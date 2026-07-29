@@ -328,6 +328,7 @@ export function StorefrontSetupStep({
             selectedBlockLibraries: state.selectedBlockLibraries,
             customBlockLibraries: state.customBlockLibraries,
             selectedPackage: state.selectedPackage,
+            selectedStack: state.selectedStack,
         });
     }, [
         state.projectName,
@@ -340,6 +341,7 @@ export function StorefrontSetupStep({
         state.selectedBlockLibraries,
         state.customBlockLibraries,
         state.selectedPackage,
+        state.selectedStack,
     ]);
 
     /**
@@ -379,6 +381,7 @@ export function StorefrontSetupStep({
         selectedBlockLibraries: state.selectedBlockLibraries,
         customBlockLibraries: state.customBlockLibraries,
         selectedPackage: state.selectedPackage,
+        selectedStack: state.selectedStack,
     });
 
     // Update running state and partialState ref when phase changes
@@ -463,6 +466,7 @@ export function StorefrontSetupStep({
             selectedBlockLibraries: initialConfigRef.current.selectedBlockLibraries,
             customBlockLibraries: initialConfigRef.current.customBlockLibraries,
             selectedPackage: initialConfigRef.current.selectedPackage,
+            selectedStack: initialConfigRef.current.selectedStack,
         });
     }, []);
 

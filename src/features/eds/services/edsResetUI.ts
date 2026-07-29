@@ -179,9 +179,27 @@ async function checkGitHubAppInstallation(
     const { tokenService: preCheckTokenService } = getGitHubServices(context);
     const { GitHubAppService } = await import('./githubAppService');
     const appService = new GitHubAppService(preCheckTokenService, context.logger);
-    const appCheck = await appService.isAppInstalled(repoOwner, repoName);
+    const { resolveAppInstallation } = await import('./appInstallationResolver');
+    const outcome = await resolveAppInstallation(
+        appService,
+        { repoOwner, repoName, repoUrl: '' },
+        context.logger,
+    );
 
-    if (appCheck.isInstalled) {
+    if (outcome.kind === 'installed') {
+        return null;
+    }
+
+    // AEM never answered. Warning that the App "is not installed" would be a
+    // claim the evidence does not support — the same false statement that had a
+    // user reinstall a working App eleven times. Report the real cause and let
+    // the reset continue; the check is advisory here, not a gate.
+    if (outcome.kind === 'undetermined') {
+        context.logger.warn(
+            `${logPrefix} Could not verify AEM Code Sync on ${repoOwner}/${repoName} ` +
+                `(HTTP ${outcome.httpStatus ?? 'no response'}) — continuing; this is a failed ` +
+                `check, not a missing App.`,
+        );
         return null;
     }
 

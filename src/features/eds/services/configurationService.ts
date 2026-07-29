@@ -351,10 +351,27 @@ export class ConfigurationService {
             this.logger.debug(`[ConfigService] Auth failure raw response: ${safeBody}`);
         }
 
+        // Adobe returns an EMPTY body on 401/403 and puts its stated reason in
+        // `x-error`; `x-invocation-id` is the handle Adobe support needs to trace
+        // the call. Both were discarded, which is why a field 403 was
+        // undiagnosable from the logs. Absent headers are omitted rather than
+        // padded, so the line carries only what Adobe actually said.
+        const xError = response.headers?.get?.('x-error') ?? undefined;
+        const invocationId = response.headers?.get?.('x-invocation-id') ?? undefined;
+        const detail = [
+            xError ? `x-error: ${xError}` : undefined,
+            invocationId ? `x-invocation-id: ${invocationId}` : undefined,
+        ]
+            .filter(Boolean)
+            .join(', ');
+
         const errorMessage = this.formatError(response.status, errorBody);
         // 409 (conflict) is handled by callers (delete + re-create) — log at info, not error
         const logLevel = response.status === 409 ? 'info' : 'error';
-        this.logger[logLevel](`[ConfigService] ${method} ${url} -> ${response.status}: ${errorMessage}`);
+        this.logger[logLevel](
+            `[ConfigService] ${method} ${url} -> ${response.status}: ${errorMessage}`
+                + `${detail ? ` (${detail})` : ''}`,
+        );
         return { success: false, error: errorMessage, statusCode: response.status };
     }
 
@@ -377,7 +394,12 @@ export class ConfigurationService {
             case 401:
                 return 'Configuration Service auth failed. Your DA.live token may have expired — try re-authenticating with DA.live.';
             case 403:
-                return 'Not authorized for Configuration Service. You may need org-level admin access — install AEM Code Sync via aem.live/developer/tutorial or ask an Adobe admin to grant access.';
+                // Deliberately does NOT name AEM Code Sync. This 403 has been
+                // observed on runs where code sync was verified and publishing
+                // in the same session, so pointing at it sends people to
+                // reinstall a working app instead of seeking the access they
+                // actually lack.
+                return 'Not authorized for Configuration Service (403). Your Adobe account lacks admin access to the site configuration for this GitHub namespace — ask an Adobe admin to grant it.';
             case 409:
                 return 'Site configuration already exists. It may have been created by another process.';
             default:

@@ -19,6 +19,23 @@ const HELIX_ADMIN_BASE_URL = 'https://admin.hlx.page';
 const GITHUB_APP_INSTALL_URL = 'https://github.com/apps/aem-code-sync/installations/select_target';
 
 /**
+ * Describe a GitHub credential by its type prefix, never its value.
+ *
+ * GitHub credentials are self-identifying: `gho_` (OAuth app token, what
+ * VS Code's GitHub provider normally issues), `ghu_` (GitHub App user token),
+ * `ghp_` (classic PAT), `github_pat_` (fine-grained PAT). These are NOT
+ * interchangeable against the AEM admin API's write-access check, so knowing
+ * which kind we hold narrows a 401 considerably.
+ *
+ * Only the prefix is ever returned — the secret must not reach a log file that
+ * users paste into tickets.
+ */
+export function describeTokenType(token: string): string {
+    const match = /^(github_pat|gh[pousr])_/.exec(token);
+    return match ? `${match[1]}_` : 'unrecognized';
+}
+
+/**
  * GitHub App Service for AEM Code Sync app detection and installation
  */
 export class GitHubAppService {
@@ -66,24 +83,54 @@ export class GitHubAppService {
         owner: string,
         repo: string,
         options?: { lenient?: boolean },
-    ): Promise<{ isInstalled: boolean; codeStatus?: number; transient?: boolean }> {
+    ): Promise<{
+        isInstalled: boolean;
+        codeStatus?: number;
+        transient?: boolean;
+        httpNotFound?: boolean;
+        httpStatus?: number;
+        helixError?: string;
+        noCredential?: boolean;
+    }> {
         const lenient = options?.lenient ?? false;
-        this.logger.debug(`[GitHub App] Checking if app is installed on ${owner}/${repo} (lenient: ${lenient})`);
+        this.logger.debug(
+            `[GitHub App] Checking if app is installed on ${owner}/${repo} (lenient: ${lenient})`,
+        );
 
         const token = await this.tokenService.getToken();
         if (!token) {
             this.logger.warn('[GitHub App] No token available for app installation check');
-            return { isInstalled: false };
+            // NOT "not installed" — we never asked. Holding no credential is not
+            // evidence about the App, and the install flow cannot supply one.
+            return { isInstalled: false, transient: true, noCredential: true };
         }
+
+        this.logger.debug(
+            `[GitHub App] Using ${describeTokenType(token.token)} credential for ${owner}/${repo}`,
+        );
 
         try {
             const result = await this.checkHelixStatus(owner, repo, token.token, lenient);
-            return { isInstalled: result.isInstalled, codeStatus: result.codeStatus, transient: result.transient };
+            // Forward the FULL classification. `httpNotFound` is the only signal
+            // meaning "Helix has never heard of this repo"; callers must not
+            // re-derive it from `codeStatus === undefined`, which is equally true
+            // of a 401/403/5xx and would report a rejected credential as a
+            // missing GitHub App install.
+            return {
+                isInstalled: result.isInstalled,
+                codeStatus: result.codeStatus,
+                transient: result.transient,
+                httpNotFound: result.httpNotFound,
+                httpStatus: result.httpStatus,
+                helixError: result.helixError,
+            };
         } catch (error) {
             // Network errors, fetch aborts, JSON parse failures, and the like are
             // transient — the caller can decide whether to retry before treating
             // this as a definitive "App not installed" signal.
-            this.logger.debug(`[GitHub App] Failed to check app installation: ${(error as Error).message}`);
+            this.logger.debug(
+                `[GitHub App] Failed to check app installation: ${(error as Error).message}`,
+            );
             return { isInstalled: false, transient: true };
         }
     }
@@ -104,7 +151,14 @@ export class GitHubAppService {
         repo: string,
         token: string,
         lenient: boolean,
-    ): Promise<{ isInstalled: boolean; codeStatus?: number; httpNotFound?: boolean; transient?: boolean }> {
+    ): Promise<{
+        isInstalled: boolean;
+        codeStatus?: number;
+        httpNotFound?: boolean;
+        transient?: boolean;
+        httpStatus?: number;
+        helixError?: string;
+    }> {
         const statusUrl = `${HELIX_ADMIN_BASE_URL}/status/${owner}/${repo}/main?editUrl=auto`;
 
         const response = await fetch(statusUrl, {
@@ -114,15 +168,30 @@ export class GitHubAppService {
         });
 
         if (!response.ok) {
-            // HTTP 404 means Helix definitively doesn't know this repo — retrying
-            // won't change that. Other HTTP errors (401, 403, 429, 5xx, timeouts)
-            // are transient transport failures; flag for retry.
+            // Observed responses from admin.hlx.page (verified 2026-07-28):
+            //   404 + `x-error: [admin] no such site` → Helix has never heard of
+            //         the repo. Definitive; retrying won't change it.
+            //   401 + `x-error: [admin] not authenticated` → Helix refused the
+            //         credential. Says NOTHING about whether the App is installed.
+            //   403 / 429 / 5xx / timeouts → transport failures.
+            // Everything except the 404 is "undetermined", not "not installed".
+            // The body is empty on 401/403; `x-error` carries the only stated
+            // reason. helixService already reads this header for the same
+            // purpose (see its 401/403 diagnostics).
+            const helixError = response.headers?.get?.('x-error') ?? undefined;
+
             if (response.status === 404) {
-                this.logger.debug(`[GitHub App] Status endpoint returned HTTP 404 (Helix does not know this repo)`);
-                return { isInstalled: false, httpNotFound: true };
+                this.logger.debug(
+                    `[GitHub App] Status endpoint returned HTTP 404 (Helix does not know this repo)` +
+                        `${helixError ? ` — ${helixError}` : ''}`,
+                );
+                return { isInstalled: false, httpNotFound: true, httpStatus: 404, helixError };
             }
-            this.logger.debug(`[GitHub App] Status endpoint returned transient HTTP ${response.status}`);
-            return { isInstalled: false, transient: true };
+            this.logger.debug(
+                `[GitHub App] Status endpoint returned transient HTTP ${response.status}` +
+                    `${helixError ? ` — ${helixError}` : ''}`,
+            );
+            return { isInstalled: false, transient: true, httpStatus: response.status, helixError };
         }
 
         const data = await response.json();
@@ -133,7 +202,9 @@ export class GitHubAppService {
         if (codeStatus === undefined) {
             // Response shape was unrecognized — don't conclude "not installed"
             // from an answer Helix didn't give. Flag transient so the caller retries.
-            this.logger.info(`[GitHub App] Unable to determine app status for ${owner}/${repo} (no code.status in response)`);
+            this.logger.info(
+                `[GitHub App] Unable to determine app status for ${owner}/${repo} (no code.status in response)`,
+            );
             return { isInstalled: false, transient: true };
         }
 
@@ -144,18 +215,28 @@ export class GitHubAppService {
             isInstalled = codeStatus === 200 || codeStatus === 400;
         }
 
-        this.logger.debug(`[GitHub App] Code status for ${owner}/${repo}: ${codeStatus}, installed: ${isInstalled}`);
+        this.logger.debug(
+            `[GitHub App] Code status for ${owner}/${repo}: ${codeStatus}, installed: ${isInstalled}`,
+        );
 
         if (codeStatus === 404) {
-            this.logger.info(`[GitHub App] AEM Code Sync app not installed for ${owner}/${repo} (code.status: 404)`);
+            this.logger.info(
+                `[GitHub App] AEM Code Sync app not installed for ${owner}/${repo} (code.status: 404)`,
+            );
         } else if (codeStatus === 200) {
-            this.logger.info(`[GitHub App] AEM Code Sync app installed and working for ${owner}/${repo}`);
+            this.logger.info(
+                `[GitHub App] AEM Code Sync app installed and working for ${owner}/${repo}`,
+            );
         } else if (codeStatus === 400) {
             // 400 is expected for repos where sync is initializing - log at trace level to reduce noise
-            this.logger.trace(`[GitHub App] AEM Code Sync app sync initializing for ${owner}/${repo} (code.status: 400)`);
+            this.logger.trace(
+                `[GitHub App] AEM Code Sync app sync initializing for ${owner}/${repo} (code.status: 400)`,
+            );
         } else {
             // Truly unexpected status codes - keep at info level
-            this.logger.info(`[GitHub App] AEM Code Sync app status unclear for ${owner}/${repo} (code.status: ${codeStatus})${lenient ? ' - accepting in lenient mode' : ''}`);
+            this.logger.info(
+                `[GitHub App] AEM Code Sync app status unclear for ${owner}/${repo} (code.status: ${codeStatus})${lenient ? ' - accepting in lenient mode' : ''}`,
+            );
         }
 
         return { isInstalled, codeStatus };

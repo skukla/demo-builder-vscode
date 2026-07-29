@@ -1,9 +1,8 @@
-<!-- Last verified: 2026-07-03 -->
 # Commands Module
 
 ## Overview
 
-The commands module contains VS Code command implementations plus the central `CommandManager` that registers every `demoBuilder.*` command ID. Many user-facing commands live in their owning feature module (e.g. `@/features/mesh/commands/deployMesh`, `@/features/updates/commands/checkUpdates`, `@/features/project-creation/commands/createProject`, lifecycle commands) — `CommandManager` imports and registers them all.
+The commands module contains all VS Code command implementations for the Demo Builder extension. Each command represents a user-facing action that can be triggered via the command palette, UI buttons, or programmatically.
 
 ## Command Structure
 
@@ -12,7 +11,7 @@ The commands module contains VS Code command implementations plus the central `C
 | `commandManager.ts` | Central registry — instantiates local and feature-owned commands and registers all `demoBuilder.*` command IDs |
 | `claudeSessionStore.ts` | Probe for Claude Code's per-cwd conversation store (`~/.claude/projects/<encoded-cwd>/`); decides whether `claude --continue` is safe at launch |
 | `configure.ts` | `demoBuilder.configure` — QuickPick to edit .env, redeploy mesh, and related project configuration actions |
-| `diagnostics.ts` | System diagnostics report (system/VS Code/tool info, Adobe CLI auth, MCP socket/tool probe) logged to the debug channel |
+| `diagnostics.ts` | System diagnostics report (system/VS Code/tool info, Adobe CLI auth, MCP socket/tool probe, GitHub↔AEM credential probe) logged to the debug channel |
 | `migrateStorefrontNames.ts` | One-shot palette command migrating projects whose DA.live site name doesn't match the GitHub repo name (pre-`164fd251` builds) |
 | `openInClaude.ts` | Launches the single "home" Claude Code chat terminal (see below) |
 | `openModernizationAgent.ts` | Opens the AEM Experience Modernization Agent web console (`aemcoder.adobe.io`) with a tip about the current project's repo |
@@ -26,22 +25,81 @@ Read the source — each file carries a substantial header comment.
 
 ```typescript
 // In extension.ts
-const commandManager = new CommandManager(context, stateManager, logger);
-commandManager.registerCommands();
+export function activate(context: vscode.ExtensionContext) {
+    // Register all commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('demo-builder.createProject', 
+            () => new CreateProjectCommand().execute())
+    );
+}
 ```
-
-A few commands (`demoBuilder.showLogs`, `demoBuilder.showDebugLogs`, `demoBuilder.restartDemo`) are registered directly in `extension.ts`; everything else goes through `CommandManager.registerCommands()`.
 
 ## Main Commands
 
-### Wizard message handling (CreateProjectWebviewCommand)
+### createProjectWebview (Primary Command)
 
-The main wizard command lives at `src/features/project-creation/commands/createProject.ts` and extends `BaseWebviewCommand`.
+**Purpose**: Launch the full project creation wizard
 
-**Handler pattern** (handlers properly awaited via WebviewCommunicationManager):
+**Key Components**:
+- `CreateProjectWebviewCommand` class
+- Manages webview lifecycle
+- Handles message passing
+- Orchestrates prerequisite checking
+- Manages project creation flow
+
+**Important Methods**:
 ```typescript
+class CreateProjectWebviewCommand {
+    async execute() {
+        // 1. Create webview panel
+        // 2. Load React app
+        // 3. Handle messages
+        // 4. Manage state
+    }
+    
+    async handleMessage(message: any) {
+        switch(message.type) {
+            case 'checkPrerequisites':
+            case 'installPrerequisite':
+            case 'createProject':
+            // ... handle each message type
+        }
+    }
+}
+```
+
+**Message Protocol Evolution**:
+
+Starting with v1.5.0, the message handling was fundamentally improved to fix critical async handler resolution issues.
+
+**Legacy Pattern (Pre v1.5.0)**:
+```typescript
+// ❌ Problematic - handlers not awaited
+panel.webview.onDidReceiveMessage(message => {
+    // This returned Promise objects to UI instead of resolved values
+    return this.handleMessage(message);
+});
+
+// Extension → Webview
+panel.webview.postMessage({
+    type: 'prerequisiteStatus',
+    data: { status: 'checking', progress: 50 }
+});
+
+// Webview → Extension
+vscode.postMessage({
+    type: 'installPrerequisite',
+    prereqId: 'node',
+    version: '20.11.0'
+});
+```
+
+**Modern Pattern (v1.5.0+)**:
+```typescript
+// ✅ Fixed - handlers properly awaited via WebviewCommunicationManager
 class CreateProjectWebviewCommand extends BaseWebviewCommand {
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
+        // Now properly handles async responses
         comm.on('get-projects', async (payload) => {
             return await this.adobeAuth.getProjects(payload.orgId);
         });
@@ -56,14 +114,38 @@ class CreateProjectWebviewCommand extends BaseWebviewCommand {
 }
 ```
 
-**Backend Call on Continue pattern** — selection steps update the UI immediately and defer backend calls to the Continue action:
+**Backend Call on Continue Pattern**:
+The major UX change in v1.5.0 implements the "Backend Call on Continue" pattern, where:
 
 1. **Selection UI Updates**: Immediate visual feedback on selection
 2. **Backend Calls Deferred**: Actual backend operations happen when user clicks Continue
 3. **Loading Overlay**: Simple spinner during backend confirmation
 4. **Error Recovery**: Clear error handling at the commitment point
 
-See `docs/patterns/selection-pattern.md` for the full pattern.
+```typescript
+// UI-only selection handlers
+comm.on('project-selected', (payload) => {
+    // Immediate UI update - no backend call
+    this.updateUIState({
+        selectedProject: payload.project
+    });
+});
+
+// Backend calls during Continue action
+comm.on('continue-step', async (payload) => {
+    if (payload.step === 'adobe-project' && payload.selectedProject) {
+        // Validate the selection's org is reachable (no aio global mutation).
+        // The project/workspace are targeted per-operation via withOrgContext
+        // when a dependent op (e.g. mesh deploy) actually runs.
+        const result = await handleSelectProject(this.context, {
+            projectId: payload.selectedProject.id,
+        });
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to select project');
+        }
+    }
+});
+```
 
 ### navigate (Internal)
 
@@ -93,6 +175,15 @@ The prompt-library webview (`ShowAiCommand` / `demoBuilder.openAi`, titled "Prom
 
 The previous `demoBuilder.aiMenu` command (state-aware wand-icon dispatcher) was retired in favor of the two single-purpose commands above. The two-button `AiZone` in the sidebar makes the prompt library discoverable from the first click rather than requiring a hidden second click on a state-aware wand.
 
+---
+
+### createProject (Legacy)
+
+**Purpose**: Quick project creation without wizard
+- Simplified flow for experienced users
+- Command-line style interaction
+- Minimal UI involvement
+
 ### openInClaude
 
 **Purpose**: Launch the single "home" Claude Code (CLI) Chat.
@@ -117,40 +208,93 @@ With no prompt, spawn runs a bare `claude` (or `claude --continue` if a prior ro
 **No more anchoring / pending-launch**: The prior anchor-on-demand model (pending `globalState` record + `vscode.openFolder` reload + `replayPendingClaudeLaunch` on activation) was retired with the always-root model. Home-grid prompt clicks just set the current-project pointer and launch the home Chat at the root; no window reload. If a window ever opens anchored to a project subdir, activation's `shouldReHomeToRoot` re-homes it to the projects root.
 
 **Dispatched from**:
-- The project-card kebab menu in `src/features/projects-dashboard/ui/components/ProjectActionsMenu.tsx` (posts `openAiForProject` → handled in `src/features/projects-dashboard/handlers/`, which sets the current-project pointer, then dispatches `openInClaude` with no arg)
-- The Prompt Library prompt cards in `PromptCard.tsx` → `AiOverviewScreen.tsx` (both under `src/features/dashboard/ui/aiSurface/`) → `webviewClient.postMessage('openInClaude', { prompt })` → `aiHandlers.handleOpenInClaude`
+- The project-card kebab menu in `ProjectActionsMenu.tsx` (calls `webviewClient.postMessage('openAiForProject', { projectPath })` → `handleOpenAiForProject` sets the pointer, then dispatches `openInClaude` with no arg)
+- The Prompt Library prompt cards in `PromptCard.tsx` → `AiOverviewScreen.tsx` → `webviewClient.postMessage('openInClaude', { prompt })` → `aiHandlers.handleOpenInClaude`
 - The sidebar `AiZone` Prompts button → `showPromptsPicker.ts` → `openInClaude` with the selected prompt
 
 **File**: `src/commands/openInClaude.ts`. See `docs/architecture/adr/004-claude-code-harness.md` for the harness decision rationale.
 
 ### diagnostics
 
-**Purpose**: Comprehensive system diagnostics (`src/commands/diagnostics.ts`)
-- Collects system, VS Code, and tool version information
+**Purpose**: Comprehensive system diagnostics
+- Collects system and tool information
 - Tests Adobe CLI authentication
 - Probes the in-extension MCP server socket and tools
+- Triangulates the GitHub credential (see below)
 - Logs the full report to the debug channel, shows a summary in user logs
+
+**GitHub↔AEM credential triangulation**: asks three questions in one pass —
+who we're signed in as plus the scopes GitHub actually *granted* (`x-oauth-scopes`,
+not the set we requested), whether GitHub reports `permissions.push` on the
+project's repo, and what `admin.hlx.page` returns for the same credential (HTTP
+status + `x-error`). It prints a one-line verdict, because no single answer is
+decisive: `push: true` alongside an AEM 401 rules out scope and permission
+problems and leaves the credential itself, which is the branch that previously
+could not be distinguished from a missing AEM Code Sync install.
+
+Probe logic lives in `@/features/eds/services/githubCredentialProbe` (mirroring
+the `checkMcp` → `probeInExtensionMcpTools` split) so it stays testable outside
+the command shell; `diagnostics.ts` only calls and renders it. The command takes
+`vscode.SecretStorage` in its constructor for this — `CommandManager` supplies it.
+
+Never printed: the credential. The output is designed to be pasted into tickets,
+so only the login, granted scopes, `push` boolean, status codes, `x-error`, and
+the credential *type prefix* (`gho_`, `ghu_`, …) appear. A test enforces this.
+
+This is the command's only outbound network call; every other check is local.
+Each leg has its own timeout and degrades independently.
 
 ## Command Patterns
 
-### BaseWebviewCommand Pattern
+### BaseWebviewCommand Pattern (Recommended)
 
-Webview commands extend `BaseWebviewCommand` (from `@/core/base`) for standardized webview handling with robust communication:
+The new BaseWebviewCommand provides standardized webview handling with robust communication:
 
 ```typescript
-import { BaseWebviewCommand } from '@/core/base';
-import { WebviewCommunicationManager } from '@/core/communication';
+import { BaseWebviewCommand } from './baseWebviewCommand';
+import { WebviewCommunicationManager } from '../utils/webviewCommunicationManager';
 
 class MyWebviewCommand extends BaseWebviewCommand {
-    protected getWebviewId(): string { return 'myWebview'; }
-    protected getWebviewTitle(): string { return 'My Webview'; }
-
+    protected getWebviewId(): string {
+        return 'myWebview';
+    }
+    
+    protected getWebviewTitle(): string {
+        return 'My Webview';
+    }
+    
     protected async getWebviewContent(): Promise<string> {
         // Return HTML with React app
+        return getHtmlContent(this.panel!, this.context);
     }
-
+    
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
-        comm.on('getData', async () => this.fetchData());
+        // Register message handlers
+        comm.on('action', async (data) => {
+            // Handle action
+            return { success: true };
+        });
+        
+        comm.on('getData', async () => {
+            return await this.fetchData();
+        });
+    }
+    
+    protected async getInitialData(): Promise<any> {
+        return {
+            config: await this.loadConfig(),
+            state: await this.stateManager.getState()
+        };
+    }
+    
+    async execute(): Promise<void> {
+        // Create panel
+        await this.createOrRevealPanel();
+        
+        // Initialize communication with handshake
+        await this.initializeCommunication();
+        
+        // Webview is ready for interaction
     }
 }
 ```
@@ -162,55 +306,221 @@ class MyWebviewCommand extends BaseWebviewCommand {
 - Standardized error handling
 - Consistent logging
 
+### Legacy Webview Pattern
+
+For existing commands not yet migrated:
+
+```typescript
+class WebviewCommand {
+    private panel: vscode.WebviewPanel | undefined;
+    
+    async execute() {
+        // Create or reveal panel
+        this.panel = vscode.window.createWebviewPanel(...);
+        
+        // Set content
+        this.panel.webview.html = this.getWebviewContent();
+        
+        // Handle messages
+        this.panel.webview.onDidReceiveMessage(
+            message => this.handleMessage(message)
+        );
+    }
+    
+    private getWebviewContent(): string {
+        // Return HTML with React app
+    }
+    
+    private async handleMessage(message: any) {
+        // Process messages from webview
+    }
+}
+```
+
+### Simple Command Pattern
+
+```typescript
+class SimpleCommand {
+    async execute(context: vscode.ExtensionContext) {
+        try {
+            // Perform action
+            const result = await this.doWork();
+            
+            // Show success
+            vscode.window.showInformationMessage('Success!');
+        } catch (error) {
+            // Handle error
+            vscode.window.showErrorMessage('Failed: ' + error.message);
+        }
+    }
+}
+```
+
 ### Authentication Pre-flight Pattern
 
-**Purpose**: Prevent unexpected browser auth launches during Adobe I/O operations.
+**Purpose**: Prevent unexpected browser auth launches during Adobe I/O operations
 
-Check authentication status before expensive operations and explicitly ask for permission:
+**Problem**: Operations like mesh deployment or fetching org data would silently trigger browser authentication, confusing users who didn't expect it.
 
-1. Token-only auth check via `isAuthenticated()` (fast, no org validation)
-2. If not authenticated, show a warning with a "Sign In" choice
-3. User confirms → browser-based login
-4. Proceed with the Adobe I/O operation (or cancel gracefully if declined)
+**Solution**: Check authentication status before expensive operations and explicitly ask for permission.
 
-**Used In**: `deployMesh` (feature command), dashboard mesh status check (skips fetch if not authenticated), configure flows that fetch Adobe data.
+**Implementation**:
+
+```typescript
+class AdobeIOCommand extends BaseCommand {
+    async execute() {
+        // 1. Token-only auth check (2-3s, no org validation)
+        const isAuthenticated = await this.authManager.isAuthenticated();
+
+        if (!isAuthenticated) {
+            // 2. Show explicit warning with user choice
+            const action = await vscode.window.showWarningMessage(
+                'Authentication required to [action]. Sign in to Adobe?',
+                'Sign In',
+                'Cancel'
+            );
+            
+            if (action !== 'Sign In') {
+                return; // User declined
+            }
+            
+            // 3. User confirmed → Browser-based login
+            await this.authManager.login();
+        }
+        
+        // 4. Proceed with Adobe I/O operation
+        await this.performAdobeIOOperation();
+    }
+}
+```
+
+**Used In**:
+- `deployMesh` command
+- Dashboard mesh status check (skips fetch if not authenticated)
+- `configure` command (when fetching Adobe data)
+
+**Key Benefits**:
+- No surprise browser windows
+- User remains in control
+- Clear context for why auth is needed
+- Graceful degradation (operation cancelled if user declines)
+
+**Performance Note**: `isAuthenticated()` only checks token validity (2-3s) vs full org validation (3-10s with `isFullyAuthenticated()`).
+
+## Key Responsibilities
+
+### Prerequisite Management
+- Check for required tools
+- Trigger installations
+- Track progress
+- Report status to UI
+
+### Project Creation
+- Gather user inputs
+- Validate selections
+- Execute creation scripts
+- Monitor progress
+- Handle errors
+
+### State Management
+- Persist wizard state
+- Resume interrupted flows
+- Cache user preferences
+
+## Integration Points
+
+### With Utils
+- Uses PrerequisitesManager for tool checking
+- Uses ProgressUnifier for progress tracking
+- Uses StateManager for persistence
+- Uses ErrorLogger for error handling
+
+### With Webviews
+- Provides data to React components
+- Receives user actions
+- Manages webview lifecycle
+- Handles resource loading
+
+### With Templates
+- Loads component definitions
+- Reads prerequisite configurations
+- Applies project templates
+
+## Error Handling Strategy
+
+```typescript
+try {
+    // Risky operation
+    await this.createProject(config);
+} catch (error) {
+    // Log for debugging
+    this.logger.error('Project creation failed', error);
+    
+    // User-friendly message
+    const message = this.getUserFriendlyError(error);
+    
+    // Show to user with action
+    const action = await vscode.window.showErrorMessage(
+        message,
+        'Retry',
+        'View Logs'
+    );
+    
+    if (action === 'Retry') {
+        return this.execute();
+    } else if (action === 'View Logs') {
+        vscode.commands.executeCommand('demo-builder.showLogs');
+    }
+}
+```
 
 ## Timeout Handling in Commands
 
 **Critical Issue**: Adobe CLI commands often succeed but timeout due to restrictive timeout values.
 
-Note: project/workspace selection no longer runs an `aio` CLI mutation, so it no longer carries a CLI timeout. The pattern below applies to the Adobe CLI operations that DO run (e.g. workspace download, api-mesh get/deploy), which are targeted per-invocation via `withOrgContext`.
+**Solution Pattern**:
+Note: project/workspace selection no longer runs an `aio` CLI mutation, so it
+no longer carries a CLI timeout. The pattern below applies to the Adobe CLI
+operations that DO run (e.g. workspace download, api-mesh get/deploy), which are
+targeted per-invocation via `withOrgContext`.
 
 ```typescript
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { TIMEOUT_CONFIG } from '../utils/timeoutConfig';
 
-comm.on('check-mesh', async (payload) => {
-    try {
-        // Run the CLI op under the per-invocation org/project/workspace target.
-        return await withOrgContext(target, () =>
-            this.commandExecutor.execute('aio api-mesh get', {
-                timeout: TIMEOUTS.NORMAL,
-            }),
-        );
-    } catch (error) {
-        // Check for success despite timeout (CLI is slow, not failing).
-        if (error.stdout && error.stdout.includes('Successfully')) {
-            return { success: true, message: 'Completed despite timeout' };
-        }
-        throw error;
+class CreateProjectWebviewCommand extends BaseWebviewCommand {
+    protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
+        comm.on('check-mesh', async (payload) => {
+            try {
+                // Run the CLI op under the per-invocation org/project/workspace
+                // target; use an appropriate timeout for the slow CLI call.
+                return await withOrgContext(target, () =>
+                    this.commandExecutor.execute('aio api-mesh get', {
+                        timeout: TIMEOUT_CONFIG.CONFIG_WRITE  // 10 seconds
+                    }),
+                );
+            } catch (error) {
+                // Check for success despite timeout (CLI is slow, not failing).
+                if (error.stdout && error.stdout.includes('Successfully')) {
+                    return { success: true, message: 'Completed despite timeout' };
+                }
+                throw error;
+            }
+        });
     }
-});
+}
 ```
 
 **Key Patterns**:
-1. **Use TIMEOUTS**: Centralized timeout buckets in `@/core/utils/timeoutConfig` (QUICK/NORMAL/LONG/VERY_LONG/EXTENDED plus UI/POLL sub-objects)
+1. **Use TIMEOUT_CONFIG**: Centralized timeout management
 2. **Success Detection**: Check stdout for success indicators in catch blocks
 3. **Graceful Degradation**: Continue operation even if timeout occurred but command succeeded
+4. **User Feedback**: Clear loading states during potentially slow operations
 
 ## Testing Commands
 
 ### Manual Testing Checklist
 - [ ] Command appears in palette
+- [ ] Keyboard shortcuts work
 - [ ] UI buttons trigger command
 - [ ] Error cases handled gracefully
 - [ ] Progress shown correctly
@@ -221,7 +531,7 @@ comm.on('check-mesh', async (payload) => {
 ### Common Issues
 
 1. **Webview Not Loading**
-   - Check the esbuild build (`esbuild.config.js`, `npm run watch`)
+   - Check webpack build
    - Verify resource paths
    - Check CSP settings
 
@@ -237,13 +547,22 @@ comm.on('check-mesh', async (payload) => {
 
 ## Adding New Commands
 
-1. Create the command file — in `commands/` for cross-cutting commands, or in the owning feature's `commands/` directory
-2. Extend `BaseCommand` or `BaseWebviewCommand` (`@/core/base`)
-3. Register in `commandManager.ts`
-4. Add to package.json contributions (unless internal)
-5. Add tests
+1. Create command file in `commands/`
+2. Implement Command interface
+3. Register in extension.ts
+4. Add to package.json contributions
+5. Document in this file
+6. Add tests
+
+## Performance Considerations
+
+- Lazy load heavy dependencies
+- Cache webview content
+- Debounce rapid messages
+- Use progress indicators
+- Cancel long-running operations
 
 ---
 
-For core infrastructure (base classes, communication, timeouts), see `../core/CLAUDE.md`
-For feature-owned commands, see `../features/CLAUDE.md`
+For webview details, see `../webviews/CLAUDE.md`
+For utility integration, see `../utils/CLAUDE.md`

@@ -18,6 +18,7 @@
 import * as fs from 'fs/promises';
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
 import type { Project } from '@/types';
+import * as path from 'path';
 
 // Mock fs/promises
 jest.mock('fs/promises');
@@ -122,10 +123,22 @@ describe('Manifest Error Investigation', () => {
             // The atomic helper (writeFileAtomic) surfaces this as an ENOENT from rename(2) —
             // there is no separate temp-file access check to intercept it.
             const project = createTestProject();
+            const tempPath = path.join(project.path, '.demo-builder.json.tmp');
+
+            // Simulate: writeFile succeeds, but the temp file is gone by the
+            // time we rename it. The write path is writeFile -> rename ->
+            // (on failure) unlink; it does not call access, so the loss has to
+            // be injected at the rename for this to exercise anything real.
             mockFs.writeFile.mockResolvedValue(undefined);
-            const enoentError = new Error('ENOENT: no such file or directory, rename');
-            (enoentError as Error & { code: string }).code = 'ENOENT';
-            mockFs.rename.mockRejectedValue(enoentError);
+            mockFs.rename.mockImplementation(async (from) => {
+                if (from === tempPath) {
+                    const err = new Error('ENOENT: no such file or directory');
+                    (err as Error & { code: string }).code = 'ENOENT';
+                    throw err;
+                }
+                return undefined;
+            });
+            mockFs.unlink.mockResolvedValue(undefined);
 
             // When: Attempting to save
             await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('ENOENT');

@@ -303,6 +303,30 @@ export function isEdsProject(project: Project | undefined | null): boolean {
 }
 
 /**
+ * Get the EDS storefront's GitHub repository as `owner/repo`.
+ *
+ * SOP §4: extracted deep optional chain to a named getter. Three callers depend
+ * on it — `getEdsLiveUrl`, `getEdsPreviewUrl`, and the Diagnostics credential
+ * probe — which is the Rule of Three threshold for extraction.
+ *
+ * Returns undefined unless the value is well formed. Callers split on '/', and
+ * a bare name would otherwise yield an undefined half and produce URLs like
+ * `https://main--undefined--name.aem.live`.
+ *
+ * @param project - The project (can be undefined/null)
+ * @returns `owner/repo`, or undefined when absent, malformed, or not an EDS project
+ */
+export function getEdsGithubRepo(project: Project | undefined | null): string | undefined {
+    if (!isEdsProject(project)) return undefined;
+    const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    const githubRepo = edsInstance?.metadata?.githubRepo as string | undefined;
+
+    if (!githubRepo) return undefined;
+    const [owner, repo] = githubRepo.split('/');
+    return owner && repo ? githubRepo : undefined;
+}
+
+/**
  * Get the live URL for an EDS project
  *
  * The live URL is stored in the COMPONENT_IDS.EDS_STOREFRONT component instance metadata.
@@ -322,8 +346,8 @@ export function getEdsLiveUrl(project: Project | undefined | null): string | und
     if (storedUrl) return storedUrl;
 
     // Fallback: Generate from githubRepo (format: "owner/repo")
-    const githubRepo = edsInstance?.metadata?.githubRepo as string | undefined;
-    if (githubRepo && githubRepo.includes('/')) {
+    const githubRepo = getEdsGithubRepo(project);
+    if (githubRepo) {
         const [owner, repo] = githubRepo.split('/');
         return `https://main--${repo}--${owner}.aem.live`;
     }
@@ -374,8 +398,8 @@ export function getEdsPreviewUrl(project: Project | undefined | null): string | 
     if (storedUrl) return storedUrl;
 
     // Fallback: Generate from githubRepo (format: "owner/repo")
-    const githubRepo = edsInstance?.metadata?.githubRepo as string | undefined;
-    if (githubRepo && githubRepo.includes('/')) {
+    const githubRepo = getEdsGithubRepo(project);
+    if (githubRepo) {
         const [owner, repo] = githubRepo.split('/');
         return `https://main--${repo}--${owner}.aem.page`;
     }

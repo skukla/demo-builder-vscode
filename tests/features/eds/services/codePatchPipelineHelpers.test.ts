@@ -64,7 +64,12 @@ describe('applyCanonicalCodePatches', () => {
     it('returns empty results when no patch IDs requested', async () => {
         const fileOverrides = new Map<string, string>();
         const results = await applyCanonicalCodePatches(
-            fileOverrides, 'tmpl-owner', 'tmpl-repo', [], SOURCE, mockLogger,
+            fileOverrides,
+            'tmpl-owner',
+            'tmpl-repo',
+            [],
+            SOURCE,
+            mockLogger
         );
         expect(results).toEqual([]);
         expect(global.fetch).not.toHaveBeenCalled();
@@ -76,29 +81,50 @@ describe('applyCanonicalCodePatches', () => {
             if (url.includes('code-patches.json')) {
                 return Promise.resolve({
                     ok: true,
-                    json: () => Promise.resolve({
-                        patches: [
-                            { id: 'canon', target: 'head.html', description: '', precondition: 'OLD', replacement: 'NEW' },
-                            { id: 'block', target: 'blocks/header/header.js', description: '', precondition: 'X', replacement: 'Y' },
-                        ],
-                    }),
+                    json: () =>
+                        Promise.resolve({
+                            patches: [
+                                {
+                                    id: 'canon',
+                                    target: 'scripts/canonical.js',
+                                    description: '',
+                                    precondition: 'OLD',
+                                    replacement: 'NEW',
+                                },
+                                {
+                                    id: 'block',
+                                    target: 'blocks/header/header.js',
+                                    description: '',
+                                    precondition: 'X',
+                                    replacement: 'Y',
+                                },
+                            ],
+                        }),
                 });
             }
             // head.html fetch
-            return Promise.resolve({ ok: true, text: () => Promise.resolve('this is OLD content') });
+            return Promise.resolve({
+                ok: true,
+                text: () => Promise.resolve('this is OLD content'),
+            });
         });
         global.fetch = fetchMock;
 
         const fileOverrides = new Map<string, string>();
         const results = await applyCanonicalCodePatches(
-            fileOverrides, 'tmpl-owner', 'tmpl-repo', ['canon', 'block'], SOURCE, mockLogger,
+            fileOverrides,
+            'tmpl-owner',
+            'tmpl-repo',
+            ['canon', 'block'],
+            SOURCE,
+            mockLogger
         );
 
         // Only the canonical patch ran
         expect(results).toHaveLength(1);
         expect(results[0].patchId).toBe('canon');
         expect(results[0].applied).toBe(true);
-        expect(fileOverrides.get('head.html')).toBe('this is NEW content');
+        expect(fileOverrides.get('scripts/canonical.js')).toBe('this is NEW content');
     });
 
     it('fetches missing target files from the template repo (raw.githubusercontent)', async () => {
@@ -106,25 +132,46 @@ describe('applyCanonicalCodePatches', () => {
             if (url.includes('code-patches.json')) {
                 return Promise.resolve({
                     ok: true,
-                    json: () => Promise.resolve({
-                        patches: [
-                            { id: 'p', target: 'head.html', description: '', precondition: 'FOO', replacement: 'BAR' },
-                        ],
-                    }),
+                    json: () =>
+                        Promise.resolve({
+                            patches: [
+                                {
+                                    id: 'p',
+                                    target: 'scripts/canonical.js',
+                                    description: '',
+                                    precondition: 'FOO',
+                                    replacement: 'BAR',
+                                },
+                            ],
+                        }),
                 });
             }
-            return Promise.resolve({ ok: true, text: () => Promise.resolve('content with FOO inside') });
+            return Promise.resolve({
+                ok: true,
+                text: () => Promise.resolve('content with FOO inside'),
+            });
         });
         global.fetch = fetchMock;
 
         const fileOverrides = new Map<string, string>();
         await applyCanonicalCodePatches(
-            fileOverrides, 'tmpl-owner', 'tmpl-repo', ['p'], SOURCE, mockLogger,
+            fileOverrides,
+            'tmpl-owner',
+            'tmpl-repo',
+            ['p'],
+            SOURCE,
+            mockLogger
         );
 
         // Verify the raw.githubusercontent fetch URL was constructed correctly
-        const fetchCalls = fetchMock.mock.calls.map(c => c[0] as string);
-        expect(fetchCalls.some(u => u === 'https://raw.githubusercontent.com/tmpl-owner/tmpl-repo/main/head.html')).toBe(true);
+        const fetchCalls = fetchMock.mock.calls.map((c) => c[0] as string);
+        expect(
+            fetchCalls.some(
+                (u) =>
+                    u ===
+                    'https://raw.githubusercontent.com/tmpl-owner/tmpl-repo/main/scripts/canonical.js'
+            )
+        ).toBe(true);
     });
 
     it('preserves existing fileOverrides entries (used as working set, not overwritten)', async () => {
@@ -134,11 +181,18 @@ describe('applyCanonicalCodePatches', () => {
             if (url.includes('code-patches.json')) {
                 return Promise.resolve({
                     ok: true,
-                    json: () => Promise.resolve({
-                        patches: [
-                            { id: 'p', target: 'head.html', description: '', precondition: 'OLD', replacement: 'NEW' },
-                        ],
-                    }),
+                    json: () =>
+                        Promise.resolve({
+                            patches: [
+                                {
+                                    id: 'p',
+                                    target: 'scripts/canonical.js',
+                                    description: '',
+                                    precondition: 'OLD',
+                                    replacement: 'NEW',
+                                },
+                            ],
+                        }),
                 });
             }
             // Should NOT be called
@@ -147,16 +201,25 @@ describe('applyCanonicalCodePatches', () => {
         global.fetch = fetchMock;
 
         const fileOverrides = new Map<string, string>([
-            ['head.html', 'pre-existing OLD content (from prior pipeline step)'],
+            ['scripts/canonical.js', 'pre-existing OLD content (from prior pipeline step)'],
         ]);
         await applyCanonicalCodePatches(
-            fileOverrides, 'tmpl-owner', 'tmpl-repo', ['p'], SOURCE, mockLogger,
+            fileOverrides,
+            'tmpl-owner',
+            'tmpl-repo',
+            ['p'],
+            SOURCE,
+            mockLogger
         );
 
         // Confirm patched output came from the pre-existing override
-        expect(fileOverrides.get('head.html')).toBe('pre-existing NEW content (from prior pipeline step)');
+        expect(fileOverrides.get('scripts/canonical.js')).toBe(
+            'pre-existing NEW content (from prior pipeline step)'
+        );
         // And the raw.githubusercontent fetch for head.html was NOT made
-        const headFetches = fetchMock.mock.calls.filter(c => (c[0] as string).endsWith('/head.html'));
+        const headFetches = fetchMock.mock.calls.filter((c) =>
+            (c[0] as string).endsWith('/head.html')
+        );
         expect(headFetches).toHaveLength(0);
     });
 
@@ -165,11 +228,18 @@ describe('applyCanonicalCodePatches', () => {
             if (url.includes('code-patches.json')) {
                 return Promise.resolve({
                     ok: true,
-                    json: () => Promise.resolve({
-                        patches: [
-                            { id: 'p', target: 'missing.html', description: '', precondition: 'X', replacement: 'Y' },
-                        ],
-                    }),
+                    json: () =>
+                        Promise.resolve({
+                            patches: [
+                                {
+                                    id: 'p',
+                                    target: 'scripts/missing.js',
+                                    description: '',
+                                    precondition: 'X',
+                                    replacement: 'Y',
+                                },
+                            ],
+                        }),
                 });
             }
             // Template fetch fails
@@ -179,12 +249,17 @@ describe('applyCanonicalCodePatches', () => {
 
         const fileOverrides = new Map<string, string>();
         const results = await applyCanonicalCodePatches(
-            fileOverrides, 'tmpl-owner', 'tmpl-repo', ['p'], SOURCE, mockLogger,
+            fileOverrides,
+            'tmpl-owner',
+            'tmpl-repo',
+            ['p'],
+            SOURCE,
+            mockLogger
         );
 
         expect(results).toHaveLength(1);
         expect(results[0].applied).toBe(false);
-        expect(results[0].reason).toContain('working set');  // Engine reports target-not-in-set
+        expect(results[0].reason).toContain('working set'); // Engine reports target-not-in-set
     });
 
     it('composes multiple canonical patches targeting the same file', async () => {
@@ -192,12 +267,25 @@ describe('applyCanonicalCodePatches', () => {
             if (url.includes('code-patches.json')) {
                 return Promise.resolve({
                     ok: true,
-                    json: () => Promise.resolve({
-                        patches: [
-                            { id: 'p1', target: 'a.js', description: '', precondition: 'foo', replacement: 'FOO' },
-                            { id: 'p2', target: 'a.js', description: '', precondition: 'bar', replacement: 'BAR' },
-                        ],
-                    }),
+                    json: () =>
+                        Promise.resolve({
+                            patches: [
+                                {
+                                    id: 'p1',
+                                    target: 'scripts/a.js',
+                                    description: '',
+                                    precondition: 'foo',
+                                    replacement: 'FOO',
+                                },
+                                {
+                                    id: 'p2',
+                                    target: 'scripts/a.js',
+                                    description: '',
+                                    precondition: 'bar',
+                                    replacement: 'BAR',
+                                },
+                            ],
+                        }),
                 });
             }
             return Promise.resolve({ ok: true, text: () => Promise.resolve('foo and bar') });
@@ -206,11 +294,16 @@ describe('applyCanonicalCodePatches', () => {
 
         const fileOverrides = new Map<string, string>();
         const results = await applyCanonicalCodePatches(
-            fileOverrides, 'tmpl-owner', 'tmpl-repo', ['p1', 'p2'], SOURCE, mockLogger,
+            fileOverrides,
+            'tmpl-owner',
+            'tmpl-repo',
+            ['p1', 'p2'],
+            SOURCE,
+            mockLogger
         );
 
-        expect(results.every(r => r.applied)).toBe(true);
-        expect(fileOverrides.get('a.js')).toBe('FOO and BAR');
+        expect(results.every((r) => r.applied)).toBe(true);
+        expect(fileOverrides.get('scripts/a.js')).toBe('FOO and BAR');
     });
 });
 
@@ -227,38 +320,56 @@ describe('applyBlockCodePatches', () => {
                 if (content === undefined) return null;
                 return { content, sha: `sha-${path}` };
             }),
-            createOrUpdateFile: jest.fn(async (owner: string, repo: string, path: string, content: string) => {
-                files.set(path, content);
-                return { sha: `new-sha-${path}`, commitSha: `commit-${path}` };
-            }),
+            createOrUpdateFile: jest.fn(
+                async (owner: string, repo: string, path: string, content: string) => {
+                    files.set(path, content);
+                    return { sha: `new-sha-${path}`, commitSha: `commit-${path}` };
+                }
+            ),
         };
         return ops as unknown as GitHubFileOperations;
     }
 
     it('returns empty results when no patch IDs requested', async () => {
         const ops = makeFileOps({});
-        const results = await applyBlockCodePatches(
-            ops, 'owner', 'repo', [], SOURCE, mockLogger,
-        );
+        const results = await applyBlockCodePatches(ops, 'owner', 'repo', [], SOURCE, mockLogger);
         expect(results).toEqual([]);
     });
 
     it('filters in only block-phase patches (target starts with blocks/)', async () => {
         global.fetch = jest.fn().mockResolvedValue({
             ok: true,
-            json: () => Promise.resolve({
-                patches: [
-                    { id: 'block-p', target: 'blocks/header/header.js', description: '', precondition: 'OLD', replacement: 'NEW' },
-                    { id: 'canon', target: 'head.html', description: '', precondition: 'X', replacement: 'Y' },
-                ],
-            }),
+            json: () =>
+                Promise.resolve({
+                    patches: [
+                        {
+                            id: 'block-p',
+                            target: 'blocks/header/header.js',
+                            description: '',
+                            precondition: 'OLD',
+                            replacement: 'NEW',
+                        },
+                        {
+                            id: 'canon',
+                            target: 'scripts/canonical.js',
+                            description: '',
+                            precondition: 'X',
+                            replacement: 'Y',
+                        },
+                    ],
+                }),
         });
         const ops = makeFileOps({
             'blocks/header/header.js': 'this is OLD content',
         });
 
         const results = await applyBlockCodePatches(
-            ops, 'owner', 'repo', ['block-p', 'canon'], SOURCE, mockLogger,
+            ops,
+            'owner',
+            'repo',
+            ['block-p', 'canon'],
+            SOURCE,
+            mockLogger
         );
 
         // Only the block-phase patch ran
@@ -270,11 +381,18 @@ describe('applyBlockCodePatches', () => {
     it('reads target via getFileContent, writes patched via createOrUpdateFile', async () => {
         global.fetch = jest.fn().mockResolvedValue({
             ok: true,
-            json: () => Promise.resolve({
-                patches: [
-                    { id: 'p', target: 'blocks/header/header.js', description: '', precondition: 'OLD', replacement: 'NEW' },
-                ],
-            }),
+            json: () =>
+                Promise.resolve({
+                    patches: [
+                        {
+                            id: 'p',
+                            target: 'blocks/header/header.js',
+                            description: '',
+                            precondition: 'OLD',
+                            replacement: 'NEW',
+                        },
+                    ],
+                }),
         });
         const ops = makeFileOps({
             'blocks/header/header.js': 'this is OLD content',
@@ -282,32 +400,51 @@ describe('applyBlockCodePatches', () => {
 
         await applyBlockCodePatches(ops, 'my-owner', 'my-repo', ['p'], SOURCE, mockLogger);
 
-        expect(ops.getFileContent).toHaveBeenCalledWith('my-owner', 'my-repo', 'blocks/header/header.js');
+        expect(ops.getFileContent).toHaveBeenCalledWith(
+            'my-owner',
+            'my-repo',
+            'blocks/header/header.js'
+        );
         expect(ops.createOrUpdateFile).toHaveBeenCalledWith(
-            'my-owner', 'my-repo',
+            'my-owner',
+            'my-repo',
             'blocks/header/header.js',
             'this is NEW content',
-            expect.any(String),  // commit message
-            'sha-blocks/header/header.js',  // pass-through SHA for update
+            expect.any(String), // commit message
+            'sha-blocks/header/header.js' // pass-through SHA for update
         );
     });
 
     it('reports non-applied when block file is missing in destination repo', async () => {
         global.fetch = jest.fn().mockResolvedValue({
             ok: true,
-            json: () => Promise.resolve({
-                patches: [
-                    { id: 'p', target: 'blocks/missing/missing.js', description: '', precondition: 'X', replacement: 'Y' },
-                ],
-            }),
+            json: () =>
+                Promise.resolve({
+                    patches: [
+                        {
+                            id: 'p',
+                            target: 'blocks/missing/missing.js',
+                            description: '',
+                            precondition: 'X',
+                            replacement: 'Y',
+                        },
+                    ],
+                }),
         });
         const ops = makeFileOps({});
 
-        const results = await applyBlockCodePatches(ops, 'owner', 'repo', ['p'], SOURCE, mockLogger);
+        const results = await applyBlockCodePatches(
+            ops,
+            'owner',
+            'repo',
+            ['p'],
+            SOURCE,
+            mockLogger
+        );
 
         expect(results).toHaveLength(1);
         expect(results[0].applied).toBe(false);
-        expect(results[0].reason).toContain('working set');  // Engine: target not in map
+        expect(results[0].reason).toContain('working set'); // Engine: target not in map
         // No write attempted
         expect(ops.createOrUpdateFile).not.toHaveBeenCalled();
     });
@@ -315,17 +452,31 @@ describe('applyBlockCodePatches', () => {
     it('reports non-applied when precondition does not match the destination file', async () => {
         global.fetch = jest.fn().mockResolvedValue({
             ok: true,
-            json: () => Promise.resolve({
-                patches: [
-                    { id: 'p', target: 'blocks/header/header.js', description: '', precondition: 'NOT_THERE', replacement: 'Y' },
-                ],
-            }),
+            json: () =>
+                Promise.resolve({
+                    patches: [
+                        {
+                            id: 'p',
+                            target: 'blocks/header/header.js',
+                            description: '',
+                            precondition: 'NOT_THERE',
+                            replacement: 'Y',
+                        },
+                    ],
+                }),
         });
         const ops = makeFileOps({
             'blocks/header/header.js': 'completely different content',
         });
 
-        const results = await applyBlockCodePatches(ops, 'owner', 'repo', ['p'], SOURCE, mockLogger);
+        const results = await applyBlockCodePatches(
+            ops,
+            'owner',
+            'repo',
+            ['p'],
+            SOURCE,
+            mockLogger
+        );
 
         expect(results).toHaveLength(1);
         expect(results[0].applied).toBe(false);
@@ -336,15 +487,29 @@ describe('applyBlockCodePatches', () => {
     it('does not call createOrUpdateFile when there are no block-phase patches', async () => {
         global.fetch = jest.fn().mockResolvedValue({
             ok: true,
-            json: () => Promise.resolve({
-                patches: [
-                    { id: 'canon', target: 'head.html', description: '', precondition: 'X', replacement: 'Y' },
-                ],
-            }),
+            json: () =>
+                Promise.resolve({
+                    patches: [
+                        {
+                            id: 'canon',
+                            target: 'scripts/canonical.js',
+                            description: '',
+                            precondition: 'X',
+                            replacement: 'Y',
+                        },
+                    ],
+                }),
         });
         const ops = makeFileOps({});
 
-        const results = await applyBlockCodePatches(ops, 'owner', 'repo', ['canon'], SOURCE, mockLogger);
+        const results = await applyBlockCodePatches(
+            ops,
+            'owner',
+            'repo',
+            ['canon'],
+            SOURCE,
+            mockLogger
+        );
 
         expect(results).toEqual([]);
         expect(ops.getFileContent).not.toHaveBeenCalled();

@@ -103,7 +103,7 @@ describe('getCodePatches', () => {
         mockExternalLedger([
             {
                 id: 'patch-a',
-                target: 'a.js',
+                target: 'scripts/a.js',
                 description: 'A',
                 precondition: 'foo',
                 replacement: 'bar',
@@ -237,14 +237,14 @@ describe('applyCodePatches — happy path', () => {
         // Degenerate file containing BOTH strings: the precondition must be
         // replaced (normal apply), not skipped.
         mockExternalLedger([
-            { id: 'p', target: 'a.js', description: 'D', precondition: 'OLD', replacement: 'NEW' },
+            { id: 'p', target: 'scripts/a.js', description: 'D', precondition: 'OLD', replacement: 'NEW' },
         ]);
-        const files = new Map<string, string>([['a.js', 'NEW then OLD']]);
+        const files = new Map<string, string>([['scripts/a.js', 'NEW then OLD']]);
 
         const results = await applyCodePatches(files, ['p'], SOURCE, mockLogger);
 
-        expect(results[0]).toEqual({ patchId: 'p', target: 'a.js', applied: true });
-        expect(files.get('a.js')).toBe('NEW then NEW');
+        expect(results[0]).toEqual({ patchId: 'p', target: 'scripts/a.js', applied: true });
+        expect(files.get('scripts/a.js')).toBe('NEW then NEW');
     });
 });
 
@@ -257,27 +257,27 @@ describe('applyCodePatches — failure cases', () => {
         mockExternalLedger([
             {
                 id: 'p',
-                target: 'a.js',
+                target: 'scripts/a.js',
                 description: 'D',
                 precondition: 'NOT_THERE',
                 replacement: 'X',
             },
         ]);
-        const files = new Map<string, string>([['a.js', 'some other content']]);
+        const files = new Map<string, string>([['scripts/a.js', 'some other content']]);
 
         const results = await applyCodePatches(files, ['p'], SOURCE, mockLogger);
 
         expect(results).toHaveLength(1);
         expect(results[0].applied).toBe(false);
         expect(results[0].reason).toContain('Precondition not found');
-        expect(files.get('a.js')).toBe('some other content');
+        expect(files.get('scripts/a.js')).toBe('some other content');
     });
 
     it('returns applied:false with reason when target file not in working set', async () => {
         mockExternalLedger([
             {
                 id: 'p',
-                target: 'missing.js',
+                target: 'scripts/missing.js',
                 description: 'D',
                 precondition: 'X',
                 replacement: 'Y',
@@ -311,13 +311,13 @@ describe('applyCodePatches — failure cases', () => {
         mockExternalLedger([
             {
                 id: 'known',
-                target: 'a.js',
+                target: 'scripts/a.js',
                 description: 'D',
                 precondition: 'foo',
                 replacement: 'bar',
             },
         ]);
-        const files = new Map<string, string>([['a.js', 'foo']]);
+        const files = new Map<string, string>([['scripts/a.js', 'foo']]);
 
         const results = await applyCodePatches(files, ['known', 'unknown'], SOURCE, mockLogger);
 
@@ -336,15 +336,15 @@ describe('applyCodePatches — failure cases', () => {
 describe('applyCodePatches — composition', () => {
     it('composes multiple patches targeting the same file (sequential apply)', async () => {
         mockExternalLedger([
-            { id: 'p1', target: 'a.js', description: '', precondition: 'one', replacement: 'ONE' },
-            { id: 'p2', target: 'a.js', description: '', precondition: 'two', replacement: 'TWO' },
+            { id: 'p1', target: 'scripts/a.js', description: '', precondition: 'one', replacement: 'ONE' },
+            { id: 'p2', target: 'scripts/a.js', description: '', precondition: 'two', replacement: 'TWO' },
         ]);
-        const files = new Map<string, string>([['a.js', 'one and two']]);
+        const files = new Map<string, string>([['scripts/a.js', 'one and two']]);
 
         const results = await applyCodePatches(files, ['p1', 'p2'], SOURCE, mockLogger);
 
         expect(results.every((r) => r.applied)).toBe(true);
-        expect(files.get('a.js')).toBe('ONE and TWO');
+        expect(files.get('scripts/a.js')).toBe('ONE and TWO');
     });
 });
 
@@ -356,7 +356,7 @@ describe('applyCodePatches — idempotency', () => {
     it('is idempotent: re-running on an already-patched file reports success (alreadyApplied), untouched', async () => {
         const patch: CodePatch = {
             id: 'p',
-            target: 'a.js',
+            target: 'scripts/a.js',
             description: '',
             precondition: 'OLD',
             replacement: 'NEW',
@@ -364,11 +364,11 @@ describe('applyCodePatches — idempotency', () => {
         mockExternalLedger([patch]);
 
         // First apply: succeeds
-        const files = new Map<string, string>([['a.js', 'this is OLD content']]);
+        const files = new Map<string, string>([['scripts/a.js', 'this is OLD content']]);
         const first = await applyCodePatches(files, ['p'], SOURCE, mockLogger);
         expect(first[0].applied).toBe(true);
         expect(first[0].alreadyApplied).toBeUndefined();
-        expect(files.get('a.js')).toBe('this is NEW content');
+        expect(files.get('scripts/a.js')).toBe('this is NEW content');
 
         // Second apply on the now-patched content: the replacement is in place,
         // so this is success — NOT a "didn't apply" warning (the b2b-tester
@@ -376,7 +376,7 @@ describe('applyCodePatches — idempotency', () => {
         const second = await applyCodePatches(files, ['p'], SOURCE, mockLogger);
         expect(second[0].applied).toBe(true);
         expect(second[0].alreadyApplied).toBe(true);
-        expect(files.get('a.js')).toBe('this is NEW content');
+        expect(files.get('scripts/a.js')).toBe('this is NEW content');
     });
 });
 
@@ -387,14 +387,14 @@ describe('applyCodePatches — idempotency', () => {
 describe('applyCodePatches — multi-occurrence precondition', () => {
     it('replaces only the first occurrence when precondition appears multiple times (deterministic via String.replace)', async () => {
         mockExternalLedger([
-            { id: 'p', target: 'a.js', description: '', precondition: 'foo', replacement: 'BAR' },
+            { id: 'p', target: 'scripts/a.js', description: '', precondition: 'foo', replacement: 'BAR' },
         ]);
-        const files = new Map<string, string>([['a.js', 'foo and foo and foo']]);
+        const files = new Map<string, string>([['scripts/a.js', 'foo and foo and foo']]);
 
         const results = await applyCodePatches(files, ['p'], SOURCE, mockLogger);
 
         expect(results[0].applied).toBe(true);
-        expect(files.get('a.js')).toBe('BAR and foo and foo');
+        expect(files.get('scripts/a.js')).toBe('BAR and foo and foo');
     });
 });
 
@@ -407,14 +407,14 @@ describe('applyCodePatches — critical flag', () => {
         mockExternalLedger([
             {
                 id: 'must-apply',
-                target: 'a.js',
+                target: 'scripts/a.js',
                 description: 'Load-bearing',
                 precondition: 'NOT_THERE',
                 replacement: 'X',
                 critical: true,
             },
         ]);
-        const files = new Map<string, string>([['a.js', 'something else']]);
+        const files = new Map<string, string>([['scripts/a.js', 'something else']]);
 
         await expect(
             applyCodePatches(files, ['must-apply'], SOURCE, mockLogger)
@@ -425,7 +425,7 @@ describe('applyCodePatches — critical flag', () => {
         mockExternalLedger([
             {
                 id: 'must-apply',
-                target: 'missing.js',
+                target: 'scripts/missing.js',
                 description: 'Load-bearing',
                 precondition: 'X',
                 replacement: 'Y',
@@ -443,13 +443,13 @@ describe('applyCodePatches — critical flag', () => {
         mockExternalLedger([
             {
                 id: 'p',
-                target: 'a.js',
+                target: 'scripts/a.js',
                 description: '',
                 precondition: 'NOT_THERE',
                 replacement: 'X',
             },
         ]);
-        const files = new Map<string, string>([['a.js', 'something else']]);
+        const files = new Map<string, string>([['scripts/a.js', 'something else']]);
 
         await expect(applyCodePatches(files, ['p'], SOURCE, mockLogger)).resolves.toEqual([
             expect.objectContaining({ patchId: 'p', applied: false }),
@@ -464,7 +464,7 @@ describe('applyCodePatches — critical flag', () => {
 describe('per-source caching', () => {
     it('deduplicates concurrent fetches to a single HTTP request', async () => {
         const fetchMock = mockExternalLedger([
-            { id: 'p', target: 'a.js', description: '', precondition: 'x', replacement: 'y' },
+            { id: 'p', target: 'scripts/a.js', description: '', precondition: 'x', replacement: 'y' },
         ]);
 
         const source: CodePatchSource = {
@@ -485,7 +485,13 @@ describe('per-source caching', () => {
             expect(patches).toHaveLength(1);
             expect(patches[0].id).toBe('p');
         }
-        expect(fetchMock).toHaveBeenCalledTimes(1);
+        // Dedup is about the CONTENT fetch. The release-ref lookup is a separate
+        // call (and is itself cached per repo), so count content requests rather
+        // than total requests.
+        const contentCalls = fetchMock.mock.calls
+            .map((c: unknown[]) => String(c[0]))
+            .filter((u: string) => u.includes('raw.githubusercontent'));
+        expect(contentCalls).toHaveLength(1);
     });
 
     it('evicts failed promise from cache so the next call retries', async () => {
@@ -502,11 +508,94 @@ describe('per-source caching', () => {
 
         // Second call now succeeds — proves the failed promise was evicted
         const successFetch = mockExternalLedger([
-            { id: 'p', target: 'a.js', description: '', precondition: 'x', replacement: 'y' },
+            { id: 'p', target: 'scripts/a.js', description: '', precondition: 'x', replacement: 'y' },
         ]);
         const patches = await getCodePatches(['p'], source, mockLogger);
 
         expect(patches).toHaveLength(1);
         expect(successFetch).toHaveBeenCalled();
+    });
+});
+
+/**
+ * Target policy enforcement (see patchTargetPolicy.ts).
+ *
+ * The ledger is fetched from a public repo, so a compromised or mistaken entry
+ * could name a file that has nothing to do with storefront JavaScript. The two
+ * that matter are `package.json` — a dependency addition runs arbitrary code at
+ * install time — and `.github/workflows/*`, which is write access to the
+ * colleague's CI secrets. Refusal happens here, at the point of consumption,
+ * because CI on the patches repo cannot be trusted to survive the compromise
+ * it would be guarding against.
+ */
+describe('applyCodePatches — target policy', () => {
+    it('refuses a patch targeting package.json and leaves the file untouched', async () => {
+        mockExternalLedger([
+            {
+                id: 'malicious',
+                target: 'package.json',
+                precondition: '"dependencies"',
+                replacement: '"dependencies": { "evil": "1.0.0" }',
+            } as CodePatch,
+        ]);
+        const files = new Map([['package.json', '{ "dependencies": {} }']]);
+
+        const results = await applyCodePatches(files, ['malicious'], SOURCE, mockLogger);
+
+        expect(results[0].applied).toBe(false);
+        expect(results[0].reason).toMatch(/permitted directories|path escape|not a \.js/i);
+        // The refusal must be a refusal, not a warning next to a write.
+        expect(files.get('package.json')).toBe('{ "dependencies": {} }');
+    });
+
+    it('refuses a patch targeting a GitHub workflow', async () => {
+        mockExternalLedger([
+            {
+                id: 'ci-takeover',
+                target: '.github/workflows/deploy.yml',
+                precondition: 'on:',
+                replacement: 'on: [push]',
+            } as CodePatch,
+        ]);
+        const files = new Map([['.github/workflows/deploy.yml', 'on:\n']]);
+
+        const results = await applyCodePatches(files, ['ci-takeover'], SOURCE, mockLogger);
+
+        expect(results[0].applied).toBe(false);
+        expect(files.get('.github/workflows/deploy.yml')).toBe('on:\n');
+    });
+
+    it('refuses a target that escapes the repo', async () => {
+        mockExternalLedger([
+            {
+                id: 'traversal',
+                target: '../../.ssh/authorized_keys',
+                precondition: 'x',
+                replacement: 'y',
+            } as CodePatch,
+        ]);
+        const files = new Map([['../../.ssh/authorized_keys', 'x']]);
+
+        const results = await applyCodePatches(files, ['traversal'], SOURCE, mockLogger);
+
+        expect(results[0].applied).toBe(false);
+        expect(results[0].reason).toMatch(/path escape/i);
+    });
+
+    it('still applies a legitimate patch', async () => {
+        mockExternalLedger([
+            {
+                id: 'legit',
+                target: 'scripts/commerce.js',
+                precondition: 'const a = 1;',
+                replacement: 'const a = 2;',
+            } as CodePatch,
+        ]);
+        const files = new Map([['scripts/commerce.js', 'const a = 1;']]);
+
+        const results = await applyCodePatches(files, ['legit'], SOURCE, mockLogger);
+
+        expect(results[0].applied).toBe(true);
+        expect(files.get('scripts/commerce.js')).toBe('const a = 2;');
     });
 });

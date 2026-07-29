@@ -112,7 +112,15 @@ async function pinIfThinLayer(
     logger: HandlerContext['logger'],
     patchReport: PatchReport | undefined,
 ): Promise<void> {
-    if (!edsConfig.codePatchSource || !edsConfig.codePatches) return;
+    if (!edsConfig.codePatchSource || !edsConfig.codePatches) {
+        // Logged, never silent. This guard disabled the whole code-patch
+        // subsystem for every edit-mode run since before beta.121, and the
+        // absence of any log is what hid it.
+        logger.info(
+            '[Storefront Setup] No code patches configured for this storefront — skipping patch step',
+        );
+        return;
+    }
     const { repoOwner, repoName } = repoInfo;
     if (!repoOwner || !repoName) return;  // Defensive — phases above populate both before this runs.
     await pinRepoToLkg(
