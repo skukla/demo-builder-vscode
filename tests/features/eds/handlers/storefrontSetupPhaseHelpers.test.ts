@@ -339,3 +339,41 @@ describe('checkGitHubAppForExistingRepo — no GitHub credential', () => {
         expect(services.githubAppService.isAppInstalled).toHaveBeenCalledTimes(1);
     });
 });
+
+/**
+ * The install dialog must survive the pipeline halting.
+ *
+ * This gate sent `storefront-setup-github-app-required` — which renders
+ * GitHubAppInstallDialog with the install URL and polls for the install — and
+ * then returned `{ success: false, error: 'GitHub App installation required' }`.
+ * The handler turned that into a thrown error and a `storefront-setup-error`
+ * message, flipping the UI to the failure screen a moment after the dialog
+ * appeared. The guided flow was built and wired, then destroyed on the way out,
+ * and the resume handler downstream could never fire.
+ *
+ * A missing App is a halt with a remedy in progress, not a failure.
+ */
+describe('checkGitHubAppForExistingRepo — halting without failing', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('marks a missing App as awaiting installation, not as an error', async () => {
+        const context = makeContext();
+        const services = makeServices({ isInstalled: false, codeStatus: 404 });
+
+        const result = await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
+
+        expect(sentMessageTypes(context)).toContain('storefront-setup-github-app-required');
+        expect(result?.awaitingGitHubApp).toBe(true);
+    });
+
+    it('does NOT mark an undetermined check as awaiting installation', async () => {
+        // No dialog can fix a refused credential, so that path must keep
+        // failing loudly.
+        const context = makeContext();
+        const services = makeServices({ isInstalled: false, transient: true, httpStatus: 401 });
+
+        const result = await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
+
+        expect(result?.awaitingGitHubApp).toBeFalsy();
+    });
+});

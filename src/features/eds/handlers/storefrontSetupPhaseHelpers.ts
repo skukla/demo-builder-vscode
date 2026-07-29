@@ -62,7 +62,12 @@ export async function checkGitHubAppForExistingRepo(
             message: 'The AEM Code Sync GitHub App must be installed to continue.',
         });
 
-        return { success: false, error: 'GitHub App installation required', ...repoInfo };
+        return {
+            success: false,
+            error: 'GitHub App installation required',
+            awaitingGitHubApp: true,
+            ...repoInfo,
+        };
     }
 
     logger.info(

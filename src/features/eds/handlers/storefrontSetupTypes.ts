@@ -21,6 +21,14 @@ import type { HelixService } from '../services/helixService';
 export interface StorefrontSetupResult {
     success: boolean;
     error?: string;
+    /**
+     * The pipeline stopped because AEM Code Sync is not installed and the user
+     * is being walked through installing it. A halt with a remedy in progress —
+     * NOT a failure. Callers must not convert this into an error message: doing
+     * so replaces the install dialog with the failure screen and strands the
+     * resume handler that would have continued the run.
+     */
+    awaitingGitHubApp?: boolean;
     repoUrl?: string;
     repoOwner?: string;
     repoName?: string;

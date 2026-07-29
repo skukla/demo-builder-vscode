@@ -168,7 +168,12 @@ async function verifyCodeSync(
                 message: 'The AEM Code Sync GitHub App must be installed to continue.',
             });
 
-            return { success: false, error: 'GitHub App installation required', ...repoInfo };
+            return {
+            success: false,
+            error: 'GitHub App installation required',
+            awaitingGitHubApp: true,
+            ...repoInfo,
+        };
         }
 
         // 2. App is installed — wait briefly for the bus to start serving the

@@ -23,6 +23,7 @@ import { ToolManager } from '../services/toolManager';
 import type { EdsMetadata, EdsCleanupOptions } from '../services/types';
 import { ensureDaLiveAuth, getDaLiveAuthService, resolveByomOverlayConfig } from './edsHelpers';
 import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
+import type { StorefrontSetupResult } from './storefrontSetupTypes';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { hasMeshInDependencies } from '@/core/constants';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
@@ -254,6 +255,26 @@ export async function handleCancelStorefrontSetup(
  * @param payload - Start payload with project and EDS config
  * @returns Success with setup results
  */
+/** What the caller should do with a finished setup run. */
+export type SetupOutcome = 'complete' | 'awaiting-github-app' | 'error';
+
+/**
+ * Classify a setup result.
+ *
+ * Three outcomes, not two. Collapsing "stopped so the user can install the App"
+ * into "failed" is what replaced the install dialog with the failure screen: the
+ * dialog message is sent first, then the error message overwrote it a moment
+ * later, and the resume handler could never fire.
+ *
+ * Decided by the flag, never by the error text — that wording changed twice in
+ * one release, and matching on it would have broken silently each time.
+ */
+export function classifySetupResult(result: StorefrontSetupResult): SetupOutcome {
+    if (result.success) return 'complete';
+    if (result.awaitingGitHubApp) return 'awaiting-github-app';
+    return 'error';
+}
+
 export async function handleStartStorefrontSetup(
     context: HandlerContext,
     payload?: StorefrontSetupStartPayload,
@@ -346,7 +367,19 @@ export async function handleStartStorefrontSetup(
             },
         );
 
-        if (result.success) {
+        const outcome = classifySetupResult(result);
+
+        // Awaiting installation: the install dialog is already up and the resume
+        // handler takes over from here. Emitting an error tears the dialog down
+        // and leaves the user with nothing to act on.
+        if (outcome === 'awaiting-github-app') {
+            context.logger.info(
+                '[Storefront Setup] Paused — waiting for AEM Code Sync installation',
+            );
+            return { success: false, error: result.error };
+        }
+
+        if (outcome === 'complete') {
             context.logger.info(`[Storefront Setup] Complete: ${result.repoUrl}`);
             await context.sendMessage('storefront-setup-complete', {
                 message: 'Storefront setup completed successfully!',
