@@ -81,6 +81,7 @@
 | [009](adr/009-storefront-config-flag-injection.md) | Storefront `config.json` flag injection — the generator owns config, so template flags must be re-injected | Accepted |
 | [010](adr/010-content-copy-completeness.md) | Content-copy completeness — follow document references so unindexed fragments aren't dropped | Accepted |
 | [011](adr/011-app-builder-deployables.md) | App Builder deployables — a keyed set of deployable components in one App Builder project (shipped as `appBuilderComponents`) | Accepted; D1–D2 implemented, D3 pending |
+| [012](adr/012-diagnostic-surfaces.md) | Diagnostic surfaces — every capability human-reachable first, MCP tools wrap the same core; no remote probe manifest | Accepted; not yet implemented (beta.123) |
 
 ## Quick Reference
 
