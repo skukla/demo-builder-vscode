@@ -62,7 +62,17 @@ export async function rehydratePackageDerivedConfig<T extends object>(
     stackId: string | undefined,
     logger: Logger,
 ): Promise<T> {
-    if (!packageId || !stackId) return edsConfig;
+    if (!packageId || !stackId) {
+        // Never silent. This returned without a word when selectedStack failed to
+        // reach the payload, and the whole patch subsystem stayed dead with no
+        // trace — the same failure mode this function exists to fix.
+        logger.warn(
+            '[Storefront Setup] Cannot resolve package settings — '
+                + `package=${packageId ?? 'missing'}, stack=${stackId ?? 'missing'}. `
+                + 'Patches and overlay settings will not be applied.',
+        );
+        return edsConfig;
+    }
 
     let storefront: Record<string, unknown> | undefined;
     try {

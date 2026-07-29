@@ -129,6 +129,17 @@ describe('rehydratePackageDerivedConfig', () => {
         expect(mockLookup).not.toHaveBeenCalled();
     });
 
+    it('warns when it cannot resolve, rather than no-opping in silence', async () => {
+        // A silent no-op here is what let a missing `selectedStack` disable every
+        // patch with no trace in the log — the same failure this function fixes.
+        await rehydratePackageDerivedConfig(
+            EDIT_MODE_CONFIG, 'custom', undefined, logger as never,
+        );
+
+        expect(logger.warn).toHaveBeenCalled();
+        expect(logger.warn.mock.calls.flat().join(' ')).toContain('stack=missing');
+    });
+
     it('survives a lookup failure rather than aborting setup', async () => {
         // A malformed demo-packages.json must not take storefront setup down;
         // the pre-fix behavior (no patches) is the correct degradation.
