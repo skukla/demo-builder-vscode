@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.123] - 2026-07-29
+
+### Added
+
+- **Diagnostics now says why the Configuration Service refused a write.** When registering a storefront's site config fails with "forbidden", the report tests the same credential against DA.live and interprets the two answers together. If DA.live accepts it and the Configuration Service does not, the credential is fine and the *account* is unauthorized — the admin role is granted to whoever installs the AEM Code Sync GitHub App on the repo, so a storefront set up by a teammate leaves you with no role on it. The report names that, and prints Adobe's own reason and invocation ID for support. Read-only: it never writes a site config.
+
 ## [1.0.0-beta.122] - 2026-07-29
 
 ### Fixed
