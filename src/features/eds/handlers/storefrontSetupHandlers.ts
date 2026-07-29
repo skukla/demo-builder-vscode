@@ -22,6 +22,7 @@ import { GitHubTokenService } from '../services/githubTokenService';
 import { ToolManager } from '../services/toolManager';
 import type { EdsMetadata, EdsCleanupOptions } from '../services/types';
 import { ensureDaLiveAuth, getDaLiveAuthService, resolveByomOverlayConfig } from './edsHelpers';
+import { rehydratePackageDerivedConfig } from './storefrontSetupConfigRehydration';
 import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
 import type { StorefrontSetupResult } from './storefrontSetupTypes';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
@@ -65,6 +66,8 @@ export interface StorefrontSetupStartPayload {
     customBlockLibraries?: CustomBlockLibrary[];
     /** Selected package ID (e.g., 'citisignal') */
     selectedPackage?: string;
+    /** Selected stack ID (e.g. 'eds-accs') — needed to resolve package-derived settings */
+    selectedStack?: string;
     edsConfig: {
         repoName: string;
         repoMode?: 'new' | 'existing';
@@ -288,8 +291,17 @@ export async function handleStartStorefrontSetup(
         return { success: false, error: 'Missing required parameters' };
     }
 
-    const { projectName, edsConfig } = payload;
+    const { projectName } = payload;
     context.logger.info(`[Storefront Setup] Starting for project: ${projectName}`);
+
+    // Edit mode rebuilds edsConfig from project metadata, which carries no
+    // package-derived settings — restore them before any phase reads them.
+    const edsConfig = await rehydratePackageDerivedConfig(
+        payload.edsConfig,
+        payload.selectedPackage,
+        payload.selectedStack,
+        context.logger,
+    );
 
     // Create AbortController for cancel support
     const abortController = new AbortController();

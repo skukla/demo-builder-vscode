@@ -311,8 +311,9 @@ export function StorefrontSetupStep({
             selectedBlockLibraries: state.selectedBlockLibraries,
             customBlockLibraries: state.customBlockLibraries,
             selectedPackage: state.selectedPackage,
+            selectedStack: state.selectedStack,
         });
-    }, [state.projectName, state.edsConfig, state.componentConfigs, state.components?.backend, state.components?.dependencies, state.selectedOptionalDependencies, state.selectedAddons, state.selectedBlockLibraries, state.customBlockLibraries, state.selectedPackage]);
+    }, [state.projectName, state.edsConfig, state.componentConfigs, state.components?.backend, state.components?.dependencies, state.selectedOptionalDependencies, state.selectedAddons, state.selectedBlockLibraries, state.customBlockLibraries, state.selectedPackage, state.selectedStack]);
 
     /**
      * Handle GitHub App installation detected
@@ -348,6 +349,7 @@ export function StorefrontSetupStep({
         selectedBlockLibraries: state.selectedBlockLibraries,
         customBlockLibraries: state.customBlockLibraries,
         selectedPackage: state.selectedPackage,
+            selectedStack: state.selectedStack,
     });
 
     // Update running state and partialState ref when phase changes

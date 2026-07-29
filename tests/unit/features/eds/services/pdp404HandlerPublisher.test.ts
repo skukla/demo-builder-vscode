@@ -724,3 +724,106 @@ describe('installSmart404Handler', () => {
     });
 });
 
+
+/**
+ * Stale-SHA retry.
+ *
+ * Inspector Tagging writes `scripts/delayed.js` through the Git Tree API during
+ * block installation; this publisher reads it back through the Contents API,
+ * which serves from a different path and can lag behind a tree commit. A live
+ * run on 2026-07-29 lost that race 18 seconds after the tree commit:
+ *
+ *   [PDP404] GitHub commit failed: scripts/delayed.js does not match
+ *            15be5fb9e97773471ea4124c259d6d1e2eeb2626 — skipping smart 404 install
+ *
+ * The step is non-fatal, so setup reported Complete with no PDP handling at all.
+ * Re-reading and retrying once covers both the staleness and genuine interleaving.
+ */
+describe('installSmart404Handler — stale SHA', () => {
+    const repoOwner = 'skukla';
+    const repoName = 'citisignal-b2b';
+    const daLiveOrg = 'skukla';
+    const daLiveSite = 'citisignal-b2b';
+    const overlayUrl = 'https://example.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp';
+    const SHA_MISMATCH = 'scripts/delayed.js does not match 15be5fb9e97773471ea4124c259d6d1e2eeb2626';
+
+    /** Contents API hands back `sha` on each successive read of delayed.js. */
+    function makeGithub(delayedShas: string[]) {
+        let read = 0;
+        return {
+            getFileContent: jest.fn().mockImplementation((_o: string, _r: string, path: string) => {
+                if (path === 'head.html') {
+                    return Promise.resolve({
+                        content: '<meta charset="UTF-8">\n<script nonce="aem" type="importmap">{}</script>\n',
+                        sha: 'head-sha',
+                    });
+                }
+                if (path === '404.html') {
+                    return Promise.resolve({
+                        content: '<!DOCTYPE html><html><head><script nonce="aem">w.x=1;</script></head></html>',
+                        sha: '404-sha',
+                    });
+                }
+                const sha = delayedShas[Math.min(read, delayedShas.length - 1)];
+                read += 1;
+                return Promise.resolve({ content: '// Existing delayed.js\n', sha });
+            }),
+            createOrUpdateFile: jest.fn(),
+        };
+    }
+
+    beforeEach(() => jest.clearAllMocks());
+
+    it('re-reads and retries once when the write is rejected for a stale SHA', async () => {
+        const gh = makeGithub(['stale-sha', 'fresh-sha']);
+        gh.createOrUpdateFile
+            .mockRejectedValueOnce(new Error(SHA_MISMATCH))
+            .mockResolvedValue({ sha: 'new', commitSha: 'c' });
+
+        const result = await installSmart404Handler(
+            gh as never, repoOwner, repoName, overlayUrl, mockLogger as never,
+            daLiveOrg, daLiveSite,
+        );
+
+        expect(result).toEqual({ installed: true });
+        const delayedWrites = gh.createOrUpdateFile.mock.calls.filter(
+            c => c[2] === 'scripts/delayed.js',
+        );
+        expect(delayedWrites).toHaveLength(2);
+        expect(delayedWrites[1][5]).toBe('fresh-sha');
+    });
+
+    it('retries only once — a second stale rejection gives up', async () => {
+        const gh = makeGithub(['stale-1', 'stale-2']);
+        gh.createOrUpdateFile.mockRejectedValue(new Error(SHA_MISMATCH));
+
+        const result = await installSmart404Handler(
+            gh as never, repoOwner, repoName, overlayUrl, mockLogger as never,
+            daLiveOrg, daLiveSite,
+        );
+
+        expect(result.installed).toBe(false);
+        const delayedWrites = gh.createOrUpdateFile.mock.calls.filter(
+            c => c[2] === 'scripts/delayed.js',
+        );
+        expect(delayedWrites).toHaveLength(2);
+    });
+
+    it('does NOT retry a failure that is not a SHA mismatch', async () => {
+        // Permissions and missing-file failures are not transient. Retrying
+        // them just doubles the latency of a certain failure.
+        const gh = makeGithub(['sha-1']);
+        gh.createOrUpdateFile.mockRejectedValue(new Error('Resource not accessible by integration'));
+
+        const result = await installSmart404Handler(
+            gh as never, repoOwner, repoName, overlayUrl, mockLogger as never,
+            daLiveOrg, daLiveSite,
+        );
+
+        expect(result.installed).toBe(false);
+        const delayedWrites = gh.createOrUpdateFile.mock.calls.filter(
+            c => c[2] === 'scripts/delayed.js',
+        );
+        expect(delayedWrites).toHaveLength(1);
+    });
+});
