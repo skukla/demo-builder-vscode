@@ -385,9 +385,19 @@ export function ProjectCreationStep({ state, updateState, onBack, importedSettin
             const result = await webviewClient.request<{
                 success: boolean;
                 isInstalled: boolean;
+                undetermined?: boolean;
+                reason?: string;
                 installUrl?: string;
                 error?: string;
             }>('check-github-app', { owner, repo });
+
+            // An undetermined check means AEM never answered — installing the App
+            // cannot resolve that, so don't route the user into the install flow.
+            // Creation proceeds and surfaces the real cause if it recurs.
+            if (result.undetermined) {
+                console.warn('[GitHub App Check] Undetermined:', result.reason);
+                return true;
+            }
 
             if (result.success && !result.isInstalled && result.installUrl) {
                 // App not installed, show dialog

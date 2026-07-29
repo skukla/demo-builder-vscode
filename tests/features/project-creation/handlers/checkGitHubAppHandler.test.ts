@@ -129,6 +129,65 @@ describe('checkGitHubApp handler', () => {
         expect(allLogs(context)).toContain('401');
     });
 
+    // ─── The response the UI acts on ────────────────────────────────────────
+    //
+    // Every UI consumer keys off `isInstalled === false` to show the install
+    // prompt. If an undetermined check reports plain `isInstalled: false` with
+    // an installUrl, the wizard hands the user the same dead-end instruction
+    // the storefront gate used to — the defect simply moves one layer out.
+
+    it('marks an undetermined check as undetermined, not uninstalled', async () => {
+        mockIsAppInstalled.mockResolvedValue({
+            isInstalled: false,
+            transient: true,
+            httpStatus: 401,
+            helixError: '[admin] not authenticated',
+        });
+        const context = makeContext();
+
+        const result = await checkGitHubApp(context, REQUEST);
+
+        expect(result.undetermined).toBe(true);
+    });
+
+    it('withholds the install URL when the check was undetermined', async () => {
+        mockIsAppInstalled.mockResolvedValue({
+            isInstalled: false,
+            transient: true,
+            httpStatus: 401,
+        });
+        const context = makeContext();
+
+        const result = await checkGitHubApp(context, REQUEST);
+
+        // No install URL means no "Install App" button to send the user down.
+        expect(result.installUrl).toBeUndefined();
+    });
+
+    it('explains an undetermined check in terms the user can act on', async () => {
+        mockIsAppInstalled.mockResolvedValue({
+            isInstalled: false,
+            transient: true,
+            httpStatus: 401,
+        });
+        const context = makeContext();
+
+        const result = await checkGitHubApp(context, REQUEST);
+
+        expect(String(result.reason)).toMatch(/401/);
+        expect(String(result.reason)).toMatch(/sign-in|credential/i);
+    });
+
+    it('still offers the install URL when the App is genuinely absent', async () => {
+        mockIsAppInstalled.mockResolvedValue({ isInstalled: false, codeStatus: 404 });
+        const context = makeContext();
+
+        const result = await checkGitHubApp(context, REQUEST);
+
+        expect(result.undetermined).toBeFalsy();
+        expect(result.installUrl).toContain('aem-code-sync');
+    });
+
     it('does NOT trigger a code sync on a definitive code.status 404', async () => {
         // Helix answered authoritatively: the App is not installed. Triggering a
         // sync cannot help — the webhook that would drive it does not exist.

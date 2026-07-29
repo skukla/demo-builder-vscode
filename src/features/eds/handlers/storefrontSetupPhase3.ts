@@ -8,15 +8,15 @@
  */
 
 import * as vscode from 'vscode';
+import {
+    buildUndeterminedAppCheckError,
+    resolveAppInstallation,
+} from '../services/appInstallationResolver';
 import { CONFIG_SERVICE_PROPAGATION_DELAYS_MS } from '../services/configServiceRetry';
 import { buildSiteConfigParams, ConfigurationService } from '../services/configurationService';
 import { DaLiveAuthError } from '../services/types';
 import { configureDaLivePermissions, surfaceOverlayRegistrationFailure } from './edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
-import {
-    buildUndeterminedAppCheckError,
-    resolveAppInstallation,
-} from './storefrontSetupPhaseHelpers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { HandlerContext } from '@/types/handlers';
