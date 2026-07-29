@@ -198,6 +198,11 @@ export default tseslint.config(
             'jest.config.js',
             'esbuild.config.js',
             'tests/__mocks__/**/*.js',
+            // Verbatim upstream sources pinned for anchor-match tests. Linting
+            // them reports on someone else's code, in the wrong environment
+            // (browser globals under a Node config), and any fix would be
+            // overwritten by the documented `curl` re-pin in the fixture README.
+            'tests/fixtures/**',
         ],
     }
 );
