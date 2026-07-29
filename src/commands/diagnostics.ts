@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di';
 import { getLogger, type CommandResultWithContext, type DebugLogger } from '@/core/logging';
-import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
+import { mcpSocketBindings } from '@/features/ai/server/mcpSocketPath';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
 import {
     probeGitHubCredential,
@@ -673,15 +673,16 @@ export class DiagnosticsCommand {
      * throws: no workspace or an unreachable socket yields a structured result.
      */
     private async checkMcp(): Promise<McpInfo> {
+        // Probe the SAME socket the server binds as primary — the projects-root
+        // one. Probing the workspace socket described the retired
+        // one-project-one-workspace model and reported "not running" whenever no
+        // folder was open, which is the normal state for this window model.
+        const projectsDir =
+            process.env.DEMO_BUILDER_PROJECTS_DIR ??
+            path.join(os.homedir(), '.demo-builder', 'projects');
         const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        if (!workspacePath) {
-            return {
-                running: false,
-                error: 'No workspace folder open — the in-extension MCP server runs per project.',
-            };
-        }
+        const { primary: socketPath } = mcpSocketBindings(projectsDir, workspacePath);
 
-        const socketPath = resolveMcpSocketPath(workspacePath);
         const result = await probeInExtensionMcpTools(socketPath);
         if (!result.ok) {
             return { running: false, socketPath, error: result.error };
