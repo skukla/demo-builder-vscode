@@ -305,6 +305,23 @@ export function isEdsProject(project: Project | undefined | null): boolean {
 }
 
 /**
+ * The DA.live org/site pair for an EDS project, or undefined when absent.
+ *
+ * Sibling of {@link getEdsGithubRepo}. Both halves are required: a site config
+ * lives at `/config/{org}/sites/{site}.json`, so a partial pair addresses
+ * nothing and callers must treat it as "no target" rather than guess.
+ */
+export function getEdsDaLiveTarget(
+    project: Project | undefined | null,
+): { org: string; site: string } | undefined {
+    if (!isEdsProject(project)) return undefined;
+    const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    const org = edsInstance?.metadata?.daLiveOrg as string | undefined;
+    const site = edsInstance?.metadata?.daLiveSite as string | undefined;
+    return org && site ? { org, site } : undefined;
+}
+
+/**
  * Get the EDS storefront's GitHub repository as `owner/repo`.
  *
  * SOP §4: extracted deep optional chain to a named getter. Three callers depend

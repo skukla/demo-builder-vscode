@@ -1,0 +1,213 @@
+/**
+ * Configuration Service credential probe.
+ *
+ * Answers one question the logs could not: when the Configuration Service
+ * refuses a write, is the credential bad, or is the credential fine and the
+ * *identity* unauthorized?
+ *
+ * A colleague hit `PUT /config/{org}/sites/{site}.json -> 403` while the same
+ * IMS token succeeded against `admin.da.live` seconds earlier. That combination
+ * rules out expiry and malformation, but nothing surfaced it, so the case stayed
+ * open for days while the obvious reading — "auth is broken" — pointed the wrong
+ * way.
+ *
+ * `ConfigurationService.registerSite` names the mechanism in its own docstring:
+ * the Configuration Service grants the admin role to whoever *installs* the AEM
+ * Code Sync GitHub App. Someone who did not install it on that repo — a
+ * teammate did, or an org admin installed it org-wide — holds a valid token and
+ * is still refused every write.
+ *
+ * ## Read-only by construction
+ *
+ * Every leg is a GET, and a test enforces it. A diagnostic that PUT a site
+ * config could clobber a live storefront. There is no safe write test worth
+ * having: the only non-mutating one would be a PUT that 409s on an existing
+ * config, which stops being safe the moment Adobe makes that endpoint an upsert.
+ * Read access plus the user's observed write failure is enough to separate the
+ * branches, and it cannot damage anything.
+ *
+ * Pattern: mirrors `probeGitHubCredential` — self-contained, returns structured
+ * legs plus a one-line verdict, so Diagnostics renders rather than reasons.
+ *
+ * @module features/eds/services/configServiceProbe
+ */
+
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { Logger } from '@/types/logger';
+
+const HELIX_ADMIN_BASE_URL = 'https://admin.hlx.page';
+const DA_LIVE_ADMIN_BASE_URL = 'https://admin.da.live';
+
+/** What each leg found. An absent leg means it never ran. */
+export interface ConfigServiceProbeResult {
+    token: { present: boolean; error?: string };
+    /** GET of the site's Configuration Service entry. */
+    configService?: {
+        httpStatus?: number;
+        /** Adobe's stated reason — the body is empty on 401/403. */
+        xError?: string;
+        /** Adobe support's trace handle for this exact call. */
+        invocationId?: string;
+        error?: string;
+    };
+    /**
+     * The same credential against a different Adobe service. This is the leg
+     * that makes a 403 interpretable: DA.live accepting what the Configuration
+     * Service refuses is the signature of an authorization problem.
+     */
+    daLive?: { httpStatus?: number; error?: string };
+    /** One-line interpretation of the legs together. */
+    verdict: string;
+}
+
+/**
+ * Minimal shape needed from the DA.live token provider.
+ *
+ * `null` is in the union because the real provider returns it — narrowing to
+ * `undefined` here would compile only until a caller passed the actual service.
+ */
+interface TokenSource {
+    getAccessToken(): Promise<string | null | undefined>;
+}
+
+interface ProbeResponse {
+    ok: boolean;
+    status: number;
+    headers?: { get?: (name: string) => string | null };
+}
+
+/** GET with the IMS bearer. Never any other verb — see the module note. */
+async function get(url: string, token: string): Promise<ProbeResponse> {
+    return (await fetch(url, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+    })) as unknown as ProbeResponse;
+}
+
+function header(response: ProbeResponse, name: string): string | undefined {
+    return response.headers?.get?.(name) ?? undefined;
+}
+
+/**
+ * Interpret the legs together.
+ *
+ * Order matters: a 404 is checked before the permission branches because an
+ * unregistered site is a different remedy entirely, and reading it as "refused"
+ * would send someone chasing permissions they already have.
+ */
+function interpret(result: ConfigServiceProbeResult): string {
+    const config = result.configService;
+    const daLiveOk = result.daLive?.httpStatus === 200;
+
+    if (config?.error) {
+        return (
+            `Could not reach the Configuration Service (${config.error}). ` +
+            'Nothing can be concluded about permissions from this run.'
+        );
+    }
+
+    const status = config?.httpStatus;
+
+    if (status === 200) {
+        return 'No problem found: this credential can read the site configuration.';
+    }
+
+    if (status === 404) {
+        return (
+            'No site config exists for this storefront yet — it is not registered. ' +
+            'That is a missing registration, not a permission problem; a storefront ' +
+            'reset registers it.'
+        );
+    }
+
+    if (status === 403) {
+        if (daLiveOk) {
+            return (
+                'The credential is valid — DA.live accepted it in the same run — but the ' +
+                'Configuration Service refused it. Not a token problem: the admin role is ' +
+                'granted to whoever installs the AEM Code Sync GitHub App on the repo. If a ' +
+                'teammate or an org admin installed it, you hold no role on this site. ' +
+                'Have the installing user re-install it under your account.'
+            );
+        }
+        return (
+            'The Configuration Service refused this credential, and DA.live did not accept ' +
+            'it either. Sign in again, then re-run this probe — if it still refuses, the ' +
+            'account lacks access to this org.'
+        );
+    }
+
+    if (status === 401) {
+        return (
+            'The Configuration Service did not authenticate this credential. Sign in to ' +
+            'DA.live again and re-run.'
+        );
+    }
+
+    return (
+        `The Configuration Service returned HTTP ${status ?? 'no response'}. ` +
+        'Nothing decisive — include the invocation ID above when reporting this.'
+    );
+}
+
+/**
+ * Probe whether the current credential can reach a storefront's site config.
+ *
+ * Each leg fails into its own `error` field, so one unreachable host never costs
+ * the answer the other would have given.
+ *
+ * @param tokenProvider - Supplies the DA.live/IMS access token
+ * @param org - DA.live org (GitHub namespace)
+ * @param site - Site name, matching the GitHub repo
+ * @param logger - Receives non-secret breadcrumbs
+ */
+export async function probeConfigService(
+    tokenProvider: TokenSource,
+    org: string,
+    site: string,
+    logger: Logger,
+): Promise<ConfigServiceProbeResult> {
+    const token = await tokenProvider.getAccessToken();
+    if (!token) {
+        return {
+            token: { present: false },
+            verdict: 'No DA.live credential stored — sign in to DA.live, then re-run this probe.',
+        };
+    }
+
+    const result: ConfigServiceProbeResult = { token: { present: true }, verdict: '' };
+
+    try {
+        const response = await get(
+            `${HELIX_ADMIN_BASE_URL}/config/${org}/sites/${site}.json`,
+            token,
+        );
+        result.configService = {
+            httpStatus: response.status,
+            xError: header(response, 'x-error'),
+            invocationId: header(response, 'x-invocation-id'),
+        };
+    } catch (error) {
+        result.configService = { error: (error as Error).message };
+    }
+
+    // Comparison leg. Its only job is to say whether this credential is
+    // accepted ANYWHERE, which is what turns a bare 403 into a diagnosis.
+    try {
+        const response = await get(
+            `${DA_LIVE_ADMIN_BASE_URL}/source/${org}/${site}/index.html`,
+            token,
+        );
+        result.daLive = { httpStatus: response.status };
+    } catch (error) {
+        result.daLive = { error: (error as Error).message };
+    }
+
+    result.verdict = interpret(result);
+    logger.debug(
+        `[ConfigProbe] ${org}/${site}: config=${result.configService?.httpStatus ?? 'err'}, ` +
+            `da.live=${result.daLive?.httpStatus ?? 'err'}`,
+    );
+    return result;
+}
