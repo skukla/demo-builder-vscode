@@ -115,6 +115,17 @@ export async function pollGitHubAppInstallation(
 }
 
 /**
+ * Repo readiness as the UI holds it: the classifier's verdict, or undefined
+ * while the check is still in flight. Undefined must read as "do not block" —
+ * the step would otherwise flicker to invalid on every selection.
+ */
+export type RepoReadinessState =
+    | { kind: 'empty' }
+    | { kind: 'storefront' }
+    | { kind: 'not-a-storefront'; missing: string[] }
+    | { kind: 'undetermined'; reason?: string };
+
+/**
  * Compute whether the REPOSITORY choice is valid (repo picked/created), WITHOUT
  * the AEM-Code-Sync app gate. This is the `repository` sub-step's verdict:
  * - new:      created and not mid-creation
@@ -125,11 +136,26 @@ export function computeRepoValid(
     repoCreationState: RepoCreationState,
     selectedRepo: GitHubRepoItem | undefined,
     isLoading: boolean,
+    readiness?: RepoReadinessState,
+    resetToTemplate?: boolean,
 ): boolean {
     if (repoMode === 'new') {
         return repoCreationState.isCreated && !repoCreationState.isCreating;
     }
-    return !!selectedRepo && !isLoading;
+    if (!selectedRepo || isLoading) return false;
+
+    // A populated repo that is not a storefront cannot complete setup: the
+    // steps that need scripts/scripts.js and scripts/delayed.js skip
+    // themselves, and the run still reports Complete. Reset is the remedy, so
+    // it is required rather than offered.
+    //
+    // Only this state blocks. `empty` is auto-reset (nothing to lose),
+    // `storefront` is the normal case, and `undetermined` must not stop setup
+    // over a GitHub blip — it withholds the destructive default, not the user's
+    // ability to continue.
+    if (readiness?.kind === 'not-a-storefront') return resetToTemplate === true;
+
+    return true;
 }
 
 /**
@@ -371,23 +397,81 @@ export function NewRepoForm({
 }
 
 /**
- * ResetToTemplateOption - Checkbox with warning for resetting existing repos.
+ * Decide the reset control's appearance from what the repo actually contains.
+ *
+ * The control stays rendered in every state — including its notice row — so the
+ * layout never reflows as readiness resolves. That was already true of the
+ * warning row and is worth keeping: a step that jumps as you look at it reads
+ * as broken.
+ */
+export function describeResetOption(
+    readiness: RepoReadinessState | undefined,
+    resetToTemplate: boolean,
+    disabled: boolean,
+): { checked: boolean; locked: boolean; tone: 'info' | 'warn' | 'none'; message: string } {
+    if (disabled) return { checked: false, locked: true, tone: 'none', message: '' };
+
+    if (readiness?.kind === 'empty') {
+        // Nothing to lose, so nothing to consent to. Shown as done, not asked.
+        return {
+            checked: true,
+            locked: true,
+            tone: 'info',
+            message: 'This repository is empty — it will be set up from the template.',
+        };
+    }
+
+    if (readiness?.kind === 'not-a-storefront') {
+        return {
+            checked: resetToTemplate,
+            locked: false,
+            tone: 'warn',
+            message:
+                `Missing ${readiness.missing.join(', ')}. `
+                + 'Setup cannot complete without a reset.',
+        };
+    }
+
+    return {
+        checked: resetToTemplate,
+        locked: false,
+        tone: resetToTemplate ? 'warn' : 'none',
+        message: resetToTemplate
+            ? 'This will delete and recreate the repository with the selected template content.'
+            : '',
+    };
+}
+
+/**
+ * ResetToTemplateOption - reset control, presented by what the repo contains.
+ *
+ * Consent is asked only where something could be destroyed. An empty repo is
+ * reset automatically and told, not asked; a populated non-storefront requires
+ * the reset because setup cannot otherwise succeed; a real storefront gets the
+ * original prompt and warning.
  */
 export function ResetToTemplateOption({
     resetToTemplate,
     onResetToTemplateChange,
     disabled = false,
+    readiness,
 }: {
     resetToTemplate: boolean;
     onResetToTemplateChange: (isSelected: boolean) => void;
     /** Disabled until a repository is selected; always rendered so the row never reflows. */
     disabled?: boolean;
+    /** Undefined while the readiness check is in flight. */
+    readiness?: RepoReadinessState;
 }): React.ReactElement {
-    // When disabled (no repo selected) present as unchecked with no warning.
-    const active = !disabled && resetToTemplate;
+    const { checked, locked, tone, message } = describeResetOption(
+        readiness,
+        resetToTemplate,
+        disabled,
+    );
+
     return (
         <Flex direction="column" gap="size-50" UNSAFE_className="reset-to-template-top">
-            <Checkbox isSelected={active} isDisabled={disabled} onChange={onResetToTemplateChange}>
+            <Checkbox isSelected={checked} isDisabled={locked} onChange={onResetToTemplateChange}>
                 Reset to template (replaces all content)
             </Checkbox>
 
@@ -395,12 +479,24 @@ export function ResetToTemplateOption({
                 <Flex
                     alignItems="center"
                     gap="size-100"
-                    UNSAFE_className={active ? 'reset-warning-visible' : 'reset-warning-hidden'}
+                    UNSAFE_className={
+                        tone === 'none' ? 'reset-warning-hidden' : 'reset-warning-visible'
+                    }
                 >
-                    <Alert size="S" UNSAFE_className="text-orange-500 flex-shrink-0" />
-                    <Text UNSAFE_className="text-xs text-orange-600">
-                        This will delete and recreate the repository with the selected template
-                        content.
+                    <Alert
+                        size="S"
+                        UNSAFE_className={
+                            tone === 'info'
+                                ? 'text-blue-500 flex-shrink-0'
+                                : 'text-orange-500 flex-shrink-0'
+                        }
+                    />
+                    <Text
+                        UNSAFE_className={
+                            tone === 'info' ? 'text-xs text-blue-600' : 'text-xs text-orange-600'
+                        }
+                    >
+                        {message}
                     </Text>
                 </Flex>
             </View>

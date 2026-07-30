@@ -657,6 +657,17 @@ button[class*="spectrum-Button"][disabled],
    scrolling content bleed through that strip, so zero it — the footer owns the bottom gap. */
 .modal-content {
     padding-bottom: 0 !important;
+    /* Column flex so .modal-body can grow and push the footer to the true bottom on a
+       SHORT modal (sticky only pins against an overflowing container — see below). */
+    display: flex !important;
+    flex-direction: column !important;
+}
+/* The scrollable body. `flex: 1` claims the leftover height so the footer never floats
+   mid-dialog; `min-height: 0` lets it shrink below its content so overflow still engages
+   and the footer's sticky behaviour keeps working on a TALL modal. */
+.modal-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
 }
 .modal-footer-actions {
     /* Pin to the bottom of the dialog's scroll area so the primary action stays visible while
@@ -4075,10 +4086,17 @@ div[class*="spectrum"] input[type="search"] {
  * width (~200-240px); the step-view flexes to fill the rest so the choice-grid cards
  * read spacious. */
 /* The Build step owns ONE two-column [ active area body | unified summary ] (.build-two-col).
- * Cap the LEFT column (the active area body — Commerce's nav+view, or a Storefront/
- * Integrations form) at the shared content-band max. Overrides TwoColumnLayout's inline
- * leftMaxWidth so the cap lives in one place (the CSS var), not duplicated in JS. */
+ * The content band max applies to the CONTENT, not the column: .step-nav is a full-bleed
+ * toolbar whose fill and bottom divider must reach the column's right edge. Capping the
+ * COLUMN clipped that strip short — invisible at 100% zoom (panel narrower than the cap),
+ * visible as a gap at reduced zoom (panel wider than the 960px cap). So the column runs
+ * full width and each content region below carries the cap itself. */
 .build-two-col .two-column-layout-left {
+    min-width: 0 !important;
+}
+/* The capped content regions — Commerce's active view, and the non-nav area bodies. */
+.commerce-body > .step-view,
+.build-two-col .build-area-pad {
     max-width: var(--commerce-zone-max) !important;
 }
 /* Non-nav area bodies (Storefront / Integrations) supply their own padding since the
@@ -4670,10 +4688,12 @@ div[class*="spectrum"] input[type="search"] {
 }
 
 /* ---- Flow modal: stage body + per-stage layouts ---- */
-/* Reserve stage height so Back/Continue don't jump between short and tall
-   stages; the Modal's .modal-content scrolls and its footer stays sticky. */
+/* The 360px min-height that used to live here reserved stage height so
+   Back/Continue wouldn't jump between short and tall stages. That was a
+   workaround for the shared Modal's floating footer (sticky is a no-op when the
+   content doesn't overflow). The Modal now grows .modal-body to push the footer
+   to the true bottom, so the reservation is redundant — removed. */
 .intflow-stage-body {
-    min-height: 360px;
     display: flex;
     flex-direction: column;
 }

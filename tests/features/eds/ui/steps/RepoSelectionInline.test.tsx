@@ -85,6 +85,12 @@ describe('RepoSelectionInline', () => {
         mockOnRepoValidChange = jest.fn();
         mockOnCodeSyncValidChange = jest.fn();
         mockRequest.mockReset();
+        // webviewClient.request always returns a promise. mockReset leaves it
+        // returning undefined, so any NEW request the component makes crashes on
+        // `.then` — which is how check-repo-readiness broke these two tests
+        // without either of them being about readiness. Default to a resolved
+        // promise; per-test mockResolvedValue still overrides.
+        mockRequest.mockResolvedValue({ success: true });
     });
 
     const renderInline = (

@@ -15,14 +15,21 @@
 
 import * as vscode from 'vscode';
 import { ConfigurationService } from '../services/configurationService';
-import { createDaLiveServiceTokenProvider, DaLiveContentOperations } from '../services/daLiveContentOperations';
+import {
+    createDaLiveServiceTokenProvider,
+    DaLiveContentOperations,
+} from '../services/daLiveContentOperations';
 import { executeEdsPipeline } from '../services/edsPipeline';
 import { GitHubAppService } from '../services/githubAppService';
 import { GitHubFileOperations } from '../services/githubFileOperations';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { HelixService } from '../services/helixService';
-import { createPatchReport, reportUnapplied, type PatchReport } from '../services/patchReportHelper';
+import {
+    createPatchReport,
+    reportUnapplied,
+    type PatchReport,
+} from '../services/patchReportHelper';
 import { DaLiveAuthError } from '../services/types';
 import { ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
@@ -60,7 +67,9 @@ function createSetupServices(context: HandlerContext): SetupServices {
 }
 
 /** Build content source entries for block library doc pages */
-function buildLibraryContentSources(blockLibraries: string[]): Array<{ org: string; site: string }> {
+function buildLibraryContentSources(
+    blockLibraries: string[],
+): Array<{ org: string; site: string }> {
     const sources: Array<{ org: string; site: string }> = [];
     for (const libraryId of blockLibraries) {
         const cs = getBlockLibraryContentSource(libraryId);
@@ -70,24 +79,30 @@ function buildLibraryContentSources(blockLibraries: string[]): Array<{ org: stri
 }
 
 type PipelineProgressInfo = {
-    operation: string; message: string; subMessage?: string;
-    percentage?: number; current?: number; total?: number;
+    operation: string;
+    message: string;
+    subMessage?: string;
+    percentage?: number;
+    current?: number;
+    total?: number;
 };
 
 const PIPELINE_PROGRESS = {
     CONTENT_CLEAR: 49,
     CONTENT_COPY_START: 50,
-    CONTENT_COPY_END: 58,   // 50 + 8 (0.08 × 100)
+    CONTENT_COPY_END: 58, // 50 + 8 (0.08 × 100)
     BLOCK_LIBRARY: 59,
     EDS_SETTINGS: 63,
     CACHE_PURGE: 66,
     CONTENT_PUBLISH_START: 67,
     CONTENT_PUBLISH_END: 94, // 67 + 27
-    LIBRARY_PUBLISH: 95,    // after content-publish completes — must be > CONTENT_PUBLISH_END (94)
+    LIBRARY_PUBLISH: 95, // after content-publish completes — must be > CONTENT_PUBLISH_END (94)
 } as const;
 
 /** Build the progress callback for the EDS content pipeline */
-function buildPipelineProgressCallback(context: HandlerContext): (info: PipelineProgressInfo) => void {
+function buildPipelineProgressCallback(
+    context: HandlerContext,
+): (info: PipelineProgressInfo) => void {
     return (info) => {
         const mapping: Record<string, { phase: string; progress: number }> = {
             'content-clear': { phase: 'content', progress: PIPELINE_PROGRESS.CONTENT_CLEAR },
@@ -95,21 +110,33 @@ function buildPipelineProgressCallback(context: HandlerContext): (info: Pipeline
             'block-library': { phase: 'block-library', progress: PIPELINE_PROGRESS.BLOCK_LIBRARY },
             'eds-settings': { phase: 'block-library', progress: PIPELINE_PROGRESS.EDS_SETTINGS },
             'cache-purge': { phase: 'publish', progress: PIPELINE_PROGRESS.CACHE_PURGE },
-            'content-publish': { phase: 'publish', progress: PIPELINE_PROGRESS.CONTENT_PUBLISH_START },
+            'content-publish': {
+                phase: 'publish',
+                progress: PIPELINE_PROGRESS.CONTENT_PUBLISH_START,
+            },
             'library-publish': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
             'catalog-prewarm': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
         };
-        const m = mapping[info.operation] ?? { phase: info.operation, progress: PIPELINE_PROGRESS.CONTENT_COPY_START };
+        const m = mapping[info.operation] ?? {
+            phase: info.operation,
+            progress: PIPELINE_PROGRESS.CONTENT_COPY_START,
+        };
         let progress = m.progress;
         if (info.operation === 'content-copy' && info.percentage !== undefined) {
             progress = PIPELINE_PROGRESS.CONTENT_COPY_START + Math.round(info.percentage * 0.08);
         }
         if (info.operation === 'content-publish' && info.current !== undefined && info.total) {
-            const span = PIPELINE_PROGRESS.CONTENT_PUBLISH_END - PIPELINE_PROGRESS.CONTENT_PUBLISH_START;
-            progress = PIPELINE_PROGRESS.CONTENT_PUBLISH_START + Math.round((info.current / info.total) * span);
+            const span =
+                PIPELINE_PROGRESS.CONTENT_PUBLISH_END - PIPELINE_PROGRESS.CONTENT_PUBLISH_START;
+            progress =
+                PIPELINE_PROGRESS.CONTENT_PUBLISH_START +
+                Math.round((info.current / info.total) * span);
         }
         context.sendMessage('storefront-setup-progress', {
-            phase: m.phase, message: info.message, subMessage: info.subMessage, progress,
+            phase: m.phase,
+            message: info.message,
+            subMessage: info.subMessage,
+            progress,
         });
     };
 }
@@ -143,9 +170,11 @@ async function withDaLiveAuthRetry<T>(
             });
             const authResult = await ensureDaLiveAuth(context, '[Storefront Setup]');
             if (!authResult.authenticated) {
-                throw new Error(authResult.cancelled
-                    ? 'Setup cancelled — DA.live re-authentication required'
-                    : `DA.live re-authentication failed: ${authResult.error}`);
+                throw new Error(
+                    authResult.cancelled
+                        ? 'Setup cancelled — DA.live re-authentication required'
+                        : `DA.live re-authentication failed: ${authResult.error}`,
+                );
             }
             logger.info('[Storefront Setup] DA.live re-authenticated');
             if (onBeforeRetry) await onBeforeRetry();
@@ -170,22 +199,40 @@ async function runConfigCodeSyncPhases(
         context,
         async () => {
             const phase2Result = await executePhaseHelixConfig(
-                context, edsConfig, services, repoInfo, signal, options,
+                context,
+                edsConfig,
+                services,
+                repoInfo,
+                signal,
+                options,
             );
             if (phase2Result.earlyReturn) {
                 return { blockCollectionIds: undefined, earlyReturn: phase2Result.earlyReturn };
             }
-            const phase3Result = await executePhaseCodeSync(context, edsConfig, services, repoInfo, signal);
+            const phase3Result = await executePhaseCodeSync(
+                context,
+                edsConfig,
+                services,
+                repoInfo,
+                signal,
+            );
             if (phase3Result) {
-                return { blockCollectionIds: phase2Result.blockCollectionIds, earlyReturn: phase3Result };
+                return {
+                    blockCollectionIds: phase2Result.blockCollectionIds,
+                    earlyReturn: phase3Result,
+                };
             }
             return { blockCollectionIds: phase2Result.blockCollectionIds };
         },
         MAX_REAUTH_ATTEMPTS,
         async () => {
-            context.logger.info('[Storefront Setup] DA.live re-authenticated, resuming configuration');
+            context.logger.info(
+                '[Storefront Setup] DA.live re-authenticated, resuming configuration',
+            );
             await context.sendMessage('storefront-setup-progress', {
-                phase: 'code-sync', message: 'Resuming site configuration...', progress: 40,
+                phase: 'code-sync',
+                message: 'Resuming site configuration...',
+                progress: 40,
             });
         },
     );
@@ -220,20 +267,28 @@ async function runEdsPipelineWithRecovery(
         async () => {
             const result = await executeEdsPipeline(
                 {
-                    repoOwner: repoInfo.repoOwner, repoName: repoInfo.repoName,
-                    daLiveOrg: edsConfig.daLiveOrg, daLiveSite: edsConfig.daLiveSite,
-                    templateOwner, templateRepo,
-                    clearExistingContent: wantsToResetContent, skipContent,
+                    repoOwner: repoInfo.repoOwner,
+                    repoName: repoInfo.repoName,
+                    daLiveOrg: edsConfig.daLiveOrg,
+                    daLiveSite: edsConfig.daLiveSite,
+                    templateOwner,
+                    templateRepo,
+                    clearExistingContent: wantsToResetContent,
+                    skipContent,
                     contentSource: edsConfig.contentSource,
                     accountContentSource: edsConfig.accountContentSource,
-                    contentPatches: edsConfig.contentPatches, contentPatchSource: edsConfig.contentPatchSource,
-                    codePatches: edsConfig.codePatches, codePatchSource: edsConfig.codePatchSource,
+                    contentPatches: edsConfig.contentPatches,
+                    contentPatchSource: edsConfig.contentPatchSource,
+                    codePatches: edsConfig.codePatches,
+                    codePatchSource: edsConfig.codePatchSource,
                     // Thread the orchestrator's shared patch report through so canonical-phase
                     // results (from Step 1 LKG-pinning) + block-phase + content-patch results
                     // all aggregate into ONE report. The orchestrator owns reportUnapplied so
                     // there's a single toast per setup, not one per source.
                     patchReport,
-                    includeBlockLibrary: true, blockCollectionIds, libraryContentSources,
+                    includeBlockLibrary: true,
+                    blockCollectionIds,
+                    libraryContentSources,
                     purgeCache: Boolean(edsConfig.resetToTemplate || wantsToResetContent),
                     byomOverlayUrl: edsConfig.byomOverlayUrl,
                     project: project ?? undefined,
@@ -253,7 +308,9 @@ async function runEdsPipelineWithRecovery(
         async () => {
             logger.info('[Storefront Setup] DA.live re-authenticated, resuming pipeline');
             await context.sendMessage('storefront-setup-progress', {
-                phase: 'content', message: 'Resuming content copy...', progress: 50,
+                phase: 'content',
+                message: 'Resuming content copy...',
+                progress: 50,
             });
         },
     );
@@ -288,29 +345,60 @@ export async function executeStorefrontSetupPhases(
     const services = createSetupServices(context);
 
     const wantsToResetContent = Boolean(edsConfig.resetSiteContent);
-    const skipContent = !edsConfig.contentSource || (Boolean(edsConfig.selectedSite) && !wantsToResetContent);
-    logger.info(`[Storefront Setup] Content: skipContent=${skipContent}, selectedSite=${Boolean(edsConfig.selectedSite)}, resetContent=${wantsToResetContent}`);
+    const skipContent =
+        !edsConfig.contentSource || (Boolean(edsConfig.selectedSite) && !wantsToResetContent);
+    logger.info(
+        `[Storefront Setup] Content: skipContent=${skipContent}, selectedSite=${Boolean(edsConfig.selectedSite)}, resetContent=${wantsToResetContent}`,
+    );
 
     const githubOwner = edsConfig.githubOwner || edsConfig.githubAuth?.user?.login;
     if (!githubOwner) {
-        logger.error('[Storefront Setup] GitHub owner not found. Config:', JSON.stringify({
-            repoName: edsConfig.repoName, repoMode: edsConfig.repoMode, githubOwner: edsConfig.githubOwner,
-            templateOwner: edsConfig.templateOwner, templateRepo: edsConfig.templateRepo,
-        }));
-        return { success: false, error: 'GitHub owner not configured. Please complete GitHub authentication.' };
+        logger.error(
+            '[Storefront Setup] GitHub owner not found. Config:',
+            JSON.stringify({
+                repoName: edsConfig.repoName,
+                repoMode: edsConfig.repoMode,
+                githubOwner: edsConfig.githubOwner,
+                templateOwner: edsConfig.templateOwner,
+                templateRepo: edsConfig.templateRepo,
+            }),
+        );
+        return {
+            success: false,
+            error: 'GitHub owner not configured. Please complete GitHub authentication.',
+        };
     }
-    logger.info(`[Storefront Setup] Using GitHub owner: ${githubOwner}`);
+    // Log the authenticated identity alongside the target namespace. When these
+    // differ, the repo lives in an org rather than the signed-in user's own
+    // account — which changes both the permissions in play and who can install
+    // the AEM Code Sync App. Without both values a log cannot distinguish an
+    // identity mismatch from a credential problem.
+    const authenticatedLogin = edsConfig.githubAuth?.user?.login;
+    logger.info(
+        `[Storefront Setup] Using GitHub owner: ${githubOwner}` +
+            `${authenticatedLogin ? ` (authenticated as ${authenticatedLogin})` : ' (authenticated user unknown)'}`,
+    );
 
     const { templateOwner, templateRepo } = edsConfig;
     if (!templateOwner || !templateRepo) {
-        logger.error('[Storefront Setup] Template not configured. Config:', JSON.stringify({
-            repoName: edsConfig.repoName, templateOwner, templateRepo,
-        }));
-        return { success: false, error: 'GitHub template not configured. Please check your stack configuration.' };
+        logger.error(
+            '[Storefront Setup] Template not configured. Config:',
+            JSON.stringify({
+                repoName: edsConfig.repoName,
+                templateOwner,
+                templateRepo,
+            }),
+        );
+        return {
+            success: false,
+            error: 'GitHub template not configured. Please check your stack configuration.',
+        };
     }
 
     const repoInfo: RepoInfo = { repoOwner: githubOwner, repoName: edsConfig.repoName };
-    const useExistingRepo = (edsConfig.repoMode ?? 'new') === 'existing' && !!(edsConfig.selectedRepo || edsConfig.existingRepo);
+    const useExistingRepo =
+        (edsConfig.repoMode ?? 'new') === 'existing' &&
+        !!(edsConfig.selectedRepo || edsConfig.existingRepo);
     const effectiveBlockLibraries = options?.selectedBlockLibraries ?? [];
     const phaseOptions: BlockLibraryOptions = { ...options, useExistingRepo };
 
@@ -322,20 +410,41 @@ export async function executeStorefrontSetupPhases(
 
     try {
         const phase1Result = await executePhaseGitHubRepo(
-            context, edsConfig, services, repoInfo, signal, templateOwner, templateRepo, patchReport,
+            context,
+            edsConfig,
+            services,
+            repoInfo,
+            signal,
+            templateOwner,
+            templateRepo,
+            patchReport,
         );
         if (phase1Result) return phase1Result;
 
         const { blockCollectionIds, earlyReturn } = await runConfigCodeSyncPhases(
-            context, edsConfig, services, repoInfo, signal, phaseOptions,
+            context,
+            edsConfig,
+            services,
+            repoInfo,
+            signal,
+            phaseOptions,
         );
         if (earlyReturn) return earlyReturn;
         if (signal.aborted) throw new Error('Operation cancelled');
 
         const pipelineResult = await runEdsPipelineWithRecovery(
-            context, logger, services, repoInfo, edsConfig, templateOwner, templateRepo,
-            blockCollectionIds, buildLibraryContentSources(effectiveBlockLibraries),
-            wantsToResetContent, skipContent, buildPipelineProgressCallback(context),
+            context,
+            logger,
+            services,
+            repoInfo,
+            edsConfig,
+            templateOwner,
+            templateRepo,
+            blockCollectionIds,
+            buildLibraryContentSources(effectiveBlockLibraries),
+            wantsToResetContent,
+            skipContent,
+            buildPipelineProgressCallback(context),
             patchReport,
         );
         if (signal.aborted) throw new Error('Operation cancelled');
@@ -345,7 +454,10 @@ export async function executeStorefrontSetupPhases(
 
         await context.sendMessage('storefront-setup-progress', {
             phase: 'complete',
-            message: pipelineResult.libraryPaths.length > 0 ? 'Site is live!' : 'Content publish complete',
+            message:
+                pipelineResult.libraryPaths.length > 0
+                    ? 'Site is live!'
+                    : 'Content publish complete',
             progress: 100,
         });
         return { success: true, ...repoInfo };

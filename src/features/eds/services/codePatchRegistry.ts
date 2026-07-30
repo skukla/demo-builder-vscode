@@ -31,6 +31,7 @@
  */
 
 import { fetchExternalPatches, _clearExternalPatchCacheForTests } from './externalPatchFetcher';
+import { checkPatchTarget } from './patchTargetPolicy';
 import type { Logger } from '@/types';
 import type { CodePatchSource } from '@/types/demoPackages';
 
@@ -208,6 +209,21 @@ function tryApplyOne(
     patch: CodePatch,
     logger: Logger,
 ): CodePatchResult {
+    // Policy first — before the file is even looked up. The ledger comes from a
+    // public repo, so a target naming `package.json` or `.github/workflows/*`
+    // must be refused rather than resolved. Logged at error level: a refusal
+    // here means the ledger asked for something it should never ask for.
+    const policy = checkPatchTarget(patch.target);
+    if (!policy.allowed) {
+        logger.error(`[CodePatch] REFUSED '${patch.id}': ${policy.reason}`);
+        return {
+            patchId: patch.id,
+            target: patch.target,
+            applied: false,
+            reason: policy.reason,
+        };
+    }
+
     const content = files.get(patch.target);
     if (content === undefined) {
         return {

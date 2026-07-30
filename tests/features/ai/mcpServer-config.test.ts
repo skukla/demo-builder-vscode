@@ -30,16 +30,18 @@ describe('toolHandlers.updateProjectConfig', () => {
             PROJECTS_DIR,
             PROJECT_NAME,
             '.demo-builder.json',
-            '{"name":"test"}',
+            '{"name":"test"}'
         );
 
-        // Atomic write: content goes to a sibling .tmp, then rename(2) swaps it in.
-        const manifestPath = path.resolve(PROJECT_PATH, '.demo-builder.json');
+        // The write is atomic: content goes to a sibling temp file, which is then
+        // renamed over the target. Asserting the final path on writeFile would
+        // describe the pre-atomic implementation and pass only by accident.
+        const target = path.resolve(PROJECT_PATH, '.demo-builder.json');
         expect(fsProm.writeFile as jest.Mock).toHaveBeenCalledWith(
-            `${manifestPath}.tmp`,
-            '{"name":"test"}',
+            `${target}.tmp`,
+            '{"name":"test"}'
         );
-        expect(fsProm.rename as jest.Mock).toHaveBeenCalledWith(`${manifestPath}.tmp`, manifestPath);
+        expect(fsProm.rename as jest.Mock).toHaveBeenCalledWith(`${target}.tmp`, target);
         expect(result).toContain('.demo-builder.json');
     });
 
@@ -48,7 +50,7 @@ describe('toolHandlers.updateProjectConfig', () => {
             PROJECTS_DIR,
             PROJECT_NAME,
             'components/eds-storefront/.env',
-            'KEY=value',
+            'KEY=value'
         );
 
         expect(fsProm.writeFile as jest.Mock).toHaveBeenCalled();
@@ -57,31 +59,46 @@ describe('toolHandlers.updateProjectConfig', () => {
 
     it('throws when path resolves outside projectPath', async () => {
         await expect(
-            toolHandlers.updateProjectConfig(PROJECTS_DIR, PROJECT_NAME, '../../etc/hosts', 'content'),
+            toolHandlers.updateProjectConfig(
+                PROJECTS_DIR,
+                PROJECT_NAME,
+                '../../etc/hosts',
+                'content'
+            )
         ).rejects.toThrow(/not permitted|escapes/i);
     });
 
     it('throws for a non-manifest, non-.env file even if inside projectPath', async () => {
         await expect(
-            toolHandlers.updateProjectConfig(PROJECTS_DIR, PROJECT_NAME, 'src/index.ts', 'code'),
+            toolHandlers.updateProjectConfig(PROJECTS_DIR, PROJECT_NAME, 'src/index.ts', 'code')
         ).rejects.toThrow(/not permitted/i);
     });
 
     it('throws for a .env file inside node_modules', async () => {
         await expect(
-            toolHandlers.updateProjectConfig(PROJECTS_DIR, PROJECT_NAME, 'node_modules/some-dep/.env', 'secret'),
+            toolHandlers.updateProjectConfig(
+                PROJECTS_DIR,
+                PROJECT_NAME,
+                'node_modules/some-dep/.env',
+                'secret'
+            )
         ).rejects.toThrow(/not permitted/i);
     });
 
     it('throws for a .env file inside .git', async () => {
         await expect(
-            toolHandlers.updateProjectConfig(PROJECTS_DIR, PROJECT_NAME, '.git/hooks/.env', 'secret'),
+            toolHandlers.updateProjectConfig(
+                PROJECTS_DIR,
+                PROJECT_NAME,
+                '.git/hooks/.env',
+                'secret'
+            )
         ).rejects.toThrow(/not permitted/i);
     });
 
     it('throws when .env content contains subshell syntax', async () => {
         await expect(
-            toolHandlers.updateProjectConfig(PROJECTS_DIR, PROJECT_NAME, '.env', 'KEY=$(dangerous)'),
+            toolHandlers.updateProjectConfig(PROJECTS_DIR, PROJECT_NAME, '.env', 'KEY=$(dangerous)')
         ).rejects.toThrow(/subshell/i);
     });
 
@@ -90,7 +107,7 @@ describe('toolHandlers.updateProjectConfig', () => {
             PROJECTS_DIR,
             PROJECT_NAME,
             '.env',
-            'API_URL=https://example.com\nDEBUG=false\n',
+            'API_URL=https://example.com\nDEBUG=false\n'
         );
         expect(result).toContain('.env');
     });
@@ -99,12 +116,17 @@ describe('toolHandlers.updateProjectConfig', () => {
         (fsProm.realpath as jest.Mock)
             .mockImplementationOnce((p: string) => Promise.resolve(p))
             .mockImplementationOnce(() =>
-                Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
+                Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
             )
             .mockImplementationOnce(() => Promise.resolve('/etc'));
 
         await expect(
-            toolHandlers.updateProjectConfig(PROJECTS_DIR, PROJECT_NAME, 'components/link/.env', 'KEY=value'),
+            toolHandlers.updateProjectConfig(
+                PROJECTS_DIR,
+                PROJECT_NAME,
+                'components/link/.env',
+                'KEY=value'
+            )
         ).rejects.toThrow(/escapes allowed directory/i);
     });
 
@@ -119,7 +141,12 @@ describe('toolHandlers.updateProjectConfig', () => {
             return Promise.resolve(p);
         });
 
-        const result = await toolHandlers.updateProjectConfig(PROJECTS_DIR, PROJECT_NAME, 'components/link/.env', 'KEY=value');
+        const result = await toolHandlers.updateProjectConfig(
+            PROJECTS_DIR,
+            PROJECT_NAME,
+            'components/link/.env',
+            'KEY=value'
+        );
 
         expect(fsProm.writeFile as jest.Mock).toHaveBeenCalled();
         expect(result).toContain('.env');
@@ -129,12 +156,18 @@ describe('toolHandlers.updateProjectConfig', () => {
         const resolvedTarget = path.resolve(PROJECT_PATH, '.demo-builder.json');
 
         (fsProm.realpath as jest.Mock).mockImplementation((p: string) => {
-            if (String(p) === resolvedTarget) return Promise.resolve(`${PROJECT_PATH}/src/secret.ts`);
+            if (String(p) === resolvedTarget)
+                return Promise.resolve(`${PROJECT_PATH}/src/secret.ts`);
             return Promise.resolve(p);
         });
 
         await expect(
-            toolHandlers.updateProjectConfig(PROJECTS_DIR, PROJECT_NAME, '.demo-builder.json', '{"name":"evil"}'),
+            toolHandlers.updateProjectConfig(
+                PROJECTS_DIR,
+                PROJECT_NAME,
+                '.demo-builder.json',
+                '{"name":"evil"}'
+            )
         ).rejects.toThrow(/not permitted/i);
         expect(fsProm.writeFile as jest.Mock).not.toHaveBeenCalled();
     });
@@ -143,12 +176,13 @@ describe('toolHandlers.updateProjectConfig', () => {
         const resolvedTarget = path.resolve(PROJECT_PATH, '.demo-builder.json');
 
         (fsProm.realpath as jest.Mock).mockImplementation((p: string) => {
-            if (String(p) === resolvedTarget) return Promise.resolve(`${PROJECT_PATH}/src/secret.ts`);
+            if (String(p) === resolvedTarget)
+                return Promise.resolve(`${PROJECT_PATH}/src/secret.ts`);
             return Promise.resolve(p);
         });
 
         await expect(
-            toolHandlers.getComponentConfig(PROJECTS_DIR, PROJECT_NAME, '.demo-builder.json'),
+            toolHandlers.getComponentConfig(PROJECTS_DIR, PROJECT_NAME, '.demo-builder.json')
         ).rejects.toThrow(/not permitted/i);
         expect(fsProm.readFile as jest.Mock).not.toHaveBeenCalled();
     });
@@ -159,12 +193,18 @@ describe('toolHandlers.updateProjectConfig', () => {
         const enoent = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
 
         (fsProm.realpath as jest.Mock).mockImplementation((p: string) => {
-            if (String(p) === resolvedTarget || String(p) === parentDir) return Promise.reject(enoent);
+            if (String(p) === resolvedTarget || String(p) === parentDir)
+                return Promise.reject(enoent);
             return Promise.resolve(p);
         });
 
         await expect(
-            toolHandlers.updateProjectConfig(PROJECTS_DIR, PROJECT_NAME, 'deep/nonexistent/dir/.env', 'KEY=value'),
+            toolHandlers.updateProjectConfig(
+                PROJECTS_DIR,
+                PROJECT_NAME,
+                'deep/nonexistent/dir/.env',
+                'KEY=value'
+            )
         ).rejects.toThrow(/Cannot verify path safety/i);
     });
 });
@@ -221,7 +261,9 @@ describe('validateEnvContent', () => {
     });
 
     it('throws when value contains <(...) process substitution syntax', () => {
-        expect(() => validateEnvContent('KEY=x<(touch /tmp/pwned)')).toThrow(/process substitution/i);
+        expect(() => validateEnvContent('KEY=x<(touch /tmp/pwned)')).toThrow(
+            /process substitution/i
+        );
     });
 
     it('throws when value contains >(...) process substitution syntax', () => {
@@ -229,7 +271,9 @@ describe('validateEnvContent', () => {
     });
 
     it('throws when value contains zsh =(...) process substitution', () => {
-        expect(() => validateEnvContent('KEY=x=(touch /tmp/pwned)')).toThrow(/process substitution/i);
+        expect(() => validateEnvContent('KEY=x=(touch /tmp/pwned)')).toThrow(
+            /process substitution/i
+        );
     });
 
     it('throws when value contains bare > redirection', () => {
@@ -261,7 +305,9 @@ describe('validateEnvContent', () => {
     });
 
     it('throws when unquoted value contains glob metacharacter ?', () => {
-        expect(() => validateEnvContent('KEY=https://api.com/path?a=1')).toThrow(/safe-chars-only/i);
+        expect(() => validateEnvContent('KEY=https://api.com/path?a=1')).toThrow(
+            /safe-chars-only/i
+        );
     });
 
     it('throws when unquoted value contains glob metacharacter [', () => {
@@ -293,7 +339,9 @@ describe('validateEnvContent', () => {
     });
 
     it('throws when single-quoted value contains embedded single quote', () => {
-        expect(() => validateEnvContent("KEY='foo'bar'")).toThrow(/safe-chars-only|subshell|expansion|metacharacter/i);
+        expect(() => validateEnvContent("KEY='foo'bar'")).toThrow(
+            /safe-chars-only|subshell|expansion|metacharacter/i
+        );
     });
 
     it('accepts double-quoted value with spaces and safe chars', () => {
@@ -321,7 +369,8 @@ describe('validateEnvContent', () => {
     });
 
     it('accepts postgres connection URL (no query string)', () => {
-        expect(() => validateEnvContent('DATABASE_URL=postgres://user:pass@host:5432/db')).not.toThrow();
+        expect(() =>
+            validateEnvContent('DATABASE_URL=postgres://user:pass@host:5432/db')
+        ).not.toThrow();
     });
 });
-

@@ -45,6 +45,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Business Structure no longer goes blank for a mistyped ACCS endpoint.** Store detection keys on the ACCS GraphQL endpoint's path, so an endpoint without the `/graphql` suffix (e.g. the bare instance URL) silently disabled detection and left the Business Structure step empty with no explanation. The endpoint field on the Connection step now validates that it ends in `/graphql` and blocks Continue with a guiding message, so you're told up front instead of landing on a blank screen.
 - **Deleted-product pages show the real 404 instead of an empty product page.** When a shopper opens a product URL whose SKU no longer exists in Commerce, the storefront now lands on its own **native /404** rather than a blank product-details block. Two layers cooperate: the shared `prepublish-pdp` action checks Commerce before publishing and refuses to publish a page for a missing SKU (so no empty page gets cached), and the storefront's smart-404 snippet redirects to `/404` when publishing is refused. The existence check fails open — an infra hiccup never turns a real product into a 404. Existing storefronts pick up the updated snippet on their next reset (the installer now re-vendors the snippet in place instead of skipping when an older copy is present). Note: a product deleted *after* its page was already published/pre-warmed still serves the cached page until unpublished — tracked separately.
+## [1.0.0-beta.123] - 2026-07-29
+
+### Added
+
+- **Diagnostics now says why the Configuration Service refused a write.** When registering a storefront's site config fails with "forbidden", the report tests the same credential against DA.live and interprets the two answers together. If DA.live accepts it and the Configuration Service does not, the credential is fine and the *account* is unauthorized — the admin role is granted to whoever installs the AEM Code Sync GitHub App on the repo, so a storefront set up by a teammate leaves you with no role on it. The report names that, and prints Adobe's own reason and invocation ID for support. Read-only: it never writes a site config.
+
+## [1.0.0-beta.122] - 2026-07-29
+
+### Fixed
+
+- **Storefront setup no longer reports a working AEM Code Sync app as missing.** When the AEM admin API refused a credential (HTTP 401) or was unreachable, the check read that as "app not installed" and stopped setup — repeatedly, on repos where code sync was live and syncing. The check now distinguishes three states: installed, not installed, and *undetermined*. An undetermined result says what AEM actually returned and never offers an install that could not fix it.
+- **The guided Code Sync install stays on screen.** Selecting a repo without the app showed the install steps and then replaced them with "Storefront Setup Failed" a moment later, leaving no way forward. A missing app is now treated as a pause with a remedy in progress: the dialog stays, and "Check Installation" resumes setup where it left off.
+- **Editing an existing project applies its code patches again.** Package settings live in the demo package, but edit mode rebuilt the project config from saved metadata, which does not carry them — so republishing an existing storefront silently skipped every patch, including the SKU-encoding patches that product detail page routing depends on. Those settings are now restored from the package on every run.
+- **Smart 404 handling survives a concurrent write.** Installing the product-detail 404 handler could fail when another setup step had just written the same file, and the failure was skipped past quietly. The write now retries once against the current file.
+- **AI tools work without a folder open.** The in-extension MCP server refused to start unless a workspace folder was open, which is not how the extension's windows work — so agent tools were unavailable and diagnostics reported the server unreachable.
+- **Configuration Service failures say what Adobe said.** Site registration errors now carry Adobe's own reason and its invocation ID, instead of a generic message that pointed at the wrong subsystem.
+- **Diagnostics reports "Browser Launch" correctly on macOS**, and no longer pads the summary with the full MCP tool list, which made pasted reports get silently truncated mid-line.
+
+### Added
+
+- **Copy Report on the diagnostics notification.** One click puts the current run's summary on the clipboard — curated, and carrying credential *types* and status codes but never a credential.
+- **GitHub / AEM credential check in Diagnostics.** Tests the same credential against GitHub and against the AEM admin API and states which one refused it, so a permission problem can be told apart from a rejected credential without a round trip.
+
+### Changed
+
+- **Code patches may only target `blocks/` and `scripts/` JavaScript files.** Anything else is refused before the file is read.
+- **Patch definitions are fetched from the latest published release** rather than from the tip of the branch. Until a release exists the previous behavior continues, with a warning in the logs.
+
+
+## [1.0.0-beta.121] - 2026-06-19
 
 ### Added
 

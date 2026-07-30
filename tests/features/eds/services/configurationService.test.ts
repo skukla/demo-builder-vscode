@@ -544,3 +544,99 @@ describe('ConfigurationService', () => {
         });
     });
 });
+
+/**
+ * Config Service failure reporting.
+ *
+ * Field case (2026-07-28): a colleague's storefront failed four times with
+ * `PUT /config/{org}/sites/{site}.json -> 403`, and the message told him to
+ * install AEM Code Sync — on a run where code sync had been verified and 62
+ * pages published seconds earlier. The advice was unfollowable, and the log
+ * carried nothing to diagnose from: the 403 body is empty, and Adobe's stated
+ * reason lives in the `x-error` header, which was discarded.
+ *
+ * Two requirements follow: record what Adobe actually said, and stop naming a
+ * remedy the evidence contradicts.
+ */
+describe('ConfigurationService — failure reporting', () => {
+    const logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() };
+    const tokenProvider = { getAccessToken: jest.fn().mockResolvedValue('ims-token') };
+    const params: SiteRegistrationParams = {
+        org: 'kmanns',
+        site: 'blaines',
+        codeOwner: 'kmanns',
+        codeRepo: 'blaines',
+        contentSourceUrl: 'https://content.da.live/kmanns/blaines/',
+    };
+
+    let service: ConfigurationService;
+    let fetchSpy: jest.SpyInstance;
+
+    function forbidden(headers: Record<string, string> = {}) {
+        return new Response('', { status: 403, headers });
+    }
+
+    function loggedText(): string {
+        return ['debug', 'info', 'warn', 'error']
+            .flatMap((lvl) => (logger as never as Record<string, jest.Mock>)[lvl].mock.calls)
+            .map((c) => String(c[0]))
+            .join('\n');
+    }
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        service = new ConfigurationService(tokenProvider as never, logger as never);
+    });
+
+    afterEach(() => fetchSpy?.mockRestore());
+
+    it("records Adobe's stated reason from x-error", async () => {
+        fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(
+            forbidden({ 'x-error': '[admin] not authorized' }),
+        );
+
+        await service.registerSite(params);
+
+        expect(loggedText()).toContain('[admin] not authorized');
+    });
+
+    it("records Adobe's request id, which is what support needs", async () => {
+        fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(
+            forbidden({ 'x-invocation-id': 'abc-123' }),
+        );
+
+        await service.registerSite(params);
+
+        expect(loggedText()).toContain('abc-123');
+    });
+
+    it('does not tell the user to install AEM Code Sync', async () => {
+        // The failing runs had code sync verified and publishing in the same
+        // session. Naming it as the remedy sends people to reinstall a working
+        // app — the exact loop this project already burned days on.
+        fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(forbidden());
+
+        const result = await service.registerSite(params);
+
+        expect(result.error).not.toMatch(/install AEM Code Sync/i);
+        expect(result.error).not.toMatch(/aem\.live\/developer\/tutorial/i);
+    });
+
+    it('still explains a 403 and stays actionable', async () => {
+        fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(forbidden());
+
+        const result = await service.registerSite(params);
+
+        expect(result.error).toMatch(/not authorized|permission|access/i);
+        expect(result.statusCode).toBe(403);
+    });
+
+    it('tolerates a response carrying neither header', async () => {
+        fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(forbidden());
+
+        await service.registerSite(params);
+
+        expect(loggedText()).not.toContain('undefined');
+        expect(loggedText()).not.toContain('null');
+    });
+});

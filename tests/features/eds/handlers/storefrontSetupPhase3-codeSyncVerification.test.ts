@@ -88,17 +88,23 @@ function makeContext(): HandlerContext {
     } as unknown as HandlerContext;
 }
 
-function makeServices(overrides: Partial<{
-    isInstalled: boolean;
-    codeStatus?: number;
-    registerSiteResult: { success: boolean; statusCode?: number; error?: string };
-}> = {}): SetupServices {
+function makeServices(
+    overrides: Partial<{
+        isInstalled: boolean;
+        codeStatus?: number;
+        registerSiteResult: { success: boolean; statusCode?: number; error?: string };
+    }> = {}
+): SetupServices {
     const isInstalled = overrides.isInstalled ?? true;
     const codeStatus = overrides.codeStatus ?? (isInstalled ? 200 : 404);
     return {
         githubAppService: {
             isAppInstalled: jest.fn().mockResolvedValue({ isInstalled, codeStatus }),
-            getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/aem-code-sync/installations/select_target'),
+            getInstallUrl: jest
+                .fn()
+                .mockReturnValue(
+                    'https://github.com/apps/aem-code-sync/installations/select_target'
+                ),
         },
         helixService: {
             previewCode: jest.fn().mockResolvedValue(undefined),
@@ -110,7 +116,9 @@ function makeServices(overrides: Partial<{
             getAccessToken: jest.fn().mockResolvedValue('mock-token'),
         },
         configurationService: {
-            registerSite: jest.fn().mockResolvedValue(overrides.registerSiteResult ?? { success: true }),
+            registerSite: jest
+                .fn()
+                .mockResolvedValue(overrides.registerSiteResult ?? { success: true }),
             updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
         },
         githubRepoOps: {} as SetupServices['githubRepoOps'],
@@ -208,7 +216,11 @@ describe('executePhaseCodeSync — code sync verification gate', () => {
             const services = makeServices({ isInstalled: false, codeStatus: 404 });
 
             const result = await executePhaseCodeSync(
-                context, EDS_CONFIG, services, { ...REPO_INFO }, new AbortController().signal,
+                context,
+                EDS_CONFIG,
+                services,
+                { ...REPO_INFO },
+                new AbortController().signal
             );
 
             // Install dialog must be sent
@@ -218,7 +230,7 @@ describe('executePhaseCodeSync — code sync verification gate', () => {
                     owner: 'skukla',
                     repo: 'citisignal-b2b',
                     installUrl: expect.stringContaining('aem-code-sync'),
-                }),
+                })
             );
             // Phase must fail with the explicit reason
             expect(result).toMatchObject({
@@ -239,10 +251,17 @@ describe('executePhaseCodeSync — code sync verification gate', () => {
             const services = makeServices({ isInstalled: false });
 
             await executePhaseCodeSync(
-                context, EDS_CONFIG, services, { ...REPO_INFO }, new AbortController().signal,
+                context,
+                EDS_CONFIG,
+                services,
+                { ...REPO_INFO },
+                new AbortController().signal
             );
 
-            expect(services.githubAppService.isAppInstalled).toHaveBeenCalledWith('skukla', 'citisignal-b2b');
+            expect(services.githubAppService.isAppInstalled).toHaveBeenCalledWith(
+                'skukla',
+                'citisignal-b2b'
+            );
             // Polling must not have run for the code bus when the App is missing —
             // we already know verification will fail.
             expect(global.fetch).not.toHaveBeenCalled();
@@ -255,13 +274,17 @@ describe('executePhaseCodeSync — code sync verification gate', () => {
             const services = makeServices({ isInstalled: true, codeStatus: 200 });
 
             const result = await executePhaseCodeSync(
-                context, EDS_CONFIG, services, { ...REPO_INFO }, new AbortController().signal,
+                context,
+                EDS_CONFIG,
+                services,
+                { ...REPO_INFO },
+                new AbortController().signal
             );
 
             // No install dialog
             expect(context.sendMessage).not.toHaveBeenCalledWith(
                 'storefront-setup-github-app-required',
-                expect.anything(),
+                expect.anything()
             );
             // Downstream steps did run
             expect(services.helixService.previewCode).toHaveBeenCalled();
@@ -282,34 +305,51 @@ describe('executePhaseCodeSync — code sync verification gate', () => {
                 .mockResolvedValueOnce({ isInstalled: true, codeStatus: 200 });
 
             const result = await executePhaseCodeSync(
-                context, EDS_CONFIG, services, { ...REPO_INFO }, new AbortController().signal,
+                context,
+                EDS_CONFIG,
+                services,
+                { ...REPO_INFO },
+                new AbortController().signal
             );
 
             expect(services.githubAppService.isAppInstalled).toHaveBeenCalledTimes(2);
             expect(context.sendMessage).not.toHaveBeenCalledWith(
                 'storefront-setup-github-app-required',
-                expect.anything(),
+                expect.anything()
             );
             expect(result).toBeNull();
         });
 
-        it('surfaces the install dialog when the transient retry also fails', async () => {
+        it('fails truthfully — NOT with the install dialog — when the transient retry also fails', async () => {
+            // A persistent transient result means Helix never answered the
+            // question. Claiming "install the GitHub App" on that evidence is
+            // what trapped a user in eleven identical failures against a repo
+            // whose App was installed and syncing. Fail, but say what happened.
             const context = makeContext();
             const services = makeServices();
-            (services.githubAppService.isAppInstalled as jest.Mock)
-                .mockResolvedValue({ isInstalled: false, transient: true });
+            (services.githubAppService.isAppInstalled as jest.Mock).mockResolvedValue({
+                isInstalled: false,
+                transient: true,
+                httpStatus: 401,
+            });
 
             const result = await executePhaseCodeSync(
-                context, EDS_CONFIG, services, { ...REPO_INFO }, new AbortController().signal,
+                context,
+                EDS_CONFIG,
+                services,
+                { ...REPO_INFO },
+                new AbortController().signal
             );
 
             // Retried exactly once before giving up
             expect(services.githubAppService.isAppInstalled).toHaveBeenCalledTimes(2);
-            expect(context.sendMessage).toHaveBeenCalledWith(
+            expect(context.sendMessage).not.toHaveBeenCalledWith(
                 'storefront-setup-github-app-required',
-                expect.objectContaining({ owner: 'skukla', repo: 'citisignal-b2b' }),
+                expect.anything()
             );
-            expect(result).toMatchObject({ success: false, error: 'GitHub App installation required' });
+            expect(result?.success).toBe(false);
+            expect(result?.error).not.toBe('GitHub App installation required');
+            expect(result?.error).toContain('401');
         });
 
         it('does NOT retry when the first check returns a definitive not-installed (no transient flag)', async () => {
@@ -319,13 +359,17 @@ describe('executePhaseCodeSync — code sync verification gate', () => {
             const services = makeServices({ isInstalled: false, codeStatus: 404 });
 
             await executePhaseCodeSync(
-                context, EDS_CONFIG, services, { ...REPO_INFO }, new AbortController().signal,
+                context,
+                EDS_CONFIG,
+                services,
+                { ...REPO_INFO },
+                new AbortController().signal
             );
 
             expect(services.githubAppService.isAppInstalled).toHaveBeenCalledTimes(1);
             expect(context.sendMessage).toHaveBeenCalledWith(
                 'storefront-setup-github-app-required',
-                expect.anything(),
+                expect.anything()
             );
         });
     });

@@ -89,7 +89,11 @@ export function Modal({
             <Heading>{title}</Heading>
             <Divider />
             <Content UNSAFE_className="modal-content">
-                {children}
+                {/* The body GROWS so the footer is pushed to the dialog's bottom even when
+                    the content is short. `position: sticky` alone only pins against an
+                    OVERFLOWING container, so a short body (a spinner, a two-row list) left
+                    the footer floating mid-dialog with dead space beneath it. */}
+                <div className="modal-body">{children}</div>
                 <div className="modal-footer-actions">
                     {/* Close/Cancel on left, primary actions on right (per Spectrum design guidelines) */}
                     <FocusableButton variant={closeVariant} onPress={onClose}>
@@ -110,4 +114,3 @@ export function Modal({
         </Dialog>
     );
 }
-

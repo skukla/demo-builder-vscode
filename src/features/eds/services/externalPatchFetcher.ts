@@ -31,6 +31,60 @@ interface PatchFetchResponse<T> {
 
 const sharedCache = new Map<string, Promise<unknown[]>>();
 
+/** Resolved git ref per `owner/repo`. Only successful tag resolutions are
+ *  cached — see {@link resolveRef}. */
+const refCache = new Map<string, Promise<string>>();
+
+/** Branch used when a patches repo has no published release yet. */
+const UNPINNED_REF = 'main';
+
+/**
+ * Resolve which git ref to read patches from.
+ *
+ * Prefers the repo's latest published release, so shipping a patch is a
+ * deliberate act with a record and a rollback target. Falls back to `main` when
+ * no release exists — without that fallback this change would take every
+ * storefront build down until the first release is cut, since no patches repo
+ * has one today.
+ *
+ * A fallback is never cached: a transient failure on the release lookup must
+ * not leave the channel unpinned for the rest of the session.
+ */
+async function resolveRef(owner: string, repo: string, logger: Logger): Promise<string> {
+    const key = `${owner}/${repo}`;
+    const cached = refCache.get(key);
+    if (cached) return cached;
+
+    const pending = (async () => {
+        try {
+            const response = await fetch(
+                `https://api.github.com/repos/${owner}/${repo}/releases/latest`,
+                { signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK) },
+            );
+            if (response.ok) {
+                const data = (await response.json()) as { tag_name?: string };
+                if (data?.tag_name) return data.tag_name;
+            }
+        } catch {
+            // Fall through to the unpinned path — reported below.
+        }
+        return '';
+    })();
+
+    const tag = await pending;
+    if (tag) {
+        refCache.set(key, Promise.resolve(tag));
+        logger.info(`[Patch] Pinned ${key} to release ${tag}`);
+        return tag;
+    }
+
+    logger.warn(
+        `[Patch] No published release for ${key} — falling back to ${UNPINNED_REF}. `
+            + `Patches are unpinned until a release is cut.`,
+    );
+    return UNPINNED_REF;
+}
+
 /**
  * Fetch an external patches-style JSON ledger with per-source caching.
  *
@@ -53,9 +107,10 @@ export function fetchExternalPatches<T>(
     if (cached) return cached as Promise<T[]>;
 
     logger.info(`[Patch] Fetching ${fileName} from ${source.owner}/${source.repo}`);
-    const url = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/main/${source.path}/${fileName}`;
 
     const promise = (async () => {
+        const ref = await resolveRef(source.owner, source.repo, logger);
+        const url = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/${ref}/${source.path}/${fileName}`;
         const response = await fetch(url, {
             signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK),
         });
@@ -80,4 +135,5 @@ export function fetchExternalPatches<T>(
  */
 export function _clearExternalPatchCacheForTests(): void {
     sharedCache.clear();
+    refCache.clear();
 }

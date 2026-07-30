@@ -55,6 +55,17 @@ src/utils/
   - Browser launch capability
   - Adobe login command availability
   - File system access
+- **GitHub / AEM credential**:
+  - Signed-in GitHub login and credential type prefix
+  - Scopes GitHub actually granted (`x-oauth-scopes`), not the set requested
+  - Whether GitHub reports write access (`permissions.push`) to the project repo
+  - What `admin.hlx.page` returns for the same credential (HTTP status, `x-error`)
+  - A one-line verdict combining all three
+
+  Reach for this first when storefront setup fails at the AEM Code Sync check.
+  `push: true` with an AEM 401 means the credential is being refused outright —
+  not a scope or permission problem, and not a missing GitHub App. The credential
+  itself is never printed.
 
 ### Diagnostic Report Structure
 

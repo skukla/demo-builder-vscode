@@ -1,134 +1,94 @@
-import { promises as fs } from 'fs';
+/**
+ * Demo Builder diagnostics command.
+ *
+ * Collects the report — system, tools, Adobe CLI, environment, capability
+ * tests, MCP, and the two credential probes — then hands it to
+ * `./diagnosticsReport` to render. Collection lives here because it needs
+ * `vscode` and the service locator; rendering deliberately does not.
+ *
+ * Re-exports the rendering entry points so existing consumers and tests keep
+ * their import path.
+ */
+
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import {
+    checkAdobeCLI,
+    checkTools,
+    getEnvironment,
+    getSystemInfo,
+    getVSCodeInfo,
+    runTests,
+} from './diagnosticsChecks';
+import {
+    buildSummaryLines,
+    type AdobeCLIInfo,
+    type DiagnosticsReport,
+    type EnvironmentInfo,
+    type McpInfo,
+    type SystemInfo,
+    type TestResults,
+    type ToolsInfo,
+    type VSCodeInfo,
+} from './diagnosticsReport';
 import { ServiceLocator } from '@/core/di';
-import { getLogger, CommandResultWithContext } from '@/core/logging';
-import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
+import { getLogger, type DebugLogger } from '@/core/logging';
+import { mcpSocketBindings } from '@/features/ai/server/mcpSocketPath';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
-import { parseJSON } from '@/types/typeGuards';
+import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
+import {
+    probeConfigService,
+    type ConfigServiceProbeResult,
+} from '@/features/eds/services/configServiceProbe';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
+import {
+    probeGitHubCredential,
+    type CredentialProbeResult,
+} from '@/features/eds/services/githubCredentialProbe';
+import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+import { getEdsDaLiveTarget, getEdsGithubRepo } from '@/types/typeGuards';
 
-// Diagnostic Type Definitions
-interface SystemInfo {
-    platform: string;
-    release: string;
-    arch: string;
-    cpus: number;
-    memory: string;
-    homedir: string;
-    tmpdir: string;
-    shell: string;
+export { browserProbeCommand, buildSummaryLines } from './diagnosticsReport';
+export type { DiagnosticsReport } from './diagnosticsReport';
+
+/** Actions offered on the completion notification. Copy is first: for a
+ *  colleague reporting a problem it is the primary one. */
+export const DIAGNOSTICS_ACTIONS = ['Copy Report', 'Show Logs', 'Export Log'] as const;
+
+/**
+ * Handle the chosen completion action.
+ *
+ * `undefined` means the notification was dismissed — do nothing.
+ */
+export async function runDiagnosticsAction(
+    action: string | undefined,
+    summary: string,
+    logger: DebugLogger,
+): Promise<void> {
+    if (action === 'Copy Report') {
+        await vscode.env.clipboard.writeText(summary);
+        // Confirm explicitly: a silent clipboard write is indistinguishable
+        // from a no-op, and the user is about to paste it somewhere.
+        await vscode.window.showInformationMessage('Diagnostic report copied to clipboard.');
+    } else if (action === 'Show Logs') {
+        logger.show(false);
+    } else if (action === 'Export Log') {
+        await logger.exportDebugLog();
+    }
 }
 
-interface VSCodeInfo {
-    version: string;
-    appName: string;
-    language: string;
-    machineId: string;
-    sessionId: string;
-}
-
-interface CommandCheckResult {
-    installed: boolean;
-    output?: string;
-    error?: string;
-    duration: number;
-    code?: number;
-    versions?: string[];
-}
-
-interface ToolsInfo {
-    node: CommandCheckResult;
-    npm: CommandCheckResult;
-    fnm: CommandCheckResult;
-    git: CommandCheckResult;
-    aio: CommandCheckResult;
-}
-
-interface AdobeContextInfo {
-    org: string;
-    project: string;
-    workspace: string;
-}
-
-interface AdobeCLIInfo {
-    installed: boolean;
-    version?: string;
-    authConfigured?: boolean;
-    hasToken?: boolean;
-    hasRefreshToken?: boolean;
-    expiresIn?: string;
-    tokenExpired?: boolean;
-    expiryDate?: string;
-    authParseError?: string;
-    currentContext?: AdobeContextInfo | string;
-    canListOrgs?: boolean;
-    organizationCount?: number;
-}
-
-interface EnvironmentInfo {
-    PATH: string[];
-    HOME: string | undefined;
-    USER: string | undefined;
-    SHELL: string | undefined;
-    NODE_PATH: string | undefined;
-    npm_config_prefix: string | undefined;
-    FNM_DIR: string | undefined;
-    FNM_MULTISHELL_PATH: string | undefined;
-    FNM_NODE_DIST_MIRROR: string | undefined;
-    FNM_LOGLEVEL: string | undefined;
-}
-
-interface BrowserLaunchTest {
-    platform: string;
-    command: string;
-    available: boolean;
-}
-
-interface AdobeLoginTest {
-    available: boolean;
-    supportsForceFlag: boolean;
-}
-
-interface FileSystemTest {
-    canWrite: boolean;
-    canRead: boolean;
-    tempDir: string;
-    error?: string;
-}
-
-interface TestResults {
-    browserLaunch: BrowserLaunchTest;
-    adobeLoginCommand: AdobeLoginTest;
-    fileSystem: FileSystemTest;
-}
-
-interface McpInfo {
-    /** True when a workspace is open and the in-extension server was reachable. */
-    running: boolean;
-    /** Absolute socket path probed (when a workspace is open). */
-    socketPath?: string;
-    /** Tool names the in-extension server exposed (sorted). */
-    tools?: string[];
-    /** Whether the auth `sign_in` tool is present (the common "is it there?" check). */
-    hasSignIn?: boolean;
-    /** Why the probe did not run / failed (no workspace, socket missing, timeout). */
-    error?: string;
-}
-
-interface DiagnosticsReport {
-    timestamp: string;
-    system: SystemInfo;
-    vscode: VSCodeInfo;
-    tools: ToolsInfo;
-    adobe: AdobeCLIInfo;
-    environment: EnvironmentInfo;
-    tests: TestResults;
-    mcp: McpInfo;
-}
 
 export class DiagnosticsCommand {
     private logger = getLogger();
+
+    /**
+     * @param context - ExtensionContext, supplied by CommandManager which owns
+     *   it. Carries the SecretStorage the GitHub credential probe needs and the
+     *   context the DA.live auth service is keyed on. Taking the context rather
+     *   than just `secrets` avoids holding the same thing under two names.
+     */
+    constructor(private context: vscode.ExtensionContext) {}
 
     public async execute(): Promise<void> {
         this.logger.info('Running Demo Builder diagnostics...');
@@ -136,7 +96,7 @@ export class DiagnosticsCommand {
 
         // Clear channel for fresh diagnostics
         this.logger.clear();
-        
+
         const report: DiagnosticsReport = {
             timestamp: new Date().toISOString(),
             system: {} as SystemInfo,
@@ -146,365 +106,59 @@ export class DiagnosticsCommand {
             environment: {} as EnvironmentInfo,
             tests: {} as TestResults,
             mcp: {} as McpInfo,
+            githubCredential: {} as CredentialProbeResult,
         };
 
         try {
             // System information
             this.logger.debug('Collecting system information...');
-            report.system = await this.getSystemInfo();
-            
+            report.system = await getSystemInfo();
+
             // VS Code information
             this.logger.debug('Collecting VS Code information...');
-            report.vscode = this.getVSCodeInfo();
-            
+            report.vscode = getVSCodeInfo();
+
             // Tool versions
             this.logger.debug('Checking tool versions...');
-            report.tools = await this.checkTools();
-            
+            report.tools = await checkTools();
+
             // Adobe CLI status
             this.logger.debug('Checking Adobe CLI...');
-            report.adobe = await this.checkAdobeCLI();
-            
+            report.adobe = await checkAdobeCLI();
+
             // Environment variables
             this.logger.debug('Collecting environment variables...');
-            report.environment = this.getEnvironment();
-            
+            report.environment = getEnvironment();
+
             // Run diagnostic tests
             this.logger.debug('Running diagnostic tests...');
-            report.tests = await this.runTests();
+            report.tests = await runTests();
 
             // In-extension MCP server tool surface
             this.logger.debug('Probing in-extension MCP server...');
             report.mcp = await this.checkMcp();
 
+            // GitHub <-> AEM credential triangulation
+            this.logger.debug('Probing GitHub and AEM credential access...');
+            report.githubCredential = await this.checkGitHubCredential();
+            report.configService = await this.checkConfigService();
+
             // Log the full report
             this.logger.debug('DIAGNOSTIC REPORT', report);
-            
-            // Show summary in main output
-            this.showSummary(report);
-            
-            // Offer to export
+
+            // Show summary in main output, keeping the text for the clipboard
+            // so a copy is exactly what the user was shown.
+            const summary = this.showSummary(report);
+
             const action = await vscode.window.showInformationMessage(
                 'Diagnostics complete. Check the output for details.',
-                'Show Logs',
-                'Export Log',
+                ...DIAGNOSTICS_ACTIONS,
             );
 
-            if (action === 'Show Logs') {
-                this.logger.show(false);
-            } else if (action === 'Export Log') {
-                await this.logger.exportDebugLog();
-            }
-            
+            await runDiagnosticsAction(action, summary, this.logger);
         } catch (error) {
             this.logger.error('Diagnostics failed', error as Error);
             throw error;
-        }
-    }
-
-    private async getSystemInfo(): Promise<SystemInfo> {
-        return {
-            platform: os.platform(),
-            release: os.release(),
-            arch: os.arch(),
-            cpus: os.cpus().length,
-            memory: `${Math.round(os.totalmem() / (1024 * 1024 * 1024))}GB`,
-            homedir: os.homedir(),
-            tmpdir: os.tmpdir(),
-            shell: process.env.SHELL || 'unknown',
-        };
-    }
-
-    private getVSCodeInfo(): VSCodeInfo {
-        return {
-            version: vscode.version,
-            appName: vscode.env.appName,
-            language: vscode.env.language,
-            machineId: vscode.env.machineId.substring(0, 8) + '...',
-            sessionId: vscode.env.sessionId.substring(0, 8) + '...',
-        };
-    }
-
-    private async checkTools(): Promise<ToolsInfo> {
-        const node = await this.checkCommand('node --version');
-        const npm = await this.checkCommand('npm --version');
-        const fnm = await this.checkCommand('fnm --version');
-
-        if (fnm.installed) {
-            // List fnm installations
-            const fnmList = await this.checkCommand('fnm list');
-            if (fnmList.installed && fnmList.output) {
-                fnm.versions = fnmList.output.split('\n').filter((l: string) => l.trim());
-            }
-        }
-
-        const git = await this.checkCommand('git --version');
-        const aio = await this.checkCommand('aio --version');
-
-        return {
-            node,
-            npm,
-            fnm,
-            git,
-            aio,
-        };
-    }
-
-    private async checkAdobeCLI(): Promise<AdobeCLIInfo> {
-        const adobe: AdobeCLIInfo = {
-            installed: false,
-        };
-
-        // Check if Adobe CLI is installed
-        const aioVersion = await this.checkCommand('aio --version');
-        adobe.installed = aioVersion.installed;
-        adobe.version = aioVersion.output;
-
-        if (adobe.installed) {
-            await this.checkAuthenticationStatus(adobe);
-            await this.checkCurrentContext(adobe);
-            await this.checkOrganizations(adobe);
-        }
-
-        return adobe;
-    }
-
-    private async checkAuthenticationStatus(adobe: AdobeCLIInfo): Promise<void> {
-        const authCheck = await this.checkCommand('aio config get ims.contexts.aio-cli-plugin-auth');
-        adobe.authConfigured = authCheck.installed && !!authCheck.output && authCheck.output.length > 0;
-
-        if (adobe.authConfigured && authCheck.output) {
-            this.parseAuthConfig(adobe, authCheck.output);
-        }
-    }
-
-    private parseAuthConfig(adobe: AdobeCLIInfo, output: string): void {
-        try {
-            const authData = parseJSON<{ access_token?: string; refresh_token?: string; expires_in?: string }>(output);
-            if (!authData) {
-                throw new Error('Invalid auth data format');
-            }
-            adobe.hasToken = !!authData.access_token;
-            adobe.hasRefreshToken = !!authData.refresh_token;
-            adobe.expiresIn = authData.expires_in;
-
-            if (adobe.expiresIn) {
-                const expiryTime = parseInt(adobe.expiresIn);
-                const now = Date.now();
-                adobe.tokenExpired = expiryTime < now;
-                adobe.expiryDate = new Date(expiryTime).toISOString();
-            }
-        } catch (e) {
-            adobe.authParseError = (e as Error).message;
-            this.logger.debug('Failed to parse auth config', output);
-        }
-    }
-
-    private async checkCurrentContext(adobe: AdobeCLIInfo): Promise<void> {
-        const whereCheck = await this.checkCommand('aio console where --json');
-        if (whereCheck.installed && whereCheck.output) {
-            try {
-                const context = parseJSON<{ org?: { name?: string }; project?: { name?: string }; workspace?: { name?: string } }>(whereCheck.output);
-                if (!context) {
-                    throw new Error('Invalid context format');
-                }
-                adobe.currentContext = {
-                    org: context.org?.name || 'Not selected',
-                    project: context.project?.name || 'Not selected',
-                    workspace: context.workspace?.name || 'Not selected',
-                };
-            } catch {
-                adobe.currentContext = whereCheck.output;
-            }
-        }
-    }
-
-    private async checkOrganizations(adobe: AdobeCLIInfo): Promise<void> {
-        const orgCheck = await this.checkCommand('aio console org list --json');
-        adobe.canListOrgs = orgCheck.installed && orgCheck.output !== undefined && !orgCheck.output.includes('Error');
-
-        if (adobe.canListOrgs && orgCheck.output) {
-            try {
-                const orgs = parseJSON<{ id?: string; name?: string }[]>(orgCheck.output);
-                if (!orgs) {
-                    throw new Error('Invalid orgs format');
-                }
-                adobe.organizationCount = Array.isArray(orgs) ? orgs.length : 0;
-            } catch {
-                // Fallback to raw output
-            }
-        }
-    }
-
-    private getEnvironment(): EnvironmentInfo {
-        const env = process.env;
-        return {
-            PATH: env.PATH?.split(path.delimiter) || [],
-            HOME: env.HOME,
-            USER: env.USER,
-            SHELL: env.SHELL,
-            NODE_PATH: env.NODE_PATH,
-            npm_config_prefix: env.npm_config_prefix,
-            FNM_DIR: env.FNM_DIR,
-            FNM_MULTISHELL_PATH: env.FNM_MULTISHELL_PATH,
-            FNM_NODE_DIST_MIRROR: env.FNM_NODE_DIST_MIRROR,
-            FNM_LOGLEVEL: env.FNM_LOGLEVEL,
-        };
-    }
-
-    private async runTests(): Promise<TestResults> {
-        // Test browser launch capability
-        this.logger.debug('Testing browser launch...');
-        const browserLaunch = await this.testBrowserLaunch();
-
-        // Test Adobe login command
-        this.logger.debug('Testing Adobe login command...');
-        const adobeLoginCommand = await this.testAdobeLogin();
-
-        // Test file system access
-        this.logger.debug('Testing file system access...');
-        const fileSystem = await this.testFileSystem();
-
-        return {
-            browserLaunch,
-            adobeLoginCommand,
-            fileSystem,
-        };
-    }
-
-    private async checkCommand(command: string): Promise<CommandCheckResult> {
-        const startTime = Date.now();
-        const commandManager = ServiceLocator.getCommandExecutor();
-        try {
-            // Use appropriate options based on command type
-            let execResult;
-            if (command.includes('node') || command.includes('npm')) {
-                execResult = await commandManager.execute(command, {
-                    useNodeVersion: 'current',
-                });
-            } else if (command.includes('aio')) {
-                execResult = await commandManager.execute(command, {
-                    enhancePath: true,
-                    configureTelemetry: true,
-                    useNodeVersion: 'auto',
-                });
-            } else {
-                // Other tools (git, fnm): run through a shell so the multi-word
-                // "<tool> --version" string is parsed and executed. With execa's
-                // default shell:false the whole string is treated as a single
-                // binary name → the command never runs and stdout comes back
-                // empty (the "✅ git: <blank>" symptom). enhancePath surfaces
-                // tools installed outside the GUI launchd PATH.
-                execResult = await commandManager.execute(command, { shell: true, enhancePath: true });
-            }
-            const { stdout, stderr, code } = execResult;
-            const duration = Date.now() - startTime;
-            const trimmedStdout = stdout.trim();
-
-            const result: CommandResultWithContext = {
-                stdout: trimmedStdout,
-                stderr: stderr.trim(),
-                code: code ?? 0,
-                duration,
-                cwd: process.cwd(),
-            };
-
-            this.logger.logCommand(command, result);
-
-            // The command ran without throwing, but a non-zero exit means the
-            // tool isn't actually usable — e.g. a shell "command not found" (127)
-            // resolves rather than throws. Treat only a clean exit as installed so
-            // a failed probe reports "❌ Not installed" instead of "✅ <blank>".
-            return {
-                installed: code === 0,
-                output: trimmedStdout,
-                error: stderr.trim(),
-                code: code ?? undefined,
-                duration,
-            };
-        } catch (error: unknown) {
-            const duration = Date.now() - startTime;
-            const err = error as { stdout?: string; stderr?: string; message: string; code?: number };
-
-            const result: CommandResultWithContext = {
-                stdout: err.stdout || '',
-                stderr: err.stderr || err.message,
-                code: err.code || -1,
-                duration,
-                cwd: process.cwd(),
-            };
-
-            this.logger.logCommand(command, result);
-
-            return {
-                installed: false,
-                error: err.message,
-                code: err.code,
-                duration,
-            };
-        }
-    }
-
-    private async testBrowserLaunch(): Promise<BrowserLaunchTest> {
-        // Test if we can open a URL (won't actually open, just test the command)
-        const platform = os.platform();
-        let command: string;
-
-        switch (platform) {
-            case 'darwin':
-                command = 'open --help';
-                break;
-            case 'win32':
-                command = 'start /?';
-                break;
-            default:
-                command = 'xdg-open --help';
-        }
-
-        const result = await this.checkCommand(command);
-        return {
-            platform,
-            command: command.split(' ')[0],
-            available: result.installed,
-        };
-    }
-
-    private async testAdobeLogin(): Promise<AdobeLoginTest> {
-        // Test if Adobe login command is available (without actually running it)
-        const result = await this.checkCommand('aio auth login --help');
-        return {
-            available: result.installed,
-            supportsForceFlag: result.installed && !!result.output && result.output.includes('-f'),
-        };
-    }
-
-    private async testFileSystem(): Promise<FileSystemTest> {
-        const tempDir = os.tmpdir();
-        const testFile = path.join(tempDir, 'demo-builder-test.txt');
-
-        try {
-
-            // Test write
-            await fs.writeFile(testFile, 'test');
-
-            // Test read
-            const content = await fs.readFile(testFile, 'utf8');
-
-            // Clean up
-            await fs.unlink(testFile);
-
-            return {
-                canWrite: true,
-                canRead: content === 'test',
-                tempDir,
-            };
-        } catch (error) {
-            return {
-                canWrite: false,
-                canRead: false,
-                error: (error as Error).message,
-                tempDir,
-            };
         }
     }
 
@@ -515,12 +169,16 @@ export class DiagnosticsCommand {
      * throws: no workspace or an unreachable socket yields a structured result.
      */
     private async checkMcp(): Promise<McpInfo> {
+        // Probe the SAME socket the server binds as primary — the projects-root
+        // one. Probing the workspace socket described the retired
+        // one-project-one-workspace model and reported "not running" whenever no
+        // folder was open, which is the normal state for this window model.
+        const projectsDir =
+            process.env.DEMO_BUILDER_PROJECTS_DIR ??
+            path.join(os.homedir(), '.demo-builder', 'projects');
         const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        if (!workspacePath) {
-            return { running: false, error: 'No workspace folder open — the in-extension MCP server runs per project.' };
-        }
+        const { primary: socketPath } = mcpSocketBindings(projectsDir, workspacePath);
 
-        const socketPath = resolveMcpSocketPath(workspacePath);
         const result = await probeInExtensionMcpTools(socketPath);
         if (!result.ok) {
             return { running: false, socketPath, error: result.error };
@@ -535,55 +193,48 @@ export class DiagnosticsCommand {
         };
     }
 
-    private showSummary(report: DiagnosticsReport): void {
-        this.logger.info('=== DIAGNOSTICS SUMMARY ===');
-        this.logger.info(`System: ${report.system.platform} ${report.system.release}`);
-        this.logger.info(`VS Code: ${report.vscode.version}`);
-
-        // Tools summary
-        this.logger.info('');
-        this.logger.info('Tools Status:');
-        // SOP §4: Using for...of instead of Object.entries().forEach()
-        const toolEntries = Object.entries(report.tools);
-        for (const [tool, info] of toolEntries) {
-            const status = info.installed ? '✅' : '❌';
-            const version = info.installed ? info.output : 'Not installed';
-            this.logger.info(`  ${status} ${tool}: ${version}`);
-        }
-
-        // Adobe CLI summary
-        if (report.adobe.installed) {
-            this.logger.info('');
-            this.logger.info('Adobe CLI Status:');
-            this.logger.info(`  Version: ${report.adobe.version}`);
-            this.logger.info(`  Authenticated: ${report.adobe.authConfigured ? 'Yes' : 'No'}`);
-            if (report.adobe.authConfigured) {
-                this.logger.info(`  Token Valid: ${!report.adobe.tokenExpired ? 'Yes' : 'No'}`);
-                this.logger.info(`  Can List Orgs: ${report.adobe.canListOrgs ? 'Yes' : 'No'}`);
-            }
-        }
-
-        // Test results
-        this.logger.info('');
-        this.logger.info('Diagnostic Tests:');
-        this.logger.info(`  Browser Launch: ${report.tests.browserLaunch.available ? 'Available' : 'Not available'}`);
-        this.logger.info(`  Adobe Login Command: ${report.tests.adobeLoginCommand.available ? 'Available' : 'Not available'}`);
-        this.logger.info(`  File System Access: ${report.tests.fileSystem.canWrite ? 'OK' : 'Failed'}`);
-
-        // In-extension MCP server
-        this.logger.info('');
-        this.logger.info('MCP Server (in-extension):');
-        if (report.mcp.running) {
-            const tools = report.mcp.tools ?? [];
-            this.logger.info(`  Reachable: Yes (${tools.length} tool${tools.length === 1 ? '' : 's'})`);
-            this.logger.info(`  sign_in tool: ${report.mcp.hasSignIn ? '✅ present' : '❌ missing'}`);
-            this.logger.info(`  Tools: ${tools.join(', ')}`);
-        } else {
-            this.logger.info(`  Reachable: No`);
-            this.logger.info(`  Reason: ${report.mcp.error ?? 'unknown'}`);
-        }
-
-        this.logger.info('');
-        this.logger.info('Use VS Code\'s "Set Log Level..." command to see debug/trace details');
+    /**
+     * Probe whether the stored GitHub credential is accepted by GitHub AND by
+     * AEM, and whether GitHub grants write access to the current project's repo.
+     *
+     * Runs without a project too — identity and granted scopes are still worth
+     * having, and partial output beats none.
+     */
+    private async checkGitHubCredential(): Promise<CredentialProbeResult> {
+        const project = await ServiceLocator.getStateManager()?.getCurrentProject();
+        const repoFullName = getEdsGithubRepo(project);
+        const tokenService = new GitHubTokenService(this.context.secrets, this.logger);
+        return probeGitHubCredential(tokenService, repoFullName, this.logger);
     }
+
+
+    /**
+     * Probe whether the DA.live credential can read this storefront's site
+     * config, and whether the same credential is accepted by DA.live itself.
+     *
+     * Returns undefined without an EDS project: there is no site to address,
+     * and an invented one would produce a 404 that reads like a real finding.
+     */
+    private async checkConfigService(): Promise<ConfigServiceProbeResult | undefined> {
+        const project = await ServiceLocator.getStateManager()?.getCurrentProject();
+        const target = getEdsDaLiveTarget(project);
+        if (!target) return undefined;
+
+        const daLiveAuthService = getDaLiveAuthService(this.context);
+        const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
+        return probeConfigService(tokenProvider, target.org, target.site, this.logger);
+    }
+
+    /**
+     * Write the summary to the user log and return it as text.
+     *
+     * Returns the same lines it logs so the "Copy Report" action can hand the
+     * user exactly what they just read, rather than the whole output channel.
+     */
+    private showSummary(report: DiagnosticsReport): string {
+        const lines = buildSummaryLines(report);
+        for (const line of lines) this.logger.info(line);
+        return lines.join('\n');
+    }
+
 }
