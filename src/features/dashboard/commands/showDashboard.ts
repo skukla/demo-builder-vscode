@@ -12,7 +12,10 @@ import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appB
 import { dashboardHandlers } from '@/features/dashboard/handlers';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import type { AppBuilderComponentRowStatus } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
-import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
+import {
+    getEwCanvasBranch,
+    resolveProjectAuthoringExperience,
+} from '@/features/eds/handlers/edsHelpers';
 import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import { loadDemoPackages } from '@/features/project-creation/services/demoPackageLoader';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
@@ -22,7 +25,12 @@ import type { AppBuilderComponentState } from '@/types/base';
 import type { DemoPackage } from '@/types/demoPackages';
 import { HandlerContext, SharedState } from '@/types/handlers';
 import type { Stack, StacksConfig } from '@/types/stacks';
-import { getComponentInstanceValues, isEdsProject, getEdsLiveUrl, getEdsDaLiveUrl } from '@/types/typeGuards';
+import {
+    getComponentInstanceValues,
+    isEdsProject,
+    getEdsLiveUrl,
+    getEdsDaLiveUrl,
+} from '@/types/typeGuards';
 
 /** Absolute path to the Demo Builder projects directory (`~/.demo-builder/projects`). */
 const DEMO_BUILDER_PROJECTS_BASE = path.join(os.homedir(), '.demo-builder', 'projects');
@@ -174,10 +182,12 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
 
         return {
             theme,
-            project: project ? {
-                name: project.name,
-                path: project.path,
-            } : null,
+            project: project
+                ? {
+                      name: project.name,
+                      path: project.path,
+                  }
+                : null,
             hasMesh,
             packageName,
             stackName,
@@ -192,7 +202,9 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     }
 
     /** Stack-filtered appBuilderComponent catalog for the integrations add-a-appBuilderComponent picker. */
-    private resolveAppBuilderComponentCatalog(project: Project | null): AppBuilderComponentCatalogEntry[] {
+    private resolveAppBuilderComponentCatalog(
+        project: Project | null,
+    ): AppBuilderComponentCatalogEntry[] {
         return getAvailableAppBuilderComponents(
             project?.componentSelections?.backend ?? '',
             project?.componentSelections?.frontend ?? '',
@@ -225,10 +237,19 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
 
             // Resolve stack name
             if (project.selectedStack) {
-                const stacksPath = path.join(this.context.extensionPath, 'src', 'features', 'project-creation', 'config', 'stacks.json');
+                const stacksPath = path.join(
+                    this.context.extensionPath,
+                    'src',
+                    'features',
+                    'project-creation',
+                    'config',
+                    'stacks.json',
+                );
                 const stacksLoader = new ConfigurationLoader<StacksConfig>(stacksPath);
                 const stacksConfig = await stacksLoader.load();
-                const stack = stacksConfig.stacks.find((s: Stack) => s.id === project.selectedStack);
+                const stack = stacksConfig.stacks.find(
+                    (s: Stack) => s.id === project.selectedStack,
+                );
                 if (stack) {
                     result.stackName = stack.name;
                 }
@@ -295,6 +316,23 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     }
 
     /**
+     * Resolve whichever project-scoped panel is live for the live push channels.
+     *
+     * These pushes used to address the Project Dashboard alone. Opening the
+     * dedicated integrations surface is a tab REPLACEMENT — the dashboard panel
+     * is disposed — so a dashboard-only lookup would silently reach nobody and
+     * the grid would never flip status or land an added card.
+     *
+     * Dashboard wins when both are somehow live, so a push renders once.
+     */
+    private static getLiveProjectPanel(): vscode.WebviewPanel | undefined {
+        return (
+            BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard') ??
+            BaseWebviewCommand.getActivePanel('demoBuilder.integrations')
+        );
+    }
+
+    /**
      * Public method to send mesh status updates (called by deployMesh command)
      */
     public static async sendMeshStatusUpdate(
@@ -302,7 +340,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         message?: string,
         endpoint?: string,
     ): Promise<void> {
-        const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
+        const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
         if (panel) {
             await panel.webview.postMessage({
                 type: 'meshStatusUpdate',
@@ -331,7 +369,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         message?: string,
         name?: string,
     ): Promise<void> {
-        const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
+        const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
         if (panel) {
             await panel.webview.postMessage({
                 type: 'appBuilderComponentStatusUpdate',
@@ -351,12 +389,12 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
      * add/deploy terminal, remove success, rename success). The webview's map
      * is seeded once at init, so without this snapshot an added card never
      * appears and a removed card lingers. Modeled on
-     * sendAppBuilderComponentStatusUpdate; no-op if no dashboard is open.
+     * sendAppBuilderComponentStatusUpdate; no-op if neither project panel is open.
      */
     public static async sendAppBuilderComponentsSnapshot(
         components: Record<string, AppBuilderComponentState>,
     ): Promise<void> {
-        const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
+        const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
         if (panel) {
             await panel.webview.postMessage({
                 type: 'appBuilderComponentsSnapshot',
@@ -501,7 +539,10 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         }
 
         if (envFiles.length > 0) {
-            await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', envFiles);
+            await vscode.commands.executeCommand(
+                'demoBuilder._internal.initializeFileHashes',
+                envFiles,
+            );
         }
     }
 }
