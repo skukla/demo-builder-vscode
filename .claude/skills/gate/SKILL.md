@@ -1,6 +1,6 @@
 ---
 name: gate
-description: Run the fast inner-loop quality gate for the Demo Builder project — scoped Jest (redirected to a file, NEVER piped through tail), tsc --noEmit, and eslint on changed files — then report a compact PASS/FAIL summary. Use after making code changes and before committing.
+description: Run the fast inner-loop quality gate for the Demo Builder project — scoped Jest (redirected to a file, NEVER piped through tail), tsc --noEmit, and eslint on changed files — then report a compact PASS/FAIL summary. INVOKE this skill rather than re-running its commands by hand; hand-running skips §6, the whole-repo lint that CI actually enforces. Use after making code changes, before committing or pushing, and whenever a plan step or doc says to run the gate.
 ---
 
 # gate — Demo Builder inner-loop quality gate

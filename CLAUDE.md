@@ -102,6 +102,8 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 
 ## Project Skills (`.claude/skills/` — tracked; bodies load on invocation)
 
+**Skills are invoked, not transcribed.** A backticked skill name in a plan, doc, or step (e.g. "run `gate`") is an instruction to INVOKE that skill — not a shell command to reproduce from memory. Reproducing the steps by hand silently skips the rules in the skill's body; the 2026-07-30 dream run found a whole feature delivered this way, hand-running a scoped lint and missing `gate` §6's whole-repo lint that CI enforces.
+
 - `gate` — inner-loop quality gate (scoped jest + tsc + eslint) · `cut-release` — VSIX beta release
 - `worktree-setup` — create/relocate a worktree correctly + copy the gitignored .claude config (hooks, settings.local.json) that doesn't travel via git + start the preview loop
 - `adobe-org-context` — canonical IMS org/auth model; use for ANY org guard or org-mismatch work
@@ -111,6 +113,8 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 - `ai-context-authoring` — change the generated AI bundle (skills/AGENTS.md/.mcp.json/ai-defaults) without stranding existing projects: the four gate seams + the AI_CONTEXT_VERSION bump discipline
 - `mcp-tool-authoring` — add an in-extension MCP tool (headless-safe handler + descriptor row, no writes-hiding-in-reads, count-pinned tests, mcp-server.md sync)
 - `spectrum-webview-ui` — load-bearing Spectrum/webview UI gotchas (dimension-token scale, Menu sections/submenus, Flex-450px, box-sizing, dashboard notices)
+- `webview-test-authoring` — write/fix a React/Spectrum webview test: mock preamble, `advanceTimers` contract, hoist-safe `.testUtils` extraction, div-role card queries, mocked-vs-bundled-JSON trap (test-side counterpart to `spectrum-webview-ui`)
+- `dream` — out-of-band curation pass over memory/skills/CLAUDE.md: mine transcripts for recurring failures + staleness, propose evidence-backed changes (runs at release cuts; proposes, never applies)
 - `debug-log-triage` — parse a pasted Debug Logs dump: the structured stdout/stderr block above a blank error carries the truth; benign-noise catalog; channel→feature map
 - `component-extraction-scan` — find UI markup duplicated across ≥3 sites that should be one component (inverse of the SOP God-file scan)
 - `code-duplication-scan` — find copy-paste LOGIC duplication (jscpd) that should be one shared function (logic counterpart to component-extraction-scan)
