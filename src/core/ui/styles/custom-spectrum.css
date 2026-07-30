@@ -5102,11 +5102,29 @@ div[class*="spectrum"] input[type="search"] {
  * 450px); tokens flip light/dark. Card family: .project-card-spectrum
  * (gray-50 base, gray-75 hover, lift, radius 8).
  * ------------------------------------------------------------------------ */
-/* The grid's root inside the flex `.dashboard-grid-container` (shared with the
- * ActionGrid, so the stretch belongs here, not on the container). Without it the
- * flex child sizes to its INTRINSIC width and the auto-fill tracks below
- * collapse to a single 268px column. */
+/* The grid's root. Kept flexible so it fills whatever host it sits in — on the
+ * dedicated surface that is the full page width. */
 .integrations-surface {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* ---- Dedicated integrations surface ----
+ * The page shell is PageLayout + PageHeader and the content band is
+ * `.page-container-padded` (the canonical --content-width band), so this file
+ * carries NO page padding, breadcrumb, or banner rules — those were bespoke
+ * re-implementations of shared primitives and were removed. */
+.integrations-destination {
+    margin-bottom: var(--spectrum-global-dimension-size-200);
+}
+
+/* Master/detail: grid flexes, panel takes a fixed column beside it. */
+.integrations-split {
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+}
+.integrations-split > .integrations-grid {
     flex: 1 1 auto;
     min-width: 0;
 }
@@ -5130,10 +5148,15 @@ div[class*="spectrum"] input[type="search"] {
     background: var(--spectrum-global-color-gray-200);
     color: var(--spectrum-global-color-gray-700);
 }
+/* Card tracks are CAPPED, not 1fr: with two cards in a wide band, `1fr` inflated
+   them to ~420px and the content read as mostly empty. `justify-content: start`
+   packs them left instead of spreading. Gap matches the extension's card-grid
+   rhythm (.projects-grid, 24px / size-300). */
 .integrations-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(268px, 300px));
+    justify-content: start;
+    gap: 24px;
     padding: 8px;
 }
 .integration-card {
@@ -5200,7 +5223,9 @@ div[class*="spectrum"] input[type="search"] {
     font-style: italic;
 }
 /* Footer pinned to the card bottom; hosts the at-most-one face affordance. */
-.integration-card-foot {
+/* Only pushed to the bottom when the card HAS a face affordance — an empty foot
+   was reserving a row on every deployed card. */
+.integration-card-foot:not(:empty) {
     margin-top: auto;
     padding-top: 8px;
     display: flex;
@@ -5245,120 +5270,135 @@ div[class*="spectrum"] input[type="search"] {
     outline-offset: 2px;
 }
 
-/* Scrim + panel stay mounted; `.open` drives the slide. */
-.db-drawer-scrim {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.42);
-    z-index: 100;
-    opacity: 0;
-    visibility: hidden;
-    transition:
-        opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-        visibility 0.22s;
-}
-.db-drawer-scrim.open {
-    opacity: 1;
-    visibility: visible;
-}
-.db-drawer {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 392px;
-    max-width: 92vw;
-    background: var(--spectrum-global-color-gray-50);
-    border-left: 1px solid var(--spectrum-global-color-gray-300);
-    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
-    z-index: 101;
-    transform: translateX(100%);
-    visibility: hidden;
-    transition:
-        transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-        visibility 0.22s;
+/* ---- Detail panel (master/detail, page-scoped) ----
+ * Replaced the viewport-fixed drawer: no scrim, no slide, no always-mounted
+ * hidden node. It sits BESIDE the grid and sticks while the grid scrolls, so it
+ * never covers what you just navigated to. */
+.integration-panel {
+    flex: 0 0 352px;
+    max-width: 352px;
+    position: sticky;
+    top: 18px;
+    background: var(--spectrum-global-color-gray-75);
+    border: 1px solid var(--spectrum-global-color-gray-200);
+    border-radius: 8px;
+    padding: 16px 18px;
     display: flex;
     flex-direction: column;
-    outline: none;
 }
-.db-drawer.open {
-    transform: translateX(0);
-    visibility: visible;
-}
-@media (prefers-reduced-motion: reduce) {
-    .db-drawer,
-    .db-drawer-scrim {
-        transition: none;
-    }
-    .integration-dot--deploying {
-        animation: none;
-    }
-}
-/* Drawer sections: fixed head, scrolling body, fixed action bar. */
-.db-drawer-head {
+.integration-panel-head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 16px;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+    gap: 9px;
+    margin-bottom: 12px;
 }
-.db-drawer-body {
-    flex: 1 1 auto;
-    overflow-y: auto;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-.db-drawer-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 16px;
-    border-top: 1px solid var(--spectrum-global-color-gray-300);
-}
-.integration-drawer-title {
+.integration-panel-title {
     font-size: 15px;
     font-weight: 600;
-    color: var(--spectrum-global-color-gray-900);
     min-width: 0;
 }
-/* The mesh's "Data layer" role tag (drawer head only). */
-.integration-drawer-role {
-    flex: 0 0 auto;
+.integration-panel-role {
     font-size: 11px;
-    padding: 1px 8px;
-    border-radius: 10px;
-    background: var(--spectrum-global-color-blue-100);
-    color: var(--spectrum-global-color-blue-700);
+    color: var(--spectrum-global-color-blue-600);
 }
-/* Key/value detail rows. */
-.integration-drawer-row {
+.integration-panel-head > *:last-child {
+    margin-left: auto;
+}
+.integration-panel-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.integration-panel-row {
     display: flex;
     align-items: baseline;
     gap: 12px;
     font-size: 13px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
 }
-.integration-drawer-row-key {
-    flex: 0 0 96px;
+.integration-panel-row:last-child {
+    border-bottom: none;
+}
+.integration-panel-row-key {
+    flex: 0 0 88px;
     font-size: 12px;
     color: var(--spectrum-global-color-gray-600);
 }
-.integration-drawer-row-value {
+.integration-panel-row-value {
     min-width: 0;
     color: var(--spectrum-global-color-gray-800);
     overflow-wrap: anywhere;
 }
-.integration-drawer-row-value--mono {
+.integration-panel-row-value--mono {
     font-family: var(--spectrum-font-family-code, monospace);
     font-size: 12px;
 }
+/* One API per line — a comma-joined run of long Adobe API names is unreadable
+   in a 352px column. */
+.integration-panel-api {
+    display: block;
+}
 /* Live deploy progress / failure detail under the Status row's label. */
-.integration-drawer-status-message {
+.integration-panel-status-message {
     display: block;
     margin-top: 2px;
     font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+.integration-panel-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 14px;
+    padding-top: 13px;
+    border-top: 1px solid var(--spectrum-global-color-gray-200);
+}
+/* Remove trails the row (the prototype separates it from the safe actions). */
+.integration-panel-danger {
+    margin-left: auto;
+}
+
+/* ---- Dashboard integrations summary tile (build zone) ----
+ * Shaped exactly like its neighbours (Configure / More) — the dot and count are
+ * absolutely positioned overlays, NOT extra inline content, so the tile keeps a
+ * neighbour's footprint and the action row stays on one line. Widening the tile
+ * is what pushed it to wrap onto its own row. */
+.integrations-tile {
+    position: relative;
+}
+/* Status dot rides the tile's top-right corner. */
+.integrations-tile-dot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--spectrum-global-color-gray-500);
+}
+.integrations-tile-dot.status-dot--success {
+    background: var(--spectrum-global-color-green-500);
+}
+.integrations-tile-dot.status-dot--warning {
+    background: var(--spectrum-global-color-orange-500);
+}
+.integrations-tile-dot.status-dot--error {
+    background: var(--spectrum-global-color-red-500);
+}
+.integrations-tile-dot.status-dot--info {
+    background: var(--spectrum-global-color-blue-500);
+}
+.integrations-tile-dot.status-dot--neutral {
+    background: var(--spectrum-global-color-gray-500);
+}
+/* Count rides the bottom-right, out of the label's way. */
+.integrations-tile-count {
+    position: absolute;
+    bottom: 6px;
+    right: 8px;
+    font-size: 10.5px;
+    line-height: 1;
     color: var(--spectrum-global-color-gray-600);
 }
 } /* End of second @layer theme block */

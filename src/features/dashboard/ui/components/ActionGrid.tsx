@@ -45,6 +45,9 @@ import Settings from '@spectrum-icons/workflow/Settings';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
 import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
 import React from 'react';
+import type { MeshStatus } from '../hooks/useDashboardStatus';
+import { IntegrationsSummaryTile } from './IntegrationsSummaryTile';
+import type { AppBuilderComponentState } from '@/types/base';
 
 /** Overflow menu item keys. */
 type OverflowKey =
@@ -70,6 +73,15 @@ export interface ActionGridProps {
     isStopDisabled: boolean;
     /** Whether mesh-related actions (Configure) should be disabled */
     isMeshActionDisabled: boolean;
+    /**
+     * Integrations summary tile inputs. The tile lives in the BUILD zone beside
+     * Configure — integrations are a "set this up" concern, not a run-time
+     * action, and grouping it there keeps the row to a single line.
+     */
+    hasAdobeContext?: boolean;
+    appBuilderComponents?: Record<string, AppBuilderComponentState>;
+    hasMesh?: boolean;
+    meshStatus?: MeshStatus;
     /** Whether browser is currently opening */
     isOpeningBrowser: boolean;
     /** Handler for Start button (non-EDS only) */
@@ -122,6 +134,10 @@ export function ActionGrid({
     isStopDisabled,
     isMeshActionDisabled,
     isOpeningBrowser,
+    hasAdobeContext,
+    appBuilderComponents,
+    hasMesh,
+    meshStatus,
     handleStartDemo,
     handleStopDemo,
     handleOpenBrowser,
@@ -287,6 +303,16 @@ export function ActionGrid({
                             <Settings size="L" />
                             <Text UNSAFE_className="icon-label">Configure</Text>
                         </ActionButton>
+
+                        {/* Integrations — the whole integrations footprint on the
+                            dashboard (count + worst status), routing to the
+                            dedicated surface. Renders nothing without an Adobe org. */}
+                        <IntegrationsSummaryTile
+                            hasAdobeContext={hasAdobeContext}
+                            appBuilderComponents={appBuilderComponents}
+                            hasMesh={hasMesh}
+                            meshStatus={meshStatus}
+                        />
 
                         {/* Overflow — rarely used actions tucked into a menu */}
                         <MenuTrigger>

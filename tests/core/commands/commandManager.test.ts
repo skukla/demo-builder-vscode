@@ -145,17 +145,21 @@ describe('CommandManager', () => {
             );
         });
 
-        it('should register all 28 commands (29 total, but resetAll only in dev mode)', () => {
+        it('should register all 29 commands (30 total, but resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
-            // Verify registerCommand was called 29 times (resetAll excluded - dev mode only)
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(29);
+            // Verify registerCommand was called 30 times (resetAll excluded - dev mode only)
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(30);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
                 'demoBuilder.showProjectsList',
                 'demoBuilder.createProject',
                 'demoBuilder.showProjectDashboard',
+                // The dedicated integrations surface, opened from the dashboard's
+                // summary tile (registered right after the dashboard it replaces
+                // the grid section of).
+                'demoBuilder.showIntegrations',
                 'demoBuilder.loadProject',
                 'demoBuilder.startDemo',
                 'demoBuilder.stopDemo',

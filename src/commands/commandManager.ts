@@ -17,6 +17,7 @@ import { openUrl } from '@/core/utils/browserUtils';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
+import { ShowIntegrationsCommand } from '@/features/dashboard/commands/showIntegrations';
 import { getBookmarkletSetupPageUrl } from '@/features/eds/ui/helpers/bookmarkletSetupPage';
 import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
 import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
@@ -105,7 +106,23 @@ export class CommandManager {
                 await sidebarProvider.setShowingProjectsList(false);
             }
             // Note: Projects List disposal is handled by showDashboard.execute() AFTER panel creation
+            ShowIntegrationsCommand.disposeActivePanel();
             await projectDashboard.execute();
+        });
+
+        // Integrations surface (dedicated, opened from the dashboard summary tile)
+        const integrations = new ShowIntegrationsCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.showIntegrations', async () => {
+            // Tab replacement, same as the other project-scoped surfaces. The
+            // dashboard panel is disposed by handleOpenIntegrations inside a
+            // webview transition; dispose the rest here.
+            ShowProjectsListCommand.disposeActivePanel();
+            ConfigureProjectWebviewCommand.disposeActivePanel();
+            await integrations.execute();
         });
 
         // Load Project (from tree view click)

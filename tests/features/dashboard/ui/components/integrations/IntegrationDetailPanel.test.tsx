@@ -1,8 +1,8 @@
 /**
- * IntegrationDrawer Tests (integrations grid — Step 5)
+ * IntegrationDetailPanel Tests (integrations surface)
  *
- * The detail drawer content, composed INSIDE the Drawer primitive (the grid
- * renders one `<IntegrationDrawer model={selected | undefined} …/>`):
+ * The detail panel content, rendered beside the grid (the grid
+ * renders one `<IntegrationDetailPanel model={selected | undefined} …/>`):
  *   - header: InlineRenameField only when `canRename` (commit → onRename,
  *     an error string stays visible inline), mesh "Data layer" role tag,
  *     quiet ✕ → onClose
@@ -13,7 +13,7 @@
  *   - action bar: model.barActions with emphasis→variant mapping and
  *     disabled honored; deploying → a single disabled "Deploying…"
  *
- * Uses the REAL Drawer + InlineRenameField (the inline-error pin needs the
+ * Uses the REAL InlineRenameField (the inline-error pin needs the
  * real field); Spectrum primitives are mocked per the directory convention.
  *
  * Strict TDD: written BEFORE the component exists.
@@ -21,7 +21,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import { IntegrationDrawer } from '@/features/dashboard/ui/components/integrations/IntegrationDrawer';
+import { IntegrationDetailPanel } from '@/features/dashboard/ui/components/integrations/IntegrationDetailPanel';
 import type { IntegrationCardModel } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
 import '@testing-library/jest-dom';
 
@@ -101,60 +101,63 @@ function makeMeshModel(overrides: Partial<IntegrationCardModel> = {}): Integrati
     });
 }
 
-function renderDrawer(model: IntegrationCardModel | undefined) {
+function renderPanel(model: IntegrationCardModel | undefined) {
     const onClose = jest.fn();
     const onAction = jest.fn();
-    const onRename = jest.fn<Promise<string | null>, [string, string]>(() =>
-        Promise.resolve(null),
-    );
+    const onRename = jest.fn<Promise<string | null>, [string, string]>(() => Promise.resolve(null));
     const view = render(
-        <IntegrationDrawer model={model} onClose={onClose} onAction={onAction} onRename={onRename} />,
+        <IntegrationDetailPanel
+            model={model}
+            onClose={onClose}
+            onAction={onAction}
+            onRename={onRename}
+        />
     );
-    const panel = view.container.querySelector('.db-drawer') as HTMLElement;
+    const panel = view.container.querySelector('.integration-panel') as HTMLElement;
     return { onClose, onAction, onRename, panel };
 }
 
-describe('IntegrationDrawer', () => {
-    it('stays closed (hidden panel, no rows) without a model', () => {
-        const { panel } = renderDrawer(undefined);
+describe('IntegrationDetailPanel', () => {
+    // The panel is non-modal and page-scoped: with no selection it renders
+    // NOTHING at all, rather than staying mounted-but-hidden the way the
+    // superseded viewport drawer did (it needed a mounted node to slide).
+    it('renders nothing without a model', () => {
+        const { panel } = renderPanel(undefined);
 
-        expect(panel).not.toHaveClass('open');
-        expect(panel).toHaveAttribute('aria-hidden', 'true');
-        expect(panel.querySelector('.integration-drawer-row')).toBeNull();
+        expect(panel).toBeNull();
     });
 
-    it('opens with the model name in the header', () => {
-        const { panel } = renderDrawer(makeModel());
+    it('renders with the model name in the header', () => {
+        const { panel } = renderPanel(makeModel());
 
-        expect(panel).toHaveClass('open');
+        expect(panel).toBeInTheDocument();
+        expect(panel).toHaveAttribute('aria-label', 'Custom App details');
         expect(screen.getByText('Custom App')).toBeInTheDocument();
     });
 
     it('closes via the ✕ button', () => {
-        const { onClose } = renderDrawer(makeModel());
+        const { onClose } = renderPanel(makeModel());
 
-        fireEvent.click(screen.getByRole('button', { name: 'Close drawer' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Close details' }));
 
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
     describe('rename', () => {
         it('shows the rename field only when canRename', () => {
-            renderDrawer(makeModel());
+            renderPanel(makeModel());
 
             expect(screen.getByRole('button', { name: 'Rename Custom App' })).toBeInTheDocument();
         });
 
         it('hides the rename field when canRename is false', () => {
-            renderDrawer(makeModel({ canRename: false }));
+            renderPanel(makeModel({ canRename: false }));
 
-            expect(
-                screen.queryByRole('button', { name: /rename/i }),
-            ).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /rename/i })).not.toBeInTheDocument();
         });
 
         it('commits through onRename(id, name)', async () => {
-            const { onRename } = renderDrawer(makeModel());
+            const { onRename } = renderPanel(makeModel());
 
             fireEvent.click(screen.getByRole('button', { name: 'Rename Custom App' }));
             const input = screen.getByRole('textbox');
@@ -166,7 +169,7 @@ describe('IntegrationDrawer', () => {
         });
 
         it('keeps a returned error string visible inline', async () => {
-            const { onRename } = renderDrawer(makeModel());
+            const { onRename } = renderPanel(makeModel());
             onRename.mockResolvedValueOnce('Name already in use');
 
             fireEvent.click(screen.getByRole('button', { name: 'Rename Custom App' }));
@@ -181,7 +184,7 @@ describe('IntegrationDrawer', () => {
 
     describe('body rows', () => {
         it('renders Status with label and message when present', () => {
-            renderDrawer(makeModel({ message: 'Deploy step 3 of 5' }));
+            renderPanel(makeModel({ message: 'Deploy step 3 of 5' }));
 
             expect(screen.getByText('Status')).toBeInTheDocument();
             expect(screen.getByText('Deployed')).toBeInTheDocument();
@@ -189,25 +192,25 @@ describe('IntegrationDrawer', () => {
         });
 
         it('renders Kind and Source (mono when not AI)', () => {
-            renderDrawer(makeModel());
+            renderPanel(makeModel());
 
             expect(screen.getByText('Imported repo')).toBeInTheDocument();
             expect(screen.getByText('acme/custom-app')).toHaveClass(
-                'integration-drawer-row-value--mono',
+                'integration-panel-row-value--mono'
             );
         });
 
         it('drops the mono modifier for the AI source caption', () => {
-            renderDrawer(makeModel({ sourceLine: 'Built with AI', sourceIsAi: true }));
+            renderPanel(makeModel({ sourceLine: 'Built with AI', sourceIsAi: true }));
 
             expect(screen.getByText('Built with AI')).not.toHaveClass(
-                'integration-drawer-row-value--mono',
+                'integration-panel-row-value--mono'
             );
         });
 
         it('renders the integration URL as a link firing onAction(open)', () => {
             const model = makeModel();
-            const { onAction } = renderDrawer(model);
+            const { onAction } = renderPanel(model);
 
             expect(screen.getByText('App URL')).toBeInTheDocument();
             const link = screen.getByRole('link', { name: 'https://example.com/app' });
@@ -217,34 +220,40 @@ describe('IntegrationDrawer', () => {
         });
 
         it('renders each deployed URL row', () => {
-            renderDrawer(makeModel());
+            renderPanel(makeModel());
 
             expect(screen.getByText('Frontend')).toBeInTheDocument();
             expect(screen.getByText('https://example.com/front')).toBeInTheDocument();
         });
 
-        it('renders APIs and Last deploy rows from the model', () => {
-            renderDrawer(makeModel());
+        it('renders APIs ONE PER LINE and the Last deploy row', () => {
+            const { panel } = renderPanel(makeModel());
 
-            expect(screen.getByText('APIs')).toBeInTheDocument();
-            expect(screen.getByText('I/O Events, I/O Management')).toBeInTheDocument();
+            expect(screen.getByText('APIs in use')).toBeInTheDocument();
+            // One element per API, not a comma-joined run — three long Adobe API
+            // names read as noise on one line in a 352px panel.
+            const apis = panel!.querySelectorAll('.integration-panel-api');
+            expect(Array.from(apis).map((n) => n.textContent)).toEqual([
+                'I/O Events',
+                'I/O Management',
+            ]);
             expect(screen.getByText('Last deploy')).toBeInTheDocument();
             expect(screen.getByText('6/1/2026, 10:00:00 AM')).toBeInTheDocument();
         });
 
         it('omits every row whose datum is absent', () => {
-            renderDrawer(
+            renderPanel(
                 makeModel({
                     message: undefined,
                     url: undefined,
                     deployedUrls: undefined,
                     apis: undefined,
                     lastDeployed: undefined,
-                }),
+                })
             );
 
             expect(screen.queryByText('App URL')).not.toBeInTheDocument();
-            expect(screen.queryByText('APIs')).not.toBeInTheDocument();
+            expect(screen.queryByText('APIs in use')).not.toBeInTheDocument();
             expect(screen.queryByText('Last deploy')).not.toBeInTheDocument();
             expect(screen.queryByText('Frontend')).not.toBeInTheDocument();
         });
@@ -261,7 +270,7 @@ describe('IntegrationDrawer', () => {
                 status: 'not-deployed',
                 statusLabel: 'Not deployed',
             });
-            const { onAction } = renderDrawer(model);
+            const { onAction } = renderPanel(model);
 
             const deploy = screen.getByRole('button', { name: 'Deploy' });
             const manage = screen.getByRole('button', { name: 'Manage APIs' });
@@ -280,25 +289,30 @@ describe('IntegrationDrawer', () => {
         });
 
         it('honors disabled bar actions', () => {
-            renderDrawer(
+            renderPanel(
                 makeMeshModel({
                     barActions: [
-                        { action: 'redeploy', label: 'Redeploy', emphasis: 'secondary', disabled: true },
+                        {
+                            action: 'redeploy',
+                            label: 'Redeploy',
+                            emphasis: 'secondary',
+                            disabled: true,
+                        },
                     ],
-                }),
+                })
             );
 
             expect(screen.getByRole('button', { name: 'Redeploy' })).toBeDisabled();
         });
 
         it('shows a single disabled Deploying… while deploying', () => {
-            renderDrawer(
+            renderPanel(
                 makeModel({
                     status: 'deploying',
                     statusLabel: 'Deploying…',
                     faceAction: undefined,
                     barActions: [],
-                }),
+                })
             );
 
             const button = screen.getByRole('button', { name: 'Deploying…' });
@@ -308,7 +322,7 @@ describe('IntegrationDrawer', () => {
 
     describe('mesh asymmetry', () => {
         it('shows the Data layer role tag, no rename field, no Manage APIs/Remove', () => {
-            renderDrawer(makeMeshModel());
+            renderPanel(makeMeshModel());
 
             expect(screen.getByText('Data layer')).toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /rename/i })).not.toBeInTheDocument();
@@ -317,11 +331,11 @@ describe('IntegrationDrawer', () => {
         });
 
         it('renders the mesh endpoint as mono TEXT, never a link', () => {
-            renderDrawer(makeMeshModel());
+            renderPanel(makeMeshModel());
 
             expect(screen.getByText('Endpoint')).toBeInTheDocument();
             const value = screen.getByText('https://mesh.example.com/graphql');
-            expect(value).toHaveClass('integration-drawer-row-value--mono');
+            expect(value).toHaveClass('integration-panel-row-value--mono');
             expect(screen.queryByRole('link')).not.toBeInTheDocument();
         });
     });

@@ -114,23 +114,13 @@ describe('ProjectDashboardScreen - Rendering and Status', () => {
             expect(screen.getByText('Demo Project')).toBeInTheDocument();
         });
 
-        it('should hide mesh status after status update confirms no mesh', async () => {
-            // The mesh row renders inside the integrations list, which is
-            // gated on hasAdobeContext (D3 Step 08).
-            renderDashboard({ hasAdobeContext: true });
-
-            expect(screen.getByText(/Loading status/i)).toBeInTheDocument();
-
-            ctx.triggerMessage('statusUpdate', {
-                name: 'Test Project',
-                path: '/test/path',
-                status: 'ready',
-            });
-
-            await waitFor(() => {
-                expect(screen.queryByText(/API Mesh/i)).not.toBeInTheDocument();
-            });
-        });
+        // The dashboard no longer renders mesh status text at all — the mesh card
+        // left with the grid for the dedicated integrations surface, and the
+        // dashboard keeps only the summary tile's dot. The equivalent coverage:
+        //   - useDashboardStatus-statusDisplay.test.ts — meshStatusDisplay resolves
+        //     to null once a status update confirms no mesh
+        //   - IntegrationsSummaryTile.test.tsx — "ignores mesh status entirely when
+        //     the project has no mesh"
 
         it('should cleanup subscriptions on unmount', () => {
             const unsubscribeStatus = jest.fn();

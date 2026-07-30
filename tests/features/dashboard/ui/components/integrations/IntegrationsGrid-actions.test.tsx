@@ -1,12 +1,12 @@
 /**
- * IntegrationsGrid Tests — drawer, dispatch, dialogs, rename, add
+ * IntegrationsGrid Tests — detail panel, dispatch, dialogs, rename, add
  * (integrations grid, Step 7 — the cutover)
  *
- * The interaction half of the grid: the drawer it opens, the ONE handleAction
+ * The interaction half of the grid: the detail panel it opens, the ONE handleAction
  * switch that turns a card model into an id-scoped message or a mesh callback,
  * the two dialogs it hosts as single shared instances (remove-confirm and
  * Manage APIs — both ported from the retired AppBuilderComponentsList suite),
- * in-drawer rename, and the add flow.
+ * in-panel rename, and the add flow.
  *
  * Composition and the live push channels live in IntegrationsGrid.test.tsx;
  * the shared harness in IntegrationsGrid.testUtils.tsx.
@@ -20,7 +20,7 @@ import {
     card,
     DEPLOYED_INTEGRATION,
     getClient,
-    openDrawer,
+    openPanel,
     renderGrid,
     resetGridMocks,
     setupUser,
@@ -37,28 +37,28 @@ beforeEach(() => {
 });
 
 describe('IntegrationsGrid actions', () => {
-    describe('drawer open/close', () => {
-        it('opens the detail drawer on card click', async () => {
+    describe('detail panel open/close', () => {
+        it('opens the detail panel on card click', async () => {
             const user = setupUser();
             renderGrid({ appBuilderComponents: oneDeployed() });
 
-            const drawer = await openDrawer(user, 'custom-app', 'Deployed');
-            expect(drawer).toBeInTheDocument();
+            const panel = await openPanel(user, 'custom-app', 'Deployed');
+            expect(panel).toBeInTheDocument();
         });
 
-        it('closes the drawer on ✕', async () => {
+        it('closes the panel on ✕', async () => {
             const user = setupUser();
             renderGrid({ appBuilderComponents: oneDeployed() });
 
-            const drawer = await openDrawer(user, 'custom-app', 'Deployed');
-            await user.click(within(drawer).getByRole('button', { name: /close drawer/i }));
+            const panel = await openPanel(user, 'custom-app', 'Deployed');
+            await user.click(within(panel).getByRole('button', { name: /close details/i }));
 
             expect(
-                screen.queryByRole('dialog', { name: 'custom-app details' }),
+                screen.queryByLabelText('custom-app details'),
             ).not.toBeInTheDocument();
         });
 
-        it('a face affordance does NOT open the drawer (stop-propagation containment)', async () => {
+        it('a face affordance does NOT open the panel (stop-propagation containment)', async () => {
             const user = setupUser();
             renderGrid({
                 appBuilderComponents: {
@@ -93,24 +93,24 @@ describe('IntegrationsGrid actions', () => {
             });
         });
 
-        it('routes drawer Redeploy to redeployAppBuilderComponent', async () => {
+        it('routes panel Redeploy to redeployAppBuilderComponent', async () => {
             const user = setupUser();
             renderGrid({ appBuilderComponents: oneDeployed() });
 
-            const drawer = await openDrawer(user, 'custom-app', 'Deployed');
-            await user.click(within(drawer).getByRole('button', { name: /^redeploy$/i }));
+            const panel = await openPanel(user, 'custom-app', 'Deployed');
+            await user.click(within(panel).getByRole('button', { name: /^redeploy$/i }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('redeployAppBuilderComponent', {
                 id: 'custom-app',
             });
         });
 
-        it('routes drawer Verify to verifyAppBuilderComponent', async () => {
+        it('routes panel Verify to verifyAppBuilderComponent', async () => {
             const user = setupUser();
             renderGrid({ appBuilderComponents: oneDeployed() });
 
-            const drawer = await openDrawer(user, 'custom-app', 'Deployed');
-            await user.click(within(drawer).getByRole('button', { name: /^verify$/i }));
+            const panel = await openPanel(user, 'custom-app', 'Deployed');
+            await user.click(within(panel).getByRole('button', { name: /^verify$/i }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('verifyAppBuilderComponent', {
                 id: 'custom-app',
@@ -163,12 +163,12 @@ describe('IntegrationsGrid actions', () => {
     });
 
     describe('mesh card routing (mesh callbacks, never keyed messages)', () => {
-        it('routes the mesh drawer Redeploy to onDeployMesh', async () => {
+        it('routes the mesh panel Redeploy to onDeployMesh', async () => {
             const user = setupUser();
             const { onDeployMesh } = renderGrid({ withMesh: true });
 
-            const drawer = await openDrawer(user, 'API Mesh', 'Deployed');
-            await user.click(within(drawer).getByRole('button', { name: /^redeploy$/i }));
+            const panel = await openPanel(user, 'API Mesh', 'Deployed');
+            await user.click(within(panel).getByRole('button', { name: /^redeploy$/i }));
 
             expect(onDeployMesh).toHaveBeenCalled();
             expect(getClient().postMessage).not.toHaveBeenCalledWith(
@@ -177,17 +177,17 @@ describe('IntegrationsGrid actions', () => {
             );
         });
 
-        it('offers no Manage APIs and no Remove in the mesh drawer', async () => {
+        it('offers no Manage APIs and no Remove in the mesh panel', async () => {
             const user = setupUser();
             renderGrid({ withMesh: true });
 
-            const drawer = await openDrawer(user, 'API Mesh', 'Deployed');
+            const panel = await openPanel(user, 'API Mesh', 'Deployed');
 
             expect(
-                within(drawer).queryByRole('button', { name: /manage apis/i }),
+                within(panel).queryByRole('button', { name: /manage apis/i }),
             ).not.toBeInTheDocument();
             expect(
-                within(drawer).queryByRole('button', { name: /^remove$/i }),
+                within(panel).queryByRole('button', { name: /^remove$/i }),
             ).not.toBeInTheDocument();
         });
 
@@ -220,8 +220,8 @@ describe('IntegrationsGrid actions', () => {
 
     describe('remove confirmation guard (ported)', () => {
         async function openRemove(user: ReturnType<typeof userEvent.setup>) {
-            const drawer = await openDrawer(user, 'custom-app', 'Deployed');
-            await user.click(within(drawer).getByRole('button', { name: /^remove$/i }));
+            const panel = await openPanel(user, 'custom-app', 'Deployed');
+            await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
         }
 
         it('opens a confirm dialog on Remove WITHOUT posting removeAppBuilderComponent', async () => {
@@ -278,8 +278,8 @@ describe('IntegrationsGrid actions', () => {
             const user = setupUser();
             renderGrid({ appBuilderComponents: twoDeployed() });
 
-            const drawer = await openDrawer(user, 'other-app', 'Deployed');
-            await user.click(within(drawer).getByRole('button', { name: /manage apis/i }));
+            const panel = await openPanel(user, 'other-app', 'Deployed');
+            await user.click(within(panel).getByRole('button', { name: /manage apis/i }));
 
             const modals = screen.getAllByTestId('manage-apis-modal');
             expect(modals).toHaveLength(1);
@@ -290,22 +290,22 @@ describe('IntegrationsGrid actions', () => {
             const user = setupUser();
             renderGrid({ appBuilderComponents: twoDeployed() });
 
-            const drawer = await openDrawer(user, 'custom-app', 'Deployed');
-            await user.click(within(drawer).getByRole('button', { name: /manage apis/i }));
+            const panel = await openPanel(user, 'custom-app', 'Deployed');
+            await user.click(within(panel).getByRole('button', { name: /manage apis/i }));
             await user.click(screen.getByRole('button', { name: /close-manage-apis/i }));
 
             expect(screen.queryByTestId('manage-apis-modal')).not.toBeInTheDocument();
         });
     });
 
-    describe('in-drawer rename', () => {
+    describe('in-panel rename', () => {
         it('requests renameAppBuilderComponent with the id AND the inline name', async () => {
             const user = setupUser();
             renderGrid({ appBuilderComponents: oneDeployed() });
 
-            const drawer = await openDrawer(user, 'custom-app', 'Deployed');
-            await user.click(within(drawer).getByRole('button', { name: /rename custom-app/i }));
-            const input = within(drawer).getByRole('textbox');
+            const panel = await openPanel(user, 'custom-app', 'Deployed');
+            await user.click(within(panel).getByRole('button', { name: /rename custom-app/i }));
+            const input = within(panel).getByRole('textbox');
             await user.clear(input);
             await user.type(input, 'Renamed App{Enter}');
 
@@ -317,19 +317,19 @@ describe('IntegrationsGrid actions', () => {
             });
         });
 
-        it('surfaces a rejected rename inline without closing the drawer', async () => {
+        it('surfaces a rejected rename inline without closing the panel', async () => {
             const user = setupUser();
             getClient().request.mockResolvedValue({ success: false, error: 'Name already taken' });
             renderGrid({ appBuilderComponents: oneDeployed() });
 
-            const drawer = await openDrawer(user, 'custom-app', 'Deployed');
-            await user.click(within(drawer).getByRole('button', { name: /rename custom-app/i }));
-            const input = within(drawer).getByRole('textbox');
+            const panel = await openPanel(user, 'custom-app', 'Deployed');
+            await user.click(within(panel).getByRole('button', { name: /rename custom-app/i }));
+            const input = within(panel).getByRole('textbox');
             await user.clear(input);
             await user.type(input, 'Taken{Enter}');
 
-            expect(await within(drawer).findByRole('alert')).toHaveTextContent('Name already taken');
-            expect(drawer).toBeInTheDocument();
+            expect(await within(panel).findByRole('alert')).toHaveTextContent('Name already taken');
+            expect(panel).toBeInTheDocument();
         });
 
         it('offers no rename for a CATALOG integration (id is a bundled catalog id)', async () => {
@@ -346,44 +346,35 @@ describe('IntegrationsGrid actions', () => {
                 },
             });
 
-            const drawer = await openDrawer(user, 'app-builder-shell', 'Deployed');
+            const panel = await openPanel(user, 'app-builder-shell', 'Deployed');
 
             expect(
-                within(drawer).queryByRole('button', { name: /^rename/i }),
+                within(panel).queryByRole('button', { name: /^rename/i }),
             ).not.toBeInTheDocument();
         });
     });
 
     describe('add flow', () => {
-        it('opens the add modal from the add tile', async () => {
+        // The MODAL is hosted by the screen so the header button and this tile
+        // open one instance; the grid's only job is to ask for it.
+        it('asks the screen to open the add picker', async () => {
             const user = setupUser();
-            renderGrid();
+            const { onAddRequest } = renderGrid();
 
             await user.click(screen.getByTestId('integration-add-tile'));
 
-            expect(screen.getByRole('dialog', { name: /add integration/i })).toBeInTheDocument();
+            expect(onAddRequest).toHaveBeenCalledTimes(1);
         });
 
-        it('opens the add modal from the header button', async () => {
-            const user = setupUser();
-            renderGrid();
+        it('renders the add tile as the last cell', () => {
+            renderGrid({ appBuilderComponents: twoDeployed() });
 
-            await user.click(screen.getByTestId('integration-add-header'));
-
-            expect(screen.getByRole('dialog', { name: /add integration/i })).toBeInTheDocument();
-        });
-
-        it('closes the add modal on cancel', async () => {
-            const user = setupUser();
-            renderGrid();
-
-            await user.click(screen.getByTestId('integration-add-tile'));
-            const dialog = screen.getByRole('dialog', { name: /add integration/i });
-            await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }));
-
+            const tile = screen.getByTestId('integration-add-tile');
+            const cards = screen.getAllByRole('button', { name: /, Deployed$/ });
             expect(
-                screen.queryByRole('dialog', { name: /add integration/i }),
-            ).not.toBeInTheDocument();
+                cards[cards.length - 1].compareDocumentPosition(tile) &
+                    Node.DOCUMENT_POSITION_FOLLOWING,
+            ).toBeTruthy();
         });
     });
 });

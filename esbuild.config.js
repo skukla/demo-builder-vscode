@@ -158,6 +158,8 @@ const WEBVIEW_ENTRIES = {
     projectsList: 'src/features/projects-dashboard/ui/index.tsx',
     // Standalone AI surface (Batch E1) — webview behind `demoBuilder.openAi`.
     aiOverview:   'src/features/dashboard/ui/aiSurface/index.tsx',
+    // Dedicated integrations surface — webview behind `demoBuilder.showIntegrations`.
+    integrations: 'src/features/dashboard/ui/integrationsSurface/index.tsx',
 };
 
 function runWebviewBuild() {

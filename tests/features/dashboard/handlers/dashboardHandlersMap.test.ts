@@ -127,15 +127,17 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 32 handlers', () => {
+        it('should have exactly 34 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 32 handlers
-            // 1 init (requestStatus only; no 'ready') + 2 lifecycle + 8 navigation
+            // Then: Exactly 34 handlers
+            // 1 init (requestStatus only; no 'ready') + 2 lifecycle + 9 navigation
             // (openBrowser, openLiveSite, openDaLive, openAdminPanel, configure,
-            // openDevConsole, getProjectUrls, navigateBack) + 1 mesh + 1
+            // openDevConsole, getProjectUrls, navigateBack, openIntegrations +
+            // showProjectDashboard — the summary tile's route to the dedicated
+            // surface and the surface's route back) + 1 mesh + 1
             // syncStorefront + 1 refreshBlockLibrary + 2 auth (reAuthenticate +
             // switchOrg) + 1 project + 1 reset = 18, plus the 4 More-menu actions
             // (editProject, exportProject, republishContent, renameProject) = 22
@@ -146,11 +148,11 @@ describe('dashboardHandlers', () => {
             // renameAppBuilderComponent — shell instancing Step 10 —
             // verifyAppBuilderComponent) = 28, plus the 3 console-API actions
             // (listConsoleApis, addConsoleApis, setConsoleApis) = 31, plus the
-            // headless exportProjectSettings (export_project_settings MCP tool) = 32.
+            // headless exportProjectSettings (export_project_settings MCP tool) = 34.
             // The 4 singular App Builder actions (addApp, deployApp, redeployApp,
             // removeApp) retired with the dormant AppBuilderCard (D3 Step 08).
             // setAuthoringExperience lives in the Configure webview, not this map.
-            expect(types).toHaveLength(32);
+            expect(types).toHaveLength(34);
         });
 
         it('should have handlers as functions', () => {

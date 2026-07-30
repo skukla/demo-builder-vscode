@@ -21,46 +21,37 @@
  * @module features/dashboard/ui/components/integrations/IntegrationsGrid
  */
 
-import { Button, Heading } from '@adobe/react-spectrum';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import type { MeshStatus, StatusDisplay } from '../../hooks/useDashboardStatus';
-import { useLiveAppBuilderComponents } from '../../hooks/useLiveAppBuilderComponents';
-import { useRowStatusOverrides } from '../../hooks/useRowStatusOverrides';
+import React, { useCallback, useEffect, useState } from 'react';
 import { AppBuilderComponentRemoveDialog } from '../AppBuilderComponentRemoveDialog';
 import { ManageApisModal } from '../ManageApisModal';
-import { AddIntegrationModal } from './AddIntegrationModal';
 import { IntegrationCard } from './IntegrationCard';
-import {
-    buildIntegrationCards,
-    deriveMeshCard,
-    type CardAction,
-    type IntegrationCardModel,
-} from './integrationCardModel';
-import { IntegrationDrawer } from './IntegrationDrawer';
+import { type CardAction, type IntegrationCardModel } from './integrationCardModel';
+import { IntegrationDetailPanel } from './IntegrationDetailPanel';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import {
-    getMeshAppBuilderComponent,
-    listAppBuilderComponents,
-} from '@/features/app-builder/services/appBuilderComponentState';
-import type { Project } from '@/types';
-import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { AppBuilderComponentState } from '@/types/base';
 
 export interface IntegrationsGridProps {
-    /** Keyed persisted component map (seed; snapshot pushes supersede it). */
-    appBuilderComponents?: Record<string, AppBuilderComponentState>;
-    /** Stack-filtered catalog (getAvailableAppBuilderComponents). */
-    catalog: AppBuilderComponentCatalogEntry[];
-    /** Live mesh status display. Non-null ⇒ the mesh card renders. */
-    meshStatusDisplay?: StatusDisplay | null;
-    /** Raw mesh status — drives the mesh card's face/bar action. */
-    meshStatus?: MeshStatus;
-    /** Disables the mesh card's actions while an operation is in flight. */
-    isMeshActionDisabled?: boolean;
-    /** The existing mesh deploy path (posts 'deployMesh'). */
+    /**
+     * The cards to render, already derived and filtered. Derivation lives in the
+     * SCREEN (same split as ProjectsDashboard → ProjectsGrid: the screen owns and
+     * filters the data, the grid renders it), so the screen can count and filter
+     * without a second source of truth.
+     */
+    cards: IntegrationCardModel[];
+    /**
+     * Open the add-integration picker. The modal itself is hosted by the SCREEN,
+     * so the sticky header's "Add integration" button and this grid's add tile
+     * open the same one instance.
+     */
+    onAddRequest: () => void;
+    /** Mesh callbacks — the mesh card routes here, never to the keyed messages. */
     onDeployMesh?: () => void;
     /** User-initiated re-auth for the mesh needs-auth state. */
     onReAuthenticate?: () => void;
+    /**
+     * Shared deploy destination ("<project> · <workspace>"), shown as a row in
+     * the detail panel. The page header names it once above the grid.
+     */
+    destinationLabel?: string;
 }
 
 /**
@@ -95,42 +86,17 @@ async function requestRename(id: string, name: string): Promise<string | null> {
 
 /** The integrations card grid + its hosted drawer, modals, and confirm dialog. */
 export function IntegrationsGrid({
-    appBuilderComponents,
-    catalog,
-    meshStatusDisplay,
-    meshStatus,
-    isMeshActionDisabled,
+    cards,
+    onAddRequest,
     onDeployMesh,
     onReAuthenticate,
+    destinationLabel,
 }: IntegrationsGridProps): React.ReactElement {
-    const components = useLiveAppBuilderComponents(appBuilderComponents);
-    const overrides = useRowStatusOverrides();
-
     const [selectedId, setSelectedId] = useState<string | null>(null);
-    const [addOpen, setAddOpen] = useState(false);
     // One dialog/modal instance for the whole grid; the pending id identifies
     // the card awaiting confirmation (no per-card dialog, no state leak).
     const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
     const [manageApisId, setManageApisId] = useState<string | null>(null);
-
-    const cards = useMemo((): IntegrationCardModel[] => {
-        const project = { appBuilderComponents: components } as Project;
-        const integrationCards = buildIntegrationCards(
-            listAppBuilderComponents(project),
-            overrides,
-            catalog,
-        );
-        if (!meshStatusDisplay) {
-            return integrationCards;
-        }
-        const meshCard = deriveMeshCard(
-            meshStatusDisplay,
-            meshStatus,
-            getMeshAppBuilderComponent(project),
-            Boolean(isMeshActionDisabled),
-        );
-        return [meshCard, ...integrationCards];
-    }, [components, overrides, catalog, meshStatusDisplay, meshStatus, isMeshActionDisabled]);
 
     // Looked up fresh each render: the open drawer tracks live pushes, and a
     // card that left the map closes it.
@@ -191,56 +157,42 @@ export function IntegrationsGrid({
         setPendingRemoveId(null);
     }, [pendingRemoveId]);
 
-    const openAdd = useCallback((): void => setAddOpen(true), []);
-
     return (
-        // Stretches inside the flex `.dashboard-grid-container` (shared with the
-        // ActionGrid, so the stretch lives here): a flex child sizes to its
-        // INTRINSIC width by default, which collapses the grid's
-        // repeat(auto-fill, minmax(268px, 1fr)) tracks to a single column.
+        // No section heading, count, or Add button here: the SCREEN's page header
+        // and sticky action band own those (the same division ProjectsDashboard
+        // uses). This component is the card surface only.
         <div className="integrations-surface">
-            <div className="integrations-header">
-                <Heading level={3}>Integrations</Heading>
-                <span className="integration-count" data-testid="integration-count">
-                    {cards.length}
-                </span>
-                <Button variant="primary" data-testid="integration-add-header" onPress={openAdd}>
-                    Add integration
-                </Button>
+            {/* Master/detail: the grid flexes, the panel takes a fixed column beside
+                it. Plain divs — a Spectrum Flex caps at 450px (custom-spectrum.css). */}
+            <div className="integrations-split">
+                <div className="integrations-grid">
+                    {cards.map((model) => (
+                        <IntegrationCard
+                            key={model.id}
+                            model={model}
+                            onOpen={setSelectedId}
+                            onAction={handleAction}
+                        />
+                    ))}
+                    <button
+                        type="button"
+                        className="integration-add-tile"
+                        data-testid="integration-add-tile"
+                        onClick={onAddRequest}
+                    >
+                        + Add integration
+                    </button>
+                </div>
+
+                <IntegrationDetailPanel
+                    model={selected}
+                    onClose={() => setSelectedId(null)}
+                    onAction={handleAction}
+                    onRename={requestRename}
+                    destinationLabel={destinationLabel}
+                />
             </div>
 
-            {/* Plain divs: a Spectrum Flex caps at 450px (see custom-spectrum.css). */}
-            <div className="integrations-grid">
-                {cards.map((model) => (
-                    <IntegrationCard
-                        key={model.id}
-                        model={model}
-                        onOpen={setSelectedId}
-                        onAction={handleAction}
-                    />
-                ))}
-                <button
-                    type="button"
-                    className="integration-add-tile"
-                    data-testid="integration-add-tile"
-                    onClick={openAdd}
-                >
-                    + Add integration
-                </button>
-            </div>
-
-            <IntegrationDrawer
-                model={selected}
-                onClose={() => setSelectedId(null)}
-                onAction={handleAction}
-                onRename={requestRename}
-            />
-
-            <AddIntegrationModal
-                isOpen={addOpen}
-                catalog={catalog}
-                onClose={() => setAddOpen(false)}
-            />
 
             <AppBuilderComponentRemoveDialog
                 isOpen={pendingRemoveId !== null}

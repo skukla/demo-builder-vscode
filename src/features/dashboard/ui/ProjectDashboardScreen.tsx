@@ -1,9 +1,10 @@
 /**
  * ProjectDashboardScreen Component
  *
- * Main dashboard screen for a demo project. Displays project status, a grid
- * of action buttons, and the App Builder integrations list (mesh included as
- * its first row — ADR-011 D3 Step 08).
+ * Main dashboard screen for a demo project. Displays project status, a grid of
+ * action buttons, and the integrations SUMMARY TILE (count + worst status). The
+ * integrations card grid itself lives on its own surface — it needs room this
+ * band does not have (`.rptc/plans/integrations-surface/overview.md`).
  *
  * @module features/dashboard/ui/ProjectDashboardScreen
  */
@@ -13,7 +14,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
 import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
 import { DashboardStatusHeader } from './components/DashboardStatusHeader';
-import { IntegrationsBlock } from './components/IntegrationsBlock';
 import { OrgContextNotice } from './components/OrgContextNotice';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
@@ -26,7 +26,6 @@ import { PageLayout, PageHeader, ControlPanelLayout } from '@/core/ui/components
 import { useFocusTrap, useSingleTimer } from '@/core/ui/hooks';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { normalizeProjectName } from '@/core/validation/normalizers';
-import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 
 /**
@@ -54,10 +53,8 @@ interface ProjectDashboardScreenProps {
     initialEdsStorefrontStatus?: 'published' | 'stale' | 'update-declined' | 'not-published';
     /** Whether the project has an Adobe org (drives the "Checking organization…" telegraph) */
     hasAdobeContext?: boolean;
-    /** Keyed appBuilderComponents map (drives the integrations list rows). */
+    /** Keyed appBuilderComponents map (drives the summary tile's count + dot). */
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
-    /** Stack-filtered catalog for the add-a-appBuilderComponent picker. */
-    appBuilderComponentCatalog?: AppBuilderComponentCatalogEntry[];
 }
 
 /**
@@ -67,8 +64,8 @@ interface ProjectDashboardScreenProps {
  * - Project name header
  * - Demo status indicator
  * - Action button grid (Start/Stop, Open, Configure, etc.)
- * - The App Builder integrations list, with the mesh as its first row
- *   (the one mesh surface — status + Deploy/Redeploy via the mesh path)
+ * - The integrations summary tile — count + the worst status across every
+ *   integration AND the mesh, routing to the dedicated integrations surface
  *
  * @param props - Component props
  */
@@ -84,7 +81,6 @@ export function ProjectDashboardScreen({
     initialEdsStorefrontStatus,
     hasAdobeContext,
     appBuilderComponents,
-    appBuilderComponentCatalog,
 }: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
     const isEdsRef = useRef(isEds);
@@ -121,7 +117,6 @@ export function ProjectDashboardScreen({
         isTransitioning,
         setIsTransitioning,
         demoStatusDisplay,
-        meshStatusDisplay,
         displayName: statusDisplayName,
         status,
         meshStatus,
@@ -145,7 +140,6 @@ export function ProjectDashboardScreen({
     const {
         handleStartDemo,
         handleStopDemo,
-        handleDeployMesh,
         handleSyncStorefront,
         handleRefreshBlockLibrary,
         handleOpenBrowser,
@@ -273,6 +267,10 @@ export function ProjectDashboardScreen({
                                     isStopDisabled={isStopDisabled}
                                     isMeshActionDisabled={isMeshActionDisabled}
                                     isOpeningBrowser={isOpeningBrowser}
+                                    hasAdobeContext={hasAdobeContext}
+                                    appBuilderComponents={appBuilderComponents}
+                                    hasMesh={hasMesh}
+                                    meshStatus={meshStatus}
                                     handleStartDemo={handleStartDemo}
                                     handleStopDemo={handleStopDemo}
                                     handleOpenBrowser={handleOpenBrowser}
@@ -294,19 +292,6 @@ export function ProjectDashboardScreen({
                                     handleDeleteProject={handleDeleteProject}
                                 />
                             </div>
-
-                            {/* App Builder integrations list — the mesh renders as
-                                its FIRST row (the one mesh surface after Step 08). */}
-                            <IntegrationsBlock
-                                hasAdobeContext={hasAdobeContext}
-                                appBuilderComponents={appBuilderComponents}
-                                catalog={appBuilderComponentCatalog}
-                                meshStatusDisplay={meshStatusDisplay}
-                                meshStatus={meshStatus}
-                                isMeshActionDisabled={isMeshActionDisabled}
-                                onDeployMesh={handleDeployMesh}
-                                onReAuthenticate={handleReAuthenticate}
-                            />
                         </>
                     }
                 />

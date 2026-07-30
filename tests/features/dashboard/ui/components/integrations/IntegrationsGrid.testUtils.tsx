@@ -100,6 +100,14 @@ jest.mock('@/features/dashboard/ui/components/ManageApisModal', () => ({
 // babel-plugin-jest-hoist lifts them above every import, so the component
 // module always loads against the mocks.
 import { IntegrationsGrid } from '@/features/dashboard/ui/components/integrations/IntegrationsGrid';
+import {
+    buildIntegrationCards,
+    deriveMeshCard,
+} from '@/features/dashboard/ui/components/integrations/integrationCardModel';
+import {
+    getMeshAppBuilderComponent,
+    listAppBuilderComponents,
+} from '@/features/app-builder/services/appBuilderComponentState';
 
 export function getClient() {
     const { webviewClient } = require('@/core/ui/utils/WebviewClient');
@@ -167,8 +175,16 @@ export interface RenderOptions {
     isMeshActionDisabled?: boolean;
     onDeployMesh?: () => void;
     onReAuthenticate?: () => void;
+    onAddRequest?: () => void;
 }
 
+/**
+ * Derive the cards the way the SCREEN does, then hand them to the presentational
+ * grid. Card derivation moved to IntegrationsScreen (the screen owns and filters
+ * the data, the grid renders it), so this harness stands in for that half —
+ * which keeps every existing grid test expressed in its original inputs
+ * (appBuilderComponents + mesh props) rather than hand-built card models.
+ */
 export function renderGrid({
     appBuilderComponents = {},
     withMesh = false,
@@ -177,19 +193,35 @@ export function renderGrid({
     isMeshActionDisabled = false,
     onDeployMesh = jest.fn(),
     onReAuthenticate = jest.fn(),
+    onAddRequest = jest.fn(),
 }: RenderOptions = {}) {
+    const project = { appBuilderComponents } as never;
+    const integrationCards = buildIntegrationCards(
+        listAppBuilderComponents(project),
+        {},
+        CATALOG,
+    );
+    const cards = withMesh
+        ? [
+              deriveMeshCard(
+                  { ...MESH_DISPLAY, text: meshStatusText },
+                  meshStatus,
+                  getMeshAppBuilderComponent(project),
+                  isMeshActionDisabled,
+              ),
+              ...integrationCards,
+          ]
+        : integrationCards;
+
     const result = render(
         <IntegrationsGrid
-            appBuilderComponents={appBuilderComponents}
-            catalog={CATALOG}
-            meshStatusDisplay={withMesh ? { ...MESH_DISPLAY, text: meshStatusText } : null}
-            meshStatus={withMesh ? meshStatus : undefined}
-            isMeshActionDisabled={isMeshActionDisabled}
+            cards={cards}
+            onAddRequest={onAddRequest}
             onDeployMesh={onDeployMesh}
             onReAuthenticate={onReAuthenticate}
         />,
     );
-    return { ...result, onDeployMesh, onReAuthenticate };
+    return { ...result, onDeployMesh, onReAuthenticate, onAddRequest };
 }
 
 /** The card tile for a given accessible name (`name, statusLabel`). */
@@ -197,14 +229,20 @@ export function card(name: string, statusLabel: string): HTMLElement {
     return screen.getByRole('button', { name: `${name}, ${statusLabel}` });
 }
 
-/** Open a card's detail drawer and return the drawer element. */
-export async function openDrawer(
+/**
+ * Open a card's detail panel and return the panel element.
+ *
+ * The panel is a non-modal <aside> beside the grid (it replaced the viewport
+ * drawer), so it is found by its accessible name, not by role="dialog" — that
+ * role now belongs only to the genuinely modal dialogs this grid hosts.
+ */
+export async function openPanel(
     user: ReturnType<typeof userEvent.setup>,
     name: string,
     statusLabel: string,
 ): Promise<HTMLElement> {
     await user.click(card(name, statusLabel));
-    return screen.getByRole('dialog', { name: `${name} details` });
+    return screen.getByLabelText(`${name} details`);
 }
 
 export function setupUser() {

@@ -220,6 +220,24 @@ describe('useDashboardStatus — Status Display Strings', () => {
             });
         });
 
+        // Moved down from ProjectDashboardScreen-mesh.test.tsx when the mesh
+        // display left the dashboard with the grid: the vocabulary is the hook's
+        // responsibility, and this was the one case the hook did not yet pin.
+        it('should return Not deployed for not-deployed', () => {
+            const { result } = renderHook(() => useDashboardStatus());
+
+            act(() => {
+                mocks.state.statusHandler?.({
+                    name: 'Test Project',
+                    path: '/test/path',
+                    status: 'ready',
+                    mesh: { status: 'not-deployed' },
+                });
+            });
+
+            expect(result.current.meshStatusDisplay?.text).toBe('Not Deployed');
+        });
+
         it('should return Deploying... with message for deploying', () => {
             const { result } = renderHook(() => useDashboardStatus());
 

@@ -119,7 +119,11 @@ const INTEGRATION_STATUS_DISPLAY: Record<
     error: { label: 'Deploy failed', dot: 'error' },
 };
 
-const MANAGE_APIS: BarAction = { action: 'manage-apis', label: 'Manage APIs', emphasis: 'secondary' };
+const MANAGE_APIS: BarAction = {
+    action: 'manage-apis',
+    label: 'Manage APIs',
+    emphasis: 'secondary',
+};
 const REMOVE: BarAction = { action: 'remove', label: 'Remove', emphasis: 'danger' };
 const VERIFY: BarAction = { action: 'verify', label: 'Verify', emphasis: 'secondary' };
 
@@ -129,10 +133,7 @@ const VERIFY: BarAction = { action: 'verify', label: 'Verify', emphasis: 'second
  * workspace-scoped, not deployment-scoped); Remove(danger) everywhere except
  * deploying; deploying is action-free (pulse only).
  */
-const INTEGRATION_ACTIONS: Record<
-    IntegrationStatus,
-    { face?: FaceAction; bar: BarAction[] }
-> = {
+const INTEGRATION_ACTIONS: Record<IntegrationStatus, { face?: FaceAction; bar: BarAction[] }> = {
     'not-deployed': {
         face: { kind: 'deploy' },
         bar: [{ action: 'deploy', label: 'Deploy', emphasis: 'primary' }, MANAGE_APIS, REMOVE],
@@ -149,7 +150,12 @@ const INTEGRATION_ACTIONS: Record<
     },
     stale: {
         face: { kind: 'update' },
-        bar: [{ action: 'update', label: 'Update', emphasis: 'primary' }, VERIFY, MANAGE_APIS, REMOVE],
+        bar: [
+            { action: 'update', label: 'Update', emphasis: 'primary' },
+            VERIFY,
+            MANAGE_APIS,
+            REMOVE,
+        ],
     },
     error: {
         face: { kind: 'retry' },
@@ -261,7 +267,7 @@ export function deriveIntegrationCard(
 }
 
 /** Collapse a raw MeshStatus onto the card vocabulary (config drift = stale). */
-function toMeshCardStatus(status: MeshStatus | undefined): CardStatus {
+export function toMeshCardStatus(status: MeshStatus | undefined): CardStatus {
     switch (status) {
         case 'config-changed':
         case 'config-incomplete':

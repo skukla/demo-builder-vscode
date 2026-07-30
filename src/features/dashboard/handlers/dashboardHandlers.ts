@@ -668,6 +668,85 @@ export const handleNavigateBack: MessageHandler = async (context) => {
 };
 
 /**
+ * Handle 'openIntegrations' message - open the dedicated integrations surface
+ *
+ * The dashboard's integrations summary tile opens the full-width integrations
+ * screen. Tab replacement, exactly like navigateBack: dispose the dashboard
+ * panel inside a webview transition (so the disposal callback doesn't re-open
+ * the projects list), then dispatch the command. The current project pointer is
+ * NOT cleared — the surface is scoped to the project we came from.
+ */
+export const handleOpenIntegrations: MessageHandler = async (context) => {
+    try {
+        context.logger.info('Opening integrations surface');
+
+        await BaseWebviewCommand.startWebviewTransition();
+        try {
+            const dashboardPanel = BaseWebviewCommand.getActivePanel(
+                'demoBuilder.projectDashboard',
+            );
+            if (dashboardPanel) {
+                try {
+                    dashboardPanel.dispose();
+                } catch {
+                    // Panel may already be disposed - this is OK
+                }
+            }
+
+            await vscode.commands.executeCommand('demoBuilder.showIntegrations');
+        } finally {
+            BaseWebviewCommand.endWebviewTransition();
+        }
+
+        return { success: true };
+    } catch (error) {
+        context.logger.error('Failed to open integrations surface', error as Error);
+        return {
+            success: false,
+            error: 'Failed to open the integrations surface',
+        };
+    }
+};
+
+/**
+ * Handle 'showProjectDashboard' message - return to the project dashboard
+ *
+ * The integrations surface's way back. The MIRROR of handleOpenIntegrations:
+ * dispose the sibling panel inside a webview transition, then dispatch the
+ * command. Deliberately NOT navigateBack — that clears the current project and
+ * lands on the projects LIST; this keeps the project and swaps to its dashboard.
+ */
+export const handleShowProjectDashboard: MessageHandler = async (context) => {
+    try {
+        context.logger.info('Returning to the project dashboard');
+
+        await BaseWebviewCommand.startWebviewTransition();
+        try {
+            const integrationsPanel = BaseWebviewCommand.getActivePanel('demoBuilder.integrations');
+            if (integrationsPanel) {
+                try {
+                    integrationsPanel.dispose();
+                } catch {
+                    // Panel may already be disposed - this is OK
+                }
+            }
+
+            await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+        } finally {
+            BaseWebviewCommand.endWebviewTransition();
+        }
+
+        return { success: true };
+    } catch (error) {
+        context.logger.error('Failed to return to the project dashboard', error as Error);
+        return {
+            success: false,
+            error: 'Failed to return to the project dashboard',
+        };
+    }
+};
+
+/**
  * Handle 'resetProject' message - Reset project to initial state
  *
  * Dispatches to the appropriate reset service based on project type:
@@ -997,6 +1076,8 @@ export const dashboardHandlers = defineHandlers({
     openDevConsole: handleOpenDevConsole,
     getProjectUrls: handleGetProjectUrls,
     navigateBack: handleNavigateBack,
+    openIntegrations: handleOpenIntegrations,
+    showProjectDashboard: handleShowProjectDashboard,
 
     // Mesh handlers
     deployMesh: handleDeployMesh,

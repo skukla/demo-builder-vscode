@@ -1,0 +1,230 @@
+/**
+ * IntegrationsSummaryTile Tests (integrations surface)
+ *
+ * The dashboard's ENTIRE integrations footprint after the grid moved to its own
+ * surface: a single tile carrying the count and the WORST status across every
+ * card, opening the surface on press. Keeping the count and a status dot here is
+ * what mitigates integrations being one click away instead of visible on arrival.
+ *
+ * Worst-status precedence (most alarming wins): error > stale > deploying >
+ * not-deployed > deployed.
+ *
+ * Strict TDD: written BEFORE the component exists.
+ */
+
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { IntegrationsSummaryTile } from '@/features/dashboard/ui/components/IntegrationsSummaryTile';
+import type { AppBuilderComponentState } from '@/types/base';
+import '@testing-library/jest-dom';
+
+jest.mock('@/core/ui/utils/WebviewClient', () => ({
+    webviewClient: { postMessage: jest.fn(), onMessage: jest.fn(() => jest.fn()) },
+}));
+
+jest.mock('@adobe/react-spectrum', () => ({
+    ActionButton: ({
+        children,
+        onPress,
+        isDisabled,
+        isQuiet: _q,
+        UNSAFE_className,
+        ...props
+    }: any) => (
+        <button onClick={onPress} disabled={isDisabled} className={UNSAFE_className} {...props}>
+            {children}
+        </button>
+    ),
+    Text: ({ children, UNSAFE_className, ...props }: any) => (
+        <span className={UNSAFE_className} {...props}>
+            {children}
+        </span>
+    ),
+}));
+
+jest.mock('@spectrum-icons/workflow/Data', () => ({
+    __esModule: true,
+    default: () => <span data-testid="icon-data" />,
+}));
+
+function getClient() {
+    const { webviewClient } = require('@/core/ui/utils/WebviewClient');
+    return webviewClient as { postMessage: jest.Mock };
+}
+
+const DEPLOYED: AppBuilderComponentState = {
+    kind: 'integration',
+    status: 'deployed',
+    source: { owner: 'acme', repo: 'a' },
+};
+
+function components(
+    ...statuses: Array<AppBuilderComponentState['status']>
+): Record<string, AppBuilderComponentState> {
+    return Object.fromEntries(statuses.map((status, i) => [`app-${i}`, { ...DEPLOYED, status }]));
+}
+
+beforeEach(() => {
+    jest.clearAllMocks();
+});
+
+describe('IntegrationsSummaryTile', () => {
+    it('renders nothing without an Adobe context (same gate as the old block)', () => {
+        const { container } = render(
+            <IntegrationsSummaryTile appBuilderComponents={components('deployed')} />
+        );
+
+        expect(container).toBeEmptyDOMElement();
+    });
+
+    it('shows the integration count', () => {
+        render(
+            <IntegrationsSummaryTile
+                hasAdobeContext
+                appBuilderComponents={components('deployed', 'deployed')}
+            />
+        );
+
+        expect(screen.getByTestId('integrations-tile-count')).toHaveTextContent('2');
+    });
+
+    it('counts the mesh as a peer when the project has one', () => {
+        render(
+            <IntegrationsSummaryTile
+                hasAdobeContext
+                hasMesh
+                appBuilderComponents={components('deployed')}
+            />
+        );
+
+        expect(screen.getByTestId('integrations-tile-count')).toHaveTextContent('2');
+    });
+
+    it('EXCLUDES a mesh entry in the keyed map from the integration count', () => {
+        render(
+            <IntegrationsSummaryTile
+                hasAdobeContext
+                appBuilderComponents={{
+                    'erp-sync': { ...DEPLOYED },
+                    'commerce-paas-mesh': { ...DEPLOYED, kind: 'mesh' },
+                }}
+            />
+        );
+
+        expect(screen.getByTestId('integrations-tile-count')).toHaveTextContent('1');
+    });
+
+    it('shows zero when there are no integrations at all', () => {
+        render(<IntegrationsSummaryTile hasAdobeContext appBuilderComponents={{}} />);
+
+        expect(screen.getByTestId('integrations-tile-count')).toHaveTextContent('0');
+    });
+
+    describe('worst-status dot (most alarming wins)', () => {
+        it.each([
+            [['deployed', 'deployed'], 'success'],
+            [['deployed', 'not-deployed'], 'neutral'],
+            [['not-deployed', 'deploying'], 'info'],
+            [['deploying', 'stale'], 'warning'],
+            [['stale', 'error'], 'error'],
+            [['error', 'deployed'], 'error'],
+        ])('%s → %s', (statuses, expected) => {
+            render(
+                <IntegrationsSummaryTile
+                    hasAdobeContext
+                    appBuilderComponents={components(
+                        ...(statuses as Array<AppBuilderComponentState['status']>)
+                    )}
+                />
+            );
+
+            expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute(
+                'data-variant',
+                expected
+            );
+        });
+    });
+
+    describe('mesh health folds into the same dot', () => {
+        // Without this the mesh could be broken and the dashboard would look
+        // healthy — the regression the tile exists to prevent, since the mesh
+        // card left the dashboard with the grid.
+        it('reports a mesh error even when every integration is healthy', () => {
+            render(
+                <IntegrationsSummaryTile
+                    hasAdobeContext
+                    hasMesh
+                    meshStatus="error"
+                    appBuilderComponents={components('deployed', 'deployed')}
+                />
+            );
+
+            expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute(
+                'data-variant',
+                'error'
+            );
+        });
+
+        it('maps mesh config drift to the warning dot (same mapping as the card)', () => {
+            render(
+                <IntegrationsSummaryTile
+                    hasAdobeContext
+                    hasMesh
+                    meshStatus="config-changed"
+                    appBuilderComponents={components('deployed')}
+                />
+            );
+
+            expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute(
+                'data-variant',
+                'warning'
+            );
+        });
+
+        it('ignores the in-flight "checking" mesh state (not a health signal)', () => {
+            render(
+                <IntegrationsSummaryTile
+                    hasAdobeContext
+                    hasMesh
+                    meshStatus={undefined}
+                    appBuilderComponents={components('deployed')}
+                />
+            );
+
+            expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute(
+                'data-variant',
+                'success'
+            );
+        });
+
+        it('ignores mesh status entirely when the project has no mesh', () => {
+            render(
+                <IntegrationsSummaryTile
+                    hasAdobeContext
+                    meshStatus="error"
+                    appBuilderComponents={components('deployed')}
+                />
+            );
+
+            expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute(
+                'data-variant',
+                'success'
+            );
+        });
+    });
+
+    it('opens the integrations surface on press', async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        render(
+            <IntegrationsSummaryTile
+                hasAdobeContext
+                appBuilderComponents={components('deployed')}
+            />
+        );
+
+        await user.click(screen.getByRole('button', { name: /integrations/i }));
+
+        expect(getClient().postMessage).toHaveBeenCalledWith('openIntegrations');
+    });
+});
