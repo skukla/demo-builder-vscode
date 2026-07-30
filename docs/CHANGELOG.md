@@ -45,6 +45,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Business Structure no longer goes blank for a mistyped ACCS endpoint.** Store detection keys on the ACCS GraphQL endpoint's path, so an endpoint without the `/graphql` suffix (e.g. the bare instance URL) silently disabled detection and left the Business Structure step empty with no explanation. The endpoint field on the Connection step now validates that it ends in `/graphql` and blocks Continue with a guiding message, so you're told up front instead of landing on a blank screen.
 - **Deleted-product pages show the real 404 instead of an empty product page.** When a shopper opens a product URL whose SKU no longer exists in Commerce, the storefront now lands on its own **native /404** rather than a blank product-details block. Two layers cooperate: the shared `prepublish-pdp` action checks Commerce before publishing and refuses to publish a page for a missing SKU (so no empty page gets cached), and the storefront's smart-404 snippet redirects to `/404` when publishing is refused. The existence check fails open — an infra hiccup never turns a real product into a 404. Existing storefronts pick up the updated snippet on their next reset (the installer now re-vendors the snippet in place instead of skipping when an older copy is present). Note: a product deleted *after* its page was already published/pre-warmed still serves the cached page until unpublished — tracked separately.
+## [1.0.0-beta.123] - 2026-07-29
+
+### Added
+
+- **Diagnostics now says why the Configuration Service refused a write.** When registering a storefront's site config fails with "forbidden", the report tests the same credential against DA.live and interprets the two answers together. If DA.live accepts it and the Configuration Service does not, the credential is fine and the *account* is unauthorized — the admin role is granted to whoever installs the AEM Code Sync GitHub App on the repo, so a storefront set up by a teammate leaves you with no role on it. The report names that, and prints Adobe's own reason and invocation ID for support. Read-only: it never writes a site config.
+
 ## [1.0.0-beta.122] - 2026-07-29
 
 ### Fixed
