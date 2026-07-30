@@ -8,9 +8,10 @@
  *
  * Controlled + presentational: the
  * DialogContainer is the always-mounted modal host; the confirm Modal renders
- * only while `isOpen`. It does NOT post — its consumer ({@link AppBuilderComponentsList})
- * wires `onConfirm` to post `removeAppBuilderComponent {id}`, so the cancel path is a
- * pure no-op (no teardown).
+ * only while `isOpen`. It does NOT post — its consumer (the integrations grid,
+ * which hosts ONE instance) wires `onConfirm` to post
+ * `removeAppBuilderComponent {id}`, so the cancel path is a pure no-op (no
+ * teardown).
  *
  * @module features/dashboard/ui/components/AppBuilderComponentRemoveDialog
  */

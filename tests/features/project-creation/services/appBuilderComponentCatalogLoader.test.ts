@@ -16,6 +16,7 @@ import {
     getAppBuilderComponentEnvSchema,
     getAppBuilderComponentName,
     buildCustomIntegrationEntry,
+    isBlankSource,
 } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 
 const CONFIG_DIR = path.join(__dirname, '../../../../src/features/project-creation/config');
@@ -82,6 +83,20 @@ describe('appBuilderComponentCatalogLoader', () => {
 
         it('returns undefined for an unknown id', () => {
             expect(getAppBuilderComponentEntry('nope')).toBeUndefined();
+        });
+    });
+
+    describe('isBlankSource (AI-built source recognition)', () => {
+        it('matches the seeded blank shell source (skukla/app-builder-shell)', () => {
+            expect(isBlankSource({ owner: 'skukla', repo: 'app-builder-shell' })).toBe(true);
+        });
+
+        it('rejects a fork of the shell repo under a different owner (wrong owner ≠ AI)', () => {
+            expect(isBlankSource({ owner: 'acme', repo: 'app-builder-shell' })).toBe(false);
+        });
+
+        it('rejects an unrelated repo', () => {
+            expect(isBlankSource({ owner: 'acme', repo: 'erp-sync' })).toBe(false);
         });
     });
 

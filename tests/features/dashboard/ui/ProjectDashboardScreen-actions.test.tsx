@@ -108,24 +108,10 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
     });
 
     describe('Common Actions', () => {
-        // Since D3 Step 08 the mesh deploys from its integrations-list row
-        // (MeshComponentRow), not an ActionGrid tile — same deployMesh message.
-        it('should send deployMesh message when the mesh row Redeploy is clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderDashboard({ hasMesh: true, hasAdobeContext: true });
-
-            ctx.triggerMessage('statusUpdate', {
-                name: 'Test Project',
-                path: '/test/path',
-                status: 'ready',
-                mesh: { status: 'deployed' },
-            });
-
-            const redeployButton = await screen.findByRole('button', { name: /^redeploy$/i });
-            await user.click(redeployButton);
-
-            expect(ctx.mockPostMessage).toHaveBeenCalledWith('deployMesh');
-        });
+        // The mesh has not deployed from an ActionGrid tile since D3 Step 08, and
+        // since the integrations-grid cutover its Redeploy lives in the card's
+        // detail drawer. That routing pin (deployMesh, never the keyed message)
+        // is owned by ProjectDashboardScreen-integrations.test.tsx.
 
         it('should send configure message when Configure clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });

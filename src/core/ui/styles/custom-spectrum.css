@@ -5074,4 +5074,263 @@ div[class*="spectrum"] input[type="search"] {
     color: var(--spectrum-global-color-red-600);
     overflow-wrap: anywhere;
 }
+
+/* --------------------------------------------------------------------------
+ * Integrations grid + drawer (dashboard)
+ * Card grid + right detail drawer replacing the stacked integration rows.
+ * Grid, cards, scrim, and drawer are PLAIN DIVS (Spectrum Flex caps at
+ * 450px); tokens flip light/dark. Card family: .project-card-spectrum
+ * (gray-50 base, gray-75 hover, lift, radius 8).
+ * ------------------------------------------------------------------------ */
+/* Heading · count pill · Add button on one baseline; the Add button trails. */
+.integrations-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px;
+}
+.integrations-header > *:last-child {
+    margin-left: auto;
+}
+.integration-count {
+    font-size: 12px;
+    line-height: 18px;
+    min-width: 18px;
+    padding: 0 6px;
+    border-radius: 9px;
+    text-align: center;
+    background: var(--spectrum-global-color-gray-200);
+    color: var(--spectrum-global-color-gray-700);
+}
+.integrations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+    gap: 16px;
+    padding: 8px;
+}
+.integration-card {
+    background: var(--spectrum-global-color-gray-50);
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 128px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.integration-card:hover,
+.integration-card:focus {
+    background: var(--spectrum-global-color-gray-75);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-color: var(--spectrum-global-color-gray-400);
+    outline: none;
+}
+.integration-card:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+}
+/* The mesh peer card: accent left border, everything else identical. */
+.integration-card--mesh {
+    border-left: 3px solid var(--spectrum-global-color-blue-400);
+}
+.integration-card-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.integration-card-statusline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+.integration-card-status {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+.integration-card-status--error {
+    color: var(--spectrum-global-color-red-600);
+}
+/* One mono source line (owner/repo); the AI caption reads italic sans. */
+.integration-card-src {
+    font-size: 12px;
+    font-family: var(--spectrum-font-family-code, monospace);
+    color: var(--spectrum-global-color-gray-500);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.integration-card-src--ai {
+    font-family: inherit;
+    font-style: italic;
+}
+/* Footer pinned to the card bottom; hosts the at-most-one face affordance. */
+.integration-card-foot {
+    margin-top: auto;
+    padding-top: 8px;
+    display: flex;
+    align-items: center;
+}
+/* Deploying: the status dot pulses (the ONLY motion on a card face). */
+.integration-dot--deploying {
+    animation: integration-dot-pulse 1.2s ease-in-out infinite;
+}
+@keyframes integration-dot-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.35;
+    }
+}
+/* The add tile IS the empty state: a dashed last grid cell. */
+.integration-add-tile {
+    border: 1.5px dashed var(--spectrum-global-color-gray-400);
+    border-radius: 8px;
+    background: transparent;
+    min-height: 128px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    color: var(--spectrum-global-color-gray-600);
+    font-size: 13px;
+    transition: border-color 0.2s ease, color 0.2s ease;
+}
+.integration-add-tile:hover,
+.integration-add-tile:focus {
+    border-color: var(--spectrum-global-color-blue-400);
+    color: var(--spectrum-global-color-blue-600);
+    outline: none;
+}
+.integration-add-tile:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+}
+
+/* Scrim + panel stay mounted; `.open` drives the slide. */
+.db-drawer-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.42);
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+        opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0.22s;
+}
+.db-drawer-scrim.open {
+    opacity: 1;
+    visibility: visible;
+}
+.db-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 392px;
+    max-width: 92vw;
+    background: var(--spectrum-global-color-gray-50);
+    border-left: 1px solid var(--spectrum-global-color-gray-300);
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
+    z-index: 101;
+    transform: translateX(100%);
+    visibility: hidden;
+    transition:
+        transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0.22s;
+    display: flex;
+    flex-direction: column;
+    outline: none;
+}
+.db-drawer.open {
+    transform: translateX(0);
+    visibility: visible;
+}
+@media (prefers-reduced-motion: reduce) {
+    .db-drawer,
+    .db-drawer-scrim {
+        transition: none;
+    }
+    .integration-dot--deploying {
+        animation: none;
+    }
+}
+/* Drawer sections: fixed head, scrolling body, fixed action bar. */
+.db-drawer-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 16px;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+}
+.db-drawer-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.db-drawer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 16px;
+    border-top: 1px solid var(--spectrum-global-color-gray-300);
+}
+.integration-drawer-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+    min-width: 0;
+}
+/* The mesh's "Data layer" role tag (drawer head only). */
+.integration-drawer-role {
+    flex: 0 0 auto;
+    font-size: 11px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    background: var(--spectrum-global-color-blue-100);
+    color: var(--spectrum-global-color-blue-700);
+}
+/* Key/value detail rows. */
+.integration-drawer-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    font-size: 13px;
+}
+.integration-drawer-row-key {
+    flex: 0 0 96px;
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+.integration-drawer-row-value {
+    min-width: 0;
+    color: var(--spectrum-global-color-gray-800);
+    overflow-wrap: anywhere;
+}
+.integration-drawer-row-value--mono {
+    font-family: var(--spectrum-font-family-code, monospace);
+    font-size: 12px;
+}
+/* Live deploy progress / failure detail under the Status row's label. */
+.integration-drawer-status-message {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
 } /* End of second @layer theme block */

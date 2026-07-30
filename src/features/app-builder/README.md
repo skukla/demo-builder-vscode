@@ -108,13 +108,14 @@ integration). Dashboard-driven deploys go through the keyed runner
 
 ## Dashboard surface
 
-The dashboard renders ONE integrations list: `IntegrationsBlock` →
-`AppBuilderComponentsList`, with the mesh as its first row (`MeshComponentRow`) and one
-`AppBuilderComponentRow` per keyed integration. Per-id handlers (`addAppBuilderComponent`,
-`deployAppBuilderComponent`, `redeployAppBuilderComponent`, `removeAppBuilderComponent`,
-`verifyAppBuilderComponent` — `features/dashboard/handlers/appBuilderComponentHandlers.ts`)
-drive the keyed runner and push per-row status via
-`sendAppBuilderComponentStatusUpdate` (see `features/dashboard/README.md`).
+The dashboard renders ONE integrations card grid: `IntegrationsBlock` →
+`integrations/IntegrationsGrid`, with the mesh as its first peer card and one card per keyed
+integration; every card's detail and non-face actions live in the shared detail drawer. Per-id
+handlers (`addAppBuilderComponent`, `deployAppBuilderComponent`, `redeployAppBuilderComponent`,
+`removeAppBuilderComponent`, `renameAppBuilderComponent`, `verifyAppBuilderComponent` —
+`features/dashboard/handlers/appBuilderComponentHandlers.ts`) drive the keyed runner and push
+per-card status via `sendAppBuilderComponentStatusUpdate`, plus the whole fresh persisted map via
+`sendAppBuilderComponentsSnapshot` after each terminal op (see `features/dashboard/README.md`).
 
 ## Reuse
 

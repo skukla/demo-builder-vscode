@@ -132,8 +132,8 @@ kind in that map; the legacy singular `meshState`/`appState` fields are legacy-r
 - Per-id integration deploy/redeploy/remove/rename (rename is display name only —
   `renameAppBuilderComponent` updates `appBuilderComponents[id].name`; the id/folder/ow.package
   are immutable; pre-built catalog entries keep their catalog names) from the dashboard
-  integrations list (`IntegrationsBlock` → `AppBuilderComponentsList`, mesh first row via
-  `MeshComponentRow`)
+  integrations card grid (`IntegrationsBlock` → `integrations/IntegrationsGrid`, mesh as the
+  first peer card via `deriveMeshCard`; detail + actions live in the card's detail drawer)
 - Reuses (no fork): `withOrgContext` + `buildOrgTargetFromProjectAdobe`, `CommandExecutor`,
   `componentManager.installComponent`/`removeComponent`, `ensureAdobeIOAuth`,
   `detectProjectOrgMismatch`, the dashboard status channel. Only new abstraction is the shared

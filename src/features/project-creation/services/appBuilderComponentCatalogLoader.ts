@@ -59,6 +59,24 @@ export function getAppBuilderComponentEntry(
 }
 
 /**
+ * Whether a GitHub source matches a blank/starter (`blank: true`) catalog
+ * entry — the "built with AI" recognition used by the dashboard card model.
+ * Matches on owner AND repo, so a fork of the shell repo under a different
+ * owner is NOT recognized as AI-built.
+ *
+ * @param source - A component's GitHub source ({owner, repo})
+ * @returns true when the source is a blank catalog entry's repo
+ */
+export function isBlankSource(source: { owner: string; repo: string }): boolean {
+    return config.appBuilderComponents.some(
+        (entry) =>
+            entry.blank === true &&
+            entry.source.owner === source.owner &&
+            entry.source.repo === source.repo,
+    );
+}
+
+/**
  * GitHub owner/repo charset — mirrors the dashboard's resolvePublicRepo gate
  * (appComponentManager). owner/repo are interpolated into a shell-executed
  * `git clone` and into componentDef.id (a path segment), so shell

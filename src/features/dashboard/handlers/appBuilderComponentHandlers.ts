@@ -156,6 +156,27 @@ async function postRowStatus(
 }
 
 /**
+ * Post the FULL fresh persisted `appBuilderComponents` map over the
+ * `appBuilderComponentsSnapshot` channel. The webview's map is seeded once at
+ * init, so per-row status pushes alone drop ADDED entries (no row to flip) and
+ * leave REMOVED entries lingering. Sent after terminal ops: add (success AND
+ * failure — the entry may have persisted), deploy/redeploy terminal, remove
+ * success, rename success. Same lazy import as postRowStatus.
+ */
+async function postComponentsSnapshot(context: HandlerContext): Promise<void> {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return;
+    }
+    const { ProjectDashboardWebviewCommand } = await import(
+        '@/features/dashboard/commands/showDashboard'
+    );
+    await ProjectDashboardWebviewCommand.sendAppBuilderComponentsSnapshot(
+        project.appBuilderComponents ?? {},
+    );
+}
+
+/**
  * Handle 'addAppBuilderComponent' — guards → (bucket-3 → Configure) → assemble deps →
  * D1 addAppBuilderComponent. The FIRST live UI-driven full add.
  */
@@ -194,9 +215,13 @@ export const handleAddAppBuilderComponent: MessageHandler<{
     const result = await addAppBuilderComponent(project, entry, deps);
     if (!result.success) {
         await postRowStatus(entry.id, 'error', result.error || 'Deployment failed');
+        // Even a failed add may have persisted the entry (clone/deploy died
+        // mid-flight) — the grid needs the fresh map either way.
+        await postComponentsSnapshot(context);
         return { success: false, error: result.error };
     }
     await postRowStatus(entry.id, 'deployed', undefined);
+    await postComponentsSnapshot(context);
     return { success: true };
 };
 
@@ -229,6 +254,8 @@ async function deployById(context: HandlerContext, id: string | undefined) {
         status,
         result.success ? undefined : result.error || 'Deployment failed',
     );
+    // Terminal either way — the persisted status changed; refresh the grid map.
+    await postComponentsSnapshot(context);
     return result.success ? { success: true } : { success: false, error: result.error };
 }
 
@@ -267,7 +294,12 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
 
     const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
     const result = await removeAppBuilderComponent(project, id, deps);
-    return result.success ? { success: true } : { success: false, error: result.error };
+    if (!result.success) {
+        return { success: false, error: result.error };
+    }
+    // The entry left the persisted map — without a snapshot the card lingers.
+    await postComponentsSnapshot(context);
+    return { success: true };
 };
 
 /**
@@ -296,14 +328,43 @@ function takenIntegrationNames(project: Project, id: string): string[] {
 }
 
 /**
+ * Resolve the new display name for a rename. Two doors, ONE validation chain:
+ *   - inline payload `name` (drawer rename) → validateRenameInput directly;
+ *     a failure comes back as `error` for inline display in the webview.
+ *   - no payload name → the extension's input box (validateInput enforces the
+ *     same rules live); `cancelled` when dismissed — write nothing.
+ */
+async function resolveRenameName(
+    payloadName: string | undefined,
+    currentLabel: string,
+    takenNames: string[],
+): Promise<{ name: string } | { error: string } | { cancelled: true }> {
+    if (payloadName !== undefined) {
+        const error = validateRenameInput(payloadName, takenNames);
+        return error ? { error } : { name: payloadName.trim() };
+    }
+    const raw = await vscode.window.showInputBox({
+        prompt: 'New integration name',
+        value: currentLabel,
+        validateInput: (value) => validateRenameInput(value, takenNames),
+    });
+    if (raw === undefined) {
+        return { cancelled: true };
+    }
+    return { name: raw.trim() };
+}
+
+/**
  * Handle 'renameAppBuilderComponent' — display-name rename for a deployed
  * integration (shell instancing Step 10). The id (map key, folder, ow.package)
  * is IMMUTABLE; only the keyed entry's `name` changes. Mesh entries keep their
  * fixed "API Mesh" identity and are rejected. A LOCAL metadata write: no Adobe
- * guards (rename works offline). The extension owns the input surface
- * (showInputBox, prefilled with the current label); cancel writes nothing.
+ * guards (rename works offline). The extension owns the input surface — UNLESS
+ * the payload carries an inline `name` (the drawer's InlineRenameField), which
+ * skips the input box and round-trips validation errors for inline display.
+ * Cancel writes nothing.
  */
-export const handleRenameAppBuilderComponent: MessageHandler<{ id?: string }> = async (
+export const handleRenameAppBuilderComponent: MessageHandler<{ id?: string; name?: string }> = async (
     context,
     payload,
 ) => {
@@ -342,20 +403,20 @@ export const handleRenameAppBuilderComponent: MessageHandler<{ id?: string }> = 
     }
 
     const takenNames = takenIntegrationNames(project, id);
-    const raw = await vscode.window.showInputBox({
-        prompt: 'New integration name',
-        value: entry.name ?? id,
-        validateInput: (value) => validateRenameInput(value, takenNames),
-    });
-    if (raw === undefined) {
+    const resolved = await resolveRenameName(payload?.name, entry.name ?? id, takenNames);
+    if ('cancelled' in resolved) {
         return { success: true }; // cancelled — nothing written
     }
+    if ('error' in resolved) {
+        return { success: false, error: resolved.error, code: ErrorCode.CONFIG_INVALID };
+    }
 
-    const name = raw.trim();
+    const { name } = resolved;
     await context.stateManager.saveProject(setAppBuilderComponent(project, id, { ...entry, name }));
     // Same per-row channel the deploy path pushes — the status is unchanged
     // (the entry's current one); the name rides along to refresh the row label.
     await postRowStatus(id, entry.status, undefined, name);
+    await postComponentsSnapshot(context);
     return { success: true };
 };
 

@@ -2,110 +2,48 @@
  * appBuilderComponentHandlers Tests (D2 Track B — Step 05)
  *
  * The dashboard message handlers that drive the live D1 runner from the
- * integrations list:
+ * integrations grid:
  *   - handleAddAppBuilderComponent     — resolve catalog entry / custom source → guards →
  *                               assemble RunnerDepsContext → addAppBuilderComponent
  *   - handleDeployAppBuilderComponent  — deployAppBuilderComponent {id}
  *   - handleRedeployAppBuilderComponent— deployAppBuilderComponent {id}
  *   - handleRemoveAppBuilderComponent  — removeAppBuilderComponent {id}
+ *   - handleRenameAppBuilderComponent  — display-name rename via the input box
  *   - handleVerifyAppBuilderComponent  — on-demand, non-interactive SDK-only probe
  *
  * The guard order is auth → org-mismatch → App Builder permission; a failing guard surfaces the message and NEVER calls the runner.
  *
- * Strict TDD: written BEFORE the handlers exist. The runner, the subscriber
- * adapter, the SDK/auth service, and the guards are ALL mocked — no live
- * Adobe/aio calls.
+ * The drawer's inline payload rename and the appBuilderComponentsSnapshot
+ * channel live in appBuilderComponentHandlers-drawer.test.ts; shared setup in
+ * appBuilderComponentHandlers.testUtils.ts.
+ *
+ * Strict TDD: written BEFORE the handlers exist.
  */
 
-import { setupMocks } from './dashboardHandlers.testUtils';
-
-// ---- D1 runner (the live engine — fully mocked) ----------------------------
-const mockAddAppBuilderComponent = jest.fn();
-const mockDeployAppBuilderComponent = jest.fn();
-const mockRemoveAppBuilderComponent = jest.fn();
-jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
-    addAppBuilderComponent: (...a: unknown[]) => mockAddAppBuilderComponent(...a),
-    deployAppBuilderComponent: (...a: unknown[]) => mockDeployAppBuilderComponent(...a),
-    removeAppBuilderComponent: (...a: unknown[]) => mockRemoveAppBuilderComponent(...a),
-}));
-
-// ---- runner deps factory + context builder (both now live in runnerDeps) ---
-const mockBuildDefaultRunnerDeps = jest.fn(() => ({ catalog: [], _deps: true }));
-const mockBuildRunnerDepsContext = jest.fn(async () => ({
-    subscriberClient: { _client: true },
-    getCachedOrganization: () => undefined,
-    secrets: { _secrets: true },
-}));
-jest.mock('@/features/app-builder/services/appBuilderComponentRunnerDeps', () => ({
-    buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...a),
-    buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...a),
-}));
-
-// ---- catalog loader --------------------------------------------------------
-const mockGetAppBuilderComponentEntry = jest.fn();
-const mockBuildCustomIntegrationEntry = jest.fn((source: { owner: string; repo: string; branch?: string }) => ({
-    id: `${source.owner}-${source.repo}`,
-    name: source.repo,
-    description: `Custom App Builder component from ${source.owner}/${source.repo}`,
-    kind: 'integration' as const,
-    source: { owner: source.owner, repo: source.repo, branch: source.branch ?? 'main' },
-}));
-jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => ({
-    getAppBuilderComponentEntry: (...a: unknown[]) => mockGetAppBuilderComponentEntry(...a),
-    buildCustomIntegrationEntry: (...a: unknown[]) => mockBuildCustomIntegrationEntry(...a),
-}));
-
-// ---- guards (auth → org-mismatch → permission) ------------------------------
-const mockEnsureAdobeIOAuth = jest.fn();
-jest.mock('@/core/auth/adobeAuthGuard', () => ({
-    ensureAdobeIOAuth: (...a: unknown[]) => mockEnsureAdobeIOAuth(...a),
-}));
-const mockDetectProjectOrgMismatch = jest.fn();
-jest.mock('@/features/authentication/services/detectProjectOrgMismatch', () => ({
-    detectProjectOrgMismatch: (...a: unknown[]) => mockDetectProjectOrgMismatch(...a),
-}));
-
-// ---- dashboard status channel (mocked — no live webview) -------------------
-const mockSendAppBuilderComponentStatusUpdate = jest.fn();
-jest.mock('@/features/dashboard/commands/showDashboard', () => ({
-    ProjectDashboardWebviewCommand: {
-        sendAppBuilderComponentStatusUpdate: (...a: unknown[]) => mockSendAppBuilderComponentStatusUpdate(...a),
-        refreshStatus: jest.fn(),
-    },
-}));
-
 import {
+    ERP_ENTRY,
     handleAddAppBuilderComponent,
     handleDeployAppBuilderComponent,
     handleRedeployAppBuilderComponent,
     handleRemoveAppBuilderComponent,
     handleRenameAppBuilderComponent,
     handleVerifyAppBuilderComponent,
-} from '@/features/dashboard/handlers/appBuilderComponentHandlers';
-
-const ERP_ENTRY = {
-    id: 'erp-sync',
-    name: 'ERP Sync',
-    description: 'Sync ERP',
-    kind: 'integration' as const,
-    source: { owner: 'acme', repo: 'erp-sync' },
-};
-
-function mockTestDeveloperPermissions(hasPermissions: boolean, error?: string) {
-    const { ServiceLocator } = require('@/core/di');
-    const svc = ServiceLocator.getAuthenticationService();
-    svc.testDeveloperPermissions = jest.fn().mockResolvedValue({ hasPermissions, error });
-    return svc;
-}
+    mockAddAppBuilderComponent,
+    mockBuildDefaultRunnerDeps,
+    mockBuildRunnerDepsContext,
+    mockDeployAppBuilderComponent,
+    mockDetectProjectOrgMismatch,
+    mockEnsureAdobeIOAuth,
+    mockGetAppBuilderComponentEntry,
+    mockRemoveAppBuilderComponent,
+    mockSendAppBuilderComponentStatusUpdate,
+    mockTestDeveloperPermissions,
+    resetHandlerMocks,
+    setupMocks,
+} from './appBuilderComponentHandlers.testUtils';
 
 beforeEach(() => {
-    jest.clearAllMocks();
-    mockAddAppBuilderComponent.mockResolvedValue({ success: true });
-    mockDeployAppBuilderComponent.mockResolvedValue({ success: true });
-    mockRemoveAppBuilderComponent.mockResolvedValue({ success: true });
-    mockGetAppBuilderComponentEntry.mockReturnValue(ERP_ENTRY);
-    mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
-    mockDetectProjectOrgMismatch.mockResolvedValue({ reachable: true });
+    resetHandlerMocks();
 });
 
 describe('handleAddAppBuilderComponent', () => {

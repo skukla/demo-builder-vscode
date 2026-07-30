@@ -6,9 +6,9 @@
  * navigation on the right, and the "View AI Capabilities" link below the
  * badges. Each badge can surface a remediation action via the shared
  * StatusCard.action (re-auth, regenerate AI files). The mesh's status is NOT a
- * masthead badge anymore — since ADR-011 D3 Step 08 it renders as the mesh row
- * of the integrations list (MeshComponentRow), which carries the same status
- * vocabulary plus the deploy/sign-in remediations.
+ * masthead badge anymore — since ADR-011 D3 Step 08 it renders as the mesh peer
+ * card of the integrations grid (IntegrationsGrid), which carries the same
+ * status vocabulary plus the deploy/sign-in remediations.
  *
  * Extracted from ProjectDashboardScreen: the status block was ~100 lines nested
  * eight levels deep, which both pushed the screen past its complexity budget and

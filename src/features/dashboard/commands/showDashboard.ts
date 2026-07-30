@@ -166,10 +166,10 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         // "Checking Adobe organization…" state before the result arrives.
         const hasAdobeContext = Boolean(project?.adobe?.organization);
 
-        // Integrations list seed: the keyed appBuilderComponents map + the
-        // stack-filtered catalog for the add-a-appBuilderComponent picker (the
-        // mesh renders as the list's first row — MeshComponentRow — driven by
-        // the live mesh status channels, so no separate seed is needed here).
+        // Integrations grid seed: the keyed appBuilderComponents map + the
+        // stack-filtered catalog for the add-integration picker (the mesh
+        // renders as the grid's first peer card, derived from the live mesh
+        // status channels, so no separate seed is needed here).
         const appBuilderComponentCatalog = this.resolveAppBuilderComponentCatalog(project ?? null);
 
         return {
@@ -340,6 +340,28 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
                     status,
                     message,
                     name,
+                },
+            });
+        }
+    }
+
+    /**
+     * Public method to push the FULL fresh persisted `appBuilderComponents`
+     * map (called by the appBuilderComponent handlers after terminal ops:
+     * add/deploy terminal, remove success, rename success). The webview's map
+     * is seeded once at init, so without this snapshot an added card never
+     * appears and a removed card lingers. Modeled on
+     * sendAppBuilderComponentStatusUpdate; no-op if no dashboard is open.
+     */
+    public static async sendAppBuilderComponentsSnapshot(
+        components: Record<string, AppBuilderComponentState>,
+    ): Promise<void> {
+        const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
+        if (panel) {
+            await panel.webview.postMessage({
+                type: 'appBuilderComponentsSnapshot',
+                payload: {
+                    components,
                 },
             });
         }
