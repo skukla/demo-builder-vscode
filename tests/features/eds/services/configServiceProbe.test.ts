@@ -1,0 +1,212 @@
+/**
+ * Configuration Service credential probe.
+ *
+ * A colleague hit `PUT /config/{org}/sites/{site}.json -> 403` while the SAME
+ * IMS token succeeded against `admin.da.live` in the same run. That rules out an
+ * expired or malformed token and leaves authorization — but nothing in the logs
+ * could tell the two apart, so the case sat open for days.
+ *
+ * `registerSite`'s own docstring names the likely cause: the Configuration
+ * Service assigns the admin role to whoever *installs* the AEM Code Sync GitHub
+ * App. A user who did not install it on that repo — because a teammate did, or
+ * because an org admin installed it org-wide — can hold a perfectly valid token
+ * and still be refused every write.
+ *
+ * The probe is deliberately READ-ONLY. A diagnostic that PUTs a site config
+ * could clobber a live storefront, and there is no safe write test: the only
+ * non-mutating write probe would be a PUT that 409s, which stops being safe the
+ * moment Adobe changes it to an upsert.
+ */
+
+import { probeConfigService } from '@/features/eds/services/configServiceProbe';
+
+const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+const TOKEN = 'ims-token-value-never-logged';
+
+function tokenProvider() {
+    return { getAccessToken: jest.fn().mockResolvedValue(TOKEN) };
+}
+
+/**
+ * The no-credential case needs its own factory. Passing `undefined` to a
+ * defaulted parameter triggers the default, so `tokenProvider(undefined)`
+ * quietly handed back a valid token and the test asserted nothing.
+ */
+function tokenProviderWithNoCredential() {
+    return { getAccessToken: jest.fn().mockResolvedValue(undefined) };
+}
+
+/** Build a fetch stub keyed on which host the probe is calling. */
+function fetchStub(byHost: Record<string, { status: number; headers?: Record<string, string> }>) {
+    return jest.fn().mockImplementation((url: string) => {
+        const key = Object.keys(byHost).find((k) => url.includes(k));
+        if (!key) return Promise.reject(new Error(`unstubbed host: ${url}`));
+        const { status, headers = {} } = byHost[key];
+        return Promise.resolve({
+            ok: status >= 200 && status < 300,
+            status,
+            headers: { get: (n: string) => headers[n.toLowerCase()] ?? null },
+        });
+    });
+}
+
+describe('probeConfigService', () => {
+    const org = 'skukla';
+    const site = 'b2b-tester';
+    let originalFetch: typeof globalThis.fetch;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        originalFetch = globalThis.fetch;
+    });
+    afterEach(() => {
+        globalThis.fetch = originalFetch;
+    });
+
+    it('reports no credential when the token provider has none', async () => {
+        const result = await probeConfigService(
+            tokenProviderWithNoCredential(),
+            org,
+            site,
+            logger as never
+        );
+
+        expect(result.token.present).toBe(false);
+        expect(result.verdict).toMatch(/sign in/i);
+    });
+
+    it('treats a null credential as absent, the way the real provider returns it', async () => {
+        // DaLiveAuthService resolves null, not undefined. A probe that only
+        // handled undefined would sail past this and probe with "Bearer null".
+        const provider = { getAccessToken: jest.fn().mockResolvedValue(null) };
+
+        const result = await probeConfigService(provider, org, site, logger as never);
+
+        expect(result.token.present).toBe(false);
+        expect(result.verdict).toMatch(/sign in/i);
+    });
+
+    it('never puts the token in the result', async () => {
+        // The probe's output is meant to be pasted into a ticket.
+        globalThis.fetch = fetchStub({
+            'admin.hlx.page': { status: 200 },
+            'admin.da.live': { status: 200 },
+        }) as never;
+
+        const result = await probeConfigService(tokenProvider(), org, site, logger as never);
+
+        expect(JSON.stringify(result)).not.toContain(TOKEN);
+    });
+
+    it('issues only GET requests', async () => {
+        // A diagnostic must not mutate. If this ever fails, the probe has grown
+        // a write and can clobber a live storefront's site config.
+        const stub = fetchStub({
+            'admin.hlx.page': { status: 200 },
+            'admin.da.live': { status: 200 },
+        });
+        globalThis.fetch = stub as never;
+
+        await probeConfigService(tokenProvider(), org, site, logger as never);
+
+        for (const [, init] of stub.mock.calls) {
+            expect((init?.method ?? 'GET').toUpperCase()).toBe('GET');
+        }
+    });
+
+    it('captures the status, x-error and x-invocation-id the service returned', async () => {
+        globalThis.fetch = fetchStub({
+            'admin.hlx.page': {
+                status: 403,
+                headers: { 'x-error': '[admin] forbidden', 'x-invocation-id': 'abc-123' },
+            },
+            'admin.da.live': { status: 200 },
+        }) as never;
+
+        const result = await probeConfigService(tokenProvider(), org, site, logger as never);
+
+        expect(result.configService?.httpStatus).toBe(403);
+        expect(result.configService?.xError).toBe('[admin] forbidden');
+        expect(result.configService?.invocationId).toBe('abc-123');
+    });
+
+    it('names the admin-role cause when the token works elsewhere but config is 403', async () => {
+        // The decisive combination: DA.live accepts the credential, the
+        // Configuration Service refuses it. Not expiry, not a malformed token.
+        globalThis.fetch = fetchStub({
+            'admin.hlx.page': { status: 403 },
+            'admin.da.live': { status: 200 },
+        }) as never;
+
+        const result = await probeConfigService(tokenProvider(), org, site, logger as never);
+
+        expect(result.daLive?.httpStatus).toBe(200);
+        expect(result.verdict).toMatch(/install/i);
+        expect(result.verdict).toMatch(/not a token problem|credential is valid/i);
+    });
+
+    it('calls an expired-or-rejected credential what it is on a 401', async () => {
+        globalThis.fetch = fetchStub({
+            'admin.hlx.page': { status: 401 },
+            'admin.da.live': { status: 401 },
+        }) as never;
+
+        const result = await probeConfigService(tokenProvider(), org, site, logger as never);
+
+        expect(result.verdict).toMatch(/sign in|credential/i);
+        expect(result.verdict).not.toMatch(/install the AEM Code Sync/i);
+    });
+
+    it('reports a healthy config read plainly', async () => {
+        globalThis.fetch = fetchStub({
+            'admin.hlx.page': { status: 200 },
+            'admin.da.live': { status: 200 },
+        }) as never;
+
+        const result = await probeConfigService(tokenProvider(), org, site, logger as never);
+
+        expect(result.configService?.httpStatus).toBe(200);
+        expect(result.verdict).toMatch(/no problem|healthy|can read/i);
+    });
+
+    it('distinguishes an unregistered site from a refused one', async () => {
+        // 404 means the site was never registered — a different remedy entirely
+        // from being refused, and it must not read as a permission problem.
+        globalThis.fetch = fetchStub({
+            'admin.hlx.page': { status: 404 },
+            'admin.da.live': { status: 200 },
+        }) as never;
+
+        const result = await probeConfigService(tokenProvider(), org, site, logger as never);
+
+        expect(result.verdict).toMatch(/not registered|no site config/i);
+        expect(result.verdict).not.toMatch(/forbidden|refused/i);
+    });
+
+    it('survives one unreachable host without losing the other leg', async () => {
+        globalThis.fetch = jest.fn().mockImplementation((url: string) => {
+            if (url.includes('admin.da.live')) return Promise.reject(new Error('ENOTFOUND'));
+            return Promise.resolve({
+                ok: true,
+                status: 200,
+                headers: { get: () => null },
+            });
+        }) as never;
+
+        const result = await probeConfigService(tokenProvider(), org, site, logger as never);
+
+        expect(result.configService?.httpStatus).toBe(200);
+        expect(result.daLive?.error).toContain('ENOTFOUND');
+    });
+
+    it('keeps the verdict short enough to paste', async () => {
+        globalThis.fetch = fetchStub({
+            'admin.hlx.page': { status: 403 },
+            'admin.da.live': { status: 200 },
+        }) as never;
+
+        const result = await probeConfigService(tokenProvider(), org, site, logger as never);
+
+        expect(result.verdict.length).toBeLessThan(400);
+    });
+});

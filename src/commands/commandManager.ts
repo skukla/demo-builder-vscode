@@ -330,7 +330,7 @@ export class CommandManager {
         }
 
         // Diagnostics
-        const diagnostics = new DiagnosticsCommand(this.context.secrets);
+        const diagnostics = new DiagnosticsCommand(this.context);
         this.registerCommand('demoBuilder.diagnostics', () => diagnostics.execute());
 
         // One-shot storefront name migration (heals pre-`164fd251` storefronts
