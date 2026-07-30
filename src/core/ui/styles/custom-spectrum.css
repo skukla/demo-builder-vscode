@@ -5082,6 +5082,14 @@ div[class*="spectrum"] input[type="search"] {
  * 450px); tokens flip light/dark. Card family: .project-card-spectrum
  * (gray-50 base, gray-75 hover, lift, radius 8).
  * ------------------------------------------------------------------------ */
+/* The grid's root inside the flex `.dashboard-grid-container` (shared with the
+ * ActionGrid, so the stretch belongs here, not on the container). Without it the
+ * flex child sizes to its INTRINSIC width and the auto-fill tracks below
+ * collapse to a single 268px column. */
+.integrations-surface {
+    flex: 1 1 auto;
+    min-width: 0;
+}
 /* Heading · count pill · Add button on one baseline; the Add button trails. */
 .integrations-header {
     display: flex;

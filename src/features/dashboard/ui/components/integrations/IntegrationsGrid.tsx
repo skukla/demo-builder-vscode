@@ -194,7 +194,11 @@ export function IntegrationsGrid({
     const openAdd = useCallback((): void => setAddOpen(true), []);
 
     return (
-        <div>
+        // Stretches inside the flex `.dashboard-grid-container` (shared with the
+        // ActionGrid, so the stretch lives here): a flex child sizes to its
+        // INTRINSIC width by default, which collapses the grid's
+        // repeat(auto-fill, minmax(268px, 1fr)) tracks to a single column.
+        <div className="integrations-surface">
             <div className="integrations-header">
                 <Heading level={3}>Integrations</Heading>
                 <span className="integration-count" data-testid="integration-count">
