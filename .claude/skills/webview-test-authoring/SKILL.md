@@ -134,7 +134,28 @@ that looks catalog-ish is therefore not one. Derived flags key off the real file
 Symptom of getting it wrong: an affordance that should be hidden renders anyway, with the
 fixture looking entirely correct.
 
-## 6. `jest.mock('os')` needs a module factory
+## 6. `clearAllMocks()` does NOT reset implementations
+
+`jest.clearAllMocks()` clears recorded **calls**, not implementations. A
+`mockRejectedValue` / `mockResolvedValue` / `mockImplementation` set inside one test
+survives into every later test in the file. The symptom is a test that passes alone and
+fails in sequence, with an error belonging to a *different* test's setup.
+
+When a suite's `beforeEach` sets up a shared mock the tests then override, reset it
+explicitly:
+
+```ts
+beforeEach(() => {
+    jest.clearAllMocks();
+    mockExecuteCommand.mockReset();      // drops the leaked implementation
+    mockGetActivePanel.mockReturnValue(null);  // re-establish the default
+});
+```
+
+`mockReset()` clears implementations too, so re-establish any default the suite relies on
+immediately after.
+
+## 7. `jest.mock('os')` needs a module factory
 
 `jest.spyOn(os, 'homedir')` does **not** intercept the SUT. Use a module-factory mock whose
 default is a nonexistent path, so a missed override fails loudly instead of touching the

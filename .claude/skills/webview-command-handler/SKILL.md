@@ -19,7 +19,31 @@ description: Add a webview message handler/command end-to-end (MessageType → h
 7. If the handler runs Adobe CLI commands: use `TIMEOUTS.*` from `@/core/utils/timeoutConfig` (never numeric literals), target the op per-invocation with `withOrgContext`, and in the catch block check `error.stdout` for success indicators before failing — Adobe CLI ops routinely succeed after the timeout fires (`src/commands/CLAUDE.md` "Timeout Handling").
 8. Add a test mirroring the source path, e.g. `tests/features/mesh/handlers/subscribeHandler.test.ts` — assert the response SHAPE for success, validation failure, and service failure.
 
+## Adding a whole new webview SURFACE (not just a handler)
+
+Two traps that fail SILENTLY — nothing throws, nothing logs, the UI just never updates:
+
+- **Static push senders address ONE panel id.** The senders in
+  `showDashboard.ts` (`sendMeshStatusUpdate`, `sendAppBuilderComponentStatusUpdate`,
+  `sendAppBuilderComponentsSnapshot`, …) look up `getActivePanel('demoBuilder.projectDashboard')`.
+  Surfaces open by tab REPLACEMENT — the dashboard panel is disposed — so on a new
+  project-scoped surface every push reaches nobody. Resolve whichever panel is live
+  (`getLiveProjectPanel()`), preferring one so a push renders once. Symptom: the surface
+  renders correct initial data and then never moves.
+- **Reuse the existing handler map before writing handlers.** A surface that renders existing
+  components usually needs ZERO new handlers — register the feature's map wholesale
+  (`getRegisteredTypes` + `dispatchHandler`, per `showProjectsList.ts`). The integrations
+  surface needed none: the grid's messages already lived in `dashboardHandlers`.
+
+Precedents to copy rather than invent: `showProjectsList.ts` (command shape),
+`src/features/dashboard/ui/aiSurface/index.tsx` (entry point), `WEBVIEW_ENTRIES` in
+`esbuild.config.js` (bundle key), `commandManager.ts` `registerCommands()` (registration +
+sibling-panel disposal).
+
 ## Gotchas
+- **The handler-map count test is PINNED.** `tests/features/dashboard/handlers/dashboardHandlersMap.test.ts`
+  asserts an exact handler count with a comment deriving it. Adding a handler fails it by design —
+  bump the number AND extend the derivation comment so the next reader can still reconstruct it.
 - An unawaited/unreturned inner promise makes the UI receive a Promise object or `undefined`. `WebviewCommunicationManager` awaits the handler you register, but only what the handler *returns* travels back — always `return await service(...)` results, never fire-and-forget inside a request handler. (Root `CLAUDE.md` gotcha; `src/core/communication/webviewCommunicationManager.ts`.)
 - The handshake protocol queues messages until both sides are ready — never assume immediate delivery, and never send from the webview before `ready` (`docs/systems/race-conditions.md`).
 - Handler works from the dashboard but the wizard reports an unknown message → it's missing from `ProjectCreationHandlerRegistry.ts` (step 5).

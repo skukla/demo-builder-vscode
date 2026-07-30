@@ -24,9 +24,19 @@ description: Create or relocate a git worktree for this repo the way it expects 
    cp -R "$MAIN/.claude/hooks" "$MAIN/.claude/settings.local.json" "$WT/.claude/"
    ```
    `skills/` is tracked — it arrives with the checkout, don't copy it.
-3. **Reload Claude in the worktree session** — settings/hooks/skills are read at session start, so
+3. **Give the worktree its OWN `dist/` — never a symlink** (share `node_modules`, not build
+   output):
+   ```bash
+   [ -L "$WT/dist" ] && rm "$WT/dist"     # kill an inherited symlink
+   mkdir -p "$WT/dist"
+   [ -e "$WT/node_modules" ] || ln -s "$MAIN/node_modules" "$WT/node_modules"
+   ```
+   `node_modules` is read-only at runtime, so sharing it is free. `dist/` is WRITTEN by every
+   build — sharing it means two branches compile into one directory and the last writer silently
+   wins (see Gotchas). The cost of a private `dist/` is one `npm run compile` in the worktree.
+4. **Reload Claude in the worktree session** — settings/hooks/skills are read at session start, so
    a session opened before the copy won't see them.
-4. **Start the preview loop from the worktree** (the folder the Extension Dev Host was launched
+5. **Start the preview loop from the worktree** (the folder the Extension Dev Host was launched
    from) with Bash `run_in_background`:
    ```bash
    cd "$WT" && npm run watch:all
@@ -43,7 +53,24 @@ description: Create or relocate a git worktree for this repo the way it expects 
   worktrees inherit it on copy.
 - **Never place a worktree under `.claude/worktrees/`** — a dotfolder is invisible in Finder and
   VS Code open dialogs; the user won't find it. The sibling `.worktrees/` dir is the convention.
-- **`node_modules` and `dist` travel with a worktree** on create/move — no reinstall or rebuild.
+- **NEVER symlink `dist/` between checkouts** (step 3). Older worktrees here were created with
+  `dist -> <main>/dist`, and it burned a whole debugging session on 2026-07-30: the Dev Host showed
+  the wrong branch's UI, a build "disappeared", and a bundle that existed at 13:24 was gone by
+  13:27 because a build in the other tree emitted six bundles over the seven-bundle set. Two ways
+  it bites:
+  1. Whichever build ran LAST owns what the Extension Dev Host loads — across BRANCHES, invisibly.
+  2. `.vscode/launch.json` has `"preLaunchTask": "npm: compile"` scoped to `${workspaceFolder}`, so
+     **F5 rebuilds `dist` from the workspace you launched from** — F5 in either tree overwrites the
+     other's build.
+  If you inherit a worktree with the symlink, replace it (step 3) — `dist/` is gitignored, so
+  nothing is lost. Sharing `node_modules` stays fine: it is read, never written.
+- **Confirm WHICH build you are looking at before trusting the UI.** After any rebuild, grep the
+  bundle for a string only your branch produces:
+  `grep -c '<a-class-only-on-your-branch>' dist/webview/<name>-bundle.js`. A `0` means another
+  tree, or an older build, won.
+- **Cmd+R reloads the webview; it does NOT compile.** After an edit with no watch running you are
+  looking at a stale bundle. Extension-side changes (commands, handlers, push senders) need a full
+  **F5** host restart — Cmd+R alone refreshes the webview against the old extension host.
 - **Relocating an existing worktree**: `git -C "$MAIN" worktree move <old> <new>`. If you're moving
   the worktree that is your OWN cwd, do it LAST and `cd` into the new path in the same command —
   the old dir vanishes mid-move.
