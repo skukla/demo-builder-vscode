@@ -56,11 +56,15 @@ export function useElapsedStage(active: boolean, stages: ElapsedStage[]): string
  * Stages for the Adobe org-services catalog fetch, shared by every surface that
  * waits on it (the wizard's API picker, the dashboard's Edit-APIs modal).
  *
- * Thresholds are set against the measured 38.9s / 96 services: the first lands
- * well before a healthy fetch would finish, the second explains WHY it is slow
- * rather than just asserting that it still is.
+ * The copy attributes the wait to Adobe and confirms liveness — it does NOT
+ * explain the cause, because we do not know it. The evidence is a single
+ * measurement (38.9s for 96 services, 2026-07-31). Earlier drafts blamed the
+ * payload ("returns the entire catalog at once") and then org size ("large
+ * organizations can take a minute"); 96 rows is a tiny response, so size is
+ * almost certainly not the bottleneck, and one org is no basis for a claim about
+ * bigger ones. Do not add a mechanism here without a measurement behind it.
  */
 export const ORG_SERVICES_LOADING_STAGES: ElapsedStage[] = [
-    { afterMs: 4000, message: 'Adobe returns the entire API catalog at once.' },
-    { afterMs: 15000, message: 'Large organizations can take up to a minute.' },
+    { afterMs: 4000, message: "Waiting on Adobe's API catalog service…" },
+    { afterMs: 15000, message: 'Still waiting — Adobe can take up to a minute to respond.' },
 ];
