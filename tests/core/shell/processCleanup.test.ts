@@ -7,6 +7,7 @@
 
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { spawn } from 'child_process';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 // Mock logger
 jest.mock('@/core/logging/debugLogger', () => ({
@@ -17,6 +18,18 @@ jest.mock('@/core/logging/debugLogger', () => ({
         error: jest.fn(),
     }),
 }));
+
+/**
+ * These suites drive REAL child processes, and `killProcessTree` observes exits
+ * by POLLING on a `TIMEOUTS.POLL.PROCESS_CHECK` (100ms) `setTimeout` chain. Node
+ * timers fire at *least* after their delay, so under the full suite's worker
+ * contention a loop that resolves in one or two ticks when idle can stretch far
+ * longer. Jest's default 10s cap then trips on tests that are behaving correctly.
+ *
+ * Hence the raised timeout — it buys scheduler headroom, it does NOT slow a
+ * healthy run (these finish in ~100-200ms in band).
+ */
+jest.setTimeout(30_000);
 
 describe('ProcessCleanup - Basic Operations', () => {
     let processCleanup: ProcessCleanup;
@@ -70,8 +83,11 @@ describe('ProcessCleanup - Basic Operations', () => {
             await processCleanup.killProcessTree(pid, 'SIGTERM');
             const duration = Date.now() - startTime;
 
-            // Then: Should complete quickly (< 1s for graceful shutdown)
-            expect(duration).toBeLessThan(1000);
+            // Then: it exited on SIGTERM rather than being force-killed. The
+            // boundary for that claim is the grace period — escalation to SIGKILL
+            // cannot have happened below it. A tighter wall-clock bound would be
+            // stricter than the property under test, and is what made this flake.
+            expect(duration).toBeLessThan(TIMEOUTS.PROCESS_GRACEFUL_SHUTDOWN);
             expect(() => process.kill(pid, 0)).toThrow();
         });
 
@@ -88,8 +104,9 @@ describe('ProcessCleanup - Basic Operations', () => {
 
             const duration = Date.now() - startTime;
 
-            // Then: Should complete quickly (no SIGKILL delay)
-            expect(duration).toBeLessThan(1000);
+            // Then: no SIGKILL escalation — the grace period is the boundary
+            // that claim actually rests on.
+            expect(duration).toBeLessThan(TIMEOUTS.PROCESS_GRACEFUL_SHUTDOWN);
             expect(() => process.kill(pid, 0)).toThrow();
         });
     });
@@ -104,8 +121,10 @@ describe('ProcessCleanup - Basic Operations', () => {
             await processCleanup.killProcessTree(nonExistentPid);
             const duration = Date.now() - startTime;
 
-            // Then: Should resolve immediately (< 100ms)
-            expect(duration).toBeLessThan(100);
+            // Then: it short-circuited instead of entering the poll loop. Ten
+            // poll ticks is the margin; anything that actually polled to the
+            // grace period lands an order of magnitude above this.
+            expect(duration).toBeLessThan(TIMEOUTS.POLL.PROCESS_CHECK * 10);
         });
 
         it('should not throw error for non-existent PID', async () => {
