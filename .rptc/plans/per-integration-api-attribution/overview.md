@@ -64,12 +64,16 @@ row is.
 
 ## Prior art audit (2026-07-30) — read before planning steps
 
-**⚠️ CONFLICT — [`../unify-api-subscribe-at-rebuild/overview.md`](../unify-api-subscribe-at-rebuild/overview.md)
-(user-approved, NOT started — no branch, no worktree).** Its Change 1 is "every integration's APIs land
-at **one place — the rebuild**; the modal never provisions," removing the mesh's in-modal subscribe.
-Locked decision 3 below says subscription is **immediate on edit**. Both can technically coexist (defer
-at *add*, immediate at *live edit*), but that reintroduces two provisioning moments — the exact "mixing
-and matching" frustration that plan exists to kill. **Needs an explicit ruling before either proceeds.**
+**✅ RESOLVED — `unify-api-subscribe-at-rebuild` already SHIPPED** (2026-07-15, `830e17f2`; now in
+`.rptc/complete/`). An earlier draft of this plan flagged a conflict with it and marked decision 3
+CONTESTED. That was wrong twice over: the plan's "one provisioning place" was always scoped to the
+ADD MODAL, and it is not pending — it shipped. The modal now provisions nothing (`enableMeshApi`
+deleted; every kind commits + closes) and APIs subscribe at the rebuild. A LIVE edit posting
+immediately via dashboard `setConsoleApis` is a different path and coexists with that. **Decision 3
+below stands, uncontested.**
+
+*(The earlier error is worth remembering: plan status was inferred from `git branch` finding no
+branch, when the work had been merged straight to develop. Plan status lives in the CODE.)*
 
 **Taxonomy already shipped — it constrains the resolver.**
 [`../../backlog/2026-07-13-deterministic-integrations.md`](../../backlog/2026-07-13-deterministic-integrations.md)
@@ -111,9 +115,9 @@ persistence backlog's remaining items (ReviewStep `components.appBuilder` bug,
    shape the wizard already models) and is shown as "added directly" in the project view. No owner is
    guessed.
 3. **Subscription is immediate**, on edit — not deferred to next deploy. Matches today's dashboard
-   semantics; a subscription is a prerequisite, not a build output. **⚠️ CONTESTED** — see the
-   conflict with `unify-api-subscribe-at-rebuild` above. Ruling needed: does "one provisioning
-   moment" apply only to the ADD journey (leaving live edits immediate), or to every path?
+   semantics; a subscription is a prerequisite, not a build output. Uncontested: the "one
+   provisioning moment" rule shipped scoped to the ADD modal (see above), and a live edit is a
+   different path.
 
 ## The four row states (the load-bearing derivation)
 

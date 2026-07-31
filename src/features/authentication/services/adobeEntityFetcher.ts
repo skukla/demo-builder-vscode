@@ -65,6 +65,12 @@ export interface AdobeEntityFetcherConfig {
  */
 export class AdobeEntityFetcher {
     private debugLogger = getLogger();
+    /**
+     * The in-flight org-list fetch, shared by concurrent callers (single-flight).
+     * Undefined when none is running. Distinct from the org-list CACHE, which can
+     * only help callers arriving after a fetch completes.
+     */
+    private orgListFlight: Promise<AdobeOrg[]> | undefined;
     /** Cached credential from createWorkspaceCredential — avoids re-query issues */
     private cachedCredential: WorkspaceCredential | undefined;
     /**
@@ -328,10 +334,28 @@ export class AdobeEntityFetcher {
      * {@link getOrganizations}) or fire `onNoOrgsAccessible` (a state mutation).
      */
     async getOrganizationsSdkOnly(): Promise<AdobeOrg[]> {
-        const startTime = Date.now();
-
         const cachedOrgs = this.cacheManager.getCachedOrgList();
         if (cachedOrgs) return cachedOrgs;
+
+        // SINGLE-FLIGHT. The cache dedupes SEQUENTIAL callers, but concurrent ones
+        // all check before any has written: each missed and each fired its own SDK
+        // round-trip. Opening the integrations surface starts `orgContextCheck` and
+        // the API picker's handler at nearly the same moment, so the logs showed two
+        // overlapping fetches (2.5s + 1.4s) for one piece of data. Callers arriving
+        // during a flight now await the SAME promise.
+        if (!this.orgListFlight) {
+            this.orgListFlight = this.fetchOrganizationsSdkOnly().finally(() => {
+                // Released on BOTH paths — a rejected flight left pending would wedge
+                // the fetcher for the rest of the session.
+                this.orgListFlight = undefined;
+            });
+        }
+        return this.orgListFlight;
+    }
+
+    /** The uncached fetch behind {@link getOrganizationsSdkOnly}'s single-flight. */
+    private async fetchOrganizationsSdkOnly(): Promise<AdobeOrg[]> {
+        const startTime = Date.now();
 
         await this.ensureSDKReady();
         if (!this.sdkClient.isInitialized()) return [];

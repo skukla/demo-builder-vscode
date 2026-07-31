@@ -1,5 +1,14 @@
 # Unify API provisioning at rebuild + prefetch the org-API picker
 
+> **✅ SHIPPED 2026-07-15 in `830e17f2`** — BOTH changes. Change 1: `enableMeshApi` and the
+> in-modal subscribe deleted; every kind commits + closes immediately, APIs subscribe at the
+> rebuild. Change 2: the prefetch fires on modal open (`AddIntegrationFlowModal.tsx:235`) and
+> `CACHE_TTL.ORG_SERVICES` went 5min → 30min. Moved to `.rptc/complete/` on 2026-07-31.
+>
+> **Caution for future readers (2026-07-31):** this plan was twice read as "not started" because
+> no branch or worktree survived the merge to develop. Plan status lives in the CODE, not in
+> `git branch`.
+
 > **Step 0 — RPTC re-initialization (ALWAYS FIRST on re-entry):** if context was cleared,
 > re-invoke `/rptc:fix "Plan is approved, continue to implementation"`. Work happens in the
 > worktree `…/demo-builder-vscode.worktrees/fix/unify-api-subscribe-at-rebuild` (branch
@@ -79,10 +88,9 @@ Three things this pins down:
 3. Only after all of that does `list-org-console-apis` begin, which is what the user experiences
    as "loading APIs takes forever".
 
-**Status of the two Change-2 items against shipped code (checked 2026-07-31):** the prefetch EXISTS
-(`AddIntegrationFlowModal.tsx:235` fires `list-org-console-apis` with `componentIds: []` on open).
-The **TTL bump does not** — `CACHE_TTL.ORG_SERVICES` is still 5 min. So the cheap half is done and
-the durable half is not.
+**Both Change-2 items were already shipped when this was measured** — prefetch AND the 30min
+`ORG_SERVICES` TTL. So the latency below is what remains AFTER this plan, not a gap in it. The
+residual causes are diagnosed in the follow-on note beneath.
 
 **Note the prefetch cannot help the first open**, which is the one users notice: it fires when the
 modal opens, and the picker is reached seconds later in the same session. It hides latency for the
@@ -137,3 +145,23 @@ than the services cache.
    → "Add" is instant. Finish rebuild → the picked API is subscribed.
 4. **Change APIs** on a custom integration → the picker opens warm.
 5. Jest: the updated suites pass; `tsc --noEmit` 0; eslint 0.
+
+---
+
+## Follow-on: what the 2026-07-31 measurement actually blames (NOT this plan's scope)
+
+With both Change-2 items shipped, the ~7s is elsewhere:
+
+1. **Org-list cache stampede (fixed 2026-07-31).** `getOrganizationsSdkOnly` checked the cache and
+   fetched on a miss, with no in-flight dedup — so CONCURRENT callers all missed and all fetched.
+   Opening the integrations surface fires `orgContextCheck` and the picker's handler at nearly the
+   same moment: two overlapping SDK round-trips (2.5s + 1.4s in the logs). Fixed with single-flight
+   promise sharing in `adobeEntityFetcher`.
+2. **The org LIST uses a different TTL from the org SERVICES catalog.** `setCachedOrgList` uses
+   `CACHE_TTL.SHORT` (60s); `ORG_SERVICES` (30min) covers the entitlement catalog only. Raising
+   ORG_SERVICES never affected the org-list fetches being measured here.
+3. **`isAuthenticated` breaches its own budget and retries — STILL OPEN.**
+   `[Retry Strategy] Command succeeded after 3.7s (attempt 1/2)` then
+   `isAuthenticated took 3.8s ⚠️ SLOW (expected <3.0s)`. The first attempt fails silently and the
+   retry succeeds, so nothing surfaces. Not diagnosed; needs its own investigation into what the
+   first attempt is doing and why it fails.
