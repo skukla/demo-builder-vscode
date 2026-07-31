@@ -14,6 +14,7 @@ import { sortPackages, filterPackagesBySearchQuery } from './brandGalleryHelpers
 import { SelectionCheck } from './SelectionCheck';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
+import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { cn } from '@/core/ui/utils/classNames';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import { DemoPackage } from '@/types/demoPackages';
@@ -68,15 +69,7 @@ const PackageCard: React.FC<PackageCardProps> = ({
         }
     }, [onCardClick, isComingSoon]);
 
-    const handleCardKeyDown = useCallback(
-        (e: React.KeyboardEvent) => {
-            if (!isComingSoon && (e.key === 'Enter' || e.key === ' ')) {
-                e.preventDefault();
-                onCardClick();
-            }
-        },
-        [onCardClick, isComingSoon],
-    );
+    const handleCardKeyDown = useActivateOnKey(onCardClick, { disabled: isComingSoon });
 
     const libraryCount = selectedBlockLibraries.length + (customBlockLibraries?.length ?? 0);
 

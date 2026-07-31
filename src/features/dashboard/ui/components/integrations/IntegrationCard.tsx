@@ -19,12 +19,13 @@
  * @module features/dashboard/ui/components/integrations/IntegrationCard
  */
 
-import { ActionButton, Button, Item, Link, Menu, MenuTrigger } from '@adobe/react-spectrum';
-import More from '@spectrum-icons/workflow/More';
+import { Button, Item, Link } from '@adobe/react-spectrum';
 import React, { useCallback } from 'react';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
 import { InlineRenameField } from '@/core/ui/components/forms';
+import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
+import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { cn } from '@/core/ui/utils/classNames';
 
 export interface IntegrationCardProps {
@@ -67,22 +68,17 @@ function CardMenu({
 }: Pick<IntegrationCardProps, 'model' | 'onAction'>): React.ReactElement | null {
     if (model.menuActions.length === 0) return null;
     return (
-        <MenuTrigger>
-            <ActionButton
-                isQuiet
-                aria-label={`More actions for ${model.name}`}
-                UNSAFE_className="integration-card-menu-button"
-            >
-                <More size="S" />
-            </ActionButton>
-            <Menu onAction={(key) => onAction(model, key as CardAction)}>
-                {model.menuActions.map((action) => (
-                    <Item key={action} textValue={MENU_LABELS[action] ?? action}>
-                        {MENU_LABELS[action] ?? action}
-                    </Item>
-                ))}
-            </Menu>
-        </MenuTrigger>
+        <CardActionsMenu
+            ariaLabel={`More actions for ${model.name}`}
+            className="integration-card-menu-button"
+            onAction={(key) => onAction(model, key as CardAction)}
+        >
+            {model.menuActions.map((action) => (
+                <Item key={action} textValue={MENU_LABELS[action] ?? action}>
+                    {MENU_LABELS[action] ?? action}
+                </Item>
+            ))}
+        </CardActionsMenu>
     );
 }
 
@@ -120,15 +116,7 @@ export function IntegrationCard({
 }: IntegrationCardProps): React.ReactElement {
     const handleClick = useCallback((): void => onOpen(model.id), [model.id, onOpen]);
 
-    const handleKeyDown = useCallback(
-        (event: React.KeyboardEvent): void => {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                onOpen(model.id);
-            }
-        },
-        [model.id, onOpen],
-    );
+    const handleKeyDown = useActivateOnKey(handleClick);
 
     // Contain face presses: click/keydown must never bubble into the
     // card's open-the-drawer handlers (InlineRenameField.tsx precedent).
@@ -159,12 +147,8 @@ export function IntegrationCard({
                 ) : (
                     <div className="integration-card-name">{model.name}</div>
                 )}
-                {/* Containment, same as the face affordance: opening the menu or
-                    picking an item must not also open the detail flyout. */}
-                {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- containment only; interaction lives on the child MenuTrigger */}
-                <span onClick={stopPropagation} onKeyDown={stopPropagation}>
-                    <CardMenu model={model} onAction={onAction} />
-                </span>
+                {/* CardActionsMenu contains its own clicks — no wrapper needed. */}
+                <CardMenu model={model} onAction={onAction} />
             </div>
             <div className="integration-card-statusline">
                 {/* size 6 matches the project card's status dot — the 8px default

@@ -25,6 +25,7 @@ This directory contains custom React hooks that extract and encapsulate reusable
 | `useSearchFilter` | Search/filter arrays over configurable fields with memoized results | `useSearchFilter.ts` |
 | `useFocusTrap` | Trap keyboard focus within a container (WCAG); exports `FOCUSABLE_SELECTOR` | `useFocusTrap.ts` |
 | `useFocusOnMount` | Focus an element on mount via a 3-tier strategy (see below) | `useFocusOnMount.ts` |
+| `useActivateOnKey` | Enter/Space activation for a div-role button (with `preventDefault`) — the contract every click-to-open tile needs | `useActivateOnKey.ts` |
 | `useArrowKeyNavigation` | Arrow-key navigation for lists/grids (currently unused; retained as a primitive) | `useArrowKeyNavigation.ts` |
 | `useEnterExit` | Track items that just appeared/disappeared so lists can animate in/out (see below) | `useEnterExit.ts` |
 | **Utility** | | |

@@ -34,6 +34,7 @@ import { AddIntegrationFlowAdapter } from './AddIntegrationFlowAdapter';
 import { StatusDisplay } from '@/core/ui/components/feedback';
 import { PageHeader, PageLayout } from '@/core/ui/components/layout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
+import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import {
     getMeshAppBuilderComponent,
@@ -79,16 +80,23 @@ export function formatDestination(destination?: {
 }
 
 /** Case-insensitive match over the fields a user would search by. */
+/** The card fields a search query matches against. */
+const CARD_SEARCH_FIELDS = ['name', 'kindLabel', 'sourceLine'] as const;
+
+/**
+ * Filter cards by a search query.
+ *
+ * Delegates to the shared `matchesSearchFields` predicate rather than
+ * re-implementing the lowercase-contains walk a third time (this surface and
+ * ProjectsDashboard had each hand-rolled it while `useSearchFilter` sat unused —
+ * architecture-duplication scan, 2026-07-31). Kept as a named export because the
+ * screen owns its query state and the suite tests this directly.
+ */
 export function filterCards(cards: IntegrationCardModel[], query: string): IntegrationCardModel[] {
-    const needle = query.trim().toLowerCase();
-    if (!needle) {
+    if (!query.trim()) {
         return cards;
     }
-    return cards.filter((card) =>
-        [card.name, card.kindLabel, card.sourceLine].some((field) =>
-            field?.toLowerCase().includes(needle),
-        ),
-    );
+    return cards.filter((card) => matchesSearchFields(card, CARD_SEARCH_FIELDS, query));
 }
 
 export function IntegrationsScreen({

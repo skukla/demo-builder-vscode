@@ -31,6 +31,7 @@ import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { SearchHeader, type ViewMode } from '@/core/ui/components/navigation/SearchHeader';
 import { useFocusTrap } from '@/core/ui/hooks';
+import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import type { Project } from '@/types/base';
 
 export interface ProjectsDashboardProps {
@@ -114,15 +115,12 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     };
 
     // Filter projects based on search query
-    const filteredProjects = useMemo(() => {
-        if (!searchQuery.trim()) {
-            return projects;
-        }
-        const query = searchQuery.toLowerCase();
-        return projects.filter((project) =>
-            project.name.toLowerCase().includes(query),
-        );
-    }, [projects, searchQuery]);
+    // The shared predicate, not a third hand-rolled lowercase-contains walk
+    // (architecture-duplication scan, 2026-07-31).
+    const filteredProjects = useMemo(
+        () => projects.filter((project) => matchesSearchFields(project, ['name'], searchQuery)),
+        [projects, searchQuery],
+    );
 
     const hasProjects = projects.length > 0;
     const isFiltering = searchQuery.trim().length > 0;

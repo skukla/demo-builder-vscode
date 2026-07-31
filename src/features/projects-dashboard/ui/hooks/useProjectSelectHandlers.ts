@@ -11,6 +11,7 @@
  */
 
 import { useCallback } from 'react';
+import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import type { Project } from '@/types';
 
 /** How a surface opens a project; `forceNewWindow` requests a new VS Code window. */
@@ -43,19 +44,15 @@ export function useProjectSelectHandlers(project: Project, onSelect: ProjectSele
         [project, onSelect],
     );
 
-    const handleKeyDown = useCallback(
-        (e: React.KeyboardEvent) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                if (e.shiftKey) {
-                    onSelect(project, { forceNewWindow: true });
-                } else {
-                    onSelect(project);
-                }
-            }
-        },
-        [project, onSelect],
-    );
+    const handleKeyDown = useActivateOnKey((e) => {
+        // SHIFT only: there is no cmd-Enter convention for this in VS Code, and
+        // binding meta here would swallow other shortcuts.
+        if (e.shiftKey) {
+            onSelect(project, { forceNewWindow: true });
+        } else {
+            onSelect(project);
+        }
+    });
 
     return { handleClick, handleKeyDown };
 }

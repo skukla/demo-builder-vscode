@@ -9,6 +9,7 @@
 import { Flex, Text } from '@adobe/react-spectrum';
 import React, { useCallback } from 'react';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
+import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import {
     getStatusText,
     getStatusVariant,
@@ -58,15 +59,7 @@ export const ProjectButton: React.FC<ProjectButtonProps> = ({
         onSelect(project);
     }, [project, onSelect]);
 
-    const handleKeyDown = useCallback(
-        (e: React.KeyboardEvent) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onSelect(project);
-            }
-        },
-        [project, onSelect],
-    );
+    const handleKeyDown = useActivateOnKey(() => onSelect(project));
 
     const isRunning = project.status === 'running';
     const port = getFrontendPort(project);

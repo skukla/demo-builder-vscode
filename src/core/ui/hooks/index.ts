@@ -55,3 +55,5 @@ export type {
 
 export { useElapsedStage, ORG_SERVICES_LOADING_STAGES } from './useElapsedStage';
 export type { ElapsedStage } from './useElapsedStage';
+
+export { useActivateOnKey } from './useActivateOnKey';

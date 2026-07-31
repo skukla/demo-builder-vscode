@@ -16,7 +16,8 @@
 import { Flex, Text, View } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import React, { useCallback } from 'react';
+import React from 'react';
+import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 
 /** Whether the tile's concern is fully configured or still needs setup. */
 export type ConfigTileStatus = 'configured' | 'needs-setup';
@@ -49,15 +50,7 @@ const STATUS_TEXT: Record<ConfigTileStatus, string> = {
  * @returns The tile element
  */
 export function ConfigTile({ label, summary, status, icon, onPress, testId }: ConfigTileProps) {
-    const handleKeyDown = useCallback(
-        (e: React.KeyboardEvent) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onPress();
-            }
-        },
-        [onPress],
-    );
+    const handleKeyDown = useActivateOnKey(onPress);
 
     const statusText = STATUS_TEXT[status];
     const badgeIcon =

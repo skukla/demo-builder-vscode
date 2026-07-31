@@ -24,15 +24,7 @@
  * - Edit is always available (no need to stop first)
  */
 
-import {
-    Text,
-    ActionButton,
-    MenuTrigger,
-    Menu,
-    Section,
-    SubmenuTrigger,
-    Item,
-} from '@adobe/react-spectrum';
+import { Text, Menu, Section, SubmenuTrigger, Item } from '@adobe/react-spectrum';
 import Copy from '@spectrum-icons/workflow/Copy';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Edit from '@spectrum-icons/workflow/Edit';
@@ -40,7 +32,6 @@ import Export from '@spectrum-icons/workflow/Export';
 import Globe from '@spectrum-icons/workflow/Globe';
 import MagicWand from '@spectrum-icons/workflow/MagicWand';
 import More from '@spectrum-icons/workflow/More';
-import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
 import PinOff from '@spectrum-icons/workflow/PinOff';
 import PinOn from '@spectrum-icons/workflow/PinOn';
 import Play from '@spectrum-icons/workflow/Play';
@@ -49,6 +40,7 @@ import Revert from '@spectrum-icons/workflow/Revert';
 import Stop from '@spectrum-icons/workflow/Stop';
 import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
 import React, { useCallback, useMemo } from 'react';
+import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import {
     listRedeployableIntegrations,
     meshNeedsRedeploy,
@@ -279,10 +271,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     );
 
     // Stop click propagation to prevent triggering parent selection
-    const handleMenuClick = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-    }, []);
-
     // Build the grouped items from project state and type. Each item still
     // checks its callback, so callers disable actions by omitting callbacks.
     const groups = useMemo<MenuGroups>(() => {
@@ -387,45 +375,37 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     // Spectrum's Section accepts only Item children, so the "More…" submenu is a
     // top-level sibling of the sections (not nested inside one).
     return (
-        // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- click handled by child MenuTrigger/ActionButton which provides keyboard support
-        <div onClick={handleMenuClick}>
-            <MenuTrigger>
-                <ActionButton isQuiet aria-label="More actions" UNSAFE_className={className}>
-                    <MoreSmallListVert size="S" />
-                </ActionButton>
-                <Menu onAction={handleMenuAction}>
-                    {groups.use.length > 0 ? (
-                        <Section key="use" title="Use">
-                            {groups.use.map(renderItem)}
-                        </Section>
-                    ) : null}
+        <CardActionsMenu ariaLabel="More actions" className={className} onAction={handleMenuAction}>
+            {groups.use.length > 0 ? (
+                <Section key="use" title="Use">
+                    {groups.use.map(renderItem)}
+                </Section>
+            ) : null}
 
-                    {groups.manage.length > 0 ? (
-                        <Section key="manage" title="Manage">
-                            {groups.manage.map(renderItem)}
-                        </Section>
-                    ) : null}
+            {groups.manage.length > 0 ? (
+                <Section key="manage" title="Manage">
+                    {groups.manage.map(renderItem)}
+                </Section>
+            ) : null}
 
-                    {groups.more.length > 0 ? (
-                        <SubmenuTrigger>
-                            <Item key="more" textValue="More">
-                                <More size="S" />
-                                <Text>More</Text>
-                            </Item>
-                            <Menu onAction={handleMenuAction}>{groups.more.map(renderItem)}</Menu>
-                        </SubmenuTrigger>
-                    ) : null}
+            {groups.more.length > 0 ? (
+                <SubmenuTrigger>
+                    <Item key="more" textValue="More">
+                        <More size="S" />
+                        <Text>More</Text>
+                    </Item>
+                    <Menu onAction={handleMenuAction}>{groups.more.map(renderItem)}</Menu>
+                </SubmenuTrigger>
+            ) : null}
 
-                    {onDelete ? (
-                        <Section key="delete">
-                            <Item key="delete" textValue="Delete">
-                                {renderMenuIcon('delete')}
-                                <Text>Delete</Text>
-                            </Item>
-                        </Section>
-                    ) : null}
-                </Menu>
-            </MenuTrigger>
-        </div>
+            {onDelete ? (
+                <Section key="delete">
+                    <Item key="delete" textValue="Delete">
+                        {renderMenuIcon('delete')}
+                        <Text>Delete</Text>
+                    </Item>
+                </Section>
+            ) : null}
+        </CardActionsMenu>
     );
 };
