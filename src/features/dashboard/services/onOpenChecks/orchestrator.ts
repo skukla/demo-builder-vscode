@@ -26,6 +26,14 @@ export function _resetOnOpenChecksGuardForTests(): void {
 }
 
 /**
+ * VS Code throws "Webview is disposed" from postMessage/.visible once a panel is
+ * gone. Matched on the message because the API surfaces no typed error for it.
+ */
+function isDisposedPanelError(message: string): boolean {
+    return message.toLowerCase().includes('webview is disposed');
+}
+
+/**
  * Run the given on-open checks for a project. Fire-and-forget from the caller
  * (`void runOnOpenChecks(...)`); resolves once all checks settle.
  *
@@ -60,9 +68,19 @@ export async function runOnOpenChecks(
             const outcome = await check.run({ project, logger, post });
             post(outcome);
         } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            // A disposed panel is NOT a check failure — it means the user navigated
+            // away while a slow check (auth + org fetch runs ~4-6s) was still in
+            // flight. Common since the dashboard ⇄ integrations swap disposes the
+            // sibling panel. Reporting it as an error logged a warning about
+            // nothing and then tried to post the outcome to the very panel that
+            // had just gone away.
+            if (isDisposedPanelError(message)) {
+                logger.debug(`[OnOpenChecks] '${check.id}' abandoned — panel closed mid-check`);
+                return;
+            }
             // P2: a throw never escapes and never goes silent — surface it as an
             // error outcome on the same channel.
-            const message = error instanceof Error ? error.message : String(error);
             logger.warn(`[OnOpenChecks] '${check.id}' failed: ${message}`);
             post({ status: 'error', message });
         }

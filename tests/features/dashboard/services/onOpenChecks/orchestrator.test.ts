@@ -109,6 +109,35 @@ it('P2: a throwing check posts an error outcome and never rejects; others still 
     expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('org-context'));
 });
 
+// A disposed panel is NOT a check failure: it means the user navigated away
+// while a slow check was in flight. Common since the dashboard ⇄ integrations
+// swap disposes the sibling panel, and auth + org fetch runs ~4-6s. Reporting it
+// as an error logged a warning about nothing, then tried to post the outcome to
+// the very panel that had just gone away.
+it('treats a disposed panel as abandonment, not failure — no warn, no post', async () => {
+    const { deps, postMessage } = makeDeps();
+    const abandoned: OnOpenCheck = {
+        id: 'org-context',
+        mode: 'background',
+        run: async () => {
+            throw new Error('Webview is disposed');
+        },
+    };
+    const healthy: OnOpenCheck = {
+        id: 'ai-verify',
+        mode: 'background',
+        run: async () => ({ status: 'ok' }),
+    };
+
+    await expect(runOnOpenChecks(deps, [abandoned, healthy])).resolves.toBeUndefined();
+
+    const posted = outcomes(postMessage);
+    expect(posted.find((o) => o.checkId === 'org-context')).toBeUndefined();
+    expect(mockLogger.warn).not.toHaveBeenCalled();
+    // Siblings are unaffected — one abandoned check must not stop the rest.
+    expect(posted.find((o) => o.checkId === 'ai-verify')).toMatchObject({ status: 'ok' });
+});
+
 it('supports an intermediate pending post then the resolved outcome', async () => {
     const { deps, postMessage } = makeDeps();
     const check: OnOpenCheck = {

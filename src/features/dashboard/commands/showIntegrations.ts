@@ -9,7 +9,14 @@
  *
  * Registers the EXISTING `dashboardHandlers` map wholesale — the grid's messages
  * (add/deploy/redeploy/verify/remove/rename, the console-API trio, openLiveSite)
- * already live there, so this surface needs ZERO new handlers.
+ * already live there.
+ *
+ * PLUS the wizard messages the REUSED add-integration modal sends. That modal is
+ * the wizard's own component ({@link AddIntegrationFlowAdapter}), so its message
+ * dependencies are the WIZARD's, not this surface's — and an unregistered type
+ * is not an error, it is silence: the request simply never resolves and the
+ * picker hangs until it times out. Anything the reused flow posts must be
+ * registered here.
  *
  * Live updates arrive on the same push channels the dashboard uses; their
  * senders resolve whichever project panel is live (`getLiveProjectPanel`), so
@@ -26,6 +33,7 @@ import { StateManager } from '@/core/state';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
+import { handleListOrgConsoleApis } from '@/features/project-creation/handlers/consoleApiHandlers';
 import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -109,8 +117,29 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand {
         );
     }
 
+    /**
+     * Messages the reused wizard add-integration flow sends. Keep in step with
+     * `features/project-creation/ui/components/integration-flow/` — the suite
+     * pins this list against the panel's registered types.
+     */
+    private static readonly REUSED_WIZARD_HANDLERS = {
+        'list-org-console-apis': handleListOrgConsoleApis,
+    };
+
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
-        // The whole dashboard map — this surface adds no handlers of its own.
+        for (const messageType of getRegisteredTypes(
+            ShowIntegrationsCommand.REUSED_WIZARD_HANDLERS,
+        )) {
+            comm.onStreaming(messageType, async (data: unknown) => {
+                return dispatchHandler(
+                    ShowIntegrationsCommand.REUSED_WIZARD_HANDLERS,
+                    this.createHandlerContext(),
+                    messageType,
+                    data,
+                );
+            });
+        }
+        // The whole dashboard map — the grid's own messages.
         for (const messageType of getRegisteredTypes(dashboardHandlers)) {
             comm.onStreaming(messageType, async (data: unknown) => {
                 return dispatchHandler(
