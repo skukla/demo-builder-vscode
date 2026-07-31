@@ -81,6 +81,8 @@ function renderAdapter(appBuilderComponents: Record<string, AppBuilderComponentS
             appBuilderComponents={appBuilderComponents}
             adobeProjectId="proj-1"
             adobeWorkspaceId="ws-1"
+            adobeProjectTitle="My Demo Project"
+            adobeWorkspaceTitle="Stage"
             adobeOrgId="org-1"
         />
     );
@@ -105,8 +107,20 @@ describe('AddIntegrationFlowAdapter', () => {
 
             // deriveStageOrder reads these as booleans (projectCommitted /
             // workspaceCommitted) — real ids, not placeholders.
-            expect(captured?.state.adobeProject).toEqual({ id: 'proj-1' });
-            expect(captured?.state.adobeWorkspace).toEqual({ id: 'ws-1' });
+            expect(captured?.state.adobeProject?.id).toBe('proj-1');
+            expect(captured?.state.adobeWorkspace?.id).toBe('ws-1');
+        });
+
+        // REGRESSION: deriveStageOrder only reads the ids as booleans, but the
+        // dest-summary STAGE renders `adobeProject.title`. Supplying ids alone
+        // left the user staring at two labelled rows with no values — the same
+        // mistake as shaping state for the stage MACHINE without checking what
+        // the stage RENDERS.
+        it('carries the destination TITLES, which the summary actually renders', () => {
+            renderAdapter();
+
+            expect(captured?.state.adobeProject?.title).toBe('My Demo Project');
+            expect(captured?.state.adobeWorkspace?.title).toBe('Stage');
         });
 
         it('lists ALL keyed ids including the mesh', () => {

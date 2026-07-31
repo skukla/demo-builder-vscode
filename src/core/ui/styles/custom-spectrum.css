@@ -5213,6 +5213,23 @@ div[class*="spectrum"] input[type="search"] {
 }
 /* Name on the left, overflow menu pinned right. The name must be free to
    ellipsize without shoving the kebab off the card. */
+/* A text-styled <button> for a small inline action ("Change", "Reset"). GLOBAL
+   on purpose: the equivalent EDS class (.service-action-link) lives in a
+   feature stylesheet that only some bundles load, so components outside EDS that
+   used it rendered as raw grey boxes wherever that sheet was absent. Stays a
+   button — these perform actions, not navigation. */
+.inline-action-link {
+    background: none;
+    border: none;
+    color: var(--spectrum-global-color-blue-500);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+.inline-action-link:hover {
+    text-decoration: underline;
+}
+
 .integration-card-head {
     display: flex;
     align-items: center;

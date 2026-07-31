@@ -184,6 +184,8 @@ export function IntegrationsScreen({
                     appBuilderComponents={components}
                     adobeProjectId={adobeProjectId}
                     adobeWorkspaceId={adobeWorkspaceId}
+                    adobeProjectTitle={destination?.projectTitle}
+                    adobeWorkspaceTitle={destination?.workspaceTitle}
                     adobeOrgId={adobeOrgId}
                 />
             </View>
@@ -255,6 +257,8 @@ export function IntegrationsScreen({
                     appBuilderComponents={components}
                     adobeProjectId={adobeProjectId}
                     adobeWorkspaceId={adobeWorkspaceId}
+                    adobeProjectTitle={destination?.projectTitle}
+                    adobeWorkspaceTitle={destination?.workspaceTitle}
                     adobeOrgId={adobeOrgId}
                 />
             </div>

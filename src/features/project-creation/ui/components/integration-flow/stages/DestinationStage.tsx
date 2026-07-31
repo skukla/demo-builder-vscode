@@ -100,7 +100,13 @@ function DestinationSummary({
         <div className="intflow-dest-summary">
             <SummaryRow label="Project" value={projectName} />
             <SummaryRow label="Workspace" value={workspaceName} />
-            <button type="button" className="service-action-link" onClick={onChangeDestination}>
+            {/* `.inline-action-link` (custom-spectrum.css), NOT EDS's
+                `.service-action-link` — that class lives in connect-services.css,
+                which only reaches the wizard bundle because StorefrontStep happens
+                to import it. In any other bundle (the integrations surface) this
+                rendered as a raw grey box. Stays a <button>: it performs an
+                action, so the role must not become "link". */}
+            <button type="button" className="inline-action-link" onClick={onChangeDestination}>
                 Change
             </button>
         </div>

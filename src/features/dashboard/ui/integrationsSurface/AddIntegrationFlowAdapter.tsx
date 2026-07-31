@@ -42,6 +42,13 @@ export interface AddIntegrationFlowAdapterProps {
     /** The live project's committed Adobe destination ids. */
     adobeProjectId?: string;
     adobeWorkspaceId?: string;
+    /**
+     * The destination's display TITLES. `deriveStageOrder` only reads the ids as
+     * booleans, but the dest-summary STAGE renders `adobeProject.title` — supply
+     * ids alone and the user sees two labelled rows with no values.
+     */
+    adobeProjectTitle?: string;
+    adobeWorkspaceTitle?: string;
     /** The IMS org. `isAdobeSignedIn` reads adobeAuth + adobeOrg — NOT the project id. */
     adobeOrgId?: string;
 }
@@ -58,6 +65,8 @@ export function AddIntegrationFlowAdapter({
     appBuilderComponents,
     adobeProjectId,
     adobeWorkspaceId,
+    adobeProjectTitle,
+    adobeWorkspaceTitle,
     adobeOrgId,
 }: AddIntegrationFlowAdapterProps): React.ReactElement {
     // The modal writes destination/API picks through updateState. On a live
@@ -90,15 +99,27 @@ export function AddIntegrationFlowAdapter({
             // collapsing to the summary.
             adobeAuth: { isAuthenticated: true },
             adobeOrg: adobeOrgId ? { id: adobeOrgId } : undefined,
-            adobeProject: adobeProjectId ? { id: adobeProjectId } : undefined,
-            adobeWorkspace: adobeWorkspaceId ? { id: adobeWorkspaceId } : undefined,
+            adobeProject: adobeProjectId
+                ? { id: adobeProjectId, title: adobeProjectTitle }
+                : undefined,
+            adobeWorkspace: adobeWorkspaceId
+                ? { id: adobeWorkspaceId, title: adobeWorkspaceTitle }
+                : undefined,
             // ALL keyed ids, mesh included: this drives the custom-source duplicate
             // guard, the "mesh already added" rule, AND `hasIntegrations` (something
             // references the destination), which gates the collapse.
             selectedAppBuilderComponents: allComponentIds,
             selectedConsoleApis: apiPicks,
         }),
-        [adobeOrgId, adobeProjectId, adobeWorkspaceId, allComponentIds, apiPicks],
+        [
+            adobeOrgId,
+            adobeProjectId,
+            adobeWorkspaceId,
+            adobeProjectTitle,
+            adobeWorkspaceTitle,
+            allComponentIds,
+            apiPicks,
+        ],
     );
 
     const updateState = useCallback((updates: Record<string, unknown>): void => {
