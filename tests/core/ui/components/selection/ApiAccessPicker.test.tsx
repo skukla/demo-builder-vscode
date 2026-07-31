@@ -58,6 +58,26 @@ function renderPicker(props: Partial<Props> = {}): {
     return { onToggle, container };
 }
 
+/** Like renderPicker, but exposes a typed rerender for interaction tests. */
+function renderPickerRerenderable(props: Partial<Props> = {}): {
+    container: HTMLElement;
+    rerender: (next: Partial<Props>) => void;
+} {
+    const onToggle = jest.fn();
+    const ui = (p: Partial<Props>) => (
+        <Provider theme={defaultTheme} colorScheme="light">
+            <ApiAccessPicker
+                apis={p.apis ?? APIS}
+                selected={p.selected ?? []}
+                onToggle={onToggle}
+                helperText={p.helperText}
+            />
+        </Provider>
+    );
+    const { container, rerender } = render(ui(props));
+    return { container, rerender: (next) => rerender(ui({ ...props, ...next })) };
+}
+
 /** The checkbox input rendered for a given API display name. */
 function checkboxFor(name: string): HTMLInputElement {
     const label = screen.getByText(name).closest('label');
@@ -108,6 +128,40 @@ describe('ApiAccessPicker', () => {
                 'Audience Manager',
                 'Cloud Manager',
             ]);
+        });
+
+        // REGRESSION (2026-07-31, user-reported): the checked-first rank read the
+        // LIVE `selected`, so ticking a box sent that row to the top and every row
+        // below it shifted — the next row the user was aiming at moved out from
+        // under the cursor. Order is now frozen to the selection as it stood when
+        // the list arrived; only the CHECKBOXES track the live selection.
+        it('does NOT reorder rows as the selection changes', () => {
+            const { container, rerender } = renderPickerRerenderable({ selected: [] });
+            const before = listNames(container);
+
+            // The user ticks a row near the bottom.
+            rerender({ selected: ['CloudManagerSDK'] });
+
+            expect(listNames(container)).toEqual(before);
+        });
+
+        it('still reflects the new selection in the checkbox, just not the order', () => {
+            const { container, rerender } = renderPickerRerenderable({ selected: [] });
+            rerender({ selected: ['CloudManagerSDK'] });
+
+            expect(checkboxFor('Cloud Manager')).toBeChecked();
+            // …and it has NOT jumped to the top.
+            expect(listNames(container)[0]).not.toBe('Cloud Manager');
+        });
+
+        // The freeze must not outlive the list it was taken for.
+        it('RE-seeds the order when the api list itself changes', () => {
+            const { container, rerender } = renderPickerRerenderable({ selected: [] });
+
+            rerender({ selected: ['CloudManagerSDK'], apis: [...APIS] });
+
+            expect(listNames(container)[0]).toBe('API Mesh'); // locked still first
+            expect(listNames(container).slice(0, 2)).toContain('Cloud Manager');
         });
 
         it('renders locked APIs checked + disabled at the top', () => {

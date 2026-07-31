@@ -21,7 +21,7 @@
  */
 
 import { Checkbox } from '@adobe/react-spectrum';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SearchHeader } from '../navigation/SearchHeader';
 import type { CloudGrouping } from '@/types/adobeApis';
 
@@ -205,8 +205,20 @@ export function ApiAccessPicker({
     const [query, setQuery] = useState('');
     const [family, setFamily] = useState<string | null>(null);
     const q = query.trim().toLowerCase();
+    // Re-seeded when the SOURCE list changes (a fetch landing, a different org) —
+    // never on selection, which is precisely the reshuffle being prevented.
+    // `selected` is deliberately absent from the deps: it is read as a SNAPSHOT,
+    // and depending on it would restore the bug this exists to fix.
+    const [orderSeed, setOrderSeed] = useState<Set<string>>(() => new Set(selected));
+    /* eslint-disable react-hooks/exhaustive-deps */
+    useEffect(() => {
+        setOrderSeed(new Set(selected));
+    }, [apis]);
+    /* eslint-enable react-hooks/exhaustive-deps */
+
     // Review- and profile-gated APIs can't be subscribed in this self-serve flow, so
     // they are hidden entirely — dropped from the list, chips, search, and count.
+
     const selectable = apis.filter((api) => !api.requiresReview && !api.requiresProfile);
     const searched = q ? selectable.filter((api) => matchesQuery(api, q)) : selectable;
     // Chips come from the full (search-independent) pickable set so they don't jump
@@ -215,7 +227,14 @@ export function ApiAccessPicker({
     // One flat list (active family chip applied). Checked rows — locked/already-provided
     // OR the user's picks — sort to the TOP so what's on is visible first; alphabetical
     // within each partition. Locked rows render checked + disabled (required).
-    const isChecked = (api: ApiAccessOption): boolean => api.locked || selected.includes(api.code);
+    //
+    // The partition is FROZEN to the selection as it stood when the list arrived.
+    // Ranking on the LIVE selection re-sorted rows mid-interaction: ticking a box
+    // sent that row to the top and everything below it shifted, so the next row the
+    // user was aiming at had moved. Checkboxes still reflect the live selection —
+    // only the ORDER is held still.
+    const isChecked = (api: ApiAccessOption): boolean =>
+        api.locked || orderSeed.has(api.code);
     const list = searched
         .filter((api) => family === null || familyKey(api) === family)
         .sort((a, b) => {
