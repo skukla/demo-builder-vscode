@@ -59,6 +59,37 @@ keeps the message as its (tested) create-project contract. Not dead; out of scop
 
 ## Change 2 — prefetch + warm the org-API catalog for the picker
 
+### Measured evidence (2026-07-31, Extension Dev Host)
+
+Live Debug Logs opening the API picker from the integrations surface — roughly **7s of Adobe
+round-trips before the picker starts fetching at all**:
+
+```
+[Retry Strategy] Command succeeded after 3.7s (attempt 1/2)
+[Performance] isAuthenticated took 3.8s ⚠️ SLOW (expected <3.0s)
+[Entity Fetcher] Retrieved 1 organizations via SDK in 2.5s
+[Entity Fetcher] Retrieved 1 organizations via SDK in 1.4s
+```
+
+Three things this pins down:
+1. `isAuthenticated` alone breaches its own 3.0s budget — it retries, and the retry succeeds, so
+   the first attempt is failing silently on a path nobody is watching.
+2. The org list is fetched **twice** in the same open (2.5s + 1.4s). The second is presumably
+   cache-warm and still over a second; the first is un-deduped work.
+3. Only after all of that does `list-org-console-apis` begin, which is what the user experiences
+   as "loading APIs takes forever".
+
+**Status of the two Change-2 items against shipped code (checked 2026-07-31):** the prefetch EXISTS
+(`AddIntegrationFlowModal.tsx:235` fires `list-org-console-apis` with `componentIds: []` on open).
+The **TTL bump does not** — `CACHE_TTL.ORG_SERVICES` is still 5 min. So the cheap half is done and
+the durable half is not.
+
+**Note the prefetch cannot help the first open**, which is the one users notice: it fires when the
+modal opens, and the picker is reached seconds later in the same session. It hides latency for the
+SECOND visit. The ~7s above is pre-picker auth/org work the prefetch does not touch at all — worth
+deciding whether the real target is the double org fetch and the retrying `isAuthenticated` rather
+than the services cache.
+
 - **Prefetch on flow open.** When `AddIntegrationFlowModal` opens and the user is signed in, fire a
   fire-and-forget `list-org-console-apis` request (componentIds `[]`) to warm the extension-side
   `servicesCache`. The picker's later fetch (`ApiPickerStage`) then hits the warm cache and renders
