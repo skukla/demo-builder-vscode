@@ -61,6 +61,6 @@ export function useElapsedStage(active: boolean, stages: ElapsedStage[]): string
  * rather than just asserting that it still is.
  */
 export const ORG_SERVICES_LOADING_STAGES: ElapsedStage[] = [
-    { afterMs: 4000, message: 'Still loading — Adobe returns your whole catalog at once.' },
+    { afterMs: 4000, message: 'Adobe returns the entire API catalog at once.' },
     { afterMs: 15000, message: 'Large organizations can take up to a minute.' },
 ];
