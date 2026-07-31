@@ -43,6 +43,15 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     'get-workspaces': TIMEOUTS.NORMAL,               // 30s - fetch workspace list from Adobe
     'list-org-console-apis': TIMEOUTS.LONG,          // 180s - full org services catalog (getServicesForOrg); same slow call the mesh subscribe path budgets for
 
+    // Console APIs on a LIVE project (dashboard twins of the wizard messages
+    // above). They hit the SAME getServicesForOrg / subscribe calls, so they need
+    // the same budgets — without them the frontend's 30s default applied, and a
+    // 35.2s catalog fetch reported "Request timeout: listConsoleApis" in the UI
+    // while the extension logged a successful 96-service result (2026-07-31).
+    'listConsoleApis': TIMEOUTS.LONG,                // 180s - same catalog fetch as list-org-console-apis
+    'addConsoleApis': TIMEOUTS.LONG,                 // 180s - catalog fetch + union subscribe PUT
+    'setConsoleApis': TIMEOUTS.LONG,                 // 180s - catalog fetch + reconcile subscribe PUT
+
     // Project/workspace selection (validate reachability + ack; no global aio mutation)
     'select-project': TIMEOUTS.NORMAL,               // 30s - validate project reachable, then ack
     'select-workspace': TIMEOUTS.NORMAL,             // 30s - validate workspace, then ack
