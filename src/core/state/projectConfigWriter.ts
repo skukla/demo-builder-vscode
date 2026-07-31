@@ -131,6 +131,17 @@ export class ProjectConfigWriter {
             if (project.additionalConsoleApis?.length) {
                 manifest.additionalConsoleApis = project.additionalConsoleApis;
             }
+            // The ATTRIBUTED form of the same picks (per-integration API
+            // attribution, step 01). Omitted when empty so legacy manifests keep
+            // loading through the read-side migration rather than a persisted
+            // empty map. `additionalConsoleApis` above stays written until the
+            // flat write path is retired.
+            if (
+                project.componentApiPicks &&
+                Object.keys(project.componentApiPicks).length > 0
+            ) {
+                manifest.componentApiPicks = project.componentApiPicks;
+            }
             // Keyed App Builder component state (ADR-011 D3 Step 01) — the durable
             // model that replaces the singular meshState/appState (retired in Step 07).
             // Omitted when empty so legacy manifests keep loading via the read-side

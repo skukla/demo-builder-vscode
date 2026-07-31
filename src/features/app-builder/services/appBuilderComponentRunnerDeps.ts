@@ -21,6 +21,7 @@ import { deployAppComponentIsolated } from './deployAppIsolated';
 import type { MeshSubscribeTarget } from './ensureMeshApiSubscribed';
 import { ServiceLocator } from '@/core/di';
 import type { CachedOrgRef, CommandExecutor } from '@/core/shell';
+import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import { republishStorefrontConfig } from '@/features/eds/services/storefrontRepublishService';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
@@ -73,8 +74,9 @@ export function buildDefaultRunnerDeps(ctx: RunnerDepsContext): AppBuilderCompon
                 ctx.subscriberClient,
                 deriveAllowedDomain(project),
                 // Runtime-added APIs (add_console_apis) must ride every
-                // reconcile or the full-union PUT strips them.
-                project.additionalConsoleApis ?? [],
+                // reconcile or the full-union PUT strips them. Unioned across
+                // every integration's picks — the flat field is legacy.
+                resolveDesiredApis(project),
             );
         },
         republishStorefront: ({ project }) =>

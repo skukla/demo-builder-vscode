@@ -9,6 +9,7 @@
 
 import * as fs from 'fs/promises';
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
+import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import { ProjectFileLoader } from '@/core/state/projectFileLoader';
 import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import { extractSettingsFromProject } from '@/features/projects-dashboard/services/settingsSerializer';
@@ -371,6 +372,62 @@ describe('additionalConsoleApis — manifest persistence (§E)', () => {
         const reloaded = await loader.loadProject(PROJECT_PATH, () => []);
 
         expect(reloaded!.additionalConsoleApis).toEqual(['CCAPI']);
+    });
+
+    // ---- per-integration attribution (step 01) ----
+    // The keyed map supersedes the flat field. Both are written until the flat
+    // write path retires, so a manifest written now still loads on an older build.
+
+    it('persists componentApiPicks alongside the flat field', async () => {
+        const written = await writeAndCaptureManifest(
+            baseProject({
+                componentApiPicks: { 'erp-sync': ['CCAPI'] },
+                additionalConsoleApis: ['CCAPI'],
+            }),
+        );
+
+        expect(written.componentApiPicks).toEqual({ 'erp-sync': ['CCAPI'] });
+        expect(written.additionalConsoleApis).toEqual(['CCAPI']);
+    });
+
+    it('omits componentApiPicks when empty (legacy manifests keep loading via migration)', async () => {
+        const written = await writeAndCaptureManifest(baseProject({ componentApiPicks: {} }));
+
+        expect('componentApiPicks' in written).toBe(false);
+    });
+
+    // REGRESSION GUARD: a pre-attribution manifest must load with its picks moved
+    // under the unattributed key. If the migration ever dropped them the union
+    // would come back EMPTY, and the next subscribe PUT — which sets extras to
+    // exactly that list — would unsubscribe live APIs on a working project.
+    it('MIGRATES a pre-attribution manifest onto the keyed map on load', async () => {
+        primeFsWithManifest({
+            name: 'legacy-apis-demo',
+            additionalConsoleApis: ['AssetComputeSDK', 'CCAPI'],
+        });
+
+        const loader = new ProjectFileLoader(makeLogger());
+        const project = await loader.loadProject(PROJECT_PATH, () => []);
+
+        expect(project!.componentApiPicks).toEqual({
+            __existing__: ['AssetComputeSDK', 'CCAPI'],
+        });
+        expect(resolveDesiredApis(project!).sort()).toEqual(['AssetComputeSDK', 'CCAPI']);
+    });
+
+    it('leaves an already-keyed manifest alone on load', async () => {
+        primeFsWithManifest({
+            name: 'keyed-demo',
+            componentApiPicks: { 'erp-sync': ['CCAPI'] },
+            additionalConsoleApis: ['STALE'],
+        });
+
+        const loader = new ProjectFileLoader(makeLogger());
+        const project = await loader.loadProject(PROJECT_PATH, () => []);
+
+        expect(project!.componentApiPicks).toEqual({ 'erp-sync': ['CCAPI'] });
+        // Keyed wins — the stale flat field must not leak into the union.
+        expect(resolveDesiredApis(project!)).toEqual(['CCAPI']);
     });
 });
 

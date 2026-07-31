@@ -159,6 +159,14 @@ export interface Project {
      * silently dropped on the next component add/remove.
      */
     additionalConsoleApis?: string[];
+    /**
+     * Ad-hoc Console API picks, ATTRIBUTED to the integration that wanted them.
+     * Supersedes the flat `additionalConsoleApis` above, which lost attribution
+     * at the persist boundary. The subscribe union is derived at read time via
+     * `resolveDesiredApis`; `__existing__` carries pre-attribution picks whose
+     * owner is unrecoverable. See `app-builder/services/componentApiPicks.ts`.
+     */
+    componentApiPicks?: Record<string, string[]>;
     /** User-saved AI prompts */
     aiPrompts?: AiPrompt[];
     /**

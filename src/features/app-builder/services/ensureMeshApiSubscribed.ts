@@ -25,6 +25,7 @@ import {
 import { createApiSubscriberClient } from './apiSubscriberClientAdapter';
 import { subscriberTarget } from './appBuilderComponentRunnerDeps';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import type { AdobeConfig, Project } from '@/types/base';
@@ -40,6 +41,7 @@ export interface MeshSubscribeTarget {
     componentSelections?: Pick<NonNullable<Project['componentSelections']>, 'backend' | 'frontend'>;
     componentInstances?: Project['componentInstances'];
     additionalConsoleApis?: Project['additionalConsoleApis'];
+    componentApiPicks?: Project['componentApiPicks'];
 }
 
 export interface EnsureMeshApiSubscribedParams {
@@ -85,7 +87,7 @@ export async function ensureMeshApiSubscribed(
             subscriberTarget(project),
             client,
             deriveAllowedDomain(project),
-            project.additionalConsoleApis ?? [],
+            resolveDesiredApis(project),
             onProgress,
         ),
     );

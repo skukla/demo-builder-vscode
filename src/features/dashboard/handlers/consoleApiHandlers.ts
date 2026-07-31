@@ -23,6 +23,7 @@
 import { runGuards } from './appBuilderComponentHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { resolveDesiredApis, UNATTRIBUTED_PICKS_KEY } from '@/core/state/componentApiPicks';
 import { deriveAllowedDomain } from '@/features/app-builder/services/allowedDomain';
 import {
     computeRequiredApis,
@@ -78,7 +79,9 @@ export const handleListConsoleApis: MessageHandler = async (context) => {
         // `managed` = ALWAYS-ON only (baseline + catalog required, NO extras) — these
         // are locked, non-removable. The optional extras are returned as `added`
         // (checked + removable in the modal). Both survive the noise filter.
-        const added = project.additionalConsoleApis ?? [];
+        // The union across every integration's picks. Step 04 will make this
+        // per-component; today it is the same set the flat field held.
+        const added = resolveDesiredApis(project);
         const managed = new Set(computeRequiredApis(resolveProjectCatalog(project), []));
         const rows = buildApiAccessCatalog(services, new Set([...managed, ...added]));
         return {
@@ -138,6 +141,10 @@ async function reconcileExtras(
                 desiredExtras,
             ),
         );
+        // Both forms until the flat write path is retired (step 07). The keyed
+        // map is authoritative; the flat field is its union, kept so a manifest
+        // written now still loads on an older build.
+        project.componentApiPicks = { [UNATTRIBUTED_PICKS_KEY]: desiredExtras };
         project.additionalConsoleApis = desiredExtras;
         await context.stateManager.saveProject(project);
         return { success: true, data: { subscribed } };
@@ -174,7 +181,7 @@ export const handleAddConsoleApis: MessageHandler<{ apis?: string[] }> = async (
         return { success: false, error: guardError };
     }
 
-    const merged = [...new Set([...(project.additionalConsoleApis ?? []), ...(apis as string[])])];
+    const merged = [...new Set([...resolveDesiredApis(project), ...(apis as string[])])];
     const result = await reconcileExtras(context, project, merged);
     if (result.success) {
         context.logger.info(

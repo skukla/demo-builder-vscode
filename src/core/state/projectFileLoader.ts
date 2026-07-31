@@ -9,6 +9,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { migrateLegacyToAppBuilderComponents } from './appBuilderComponentMigration';
+import { migrateApiPicks } from './componentApiPicks';
 import type { Project, ComponentInstance } from '@/types';
 import type { AiPrompt } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
@@ -52,6 +53,7 @@ export interface ProjectManifest {
     appState?: Project['appState'];
     appBuilderComponents?: Project['appBuilderComponents'];
     additionalConsoleApis?: string[];
+    componentApiPicks?: Record<string, string[]>;
     edsStorefrontState?: Project['edsStorefrontState'];
     edsStorefrontStatusSummary?: Project['edsStorefrontStatusSummary'];
     selectedPackage?: string;
@@ -125,7 +127,10 @@ export class ProjectFileLoader {
                 customBlockLibraries: manifest.customBlockLibraries,
                 aiPrompts: manifest.aiPrompts,
                 // Absent on legacy manifests (pre-§E) — loads as undefined.
+                // LEGACY-READ-ONLY once componentApiPicks exists: migrateApiPicks
+                // below moves it under the unattributed key.
                 additionalConsoleApis: manifest.additionalConsoleApis,
+                componentApiPicks: manifest.componentApiPicks,
                 aiContextVersion: manifest.aiContextVersion,
                 pinned: manifest.pinned,
             };
@@ -137,6 +142,12 @@ export class ProjectFileLoader {
             // arbitrary age must keep loading).
             project.appBuilderComponents =
                 manifest.appBuilderComponents ?? migrateLegacyToAppBuilderComponents(manifest);
+
+            // Per-integration API attribution (step 01): a pre-attribution manifest
+            // carries only the flat `additionalConsoleApis`; move it under the
+            // unattributed key so every reader can go through resolveDesiredApis.
+            // Read-side only — the on-disk manifest is untouched until next write.
+            project.componentApiPicks = migrateApiPicks(project).componentApiPicks;
 
             // Detect if demo is actually running
             this.detectDemoStatus(project, terminalProvider);
