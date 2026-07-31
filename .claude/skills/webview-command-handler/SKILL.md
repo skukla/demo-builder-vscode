@@ -1,6 +1,6 @@
 ---
 name: webview-command-handler
-description: Add a webview message handler/command end-to-end (MessageType → handler → feature map → wizard composite → webview request). Use when adding or wiring an extension↔webview message, a comm.on/dispatchHandler handler, or when the UI receives a Promise/[object Object]/undefined instead of a response.
+description: Add a webview message handler/command end-to-end (MessageType → handler → feature map → wizard composite → webview request), stand up a new webview surface, or REUSE a component from another feature/surface. Use when adding or wiring an extension↔webview message, a comm.on/dispatchHandler handler, when the UI receives a Promise/[object Object]/undefined instead of a response, or when a borrowed component misbehaves on its new surface — a request that never resolves, a blank panel, or rows rendering with no values.
 ---
 # Add a Webview Message Handler End-to-End
 
@@ -31,14 +31,42 @@ Two traps that fail SILENTLY — nothing throws, nothing logs, the UI just never
   (`getLiveProjectPanel()`), preferring one so a push renders once. Symptom: the surface
   renders correct initial data and then never moves.
 - **Reuse the existing handler map before writing handlers.** A surface that renders existing
-  components usually needs ZERO new handlers — register the feature's map wholesale
-  (`getRegisteredTypes` + `dispatchHandler`, per `showProjectsList.ts`). The integrations
-  surface needed none: the grid's messages already lived in `dashboardHandlers`.
+  components usually needs ZERO NEW handlers — register the feature's map wholesale
+  (`getRegisteredTypes` + `dispatchHandler`, per `showProjectsList.ts`). But "no new handlers"
+  is not "no more registration": the map you register must cover every message the surface's
+  components send, INCLUDING components borrowed from another feature — see below.
 
 Precedents to copy rather than invent: `showProjectsList.ts` (command shape),
 `src/features/dashboard/ui/aiSurface/index.tsx` (entry point), `WEBVIEW_ENTRIES` in
 `esbuild.config.js` (bundle key), `commandManager.ts` `registerCommands()` (registration +
 sibling-panel disposal).
+
+## Reusing a component from ANOTHER surface
+
+Rendering another feature's component (the integrations surface renders the WIZARD's
+`AddIntegrationFlowModal` via `AddIntegrationFlowAdapter`) inherits its **whole dependency
+graph**, and every layer of it fails silently. On 2026-07-31 the same reuse broke three times,
+each fix exposing the next — check all four before wiring:
+
+1. **Messages** — the component's requests are registered in ITS feature's map, not yours.
+   `list-org-console-apis` lives in `ProjectCreationHandlerRegistry`; the integrations panel
+   registers `dashboardHandlers`, so the API picker hung until timeout. An unregistered type
+   is not an error, it is silence: the request never resolves.
+   *Guarded:* `tests/features/dashboard/commands/showIntegrations-handlerCoverage.test.ts`
+   scans the reused flow's source for every `webviewClient` request/postMessage literal and
+   fails if the host panel doesn't register it. Copy that test for a new reuse.
+2. **State the component's LOGIC reads** — supply what its gates actually test, not what looks
+   sufficient. `isAdobeSignedIn` reads `adobeAuth` + `adobeOrg`; passing neither made the flow
+   walk `dest-signin` → `AdobeAuthStep` → **blank webview**.
+3. **State the component's VIEWS render** — a different set from (2). `deriveStageOrder` reads
+   `adobeProject` as a mere boolean, but `DestinationSummary` renders `adobeProject.title`;
+   passing `{ id }` alone gave two labelled rows with **no values**. Shaping state for the
+   machine is not the same as shaping it for what the user sees.
+4. **CSS** — its classes may live in a stylesheet only the ORIGINAL bundle imports. See
+   `spectrum-webview-ui` → "A CSS class working in one webview proves nothing about another".
+
+Rule of thumb: read the component's own source for `webviewClient.`, for the state fields its
+gates read, and for the fields its JSX renders. Three different lists.
 
 ## Gotchas
 - **The handler-map count test is PINNED.** `tests/features/dashboard/handlers/dashboardHandlersMap.test.ts`

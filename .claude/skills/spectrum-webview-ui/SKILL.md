@@ -66,8 +66,22 @@ The dashboard is minimal/dark — conform, don't invent.
   `src/features/dashboard/ui/components/OrgContextNotice.tsx`.
 - **`StatusDisplay` (feedback/) is a full-height centered block** for empty/error screens — NOT
   for inline notices.
-- Warning-text utilities like `text-orange-500/600` are feature-scoped (`eds-steps.css`), NOT
-  global — define a local class instead of depending on them from the dashboard.
+### A CSS class working in one webview proves NOTHING about another
+Each webview is its own esbuild entry (`WEBVIEW_ENTRIES`), and a feature stylesheet reaches a
+bundle only via a side-effect `import` somewhere in *that* entry's graph. So a class can be
+styled in one surface and simply absent in the next — the element renders raw, with no error
+anywhere.
+- **Incident (2026-07-31).** `DestinationStage` used `.service-action-link`, defined in EDS's
+  `connect-services.css`. That sheet reaches the WIZARD bundle only because `StorefrontStep.tsx`
+  imports it. On the integrations surface the class didn't exist and the "Change" button rendered
+  as a raw grey box ("This UI looks broken"). Its styling in the wizard was working by accident.
+- **Earlier shape of the same trap:** warning-text utilities like `text-orange-500/600` are
+  feature-scoped (`eds-steps.css`), NOT global — don't depend on them from the dashboard.
+- **Before reusing a component across surfaces**, confirm every class it needs lives in a sheet
+  the TARGET bundle loads. `custom-spectrum.css` / `index.css` / `vscode-theme.css` are imported
+  by every entry; anything under `src/features/*/ui/styles/` is not.
+- Small inline text-button actions have a global home: **`.inline-action-link`**
+  (`custom-spectrum.css`) — use it instead of EDS's `.service-action-link`.
 
 ### Styling mechanics
 - Prefer a CSS class via `cn()` (see styling-guide.md) over inline styles. `GridLayout` /
