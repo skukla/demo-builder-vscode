@@ -54,13 +54,17 @@ export type CardAction =
 type AttentionKind = 'deploy' | 'update' | 'retry' | 'sign-in';
 
 /**
- * The card face's at-most-one affordance: an attention verb (Deploy / Update /
- * Retry / Sign in) or the deployed Open↗ link. `disabled` is set only by the
- * mesh producer (its actions gate on in-flight operations).
+ * The card face's at-most-one affordance — an ATTENTION verb only (Deploy /
+ * Update / Retry / Sign in). `disabled` is set only by the mesh producer (its
+ * actions gate on in-flight operations).
+ *
+ * Open↗ deliberately does NOT live here. It is an ordinary action on a healthy
+ * integration, and it sat in the attention slot only because the slot existed —
+ * so it moved to the kebab, where ProjectCard has always kept "Open in Browser"
+ * (that card has no face affordance at all). The payoff is that a healthy card
+ * now carries NO button, so any card showing one is a card that needs you.
  */
-export type FaceAction =
-    | { kind: AttentionKind; disabled?: boolean }
-    | { kind: 'open'; url: string };
+export type FaceAction = { kind: AttentionKind; disabled?: boolean };
 
 /** One drawer action-bar button. */
 export interface BarAction {
@@ -158,7 +162,7 @@ const INTEGRATION_ACTIONS: Record<IntegrationStatus, { face?: FaceAction; bar: B
     },
     deploying: { bar: [] },
     deployed: {
-        // face resolved per-card: { kind: 'open', url } only when a url exists
+        // no face when deployed — a healthy card is calm; Open lives in the menu
         bar: [
             { action: 'redeploy', label: 'Redeploy', emphasis: 'secondary' },
             VERIFY,
@@ -180,6 +184,25 @@ const INTEGRATION_ACTIONS: Record<IntegrationStatus, { face?: FaceAction; bar: B
         bar: [{ action: 'retry', label: 'Retry', emphasis: 'primary' }, MANAGE_APIS, REMOVE],
     },
 };
+
+/**
+ * The card's kebab items.
+ *
+ * Open leads when the integration has a URL — it is the most common thing to do
+ * with a healthy one, just not urgent enough for the card face. Nothing is
+ * offered mid-deploy: every item would race the runner.
+ *
+ * Rename is deliberately absent — it is the name's own inline pencil, matching
+ * ProjectCard.
+ *
+ * @param status - the card's normalized status
+ * @param url - the integration's primary URL, when it has one
+ * @returns the menu actions, in display order
+ */
+function buildMenuActions(status: IntegrationStatus, url: string | undefined): CardAction[] {
+    if (status === 'deploying') return [];
+    return [...(url ? (['open'] as CardAction[]) : []), 'manage-apis', 'remove'];
+}
 
 /**
  * Narrow a live status string (override channel carries 'deploying' beyond
@@ -263,8 +286,7 @@ export function deriveIntegrationCard(
     const primaryUrl = resolvePrimaryUrl(entry);
     const { label: statusLabel, dot: dotVariant } = INTEGRATION_STATUS_DISPLAY[status];
     const actions = INTEGRATION_ACTIONS[status];
-    const openFace: FaceAction | undefined =
-        status === 'deployed' && primaryUrl ? { kind: 'open', url: primaryUrl } : undefined;
+
 
     return {
         id: entry.id,
@@ -282,12 +304,9 @@ export function deriveIntegrationCard(
         deployedUrls: entry.deployedUrls,
         apis: facet.apis,
         lastDeployed: formatLastDeployed(entry.lastDeployed),
-        faceAction: actions.face ? { ...actions.face } : openFace,
+        faceAction: actions.face ? { ...actions.face } : undefined,
         barActions: actions.bar.map((action) => ({ ...action })),
-        // Surfaces on the CARD what previously required opening the flyout first.
-        // Rename is NOT here — it is the name's own inline pencil, matching
-        // ProjectCard. Nothing mid-deploy: both would race the runner.
-        menuActions: status === 'deploying' ? [] : ['manage-apis', 'remove'],
+        menuActions: buildMenuActions(status, primaryUrl),
         canRename: entry.kind === 'integration' && !facet.isCatalog,
     };
 }

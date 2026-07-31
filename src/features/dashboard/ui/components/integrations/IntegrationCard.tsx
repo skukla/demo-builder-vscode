@@ -19,7 +19,7 @@
  * @module features/dashboard/ui/components/integrations/IntegrationCard
  */
 
-import { Button, Item, Link } from '@adobe/react-spectrum';
+import { Button, Item } from '@adobe/react-spectrum';
 import React, { useCallback } from 'react';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
 import { InlineRenameField } from '@/core/ui/components/forms';
@@ -49,6 +49,7 @@ const FACE_LABELS: Record<string, string> = {
 
 /** Kebab-menu labels, keyed by the same CardAction the grid dispatches. */
 const MENU_LABELS: Partial<Record<CardAction, string>> = {
+    open: 'Open ↗',
     'manage-apis': 'Manage APIs',
     remove: 'Remove',
 };
@@ -82,20 +83,19 @@ function CardMenu({
     );
 }
 
-/** The card face's at-most-one affordance (attention Button or Open↗ Link). */
+/**
+ * The card face's at-most-one affordance — an ATTENTION verb only.
+ *
+ * A healthy card renders nothing here: Open moved to the kebab (matching
+ * ProjectCard, which has no face affordance at all), so a visible button now
+ * means the card needs you.
+ */
 function FaceAffordance({
     model,
     onAction,
 }: Pick<IntegrationCardProps, 'model' | 'onAction'>): React.ReactElement | null {
     const face = model.faceAction;
     if (!face) return null;
-    if (face.kind === 'open') {
-        return (
-            <Link isQuiet onPress={() => onAction(model, 'open')}>
-                Open ↗
-            </Link>
-        );
-    }
     return (
         <Button
             variant="accent"

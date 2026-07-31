@@ -2,12 +2,11 @@
  * IntegrationCard Tests (integrations grid — Step 4)
  *
  * The grid's calm card face: name, status dot + label, a source line when the
- * card has one, AT MOST ONE affordance from `model.faceAction`, and the
- * overflow menu carrying `model.menuActions`. The card is dumb — clicks open
- * the drawer via `onOpen(id)`, and every affordance (attention verbs, the
- * deployed Open↗ link, and each menu item) routes through
- * `onAction(model, kind)` WITHOUT triggering `onOpen` (stop-propagation
- * containment span, the InlineRenameField precedent).
+ * card has one, AT MOST ONE ATTENTION affordance from `model.faceAction`, and
+ * the overflow menu carrying `model.menuActions`. A healthy card shows NO face
+ * button — Open lives in the menu — so a visible one always means the card needs
+ * you. The card is dumb: clicks open the drawer via `onOpen(id)`, and every
+ * affordance routes through `onAction(model, kind)` WITHOUT triggering `onOpen`.
  *
  * Strict TDD: written BEFORE the component exists.
  */
@@ -78,9 +77,9 @@ function makeModel(overrides: Partial<IntegrationCardModel> = {}): IntegrationCa
         dotVariant: 'success',
         url: 'https://example.com/app',
         urlLabel: 'App URL',
-        faceAction: { kind: 'open', url: 'https://example.com/app' },
+        faceAction: undefined,
         barActions: [],
-        menuActions: ['manage-apis', 'remove'],
+        menuActions: ['open', 'manage-apis', 'remove'],
         canRename: true,
         ...overrides,
     };
@@ -150,12 +149,13 @@ describe('IntegrationCard', () => {
         expect(onOpen).not.toHaveBeenCalled();
     });
 
-    it('renders the deployed Open face as a quiet link routing onAction(open) without onOpen', () => {
+    it('routes the deployed Open MENU item to onAction(open) without opening the flyout', () => {
         const model = makeModel();
         const { onOpen, onAction } = renderCard(model);
 
-        const link = screen.getByRole('link', { name: /open/i });
-        fireEvent.click(link);
+        // A menu item now, not a face link — the mock renders Menu items eagerly
+        // as buttons, so query by role button.
+        fireEvent.click(screen.getByRole('button', { name: /open/i }));
 
         expect(onAction).toHaveBeenCalledWith(model, 'open');
         expect(onOpen).not.toHaveBeenCalled();

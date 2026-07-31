@@ -56,7 +56,7 @@ describe('deriveIntegrationCard — status matrix', () => {
         expect(model.barActions).toEqual([]);
     });
 
-    it('deployed (with url): success dot, "Deployed", Open face, Redeploy·Verify·Manage APIs·Remove bar', () => {
+    it('deployed (with url): success dot, "Deployed", NO face, Open leads the menu', () => {
         const model = deriveIntegrationCard(
             integration({ status: 'deployed', url: 'https://245bce.adobeio-static.net' }),
         );
@@ -64,10 +64,11 @@ describe('deriveIntegrationCard — status matrix', () => {
         expect(model.status).toBe('deployed');
         expect(model.dotVariant).toBe('success');
         expect(model.statusLabel).toBe('Deployed');
-        expect(model.faceAction).toEqual({
-            kind: 'open',
-            url: 'https://245bce.adobeio-static.net',
-        });
+        // A healthy card is CALM: no face button at all. Open moved to the kebab,
+        // where ProjectCard has always kept "Open in Browser" — so a visible face
+        // button now always means the card needs you.
+        expect(model.faceAction).toBeUndefined();
+        expect(model.menuActions[0]).toBe('open');
         expect(model.barActions).toEqual([
             { action: 'redeploy', label: 'Redeploy', emphasis: 'secondary' },
             { action: 'verify', label: 'Verify', emphasis: 'secondary' },

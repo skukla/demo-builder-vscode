@@ -149,12 +149,14 @@ describe('IntegrationsGrid actions', () => {
             });
         });
 
-        it('routes the deployed card Open↗ to openLiveSite with the primary url', async () => {
+        // Open moved from the card FACE to the kebab (a healthy card is calm), so
+        // this is a menu item scoped to the tile now.
+        it('routes the deployed card Open to openLiveSite with the primary url', async () => {
             const user = setupUser();
             renderGrid({ appBuilderComponents: oneDeployed() });
 
             const tile = card('custom-app', 'Deployed');
-            await user.click(within(tile).getByRole('link', { name: /open/i }));
+            await user.click(within(tile).getByRole('button', { name: /open ↗/i }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('openLiveSite', {
                 url: 'https://custom-app.example.com',
