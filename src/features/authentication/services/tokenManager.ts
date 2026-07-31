@@ -21,6 +21,15 @@ export class TokenManager {
      * @param cacheManager - Optional cache manager for token caching
      * @param logger - Optional logger for dependency injection (defaults to getLogger())
      */
+    /**
+     * The in-flight token inspection, shared by concurrent callers (single-flight).
+     * Undefined when none is running. Distinct from the inspection CACHE, which can
+     * only help callers arriving after a fetch has completed.
+     */
+    private inspectionFlight:
+        | Promise<{ valid: boolean; expiresIn: number; token?: string }>
+        | undefined;
+
     constructor(
         private commandManager: CommandExecutor,
         cacheManager?: AuthCacheManager,
@@ -77,7 +86,30 @@ export class TokenManager {
             }
         }
 
-        // Cache miss or expired, fetch fresh
+        // SINGLE-FLIGHT. The fetch below spawns the whole `aio` Node CLI (~3.7s of
+        // process start + module load) to read one config value. The cache only
+        // helps callers arriving AFTER a fetch completes; concurrent callers on a
+        // cold cache each check, each miss, and each spawn their own CLI. There are
+        // 8 isAuthenticated() call sites in the dashboard/creation handlers, and the
+        // sibling org-list path was observed doing exactly this (2.5s + 1.4s
+        // overlapping, 2026-07-31). Preventive here — that trace happened to
+        // serialise the token path — but the structure is identical.
+        if (!this.inspectionFlight) {
+            this.inspectionFlight = this.fetchTokenInspection().finally(() => {
+                // Released on BOTH paths: a rejected flight left pending would wedge
+                // authentication for the rest of the session.
+                this.inspectionFlight = undefined;
+            });
+        }
+        return this.inspectionFlight;
+    }
+
+    /** The uncached, retrying CLI read behind {@link inspectToken}'s single-flight. */
+    private async fetchTokenInspection(): Promise<{
+        valid: boolean;
+        expiresIn: number;
+        token?: string;
+    }> {
         const maxRetries = 3;
 
         // Retry loop with exponential backoff

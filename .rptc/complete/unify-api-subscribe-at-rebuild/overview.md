@@ -160,8 +160,31 @@ With both Change-2 items shipped, the ~7s is elsewhere:
 2. **The org LIST uses a different TTL from the org SERVICES catalog.** `setCachedOrgList` uses
    `CACHE_TTL.SHORT` (60s); `ORG_SERVICES` (30min) covers the entitlement catalog only. Raising
    ORG_SERVICES never affected the org-list fetches being measured here.
-3. **`isAuthenticated` breaches its own budget and retries — STILL OPEN.**
-   `[Retry Strategy] Command succeeded after 3.7s (attempt 1/2)` then
-   `isAuthenticated took 3.8s ⚠️ SLOW (expected <3.0s)`. The first attempt fails silently and the
-   retry succeeds, so nothing surfaces. Not diagnosed; needs its own investigation into what the
-   first attempt is doing and why it fails.
+3. **`isAuthenticated` at 3.8s — DIAGNOSED 2026-07-31. Not a failure; a CLI spawn.**
+
+   **Correction first:** an earlier note here (and commit `9c8ea636`) claimed "the first attempt
+   fails silently and the retry succeeds". That is FALSE — a misreading of
+   `[Retry Strategy] Command succeeded after 3.7s (attempt 1/2)`. The logging condition is
+   `attempt > 1 || duration > SLOW_COMMAND_THRESHOLD` (`retryStrategyManager.ts:152`), and
+   `SLOW_COMMAND_THRESHOLD` is 3000ms. The line printed because the command was SLOW, not because
+   it retried. `attempt 1/2` means it succeeded on the FIRST attempt. There is no silent failure.
+
+   **What it actually is.** `isAuthenticated` → `tokenManager.inspectToken()` →
+   `aio config get ims.contexts.cli.access_token --json` (`tokenManager.ts:89`). That spawns the
+   whole `aio` Node CLI — process start plus module load — to read one value out of a local config
+   file. ~3.7s is simply what that costs; the 3.0s budget in the perf warning is unrealistic for a
+   CLI spawn, so the warning cries wolf on healthy behaviour.
+
+   **Caching already works.** The same trace shows three `[Token] Token valid` lines: one after the
+   slow spawn (cache miss) and two immediate (hits). `inspectToken` and `isAuthenticated` both
+   cache at `CACHE_TTL.MEDIUM` (5 min, jittered).
+
+   **Latent, same shape as the org-list stampede:** `inspectToken` has no in-flight dedup either,
+   and there are 8 `isAuthenticated()` call sites in the dashboard/creation handlers. Concurrent
+   cold-cache callers would each spawn their own `aio`. Not observed in this trace — the token path
+   happened to serialise — but structurally identical to the bug that WAS observed one line above.
+
+   **Not worth doing:** reading `~/.config/aio` directly to skip the spawn. It would eliminate the
+   3.7s, but the file's location and shape are `@adobe/aio-lib-core-config` implementation details,
+   and the corruption-detection logic in `inspectToken` (expiry=0, token length) would have to be
+   duplicated against them.
