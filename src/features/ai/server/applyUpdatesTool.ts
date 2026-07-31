@@ -14,6 +14,7 @@
  */
 
 import { z } from 'zod';
+import { asText } from './mcpToolResult';
 import type { StateManager } from '@/core/state';
 import {
     applyUpdatesHeadless,
@@ -22,11 +23,6 @@ import {
     type UpdateSelections,
 } from '@/features/updates/services/updateApplyService';
 import type { HandlerContext } from '@/types/handlers';
-
-/** Wrap a JSON-serializable value as an MCP text result. */
-function asText(value: unknown): { content: Array<{ type: 'text'; text: string }> } {
-    return { content: [{ type: 'text' as const, text: JSON.stringify(value) }] };
-}
 
 /** Compact, human-readable summary of pending updates. */
 function summarize(selections: UpdateSelections): Record<string, unknown> {

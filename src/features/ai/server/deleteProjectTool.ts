@@ -10,13 +10,9 @@
  */
 
 import { z } from 'zod';
+import { asText } from './mcpToolResult';
 import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectDeletionService';
 import type { HandlerContext } from '@/types/handlers';
-
-/** Wrap a JSON-serializable value as an MCP text result. */
-function asText(value: unknown): { content: Array<{ type: 'text'; text: string }> } {
-    return { content: [{ type: 'text' as const, text: JSON.stringify(value) }] };
-}
 
 /**
  * Register the delete_project tool on `server`.

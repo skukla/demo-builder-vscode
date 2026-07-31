@@ -11,11 +11,9 @@
  * selected (the agent should then ask which project to act on).
  */
 
+import { asText } from './mcpToolResult';
 import type { HandlerContext } from '@/types/handlers';
 
-function asText(value: unknown) {
-    return { content: [{ type: 'text' as const, text: JSON.stringify(value) }] };
-}
 
 /**
  * Register `get_current_project`.

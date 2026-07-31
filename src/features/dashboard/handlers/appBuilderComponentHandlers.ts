@@ -49,7 +49,7 @@ import { classifyEnvSchema } from '@/features/project-creation/services/envVarCl
 import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import { ErrorCode } from '@/types/errorCodes';
-import { MessageHandler, HandlerContext } from '@/types/handlers';
+import { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
 
 /**
@@ -225,19 +225,52 @@ export const handleAddAppBuilderComponent: MessageHandler<{
     return { success: true };
 };
 
-/** Shared deploy/redeploy: guards → D1 deployAppBuilderComponent {id}. */
-async function deployById(context: HandlerContext, id: string | undefined) {
+/**
+ * Resolve the two things every per-component handler needs first: a non-empty
+ * `id` from the payload, and the current project.
+ *
+ * Returns a discriminated result rather than throwing: these are `MessageHandler`s
+ * that answer with a `HandlerResponse`, so a throw would need a catch at every
+ * site or a change to the handler contract. `if (!target.ok) return target.error;`
+ * keeps the early-return style the handlers already use.
+ *
+ * Extracted at four identical copies (duplication scan, 2026-07-31).
+ *
+ * @param context - the handler context (supplies the state manager)
+ * @param id - the payload's component id, possibly absent
+ * @returns the id + project, or the error response to return as-is
+ */
+async function resolveComponentTarget(
+    context: HandlerContext,
+    id: string | undefined,
+): Promise<
+    { ok: true; id: string; project: Project } | { ok: false; error: HandlerResponse }
+> {
     if (!id) {
         return {
-            success: false,
-            error: 'AppBuilderComponent id is required',
-            code: ErrorCode.CONFIG_INVALID,
+            ok: false,
+            error: {
+                success: false,
+                error: 'AppBuilderComponent id is required',
+                code: ErrorCode.CONFIG_INVALID,
+            },
         };
     }
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+        return {
+            ok: false,
+            error: { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND },
+        };
     }
+    return { ok: true, id, project };
+}
+
+/** Shared deploy/redeploy: guards → D1 deployAppBuilderComponent {id}. */
+async function deployById(context: HandlerContext, requestedId: string | undefined) {
+    const target = await resolveComponentTarget(context, requestedId);
+    if (!target.ok) return target.error;
+    const { id, project } = target;
 
     const guardError = await runGuards(context, project);
     if (guardError) {
@@ -273,18 +306,9 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
     context,
     payload,
 ) => {
-    const id = payload?.id;
-    if (!id) {
-        return {
-            success: false,
-            error: 'AppBuilderComponent id is required',
-            code: ErrorCode.CONFIG_INVALID,
-        };
-    }
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
+    const target = await resolveComponentTarget(context, payload?.id);
+    if (!target.ok) return target.error;
+    const { id, project } = target;
 
     const guardError = await runGuards(context, project);
     if (guardError) {
@@ -368,18 +392,9 @@ export const handleRenameAppBuilderComponent: MessageHandler<{ id?: string; name
     context,
     payload,
 ) => {
-    const id = payload?.id;
-    if (!id) {
-        return {
-            success: false,
-            error: 'AppBuilderComponent id is required',
-            code: ErrorCode.CONFIG_INVALID,
-        };
-    }
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
+    const target = await resolveComponentTarget(context, payload?.id);
+    if (!target.ok) return target.error;
+    const { id, project } = target;
 
     const entry = getAppBuilderComponent(project, id);
     if (!entry || entry.kind !== 'integration') {
@@ -430,18 +445,10 @@ export const handleVerifyAppBuilderComponent: MessageHandler<{ id?: string }> = 
     context,
     payload,
 ) => {
-    const id = payload?.id;
-    if (!id) {
-        return {
-            success: false,
-            error: 'AppBuilderComponent id is required',
-            code: ErrorCode.CONFIG_INVALID,
-        };
-    }
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
+    // The project is loaded as a GUARD only — verify reads the org, not the project.
+    const target = await resolveComponentTarget(context, payload?.id);
+    if (!target.ok) return target.error;
+    const { id } = target;
 
     const authManager = ServiceLocator.getAuthenticationService();
     try {

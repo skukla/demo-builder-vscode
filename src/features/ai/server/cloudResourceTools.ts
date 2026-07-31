@@ -18,16 +18,12 @@
 import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
+import { asText } from './mcpToolResult';
 import { ServiceLocator } from '@/core/di';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
 import { DaLiveOrgOperations } from '@/features/eds/services/daLiveOrgOperations';
 import type { HandlerContext } from '@/types/handlers';
-
-/** Wrap a JSON-serializable value as an MCP text result. */
-function asText(value: unknown): { content: Array<{ type: 'text'; text: string }> } {
-    return { content: [{ type: 'text' as const, text: JSON.stringify(value) }] };
-}
 
 /** Silent GitHub auth pre-flight → `true` when a valid token is present. */
 async function githubAuthed(ctx: HandlerContext): Promise<boolean> {

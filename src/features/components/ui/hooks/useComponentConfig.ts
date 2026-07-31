@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { findComponentById } from '@/core/ui/utils/componentDataHelpers';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
 import { PAAS_URL, PAAS_GRAPHQL_ENDPOINT } from '@/features/components/config/envVarKeys';
 import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
 import { toServiceGroupWithSortedFields, SERVICE_GROUP_DEFINITIONS } from '@/features/components/services/serviceGroupTransforms';
+import { collectStackComponents } from '@/features/components/services/stackComponentCollector';
 import { getStackById } from '@/features/project-creation/ui/hooks/useSelectedStack';
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
 
@@ -171,74 +171,18 @@ export function useComponentConfig({
         loadData();
     }, []);
 
-    // Build selected components with dependencies
-    // Read directly from stack config - this is the source of truth
-    const selectedComponents = useMemo(() => {
-        const components: Array<{ id: string; data: ComponentData; type: string }> = [];
-
-        // Get stack directly from config - no derivation needed
-        const stack = selectedStack ? getStackById(selectedStack) : undefined;
-        if (!stack) return components;
-
-        const addComponentWithDeps = (comp: ComponentData, type: string) => {
-            components.push({ id: comp.id, data: comp, type });
-
-            comp.dependencies?.required?.forEach(depId => {
-                const dep = findComponentById(componentsData, depId);
-                if (dep && !components.some(c => c.id === depId)) {
-                    const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
-                                       (dep.configuration?.optionalEnvVars?.length || 0) > 0;
-                    if (hasEnvVars) {
-                        components.push({ id: dep.id, data: dep, type: 'Dependency' });
-                    }
-                }
-            });
-
-            comp.dependencies?.optional?.forEach(depId => {
-                const dep = findComponentById(componentsData, depId);
-                if (dep && !components.some(c => c.id === depId)) {
-                    // Check if optional dep is in stack dependencies
-                    const isSelected = stack.dependencies?.includes(depId);
-                    if (isSelected) {
-                        const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
-                                           (dep.configuration?.optionalEnvVars?.length || 0) > 0;
-                        if (hasEnvVars) {
-                            components.push({ id: dep.id, data: dep, type: 'Dependency' });
-                        }
-                    }
-                }
-            });
-        };
-
-        // Use stack.frontend directly
-        if (stack.frontend) {
-            const frontend = componentsData.frontends?.find(f => f.id === stack.frontend);
-            if (frontend) addComponentWithDeps(frontend, 'Frontend');
-        }
-
-        // Use stack.backend directly
-        if (stack.backend) {
-            const backend = componentsData.backends?.find(b => b.id === stack.backend);
-            if (backend) addComponentWithDeps(backend, 'Backend');
-        }
-
-        // Use stack.dependencies — search all component sections (not just dependencies)
-        // so mesh components (eds-accs-mesh, eds-commerce-mesh) are included
-        stack.dependencies?.forEach(depId => {
-            if (!components.some(c => c.id === depId)) {
-                const dep = findComponentById(componentsData, depId);
-                if (dep) {
-                    const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
-                                       (dep.configuration?.optionalEnvVars?.length || 0) > 0;
-                    if (hasEnvVars) {
-                        components.push({ id: dep.id, data: dep, type: 'Dependency' });
-                    }
-                }
-            }
-        });
-
-        return components;
-    }, [selectedStack, componentsData]);
+    // Build selected components with dependencies.
+    // The collection rule (and the three-way dependency walk) lives in
+    // `stackComponentCollector` — it is pure, and inside this hook it was both
+    // written out three times and unreachable by tests.
+    const selectedComponents = useMemo(
+        () =>
+            collectStackComponents<ComponentData>(
+                selectedStack ? getStackById(selectedStack) : undefined,
+                componentsData,
+            ),
+        [selectedStack, componentsData],
+    );
 
     // Build service groups from selected components
     const serviceGroups = useMemo(() => {

@@ -20,14 +20,12 @@
 
 import { z } from 'zod';
 import { getAdobeTarget, runWithAdobeTarget, setAdobeTarget } from './adobeTargetStore';
+import { asText } from './mcpToolResult';
 import { withOrgContext } from '@/core/shell';
 import { ErrorCode } from '@/types/errorCodes';
 import { hasErrorCode } from '@/types/errors';
 import type { HandlerContext } from '@/types/handlers';
 
-function asText(value: unknown) {
-    return { content: [{ type: 'text' as const, text: JSON.stringify(value) }] };
-}
 
 const NEEDS_ADOBE_AUTH = asText({
     needsAuth: 'adobe',

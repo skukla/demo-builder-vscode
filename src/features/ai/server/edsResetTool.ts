@@ -13,17 +13,13 @@
 
 import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
+import { asText } from './mcpToolResult';
 import { ServiceLocator } from '@/core/di';
 import { getDaLiveAuthService, getGitHubServices, resolveByomOverlayConfig } from '@/features/eds/handlers/edsHelpers';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import { executeEdsReset, extractResetParams } from '@/features/eds/services/edsResetService';
 import type { HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance, isEdsProject } from '@/types/typeGuards';
-
-/** Wrap a JSON-serializable value as an MCP text result. */
-function asText(value: unknown): { content: Array<{ type: 'text'; text: string }> } {
-    return { content: [{ type: 'text' as const, text: JSON.stringify(value) }] };
-}
 
 /** Silent Adobe IMS auth pre-flight. */
 async function adobeAuthed(): Promise<boolean> {
