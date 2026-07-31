@@ -182,7 +182,7 @@ describe('deployMeshHeadless', () => {
         expect(mockDeploy).not.toHaveBeenCalled();
     });
 
-    it('returns a failure result (no persistence) when the deploy fails', async () => {
+    it('returns a failure result without writing the endpoint state when the deploy fails', async () => {
         mockDeploy.mockResolvedValue({ success: false, error: 'boom' });
         const onStatus = jest.fn();
         const result = await deployMeshHeadless(deps({ onStatus }));
@@ -190,6 +190,22 @@ describe('deployMeshHeadless', () => {
         expect(result.error).toBe('boom');
         expect(mockUpdateMeshState).not.toHaveBeenCalled();
         expect(onStatus).toHaveBeenLastCalledWith('error', expect.any(String));
+    });
+
+    // REGRESSION: the failure path wrote the component entry and the keyed map
+    // but left meshStatusSummary alone — so a redeploy that failed kept whatever
+    // the last SUCCESS wrote. The dashboard reads that field on open, so it
+    // greeted a broken mesh with "Mesh Deployed" and a green dot. Starts from
+    // 'deployed' because a fresh-but-unset summary would pass either way.
+    it('MOVES meshStatusSummary off a prior success when the deploy fails', async () => {
+        mockDeploy.mockResolvedValue({ success: false, error: 'boom' });
+        const p = project();
+        p.meshStatusSummary = 'deployed';
+        const d = deps({ project: p });
+
+        await deployMeshHeadless(d);
+
+        expect(p.meshStatusSummary).toBe('error');
     });
 
     // ADR-011 D3 Step 02 (one writer): the singular mesh path must ALSO write

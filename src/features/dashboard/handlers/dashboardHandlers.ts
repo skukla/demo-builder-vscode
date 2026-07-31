@@ -107,6 +107,13 @@ export const handleRequestStatus: MessageHandler = async (context) => {
     if (meshComponent) {
         if (meshComponent.status === 'deploying') {
             meshStatus = 'deploying';
+        } else if (meshComponent.status === 'error') {
+            // A failed deploy, reported WITHOUT consulting meshStatusSummary and
+            // without waiting on auth — mirrors sendDemoStatusUpdate, which has
+            // always checked this first. While only the summary was read here the
+            // two handlers could describe the same mesh differently depending on
+            // which message landed last, which is worse than either being wrong.
+            meshStatus = 'error';
         } else {
             // Auth check — prompt for inline sign-in if not authenticated
             const authManager = ServiceLocator.getAuthenticationService();

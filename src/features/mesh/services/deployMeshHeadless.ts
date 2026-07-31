@@ -165,6 +165,13 @@ export async function deployMeshHeadless(
         await onStatus?.('error', 'Deployment failed');
         meshComponent.status = 'error';
         recordDeployOutcome(project, 'mesh', meshComponent.id, { status: 'error' });
+        // The SUMMARY has to move too. The success path above sets it to
+        // 'deployed'; leaving it untouched here meant a failed redeploy kept
+        // whatever the last SUCCESS wrote, so the dashboard — which reads this
+        // field on open — reported "Mesh Deployed" with a green dot for a mesh
+        // that had just failed. The two records above are not enough: neither is
+        // consulted by that read path.
+        project.meshStatusSummary = 'error';
         await stateManager.saveProject(project);
         return {
             success: false,
