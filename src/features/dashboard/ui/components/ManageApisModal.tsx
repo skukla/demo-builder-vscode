@@ -24,6 +24,10 @@ import { DialogContainer, Flex, ProgressCircle, Text } from '@adobe/react-spectr
 import React, { useEffect, useState } from 'react';
 import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection';
 import { Modal } from '@/core/ui/components/ui/Modal';
+import {
+    useElapsedStage,
+    ORG_SERVICES_LOADING_STAGES,
+} from '@/core/ui/hooks/useElapsedStage';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { CloudGrouping } from '@/types/adobeApis';
 
@@ -73,12 +77,14 @@ function toMessage(err: unknown): string {
 
 /** Compact fetch states (inline, not tall-centered) around the shared picker. */
 function ManageApisBody({
+    loadingStage,
     isLoading,
     loadError,
     apis,
     selected,
     onToggle,
 }: {
+    loadingStage?: string;
     isLoading: boolean;
     loadError: string | null;
     apis: ApiAccessOption[];
@@ -86,10 +92,17 @@ function ManageApisBody({
     onToggle: (code: string) => void;
 }): React.ReactElement {
     if (isLoading) {
+        // Same staged copy as the wizard picker — the wait is the same fetch
+        // (~39s measured), so a bare "Loading…" reads as frozen here too.
         return (
-            <Flex alignItems="center" gap="size-150">
-                <ProgressCircle aria-label="Loading Adobe APIs" isIndeterminate size="S" />
-                <Text>Loading Adobe APIs…</Text>
+            <Flex direction="column" gap="size-75">
+                <Flex alignItems="center" gap="size-150">
+                    <ProgressCircle aria-label="Loading Adobe APIs" isIndeterminate size="S" />
+                    <Text>Loading Adobe APIs…</Text>
+                </Flex>
+                <Text UNSAFE_className="text-sm text-gray-600">
+                    {loadingStage ?? 'This can take up to a minute'}
+                </Text>
             </Flex>
         );
     }
@@ -124,6 +137,7 @@ export function ManageApisModal({
     /** The set as loaded — Apply is a no-op (disabled) until this changes. */
     const [initial, setInitial] = useState<string[]>([]);
     const [isApplying, setIsApplying] = useState(false);
+    const loadingStage = useElapsedStage(isLoading, ORG_SERVICES_LOADING_STAGES);
     const [applyError, setApplyError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -225,6 +239,7 @@ export function ManageApisModal({
                             Manage Adobe API access for <strong>{componentName}</strong>.
                         </Text>
                         <ManageApisBody
+                            loadingStage={loadingStage}
                             isLoading={isLoading}
                             loadError={loadError}
                             apis={apis}

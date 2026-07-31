@@ -35,6 +35,7 @@ This directory contains custom React hooks that extract and encapsulate reusable
 | `useTimerCleanup` | Manage N timer refs with set/clear helpers and automatic cleanup on unmount | `useTimerCleanup.ts` |
 | `useSelectableDefault` | Select-all-on-focus props for text fields with replaceable default values | `useSelectableDefault.ts` |
 | `useVerificationMessage` | Map a status value to a formatted verification message (`info`/`success`/`warning`/`error`) | `useVerificationMessage.ts` |
+| `useElapsedStage` | Advance a sub-message as a long wait drags on, so a slow fetch doesn't read as frozen (ships `ORG_SERVICES_LOADING_STAGES`) | `useElapsedStage.ts` |
 
 **Choosing between the async hooks:**
 - `useAsyncData` — fetching data that arrives via VS Code messages

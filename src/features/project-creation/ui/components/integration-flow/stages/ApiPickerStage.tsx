@@ -16,6 +16,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { LoadingDisplay, StatusDisplay } from '@/core/ui/components/feedback';
 import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection';
+import {
+    useElapsedStage,
+    ORG_SERVICES_LOADING_STAGES,
+} from '@/core/ui/hooks/useElapsedStage';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 
 /** The `list-org-console-apis` handler response (rows are already picker-shaped). */
@@ -58,6 +62,8 @@ export function ApiPickerStage({
     const [error, setError] = useState<string | undefined>(undefined);
     const [reloadKey, setReloadKey] = useState(0);
 
+    const loadingStage = useElapsedStage(loading, ORG_SERVICES_LOADING_STAGES);
+
     /** Re-fire the list (from the error view's Retry). */
     const retry = useCallback(() => setReloadKey((key) => key + 1), []);
 
@@ -89,7 +95,15 @@ export function ApiPickerStage({
     if (loading) {
         return (
             <div className="intflow-api-center" data-testid="api-picker-stage">
-                <LoadingDisplay size="L" message="Loading Adobe APIs…" />
+                {/* A static label reads as FROZEN on a fetch this long (38.9s
+                    measured). helperText sets the expectation up front; the staged
+                    subMessage shows it is still moving. */}
+                <LoadingDisplay
+                    size="L"
+                    message="Loading Adobe APIs…"
+                    subMessage={loadingStage}
+                    helperText="This can take up to a minute"
+                />
             </div>
         );
     }

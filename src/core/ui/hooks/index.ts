@@ -52,3 +52,6 @@ export type {
     UseSelectionStepOptions,
     UseSelectionStepResult,
 } from './useSelectionStep';
+
+export { useElapsedStage, ORG_SERVICES_LOADING_STAGES } from './useElapsedStage';
+export type { ElapsedStage } from './useElapsedStage';
