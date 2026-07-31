@@ -9,7 +9,7 @@
 import { getAppStatusDisplay } from '@/core/ui/utils/appStatusDisplay';
 import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import type { AppBuilderComponentState, Project, ProjectStatus } from '@/types/base';
-import { getComponentInstanceValues } from '@/types/typeGuards';
+import { getComponentInstanceValues, isEdsProject } from '@/types/typeGuards';
 
 /**
  * StatusDot variant type for visual status indication
@@ -253,4 +253,35 @@ export function getFrontendPort(project: Project): number | undefined {
     const instances = getComponentInstanceValues(project);
     const frontend = instances.find((c) => c.port !== undefined);
     return frontend?.port;
+}
+
+/**
+ * The primary status line both project surfaces show, derived once.
+ *
+ * EDS projects report STOREFRONT status; everything else reports demo-running
+ * status. `ProjectCard` and `ProjectRow` had each written that branch out
+ * (duplication scan, 2026-07-31); getting it wrong in one place would make the
+ * card and list views disagree about the same project.
+ *
+ * @param project - the project to describe
+ * @returns whether it is EDS, its frontend port, and the status text + variant
+ */
+export function getProjectStatusDisplay(project: Project): {
+    isEds: boolean;
+    port: number | undefined;
+    statusText: string;
+    statusVariant: StatusVariant;
+} {
+    const isEds = isEdsProject(project);
+    const port = getFrontendPort(project);
+    return {
+        isEds,
+        port,
+        statusText: isEds
+            ? getStorefrontStatusText(project)
+            : getStatusText(project.status, port, false),
+        statusVariant: isEds
+            ? getStorefrontStatusVariant(project)
+            : getStatusVariant(project.status, false),
+    };
 }

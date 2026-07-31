@@ -10,25 +10,21 @@
 
 import { Flex, Text } from '@adobe/react-spectrum';
 import PinOn from '@spectrum-icons/workflow/PinOn';
-import React, { useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
+import { useProjectSelectHandlers } from '../hooks/useProjectSelectHandlers';
 import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
 import { InlineRenameField } from '@/core/ui/components/forms';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { normalizeProjectName } from '@/core/validation/normalizers';
 import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {
-    getStatusText,
-    getStatusVariant,
-    getFrontendPort,
+    getProjectStatusDisplay,
     getMeshStatusText,
     getMeshStatusVariant,
     getAppStatusText,
     getAppStatusVariant,
-    getStorefrontStatusText,
-    getStorefrontStatusVariant,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import type { Project } from '@/types/base';
-import { isEdsProject } from '@/types/typeGuards';
 
 export interface ProjectCardProps {
     /** The project to display */
@@ -56,42 +52,9 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     onSelect,
     actions = {},
 }) => {
-    const handleClick = useCallback(
-        (e: React.MouseEvent) => {
-            // Shift-click / Cmd-click → open in a new VS Code window (standard
-            // VS Code modifier convention for Open Recent et al.).
-            if (e.shiftKey || e.metaKey) {
-                onSelect(project, { forceNewWindow: true });
-            } else {
-                onSelect(project);
-            }
-        },
-        [project, onSelect],
-    );
+    const { handleClick, handleKeyDown } = useProjectSelectHandlers(project, onSelect);
 
-    const handleKeyDown = useCallback(
-        (e: React.KeyboardEvent) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                if (e.shiftKey) {
-                    onSelect(project, { forceNewWindow: true });
-                } else {
-                    onSelect(project);
-                }
-            }
-        },
-        [project, onSelect],
-    );
-
-    const isEds = isEdsProject(project);
-    const port = getFrontendPort(project);
-    // EDS projects use storefront status; non-EDS use demo running status
-    const statusText = isEds
-        ? getStorefrontStatusText(project)
-        : getStatusText(project.status, port, false);
-    const statusVariant = isEds
-        ? getStorefrontStatusVariant(project)
-        : getStatusVariant(project.status, false);
+    const { statusText, statusVariant } = getProjectStatusDisplay(project);
     const brandStackSummary = useMemo(() => getBrandStackSummary(project), [project]);
     const meshText = getMeshStatusText(project);
     const meshVariant = getMeshStatusVariant(project);
