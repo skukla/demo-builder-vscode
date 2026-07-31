@@ -198,24 +198,36 @@ export const handleAddAppBuilderComponent: MessageHandler<{
         };
     }
 
-    const guardError = await runGuards(context, project);
-    if (guardError) {
-        vscode.window.showWarningMessage(guardError);
-        return { success: false, error: guardError };
-    }
-
-    // Bucket-3 inputs → Configure FIRST (never silently deploy with missing inputs).
-    if (needsUserInputs(entry)) {
-        await vscode.commands.executeCommand('demoBuilder.configureProject');
-        return { success: true };
-    }
-
-    await postRowStatus(entry.id, 'deploying', 'Adding integration…');
-    const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
+    // The guards run INSIDE the progress: runGuards does the auth check, whose
+    // `aio config get` spawn costs seconds on a cold cache. Running it first left
+    // the user clicking Add and staring at nothing until it returned.
     const result = await withComponentProgress(
         { title: 'Adding', id: entry.id, label: entry.name ?? entry.id, logger: context.logger },
-        () => addAppBuilderComponent(project, entry, deps),
+        async (report): Promise<GuardableResult> => {
+            report('Checking requirements…');
+            const guardError = await runGuards(context, project);
+            if (guardError) {
+                vscode.window.showWarningMessage(guardError);
+                // `blocked`, not merely failed: nothing ran, so callers must NOT
+                // take the failed-op path (error row status + snapshot).
+                return { success: false, error: guardError, blocked: true };
+            }
+
+            // Bucket-3 inputs → Configure FIRST (never silently deploy with missing inputs).
+            if (needsUserInputs(entry)) {
+                await vscode.commands.executeCommand('demoBuilder.configureProject');
+                return { success: true };
+            }
+
+            report('Adding integration…');
+            await postRowStatus(entry.id, 'deploying', 'Adding integration…');
+            const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
+            return addAppBuilderComponent(project, entry, deps);
+        },
     );
+    if (result.blocked) {
+        return { success: false, error: result.error };
+    }
     if (!result.success) {
         await postRowStatus(entry.id, 'error', result.error || 'Deployment failed');
         // Even a failed add may have persisted the entry (clone/deploy died
@@ -270,6 +282,14 @@ async function resolveComponentTarget(
 }
 
 /**
+ * A runner outcome, plus the one distinction the runner itself cannot make:
+ * `blocked` means a GUARD stopped the operation before any work ran, so callers
+ * must not take the failed-op path (error row status + snapshot) — nothing was
+ * attempted and nothing persisted.
+ */
+type GuardableResult = { success: boolean; error?: string; blocked?: boolean };
+
+/**
  * Run a slow per-integration operation with the telegraph the rest of the
  * extension already uses: a VS Code progress notification, a live row status on
  * the grid, and USER-log lines at start and finish.
@@ -281,11 +301,18 @@ async function resolveComponentTarget(
  * `DeployMeshCommand`'s withProgress + status-push shape rather than inventing a
  * second one.
  *
+ * **Call this BEFORE the guards, not after.** `runGuards` performs the auth
+ * check, whose `aio config get` spawn costs seconds on a cold cache — so a
+ * handler that guards first shows nothing for those seconds and the notification
+ * reads as laggy (reported 2026-07-31: "it's not as immediate as it should be").
+ * Every slow step belongs inside `run`, with `report('Checking requirements…')`
+ * as its first line — the same shape `deployMeshHeadless` uses.
+ *
  * @param options - the notification title, the row to telegraph, the user logger
  * @param run - the work; call its `report` to push sub-progress to both surfaces
  * @returns whatever `run` resolves to
  */
-async function withComponentProgress<T extends { success: boolean; error?: string }>(
+async function withComponentProgress<T extends GuardableResult>(
     options: { title: string; id: string; label: string; logger: HandlerContext['logger'] },
     run: (report: (message: string) => void) => Promise<T>,
 ): Promise<T> {
@@ -305,6 +332,9 @@ async function withComponentProgress<T extends { success: boolean; error?: strin
 
     if (result.success) {
         logger.info(`${title} ${label} — done`);
+    } else if (result.blocked) {
+        // A guard stopped it before any work ran — not a failure to report as one.
+        logger.info(`${title} ${label} — stopped: ${result.error ?? 'requirements not met'}`);
     } else {
         logger.error(`${title} ${label} — failed: ${result.error ?? 'unknown error'}`);
     }
@@ -317,17 +347,23 @@ async function deployById(context: HandlerContext, requestedId: string | undefin
     if (!target.ok) return target.error;
     const { id, project } = target;
 
-    const guardError = await runGuards(context, project);
-    if (guardError) {
-        vscode.window.showWarningMessage(guardError);
-        return { success: false, error: guardError };
-    }
-
-    await postRowStatus(id, 'deploying', 'Deploying…');
-    const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
     const result = await withComponentProgress(
         { title: 'Deploying', id, label: id, logger: context.logger },
-        () => deployAppBuilderComponent(project, id, deps),
+        async (report): Promise<GuardableResult> => {
+            report('Checking requirements…');
+            const guardError = await runGuards(context, project);
+            if (guardError) {
+                vscode.window.showWarningMessage(guardError);
+                // `blocked`, not merely failed: nothing ran, so callers must NOT
+                // take the failed-op path (error row status + snapshot).
+                return { success: false, error: guardError, blocked: true };
+            }
+
+            report('Deploying…');
+            await postRowStatus(id, 'deploying', 'Deploying…');
+            const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
+            return deployAppBuilderComponent(project, id, deps);
+        },
     );
     const status = result.success ? 'deployed' : 'error';
     await postRowStatus(
@@ -358,20 +394,26 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
     if (!target.ok) return target.error;
     const { id, project } = target;
 
-    const guardError = await runGuards(context, project);
-    if (guardError) {
-        vscode.window.showWarningMessage(guardError);
-        return { success: false, error: guardError };
-    }
-
-    const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
-    // Undeploy is a slow cloud op — telegraph it, or the grid sits frozen while
-    // `aio app undeploy` runs with nothing on screen saying so.
-    await postRowStatus(id, 'deploying', 'Removing integration…');
     const displayName = getAppBuilderComponent(project, id)?.name ?? id;
     const result = await withComponentProgress(
         { title: 'Removing', id, label: displayName, logger: context.logger },
-        () => removeAppBuilderComponent(project, id, deps),
+        async (report): Promise<GuardableResult> => {
+            report('Checking requirements…');
+            const guardError = await runGuards(context, project);
+            if (guardError) {
+                vscode.window.showWarningMessage(guardError);
+                // `blocked`, not merely failed: nothing ran, so callers must NOT
+                // take the failed-op path (error row status + snapshot).
+                return { success: false, error: guardError, blocked: true };
+            }
+
+            // Undeploy is a slow cloud op — telegraph it, or the grid sits frozen
+            // while `aio app undeploy` runs with nothing on screen saying so.
+            report('Removing integration…');
+            await postRowStatus(id, 'deploying', 'Removing integration…');
+            const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
+            return removeAppBuilderComponent(project, id, deps);
+        },
     );
     if (!result.success) {
         return { success: false, error: result.error };

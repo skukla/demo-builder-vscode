@@ -69,6 +69,18 @@ Rule of thumb: read the component's own source for `webviewClient.`, for the sta
 gates read, and for the fields its JSX renders. Three different lists.
 
 ## Gotchas
+- **A progress notification must OPEN BEFORE the guards, not after.** `runGuards`
+  (auth + org-mismatch) performs the auth check, whose `aio config get` spawns the whole
+  `aio` CLI — seconds on a cold cache. A handler that guards first, then opens
+  `withProgress`, shows the user nothing for those seconds and reads as laggy. Put EVERY
+  slow step inside the progress callback with `report('Checking requirements…')` as its
+  first line — the shape `deployMeshHeadless` uses. Reported twice (2026-07-31: "it's not
+  as immediate as it should be… We've hit this before"), so it is pinned by an ordering
+  test in `appBuilderComponentHandlers-drawer.test.ts`.
+  - **Consequence to handle:** once guards run inside the progress, a guard bail is no
+    longer an early `return` from the handler — it becomes a result, and the failure path
+    (error row status + snapshot push) will fire for an operation that never ran. Mark it
+    (`blocked: true`) and short-circuit before that path.
 - **The handler-map count test is PINNED.** `tests/features/dashboard/handlers/dashboardHandlersMap.test.ts`
   asserts an exact handler count with a comment deriving it. Adding a handler fails it by design —
   bump the number AND extend the derivation comment so the next reader can still reconstruct it.

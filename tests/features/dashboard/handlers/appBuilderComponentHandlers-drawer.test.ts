@@ -341,3 +341,37 @@ describe('appBuilderComponentsSnapshot channel (fresh persisted map after termin
         expect(mockSendAppBuilderComponentsSnapshot).not.toHaveBeenCalled();
     });
 });
+
+// The progress notification must open BEFORE the guards, not after. runGuards
+// performs the auth check, whose `aio config get` spawn costs seconds on a cold
+// cache — guarding first left the user clicking Add and watching nothing happen
+// ("it's not as immediate as it should be", 2026-07-31). Ordering is invisible in
+// the UI once it is right, so it is pinned here.
+describe('progress opens before the guards run', () => {
+    it.each([
+        ['add', handleAddAppBuilderComponent],
+        ['remove', handleRemoveAppBuilderComponent],
+        ['deploy', handleDeployAppBuilderComponent],
+    ])('%s: withProgress is entered before runGuards resolves', async (_label, handler) => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+        const vscode = require('vscode');
+        const order: string[] = [];
+
+        vscode.window.withProgress.mockImplementation(
+            async (_o: unknown, task: (p: unknown) => unknown) => {
+                order.push('progress');
+                return task({ report: jest.fn() });
+            },
+        );
+        mockEnsureAdobeIOAuth.mockImplementation(async () => {
+            order.push('guards');
+            return { authenticated: true };
+        });
+
+        await handler(mockContext, { id: 'erp-sync' });
+
+        expect(order[0]).toBe('progress');
+        expect(order).toContain('guards');
+    });
+});
