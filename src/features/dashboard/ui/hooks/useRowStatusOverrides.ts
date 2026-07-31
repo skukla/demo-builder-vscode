@@ -22,10 +22,35 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
  * Live per-id status overrides from the `appBuilderComponentStatusUpdate` push
  * channel.
  *
+ * Overrides are PRUNED against each `appBuilderComponentsSnapshot`: an override
+ * for an id the persisted map no longer holds is dropped. Without that, removing
+ * an integration left its `deploying` override behind forever — the entry left
+ * the map, but `buildIntegrationCards` synthesizes a pending card for any
+ * unknown-id `deploying` override, so the grid showed a GHOST card stuck on
+ * "Deploying…" (reported 2026-07-31). Pruning on the snapshot rather than on the
+ * remove handler means it self-heals for every cause of disappearance, not just
+ * the one that was reported.
+ *
  * @returns id-keyed override map (empty until the first push)
  */
 export function useRowStatusOverrides(): Record<string, RowStatusOverride> {
     const [overrides, setOverrides] = useState<Record<string, RowStatusOverride>>({});
+
+    useEffect(() => {
+        return webviewClient.onMessage('appBuilderComponentsSnapshot', (data: unknown) => {
+            const map = (data ?? {}) as Record<string, unknown>;
+            const live = new Set(Object.keys(map));
+            setOverrides((prev) => {
+                const kept = Object.fromEntries(
+                    Object.entries(prev).filter(([id]) => live.has(id)),
+                );
+                // Same object when nothing was pruned — the map feeds a useMemo
+                // dependency, so a fresh identity every snapshot would rebuild
+                // every card for nothing.
+                return Object.keys(kept).length === Object.keys(prev).length ? prev : kept;
+            });
+        });
+    }, []);
 
     useEffect(() => {
         return webviewClient.onMessage('appBuilderComponentStatusUpdate', (data: unknown) => {

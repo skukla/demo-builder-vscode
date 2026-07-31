@@ -154,7 +154,14 @@ export function AddIntegrationFlowAdapter({
                 source: { owner: string; repo: string },
                 instance?: { id: string; name: string },
             ): void => {
-                postAdd({ source, ...(instance ? { name: instance.name } : {}) });
+                // BOTH halves of the instance identity: the name the user typed
+                // AND the collision-checked id. Sending only the name let the id
+                // fall back to `${owner}-${repo}`, so the card came back titled
+                // "skukla-app-builder-shell" instead of what they named it.
+                postAdd({
+                    source,
+                    ...(instance ? { name: instance.name, instanceId: instance.id } : {}),
+                });
             },
         }),
         [],

@@ -122,14 +122,29 @@ function getClient() {
     return webviewClient as { postMessage: jest.Mock; onMessage: jest.Mock };
 }
 
-/** Capture push subscriptions so tests can drive the live channels. */
+/**
+ * Capture push subscriptions so tests can drive the live channels.
+ *
+ * Fans out to EVERY subscriber of a type, matching the real client
+ * (`Map<type, Set<handler>>`). A single-handler map silently dropped the first
+ * subscriber: both `useLiveAppBuilderComponents` and `useRowStatusOverrides`
+ * listen on `appBuilderComponentsSnapshot`, so the later registration displaced
+ * the map updater and snapshots stopped landing — in the TEST only, which is the
+ * kind of mock drift that reads as a product bug.
+ */
 function captureHandlers(): Map<string, (data: unknown) => void> {
-    const handlers = new Map<string, (data: unknown) => void>();
+    const subscribers = new Map<string, Array<(data: unknown) => void>>();
     getClient().onMessage.mockImplementation((type: string, handler: (d: unknown) => void) => {
-        handlers.set(type, handler);
+        const list = subscribers.get(type) ?? [];
+        list.push(handler);
+        subscribers.set(type, list);
         return jest.fn();
     });
-    return handlers;
+    // Present the same Map-like read the tests already use, but dispatching to all.
+    return {
+        get: (type: string) => (data: unknown) =>
+            subscribers.get(type)?.forEach((handler) => handler(data)),
+    } as unknown as Map<string, (data: unknown) => void>;
 }
 
 /** Resolve the status gate so the screen leaves its loading state. */

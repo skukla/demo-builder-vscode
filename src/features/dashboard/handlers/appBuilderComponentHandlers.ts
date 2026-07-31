@@ -101,9 +101,18 @@ export async function runGuards(
 function resolveAddEntry(payload: {
     id?: string;
     source?: { owner: string; repo: string };
+    name?: string;
+    instanceId?: string;
 }): AppBuilderComponentCatalogEntry | undefined {
     if (payload.source?.owner && payload.source?.repo) {
-        return buildCustomIntegrationEntry(payload.source);
+        // Carry the user's NAME and instance id through. Dropping them meant a
+        // named blank starter came back as its owner-repo slug
+        // ("skukla-app-builder-shell") — the name the user typed was discarded at
+        // this boundary (reported 2026-07-31).
+        return buildCustomIntegrationEntry(
+            { ...payload.source, name: payload.name },
+            payload.instanceId,
+        );
     }
     if (payload.id) {
         return getAppBuilderComponentEntry(payload.id);
@@ -183,6 +192,10 @@ async function postComponentsSnapshot(context: HandlerContext): Promise<void> {
 export const handleAddAppBuilderComponent: MessageHandler<{
     id?: string;
     source?: { owner: string; repo: string };
+    /** Display name for a named blank instance (the flow's naming step). */
+    name?: string;
+    /** Collision-checked instance id for a named blank instance. */
+    instanceId?: string;
 }> = async (context, payload) => {
     const project = await context.stateManager.getCurrentProject();
     if (!project) {

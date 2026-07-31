@@ -212,7 +212,11 @@ describe('AddIntegrationFlowAdapter', () => {
             });
         });
 
-        it('a named blank instance carries its display name', () => {
+        // REGRESSION: sending only the name let the id fall back to
+        // `${owner}-${repo}`, so a shell the user named came back titled
+        // "skukla-app-builder-shell" (reported 2026-07-31). Both halves of the
+        // instance identity have to travel.
+        it('a named blank instance carries its display name AND its instance id', () => {
             renderAdapter();
 
             captured?.builder.onAddCustomAppBuilderComponent(
@@ -223,6 +227,7 @@ describe('AddIntegrationFlowAdapter', () => {
             expect(getClient().postMessage).toHaveBeenCalledWith('addAppBuilderComponent', {
                 source: { owner: 'skukla', repo: 'app-builder-shell' },
                 name: 'Firefly Gen',
+                instanceId: 'firefly-gen',
             });
         });
     });
