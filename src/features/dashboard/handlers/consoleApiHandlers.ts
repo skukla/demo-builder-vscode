@@ -25,13 +25,13 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { resolveDesiredApis, UNATTRIBUTED_PICKS_KEY } from '@/core/state/componentApiPicks';
 import { deriveAllowedDomain } from '@/features/app-builder/services/allowedDomain';
+import { fetchApiAccessRows } from '@/features/app-builder/services/apiAccessRows';
 import {
     computeRequiredApis,
     subscribeRequiredApis,
 } from '@/features/app-builder/services/apiSubscriber';
 import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
 import { subscriberTarget } from '@/features/app-builder/services/appBuilderComponentRunnerDeps';
-import { buildApiAccessCatalog } from '@/features/authentication/services/apiAccessCatalog';
 import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
@@ -74,8 +74,6 @@ export const handleListConsoleApis: MessageHandler = async (context) => {
     }
 
     try {
-        const client = createApiSubscriberClient(ServiceLocator.getAuthenticationService());
-        const services = await client.getServicesForOrg(orgId);
         // `managed` = ALWAYS-ON only (baseline + catalog required, NO extras) — these
         // are locked, non-removable. The optional extras are returned as `added`
         // (checked + removable in the modal). Both survive the noise filter.
@@ -83,7 +81,11 @@ export const handleListConsoleApis: MessageHandler = async (context) => {
         // per-component; today it is the same set the flat field held.
         const added = resolveDesiredApis(project);
         const managed = new Set(computeRequiredApis(resolveProjectCatalog(project), []));
-        const rows = buildApiAccessCatalog(services, new Set([...managed, ...added]));
+        const rows = await fetchApiAccessRows(
+            ServiceLocator.getAuthenticationService(),
+            orgId,
+            new Set([...managed, ...added]),
+        );
         return {
             success: true,
             data: {

@@ -16,9 +16,8 @@
 
 import { getAppBuilderComponentEntry } from '../services/appBuilderComponentCatalogLoader';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { fetchApiAccessRows } from '@/features/app-builder/services/apiAccessRows';
 import { computeRequiredApis } from '@/features/app-builder/services/apiSubscriber';
-import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
-import { buildApiAccessCatalog } from '@/features/authentication/services/apiAccessCatalog';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { MessageHandler } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
@@ -56,11 +55,7 @@ export const handleListOrgConsoleApis: MessageHandler<{ componentIds?: string[] 
     const locked = new Set(computeRequiredApis(entries));
 
     try {
-        const client = createApiSubscriberClient(authService);
-        const services = await client.getServicesForOrg(org.id);
-        // Clean the raw catalog (dedupe, drop deprecated/unsupported noise, classify
-        // review/profile gating, carry product families); `locked` codes always survive.
-        const rows = buildApiAccessCatalog(services, locked);
+        const rows = await fetchApiAccessRows(authService, org.id, locked);
         return {
             success: true,
             data: {
