@@ -1163,17 +1163,21 @@ export class AdobeEntityFetcher {
         // method predates): an unbounded call left the API picker spinning with no
         // log line and no ceiling when the endpoint stalled.
         const outcome = await tryWithTimeout(client.getServicesForOrg(orgId), {
-            timeoutMs: TIMEOUTS.SDK_ENTITY_FETCH,
+            timeoutMs: TIMEOUTS.ORG_SERVICES_FETCH,
             timeoutMessage: 'SDK org services fetch',
         });
 
         if (outcome.timedOut || outcome.error || !outcome.result) {
-            this.debugLogger.warn(
-                `[Entity Fetcher] Org services fetch failed after ` +
-                    `${formatDuration(Date.now() - startTime)}` +
-                    `${outcome.timedOut ? ' (timed out)' : ''}`,
-            );
-            return [];
+            const elapsed = formatDuration(Date.now() - startTime);
+            const reason = outcome.timedOut ? `timed out after ${elapsed}` : 'failed';
+            this.debugLogger.warn(`[Entity Fetcher] Org services fetch ${reason}`);
+            // THROW rather than return [] — an empty list is indistinguishable from
+            // "this org entitles nothing", so the picker rendered a failed fetch as
+            // `No APIs match ""`. Its caller turns a throw into a typed error and the
+            // picker already has the matching "Couldn't load Adobe APIs" + Retry view.
+            throw outcome.error instanceof Error
+                ? outcome.error
+                : new Error(`Adobe org services request ${reason}`);
         }
 
         const services = outcome.result.body ?? [];

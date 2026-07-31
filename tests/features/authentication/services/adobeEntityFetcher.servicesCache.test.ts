@@ -135,28 +135,35 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
 
     // Every other SDK read is bounded by trySDKFetch; this one predated that and had
     // no ceiling, so a stalled endpoint left the picker spinning indefinitely.
-    it('returns [] rather than hanging when the SDK call never settles', async () => {
+    // THROWS rather than resolving []: an empty list is indistinguishable from
+    // "this org entitles nothing", and the picker rendered a failed fetch as
+    // `No APIs match ""` instead of its "Couldn't load Adobe APIs" + Retry view.
+    it('THROWS rather than hanging when the SDK call never settles', async () => {
         jest.useFakeTimers();
         sdk.getServicesForOrg.mockReturnValue(new Promise(() => {}));
 
         const pending = fetcher.getServicesForOrg('org1');
+        const assertion = expect(pending).rejects.toThrow(/timed out/i);
         await Promise.resolve();
-        jest.advanceTimersByTime(TIMEOUTS.SDK_ENTITY_FETCH + 1000);
+        jest.advanceTimersByTime(TIMEOUTS.ORG_SERVICES_FETCH + 1000);
 
-        await expect(pending).resolves.toEqual([]);
+        await assertion;
         jest.useRealTimers();
     });
 
-    it('does NOT cache a timed-out fetch', async () => {
+    it('does NOT cache a timed-out fetch, and the slot still works after', async () => {
         jest.useFakeTimers();
         sdk.getServicesForOrg.mockReturnValueOnce(new Promise(() => {}));
 
         const pending = fetcher.getServicesForOrg('org1');
+        const rejected = expect(pending).rejects.toThrow();
         await Promise.resolve();
-        jest.advanceTimersByTime(TIMEOUTS.SDK_ENTITY_FETCH + 1000);
-        await pending;
+        jest.advanceTimersByTime(TIMEOUTS.ORG_SERVICES_FETCH + 1000);
+        await rejected;
         jest.useRealTimers();
 
+        // A failed flight must be released AND uncached, or one transient stall
+        // would wedge the picker for the whole session.
         sdk.getServicesForOrg.mockResolvedValue({ body: [{ code: MESH, platformList: ['apiKey'] }] });
         expect(await fetcher.getServicesForOrg('org1')).toHaveLength(1);
     });

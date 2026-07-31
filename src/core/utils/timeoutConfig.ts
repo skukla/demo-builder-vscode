@@ -135,6 +135,16 @@ export const TIMEOUTS = {
      *  with no false bailouts, while capping worst case at ~10s + CLI instead of ~60s. */
     SDK_ENTITY_FETCH: 10000,
 
+    /** Per-call deadline for the ORG SERVICES catalog (`getServicesForOrg`).
+     *  Deliberately far above SDK_ENTITY_FETCH: that budget is sized for the small
+     *  entity reads ("healthy fetches return in ~0.5–2.5s"), while this pulls the
+     *  org's entire entitled-services catalog (~90 rows) and was observed
+     *  exceeding 10s on a real org. Bounding it at 10s turned a slow SUCCESS into
+     *  a fast failure — worse for the user than the unbounded call it replaced.
+     *  Generous enough that a slow-but-working endpoint still lands, while still
+     *  capping a genuine hang (the picker surfaces failures with a Retry). */
+    ORG_SERVICES_FETCH: 60000,
+
     /** Initial wait before first mesh verification poll (20 seconds) */
     MESH_VERIFY_INITIAL_WAIT: 20000,
 
