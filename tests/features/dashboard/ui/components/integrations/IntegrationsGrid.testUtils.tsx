@@ -29,6 +29,21 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 }));
 
 jest.mock('@adobe/react-spectrum', () => ({
+    // Menu renders items EAGERLY (no popup): each Item becomes a button firing
+    // the parent Menu's onAction with its key, so a card-menu pick is one click.
+    MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
+    Menu: ({ children, onAction }: any) => (
+        <ul data-testid="card-menu">
+            {require('react').Children.map(children, (child: any) =>
+                child ? (
+                    <li>
+                        <button onClick={() => onAction?.(child.key)}>{child.props.children}</button>
+                    </li>
+                ) : null
+            )}
+        </ul>
+    ),
+    Item: ({ children }: any) => <>{children}</>,
     View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     Flex: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     Heading: ({ children, ...props }: any) => <h3 {...props}>{children}</h3>,
@@ -57,6 +72,11 @@ jest.mock('@adobe/react-spectrum', () => ({
         />
     ),
     DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
+}));
+
+jest.mock('@spectrum-icons/workflow/More', () => ({
+    __esModule: true,
+    default: () => <span data-testid="icon-more" />,
 }));
 
 jest.mock('@spectrum-icons/workflow/Close', () => ({

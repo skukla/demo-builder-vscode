@@ -139,16 +139,35 @@ describe('deriveMeshCard — status matrix', () => {
 });
 
 describe('deriveMeshCard — identity + propagation', () => {
-    it('fixed identity: id "mesh", isMesh, "API Mesh" name + kindLabel, GraphQL source line, never renamable', () => {
+    it('fixed identity: id "mesh", isMesh, "API Mesh" name + kindLabel, NO source line, never renamable', () => {
         const model = deriveMeshCard(display(), 'deployed', meshEntry(), false);
 
         expect(model.id).toBe('mesh');
         expect(model.isMesh).toBe(true);
         expect(model.name).toBe('API Mesh');
         expect(model.kindLabel).toBe('API Mesh');
-        expect(model.sourceLine).toBe('GraphQL bridge · Adobe I/O');
         expect(model.sourceIsAi).toBe(false);
         expect(model.canRename).toBe(false);
+    });
+
+    // The slot used to hold 'GraphQL bridge · Adobe I/O': a constant, identical on
+    // every project in every state, typeset in the mono reserved for `owner/repo`
+    // identifiers you can go look up. The mesh has no source repo, so it carries
+    // no line rather than a placeholder standing in for one.
+    it('carries NO sourceLine in any mesh status', () => {
+        for (const status of MESH_STATUSES) {
+            expect(
+                deriveMeshCard(display(), status, meshEntry(), false).sourceLine
+            ).toBeUndefined();
+        }
+    });
+
+    // No menu on the mesh: nothing about it is user-editable (no rename, no
+    // API picks of its own).
+    it('carries an EMPTY menu in any mesh status', () => {
+        for (const status of MESH_STATUSES) {
+            expect(deriveMeshCard(display(), status, meshEntry(), false).menuActions).toEqual([]);
+        }
     });
 
     it('statusLabel is ALWAYS statusDisplay.text (the live vocabulary is unchanged)', () => {

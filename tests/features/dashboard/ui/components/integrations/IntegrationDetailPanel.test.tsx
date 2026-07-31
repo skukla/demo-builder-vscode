@@ -1,15 +1,16 @@
 /**
  * IntegrationDetailPanel Tests (integrations surface)
  *
- * The detail panel content, rendered beside the grid (the grid
- * renders one `<IntegrationDetailPanel model={selected | undefined} …/>`):
+ * The detail FLYOUT's content, hosted by the Drawer primitive over the grid
+ * (the grid renders one `<IntegrationDetailPanel model={selected | undefined} …/>`;
+ * it stays mounted when closed so `.open` can drive the slide):
  *   - header: InlineRenameField only when `canRename` (commit → onRename,
- *     an error string stays visible inline), mesh "Data layer" role tag,
- *     quiet ✕ → onClose
+ *     an error string stays visible inline), quiet ✕ → onClose
  *   - body: key/value rows that render ONLY when their datum exists
- *     (Status + message, Kind, Source, URL(s), APIs, Last deploy); the
+ *     (Status + message, Kind, Destination, URL(s), APIs, Last deploy); the
  *     integration URL is a Link → onAction(model,'open'); the mesh endpoint
- *     is mono TEXT (GraphQL POST endpoint — not browsable)
+ *     is click-to-copy mono TEXT (GraphQL POST endpoint — not browsable).
+ *     There is NO Source row — it reprinted the card's own face line.
  *   - action bar: model.barActions with emphasis→variant mapping and
  *     disabled honored; deploying → a single disabled "Deploying…"
  *
@@ -77,6 +78,7 @@ function makeModel(overrides: Partial<IntegrationCardModel> = {}): IntegrationCa
             { action: 'manage-apis', label: 'Manage APIs', emphasis: 'secondary' },
             { action: 'remove', label: 'Remove', emphasis: 'danger' },
         ],
+        menuActions: ['manage-apis', 'remove'],
         canRename: true,
         ...overrides,
     };
@@ -89,7 +91,8 @@ function makeMeshModel(overrides: Partial<IntegrationCardModel> = {}): Integrati
         isMesh: true,
         name: 'API Mesh',
         kindLabel: 'API Mesh',
-        sourceLine: 'GraphQL bridge · Adobe I/O',
+        // The mesh carries no sourceLine at all (it has no owner/repo).
+        sourceLine: undefined,
         url: 'https://mesh.example.com/graphql',
         urlLabel: 'Endpoint',
         deployedUrls: undefined,
@@ -113,24 +116,26 @@ function renderPanel(model: IntegrationCardModel | undefined) {
             onRename={onRename}
         />
     );
-    const panel = view.container.querySelector('.integration-panel') as HTMLElement;
+    const panel = view.container.querySelector('.db-drawer') as HTMLElement;
     return { onClose, onAction, onRename, panel };
 }
 
 describe('IntegrationDetailPanel', () => {
-    // The panel is non-modal and page-scoped: with no selection it renders
-    // NOTHING at all, rather than staying mounted-but-hidden the way the
-    // superseded viewport drawer did (it needed a mounted node to slide).
-    it('renders nothing without a model', () => {
+    // The flyout stays MOUNTED when closed — `.open` drives the slide, which
+    // needs a node already in the tree to animate from.
+    it('stays mounted but closed without a model', () => {
         const { panel } = renderPanel(undefined);
 
-        expect(panel).toBeNull();
+        expect(panel).toBeInTheDocument();
+        expect(panel).not.toHaveClass('open');
+        expect(panel).toHaveAttribute('aria-hidden', 'true');
+        expect(panel.querySelector('.integration-panel-row')).toBeNull();
     });
 
-    it('renders with the model name in the header', () => {
+    it('opens with the model name in the header', () => {
         const { panel } = renderPanel(makeModel());
 
-        expect(panel).toBeInTheDocument();
+        expect(panel).toHaveClass('open');
         expect(panel).toHaveAttribute('aria-label', 'Custom App details');
         expect(screen.getByText('Custom App')).toBeInTheDocument();
     });
@@ -191,22 +196,16 @@ describe('IntegrationDetailPanel', () => {
             expect(screen.getByText('Deploy step 3 of 5')).toBeInTheDocument();
         });
 
-        it('renders Kind and Source (mono when not AI)', () => {
+        it('renders Kind', () => {
             renderPanel(makeModel());
 
+            expect(screen.getByText('Kind')).toBeInTheDocument();
             expect(screen.getByText('Imported repo')).toBeInTheDocument();
-            expect(screen.getByText('acme/custom-app')).toHaveClass(
-                'integration-panel-row-value--mono'
-            );
         });
 
-        it('drops the mono modifier for the AI source caption', () => {
-            renderPanel(makeModel({ sourceLine: 'Built with AI', sourceIsAi: true }));
-
-            expect(screen.getByText('Built with AI')).not.toHaveClass(
-                'integration-panel-row-value--mono'
-            );
-        });
+        // The Source row's mono-modifier pin retired with the row itself; the
+        // modifier is still exercised by Destination and the deployed-URL rows
+        // below. See "rows that would only restate".
 
         it('renders the integration URL as a link firing onAction(open)', () => {
             const model = makeModel();
@@ -219,11 +218,13 @@ describe('IntegrationDetailPanel', () => {
             expect(onAction).toHaveBeenCalledWith(model, 'open');
         });
 
-        it('renders each deployed URL row', () => {
+        it('renders each deployed URL row (mono)', () => {
             renderPanel(makeModel());
 
             expect(screen.getByText('Frontend')).toBeInTheDocument();
-            expect(screen.getByText('https://example.com/front')).toBeInTheDocument();
+            expect(screen.getByText('https://example.com/front')).toHaveClass(
+                'integration-panel-row-value--mono'
+            );
         });
 
         it('renders APIs ONE PER LINE and the Last deploy row', () => {
@@ -320,22 +321,81 @@ describe('IntegrationDetailPanel', () => {
         });
     });
 
+    describe('rows that would only restate', () => {
+        // `sourceLine` is the CARD's face line, and the card sits scrimmed behind
+        // this flyout the whole time it is open — so the row printed it twice and
+        // carried nothing of its own. Universal, not per-variant: there is no
+        // model shape that brings it back.
+        it.each([
+            ['imported', makeModel({ sourceLine: 'acme/custom-app' })],
+            ['pre-built', makeModel({ kindLabel: 'Pre-built', sourceLine: 'acme/erp-sync' })],
+            [
+                'AI-built',
+                makeModel({
+                    kindLabel: 'Custom · built with AI',
+                    sourceLine: 'Built with AI',
+                    sourceIsAi: true,
+                }),
+            ],
+            ['mesh', makeMeshModel()],
+        ])('never renders Source (%s)', (_label, model) => {
+            renderPanel(model);
+
+            expect(screen.queryByText('Source')).not.toBeInTheDocument();
+            // The mesh has no sourceLine at all, so there is nothing to look for.
+            if (model.sourceLine) {
+                expect(screen.queryByText(model.sourceLine)).not.toBeInTheDocument();
+            }
+        });
+
+        it('KEEPS Kind for catalog vs imported — it is now the ONLY thing telling them apart', () => {
+            // With Source gone, a pre-built entry and an imported repo differ by
+            // this row alone. Cutting Kind too would make them identical.
+            renderPanel(makeModel({ kindLabel: 'Pre-built' }));
+
+            expect(screen.getByText('Kind')).toBeInTheDocument();
+            expect(screen.getByText('Pre-built')).toBeInTheDocument();
+        });
+
+        // Status restates the card too but is deliberately KEPT: `model.message`
+        // (live deploy progress / failure detail) exists nowhere else, and the
+        // action bar's verbs read as arbitrary without it.
+        it('keeps Status, whose message has no other home', () => {
+            renderPanel(makeModel({ status: 'error', statusLabel: 'Failed', message: 'exit 1' }));
+
+            expect(screen.getByText('Status')).toBeInTheDocument();
+            expect(screen.getByText('exit 1')).toBeInTheDocument();
+        });
+    });
+
     describe('mesh asymmetry', () => {
-        it('shows the Data layer role tag, no rename field, no Manage APIs/Remove', () => {
+        it('omits Kind — it would read "API Mesh" under a title reading "API Mesh"', () => {
             renderPanel(makeMeshModel());
 
-            expect(screen.getByText('Data layer')).toBeInTheDocument();
+            expect(screen.queryByText('Kind')).not.toBeInTheDocument();
+        });
+
+        it('shows no role tag, no rename field, no Manage APIs/Remove', () => {
+            renderPanel(makeMeshModel());
+
+            // The "Data layer" tag was jargon carrying no actionable information —
+            // removed rather than restyled.
+            expect(screen.queryByText('Data layer')).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /rename/i })).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: 'Manage APIs' })).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
         });
 
-        it('renders the mesh endpoint as mono TEXT, never a link', () => {
+        it('renders the mesh endpoint as CLICK-TO-COPY, never a navigable link', () => {
             renderPanel(makeMeshModel());
 
             expect(screen.getByText('Endpoint')).toBeInTheDocument();
-            const value = screen.getByText('https://mesh.example.com/graphql');
-            expect(value).toHaveClass('integration-panel-row-value--mono');
+            // A GraphQL endpoint answers POSTs, so it must never navigate — but it
+            // IS the value a user needs to get out, hence copy-on-click.
+            const value = screen.getByText('https://mesh.example.com/graphql', {
+                selector: '.copyable-text',
+            });
+            expect(value).toHaveAttribute('role', 'button');
             expect(screen.queryByRole('link')).not.toBeInTheDocument();
         });
     });

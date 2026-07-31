@@ -2,8 +2,9 @@
  * IntegrationCard — one calm grid card (integrations grid, Step 4).
  *
  * Pure presentation over an {@link IntegrationCardModel}: name, status dot
- * (+ pulse while deploying) with label, one source line, and AT MOST ONE
- * face affordance from `model.faceAction`. The card is dumb:
+ * (+ pulse while deploying) with label, a source line WHEN THERE IS ONE (the
+ * mesh has no owner/repo and carries none), and AT MOST ONE face affordance
+ * from `model.faceAction`. The card is dumb:
  *   - card click / Enter / Space → `onOpen(model.id)` (the ProjectCard
  *     div-card keyboard precedent)
  *   - every face affordance → `onAction(model, kind)` — including the
@@ -11,19 +12,24 @@
  *     `openLiveSite`), wrapped in a stop-propagation containment span
  *     (InlineRenameField precedent) so a face press never opens the drawer
  *
- * The mesh peer card differs ONLY by the `.integration-card--mesh` accent
- * class — the model asymmetry lives in integrationCardModel.ts.
+ * The mesh peer card is visually IDENTICAL to an integration card — it is a
+ * peer, identified by its name rather than chrome. Its behavioural asymmetry
+ * (routing, actions, no rename) lives in integrationCardModel.ts.
  *
  * @module features/dashboard/ui/components/integrations/IntegrationCard
  */
 
-import { Button, Link } from '@adobe/react-spectrum';
+import { ActionButton, Button, Item, Link, Menu, MenuTrigger } from '@adobe/react-spectrum';
+import More from '@spectrum-icons/workflow/More';
 import React, { useCallback } from 'react';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
+import { InlineRenameField } from '@/core/ui/components/forms';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { cn } from '@/core/ui/utils/classNames';
 
 export interface IntegrationCardProps {
+    /** Rename commit (renamable cards only): null on success, else an error string. */
+    onRename: (id: string, name: string) => Promise<string | null>;
     /** The derived card model (integrationCardModel.ts — never raw entries). */
     model: IntegrationCardModel;
     /** Card body press → open this card's detail drawer. */
@@ -40,9 +46,51 @@ const FACE_LABELS: Record<string, string> = {
     'sign-in': 'Sign in',
 };
 
+/** Kebab-menu labels, keyed by the same CardAction the grid dispatches. */
+const MENU_LABELS: Partial<Record<CardAction, string>> = {
+    'manage-apis': 'Manage APIs',
+    remove: 'Remove',
+};
+
+/**
+ * The card's overflow menu — the house pattern from ProjectActionsMenu, which
+ * the project card uses for exactly this job.
+ *
+ * It exists because editing an integration had no trigger on the grid at all —
+ * API access was reachable only by opening the detail flyout first. Rename is
+ * deliberately NOT in here: it is the name's own inline pencil, exactly as on
+ * ProjectCard.
+ */
+function CardMenu({
+    model,
+    onAction,
+}: Pick<IntegrationCardProps, 'model' | 'onAction'>): React.ReactElement | null {
+    if (model.menuActions.length === 0) return null;
+    return (
+        <MenuTrigger>
+            <ActionButton
+                isQuiet
+                aria-label={`More actions for ${model.name}`}
+                UNSAFE_className="integration-card-menu-button"
+            >
+                <More size="S" />
+            </ActionButton>
+            <Menu onAction={(key) => onAction(model, key as CardAction)}>
+                {model.menuActions.map((action) => (
+                    <Item key={action} textValue={MENU_LABELS[action] ?? action}>
+                        {MENU_LABELS[action] ?? action}
+                    </Item>
+                ))}
+            </Menu>
+        </MenuTrigger>
+    );
+}
+
 /** The card face's at-most-one affordance (attention Button or Open↗ Link). */
-function FaceAffordance({ model, onAction }: Pick<IntegrationCardProps, 'model' | 'onAction'>):
-    React.ReactElement | null {
+function FaceAffordance({
+    model,
+    onAction,
+}: Pick<IntegrationCardProps, 'model' | 'onAction'>): React.ReactElement | null {
     const face = model.faceAction;
     if (!face) return null;
     if (face.kind === 'open') {
@@ -64,7 +112,12 @@ function FaceAffordance({ model, onAction }: Pick<IntegrationCardProps, 'model' 
 }
 
 /** One integration (or mesh) card in the dashboard grid. */
-export function IntegrationCard({ model, onOpen, onAction }: IntegrationCardProps): React.ReactElement {
+export function IntegrationCard({
+    model,
+    onOpen,
+    onAction,
+    onRename,
+}: IntegrationCardProps): React.ReactElement {
     const handleClick = useCallback((): void => onOpen(model.id), [model.id, onOpen]);
 
     const handleKeyDown = useCallback(
@@ -89,14 +142,36 @@ export function IntegrationCard({ model, onOpen, onAction }: IntegrationCardProp
             role="button"
             tabIndex={0}
             aria-label={`${model.name}, ${model.statusLabel}`}
-            className={cn('integration-card', model.isMesh && 'integration-card--mesh')}
+            className="integration-card"
             onClick={handleClick}
             onKeyDown={handleKeyDown}
         >
-            <div className="integration-card-name">{model.name}</div>
+            <div className="integration-card-head">
+                {/* Rename in place, the ProjectCard treatment. The pencil reveals on
+                    card hover; the name text stays click-transparent so a click still
+                    opens the flyout (InlineRenameField contains only the pencil). */}
+                {model.canRename ? (
+                    <InlineRenameField
+                        name={model.name}
+                        onRename={(newName) => onRename(model.id, newName)}
+                        textClassName="integration-card-name"
+                    />
+                ) : (
+                    <div className="integration-card-name">{model.name}</div>
+                )}
+                {/* Containment, same as the face affordance: opening the menu or
+                    picking an item must not also open the detail flyout. */}
+                {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- containment only; interaction lives on the child MenuTrigger */}
+                <span onClick={stopPropagation} onKeyDown={stopPropagation}>
+                    <CardMenu model={model} onAction={onAction} />
+                </span>
+            </div>
             <div className="integration-card-statusline">
+                {/* size 6 matches the project card's status dot — the 8px default
+                    sat heavier beside the same 11px uppercase label. */}
                 <StatusDot
                     variant={model.dotVariant}
+                    size={6}
                     className={
                         model.status === 'deploying' ? 'integration-dot--deploying' : undefined
                     }
@@ -110,9 +185,18 @@ export function IntegrationCard({ model, onOpen, onAction }: IntegrationCardProp
                     {model.statusLabel}
                 </span>
             </div>
-            <div className={cn('integration-card-src', model.sourceIsAi && 'integration-card-src--ai')}>
-                {model.sourceLine}
-            </div>
+            {/* No source line, no element — an empty div still claims a flex gap.
+                The mesh has no owner/repo and carries none. */}
+            {model.sourceLine && (
+                <div
+                    className={cn(
+                        'integration-card-src',
+                        model.sourceIsAi && 'integration-card-src--ai',
+                    )}
+                >
+                    {model.sourceLine}
+                </div>
+            )}
             <div className="integration-card-foot">
                 {model.faceAction && (
                     // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- containment only; interaction lives on the child Button/Link

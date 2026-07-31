@@ -133,8 +133,16 @@ export function InlineRenameField({
             <span className="inline-rename">
                 <span className={cn('inline-rename-text', textClassName)}>{name}</span>
                 {!disabled && (
+                    // The SLOT, not the button, is what collapses while hidden —
+                    // clipping a Spectrum ActionButton's own box would mean
+                    // re-declaring its padding to restore it. See the
+                    // `.inline-rename-pencil-slot` rules.
                     // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- containment only; interaction lives on the child ActionButton
-                    <span onClick={stopPropagation} onKeyDown={stopPropagation}>
+                    <span
+                        className="inline-rename-pencil-slot"
+                        onClick={stopPropagation}
+                        onKeyDown={stopPropagation}
+                    >
                         <ActionButton
                             isQuiet
                             aria-label={`Rename ${name}`}

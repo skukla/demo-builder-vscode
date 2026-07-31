@@ -390,4 +390,23 @@ describe('deriveIntegrationCard — url + lastDeployed derivation', () => {
         const model = deriveIntegrationCard(integration({ lastDeployed: 'not-a-date' }));
         expect(model.lastDeployed).toBeUndefined();
     });
+    // The card menu, which is what makes API access reachable from the grid
+    // without opening the flyout first. Rename is NOT here — it is the name's
+    // own inline pencil, matching ProjectCard.
+    describe('menuActions', () => {
+        it.each(['not-deployed', 'deployed', 'stale', 'error'] as const)(
+            'offers Manage APIs + Remove on %s',
+            (status) => {
+                const model = deriveIntegrationCard(integration({ status }));
+                expect(model.menuActions).toEqual(['manage-apis', 'remove']);
+            }
+        );
+
+        // Both would race the runner: an API change mid-deploy fights the
+        // subscribe, and a remove would delete files out from under it.
+        it('offers NOTHING while deploying', () => {
+            const model = deriveIntegrationCard(integration({ status: 'deploying' }));
+            expect(model.menuActions).toEqual([]);
+        });
+    });
 });

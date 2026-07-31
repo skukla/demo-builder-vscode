@@ -1,12 +1,13 @@
 /**
  * IntegrationCard Tests (integrations grid — Step 4)
  *
- * The grid's calm card face: name, status dot + label, one source line, and
- * AT MOST ONE affordance from `model.faceAction`. The card is dumb — clicks
- * open the drawer via `onOpen(id)`, and every face affordance (attention
- * verbs AND the deployed Open↗ link) routes through `onAction(model, kind)`
- * WITHOUT triggering `onOpen` (stop-propagation containment span, the
- * InlineRenameField precedent).
+ * The grid's calm card face: name, status dot + label, a source line when the
+ * card has one, AT MOST ONE affordance from `model.faceAction`, and the
+ * overflow menu carrying `model.menuActions`. The card is dumb — clicks open
+ * the drawer via `onOpen(id)`, and every affordance (attention verbs, the
+ * deployed Open↗ link, and each menu item) routes through
+ * `onAction(model, kind)` WITHOUT triggering `onOpen` (stop-propagation
+ * containment span, the InlineRenameField precedent).
  *
  * Strict TDD: written BEFORE the component exists.
  */
@@ -17,17 +18,44 @@ import { IntegrationCard } from '@/features/dashboard/ui/components/integrations
 import type { IntegrationCardModel } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
 import '@testing-library/jest-dom';
 
+// The Menu mock renders items EAGERLY (no popup) — the directory convention;
+// each Item becomes a button firing the parent Menu's onAction with its key.
 jest.mock('@adobe/react-spectrum', () => ({
-    Button: ({ children, onPress, isDisabled, variant, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} data-variant={variant} {...props}>
-            {children}
-        </button>
-    ),
-    Link: ({ children, onPress, isQuiet, ...props }: any) => (
-        <span role="link" tabIndex={0} data-quiet={isQuiet} onClick={onPress} {...props}>
-            {children}
-        </span>
-    ),
+        ActionButton: ({ children, onPress, isQuiet: _q, UNSAFE_className, ...props }: any) => (
+            <button onClick={onPress} className={UNSAFE_className} {...props}>
+                {children}
+            </button>
+        ),
+        Button: ({ children, onPress, isDisabled, variant, ...props }: any) => (
+            <button onClick={onPress} disabled={isDisabled} data-variant={variant} {...props}>
+                {children}
+            </button>
+        ),
+        Link: ({ children, onPress, isQuiet, ...props }: any) => (
+            <span role="link" tabIndex={0} data-quiet={isQuiet} onClick={onPress} {...props}>
+                {children}
+            </span>
+        ),
+        MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
+        Menu: ({ children, onAction }: any) => (
+            <ul data-testid="card-menu">
+                {require('react').Children.map(children, (child: any) =>
+                    child ? (
+                        <li>
+                            <button onClick={() => onAction?.(child.key)}>
+                                {child.props.children}
+                            </button>
+                        </li>
+                    ) : null
+                )}
+            </ul>
+        ),
+        Item: ({ children }: any) => <>{children}</>,
+}));
+
+jest.mock('@spectrum-icons/workflow/More', () => ({
+    __esModule: true,
+    default: () => <span data-testid="icon-more" />,
 }));
 
 jest.mock('@/core/ui/components/ui/StatusDot', () => ({
@@ -52,6 +80,7 @@ function makeModel(overrides: Partial<IntegrationCardModel> = {}): IntegrationCa
         urlLabel: 'App URL',
         faceAction: { kind: 'open', url: 'https://example.com/app' },
         barActions: [],
+        menuActions: ['manage-apis', 'remove'],
         canRename: true,
         ...overrides,
     };
@@ -153,16 +182,12 @@ describe('IntegrationCard', () => {
         expect(screen.getByTestId('status-dot')).not.toHaveClass('integration-dot--deploying');
     });
 
-    it('marks the mesh card with the accent modifier', () => {
-        const { card } = renderCard(makeModel({ id: 'mesh', isMesh: true, name: 'API Mesh' }));
+    it('renders the mesh card with the SAME chrome as an integration card', () => {
+        // The mesh is a peer, identified by its name — not by an accent border.
+        // Its asymmetry is behavioural (routing, actions, no rename), not visual.
+        const { card: mesh } = renderCard(makeModel({ id: 'mesh', isMesh: true, name: 'API Mesh' }));
 
-        expect(card).toHaveClass('integration-card--mesh');
-    });
-
-    it('omits the mesh modifier on integration cards', () => {
-        const { card } = renderCard(makeModel());
-
-        expect(card).not.toHaveClass('integration-card--mesh');
+        expect(mesh.className).toBe('integration-card');
     });
 
     it('renders the AI source caption with the --ai modifier', () => {
@@ -182,5 +207,33 @@ describe('IntegrationCard', () => {
         );
 
         expect(screen.getByText('Deploy failed')).toHaveClass('integration-card-status--error');
+    });
+    // The card had NO trigger for editing at all: both mutable things (display
+    // name, API access) were reachable only by opening the detail flyout first.
+    describe('overflow menu', () => {
+        it('renders the menu items from model.menuActions', () => {
+            renderCard(makeModel());
+
+            expect(screen.getByRole('button', { name: 'Manage APIs' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument();
+        });
+
+        it('routes a menu pick through onAction WITHOUT opening the drawer', () => {
+            const { onAction, onOpen } = renderCard(makeModel());
+
+            fireEvent.click(screen.getByRole('button', { name: 'Manage APIs' }));
+
+            expect(onAction).toHaveBeenCalledWith(
+                expect.objectContaining({ id: 'erp-sync' }),
+                'manage-apis'
+            );
+            expect(onOpen).not.toHaveBeenCalled();
+        });
+
+        it('renders NO menu when menuActions is empty (the mesh, and mid-deploy)', () => {
+            renderCard(makeModel({ menuActions: [] }));
+
+            expect(screen.queryByTestId('card-menu')).not.toBeInTheDocument();
+        });
     });
 });

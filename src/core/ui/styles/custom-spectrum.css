@@ -2334,9 +2334,15 @@ button[class*="spectrum-Button"][disabled],
     outline-offset: 2px !important;
 }
 
-/* Prevent internal Spectrum elements from showing their own hover states */
-.dashboard-action-button:hover *,
-.dashboard-action-button:focus * {
+/* Prevent internal Spectrum elements from showing their own hover states.
+ *
+ * Exempts status indicators: this suppresses Spectrum's own hover fills, but it
+ * matched EVERY descendant, and an indicator whose colour IS its background got
+ * blanked to transparent — so the integrations dot vanished on the one gesture a
+ * user makes right before clicking through to check on it. Any future dot needs
+ * the same exemption, hence the shared `.tile-status-dot` marker. */
+.dashboard-action-button:hover *:not(.tile-status-dot),
+.dashboard-action-button:focus *:not(.tile-status-dot) {
     background: transparent !important;
     background-color: transparent !important;
 }
@@ -5050,10 +5056,12 @@ div[class*="spectrum"] input[type="search"] {
  * the caller's typography (font: inherit) so it sizes to its context, and the
  * pencil reveals on hover/focus of the wrapper.
  * ------------------------------------------------------------------------ */
+/* No `gap` here: spacing to the pencil is the SLOT's margin, so it collapses
+ * with the slot. A gap would survive the collapse and leave 6px of hoverable
+ * dead space past the name. */
 .inline-rename {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
     min-width: 0;
     max-width: 100%;
 }
@@ -5063,14 +5071,40 @@ div[class*="spectrum"] input[type="search"] {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+/* The hidden pencil takes ZERO width, so the wrapper shrink-wraps to the name
+ * itself and the hover target IS the text.
+ *
+ * `opacity: 0` alone left the button's ~32px box in flow: the wrapper stayed
+ * wider than the name, and hovering that blank strip to its right revealed the
+ * pencil — the affordance appeared to belong to empty space. Collapsing the
+ * slot removes the strip rather than trying to make it non-reactive.
+ *
+ * Revealing on the WRAPPER (not on `.inline-rename-text:hover`) is what makes
+ * the pencil reachable: once expanded it lies inside the grown wrapper, so
+ * travelling from the name to the button never crosses a non-hovered gap that
+ * would collapse it mid-journey. */
+.inline-rename-pencil-slot {
+    display: inline-flex;
+    align-items: center;
+    max-width: 0;
+    margin-left: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+        opacity 120ms ease,
+        max-width 120ms ease,
+        margin-left 120ms ease;
+}
+.inline-rename:hover .inline-rename-pencil-slot,
+.inline-rename:focus-within .inline-rename-pencil-slot {
+    max-width: 44px;
+    margin-left: 6px;
+    opacity: 1;
+    pointer-events: auto;
+}
 .inline-rename .inline-rename-pencil {
     flex: 0 0 auto;
-    opacity: 0;
-    transition: opacity 120ms ease;
-}
-.inline-rename:hover .inline-rename-pencil,
-.inline-rename:focus-within .inline-rename-pencil {
-    opacity: 1;
 }
 .inline-rename-input {
     box-sizing: border-box;
@@ -5118,16 +5152,6 @@ div[class*="spectrum"] input[type="search"] {
     margin-bottom: var(--spectrum-global-dimension-size-200);
 }
 
-/* Master/detail: grid flexes, panel takes a fixed column beside it. */
-.integrations-split {
-    display: flex;
-    gap: 18px;
-    align-items: flex-start;
-}
-.integrations-split > .integrations-grid {
-    flex: 1 1 auto;
-    min-width: 0;
-}
 /* Heading · count pill · Add button on one baseline; the Add button trails. */
 .integrations-header {
     display: flex;
@@ -5166,8 +5190,12 @@ div[class*="spectrum"] input[type="search"] {
     padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    min-height: 128px;
+    /* Matched to .project-card-spectrum so both card families read the same:
+       same gap, height floor and width floor. The mesh no longer carries an
+       accent border — it is a peer card, identified by its name, not chrome. */
+    gap: 8px;
+    min-height: 100px;
+    min-width: 200px;
     cursor: pointer;
     transition: all 0.3s ease;
 }
@@ -5183,9 +5211,31 @@ div[class*="spectrum"] input[type="search"] {
     outline: 2px solid var(--spectrum-global-color-blue-400);
     outline-offset: 2px;
 }
-/* The mesh peer card: accent left border, everything else identical. */
-.integration-card--mesh {
-    border-left: 3px solid var(--spectrum-global-color-blue-400);
+/* Name on the left, overflow menu pinned right. The name must be free to
+   ellipsize without shoving the kebab off the card. */
+.integration-card-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.integration-card-head > .integration-card-name {
+    flex: 1 1 auto;
+}
+.integration-card-head > span {
+    flex: 0 0 auto;
+    margin-right: -6px;
+}
+/* Revealed on card hover/focus like the rename pencil — a kebab on every card
+   at rest turns a calm grid into a row of controls. Always available to
+   keyboards via :focus-within. */
+.integration-card-menu-button {
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+.integration-card:hover .integration-card-menu-button,
+.integration-card:focus-within .integration-card-menu-button {
+    opacity: 1;
 }
 .integration-card-name {
     font-size: 15px;
@@ -5202,18 +5252,31 @@ div[class*="spectrum"] input[type="search"] {
     gap: 6px;
     min-width: 0;
 }
+/* The house status treatment, identical to `.project-card-spectrum-status`:
+ * 11px uppercase with letter-spacing, NOT 12px sentence case. Both cards pair
+ * it with a 6px StatusDot, so the two grids read as one family. */
 .integration-card-status {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--spectrum-global-color-gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 .integration-card-status--error {
     color: var(--spectrum-global-color-red-600);
 }
-/* One mono source line (owner/repo); the AI caption reads italic sans. */
+/* The secondary line, matching `.project-card-spectrum-components` on tone and
+ * rhythm (12px, gray-600, 1.4) — it was a step lighter at gray-500, which read
+ * as disabled beside a project card.
+ *
+ * It KEEPS the mono family: this line is an `owner/repo` identifier, not prose,
+ * and the AI caption below deliberately opts back out to italic sans. That is a
+ * meaning-carrying difference from the project card's plain-language stack
+ * summary, not a styling drift. */
 .integration-card-src {
     font-size: 12px;
     font-family: var(--spectrum-font-family-code, monospace);
-    color: var(--spectrum-global-color-gray-500);
+    color: var(--spectrum-global-color-gray-600);
+    line-height: 1.4;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -5270,27 +5333,85 @@ div[class*="spectrum"] input[type="search"] {
     outline-offset: 2px;
 }
 
-/* ---- Detail panel (master/detail, page-scoped) ----
- * Replaced the viewport-fixed drawer: no scrim, no slide, no always-mounted
- * hidden node. It sits BESIDE the grid and sticks while the grid scrolls, so it
- * never covers what you just navigated to. */
-.integration-panel {
-    flex: 0 0 352px;
-    max-width: 352px;
-    position: sticky;
-    top: 18px;
+/* ---- Detail FLYOUT (over the grid) ----
+ * Restored from the pre-master/detail build: this surface IS the integrations
+ * grid, so an overlay covers only its own page. The scrim + slide live on the
+ * Drawer primitive's classes; everything below styles the CONTENT, which is
+ * host-independent and survived the host swap unchanged. */
+/* Scrim + panel stay mounted; `.open` drives the slide. */
+.db-drawer-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.42);
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+        opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0.22s;
+}
+.db-drawer-scrim.open {
+    opacity: 1;
+    visibility: visible;
+}
+.db-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 392px;
+    max-width: 92vw;
+    /* Surface matches the panel treatment this flyout inherited its content from
+       (gray-75 over gray-200 dividers) — the restored shell used gray-50/gray-300,
+       which disagreed with the `.integration-panel-row` dividers INSIDE it. */
     background: var(--spectrum-global-color-gray-75);
-    border: 1px solid var(--spectrum-global-color-gray-200);
-    border-radius: 8px;
-    padding: 16px 18px;
+    border-left: 1px solid var(--spectrum-global-color-gray-200);
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
+    z-index: 101;
+    transform: translateX(100%);
+    visibility: hidden;
+    transition:
+        transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0.22s;
     display: flex;
     flex-direction: column;
+    outline: none;
 }
-.integration-panel-head {
+.db-drawer.open {
+    transform: translateX(0);
+    visibility: visible;
+}
+@media (prefers-reduced-motion: reduce) {
+    .db-drawer,
+    .db-drawer-scrim {
+        transition: none;
+    }
+    .integration-dot--deploying {
+        animation: none;
+    }
+}
+/* The flyout's sections: fixed head, scrolling body, fixed action bar. */
+.db-drawer-head {
     display: flex;
     align-items: center;
     gap: 9px;
-    margin-bottom: 12px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
+}
+.db-drawer-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.db-drawer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    padding: 13px 18px 16px;
+    border-top: 1px solid var(--spectrum-global-color-gray-200);
 }
 .integration-panel-title {
     font-size: 15px;
@@ -5301,17 +5422,16 @@ div[class*="spectrum"] input[type="search"] {
     font-size: 11px;
     color: var(--spectrum-global-color-blue-600);
 }
-.integration-panel-head > *:last-child {
+.db-drawer-head > *:last-child {
     margin-left: auto;
 }
-.integration-panel-body {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
+/* Labels center against the FULL height of their value, not its first baseline.
+ * Baseline alignment pinned the label to line 1, so once values grew to several
+ * lines (the wrapped endpoint, one-API-per-line) the label hung at the top of a
+ * tall row and read as misaligned. */
 .integration-panel-row {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 12px;
     font-size: 13px;
     padding: 5px 0;
@@ -5339,20 +5459,32 @@ div[class*="spectrum"] input[type="search"] {
 .integration-panel-api {
     display: block;
 }
+
+/* Copyable values inside the flyout must WRAP.
+ * `.copyable-text` is nowrap by design — it is a core component sized for short
+ * inline snippets. A mesh endpoint runs ~70 chars, so in this 352px panel nowrap
+ * pushed the ⧉ affordance clean off the edge: the value looked hoverable but gave
+ * no visible sign it could be copied. Scoped here so the core component's other
+ * consumers keep their single-line treatment. */
+.integration-panel-row-value .copyable-text {
+    display: inline-block;
+    max-width: 100%;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+}
+/* Never let the affordance be the thing that wraps away from its value. */
+.integration-panel-row-value .copyable-icon,
+.integration-panel-row-value .copyable-icon-copied {
+    white-space: nowrap;
+}
+
 /* Live deploy progress / failure detail under the Status row's label. */
 .integration-panel-status-message {
     display: block;
     margin-top: 2px;
     font-size: 12px;
     color: var(--spectrum-global-color-gray-600);
-}
-.integration-panel-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 7px;
-    margin-top: 14px;
-    padding-top: 13px;
-    border-top: 1px solid var(--spectrum-global-color-gray-200);
 }
 /* Remove trails the row (the prototype separates it from the safe actions). */
 .integration-panel-danger {
@@ -5393,12 +5525,4 @@ div[class*="spectrum"] input[type="search"] {
     background: var(--spectrum-global-color-gray-500);
 }
 /* Count rides the bottom-right, out of the label's way. */
-.integrations-tile-count {
-    position: absolute;
-    bottom: 6px;
-    right: 8px;
-    font-size: 10.5px;
-    line-height: 1;
-    color: var(--spectrum-global-color-gray-600);
-}
 } /* End of second @layer theme block */

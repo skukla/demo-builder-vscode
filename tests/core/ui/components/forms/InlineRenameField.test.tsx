@@ -72,6 +72,17 @@ describe('InlineRenameField', () => {
             expect(screen.getByText('My Project')).toBeInTheDocument();
             expect(screen.queryByRole('button')).not.toBeInTheDocument();
         });
+
+        // The pencil sits in a COLLAPSING slot so the hidden button's ~32px box
+        // stops widening the wrapper past the name. Without it the wrapper spans
+        // name + gap + button, and hovering that blank strip to the right of the
+        // name pops the pencil — an affordance apparently owned by empty space.
+        // jsdom applies no stylesheet, so the reveal itself can only be checked
+        // in the Dev Host; this pins the hook the CSS collapses.
+        it('wraps the pencil in the collapsing slot the hover rules target', () => {
+            renderField();
+            expect(pencil().closest('.inline-rename-pencil-slot')).not.toBeNull();
+        });
     });
 
     describe('entering edit mode', () => {

@@ -88,6 +88,16 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand {
                 projectTitle: project?.adobe?.projectTitle,
                 workspaceTitle: project?.adobe?.workspaceTitle,
             },
+            // The committed destination IDS (not titles). The add flow's stage
+            // machine reads these as booleans — projectCommitted /
+            // workspaceCommitted — to collapse the destination stages to the
+            // informational summary on a live project.
+            adobeProjectId: project?.adobe?.projectId,
+            adobeWorkspaceId: project?.adobe?.workspace,
+            // isAdobeSignedIn() reads adobeAuth + adobeOrg, NOT the project id —
+            // without the org the add flow walks the sign-in/project/workspace
+            // stages instead of collapsing to the summary.
+            adobeOrgId: project?.adobe?.organization,
         };
     }
 

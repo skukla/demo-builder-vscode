@@ -1,19 +1,21 @@
 /**
- * IntegrationDetailPanel — the master/detail panel beside the grid.
+ * IntegrationDetailPanel — the detail FLYOUT over the grid.
  *
- * Supersedes the viewport-fixed `Drawer` host (integrations-surface plan,
- * decision 1). On the dedicated full-width surface a page-scoped sticky panel
- * never covers the grid you just navigated to, and it holds its place while the
- * grid scrolls — a modal drawer had to cover the whole webview to show one card.
+ * Hosted by the {@link Drawer} primitive: a viewport-fixed right panel with a
+ * scrim, Esc-to-close, and a focus trap. That is the original grid prototype's
+ * treatment, and it is right HERE because this surface is nothing but the
+ * integrations grid — the flyout covers only its own page.
  *
- * The CONTENT is unchanged from the drawer it replaces: key/value rows that
- * render only when their datum exists, the emphasis→variant action bar, and
- * rename-in-place when `model.canRename`. Only the host changed, so the model
- * and its matrices are untouched.
+ * (It briefly shipped as a sticky page-scoped panel beside the grid. That was
+ * the correct call while the grid lived in a dashboard SUBSECTION, where a
+ * viewport drawer covered the whole webview to show one card; it stopped being
+ * the right call once the grid owned the surface. See decision 1 in
+ * `.rptc/plans/integrations-surface/overview.md`.)
  *
- * Non-modal by design: no scrim, no focus trap, no Esc-to-close. It sits in the
- * page beside the grid rather than over it, so those modal affordances would be
- * wrong here (that is why the Drawer primitive was deleted rather than kept).
+ * The CONTENT is host-independent — key/value rows that render only when their
+ * datum exists, the emphasis→variant action bar, rename-in-place when
+ * `model.canRename` — which is exactly why swapping the host back cost nothing
+ * and the model and its matrices stayed untouched.
  *
  * Asymmetries arrive pre-decided on the model: the mesh endpoint renders as mono
  * TEXT (a GraphQL POST endpoint is not browsable) while an integration URL is a
@@ -25,15 +27,17 @@
 import { ActionButton, Button, Link } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
 import React from 'react';
+import { Drawer } from './Drawer';
 import type { BarAction, CardAction, IntegrationCardModel } from './integrationCardModel';
 import { InlineRenameField } from '@/core/ui/components/forms';
+import { CopyableText } from '@/core/ui/components/ui/CopyableText';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { cn } from '@/core/ui/utils/classNames';
 
 export interface IntegrationDetailPanelProps {
     /** The selected card's model, or undefined while no card is selected. */
     model: IntegrationCardModel | undefined;
-    /** ✕ → the grid clears its selection. */
+    /** ✕ / scrim / Esc → the grid clears its selection. */
     onClose: () => void;
     /** Bar buttons and the URL link → the grid's single handleAction switch. */
     onAction: (model: IntegrationCardModel, action: CardAction) => void;
@@ -85,9 +89,20 @@ function PanelContent({
 }: IntegrationDetailPanelProps & { model: IntegrationCardModel }): React.ReactElement {
     const showBar = model.status === 'deploying' || model.barActions.length > 0;
 
+    // Kind is cut when it repeats the TITLE (the mesh: "API Mesh" under "API Mesh").
+    //
+    // There is no Source row. `model.sourceLine` is what the CARD renders on its
+    // face, and the card is on screen — scrimmed — the whole time this flyout is
+    // open, so the row was a verbatim second printing that carried no payload of
+    // its own. (Status restates the card too, but earns it: `model.message` — live
+    // deploy progress and failure detail — exists nowhere else, and the action bar
+    // reads as arbitrary without it.) An earlier pass compared rows only against
+    // EACH OTHER, which is how a card-duplicating row survived being audited.
+    const showKind = model.kindLabel !== model.name;
+
     return (
         <>
-            <div className="integration-panel-head">
+            <div className="db-drawer-head">
                 <div className="integration-panel-title">
                     {model.canRename ? (
                         <InlineRenameField
@@ -98,23 +113,19 @@ function PanelContent({
                         <span>{model.name}</span>
                     )}
                 </div>
-                {model.isMesh && <span className="integration-panel-role">Data layer</span>}
                 <ActionButton isQuiet aria-label="Close details" onPress={onClose}>
                     <Close size="S" />
                 </ActionButton>
             </div>
 
-            <div className="integration-panel-body">
+            <div className="db-drawer-body">
                 <PanelRow label="Status">
                     <StatusDot variant={model.dotVariant} /> <span>{model.statusLabel}</span>
                     {model.message && (
                         <span className="integration-panel-status-message">{model.message}</span>
                     )}
                 </PanelRow>
-                <PanelRow label="Kind">{model.kindLabel}</PanelRow>
-                <PanelRow label="Source" mono={!model.sourceIsAi}>
-                    {model.sourceLine}
-                </PanelRow>
+                {showKind && <PanelRow label="Kind">{model.kindLabel}</PanelRow>}
                 {destinationLabel && (
                     <PanelRow label="Destination" mono>
                         {destinationLabel}
@@ -122,8 +133,11 @@ function PanelContent({
                 )}
                 {model.url &&
                     (model.isMesh ? (
-                        <PanelRow label={model.urlLabel} mono>
-                            {model.url}
+                        // Click-to-copy: a GraphQL endpoint answers POSTs, so it is not
+                        // browsable — copying is the only way to get it out. CopyableText
+                        // renders its own <code>, so no mono modifier here.
+                        <PanelRow label={model.urlLabel}>
+                            <CopyableText>{model.url}</CopyableText>
                         </PanelRow>
                     ) : (
                         <PanelRow label={model.urlLabel}>
@@ -154,7 +168,7 @@ function PanelContent({
             </div>
 
             {showBar && (
-                <div className="integration-panel-actions">
+                <div className="db-drawer-actions">
                     {model.status === 'deploying' ? (
                         <Button variant="secondary" isDisabled>
                             Deploying…
@@ -183,20 +197,17 @@ function PanelContent({
 }
 
 /** The detail panel. Renders nothing at all when no card is selected. */
-export function IntegrationDetailPanel(
-    props: IntegrationDetailPanelProps,
-): React.ReactElement | null {
-    const { model } = props;
-    if (!model) {
-        return null;
-    }
+export function IntegrationDetailPanel(props: IntegrationDetailPanelProps): React.ReactElement {
+    const { model, onClose } = props;
+    // Always mounted so the flyout can SLIDE: the Drawer's `.open` class drives
+    // translateX, which needs a node already in the tree to animate from.
     return (
-        <aside
-            className="integration-panel"
-            aria-label={`${model.name} details`}
-            data-testid="integration-detail-panel"
+        <Drawer
+            isOpen={model !== undefined}
+            onClose={onClose}
+            ariaLabel={model ? `${model.name} details` : 'Integration details'}
         >
-            <PanelContent {...props} model={model} />
-        </aside>
+            {model && <PanelContent {...props} model={model} />}
+        </Drawer>
     );
 }

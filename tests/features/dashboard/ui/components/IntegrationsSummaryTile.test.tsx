@@ -2,9 +2,10 @@
  * IntegrationsSummaryTile Tests (integrations surface)
  *
  * The dashboard's ENTIRE integrations footprint after the grid moved to its own
- * surface: a single tile carrying the count and the WORST status across every
- * card, opening the surface on press. Keeping the count and a status dot here is
- * what mitigates integrations being one click away instead of visible on arrival.
+ * surface: a single tile carrying the WORST status across every card, opening
+ * the surface on press. That dot is what mitigates integrations being one click
+ * away instead of visible on arrival — so it must survive hover, and it must
+ * never be outvoted by healthier siblings.
  *
  * Worst-status precedence (most alarming wins): error > stale > deploying >
  * not-deployed > deployed.
@@ -78,47 +79,32 @@ describe('IntegrationsSummaryTile', () => {
         expect(container).toBeEmptyDOMElement();
     });
 
-    it('shows the integration count', () => {
-        render(
-            <IntegrationsSummaryTile
-                hasAdobeContext
-                appBuilderComponents={components('deployed', 'deployed')}
-            />
-        );
-
-        expect(screen.getByTestId('integrations-tile-count')).toHaveTextContent('2');
-    });
-
-    it('counts the mesh as a peer when the project has one', () => {
+    // No count: "how many?" is idle trivia from the dashboard next to "is
+    // anything broken?", and it put a number on a tile whose row-neighbours
+    // carry none. The status dot is the whole payload.
+    it('renders NO count', () => {
         render(
             <IntegrationsSummaryTile
                 hasAdobeContext
                 hasMesh
-                appBuilderComponents={components('deployed')}
+                appBuilderComponents={components('deployed', 'deployed')}
             />
         );
 
-        expect(screen.getByTestId('integrations-tile-count')).toHaveTextContent('2');
+        expect(screen.queryByTestId('integrations-tile-count')).not.toBeInTheDocument();
+        expect(screen.getByRole('button')).not.toHaveTextContent(/\d/);
     });
 
-    it('EXCLUDES a mesh entry in the keyed map from the integration count', () => {
+    // REGRESSION: `.dashboard-action-button:hover *` blanks every descendant
+    // background to transparent to kill Spectrum's internal hover fills. The dot
+    // IS a background, so it vanished under the pointer — on the exact gesture
+    // preceding a click through to check on it. The marker class is its exemption.
+    it('carries the marker exempting the dot from the tile hover-blanking rule', () => {
         render(
-            <IntegrationsSummaryTile
-                hasAdobeContext
-                appBuilderComponents={{
-                    'erp-sync': { ...DEPLOYED },
-                    'commerce-paas-mesh': { ...DEPLOYED, kind: 'mesh' },
-                }}
-            />
+            <IntegrationsSummaryTile hasAdobeContext appBuilderComponents={components('error')} />
         );
 
-        expect(screen.getByTestId('integrations-tile-count')).toHaveTextContent('1');
-    });
-
-    it('shows zero when there are no integrations at all', () => {
-        render(<IntegrationsSummaryTile hasAdobeContext appBuilderComponents={{}} />);
-
-        expect(screen.getByTestId('integrations-tile-count')).toHaveTextContent('0');
+        expect(screen.getByTestId('integrations-tile-dot')).toHaveClass('tile-status-dot');
     });
 
     describe('worst-status dot (most alarming wins)', () => {

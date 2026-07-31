@@ -69,10 +69,13 @@ describe('IntegrationsGrid', () => {
             expect(screen.queryByRole('button', { name: /API Mesh/ })).not.toBeInTheDocument();
         });
 
-        it('marks the mesh card with the accent class', () => {
-            renderGrid({ withMesh: true });
+        it('gives the mesh card the same chrome as the rest', () => {
+            renderGrid({ withMesh: true, appBuilderComponents: twoDeployed() });
 
-            expect(card('API Mesh', 'Deployed')).toHaveClass('integration-card--mesh');
+            // Card families should read alike; the mesh earns no accent border.
+            expect(card('API Mesh', 'Deployed').className).toBe(
+                card('custom-app', 'Deployed').className,
+            );
         });
 
         it('renders the add tile as the LAST grid cell', () => {

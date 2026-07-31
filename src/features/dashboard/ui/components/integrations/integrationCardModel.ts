@@ -88,7 +88,18 @@ export interface IntegrationCardModel {
     isMesh: boolean;
     name: string;
     kindLabel: string;
-    sourceLine: string;
+    /**
+     * `owner/repo` — an identifier you can go look up, which is why the card
+     * typesets it in mono.
+     *
+     * Absent on the mesh, which has no source repo. The hardcoded prose that
+     * used to fill the slot ('GraphQL bridge · Adobe I/O') was a constant wearing
+     * the identifier styling: it never varied by project or state, so it carried
+     * no information, and the same string had already been cut from the detail
+     * panel as decoration. Optional rather than a placeholder — a card with
+     * nothing to say here renders no line at all.
+     */
+    sourceLine?: string;
     sourceIsAi: boolean;
     status: CardStatus;
     statusLabel: string;
@@ -102,6 +113,13 @@ export interface IntegrationCardModel {
     lastDeployed?: string;
     faceAction?: FaceAction;
     barActions: BarAction[];
+    /**
+     * The card's own kebab menu. Kept OFF the face so the at-most-one-affordance
+     * rule survives: the face carries the urgent verb (Deploy / Update / Retry),
+     * the menu carries the deliberate ones. Empty on the mesh (nothing about it
+     * is editable) and while deploying.
+     */
+    menuActions: CardAction[];
     canRename: boolean;
 }
 
@@ -262,6 +280,10 @@ export function deriveIntegrationCard(
         lastDeployed: formatLastDeployed(entry.lastDeployed),
         faceAction: actions.face ? { ...actions.face } : openFace,
         barActions: actions.bar.map((action) => ({ ...action })),
+        // Surfaces on the CARD what previously required opening the flyout first.
+        // Rename is NOT here — it is the name's own inline pencil, matching
+        // ProjectCard. Nothing mid-deploy: both would race the runner.
+        menuActions: status === 'deploying' ? [] : ['manage-apis', 'remove'],
         canRename: entry.kind === 'integration' && !facet.isCatalog,
     };
 }
@@ -336,7 +358,6 @@ export function deriveMeshCard(
         isMesh: true,
         name: 'API Mesh',
         kindLabel: 'API Mesh',
-        sourceLine: 'GraphQL bridge · Adobe I/O',
         sourceIsAi: false,
         status: cardStatus,
         statusLabel: statusDisplay.text,
@@ -346,6 +367,9 @@ export function deriveMeshCard(
         lastDeployed: formatLastDeployed(meshEntry?.lastDeployed),
         faceAction: row.face ? { kind: row.face, disabled: isActionDisabled } : undefined,
         barActions: row.bar ? [{ ...row.bar, disabled: isActionDisabled }] : [],
+        // No menu: the mesh has no display name to change (canRename false) and
+        // no API access of its own, so Edit would open an empty dialog.
+        menuActions: [],
         canRename: false,
     };
 }

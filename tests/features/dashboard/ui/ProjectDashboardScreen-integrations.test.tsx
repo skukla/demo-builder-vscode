@@ -38,16 +38,18 @@ describe('ProjectDashboardScreen - Integrations summary tile', () => {
         ctx = setupTestContext();
     });
 
-    it('renders the tile with the integration count', async () => {
+    // The dot is the tile's only content now — the count was cut, so it is also
+    // the probe for "did the tile render at all".
+    it('renders the tile', async () => {
         renderDashboard({ hasAdobeContext: true, appBuilderComponents: INTEGRATIONS });
 
-        expect(await screen.findByTestId('integrations-tile-count')).toHaveTextContent('2');
+        expect(await screen.findByTestId('integrations-tile-dot')).toBeInTheDocument();
     });
 
     it('does NOT render the tile without hasAdobeContext', () => {
         renderDashboard({ appBuilderComponents: INTEGRATIONS });
 
-        expect(screen.queryByTestId('integrations-tile-count')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('integrations-tile-dot')).not.toBeInTheDocument();
     });
 
     it('does NOT render the grid on the dashboard anymore', () => {
@@ -76,15 +78,14 @@ describe('ProjectDashboardScreen - Integrations summary tile', () => {
         expect(ctx.mockPostMessage).toHaveBeenCalledWith('openIntegrations');
     });
 
-    it('counts a mesh as a peer alongside the integrations', async () => {
-        renderDashboard({
-            hasAdobeContext: true,
-            hasMesh: true,
-            appBuilderComponents: INTEGRATIONS,
-        });
+    // Screen-level WIRING only: hasMesh must reach the tile, so a mesh-only
+    // project still gets a tile to click through. Which status the mesh
+    // contributes is the tile suite's job ("mesh health folds into the same dot").
+    it('renders the tile for a mesh-only project (hasMesh threads through)', async () => {
+        renderDashboard({ hasAdobeContext: true, hasMesh: true, appBuilderComponents: {} });
 
         await waitFor(() => {
-            expect(screen.getByTestId('integrations-tile-count')).toHaveTextContent('3');
+            expect(screen.getByTestId('integrations-tile-dot')).toBeInTheDocument();
         });
     });
 

@@ -104,8 +104,13 @@ jest.mock('@/features/dashboard/ui/components/integrations/IntegrationsGrid', ()
     ),
 }));
 
-jest.mock('@/features/dashboard/ui/components/integrations/AddIntegrationModal', () => ({
-    AddIntegrationModal: ({ isOpen }: any) => (isOpen ? <div data-testid="add-modal" /> : null),
+// The adapter renders the WIZARD's real flow modal, which needs Spectrum
+// internals this suite deliberately does not mock. Its own behaviour (the
+// commit callbacks, the mesh rule, reservedIds) is pinned in
+// AddIntegrationFlowAdapter.test.tsx.
+jest.mock('@/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter', () => ({
+    AddIntegrationFlowAdapter: ({ isOpen }: any) =>
+        isOpen ? <div data-testid="add-modal" /> : null,
 }));
 
 // Deliberately below the jest.mock calls: babel-plugin-jest-hoist lifts them

@@ -102,6 +102,7 @@ export function IntegrationsGrid({
     // card that left the map closes it.
     const selected = cards.find((card) => card.id === selectedId);
 
+
     // Drop a stale selection so a later card reusing that id cannot spring the
     // drawer open unbidden (remove-then-re-add the same catalog entry).
     useEffect(() => {
@@ -162,37 +163,36 @@ export function IntegrationsGrid({
         // and sticky action band own those (the same division ProjectsDashboard
         // uses). This component is the card surface only.
         <div className="integrations-surface">
-            {/* Master/detail: the grid flexes, the panel takes a fixed column beside
-                it. Plain divs — a Spectrum Flex caps at 450px (custom-spectrum.css). */}
-            <div className="integrations-split">
-                <div className="integrations-grid">
-                    {cards.map((model) => (
-                        <IntegrationCard
-                            key={model.id}
-                            model={model}
-                            onOpen={setSelectedId}
-                            onAction={handleAction}
-                        />
-                    ))}
-                    <button
-                        type="button"
-                        className="integration-add-tile"
-                        data-testid="integration-add-tile"
-                        onClick={onAddRequest}
-                    >
-                        + Add integration
-                    </button>
-                </div>
-
-                <IntegrationDetailPanel
-                    model={selected}
-                    onClose={() => setSelectedId(null)}
-                    onAction={handleAction}
-                    onRename={requestRename}
-                    destinationLabel={destinationLabel}
-                />
+            {/* The grid owns the full width; the detail FLYOUT overlays it rather
+                than taking a column beside it. Plain divs — a Spectrum Flex caps
+                at 450px (custom-spectrum.css). */}
+            <div className="integrations-grid">
+                {cards.map((model) => (
+                    <IntegrationCard
+                        key={model.id}
+                        model={model}
+                        onOpen={setSelectedId}
+                        onAction={handleAction}
+                        onRename={requestRename}
+                    />
+                ))}
+                <button
+                    type="button"
+                    className="integration-add-tile"
+                    data-testid="integration-add-tile"
+                    onClick={onAddRequest}
+                >
+                    + Add integration
+                </button>
             </div>
 
+            <IntegrationDetailPanel
+                model={selected}
+                onClose={() => setSelectedId(null)}
+                onAction={handleAction}
+                onRename={requestRename}
+                destinationLabel={destinationLabel}
+            />
 
             <AppBuilderComponentRemoveDialog
                 isOpen={pendingRemoveId !== null}

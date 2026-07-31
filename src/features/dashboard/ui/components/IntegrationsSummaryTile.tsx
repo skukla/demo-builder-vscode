@@ -2,10 +2,14 @@
  * IntegrationsSummaryTile — the dashboard's whole integrations footprint.
  *
  * The card grid moved to its own surface (integrations-surface plan), so the
- * dashboard keeps only this: count + the WORST status across every card +
- * a chevron, opening the surface on press. That is what keeps integrations
- * legible at a glance despite being one click away, and it means the dashboard
- * no longer grows with integration count.
+ * dashboard keeps only this: the WORST status across every card, opening the
+ * surface on press. That is what keeps integrations legible at a glance despite
+ * being one click away, and it means the dashboard no longer grows with
+ * integration count.
+ *
+ * There is deliberately NO count. It answered a question nobody asks from the
+ * dashboard — "how many?" is idle trivia next to "is anything broken?" — while
+ * adding a second number to a tile row whose neighbours carry none.
  *
  * Supersedes IntegrationsBlock, which hosted the grid inline.
  *
@@ -69,7 +73,6 @@ export function IntegrationsSummaryTile({
     const integrations = Object.values(appBuilderComponents ?? {}).filter(
         (entry) => entry.kind === 'integration',
     );
-    const count = integrations.length + (hasMesh ? 1 : 0);
     // The mesh folds in through the SAME mapping the mesh card uses, so the dot
     // can never disagree with the card the surface shows. 'checking' is not a
     // health signal, so it is excluded rather than reported as neutral.
@@ -80,8 +83,8 @@ export function IntegrationsSummaryTile({
     ]);
 
     // Shaped like its build-zone neighbours (icon above label) so the row reads
-    // as one bar; the dot and count ride the icon as small overlays rather than
-    // widening the tile, which is what made it wrap onto its own line before.
+    // as one bar; the dot rides the icon as a small overlay rather than widening
+    // the tile, which is what made it wrap onto its own line before.
     return (
         <ActionButton
             isQuiet
@@ -92,13 +95,13 @@ export function IntegrationsSummaryTile({
             <Data size="L" />
             <Text UNSAFE_className="icon-label">Integrations</Text>
             <span
-                className={`integrations-tile-dot status-dot--${variant}`}
+                // `tile-status-dot` is the marker exempting it from the tile's
+                // blanket "no descendant backgrounds on hover" rule, which would
+                // otherwise blank the dot exactly when the pointer is on it.
+                className={`integrations-tile-dot tile-status-dot status-dot--${variant}`}
                 data-testid="integrations-tile-dot"
                 data-variant={variant}
             />
-            <span className="integrations-tile-count" data-testid="integrations-tile-count">
-                {count}
-            </span>
         </ActionButton>
     );
 }

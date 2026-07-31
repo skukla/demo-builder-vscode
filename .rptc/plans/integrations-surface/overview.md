@@ -46,17 +46,31 @@ evidence, not skipped. See "Decisions to confirm" #0.
    to compact buttons) and it still grows without bound with integration count. B is the only
    option that keeps the dashboard fixed-size.
 
-1. **Drawer vs master/detail → MASTER/DETAIL. (Reversed from the earlier recommendation.)**
-   Rendering option B made the case: a page-scoped sticky side panel never covers the grid you
-   just navigated to, and it keeps your place while scrolling. The earlier "keep the drawer"
-   recommendation was an argument from sunk cost — it is built and test-pinned — which is not a
-   design reason.
-   **Consequence:** `Drawer.tsx` and `Drawer.test.tsx` are SUPERSEDED and get deleted outright
-   (no soft deprecation). The scrim, Esc-when-not-defaultPrevented, focus-capture/restore, and
-   Tab-wrap behaviours are modal-dialog concerns that a non-modal side panel does not have, so
-   those tests are obsolete rather than portable. `IntegrationDrawer`'s CONTENT — the key/value
-   rows, the emphasis→variant action bar, the inline rename — is re-hosted verbatim in the
-   panel, so `integrationCardModel` and its matrices are untouched.
+1. **Detail pane → FLYOUT over the grid. (Settled 2026-07-30, after one reversal.)**
+
+   The decision history matters, because it moved twice and the reasoning changed each time:
+
+   - *Originally:* keep the built `Drawer` — argued from it being built and test-pinned. That
+     was sunk cost, not a design reason.
+   - *Then:* master/detail, a page-scoped sticky panel beside the grid. The argument was that a
+     drawer "covers the grid you just navigated to". But that observation came from the grid
+     living in a **dashboard subsection**, where a viewport-fixed drawer covered the entire
+     webview to show one card. On a dedicated full-width surface that objection does not hold —
+     the surface IS the integrations page, so an overlay covers only its own grid.
+   - *Now:* a flyout over the grid, which is what the original grid prototype specified
+     (`position: fixed; top: 0; right: 0; height: 100%; width: 392px` + scrim).
+
+   **Consequence:** `Drawer.tsx` and `Drawer.test.tsx` are RESTORED (`git show
+   25ec2327:src/features/dashboard/ui/components/integrations/Drawer.tsx`) rather than rebuilt —
+   the scrim, Esc-when-not-`defaultPrevented`, focus capture/restore and minimal Tab wrap were
+   all already test-pinned, and a flyout needs every one of them. The interim master/detail pass
+   was not wasted: it kept the CONTENT (`IntegrationDetailPanel`) separate from its host, so the
+   host swaps without touching the rows, the action bar, or the inline rename — and it added the
+   Destination row and one-API-per-line treatment, both of which stay.
+
+   **The lesson to keep:** the drawer-vs-panel question was never answerable in the abstract. It
+   depended entirely on whether the grid owned the whole surface, and that changed underneath the
+   decision. Re-ask a layout decision when its host changes.
 
 2. **Dashboard section → SUMMARY TILE.** One tile among the action buttons: worst-status dot +
    "Integrations" + count + chevron. Opens the surface. This is the whole integrations footprint

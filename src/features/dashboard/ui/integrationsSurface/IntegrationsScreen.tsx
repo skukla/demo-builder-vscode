@@ -21,7 +21,6 @@
 
 import { Button, Flex, ProgressCircle, View } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useState } from 'react';
-import { AddIntegrationModal } from '../components/integrations/AddIntegrationModal';
 import {
     buildIntegrationCards,
     deriveMeshCard,
@@ -31,6 +30,7 @@ import { IntegrationsGrid } from '../components/integrations/IntegrationsGrid';
 import { isMeshBusy, useDashboardStatus } from '../hooks/useDashboardStatus';
 import { useLiveAppBuilderComponents } from '../hooks/useLiveAppBuilderComponents';
 import { useRowStatusOverrides } from '../hooks/useRowStatusOverrides';
+import { AddIntegrationFlowAdapter } from './AddIntegrationFlowAdapter';
 import { StatusDisplay } from '@/core/ui/components/feedback';
 import { PageHeader, PageLayout } from '@/core/ui/components/layout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
@@ -59,6 +59,11 @@ export interface IntegrationsScreenProps {
     appBuilderComponentCatalog?: AppBuilderComponentCatalogEntry[];
     /** Adobe project/workspace TITLES — the shared deploy destination. */
     destination?: { projectTitle?: string; workspaceTitle?: string };
+    /** The committed destination IDs, which the add flow reads as booleans. */
+    adobeProjectId?: string;
+    adobeWorkspaceId?: string;
+    /** The IMS org — the add flow's signed-in test reads this, not the project id. */
+    adobeOrgId?: string;
 }
 
 /**
@@ -92,6 +97,9 @@ export function IntegrationsScreen({
     appBuilderComponents,
     appBuilderComponentCatalog,
     destination,
+    adobeProjectId,
+    adobeWorkspaceId,
+    adobeOrgId,
 }: IntegrationsScreenProps): React.ReactElement {
     const { meshStatusDisplay, meshStatus, isTransitioning, projectStatus } = useDashboardStatus({
         hasAdobeContext,
@@ -169,7 +177,15 @@ export function IntegrationsScreen({
                     message="Add an API Mesh, a pre-built integration, or your own custom integration — each deploys to this project's shared Adobe I/O workspace."
                     actions={[{ label: 'Add integration', variant: 'accent', onPress: openAdd }]}
                 />
-                <AddIntegrationModal isOpen={addOpen} catalog={catalog} onClose={closeAdd} />
+                <AddIntegrationFlowAdapter
+                    isOpen={addOpen}
+                    onClose={closeAdd}
+                    catalog={catalog}
+                    appBuilderComponents={components}
+                    adobeProjectId={adobeProjectId}
+                    adobeWorkspaceId={adobeWorkspaceId}
+                    adobeOrgId={adobeOrgId}
+                />
             </View>
         );
     }
@@ -232,7 +248,15 @@ export function IntegrationsScreen({
 
                 {/* Hosted HERE so the header button and the grid's add tile open
                     the same one instance. */}
-                <AddIntegrationModal isOpen={addOpen} catalog={catalog} onClose={closeAdd} />
+                <AddIntegrationFlowAdapter
+                    isOpen={addOpen}
+                    onClose={closeAdd}
+                    catalog={catalog}
+                    appBuilderComponents={components}
+                    adobeProjectId={adobeProjectId}
+                    adobeWorkspaceId={adobeWorkspaceId}
+                    adobeOrgId={adobeOrgId}
+                />
             </div>
         </PageLayout>
     );
