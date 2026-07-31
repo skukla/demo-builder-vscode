@@ -156,7 +156,7 @@ describe('IntegrationsGrid actions', () => {
             renderGrid({ appBuilderComponents: oneDeployed() });
 
             const tile = card('custom-app', 'Deployed');
-            await user.click(within(tile).getByRole('button', { name: /open ↗/i }));
+            await user.click(within(tile).getByRole('button', { name: /^open$/i }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('openLiveSite', {
                 url: 'https://custom-app.example.com',

@@ -19,11 +19,12 @@
  * @module features/dashboard/ui/components/integrations/IntegrationCard
  */
 
-import { Button, Item } from '@adobe/react-spectrum';
+import { Button, Item, Text } from '@adobe/react-spectrum';
 import React, { useCallback } from 'react';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
 import { InlineRenameField } from '@/core/ui/components/forms';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
+import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { cn } from '@/core/ui/utils/classNames';
@@ -47,11 +48,17 @@ const FACE_LABELS: Record<string, string> = {
     'sign-in': 'Sign in',
 };
 
-/** Kebab-menu labels, keyed by the same CardAction the grid dispatches. */
-const MENU_LABELS: Partial<Record<CardAction, string>> = {
-    open: 'Open ↗',
-    'manage-apis': 'Manage APIs',
-    remove: 'Remove',
+/**
+ * Kebab-menu rows, keyed by the CardAction the grid dispatches.
+ *
+ * `icon` names a concept in the SHARED vocabulary (`menuIcons`), so "open" here
+ * is the same glyph as the project menu's "Open in Browser" by construction —
+ * these two menus must not give one idea two icons.
+ */
+const MENU_ROWS: Partial<Record<CardAction, { label: string; icon: string }>> = {
+    open: { label: 'Open', icon: 'globe' },
+    'manage-apis': { label: 'Manage APIs', icon: 'apiAccess' },
+    remove: { label: 'Remove', icon: 'delete' },
 };
 
 /**
@@ -74,11 +81,16 @@ function CardMenu({
             className="integration-card-menu-button"
             onAction={(key) => onAction(model, key as CardAction)}
         >
-            {model.menuActions.map((action) => (
-                <Item key={action} textValue={MENU_LABELS[action] ?? action}>
-                    {MENU_LABELS[action] ?? action}
-                </Item>
-            ))}
+            {model.menuActions.map((action) => {
+                const row = MENU_ROWS[action];
+                const label = row?.label ?? action;
+                return (
+                    <Item key={action} textValue={label}>
+                        {renderMenuIcon(row?.icon)}
+                        <Text>{label}</Text>
+                    </Item>
+                );
+            })}
         </CardActionsMenu>
     );
 }

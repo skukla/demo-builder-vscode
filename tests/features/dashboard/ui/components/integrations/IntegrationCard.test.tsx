@@ -50,6 +50,7 @@ jest.mock('@adobe/react-spectrum', () => ({
             </ul>
         ),
         Item: ({ children }: any) => <>{children}</>,
+    Text: ({ children }: any) => <span>{children}</span>,
 }));
 
 jest.mock('@spectrum-icons/workflow/More', () => ({
@@ -155,7 +156,7 @@ describe('IntegrationCard', () => {
 
         // A menu item now, not a face link — the mock renders Menu items eagerly
         // as buttons, so query by role button.
-        fireEvent.click(screen.getByRole('button', { name: /open/i }));
+        fireEvent.click(screen.getByRole('button', { name: /^open$/i }));
 
         expect(onAction).toHaveBeenCalledWith(model, 'open');
         expect(onOpen).not.toHaveBeenCalled();

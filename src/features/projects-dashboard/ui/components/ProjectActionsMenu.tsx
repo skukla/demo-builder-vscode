@@ -25,22 +25,10 @@
  */
 
 import { Text, Menu, Section, SubmenuTrigger, Item } from '@adobe/react-spectrum';
-import Copy from '@spectrum-icons/workflow/Copy';
-import Delete from '@spectrum-icons/workflow/Delete';
-import Edit from '@spectrum-icons/workflow/Edit';
-import Export from '@spectrum-icons/workflow/Export';
-import Globe from '@spectrum-icons/workflow/Globe';
-import MagicWand from '@spectrum-icons/workflow/MagicWand';
 import More from '@spectrum-icons/workflow/More';
-import PinOff from '@spectrum-icons/workflow/PinOff';
-import PinOn from '@spectrum-icons/workflow/PinOn';
-import Play from '@spectrum-icons/workflow/Play';
-import Refresh from '@spectrum-icons/workflow/Refresh';
-import Revert from '@spectrum-icons/workflow/Revert';
-import Stop from '@spectrum-icons/workflow/Stop';
-import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
 import React, { useCallback, useMemo } from 'react';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
+import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 import {
     listRedeployableIntegrations,
     meshNeedsRedeploy,
@@ -107,28 +95,6 @@ export interface ProjectActions {
 }
 
 /** Icon lookup - maps menu item icon keys to Spectrum icon components */
-const ICON_MAP: Record<string, React.ReactElement> = {
-    play: <Play size="S" />,
-    stop: <Stop size="S" />,
-    globe: <Globe size="S" />,
-    dalive: <Edit size="S" />,
-    edit: <Edit size="S" />,
-    copy: <Copy size="S" />,
-    reset: <Revert size="S" />,
-    republish: <Globe size="S" />,
-    export: <Export size="S" />,
-    ai: <MagicWand size="S" />,
-    admin: <UserAdmin size="S" />,
-    redeploy: <Refresh size="S" />,
-    more: <More size="S" />,
-    pinOn: <PinOn size="S" />,
-    pinOff: <PinOff size="S" />,
-    delete: <Delete size="S" />,
-};
-
-function renderMenuIcon(iconKey: string): React.ReactElement | null {
-    return ICON_MAP[iconKey] ?? null;
-}
 
 /** Callbacks that decide which "More…" submenu items appear. */
 type MoreCallbacks = Pick<
