@@ -39,3 +39,5 @@ export type { GitHubRepoInfo } from './githubUrlParser';
 export { openInIncognito } from './browserUtils';
 
 export { showOneTimeTip } from './oneTimeTip';
+
+export { SingleFlight } from './singleFlight';

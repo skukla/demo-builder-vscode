@@ -11,6 +11,7 @@
  */
 
 import * as vscode from 'vscode';
+import { SingleFlight } from '@/core/utils/singleFlight';
 import type { Logger } from '@/types/logger';
 
 export interface AdobeAuthResult {
@@ -31,14 +32,14 @@ export interface AdobeAuthManager {
  * a duplicate `showWarningMessage` with the same text makes VS Code collapse the two
  * and resolve the first as a phantom cancel — a premature "sign-in was cancelled".
  */
-let inFlightSignIn: Promise<AdobeAuthResult> | null = null;
+const signInFlight = new SingleFlight<AdobeAuthResult>();
 
 /**
  * Ensure Adobe I/O authentication, prompting sign-in if expired.
  *
  * Shared pause-and-prompt guard for the many sign-in-gated flows (mesh deploy, EDS
  * reset, storefront setup, store discovery, App Builder component guards, …).
- * Concurrent callers share a single prompt (see {@link inFlightSignIn}).
+ * Concurrent callers share a single prompt (see {@link signInFlight}).
  */
 export async function ensureAdobeIOAuth(options: {
     authManager: AdobeAuthManager;
@@ -59,25 +60,12 @@ export async function ensureAdobeIOAuth(options: {
         return { authenticated: true };
     }
 
-    // Concurrent callers share ONE prompt. `promptAndSignIn` is invoked synchronously
-    // (no await between this check and the assignment), so a second caller arriving
-    // here sees the in-flight promise and never shows a duplicate notification.
-    if (inFlightSignIn) {
-        logger.info(`${logPrefix} Reusing the in-flight Adobe sign-in prompt`);
-        return inFlightSignIn;
-    }
-    inFlightSignIn = promptAndSignIn(
-        authManager,
-        logger,
-        logPrefix,
-        projectContext,
-        warningMessage,
+    // Concurrent callers share ONE prompt (SingleFlight does the synchronous
+    // check-and-set), so a second caller never shows a duplicate notification.
+    return signInFlight.run(
+        () => promptAndSignIn(authManager, logger, logPrefix, projectContext, warningMessage),
+        () => logger.info(`${logPrefix} Reusing the in-flight Adobe sign-in prompt`),
     );
-    try {
-        return await inFlightSignIn;
-    } finally {
-        inFlightSignIn = null;
-    }
 }
 
 /** Show the sign-in prompt and, on "Sign In", run the browser login with progress. */

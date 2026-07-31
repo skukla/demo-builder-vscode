@@ -2,7 +2,7 @@ import type { AuthCacheManager } from './authCacheManager';
 import { AuthenticationErrorFormatter } from './authenticationErrorFormatter';
 import { getLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
-import { TIMEOUTS, formatMinutes } from '@/core/utils';
+import { SingleFlight, TIMEOUTS, formatMinutes } from '@/core/utils';
 import { toAppError, isTimeout } from '@/types/errors';
 import type { Logger } from '@/types/logger';
 import { toError } from '@/types/typeGuards';
@@ -22,13 +22,14 @@ export class TokenManager {
      * @param logger - Optional logger for dependency injection (defaults to getLogger())
      */
     /**
-     * The in-flight token inspection, shared by concurrent callers (single-flight).
-     * Undefined when none is running. Distinct from the inspection CACHE, which can
-     * only help callers arriving after a fetch has completed.
+     * Shared in-flight token inspection. Distinct from the inspection CACHE, which
+     * can only help callers arriving after a fetch has completed.
      */
-    private inspectionFlight:
-        | Promise<{ valid: boolean; expiresIn: number; token?: string }>
-        | undefined;
+    private readonly inspectionFlight = new SingleFlight<{
+        valid: boolean;
+        expiresIn: number;
+        token?: string;
+    }>();
 
     constructor(
         private commandManager: CommandExecutor,
@@ -86,22 +87,13 @@ export class TokenManager {
             }
         }
 
-        // SINGLE-FLIGHT. The fetch below spawns the whole `aio` Node CLI (~3.7s of
-        // process start + module load) to read one config value. The cache only
-        // helps callers arriving AFTER a fetch completes; concurrent callers on a
-        // cold cache each check, each miss, and each spawn their own CLI. There are
-        // 8 isAuthenticated() call sites in the dashboard/creation handlers, and the
-        // sibling org-list path was observed doing exactly this (2.5s + 1.4s
-        // overlapping, 2026-07-31). Preventive here — that trace happened to
-        // serialise the token path — but the structure is identical.
-        if (!this.inspectionFlight) {
-            this.inspectionFlight = this.fetchTokenInspection().finally(() => {
-                // Released on BOTH paths: a rejected flight left pending would wedge
-                // authentication for the rest of the session.
-                this.inspectionFlight = undefined;
-            });
-        }
-        return this.inspectionFlight;
+        // The fetch below spawns the whole `aio` Node CLI (~3.7s of process start +
+        // module load) to read one config value. The cache only helps callers
+        // arriving AFTER it completes; concurrent cold-cache callers would each spawn
+        // their own CLI, and there are 8 isAuthenticated() call sites in the
+        // dashboard/creation handlers. Preventive — the sibling org-list path was
+        // observed stampeding (2026-07-31) while this one happened to serialise.
+        return this.inspectionFlight.run(() => this.fetchTokenInspection());
     }
 
     /** The uncached, retrying CLI read behind {@link inspectToken}'s single-flight. */
