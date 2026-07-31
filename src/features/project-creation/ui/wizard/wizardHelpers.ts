@@ -282,6 +282,8 @@ export interface ImportedSettings {
     >;
     /** Console API sdk codes subscribed beyond catalog requiredApis (seeds `selectedConsoleApis['__existing__']` in edit mode) */
     additionalConsoleApis?: string[];
+    /** The same picks, ATTRIBUTED per integration id — the durable form. */
+    componentApiPicks?: Record<string, string[]>;
 }
 
 /**
@@ -649,6 +651,29 @@ function buildProjectEdsConfig(wizardState: WizardState) {
 const SDK_CODE_RE = /^[A-Za-z0-9_-]+$/;
 
 /**
+ * The per-integration picks, charset-filtered per key, with keys left empty
+ * dropped. This is what PERSISTS — {@link unionConsoleApiPicks} below derives
+ * the legacy flat field from it for readers that predate attribution.
+ *
+ * `__existing__` stays its own key: those picks have an unrecoverable owner,
+ * which is not the same as having none.
+ *
+ * @param selectedConsoleApis - wizard picks, keyed by integration id
+ * @returns the sanitized record, or undefined when nothing valid is picked
+ */
+function sanitizeConsoleApiPicks(
+    selectedConsoleApis: Record<string, string[]> | undefined,
+): Record<string, string[]> | undefined {
+    const entries = Object.entries(selectedConsoleApis ?? {})
+        .map(([id, codes]): [string, string[]] => [
+            id,
+            [...new Set(codes.filter((c) => SDK_CODE_RE.test(c)))],
+        ])
+        .filter(([, codes]) => codes.length > 0);
+    return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
+/**
  * Sorted, deduped union of all per-integration free Console API picks
  * (including the reserved `__existing__` edit-mode key). Codes outside the
  * SDK charset are dropped at this boundary. Returns undefined when nothing
@@ -728,7 +753,10 @@ export function buildProjectConfig(
         selectedStack: wizardState.selectedStack,
         selectedAppBuilderComponents: wizardState.selectedAppBuilderComponents ?? [],
         appBuilderComponentSources: wizardState.appBuilderComponentSources ?? {},
+        // Legacy flat field, DERIVED from the keyed record below so both forms
+        // always describe the same set (step 07 retires it).
         additionalConsoleApis: unionConsoleApiPicks(wizardState.selectedConsoleApis),
+        componentApiPicks: sanitizeConsoleApiPicks(wizardState.selectedConsoleApis),
         selectedAddons: wizardState.selectedAddons || [],
         selectedBlockLibraries: wizardState.selectedBlockLibraries || [],
         customBlockLibraries: wizardState.customBlockLibraries || [],

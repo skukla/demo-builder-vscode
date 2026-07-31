@@ -538,6 +538,66 @@ describe('wizardHelpers - state & config', () => {
             expect(config.additionalConsoleApis).toBeUndefined();
         });
 
+        // ---- attribution carried through (step 02) ----
+        // The union above is now DERIVED for legacy readers; the keyed record is
+        // what actually persists. Flattening at this boundary is what threw the
+        // attribution away in the first place.
+
+        it('carries the keyed picks through, not just their union', () => {
+            const config = buildProjectConfig(
+                baseState({
+                    'erp-sync': ['AssetComputeSDK'],
+                    'owner-custom-app': ['CCAPI'],
+                })
+            );
+
+            expect(config.componentApiPicks).toEqual({
+                'erp-sync': ['AssetComputeSDK'],
+                'owner-custom-app': ['CCAPI'],
+            });
+        });
+
+        it('keeps __existing__ as its own key (its owner is unrecoverable, not absent)', () => {
+            const config = buildProjectConfig(
+                baseState({ __existing__: ['CCAPI'], 'erp-sync': ['AssetComputeSDK'] })
+            );
+
+            expect(config.componentApiPicks).toEqual({
+                __existing__: ['CCAPI'],
+                'erp-sync': ['AssetComputeSDK'],
+            });
+        });
+
+        it('applies the SDK charset filter per key and drops keys left empty', () => {
+            const config = buildProjectConfig(
+                baseState({
+                    'erp-sync': ['CCAPI', 'not a code!'],
+                    junk: ['also bad!'],
+                })
+            );
+
+            expect(config.componentApiPicks).toEqual({ 'erp-sync': ['CCAPI'] });
+        });
+
+        it('omits the keyed field when nothing valid is picked', () => {
+            expect(buildProjectConfig(baseState(undefined)).componentApiPicks).toBeUndefined();
+            expect(buildProjectConfig(baseState({})).componentApiPicks).toBeUndefined();
+            expect(
+                buildProjectConfig(baseState({ 'erp-sync': [] })).componentApiPicks
+            ).toBeUndefined();
+        });
+
+        // The legacy union must stay EXACTLY the union of the keyed record, or a
+        // project written now and read by an older build would see a different set.
+        it('the legacy union equals the union of the keyed record', () => {
+            const config = buildProjectConfig(
+                baseState({ __existing__: ['CCAPI'], 'erp-sync': ['AssetComputeSDK', 'CCAPI'] })
+            );
+
+            const fromKeyed = [...new Set(Object.values(config.componentApiPicks ?? {}).flat())];
+            expect(fromKeyed.sort()).toEqual([...(config.additionalConsoleApis ?? [])].sort());
+        });
+
         it('should omit the field when every integration has an empty picks array', () => {
             const config = buildProjectConfig(
                 baseState({ 'erp-sync': [], 'owner-custom-app': [] })

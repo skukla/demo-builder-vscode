@@ -188,8 +188,11 @@ interface ProjectCreationConfig {
         { owner: string; repo: string; branch?: string; name?: string }
     >;
     // Free Console API picks (union across integrations) — persisted on the Project
-    // so Phase 3b's subscribe union covers them
+    // so Phase 3b's subscribe union covers them. LEGACY: derived from the keyed
+    // record below, which is the durable, attributed form.
     additionalConsoleApis?: string[];
+    // The same picks keyed by integration id — what resolveDesiredApis unions.
+    componentApiPicks?: Record<string, string[]>;
     // Selected optional addons (e.g., ['adobe-commerce-aco'])
     selectedAddons?: string[];
     // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
@@ -327,6 +330,7 @@ export function buildInitialProject(
         selectedBlockLibraries: typedConfig.selectedBlockLibraries,
         customBlockLibraries: typedConfig.customBlockLibraries,
         additionalConsoleApis: nonEmptyArray(typedConfig.additionalConsoleApis),
+        componentApiPicks: typedConfig.componentApiPicks,
         // Note: componentVersions, meshState, etc. are NOT preserved during edit
         // - componentVersions: Regenerated from fresh component installation
         // - meshState: Must be clean slate - old sourceHash won't match fresh files
