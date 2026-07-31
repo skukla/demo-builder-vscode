@@ -668,6 +668,14 @@ button[class*="spectrum-Button"][disabled],
 .modal-body {
     flex: 1 1 auto !important;
     min-height: 0 !important;
+    /* THE scroll container. Without this the body just grows: a long list (the
+       ~90-row Adobe API picker) overflows the dialog, and the sticky footer pins
+       against a container that no longer scrolls — so the buttons land in the
+       MIDDLE of the list with content spilling past them.
+       `min-height: 0` above is the other half of the pattern: a flex child
+       defaults to min-height:auto and refuses to shrink below its content, which
+       would make overflow-y here do nothing. */
+    overflow-y: auto !important;
 }
 .modal-footer-actions {
     /* Pin to the bottom of the dialog's scroll area so the primary action stays visible while

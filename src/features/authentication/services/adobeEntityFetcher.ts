@@ -78,6 +78,8 @@ export class AdobeEntityFetcher {
      * ServiceLocator/AuthenticationService), so this lives for the session.
      */
     private servicesCache = new Map<string, { services: OrgServiceInfo[]; expiresAt: number }>();
+    /** In-flight catalog fetch per org — see getServicesForOrg. */
+    private readonly servicesFlights = new Map<string, SingleFlight<OrgServiceInfo[]>>();
 
     constructor(
         private commandManager: CommandExecutor,
@@ -1136,12 +1138,49 @@ export class AdobeEntityFetcher {
             return cached.services;
         }
 
+        // Single-flight PER ORG. The Add Integration modal PREFETCHES this on open
+        // and the API picker fetches it again when the user reaches that stage —
+        // a concurrent pair by construction, so without this both pulled the org's
+        // full ~90-row catalog. Third instance of the stampede (org list, token
+        // inspection, this).
+        let flight = this.servicesFlights.get(orgId);
+        if (!flight) {
+            flight = new SingleFlight<OrgServiceInfo[]>();
+            this.servicesFlights.set(orgId, flight);
+        }
+        return flight.run(() => this.fetchServicesForOrg(orgId));
+    }
+
+    /** The uncached catalog fetch behind {@link getServicesForOrg}'s single-flight. */
+    private async fetchServicesForOrg(orgId: string): Promise<OrgServiceInfo[]> {
+        const startTime = Date.now();
         await this.ensureSDKReady();
         const client = this.sdkClient.getClient() as {
             getServicesForOrg: (orgId: string) => Promise<SDKResponse<OrgServiceInfo[]>>;
         };
-        const response = await client.getServicesForOrg(orgId);
-        const services = response?.body ?? [];
+
+        // Bounded like every other SDK read (trySDKFetch's contract, which this
+        // method predates): an unbounded call left the API picker spinning with no
+        // log line and no ceiling when the endpoint stalled.
+        const outcome = await tryWithTimeout(client.getServicesForOrg(orgId), {
+            timeoutMs: TIMEOUTS.SDK_ENTITY_FETCH,
+            timeoutMessage: 'SDK org services fetch',
+        });
+
+        if (outcome.timedOut || outcome.error || !outcome.result) {
+            this.debugLogger.warn(
+                `[Entity Fetcher] Org services fetch failed after ` +
+                    `${formatDuration(Date.now() - startTime)}` +
+                    `${outcome.timedOut ? ' (timed out)' : ''}`,
+            );
+            return [];
+        }
+
+        const services = outcome.result.body ?? [];
+        this.debugLogger.debug(
+            `[Entity Fetcher] Retrieved ${services.length} org services via SDK in ` +
+                `${formatDuration(Date.now() - startTime)}`,
+        );
 
         // Cache only a successful, non-empty fetch — never a degraded empty result,
         // so a transient 500 → [] cannot poison the cache for the whole session.

@@ -13,7 +13,7 @@
  */
 
 import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
-import { CACHE_TTL } from '@/core/utils';
+import { CACHE_TTL, TIMEOUTS } from '@/core/utils';
 import type { CommandExecutor } from '@/core/shell';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
@@ -96,5 +96,68 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
         await fetcher.getServicesForOrg('org1');
 
         expect(sdk.getServicesForOrg).toHaveBeenCalledTimes(2);
+    });
+
+    // ---- single-flight (2026-07-31) ----
+    // The Add Integration modal PREFETCHES this catalog on open and the API picker
+    // fetches it again when the user reaches that stage. That pair is concurrent by
+    // construction, and the cache cannot help inside the in-flight window — so both
+    // pulled the org's full ~90-row catalog.
+
+    it('collapses CONCURRENT callers for the same org into one SDK fetch', async () => {
+        let release!: (v: unknown) => void;
+        sdk.getServicesForOrg.mockReturnValue(
+            new Promise((resolve) => {
+                release = resolve;
+            })
+        );
+
+        const a = fetcher.getServicesForOrg('org1');
+        const b = fetcher.getServicesForOrg('org1');
+        const c = fetcher.getServicesForOrg('org1');
+        await Promise.resolve();
+        await Promise.resolve();
+        release({ body: [{ code: MESH, platformList: ['apiKey'] }] });
+
+        const [ra, rb, rc] = await Promise.all([a, b, c]);
+        expect(sdk.getServicesForOrg).toHaveBeenCalledTimes(1);
+        expect(rb).toEqual(ra);
+        expect(rc).toEqual(ra);
+    });
+
+    it('keeps concurrent flights SEPARATE per org', async () => {
+        sdk.getServicesForOrg.mockResolvedValue({ body: [{ code: MESH, platformList: ['apiKey'] }] });
+
+        await Promise.all([fetcher.getServicesForOrg('org1'), fetcher.getServicesForOrg('org2')]);
+
+        expect(sdk.getServicesForOrg).toHaveBeenCalledTimes(2);
+    });
+
+    // Every other SDK read is bounded by trySDKFetch; this one predated that and had
+    // no ceiling, so a stalled endpoint left the picker spinning indefinitely.
+    it('returns [] rather than hanging when the SDK call never settles', async () => {
+        jest.useFakeTimers();
+        sdk.getServicesForOrg.mockReturnValue(new Promise(() => {}));
+
+        const pending = fetcher.getServicesForOrg('org1');
+        await Promise.resolve();
+        jest.advanceTimersByTime(TIMEOUTS.SDK_ENTITY_FETCH + 1000);
+
+        await expect(pending).resolves.toEqual([]);
+        jest.useRealTimers();
+    });
+
+    it('does NOT cache a timed-out fetch', async () => {
+        jest.useFakeTimers();
+        sdk.getServicesForOrg.mockReturnValueOnce(new Promise(() => {}));
+
+        const pending = fetcher.getServicesForOrg('org1');
+        await Promise.resolve();
+        jest.advanceTimersByTime(TIMEOUTS.SDK_ENTITY_FETCH + 1000);
+        await pending;
+        jest.useRealTimers();
+
+        sdk.getServicesForOrg.mockResolvedValue({ body: [{ code: MESH, platformList: ['apiKey'] }] });
+        expect(await fetcher.getServicesForOrg('org1')).toHaveLength(1);
     });
 });
