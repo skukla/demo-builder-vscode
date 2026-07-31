@@ -315,4 +315,32 @@ describe('ManageApisModal', () => {
             expect(onClose).not.toHaveBeenCalled();
         });
     });
+
+    // The loading/error views use the house centered treatment (LoadingDisplay /
+    // StatusDisplay in a CenteredFeedbackContainer) rather than a small inline
+    // spinner, which collapsed this size-L modal to a sliver (reported 2026-07-31).
+    describe('loading and failure use the standard centered views', () => {
+        it('shows the centered loading view with the time expectation', async () => {
+            getClient().request.mockReturnValue(new Promise(() => {}));
+            renderModal();
+            await flush();
+
+            expect(screen.getByText('Loading Adobe APIs…')).toBeInTheDocument();
+            expect(screen.getByText('This can take up to a minute')).toBeInTheDocument();
+        });
+
+        it('offers a Retry on failure that re-fires the fetch', async () => {
+            getClient().request.mockResolvedValue({ success: false, error: 'boom' });
+            renderModal();
+            await flush();
+
+            expect(screen.getByText("Couldn't load Adobe APIs")).toBeInTheDocument();
+            const callsBefore = getClient().request.mock.calls.length;
+
+            fireEvent.click(screen.getByRole('button', { name: /^retry$/i }));
+            await flush();
+
+            expect(getClient().request.mock.calls.length).toBeGreaterThan(callsBefore);
+        });
+    });
 });

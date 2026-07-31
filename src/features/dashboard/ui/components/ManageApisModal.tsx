@@ -20,8 +20,11 @@
  * @module features/dashboard/ui/components/ManageApisModal
  */
 
-import { DialogContainer, Flex, ProgressCircle, Text } from '@adobe/react-spectrum';
-import React, { useEffect, useState } from 'react';
+import { DialogContainer, Flex, Text } from '@adobe/react-spectrum';
+import React, { useCallback, useEffect, useState } from 'react';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import {
@@ -66,6 +69,13 @@ export interface ManageApisModalProps {
     onClose: () => void;
 }
 
+/**
+ * Reserved height for the loading/error views so the modal does not resize when
+ * the list lands. A plain px value: Spectrum's dimension tokens top out well
+ * below this, and `size-3600` is not one of them.
+ */
+const FEEDBACK_HEIGHT = '320px';
+
 /** Helper copy above the dashboard's Manage APIs list. */
 const HELPER_TEXT =
     'Check to add an API, uncheck to remove one. Locked entries are always-on and ' +
@@ -80,6 +90,7 @@ function ManageApisBody({
     loadingStage,
     isLoading,
     loadError,
+    onRetry,
     apis,
     selected,
     onToggle,
@@ -87,27 +98,42 @@ function ManageApisBody({
     loadingStage?: string;
     isLoading: boolean;
     loadError: string | null;
+    onRetry?: () => void;
     apis: ApiAccessOption[];
     selected: string[];
     onToggle: (code: string) => void;
 }): React.ReactElement {
+    // Loading and failure both fill a RESERVED height and center — the house
+    // treatment, and the same one the wizard's picker uses for this identical
+    // fetch. A small inline spinner left-aligned in a size-L modal collapsed the
+    // dialog to a sliver and left the body looking empty. The reserved height
+    // also stops the modal resizing when the list lands.
     if (isLoading) {
-        // Same staged copy as the wizard picker — the wait is the same fetch
-        // (~39s measured), so a bare "Loading…" reads as frozen here too.
         return (
-            <Flex direction="column" gap="size-75">
-                <Flex alignItems="center" gap="size-150">
-                    <ProgressCircle aria-label="Loading Adobe APIs" isIndeterminate size="S" />
-                    <Text>Loading Adobe APIs…</Text>
-                </Flex>
-                <Text UNSAFE_className="text-sm text-gray-600">
-                    {loadingStage ?? 'This can take up to a minute'}
-                </Text>
-            </Flex>
+            <CenteredFeedbackContainer height={FEEDBACK_HEIGHT}>
+                <LoadingDisplay
+                    size="L"
+                    message="Loading Adobe APIs…"
+                    subMessage={loadingStage}
+                    helperText="This can take up to a minute"
+                />
+            </CenteredFeedbackContainer>
         );
     }
     if (loadError) {
-        return <Text UNSAFE_className="text-sm text-red-600">{loadError}</Text>;
+        // A retryable failure, not dead-end red text — matching the wizard picker,
+        // where the same fetch failing offers the same way out.
+        return (
+            <CenteredFeedbackContainer height={FEEDBACK_HEIGHT}>
+                <StatusDisplay
+                    variant="error"
+                    height="100%"
+                    title="Couldn't load Adobe APIs"
+                    message={loadError}
+                    actions={onRetry ? [{ label: 'Retry', variant: 'accent', onPress: onRetry }] : []}
+                />
+            </CenteredFeedbackContainer>
+        );
     }
     return (
         <ApiAccessPicker
@@ -138,6 +164,9 @@ export function ManageApisModal({
     const [initial, setInitial] = useState<string[]>([]);
     const [isApplying, setIsApplying] = useState(false);
     const loadingStage = useElapsedStage(isLoading, ORG_SERVICES_LOADING_STAGES);
+    /** Bumped by the error view's Retry to re-fire the fetch. */
+    const [reloadKey, setReloadKey] = useState(0);
+    const retry = useCallback(() => setReloadKey((key) => key + 1), []);
     const [applyError, setApplyError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -181,7 +210,7 @@ export function ManageApisModal({
         return () => {
             cancelled = true;
         };
-    }, [isOpen]);
+    }, [isOpen, reloadKey]);
 
     const handleToggle = (code: string): void => {
         setSelected((prev) =>
@@ -239,6 +268,7 @@ export function ManageApisModal({
                             Manage Adobe API access for <strong>{componentName}</strong>.
                         </Text>
                         <ManageApisBody
+                            onRetry={retry}
                             loadingStage={loadingStage}
                             isLoading={isLoading}
                             loadError={loadError}
