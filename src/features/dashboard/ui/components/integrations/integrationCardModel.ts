@@ -231,8 +231,12 @@ function deriveKindFacet(entry: IdentifiedAppBuilderComponent): {
     }
     if (isBlankSource(entry.source)) {
         return {
-            kindLabel: 'Custom · built with AI',
-            sourceLine: 'Built with AI',
+            // NOT "built with AI": the blank starter is an EMPTY shell you build
+            // out yourself (with AI, in-project, later). Labelling a freshly-added
+            // shell as already AI-built described the intended workflow as though
+            // it had happened (reported 2026-07-31).
+            kindLabel: 'Custom · blank starter',
+            sourceLine: 'Blank starter — build it out',
             sourceIsAi: true,
             isCatalog: false,
         };

@@ -191,9 +191,11 @@ describe('IntegrationCard', () => {
     });
 
     it('renders the AI source caption with the --ai modifier', () => {
-        renderCard(makeModel({ sourceLine: 'Built with AI', sourceIsAi: true }));
+        renderCard(makeModel({ sourceLine: 'Blank starter — build it out', sourceIsAi: true }));
 
-        expect(screen.getByText('Built with AI')).toHaveClass('integration-card-src--ai');
+        expect(screen.getByText('Blank starter — build it out')).toHaveClass(
+            'integration-card-src--ai'
+        );
     });
 
     it('marks an error status label with the error modifier', () => {

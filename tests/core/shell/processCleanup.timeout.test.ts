@@ -18,6 +18,14 @@ jest.mock('@/core/logging/debugLogger', () => ({
     }),
 }));
 
+/**
+ * These suites drive REAL child processes: node spawn + a 5s graceful-shutdown
+ * window + a 100ms poll chain. Jest's 10s default is under that on a loaded
+ * machine, so a correctly-behaving test times out. Raised for headroom, not
+ * slack — a healthy run finishes far below it.
+ */
+jest.setTimeout(30_000);
+
 describe('ProcessCleanup - Timeout Behavior', () => {
     const spawnedPids: number[] = [];
 

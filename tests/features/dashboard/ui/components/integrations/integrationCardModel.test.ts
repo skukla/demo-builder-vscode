@@ -285,7 +285,7 @@ describe('deriveIntegrationCard — kindLabel + canRename', () => {
         expect(model.apis).toBeUndefined();
     });
 
-    it('blank-source match (AI-built instance): "Custom · built with AI" + "Built with AI" caption', () => {
+    it('blank-source match: "Custom · blank starter" + a build-it-out caption', () => {
         const model = deriveIntegrationCard(
             integration({
                 id: 'my-firefly-gen',
@@ -294,8 +294,9 @@ describe('deriveIntegrationCard — kindLabel + canRename', () => {
             }),
         );
 
-        expect(model.kindLabel).toBe('Custom · built with AI');
-        expect(model.sourceLine).toBe('Built with AI');
+        expect(model.kindLabel).toBe('Custom · blank starter');
+        // NOT "built with AI" — the shell is empty until the user builds it.
+        expect(model.sourceLine).toBe('Blank starter — build it out');
         expect(model.sourceIsAi).toBe(true);
         expect(model.canRename).toBe(true);
     });

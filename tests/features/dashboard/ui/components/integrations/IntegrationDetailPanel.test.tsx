@@ -333,7 +333,7 @@ describe('IntegrationDetailPanel', () => {
                 'AI-built',
                 makeModel({
                     kindLabel: 'Custom · built with AI',
-                    sourceLine: 'Built with AI',
+                    sourceLine: 'Blank starter — build it out',
                     sourceIsAi: true,
                 }),
             ],

@@ -24,7 +24,14 @@ jest.mock('vscode', () => ({
     window: {
         activeColorTheme: { kind: 1 }, // Light theme
         showWarningMessage: jest.fn().mockResolvedValue('Cancel'), // Default: user cancels
+        // Slow per-integration ops (add/remove/deploy) run inside a progress
+        // notification — the mock must INVOKE the task or the handler's result
+        // never materializes and every one of them reads as a failure.
+        withProgress: jest.fn(async (_options: unknown, task: (p: unknown) => unknown) =>
+            task({ report: jest.fn() }),
+        ),
     },
+    ProgressLocation: { Notification: 15, Window: 10, SourceControl: 1 },
     ColorThemeKind: { Dark: 2, Light: 1 },
     commands: {
         executeCommand: jest.fn(),

@@ -206,7 +206,7 @@ export function ManageApisModal({
             {isOpen && (
                 <Modal
                     title="Manage APIs"
-                    size="M"
+                    size="L"
                     onClose={onClose}
                     closeLabel="Cancel"
                     actionButtons={[

@@ -96,17 +96,22 @@ describe('ProcessCleanup - Basic Operations', () => {
             const childProcess = spawn('node', ['-e', 'process.on("SIGTERM", () => process.exit(0)); setTimeout(() => {}, 60000);']);
             const pid = childProcess.pid!;
 
-            // Track signals sent (we'll verify via timing - quick exit = no SIGKILL)
-            const startTime = Date.now();
+            // OBSERVE the signals instead of inferring them from elapsed time. The
+            // original comment conceded the proxy ("we'll verify via timing — quick
+            // exit = no SIGKILL"), and it was wrong twice over: spawning a whole
+            // node process is inside the measurement, and under full-suite load
+            // this reached 15s against a 5s grace period while behaving correctly.
+            // A spy tests the actual claim, and cannot flake.
+            const killSpy = jest.spyOn(process, 'kill');
 
             // When: Kill with SIGTERM
             await processCleanup.killProcessTree(pid, 'SIGTERM');
 
-            const duration = Date.now() - startTime;
-
-            // Then: no SIGKILL escalation — the grace period is the boundary
-            // that claim actually rests on.
-            expect(duration).toBeLessThan(TIMEOUTS.PROCESS_GRACEFUL_SHUTDOWN);
+            // Then: SIGTERM was enough — escalation never happened.
+            const signals = killSpy.mock.calls.map((call) => call[1]);
+            expect(signals).toContain('SIGTERM');
+            expect(signals).not.toContain('SIGKILL');
+            killSpy.mockRestore();
             expect(() => process.kill(pid, 0)).toThrow();
         });
     });

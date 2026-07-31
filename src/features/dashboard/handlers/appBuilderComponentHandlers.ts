@@ -210,9 +210,12 @@ export const handleAddAppBuilderComponent: MessageHandler<{
         return { success: true };
     }
 
-    await postRowStatus(entry.id, 'deploying', 'Adding appBuilderComponent…');
+    await postRowStatus(entry.id, 'deploying', 'Adding integration…');
     const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
-    const result = await addAppBuilderComponent(project, entry, deps);
+    const result = await withComponentProgress(
+        { title: 'Adding', id: entry.id, label: entry.name ?? entry.id, logger: context.logger },
+        () => addAppBuilderComponent(project, entry, deps),
+    );
     if (!result.success) {
         await postRowStatus(entry.id, 'error', result.error || 'Deployment failed');
         // Even a failed add may have persisted the entry (clone/deploy died
@@ -266,6 +269,48 @@ async function resolveComponentTarget(
     return { ok: true, id, project };
 }
 
+/**
+ * Run a slow per-integration operation with the telegraph the rest of the
+ * extension already uses: a VS Code progress notification, a live row status on
+ * the grid, and USER-log lines at start and finish.
+ *
+ * Before this, add/remove/deploy ran silently — the modal closed, `aio app
+ * undeploy` ground away for tens of seconds, and nothing anywhere said so
+ * (reported 2026-07-31: "no visual indication that anything is happening", "no
+ * logging in the user log channel for any of these actions"). Mirrors
+ * `DeployMeshCommand`'s withProgress + status-push shape rather than inventing a
+ * second one.
+ *
+ * @param options - the notification title, the row to telegraph, the user logger
+ * @param run - the work; call its `report` to push sub-progress to both surfaces
+ * @returns whatever `run` resolves to
+ */
+async function withComponentProgress<T extends { success: boolean; error?: string }>(
+    options: { title: string; id: string; label: string; logger: HandlerContext['logger'] },
+    run: (report: (message: string) => void) => Promise<T>,
+): Promise<T> {
+    const { title, id, label, logger } = options;
+    logger.info(`${title} ${label}...`);
+
+    let result = { success: false } as T;
+    await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: `${title} ${label}`, cancellable: false },
+        async (progress) => {
+            result = await run((message) => {
+                progress.report({ message });
+                void postRowStatus(id, 'deploying', message);
+            });
+        },
+    );
+
+    if (result.success) {
+        logger.info(`${title} ${label} — done`);
+    } else {
+        logger.error(`${title} ${label} — failed: ${result.error ?? 'unknown error'}`);
+    }
+    return result;
+}
+
 /** Shared deploy/redeploy: guards → D1 deployAppBuilderComponent {id}. */
 async function deployById(context: HandlerContext, requestedId: string | undefined) {
     const target = await resolveComponentTarget(context, requestedId);
@@ -280,7 +325,10 @@ async function deployById(context: HandlerContext, requestedId: string | undefin
 
     await postRowStatus(id, 'deploying', 'Deploying…');
     const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
-    const result = await deployAppBuilderComponent(project, id, deps);
+    const result = await withComponentProgress(
+        { title: 'Deploying', id, label: id, logger: context.logger },
+        () => deployAppBuilderComponent(project, id, deps),
+    );
     const status = result.success ? 'deployed' : 'error';
     await postRowStatus(
         id,
@@ -317,7 +365,14 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
     }
 
     const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
-    const result = await removeAppBuilderComponent(project, id, deps);
+    // Undeploy is a slow cloud op — telegraph it, or the grid sits frozen while
+    // `aio app undeploy` runs with nothing on screen saying so.
+    await postRowStatus(id, 'deploying', 'Removing integration…');
+    const displayName = getAppBuilderComponent(project, id)?.name ?? id;
+    const result = await withComponentProgress(
+        { title: 'Removing', id, label: displayName, logger: context.logger },
+        () => removeAppBuilderComponent(project, id, deps),
+    );
     if (!result.success) {
         return { success: false, error: result.error };
     }

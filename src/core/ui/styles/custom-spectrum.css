@@ -5251,6 +5251,14 @@ div[class*="spectrum"] input[type="search"] {
     flex: 0 0 auto;
     margin-right: -6px;
 }
+/* The rename pencil expands INSIDE the name's lane, never into the kebab's.
+   Without this the growing InlineRenameField pushed the kebab out from under the
+   cursor — hovering to reveal it also moved it away (reported 2026-07-31). */
+.integration-card-head > .inline-rename {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+}
 /* Revealed on card hover/focus like the rename pencil — a kebab on every card
    at rest turns a calm grid into a row of controls. Always available to
    keyboards via :focus-within. */
