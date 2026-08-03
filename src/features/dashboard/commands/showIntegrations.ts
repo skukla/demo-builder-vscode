@@ -32,7 +32,9 @@ import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { StateManager } from '@/core/state';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
+import * as authentication from '@/features/authentication';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
+import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import { handleListOrgConsoleApis } from '@/features/project-creation/handlers/consoleApiHandlers';
 import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import type { Project } from '@/types';
@@ -124,6 +126,21 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand {
      */
     private static readonly REUSED_WIZARD_HANDLERS = {
         'list-org-console-apis': handleListOrgConsoleApis,
+        // The DESTINATION stages (Change → project/workspace). These requests come
+        // from AdobeProjectPicker / AdobeWorkspacePicker / useProjectCreationPhases,
+        // which the flow RENDERS but does not live beside — which is why the
+        // coverage guard, scanning only integration-flow/, did not catch them and
+        // the picker spun forever with nothing answering (2026-07-31).
+        'get-projects': authentication.handleGetProjects,
+        'select-project': authentication.handleSelectProject,
+        'create-adobe-project': authentication.handleCreateAdobeProject,
+        'delete-adobe-project': authentication.handleDeleteAdobeProject,
+        'get-workspaces': authentication.handleGetWorkspaces,
+        'select-workspace': authentication.handleSelectWorkspace,
+        // Reachable from useProjectCreationPhases. This flow passes skipEnabling, so
+        // it should never fire — but "should never fire" is precisely the assumption
+        // that produces a silent hang, and registering it costs nothing.
+        'ensure-mesh-api-subscribed': meshHandlers['ensure-mesh-api-subscribed'],
     };
 
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
