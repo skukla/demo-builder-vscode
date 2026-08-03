@@ -110,8 +110,16 @@ export function buildOrgTargetFromProjectAdobe(
 /**
  * AsyncLocalStorage holding the active org-context target for the current async
  * flow. The command executor reads this to inject AIO_CONSOLE_* env onto `aio`
- * commands. Call paths that aren't wrapped simply get no targeting (today's
- * behavior) — which is safe.
+ * commands.
+ *
+ * An unwrapped call path is NOT safe, whatever this comment used to claim. It
+ * does not mean "no targeting" — it means the CLI falls back to its process-global
+ * `aio console where` selection, which the extension deliberately stopped writing
+ * (Phase 4a), so it holds whatever some earlier session or another tool left
+ * there. `deployMeshHeadless` ran unwrapped and deployed into a DELETED project
+ * for two days, reporting "Unable to create a mesh. Check the mesh configuration
+ * file" while the config was fine (2026-08-03). Any `aio` invocation that should
+ * hit a specific org/project/workspace must be wrapped.
  */
 const orgContextStore = new AsyncLocalStorage<OrgContextTarget>();
 

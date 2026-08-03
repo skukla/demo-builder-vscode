@@ -33,6 +33,7 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
 }));
 
 import { ServiceLocator } from '@/core/di';
+import { getActiveOrgContext, type OrgContextTarget } from '@/core/shell';
 import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import { listAppBuilderComponents } from '@/features/app-builder/services/appBuilderComponentState';
@@ -86,6 +87,13 @@ describe('deployMeshHeadless', () => {
         jest.clearAllMocks();
         const authManager = {
             testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }),
+            // Enriches the org target with code/name when the id matches
+            // (buildOrgTargetFromProjectAdobe).
+            getCachedOrganization: jest.fn(() => ({
+                id: 'org',
+                code: 'ORG@AdobeOrg',
+                name: 'Adobe Demo System',
+            })),
         };
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(authManager);
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue({ execute: jest.fn() });
@@ -107,6 +115,67 @@ describe('deployMeshHeadless', () => {
                 userDeclinedUpdate: undefined,
                 declinedAt: undefined,
             });
+        });
+    });
+
+    // REGRESSION (2026-08-03): the CLI half of this core ran with NO org
+    // targeting. `aio`'s org/project/workspace selection is a process-global the
+    // extension deliberately stopped writing (Phase 4a), so an untargeted `aio`
+    // child falls back to whatever some earlier session left in `aio console
+    // where` — here a deleted project, "Kukla Mesh Test". The CLI reported it
+    // plainly in stdout:
+    //
+    //     Selected project: Kukla Mesh Test
+    //     The specified organization, project, and workspace combination is
+    //     invalid or disabled.
+    //
+    // while stderr only said "Unable to create a mesh. Check the mesh
+    // configuration file" — so the mesh card showed MESH ERROR for two days and
+    // the config was never the problem. `ensureMeshApiSubscribed` wraps its own
+    // calls, which is why the subscribe step SUCCEEDED in the same run: the
+    // asymmetry between the two was the tell.
+    describe('org-context targeting', () => {
+        it('runs the deploy under the project org-context, not the CLI global', async () => {
+            let target: OrgContextTarget | undefined;
+            mockDeploy.mockImplementation(async () => {
+                target = getActiveOrgContext();
+                return { success: true, data: { meshId: 'mesh-1', endpoint: 'https://new/graphql' } };
+            });
+
+            await deployMeshHeadless(deps());
+
+            expect(target).toMatchObject({
+                orgId: 'org',
+                projectId: 'proj',
+                workspaceId: 'ws',
+            });
+        });
+
+        // The mesh-id probe picks create vs update. Untargeted it queried the
+        // wrong project, failed ("Unable to get mesh details"), and reported NO
+        // existing mesh — so a project with a live mesh took the create path.
+        it('runs the existing-mesh probe under the same targeting', async () => {
+            let target: OrgContextTarget | undefined;
+            mockFetchInfo.mockImplementation(async () => {
+                target = getActiveOrgContext();
+                return { meshId: 'existing-1', endpoint: 'https://old/graphql' };
+            });
+
+            await deployMeshHeadless(deps());
+
+            expect(target).toMatchObject({ orgId: 'org', projectId: 'proj', workspaceId: 'ws' });
+        });
+
+        it('enriches the target with the cached org code/name on an id match', async () => {
+            let target: OrgContextTarget | undefined;
+            mockDeploy.mockImplementation(async () => {
+                target = getActiveOrgContext();
+                return { success: true, data: { meshId: 'mesh-1', endpoint: 'https://new/graphql' } };
+            });
+
+            await deployMeshHeadless(deps());
+
+            expect(target).toMatchObject({ orgCode: 'ORG@AdobeOrg', orgName: 'Adobe Demo System' });
         });
     });
 

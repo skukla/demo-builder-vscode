@@ -33,6 +33,11 @@ by design**. Knowing which is which is the whole skill.
    The error formatter sometimes surfaces a blank `Error:` — the preceding structured dump's
    `stdout`/`stderr` fields carry the actionable line the formatter dropped. The CLI's own
    words ("Selected org, project and workspace already has a mesh") beat the wrapper every time.
+   **Read `stdout` even when `stderr` looks like the answer.** `aio` puts its real diagnosis in
+   stdout and a generic "check your configuration" in stderr, so the field that looks like the
+   error is the one that misleads: "Unable to create a mesh. Check the mesh configuration file"
+   (stderr) vs "The specified organization, project, and workspace combination is invalid or
+   disabled" (stdout, same failure). Two days were spent on the wrong half of that dump.
 2. **Match the failure-signatures table** below before theorizing.
 3. **Strip the benign noise** (table below) so it doesn't derail the diagnosis.
 4. **Map the channel to the owning feature** to locate code; message templates live in
@@ -49,7 +54,8 @@ by design**. Knowing which is which is the whole skill.
 | Either mesh signature with NO `retrying as` line | Running a pre-fallback build | Update the extension / rebuild from develop |
 | `[error] Error:` with NOTHING after it | Error formatter dropped the CLI detail | Read the `[debug] {stdout,stderr}` block above it (Procedure 1); the formatter gap is part of the same backlog item |
 | `DA.live token expired or missing` / `Token validation failed: Token has expired` | DA.live tokens are short-lived; the token-first flow re-prompts | Expected once per session-ish; only a LOOP of these is a bug |
-| `Could not find numeric ID for project "X", using name as fallback` | Console project lacks/eludes numeric-id resolution | Works via fallback; note it, don't chase it unless an op then 403s |
+| `The specified organization, project, and workspace combination is invalid or disabled` in **stdout**, under a `Selected project: <name>` banner, while stderr blames the mesh config | An `aio` call ran WITHOUT `withOrgContext`, so it used the CLI's process-global `aio console where` selection — stale by design, since Phase 4a stopped writing it | Read the `Selected project:` name in stdout. If it is not the project's committed destination, the call path is unwrapped: wrap it in `withOrgContext(buildOrgTargetFromProjectAdobe(project.adobe, cachedOrg))` like its siblings. **Tell:** a `[Mesh Subscribe]`/SDK step SUCCEEDS in the same run while the CLI step fails — the SDK path threads ids explicitly, so only the CLI half mis-targets (`deployMeshHeadless`, fixed 2026-08-03) |
+| `The CLI's persisted project "X" is not in this token's project list` (debug) | `aio console where` names a project that is deleted or under an org this token cannot reach — expected, since the extension no longer writes that global | Genuinely benign for the resolver, which now returns "no current project". But treat it as a WARNING SIGN for the run: if an `aio` op fails nearby, suspect an unwrapped call path targeting that same stale project (the row above). Before 2026-08-03 this read `Could not find numeric ID … using name as fallback` and this table called it harmless — the fallback fabricated an id and that mis-targeting was the mesh bug |
 | `[Command Executor] Process exited with code N` followed by a raw stderr | The actual CLI failure | Judge by the stderr content, not the exit code alone |
 
 ## Benign-noise catalog (looks alarming, is by design)

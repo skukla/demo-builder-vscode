@@ -19,6 +19,7 @@ import { deployMeshComponent } from './meshDeployment';
 import { fetchMeshInfoFromAdobeIO } from './meshVerifier';
 import { updateMeshState } from './stalenessDetector';
 import { ServiceLocator } from '@/core/di';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import { ensureMeshApiSubscribed } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
@@ -121,46 +122,66 @@ export async function deployMeshHeadless(
     meshComponent.status = 'deploying';
     await stateManager.saveProject(project);
 
+    // Target THIS project's org/project/workspace for every `aio` child issued
+    // below. Without it the CLI falls back to its process-global `aio console
+    // where` selection — which the extension deliberately stopped writing (Phase
+    // 4a), so it holds whatever some earlier session left there. On 2026-08-03
+    // that was a deleted project, and every deploy failed with the CLI's own
+    // "The specified organization, project, and workspace combination is invalid
+    // or disabled" buried in stdout while stderr blamed the mesh config.
+    //
+    // `ensureMeshApiSubscribed` wraps its own SDK calls with the same target
+    // (harmless to nest — withOrgContext is AsyncLocalStorage), which is why the
+    // subscribe step kept succeeding while the deploy beside it failed.
+    const orgTarget = buildOrgTargetFromProjectAdobe(
+        project.adobe,
+        authManager.getCachedOrganization?.(),
+    );
+
     try {
-        // Bounded pre-deploy subscribe (API Mesh API + baseline) BEFORE deploying.
-        await ensureMeshApiSubscribed({ project, authService: authManager, logger });
+        return await withOrgContext(orgTarget, async () => {
+            // Bounded pre-deploy subscribe (API Mesh API + baseline) BEFORE deploying.
+            await ensureMeshApiSubscribed({ project, authService: authManager, logger });
 
-        // Create-or-update: source the existing mesh id from Adobe I/O (remote truth).
-        const meshInfo = await fetchMeshInfoFromAdobeIO(logger);
-        const existingMeshId = meshInfo?.meshId || '';
+            // Create-or-update: source the existing mesh id from Adobe I/O (remote
+            // truth). Untargeted this queried the WRONG project, failed, and
+            // reported no existing mesh — sending a live mesh down the create path.
+            const meshInfo = await fetchMeshInfoFromAdobeIO(logger);
+            const existingMeshId = meshInfo?.meshId || '';
 
-        const result = await deployMeshComponent(
-            meshComponent.path as string,
-            ServiceLocator.getCommandExecutor(),
-            logger,
-            (message: string, subMessage?: string) => onProgress?.(message, subMessage),
-            existingMeshId,
-        );
+            const result = await deployMeshComponent(
+                meshComponent.path as string,
+                ServiceLocator.getCommandExecutor(),
+                logger,
+                (message: string, subMessage?: string) => onProgress?.(message, subMessage),
+                existingMeshId,
+            );
 
-        // A failed deploy result throws into the catch below (single error path:
-        // 'error' status + component error-state persist), matching the command.
-        if (!result.success) {
-            throw new Error(result.error || 'Mesh deployment failed');
-        }
+            // A failed deploy result throws into the catch below (single error path:
+            // 'error' status + component error-state persist), matching the command.
+            if (!result.success) {
+                throw new Error(result.error || 'Mesh deployment failed');
+            }
 
-        const deployedMeshId = result.data?.meshId;
-        const deployedEndpoint = result.data?.endpoint;
+            const deployedMeshId = result.data?.meshId;
+            const deployedEndpoint = result.data?.endpoint;
 
-        // Persist deployed status (the endpoint + runtime baseline live on the
-        // keyed mesh appBuilderComponents entry, written by updateMeshState —
-        // the single writer chokepoint, ADR-011 D3 Steps 07+09).
-        meshComponent.status = 'deployed';
-        meshComponent.metadata = {
-            ...meshComponent.metadata,
-            meshId: deployedMeshId || '',
-            meshStatus: 'deployed',
-        };
-        await updateMeshState(project, deployedEndpoint);
-        project.meshStatusSummary = 'deployed';
-        await stateManager.saveProject(project);
+            // Persist deployed status (the endpoint + runtime baseline live on the
+            // keyed mesh appBuilderComponents entry, written by updateMeshState —
+            // the single writer chokepoint, ADR-011 D3 Steps 07+09).
+            meshComponent.status = 'deployed';
+            meshComponent.metadata = {
+                ...meshComponent.metadata,
+                meshId: deployedMeshId || '',
+                meshStatus: 'deployed',
+            };
+            await updateMeshState(project, deployedEndpoint);
+            project.meshStatusSummary = 'deployed';
+            await stateManager.saveProject(project);
 
-        await onStatus?.('deployed', undefined, deployedEndpoint);
-        return { success: true, meshId: deployedMeshId, endpoint: deployedEndpoint };
+            await onStatus?.('deployed', undefined, deployedEndpoint);
+            return { success: true, meshId: deployedMeshId, endpoint: deployedEndpoint };
+        });
     } catch (error) {
         await onStatus?.('error', 'Deployment failed');
         meshComponent.status = 'error';
