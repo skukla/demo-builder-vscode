@@ -161,6 +161,39 @@ immediately after.
 default is a nonexistent path, so a missed override fails loudly instead of touching the
 real home directory. A test once wrote the real `~/.claude.json` this way.
 
+## 8. Changing a contract means auditing its MOCKS, not just its callers
+
+`tsc` and the callers keep each other honest; a hand-written mock is invisible to both. It
+keeps returning the OLD shape and the suite either fails confusingly or — worse — passes
+while asserting behaviour that no longer exists.
+
+Four instances in a single day (2026-07-31), each caught only by running the suite:
+
+| Change | Stale mock | How it surfaced |
+|---|---|---|
+| Handler wrapped in `withProgress` | `dashboardHandlers.testUtils` had no `withProgress`/`ProgressLocation` | Handler threw inside the test |
+| Client moved to `Map<type, Set<handler>>` | Mock kept ONE handler per type | Only the last registration fired |
+| Menu rows gained icons + `<Text>` | Per-suite Spectrum mock had no `Text` | "Element type is invalid… got: undefined" |
+| `runGuards` → typed `{ error, code? }` | Mock resolved a bare string | `error: undefined` in the result |
+
+So when you change a signature, return shape, or registration structure, grep for its mocks
+BEFORE running anything:
+
+```bash
+grep -rn "<symbol>" tests/ --include="*.ts" --include="*.tsx" | grep -i "mock\|testUtils"
+```
+
+Two traps specific to this repo:
+- **A per-suite Spectrum mock only exports what the tree rendered WHEN IT WAS WRITTEN.** Adding
+  any primitive to a component (`Text`, `Section`, `SubmenuTrigger`) breaks every suite mocking
+  that module — §2 says mock only what renders, which is right, and this is its cost.
+- **`.testUtils` files are shared across a split suite** (§3), so one stale mock fails several
+  files at once. Fix the helper, not the individual suites.
+
+The failure to fear is the silent one: a mock returning the old shape that still satisfies a
+loose assertion (`expect(result.success).toBe(false)`) proves nothing once the shape changed.
+Assert the FULL object when a contract carries a new field.
+
 ## Before finishing
 
 Run `gate`. Then confirm no test file exceeds 500 lines (`max-lines` warns at 500, and CI

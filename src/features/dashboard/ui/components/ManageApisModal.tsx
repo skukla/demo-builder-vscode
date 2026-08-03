@@ -21,11 +21,8 @@
  */
 
 import { DialogContainer, Flex, Text } from '@adobe/react-spectrum';
-import Key from '@spectrum-icons/workflow/Key';
-import Login from '@spectrum-icons/workflow/Login';
 import React, { useCallback, useEffect, useState } from 'react';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
+import { renderApiCatalogFeedback } from '@/core/ui/components/feedback/ApiCatalogFeedback';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection';
 import { Modal } from '@/core/ui/components/ui/Modal';
@@ -114,65 +111,24 @@ function ManageApisBody({
     selected: string[];
     onToggle: (code: string) => void;
 }): React.ReactElement {
-    // Loading and failure both fill a RESERVED height and center — the house
-    // treatment, and the same one the wizard's picker uses for this identical
-    // fetch. A small inline spinner left-aligned in a size-L modal collapsed the
-    // dialog to a sliver and left the body looking empty. The reserved height
-    // also stops the modal resizing when the list lands.
-    if (isLoading) {
+    // The three non-picker views are shared with the wizard's picker stage
+    // (renderApiCatalogFeedback) — same fetch, same states. Only the wrapper differs:
+    // the reserved height stops this dialog resizing when the list lands.
+    const feedback = renderApiCatalogFeedback({
+        loading: isLoading,
+        loadingStage,
+        needsSignIn,
+        error: loadError,
+        onSignIn,
+        onRetry,
+        signInPurpose: "manage this app's API access",
+    });
+    if (feedback) {
         return (
-            <CenteredFeedbackContainer height={FEEDBACK_HEIGHT}>
-                <LoadingDisplay
-                    size="L"
-                    message="Loading Adobe APIs…"
-                    subMessage={loadingStage}
-                    helperText="This can take up to a minute"
-                />
-            </CenteredFeedbackContainer>
+            <CenteredFeedbackContainer height={FEEDBACK_HEIGHT}>{feedback}</CenteredFeedbackContainer>
         );
     }
-    // Signed out is not retryable — Retry re-runs the same unauthenticated call.
-    // AdobeAuthStep's treatment: a StatusDisplay whose action STARTS a sign-in.
-    if (needsSignIn) {
-        return (
-            <CenteredFeedbackContainer height={FEEDBACK_HEIGHT}>
-                <StatusDisplay
-                    variant="info"
-                    height="100%"
-                    icon={<Key size="L" UNSAFE_className="text-gray-500" />}
-                    title="Sign in to Adobe"
-                    message="Your Adobe session has ended. Sign in to manage this app's API access."
-                    actions={
-                        onSignIn
-                            ? [
-                                  {
-                                      label: 'Sign In with Adobe',
-                                      icon: <Login size="S" />,
-                                      variant: 'accent',
-                                      onPress: () => void onSignIn().then(onRetry),
-                                  },
-                              ]
-                            : []
-                    }
-                />
-            </CenteredFeedbackContainer>
-        );
-    }
-    if (loadError) {
-        // A retryable failure, not dead-end red text — matching the wizard picker,
-        // where the same fetch failing offers the same way out.
-        return (
-            <CenteredFeedbackContainer height={FEEDBACK_HEIGHT}>
-                <StatusDisplay
-                    variant="error"
-                    height="100%"
-                    title="Couldn't load Adobe APIs"
-                    message={loadError}
-                    actions={onRetry ? [{ label: 'Retry', variant: 'accent', onPress: onRetry }] : []}
-                />
-            </CenteredFeedbackContainer>
-        );
-    }
+
     return (
         <ApiAccessPicker
             apis={apis}

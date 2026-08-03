@@ -13,10 +13,8 @@
  * @module features/project-creation/ui/components/integration-flow/stages/ApiPickerStage
  */
 
-import Key from '@spectrum-icons/workflow/Key';
-import Login from '@spectrum-icons/workflow/Login';
 import React, { useCallback, useEffect, useState } from 'react';
-import { LoadingDisplay, StatusDisplay } from '@/core/ui/components/feedback';
+import { renderApiCatalogFeedback } from '@/core/ui/components/feedback/ApiCatalogFeedback';
 import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection';
 import {
     useElapsedStage,
@@ -111,65 +109,26 @@ export function ApiPickerStage({
         };
     }, [componentIds, reloadKey]);
 
-    // Loading and error fill the reserved stage body and center on both axes —
-    // full width, not the left-aligned .intflow-api-info content band (a retryable
-    // failure, not dead-end red text). The picker/summary keep that top-aligned band.
-    if (loading) {
+    // The three non-picker views are shared with the Manage APIs modal
+    // (renderApiCatalogFeedback) — same fetch, same states. Only the wrapper differs:
+    // this band is full-bleed and carries the stage's test id.
+    const feedback = renderApiCatalogFeedback({
+        loading,
+        loadingStage,
+        needsSignIn,
+        error,
+        onSignIn,
+        onRetry: retry,
+        signInPurpose: 'choose the APIs this app needs',
+    });
+    if (feedback) {
         return (
             <div className="intflow-api-center" data-testid="api-picker-stage">
-                {/* A static label reads as FROZEN on a fetch this long (38.9s
-                    measured). helperText sets the expectation up front; the staged
-                    subMessage shows it is still moving. */}
-                <LoadingDisplay
-                    size="L"
-                    message="Loading Adobe APIs…"
-                    subMessage={loadingStage}
-                    helperText="This can take up to a minute"
-                />
+                {feedback}
             </div>
         );
     }
-    // Signed out is NOT a retryable error — Retry re-runs the same unauthenticated
-    // call and fails identically. The house treatment for this is AdobeAuthStep's:
-    // a StatusDisplay whose action STARTS a sign-in (user-initiated, opens a browser).
-    if (needsSignIn) {
-        return (
-            <div className="intflow-api-center" data-testid="api-picker-stage">
-                <StatusDisplay
-                    variant="info"
-                    height="100%"
-                    icon={<Key size="L" UNSAFE_className="text-gray-500" />}
-                    title="Sign in to Adobe"
-                    message="Your Adobe session has ended. Sign in to choose the APIs this app needs."
-                    actions={
-                        onSignIn
-                            ? [
-                                  {
-                                      label: 'Sign In with Adobe',
-                                      icon: <Login size="S" />,
-                                      variant: 'accent',
-                                      onPress: () => void onSignIn().then(retry),
-                                  },
-                              ]
-                            : []
-                    }
-                />
-            </div>
-        );
-    }
-    if (error) {
-        return (
-            <div className="intflow-api-center" data-testid="api-picker-stage">
-                <StatusDisplay
-                    variant="error"
-                    height="100%"
-                    title="Couldn't load Adobe APIs"
-                    message={error}
-                    actions={[{ label: 'Retry', variant: 'accent', onPress: retry }]}
-                />
-            </div>
-        );
-    }
+
     // The interactive picker (filter, category chips, API list) uses the full modal
     // width — the extra room lets more chips and the list breathe.
     return (
