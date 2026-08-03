@@ -19,6 +19,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { fetchApiAccessRows } from '@/features/app-builder/services/apiAccessRows';
 import { computeRequiredApis } from '@/features/app-builder/services/apiSubscriber';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import { ErrorCode } from '@/types/errorCodes';
 import type { MessageHandler } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
 
@@ -33,7 +34,13 @@ export const handleListOrgConsoleApis: MessageHandler<{ componentIds?: string[] 
 ) => {
     const authService = ServiceLocator.getAuthenticationService();
     if (!(await authService.isAuthenticated())) {
-        return { success: false, error: 'Adobe sign-in required to list Adobe APIs.' };
+        // TYPED, not just prose: the picker renders a "Sign In with Adobe" action for
+        // this code instead of a Retry, which cannot fix being signed out.
+        return {
+            success: false,
+            error: 'Adobe sign-in required to list Adobe APIs.',
+            code: ErrorCode.AUTH_REQUIRED,
+        };
     }
     // The in-memory org cache is only warm after a sign-in THIS session; editing a
     // loaded project (Edit → Integrations → Change APIs) reaches this handler without

@@ -21,6 +21,8 @@
  */
 
 import { DialogContainer, Flex, Text } from '@adobe/react-spectrum';
+import Key from '@spectrum-icons/workflow/Key';
+import Login from '@spectrum-icons/workflow/Login';
 import React, { useCallback, useEffect, useState } from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
@@ -33,6 +35,7 @@ import {
 } from '@/core/ui/hooks/useElapsedStage';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { CloudGrouping } from '@/types/adobeApis';
+import { ErrorCode } from '@/types/errorCodes';
 
 /** One org service as the `listConsoleApis` handler reports it. */
 interface ConsoleApiEntry {
@@ -53,6 +56,8 @@ interface ListConsoleApisResponse {
     /** `added` = the project's current OPTIONAL extras (checked + removable). */
     data?: { apis: ConsoleApiEntry[]; added?: string[] };
     error?: string;
+    /** AUTH_REQUIRED distinguishes "signed out" from a retryable failure. */
+    code?: ErrorCode;
 }
 
 interface SetConsoleApisResponse {
@@ -90,6 +95,8 @@ function ManageApisBody({
     loadingStage,
     isLoading,
     loadError,
+    needsSignIn,
+    onSignIn,
     onRetry,
     apis,
     selected,
@@ -98,6 +105,10 @@ function ManageApisBody({
     loadingStage?: string;
     isLoading: boolean;
     loadError: string | null;
+    /** Render the sign-in view rather than the retryable-error view. */
+    needsSignIn?: boolean;
+    /** Start a user-initiated Adobe sign-in; resolves when it finishes. */
+    onSignIn?: () => Promise<unknown>;
     onRetry?: () => void;
     apis: ApiAccessOption[];
     selected: string[];
@@ -116,6 +127,33 @@ function ManageApisBody({
                     message="Loading Adobe APIs…"
                     subMessage={loadingStage}
                     helperText="This can take up to a minute"
+                />
+            </CenteredFeedbackContainer>
+        );
+    }
+    // Signed out is not retryable — Retry re-runs the same unauthenticated call.
+    // AdobeAuthStep's treatment: a StatusDisplay whose action STARTS a sign-in.
+    if (needsSignIn) {
+        return (
+            <CenteredFeedbackContainer height={FEEDBACK_HEIGHT}>
+                <StatusDisplay
+                    variant="info"
+                    height="100%"
+                    icon={<Key size="L" UNSAFE_className="text-gray-500" />}
+                    title="Sign in to Adobe"
+                    message="Your Adobe session has ended. Sign in to manage this app's API access."
+                    actions={
+                        onSignIn
+                            ? [
+                                  {
+                                      label: 'Sign In with Adobe',
+                                      icon: <Login size="S" />,
+                                      variant: 'accent',
+                                      onPress: () => void onSignIn().then(onRetry),
+                                  },
+                              ]
+                            : []
+                    }
                 />
             </CenteredFeedbackContainer>
         );
@@ -157,6 +195,8 @@ export function ManageApisModal({
     const [apis, setApis] = useState<ApiAccessOption[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
+    /** "Signed out" is a DIFFERENT view from a retryable failure (see ManageApisBody). */
+    const [needsSignIn, setNeedsSignIn] = useState(false);
     /** The OPTIONAL extras: seeded from the project's existing added set, then
         edited (check adds, uncheck removes). Managed codes are locked, never here. */
     const [selected, setSelected] = useState<string[]>([]);
@@ -167,6 +207,12 @@ export function ManageApisModal({
     /** Bumped by the error view's Retry to re-fire the fetch. */
     const [reloadKey, setReloadKey] = useState(0);
     const retry = useCallback(() => setReloadKey((key) => key + 1), []);
+    // The dashboard webview's sign-in message; resolves when the browser flow ends,
+    // so the reload lands on a signed-in session.
+    const signIn = useCallback(
+        () => webviewClient.request('reAuthenticate').catch(() => undefined),
+        [],
+    );
     const [applyError, setApplyError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -177,6 +223,7 @@ export function ManageApisModal({
         setSelected([]);
         setInitial([]);
         setLoadError(null);
+        setNeedsSignIn(false);
         setApplyError(null);
         setIsLoading(true);
         webviewClient
@@ -198,6 +245,7 @@ export function ManageApisModal({
                     setSelected(added);
                     setInitial(added);
                 } else {
+                    setNeedsSignIn(res?.code === ErrorCode.AUTH_REQUIRED);
                     setLoadError(res?.error ?? 'Could not load Adobe APIs.');
                 }
             })
@@ -272,6 +320,8 @@ export function ManageApisModal({
                             loadingStage={loadingStage}
                             isLoading={isLoading}
                             loadError={loadError}
+                            needsSignIn={needsSignIn}
+                            onSignIn={signIn}
                             apis={apis}
                             selected={selected}
                             onToggle={handleToggle}

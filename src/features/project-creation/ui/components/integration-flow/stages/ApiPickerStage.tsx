@@ -13,6 +13,8 @@
  * @module features/project-creation/ui/components/integration-flow/stages/ApiPickerStage
  */
 
+import Key from '@spectrum-icons/workflow/Key';
+import Login from '@spectrum-icons/workflow/Login';
 import React, { useCallback, useEffect, useState } from 'react';
 import { LoadingDisplay, StatusDisplay } from '@/core/ui/components/feedback';
 import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection';
@@ -21,11 +23,14 @@ import {
     ORG_SERVICES_LOADING_STAGES,
 } from '@/core/ui/hooks/useElapsedStage';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
+import { ErrorCode } from '@/types/errorCodes';
 
 /** The `list-org-console-apis` handler response (rows are already picker-shaped). */
 interface ListOrgApisResponse {
     success: boolean;
     error?: string;
+    /** AUTH_REQUIRED distinguishes "signed out" from a retryable failure. */
+    code?: ErrorCode;
     data?: { apis: ApiAccessOption[] };
 }
 
@@ -39,6 +44,15 @@ export interface ApiPickerStageProps {
     selected: string[];
     /** Toggle a free pick by code. */
     onToggle: (code: string) => void;
+    /**
+     * Start a user-initiated Adobe sign-in and resolve when it finishes.
+     *
+     * HOST-PROVIDED because this stage renders in both webviews and they register
+     * DIFFERENT messages for it — the wizard `authenticate`, the dashboard
+     * `reAuthenticate`. Hardcoding either breaks the other host. Omitted → the
+     * signed-out view shows the reason with no action rather than a dead button.
+     */
+    onSignIn?: () => Promise<unknown>;
 }
 
 /** Stable empty default so an omitted `selected` never churns the picker. */
@@ -56,10 +70,13 @@ export function ApiPickerStage({
     componentIds,
     selected = NO_SELECTED,
     onToggle,
+    onSignIn,
 }: ApiPickerStageProps): React.ReactElement {
     const [apis, setApis] = useState<ApiAccessOption[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | undefined>(undefined);
+    /** Set when the failure is "not signed in" — a DIFFERENT view, not a retryable error. */
+    const [needsSignIn, setNeedsSignIn] = useState(false);
     const [reloadKey, setReloadKey] = useState(0);
 
     const loadingStage = useElapsedStage(loading, ORG_SERVICES_LOADING_STAGES);
@@ -71,12 +88,17 @@ export function ApiPickerStage({
         let cancelled = false;
         setLoading(true);
         setError(undefined);
+        setNeedsSignIn(false);
         webviewClient
             .request<ListOrgApisResponse>('list-org-console-apis', { componentIds })
             .then((res) => {
                 if (cancelled) return;
-                if (res.success && res.data) setApis(res.data.apis);
-                else setError(res.error ?? 'Could not list Adobe APIs.');
+                if (res.success && res.data) {
+                    setApis(res.data.apis);
+                } else {
+                    setNeedsSignIn(res.code === ErrorCode.AUTH_REQUIRED);
+                    setError(res.error ?? 'Could not list Adobe APIs.');
+                }
             })
             .catch((err: unknown) => {
                 if (!cancelled) setError(err instanceof Error ? err.message : String(err));
@@ -103,6 +125,34 @@ export function ApiPickerStage({
                     message="Loading Adobe APIs…"
                     subMessage={loadingStage}
                     helperText="This can take up to a minute"
+                />
+            </div>
+        );
+    }
+    // Signed out is NOT a retryable error — Retry re-runs the same unauthenticated
+    // call and fails identically. The house treatment for this is AdobeAuthStep's:
+    // a StatusDisplay whose action STARTS a sign-in (user-initiated, opens a browser).
+    if (needsSignIn) {
+        return (
+            <div className="intflow-api-center" data-testid="api-picker-stage">
+                <StatusDisplay
+                    variant="info"
+                    height="100%"
+                    icon={<Key size="L" UNSAFE_className="text-gray-500" />}
+                    title="Sign in to Adobe"
+                    message="Your Adobe session has ended. Sign in to choose the APIs this app needs."
+                    actions={
+                        onSignIn
+                            ? [
+                                  {
+                                      label: 'Sign In with Adobe',
+                                      icon: <Login size="S" />,
+                                      variant: 'accent',
+                                      onPress: () => void onSignIn().then(retry),
+                                  },
+                              ]
+                            : []
+                    }
                 />
             </div>
         );

@@ -37,6 +37,10 @@ interface CommunicationConfig {
 const REQUEST_TIMEOUTS: Record<string, number> = {
     // Authentication
     'authenticate': TIMEOUTS.AUTH.BROWSER,           // 60s - browser-based auth flow
+    // Awaits the SAME browser sign-in as 'authenticate', then restores project context
+    // and refreshes status — so it needs at least the same budget. Callers await it to
+    // know when sign-in finished (the API picker re-fetches on success).
+    'reAuthenticate': TIMEOUTS.AUTH.BROWSER,         // 60s - browser sign-in + context restore
 
     // Data loading (wizard UI)
     'get-projects': TIMEOUTS.NORMAL,                 // 30s - fetch project list from Adobe

@@ -13,6 +13,7 @@ import {
     handleListConsoleApis,
     handleSetConsoleApis,
 } from '@/features/dashboard/handlers/consoleApiHandlers';
+import { ErrorCode } from '@/types/errorCodes';
 import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import { subscribeRequiredApis } from '@/features/app-builder/services/apiSubscriber';
 import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
@@ -117,9 +118,18 @@ describe('handleListConsoleApis', () => {
     });
 
     it('aborts on a guard failure without touching the Console', async () => {
-        (runGuards as jest.Mock).mockResolvedValueOnce('Adobe sign-in required.');
+        // runGuards returns a TYPED refusal ({ error, code? }) so UI surfaces can offer
+        // a sign-in action for AUTH_REQUIRED rather than a Retry that cannot help.
+        (runGuards as jest.Mock).mockResolvedValueOnce({
+            error: 'Adobe sign-in required.',
+            code: ErrorCode.AUTH_REQUIRED,
+        });
         const result = await handleListConsoleApis(makeContext(makeProject()), undefined);
-        expect(result).toEqual({ success: false, error: 'Adobe sign-in required.' });
+        expect(result).toEqual({
+            success: false,
+            error: 'Adobe sign-in required.',
+            code: ErrorCode.AUTH_REQUIRED,
+        });
     });
 
     it('cleans the catalog the same way as the wizard (drops noise, carries product family)', async () => {

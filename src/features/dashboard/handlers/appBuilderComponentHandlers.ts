@@ -60,10 +60,17 @@ import { toError } from '@/types/typeGuards';
  * Exported for the console-API handlers (consoleApiHandlers.ts), which need
  * the identical chain before touching Developer Console credentials.
  */
+/** A guard refusal: the message to show, plus a code when the UI can act on it. */
+export interface GuardFailure {
+    error: string;
+    /** AUTH_REQUIRED lets a picker offer "Sign In with Adobe" instead of Retry. */
+    code?: ErrorCode;
+}
+
 export async function runGuards(
     context: HandlerContext,
     project: Project,
-): Promise<string | undefined> {
+): Promise<GuardFailure | undefined> {
     const authManager = ServiceLocator.getAuthenticationService();
 
     const authResult = await ensureAdobeIOAuth({
@@ -78,7 +85,8 @@ export async function runGuards(
         warningMessage: 'Adobe sign-in required to manage App Builder components.',
     });
     if (!authResult.authenticated) {
-        return 'Adobe sign-in required.';
+        // TYPED so UI surfaces can offer a SIGN-IN action; a Retry cannot fix this.
+        return { error: 'Adobe sign-in required.', code: ErrorCode.AUTH_REQUIRED };
     }
 
     const { detectProjectOrgMismatch } = await import(
@@ -86,12 +94,16 @@ export async function runGuards(
     );
     const orgContext = await detectProjectOrgMismatch(authManager, project, context.logger);
     if (orgContext && !orgContext.reachable) {
-        return 'Project uses a different Adobe organization. Use "Switch IMS Org" to continue.';
+        return {
+            error: 'Project uses a different Adobe organization. Use "Switch IMS Org" to continue.',
+        };
     }
 
     const permission = await authManager.testDeveloperPermissions();
     if (!permission.hasPermissions) {
-        return permission.error || 'Developer or System Admin role required for App Builder.';
+        return {
+            error: permission.error || 'Developer or System Admin role required for App Builder.',
+        };
     }
 
     return undefined;
@@ -220,10 +232,15 @@ export const handleAddAppBuilderComponent: MessageHandler<{
             report('Checking requirements…');
             const guardError = await runGuards(context, project);
             if (guardError) {
-                vscode.window.showWarningMessage(guardError);
+                vscode.window.showWarningMessage(guardError.error);
                 // `blocked`, not merely failed: nothing ran, so callers must NOT
                 // take the failed-op path (error row status + snapshot).
-                return { success: false, error: guardError, blocked: true };
+                return {
+                    success: false,
+                    error: guardError.error,
+                    code: guardError.code,
+                    blocked: true,
+                };
             }
 
             // Bucket-3 inputs → Configure FIRST (never silently deploy with missing inputs).
@@ -300,7 +317,13 @@ async function resolveComponentTarget(
  * must not take the failed-op path (error row status + snapshot) — nothing was
  * attempted and nothing persisted.
  */
-type GuardableResult = { success: boolean; error?: string; blocked?: boolean };
+type GuardableResult = {
+    success: boolean;
+    error?: string;
+    /** Set when the refusal is actionable (AUTH_REQUIRED → the UI offers sign-in). */
+    code?: ErrorCode;
+    blocked?: boolean;
+};
 
 /**
  * Run a slow per-integration operation with the telegraph the rest of the
@@ -366,10 +389,15 @@ async function deployById(context: HandlerContext, requestedId: string | undefin
             report('Checking requirements…');
             const guardError = await runGuards(context, project);
             if (guardError) {
-                vscode.window.showWarningMessage(guardError);
+                vscode.window.showWarningMessage(guardError.error);
                 // `blocked`, not merely failed: nothing ran, so callers must NOT
                 // take the failed-op path (error row status + snapshot).
-                return { success: false, error: guardError, blocked: true };
+                return {
+                    success: false,
+                    error: guardError.error,
+                    code: guardError.code,
+                    blocked: true,
+                };
             }
 
             report('Deploying…');
@@ -414,10 +442,15 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
             report('Checking requirements…');
             const guardError = await runGuards(context, project);
             if (guardError) {
-                vscode.window.showWarningMessage(guardError);
+                vscode.window.showWarningMessage(guardError.error);
                 // `blocked`, not merely failed: nothing ran, so callers must NOT
                 // take the failed-op path (error row status + snapshot).
-                return { success: false, error: guardError, blocked: true };
+                return {
+                    success: false,
+                    error: guardError.error,
+                    code: guardError.code,
+                    blocked: true,
+                };
             }
 
             // Undeploy is a slow cloud op — telegraph it, or the grid sits frozen

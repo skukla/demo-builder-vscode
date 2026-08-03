@@ -38,6 +38,7 @@ import {
 } from '../components/integration-flow';
 import { meshComponentForStack } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
+import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
@@ -109,6 +110,14 @@ export function IntegrationsStep({
     // The row being API-edited (mode 'api-edit' only) — seeds the picker with its
     // current picks; passed to the modal only in that mode.
     const [editTarget, setEditTarget] = useState<ApiEditTarget | undefined>(undefined);
+    // The WIZARD webview registers `authenticate` (the dashboard's twin is
+    // `reAuthenticate`); it resolves once the browser sign-in completes, so the API
+    // picker can re-fetch immediately after.
+    const signIn = useCallback(
+        () => webviewClient.request('authenticate', { force: false }).catch(() => undefined),
+        [],
+    );
+
     const openAdd = useCallback((): void => {
         setMode('add');
         setModalOpen(true);
@@ -277,6 +286,7 @@ export function IntegrationsStep({
                 blankComponent={blankComponent}
                 reservedIds={reservedIds}
                 builder={builder}
+                onSignIn={signIn}
             />
             <RenameIntegrationModal
                 isOpen={renameTarget !== null}

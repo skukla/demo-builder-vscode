@@ -167,6 +167,14 @@ export function AddIntegrationFlowAdapter({
         [],
     );
 
+    // The DASHBOARD webview registers `reAuthenticate` (not the wizard's
+    // `authenticate`); it awaits the browser sign-in and returns when done, so the
+    // picker can re-fetch straight after.
+    const signIn = useCallback(
+        () => webviewClient.request('reAuthenticate').catch(() => undefined),
+        [],
+    );
+
     return (
         <AddIntegrationFlowModal
             isOpen={isOpen}
@@ -179,6 +187,7 @@ export function AddIntegrationFlowAdapter({
             blankComponent={blankComponent}
             reservedIds={reservedIds}
             builder={builder as never}
+            onSignIn={signIn}
         />
     );
 }

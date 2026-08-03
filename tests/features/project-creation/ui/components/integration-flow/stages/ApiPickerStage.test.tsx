@@ -23,7 +23,14 @@ import { ApiPickerStage } from '@/features/project-creation/ui/components/integr
 const FFS = { code: 'FireflyServicesSDK', name: 'Firefly Services', locked: false };
 const BASELINE = { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API', locked: true };
 
-function renderStage(props: { componentIds?: string[]; selected?: string[] } = {}) {
+function renderStage(
+    props: {
+        componentIds?: string[];
+        selected?: string[];
+        /** Omitted by default — most cases never reach the signed-out view. */
+        onSignIn?: () => Promise<unknown>;
+    } = {}
+) {
     const onToggle = jest.fn();
     render(
         <Provider theme={defaultTheme} colorScheme="light">
@@ -31,6 +38,7 @@ function renderStage(props: { componentIds?: string[]; selected?: string[] } = {
                 componentIds={props.componentIds ?? []}
                 selected={props.selected ?? []}
                 onToggle={onToggle}
+                onSignIn={props.onSignIn}
             />
         </Provider>
     );
@@ -78,12 +86,59 @@ describe('ApiPickerStage', () => {
     });
 
     it('surfaces a fetch error inline', async () => {
-        mockRequest.mockResolvedValue({ success: false, error: 'Adobe sign-in required.' });
+        // A NON-auth failure: the retryable error view. (An AUTH_REQUIRED code routes
+        // to the sign-in view instead — see the sign-in describe below.)
+        mockRequest.mockResolvedValue({ success: false, error: 'Adobe API catalog unavailable.' });
         renderStage();
         await waitFor(() =>
-            expect(screen.getByText('Adobe sign-in required.')).toBeInTheDocument()
+            expect(screen.getByText('Adobe API catalog unavailable.')).toBeInTheDocument()
         );
         expect(screen.queryByText('Firefly Services')).not.toBeInTheDocument();
+    });
+
+    // Signed out is NOT retryable: Retry re-runs the same unauthenticated call and
+    // fails identically. The house treatment (AdobeAuthStep) offers a sign-in action.
+    describe('signed out offers sign-in, not Retry', () => {
+        const signedOut = {
+            success: false,
+            error: 'Adobe sign-in required to list Adobe APIs.',
+            code: 'AUTH_REQUIRED',
+        };
+
+        it('shows Sign In with Adobe and NO Retry', async () => {
+            mockRequest.mockResolvedValue(signedOut);
+            renderStage({ onSignIn: jest.fn().mockResolvedValue(undefined) });
+
+            await waitFor(() => expect(screen.getByText('Sign in to Adobe')).toBeInTheDocument());
+            expect(
+                screen.getByRole('button', { name: /sign in with adobe/i }),
+            ).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /^retry$/i })).not.toBeInTheDocument();
+        });
+
+        it('re-fetches after the host sign-in resolves', async () => {
+            mockRequest.mockResolvedValueOnce(signedOut);
+            const onSignIn = jest.fn().mockResolvedValue(undefined);
+            renderStage({ onSignIn });
+
+            await waitFor(() => expect(screen.getByText('Sign in to Adobe')).toBeInTheDocument());
+            fireEvent.click(screen.getByRole('button', { name: /sign in with adobe/i }));
+
+            await waitFor(() => expect(onSignIn).toHaveBeenCalled());
+            // The retry hits the beforeEach success default.
+            await waitFor(() => expect(screen.getByText('Firefly Services')).toBeInTheDocument());
+        });
+
+        it('omits the action when the host provides no sign-in', async () => {
+            // Rather than a dead button: the reason still shows.
+            mockRequest.mockResolvedValue(signedOut);
+            renderStage();
+
+            await waitFor(() => expect(screen.getByText('Sign in to Adobe')).toBeInTheDocument());
+            expect(
+                screen.queryByRole('button', { name: /sign in with adobe/i }),
+            ).not.toBeInTheDocument();
+        });
     });
 
     it('offers a Retry on failure that re-fetches and recovers', async () => {

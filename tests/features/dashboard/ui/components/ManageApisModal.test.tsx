@@ -343,4 +343,44 @@ describe('ManageApisModal', () => {
             expect(getClient().request.mock.calls.length).toBeGreaterThan(callsBefore);
         });
     });
+
+    // Signed-out is NOT a retryable error — Retry re-runs the same unauthenticated
+    // call. The house treatment (AdobeAuthStep) offers a sign-in action instead.
+    describe('signed out offers sign-in, not Retry', () => {
+        const signedOut = { success: false, error: 'Adobe sign-in required.', code: 'AUTH_REQUIRED' };
+
+        it('shows Sign In with Adobe and NO Retry', async () => {
+            getClient().request.mockResolvedValue(signedOut);
+            renderModal();
+            await flush();
+
+            expect(screen.getByText('Sign in to Adobe')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /sign in with adobe/i })).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /^retry$/i })).not.toBeInTheDocument();
+        });
+
+        it('re-fetches once sign-in resolves', async () => {
+            getClient().request.mockResolvedValue(signedOut);
+            renderModal();
+            await flush();
+
+            const before = getClient().request.mock.calls.length;
+            fireEvent.click(screen.getByRole('button', { name: /sign in with adobe/i }));
+            await flush();
+
+            // reAuthenticate itself, plus the reload it triggers.
+            expect(getClient().request.mock.calls.length).toBeGreaterThan(before + 1);
+            expect(getClient().request.mock.calls.some((c: unknown[]) => c[0] === 'reAuthenticate'))
+                .toBe(true);
+        });
+
+        it('still offers Retry for a NON-auth failure', async () => {
+            getClient().request.mockResolvedValue({ success: false, error: 'network down' });
+            renderModal();
+            await flush();
+
+            expect(screen.getByRole('button', { name: /^retry$/i })).toBeInTheDocument();
+            expect(screen.queryByText('Sign in to Adobe')).not.toBeInTheDocument();
+        });
+    });
 });

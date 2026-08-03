@@ -90,6 +90,13 @@ export interface AddIntegrationFlowModalProps {
         UseProjectBuilderReturn,
         'onAppBuilderComponentToggle' | 'onAddCustomAppBuilderComponent'
     >;
+    /**
+     * Start a user-initiated Adobe sign-in; resolves when it finishes.
+     *
+     * Supplied by the HOST because the two webviews register different messages
+     * for it (wizard `authenticate`, dashboard `reAuthenticate`).
+     */
+    onSignIn?: () => Promise<unknown>;
 }
 
 type JourneyProps = Omit<AddIntegrationFlowModalProps, 'isOpen'>;
@@ -103,7 +110,7 @@ function StageBody({
     props: JourneyProps;
 }): React.ReactElement {
     const { stage, draft } = flow;
-    const { state, updateState, meshComponent, catalog } = props;
+    const { state, updateState, meshComponent, catalog, onSignIn } = props;
     const selectedIds = state.selectedAppBuilderComponents ?? EMPTY_IDS;
     if (stage === 'kind') {
         // The ONE mesh-offered rule (flowStages): available for the stack AND not
@@ -161,6 +168,7 @@ function StageBody({
         // stage is terminal), so this is unconditionally the picker.
         return (
             <ApiPickerStage
+                onSignIn={onSignIn}
                 componentIds={selectedIds}
                 selected={draft.selectedApis ?? EMPTY_IDS}
                 onToggle={flow.toggleApi}

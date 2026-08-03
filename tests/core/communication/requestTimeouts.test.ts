@@ -45,6 +45,14 @@ describe('REQUEST_TIMEOUTS', () => {
         }
     );
 
+    // Both sign-in messages AWAIT a browser flow (human think-time + 2FA), so the
+    // 30s default cannot cover either. `reAuthenticate` shipped unbudgeted while its
+    // sibling `authenticate` was covered — found when the API picker's new
+    // "Sign In with Adobe" action needed to await it (2026-07-31).
+    it.each(['authenticate', 'reAuthenticate'])('budgets the browser sign-in %s', (type) => {
+        expect([...budgetedTypes()]).toContain(type);
+    });
+
     // Every Adobe-console call routes through getServicesForOrg or a subscribe PUT,
     // both measured well past the 30s default. If a twin exists for one, it exists
     // for the other.

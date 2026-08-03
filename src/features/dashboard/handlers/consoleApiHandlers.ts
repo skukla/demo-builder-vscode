@@ -70,7 +70,7 @@ export const handleListConsoleApis: MessageHandler = async (context) => {
 
     const guardError = await runGuards(context, project);
     if (guardError) {
-        return { success: false, error: guardError };
+        return { success: false, error: guardError.error, code: guardError.code };
     }
 
     try {
@@ -180,7 +180,7 @@ export const handleAddConsoleApis: MessageHandler<{ apis?: string[] }> = async (
     }
     const guardError = await runGuards(context, project);
     if (guardError) {
-        return { success: false, error: guardError };
+        return { success: false, error: guardError.error, code: guardError.code };
     }
 
     const merged = [...new Set([...resolveDesiredApis(project), ...(apis as string[])])];
@@ -216,7 +216,7 @@ export const handleSetConsoleApis: MessageHandler<{ apis?: string[] }> = async (
     }
     const guardError = await runGuards(context, project);
     if (guardError) {
-        return { success: false, error: guardError };
+        return { success: false, error: guardError.error, code: guardError.code };
     }
 
     const desired = [...new Set(apis as string[])];
