@@ -29,6 +29,20 @@ that keep biting — read the docs for the how, read this for the traps.
   Reference: the timeline connector in `TimelineNav.tsx` + `.timeline-connector` in
   `custom-spectrum.css` (a child of the `size-300` dot; the stretch case uses a tall line clipped
   by `.timeline-step-wrap-clip`'s `overflow:hidden`).
+- **`DialogContainer type="fullscreen"` outranks the Dialog's `size` and every CSS override.**
+  It renders `spectrum-Modal--fullscreen` / `spectrum-Dialog--fullscreen`, which size to the
+  VIEWPORT — so a modal looks far too big for its content and no `max-width`/`height` aimed at
+  the Dialog can win. Worse, `UNSAFE_className` on `Dialog` lands on an element INSIDE the
+  painted panel, so a width cap there squeezes the content while the panel stays wide.
+  Symptom → check the container's `type` FIRST; there should be none (2026-07-31: the Add
+  Integration flow was the only fullscreen container in the repo, and it cost four failed CSS
+  fixes; guarded by a source-reading test in flowStages.test.ts).
+- **When a style override does not take, READ THE DOM before writing a second one.** One pass
+  up the ancestor chain names the culprit; a second guess rarely does. In the webview devtools
+  the console defaults to VS Code's outer document — switch the frame dropdown from `top` to
+  the innermost `vscode-webview://` frame, or right-click the element → Inspect, then walk
+  `parentElement` printing `className` + `getBoundingClientRect()` + the computed
+  `display`/`align-items`/`align-self` of each ancestor.
 - **"My CSS edit does nothing" → a Spectrum View style PROP is beating it.** A prop like
   `left="11px"` renders as an inline style that outranks your class. Remove the prop so the class
   wins. Prove a rule controls the element with a fat/obvious diagnostic before theorizing values.
