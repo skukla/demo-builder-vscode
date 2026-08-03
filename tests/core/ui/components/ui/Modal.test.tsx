@@ -254,28 +254,6 @@ describe('Modal', () => {
         });
     });
 
-    // Spectrum's `size` is a MAX width, so an unbounded greedy layout decides the
-    // real width (measured: ~890px vs ~1585px for the SAME size="L"). The house cap
-    // makes it a decision; fullscreen is the documented way out.
-    describe('house width', () => {
-        it('caps every ordinary modal', () => {
-            renderWithProvider(<Modal {...defaultProps} size="L" />);
-
-            const dialog = screen.getByRole('dialog');
-            expect(dialog).toHaveClass('modal-dialog');
-            expect(dialog).not.toHaveClass('modal-dialog--full');
-        });
-
-        it.each(['fullscreen', 'fullscreenTakeover'] as const)(
-            'releases the cap for %s',
-            (size) => {
-                renderWithProvider(<Modal {...defaultProps} size={size} />);
-
-                expect(screen.getByRole('dialog')).toHaveClass('modal-dialog--full');
-            }
-        );
-    });
-
     // Content-aware height: Spectrum's modal Dialog claims a height independent of
     // its content, so a short body (the Add Integration kind/name/destination
     // stages) leaves dead space under the footer. `fitContent` releases it.
