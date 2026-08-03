@@ -1,14 +1,14 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { aiHandlers } from '../handlers/aiHandlers';
+import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
-import { ServiceLocator } from '@/core/di';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { Project } from '@/types';
-import type { HandlerContext, SharedState } from '@/types/handlers';
+import type { HandlerContext } from '@/types/handlers';
 
 /**
  * Initial data sent to the prompt library webview.
@@ -154,25 +154,14 @@ export class ShowAiCommand extends BaseWebviewCommand {
      * the AI handlers reuse the same shape (stateManager + context.globalState).
      */
     private createHandlerContext(): HandlerContext {
-        return {
-            prereqManager: undefined as unknown as HandlerContext['prereqManager'],
-            authManager: ServiceLocator.getAuthenticationService(),
-            errorLogger: undefined as unknown as HandlerContext['errorLogger'],
-            progressUnifier: undefined as unknown as HandlerContext['progressUnifier'],
-            stepLogger: undefined as unknown as HandlerContext['stepLogger'],
-
-            logger: this.logger,
-            debugLogger: this.logger,
-
+        // ONE complete context from the shared factory — no per-panel guessing about
+        // which managers its (possibly reused) handlers will reach for.
+        return createPanelHandlerContext({
             context: this.context,
             panel: this.panel,
             stateManager: this.stateManager,
             communicationManager: this.communicationManager,
             sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
-
-            sharedState: {
-                isAuthenticating: false,
-            } as SharedState,
-        };
+        });
     }
 }

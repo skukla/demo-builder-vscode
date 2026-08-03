@@ -8,6 +8,7 @@
  */
 
 import * as vscode from 'vscode';
+import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { ServiceLocator } from '@/core/di/serviceLocator';
@@ -15,7 +16,7 @@ import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers';
-import { HandlerContext, SharedState } from '@/types/handlers';
+import { HandlerContext } from '@/types/handlers';
 
 /**
  * Command to show the "Projects List" as the home screen
@@ -209,30 +210,14 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
      * Create handler context with all dependencies
      */
     private createHandlerContext(): HandlerContext {
-        return {
-            // Managers (projects list doesn't use all managers, but context requires them)
-            // Using type assertion since handlers don't actually use these managers
-            prereqManager: undefined as unknown as HandlerContext['prereqManager'],
-            authManager: undefined as unknown as HandlerContext['authManager'],
-            errorLogger: undefined as unknown as HandlerContext['errorLogger'],
-            progressUnifier: undefined as unknown as HandlerContext['progressUnifier'],
-            stepLogger: undefined as unknown as HandlerContext['stepLogger'],
-
-            // Loggers
-            logger: this.logger,
-            debugLogger: this.logger,
-
-            // VS Code integration
+        // ONE complete context from the shared factory — no per-panel guessing about
+        // which managers its (possibly reused) handlers will reach for.
+        return createPanelHandlerContext({
             context: this.context,
             panel: this.panel,
             stateManager: this.stateManager,
             communicationManager: this.communicationManager,
             sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
-
-            // Shared state (projects list doesn't use shared state)
-            sharedState: {
-                isAuthenticating: false,
-            } as SharedState,
-        };
+        });
     }
 }

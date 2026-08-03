@@ -9,6 +9,7 @@ import {
 import { configureHandlers } from '../handlers/configureHandlers';
 import { mergeEnvValuesFromSources } from './configureEnvLoader';
 import { ProjectDashboardWebviewCommand } from './showDashboard';
+import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { COMPONENT_IDS } from '@/core/constants';
@@ -34,7 +35,7 @@ import { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AuthoringExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
-import type { HandlerContext, SharedState } from '@/types/handlers';
+import type { HandlerContext } from '@/types/handlers';
 import { getComponentInstanceEntries, getEdsDaLiveUrl } from '@/types/typeGuards';
 
 const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<AuthoringExperience>([
@@ -810,30 +811,15 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
      * Create handler context for message handlers
      */
     private createHandlerContext(): HandlerContext {
-        return {
-            // Managers (Configure doesn't use all managers, but context requires them)
-            prereqManager: undefined as unknown as HandlerContext['prereqManager'],
-            authManager: ServiceLocator.getAuthenticationService(),
-            errorLogger: undefined as unknown as HandlerContext['errorLogger'],
-            progressUnifier: undefined as unknown as HandlerContext['progressUnifier'],
-            stepLogger: undefined as unknown as HandlerContext['stepLogger'],
-
-            // Loggers
-            logger: this.logger,
-            debugLogger: this.logger,
-
-            // VS Code integration
+        // ONE complete context from the shared factory — no per-panel guessing about
+        // which managers its (possibly reused) handlers will reach for.
+        return createPanelHandlerContext({
             context: this.context,
             panel: this.panel,
             stateManager: this.stateManager,
             communicationManager: this.communicationManager,
             sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
-
-            // Shared state (Configure doesn't use shared state)
-            sharedState: {
-                isAuthenticating: false,
-            } as SharedState,
-        };
+        });
     }
 
     /**

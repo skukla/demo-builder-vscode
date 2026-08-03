@@ -2,6 +2,7 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
@@ -23,7 +24,7 @@ import { Project, ComponentInstance } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { DemoPackage } from '@/types/demoPackages';
-import { HandlerContext, SharedState } from '@/types/handlers';
+import { HandlerContext } from '@/types/handlers';
 import type { Stack, StacksConfig } from '@/types/stacks';
 import {
     getComponentInstanceValues,
@@ -478,31 +479,15 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
      * Create handler context with all dependencies
      */
     private createHandlerContext(): HandlerContext {
-        return {
-            // Managers (dashboard doesn't use all managers, but context requires them)
-            // Using type assertion since dashboard handlers don't actually use these managers
-            prereqManager: undefined as unknown as HandlerContext['prereqManager'],
-            authManager: undefined as unknown as HandlerContext['authManager'],
-            errorLogger: undefined as unknown as HandlerContext['errorLogger'],
-            progressUnifier: undefined as unknown as HandlerContext['progressUnifier'],
-            stepLogger: undefined as unknown as HandlerContext['stepLogger'],
-
-            // Loggers
-            logger: this.logger,
-            debugLogger: this.logger,
-
-            // VS Code integration
+        // ONE complete context from the shared factory — no per-panel guessing about
+        // which managers its (possibly reused) handlers will reach for.
+        return createPanelHandlerContext({
             context: this.context,
             panel: this.panel,
             stateManager: this.stateManager,
             communicationManager: this.communicationManager,
             sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
-
-            // Shared state (dashboard doesn't use shared state)
-            sharedState: {
-                isAuthenticating: false,
-            } as SharedState,
-        };
+        });
     }
 
     /**

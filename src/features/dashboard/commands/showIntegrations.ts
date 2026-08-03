@@ -26,9 +26,9 @@
  */
 
 import * as vscode from 'vscode';
+import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
-import { ServiceLocator } from '@/core/di';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { StateManager } from '@/core/state';
 import { getBundleUri } from '@/core/utils/bundleUri';
@@ -40,7 +40,7 @@ import { handleListOrgConsoleApis } from '@/features/project-creation/handlers/c
 import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import { HandlerContext, SharedState } from '@/types/handlers';
+import { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
 export class ShowIntegrationsCommand extends BaseWebviewCommand {
@@ -195,25 +195,14 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand {
     }
 
     private createHandlerContext(): HandlerContext {
-        return {
-            prereqManager: undefined as unknown as HandlerContext['prereqManager'],
-            // NOT undefined. The reused wizard handlers call context.authManager, and
-            // `?? []` turns an absent one into an EMPTY org list — which ensureOrgContext
-            // reads as "your org is not on this account" and reports as needs_relogin.
-            // That surfaced as a flat lie in the destination picker while the dashboard's
-            // own IMS-org check was green (2026-07-31).
-            authManager: ServiceLocator.getAuthenticationService(),
-            errorLogger: undefined as unknown as HandlerContext['errorLogger'],
-            progressUnifier: undefined as unknown as HandlerContext['progressUnifier'],
-            stepLogger: undefined as unknown as HandlerContext['stepLogger'],
-            logger: this.logger,
-            debugLogger: this.logger,
+        // ONE complete context from the shared factory — no per-panel guessing about
+        // which managers its (possibly reused) handlers will reach for.
+        return createPanelHandlerContext({
             context: this.context,
             panel: this.panel,
             stateManager: this.stateManager,
             communicationManager: this.communicationManager,
             sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
-            sharedState: { isAuthenticating: false } as SharedState,
-        };
+        });
     }
 }
