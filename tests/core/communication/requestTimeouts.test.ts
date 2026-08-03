@@ -45,6 +45,13 @@ describe('REQUEST_TIMEOUTS', () => {
         }
     );
 
+    // These bound an SDK attempt (SDK_ENTITY_FETCH, 10s) and THEN fall back to the
+    // `aio` CLI, so the slow path is the sum of both — 30s timed out on work that
+    // would have completed (2026-07-31, the destination picker).
+    it.each(['get-projects', 'get-workspaces'])('budgets the entity fetch %s past 30s', (type) => {
+        expect([...budgetedTypes()]).toContain(type);
+    });
+
     // Both sign-in messages AWAIT a browser flow (human think-time + 2FA), so the
     // 30s default cannot cover either. `reAuthenticate` shipped unbudgeted while its
     // sibling `authenticate` was covered — found when the API picker's new

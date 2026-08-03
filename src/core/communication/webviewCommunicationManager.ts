@@ -43,8 +43,12 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     'reAuthenticate': TIMEOUTS.AUTH.BROWSER,         // 60s - browser sign-in + context restore
 
     // Data loading (wizard UI)
-    'get-projects': TIMEOUTS.NORMAL,                 // 30s - fetch project list from Adobe
-    'get-workspaces': TIMEOUTS.NORMAL,               // 30s - fetch workspace list from Adobe
+    // 30s was NOT enough and timed out on work that would have finished: each of
+    // these bounds the SDK attempt at SDK_ENTITY_FETCH (10s) and then falls back to
+    // the `aio` CLI, so a slow Adobe endpoint spends the SDK budget BEFORE the
+    // fallback even starts. Budget for the sum, not the fast path.
+    'get-projects': TIMEOUTS.LONG,                   // 180s - SDK attempt + CLI fallback
+    'get-workspaces': TIMEOUTS.LONG,                 // 180s - SDK attempt + CLI fallback
     'list-org-console-apis': TIMEOUTS.LONG,          // 180s - full org services catalog (getServicesForOrg); same slow call the mesh subscribe path budgets for
 
     // Console APIs on a LIVE project (dashboard twins of the wizard messages

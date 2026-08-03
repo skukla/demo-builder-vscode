@@ -149,7 +149,7 @@ export function SelectionStepContent<T extends SelectableItem>({
                         size="L"
                         message={labels.loadingMessage}
                         subMessage={labels.loadingSubMessage}
-                        helperText="This could take up to 30 seconds"
+                        helperText="Adobe can be slow to respond — this may take a minute"
                     />
                 </CenteredFeedbackContainer>
             </>

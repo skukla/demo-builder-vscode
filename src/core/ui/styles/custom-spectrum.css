@@ -688,6 +688,14 @@ button[class*="spectrum-Button"][disabled],
 .modal-fit-content {
     height: auto !important;
     min-height: 0 !important;
+    /* `height: auto` alone did NOT collapse the dialog (verified 2026-07-31: the
+       footer rose to the content but the panel stayed tall). The height is not on
+       the dialog's own box — Spectrum's modal wrapper is a flex/grid container whose
+       default `align-items: stretch` makes the dialog fill the cross axis whatever
+       its height says. Opting this child out of the stretch is what lets `auto`
+       take effect. */
+    align-self: center !important;
+    flex: 0 0 auto !important;
 }
 .modal-fit-content .modal-content {
     /* No leftover height to claim, so the body must not stretch. */
