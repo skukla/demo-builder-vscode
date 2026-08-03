@@ -15,7 +15,7 @@
  */
 
 import React from 'react';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AppBuilderComponentState } from '@/types/base';
 import '@testing-library/jest-dom';
@@ -62,11 +62,6 @@ jest.mock('@/core/ui/components/navigation/SearchHeader', () => ({
 
 jest.mock('@/core/ui/components/feedback', () => ({
     LoadingDisplay: ({ message }: any) => <div data-testid="loading">{message}</div>,
-    StatusCard: ({ label, status }: any) => (
-        <div data-testid="destination-row">
-            {label}: {status}
-        </div>
-    ),
     StatusDisplay: ({ title, actions }: any) => (
         <div data-testid="empty-state">
             {title}
@@ -116,7 +111,10 @@ jest.mock('@/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter
 
 // Deliberately below the jest.mock calls: babel-plugin-jest-hoist lifts them
 // above every import, so the screen always loads against the mocks.
-import { IntegrationsScreen } from '@/features/dashboard/ui/integrationsSurface/IntegrationsScreen';
+import {
+    formatDestination,
+    IntegrationsScreen,
+} from '@/features/dashboard/ui/integrationsSurface/IntegrationsScreen';
 
 function getClient() {
     const { webviewClient } = require('@/core/ui/utils/WebviewClient');
@@ -208,6 +206,25 @@ describe('IntegrationsScreen', () => {
         });
     });
 
+    describe('formatDestination', () => {
+        it('joins project and workspace', () => {
+            expect(formatDestination({ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' })).toBe(
+                'Kukla Mesh · Stage'
+            );
+        });
+
+        it('returns the project alone when there is no workspace', () => {
+            expect(formatDestination({ projectTitle: 'Kukla Mesh' })).toBe('Kukla Mesh');
+        });
+
+        // Undefined, not an empty string — the caller hides the line on undefined,
+        // so returning '' here would render an empty labelled row.
+        it('returns undefined when neither part is known', () => {
+            expect(formatDestination({})).toBeUndefined();
+            expect(formatDestination(undefined)).toBeUndefined();
+        });
+    });
+
     describe('header', () => {
         it('names the project', () => {
             const handlers = captureHandlers();
@@ -222,17 +239,48 @@ describe('IntegrationsScreen', () => {
             settleStatus(handlers);
 
             expect(screen.getByTestId('page-subtitle')).toHaveTextContent('demo-builder-test');
-            // The shared destination is NOT surfaced on this screen — it reaches
-            // the detail panel via destinationLabel instead.
-            expect(screen.queryByTestId('destination-row')).not.toBeInTheDocument();
         });
 
-        it('renders no destination banner even with an Adobe target', () => {
-            const handlers = captureHandlers();
-            render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
-            settleStatus(handlers);
+        // Every integration deploys to ONE Adobe project + workspace, so the
+        // destination is a property of the PROJECT. It used to appear only inside
+        // each card's detail flyout, which framed a project-wide fact as a
+        // per-card one — you had to open a card to learn where anything deploys.
+        //
+        // The two tests replaced here asserted `queryByTestId('destination-row')`
+        // was absent and read as protecting that decision. They protected nothing:
+        // `destination-row` is this suite's mock of StatusCard, which this screen
+        // has never rendered, so both passed no matter what the band contained.
+        describe('destination', () => {
+            it('names the shared deploy destination in the action band', () => {
+                const handlers = captureHandlers();
+                render(
+                    <IntegrationsScreen
+                        hasAdobeContext
+                        appBuilderComponents={{ a: DEPLOYED }}
+                        destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
+                    />
+                );
+                settleStatus(handlers);
 
-            expect(screen.queryByTestId('destination-row')).not.toBeInTheDocument();
+                const line = within(screen.getByTestId('page-destination'));
+                // Both halves: `toHaveTextContent` alone is a substring match over
+                // "DestinationKukla Mesh · Stage", so deleting the key span would
+                // still pass — and a bare "Kukla Mesh · Stage" means nothing.
+                expect(line.getByText('Destination')).toBeInTheDocument();
+                expect(line.getByText('Kukla Mesh · Stage')).toBeInTheDocument();
+            });
+
+            // The case the old tests were really reaching for: a project with no
+            // Adobe target must show no line and no orphaned "Destination" label.
+            it('renders nothing when the project has no Adobe target', () => {
+                const handlers = captureHandlers();
+                render(
+                    <IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />
+                );
+                settleStatus(handlers);
+
+                expect(screen.queryByTestId('page-destination')).not.toBeInTheDocument();
+            });
         });
 
         it('renders the back button in the action band, NOT the page header', () => {

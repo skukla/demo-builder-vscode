@@ -104,7 +104,10 @@ function makeMeshModel(overrides: Partial<IntegrationCardModel> = {}): Integrati
     });
 }
 
-function renderPanel(model: IntegrationCardModel | undefined) {
+function renderPanel(
+    model: IntegrationCardModel | undefined,
+    extra: { destinationLabel?: string } = {}
+) {
     const onClose = jest.fn();
     const onAction = jest.fn();
     const onRename = jest.fn<Promise<string | null>, [string, string]>(() => Promise.resolve(null));
@@ -114,6 +117,7 @@ function renderPanel(model: IntegrationCardModel | undefined) {
             onClose={onClose}
             onAction={onAction}
             onRename={onRename}
+            {...extra}
         />
     );
     const panel = view.container.querySelector('.db-drawer') as HTMLElement;
@@ -206,6 +210,27 @@ describe('IntegrationDetailPanel', () => {
         // The Source row's mono-modifier pin retired with the row itself; the
         // modifier is still exercised by Destination and the deployed-URL rows
         // below. See "rows that would only restate".
+
+        // The Destination row was described in this suite's own header and in
+        // the "rows that would only restate" reasoning, but never asserted. It
+        // needs a pin now that the same destination ALSO appears in the page's
+        // action band: the two are deliberately allowed to coexist (the band is
+        // far top-left and dimmed to 42% behind the scrim, unlike the card
+        // sitting directly behind this flyout, which is why the Source row went).
+        // Without this test, de-duplicating them later would be a silent
+        // regression rather than a decision.
+        it('renders Destination when the host supplies one', () => {
+            renderPanel(makeModel(), { destinationLabel: 'Kukla Mesh · Stage' });
+
+            expect(screen.getByText('Destination')).toBeInTheDocument();
+            expect(screen.getByText('Kukla Mesh · Stage')).toBeInTheDocument();
+        });
+
+        it('omits Destination when the project has no Adobe target', () => {
+            renderPanel(makeModel());
+
+            expect(screen.queryByText('Destination')).not.toBeInTheDocument();
+        });
 
         it('renders the integration URL as a link firing onAction(open)', () => {
             const model = makeModel();

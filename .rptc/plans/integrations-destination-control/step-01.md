@@ -1,5 +1,34 @@
 # Step 01 — Page-level destination control on the Integrations surface
 
+## PARTIALLY SHIPPED 2026-08-03 — the DISPLAY half is done
+
+The destination now appears in the Integrations action band
+(`IntegrationsScreen.tsx`, `.integrations-destination*`). Acceptance 1's first
+clause — "Integrations page shows the destination" — is met.
+
+What remains is the CONTROL half, and it is still blocked on the same open
+question: after a change, already-deployed integrations keep pointing at the old
+workspace, and nobody has decided whether that is a copy or a stale-state
+problem. Answer that before building `Change`.
+
+Two decisions from the display pass that constrain the rest:
+
+- **No shared `DestinationContext` component was extracted.** The band renders a
+  plain keyed line; the modal keeps its own. One consumer each with different
+  affordances (the modal's carries `Change` and a bottom border), so Rule of
+  Three says wait. Extract when `Change` ships and there are two real consumers
+  to shape the interface — the extraction row in the file table below still
+  stands, just not yet.
+- **The flyout's Destination row was KEPT** (acceptance 4 is unaffected — it
+  bans a per-card *control*, not the display). If it later reads as redundant
+  against the band, `IntegrationDetailPanel.test.tsx` now pins it, so removing it
+  is a deliberate act rather than a silent regression.
+
+The `.intflow-dest-context*` → `.dest-context*` rename has NOT happened; it
+belongs with the extraction.
+
+The original plan follows.
+
 ## Goal
 
 From the Integrations page, see the current Adobe project/workspace and change it, without

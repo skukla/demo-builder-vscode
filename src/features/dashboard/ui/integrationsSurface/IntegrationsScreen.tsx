@@ -31,7 +31,7 @@ import { isMeshBusy, useDashboardStatus } from '../hooks/useDashboardStatus';
 import { useLiveAppBuilderComponents } from '../hooks/useLiveAppBuilderComponents';
 import { useRowStatusOverrides } from '../hooks/useRowStatusOverrides';
 import { AddIntegrationFlowAdapter } from './AddIntegrationFlowAdapter';
-import { LoadingDisplay , StatusDisplay } from '@/core/ui/components/feedback';
+import { LoadingDisplay, StatusDisplay } from '@/core/ui/components/feedback';
 import { PageHeader, PageLayout } from '@/core/ui/components/layout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
@@ -222,6 +222,27 @@ export function IntegrationsScreen({
                 <div className="page-container-padded page-header-section">
                     <Flex alignItems="start" gap="size-300">
                         <View flex>
+                            {/* The shared deploy destination, stated once at PAGE
+                                level because that is its scope: every integration
+                                here deploys to this one Adobe project + workspace.
+                                It also appears per-card in the detail flyout, which
+                                on its own framed a project-wide fact as a per-card
+                                property — you had to open a card to learn it.
+                                Omitted entirely (not rendered empty) before the
+                                project has an Adobe target. */}
+                            {destinationLabel && (
+                                <div
+                                    className="integrations-destination"
+                                    data-testid="page-destination"
+                                >
+                                    <span className="integrations-destination-key">
+                                        Destination
+                                    </span>
+                                    <span className="integrations-destination-value">
+                                        {destinationLabel}
+                                    </span>
+                                </div>
+                            )}
                             <SearchHeader
                                 searchQuery={searchQuery}
                                 onSearchQueryChange={setSearchQuery}
