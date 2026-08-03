@@ -236,7 +236,11 @@ describe('SOP: Component Extraction', () => {
          */
         const SHARED_COMPONENTS_VERIFIED = [
             { name: 'EmptyState', minUsages: 1 }, // 1 usage (SelectionStepContent)
-            { name: 'FadeTransition', minUsages: 2 }, // 3 usages
+            // 1 usage (StatusDisplay). Was 3; the other consumers lived in the dead
+            // mesh/ui tree deleted 2026-07-31. Kept separate rather than inlined —
+            // the transition is a real, separable concern and StatusDisplay is
+            // already large.
+            { name: 'FadeTransition', minUsages: 1 },
             { name: 'CopyableText', minUsages: 2 }, // 3 usages
             { name: 'StatusDot', minUsages: 2 }, // 6 usages
         ];

@@ -131,6 +131,11 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand {
         // which the flow RENDERS but does not live beside — which is why the
         // coverage guard, scanning only integration-flow/, did not catch them and
         // the picker spun forever with nothing answering (2026-07-31).
+        // The signed-out destination step renders AdobeAuthStep, which posts these.
+        // Unregistered they do not hang (both are postMessage) — the step simply
+        // never learns the auth state changed, which is a quieter failure.
+        'check-auth': authentication.handleCheckAuth,
+        authenticate: authentication.handleAuthenticate,
         'get-projects': authentication.handleGetProjects,
         'select-project': authentication.handleSelectProject,
         'create-adobe-project': authentication.handleCreateAdobeProject,
