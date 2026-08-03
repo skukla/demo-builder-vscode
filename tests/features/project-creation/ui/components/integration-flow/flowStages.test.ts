@@ -561,3 +561,24 @@ describe('meshKindOffered', () => {
         expect(meshKindOffered(slice({ meshAvailable: false }))).toBe(false);
     });
 });
+
+// The Add Integration modal spent four fix attempts ignoring every width and height
+// it was given because its DialogContainer carried type="fullscreen": that renders
+// spectrum-Modal--fullscreen / spectrum-Dialog--fullscreen, which size to the VIEWPORT
+// and outrank the Dialog's own `size`. It was the only fullscreen container in the
+// repo, which is why every other modal already hugged its content (2026-07-31).
+describe('AddIntegrationFlowModal container type', () => {
+    it('does NOT use a fullscreen DialogContainer', () => {
+        const source = require('fs').readFileSync(
+            require('path').join(
+                __dirname,
+                '../../../../../../src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx',
+            ),
+            'utf8',
+        );
+        const container = source.match(/<DialogContainer[^>]*>/);
+
+        expect(container).not.toBeNull();
+        expect(container?.[0]).not.toMatch(/type=/);
+    });
+});

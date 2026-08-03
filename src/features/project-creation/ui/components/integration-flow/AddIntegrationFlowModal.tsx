@@ -303,8 +303,14 @@ export function AddIntegrationFlowModal({
         // change while open (which would refetch on each keystroke/selection).
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen]);
+    // NO `type="fullscreen"` on the container. That was the whole reason this modal
+    // ignored every width and height it was given: the fullscreen TYPE renders
+    // spectrum-Modal--fullscreen / spectrum-Dialog--fullscreen, which size to the
+    // VIEWPORT and outrank the Dialog's own `size`. It was the only fullscreen
+    // DialogContainer in the repo — which is exactly why every OTHER modal (Manage
+    // APIs, on the same size="L") already hugged its content.
     return (
-        <DialogContainer type="fullscreen" onDismiss={journey.onClose}>
+        <DialogContainer onDismiss={journey.onClose}>
             {isOpen && <FlowJourney {...journey} />}
         </DialogContainer>
     );
