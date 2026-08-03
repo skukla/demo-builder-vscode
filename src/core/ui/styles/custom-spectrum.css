@@ -677,6 +677,20 @@ button[class*="spectrum-Button"][disabled],
        would make overflow-y here do nothing. */
     overflow-y: auto !important;
 }
+/* THE house modal width. Spectrum's `size` sets a MAX, so without a cap the width is
+   an emergent property of whichever stage's layout stretches hardest — measured
+   2026-07-31: the same size="L" rendered ~890px for the API list and ~1585px for the
+   Add Integration kind-card grid. One width also keeps a multi-STAGE flow from
+   resizing under the user on every Continue.
+   ~900px is what the API picker already demonstrates is comfortable: 42 rows with
+   long names plus a 7-chip filter row, uncramped. Escape hatch: size="fullscreen". */
+.modal-dialog {
+    max-width: min(900px, 92vw) !important;
+}
+.modal-dialog--full {
+    max-width: none !important;
+}
+
 /* Content-aware height — opt-in via Modal's `fitContent`.
    Spectrum's modal Dialog claims a height independent of its content, which is why
    .modal-body grows to push the footer to the bottom. For a SHORT body that leaves a
@@ -696,6 +710,14 @@ button[class*="spectrum-Button"][disabled],
        take effect. */
     align-self: center !important;
     flex: 0 0 auto !important;
+}
+/* If the TALL box turns out to be an ancestor rather than the dialog, release it
+   too — scoped by :has() so only fitContent dialogs are affected. */
+:is([class*='spectrum-Modal'], [class*='spectrum-Underlay'], [class*='wrapper']):has(
+        > .modal-fit-content
+    ) {
+    height: auto !important;
+    min-height: 0 !important;
 }
 .modal-fit-content .modal-content {
     /* No leftover height to claim, so the body must not stretch. */

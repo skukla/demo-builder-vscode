@@ -95,8 +95,22 @@ export function Modal({
     const dialogSize: 'S' | 'M' | 'L' =
         size === 'fullscreen' || size === 'fullscreenTakeover' ? 'L' : size;
 
+    // Spectrum's `size` is a MAX width, so the real width is whatever the content
+    // stretches to — a greedy grid inflates the dialog to that ceiling (the Add
+    // Integration kind cards reached ~1585px while the API list settled at ~890px).
+    // The house cap makes width a decision instead of an emergent property; the
+    // fullscreen sizes are the documented way out of it.
+    const isFullBleed = size === 'fullscreen' || size === 'fullscreenTakeover';
+    const dialogClass = [
+        'modal-dialog',
+        isFullBleed ? 'modal-dialog--full' : '',
+        fitContent ? 'modal-fit-content' : '',
+    ]
+        .filter(Boolean)
+        .join(' ');
+
     return (
-        <Dialog size={dialogSize} UNSAFE_className={fitContent ? 'modal-fit-content' : undefined}>
+        <Dialog size={dialogSize} UNSAFE_className={dialogClass}>
             <Heading>{title}</Heading>
             <Divider />
             <Content UNSAFE_className="modal-content">

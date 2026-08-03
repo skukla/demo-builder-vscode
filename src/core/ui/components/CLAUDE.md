@@ -25,12 +25,20 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | A menu row's icon | `renderMenuIcon('<concept>')` | importing a Spectrum icon per menu |
 | Rename in place | `forms/InlineRenameField` | a bespoke pencil + TextField |
 | Any modal | `ui/Modal` | `DialogContainer` assembled by hand |
+| A modal that should hug its content | `Modal` + `fitContent` | a fixed height, or living with dead space |
 | Page shell (header, back, footer) | `layout/PageLayout` + `PageHeader` + `PageFooter` | a bespoke page div |
 | Two-column / grid / sidebar layout | `layout/TwoColumnLayout`, `GridLayout`, `ContentWithSidebar` | raw flex (see the 450px trap) |
 | Search box over a list | `navigation/SearchHeader` / `SearchableList` | a TextField + filter |
 | Copy-to-clipboard value | `ui/CopyableText` | a Button + clipboard call |
 | Numbered how-to steps | `ui/NumberedInstructions` | an `<ol>` |
 | Wizard config summary / step status | `wizard/ConfigurationSummary`, `StatusSection` | a bespoke summary |
+
+**Modal width is a decision, not an emergent property.** Spectrum's `size` sets a MAX
+width, so an unbounded greedy layout inflates the dialog to that ceiling — measured
+2026-07-31, the same `size="L"` rendered ~890px for the API list and ~1585px for a
+kind-card grid. `Modal` caps every dialog at the house width; if yours genuinely needs
+more, use `size="fullscreen"` and say why in the call site. Pair with `fitContent` so
+the HEIGHT hugs the content too.
 
 Auth surfaces have a house treatment too: **signed-out is never a Retry.** It is a
 `StatusDisplay` whose action starts a user-initiated sign-in (`AdobeAuthStep` is the
