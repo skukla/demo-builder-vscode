@@ -15,10 +15,7 @@ import {
     hasAdobeProjectContext,
     sendDemoStatusUpdate,
 } from './meshStatusHelpers';
-import {
-    BROWSER_ORG_SWITCH_TITLE,
-    withBrowserSignInNotice,
-} from '@/core/auth/browserSignInNotice';
+import { withBrowserSignInNotice } from '@/core/auth/browserSignInNotice';
 import { BaseWebviewCommand } from '@/core/base';
 import { AI_CONTEXT_VERSION, COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
@@ -32,6 +29,7 @@ import {
 } from '@/core/validation';
 import { verifyAiSetup } from '@/features/ai';
 import { detectMcpDrift } from '@/features/ai/mcpDriftDetector';
+import { handleForcedOrgSwitch } from '@/features/authentication';
 import {
     handleRegenerateAiFiles,
     logAiVerification,
@@ -1019,18 +1017,18 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
 };
 
 /**
- * Handle 'switchOrg' message - Forced Adobe account/org switch recovery.
+ * Handle 'switchOrg' message — the DASHBOARD's org-switch: forced sign-in, then
+ * verify where the token actually landed.
  *
- * Called when the dashboard detects an org mismatch (the project's Adobe org is
- * not reachable by the current token). Unlike the session-expiry re-auth path,
- * this performs a FORCED sign-in (`aio auth login -f`) so the browser presents
- * the IMS account/org chooser — a non-forced login would silently reuse the
- * browser's existing SSO session and could loop back to the wrong org.
+ * The sign-in itself belongs to authentication ({@link handleForcedOrgSwitch}) —
+ * three panels need it. What is dashboard-specific is the second half: re-running
+ * the status check re-runs the proactive org-mismatch detection, so if the user is
+ * still in the wrong org (another browser tab reasserted it, say) the banner
+ * persists with a no-loop hint instead of silently failing.
  *
- * After the forced sign-in it re-runs the status check (verify): the refreshed
- * payload re-runs the proactive org-mismatch detection, so if the user is still
- * in the wrong org (e.g. another browser tab reasserted it) the banner persists
- * with a no-loop hint instead of silently failing.
+ * The project guard stays here too. A dashboard org-switch without a project is
+ * meaningless, whereas the wizard legitimately switches org before any project
+ * exists — which the shared handler allows and this one does not.
  */
 export const handleSwitchOrg: MessageHandler = async (context) => {
     context.logger.debug('[Dashboard] handleSwitchOrg called');
@@ -1040,30 +1038,11 @@ export const handleSwitchOrg: MessageHandler = async (context) => {
         return { success: false, error: 'No project available', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const authManager = ServiceLocator.getAuthenticationService();
-
-    context.logger.info('[Dashboard] Starting FORCED Adobe sign-in to switch organization');
-    const loginSuccess = await withBrowserSignInNotice(
-        () =>
-            authManager.loginAndRestoreProjectContext(
-                {
-                    organization: project.adobe?.organization,
-                    projectId: project.adobe?.projectId,
-                    workspace: project.adobe?.workspace,
-                },
-                true, // force — present the browser org chooser; never silently reuse the SSO tab
-            ),
-        BROWSER_ORG_SWITCH_TITLE,
-    );
-
-    if (!loginSuccess) {
-        context.logger.warn('[Dashboard] Forced sign-in failed or cancelled');
-        return { success: false, error: 'Sign-in failed or cancelled' };
+    const result = await handleForcedOrgSwitch(context);
+    if (!result.success) {
+        return result;
     }
 
-    // Verify the landed org by re-running the status check. If the token still
-    // can't reach the project's org, handleRequestStatus re-surfaces orgMismatch
-    // and the banner persists — no silent loop.
     context.logger.info('[Dashboard] Forced sign-in complete, verifying organization');
     return handleRequestStatus(context);
 };

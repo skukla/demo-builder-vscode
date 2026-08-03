@@ -86,9 +86,15 @@ const PLATFORM_HANDLED = new Set([
  * AdobeProjectPicker POSTS `get-projects` and waits for the extension to push the
  * result back, so an unregistered type hangs it exactly like an unresolved request —
  * that is the bug this suite exists for, and request-only did not catch it.
+ *
+ * The type-argument class is `[^()]` and NOT `[^>]`: a NESTED generic
+ * (`request<HandlerResult<Workspace>>(...)`) ends the old class at the inner `>`,
+ * so the pattern failed to match and the send became invisible. That is exactly how
+ * `create-adobe-workspace` stayed unregistered on the integrations panel while this
+ * suite reported full coverage (found 2026-08-03) — a green guard proving nothing.
+ * Parentheses still bound the class, so it cannot run past the call it is matching.
  */
-const SEND =
-    /webviewClient\s*\.\s*(?:request|postMessage)\s*(?:<[^>]*>)?\s*\(\s*'([^']+)'/g;
+const SEND = /webviewClient\s*\.\s*(?:request|postMessage)\s*(?:<[^()]*>)?\s*\(\s*'([^']+)'/g;
 const IMPORT = /(?:import|export)[^'"]*from\s*['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]/g;
 
 /** Resolve an import specifier to a file under src/, or null if external. */

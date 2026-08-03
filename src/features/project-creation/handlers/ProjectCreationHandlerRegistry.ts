@@ -5,14 +5,13 @@
  * Used by createProject command for message dispatch.
  */
 
-import { handleListOrgConsoleApis } from './consoleApiHandlers';
+// Direct module imports (NOT the './' barrel): the barrel re-exports this registry
+// first, so a barrel-first load would evaluate this map before the barrel's own
+// re-exports exist — capturing `undefined`.
+import { addIntegrationFlowHandlers } from './addIntegrationFlowHandlers';
 import * as creation from './';
-// Direct module import (NOT the './' barrel): the barrel re-exports this
-// registry first, so a barrel-first load would evaluate this map before the
-// barrel's consoleApiHandlers re-export exists — capturing `undefined`.
 import * as authentication from '@/features/authentication';
 import * as components from '@/features/components/handlers/componentHandlers';
-import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import * as eds from '@/features/eds/handlers';
 import * as lifecycle from '@/features/lifecycle/handlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
@@ -26,6 +25,12 @@ import { defineHandlers } from '@/types/handlers';
  * Use with dispatchHandler() from @/core/handlers for message dispatch.
  */
 export const projectCreationHandlers = defineHandlers({
+    // The Add Integration flow's own host contract (auth + destination + console
+    // APIs + org recovery). Spread rather than re-listed so the wizard cannot drift
+    // from the flow it hosts — see `addIntegrationFlowHandlers`. Entries below may
+    // still override a key where the wizard genuinely needs a different handler.
+    ...addIntegrationFlowHandlers,
+
     // Lifecycle handlers
     ready: lifecycle.handleReady,
     cancel: lifecycle.handleCancel,
@@ -53,38 +58,20 @@ export const projectCreationHandlers = defineHandlers({
     loadPreset: components.handleLoadPreset,
     validateSelection: components.handleValidateSelection,
 
-    // Authentication handlers
-    'check-auth': authentication.handleCheckAuth,
-    authenticate: authentication.handleAuthenticate,
-
     // Re-detect Adobe context after an external auth/org change
     're-detect-context': authentication.handleReDetectContext,
 
-    // Org recovery. The project/workspace pickers offer "Switch IMS Org" when the
-    // project's org is unreachable with the current token — a FORCED sign-in is the
-    // only way to reach another org (adobe-org-context rule 3), so both panels that
-    // render those pickers must answer it.
-    switchOrg: dashboardHandlers.switchOrg,
-
     // Project handlers
     'ensure-org-selected': authentication.handleEnsureOrgSelected,
-    'get-projects': authentication.handleGetProjects,
-    'select-project': authentication.handleSelectProject,
     'check-project-apis': authentication.handleCheckProjectApis,
-    'create-adobe-project': authentication.handleCreateAdobeProject,
-    'delete-adobe-project': authentication.handleDeleteAdobeProject,
 
     // Workspace handlers
-    'get-workspaces': authentication.handleGetWorkspaces,
-    'select-workspace': authentication.handleSelectWorkspace,
     'create-workspace-credential': authentication.handleCreateWorkspaceCredential,
-    'create-adobe-workspace': authentication.handleCreateAdobeWorkspace,
 
     // Mesh handlers
     'check-api-mesh': meshHandlers['check-api-mesh'],
     'create-api-mesh': meshHandlers['create-api-mesh'],
     'delete-api-mesh': meshHandlers['delete-api-mesh'],
-    'ensure-mesh-api-subscribed': meshHandlers['ensure-mesh-api-subscribed'],
 
     // EDS handlers - GitHub
     'check-github-auth': eds.handleCheckGitHubAuth,
@@ -120,7 +107,4 @@ export const projectCreationHandlers = defineHandlers({
     // Project creation handlers
     validate: creation.handleValidate,
     'create-project': creation.handleCreateProject,
-
-    // Console API handlers (org entitlements for the Add Integration modal)
-    'list-org-console-apis': handleListOrgConsoleApis,
 });

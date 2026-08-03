@@ -1,12 +1,12 @@
 /**
- * Tests for handleSwitchOrg — forced Adobe account/org switch recovery.
+ * Tests for the DASHBOARD's handleSwitchOrg — its COMPOSITION, not the sign-in.
  *
- * IMS tokens are org-bound and a non-forced login silently reuses the browser's
- * SSO session (which can loop back to the wrong org). So the org-switch recovery
- * MUST perform a FORCED sign-in, then re-run the proactive status check to
- * verify the landed org — if it's still wrong the banner persists (no silent
- * loop). The "verify" is the status refresh: handleSwitchOrg returns the fresh
- * status payload, which carries orgMismatch again when still mismatched.
+ * The forced sign-in itself moved to `features/authentication` (three panels need
+ * it) and is covered by `authentication/handlers/orgSwitchHandler.test.ts`. What
+ * is dashboard-specific, and what this suite pins, is the pair around it: a
+ * project guard in front, and a status re-check behind. That re-check IS the
+ * verification — it re-runs the proactive org-mismatch detection, so if the user
+ * lands in the wrong org again the banner persists instead of silently looping.
  */
 
 jest.mock('@/core/di', () => ({
@@ -47,37 +47,33 @@ import { CHECK_RESULT_MESSAGE } from '@/types/messages';
 import { setupMocks } from './dashboardHandlers.testUtils';
 
 describe('dashboardHandlers - handleSwitchOrg', () => {
+    /** The authentication-owned forced sign-in this handler composes around. */
+    function forcedSwitch(): jest.Mock {
+        const { handleForcedOrgSwitch } = require('@/features/authentication');
+        return handleForcedOrgSwitch as jest.Mock;
+    }
+
     beforeEach(() => {
         jest.clearAllMocks();
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
+        forcedSwitch().mockResolvedValue({ success: true });
     });
 
-    it('performs a FORCED login then refreshes status, triggering an org re-check', async () => {
+    it('delegates the forced sign-in, then refreshes status to trigger an org re-check', async () => {
         const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' } as any);
-
-        const loginAndRestoreProjectContext = jest.fn().mockResolvedValue(true);
         const { ServiceLocator } = require('@/core/di');
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(true),
-            loginAndRestoreProjectContext,
             // SDK-only read (the non-interactive on-open probe).
-            getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
-                { id: 'org123', code: 'ORG@AdobeOrg', name: 'Project Org' },
-            ]),
+            getOrganizationsSdkOnly: jest
+                .fn()
+                .mockResolvedValue([{ id: 'org123', code: 'ORG@AdobeOrg', name: 'Project Org' }]),
         });
 
         const result = await handleSwitchOrg(mockContext);
 
-        // Forced sign-in (force=true) targeting the project's context.
-        expect(loginAndRestoreProjectContext).toHaveBeenCalledWith(
-            {
-                organization: 'org123',
-                projectId: 'project123',
-                workspace: 'workspace123',
-            },
-            true,
-        );
+        expect(forcedSwitch()).toHaveBeenCalledWith(mockContext);
         expect(result.success).toBe(true);
         // The org re-check is triggered (decoupled, async) — it telegraphs first
         // on the unified checkResult channel. reRunnable lets it re-run after the
@@ -90,21 +86,26 @@ describe('dashboardHandlers - handleSwitchOrg', () => {
         );
     });
 
-    it('returns failure when the forced sign-in is cancelled', async () => {
+    it('returns the sign-in failure and does NOT refresh status', async () => {
         const { mockContext } = setupMocks();
-
-        const { ServiceLocator } = require('@/core/di');
-        ServiceLocator.getAuthenticationService.mockReturnValue({
-            loginAndRestoreProjectContext: jest.fn().mockResolvedValue(false),
-        });
+        forcedSwitch().mockResolvedValue({ success: false, error: 'Sign-in failed or cancelled' });
 
         const result = await handleSwitchOrg(mockContext);
 
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/cancel/i);
+        // A failed switch must not present a "refreshed" status implying it worked.
+        expect(mockContext.panel!.webview.postMessage).not.toHaveBeenCalledWith(
+            expect.objectContaining({
+                payload: expect.objectContaining({ checkId: 'org-context' }),
+            }),
+        );
     });
 
-    it('returns PROJECT_NOT_FOUND when there is no current project', async () => {
+    // The dashboard's own guard: switching org here is meaningless without a
+    // project. The shared handler deliberately allows it (the wizard switches org
+    // before any project exists), so this guard has to live at THIS layer.
+    it('returns PROJECT_NOT_FOUND when there is no current project, without signing in', async () => {
         const { mockContext } = setupMocks();
         mockContext.stateManager.getCurrentProject = jest.fn().mockResolvedValue(null);
 
@@ -115,34 +116,12 @@ describe('dashboardHandlers - handleSwitchOrg', () => {
             error: 'No project available',
             code: 'PROJECT_NOT_FOUND',
         });
-    });
-
-    // The browser opens on the other side of the login call. Both user-initiated
-    // sign-in handlers shipped WITHOUT this, so the click looked inert until a
-    // browser window appeared unannounced (2026-07-31).
-    it('telegraphs the browser hand-off with a progress notification', async () => {
-        const vscodeMock = jest.requireMock('vscode');
-        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' } as any);
-        const { ServiceLocator } = require('@/core/di');
-        ServiceLocator.getAuthenticationService.mockReturnValue({
-            isAuthenticated: jest.fn().mockResolvedValue(true),
-            loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
-        });
-
-        await handleSwitchOrg(mockContext, undefined);
-
-        expect(vscodeMock.window.withProgress).toHaveBeenCalledWith(
-            expect.objectContaining({
-                location: vscodeMock.ProgressLocation.Notification,
-                title: expect.stringMatching(/browser/i),
-            }),
-            expect.any(Function),
-        );
+        expect(forcedSwitch()).not.toHaveBeenCalled();
     });
 });
 
-
-// The org-context check itself (pending → ok/warning/unknown, self-heal,
-// non-interactive P1 contract) is owned by the orchestrator and is covered in
-// onOpenChecks/orgContextCheck.test.ts + onOpenChecks/orchestrator.test.ts. This
-// file only asserts that handleSwitchOrg re-triggers it via the status refresh.
+// The forced sign-in (force=true, the browser telegraph, the no-project case) is
+// covered in authentication/handlers/orgSwitchHandler.test.ts. The org-context
+// check itself (pending → ok/warning/unknown, self-heal, non-interactive P1
+// contract) is owned by the orchestrator and covered in
+// onOpenChecks/orgContextCheck.test.ts + onOpenChecks/orchestrator.test.ts.

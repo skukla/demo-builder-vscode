@@ -33,10 +33,8 @@ import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { StateManager } from '@/core/state';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
-import * as authentication from '@/features/authentication';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
-import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
-import { handleListOrgConsoleApis } from '@/features/project-creation/handlers/consoleApiHandlers';
+import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers/addIntegrationFlowHandlers';
 import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -120,49 +118,25 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand {
         );
     }
 
-    /**
-     * Messages the reused wizard add-integration flow sends. Keep in step with
-     * `features/project-creation/ui/components/integration-flow/` — the suite
-     * pins this list against the panel's registered types.
-     */
-    private static readonly REUSED_WIZARD_HANDLERS = {
-        'list-org-console-apis': handleListOrgConsoleApis,
-        // The DESTINATION stages (Change → project/workspace). These requests come
-        // from AdobeProjectPicker / AdobeWorkspacePicker / useProjectCreationPhases,
-        // which the flow RENDERS but does not live beside — which is why the
-        // coverage guard, scanning only integration-flow/, did not catch them and
-        // the picker spun forever with nothing answering (2026-07-31).
-        // The signed-out destination step renders AdobeAuthStep, which posts these.
-        // Unregistered they do not hang (both are postMessage) — the step simply
-        // never learns the auth state changed, which is a quieter failure.
-        'check-auth': authentication.handleCheckAuth,
-        authenticate: authentication.handleAuthenticate,
-        'get-projects': authentication.handleGetProjects,
-        'select-project': authentication.handleSelectProject,
-        'create-adobe-project': authentication.handleCreateAdobeProject,
-        'delete-adobe-project': authentication.handleDeleteAdobeProject,
-        'get-workspaces': authentication.handleGetWorkspaces,
-        'select-workspace': authentication.handleSelectWorkspace,
-        // Reachable from useProjectCreationPhases. This flow passes skipEnabling, so
-        // it should never fire — but "should never fire" is precisely the assumption
-        // that produces a silent hang, and registering it costs nothing.
-        'ensure-mesh-api-subscribed': meshHandlers['ensure-mesh-api-subscribed'],
-    };
-
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
-        for (const messageType of getRegisteredTypes(
-            ShowIntegrationsCommand.REUSED_WIZARD_HANDLERS,
-        )) {
+        // The reused flow's OWN contract — not a copy of it. See
+        // `addIntegrationFlowHandlers`; adding a message to the flow is one edit
+        // there and this panel gets it.
+        for (const messageType of getRegisteredTypes(addIntegrationFlowHandlers)) {
             comm.onStreaming(messageType, async (data: unknown) => {
                 return dispatchHandler(
-                    ShowIntegrationsCommand.REUSED_WIZARD_HANDLERS,
+                    addIntegrationFlowHandlers,
                     this.createHandlerContext(),
                     messageType,
                     data,
                 );
             });
         }
-        // The whole dashboard map — the grid's own messages.
+        // The whole dashboard map — the grid's own messages. Registered SECOND on
+        // purpose: `switchOrg` is in both, and the dashboard's variant (forced
+        // sign-in THEN a status re-check, which re-surfaces a persisting mismatch)
+        // is the one this surface wants. `messageHandlers` is a Map, so the later
+        // registration replaces rather than adding a second listener.
         for (const messageType of getRegisteredTypes(dashboardHandlers)) {
             comm.onStreaming(messageType, async (data: unknown) => {
                 return dispatchHandler(
