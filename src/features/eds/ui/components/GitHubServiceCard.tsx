@@ -16,10 +16,11 @@
  * />
  */
 
-import { Flex, Text, ProgressCircle } from '@adobe/react-spectrum';
+import { Flex, Text } from '@adobe/react-spectrum';
 import Alert from '@spectrum-icons/workflow/Alert';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
+import { Spinner } from '@/core/ui/components/ui';
 
 /** GitHub user information */
 export interface GitHubUser {
@@ -114,7 +115,7 @@ export function GitHubServiceCard({
             <div className="service-card-status">
                 {isLoading ? (
                     <Flex alignItems="center" gap="size-100">
-                        <ProgressCircle size="S" isIndeterminate aria-label="Checking" />
+                        <Spinner size="S" aria-label="Checking" />
                         <Text UNSAFE_className="status-text">
                             {isAuthenticating ? 'Connecting...' : 'Checking...'}
                         </Text>

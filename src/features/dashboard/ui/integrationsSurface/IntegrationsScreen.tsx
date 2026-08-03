@@ -19,7 +19,7 @@
  * @module features/dashboard/ui/integrationsSurface/IntegrationsScreen
  */
 
-import { Button, Flex, ProgressCircle, View } from '@adobe/react-spectrum';
+import { Button, Flex, View } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
     buildIntegrationCards,
@@ -31,7 +31,7 @@ import { isMeshBusy, useDashboardStatus } from '../hooks/useDashboardStatus';
 import { useLiveAppBuilderComponents } from '../hooks/useLiveAppBuilderComponents';
 import { useRowStatusOverrides } from '../hooks/useRowStatusOverrides';
 import { AddIntegrationFlowAdapter } from './AddIntegrationFlowAdapter';
-import { StatusDisplay } from '@/core/ui/components/feedback';
+import { LoadingDisplay , StatusDisplay } from '@/core/ui/components/feedback';
 import { PageHeader, PageLayout } from '@/core/ui/components/layout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
@@ -161,12 +161,14 @@ export function IntegrationsScreen({
     const closeAdd = useCallback((): void => setAddOpen(false), []);
 
     // Status has not resolved yet — the mesh card would otherwise pop in a beat
-    // after the integration cards. Mirrors ProjectsDashboard's loading gate.
+    // after the integration cards. Same LoadingDisplay as ProjectsDashboard's gate.
+    // The Flex stays: CenteredFeedbackContainer takes a FIXED DimensionValue (it
+    // models in-panel feedback), so it cannot express "fill this 100vh screen".
     if (hasAdobeContext && !projectStatus) {
         return (
             <View height="100vh" backgroundColor="gray-50">
                 <Flex justifyContent="center" alignItems="center" height="100%">
-                    <ProgressCircle aria-label="Loading integrations" isIndeterminate size="L" />
+                    <LoadingDisplay size="L" message="Loading integrations…" />
                 </Flex>
             </View>
         );

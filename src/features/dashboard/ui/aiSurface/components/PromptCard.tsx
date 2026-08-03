@@ -12,22 +12,15 @@
  */
 
 import {
-    ActionButton,
     Flex,
     Item,
-    Menu,
-    MenuTrigger,
     Text,
     View,
 } from '@adobe/react-spectrum';
-import Copy from '@spectrum-icons/workflow/Copy';
-import Delete from '@spectrum-icons/workflow/Delete';
-import Duplicate from '@spectrum-icons/workflow/Duplicate';
-import Edit from '@spectrum-icons/workflow/Edit';
-import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
-import PinOff from '@spectrum-icons/workflow/PinOff';
 import PinOn from '@spectrum-icons/workflow/PinOn';
 import React, { useCallback } from 'react';
+import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
+import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 import type { AiPrompt } from '@/types/base';
 
 // Re-export for backward compatibility.
@@ -161,43 +154,34 @@ function PromptKebab({
         [isPinned, promptBody, onPinToggle, onEdit, onDuplicate, onDelete, onCopy],
     );
 
-    // Stop click propagation so opening the kebab doesn't trigger card launch.
-    const stopPropagation = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-    }, []);
-
     return (
-        // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- click handled by child MenuTrigger/ActionButton which provides keyboard support
-        <div onClick={stopPropagation} style={STYLE_KEBAB_WRAPPER}>
-            <MenuTrigger>
-                <ActionButton isQuiet aria-label="More actions">
-                    <MoreSmallListVert size="S" />
-                </ActionButton>
-                <Menu onAction={handleAction}>
-                    <Item key="pin-toggle" textValue={isPinned ? 'Unpin' : 'Pin'}>
-                        {isPinned ? <PinOff size="S" /> : <PinOn size="S" />}
-                        <Text>{isPinned ? 'Unpin' : 'Pin'}</Text>
+        // The wrapper owns POSITIONING only (the card's concern); CardActionsMenu
+        // brings the trigger, the menu, and its own click containment.
+        <div style={STYLE_KEBAB_WRAPPER}>
+            <CardActionsMenu ariaLabel="More actions" onAction={handleAction}>
+                <Item key="pin-toggle" textValue={isPinned ? 'Unpin' : 'Pin'}>
+                    {renderMenuIcon(isPinned ? 'pinOff' : 'pinOn')}
+                    <Text>{isPinned ? 'Unpin' : 'Pin'}</Text>
+                </Item>
+                <Item key="edit" textValue="Edit">
+                    {renderMenuIcon('edit')}
+                    <Text>Edit</Text>
+                </Item>
+                <Item key="duplicate" textValue="Duplicate">
+                    {renderMenuIcon('duplicate')}
+                    <Text>Duplicate</Text>
+                </Item>
+                {onCopy ? (
+                    <Item key="copy" textValue="Copy prompt">
+                        {renderMenuIcon('copy')}
+                        <Text>Copy prompt</Text>
                     </Item>
-                    <Item key="edit" textValue="Edit">
-                        <Edit size="S" />
-                        <Text>Edit</Text>
-                    </Item>
-                    <Item key="duplicate" textValue="Duplicate">
-                        <Duplicate size="S" />
-                        <Text>Duplicate</Text>
-                    </Item>
-                    {onCopy ? (
-                        <Item key="copy" textValue="Copy prompt">
-                            <Copy size="S" />
-                            <Text>Copy prompt</Text>
-                        </Item>
-                    ) : null}
-                    <Item key="delete" textValue="Delete">
-                        <Delete size="S" />
-                        <Text>Delete</Text>
-                    </Item>
-                </Menu>
-            </MenuTrigger>
+                ) : null}
+                <Item key="delete" textValue="Delete">
+                    {renderMenuIcon('delete')}
+                    <Text>Delete</Text>
+                </Item>
+            </CardActionsMenu>
         </div>
     );
 }

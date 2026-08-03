@@ -16,6 +16,7 @@
 
 import Copy from '@spectrum-icons/workflow/Copy';
 import Delete from '@spectrum-icons/workflow/Delete';
+import Duplicate from '@spectrum-icons/workflow/Duplicate';
 import Edit from '@spectrum-icons/workflow/Edit';
 import Export from '@spectrum-icons/workflow/Export';
 import Globe from '@spectrum-icons/workflow/Globe';
@@ -39,6 +40,7 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     dalive: <Edit size="S" />,
     edit: <Edit size="S" />,
     copy: <Copy size="S" />,
+    duplicate: <Duplicate size="S" />,
     reset: <Revert size="S" />,
     republish: <Globe size="S" />,
     export: <Export size="S" />,

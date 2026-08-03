@@ -12,7 +12,6 @@ import {
     Flex,
     Text,
     Button,
-    ProgressCircle,
     MenuTrigger,
     Menu,
     Item,
@@ -27,6 +26,7 @@ import type { ProjectActions } from './components/ProjectActionsMenu';
 import { ProjectRowList } from './components/ProjectRowList';
 import { ProjectsGrid } from './components/ProjectsGrid';
 import { buildMenuItems } from './projectsDashboardHelpers';
+import { LoadingDisplay } from '@/core/ui/components/feedback';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { SearchHeader, type ViewMode } from '@/core/ui/components/navigation/SearchHeader';
@@ -125,21 +125,14 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     const hasProjects = projects.length > 0;
     const isFiltering = searchQuery.trim().length > 0;
 
-    // Loading state - full screen centered
+    // Loading state — the house LoadingDisplay (same as IntegrationsScreen's gate),
+    // centered by Flex because CenteredFeedbackContainer needs a fixed height.
     if (isLoading) {
         return (
             <div ref={containerRef}>
                 <View height="100vh" backgroundColor="gray-50">
-                    <Flex
-                        justifyContent="center"
-                        alignItems="center"
-                        height="100%"
-                    >
-                        <ProgressCircle
-                            aria-label="Loading projects"
-                            isIndeterminate
-                            size="L"
-                        />
+                    <Flex justifyContent="center" alignItems="center" height="100%">
+                        <LoadingDisplay size="L" message="Loading projects…" />
                     </Flex>
                 </View>
             </div>

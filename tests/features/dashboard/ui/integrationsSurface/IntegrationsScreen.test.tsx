@@ -61,6 +61,7 @@ jest.mock('@/core/ui/components/navigation/SearchHeader', () => ({
 }));
 
 jest.mock('@/core/ui/components/feedback', () => ({
+    LoadingDisplay: ({ message }: any) => <div data-testid="loading">{message}</div>,
     StatusCard: ({ label, status }: any) => (
         <div data-testid="destination-row">
             {label}: {status}
@@ -167,11 +168,13 @@ beforeEach(() => {
 
 describe('IntegrationsScreen', () => {
     describe('render states', () => {
-        it('shows a spinner until status resolves', () => {
+        it('shows the house loading view until status resolves', () => {
+            // LoadingDisplay, not a bare ProgressCircle — the same full-block
+            // treatment ProjectsDashboard's gate uses.
             captureHandlers();
             render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
 
-            expect(screen.getByTestId('spinner')).toBeInTheDocument();
+            expect(screen.getByTestId('loading')).toHaveTextContent('Loading integrations');
             expect(screen.queryByTestId('grid')).not.toBeInTheDocument();
         });
 

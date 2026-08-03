@@ -19,10 +19,11 @@
  * />
  */
 
-import { Flex, Text, ProgressCircle, Picker, Item } from '@adobe/react-spectrum';
+import { Flex, Text, Picker, Item } from '@adobe/react-spectrum';
 import Alert from '@spectrum-icons/workflow/Alert';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useEffect, useMemo, useState } from 'react';
+import { Spinner } from '@/core/ui/components/ui';
 
 /** Stable empty-array reference for the availableOrgs default (re-render guard). */
 const EMPTY_ORGS: readonly string[] = [];
@@ -173,7 +174,7 @@ export function DaLiveServiceCard({
             <div className="service-card-status">
                 {isLoading ? (
                     <Flex alignItems="center" gap="size-100">
-                        <ProgressCircle size="S" isIndeterminate aria-label="Checking" />
+                        <Spinner size="S" aria-label="Checking" />
                         <Text UNSAFE_className="status-text">
                             {isAuthenticating ? 'Verifying...' : 'Checking...'}
                         </Text>
