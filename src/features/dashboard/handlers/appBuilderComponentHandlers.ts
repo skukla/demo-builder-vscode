@@ -250,7 +250,6 @@ export const handleAddAppBuilderComponent: MessageHandler<{
             }
 
             report('Adding integration…');
-            await postRowStatus(entry.id, 'deploying', 'Adding integration…');
             const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
             return addAppBuilderComponent(project, entry, deps);
         },
@@ -288,9 +287,7 @@ export const handleAddAppBuilderComponent: MessageHandler<{
 async function resolveComponentTarget(
     context: HandlerContext,
     id: string | undefined,
-): Promise<
-    { ok: true; id: string; project: Project } | { ok: false; error: HandlerResponse }
-> {
+): Promise<{ ok: true; id: string; project: Project } | { ok: false; error: HandlerResponse }> {
     if (!id) {
         return {
             ok: false,
@@ -330,6 +327,15 @@ type GuardableResult = {
  * extension already uses: a VS Code progress notification, a live row status on
  * the grid, and USER-log lines at start and finish.
  *
+ * The three carry DIFFERENT registers, and that split is the point. The
+ * notification is coarse and ambient — its title names the operation and its
+ * object ("Deploying ERP Sync") and it spins for the duration, which is what a
+ * user who is NOT on the Integrations page needs. The row carries the STEPS. The
+ * two used to narrate the same step in the same instant, in slightly different
+ * words; the general rule is that no two surfaces narrate the same step, and the
+ * surface that exists carries it. (A path with no card — the projects-list kebab
+ * redeploy — correctly keeps step text in its notification.)
+ *
  * Before this, add/remove/deploy ran silently — the modal closed, `aio app
  * undeploy` ground away for tens of seconds, and nothing anywhere said so
  * (reported 2026-07-31: "no visual indication that anything is happening", "no
@@ -345,7 +351,7 @@ type GuardableResult = {
  * as its first line — the same shape `deployMeshHeadless` uses.
  *
  * @param options - the notification title, the row to telegraph, the user logger
- * @param run - the work; call its `report` to push sub-progress to both surfaces
+ * @param run - the work; call its `report` to push sub-progress to the CARD
  * @returns whatever `run` resolves to
  */
 async function withComponentProgress<T extends GuardableResult>(
@@ -357,10 +363,22 @@ async function withComponentProgress<T extends GuardableResult>(
 
     let result = { success: false } as T;
     await vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification, title: `${title} ${label}`, cancellable: false },
-        async (progress) => {
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: `${title} ${label}`,
+            cancellable: false,
+        },
+        async () => {
+            // `report` drives the CARD only. It used to also call
+            // `progress.report({ message })`, so the notification and the row
+            // narrated the same steps at the same moment in slightly different
+            // words — a card reading "Checking requirements…" beside a toast
+            // saying the same thing. Each surface gets one job instead:
+            // the notification is the ambient "this is running, and what"
+            // (its title, above, plus a spinner) for a user whose attention is
+            // elsewhere; the card is where the steps belong, because that is the
+            // object being acted on and it is already on screen.
             result = await run((message) => {
-                progress.report({ message });
                 void postRowStatus(id, 'deploying', message);
             });
         },
@@ -401,7 +419,6 @@ async function deployById(context: HandlerContext, requestedId: string | undefin
             }
 
             report('Deploying…');
-            await postRowStatus(id, 'deploying', 'Deploying…');
             const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
             return deployAppBuilderComponent(project, id, deps);
         },
@@ -456,7 +473,6 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
             // Undeploy is a slow cloud op — telegraph it, or the grid sits frozen
             // while `aio app undeploy` runs with nothing on screen saying so.
             report('Removing integration…');
-            await postRowStatus(id, 'deploying', 'Removing integration…');
             const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
             return removeAppBuilderComponent(project, id, deps);
         },
@@ -531,10 +547,10 @@ async function resolveRenameName(
  * skips the input box and round-trips validation errors for inline display.
  * Cancel writes nothing.
  */
-export const handleRenameAppBuilderComponent: MessageHandler<{ id?: string; name?: string }> = async (
-    context,
-    payload,
-) => {
+export const handleRenameAppBuilderComponent: MessageHandler<{
+    id?: string;
+    name?: string;
+}> = async (context, payload) => {
     const target = await resolveComponentTarget(context, payload?.id);
     if (!target.ok) return target.error;
     const { id, project } = target;

@@ -120,6 +120,43 @@ describe('DeployMeshCommand - Unification (delegates to deployMeshComponent)', (
         mockFetchInfo.mockResolvedValue({ meshId: 'existing-789', endpoint: 'https://old.adobe.io/graphql' });
     });
 
+    // The notification and the mesh CARD each get one job. Both used to narrate
+    // the same steps — onProgress pushed the identical string to progress.report
+    // and to sendMeshStatusUpdate — so the card read "STARTING DEPLOYMENT…" while
+    // a toast beside it said "Deploying API Mesh" about the same instant. The
+    // fan-out still matters for a user whose attention is elsewhere; it just
+    // needs a coarser register. Notification: title + spinner. Card: the steps.
+    it('keeps step detail off the notification', async () => {
+        const report = jest.fn();
+        (vscode.window.withProgress as jest.Mock).mockImplementation(
+            async (_o: unknown, task: (p: unknown) => Promise<void>) => {
+                await task({ report });
+            },
+        );
+        // Drive a progress tick through the core's onProgress callback.
+        mockDeploy.mockImplementation(async (_p, _e, _l, onProgress) => {
+            (onProgress as (m: string, s?: string) => void)('Building component…');
+            return { success: true, data: { meshId: 'mesh-xyz', endpoint: 'https://m/graphql' } };
+        });
+
+        await new DeployMeshCommand(mockContext, mockStateManager, mockLogger).execute();
+
+        expect(report).not.toHaveBeenCalled();
+        expect(mockSendMeshStatusUpdate).toHaveBeenCalledWith(
+            'deploying',
+            'Building component…',
+        );
+    });
+
+    it('still names the operation in the notification title', async () => {
+        await new DeployMeshCommand(mockContext, mockStateManager, mockLogger).execute();
+
+        expect(vscode.window.withProgress).toHaveBeenCalledWith(
+            expect.objectContaining({ title: 'Deploying API Mesh' }),
+            expect.any(Function),
+        );
+    });
+
     it('delegates to deployMeshComponent with the mesh path, executor, an onProgress fn, and the existing mesh id', async () => {
         await new DeployMeshCommand(mockContext, mockStateManager, mockLogger).execute();
 

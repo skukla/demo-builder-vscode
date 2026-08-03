@@ -342,6 +342,63 @@ describe('appBuilderComponentsSnapshot channel (fresh persisted map after termin
     });
 });
 
+// The notification and the card each get ONE job.
+//
+// Both used to narrate the same steps: `withComponentProgress`'s report pushed
+// the identical string to `progress.report` AND to the row status, so a user on
+// the Integrations page watched a card say "Checking requirements…" while a
+// toast beside it said the same thing in different words. That fan-out was the
+// fix for operations running silently (2026-07-31) and is still right for a user
+// whose attention is elsewhere — it just needs a coarser register.
+//
+// Notification: its title, and a spinner. Card: the steps.
+describe('progress register', () => {
+    it('keeps step detail off the notification', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+        const vscode = require('vscode');
+        const report = jest.fn();
+        vscode.window.withProgress.mockImplementation(
+            async (_o: unknown, task: (p: unknown) => unknown) => task({ report }),
+        );
+
+        await handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        // Control FIRST: a negative assertion alone would go green if the handler
+        // ever bailed before withProgress (a fixture change, a new early return),
+        // proving nothing.
+        expect(vscode.window.withProgress).toHaveBeenCalled();
+        expect(report).not.toHaveBeenCalled();
+    });
+
+    it('still names the operation in the notification title', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+        const vscode = require('vscode');
+
+        await handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(vscode.window.withProgress).toHaveBeenCalledWith(
+            expect.objectContaining({ title: expect.stringContaining('Deploying') }),
+            expect.any(Function),
+        );
+    });
+
+    it('still pushes the step detail to the card', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+
+        await handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(mockSendAppBuilderComponentStatusUpdate).toHaveBeenCalledWith(
+            'erp-sync',
+            'deploying',
+            expect.stringContaining('Checking requirements'),
+            undefined, // no endpoint on a progress tick
+        );
+    });
+});
+
 // The progress notification must open BEFORE the guards, not after. runGuards
 // performs the auth check, whose `aio config get` spawn costs seconds on a cold
 // cache — guarding first left the user clicking Add and watching nothing happen

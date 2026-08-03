@@ -11,8 +11,10 @@ import type { Logger } from '@/types/logger';
  * status bridge, and the toasts. The whole deploy sequence (pre-flight →
  * permission gate → find mesh → pre-deploy subscribe → create-or-update deploy →
  * persist) lives in the shared, UI-free `deployMeshHeadless` core, which the
- * `deploy_mesh` MCP tool also calls. The command wires the core's status/progress
- * callbacks to the dashboard badge + notification and maps its result to toasts.
+ * `deploy_mesh` MCP tool also calls. The command maps the core's result to
+ * toasts and routes its callbacks by REGISTER: status and step progress go to
+ * the dashboard/card badge; the notification carries only its title and a
+ * spinner, so the two never narrate the same step at the same moment.
  */
 export class DeployMeshCommand extends BaseCommand {
     /** Execution lock to prevent duplicate concurrent execution */
@@ -47,8 +49,9 @@ export class DeployMeshCommand extends BaseCommand {
 
                 // Run the shared, UI-free deploy core inside the progress
                 // notification, bridging its status/progress callbacks to the
-                // dashboard badge + notification. The result is captured from the
-                // task (not withProgress's return) so it survives regardless.
+                // dashboard badge. The notification itself carries only the title
+                // below. The result is captured from the task (not withProgress's
+                // return) so it survives regardless.
                 let result: import('../services/deployMeshHeadless').DeployMeshHeadlessResult = {
                     success: false,
                 };
@@ -58,7 +61,7 @@ export class DeployMeshCommand extends BaseCommand {
                         title: 'Deploying API Mesh',
                         cancellable: false,
                     },
-                    async (progress) => {
+                    async () => {
                         result = await deployMeshHeadless({
                             project,
                             stateManager: this.stateManager,
@@ -77,12 +80,18 @@ export class DeployMeshCommand extends BaseCommand {
                                           message,
                                           endpoint,
                                       ),
+                            // Steps go to the CARD only. This used to also call
+                            // `progress.report`, so the mesh card read
+                            // "STARTING DEPLOYMENT…" while the notification beside
+                            // it announced the same moment in different words. The
+                            // notification keeps the coarse register — its title
+                            // and a spinner, which is what a user who is NOT on the
+                            // Integrations page needs; the card carries the steps,
+                            // because it is the thing being deployed.
                             onProgress: (message, subMessage) => {
-                                const text = subMessage || message;
-                                progress.report({ message: text });
                                 void ProjectDashboardWebviewCommand.sendMeshStatusUpdate(
                                     'deploying',
-                                    text,
+                                    subMessage || message,
                                 );
                             },
                         });
