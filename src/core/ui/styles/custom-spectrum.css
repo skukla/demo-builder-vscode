@@ -4789,6 +4789,24 @@ div[class*="spectrum"] input[type="search"] {
     flex-direction: column;
     gap: 12px;
 }
+/* The project/workspace list keeps ONE height whether it shows 726 rows or the 5
+   that match a filter. By default `.list-refresh-container` is `flex: 1` inside an
+   auto-height chain, so the list is sized by its CONTENT — and the modal is
+   `fitContent`, so every keystroke resized the dialog and re-centred it under the
+   cursor. Same remedy as `.repo-selection-inline .list-refresh-container`, but a
+   definite height rather than a cap, because a cap still collapses when filtering.
+   It also moves the scrolling INTO the list (ListView virtualizes) instead of
+   scrolling the whole modal body past the sticky footer.
+   The ListView's `.flex-1` is what lets the "no <noun>s match" line share the box:
+   its `flex-basis: 0` overrides the `height="100%"` prop, so on an empty filter the
+   list yields the line its ~20px instead of pushing it out of view. */
+.intflow-destination .list-refresh-container {
+    flex: 0 0 auto !important;
+    /* The viewport term reserves the modal chrome (title, search, count, context
+       line, footer, dialog margins) so a short window shrinks the list rather than
+       overflowing the dialog. */
+    height: min(420px, calc(100vh - 22rem)) !important;
+}
 /* The committed destination as a quiet CONTEXT LINE above the active stage — it
    replaced the `dest-summary` step (a whole step to confirm a destination the user
    never chose). Quiet by design: it is orientation, not the task. */
