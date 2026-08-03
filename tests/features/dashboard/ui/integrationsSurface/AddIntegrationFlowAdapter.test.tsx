@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import '@testing-library/jest-dom';
@@ -147,6 +147,64 @@ describe('AddIntegrationFlowAdapter', () => {
 
             expect(captured?.state.adobeAuth?.isAuthenticated).toBe(true);
             expect(captured?.state.adobeOrg).toEqual({ id: 'org-1' });
+        });
+    });
+
+    // REGRESSION (2026-08-03): the adapter's updateState swallowed every write
+    // except `selectedConsoleApis`, and its state memo had no cache keys at all.
+    // The wizard components it hosts are STATE-BACKED: `useSelectionStep` stores
+    // fetched items in `state[cacheKey]` and reads them straight back. So the
+    // project picker fetched 726 projects, wrote them to a state that discarded
+    // them, and rendered "No Projects Found" in the same instant. The wizard host
+    // passes its real state store, which is why the identical picker works there.
+    describe('state store — writes must round-trip', () => {
+        it('a projectsCache write comes back as state (the empty-picker bug)', () => {
+            renderAdapter();
+            const projects = [{ id: 'p-1', name: 'one', title: 'One' }];
+
+            act(() => captured?.updateState({ projectsCache: projects }));
+
+            expect(captured?.state.projectsCache).toEqual(projects);
+        });
+
+        it('a workspacesCache write comes back as state', () => {
+            renderAdapter();
+            const workspaces = [{ id: 'w-1', name: 'Stage' }];
+
+            act(() => captured?.updateState({ workspacesCache: workspaces }));
+
+            expect(captured?.state.workspacesCache).toEqual(workspaces);
+        });
+
+        it('still round-trips the API picks', () => {
+            renderAdapter();
+
+            act(() => captured?.updateState({ selectedConsoleApis: { 'erp-sync': ['a'] } }));
+
+            expect(captured?.state.selectedConsoleApis).toEqual({ 'erp-sync': ['a'] });
+        });
+
+        it('a destination change overrides the value derived from the live project', () => {
+            renderAdapter();
+
+            act(() =>
+                captured?.updateState({ adobeProject: { id: 'p-2', name: 'two', title: 'Two' } })
+            );
+
+            expect(captured?.state.adobeProject).toEqual({
+                id: 'p-2',
+                name: 'two',
+                title: 'Two',
+            });
+        });
+
+        it('leaves the derived destination alone until something writes over it', () => {
+            renderAdapter();
+
+            act(() => captured?.updateState({ projectsCache: [] }));
+
+            expect(captured?.state.adobeProject?.id).toBe('proj-1');
+            expect(captured?.state.adobeWorkspace?.id).toBe('ws-1');
         });
     });
 

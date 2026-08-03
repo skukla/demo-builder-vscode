@@ -6,11 +6,16 @@
  * same kind picker, catalog gallery, custom-URL door, blank-instance naming and
  * API picker.
  *
- * Reuse is possible because that modal's wizard dependency is narrow — it reads
- * four fields and commits through exactly two callbacks
- * (`Pick<UseProjectBuilderReturn, 'onAppBuilderComponentToggle' |
- * 'onAddCustomAppBuilderComponent'>`). This file supplies both, shaped from the
- * live project instead of a wizard draft.
+ * Reuse is possible because that modal's wizard dependency is narrow — it commits
+ * through exactly two callbacks (`Pick<UseProjectBuilderReturn,
+ * 'onAppBuilderComponentToggle' | 'onAddCustomAppBuilderComponent'>`). This file
+ * supplies both, shaped from the live project instead of a wizard draft.
+ *
+ * What it does NOT get to narrow is `state`/`updateState`. The components inside
+ * that modal (the project and workspace pickers) are state-BACKED: they write
+ * their fetched lists into wizard state and read them back out. So this adapter
+ * supplies a real session store — derived-from-project values with every write
+ * layered on top — not a filter over the fields it happens to care about.
  *
  * The ONE behavioural difference, and it is the point: the wizard STAGES a
  * selection to be built when the project is created; here the commit deploys
@@ -31,6 +36,7 @@ import { AddIntegrationFlowModal } from '@/features/project-creation/ui/componen
 import { buildReservedIds } from '@/features/project-creation/ui/components/integration-flow/instanceId';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
+import type { WizardState } from '@/types/webview';
 
 export interface AddIntegrationFlowAdapterProps {
     isOpen: boolean;
@@ -69,26 +75,45 @@ export function AddIntegrationFlowAdapter({
     adobeWorkspaceTitle,
     adobeOrgId,
 }: AddIntegrationFlowAdapterProps): React.ReactElement {
-    // The modal writes destination/API picks through updateState. On a live
-    // project the destination is already fixed, so those writes are inert — held
-    // locally so the modal stays a controlled component rather than being
-    // silently dropped.
-    const [apiPicks, setApiPicks] = useState<Record<string, string[]>>({});
+    // A REAL state store for the modal session, not a filter.
+    //
+    // The wizard components this modal hosts are state-BACKED, not just
+    // state-reading: `useSelectionStep` writes fetched items into
+    // `state[cacheKey]` through updateState and reads its list straight back out.
+    // An updateState that kept only the keys this adapter cared about therefore
+    // broke the pickers outright — the project picker fetched 726 projects, wrote
+    // them into a store that dropped them, and rendered "No Projects Found" in the
+    // same instant (2026-08-03). The wizard host passes its real state store,
+    // which is why the identical picker works there.
+    //
+    // So: keep EVERY write, and layer it over the values derived from the live
+    // project. Destination writes are session-scoped — they steer the modal's own
+    // stages and context line; persisting a changed destination to the project is
+    // the page-level destination control's job, not this adapter's.
+    const [overrides, setOverrides] = useState<Partial<WizardState>>({});
 
-    const entries = Object.entries(appBuilderComponents ?? {});
-    const integrationIds = entries
-        .filter(([, entry]) => entry.kind === 'integration')
-        .map(([id]) => id);
-    const allComponentIds = entries.map(([id]) => id);
+    const updateState = useCallback((updates: Partial<WizardState>): void => {
+        setOverrides((current) => ({ ...current, ...updates }));
+    }, []);
+
+    // Memoized: `state` derives from these, and a fresh array each render would
+    // give the pickers a new `state` identity on every render — re-subscribing
+    // their message listeners each time.
+    const { integrationIds, allComponentIds } = useMemo(() => {
+        const entries = Object.entries(appBuilderComponents ?? {});
+        return {
+            integrationIds: entries
+                .filter(([, entry]) => entry.kind === 'integration')
+                .map(([id]) => id),
+            allComponentIds: entries.map(([id]) => id),
+        };
+    }, [appBuilderComponents]);
 
     // Passed unconditionally: `meshKindOffered` = meshAvailable && !meshSelected,
     // so the id list below is what hides the option once a mesh exists. Withholding
     // the component instead also made `meshSelected` false, which left a mesh-only
     // project reporting NO references and stopped the destination collapsing.
-    const meshComponent = useMemo(
-        () => catalog.find((entry) => entry.kind === 'mesh'),
-        [catalog],
-    );
+    const meshComponent = useMemo(() => catalog.find((entry) => entry.kind === 'mesh'), [catalog]);
     const blankComponent = useMemo(() => catalog.find((entry) => entry.blank === true), [catalog]);
 
     const state = useMemo(
@@ -109,7 +134,9 @@ export function AddIntegrationFlowAdapter({
             // guard, the "mesh already added" rule, AND `hasIntegrations` (something
             // references the destination), which gates the collapse.
             selectedAppBuilderComponents: allComponentIds,
-            selectedConsoleApis: apiPicks,
+            // Everything the modal session has written — caches the pickers read
+            // back, API picks, a changed destination — layered on top.
+            ...overrides,
         }),
         [
             adobeOrgId,
@@ -118,17 +145,9 @@ export function AddIntegrationFlowAdapter({
             adobeProjectTitle,
             adobeWorkspaceTitle,
             allComponentIds,
-            apiPicks,
+            overrides,
         ],
     );
-
-    const updateState = useCallback((updates: Record<string, unknown>): void => {
-        if (updates.selectedConsoleApis) {
-            setApiPicks(updates.selectedConsoleApis as Record<string, string[]>);
-        }
-        // adobeProject / adobeWorkspace writes are inert here: the live project's
-        // destination is fixed and the flow only reaches dest-summary.
-    }, []);
 
     const reservedIds = useMemo(
         () =>
@@ -181,7 +200,7 @@ export function AddIntegrationFlowAdapter({
             onClose={onClose}
             mode="add"
             state={state as never}
-            updateState={updateState as never}
+            updateState={updateState}
             meshComponent={meshComponent as never}
             catalog={catalog}
             blankComponent={blankComponent}

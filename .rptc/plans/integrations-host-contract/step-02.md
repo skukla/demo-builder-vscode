@@ -1,5 +1,35 @@
 # Step 02 — BUG: 726 projects fetched, picker shows "No Projects Found"
 
+## RESOLVED 2026-08-03 — it was none of the three candidates
+
+The push arrived intact. It was the HOST's state store: `AddIntegrationFlowAdapter`
+supplied a `state` memo with no cache keys and an `updateState` that kept
+`selectedConsoleApis` and silently dropped everything else.
+
+`useSelectionStep` is state-BACKED, not state-reading: it writes the fetched list into
+`state[cacheKey]` and reads its `items` straight back out of it. So the picker fetched
+726 projects, wrote them into a store that discarded them, and rendered the empty state
+in the same instant. The wizard works because `IntegrationsStep` passes the wizard's real
+`state`/`updateState`.
+
+Fix: the adapter keeps EVERY write in a local `overrides` object layered over the
+values derived from the live project. Also memoized the `Object.entries` derivation —
+it produced a new array (and so a new `state` identity) every render, re-subscribing
+the picker's message listener each time. The `updateState as never` cast is gone: the
+callback now genuinely has the wizard's signature.
+
+Destination writes are session-scoped — they steer the modal's own stages and context
+line. PERSISTING a changed destination to the project is still
+`integrations-destination-control/step-01`'s job.
+
+Acceptance 3 (`panelHandlerContext.test.ts`): **no**. That guard reads extension-side
+panel construction; this bug lived entirely in webview React state, where it cannot see.
+The regression net is the adapter's own `state store — writes must round-trip` block.
+`AddIntegrationFlowAdapter` is the only host in `src/` that fabricates a wizard state
+(checked: it is the sole `state as never` site), so there is no second instance to guard.
+
+The original investigation notes follow.
+
 ## Evidence (2026-08-03, after `0807d1c4`)
 
 Extension log:
