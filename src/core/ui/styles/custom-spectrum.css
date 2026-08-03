@@ -677,6 +677,26 @@ button[class*="spectrum-Button"][disabled],
        would make overflow-y here do nothing. */
     overflow-y: auto !important;
 }
+/* Content-aware height — opt-in via Modal's `fitContent`.
+   Spectrum's modal Dialog claims a height independent of its content, which is why
+   .modal-body grows to push the footer to the bottom. For a SHORT body that leaves a
+   tall dialog with dead space below the footer (the Add Integration kind/name/
+   destination stages: ~250px of content in a ~950px dialog). Releasing the height
+   lets the dialog collapse to its content.
+   The sticky footer is unaffected: sticky is a no-op when nothing overflows, and a
+   LONG body still hits the dialog's max-height and scrolls as before. */
+.modal-fit-content {
+    height: auto !important;
+    min-height: 0 !important;
+}
+.modal-fit-content .modal-content {
+    /* No leftover height to claim, so the body must not stretch. */
+    flex: 0 1 auto !important;
+}
+.modal-fit-content .modal-body {
+    flex: 0 1 auto !important;
+}
+
 .modal-footer-actions {
     /* Pin to the bottom of the dialog's scroll area so the primary action stays visible while
        a tall body (e.g. the integration catalog grid) scrolls. With .modal-content's bottom
@@ -4994,15 +5014,17 @@ div[class*="spectrum"] input[type="search"] {
 .intflow-api-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 5px;
-    margin: 0 0 2px;
+    gap: 6px;
+    margin: 0 0 4px;
 }
+/* These are the picker's primary filter control, not metadata — 11.5px/2px read as
+   a caption and were hard to hit. Sized to match the row labels they filter. */
 .intflow-api-chip {
     appearance: none;
     cursor: pointer;
-    font-size: 11.5px;
-    line-height: 1.2;
-    padding: 2px 9px;
+    font-size: 13px;
+    line-height: 1.3;
+    padding: 5px 13px;
     border-radius: 999px;
     border: 1px solid var(--spectrum-global-color-gray-300);
     background: var(--spectrum-global-color-gray-50);

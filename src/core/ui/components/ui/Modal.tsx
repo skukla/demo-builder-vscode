@@ -17,6 +17,16 @@ export interface ModalProps {
     closeLabel?: string;
     /** Variant for the built-in close button (default "secondary"). */
     closeVariant?: 'primary' | 'secondary' | 'accent' | 'negative';
+    /**
+     * Let the dialog collapse to its CONTENT's height instead of claiming a fixed
+     * one. Spectrum's modal Dialog takes a height independent of what is inside it
+     * — which is why `.modal-body` has to grow to push the footer down (below). On
+     * a short body that leaves a tall dialog with dead space under the footer.
+     *
+     * Opt-in so existing modals keep their current proportions; the max-height and
+     * the sticky footer still apply, so a LONG body scrolls exactly as before.
+     */
+    fitContent?: boolean;
     children: ReactNode;
 }
 
@@ -78,6 +88,7 @@ export function Modal({
     onClose,
     closeLabel = 'Close',
     closeVariant = 'secondary',
+    fitContent = false,
     children,
 }: ModalProps) {
     // Map custom sizes to Dialog-compatible sizes
@@ -85,7 +96,7 @@ export function Modal({
         size === 'fullscreen' || size === 'fullscreenTakeover' ? 'L' : size;
 
     return (
-        <Dialog size={dialogSize}>
+        <Dialog size={dialogSize} UNSAFE_className={fitContent ? 'modal-fit-content' : undefined}>
             <Heading>{title}</Heading>
             <Divider />
             <Content UNSAFE_className="modal-content">

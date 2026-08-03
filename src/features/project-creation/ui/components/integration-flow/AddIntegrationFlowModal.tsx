@@ -198,6 +198,9 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
         <Modal
             title={TITLES[props.mode]}
             size="L"
+            // Every stage sizes to ITS content: the kind/name/destination stages are
+            // short, the api-access list is long and still scrolls at max-height.
+            fitContent
             onClose={props.onClose}
             closeLabel="Cancel"
             actionButtons={[

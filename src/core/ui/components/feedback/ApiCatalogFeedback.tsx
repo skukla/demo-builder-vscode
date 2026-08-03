@@ -88,6 +88,10 @@ export function renderApiCatalogFeedback(
                 icon={<Key size="L" UNSAFE_className="text-gray-500" />}
                 title="Sign in to Adobe"
                 message={`Your Adobe session has ended. Sign in to ${signInPurpose}.`}
+                // Telegraph the browser hand-off BEFORE it happens — the sign-in
+                // leaves VS Code, and an unannounced browser jump reads as a glitch.
+                // Same phrasing as the GitHub app-install dialog.
+                details={['Adobe sign-in will open in your browser.']}
                 actions={
                     onSignIn
                         ? [

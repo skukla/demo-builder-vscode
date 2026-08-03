@@ -398,8 +398,17 @@ export const DialogTrigger: React.FC<any> = ({ children, isOpen: _controlledIsOp
 };
 
 // Dialog mock
-export const Dialog: React.FC<any> = ({ children, ...props }) => (
-    <div data-testid="spectrum-dialog" role="dialog" {...filterSpectrumProps(props)}>{children}</div>
+export const Dialog: React.FC<any> = ({ children, UNSAFE_className, ...props }) => (
+    // UNSAFE_className -> className, as the View mock does: Modal's `fitContent`
+    // rides on it, so a test cannot see the behaviour otherwise.
+    <div
+        data-testid="spectrum-dialog"
+        role="dialog"
+        className={UNSAFE_className}
+        {...filterSpectrumProps(props)}
+    >
+        {children}
+    </div>
 );
 
 // AlertDialog mock

@@ -252,6 +252,7 @@ export function ManageApisModal({
         <DialogContainer onDismiss={onClose}>
             {isOpen && (
                 <Modal
+                    fitContent
                     title="Manage APIs"
                     size="L"
                     onClose={onClose}

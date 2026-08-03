@@ -253,4 +253,21 @@ describe('Modal', () => {
             expect(screen.getByText('Test Modal')).toBeInTheDocument();
         });
     });
+
+    // Content-aware height: Spectrum's modal Dialog claims a height independent of
+    // its content, so a short body (the Add Integration kind/name/destination
+    // stages) leaves dead space under the footer. `fitContent` releases it.
+    describe('fitContent (content-aware height)', () => {
+        it('is OFF by default — existing modals keep their proportions', () => {
+            renderWithProvider(<Modal {...defaultProps} />);
+
+            expect(screen.getByRole('dialog')).not.toHaveClass('modal-fit-content');
+        });
+
+        it('marks the dialog when opted in', () => {
+            renderWithProvider(<Modal {...defaultProps} fitContent />);
+
+            expect(screen.getByRole('dialog')).toHaveClass('modal-fit-content');
+        });
+    });
 });
