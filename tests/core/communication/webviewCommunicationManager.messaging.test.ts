@@ -458,4 +458,33 @@ describe('WebviewCommunicationManager - Messaging', () => {
             expect(handler).toHaveBeenCalled();
         });
     });
+
+    /**
+     * An unregistered type used to fall through in SILENCE — the single mechanism
+     * behind a whole class of bug: the request never resolves, the UI spins, and the
+     * log names nothing. It shipped four times in one day on the integrations panel
+     * (2026-07-31). Guards catch holes we already know about; this makes the next
+     * unknown one announce itself.
+     */
+    describe('unregistered message types', () => {
+        it('rejects the request instead of leaving it unresolved', async () => {
+            (mockWebview.postMessage as jest.Mock).mockClear();
+
+            await messageListener({
+                id: 'req-unhandled',
+                type: 'nobody-handles-this',
+                payload: {},
+                timestamp: Date.now(),
+                expectsResponse: true,
+            } as Message);
+            await Promise.resolve();
+
+            const response = (mockWebview.postMessage as jest.Mock).mock.calls
+                .map((call) => call[0])
+                .find((m) => m?.isResponse && m?.responseToId === 'req-unhandled');
+
+            expect(response).toBeDefined();
+            expect(response.error).toMatch(/no handler registered/i);
+        });
+    });
 });

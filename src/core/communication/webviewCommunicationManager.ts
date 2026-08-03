@@ -392,6 +392,32 @@ export class WebviewCommunicationManager {
                     });
                 }
             }
+        } else {
+            // NO HANDLER. Previously this fell through in silence, which is the single
+            // mechanism behind an entire class of bug: the webview's request never
+            // resolves and the user watches a spinner until it times out — with
+            // nothing in the logs naming the cause. It shipped four times in one day
+            // on the integrations panel alone (2026-07-31).
+            //
+            // Fail loudly instead. A named error in the UI and the log points at the
+            // real fault (an unregistered type on THIS panel) in seconds, where a
+            // hang points nowhere.
+            this.logger.error(
+                `[WebviewComm] No handler registered for '${message.type}' on this panel. ` +
+                    'The webview sent it but nothing answers it — register it in the ' +
+                    "panel command's handler map.",
+            );
+            if (message.id && message.expectsResponse) {
+                this.sendRawMessage({
+                    id: uuidv4(),
+                    type: '__response__',
+                    payload: undefined,
+                    timestamp: Date.now(),
+                    isResponse: true,
+                    responseToId: message.id,
+                    error: `No handler registered for '${message.type}' on this panel.`,
+                });
+            }
         }
 
         // Send acknowledgment for non-response messages
