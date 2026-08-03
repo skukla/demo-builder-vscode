@@ -287,12 +287,16 @@ function walkMeshToProject(): void {
     click('Continue');
 }
 
-/** kind → source-catalog → pick ERP → Continue (next stage depends on state). */
-function walkCatalogPastPick(): void {
+/**
+ * kind → source-catalog → pick ERP. Stops BEFORE the stage-advancing press,
+ * because what that press DOES now depends on the destination: with one committed
+ * the source stage is terminal (the press is "Add Integration"); without one it
+ * advances to dest-project.
+ */
+function walkCatalogToPick(): void {
     click(/Pre-built integration/);
     click('Continue');
     click(/ERP Sync/);
-    click('Continue');
 }
 
 beforeEach(() => {
@@ -303,12 +307,12 @@ beforeEach(() => {
 
 // --- tests -----------------------------------------------------------------------
 describe('AddIntegrationFlowModal — later add (destination committed)', () => {
-    it('mesh later-add: destination summary is terminal, then Add commits + closes (never subscribes)', () => {
+    it('mesh later-add: the KIND stage is terminal, then Add commits + closes (never subscribes)', () => {
+        // No dest-summary step any more: a committed destination shows as a context
+        // LINE, so picking the kind lands straight on the commit.
         const { builder, updateSpy, onClose } = renderModal({ initial: COMMITTED_DEST });
         click(/API Mesh/);
-        click('Continue'); // kind → dest-summary (terminal — no api-access)
-        expect(screen.getByText('Demo Project')).toBeInTheDocument();
-        expect(screen.getByText('Stage')).toBeInTheDocument();
+        expect(screen.getByText('Demo Project · Stage')).toBeInTheDocument();
         // The modal provisions nothing — Add commits + closes in one press.
         expect(screen.queryByTestId('api-access-included')).not.toBeInTheDocument();
         expectEnabled('Add Integration');
@@ -322,20 +326,19 @@ describe('AddIntegrationFlowModal — later add (destination committed)', () => 
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('catalog later-add walks to the destination summary then finishes (no api-access)', () => {
+    it('catalog later-add finishes on the SOURCE stage (no dest step, no api-access)', () => {
         const { builder, onClose } = renderModal({ initial: COMMITTED_DEST });
-        walkCatalogPastPick(); // kind → source-catalog → pick → dest-summary (terminal)
-        expect(screen.getByText('Demo Project')).toBeInTheDocument();
+        walkCatalogToPick(); // kind → source-catalog → pick (terminal — dest is a line)
+        expect(screen.getByText('Demo Project · Stage')).toBeInTheDocument();
         expect(screen.queryByTestId('api-access-included')).not.toBeInTheDocument();
         click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('erp-sync', true);
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('Change on the destination summary re-enters dest-project', () => {
+    it('Change on the destination CONTEXT LINE re-enters dest-project', () => {
         renderModal({ initial: COMMITTED_DEST });
         click(/API Mesh/);
-        click('Continue');
         click('Change');
         expect(screen.getByTestId('project-field')).toBeInTheDocument();
     });
@@ -355,7 +358,8 @@ describe('AddIntegrationFlowModal — catalog first-add walk', () => {
 
     it('walks the dest stages to the terminal workspace step — no api-access, no fetch', () => {
         renderModal({ initial: { selectedAppBuilderComponents: ['other-app'] } });
-        walkCatalogPastPick();
+        walkCatalogToPick();
+        click('Continue'); // no committed destination — advances to dest-project
         click('pick-project');
         click('Continue');
         click('pick-ws');
@@ -372,7 +376,7 @@ describe('AddIntegrationFlowModal — catalog first-add walk', () => {
 
     it('a catalog finish writes no selectedConsoleApis (deterministic API access)', () => {
         const { builder, updateSpy } = renderModal({ initial: COMMITTED_DEST });
-        walkCatalogPastPick(); // → dest-summary (terminal)
+        walkCatalogToPick(); // source-catalog is terminal (dest is a context line)
         click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('erp-sync', true);
         expect(updateSpy).not.toHaveBeenCalledWith(
@@ -384,7 +388,8 @@ describe('AddIntegrationFlowModal — catalog first-add walk', () => {
 describe('AddIntegrationFlowModal — signed-out routing', () => {
     it('routes a signed-out add through dest-signin with a gated Continue', () => {
         renderModal({ initial: SIGNED_OUT });
-        walkCatalogPastPick();
+        walkCatalogToPick();
+        click('Continue'); // signed out — the destination stages still run as steps
         expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
         expectDisabled('Continue');
     });
@@ -424,9 +429,10 @@ describe('AddIntegrationFlowModal — custom integration', () => {
         click('Continue');
         const input = screen.getByPlaceholderText('https://github.com/owner/repo');
         fireEvent.change(input, { target: { value: 'https://github.com/acme/widget' } });
+        // No dest step: source-custom advances straight to api-access, with the
+        // committed destination riding along as the context line.
         click('Continue');
-        expect(screen.getByText('Demo Project')).toBeInTheDocument();
-        click('Continue');
+        expect(screen.getByText('Demo Project · Stage')).toBeInTheDocument();
         // Custom/import gets the INTERACTIVE picker (it can add any entitled API),
         // which fetches the org's list — not the informational deterministic panel.
         await waitFor(() => expect(screen.getByTestId('api-picker-stage')).toBeInTheDocument());

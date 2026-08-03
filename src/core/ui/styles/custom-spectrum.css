@@ -4786,11 +4786,20 @@ div[class*="spectrum"] input[type="search"] {
     flex-direction: column;
     gap: 12px;
 }
-.intflow-dest-summary {
+/* The committed destination as a quiet CONTEXT LINE above the active stage — it
+   replaced the `dest-summary` step (a whole step to confirm a destination the user
+   never chose). Quiet by design: it is orientation, not the task. */
+.intflow-dest-context {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0 0 14px;
+    padding: 0 0 10px;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+    font-size: 12.5px;
+}
+.intflow-dest-context-value {
+    color: var(--spectrum-global-color-gray-700);
 }
 /* A committed choice (project/workspace) collapsed to one compact boxed line. */
 .intflow-chosen {

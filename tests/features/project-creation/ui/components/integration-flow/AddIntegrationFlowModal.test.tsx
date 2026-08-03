@@ -397,12 +397,11 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('mesh later-add finishes on the destination summary: no api-access step, no fetch, no picker', () => {
+    it('mesh later-add finishes on the KIND stage: no dest step, no api-access, no fetch', () => {
         renderModal({ initial: COMMITTED_DEST });
         click(/API Mesh/);
-        click('Continue'); // kind → dest-summary (terminal — no api-access)
-        // No api-access step for the deterministic mesh, so no org-API fetch, no
-        // checkboxes, no provisioning — the summary is terminal.
+        // A committed destination is a context LINE, not a step, and the deterministic
+        // mesh has no api-access — so picking the kind is the whole flow.
         expect(screen.queryByTestId('api-access-included')).not.toBeInTheDocument();
         expect(mockRequest).not.toHaveBeenCalledWith(
             'list-org-console-apis',
@@ -415,8 +414,7 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
 
     it('a mesh finish writes no selectedConsoleApis and never subscribes', () => {
         const { builder, updateSpy } = renderModal({ initial: COMMITTED_DEST });
-        click(/API Mesh/);
-        click('Continue'); // kind → dest-summary (terminal)
+        click(/API Mesh/); // kind is terminal — dest is a line, mesh has no api-access
         expectEnabled('Add Integration');
         click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true);
@@ -472,13 +470,14 @@ describe('AddIntegrationFlowModal — build custom (blank instance naming)', () 
         expectEnabled('Continue');
     });
 
-    it('walks kind → source-blank → destination → api-access and commits the named instance', async () => {
+    it('walks kind → source-blank → api-access and commits the named instance', async () => {
         const { builder, updateSpy, onClose } = renderModal({ initial: COMMITTED_DEST });
         const input = walkToBlankNaming();
         fireEvent.change(input, { target: { value: 'Firefly Image Gen' } });
-        click('Continue'); // → dest-summary (destination committed, later add)
-        expect(screen.getByText('Demo Project')).toBeInTheDocument();
-        click('Continue'); // → api-access (interactive picker — blank picks APIs up front)
+        // Straight to api-access: the committed destination rides along as the
+        // context line instead of costing a step.
+        click('Continue');
+        expect(screen.getByText('Demo Project · Stage')).toBeInTheDocument();
         await waitFor(() => expect(screen.getByTestId('api-picker-stage')).toBeInTheDocument());
         click('Add Integration');
         // The commit routes through the custom add with the INSTANCE identity —

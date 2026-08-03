@@ -18,6 +18,9 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
+// The summary view was removed with the dest-summary stage: a committed
+// destination is now a context LINE in AddIntegrationFlowModal (covered by
+// AddIntegrationFlowModal.later-and-variants).
 import { DestinationStage } from '@/features/project-creation/ui/components/integration-flow/stages/DestinationStage';
 import type { WizardState } from '@/types/webview';
 
@@ -115,14 +118,15 @@ function setPhases(overrides: PhaseOverrides = {}) {
 }
 
 const PROJECT = { id: 'p1', name: 'proj', title: 'Demo Project' };
-const WORKSPACE = { id: 'w1', name: 'Stage', title: 'Stage' };
+/** Shape only — the summary view that consumed the value is gone. */
+type Workspace = { id: string; name: string; title: string };
 
-type View = 'signin' | 'project' | 'workspace' | 'summary';
+type View = 'signin' | 'project' | 'workspace';
 
 interface StageOverrides {
     state?: Partial<WizardState>;
     pendingProject?: typeof PROJECT;
-    pendingWorkspace?: typeof WORKSPACE;
+    pendingWorkspace?: Workspace;
 }
 
 function renderStage(view: View, overrides: StageOverrides = {}) {
@@ -292,32 +296,4 @@ describe('DestinationStage', () => {
         });
     });
 
-    describe('summary view', () => {
-        it('shows the COMMITTED project + workspace names', () => {
-            renderStage('summary', {
-                state: { adobeProject: PROJECT, adobeWorkspace: WORKSPACE },
-            });
-            expect(screen.getByText('Project')).toBeInTheDocument();
-            expect(screen.getByText('Demo Project')).toBeInTheDocument();
-            expect(screen.getByText('Workspace')).toBeInTheDocument();
-            expect(screen.getByText('Stage')).toBeInTheDocument();
-        });
-
-        it('Change calls onChangeDestination', () => {
-            const { onChangeDestination } = renderStage('summary', {
-                state: { adobeProject: PROJECT, adobeWorkspace: WORKSPACE },
-            });
-            fireEvent.click(screen.getByRole('button', { name: 'Change' }));
-            expect(onChangeDestination).toHaveBeenCalled();
-        });
-
-        it('renders no pickers and no auth gate', () => {
-            renderStage('summary', {
-                state: { adobeProject: PROJECT, adobeWorkspace: WORKSPACE },
-            });
-            expect(screen.queryByTestId('project-field')).not.toBeInTheDocument();
-            expect(screen.queryByTestId('workspace-field')).not.toBeInTheDocument();
-            expect(screen.queryByTestId('adobe-auth-step')).not.toBeInTheDocument();
-        });
-    });
 });

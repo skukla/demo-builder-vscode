@@ -11,9 +11,10 @@
  *                   (`pendingProject` / `onPendingProject`) — the flow's Continue
  *                   commits it to wizard state, never this component;
  *   - `workspace` → {@link AdobeWorkspaceField}, same draft-pending model;
- *   - `summary`   → compact Project / Workspace rows from the COMMITTED wizard state
- *                   (the later-add "Deploys to" view) plus one "Change" link that
- *                   re-enters the destination stages via `onChangeDestination`.
+ *
+ * There is no `summary` view: a committed destination is shown as a persistent
+ * context LINE in the modal (AddIntegrationFlowModal's DestinationContext), not as
+ * a stage — confirming state the user never chose did not deserve a step.
  *
  * The project/workspace views reuse the mesh card's create→workspace phase flow
  * ({@link useProjectCreationPhases} with `skipEnabling: true` — no mesh API-enable
@@ -49,7 +50,7 @@ function isPhaseRunning(phase: Phases['phase']): boolean {
 }
 
 /** The destination views the stage machine can ask for. */
-export type DestinationView = 'signin' | 'project' | 'workspace' | 'summary';
+export type DestinationView = 'signin' | 'project' | 'workspace';
 
 export interface DestinationStageProps {
     state: WizardState;
@@ -64,53 +65,11 @@ export interface DestinationStageProps {
     onPendingProject: (project: AdobeProject) => void;
     /** A workspace pick writes the DRAFT (never wizard state). */
     onPendingWorkspace: (workspace: Workspace) => void;
-    /** The summary's "Change" — re-enters the destination stages. */
-    onChangeDestination: () => void;
     /**
      * Reports the create/workspace phase activity (true while a phase runs) —
      * the modal bridges this to the flow hook's `setPhaseRunning` gate.
      */
     onPhaseRunningChange?: (running: boolean) => void;
-}
-
-/** A committed choice, collapsed to one compact line (no per-row action). */
-function SummaryRow({ label, value }: { label: string; value: string }): React.ReactElement {
-    return (
-        <div className="intflow-chosen">
-            <span className="intflow-chosen-check" aria-hidden="true">
-                ✓
-            </span>
-            <span className="intflow-chosen-label">{label}</span>
-            <span className="intflow-chosen-value">{value}</span>
-        </div>
-    );
-}
-
-/** The committed Project / Workspace rows + one "Change" re-entering the flow. */
-function DestinationSummary({
-    state,
-    onChangeDestination,
-}: {
-    state: WizardState;
-    onChangeDestination: () => void;
-}): React.ReactElement {
-    const projectName = state.adobeProject?.title || state.adobeProject?.name || '';
-    const workspaceName = state.adobeWorkspace?.title || state.adobeWorkspace?.name || '';
-    return (
-        <div className="intflow-dest-summary">
-            <SummaryRow label="Project" value={projectName} />
-            <SummaryRow label="Workspace" value={workspaceName} />
-            {/* `.inline-action-link` (custom-spectrum.css), NOT EDS's
-                `.service-action-link` — that class lives in connect-services.css,
-                which only reaches the wizard bundle because StorefrontStep happens
-                to import it. In any other bundle (the integrations surface) this
-                rendered as a raw grey box. Stays a <button>: it performs an
-                action, so the role must not become "link". */}
-            <button type="button" className="inline-action-link" onClick={onChangeDestination}>
-                Change
-            </button>
-        </div>
-    );
 }
 
 /** The centered running-phase spinner (create → workspace flow). */
@@ -170,9 +129,6 @@ function DestinationBody(props: BodyProps): React.ReactElement {
     const { view, state, updateState, phases } = props;
     if (view === 'signin') {
         return <AdobeAuthStep state={state} updateState={updateState} setCanProceed={NOOP} />;
-    }
-    if (view === 'summary') {
-        return <DestinationSummary state={state} onChangeDestination={props.onChangeDestination} />;
     }
     if (isPhaseRunning(phases.phase)) {
         return <PhaseSpinner phases={phases} />;

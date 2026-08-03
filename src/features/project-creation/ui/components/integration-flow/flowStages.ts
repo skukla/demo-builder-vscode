@@ -44,7 +44,6 @@ export type FlowStageId =
     | 'dest-signin'
     | 'dest-project'
     | 'dest-workspace'
-    | 'dest-summary'
     | 'api-access';
 
 /** Modal-local draft; committed to wizard state only at the flow's commit points. */
@@ -94,7 +93,6 @@ const CANONICAL_ORDER: FlowStageId[] = [
     'dest-signin',
     'dest-project',
     'dest-workspace',
-    'dest-summary',
     'api-access',
 ];
 
@@ -128,8 +126,11 @@ export function deriveStageOrder(
     if (mode === 'api-edit') return ['api-access'];
     if (mode === 'destination') return destinationStages(slice);
 
-    // Collapse to just the summary only when the destination is committed, we have
-    // a live Adobe session, AND something already references that shared destination.
+    // Skip the destination stages ENTIRELY when the destination is committed, we
+    // have a live Adobe session, AND something already references that shared
+    // destination. The destination is then shown as a persistent context line in the
+    // modal (with its own Change), because confirming state the user never chose
+    // does not deserve a step of its own.
     // Two guards on top of destinationCommitted:
     //   - signed out: a persisted project/workspace (Edit mode) makes
     //     destinationCommitted true, but the api-access picker needs a live org —
@@ -145,7 +146,7 @@ export function deriveStageOrder(
         slice.isSignedIn &&
         hasIntegrations &&
         !draft.changingDestination
-            ? ['dest-summary']
+            ? []
             : destinationStages(slice);
     // api-access is the INTERACTIVE picker — appended ONLY for custom/import apps
     // (blank shell or imported repo), which can need any entitled API the user picks
@@ -214,7 +215,6 @@ const CONTINUE_GATES: Record<FlowStageId, (draft: FlowDraft, slice: FlowStateSli
         (draft.pendingProject !== undefined || slice.projectCommitted) && !slice.phaseRunning,
     'dest-workspace': (draft, slice) =>
         (draft.pendingWorkspace !== undefined || slice.workspaceCommitted) && !slice.phaseRunning,
-    'dest-summary': () => true,
     // The interactive picker (custom/import only): free API picks are optional —
     // locked codes are already covered — so it never blocks Continue.
     'api-access': () => true,

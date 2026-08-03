@@ -62,14 +62,14 @@ describe('deriveStageOrder — add mode', () => {
         ).toEqual(['kind', 'dest-signin', 'dest-project', 'dest-workspace']);
     });
 
-    it('mesh, destination committed (later add) → dest collapses to dest-summary, no api-access', () => {
+    it('mesh, destination committed (later add) → dest vanishes entirely, no api-access', () => {
         expect(
             deriveStageOrder(
                 draft({ kind: 'mesh' }),
                 slice({ destinationCommitted: true, selectedIds: ['existing-integration'] }),
                 ADD
             )
-        ).toEqual(['kind', 'dest-summary']);
+        ).toEqual(['kind']);
     });
 
     it('catalog, signed in, uncommitted → source-catalog + full dest, NO api-access (deterministic APIs)', () => {
@@ -87,14 +87,14 @@ describe('deriveStageOrder — add mode', () => {
         ).toEqual(['kind', 'source-catalog', 'dest-signin', 'dest-project', 'dest-workspace']);
     });
 
-    it('catalog, destination committed → dest-summary is terminal (no api-access)', () => {
+    it('catalog, destination committed → the SOURCE stage is terminal (no dest, no api-access)', () => {
         expect(
             deriveStageOrder(
                 draft({ kind: 'catalog' }),
                 slice({ destinationCommitted: true, selectedIds: ['existing-integration'] }),
                 ADD
             )
-        ).toEqual(['kind', 'source-catalog', 'dest-summary']);
+        ).toEqual(['kind', 'source-catalog']);
     });
 
     it('custom, signed in, uncommitted → source-custom + full dest + api-access (interactive picker)', () => {
@@ -130,24 +130,24 @@ describe('deriveStageOrder — add mode', () => {
         ]);
     });
 
-    it('blank, destination committed (later add) → source-blank + dest-summary + api-access', () => {
+    it('blank, destination committed (later add) → source-blank + api-access (no dest step)', () => {
         expect(
             deriveStageOrder(
                 draft({ kind: 'blank' }),
                 slice({ destinationCommitted: true, selectedIds: ['existing-integration'] }),
                 ADD
             )
-        ).toEqual(['kind', 'source-blank', 'dest-summary', 'api-access']);
+        ).toEqual(['kind', 'source-blank', 'api-access']);
     });
 
-    it('custom, destination committed (later add) → dest-summary + api-access', () => {
+    it('custom, destination committed (later add) → api-access only (no dest step)', () => {
         expect(
             deriveStageOrder(
                 draft({ kind: 'custom' }),
                 slice({ destinationCommitted: true, selectedIds: ['existing-integration'] }),
                 ADD
             )
-        ).toEqual(['kind', 'source-custom', 'dest-summary', 'api-access']);
+        ).toEqual(['kind', 'source-custom', 'api-access']);
     });
 
     it('destination committed but zero integrations → walks the picker (clean slate), not the summary', () => {
@@ -174,7 +174,7 @@ describe('deriveStageOrder — add mode', () => {
                 slice({ destinationCommitted: true, selectedIds: [], meshSelected: true }),
                 ADD
             )
-        ).toEqual(['kind', 'source-custom', 'dest-summary', 'api-access']);
+        ).toEqual(['kind', 'source-custom', 'api-access']);
     });
 
     it('signed out → sign-in stage required even when the destination is committed', () => {
@@ -339,10 +339,10 @@ describe('nextStage', () => {
         expect(nextStage('dest-signin', draft(), slice(), DEST)).toBe('dest-project');
     });
 
-    it('signing in mid-flow on a committed destination clamps dest-signin to dest-summary', () => {
-        // The signed-out edit flow starts at dest-signin (committed but no session). After
-        // sign-in the order collapses the committed destination to dest-summary, and the
-        // stored dest-signin stage clamps forward onto it.
+    it('signing in mid-flow on a committed destination clamps dest-signin onto api-access', () => {
+        // The signed-out edit flow starts at dest-signin (committed but no session).
+        // After sign-in the destination stages vanish (it shows as a context line), so
+        // the stored dest-signin clamps forward onto the next surviving stage.
         expect(
             nextStage(
                 'dest-signin',
@@ -354,10 +354,10 @@ describe('nextStage', () => {
                 }),
                 ADD
             )
-        ).toBe('dest-summary');
+        ).toBe('api-access');
     });
 
-    it('vanished dest-project (dest collapsed to summary) clamps to dest-summary', () => {
+    it('vanished dest-project leaves the flow TERMINAL (nothing survives after it)', () => {
         expect(
             nextStage(
                 'dest-project',
@@ -365,7 +365,9 @@ describe('nextStage', () => {
                 slice({ destinationCommitted: true, selectedIds: ['existing-integration'] }),
                 ADD
             )
-        ).toBe('dest-summary');
+            // catalog has no api-access and the destination is now a context line, so
+            // source-catalog is the last stage standing — null means "commit next".
+        ).toBeNull();
     });
 });
 
@@ -495,10 +497,6 @@ describe('canContinue', () => {
     it('dest-workspace blocks while a phase is running', () => {
         const d = draft({ pendingWorkspace: { id: 'w1', name: 'Stage' } });
         expect(canContinue('dest-workspace', d, slice({ phaseRunning: true }))).toBe(false);
-    });
-
-    it('dest-summary is always continuable', () => {
-        expect(canContinue('dest-summary', draft(), slice())).toBe(true);
     });
 
     it('api-access is informational — never blocks (nothing to select or provision)', () => {

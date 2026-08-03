@@ -161,12 +161,6 @@ function pickKindAndContinue(s: Setup, kind: 'mesh' | 'catalog' | 'blank' | 'cus
 }
 
 /** Walk a signed-in catalog add to the dest-project stage. */
-function walkCatalogToDestProject(s: Setup, catalogId = 'erp-sync'): void {
-    pickKindAndContinue(s, 'catalog');
-    act(() => s.result.current.pickCatalog(catalogId));
-    act(() => s.result.current.onContinue());
-}
-
 describe('useIntegrationFlow — initial stage and kind walk (add mode)', () => {
     it('starts at the kind stage in add mode', () => {
         const s = setup();
@@ -398,11 +392,12 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
         );
     });
 
-    it('finishes a later-add mesh from the dest-summary in one Add press', () => {
+    it('finishes a later-add mesh from the KIND stage in one Add press', () => {
         const s = setup({ initial: LATER_ADD });
-        pickKindAndContinue(s, 'mesh');
-        // Later-add collapses to the summary, which is terminal for the mesh.
-        expect(s.result.current.stage).toBe('dest-summary');
+        // Later-add drops the destination stages entirely (it shows as a context
+        // line), so the kind stage is terminal for the mesh.
+        act(() => s.result.current.pickKind('mesh'));
+        expect(s.result.current.stage).toBe('kind');
         act(() => s.result.current.onContinue()); // Add → commit + close
         expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(MESH_ID, true);
         expect(s.onClose).toHaveBeenCalledTimes(1);
@@ -414,17 +409,21 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
 });
 
 describe('useIntegrationFlow — catalog/custom finish (deterministic, no API picks)', () => {
-    /** Walk a signed-in later-add catalog to its terminal dest-summary stage. */
-    function walkCatalogToSummary(s: Setup, catalogId = 'erp-sync'): void {
-        walkCatalogToDestProject(s, catalogId);
-        expect(s.result.current.stage).toBe('dest-summary');
+    /**
+     * Walk a signed-in later-add catalog to its terminal stage — which is now
+     * source-catalog: a committed destination is a context line, not a step.
+     */
+    function walkCatalogToTerminal(s: Setup, catalogId = 'erp-sync'): void {
+        pickKindAndContinue(s, 'catalog');
+        act(() => s.result.current.pickCatalog(catalogId));
+        expect(s.result.current.stage).toBe('source-catalog');
     }
 
-    it('finishes a catalog add from the summary: adds the component and writes NO selectedConsoleApis', () => {
+    it('finishes a catalog add from the SOURCE stage: adds it and writes NO selectedConsoleApis', () => {
         const s = setup({ initial: LATER_ADD });
-        walkCatalogToSummary(s);
-        // dest-summary is terminal for the deterministic catalog — a single Add press
-        // commits the component and closes (no api-access step).
+        walkCatalogToTerminal(s);
+        // source-catalog is terminal for the deterministic catalog — a single Add
+        // press commits the component and closes (no dest step, no api-access).
         act(() => s.result.current.onContinue());
         expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('erp-sync', true);
         // API access is deterministic — the add flow never merges per-integration APIs.
@@ -455,8 +454,7 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
         act(() =>
             s.result.current.setInstance({ id: 'firefly-image-gen', name: 'Firefly Image Gen' })
         );
-        act(() => s.result.current.onContinue()); // → dest-summary
-        act(() => s.result.current.onContinue()); // → api-access
+        act(() => s.result.current.onContinue()); // → api-access (no dest step)
         act(() => s.result.current.toggleApi('FireflyServicesSDK'));
         act(() => s.result.current.onContinue()); // Add → commit + close
         // The shell repo is a TEMPLATE: the commit routes through the custom add with
@@ -476,8 +474,7 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
         const s = setup({ initial: LATER_ADD });
         pickKindAndContinue(s, 'blank');
         act(() => s.result.current.setInstance({ id: 'order-sync', name: 'Order Sync' }));
-        act(() => s.result.current.onContinue()); // → dest-summary
-        act(() => s.result.current.onContinue()); // → api-access
+        act(() => s.result.current.onContinue()); // → api-access (no dest step)
         act(() => s.result.current.onContinue()); // Add → commit + close
         expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(
             BLANK_COMPONENT.source,
@@ -491,8 +488,7 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
         const s = setup({ initial: LATER_ADD });
         pickKindAndContinue(s, 'custom');
         act(() => s.result.current.setCustomSource({ owner: 'acme', repo: 'widget' }));
-        act(() => s.result.current.onContinue()); // → dest-summary
-        act(() => s.result.current.onContinue()); // → api-access
+        act(() => s.result.current.onContinue()); // → api-access (no dest step)
         act(() => s.result.current.toggleApi('FireflyServicesSDK'));
         act(() => s.result.current.onContinue()); // Add → commit + close
         expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith({
@@ -557,8 +553,10 @@ describe('useIntegrationFlow — destination mode', () => {
 describe('useIntegrationFlow — changingDestination', () => {
     it('changeDestination re-expands the dest stages at dest-project and flags the draft', () => {
         const s = setup({ initial: LATER_ADD });
-        pickKindAndContinue(s, 'mesh');
-        expect(s.result.current.stage).toBe('dest-summary');
+        // Change now comes from the context LINE, not a summary stage — the kind
+        // stage is where a later-add mesh sits when it fires.
+        act(() => s.result.current.pickKind('mesh'));
+        expect(s.result.current.stage).toBe('kind');
         act(() => s.result.current.changeDestination());
         expect(s.result.current.draft.changingDestination).toBe(true);
         expect(s.result.current.stage).toBe('dest-project');

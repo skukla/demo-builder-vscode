@@ -27,7 +27,7 @@ import React from 'react';
 import type { SelectableAppBuilderComponent } from '../../../services/appBuilderComponentSelection';
 import { isAdobeSignedIn, isMeshSelected } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
-import { meshKindOffered, type FlowMode } from './flowStages';
+import { meshKindOffered, type FlowMode , FlowStageId } from './flowStages';
 import { ApiPickerStage } from './stages/ApiPickerStage';
 import { BlankStage } from './stages/BlankStage';
 import { CatalogStage } from './stages/CatalogStage';
@@ -184,9 +184,59 @@ function StageBody({
             pendingWorkspace={draft.pendingWorkspace}
             onPendingProject={flow.setPendingProject}
             onPendingWorkspace={flow.setPendingWorkspace}
-            onChangeDestination={flow.changeDestination}
             onPhaseRunningChange={flow.setPhaseRunning}
         />
+    );
+}
+
+/** Stages that ARE the destination picker — the line would be redundant there. */
+const DEST_PICKER_STAGES: ReadonlySet<string> = new Set([
+    'dest-signin',
+    'dest-project',
+    'dest-workspace',
+]);
+
+/**
+ * The committed destination as a persistent context LINE, not a stage.
+ *
+ * It replaced the `dest-summary` step, whose only job was confirming a destination
+ * the user never chose (it appears only when one is already committed) — a whole
+ * modal step for zero decisions. As a line the destination stays visible while the
+ * user does the real work, and the flow loses a click on EVERY add.
+ *
+ * Gated on the STAGE rather than on `draft.changingDestination`: that flag never
+ * resets once set, so gating on it would hide the line for the rest of the session
+ * after one Change.
+ *
+ * @param props - wizard state (the committed destination) and the Change action
+ * @returns the line, or null when there is no committed destination to show
+ */
+function DestinationContext({
+    state,
+    stage,
+    onChange,
+}: {
+    state: WizardState;
+    stage: FlowStageId;
+    onChange: () => void;
+}): React.ReactElement | null {
+    if (DEST_PICKER_STAGES.has(stage)) return null;
+    const project = state.adobeProject?.title || state.adobeProject?.name || '';
+    const workspace = state.adobeWorkspace?.title || state.adobeWorkspace?.name || '';
+    if (!project || !workspace) return null;
+    return (
+        <div className="intflow-dest-context">
+            <span className="intflow-dest-context-value">
+                {project} · {workspace}
+            </span>
+            {/* `.inline-action-link` (custom-spectrum.css), NOT EDS's
+                `.service-action-link` — that class lives in connect-services.css and
+                only reaches the wizard bundle. Stays a <button>: it performs an
+                action, so the role must not become "link". */}
+            <button type="button" className="inline-action-link" onClick={onChange}>
+                Change
+            </button>
+        </div>
     );
 }
 
@@ -219,6 +269,11 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
             ]}
         >
             <div className="intflow-stage-body">
+                <DestinationContext
+                    state={props.state}
+                    stage={flow.stage}
+                    onChange={flow.changeDestination}
+                />
                 <StageBody flow={flow} props={props} />
             </div>
         </Modal>

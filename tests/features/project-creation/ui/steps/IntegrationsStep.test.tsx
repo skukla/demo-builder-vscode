@@ -526,11 +526,11 @@ describe('IntegrationsStep — mesh add commits without subscribing', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Add Integration' }));
         const dialog = screen.getByRole('dialog');
         fireEvent.click(within(dialog).getByRole('button', { name: /API Mesh/ }));
-        // Committed destination collapses to the summary, which is the TERMINAL stage
-        // for the deterministic mesh (no api-access step). Selection NEVER provisions.
-        fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }));
+        // A committed destination is a context LINE, not a step, and the deterministic
+        // mesh has no api-access — so the KIND stage is terminal. Selection NEVER
+        // provisions.
         await waitFor(() => {
-            // The summary stage just commits the integration — plain "Add Integration".
+            // The terminal stage just commits the integration — plain "Add Integration".
             expect(within(dialog).getByRole('button', { name: 'Add Integration' })).toHaveAttribute(
                 'aria-disabled',
                 'false'
