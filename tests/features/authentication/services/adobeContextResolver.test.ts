@@ -65,11 +65,7 @@ describe('AdobeContextResolver', () => {
             getWorkspaces: jest.fn(),
         } as unknown as jest.Mocked<AdobeEntityFetcher>;
 
-        resolver = new AdobeContextResolver(
-            mockCommandExecutor,
-            mockCacheManager,
-            mockFetcher,
-        );
+        resolver = new AdobeContextResolver(mockCommandExecutor, mockCacheManager, mockFetcher);
     });
 
     describe('getConsoleWhereContext()', () => {
@@ -224,11 +220,51 @@ describe('AdobeContextResolver', () => {
             // TOKEN org via the SDK), so this best-effort lookup stays on the SDK path.
             expect(mockFetcher.getProjects).toHaveBeenCalledWith({ silent: true });
         });
+
+        // REGRESSION: this used to fabricate `{ id: name, name, title }` when the
+        // lookup missed — an AdobeProject whose ID is a NAME. `aio console where`
+        // holds a selection the extension no longer writes (Phase 4a targets per-op
+        // instead), so it goes stale by design: a deleted project, or one belonging
+        // to an org this token cannot reach, lands here on every resolve. Returning
+        // a name-shaped ID is worse than returning nothing — it satisfies `.id`
+        // presence checks and would target nothing at all if it ever reached
+        // AIO_CONSOLE_PROJECT_ID. Fail closed.
+        it('returns undefined when the CLI-persisted project is not in the list', async () => {
+            mockCacheManager.getCachedProject.mockReturnValue(undefined);
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({
+                project: 'Kukla Mesh Test',
+            });
+            mockFetcher.getProjects.mockResolvedValue([
+                { id: 'proj1', name: 'Kukla Mesh', title: 'Kukla Mesh' },
+            ]);
+
+            const result = await resolver.getCurrentProject();
+
+            expect(result).toBeUndefined();
+            // Nothing worth caching, and caching it would make the miss sticky.
+            expect(mockCacheManager.setCachedProject).not.toHaveBeenCalled();
+        });
+
+        it('returns undefined when the project list cannot be fetched', async () => {
+            mockCacheManager.getCachedProject.mockReturnValue(undefined);
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({
+                project: 'Some Project',
+            });
+            mockFetcher.getProjects.mockRejectedValue(new Error('network'));
+
+            const result = await resolver.getCurrentProject();
+
+            expect(result).toBeUndefined();
+        });
     });
 
     describe('getCurrentWorkspace()', () => {
         it('should return cached workspace if available', async () => {
-            const cachedWorkspace = { id: 'ws1', name: 'Cached Workspace', title: 'Cached Workspace' };
+            const cachedWorkspace = {
+                id: 'ws1',
+                name: 'Cached Workspace',
+                title: 'Cached Workspace',
+            };
             mockCacheManager.getCachedWorkspace.mockReturnValue(cachedWorkspace);
 
             const result = await resolver.getCurrentWorkspace();
@@ -263,9 +299,21 @@ describe('AdobeContextResolver', () => {
 
     describe('getCurrentContext()', () => {
         it('should aggregate org, project, and workspace', async () => {
-            mockCacheManager.getCachedOrganization.mockReturnValue({ id: 'org1', code: 'ORG', name: 'Org' });
-            mockCacheManager.getCachedProject.mockReturnValue({ id: 'proj1', name: 'Project', title: 'Project' });
-            mockCacheManager.getCachedWorkspace.mockReturnValue({ id: 'ws1', name: 'Workspace', title: 'Workspace' });
+            mockCacheManager.getCachedOrganization.mockReturnValue({
+                id: 'org1',
+                code: 'ORG',
+                name: 'Org',
+            });
+            mockCacheManager.getCachedProject.mockReturnValue({
+                id: 'proj1',
+                name: 'Project',
+                title: 'Project',
+            });
+            mockCacheManager.getCachedWorkspace.mockReturnValue({
+                id: 'ws1',
+                name: 'Workspace',
+                title: 'Workspace',
+            });
 
             const result = await resolver.getCurrentContext();
 
@@ -275,7 +323,11 @@ describe('AdobeContextResolver', () => {
         });
 
         it('should handle partial context', async () => {
-            mockCacheManager.getCachedOrganization.mockReturnValue({ id: 'org1', code: 'ORG', name: 'Org' });
+            mockCacheManager.getCachedOrganization.mockReturnValue({
+                id: 'org1',
+                code: 'ORG',
+                name: 'Org',
+            });
             mockCacheManager.getCachedProject.mockReturnValue(undefined);
             mockCacheManager.getCachedWorkspace.mockReturnValue(undefined);
             mockCacheManager.getCachedConsoleWhere.mockReturnValue({});

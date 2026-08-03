@@ -8,7 +8,7 @@
 
 import type { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { formatDuration, formatMinutes } from '@/core/utils';
-import type { AdobeOrg, AdobeProject } from '@/features/authentication/services/types';
+import type { AdobeOrg } from '@/features/authentication/services/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult } from '@/types/results';
 
@@ -93,14 +93,16 @@ function isCachedOrgInvalid(context: HandlerContext, org: AdobeOrg): boolean {
 }
 
 /**
- * Get current org/project context from cache or CLI
+ * Get the current organization from cache or the token.
+ *
+ * ORG ONLY. `auth-status` used to carry a `project` alongside it, but nothing ever
+ * read it: `useAuthStatus` writes `adobeAuth` and `adobeOrg` and its own
+ * `AuthStatusData` type never declared the field. The project the user is working
+ * with lives in webview state and is threaded per-op.
  */
-async function getAuthContext(
-    context: HandlerContext,
-): Promise<{ currentOrg?: AdobeOrg; currentProject?: AdobeProject }> {
+async function getAuthContext(context: HandlerContext): Promise<{ currentOrg?: AdobeOrg }> {
     // Check cache first (fast - no API calls)
     const cachedOrg = context.authManager?.getCachedOrganization();
-    const cachedProject = context.authManager?.getCachedProject();
 
     // Cache miss: resolve the org from the TOKEN — `getOrganizations()[0]`, the org
     // the current IMS token actually reaches (the same source autoSelectSingleOrg and
@@ -114,21 +116,16 @@ async function getAuthContext(
         if (currentOrg) {
             context.authManager?.setCachedOrganization(currentOrg);
         }
-        // Deliberately do NOT pair the freshly-resolved TOKEN org with
-        // getCurrentProject() (the Adobe CLI's persisted console project): that
-        // source is token-independent and can belong to a DIFFERENT org after a
-        // switch, producing a mispaired {org, project}. The project isn't shown on
-        // the auth step and re-selects downstream, so omit it here.
-        return { currentOrg, currentProject: undefined };
+        return { currentOrg };
     }
 
     // Don't show cached org if validation failed
     if (isCachedOrgInvalid(context, cachedOrg)) {
-        return { currentOrg: undefined, currentProject: undefined };
+        return { currentOrg: undefined };
     }
 
     context.logger.debug(`[Auth] Using cached organization: ${cachedOrg.name}`);
-    return { currentOrg: cachedOrg, currentProject: cachedProject };
+    return { currentOrg: cachedOrg };
 }
 
 /**
@@ -164,10 +161,10 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
             `[Auth] Check complete in ${formatDuration(checkDuration)}: authenticated=${isAuthenticated}${tokenExpiresIn ? `, expires in ${formatMinutes(tokenExpiresIn)}` : ''}`,
         );
 
-        // Get org/project context (check cache first, then Adobe CLI if cache miss)
-        const { currentOrg, currentProject } = isAuthenticated
+        // Get org context (check cache first, then the token if cache miss)
+        const { currentOrg } = isAuthenticated
             ? await getAuthContext(context)
-            : { currentOrg: undefined, currentProject: undefined };
+            : { currentOrg: undefined };
 
         // Determine final status with user-friendly messaging
         let message: string;
@@ -197,7 +194,6 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
             isAuthenticated: isAuthenticated,
             isChecking: false,
             organization: currentOrg,
-            project: currentProject,
             message,
             subMessage,
             requiresOrgSelection,
@@ -233,7 +229,6 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
  */
 interface PostLoginOrgResult {
     currentOrg?: AdobeOrg;
-    currentProject?: AdobeProject;
     requiresOrgSelection: boolean;
     orgLacksAccess: boolean;
 }
@@ -308,7 +303,6 @@ async function sendPostLoginStatus(
             isAuthenticated: true,
             isChecking: false,
             organization: undefined,
-            project: undefined,
             message: 'No organizations found',
             subMessage:
                 "Your Adobe account doesn't have access to any organizations with App Builder",
@@ -321,7 +315,6 @@ async function sendPostLoginStatus(
             isAuthenticated: true,
             isChecking: false,
             organization: undefined,
-            project: undefined,
             message: 'Sign-in complete',
             subMessage: 'Choose your organization to continue',
             requiresOrgSelection: true,
@@ -333,7 +326,6 @@ async function sendPostLoginStatus(
             isAuthenticated: true,
             isChecking: false,
             organization: result.currentOrg,
-            project: result.currentProject,
             message: 'All set!',
             subMessage: result.currentOrg
                 ? `Connected to ${result.currentOrg.name}`
@@ -410,7 +402,6 @@ async function handleAlreadyAuthenticated(context: HandlerContext): Promise<Simp
     await context.authManager?.ensureSDKInitialized();
 
     const currentOrg = await context.authManager?.getCurrentOrganization();
-    const currentProject = await context.authManager?.getCurrentProject();
     context.sharedState.isAuthenticating = false;
 
     const orgLacksAccess = !currentOrg
@@ -422,7 +413,6 @@ async function handleAlreadyAuthenticated(context: HandlerContext): Promise<Simp
         isAuthenticated: true,
         isChecking: false,
         organization: currentOrg,
-        project: currentProject,
         message: orgLacksAccess ? 'Organization selection required' : 'Already signed in',
         subMessage: getAuthSubMessage(!!orgLacksAccess, currentOrg),
         requiresOrgSelection: !currentOrg,

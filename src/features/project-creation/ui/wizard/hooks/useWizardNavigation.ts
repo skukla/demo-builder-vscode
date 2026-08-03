@@ -65,13 +65,20 @@ async function handleStepBackendCalls(
     // exists (mesh-off / non-mesh stacks leave them unset — nothing to validate).
     if (currentStep === 'build-your-project') {
         if (wizardState.adobeProject?.id) {
-            const result = await vscode.request('select-project', { projectId: wizardState.adobeProject.id }) as { success: boolean; error?: string };
+            const result = (await vscode.request('select-project', {
+                projectId: wizardState.adobeProject.id,
+            })) as { success: boolean; error?: string };
             if (!result.success) {
                 throw new Error(result.error || 'Failed to select project');
             }
         }
         if (wizardState.adobeWorkspace?.id) {
-            const result = await vscode.request('select-workspace', { workspaceId: wizardState.adobeWorkspace.id }) as { success: boolean; error?: string };
+            // Thread the project the workspace was chosen UNDER: the handler's drift
+            // guard checks this selection, not the Adobe CLI's persisted one.
+            const result = (await vscode.request('select-workspace', {
+                workspaceId: wizardState.adobeWorkspace.id,
+                projectId: wizardState.adobeProject?.id,
+            })) as { success: boolean; error?: string };
             if (!result.success) {
                 throw new Error(result.error || 'Failed to select workspace');
             }
@@ -121,49 +128,54 @@ export function useWizardNavigation({
     }, []);
 
     const getCurrentStepIndex = useCallback(() => {
-        return WIZARD_STEPS.findIndex(step => step.id === state.currentStep);
+        return WIZARD_STEPS.findIndex((step) => step.id === state.currentStep);
     }, [state.currentStep, WIZARD_STEPS]);
 
     // Internal navigation function used by both timeline and Continue button
-    const navigateToStep = useCallback((step: WizardStep, targetIndex: number, currentIndex: number) => {
-        setAnimationDirection(getNavigationDirection(targetIndex, currentIndex));
-        setIsTransitioning(true);
+    const navigateToStep = useCallback(
+        (step: WizardStep, targetIndex: number, currentIndex: number) => {
+            setAnimationDirection(getNavigationDirection(targetIndex, currentIndex));
+            setIsTransitioning(true);
 
-        // If moving backward, filter completed steps (remove target step and all steps after it)
-        if (targetIndex < currentIndex) {
-            setCompletedSteps(prev => filterCompletedStepsForBackwardNav(prev, step, targetIndex, WIZARD_STEPS));
+            // If moving backward, filter completed steps (remove target step and all steps after it)
+            if (targetIndex < currentIndex) {
+                setCompletedSteps((prev) =>
+                    filterCompletedStepsForBackwardNav(prev, step, targetIndex, WIZARD_STEPS),
+                );
 
-            const adobeIndices = getAdobeStepIndices(WIZARD_STEPS);
+                const adobeIndices = getAdobeStepIndices(WIZARD_STEPS);
 
-            if (transitionTimerRef.current) {
-                clearTimeout(transitionTimerRef.current);
+                if (transitionTimerRef.current) {
+                    clearTimeout(transitionTimerRef.current);
+                }
+
+                transitionTimerRef.current = setTimeout(() => {
+                    setState((prev) => {
+                        const updates = computeStateUpdatesForBackwardNav(
+                            prev,
+                            step,
+                            targetIndex,
+                            adobeIndices,
+                        );
+                        return { ...prev, ...updates };
+                    });
+                    setIsTransitioning(false);
+                    transitionTimerRef.current = null;
+                }, TIMEOUTS.STEP_TRANSITION);
+            } else {
+                if (transitionTimerRef.current) {
+                    clearTimeout(transitionTimerRef.current);
+                }
+
+                transitionTimerRef.current = setTimeout(() => {
+                    setState((prev) => ({ ...prev, currentStep: step }));
+                    setIsTransitioning(false);
+                    transitionTimerRef.current = null;
+                }, TIMEOUTS.STEP_TRANSITION);
             }
-
-            transitionTimerRef.current = setTimeout(() => {
-                setState(prev => {
-                    const updates = computeStateUpdatesForBackwardNav(
-                        prev,
-                        step,
-                        targetIndex,
-                        adobeIndices,
-                    );
-                    return { ...prev, ...updates };
-                });
-                setIsTransitioning(false);
-                transitionTimerRef.current = null;
-            }, TIMEOUTS.STEP_TRANSITION);
-        } else {
-            if (transitionTimerRef.current) {
-                clearTimeout(transitionTimerRef.current);
-            }
-
-            transitionTimerRef.current = setTimeout(() => {
-                setState(prev => ({ ...prev, currentStep: step }));
-                setIsTransitioning(false);
-                transitionTimerRef.current = null;
-            }, TIMEOUTS.STEP_TRANSITION);
-        }
-    }, [WIZARD_STEPS, setAnimationDirection, setIsTransitioning, setCompletedSteps, setState]);
+        },
+        [WIZARD_STEPS, setAnimationDirection, setIsTransitioning, setCompletedSteps, setState],
+    );
 
     const handleCancel = useCallback(() => {
         vscode.postMessage('cancel');
@@ -184,23 +196,31 @@ export function useWizardNavigation({
 
             try {
                 setIsConfirmingSelection(true);
-                await handleStepBackendCalls(state.currentStep, nextStep.id, state, importedSettings, packages);
+                await handleStepBackendCalls(
+                    state.currentStep,
+                    nextStep.id,
+                    state,
+                    importedSettings,
+                    packages,
+                );
 
                 if (!completedSteps.includes(state.currentStep)) {
-                    setCompletedSteps(prev => markStepCompleted(prev, state.currentStep));
+                    setCompletedSteps((prev) => markStepCompleted(prev, state.currentStep));
                     setHighestCompletedStepIndex(Math.max(highestCompletedStepIndex, currentIndex));
                 }
 
                 // In review mode, mark step as confirmed (user explicitly clicked Continue)
                 if (isReviewMode && !confirmedSteps.includes(state.currentStep)) {
-                    setConfirmedSteps(prev => [...prev, state.currentStep]);
+                    setConfirmedSteps((prev) => [...prev, state.currentStep]);
                 }
 
                 setIsConfirmingSelection(false);
                 navigateToStep(nextStep.id, currentIndex + 1, currentIndex);
-
             } catch (error) {
-                log.error('Failed to proceed to next step', error instanceof Error ? error : undefined);
+                log.error(
+                    'Failed to proceed to next step',
+                    error instanceof Error ? error : undefined,
+                );
                 setIsConfirmingSelection(false);
             }
         }

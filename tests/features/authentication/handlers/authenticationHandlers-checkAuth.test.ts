@@ -39,7 +39,6 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 isAuthenticated: false,
                 isChecking: false,
                 organization: undefined,
-                project: undefined,
                 message: 'Not signed in',
                 subMessage: 'Sign in with your Adobe account to continue',
                 requiresOrgSelection: false,
@@ -49,7 +48,7 @@ describe('authenticationHandlers - handleCheckAuth', () => {
             });
         });
 
-        it('should check auth and return authenticated with org and project when fully configured', async () => {
+        it('should check auth and return authenticated with the org when fully configured', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
             (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
             (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(mockProject);
@@ -59,7 +58,11 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
             expect(result.success).toBe(true);
             expect(mockContext.authManager!.getCachedOrganization).toHaveBeenCalledTimes(1);
-            expect(mockContext.authManager!.getCachedProject).toHaveBeenCalledTimes(1);
+            // The payload carries the ORG only. `project` rode along unread for as
+            // long as this message has existed — `useAuthStatus` writes `adobeAuth`
+            // and `adobeOrg`, and its own AuthStatusData type never declared the
+            // field. So the project is not read here either.
+            expect(mockContext.authManager!.getCachedProject).not.toHaveBeenCalled();
 
             // Verify final message
             expect(mockContext.sendMessage).toHaveBeenLastCalledWith('auth-status', {
@@ -67,7 +70,6 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 isAuthenticated: true,
                 isChecking: false,
                 organization: mockOrg,
-                project: mockProject,
                 message: 'Authentication verified',
                 subMessage: `Signed in as ${mockOrg.name}`,
                 requiresOrgSelection: false,
@@ -91,7 +93,6 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 isAuthenticated: true,
                 isChecking: false,
                 organization: mockOrg,
-                project: undefined,
                 message: 'Authentication verified',
                 subMessage: `Signed in as ${mockOrg.name}`,
                 requiresOrgSelection: false,
@@ -234,7 +235,6 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 expect.objectContaining({
                     authenticated: true,
                     organization: tokenOrg,
-                    project: undefined,
                 })
             );
         });
@@ -254,7 +254,6 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 expect.objectContaining({
                     authenticated: true,
                     organization: mockOrg,
-                    project: undefined,
                 })
             );
         });
@@ -375,7 +374,6 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 isAuthenticated: true,
                 isChecking: false,
                 organization: mockOrg,
-                project: undefined,
                 message: 'Authentication verified',
                 subMessage: `Signed in as ${mockOrg.name}`,
                 requiresOrgSelection: false,
@@ -411,7 +409,6 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 isAuthenticated: true,
                 isChecking: false,
                 organization: undefined,
-                project: undefined,
                 message: 'Authentication verified',
                 subMessage: 'Organization selection required',
                 requiresOrgSelection: false,
@@ -437,7 +434,6 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 isAuthenticated: true,
                 isChecking: false,
                 organization: undefined,
-                project: undefined,
                 message: 'Authentication verified',
                 subMessage: 'Organization selection required',
                 requiresOrgSelection: false,
@@ -464,7 +460,6 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 isAuthenticated: true,
                 isChecking: false,
                 organization: mockOrg,
-                project: mockProject,
                 message: 'Authentication verified',
                 subMessage: `Signed in as ${mockOrg.name}`,
                 requiresOrgSelection: false,
@@ -488,7 +483,6 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 isAuthenticated: true,
                 isChecking: false,
                 organization: mockOrg,
-                project: mockProject,
                 message: 'Authentication verified',
                 subMessage: `Signed in as ${mockOrg.name}`,
                 requiresOrgSelection: false,

@@ -204,18 +204,13 @@ describe('workspaceHandlers', () => {
             (securityValidation.validateWorkspaceId as jest.Mock).mockImplementation(() => {
                 // Valid by default
             });
-            // Mock getCurrentProject for context guard
-            mockAuthManager.getCurrentProject.mockResolvedValue({
-                id: 'proj-123',
-                name: 'Test Project',
-                title: 'Test Project'
-            });
+            // The drift guard reads the CALLER'S project, not the CLI global.
         });
 
         it('should accept the workspace selection without mutating the aio global', async () => {
             const workspaceId = 'ws-123';
 
-            const result = await handleSelectWorkspace(mockContext, { workspaceId });
+            const result = await handleSelectWorkspace(mockContext, { workspaceId, projectId: 'proj-123' });
 
             expect(result.success).toBe(true);
             // Phase 4a: the selection lives in webview state and is threaded
@@ -228,7 +223,7 @@ describe('workspaceHandlers', () => {
         it('should validate workspace ID before accepting', async () => {
             const workspaceId = 'ws-123';
 
-            await handleSelectWorkspace(mockContext, { workspaceId });
+            await handleSelectWorkspace(mockContext, { workspaceId, projectId: 'proj-123' });
 
             expect(securityValidation.validateWorkspaceId).toHaveBeenCalledWith(workspaceId);
         });
@@ -253,7 +248,7 @@ describe('workspaceHandlers', () => {
         it('should handle special characters in workspace ID', async () => {
             const workspaceId = 'ws-123-prod';
 
-            const result = await handleSelectWorkspace(mockContext, { workspaceId });
+            const result = await handleSelectWorkspace(mockContext, { workspaceId, projectId: 'proj-123' });
 
             expect(result.success).toBe(true);
             expect(securityValidation.validateWorkspaceId).toHaveBeenCalledWith(workspaceId);
@@ -262,18 +257,33 @@ describe('workspaceHandlers', () => {
         it('should handle very long workspace IDs', async () => {
             const workspaceId = 'ws-' + 'a'.repeat(100);
 
-            const result = await handleSelectWorkspace(mockContext, { workspaceId });
+            const result = await handleSelectWorkspace(mockContext, { workspaceId, projectId: 'proj-123' });
 
             expect(result.success).toBe(true);
         });
 
-        it('should fail if no project is selected (drift guard)', async () => {
+        // REGRESSION: this guard used to read `getCurrentProject()` — the Adobe
+        // CLI's persisted `aio console where` selection. Wrong source twice over:
+        // the extension stopped writing that global (Phase 4a targets per-op), so
+        // it reflects some earlier session and can name a project under an org this
+        // token cannot reach; and it could never fail, because the resolver
+        // fabricated a name-shaped id on a miss so `.id` was always truthy. Now that
+        // the resolver fails closed, reading it here would BLOCK valid selections.
+        it('fails when the caller names no project (drift guard)', async () => {
             const workspaceId = 'ws-123';
-            mockAuthManager.getCurrentProject.mockResolvedValue(null);
 
             await expect(handleSelectWorkspace(mockContext, { workspaceId })).rejects.toThrow(
                 'No project selected'
             );
+        });
+
+        it('does not consult the CLI-persisted project at all', async () => {
+            await handleSelectWorkspace(mockContext, {
+                workspaceId: 'ws-123',
+                projectId: 'proj-123',
+            });
+
+            expect(mockAuthManager.getCurrentProject).not.toHaveBeenCalled();
         });
     });
 
@@ -299,7 +309,10 @@ describe('workspaceHandlers', () => {
             // Select workspace (accepted without mutating the global)
             (securityValidation.validateWorkspaceId as jest.Mock).mockImplementation(() => {});
 
-            const selectResult = await handleSelectWorkspace(mockContext, { workspaceId: 'ws-1' });
+            const selectResult = await handleSelectWorkspace(mockContext, {
+                workspaceId: 'ws-1',
+                projectId: 'proj-123',
+            });
             expect(selectResult.success).toBe(true);
         });
 
@@ -436,13 +449,8 @@ describe('workspaceHandlers', () => {
         it('should accept the selection and ack via sendMessage', async () => {
             const workspaceId = 'ws-123';
             (securityValidation.validateWorkspaceId as jest.Mock).mockImplementation(() => {});
-            mockAuthManager.getCurrentProject.mockResolvedValue({
-                id: 'proj-123',
-                name: 'Test Project',
-                title: 'Test Project'
-            });
 
-            const result = await handleSelectWorkspace(mockContext, { workspaceId });
+            const result = await handleSelectWorkspace(mockContext, { workspaceId, projectId: 'proj-123' });
 
             // Phase 4a: selection is webview state; no shared `aio` global mutation.
             expect(result.success).toBe(true);

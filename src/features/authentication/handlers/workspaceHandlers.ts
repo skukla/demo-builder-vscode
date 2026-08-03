@@ -43,13 +43,10 @@ export async function handleGetWorkspaces(
         if (!workspacesPromise) {
             throw new Error('Auth manager not available');
         }
-        const workspaces = await withTimeout(
-            workspacesPromise,
-            {
-                timeoutMs: TIMEOUTS.NORMAL,
-                timeoutMessage: 'Request timed out. Please check your connection and try again.',
-            },
-        );
+        const workspaces = await withTimeout(workspacesPromise, {
+            timeoutMs: TIMEOUTS.NORMAL,
+            timeoutMessage: 'Request timed out. Please check your connection and try again.',
+        });
         await context.sendMessage('get-workspaces', workspaces);
         return { success: true, data: workspaces };
     } catch (error) {
@@ -74,14 +71,22 @@ export async function handleGetWorkspaces(
  * per-op (e.g. mesh check/deploy pass it explicitly and run under
  * `withOrgContext`). This handler therefore ACCEPTS the selection and acks it
  * to the UI WITHOUT mutating the shared `aio` global via `selectWorkspace`
- * (which races concurrent processes). A current project must still exist as a
+ * (which races concurrent processes). A project must still be selected as a
  * drift guard.
+ *
+ * That guard reads the CALLER'S project (`payload.projectId`) — the same webview
+ * selection every downstream op is targeted with. It used to read
+ * `getCurrentProject()`, the Adobe CLI's persisted `aio console where` selection,
+ * which is the wrong source twice over: the extension deliberately stopped writing
+ * that global (Phase 4a), so it reflects some earlier session, and it could name a
+ * project under an org this token cannot even reach. It also could not fail — the
+ * resolver fabricated a name-shaped id on a miss, so `.id` was always truthy.
  */
 export async function handleSelectWorkspace(
     context: HandlerContext,
-    payload: { workspaceId: string },
+    payload: { workspaceId: string; projectId?: string },
 ): Promise<SimpleResult> {
-    const { workspaceId } = payload;
+    const { workspaceId, projectId } = payload;
 
     // SECURITY: Validate workspace ID to prevent command injection
     try {
@@ -93,9 +98,12 @@ export async function handleSelectWorkspace(
 
     try {
         // Drift guard: a project must be selected before a workspace is chosen.
-        const currentProject = await context.authManager?.getCurrentProject();
-        if (!currentProject?.id) {
-            throw new Error('No project selected - cannot select workspace without project context');
+        // Presence only — this handler runs no shell command, so the id never
+        // reaches a command line (unlike the workspace id validated above).
+        if (!projectId) {
+            throw new Error(
+                'No project selected - cannot select workspace without project context',
+            );
         }
 
         await context.sendMessage('workspaceSelected', { workspaceId });
@@ -133,14 +141,20 @@ export async function handleCreateWorkspaceCredential(
         );
 
         if (!credential?.clientId) {
-            return { success: false, error: 'Failed to create credential. Check that you have admin access to this workspace.' };
+            return {
+                success: false,
+                error: 'Failed to create credential. Check that you have admin access to this workspace.',
+            };
         }
 
         context.logger.info(`[Workspace] OAuth S2S credential created: ${credential.name}`);
         return { success: true, data: { clientId: credential.clientId } };
     } catch (error) {
         context.logger.error('[Workspace] Failed to create credential:', error as Error);
-        return { success: false, error: `Failed to create credential: ${(error as Error).message}` };
+        return {
+            success: false,
+            error: `Failed to create credential: ${(error as Error).message}`,
+        };
     }
 }
 
@@ -166,13 +180,15 @@ export async function handleCreateAdobeWorkspace(
 
     try {
         // Defensive permission re-check (guards a stale probe) → UI drops to Flow B.
-        const { hasPermissions, error: permError } = await context.authManager.testDeveloperPermissions();
+        const { hasPermissions, error: permError } =
+            await context.authManager.testDeveloperPermissions();
         if (!hasPermissions) {
             return {
                 success: false,
                 code: ErrorCode.AUTH_FORBIDDEN,
-                error: permError
-                    || 'You do not have permission to create workspaces in this organization. Select an existing workspace instead.',
+                error:
+                    permError ||
+                    'You do not have permission to create workspaces in this organization. Select an existing workspace instead.',
             };
         }
 
@@ -184,8 +200,9 @@ export async function handleCreateAdobeWorkspace(
         if (!workspace) {
             return {
                 success: false,
-                error: "Could not create the workspace. You may have hit your project's workspace quota — "
-                    + 'select an existing workspace instead.',
+                error:
+                    "Could not create the workspace. You may have hit your project's workspace quota — " +
+                    'select an existing workspace instead.',
             };
         }
 
@@ -193,7 +210,9 @@ export async function handleCreateAdobeWorkspace(
         // wizard's project so the fetch takes the SDK path (the org resolves via the
         // fetcher's token-org fallback); unthreaded it would drop to the stale-org CLI.
         try {
-            const workspaces = await context.authManager.getWorkspaces({ projectId: payload?.projectId });
+            const workspaces = await context.authManager.getWorkspaces({
+                projectId: payload?.projectId,
+            });
             await context.sendMessage('get-workspaces', workspaces);
             await context.sendMessage('workspaceSelected', { workspaceId: workspace.id });
         } catch (refreshError) {
