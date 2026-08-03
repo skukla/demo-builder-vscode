@@ -11,6 +11,7 @@
  */
 
 import * as vscode from 'vscode';
+import { withBrowserSignInNotice } from './browserSignInNotice';
 import { SingleFlight } from '@/core/utils/singleFlight';
 import type { Logger } from '@/types/logger';
 
@@ -85,13 +86,8 @@ async function promptAndSignIn(
 
     logger.info(`${logPrefix} Starting Adobe sign-in`);
     // Signing in opens a browser window; surface progress so the click has visible effect.
-    const loginSuccess = await vscode.window.withProgress(
-        {
-            location: vscode.ProgressLocation.Notification,
-            title: 'Opening a browser window to sign in to Adobe…',
-            cancellable: false,
-        },
-        () => authManager.loginAndRestoreProjectContext(projectContext),
+    const loginSuccess = await withBrowserSignInNotice(() =>
+        authManager.loginAndRestoreProjectContext(projectContext),
     );
 
     if (!loginSuccess || !(await authManager.isAuthenticated())) {

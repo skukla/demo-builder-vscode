@@ -15,6 +15,10 @@ import {
     hasAdobeProjectContext,
     sendDemoStatusUpdate,
 } from './meshStatusHelpers';
+import {
+    BROWSER_ORG_SWITCH_TITLE,
+    withBrowserSignInNotice,
+} from '@/core/auth/browserSignInNotice';
 import { BaseWebviewCommand } from '@/core/base';
 import { AI_CONTEXT_VERSION, COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
@@ -992,11 +996,16 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
     const authManager = ServiceLocator.getAuthenticationService();
 
     context.logger.info('[Dashboard] Starting Adobe sign-in from re-authenticate link');
-    const loginSuccess = await authManager.loginAndRestoreProjectContext({
-        organization: project.adobe?.organization,
-        projectId: project.adobe?.projectId,
-        workspace: project.adobe?.workspace,
-    });
+    // The browser opens on the other side of this call — telegraph it, exactly as
+    // ensureAdobeIOAuth does. Without it the click looks inert until a browser
+    // window appears unannounced.
+    const loginSuccess = await withBrowserSignInNotice(() =>
+        authManager.loginAndRestoreProjectContext({
+            organization: project.adobe?.organization,
+            projectId: project.adobe?.projectId,
+            workspace: project.adobe?.workspace,
+        }),
+    );
 
     if (!loginSuccess) {
         context.logger.warn('[Dashboard] Sign-in failed or cancelled');
@@ -1034,13 +1043,17 @@ export const handleSwitchOrg: MessageHandler = async (context) => {
     const authManager = ServiceLocator.getAuthenticationService();
 
     context.logger.info('[Dashboard] Starting FORCED Adobe sign-in to switch organization');
-    const loginSuccess = await authManager.loginAndRestoreProjectContext(
-        {
-            organization: project.adobe?.organization,
-            projectId: project.adobe?.projectId,
-            workspace: project.adobe?.workspace,
-        },
-        true, // force — present the browser org chooser; never silently reuse the SSO tab
+    const loginSuccess = await withBrowserSignInNotice(
+        () =>
+            authManager.loginAndRestoreProjectContext(
+                {
+                    organization: project.adobe?.organization,
+                    projectId: project.adobe?.projectId,
+                    workspace: project.adobe?.workspace,
+                },
+                true, // force — present the browser org chooser; never silently reuse the SSO tab
+            ),
+        BROWSER_ORG_SWITCH_TITLE,
     );
 
     if (!loginSuccess) {

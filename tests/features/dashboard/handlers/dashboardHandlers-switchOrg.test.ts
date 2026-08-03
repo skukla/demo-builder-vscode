@@ -31,7 +31,11 @@ jest.mock('vscode', () => ({
     window: {
         activeColorTheme: { kind: 1 },
         showWarningMessage: jest.fn().mockResolvedValue('Cancel'),
+        // The forced sign-in runs behind the browser-opening notification
+        // (withBrowserSignInNotice) — run the task straight through.
+        withProgress: jest.fn(async (_options: unknown, task: () => unknown) => task()),
     },
+    ProgressLocation: { Notification: 15, Window: 10, SourceControl: 1 },
     ColorThemeKind: { Dark: 2, Light: 1 },
     commands: { executeCommand: jest.fn() },
     env: { openExternal: jest.fn() },
@@ -112,7 +116,31 @@ describe('dashboardHandlers - handleSwitchOrg', () => {
             code: 'PROJECT_NOT_FOUND',
         });
     });
+
+    // The browser opens on the other side of the login call. Both user-initiated
+    // sign-in handlers shipped WITHOUT this, so the click looked inert until a
+    // browser window appeared unannounced (2026-07-31).
+    it('telegraphs the browser hand-off with a progress notification', async () => {
+        const vscodeMock = jest.requireMock('vscode');
+        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' } as any);
+        const { ServiceLocator } = require('@/core/di');
+        ServiceLocator.getAuthenticationService.mockReturnValue({
+            isAuthenticated: jest.fn().mockResolvedValue(true),
+            loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
+        });
+
+        await handleSwitchOrg(mockContext, undefined);
+
+        expect(vscodeMock.window.withProgress).toHaveBeenCalledWith(
+            expect.objectContaining({
+                location: vscodeMock.ProgressLocation.Notification,
+                title: expect.stringMatching(/browser/i),
+            }),
+            expect.any(Function),
+        );
+    });
 });
+
 
 // The org-context check itself (pending → ok/warning/unknown, self-heal,
 // non-interactive P1 contract) is owned by the orchestrator and is covered in
