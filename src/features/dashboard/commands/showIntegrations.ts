@@ -28,6 +28,7 @@
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
+import { ServiceLocator } from '@/core/di';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { StateManager } from '@/core/state';
 import { getBundleUri } from '@/core/utils/bundleUri';
@@ -196,7 +197,12 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand {
     private createHandlerContext(): HandlerContext {
         return {
             prereqManager: undefined as unknown as HandlerContext['prereqManager'],
-            authManager: undefined as unknown as HandlerContext['authManager'],
+            // NOT undefined. The reused wizard handlers call context.authManager, and
+            // `?? []` turns an absent one into an EMPTY org list — which ensureOrgContext
+            // reads as "your org is not on this account" and reports as needs_relogin.
+            // That surfaced as a flat lie in the destination picker while the dashboard's
+            // own IMS-org check was green (2026-07-31).
+            authManager: ServiceLocator.getAuthenticationService(),
             errorLogger: undefined as unknown as HandlerContext['errorLogger'],
             progressUnifier: undefined as unknown as HandlerContext['progressUnifier'],
             stepLogger: undefined as unknown as HandlerContext['stepLogger'],

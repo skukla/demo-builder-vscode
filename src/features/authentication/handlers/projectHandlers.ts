@@ -40,8 +40,17 @@ export async function resolveOrgContext(
 ): Promise<EnsureOrgContextResult> {
     return ensureOrgContext(orgId, {
         listSelectableOrgs: async () => {
-            const orgs = await context.authManager?.getOrganizations() ?? [];
-            return orgs.map(org => ({ id: org.id, code: org.code, name: org.name }));
+            // Throw rather than `?? []` on a missing auth service. An empty list is
+            // indistinguishable from "this account cannot see that org", so the old
+            // fallback turned a wiring bug into a confident, wrong org-mismatch
+            // message — see showIntegrations' handler context (2026-07-31).
+            if (!context.authManager) {
+                throw new Error(
+                    'No authentication service on this handler context — cannot list orgs.',
+                );
+            }
+            const orgs = await context.authManager.getOrganizations();
+            return orgs.map((org) => ({ id: org.id, code: org.code, name: org.name }));
         },
     });
 }
