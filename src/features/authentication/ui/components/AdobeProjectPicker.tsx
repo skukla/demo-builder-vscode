@@ -175,6 +175,12 @@ export function AdobeProjectPicker({
         [handleDelete],
     );
 
+    // "Switch IMS Org" = forced login. The handler verifies which org the token
+    // actually landed in, so this never assumes the switch succeeded.
+    const switchOrg = useCallback((): void => {
+        void webviewClient.request('switchOrg').catch(() => undefined);
+    }, []);
+
     const {
         items: projects,
         filteredItems: filteredProjects,
@@ -183,6 +189,7 @@ export function AdobeProjectPicker({
         isRefreshing,
         hasLoadedOnce,
         error,
+        errorCode,
         searchQuery,
         setSearchQuery,
         load: loadProjects,
@@ -247,6 +254,11 @@ export function AdobeProjectPicker({
                 isRefreshing={isRefreshing}
                 hasLoadedOnce={hasLoadedOnce}
                 error={error}
+                errorCode={errorCode}
+                // Org mismatch is unrecoverable by retry: the token reaches ONE org.
+                // A FORCED sign-in is the only way to land in another (the model's
+                // rule 3), and the extension re-checks the landed org afterwards.
+                onSwitchOrg={switchOrg}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 onLoad={loadProjects}

@@ -12,6 +12,7 @@ import * as creation from './';
 // barrel's consoleApiHandlers re-export exists — capturing `undefined`.
 import * as authentication from '@/features/authentication';
 import * as components from '@/features/components/handlers/componentHandlers';
+import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import * as eds from '@/features/eds/handlers';
 import * as lifecycle from '@/features/lifecycle/handlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
@@ -58,6 +59,12 @@ export const projectCreationHandlers = defineHandlers({
 
     // Re-detect Adobe context after an external auth/org change
     're-detect-context': authentication.handleReDetectContext,
+
+    // Org recovery. The project/workspace pickers offer "Switch IMS Org" when the
+    // project's org is unreachable with the current token — a FORCED sign-in is the
+    // only way to reach another org (adobe-org-context rule 3), so both panels that
+    // render those pickers must answer it.
+    switchOrg: dashboardHandlers.switchOrg,
 
     // Project handlers
     'ensure-org-selected': authentication.handleEnsureOrgSelected,

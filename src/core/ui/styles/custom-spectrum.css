@@ -4756,11 +4756,6 @@ div[class*="spectrum"] input[type="search"] {
     gap: 12px;
     align-items: stretch;
 }
-/* Mesh not offered → only three cards; a single row reads better than a 2×2
-   with a lonely half-width tile. */
-.intflow-kind-choices--three {
-    grid-template-columns: repeat(3, 1fr);
-}
 /* Catalog stage: search header over the wrapping tile gallery. */
 .intflow-catalog {
     display: flex;

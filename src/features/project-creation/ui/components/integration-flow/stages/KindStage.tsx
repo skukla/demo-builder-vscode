@@ -44,12 +44,10 @@ export function KindStage({
     onPickKind,
 }: KindStageProps): React.ReactElement {
     const catalogEmpty = catalogCount === 0;
-    // 4 cards (mesh offered) → 2×2 grid; 3 cards (mesh hidden) → a single row.
-    const layoutClass = meshOffered
-        ? 'intflow-kind-choices'
-        : 'intflow-kind-choices intflow-kind-choices--three';
+    // No per-count layout class: the grid is auto-fit/minmax, so 4 cards land 2×2
+    // and 3 land in a row at this width, without a variant to keep in sync.
     return (
-        <div className={layoutClass}>
+        <div className="intflow-kind-choices">
             {meshOffered ? (
                 <ChoiceCard
                     name="API Mesh"
