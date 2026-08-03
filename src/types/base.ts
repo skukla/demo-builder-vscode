@@ -206,6 +206,17 @@ export interface AppBuilderComponentState {
     deployedUrls?: Record<string, string>;
     sourceHash?: string | null;
     lastDeployed?: string; // ISO date string
+    /**
+     * Why the last deploy failed — set with `status: 'error'`, cleared by the next
+     * non-error outcome (see `recordDeployOutcome`).
+     *
+     * Without it a failed component persisted the fact of failure and none of the
+     * reason, so the card read "Deploy failed" / MESH ERROR and the only way to
+     * learn more was to run the deploy again and watch the logs. Redacted and
+     * first-line-only via `sanitizeErrorForLogging` before it lands here: this is
+     * persisted to the project manifest on disk, so raw CLI output must not be.
+     */
+    error?: string;
     /** Resolved provided values another appBuilderComponent consumes (e.g. { MESH_ENDPOINT }). */
     providesEnvVars?: Record<string, string>;
     // Mesh-kind runtime fields (ADR-011 D3 Step 06). These previously lived

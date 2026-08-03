@@ -20,6 +20,7 @@ import { fetchMeshInfoFromAdobeIO } from './meshVerifier';
 import { updateMeshState } from './stalenessDetector';
 import { ServiceLocator } from '@/core/di';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { sanitizeErrorForLogging } from '@/core/validation';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import { ensureMeshApiSubscribed } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
@@ -185,7 +186,12 @@ export async function deployMeshHeadless(
     } catch (error) {
         await onStatus?.('error', 'Deployment failed');
         meshComponent.status = 'error';
-        recordDeployOutcome(project, 'mesh', meshComponent.id, { status: 'error' });
+        // Persist WHY. Redacted + first-line-only: this lands in the project
+        // manifest on disk, and raw `aio` output can carry tokens and home paths.
+        recordDeployOutcome(project, 'mesh', meshComponent.id, {
+            status: 'error',
+            error: sanitizeErrorForLogging(error instanceof Error ? error : String(error)),
+        });
         // The SUMMARY has to move too. The success path above sets it to
         // 'deployed'; leaving it untouched here meant a failed redeploy kept
         // whatever the last SUCCESS wrote, so the dashboard — which reads this

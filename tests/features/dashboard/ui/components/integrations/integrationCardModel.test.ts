@@ -25,6 +25,41 @@ import {
 } from './integrationCardModel.testUtils';
 
 // ---------------------------------------------------------------------------
+// Failure reason (persisted, survives a reload)
+// ---------------------------------------------------------------------------
+describe('deriveIntegrationCard — failure reason', () => {
+    // REGRESSION: `message` came ONLY from the live status override, which the
+    // extension pushes during a deploy. Reopen the panel — or reload the window —
+    // and the override is gone, so an errored card said "Deploy failed" and could
+    // not say why. The reason is now persisted on the entry, so the drawer can
+    // still answer the question tomorrow.
+    it('surfaces the persisted reason when there is no live override', () => {
+        const model = deriveIntegrationCard(
+            integration({ status: 'error', error: 'invalid org/project/workspace combination' }),
+        );
+
+        expect(model.message).toBe('invalid org/project/workspace combination');
+    });
+
+    it('lets a live override win — an in-flight deploy is fresher than the record', () => {
+        const model = deriveIntegrationCard(
+            integration({ status: 'error', error: 'yesterday' }),
+            { status: 'error', message: 'right now' },
+        );
+
+        expect(model.message).toBe('right now');
+    });
+
+    it('does not show a stale reason on a card that is no longer failing', () => {
+        const model = deriveIntegrationCard(
+            integration({ status: 'deployed', error: 'a failure since fixed' }),
+        );
+
+        expect(model.message).toBeUndefined();
+    });
+});
+
+// ---------------------------------------------------------------------------
 // deriveIntegrationCard — status matrix
 // ---------------------------------------------------------------------------
 describe('deriveIntegrationCard — status matrix', () => {

@@ -134,6 +134,38 @@ describe('deployMeshHeadless', () => {
     // the config was never the problem. `ensureMeshApiSubscribed` wraps its own
     // calls, which is why the subscribe step SUCCEEDED in the same run: the
     // asymmetry between the two was the tell.
+    // The card said MESH ERROR for two days and could not say why: the failure
+    // persisted `status: 'error'` and nothing else, so the reason lived only in
+    // the logs at the moment it happened.
+    it('persists WHY a deploy failed, redacted and first-line only', async () => {
+        mockDeploy.mockResolvedValue({
+            success: false,
+            error: 'The specified organization, project, and workspace combination is invalid\nstack line',
+        });
+        const d = deps();
+
+        await deployMeshHeadless(d);
+
+        const entry = (d.project as Project).appBuilderComponents?.['commerce-mesh'];
+        expect(entry?.status).toBe('error');
+        expect(entry?.error).toBe(
+            'The specified organization, project, and workspace combination is invalid',
+        );
+    });
+
+    it('does not persist a home path from raw CLI output', async () => {
+        mockDeploy.mockResolvedValue({
+            success: false,
+            error: 'failed reading /Users/someone/.demo-builder/projects/p/mesh.json',
+        });
+        const d = deps();
+
+        await deployMeshHeadless(d);
+
+        const entry = (d.project as Project).appBuilderComponents?.['commerce-mesh'];
+        expect(entry?.error).not.toContain('/Users/someone');
+    });
+
     describe('org-context targeting', () => {
         it('runs the deploy under the project org-context, not the CLI global', async () => {
             let target: OrgContextTarget | undefined;

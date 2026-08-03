@@ -298,7 +298,10 @@ export function deriveIntegrationCard(
         status,
         statusLabel,
         dotVariant,
-        message: override?.message,
+        // Live override first (an in-flight deploy is fresher), else the reason
+        // persisted with the failure — which is what survives a reload, and the
+        // only thing that can answer "why?" once the push is gone.
+        message: override?.message ?? (status === 'error' ? entry.error : undefined),
         url: primaryUrl,
         urlLabel: 'App URL',
         deployedUrls: entry.deployedUrls,
@@ -385,6 +388,9 @@ export function deriveMeshCard(
         status: cardStatus,
         statusLabel: statusDisplay.text,
         dotVariant: row.dot,
+        // The label is the live status text; the REASON comes off the persisted
+        // entry, so an errored mesh can still explain itself after a reload.
+        message: cardStatus === 'error' ? meshEntry?.error : undefined,
         url: meshEntry?.endpoint,
         urlLabel: 'Endpoint',
         lastDeployed: formatLastDeployed(meshEntry?.lastDeployed),

@@ -33,6 +33,7 @@ export type DeployOutcome = Pick<
     | 'envVars'
     | 'userDeclinedUpdate'
     | 'declinedAt'
+    | 'error'
 >;
 
 /**
@@ -80,6 +81,26 @@ function refreshProvidedEnvVars(
 }
 
 /**
+ * The failure reason to persist: the outcome's, else the existing one, else none.
+ *
+ * A NON-error outcome always clears it. This merge is `...existing, ...outcome`,
+ * so a success that simply omits `error` would otherwise leave the previous
+ * failure's message on a now-healthy component and the drawer would explain a
+ * failure that had since been fixed — the same shape as the `meshStatusSummary`
+ * bug the mesh deploy path carries a comment about.
+ *
+ * A failure that arrives WITHOUT a reason keeps the one already recorded: a
+ * caller that knows only "it failed" must not erase a better message.
+ */
+function resolveErrorReason(
+    existing: AppBuilderComponentState | undefined,
+    outcome: DeployOutcome,
+): string | undefined {
+    if (outcome.status !== 'error') return undefined;
+    return outcome.error ?? existing?.error;
+}
+
+/**
  * Merge a deploy outcome into `project.appBuilderComponents` (in place, like the
  * headless paths' existing singular writes — the caller saves the project).
  * Identity fields the outcome doesn't know (source, name, providesEnvVars) are
@@ -102,6 +123,7 @@ export function recordDeployOutcome(
             ...outcome,
             kind,
             providesEnvVars: refreshProvidedEnvVars(existing, outcome),
+            error: resolveErrorReason(existing, outcome),
         },
     };
 }

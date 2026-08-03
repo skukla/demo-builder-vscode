@@ -27,6 +27,33 @@ import {
 // ---------------------------------------------------------------------------
 // deriveMeshCard — mesh matrix
 // ---------------------------------------------------------------------------
+describe('deriveMeshCard — failure reason', () => {
+    // The mesh card is the one that showed MESH ERROR for two days with nothing
+    // to explain it. Its status LABEL is the live statusDisplay text; the reason
+    // comes off the persisted entry.
+    it('surfaces the persisted reason on an errored mesh', () => {
+        const model = deriveMeshCard(
+            display({ color: 'red', text: 'Mesh Error' }),
+            'error',
+            meshEntry({ status: 'error', error: 'invalid org/project/workspace combination' }),
+            false,
+        );
+
+        expect(model.message).toBe('invalid org/project/workspace combination');
+    });
+
+    it('does not show a stale reason on a healthy mesh', () => {
+        const model = deriveMeshCard(
+            display(),
+            'deployed',
+            meshEntry({ status: 'deployed', error: 'a failure since fixed' }),
+            false,
+        );
+
+        expect(model.message).toBeUndefined();
+    });
+});
+
 describe('deriveMeshCard — status matrix', () => {
     it('checking: neutral dot, NO face, EMPTY bar', () => {
         const model = deriveMeshCard(display({ color: 'gray', text: 'Checking…' }), 'checking', meshEntry(), false);

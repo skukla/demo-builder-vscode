@@ -18,6 +18,7 @@ import { deriveOwPackage } from './owPackageName';
 import type { AppDeploymentResult } from './types';
 import { ServiceLocator } from '@/core/di';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { sanitizeErrorForLogging } from '@/core/validation';
 import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { projectRequiresAppBuilder } from '@/features/components/services/projectAppBuilderPredicate';
@@ -64,10 +65,7 @@ export interface DeployAppHeadlessDeps {
  * Resolve the deploy target: the id-matched app instance ONLY (no singular
  * fallback — an unknown id must block, never deploy a different integration).
  */
-function resolveTargetApp(
-    project: Project,
-    componentId: string,
-): ComponentInstance | undefined {
+function resolveTargetApp(project: Project, componentId: string): ComponentInstance | undefined {
     return getComponentInstancesBySubType(project, 'app').find((app) => app.id === componentId);
 }
 
@@ -189,7 +187,10 @@ export async function deployAppHeadless(
 
         if (!result.success) {
             project.appStatusSummary = 'error';
-            recordDeployOutcome(project, 'integration', app.id, { status: 'error' });
+            recordDeployOutcome(project, 'integration', app.id, {
+                status: 'error',
+                error: result.error ? sanitizeErrorForLogging(result.error) : undefined,
+            });
             await stateManager.saveProject(project);
             await onStatus?.('error', result.error || 'Deployment failed');
             return { success: false, error: result.error || 'App Builder deployment failed' };
@@ -203,7 +204,10 @@ export async function deployAppHeadless(
         return { success: true, url };
     } catch (error) {
         project.appStatusSummary = 'error';
-        recordDeployOutcome(project, 'integration', app.id, { status: 'error' });
+        recordDeployOutcome(project, 'integration', app.id, {
+            status: 'error',
+            error: sanitizeErrorForLogging(error instanceof Error ? error : String(error)),
+        });
         await stateManager.saveProject(project);
         await onStatus?.('error', 'Deployment failed');
         return {
