@@ -28,6 +28,22 @@ export interface WebviewAppProps {
     loadingContent?: ReactNode;
     /** Optional className for Provider */
     className?: string;
+    /**
+     * Post the `ready` message once the handshake completes.
+     *
+     * NOT the handshake — that is `__webview_ready__`, which {@link webviewClient}
+     * sends itself and the communication manager answers directly. `ready` is a
+     * separate application-level signal asking the panel to do post-handshake work,
+     * and exactly one panel has any: the wizard, whose handler loads the component
+     * definitions. Init data does not depend on it — the extension sends `init` off
+     * the handshake.
+     *
+     * Off by default because sending it where nothing answers is not free any more:
+     * since unhandled types started failing loudly, every non-wizard panel logged
+     * `No handler registered for 'ready'` on every open (2026-08-03). The honest fix
+     * is to stop sending a message nobody wants, not to register five no-ops.
+     */
+    notifyReady?: boolean;
 }
 
 /**
@@ -74,6 +90,7 @@ export function WebviewApp({
     onInit,
     loadingContent = null,
     className = 'app-container',
+    notifyReady = false,
 }: WebviewAppProps) {
     const [isReady, setIsReady] = useState(false);
     const [initData, setInitData] = useState<WebviewInitData | null>(null);
@@ -105,22 +122,25 @@ export function WebviewApp({
             setIsReady(true);
         });
 
-        // Wait for handshake, then send ready message to trigger init (guard prevents StrictMode double-send)
-        log.debug('Waiting for handshake completion');
-        webviewClient.ready().then(() => {
-            if (!readySentRef.current) {
-                readySentRef.current = true;
-                log.debug('Handshake complete, sending ready message');
-                webviewClient.postMessage('ready');
-            } else {
-                log.debug('Handshake complete, but ready already sent (StrictMode remount)');
-            }
-        });
+        // Hosts that asked for it get the post-handshake `ready` signal (see the
+        // prop). The guard prevents a StrictMode double-send.
+        if (notifyReady) {
+            log.debug('Waiting for handshake completion');
+            webviewClient.ready().then(() => {
+                if (!readySentRef.current) {
+                    readySentRef.current = true;
+                    log.debug('Handshake complete, sending ready message');
+                    webviewClient.postMessage('ready');
+                } else {
+                    log.debug('Handshake complete, but ready already sent (StrictMode remount)');
+                }
+            });
+        }
 
         return () => {
             unsubscribeInit();
         };
-    }, [onInit]);
+    }, [onInit, notifyReady]);
 
     if (!isReady) {
         log.debug('Not ready yet, showing loading content');
@@ -135,12 +155,7 @@ export function WebviewApp({
     log.debug('About to render content');
 
     return (
-        <Provider
-            theme={defaultTheme}
-            colorScheme="dark"
-            isQuiet
-            UNSAFE_className={className}
-        >
+        <Provider theme={defaultTheme} colorScheme="dark" isQuiet UNSAFE_className={className}>
             {content}
         </Provider>
     );

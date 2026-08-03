@@ -72,7 +72,16 @@ const PANELS: ReadonlyArray<{ name: string; entry: string; command: string; noRe
  * Keep this SHORT and justified — every entry is a hole in the guard.
  */
 const PLATFORM_HANDLED = new Set([
-    'ready', // handshake, WebviewCommunicationManager
+    // NOT the handshake — that is `__webview_ready__`, which the communication
+    // manager answers directly and which never reaches a panel map. `ready` is an
+    // application-level signal that WebviewApp sends only for hosts passing
+    // `notifyReady` (the wizard, which registers it). This walk is import-graph
+    // based, so it cannot see that the send is prop-conditional: WebviewApp sits in
+    // every panel's graph. Listed here for that reason, not because the platform
+    // handles it — the original justification here said "handshake,
+    // WebviewCommunicationManager", which was wrong and is why five panels sat
+    // logging "No handler registered for 'ready'" on every open (2026-08-03).
+    'ready',
     'log', // debug passthrough, every panel
     'progress', // WebviewClient.reportProgress → base command
     // Shared helpers in core/ui/utils/vscode-api.ts. They sit in every panel's

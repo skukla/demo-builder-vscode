@@ -33,6 +33,9 @@ const root = createRoot(container);
 // This was causing 3x handler execution and noisy logs. See research findings.
 root.render(
     <WebviewApp
+        // The ONLY panel with post-handshake work to ask for: `ready` makes the
+        // extension load the component definitions the selection steps need.
+        notifyReady
         onInit={(_data) => {
             // Initialization complete
         }}
