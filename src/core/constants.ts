@@ -33,7 +33,11 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // integrations, each under components/<id>/ with its own app.config.yaml + isolated
 // OpenWhisk package; extend-app-builder-app rewritten + AGENTS.md "App Builder
 // Integrations" section added (confirm WHICH integration before editing).
-export const AI_CONTEXT_VERSION = 4;
+// v5: AGENTS.md "Finding Adobe Documentation" section — routes agents to Adobe's
+// own Wayfinder doc router (adobe-commerce/wayfinder), pinned to a commit rather
+// than @main so upstream cannot alter a generated project's instructions without
+// our review. Re-pinning the SHA is itself a bundle change: bump this again.
+export const AI_CONTEXT_VERSION = 5;
 
 /**
  * Component IDs for standardized component instance access

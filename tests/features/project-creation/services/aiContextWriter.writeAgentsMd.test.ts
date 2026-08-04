@@ -106,6 +106,37 @@ const STACKS: Stack[] = [
 
 describe('aiContextWriter', () => {
     describe('generateAgentsMd', () => {
+        // Every project this extension generates is an Adobe Commerce demo — EDS
+        // delivery, storefront drop-ins, da.live authoring, App Builder. Wayfinder
+        // is Adobe's own agent router across exactly those properties, so the
+        // generated bundle points at it instead of us re-deriving that map per
+        // project (or the agent guessing from training data).
+        describe('documentation routing', () => {
+            it('points agents at Wayfinder for Adobe documentation', () => {
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+
+                expect(result).toContain('## Finding Adobe Documentation');
+                expect(result).toContain('adobe-commerce/wayfinder');
+            });
+
+            // The line makes a REMOTE document part of the agent's instructions.
+            // Pinned to a commit so upstream cannot change what a generated project
+            // tells its agent without us re-pinning; @main would be an unreviewed
+            // instruction channel into every user's repo.
+            it('pins the router to a commit SHA, never @main', () => {
+                const result = generateAgentsMd(makeEdsProject(), STACKS);
+
+                expect(result).toMatch(/wayfinder@[0-9a-f]{40}\//);
+                expect(result).not.toContain('wayfinder@main');
+            });
+
+            it('is present for every project shape, not just EDS', () => {
+                const bare = makeEdsProject({ componentInstances: {} });
+
+                expect(generateAgentsMd(bare, STACKS)).toContain('## Finding Adobe Documentation');
+            });
+        });
+
         describe('component repositories', () => {
             it('lists every component instance that has a githubRepo', () => {
                 const project = makeEdsProject({

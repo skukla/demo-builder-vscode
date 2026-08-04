@@ -79,6 +79,7 @@ export function generateAgentsMd(project: Project, stacksConfig: Stack[]): strin
     sections.push(buildAppBuilderIntegrations(project));
     sections.push(buildConsoleApiAccess(project));
     sections.push(buildTryAskingClaude(project));
+    sections.push(buildDocumentationRouting());
     sections.push(buildReportingStyle());
     sections.push(buildNotesForAgents(project));
 
@@ -90,6 +91,13 @@ export function generateAgentsMd(project: Project, stacksConfig: Stack[]): strin
  * `@AGENTS.md` against the file's parent directory and inlines the target's
  * content into context.
  */
+/**
+ * Adobe's Commerce/EDS documentation router, pinned to a reviewed commit.
+ * Upstream: https://github.com/adobe-commerce/wayfinder (head read 2026-08-04).
+ */
+const WAYFINDER_ROUTER_URL =
+    'https://cdn.jsdelivr.net/gh/adobe-commerce/wayfinder@d7275860b9ead78986f16318f3e1dc9842481fea/skills/AGENTS.md';
+
 const CLAUDE_MD_POINTER = 'see @AGENTS.md\n';
 
 /**
@@ -476,6 +484,30 @@ function buildTryAskingClaude(project: Project): string {
     lines.push('- "Check if there are any pending updates for this project"');
 
     return lines.join('\n');
+}
+
+/**
+ * Where the agent should look for Adobe documentation.
+ *
+ * Every project this extension generates is an Adobe Commerce demo — EDS delivery,
+ * storefront drop-ins, document authoring, App Builder, API Mesh. Wayfinder is
+ * Adobe's own agent-routing system across exactly those properties, so the bundle
+ * points at it rather than re-deriving that map per project. Unconditional: there
+ * is no project shape here that those properties do not cover.
+ *
+ * PINNED TO A COMMIT, deliberately. This line makes a remote document part of the
+ * agent's instructions in a user's repo. `@main` would let upstream change those
+ * instructions with no review on our side; a SHA means a change is something we
+ * opt into. Re-pin by reading the head of adobe-commerce/wayfinder and bumping
+ * AI_CONTEXT_VERSION so existing projects are prompted to regenerate.
+ */
+function buildDocumentationRouting(): string {
+    return [
+        '## Finding Adobe Documentation',
+        `Before answering an Adobe question — EDS, storefront drop-ins, document authoring, Commerce Admin, App Builder, API Mesh — fetch and follow the routing guide at: ${WAYFINDER_ROUTER_URL}`,
+        'It maps the question to the right Adobe property and gives an agent-optimised entry point for each. Fetch the docs it points at; do not answer these from training data, and do not invent config keys, CLI flags, GraphQL fields, or Admin paths.',
+        'Read this project\'s own code first where it applies — it reflects actual current state and beats general documentation.',
+    ].join('\n');
 }
 
 function buildReportingStyle(): string {

@@ -11,10 +11,12 @@ describe('AI_CONTEXT_VERSION', () => {
     // Pin the current bundle version. Bump this pin ONLY together with a real
     // generated-content change (see the ai-context-authoring discipline): the
     // constant re-gates every existing project for a bundle refresh.
-    // v4: per-integration addressing (N AI-built integrations under
-    // components/<id>/) in extend-app-builder-app + AGENTS.md.
-    it('is 4 (per-integration AI addressing)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(4);
+    // v5: AGENTS.md "Finding Adobe Documentation" — routes agents to Adobe's
+    // Wayfinder doc router, pinned to a commit. Re-pinning that SHA changes what
+    // a generated project instructs its agent to fetch, so it is a bundle change
+    // and bumps this pin again.
+    it('is 5 (Wayfinder documentation routing in AGENTS.md)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(5);
     });
 });
 
