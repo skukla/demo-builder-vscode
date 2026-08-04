@@ -96,13 +96,6 @@ const CANONICAL_ORDER: FlowStageId[] = [
     'api-access',
 ];
 
-/** Whether the kind picker should offer mesh (stack supports it, not yet added). */
-export function meshKindOffered(
-    slice: Pick<FlowStateSlice, 'meshAvailable' | 'meshSelected'>,
-): boolean {
-    return slice.meshAvailable && !slice.meshSelected;
-}
-
 function sourceStages(kind: IntegrationKind | undefined): FlowStageId[] {
     if (kind === 'catalog') return ['source-catalog'];
     if (kind === 'blank') return ['source-blank'];

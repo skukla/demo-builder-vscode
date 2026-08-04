@@ -3,8 +3,10 @@
  *
  * Presentational {@link ChoiceCard}s in one row, grouped by how much we know
  * about the integration:
- *   - **API Mesh** — the data layer (rendered ONLY when offered; HIDDEN when the
- *     stack lacks it or it's already added — see {@link import('../flowStages').meshKindOffered}).
+ *   - **API Mesh** — the data layer. HIDDEN when the stack has no mesh (nothing to
+ *     explain), but shown DISABLED with "Already added — one per project" once the
+ *     project has one: an absent tile reads the same as a stack that never offered
+ *     one, which is the question the note answers.
  *   - **Pre-built integration** — a finished catalog app (disabled with "None
  *     available yet" when the finished catalog is empty).
  *   - **Build custom** — a blank app you build out with AI (the shell).
@@ -21,8 +23,10 @@ import { ChoiceCard } from '../../ChoiceCard';
 import type { IntegrationKind } from '../flowStages';
 
 export interface KindStageProps {
-    /** Whether the API Mesh kind is offered (hidden entirely when false). */
-    meshOffered: boolean;
+    /** Whether this stack has a mesh at all (hidden entirely when false). */
+    meshAvailable: boolean;
+    /** Whether the project already HAS its mesh (tile shown, but disabled). */
+    meshAlreadyAdded: boolean;
     /** Number of pre-built catalog entries (0 disables the catalog tile). */
     catalogCount: number;
     /** The draft's picked kind (marks its tile selected). */
@@ -38,7 +42,8 @@ export interface KindStageProps {
  * @returns the tile row
  */
 export function KindStage({
-    meshOffered,
+    meshAvailable,
+    meshAlreadyAdded,
     catalogCount,
     kind,
     onPickKind,
@@ -48,11 +53,19 @@ export function KindStage({
     // and 3 land in a row at this width, without a variant to keep in sync.
     return (
         <div className="intflow-kind-choices">
-            {meshOffered ? (
+            {/* Absent vs disabled carry DIFFERENT meanings, so they are separate
+                inputs. No mesh for this stack → no tile (there is nothing to
+                explain). A mesh already added → the tile stays, disabled, saying
+                why: a project gets exactly one, and a tile that simply vanished
+                looked identical to a stack that never offered one. Same
+                disabled+note treatment the catalog tile uses when it is empty. */}
+            {meshAvailable ? (
                 <ChoiceCard
                     name="API Mesh"
                     description="Combine your Commerce and other APIs behind a single GraphQL endpoint."
                     selected={kind === 'mesh'}
+                    disabled={meshAlreadyAdded}
+                    note={meshAlreadyAdded ? 'Already added — one per project' : undefined}
                     onSelect={() => onPickKind('mesh')}
                 />
             ) : null}

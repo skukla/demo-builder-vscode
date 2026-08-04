@@ -21,7 +21,8 @@ function renderStage(props: Partial<Props> = {}): { onPickKind: jest.Mock } {
     const onPickKind = jest.fn();
     render(
         <KindStage
-            meshOffered={props.meshOffered ?? true}
+            meshAvailable={props.meshAvailable ?? true}
+            meshAlreadyAdded={props.meshAlreadyAdded ?? false}
             catalogCount={props.catalogCount ?? 3}
             kind={props.kind}
             onPickKind={onPickKind}
@@ -39,11 +40,28 @@ describe('KindStage', () => {
         expect(screen.getByRole('button', { name: /Import a repo/ })).toBeInTheDocument();
     });
 
-    it('hides (not disables) the API Mesh tile when not offered', () => {
-        renderStage({ meshOffered: false });
+    // Absent and disabled answer DIFFERENT questions, so the two inputs stay
+    // separate. No mesh for this stack: nothing to explain, so no tile.
+    it('hides the API Mesh tile when the stack has no mesh', () => {
+        renderStage({ meshAvailable: false });
         expect(screen.queryByRole('button', { name: /API Mesh/ })).not.toBeInTheDocument();
         // The other three still render.
         expect(screen.getByRole('button', { name: /Build custom/ })).toBeInTheDocument();
+    });
+
+    // A project gets exactly one mesh. Vanishing the tile looked identical to a
+    // stack that never offered one, so it stays and says why.
+    it('disables the API Mesh tile with a reason once the project has one', () => {
+        renderStage({ meshAlreadyAdded: true });
+        expect(screen.getByRole('button', { name: /API Mesh/ })).toBeDisabled();
+        expect(screen.getByText('Already added — one per project')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Build custom/ })).toBeEnabled();
+    });
+
+    it('does not fire onPickKind for a disabled mesh tile', () => {
+        const { onPickKind } = renderStage({ meshAlreadyAdded: true });
+        fireEvent.click(screen.getByRole('button', { name: /API Mesh/ }));
+        expect(onPickKind).not.toHaveBeenCalled();
     });
 
     it('disables the pre-built tile with a "None available yet" note when the catalog is empty', () => {

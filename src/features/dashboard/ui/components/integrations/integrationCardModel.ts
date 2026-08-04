@@ -115,6 +115,15 @@ export interface IntegrationCardModel {
      * is editable) and while deploying.
      */
     menuActions: CardAction[];
+    /**
+     * The keyed `appBuilderComponents` id to act on, when it differs from `id`.
+     *
+     * Only the mesh sets it. The mesh card's `id` is the literal `'mesh'` — a
+     * stable grid identity that exists before any mesh is deployed — while the
+     * component it removes is keyed by its real id (`eds-accs-mesh`). Removal
+     * must address the latter; everything else addresses `id`.
+     */
+    componentId?: string;
     canRename: boolean;
 }
 
@@ -361,6 +370,34 @@ const MESH_MATRIX: Record<CardStatus, { dot: StatusDotVariant; face?: AttentionK
 };
 
 /**
+ * The mesh card's kebab items.
+ *
+ * Redeploy on a healthy idle mesh, unchanged from the baseline: whether a face
+ * button or a kebab item is the right home for the OTHER states is a question
+ * about every tile, not the mesh alone, and is not settled here.
+ *
+ * Remove requires a real keyed component id: `removeAppBuilderComponent` looks the
+ * entry up by id, so offering the verb without one would open a confirm dialog in
+ * front of a guaranteed "not found". A project whose mesh was never deployed has
+ * no entry and therefore no Remove.
+ *
+ * @param cardStatus - the mesh card's normalized status
+ * @param isActionDisabled - a mesh/demo operation is in flight
+ * @param componentId - the keyed appBuilderComponents id, when the mesh exists
+ * @returns the menu actions, in display order
+ */
+function meshMenuActions(
+    cardStatus: CardStatus,
+    isActionDisabled: boolean,
+    componentId: string | undefined,
+): CardAction[] {
+    if (isActionDisabled) return [];
+    const redeploy: CardAction[] = cardStatus === 'deployed' ? ['redeploy'] : [];
+    const remove: CardAction[] = componentId ? ['remove'] : [];
+    return [...redeploy, ...remove];
+}
+
+/**
  * Derive the mesh peer card. The status label is ALWAYS the live
  * `statusDisplay.text` (the retired badge's vocabulary, unchanged), and every
  * action carries `disabled: isActionDisabled` (mesh/demo operation in flight).
@@ -370,6 +407,7 @@ export function deriveMeshCard(
     status: MeshStatus | undefined,
     meshEntry: AppBuilderComponentState | undefined,
     isActionDisabled: boolean,
+    meshComponentId?: string,
 ): IntegrationCardModel {
     const cardStatus = toMeshCardStatus(status);
     const row = MESH_MATRIX[cardStatus];
@@ -390,13 +428,14 @@ export function deriveMeshCard(
         urlLabel: 'Endpoint',
         lastDeployed: formatLastDeployed(meshEntry?.lastDeployed),
         faceAction: row.face ? { kind: row.face, disabled: isActionDisabled } : undefined,
-        // Redeploy ONLY, and only on a healthy idle mesh. The mesh has no display
-        // name to change (canRename false) and no API access of its own, so there
-        // is nothing else to put here — but redeploy has to live somewhere now
-        // that the flyout's button bar is gone, and it is a deliberate action.
-        // Withheld while an op is in flight: an action you cannot take is not offered.
-        menuActions:
-            cardStatus === 'deployed' && !isActionDisabled ? (['redeploy'] as CardAction[]) : [],
+        // The mesh has no display name to change (canRename false) and no API
+        // access of its own, so the menu holds only the two verbs that apply:
+        // Redeploy on a healthy idle mesh, and Remove whenever a mesh component
+        // actually exists to tear down. Both are deliberate actions, which is why
+        // they live here rather than on the face. Withheld while an op is in
+        // flight: an action you cannot take is not offered.
+        menuActions: meshMenuActions(cardStatus, isActionDisabled, meshComponentId),
+        componentId: meshComponentId,
         canRename: false,
     };
 }

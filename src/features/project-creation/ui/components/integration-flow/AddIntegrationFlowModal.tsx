@@ -27,7 +27,7 @@ import React from 'react';
 import type { SelectableAppBuilderComponent } from '../../../services/appBuilderComponentSelection';
 import { isAdobeSignedIn, isMeshSelected } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
-import { meshKindOffered, type FlowMode , FlowStageId } from './flowStages';
+import { type FlowMode, FlowStageId } from './flowStages';
 import { ApiPickerStage } from './stages/ApiPickerStage';
 import { BlankStage } from './stages/BlankStage';
 import { CatalogStage } from './stages/CatalogStage';
@@ -113,15 +113,16 @@ function StageBody({
     const { state, updateState, meshComponent, catalog, onSignIn } = props;
     const selectedIds = state.selectedAppBuilderComponents ?? EMPTY_IDS;
     if (stage === 'kind') {
-        // The ONE mesh-offered rule (flowStages): available for the stack AND not
-        // already selected by EITHER key (incl. package-seeded mesh).
-        const meshOffered = meshKindOffered({
-            meshAvailable: meshComponent !== undefined,
-            meshSelected: meshComponent !== undefined && isMeshSelected(state, meshComponent.id),
-        });
+        // Availability and already-added stay SEPARATE here: the tile is hidden
+        // for a stack with no mesh, but disabled-with-a-reason once the project
+        // has one. They were collapsed into one boolean until 2026-08-04, which
+        // is why the tile could only ever vanish.
+        const meshAvailable = meshComponent !== undefined;
+        const meshAlreadyAdded = meshAvailable && isMeshSelected(state, meshComponent.id);
         return (
             <KindStage
-                meshOffered={meshOffered}
+                meshAvailable={meshAvailable}
+                meshAlreadyAdded={meshAlreadyAdded}
                 catalogCount={catalog.length}
                 kind={draft.kind}
                 onPickKind={flow.pickKind}

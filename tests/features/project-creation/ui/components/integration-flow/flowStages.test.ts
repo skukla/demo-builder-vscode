@@ -15,7 +15,6 @@ import {
     prevStage,
     canContinue,
     continueLabel,
-    meshKindOffered,
     type FlowDraft,
     type FlowStateSlice,
     type FlowMode,
@@ -545,20 +544,6 @@ describe('continueLabel', () => {
         expect(continueLabel('kind', catalogOrder, ADD)).toBe('Continue');
         expect(continueLabel('dest-project', catalogOrder, ADD)).toBe('Continue');
         expect(continueLabel('dest-project', destOrder, DEST)).toBe('Continue');
-    });
-});
-
-describe('meshKindOffered', () => {
-    it('offered when mesh is available and not already selected', () => {
-        expect(meshKindOffered(slice())).toBe(true);
-    });
-
-    it('hidden when mesh is already selected (either key, incl. package-seeded)', () => {
-        expect(meshKindOffered(slice({ meshSelected: true }))).toBe(false);
-    });
-
-    it('hidden when the stack does not support mesh', () => {
-        expect(meshKindOffered(slice({ meshAvailable: false }))).toBe(false);
     });
 });
 

@@ -149,17 +149,24 @@ function PanelContent({
                         <span className="integration-panel-status-message">{model.message}</span>
                     )}
                 </PanelRow>
-                {showKind && <PanelRow label="Kind">{model.kindLabel}</PanelRow>}
-                {/* Moved here from the card face (2026-08-03). It was cut from this
-                    panel originally BECAUSE the card showed it and the card sits
-                    scrimmed behind the flyout — that reason left with the line. On
-                    the card it also made every non-mesh kind a row taller than the
-                    mesh, so no two cards shared a baseline.
-                    `mono` only for an owner/repo identifier: the blank starter's
-                    line is prose and must not be typeset as code. */}
+                {/* ONE row, not the former Kind + Source pair. They printed the same
+                    fact in two registers — worst on the blank starter, where
+                    "Custom · blank starter" sat directly above "Blank starter — build
+                    it out". The kind becomes a muted PREFIX on the source identifier,
+                    so the pre-built/imported distinction (the only thing Kind still
+                    carried alone) survives in one line: `Pre-built · acme/repo`.
+
+                    `mono` only for an owner/repo identifier — the blank starter has no
+                    repo, so it shows its kind alone and must not be typeset as code.
+                    The prefix opts out of mono separately: it is prose. */}
                 {model.sourceLine && (
                     <PanelRow label="Source" mono={!model.sourceIsAi}>
-                        {model.sourceLine}
+                        {showKind && !model.sourceIsAi && (
+                            <span className="integration-panel-row-prefix">
+                                {model.kindLabel} ·{' '}
+                            </span>
+                        )}
+                        {model.sourceIsAi ? model.kindLabel : model.sourceLine}
                     </PanelRow>
                 )}
                 {destinationLabel && (

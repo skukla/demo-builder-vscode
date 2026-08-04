@@ -155,11 +155,17 @@ export function IntegrationsScreen({
         if (!meshStatusDisplay) {
             return integrationCards;
         }
+        // The mesh's REAL keyed id (`eds-accs-mesh`), not the card's stable
+        // `'mesh'` identity — Remove addresses the component, not the card.
+        const meshComponentId = listAppBuilderComponents(project).find(
+            (component) => component.kind === 'mesh',
+        )?.id;
         const meshCard = deriveMeshCard(
             meshStatusDisplay,
             meshStatus,
             getMeshAppBuilderComponent(project),
             isMeshBusy(meshStatus) || isTransitioning,
+            meshComponentId,
         );
         return [meshCard, ...integrationCards];
     }, [components, overrides, catalog, meshStatusDisplay, meshStatus, isTransitioning]);

@@ -7,10 +7,11 @@
  *   - header: InlineRenameField only when `canRename` (commit → onRename,
  *     an error string stays visible inline), quiet ✕ → onClose
  *   - body: key/value rows that render ONLY when their datum exists
- *     (Status + message, Kind, Destination, URL(s), APIs, Last deploy); the
- *     integration URL is a Link → onAction(model,'open'); the mesh endpoint
- *     is click-to-copy mono TEXT (GraphQL POST endpoint — not browsable).
- *     There is NO Source row — it reprinted the card's own face line.
+ *     (Status + message, Source, Destination, URL, APIs, Last deploy, then the
+ *     Endpoints group LAST); the integration URL is a Link → onAction(model,'open'),
+ *     while the mesh endpoint and every deployed endpoint are click-to-copy
+ *     (a GraphQL POST endpoint is not browsable, and an action URL's use is to
+ *     leave the panel). Kind is NOT its own row — it is a prefix on Source.
  *   - action bar: model.barActions with emphasis→variant mapping and
  *     disabled honored; deploying → a single disabled "Deploying…"
  *
@@ -220,11 +221,17 @@ describe('IntegrationDetailPanel', () => {
             expect(screen.getByText('Deploy step 3 of 5')).toBeInTheDocument();
         });
 
-        it('renders Kind', () => {
-            renderPanel(makeModel());
+        // Kind and Source were two rows printing the same fact in two registers.
+        // Merged into one: the kind is a muted prefix on the identifier.
+        it('renders the kind as a prefix on the Source row, with no Kind row', () => {
+            const { panel } = renderPanel(makeModel());
 
-            expect(screen.getByText('Kind')).toBeInTheDocument();
-            expect(screen.getByText('Imported repo')).toBeInTheDocument();
+            expect(screen.queryByText('Kind')).not.toBeInTheDocument();
+            expect(screen.getByText('Source')).toBeInTheDocument();
+            expect(panel!.querySelector('.integration-panel-row-prefix')?.textContent).toBe(
+                'Imported repo · '
+            );
+            expect(screen.getByText('acme/custom-app')).toBeInTheDocument();
         });
 
         // The Source row's mono-modifier pin retired with the row itself; the
@@ -509,8 +516,11 @@ describe('IntegrationDetailPanel', () => {
 
         // The blank starter's line is prose, not an identifier — it must not be
         // typeset as one.
-        it('renders the blank-starter caption WITHOUT the mono treatment', () => {
-            renderPanel(
+        // The blank starter is where the duplication was loudest: its kind and its
+        // source line were the same sentence twice. It has no repo, so the kind
+        // stands alone as the value — prose, never typeset as an identifier.
+        it('shows the blank starter its kind alone, unmonospaced and unprefixed', () => {
+            const { panel } = renderPanel(
                 makeModel({
                     kindLabel: 'Custom · blank starter',
                     sourceLine: 'Blank starter — build it out',
@@ -518,9 +528,12 @@ describe('IntegrationDetailPanel', () => {
                 })
             );
 
-            const value = screen.getByText('Blank starter — build it out');
-            expect(value).toBeInTheDocument();
+            const value = screen.getByText('Custom · blank starter');
             expect(value.className).not.toContain('mono');
+            expect(panel!.querySelector('.integration-panel-row-prefix')).toBeNull();
+            expect(
+                screen.queryByText('Blank starter — build it out')
+            ).not.toBeInTheDocument();
         });
 
         it('omits Source for the mesh, which has no owner/repo', () => {
@@ -529,13 +542,16 @@ describe('IntegrationDetailPanel', () => {
             expect(screen.queryByText('Source')).not.toBeInTheDocument();
         });
 
-        it('KEEPS Kind for catalog vs imported — it is now the ONLY thing telling them apart', () => {
-            // With Source gone, a pre-built entry and an imported repo differ by
-            // this row alone. Cutting Kind too would make them identical.
-            renderPanel(makeModel({ kindLabel: 'Pre-built' }));
+        it('KEEPS catalog vs imported apart — now via the prefix', () => {
+            // A pre-built entry and an imported repo can carry the same owner/repo.
+            // The kind is the only thing distinguishing them, so merging the rows
+            // had to preserve it rather than drop it.
+            const { panel } = renderPanel(makeModel({ kindLabel: 'Pre-built' }));
 
-            expect(screen.getByText('Kind')).toBeInTheDocument();
-            expect(screen.getByText('Pre-built')).toBeInTheDocument();
+            expect(panel!.querySelector('.integration-panel-row-prefix')?.textContent).toBe(
+                'Pre-built · '
+            );
+            expect(screen.getByText('acme/custom-app')).toBeInTheDocument();
         });
 
         // Status restates the card too but is deliberately KEPT: `model.message`

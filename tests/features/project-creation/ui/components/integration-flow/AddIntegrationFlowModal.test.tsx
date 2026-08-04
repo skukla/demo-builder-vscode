@@ -344,9 +344,13 @@ describe('AddIntegrationFlowModal — kind stage', () => {
         expect(button(/API Mesh/)).toBeInTheDocument();
     });
 
-    it('hides the mesh tile when mesh is already selected', () => {
+    // Changed 2026-08-04: already-added DISABLES the tile rather than hiding it.
+    // A vanished tile is ambiguous — it looks the same as a stack with no mesh at
+    // all (the case immediately below, which still hides).
+    it('disables the mesh tile, with a reason, when mesh is already selected', () => {
         renderModal({ initial: { selectedAppBuilderComponents: ['commerce-mesh'] } });
-        expect(screen.queryByRole('button', { name: /API Mesh/ })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /API Mesh/ })).toBeDisabled();
+        expect(screen.getByText('Already added — one per project')).toBeInTheDocument();
     });
 
     it('hides the mesh tile when the stack has no mesh component', () => {

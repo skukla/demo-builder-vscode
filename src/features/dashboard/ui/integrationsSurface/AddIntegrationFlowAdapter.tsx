@@ -134,6 +134,15 @@ export function AddIntegrationFlowAdapter({
             // guard, the "mesh already added" rule, AND `hasIntegrations` (something
             // references the destination), which gates the collapse.
             selectedAppBuilderComponents: allComponentIds,
+            // The SAME ids again, under the legacy key — this is what makes the
+            // "mesh already added" rule fire, and without it the rule never did.
+            // The two sides name a mesh differently: a project keys it by its
+            // COMPONENT id (`eds-accs-mesh`), while the rule tests the CATALOG id
+            // (`commerce-eds-mesh`). `isMeshSelected` bridges them by mapping the
+            // catalog id to its component ids and looking THEM up here — so with
+            // this key empty the lookup always missed, meshSelected stayed false,
+            // and a project with a mesh kept being offered another one.
+            selectedOptionalDependencies: allComponentIds,
             // Everything the modal session has written — caches the pickers read
             // back, API picks, a changed destination — layered on top.
             ...overrides,

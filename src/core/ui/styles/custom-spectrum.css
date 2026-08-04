@@ -5515,6 +5515,12 @@ div[class*="spectrum"] input[type="search"] {
     font-family: var(--spectrum-font-family-code, monospace);
     font-size: 12px;
 }
+/* The kind prefix inside a mono Source row ("Pre-built · acme/repo"). It is prose,
+   so it opts back out of the code face its container sets. */
+.integration-panel-row-prefix {
+    font-family: var(--spectrum-font-family-base, sans-serif);
+    color: var(--spectrum-global-color-gray-600);
+}
 /* One API per line — a comma-joined run of long Adobe API names is unreadable
    in a 352px column. */
 .integration-panel-api {

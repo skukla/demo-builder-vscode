@@ -122,6 +122,24 @@ describe('deriveMeshCard — status matrix', () => {
         expect(model.menuActions).toEqual(['redeploy']);
     });
 
+    // Remove needs a real keyed id: removeAppBuilderComponent looks the entry up,
+    // so offering the verb without one would confirm a guaranteed "not found".
+    it('offers Remove only once a real mesh component exists to tear down', () => {
+        const withComponent = deriveMeshCard(
+            display(),
+            'deployed',
+            meshEntry(),
+            false,
+            'eds-accs-mesh',
+        );
+        const withoutComponent = deriveMeshCard(display(), 'deployed', meshEntry(), false);
+
+        expect(withComponent.menuActions).toEqual(['redeploy', 'remove']);
+        expect(withComponent.componentId).toBe('eds-accs-mesh');
+        expect(withoutComponent.menuActions).toEqual(['redeploy']);
+        expect(withoutComponent.componentId).toBeUndefined();
+    });
+
     it('withholds Redeploy while a mesh/demo operation is in flight', () => {
         const model = deriveMeshCard(display(), 'deployed', meshEntry(), true);
 

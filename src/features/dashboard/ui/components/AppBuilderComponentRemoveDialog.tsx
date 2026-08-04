@@ -25,6 +25,12 @@ export interface AppBuilderComponentRemoveDialogProps {
     isOpen: boolean;
     /** The appBuilderComponent id being torn down (named in the warning). */
     appBuilderComponentId: string;
+    /**
+     * One extra consequence sentence, when the component's teardown reaches past
+     * itself. The mesh is the case that needs it: removing it also strips
+     * MESH_ENDPOINT from the storefront config.
+     */
+    consequence?: string;
     /** Called when the user confirms the destructive remove. */
     onConfirm: () => void;
     /** Called when the dialog is cancelled or dismissed (no teardown). */
@@ -40,6 +46,7 @@ export interface AppBuilderComponentRemoveDialogProps {
 export function AppBuilderComponentRemoveDialog({
     isOpen,
     appBuilderComponentId,
+    consequence,
     onConfirm,
     onClose,
 }: AppBuilderComponentRemoveDialogProps): React.ReactElement {
@@ -59,6 +66,7 @@ export function AppBuilderComponentRemoveDialog({
                             Remove <strong>{appBuilderComponentId}</strong>? This permanently undeploys it
                             from the cloud (a destructive teardown) and cannot be undone.
                         </Text>
+                        {consequence && <Text>{consequence}</Text>}
                     </Flex>
                 </Modal>
             )}

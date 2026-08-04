@@ -21,7 +21,7 @@
  * @module features/dashboard/ui/components/integrations/IntegrationsGrid
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppBuilderComponentRemoveDialog } from '../AppBuilderComponentRemoveDialog';
 import { ManageApisModal } from '../ManageApisModal';
 import { IntegrationCard } from './IntegrationCard';
@@ -129,12 +129,15 @@ export function IntegrationsGrid({
                 }
                 return;
             }
-            if (model.isMesh) {
-                handleMeshAction(action);
+            // Remove is checked BEFORE the mesh branch. handleMeshAction treats
+            // every verb it receives as "deploy", so a mesh Remove routed there
+            // would DEPLOY the mesh — the exact opposite of the asked-for action.
+            if (action === 'remove') {
+                setPendingRemoveId(model.componentId ?? model.id);
                 return;
             }
-            if (action === 'remove') {
-                setPendingRemoveId(model.id);
+            if (model.isMesh) {
+                handleMeshAction(action);
                 return;
             }
             if (action === 'manage-apis') {
@@ -148,6 +151,17 @@ export function IntegrationsGrid({
         },
         [handleMeshAction],
     );
+
+    // The mesh's teardown reaches past itself: removeAppBuilderComponent
+    // regenerates the storefront config WITHOUT the MESH_ENDPOINT it provided, so
+    // the storefront has no data layer until a mesh is deployed again. That is the
+    // honest consequence of the verb, and it belongs in front of the click.
+    const removeConsequence = useMemo((): string | undefined => {
+        const target = cards.find((card) => (card.componentId ?? card.id) === pendingRemoveId);
+        return target?.isMesh
+            ? 'Your storefront loses its API Mesh endpoint until you deploy a new mesh.'
+            : undefined;
+    }, [cards, pendingRemoveId]);
 
     const closeRemoveDialog = useCallback((): void => setPendingRemoveId(null), []);
     const confirmRemove = useCallback((): void => {
@@ -196,6 +210,7 @@ export function IntegrationsGrid({
             <AppBuilderComponentRemoveDialog
                 isOpen={pendingRemoveId !== null}
                 appBuilderComponentId={pendingRemoveId ?? ''}
+                consequence={removeConsequence}
                 onConfirm={confirmRemove}
                 onClose={closeRemoveDialog}
             />

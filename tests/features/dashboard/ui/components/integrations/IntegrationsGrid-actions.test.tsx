@@ -20,6 +20,7 @@ import {
     card,
     DEPLOYED_INTEGRATION,
     getClient,
+    MESH_COMPONENT,
     openPanel,
     renderGrid,
     resetGridMocks,
@@ -167,7 +168,10 @@ describe('IntegrationsGrid actions', () => {
             );
         });
 
-        it('offers no Manage APIs and no Remove in the mesh panel', async () => {
+        // No mesh COMPONENT exists here (withMesh renders the peer card from mesh
+        // status alone). removeAppBuilderComponent looks the entry up by id, so
+        // offering Remove without one would confirm a guaranteed "not found".
+        it('offers no Manage APIs, and no Remove without a mesh component', async () => {
             const user = setupUser();
             renderGrid({ withMesh: true });
 
@@ -179,6 +183,45 @@ describe('IntegrationsGrid actions', () => {
             expect(
                 within(panel).queryByRole('button', { name: /^remove$/i }),
             ).not.toBeInTheDocument();
+        });
+
+        // The mesh's card id is the literal 'mesh'; the component it tears down is
+        // keyed by its real id. Remove has to address the latter.
+        it('removes the mesh by its REAL component id, not the card id', async () => {
+            const user = setupUser();
+            const { onDeployMesh } = renderGrid({
+                withMesh: true,
+                appBuilderComponents: {
+                    'eds-accs-mesh': { ...MESH_COMPONENT },
+                },
+            });
+
+            const panel = await openPanel(user, 'API Mesh', 'Deployed');
+            await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
+            const dialog = screen.getByRole('dialog', { name: /remove app builder component/i });
+            await user.click(within(dialog).getByRole('button', { name: /^remove$/i }));
+
+            expect(getClient().postMessage).toHaveBeenCalledWith('removeAppBuilderComponent', {
+                id: 'eds-accs-mesh',
+            });
+            // THE landmine: handleMeshAction treats every verb as "deploy", so a
+            // Remove routed into the mesh branch would deploy the mesh instead.
+            expect(onDeployMesh).not.toHaveBeenCalled();
+        });
+
+        it('warns that removing the mesh costs the storefront its endpoint', async () => {
+            const user = setupUser();
+            renderGrid({
+                withMesh: true,
+                appBuilderComponents: { 'eds-accs-mesh': { ...MESH_COMPONENT } },
+            });
+
+            const panel = await openPanel(user, 'API Mesh', 'Deployed');
+            await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
+
+            expect(
+                screen.getByText(/storefront loses its API Mesh endpoint/i),
+            ).toBeInTheDocument();
         });
 
         it('routes the needs-auth mesh Sign in to onReAuthenticate', async () => {

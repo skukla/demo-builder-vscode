@@ -177,6 +177,17 @@ export const DEPLOYED_INTEGRATION: AppBuilderComponentState = {
 
 export const MESH_DISPLAY: StatusDisplay = { color: 'green', text: 'Deployed' };
 
+/**
+ * A persisted mesh component. Key it the way a real project does — by COMPONENT
+ * id (`eds-accs-mesh`), never by the card's `'mesh'` identity or a catalog id.
+ */
+export const MESH_COMPONENT: AppBuilderComponentState = {
+    kind: 'mesh',
+    status: 'deployed',
+    source: { owner: 'adobe', repo: 'commerce-mesh' },
+    endpoint: 'https://mesh.example.com/graphql',
+};
+
 /** Two deployed custom integrations (non-catalog ids ⇒ renamable). */
 export function twoDeployed(): Record<string, AppBuilderComponentState> {
     return {
@@ -228,6 +239,9 @@ export function renderGrid({
                   meshStatus,
                   getMeshAppBuilderComponent(project),
                   isMeshActionDisabled,
+                  // Same derivation as the screen: the mesh's REAL keyed id, which
+                  // is what Remove addresses. Absent when no mesh entry exists.
+                  listAppBuilderComponents(project).find((c) => c.kind === 'mesh')?.id,
               ),
               ...integrationCards,
           ]
