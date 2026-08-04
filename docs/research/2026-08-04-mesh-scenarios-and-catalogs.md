@@ -1,9 +1,22 @@
 # The scenario meshes, and the two catalogs that disagree about them
 
-**Date:** 2026-08-04
-**Type:** Hybrid — external repo inventory (four mesh repos, read via `gh api`) + codebase config audit
+**Captured:** 2026-08-04
+**Origin:** Investigation of a failing dashboard "Add API Mesh", which opened into an
+inventory of the four scenario mesh repositories (read live via `gh api`) and an audit of the
+two configs that claim to describe them.
 **Question:** What are the scenario-specific mesh repos, why does each exist, and why can the
 dashboard's "Add API Mesh" not deploy one?
+**Status:** Research complete and **fully implemented** — see Resolution below.
+Promoted from `.rptc/research/` because the per-repo scenario reasoning (why four meshes and
+not one) outlives the bug that prompted it: it is the reference for adding or retiring a mesh.
+
+**Shipped as:**
+- `bc70668a` — derive mesh catalog entries from the registry; drop `commerce-paas-mesh`
+- `68d4d7fa` — write the mesh `.env` before deploying from the dashboard
+- `87f73a69` — refresh the mesh `.env` on every redeploy (best-effort)
+
+**Load-bearing for:** anyone adding a mesh (add it to `stacks.json` + `components.json`; the
+catalog derives), and anyone touching `adobeEntityFetcher`'s CLI fallbacks.
 
 ## Summary
 
@@ -256,27 +269,26 @@ Flagged if it is ever revived: `CatalogService` is unfiltered while `LiveSearch`
 and both expose `productSearch` and `attributeMetadata`. The README claims "no name
 collisions"; the config does not obviously deliver that. Not deployed to confirm.
 
-## Original recommendation
+## Consequences weighed before implementing
 
-Delete the catalog's mesh rows and have the Add picker resolve meshes through the same
-`stacks.json` → `components.json` path creation uses. That is the fix consistent with this
-codebase's recurring defect shape — a documented single source with a live bypass — and it
-removes, rather than reconciles, the second contract.
-
-Consequences to weigh before implementing:
+Recorded because each was a real decision point, and the reasoning is what a later change
+needs — not just the outcome.
 
 - **Install id changes.** The keyed `appBuilderComponents` map and the OpenWhisk package name
   derive from the component id. A project holding a `commerce-eds-mesh` key would need the
-  legacy-id branch in `resolveKeyedComponentId`, or a migration.
-- **`commerce-paas-mesh` loses its only home.** It is in no stack, and unlike the other three it
-  carries no release tags — it is not version-managed as a shipped component. That points to
-  hand-off template rather than demo stack, but it is a product call.
-- **Git ref.** Registry `tag: stable` becomes the single pin. Verified present on
-  `commerce-eds-mesh`, `eds-accs-mesh`, and `headless-commerce-mesh`; absent on
+  legacy-id branch in `resolveKeyedComponentId`, or a migration. *Resolved:* no such project
+  could exist — the dashboard add always failed before persisting a deployed entry — so no
+  migration shipped. A project carrying that key from a failed add has debris, not state.
+- **`commerce-paas-mesh` loses its only home.** In no stack, and unlike the other three it
+  carries no release tags — not version-managed as a shipped component. *Resolved:* dropped.
+  It derives to nothing rather than being deleted, so re-adding it means adding it to a stack.
+- **Git ref.** Registry `tag: stable` became the single pin. Verified present on
+  `commerce-eds-mesh`, `eds-accs-mesh`, `headless-commerce-mesh`; absent on
   `commerce-paas-mesh`, which would need a tag before it could join the registry.
-- **`envSchema` disappears.** Nothing reads `COMMERCE_ENDPOINT`, so removing it costs nothing,
-  but the catalog schema declares the field — the integration row (`app-builder-shell`) already
-  omits it, so it can become optional rather than required.
+- **`envSchema` disappears.** Nothing reads `COMMERCE_ENDPOINT`. *Resolved:* removed for
+  meshes. The catalog schema still declares the field and the integration row
+  (`app-builder-shell`) already omits it, so it is effectively optional; tightening the schema
+  was left alone as unrelated churn.
 
 ## Verification performed
 
@@ -291,7 +303,13 @@ Consequences to weigh before implementing:
 
 ## Open questions
 
-1. Is `commerce-paas-mesh` meant to be offered in the extension at all? It is untagged and in no
-  stack, and its scenario overlaps `commerce-eds-mesh` and `headless-commerce-mesh`.
-2. Should the Add picker offer a mesh whose stack already implies one — or should it only offer
-  the stack's mesh, making Add a re-attach rather than a choice?
+1. ~~Is `commerce-paas-mesh` meant to be offered in the extension at all?~~ **Answered: no.**
+   See the audit above — it drops a `schemaHeaders` block the EDS mesh documents as required,
+   it is a one-day spike against a month of dropin-compatibility work, and its only addition
+   (a Live Search source) is redundant wherever it would land. Reviving it means adding it to
+   a stack *and* tagging it *and* resolving the `productSearch`/`attributeMetadata` overlap
+   flagged above.
+2. **Still open.** Should the Add picker offer a mesh whose stack already implies one — or
+   should it only offer the stack's mesh, making Add a re-attach rather than a choice? The
+   derivation makes either shape cheap; nothing in the current behaviour depends on the
+   answer.
