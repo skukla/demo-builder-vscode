@@ -25,9 +25,11 @@ import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import { republishStorefrontConfig } from '@/features/eds/services/storefrontRepublishService';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
+import { regenerateComponentEnvFile } from '@/features/project-creation/helpers';
 import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import type { ComponentRegistry } from '@/types/components';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
@@ -41,6 +43,13 @@ export interface RunnerDepsContext {
     subscriberClient: ApiSubscriberClient;
     catalog: AppBuilderComponentCatalogEntry[];
     secrets: vscode.SecretStorage;
+    /**
+     * Load the component registry — the source of a mesh's `requiredEnvVars`.
+     *
+     * A thunk rather than a loaded registry so the remove path, which needs no
+     * env file, never pays for the load.
+     */
+    loadRegistry: () => Promise<ComponentRegistry>;
 }
 
 /** Build the {@link OrgTarget} the subscriber needs from the project's identity. */
@@ -69,6 +78,19 @@ export function buildDefaultRunnerDeps(
         catalog: ctx.catalog,
         secrets: ctx.secrets,
         deployMesh: deployMeshComponent,
+        // The same registry-driven .env path project creation and EDS Reset use —
+        // not a dashboard-local variant. Loading the registry lazily keeps it off
+        // the remove path, which needs no env file.
+        writeComponentEnv: async (project, componentId, componentPath) => {
+            const registry = await ctx.loadRegistry();
+            await regenerateComponentEnvFile(
+                project,
+                registry,
+                ctx.logger,
+                componentId,
+                componentPath,
+            );
+        },
         // The ONE isolating deploy seam (ADR-011 D3 Step 03) — shared with the
         // singular deployAppHeadless path so no un-isolated deploy survives.
         deployApp: deployAppComponentIsolated,
@@ -122,5 +144,11 @@ export async function buildRunnerDepsContext(
         subscriberClient: createApiSubscriberClient(authManager),
         catalog: resolveCatalog(project),
         secrets: context.context.secrets,
+        loadRegistry: async () => {
+            const { ComponentRegistryManager } = await import(
+                '@/features/components/services/ComponentRegistryManager'
+            );
+            return new ComponentRegistryManager(context.context.extensionPath).loadRegistry();
+        },
     };
 }

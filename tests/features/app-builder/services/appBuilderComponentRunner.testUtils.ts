@@ -91,6 +91,8 @@ export function createDeps(overrides: Partial<Record<string, unknown>> = {}) {
             success: true,
             data: { url: 'https://app/api', deployedUrls: { 'web/app': 'https://app/api' } },
         }),
+        // Registry-driven .env write (mesh only; see appBuilderComponentRunner-envFile.test.ts).
+        writeComponentEnv: jest.fn().mockResolvedValue(undefined),
         // API subscriber (mocked).
         subscribeRequiredApis: jest.fn().mockResolvedValue(undefined),
         // Storefront republish (mocked; production wires republishStorefrontConfig).

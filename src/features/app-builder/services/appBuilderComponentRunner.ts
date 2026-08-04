@@ -83,6 +83,20 @@ export interface AppBuilderComponentRunnerDeps {
      * because the headless/MCP callers have nobody to tell.
      */
     onProgress?: (message: string, subMessage?: string) => void;
+    /**
+     * Write a component's `.env` from the REGISTRY contract, before its deploy.
+     *
+     * Mesh only. A mesh repo's `mesh.config.js` calls `require('dotenv').config()`
+     * and resolves every endpoint through `{env.*}`, so `aio api-mesh` fails with
+     * `ENOENT: ... open '.env'` without it — which is exactly what a dashboard mesh
+     * add used to do. Catalog app repos ship no `.env` by design and receive
+     * credentials through the deploy's env injection instead (runtimeCredentials).
+     */
+    writeComponentEnv: (
+        project: Project,
+        componentId: string,
+        componentPath: string
+    ) => Promise<void>;
     /** Mesh deploy tail (org-agnostic; the runner wraps it in withOrgContext). */
     deployMesh: (
         componentPath: string,
@@ -259,6 +273,23 @@ async function dispatchDeploy(
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<{ ok: true; outcome: DeployOutcome } | { ok: false; error: string }> {
     if (entry.kind === 'mesh') {
+        // The .env must exist before `aio api-mesh` reads it, and it is rewritten
+        // on every deploy — a redeploy after a credential change in Configure must
+        // not ship the previous endpoints. Sits here, in the one kind-dispatched
+        // seam, so add and redeploy cannot drift apart on it.
+        try {
+            // Step in the FIRST arg, matching the deploy tails' convention — the
+            // caller renders arg 1 as the current step.
+            deps.onProgress?.('Generating mesh configuration...');
+            await deps.writeComponentEnv(project, entry.id, componentPath);
+        } catch (error) {
+            // Deploying anyway is the ENOENT this step exists to prevent, so fail
+            // here and let the caller persist status:'error' with the folder kept.
+            return {
+                ok: false,
+                error: `Could not write the mesh .env: ${toError(error).message}`,
+            };
+        }
         // The mesh tail picks create-vs-update internally (its own verification
         // resolves the existing mesh); D1 persists no separate meshId to pass.
         const result = await deps.deployMesh(
@@ -478,9 +509,7 @@ export async function removeAppBuilderComponent(
         // and its Redeploy answered "This project does not have an API Mesh
         // component". A selected-but-absent mesh is an error state, not a resting
         // one — so the selection goes with the component.
-        ...(state.kind === 'mesh'
-            ? { componentSelections: withoutMeshDependencies(project) }
-            : {}),
+        ...(state.kind === 'mesh' ? { componentSelections: withoutMeshDependencies(project) } : {}),
     };
     delete cleared.appBuilderComponents[id];
     // Sync the caller's reference too — a later save from a stale reference

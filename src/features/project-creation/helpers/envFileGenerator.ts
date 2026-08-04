@@ -8,11 +8,24 @@ import { formatGroupName } from './formatters';
 import { generateConfigFile } from '@/core/config/configFileGenerator';
 import { COMPONENT_IDS } from '@/core/constants';
 import { normalizeIfUrl } from '@/core/validation/Validator';
-import { PAAS_CATALOG_SERVICE_ENDPOINT, CATALOG_SERVICE_ENDPOINT, ACCS_CATALOG_SERVICE_ENDPOINT } from '@/features/components/config/envVarKeys';
-import { generateConfigJson, extractConfigParamsFromConfigs, type ConfigGeneratorParams } from '@/features/eds/services/configGenerator';
+import {
+    PAAS_CATALOG_SERVICE_ENDPOINT,
+    CATALOG_SERVICE_ENDPOINT,
+    ACCS_CATALOG_SERVICE_ENDPOINT,
+} from '@/features/components/config/envVarKeys';
+import {
+    generateConfigJson,
+    extractConfigParamsFromConfigs,
+    type ConfigGeneratorParams,
+} from '@/features/eds/services/configGenerator';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { Logger, Project } from '@/types';
-import { TransformedComponentDefinition, EnvVarDefinition, ConfigFileDefinition, ComponentRegistry } from '@/types/components';
+import {
+    TransformedComponentDefinition,
+    EnvVarDefinition,
+    ConfigFileDefinition,
+    ComponentRegistry,
+} from '@/types/components';
 import { getMeshEndpointUrl } from '@/types/typeGuards';
 
 /**
@@ -37,11 +50,11 @@ function resolveComponentEnvVars(
             if (serviceDef?.backendSpecific && serviceDef.requiredEnvVarsByBackend) {
                 const backendSpecificVars = serviceDef.requiredEnvVarsByBackend[backendId];
                 if (backendSpecificVars) {
-                    const newVars = backendSpecificVars.filter(v => !explicitKeys.has(v));
+                    const newVars = backendSpecificVars.filter((v) => !explicitKeys.has(v));
                     allEnvVarKeys.push(...newVars);
                 }
             } else if (serviceDef?.requiredEnvVars) {
-                const newVars = serviceDef.requiredEnvVars.filter(v => !explicitKeys.has(v));
+                const newVars = serviceDef.requiredEnvVars.filter((v) => !explicitKeys.has(v));
                 allEnvVarKeys.push(...newVars);
             }
         }
@@ -75,7 +88,9 @@ export interface EnvGenerationContext {
     /** Get the selected backend component ID */
     getBackendId(): string | undefined;
     /** Get all component configurations (values from all components) */
-    getComponentConfigs(): Record<string, Record<string, string | number | boolean | undefined>> | undefined;
+    getComponentConfigs():
+        | Record<string, Record<string, string | number | boolean | undefined>>
+        | undefined;
     /** Get shared env var definitions from registry */
     getEnvVarDefinitions(): Record<string, Omit<EnvVarDefinition, 'key'>>;
     /** Get mesh endpoint if available */
@@ -194,7 +209,7 @@ export async function generateComponentEnvFile(
     // Build EnvVarDefinition objects by looking up from shared dictionary
     const sharedEnvVars = context.getEnvVarDefinitions();
     const varsByKey = new Map<string, EnvVarDefinition>();
-    
+
     // Collect all explicitly required vars, deduplicating by key (first one wins)
     for (const key of allKeys) {
         if (!varsByKey.has(key)) {
@@ -211,7 +226,7 @@ export async function generateComponentEnvFile(
 
     // Compute derived values using declarative metadata (derivedFrom)
     const derivedValues = new Map<string, string>();
-    
+
     for (const [key, envVar] of varsByKey.entries()) {
         if (envVar.derivedFrom && envVar.derivedFrom.length > 0) {
             // Try each source in order, use first non-empty value
@@ -219,7 +234,9 @@ export async function generateComponentEnvFile(
                 const sourceValue = getConfigValue(sourceKey);
                 if (sourceValue) {
                     derivedValues.set(key, sourceValue);
-                    context.logger.debug(`[Env Generator] Computed ${key} from ${sourceKey}: ${sourceValue}`);
+                    context.logger.debug(
+                        `[Env Generator] Computed ${key} from ${sourceKey}: ${sourceValue}`,
+                    );
                     break;
                 }
             }
@@ -277,36 +294,14 @@ export async function regenerateProjectEnvFiles(
     registry: ComponentRegistry,
     logger: Logger,
 ): Promise<void> {
-    const backendId = project.componentSelections?.backend;
-
-    const context: EnvGenerationContext = {
-        registry,
-        logger,
-        getBackendId: () => backendId,
-        getComponentConfigs: () =>
-            project.componentConfigs as Record<
-                string,
-                Record<string, string | number | boolean | undefined>
-            > | undefined,
-        getEnvVarDefinitions: () => registry.envVars || {},
-        // Keyed-first (ADR-011 D3 Steps 07+09): the endpoint lives on the keyed
-        // mesh appBuilderComponents entry (legacy meshState fallback inside).
-        getMeshEndpoint: () => getMeshEndpointUrl(project),
-        getSelectedPackage: () => project.selectedPackage,
-    };
-
-    const allDefinitions: TransformedComponentDefinition[] = [
-        ...(registry.components.frontends || []),
-        ...(registry.components.backends || []),
-        ...(registry.components.dependencies || []),
-        ...(registry.components.mesh || []),
-        ...(registry.components.integrations || []),
-    ];
+    const context = buildEnvGenerationContext(project, registry, logger);
 
     for (const [componentId, instance] of Object.entries(project.componentInstances || {})) {
-        if (!instance?.path) { continue; }
+        if (!instance?.path) {
+            continue;
+        }
 
-        const definition = allDefinitions.find((def) => def.id === componentId);
+        const definition = findRegistryDefinition(registry, componentId);
         if (!definition) {
             logger.warn(
                 `[Env Regen] No registry definition for installed component '${componentId}', skipping .env`,
@@ -319,11 +314,96 @@ export async function regenerateProjectEnvFiles(
 }
 
 /**
+ * Build the {@link EnvGenerationContext} for an EXISTING project.
+ *
+ * Extracted so the whole-project regeneration and the single-component write
+ * below resolve env values identically — same `derivedFrom` handling, same
+ * cross-component `componentConfigs` reads, same mesh endpoint.
+ */
+function buildEnvGenerationContext(
+    project: Project,
+    registry: ComponentRegistry,
+    logger: Logger,
+): EnvGenerationContext {
+    const backendId = project.componentSelections?.backend;
+    return {
+        registry,
+        logger,
+        getBackendId: () => backendId,
+        getComponentConfigs: () =>
+            project.componentConfigs as
+                | Record<string, Record<string, string | number | boolean | undefined>>
+                | undefined,
+        getEnvVarDefinitions: () => registry.envVars || {},
+        // Keyed-first (ADR-011 D3 Steps 07+09): the endpoint lives on the keyed
+        // mesh appBuilderComponents entry (legacy meshState fallback inside).
+        getMeshEndpoint: () => getMeshEndpointUrl(project),
+        getSelectedPackage: () => project.selectedPackage,
+    };
+}
+
+/** Find a component definition across every registry category. */
+function findRegistryDefinition(
+    registry: ComponentRegistry,
+    componentId: string,
+): TransformedComponentDefinition | undefined {
+    const allDefinitions: TransformedComponentDefinition[] = [
+        ...(registry.components.frontends || []),
+        ...(registry.components.backends || []),
+        ...(registry.components.dependencies || []),
+        ...(registry.components.mesh || []),
+        ...(registry.components.integrations || []),
+    ];
+    return allDefinitions.find((def) => def.id === componentId);
+}
+
+/**
+ * Write ONE installed component's .env from the registry, for an existing project.
+ *
+ * The dashboard's mesh add/redeploy entry point. A mesh repo's `mesh.config.js`
+ * calls `require('dotenv').config()` and resolves every endpoint through
+ * `{env.*}`, so this must run before `aio api-mesh` — without it the deploy dies
+ * on `ENOENT: no such file or directory, open '.env'`.
+ *
+ * Throws when the id has no registry definition. The whole-project regeneration
+ * above warns-and-skips instead, because it sweeps components it did not choose;
+ * a caller naming ONE component has asked for that file specifically, and
+ * continuing would deploy against the missing .env this function exists to write.
+ *
+ * @param project - Saved project (componentConfigs / selections / mesh endpoint)
+ * @param registry - Loaded component registry
+ * @param logger - Logger for debug output
+ * @param componentId - Registry component id (e.g. "eds-accs-mesh")
+ * @param componentPath - Installed component directory
+ * @throws When `componentId` resolves to no registry definition
+ */
+export async function regenerateComponentEnvFile(
+    project: Project,
+    registry: ComponentRegistry,
+    logger: Logger,
+    componentId: string,
+    componentPath: string,
+): Promise<void> {
+    const definition = findRegistryDefinition(registry, componentId);
+    if (!definition) {
+        throw new Error(
+            `No registry definition for component "${componentId}" — cannot generate its .env.`,
+        );
+    }
+    await generateComponentEnvFile(
+        componentPath,
+        componentId,
+        definition,
+        buildEnvGenerationContext(project, registry, logger),
+    );
+}
+
+/**
  * Generate all configuration files for a component using ProjectSetupContext
- * 
+ *
  * If component has explicit configFiles definition, generates only those files.
  * Otherwise, defaults to generating .env (or .env.local for Next.js).
- * 
+ *
  * @param componentPath - Path to the component directory
  * @param componentId - ID of the component
  * @param componentDef - Component definition from components.json
@@ -336,15 +416,17 @@ export async function generateComponentConfigFiles(
     context: ProjectSetupContext,
 ): Promise<void> {
     const configFiles = componentDef.configuration?.configFiles;
-    
+
     // If no explicit configFiles, use default .env behavior
     if (!configFiles || Object.keys(configFiles).length === 0) {
         await generateComponentEnvFile(componentPath, componentId, componentDef, context);
         return;
     }
-    
+
     // Generate all explicitly defined config files
-    context.logger.debug(`[Project Creation] Generating ${Object.keys(configFiles).length} config file(s) for ${componentDef.name}`);
+    context.logger.debug(
+        `[Project Creation] Generating ${Object.keys(configFiles).length} config file(s) for ${componentDef.name}`,
+    );
 
     for (const [filename, configFileDef] of Object.entries(configFiles)) {
         if (configFileDef.format === 'env') {
@@ -368,7 +450,7 @@ export async function generateComponentConfigFiles(
 
 /**
  * Generate a single non-env configuration file (json, yaml, etc.) using ProjectSetupContext
- * 
+ *
  * Takes env vars and optionally renames them for the output format.
  */
 async function generateSingleConfigFile(
@@ -379,18 +461,24 @@ async function generateSingleConfigFile(
     context: ProjectSetupContext,
 ): Promise<void> {
     if (configFileDef.format !== 'json') {
-        context.logger.warn(`[Project Creation] Unsupported config file format: ${configFileDef.format} for ${filename}`);
+        context.logger.warn(
+            `[Project Creation] Unsupported config file format: ${configFileDef.format} for ${filename}`,
+        );
         return;
     }
-    
+
     const filePath = path.join(componentPath, filename);
-    const templatePath = configFileDef.template 
+    const templatePath = configFileDef.template
         ? path.join(componentPath, configFileDef.template)
         : undefined;
-    
+
     // Get all relevant env var keys (component vars + service vars)
-    const allEnvVarKeys = resolveComponentEnvVars(componentDef, context.registry, context.getBackendId());
-    
+    const allEnvVarKeys = resolveComponentEnvVars(
+        componentDef,
+        context.registry,
+        context.getBackendId(),
+    );
+
     // Helper to get value from config
     const getConfigValue = (key: string): string | undefined => {
         const componentConfigs = context.getComponentConfigs();
@@ -403,29 +491,31 @@ async function generateSingleConfigFile(
         }
         return undefined;
     };
-    
+
     // Compute derived values FIRST (before processing keys)
     const derivedValues = new Map<string, string>();
-    
+
     // Derive CATALOG_SERVICE_ENDPOINT from backend-specific source
     const paasEndpoint = getConfigValue(PAAS_CATALOG_SERVICE_ENDPOINT);
     const accsEndpoint = getConfigValue(ACCS_CATALOG_SERVICE_ENDPOINT);
     if (paasEndpoint || accsEndpoint) {
         const derivedEndpoint = paasEndpoint || accsEndpoint;
         derivedValues.set(CATALOG_SERVICE_ENDPOINT, derivedEndpoint ?? '');
-        context.logger.debug(`[Config Generator] Computed ADOBE_CATALOG_SERVICE_ENDPOINT from ${paasEndpoint ? 'PAAS' : 'ACCS'}_CATALOG_SERVICE_ENDPOINT: ${derivedEndpoint}`);
+        context.logger.debug(
+            `[Config Generator] Computed ADOBE_CATALOG_SERVICE_ENDPOINT from ${paasEndpoint ? 'PAAS' : 'ACCS'}_CATALOG_SERVICE_ENDPOINT: ${derivedEndpoint}`,
+        );
     }
-    
+
     // Add derived keys to the list of keys to process
     const allKeys = [...allEnvVarKeys, ...Array.from(derivedValues.keys())];
-    
+
     // Build the output config
     const outputConfig: Record<string, unknown> = {};
-    
+
     // Process each env var (including derived ones)
     for (const envVarKey of allKeys) {
         let value = '';
-        
+
         // Get value from config
         // Priority: 1. Derived values, 2. Runtime values, 3. User-provided values
         if (derivedValues.has(envVarKey)) {
@@ -446,17 +536,17 @@ async function generateSingleConfigFile(
                 }
             }
         }
-        
+
         // Determine output field name (rename if mapping exists)
         const outputFieldName = configFileDef.fieldRenames?.[envVarKey] || envVarKey;
         outputConfig[outputFieldName] = value;
     }
-    
+
     // Add additional static fields
     if (configFileDef.additionalFields) {
         Object.assign(outputConfig, configFileDef.additionalFields);
     }
-    
+
     // Generate the file
     if (templatePath) {
         // Build placeholders for template replacement
@@ -465,7 +555,7 @@ async function generateSingleConfigFile(
             const placeholderKey = `{${fieldName.toUpperCase().replace(/-/g, '_')}}`;
             placeholders[placeholderKey] = String(value || '');
         }
-        
+
         await generateConfigFile({
             filePath,
             templatePath,
@@ -476,13 +566,9 @@ async function generateSingleConfigFile(
         });
     } else {
         // No template, write directly
-        await fsPromises.writeFile(
-            filePath,
-            JSON.stringify(outputConfig, null, 2),
-            'utf-8',
-        );
+        await fsPromises.writeFile(filePath, JSON.stringify(outputConfig, null, 2), 'utf-8');
     }
-    
+
     context.logger.debug(`[Project Creation] Created ${filename} for ${componentDef.name}`);
 }
 
@@ -537,10 +623,14 @@ async function generateEdsConfigJson(
 
     // Validate required params
     if (!githubOwner || !repoName) {
-        logger.warn('[Config Generator] Missing GitHub repo info, config.json may have incomplete values');
+        logger.warn(
+            '[Config Generator] Missing GitHub repo info, config.json may have incomplete values',
+        );
     }
     if (!daLiveOrg || !daLiveSite) {
-        logger.warn('[Config Generator] Missing DA.live info, config.json may have incomplete values');
+        logger.warn(
+            '[Config Generator] Missing DA.live info, config.json may have incomplete values',
+        );
     }
 
     // Generate config.json using canonical generator
@@ -556,5 +646,7 @@ async function generateEdsConfigJson(
     const configFilePath = path.join(componentPath, 'config.json');
     await fsPromises.writeFile(configFilePath, result.content, 'utf-8');
 
-    logger.info(`[Config Generator] Created config.json for EDS storefront (env: ${configParams.environmentType || 'paas'})`);
+    logger.info(
+        `[Config Generator] Created config.json for EDS storefront (env: ${configParams.environmentType || 'paas'})`,
+    );
 }
