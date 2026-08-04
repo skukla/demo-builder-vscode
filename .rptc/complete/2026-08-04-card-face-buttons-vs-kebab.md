@@ -1,6 +1,20 @@
 # Face buttons vs the kebab — decide it once, for every tile
 
 **Filed:** 2026-08-04
+**Status: SHIPPED 2026-08-04** — `495b8b78`, Option A, both card kinds at once.
+Face buttons are gone; every verb is a kebab item resolved through one
+`statusVerb()`. `FaceAction` / `AttentionKind` / `FACE_LABELS` /
+`IntegrationFaceButton` / `INTEGRATION_ACTIONS` and the mesh matrix's `face`
+column are deleted, along with the `stopPropagation` wrapper that existed only
+to shield the face button from its own card's click.
+
+**The open question, resolved:** a never-deployed card puts its verb FIRST in
+the kebab rather than using the body as a CTA. Cheap to revisit — the ordering
+is one line in `buildMenuActions`/`meshMenuActions` — but it reads correctly and
+needed no new affordance. A second gap surfaced while implementing: `MENU_ROWS`
+had no label or icon for `deploy`/`update`/`retry`/`sign-in`, since they had
+never been menu items; they would have rendered as raw ids.
+
 **Type:** Research, then a single cross-tile change. NOT a per-card fix.
 **Research: DONE** — `.rptc/research/card-face-buttons-vs-kebab/research.md`
 (2026-08-04). Recommends Option A: no face buttons anywhere, kebab carries every
