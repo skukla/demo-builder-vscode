@@ -1,17 +1,21 @@
 /**
  * Mesh Deploy Handler
  *
- * Handles the `deploy-api-mesh` message: the headless entry behind the
- * `deploy_mesh` MCP tool. Resolves the current project and runs the shared
- * {@link deployMeshHeadless} core with NO UI callbacks, then shapes the result
- * into a tool response. The dashboard's Deploy button goes through
- * `DeployMeshCommand` (same core, with UI) — this is the agent-facing path.
+ * Handles the `deploy-api-mesh` message: the entry behind the `deploy_mesh` MCP
+ * tool. Resolves the current project, runs the deploy through
+ * {@link deployMeshWithFeedback}, and shapes the result into a tool response.
+ *
+ * It ran the core with NO callbacks until 2026-08-04, so an agent could deploy
+ * the mesh and the user saw nothing for one to three minutes — while the same
+ * agent deploying an INTEGRATION raised a notification and animated its card,
+ * because that tool routes through the keyed runner. An agent-driven deploy is
+ * the case the notification exists for, so it now reports itself exactly like
+ * the UI path (`DeployMeshCommand`, same wrapper). What stays different is only
+ * what each does with the RESULT: toasts there, a tool response here.
  */
 
-import {
-    deployMeshHeadless,
-    type MeshDeployBlock,
-} from '@/features/mesh/services/deployMeshHeadless';
+import type { MeshDeployBlock } from '@/features/mesh/services/deployMeshHeadless';
+import { deployMeshWithFeedback } from '@/features/mesh/services/deployMeshWithFeedback';
 import { ErrorCode } from '@/types/errorCodes';
 import type { MessageHandler } from '@/types/handlers';
 
@@ -34,7 +38,7 @@ export const handleDeployApiMesh: MessageHandler = async (context) => {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const result = await deployMeshHeadless({
+    const result = await deployMeshWithFeedback({
         project,
         stateManager: context.stateManager,
         logger: context.logger,

@@ -326,14 +326,19 @@ type GuardableResult = {
  * extension already uses: a VS Code progress notification, a live row status on
  * the grid, and USER-log lines at start and finish.
  *
- * The three carry DIFFERENT registers, and that split is the point. The
- * notification is coarse and ambient — its title names the operation and its
- * object ("Deploying ERP Sync") and it spins for the duration, which is what a
- * user who is NOT on the Integrations page needs. The row carries the STEPS. The
- * two used to narrate the same step in the same instant, in slightly different
- * words; the general rule is that no two surfaces narrate the same step, and the
- * surface that exists carries it. (A path with no card — the projects-list kebab
- * redeploy — correctly keeps step text in its notification.)
+ * They carry DIFFERENT registers, and that split is the point. The question that
+ * produced it was not "why do these two say the same words" — it was **why do we
+ * run two notification systems at once, and what is each one worth?** Answer: the
+ * notification is the only feedback for someone who is NOT on the Integrations
+ * page, so it earns its place, but it needs no more than the operation and its
+ * object ("Deploying ERP Sync") plus a spinner. The row is for someone watching
+ * the card, and carries the STEPS. Both used to receive the identical string,
+ * which is what made the redundancy visible — but sameness of wording was the
+ * symptom, not the reason to change it.
+ *
+ * The rule that falls out: no two surfaces narrate the same step, and the surface
+ * that exists carries it. A path with no card — the projects-list kebab redeploy
+ * — correctly keeps step text in its notification.
  *
  * Before this, add/remove/deploy ran silently — the modal closed, `aio app
  * undeploy` ground away for tens of seconds, and nothing anywhere said so

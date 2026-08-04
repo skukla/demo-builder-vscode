@@ -1,13 +1,38 @@
 /**
- * handleDeployApiMesh — the headless mesh deploy behind the deploy_mesh MCP tool.
- * Resolves the current project and runs the shared deployMeshHeadless core with
- * no UI callbacks, shaping the result into a tool response.
+ * handleDeployApiMesh — the mesh deploy behind the deploy_mesh MCP tool.
+ *
+ * It used to run the core with NO callbacks, so an AGENT could deploy the mesh
+ * and the user saw nothing for one to three minutes — while the same agent
+ * deploying an INTEGRATION raised a notification and animated its card, because
+ * that tool routes through the keyed runner. Same user, same window, opposite
+ * behaviour. Nobody's attention is further from a deploy than when a chat turn
+ * started it, so this now reports itself exactly like the UI path.
  */
 
 const mockDeployMeshHeadless = jest.fn();
 jest.mock('@/features/mesh/services/deployMeshHeadless', () => ({
     deployMeshHeadless: (...args: unknown[]) => mockDeployMeshHeadless(...args),
 }));
+
+const mockSendMeshStatusUpdate = jest.fn();
+jest.mock('@/features/dashboard/commands/showDashboard', () => ({
+    ProjectDashboardWebviewCommand: {
+        sendMeshStatusUpdate: (...args: unknown[]) => mockSendMeshStatusUpdate(...args),
+    },
+}));
+
+jest.mock(
+    'vscode',
+    () => ({
+        window: {
+            withProgress: jest.fn(async (_o: unknown, task: (p: unknown) => unknown) =>
+                task({ report: jest.fn() }),
+            ),
+        },
+        ProgressLocation: { Notification: 15 },
+    }),
+    { virtual: true },
+);
 
 import { handleDeployApiMesh } from '@/features/mesh/handlers/deployHandler';
 import type { HandlerContext } from '@/types/handlers';
@@ -29,7 +54,7 @@ describe('handleDeployApiMesh', () => {
         expect(mockDeployMeshHeadless).not.toHaveBeenCalled();
     });
 
-    it('runs the shared core headlessly (no UI callbacks) and returns meshId + endpoint', async () => {
+    it('runs the shared core and returns meshId + endpoint', async () => {
         mockDeployMeshHeadless.mockResolvedValue({
             success: true,
             meshId: 'm1',
@@ -39,8 +64,6 @@ describe('handleDeployApiMesh', () => {
         const result = await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
 
         const call = mockDeployMeshHeadless.mock.calls[0][0];
-        expect(call.onStatus).toBeUndefined();
-        expect(call.onProgress).toBeUndefined();
         expect(call.extensionPath).toBe('/ext');
         expect(result).toEqual({
             success: true,
@@ -60,5 +83,56 @@ describe('handleDeployApiMesh', () => {
         const result = await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
         expect(result.success).toBe(false);
         expect(result.error).toContain('boom');
+    });
+});
+
+describe('handleDeployApiMesh — an agent-triggered deploy reports itself', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('opens the progress notification', async () => {
+        mockDeployMeshHeadless.mockResolvedValue({ success: true });
+        const vscode = require('vscode');
+
+        await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
+
+        expect(vscode.window.withProgress).toHaveBeenCalledWith(
+            expect.objectContaining({ title: 'Deploying API Mesh' }),
+            expect.any(Function),
+        );
+    });
+
+    it('pushes step detail to the mesh CARD, not into the notification', async () => {
+        const report = jest.fn();
+        const vscode = require('vscode');
+        vscode.window.withProgress.mockImplementation(
+            async (_o: unknown, task: (p: unknown) => unknown) => task({ report }),
+        );
+        mockDeployMeshHeadless.mockImplementation(async (deps: any) => {
+            deps.onProgress('Building component…');
+            return { success: true };
+        });
+
+        await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
+
+        // The same register split the UI path uses: notification stays coarse.
+        expect(report).not.toHaveBeenCalled();
+        expect(mockSendMeshStatusUpdate).toHaveBeenCalledWith('deploying', 'Building component…');
+    });
+
+    it('pushes status transitions to the card, endpoint included on success', async () => {
+        mockDeployMeshHeadless.mockImplementation(async (deps: any) => {
+            deps.onStatus('deploying', 'Starting deployment…');
+            deps.onStatus('deployed', undefined, 'https://mesh/graphql');
+            return { success: true };
+        });
+
+        await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
+
+        expect(mockSendMeshStatusUpdate).toHaveBeenCalledWith('deploying', 'Starting deployment…');
+        expect(mockSendMeshStatusUpdate).toHaveBeenCalledWith(
+            'deployed',
+            undefined,
+            'https://mesh/graphql',
+        );
     });
 });

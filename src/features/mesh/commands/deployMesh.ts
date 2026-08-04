@@ -45,58 +45,20 @@ export class DeployMeshCommand extends BaseCommand {
                     return;
                 }
 
-                const { deployMeshHeadless } = await import('../services/deployMeshHeadless');
-
-                // Run the shared, UI-free deploy core inside the progress
-                // notification, bridging its status/progress callbacks to the
-                // dashboard badge. The notification itself carries only the title
-                // below. The result is captured from the task (not withProgress's
-                // return) so it survives regardless.
-                let result: import('../services/deployMeshHeadless').DeployMeshHeadlessResult = {
-                    success: false,
-                };
-                await vscode.window.withProgress(
-                    {
-                        location: vscode.ProgressLocation.Notification,
-                        title: 'Deploying API Mesh',
-                        cancellable: false,
-                    },
-                    async () => {
-                        result = await deployMeshHeadless({
-                            project,
-                            stateManager: this.stateManager,
-                            logger: this.logger,
-                            extensionPath: this.context.extensionPath,
-                            // Forward the core's args faithfully — omit the
-                            // endpoint arg entirely for non-'deployed' statuses.
-                            onStatus: (status, message, endpoint) =>
-                                endpoint === undefined
-                                    ? ProjectDashboardWebviewCommand.sendMeshStatusUpdate(
-                                          status,
-                                          message,
-                                      )
-                                    : ProjectDashboardWebviewCommand.sendMeshStatusUpdate(
-                                          status,
-                                          message,
-                                          endpoint,
-                                      ),
-                            // Steps go to the CARD only. This used to also call
-                            // `progress.report`, so the mesh card read
-                            // "STARTING DEPLOYMENT…" while the notification beside
-                            // it announced the same moment in different words. The
-                            // notification keeps the coarse register — its title
-                            // and a spinner, which is what a user who is NOT on the
-                            // Integrations page needs; the card carries the steps,
-                            // because it is the thing being deployed.
-                            onProgress: (message, subMessage) => {
-                                void ProjectDashboardWebviewCommand.sendMeshStatusUpdate(
-                                    'deploying',
-                                    subMessage || message,
-                                );
-                            },
-                        });
-                    },
+                const { deployMeshWithFeedback } = await import(
+                    '../services/deployMeshWithFeedback'
                 );
+
+                // The notification + card bridges live in that wrapper, shared
+                // with the deploy_mesh MCP tool so an agent-triggered deploy looks
+                // the same as this one. The command keeps only what is its own:
+                // the lock (above), the toasts and result mapping (below).
+                const result = await deployMeshWithFeedback({
+                    project,
+                    stateManager: this.stateManager,
+                    logger: this.logger,
+                    extensionPath: this.context.extensionPath,
+                });
 
                 if (result.success) {
                     this.showSuccessMessage('API Mesh deployed successfully');
