@@ -68,6 +68,10 @@ function createContext(): HandlerContext & { sendMessage: jest.Mock } {
             // drops to the CLI and opens a browser. They must never be called
             // while unauthenticated.
             getProjects: jest.fn().mockResolvedValue([]),
+            // The P1 sibling: no CLI fallback, so a background read cannot open
+            // a browser even with a stale token.
+            getProjectsSdkOnly: jest.fn().mockResolvedValue([]),
+            getWorkspacesSdkOnly: jest.fn().mockResolvedValue([]),
             getWorkspaces: jest.fn().mockResolvedValue([]),
             getCurrentOrganization: jest.fn().mockResolvedValue({ name: 'Org' }),
         },
@@ -137,6 +141,50 @@ describe('when already signed in the guard is transparent', () => {
         await addIntegrationFlowHandlers['get-projects'](context, {});
 
         expect(context.authManager?.getProjects).toHaveBeenCalledTimes(1);
+    });
+});
+
+// A background read the user did not ask for must neither prompt NOR shell out.
+// Prompting is what the guard does for a destination picker, and it is right
+// there; for `useWizardEffects` hydrating a project's display title it turns a
+// cosmetic fetch into a modal at wizard startup. `quiet` opts a caller out of
+// both halves: no prompt, and the SDK-only fetch so the CLI can never run.
+describe('quiet reads neither prompt nor shell out', () => {
+    it('does not consult the sign-in guard', async () => {
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false });
+        const context = createContext();
+
+        await addIntegrationFlowHandlers['get-projects'](context, { quiet: true });
+
+        expect(mockEnsureAdobeIOAuth).not.toHaveBeenCalled();
+    });
+
+    it('uses the SDK-only fetch, never the CLI-fallback one', async () => {
+        const context = createContext();
+
+        await addIntegrationFlowHandlers['get-projects'](context, { quiet: true });
+
+        expect(context.authManager?.getProjectsSdkOnly).toHaveBeenCalledTimes(1);
+        expect(context.authManager?.getProjects).not.toHaveBeenCalled();
+    });
+
+    it('still answers on the wire so the caller resolves', async () => {
+        const context = createContext();
+
+        await addIntegrationFlowHandlers['get-projects'](context, { quiet: true });
+
+        expect(context.sendMessage.mock.calls.some((c) => c[0] === 'get-projects')).toBe(true);
+    });
+
+    it('leaves a normal (non-quiet) read on the guarded, CLI-capable path', async () => {
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
+        const context = createContext();
+
+        await addIntegrationFlowHandlers['get-projects'](context, {});
+
+        expect(mockEnsureAdobeIOAuth).toHaveBeenCalledTimes(1);
+        expect(context.authManager?.getProjects).toHaveBeenCalledTimes(1);
+        expect(context.authManager?.getProjectsSdkOnly).not.toHaveBeenCalled();
     });
 });
 

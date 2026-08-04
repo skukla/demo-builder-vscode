@@ -84,15 +84,13 @@ describe('AdobeEntityFetcher', () => {
             mockCacheManager,
             mockLogger,
             mockStepLogger,
-            { onNoOrgsAccessible },
+            { onNoOrgsAccessible }
         );
     });
 
     describe('getOrganizations()', () => {
         it('should return cached organizations if available', async () => {
-            const cachedOrgs = [
-                { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' },
-            ];
+            const cachedOrgs = [{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' }];
             mockCacheManager.getCachedOrgList.mockReturnValue(cachedOrgs);
 
             const result = await fetcher.getOrganizations();
@@ -130,9 +128,7 @@ describe('AdobeEntityFetcher', () => {
             } as ReturnType<typeof mockSDKClient.getClient>);
 
             mockCommandExecutor.execute.mockResolvedValue({
-                stdout: JSON.stringify([
-                    { id: 'org1', code: 'ORG1@AdobeOrg', name: 'CLI Org' },
-                ]),
+                stdout: JSON.stringify([{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'CLI Org' }]),
                 stderr: '',
                 code: 0,
             });
@@ -143,7 +139,7 @@ describe('AdobeEntityFetcher', () => {
             expect(result[0].name).toBe('CLI Org');
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio console org list --json',
-                expect.any(Object),
+                expect.any(Object)
             );
         });
 
@@ -175,7 +171,7 @@ describe('AdobeEntityFetcher', () => {
                 expect(result[0].name).toBe('CLI Org');
                 expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                     'aio console org list --json',
-                    expect.any(Object),
+                    expect.any(Object)
                 );
             } finally {
                 jest.useRealTimers();
@@ -188,9 +184,7 @@ describe('AdobeEntityFetcher', () => {
             mockSDKClient.ensureInitialized.mockResolvedValue(false);
 
             mockCommandExecutor.execute.mockResolvedValue({
-                stdout: JSON.stringify([
-                    { id: 'org1', code: 'ORG1@AdobeOrg', name: 'CLI Org' },
-                ]),
+                stdout: JSON.stringify([{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'CLI Org' }]),
                 stderr: '',
                 code: 0,
             });
@@ -302,6 +296,93 @@ describe('AdobeEntityFetcher', () => {
         });
     });
 
+    // P1 siblings for the entity reads a BACKGROUND caller makes. `getProjects`
+    // and `getWorkspaces` fall back to `aio console …` when the SDK returns
+    // nothing, and that CLI call triggers interactive browser auth on a stale
+    // token — fine for a read the user asked for (the destination pickers guard
+    // it and prompt), wrong for one they did not, such as hydrating a project's
+    // display title. These variants degrade to [] instead, exactly as
+    // getOrganizationsSdkOnly does.
+    describe('SDK-only entity reads (P1)', () => {
+        it('getProjectsSdkOnly returns SDK results without touching the CLI', async () => {
+            mockCacheManager.getCachedOrganization.mockReturnValue({
+                id: '123456',
+                code: 'ORG@AdobeOrg',
+                name: 'Test Org',
+            });
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getProjectsForOrg: jest.fn().mockResolvedValue({
+                    body: [{ id: 'proj1', name: 'Project 1', title: 'Project 1 Title' }],
+                }),
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            const result = await fetcher.getProjectsSdkOnly();
+
+            expect(result).toHaveLength(1);
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+        });
+
+        // THE regression this exists to prevent: an empty SDK read is exactly when
+        // the normal path shells out and opens a browser.
+        it('getProjectsSdkOnly returns [] WITHOUT the CLI fallback on an empty SDK read', async () => {
+            mockCacheManager.getCachedOrganization.mockReturnValue({
+                id: '123456',
+                code: 'ORG@AdobeOrg',
+                name: 'Test Org',
+            });
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getProjectsForOrg: jest.fn().mockRejectedValue(new Error('SDK error')),
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            const result = await fetcher.getProjectsSdkOnly();
+
+            expect(result).toEqual([]);
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+        });
+
+        it('getWorkspacesSdkOnly returns [] WITHOUT the CLI fallback on an empty SDK read', async () => {
+            mockCacheManager.getCachedOrganization.mockReturnValue({
+                id: '123456',
+                code: 'ORG@AdobeOrg',
+                name: 'Test Org',
+            });
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getWorkspacesForProject: jest.fn().mockRejectedValue(new Error('SDK error')),
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            const result = await fetcher.getWorkspacesSdkOnly({ projectId: 'proj1' });
+
+            expect(result).toEqual([]);
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+        });
+
+        // Control: the ordinary reads keep their fallback. Without this, deleting
+        // the fallback entirely would satisfy every assertion above.
+        it('the ordinary getProjects DOES still fall back to the CLI', async () => {
+            mockCacheManager.getCachedOrganization.mockReturnValue({
+                id: '123456',
+                code: 'ORG@AdobeOrg',
+                name: 'Test Org',
+            });
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getProjectsForOrg: jest.fn().mockRejectedValue(new Error('SDK error')),
+            } as ReturnType<typeof mockSDKClient.getClient>);
+            mockCommandExecutor.execute.mockResolvedValue({
+                stdout: '[]',
+                stderr: '',
+                code: 0,
+            } as never);
+
+            await fetcher.getProjects();
+
+            expect(mockCommandExecutor.execute).toHaveBeenCalled();
+        });
+    });
+
     describe('getProjects()', () => {
         it('should fetch projects via SDK with valid org ID', async () => {
             mockCacheManager.getCachedOrganization.mockReturnValue({
@@ -312,9 +393,7 @@ describe('AdobeEntityFetcher', () => {
             mockSDKClient.isInitialized.mockReturnValue(true);
             mockSDKClient.getClient.mockReturnValue({
                 getProjectsForOrg: jest.fn().mockResolvedValue({
-                    body: [
-                        { id: 'proj1', name: 'Project 1', title: 'Project 1 Title' },
-                    ],
+                    body: [{ id: 'proj1', name: 'Project 1', title: 'Project 1 Title' }],
                 }),
             } as ReturnType<typeof mockSDKClient.getClient>);
 
@@ -387,7 +466,7 @@ describe('AdobeEntityFetcher', () => {
             expect(mockStepLogger.logTemplate).not.toHaveBeenCalledWith(
                 'adobe-auth',
                 'operations.loading-projects',
-                expect.anything(),
+                expect.anything()
             );
         });
 
@@ -438,9 +517,7 @@ describe('AdobeEntityFetcher', () => {
             mockSDKClient.isInitialized.mockReturnValue(false);
 
             const warningLines = ' ›   Warning: update available\n';
-            const jsonData = JSON.stringify([
-                { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org 1' },
-            ]);
+            const jsonData = JSON.stringify([{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org 1' }]);
 
             mockCommandExecutor.execute.mockResolvedValue({
                 stdout: warningLines + jsonData,

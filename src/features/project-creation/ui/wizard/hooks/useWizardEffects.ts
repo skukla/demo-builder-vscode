@@ -18,11 +18,13 @@ interface UseWizardEffectsProps {
     /** Steps confirmed by user in edit mode (clicked Continue) */
     confirmedSteps: WizardStep[];
     stepContentRef: React.RefObject<HTMLDivElement | null>;
-    setComponentsData: React.Dispatch<React.SetStateAction<{
-        success: boolean;
-        type: string;
-        data: ComponentsData;
-    } | null>>;
+    setComponentsData: React.Dispatch<
+        React.SetStateAction<{
+            success: boolean;
+            type: string;
+            data: ComponentsData;
+        } | null>
+    >;
 }
 
 /**
@@ -79,30 +81,40 @@ export function useWizardEffects({
             currentTitle: project.title,
         });
 
-        webviewClient.request<{ success: boolean; data?: Array<{ id: string; name: string; title?: string }> }>('get-projects')
-            .then(response => {
+        // `quiet`: nobody asked for this. It fills in a display title the user
+        // may never notice is missing, so it must neither prompt for sign-in nor
+        // fall back to `aio console` (which opens a browser on a stale token).
+        // The host answers it with the SDK-only fetch and degrades to nothing.
+        webviewClient
+            .request<{
+                success: boolean;
+                data?: Array<{ id: string; name: string; title?: string }>;
+            }>('get-projects', { quiet: true })
+            .then((response) => {
                 const projects = response?.data;
                 if (!Array.isArray(projects)) return;
 
-                const matchingProject = projects.find(p => p.id === project.id);
+                const matchingProject = projects.find((p) => p.id === project.id);
                 if (hasValidTitle(matchingProject)) {
                     log.info('Hydrating project title from API', {
                         from: project.title,
                         to: matchingProject?.title,
                     });
-                    setState(prev => ({
+                    setState((prev) => ({
                         ...prev,
-                        adobeProject: prev.adobeProject ? {
-                            ...prev.adobeProject,
-                            title: matchingProject?.title,
-                        } : prev.adobeProject,
+                        adobeProject: prev.adobeProject
+                            ? {
+                                  ...prev.adobeProject,
+                                  title: matchingProject?.title,
+                              }
+                            : prev.adobeProject,
                     }));
                 }
             })
-            .catch(err => {
+            .catch((err) => {
                 log.warn('Failed to hydrate project title', err);
             });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Run once on mount
 
     // Load full component data with envVars using request-response pattern
@@ -122,7 +134,10 @@ export function useWizardEffects({
 
                 setComponentsData(response);
             } catch (error) {
-                log.error('Failed to load components data', error instanceof Error ? error : undefined);
+                log.error(
+                    'Failed to load components data',
+                    error instanceof Error ? error : undefined,
+                );
             }
         };
 

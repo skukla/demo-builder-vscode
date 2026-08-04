@@ -462,6 +462,19 @@ export class AuthenticationService {
     }
 
     /**
+     * Projects via the SDK ONLY — never the `aio console` fallback.
+     *
+     * For reads the user did not ask for (P1). Degrades to `[]` rather than
+     * shelling out, which on a stale token would open a browser.
+     */
+    async getProjectsSdkOnly(options?: { orgId?: string }): Promise<AdobeProject[]> {
+        return withTiming('getProjectsSdkOnly', async () => {
+            const { fetcher } = await this.ensureEntities();
+            return fetcher.getProjectsSdkOnly(options);
+        });
+    }
+
+    /**
      * Get workspaces. `target` threads the selected org + project (webview state) so the
      * fetch targets them instead of the stale in-memory cache.
      */
@@ -472,6 +485,17 @@ export class AuthenticationService {
         return withTiming('getWorkspaces', async () => {
             const { fetcher } = await this.ensureEntities();
             return fetcher.getWorkspaces(target);
+        });
+    }
+
+    /** Workspaces via the SDK ONLY — the sibling of {@link getProjectsSdkOnly}. */
+    async getWorkspacesSdkOnly(target?: {
+        orgId?: string;
+        projectId?: string;
+    }): Promise<AdobeWorkspace[]> {
+        return withTiming('getWorkspacesSdkOnly', async () => {
+            const { fetcher } = await this.ensureEntities();
+            return fetcher.getWorkspacesSdkOnly(target);
         });
     }
 

@@ -119,9 +119,14 @@ export async function handleEnsureOrgSelected(context: HandlerContext): Promise<
  */
 export async function handleGetProjects(
     context: HandlerContext,
-    payload?: { orgId?: string },
+    payload?: { orgId?: string; quiet?: boolean },
 ): Promise<DataResult<AdobeProject[]>> {
     const orgId = payload?.orgId;
+    // `quiet` = a read the user did not ask for (background hydration). It takes
+    // the SDK-only fetch, which degrades to [] instead of falling back to `aio
+    // console project list --json` — a CLI call that opens a browser on a stale
+    // token. P1: nothing the user did not initiate may launch a browser.
+    const quiet = payload?.quiet === true;
 
     // When the caller names a target org, establish targeting through the
     // canonical helper before fetching. A mismatch yields a structured,
@@ -147,9 +152,11 @@ export async function handleGetProjects(
 
         // Wrap getProjects with timeout (30 seconds). Thread orgId so the fetch
         // runs under org-context targeting (AIO_CONSOLE_* env, no global mutation).
-        const projectsPromise = orgId
-            ? context.authManager?.getProjects({ orgId })
-            : context.authManager?.getProjects();
+        const projectsPromise = quiet
+            ? context.authManager?.getProjectsSdkOnly(orgId ? { orgId } : undefined)
+            : orgId
+              ? context.authManager?.getProjects({ orgId })
+              : context.authManager?.getProjects();
         if (!projectsPromise) {
             throw new Error('Auth manager not available');
         }

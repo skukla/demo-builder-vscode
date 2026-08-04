@@ -443,12 +443,34 @@ export class AdobeEntityFetcher {
     }
 
     /**
+     * Get projects via the SDK ONLY — never the CLI fallback.
+     *
+     * The projects sibling of {@link getOrganizationsSdkOnly}, for reads the user
+     * did not ask for. `aio console project list --json` triggers interactive
+     * browser auth on a stale token, which must never happen for a background
+     * fetch (P1). A failed or empty SDK read degrades to `[]`; the caller shows
+     * nothing rather than prompting.
+     *
+     * @param options.orgId - target org (threaded, not the ambient CLI selection)
+     * @returns the projects, or `[]` when the SDK cannot answer
+     */
+    async getProjectsSdkOnly(options?: { orgId?: string }): Promise<AdobeProject[]> {
+        const params = { ...options, silent: true, sdkOnly: true };
+        if (options?.orgId) {
+            return withOrgContext({ orgId: options.orgId }, () => this.fetchProjects(params));
+        }
+        return this.fetchProjects(params);
+    }
+
+    /**
      * Core project-fetch logic (SDK-first with CLI fallback).
      * Wrapped by getProjects, which optionally applies org-context targeting.
      */
     private async fetchProjects(options?: {
         silent?: boolean;
         orgId?: string;
+        /** P1: skip the `aio console` fallback entirely (see getProjectsSdkOnly). */
+        sdkOnly?: boolean;
     }): Promise<AdobeProject[]> {
         const startTime = Date.now();
         const silent = options?.silent ?? false;
@@ -467,7 +489,7 @@ export class AdobeEntityFetcher {
                 options?.orgId,
             );
 
-            if (mappedProjects.length === 0) {
+            if (mappedProjects.length === 0 && !options?.sdkOnly) {
                 mappedProjects = await this.executeCLIFallback<RawAdobeProject, AdobeProject>(
                     'aio console project list --json',
                     mapProjects,
@@ -531,10 +553,33 @@ export class AdobeEntityFetcher {
     }
 
     /**
+     * Get workspaces via the SDK ONLY — never the CLI fallback.
+     *
+     * The workspaces sibling of {@link getProjectsSdkOnly}; same P1 reasoning.
+     *
+     * @param target - threaded org + project to target
+     * @returns the workspaces, or `[]` when the SDK cannot answer
+     */
+    async getWorkspacesSdkOnly(target?: {
+        orgId?: string;
+        projectId?: string;
+    }): Promise<AdobeWorkspace[]> {
+        const cachedOrg = this.cacheManager.getCachedOrganization();
+        const cachedProject = this.cacheManager.getCachedProject();
+        const orgId = await this.resolveEffectiveOrgId(target?.orgId ?? cachedOrg?.id);
+        const projectId = target?.projectId ?? cachedProject?.id;
+        return this.fetchWorkspaces(orgId, projectId, true);
+    }
+
+    /**
      * Core workspace-fetch (SDK-first with CLI fallback). Wrapped by getWorkspaces, which
      * applies org-context targeting.
      */
-    private async fetchWorkspaces(orgId?: string, projectId?: string): Promise<AdobeWorkspace[]> {
+    private async fetchWorkspaces(
+        orgId?: string,
+        projectId?: string,
+        sdkOnly = false,
+    ): Promise<AdobeWorkspace[]> {
         const startTime = Date.now();
 
         try {
@@ -564,7 +609,7 @@ export class AdobeEntityFetcher {
                 );
             }
 
-            if (mappedWorkspaces.length === 0) {
+            if (mappedWorkspaces.length === 0 && !sdkOnly) {
                 mappedWorkspaces = await this.executeCLIFallback<RawAdobeWorkspace, AdobeWorkspace>(
                     'aio console workspace list --json',
                     mapWorkspaces,

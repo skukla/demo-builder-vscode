@@ -77,6 +77,16 @@ function requireAdobeAuth<H extends (context: HandlerContext, payload: never) =>
     handler: H,
 ): H {
     const guarded = async (context: HandlerContext, payload: unknown): Promise<unknown> => {
+        // A `quiet` caller is a read the user did not ask for (a background
+        // hydration). Prompting it would put a modal in front of someone who
+        // clicked nothing; the handler answers non-interactively instead, via the
+        // SDK-only fetch that cannot reach `aio console`. Opting out of the prompt
+        // is only safe BECAUSE of that second half — see handleGetProjects.
+        if ((payload as { quiet?: boolean } | undefined)?.quiet) {
+            const run = handler as unknown as (c: HandlerContext, p: unknown) => Promise<unknown>;
+            return run(context, payload);
+        }
+
         const authResult = await ensureAdobeIOAuth({
             authManager: ServiceLocator.getAuthenticationService(),
             logger: context.logger,
