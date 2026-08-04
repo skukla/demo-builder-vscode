@@ -2,6 +2,12 @@
 
 **Filed:** 2026-08-04
 **Type:** Research, then a single cross-tile change. NOT a per-card fix.
+**Research: DONE** — `.rptc/research/card-face-buttons-vs-kebab/research.md`
+(2026-08-04). Recommends Option A: no face buttons anywhere, kebab carries every
+verb, card body stays the open-detail affordance. Supported by an inventory showing
+integrations is the ONLY surface with a face button, and by Adobe's own Spectrum
+guidance. What remains is the implementation decision in the research doc's "Open
+questions" — chiefly what a never-deployed card looks like without a face verb.
 **Origin:** Reported against the mesh card: *"I don't see a Redeploy option for a
 mesh in the kebab. (Shouldn't have a Retry button on a mesh card.)"* Two attempts
 to answer it card-by-card produced a mesh-only exception both times, which is the

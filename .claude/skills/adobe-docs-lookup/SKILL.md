@@ -24,6 +24,7 @@ page was on a domain none of the doc servers index.
 | AEM as a Cloud Service, pipelines, replication | **`fluffyjaws`** `experience_league_documentation_search` | ExL Q&A, AEM-weighted by design |
 | "Has Adobe said anything about this?" — internal guidance, known issues, field intel | **`fluffyjaws`**, non-ExL tools — see below | Corpora NOTHING else reaches |
 | Helix / EDS / aem.live | **`helix-mcp-server`** `aem-docs-search` | Its own corpus |
+| **Spectrum DESIGN guidance** (should a card have X, which control for Y) | **`fluffyjaws`** `full_documentation_search` / `slack_search` | `spectrum.adobe.com` is unreadable (below), and the design team answers these in internal channels. Context7's react-spectrum is the API, not the usage rule |
 | Nothing above, or need sourced cross-checking | **Perplexity** (`perplexity_ask` / `perplexity_research`) | Project CLAUDE.md prefers it over WebSearch |
 
 **Default for anything App Builder:** go to `developer.adobe.com` via `fetch` first. Reach for
@@ -174,6 +175,12 @@ and read its links, or use `adobe-exl` / Perplexity to SURFACE the URL and then 
 page itself. Community posts are useful for locating a page and unreliable for its content:
 the post that pointed here cited a path whose `app_builder_guides` segment now 404s.
 
+**`spectrum.adobe.com` cannot be fetched at all.** Verified 2026-08-04: it is a
+client-rendered Next.js app and returns a bare `<head>` shell with `raw: true` too.
+The design guidance is real but unreachable this way — route Spectrum questions to
+fluffyjaws (row above), and if a PUBLIC citation is required, say the page needs a
+browser rather than paraphrasing from memory.
+
 **A fetch that returns empty or near-empty is not proof the page is empty.** Some pages are
 JS-rendered and come back as a shell. Check `raw: true` before concluding the content does not
 exist, and say "could not read it" rather than "it does not say".
@@ -245,8 +252,16 @@ Trust these only as far as they were tested:
 
 - **Verified working:** `adobe-exl` search · `MCP_DOCKER fetch` on developer.adobe.com ·
   Context7 `resolve-library-id` for Adobe packages
+- **Verified working:** `fluffyjaws` `full_documentation_search` post-`fj login` — reaches
+  wiki, Slack and SharePoint corpora nothing public has. Two questions it answered on
+  2026-08-04 that NO public source could: what a Console project delete does to the Runtime
+  namespace, and Spectrum's card-actions guidance.
+- **Perplexity:** was returning `401 Invalid API key` on 2026-08-04; the stored key was stale
+  and `docker mcp secret set` had been silently refusing to overwrite it. Fixed and re-verified
+  the same day. If it 401s again, that is a KEY-STORE problem, not a session you can refresh by
+  rephrasing — see the global `mcp-secret-rotation` skill, which carries the whole ladder.
 - **Untested:** `adobe-exl` `fetch_article_content` against non-ExL domains (its description
   scopes it to Experience League articles — assume it cannot reach developer.adobe.com until
-  someone proves otherwise) · `fluffyjaws` post-login · Perplexity this session
+  someone proves otherwise)
 
 If you test one of these, update this row rather than leaving the next reader to re-discover it.
