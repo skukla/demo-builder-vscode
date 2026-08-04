@@ -140,6 +140,34 @@ function needsUserInputs(entry: AppBuilderComponentCatalogEntry): boolean {
 }
 
 /**
+ * Re-run the project status after the component SET changed.
+ *
+ * The status is derived from the set, so adding, deploying or removing a
+ * component makes it stale. Same shape as rename / re-authenticate / forced org
+ * switch, which already re-run `handleRequestStatus` after their mutations.
+ *
+ * REGRESSION (2026-08-04, live): removing a mesh left its card on the grid
+ * reading "MESH DEPLOYED". The keyed entry was cleared and a fresh snapshot was
+ * sent, but nothing refreshed `meshStatus`, so the derived mesh card outlived the
+ * component it described.
+ *
+ * NOT called from `postComponentsSnapshot`, even though every one of these sites
+ * pairs the two: RENAME also posts a snapshot, and rename is a local metadata
+ * write that deliberately runs no Adobe guards so it works offline. This helper
+ * reaches `ensureAdobeIOAuth` through `handleRequestStatus`, so folding it into
+ * the snapshot would have put a guard on the offline path — a pinned property,
+ * and the test that pins it is what caught the attempt. Rename does not need it
+ * anyway: it changes a display name, not the set.
+ *
+ * LAZY import: `dashboardHandlers` imports FROM this module, so a static import
+ * would close a cycle.
+ */
+async function refreshProjectStatus(context: HandlerContext): Promise<void> {
+    const { handleRequestStatus } = await import('@/features/dashboard/handlers/dashboardHandlers');
+    await handleRequestStatus(context);
+}
+
+/**
  * The live per-row status vocabulary pushed over the keyed
  * `appBuilderComponentStatusUpdate` channel: the persisted union plus the
  * transient 'deploying'. Shared with the channel's sender
@@ -275,10 +303,12 @@ export const handleAddAppBuilderComponent: MessageHandler<{
         // Even a failed add may have persisted the entry (clone/deploy died
         // mid-flight) — the grid needs the fresh map either way.
         await postComponentsSnapshot(context);
+        await refreshProjectStatus(context);
         return { success: false, error: result.error };
     }
     await postRowStatus(entry.id, 'deployed', undefined);
     await postComponentsSnapshot(context);
+    await refreshProjectStatus(context);
     return { success: true };
 };
 
@@ -474,6 +504,7 @@ async function deployById(context: HandlerContext, requestedId: string | undefin
     );
     // Terminal either way — the persisted status changed; refresh the grid map.
     await postComponentsSnapshot(context);
+    await refreshProjectStatus(context);
     return result.success ? { success: true } : { success: false, error: result.error };
 }
 
@@ -531,6 +562,7 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
     }
     // The entry left the persisted map — without a snapshot the card lingers.
     await postComponentsSnapshot(context);
+    await refreshProjectStatus(context);
     return { success: true };
 };
 

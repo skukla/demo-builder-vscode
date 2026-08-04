@@ -31,6 +31,7 @@ import {
     mockEnsureAdobeIOAuth,
     mockGetAppBuilderComponentEntry,
     mockRemoveAppBuilderComponent,
+    mockHandleRequestStatus,
     mockSendAppBuilderComponentStatusUpdate,
     mockSendAppBuilderComponentsSnapshot,
     mockTestDeveloperPermissions,
@@ -512,5 +513,57 @@ describe('progress opens before the guards run', () => {
 
         expect(order[0]).toBe('progress');
         expect(order).toContain('guards');
+    });
+});
+
+// The project status is DERIVED from the component set, so an op that changes
+// the set makes it stale — the same reason rename / re-authenticate / forced org
+// switch already re-run handleRequestStatus after their mutations.
+//
+// REGRESSION (2026-08-04, live): removing a mesh left its card on the grid
+// reading "MESH DEPLOYED". The keyed entry was cleared and a fresh snapshot was
+// sent, but nothing refreshed meshStatus, so the derived card outlived the
+// component it described.
+describe('status refresh after a set-changing operation', () => {
+    // The context must be built INSIDE the test, after the permission mock —
+    // an it.each table is evaluated at describe time, before any beforeEach.
+    it.each([
+        ['add', (ctx: never) => handleAddAppBuilderComponent(ctx, { id: 'erp-sync' })],
+        ['deploy', (ctx: never) => handleDeployAppBuilderComponent(ctx, { id: 'erp-sync' })],
+        ['remove', (ctx: never) => handleRemoveAppBuilderComponent(ctx, { id: 'erp-sync' })],
+    ])('%s re-runs the project status', async (_label, run) => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+
+        await run(mockContext as never);
+
+        expect(mockHandleRequestStatus).toHaveBeenCalled();
+    });
+
+    // The exclusion, and it is load-bearing: rename is a local metadata write
+    // that deliberately runs NO Adobe guards so it works offline, and
+    // handleRequestStatus reaches ensureAdobeIOAuth. Folding the refresh into
+    // postComponentsSnapshot — which rename also calls — put a guard on the
+    // offline path; the pinned no-guards test caught it. Rename does not need a
+    // refresh anyway: it changes a display name, not the set.
+    it('rename does NOT re-run the project status', async () => {
+        const { mockContext } = setupMocks({
+            appBuilderComponents: {
+                'firefly-image-gen': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    name: 'Firefly Image Gen',
+                    source: { owner: 'skukla', repo: 'app-builder-shell' },
+                },
+            },
+        } as never);
+        mockGetAppBuilderComponentEntry.mockReturnValue(undefined);
+
+        await handleRenameAppBuilderComponent(mockContext, {
+            id: 'firefly-image-gen',
+            name: 'Renamed',
+        });
+
+        expect(mockHandleRequestStatus).not.toHaveBeenCalled();
     });
 });

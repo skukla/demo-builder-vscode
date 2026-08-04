@@ -301,6 +301,40 @@ describe('buildIntegrationCards', () => {
         expect(cards[0].id).toBe('erp-sync');
     });
 
+    // REGRESSION (2026-08-04, live): removing a mesh showed TWO cards — the
+    // derived peer card ("API Mesh — MESH DEPLOYED") beside a synthesized one
+    // ("EDS ACCS API Mesh — REMOVING MESH"). `knownIds` is built from the
+    // INTEGRATIONS only, so the mesh's own id is absent from it, and the row
+    // status the operation pushes for that id reads as an unknown-id deploying
+    // override — the one case that synthesizes a card. The mesh is already
+    // represented; the caller says so by naming the id its mesh card covers.
+    it('does not synthesize a second card for the id the mesh card already covers', () => {
+        const cards = buildIntegrationCards(
+            [{ id: 'eds-accs-mesh', ...meshEntry() }],
+            { 'eds-accs-mesh': { status: 'deploying', message: 'Removing Mesh' } },
+            undefined,
+            'eds-accs-mesh',
+        );
+
+        expect(cards).toEqual([]);
+    });
+
+    // The add case, which is why the synthesis cannot simply be dropped for
+    // mesh ids: with no mesh deployed there is no derived card to carry the
+    // progress, so the synthesized one is the ONLY feedback. The caller passes
+    // no covered id then.
+    it('still synthesizes for a mesh id when no mesh card is rendered', () => {
+        const cards = buildIntegrationCards(
+            [],
+            { 'eds-accs-mesh': { status: 'deploying', message: 'Adding Mesh' } },
+            undefined,
+            undefined,
+        );
+
+        expect(cards).toHaveLength(1);
+        expect(cards[0].id).toBe('eds-accs-mesh');
+    });
+
     it('synthesizes a pending card for an unknown-id deploying override (catalog name + source)', () => {
         const catalog = [FAKE_CATALOG['sfdc-connector']];
         const cards = buildIntegrationCards([], { 'sfdc-connector': { status: 'deploying' } }, catalog);

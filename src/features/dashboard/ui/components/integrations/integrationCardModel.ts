@@ -67,7 +67,6 @@ function statusVerb(status: CardStatus): CardAction | undefined {
     return undefined;
 }
 
-
 /**
  * Live per-card status override pushed via `appBuilderComponentStatusUpdate`
  * (merged id-keyed by the useRowStatusOverrides hook; shape identical to the
@@ -141,7 +140,6 @@ const INTEGRATION_STATUS_DISPLAY: Record<
     stale: { label: 'Update available', dot: 'warning' },
     error: { label: 'Deploy failed', dot: 'error' },
 };
-
 
 /**
  * The integration face matrix: the at-most-one ATTENTION verb per status.
@@ -295,7 +293,6 @@ export function deriveIntegrationCard(
     const primaryUrl = resolvePrimaryUrl(entry);
     const { label: staticLabel, dot: dotVariant } = INTEGRATION_STATUS_DISPLAY[status];
 
-
     // While deploying, the live step IS the label — because the card FACE renders
     // `statusLabel` and nothing else (IntegrationCard.tsx). Putting the step on
     // `message` alone left the face stuck on a constant "Deploying…" and sent the
@@ -308,7 +305,6 @@ export function deriveIntegrationCard(
     // leaves its reason for the drawer.
     const liveStep = status === 'deploying' ? override?.message : undefined;
     const statusLabel = liveStep ?? staticLabel;
-
 
     return {
         id: entry.id,
@@ -467,15 +463,30 @@ export function buildIntegrationCards(
     components: IdentifiedAppBuilderComponent[],
     overrides: Record<string, RowStatusOverride>,
     catalog?: AppBuilderComponentCatalogEntry[],
+    meshCardComponentId?: string,
 ): IntegrationCardModel[] {
     const integrations = components.filter((component) => component.kind === 'integration');
     const cards = integrations.map((component) =>
         deriveIntegrationCard(component, overrides[component.id]),
     );
 
-    const knownIds = new Set(integrations.map((component) => component.id));
+    // Ids already on screen. `integrations` deliberately omits the mesh, so
+    // WITHOUT the caller naming its mesh card's component id the mesh's own row
+    // status reads as an unknown-id push and synthesizes a duplicate — which is
+    // what put "API Mesh — MESH DEPLOYED" beside "EDS ACCS API Mesh — REMOVING
+    // MESH" during a removal (2026-08-04, live).
+    //
+    // The caller passes it only when a mesh card is actually rendered. During an
+    // ADD there is no mesh yet and so no derived card, and then the synthesized
+    // card is the only feedback the operation has — suppressing it by kind
+    // instead would trade a duplicate for silence.
+    const covered = new Set(integrations.map((component) => component.id));
+    if (meshCardComponentId) {
+        covered.add(meshCardComponentId);
+    }
+
     for (const [id, override] of Object.entries(overrides)) {
-        if (!knownIds.has(id) && override.status === 'deploying') {
+        if (!covered.has(id) && override.status === 'deploying') {
             cards.push(synthesizePendingCard(id, override, catalog));
         }
     }

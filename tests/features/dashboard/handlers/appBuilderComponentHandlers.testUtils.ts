@@ -68,6 +68,16 @@ jest.mock('@/features/authentication/services/detectProjectOrgMismatch', () => (
 // ---- dashboard status channels (mocked — no live webview) ------------------
 export const mockSendAppBuilderComponentStatusUpdate = jest.fn();
 export const mockSendAppBuilderComponentsSnapshot = jest.fn();
+/**
+ * The status re-run after a set-changing op. Mocked because the real one is a
+ * heavy handler (auth guard + mesh checks) and this suite only cares WHETHER the
+ * refresh happens — and, for rename, that it does not.
+ */
+export const mockHandleRequestStatus = jest.fn().mockResolvedValue({ success: true });
+jest.mock('@/features/dashboard/handlers/dashboardHandlers', () => ({
+    handleRequestStatus: (...a: unknown[]) => mockHandleRequestStatus(...a),
+}));
+
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
         sendAppBuilderComponentStatusUpdate: (...a: unknown[]) =>
@@ -112,6 +122,7 @@ export function resetHandlerMocks(): void {
     mockGetAppBuilderComponentEntry.mockReturnValue(ERP_ENTRY);
     mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
     mockDetectProjectOrgMismatch.mockResolvedValue({ reachable: true });
+    mockHandleRequestStatus.mockResolvedValue({ success: true });
 }
 
 /** Minimal fresh-project factory for snapshot freshness assertions. */

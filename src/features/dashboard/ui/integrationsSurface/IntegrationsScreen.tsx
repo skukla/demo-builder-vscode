@@ -148,19 +148,26 @@ export function IntegrationsScreen({
 
     const cards = useMemo((): IntegrationCardModel[] => {
         const project = { appBuilderComponents: components } as Project;
-        const integrationCards = buildIntegrationCards(
-            listAppBuilderComponents(project),
-            overrides,
-            catalog,
-        );
-        if (!meshStatusDisplay) {
-            return integrationCards;
-        }
         // ONE lookup for id AND state. Resolving them separately let the card
         // show one mesh while its Remove tore down another (2026-08-04, live) —
         // the map search has a priority, and a second search that omits it picks
         // a different component whenever a project holds more than one mesh.
         const mesh = getIdentifiedMeshAppBuilderComponent(project);
+        // Resolved BEFORE the list so the list knows which id the mesh card
+        // covers. Without that, the mesh's own row status synthesizes a second
+        // card beside it — two cards for one mesh, seen live during a removal.
+        // Passed only when a mesh card will actually render: with none (an ADD,
+        // where the mesh does not exist yet) the synthesized card is the
+        // operation's only feedback.
+        const integrationCards = buildIntegrationCards(
+            listAppBuilderComponents(project),
+            overrides,
+            catalog,
+            meshStatusDisplay ? mesh?.id : undefined,
+        );
+        if (!meshStatusDisplay) {
+            return integrationCards;
+        }
         const meshCard = deriveMeshCard(
             meshStatusDisplay,
             meshStatus,
@@ -272,7 +279,9 @@ export function IntegrationsScreen({
                         variant="info"
                         title="No integrations yet"
                         message="Add an API Mesh, a pre-built integration, or your own custom integration — each deploys to this project's shared Adobe I/O workspace."
-                        actions={[{ label: 'Add integration', variant: 'accent', onPress: openAdd }]}
+                        actions={[
+                            { label: 'Add integration', variant: 'accent', onPress: openAdd },
+                        ]}
                     />
                 ) : (
                     <IntegrationsGrid
