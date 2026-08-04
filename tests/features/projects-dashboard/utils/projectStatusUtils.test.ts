@@ -262,12 +262,9 @@ describe('projectStatusUtils', () => {
     });
 
     describe('getMeshStatusText', () => {
-        // The mock's stack supports a mesh (it ships an api-mesh instance), so the
-        // SLOT is present and says plainly that no mesh exists. It used to render
-        // nothing at all, which is why a reloaded project lost its mesh line.
-        it('says no mesh exists when no meshStatusSummary survived', () => {
+        it('should return null when no meshStatusSummary', () => {
             const project = createMockProject();
-            expect(getMeshStatusText(project)).toBe('No Mesh Exists');
+            expect(getMeshStatusText(project)).toBeNull();
         });
 
         it('should return "Redeploy Mesh" when stale', () => {
@@ -280,9 +277,9 @@ describe('projectStatusUtils', () => {
             expect(getMeshStatusText(project)).toBe('Mesh Deployed');
         });
 
-        it('says no mesh exists on an unrecognised summary', () => {
+        it('should return null when unknown', () => {
             const project = createMockProject({ meshStatusSummary: 'unknown' });
-            expect(getMeshStatusText(project)).toBe('No Mesh Exists');
+            expect(getMeshStatusText(project)).toBeNull();
         });
 
         it('should return "Mesh Incomplete" when config-incomplete', () => {
@@ -295,27 +292,21 @@ describe('projectStatusUtils', () => {
             expect(getMeshStatusText(project)).toBe('Redeploy Mesh');
         });
 
-        // "Not Deployed" described the DEPLOY; "No Mesh Exists" describes the
-        // project. A mesh is optional, so having none is not a pending action.
-        it('says no mesh exists when not-deployed', () => {
+        it('should return "Not Deployed" when not-deployed', () => {
             const project = createMockProject({ meshStatusSummary: 'not-deployed' });
-            expect(getMeshStatusText(project)).toBe('No Mesh Exists');
+            expect(getMeshStatusText(project)).toBe('Not Deployed');
         });
 
-        // It is not an error for a project not to have a mesh. Without an endpoint
-        // or a deploy-implying state, this mesh never existed — reported 2026-08-04
-        // when a failed add made the card cry MESH ERROR about a mesh that was
-        // never there.
-        it('says no mesh exists on error WITHOUT a deployed mesh behind it', () => {
+        it('should return "Mesh Error" when error', () => {
             const project = createMockProject({ meshStatusSummary: 'error' });
-            expect(getMeshStatusText(project)).toBe('No Mesh Exists');
+            expect(getMeshStatusText(project)).toBe('Mesh Error');
         });
     });
 
     describe('getMeshStatusVariant', () => {
-        it('is neutral when no mesh exists — absence is not a failure', () => {
+        it('should return null when no meshStatusSummary', () => {
             const project = createMockProject();
-            expect(getMeshStatusVariant(project)).toBe('neutral');
+            expect(getMeshStatusVariant(project)).toBeNull();
         });
 
         it('should return "warning" when stale', () => {
@@ -338,23 +329,8 @@ describe('projectStatusUtils', () => {
             expect(getMeshStatusVariant(project)).toBe('warning');
         });
 
-        it('is neutral, not error, when the mesh never existed', () => {
+        it('should return "error" when error', () => {
             const project = createMockProject({ meshStatusSummary: 'error' });
-            expect(getMeshStatusVariant(project)).toBe('neutral');
-        });
-
-        it('IS error once a deployed mesh breaks', () => {
-            const project = createMockProject({
-                meshStatusSummary: 'error',
-                appBuilderComponents: {
-                    'eds-accs-mesh': {
-                        kind: 'mesh',
-                        status: 'error',
-                        source: { owner: 'adobe', repo: 'commerce-mesh' },
-                        endpoint: 'https://mesh/graphql',
-                    },
-                },
-            });
             expect(getMeshStatusVariant(project)).toBe('error');
         });
 
@@ -363,9 +339,9 @@ describe('projectStatusUtils', () => {
             expect(getMeshStatusVariant(project)).toBe('neutral');
         });
 
-        it('is neutral on an unrecognised summary', () => {
+        it('should return null when unknown', () => {
             const project = createMockProject({ meshStatusSummary: 'unknown' });
-            expect(getMeshStatusVariant(project)).toBe('neutral');
+            expect(getMeshStatusVariant(project)).toBeNull();
         });
     });
 
@@ -403,25 +379,37 @@ describe('projectStatusUtils', () => {
     // The card's app line derives from the DURABLE keyed map (worst status across
     // kind:'integration' entries), NOT the deploy-time-only appStatusSummary —
     // a reloaded project carries only the keyed entries.
-    // The mesh line is a SLOT on stacks that support a mesh: it is always present
-    // there, and says plainly when no mesh exists. Absence is not a failure — a
-    // mesh is optional — so `error` is reserved for a mesh that DEPLOYED and then
-    // broke, never for one that never happened.
+    // The mesh line appears only when the project HAS a mesh — a keyed component
+    // or a deploy summary. No slot, no "No Mesh Exists" placeholder: a project
+    // without a mesh has no mesh line, and cards may differ in how many status
+    // lines they carry.
     //
     // `meshStatusSummary` is written at deploy time and never persisted, so a
-    // reloaded project carries only its keyed entries; the line reads those too.
-    describe('getMeshStatusText — the mesh slot', () => {
-        const meshEntry = (
-            status: 'deployed' | 'error' | 'stale' | 'not-deployed',
-            endpoint?: string,
-        ) => ({
+    // reloaded project carries only its durable keyed entry — the line reads that
+    // too. The summary wins when present: it expresses states the entry cannot
+    // (update-declined, config-incomplete).
+    describe('getMeshStatusText — only when the project has a mesh', () => {
+        const meshEntry = (status: 'deployed' | 'error' | 'stale' | 'not-deployed') => ({
             kind: 'mesh' as const,
             status,
             source: { owner: 'adobe', repo: 'commerce-mesh' },
-            ...(endpoint ? { endpoint } : {}),
         });
-        const meshStack = (over: Record<string, unknown> = {}) =>
-            createMockProject({
+
+        it('shows NO line when there is neither a component nor a summary', () => {
+            const project = createMockProject({
+                meshStatusSummary: undefined,
+                appBuilderComponents: {},
+            });
+
+            expect(getMeshStatusText(project)).toBeNull();
+            expect(getMeshStatusVariant(project)).toBeNull();
+        });
+
+        // A mesh DEPENDENCY in the stack is not a mesh. Selecting one during
+        // creation says the project may have a mesh, not that it does — driving
+        // the line off that is what put a placeholder on cards with no mesh.
+        it('shows NO line for a stack that merely selected a mesh dependency', () => {
+            const project = createMockProject({
                 componentSelections: {
                     frontend: 'eds-storefront',
                     backend: 'adobe-commerce-accs',
@@ -429,64 +417,14 @@ describe('projectStatusUtils', () => {
                     integrations: [],
                     appBuilder: [],
                 } as never,
-                ...over,
-            });
-
-        it('shows NO slot on a stack that does not support a mesh', () => {
-            const noMeshStack = createMockProject({
-                componentSelections: {
-                    frontend: 'eds-storefront',
-                    backend: 'adobe-commerce-accs',
-                    dependencies: [],
-                    integrations: [],
-                    appBuilder: [],
-                } as never,
-                // createMockProject ships an `api-mesh` INSTANCE by default, which
-                // supports a mesh on its own — clearing selections is not enough.
-                componentInstances: {},
                 meshStatusSummary: undefined,
                 appBuilderComponents: {},
             });
 
-            expect(getMeshStatusText(noMeshStack)).toBeNull();
-            expect(getMeshStatusVariant(noMeshStack)).toBeNull();
+            expect(getMeshStatusText(project)).toBeNull();
         });
 
-        it('says no mesh EXISTS when the stack supports one and none was deployed', () => {
-            const project = meshStack({ meshStatusSummary: undefined, appBuilderComponents: {} });
-
-            expect(getMeshStatusText(project)).toBe('No Mesh Exists');
-            expect(getMeshStatusVariant(project)).toBe('neutral');
-        });
-
-        // THE REPORT (2026-08-04): a failed add left status:'error' behind, and the
-        // card cried MESH ERROR about a mesh that never existed. It is not an error
-        // for a project not to have a mesh.
-        it('says no mesh EXISTS after a failed add, not Mesh Error', () => {
-            const project = meshStack({
-                meshStatusSummary: undefined,
-                appBuilderComponents: { 'commerce-eds-mesh': meshEntry('error') },
-            });
-
-            expect(getMeshStatusText(project)).toBe('No Mesh Exists');
-            expect(getMeshStatusVariant(project)).toBe('neutral');
-        });
-
-        // An endpoint is the proof a mesh ever existed — that is what separates
-        // "it broke" from "it never happened".
-        it('says Mesh Error only for a mesh that deployed and THEN broke', () => {
-            const project = meshStack({
-                meshStatusSummary: 'error',
-                appBuilderComponents: {
-                    'eds-accs-mesh': meshEntry('error', 'https://mesh/graphql'),
-                },
-            });
-
-            expect(getMeshStatusText(project)).toBe('Mesh Error');
-            expect(getMeshStatusVariant(project)).toBe('error');
-        });
-
-        it('derives the mesh line from the keyed entry when no summary survived the reload', () => {
+        it('derives the line from the keyed entry when no summary survived the reload', () => {
             const project = createMockProject({
                 meshStatusSummary: undefined,
                 appBuilderComponents: { 'eds-accs-mesh': meshEntry('deployed') },
@@ -497,11 +435,9 @@ describe('projectStatusUtils', () => {
         });
 
         it.each([
-            // `stale` implies a mesh that DID deploy and then drifted.
+            ['error', 'Mesh Error', 'error'],
             ['stale', 'Redeploy Mesh', 'warning'],
-            // These two may never have produced a mesh, so the slot says so.
-            ['error', 'No Mesh Exists', 'neutral'],
-            ['not-deployed', 'No Mesh Exists', 'neutral'],
+            ['not-deployed', 'Not Deployed', 'neutral'],
         ] as const)('maps a keyed %s mesh to %s', (status, text, variant) => {
             const project = createMockProject({
                 meshStatusSummary: undefined,
@@ -519,16 +455,6 @@ describe('projectStatusUtils', () => {
             });
 
             expect(getMeshStatusText(project)).toBe('Redeploy Mesh');
-        });
-
-        it('says no mesh EXISTS when the stack supports one but nothing was deployed', () => {
-            const project = createMockProject({
-                meshStatusSummary: undefined,
-                appBuilderComponents: {},
-            });
-
-            expect(getMeshStatusText(project)).toBe('No Mesh Exists');
-            expect(getMeshStatusVariant(project)).toBe('neutral');
         });
     });
 

@@ -148,23 +148,23 @@ describe('ProjectCard', () => {
             expect(screen.getByText('Mesh Incomplete')).toBeInTheDocument();
         });
 
-        // The mesh line is a SLOT on stacks that support a mesh: always present,
-        // and honest when there is nothing there. "Mesh Error" is reserved for a
-        // mesh that deployed and then broke — an error status with no deployed
-        // mesh behind it means the mesh never existed.
-        it('says no mesh exists when an error left no deployed mesh', () => {
+        it('should show "Mesh Error" when error', () => {
             const project = createMockProject({ meshStatusSummary: 'error' });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
-            expect(screen.getByText('No Mesh Exists')).toBeInTheDocument();
-            expect(screen.queryByText('Mesh Error')).not.toBeInTheDocument();
+            expect(screen.getByText('Mesh Error')).toBeInTheDocument();
         });
 
-        it('says no mesh exists when not-deployed, rather than hiding the slot', () => {
-            const project = createMockProject({ meshStatusSummary: 'not-deployed' });
+        // No placeholder line for a project without a mesh: cards are allowed to
+        // differ in how many status lines they carry.
+        it('shows no mesh line at all when the project has no mesh', () => {
+            const project = createMockProject({
+                meshStatusSummary: undefined,
+                appBuilderComponents: {},
+            });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
-            expect(screen.getByText('No Mesh Exists')).toBeInTheDocument();
+            expect(screen.queryByText(/Mesh/)).not.toBeInTheDocument();
         });
     });
 

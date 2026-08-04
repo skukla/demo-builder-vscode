@@ -6,9 +6,8 @@
  * to eliminate code duplication.
  */
 
-import { hasMeshInDependencies } from '@/core/constants';
 import { getAppStatusDisplay } from '@/core/ui/utils/appStatusDisplay';
-import { getMeshStatusDisplay, type MeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
+import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import type { AppBuilderComponentState, Project, ProjectStatus } from '@/types/base';
 import { getComponentInstanceValues, isEdsProject } from '@/types/typeGuards';
 
@@ -94,76 +93,35 @@ export function getStatusVariant(status: ProjectStatus, isEds?: boolean): Status
  *
  * @returns Display text or null if no mesh status to show
  */
-/** The slot's reading when the stack has a mesh but no mesh was ever deployed. */
-const NO_MESH: MeshStatusDisplay = { text: 'No Mesh Exists', color: 'gray', variant: 'neutral' };
-
 /**
- * Whether this project's STACK has a mesh at all. The mesh slot exists only here —
- * a stack with no mesh in it should show no slot rather than permanently reading
- * "No Mesh Exists".
+ * The mesh status key for a project card — or undefined when the project has no
+ * mesh, in which case the card shows no mesh line at all.
+ *
+ * A mesh is OPTIONAL. Its absence gets no placeholder and no slot: cards are
+ * allowed to differ in how many status lines they carry. A mesh DEPENDENCY in the
+ * stack is deliberately not enough — selecting one during creation says the
+ * project may have a mesh, not that it does, and driving the line off that put a
+ * permanent placeholder on cards with nothing behind it.
+ *
+ * `meshStatusSummary` is written at deploy time and never persisted or recomputed,
+ * so a reloaded project carries only its durable keyed entry — hence the fallback,
+ * without which the line vanished for a deployed, healthy mesh. The summary wins
+ * when present: it expresses states the entry cannot (update-declined,
+ * config-incomplete) and is the fresher of the two.
  */
-function projectSupportsMesh(project: Project): boolean {
-    if (hasMeshInDependencies(project.componentSelections?.dependencies)) return true;
-    if (Object.values(project.appBuilderComponents ?? {}).some((s) => s.kind === 'mesh')) {
-        return true;
-    }
-    return Object.values(project.componentInstances ?? {}).some((i) => i.subType === 'mesh');
-}
-
-/**
- * Whether a mesh was ever actually deployed. An ENDPOINT is the proof: it exists
- * only once a deploy succeeded, so it separates "the mesh broke" from "the mesh
- * never happened". The drifted states imply a deployed mesh too.
- */
-function meshExists(project: Project): boolean {
-    const keyed = Object.values(project.appBuilderComponents ?? {}).find(
+function getMeshStatusKey(project: Project): string | undefined {
+    if (project.meshStatusSummary) return project.meshStatusSummary;
+    return Object.values(project.appBuilderComponents ?? {}).find(
         (state) => state.kind === 'mesh',
-    );
-    // An endpoint is the strongest proof, but a deploy does not always capture one
-    // — so the states that IMPLY a successful deploy count too. What is left is
-    // `error` and `not-deployed`, the two that may never have produced a mesh.
-    if (keyed?.endpoint) return true;
-    if (keyed?.status === 'deployed' || keyed?.status === 'stale') return true;
-    const summary = project.meshStatusSummary;
-    return (
-        summary === 'deployed' ||
-        summary === 'stale' ||
-        summary === 'update-declined' ||
-        summary === 'config-incomplete'
-    );
-}
-
-/**
- * The project card's mesh SLOT.
- *
- * A mesh is optional, so its absence is not a failure — `error` is reserved for a
- * mesh that deployed and THEN broke. A failed add used to persist `status:'error'`
- * and the card cried "Mesh Error" about a mesh that never existed (reported
- * 2026-08-04). It now reads "No Mesh Exists", which is true and unalarming.
- *
- * `meshStatusSummary` is written at deploy time and never persisted, so a reloaded
- * project carries only its keyed entry — the slot reads that too, and the summary
- * wins when present because it expresses states the entry cannot.
- *
- * @param project - the project whose mesh slot is being resolved
- * @returns the slot's display, or null on a stack that has no mesh
- */
-function getMeshSlotDisplay(project: Project): MeshStatusDisplay | null {
-    if (!projectSupportsMesh(project)) return null;
-    if (!meshExists(project)) return NO_MESH;
-
-    const keyed = Object.values(project.appBuilderComponents ?? {}).find(
-        (state) => state.kind === 'mesh',
-    );
-    return getMeshStatusDisplay(project.meshStatusSummary ?? keyed?.status);
+    )?.status;
 }
 
 export function getMeshStatusText(project: Project): string | null {
-    return getMeshSlotDisplay(project)?.text ?? null;
+    return getMeshStatusDisplay(getMeshStatusKey(project))?.text ?? null;
 }
 
 export function getMeshStatusVariant(project: Project): StatusVariant | null {
-    return (getMeshSlotDisplay(project)?.variant as StatusVariant) ?? null;
+    return (getMeshStatusDisplay(getMeshStatusKey(project))?.variant as StatusVariant) ?? null;
 }
 
 /** Worst-first precedence for collapsing N integration statuses into one card line. */
