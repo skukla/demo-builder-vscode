@@ -19,12 +19,10 @@
  * @module features/dashboard/ui/components/integrations/IntegrationCard
  */
 
-import { Button, Item, Text } from '@adobe/react-spectrum';
 import React, { useCallback } from 'react';
+import { IntegrationActionsMenu, IntegrationFaceButton } from './IntegrationActions';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
 import { InlineRenameField } from '@/core/ui/components/forms';
-import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
-import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { cn } from '@/core/ui/utils/classNames';
@@ -41,12 +39,6 @@ export interface IntegrationCardProps {
 }
 
 /** Face labels for the attention verbs (bar labels live on the model). */
-const FACE_LABELS: Record<string, string> = {
-    deploy: 'Deploy',
-    update: 'Update',
-    retry: 'Retry',
-    'sign-in': 'Sign in',
-};
 
 /**
  * Kebab-menu rows, keyed by the CardAction the grid dispatches.
@@ -55,70 +47,6 @@ const FACE_LABELS: Record<string, string> = {
  * is the same glyph as the project menu's "Open in Browser" by construction —
  * these two menus must not give one idea two icons.
  */
-const MENU_ROWS: Partial<Record<CardAction, { label: string; icon: string }>> = {
-    open: { label: 'Open', icon: 'globe' },
-    'manage-apis': { label: 'Manage APIs', icon: 'apiAccess' },
-    remove: { label: 'Remove', icon: 'delete' },
-};
-
-/**
- * The card's overflow menu — the house pattern from ProjectActionsMenu, which
- * the project card uses for exactly this job.
- *
- * It exists because editing an integration had no trigger on the grid at all —
- * API access was reachable only by opening the detail flyout first. Rename is
- * deliberately NOT in here: it is the name's own inline pencil, exactly as on
- * ProjectCard.
- */
-function CardMenu({
-    model,
-    onAction,
-}: Pick<IntegrationCardProps, 'model' | 'onAction'>): React.ReactElement | null {
-    if (model.menuActions.length === 0) return null;
-    return (
-        <CardActionsMenu
-            ariaLabel={`More actions for ${model.name}`}
-            className="integration-card-menu-button"
-            onAction={(key) => onAction(model, key as CardAction)}
-        >
-            {model.menuActions.map((action) => {
-                const row = MENU_ROWS[action];
-                const label = row?.label ?? action;
-                return (
-                    <Item key={action} textValue={label}>
-                        {renderMenuIcon(row?.icon)}
-                        <Text>{label}</Text>
-                    </Item>
-                );
-            })}
-        </CardActionsMenu>
-    );
-}
-
-/**
- * The card face's at-most-one affordance — an ATTENTION verb only.
- *
- * A healthy card renders nothing here: Open moved to the kebab (matching
- * ProjectCard, which has no face affordance at all), so a visible button now
- * means the card needs you.
- */
-function FaceAffordance({
-    model,
-    onAction,
-}: Pick<IntegrationCardProps, 'model' | 'onAction'>): React.ReactElement | null {
-    const face = model.faceAction;
-    if (!face) return null;
-    return (
-        <Button
-            variant="accent"
-            isDisabled={face.disabled}
-            onPress={() => onAction(model, face.kind)}
-        >
-            {FACE_LABELS[face.kind]}
-        </Button>
-    );
-}
-
 /** One integration (or mesh) card in the dashboard grid. */
 export function IntegrationCard({
     model,
@@ -160,7 +88,11 @@ export function IntegrationCard({
                     <div className="integration-card-name">{model.name}</div>
                 )}
                 {/* CardActionsMenu contains its own clicks — no wrapper needed. */}
-                <CardMenu model={model} onAction={onAction} />
+                <IntegrationActionsMenu
+                    model={model}
+                    onAction={onAction}
+                    className="integration-card-menu-button"
+                />
             </div>
             <div className="integration-card-statusline">
                 {/* size 6 matches the project card's status dot — the 8px default
@@ -181,23 +113,11 @@ export function IntegrationCard({
                     {model.statusLabel}
                 </span>
             </div>
-            {/* No source line, no element — an empty div still claims a flex gap.
-                The mesh has no owner/repo and carries none. */}
-            {model.sourceLine && (
-                <div
-                    className={cn(
-                        'integration-card-src',
-                        model.sourceIsAi && 'integration-card-src--ai',
-                    )}
-                >
-                    {model.sourceLine}
-                </div>
-            )}
             <div className="integration-card-foot">
                 {model.faceAction && (
                     // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- containment only; interaction lives on the child Button/Link
                     <span onClick={stopPropagation} onKeyDown={stopPropagation}>
-                        <FaceAffordance model={model} onAction={onAction} />
+                        <IntegrationFaceButton model={model} onAction={onAction} />
                     </span>
                 )}
             </div>

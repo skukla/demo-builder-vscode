@@ -65,13 +65,6 @@ type AttentionKind = 'deploy' | 'update' | 'retry' | 'sign-in';
  */
 export type FaceAction = { kind: AttentionKind; disabled?: boolean };
 
-/** One drawer action-bar button. */
-export interface BarAction {
-    action: CardAction;
-    label: string;
-    emphasis: 'primary' | 'secondary' | 'danger';
-    disabled?: boolean;
-}
 
 /**
  * Live per-card status override pushed via `appBuilderComponentStatusUpdate`
@@ -115,7 +108,6 @@ export interface IntegrationCardModel {
     /** Preformatted locale display string (already display-ready). */
     lastDeployed?: string;
     faceAction?: FaceAction;
-    barActions: BarAction[];
     /**
      * The card's own kebab menu. Kept OFF the face so the at-most-one-affordance
      * rule survives: the face carries the urgent verb (Deploy / Update / Retry),
@@ -140,45 +132,22 @@ const INTEGRATION_STATUS_DISPLAY: Record<
     error: { label: 'Deploy failed', dot: 'error' },
 };
 
-const MANAGE_APIS: BarAction = {
-    action: 'manage-apis',
-    label: 'Manage APIs',
-    emphasis: 'secondary',
-};
-const REMOVE: BarAction = { action: 'remove', label: 'Remove', emphasis: 'danger' };
 
 /**
- * The integration action matrix: face verb + drawer bar per status. Manage
- * APIs appears pre-deploy too (intended — `setConsoleApis` is
- * workspace-scoped, not deployment-scoped); Remove(danger) everywhere except
- * deploying; deploying is action-free (pulse only).
+ * The integration face matrix: the at-most-one ATTENTION verb per status.
+ *
+ * There is no bar half any more. Each status used to carry a drawer button row
+ * (the verb + Manage APIs + Remove) which was the kebab's items wearing a
+ * different control, in a third place — so the flyout now renders this same face
+ * verb plus the same kebab the card uses. Deployed has no verb on purpose: a
+ * healthy card is calm, so any card showing a button is a card that needs you.
  */
-const INTEGRATION_ACTIONS: Record<IntegrationStatus, { face?: FaceAction; bar: BarAction[] }> = {
-    'not-deployed': {
-        face: { kind: 'deploy' },
-        bar: [{ action: 'deploy', label: 'Deploy', emphasis: 'primary' }, MANAGE_APIS, REMOVE],
-    },
-    deploying: { bar: [] },
-    deployed: {
-        // no face when deployed — a healthy card is calm; Open lives in the menu
-        bar: [
-            { action: 'redeploy', label: 'Redeploy', emphasis: 'secondary' },
-            MANAGE_APIS,
-            REMOVE,
-        ],
-    },
-    stale: {
-        face: { kind: 'update' },
-        bar: [
-            { action: 'update', label: 'Update', emphasis: 'primary' },
-            MANAGE_APIS,
-            REMOVE,
-        ],
-    },
-    error: {
-        face: { kind: 'retry' },
-        bar: [{ action: 'retry', label: 'Retry', emphasis: 'primary' }, MANAGE_APIS, REMOVE],
-    },
+const INTEGRATION_ACTIONS: Record<IntegrationStatus, { face?: FaceAction }> = {
+    'not-deployed': { face: { kind: 'deploy' } },
+    deploying: {},
+    deployed: {},
+    stale: { face: { kind: 'update' } },
+    error: { face: { kind: 'retry' } },
 };
 
 /**
@@ -197,7 +166,17 @@ const INTEGRATION_ACTIONS: Record<IntegrationStatus, { face?: FaceAction; bar: B
  */
 function buildMenuActions(status: IntegrationStatus, url: string | undefined): CardAction[] {
     if (status === 'deploying') return [];
-    return [...(url ? (['open'] as CardAction[]) : []), 'manage-apis', 'remove'];
+    // Redeploy is a DELIBERATE action on a card that is already working, so it
+    // belongs in the menu rather than on the face (a face button means the card
+    // needs you). A stale card's urgent verb is Update, on the face — redeploying
+    // it anyway is the deliberate variant, so the menu carries that too.
+    const redeploy: CardAction[] = status === 'deployed' ? ['redeploy'] : [];
+    return [
+        ...(url ? (['open'] as CardAction[]) : []),
+        ...redeploy,
+        'manage-apis',
+        'remove',
+    ];
 }
 
 /**
@@ -344,7 +323,6 @@ export function deriveIntegrationCard(
         apis: facet.apis,
         lastDeployed: formatLastDeployed(entry.lastDeployed),
         faceAction: actions.face ? { ...actions.face } : undefined,
-        barActions: actions.bar.map((action) => ({ ...action })),
         menuActions: buildMenuActions(status, primaryUrl),
         canRename: entry.kind === 'integration' && !facet.isCatalog,
     };
@@ -365,40 +343,21 @@ export function toMeshCardStatus(status: MeshStatus | undefined): CardStatus {
 }
 
 /**
- * The mesh action matrix: dot + face verb + bar per card status. No Manage
+ * The mesh matrix: dot + the at-most-one face verb per card status. No Manage
  * APIs and no Remove anywhere (the mesh's lifecycle is owned by the project
  * configuration); the deployed card has NO Open↗ face (see module doc).
+ *
+ * Deployed carries no face verb — redeploying a healthy mesh is deliberate, so
+ * it is the one thing in the mesh's kebab (see deriveMeshCard).
  */
-const MESH_MATRIX: Record<
-    CardStatus,
-    { dot: StatusDotVariant; face?: AttentionKind; bar?: Omit<BarAction, 'disabled'> }
-> = {
+const MESH_MATRIX: Record<CardStatus, { dot: StatusDotVariant; face?: AttentionKind }> = {
     checking: { dot: 'neutral' },
-    'needs-auth': {
-        dot: 'warning',
-        face: 'sign-in',
-        bar: { action: 'sign-in', label: 'Sign in', emphasis: 'primary' },
-    },
-    'not-deployed': {
-        dot: 'neutral',
-        face: 'deploy',
-        bar: { action: 'deploy', label: 'Deploy', emphasis: 'primary' },
-    },
+    'needs-auth': { dot: 'warning', face: 'sign-in' },
+    'not-deployed': { dot: 'neutral', face: 'deploy' },
     deploying: { dot: 'info' },
-    deployed: {
-        dot: 'success',
-        bar: { action: 'redeploy', label: 'Redeploy', emphasis: 'secondary' },
-    },
-    stale: {
-        dot: 'warning',
-        face: 'update',
-        bar: { action: 'update', label: 'Update', emphasis: 'primary' },
-    },
-    error: {
-        dot: 'error',
-        face: 'retry',
-        bar: { action: 'retry', label: 'Retry', emphasis: 'primary' },
-    },
+    deployed: { dot: 'success' },
+    stale: { dot: 'warning', face: 'update' },
+    error: { dot: 'error', face: 'retry' },
 };
 
 /**
@@ -431,10 +390,13 @@ export function deriveMeshCard(
         urlLabel: 'Endpoint',
         lastDeployed: formatLastDeployed(meshEntry?.lastDeployed),
         faceAction: row.face ? { kind: row.face, disabled: isActionDisabled } : undefined,
-        barActions: row.bar ? [{ ...row.bar, disabled: isActionDisabled }] : [],
-        // No menu: the mesh has no display name to change (canRename false) and
-        // no API access of its own, so Edit would open an empty dialog.
-        menuActions: [],
+        // Redeploy ONLY, and only on a healthy idle mesh. The mesh has no display
+        // name to change (canRename false) and no API access of its own, so there
+        // is nothing else to put here — but redeploy has to live somewhere now
+        // that the flyout's button bar is gone, and it is a deliberate action.
+        // Withheld while an op is in flight: an action you cannot take is not offered.
+        menuActions:
+            cardStatus === 'deployed' && !isActionDisabled ? (['redeploy'] as CardAction[]) : [],
         canRename: false,
     };
 }

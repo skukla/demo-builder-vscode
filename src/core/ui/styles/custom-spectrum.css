@@ -5346,27 +5346,6 @@ div[class*="spectrum"] input[type="search"] {
 .integration-card-status--error {
     color: var(--spectrum-global-color-red-600);
 }
-/* The secondary line, matching `.project-card-spectrum-components` on tone and
- * rhythm (12px, gray-600, 1.4) — it was a step lighter at gray-500, which read
- * as disabled beside a project card.
- *
- * It KEEPS the mono family: this line is an `owner/repo` identifier, not prose,
- * and the AI caption below deliberately opts back out to italic sans. That is a
- * meaning-carrying difference from the project card's plain-language stack
- * summary, not a styling drift. */
-.integration-card-src {
-    font-size: 12px;
-    font-family: var(--spectrum-font-family-code, monospace);
-    color: var(--spectrum-global-color-gray-600);
-    line-height: 1.4;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.integration-card-src--ai {
-    font-family: inherit;
-    font-style: italic;
-}
 /* Footer pinned to the card bottom; hosts the at-most-one face affordance. */
 /* Only pushed to the bottom when the card HAS a face affordance — an empty foot
    was reserving a row on every deployed card. */

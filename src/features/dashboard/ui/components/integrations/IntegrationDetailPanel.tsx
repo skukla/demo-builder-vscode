@@ -24,11 +24,12 @@
  * @module features/dashboard/ui/components/integrations/IntegrationDetailPanel
  */
 
-import { ActionButton, Button, Link } from '@adobe/react-spectrum';
+import { ActionButton, Link } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
 import React from 'react';
 import { Drawer } from './Drawer';
-import type { BarAction, CardAction, IntegrationCardModel } from './integrationCardModel';
+import { IntegrationActionsMenu, IntegrationFaceButton } from './IntegrationActions';
+import type { CardAction, IntegrationCardModel } from './integrationCardModel';
 import { InlineRenameField } from '@/core/ui/components/forms';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
@@ -46,13 +47,6 @@ export interface IntegrationDetailPanelProps {
     /** The shared deploy destination, shown as a row (the banner names it once above). */
     destinationLabel?: string;
 }
-
-/** BarAction emphasis → Spectrum Button variant. */
-const EMPHASIS_VARIANTS: Record<BarAction['emphasis'], 'accent' | 'secondary' | 'negative'> = {
-    primary: 'accent',
-    secondary: 'secondary',
-    danger: 'negative',
-};
 
 /** One key/value detail row. */
 function PanelRow({
@@ -87,7 +81,6 @@ function PanelContent({
     onRename,
     destinationLabel,
 }: IntegrationDetailPanelProps & { model: IntegrationCardModel }): React.ReactElement {
-    const showBar = model.status === 'deploying' || model.barActions.length > 0;
 
     // Kind is cut when it repeats the TITLE (the mesh: "API Mesh" under "API Mesh").
     //
@@ -113,6 +106,14 @@ function PanelContent({
                         <span>{model.name}</span>
                     )}
                 </div>
+                {/* The flyout mirrors the CARD: the at-most-one attention verb as a
+                    button, everything deliberate behind the kebab. It used to carry a
+                    row of Buttons duplicating those same actions — a third place for
+                    them, in a control the card does not use. */}
+                {model.status !== 'deploying' && (
+                    <IntegrationFaceButton model={model} onAction={onAction} />
+                )}
+                <IntegrationActionsMenu model={model} onAction={onAction} />
                 <ActionButton isQuiet aria-label="Close details" onPress={onClose}>
                     <Close size="S" />
                 </ActionButton>
@@ -126,6 +127,18 @@ function PanelContent({
                     )}
                 </PanelRow>
                 {showKind && <PanelRow label="Kind">{model.kindLabel}</PanelRow>}
+                {/* Moved here from the card face (2026-08-03). It was cut from this
+                    panel originally BECAUSE the card showed it and the card sits
+                    scrimmed behind the flyout — that reason left with the line. On
+                    the card it also made every non-mesh kind a row taller than the
+                    mesh, so no two cards shared a baseline.
+                    `mono` only for an owner/repo identifier: the blank starter's
+                    line is prose and must not be typeset as code. */}
+                {model.sourceLine && (
+                    <PanelRow label="Source" mono={!model.sourceIsAi}>
+                        {model.sourceLine}
+                    </PanelRow>
+                )}
                 {destinationLabel && (
                     <PanelRow label="Destination" mono>
                         {destinationLabel}
@@ -167,31 +180,6 @@ function PanelContent({
                 )}
             </div>
 
-            {showBar && (
-                <div className="db-drawer-actions">
-                    {model.status === 'deploying' ? (
-                        <Button variant="secondary" isDisabled>
-                            Deploying…
-                        </Button>
-                    ) : (
-                        model.barActions.map((barAction) => (
-                            <Button
-                                key={barAction.action}
-                                variant={EMPHASIS_VARIANTS[barAction.emphasis]}
-                                isDisabled={barAction.disabled}
-                                onPress={() => onAction(model, barAction.action)}
-                                UNSAFE_className={
-                                    barAction.emphasis === 'danger'
-                                        ? 'integration-panel-danger'
-                                        : undefined
-                                }
-                            >
-                                {barAction.label}
-                            </Button>
-                        ))
-                    )}
-                </div>
-            )}
         </>
     );
 }

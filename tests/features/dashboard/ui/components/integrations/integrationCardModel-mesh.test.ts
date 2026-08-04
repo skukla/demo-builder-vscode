@@ -13,7 +13,6 @@
  */
 
 import {
-    barActionIds,
     buildIntegrationCards,
     deriveMeshCard,
     display,
@@ -55,13 +54,13 @@ describe('deriveMeshCard — failure reason', () => {
 });
 
 describe('deriveMeshCard — status matrix', () => {
-    it('checking: neutral dot, NO face, EMPTY bar', () => {
+    it('checking: neutral dot, NO face, NO menu', () => {
         const model = deriveMeshCard(display({ color: 'gray', text: 'Checking…' }), 'checking', meshEntry(), false);
 
         expect(model.status).toBe('checking');
         expect(model.dotVariant).toBe('neutral');
         expect(model.faceAction).toBeUndefined();
-        expect(model.barActions).toEqual([]);
+        expect(model.menuActions).toEqual([]);
     });
 
     it('undefined status behaves as checking (unresolved)', () => {
@@ -69,10 +68,10 @@ describe('deriveMeshCard — status matrix', () => {
 
         expect(model.status).toBe('checking');
         expect(model.faceAction).toBeUndefined();
-        expect(model.barActions).toEqual([]);
+        expect(model.menuActions).toEqual([]);
     });
 
-    it('needs-auth: warning dot, Sign in face + Sign in(primary) bar', () => {
+    it('needs-auth: warning dot, Sign in face, NO menu', () => {
         const model = deriveMeshCard(
             display({ color: 'orange', text: 'Session expired' }),
             'needs-auth',
@@ -83,12 +82,9 @@ describe('deriveMeshCard — status matrix', () => {
         expect(model.status).toBe('needs-auth');
         expect(model.dotVariant).toBe('warning');
         expect(model.faceAction).toEqual({ kind: 'sign-in', disabled: false });
-        expect(model.barActions).toEqual([
-            { action: 'sign-in', label: 'Sign in', emphasis: 'primary', disabled: false },
-        ]);
     });
 
-    it('not-deployed: neutral dot, Deploy face + Deploy(primary) bar', () => {
+    it('not-deployed: neutral dot, Deploy face, NO menu', () => {
         const model = deriveMeshCard(
             display({ color: 'gray', text: 'Not deployed' }),
             'not-deployed',
@@ -99,12 +95,9 @@ describe('deriveMeshCard — status matrix', () => {
         expect(model.status).toBe('not-deployed');
         expect(model.dotVariant).toBe('neutral');
         expect(model.faceAction).toEqual({ kind: 'deploy', disabled: false });
-        expect(model.barActions).toEqual([
-            { action: 'deploy', label: 'Deploy', emphasis: 'primary', disabled: false },
-        ]);
     });
 
-    it('deploying: info dot, NO face, EMPTY bar (pulse rides the status)', () => {
+    it('deploying: info dot, NO face, NO menu (pulse rides the status)', () => {
         const model = deriveMeshCard(
             display({ color: 'blue', text: 'Deploying mesh…' }),
             'deploying',
@@ -115,22 +108,30 @@ describe('deriveMeshCard — status matrix', () => {
         expect(model.status).toBe('deploying');
         expect(model.dotVariant).toBe('info');
         expect(model.faceAction).toBeUndefined();
-        expect(model.barActions).toEqual([]);
+        expect(model.menuActions).toEqual([]);
     });
 
-    it('deployed: success dot, NO Open face (GraphQL endpoint is not browsable — deliberate prototype deviation), Redeploy(secondary) bar', () => {
+    it('deployed: success dot, NO Open face (GraphQL endpoint is not browsable — deliberate prototype deviation), Redeploy in the MENU', () => {
         const model = deriveMeshCard(display(), 'deployed', meshEntry(), false);
 
         expect(model.status).toBe('deployed');
         expect(model.dotVariant).toBe('success');
         expect(model.faceAction).toBeUndefined();
-        expect(model.barActions).toEqual([
-            { action: 'redeploy', label: 'Redeploy', emphasis: 'secondary', disabled: false },
-        ]);
+        // Redeploy has to live somewhere once the flyout's button bar is gone,
+        // and redeploying a working mesh is deliberate — so, the kebab.
+        expect(model.menuActions).toEqual(['redeploy']);
+    });
+
+    it('withholds Redeploy while a mesh/demo operation is in flight', () => {
+        const model = deriveMeshCard(display(), 'deployed', meshEntry(), true);
+
+        // An action you cannot take is not offered. The bar used to render it
+        // disabled; a menu item has no disabled state, so it is simply absent.
+        expect(model.menuActions).toEqual([]);
     });
 
     it.each(['config-changed', 'update-declined', 'config-incomplete'] as const)(
-        '%s maps to the stale treatment: warning dot, Update face + Update(primary) bar',
+        '%s maps to the stale treatment: warning dot, Update face, NO menu',
         (meshStatus) => {
             const model = deriveMeshCard(
                 display({ color: 'yellow', text: 'Update available' }),
@@ -142,13 +143,10 @@ describe('deriveMeshCard — status matrix', () => {
             expect(model.status).toBe('stale');
             expect(model.dotVariant).toBe('warning');
             expect(model.faceAction).toEqual({ kind: 'update', disabled: false });
-            expect(model.barActions).toEqual([
-                { action: 'update', label: 'Update', emphasis: 'primary', disabled: false },
-            ]);
         },
     );
 
-    it('error: error dot, Retry face + Retry(primary) bar', () => {
+    it('error: error dot, Retry face, NO menu', () => {
         const model = deriveMeshCard(
             display({ color: 'red', text: 'Deployment failed' }),
             'error',
@@ -159,9 +157,6 @@ describe('deriveMeshCard — status matrix', () => {
         expect(model.status).toBe('error');
         expect(model.dotVariant).toBe('error');
         expect(model.faceAction).toEqual({ kind: 'retry', disabled: false });
-        expect(model.barActions).toEqual([
-            { action: 'retry', label: 'Retry', emphasis: 'primary', disabled: false },
-        ]);
     });
 });
 
@@ -191,9 +186,14 @@ describe('deriveMeshCard — identity + propagation', () => {
 
     // No menu on the mesh: nothing about it is user-editable (no rename, no
     // API picks of its own).
-    it('carries an EMPTY menu in any mesh status', () => {
+    it('carries a menu ONLY on a deployed idle mesh (Redeploy), empty elsewhere', () => {
         for (const status of MESH_STATUSES) {
-            expect(deriveMeshCard(display(), status, meshEntry(), false).menuActions).toEqual([]);
+            const model = deriveMeshCard(display(), status, meshEntry(), false);
+            if (model.status === 'deployed') {
+                expect(model.menuActions).toEqual(['redeploy']);
+            } else {
+                expect(model.menuActions).toEqual([]);
+            }
         }
     });
 
@@ -212,20 +212,20 @@ describe('deriveMeshCard — identity + propagation', () => {
     it('NO Manage APIs and NO Remove in ANY mesh status', () => {
         for (const status of MESH_STATUSES) {
             const model = deriveMeshCard(display(), status, meshEntry(), false);
-            expect(barActionIds(model)).not.toContain('manage-apis');
-            expect(barActionIds(model)).not.toContain('remove');
+            expect(model.menuActions).not.toContain('manage-apis');
+            expect(model.menuActions).not.toContain('remove');
         }
     });
 
-    it('isActionDisabled true propagates to EVERY bar action and face action', () => {
+    it('isActionDisabled true propagates to the face action, and empties the menu', () => {
         for (const status of MESH_STATUSES) {
             const model = deriveMeshCard(display(), status, meshEntry(), true);
-            for (const action of model.barActions) {
-                expect(action.disabled).toBe(true);
-            }
-            if (model.faceAction && model.faceAction.kind !== 'open') {
+            if (model.faceAction) {
                 expect(model.faceAction.disabled).toBe(true);
             }
+            // A menu item has no disabled state, so an unavailable action is
+            // withheld rather than shown greyed.
+            expect(model.menuActions).toEqual([]);
         }
     });
 

@@ -91,17 +91,16 @@ function renderCard(model: IntegrationCardModel) {
     const onAction = jest.fn();
     const view = render(<IntegrationCard model={model} onOpen={onOpen} onAction={onAction} />);
     const card = view.container.querySelector('.integration-card') as HTMLElement;
-    return { onOpen, onAction, card };
+    return { onOpen, onAction, card, container: view.container };
 }
 
 describe('IntegrationCard', () => {
-    it('renders name, dot variant, status label, and source line', () => {
+    it('renders name, dot variant, and status label', () => {
         renderCard(makeModel());
 
         expect(screen.getByText('ERP Sync')).toBeInTheDocument();
         expect(screen.getByTestId('status-dot')).toHaveAttribute('data-variant', 'success');
         expect(screen.getByText('Deployed')).toBeInTheDocument();
-        expect(screen.getByText('acme/erp-sync')).toBeInTheDocument();
     });
 
     it('is a keyboard-reachable button (role + tabIndex)', () => {
@@ -191,12 +190,17 @@ describe('IntegrationCard', () => {
         expect(mesh.className).toBe('integration-card');
     });
 
-    it('renders the AI source caption with the --ai modifier', () => {
-        renderCard(makeModel({ sourceLine: 'Blank starter — build it out', sourceIsAi: true }));
+    // The face is name / status / foot for EVERY kind now. The source line moved
+    // to the flyout: on the card it made non-mesh cards a row taller than the
+    // mesh, so no two cards in the grid shared a baseline.
+    it.each([
+        ['an owner/repo identifier', { sourceLine: 'acme/erp-sync', sourceIsAi: false }],
+        ['the blank-starter caption', { sourceLine: 'Blank starter — build it out', sourceIsAi: true }],
+    ])('never renders the source line on the face (%s)', (_label, over) => {
+        const { container } = renderCard(makeModel(over));
 
-        expect(screen.getByText('Blank starter — build it out')).toHaveClass(
-            'integration-card-src--ai'
-        );
+        expect(screen.queryByText(over.sourceLine)).not.toBeInTheDocument();
+        expect(container.querySelector('.integration-card-src')).toBeNull();
     });
 
     it('marks an error status label with the error modifier', () => {

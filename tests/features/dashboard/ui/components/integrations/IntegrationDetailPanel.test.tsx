@@ -21,27 +21,48 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import { IntegrationDetailPanel } from '@/features/dashboard/ui/components/integrations/IntegrationDetailPanel';
 import type { IntegrationCardModel } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
 import '@testing-library/jest-dom';
 
 jest.mock('@adobe/react-spectrum', () => ({
-    ActionButton: ({ children, onPress, isQuiet: _isQuiet, UNSAFE_className, ...props }: any) => (
-        <button onClick={onPress} className={UNSAFE_className} {...props}>
-            {children}
-        </button>
-    ),
-    Button: ({ children, onPress, isDisabled, variant, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} data-variant={variant} {...props}>
-            {children}
-        </button>
-    ),
-    Link: ({ children, onPress, isQuiet, ...props }: any) => (
-        <span role="link" tabIndex={0} data-quiet={isQuiet} onClick={onPress} {...props}>
-            {children}
-        </span>
-    ),
+        ActionButton: ({ children, onPress, isQuiet: _q, UNSAFE_className, ...props }: any) => (
+            <button onClick={onPress} className={UNSAFE_className} {...props}>
+                {children}
+            </button>
+        ),
+        Button: ({ children, onPress, isDisabled, variant, ...props }: any) => (
+            <button onClick={onPress} disabled={isDisabled} data-variant={variant} {...props}>
+                {children}
+            </button>
+        ),
+        Link: ({ children, onPress, isQuiet, ...props }: any) => (
+            <span role="link" tabIndex={0} data-quiet={isQuiet} onClick={onPress} {...props}>
+                {children}
+            </span>
+        ),
+        MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
+        Menu: ({ children, onAction }: any) => (
+            <ul data-testid="card-menu">
+                {require('react').Children.map(children, (child: any) =>
+                    child ? (
+                        <li>
+                            <button onClick={() => onAction?.(child.key)}>
+                                {child.props.children}
+                            </button>
+                        </li>
+                    ) : null
+                )}
+            </ul>
+        ),
+        Item: ({ children }: any) => <>{children}</>,
+    Text: ({ children }: any) => <span>{children}</span>,
+}));
+
+jest.mock('@spectrum-icons/workflow/More', () => ({
+    __esModule: true,
+    default: () => <span data-testid="icon-more" />,
 }));
 
 jest.mock('@spectrum-icons/workflow/Edit', () => ({
@@ -284,92 +305,105 @@ describe('IntegrationDetailPanel', () => {
         });
     });
 
-    describe('action bar', () => {
-        it('maps emphasis to button variants and fires onAction', () => {
+    // The flyout MIRRORS the card: the at-most-one attention verb as a button,
+    // everything deliberate behind the same kebab the card uses. It used to carry
+    // a row of Buttons holding those same actions — a third control for them,
+    // which is what made the three surfaces disagree.
+    describe('actions', () => {
+        it('renders the attention verb as a button and fires onAction', () => {
             const model = makeModel({
-                barActions: [
-                    { action: 'deploy', label: 'Deploy', emphasis: 'primary' },
-                    { action: 'manage-apis', label: 'Manage APIs', emphasis: 'secondary' },
-                    { action: 'remove', label: 'Remove', emphasis: 'danger' },
-                ],
                 status: 'not-deployed',
                 statusLabel: 'Not deployed',
+                faceAction: { kind: 'deploy' },
+                menuActions: ['manage-apis', 'remove'],
             });
             const { onAction } = renderPanel(model);
 
-            const deploy = screen.getByRole('button', { name: 'Deploy' });
-            const manage = screen.getByRole('button', { name: 'Manage APIs' });
-            const remove = screen.getByRole('button', { name: 'Remove' });
-            expect(deploy).toHaveAttribute('data-variant', 'accent');
-            expect(manage).toHaveAttribute('data-variant', 'secondary');
-            expect(remove).toHaveAttribute('data-variant', 'negative');
-
-            fireEvent.click(deploy);
-            fireEvent.click(manage);
-            fireEvent.click(remove);
+            fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
 
             expect(onAction).toHaveBeenCalledWith(model, 'deploy');
-            expect(onAction).toHaveBeenCalledWith(model, 'manage-apis');
-            expect(onAction).toHaveBeenCalledWith(model, 'remove');
         });
 
-        it('honors disabled bar actions', () => {
-            renderPanel(
-                makeMeshModel({
-                    barActions: [
-                        {
-                            action: 'redeploy',
-                            label: 'Redeploy',
-                            emphasis: 'secondary',
-                            disabled: true,
-                        },
-                    ],
-                })
-            );
+        it('puts the deliberate actions behind the kebab, not in a button row', () => {
+            const model = makeModel({
+                menuActions: ['open', 'redeploy', 'manage-apis', 'remove'],
+            });
+            const { onAction } = renderPanel(model);
 
-            expect(screen.getByRole('button', { name: 'Redeploy' })).toBeDisabled();
+            // The kebab mock renders its items as buttons inside `card-menu`;
+            // what matters is that they are in the MENU, not loose in the panel.
+            const menu = screen.getByTestId('card-menu');
+            expect(within(menu).getByText('Redeploy')).toBeInTheDocument();
+            expect(within(menu).getByText('Manage APIs')).toBeInTheDocument();
+            expect(within(menu).getByText('Remove')).toBeInTheDocument();
+
+            fireEvent.click(within(menu).getByRole('button', { name: 'Redeploy' }));
+            expect(onAction).toHaveBeenCalledWith(model, 'redeploy');
         });
 
-        it('shows a single disabled Deploying… while deploying', () => {
+        // A healthy card is calm — no verb. Redeploy is reachable, but only
+        // through the kebab, which is the whole point of moving it there.
+        it('shows no attention verb on a deployed integration', () => {
+            renderPanel(makeModel({ faceAction: undefined, menuActions: ['redeploy'] }));
+
+            expect(screen.queryByRole('button', { name: 'Deploy' })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'Update' })).not.toBeInTheDocument();
+            expect(within(screen.getByTestId('card-menu')).getByText('Redeploy')).toBeInTheDocument();
+        });
+
+        it('offers nothing at all mid-deploy — every action would race the runner', () => {
             renderPanel(
                 makeModel({
                     status: 'deploying',
                     statusLabel: 'Deploying…',
                     faceAction: undefined,
-                    barActions: [],
+                    menuActions: [],
                 })
             );
 
-            const button = screen.getByRole('button', { name: 'Deploying…' });
-            expect(button).toBeDisabled();
+            expect(screen.queryByTestId('card-menu')).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'Deploy' })).not.toBeInTheDocument();
         });
     });
 
     describe('rows that would only restate', () => {
-        // `sourceLine` is the CARD's face line, and the card sits scrimmed behind
-        // this flyout the whole time it is open — so the row printed it twice and
-        // carried nothing of its own. Universal, not per-variant: there is no
-        // model shape that brings it back.
+        // Source RETURNED here (2026-08-03) when the card face stopped carrying it.
+        // The row was cut originally because the scrimmed card behind this flyout
+        // already showed the line — that reason went with the line.
         it.each([
-            ['imported', makeModel({ sourceLine: 'acme/custom-app' })],
-            ['pre-built', makeModel({ kindLabel: 'Pre-built', sourceLine: 'acme/erp-sync' })],
+            ['imported', makeModel({ sourceLine: 'acme/custom-app' }), 'acme/custom-app'],
             [
-                'AI-built',
-                makeModel({
-                    kindLabel: 'Custom · built with AI',
-                    sourceLine: 'Blank starter — build it out',
-                    sourceIsAi: true,
-                }),
+                'pre-built',
+                makeModel({ kindLabel: 'Pre-built', sourceLine: 'acme/erp-sync' }),
+                'acme/erp-sync',
             ],
-            ['mesh', makeMeshModel()],
-        ])('never renders Source (%s)', (_label, model) => {
+        ])('renders Source as a mono identifier (%s)', (_label, model, line) => {
             renderPanel(model);
 
+            expect(screen.getByText('Source')).toBeInTheDocument();
+            expect(screen.getByText(line)).toBeInTheDocument();
+        });
+
+        // The blank starter's line is prose, not an identifier — it must not be
+        // typeset as one.
+        it('renders the blank-starter caption WITHOUT the mono treatment', () => {
+            renderPanel(
+                makeModel({
+                    kindLabel: 'Custom · blank starter',
+                    sourceLine: 'Blank starter — build it out',
+                    sourceIsAi: true,
+                })
+            );
+
+            const value = screen.getByText('Blank starter — build it out');
+            expect(value).toBeInTheDocument();
+            expect(value.className).not.toContain('mono');
+        });
+
+        it('omits Source for the mesh, which has no owner/repo', () => {
+            renderPanel(makeMeshModel());
+
             expect(screen.queryByText('Source')).not.toBeInTheDocument();
-            // The mesh has no sourceLine at all, so there is nothing to look for.
-            if (model.sourceLine) {
-                expect(screen.queryByText(model.sourceLine)).not.toBeInTheDocument();
-            }
         });
 
         it('KEEPS Kind for catalog vs imported — it is now the ONLY thing telling them apart', () => {
@@ -400,7 +434,7 @@ describe('IntegrationDetailPanel', () => {
         });
 
         it('shows no role tag, no rename field, no Manage APIs/Remove', () => {
-            renderPanel(makeMeshModel());
+            renderPanel(makeMeshModel({ menuActions: [] }));
 
             // The "Data layer" tag was jargon carrying no actionable information —
             // removed rather than restyled.

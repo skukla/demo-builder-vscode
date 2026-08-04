@@ -11,7 +11,6 @@
  */
 
 import type { IdentifiedAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
-import type { IntegrationCardModel } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
 import type { StatusDisplay, MeshStatus } from '@/features/dashboard/ui/hooks/useDashboardStatus';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
@@ -101,9 +100,6 @@ function meshEntry(over: Partial<AppBuilderComponentState> = {}): AppBuilderComp
     };
 }
 
-function barActionIds(model: IntegrationCardModel): string[] {
-    return model.barActions.map((a) => a.action);
-}
 
 export {
     deriveIntegrationCard,
@@ -118,4 +114,4 @@ export type { IdentifiedAppBuilderComponent };
 export type { StatusDisplay, MeshStatus };
 export type { AppBuilderComponentState };
 export { BLANK_SOURCE, FAKE_CATALOG, INTEGRATION_STATUSES, MESH_STATUSES };
-export { integration, display, meshEntry, barActionIds };
+export { integration, display, meshEntry };
