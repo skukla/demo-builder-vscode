@@ -29,7 +29,7 @@ import { projectRequiresAppBuilder } from '@/features/components/services/projec
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
-import { getMeshComponentInstance } from '@/types/typeGuards';
+import { getMeshComponentInstance, getMeshComponentId } from '@/types/typeGuards';
 
 /** Why a deploy could not proceed (maps to the command's per-branch UI). */
 export type MeshDeployBlock = 'auth' | 'org' | 'permission' | 'no-mesh';
@@ -141,6 +141,43 @@ export async function deployMeshHeadless(
 
     try {
         return await withOrgContext(orgTarget, async () => {
+            // Refresh the mesh .env from the manifest BEFORE deploying. It is a
+            // generated artifact (every other path — creation, EDS Reset,
+            // Configure — regenerates it wholesale), and `mesh.config.js` resolves
+            // every endpoint through `{env.*}`, so a stale file silently deploys
+            // the previous Commerce credentials and reads as "my change didn't
+            // apply". Dynamic import keeps the cross-feature dependency at the
+            // call site, matching projectResetService.
+            //
+            // BEST-EFFORT here, unlike the dashboard add path (which aborts).
+            // The difference is whether a .env already exists: an add has none,
+            // so deploying without one is the ENOENT being fixed. This path only
+            // ever runs on an installed mesh, which creation already wrote a .env
+            // for — so a mesh whose id has no registry definition should deploy
+            // with its existing file, not stop working. Warn loudly instead.
+            const meshComponentId = getMeshComponentId(project);
+            if (meshComponentId) {
+                onProgress?.('Generating mesh configuration...');
+                try {
+                    const { regenerateComponentEnvFile } = await import(
+                        '@/features/project-creation/helpers/envFileGenerator'
+                    );
+                    await regenerateComponentEnvFile(
+                        project,
+                        registry,
+                        logger,
+                        meshComponentId,
+                        meshComponent.path as string,
+                    );
+                } catch (envError) {
+                    logger.warn(
+                        `[Mesh Deployment] Could not refresh the mesh .env (${
+                            (envError as Error).message
+                        }) — deploying with the existing file, which may be stale.`,
+                    );
+                }
+            }
+
             // Bounded pre-deploy subscribe (API Mesh API + baseline) BEFORE deploying.
             await ensureMeshApiSubscribed({ project, authService: authManager, logger });
 

@@ -27,6 +27,13 @@ jest.mock('@/features/mesh/services/meshVerifier', () => ({
     fetchMeshInfoFromAdobeIO: jest.fn(),
 }));
 jest.mock('@/features/mesh/services/meshDeployment', () => ({ deployMeshComponent: jest.fn() }));
+// Dynamically imported across the feature boundary (same pattern as
+// projectResetService), so the mock targets the module it imports.
+const mockRegenerateComponentEnvFile = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
+    ...jest.requireActual('@/features/project-creation/helpers/envFileGenerator'),
+    regenerateComponentEnvFile: (...args: unknown[]) => mockRegenerateComponentEnvFile(...args),
+}));
 const mockUpdateMeshState = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     updateMeshState: (...args: unknown[]) => mockUpdateMeshState(...args),
@@ -85,6 +92,7 @@ function deps(overrides: Record<string, unknown> = {}) {
 describe('deployMeshHeadless', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        mockRegenerateComponentEnvFile.mockResolvedValue(undefined);
         const authManager = {
             testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }),
             // Enriches the org target with code/name when the id matches
@@ -149,7 +157,7 @@ describe('deployMeshHeadless', () => {
         const entry = (d.project as Project).appBuilderComponents?.['commerce-mesh'];
         expect(entry?.status).toBe('error');
         expect(entry?.error).toBe(
-            'The specified organization, project, and workspace combination is invalid',
+            'The specified organization, project, and workspace combination is invalid'
         );
     });
 
@@ -171,7 +179,10 @@ describe('deployMeshHeadless', () => {
             let target: OrgContextTarget | undefined;
             mockDeploy.mockImplementation(async () => {
                 target = getActiveOrgContext();
-                return { success: true, data: { meshId: 'mesh-1', endpoint: 'https://new/graphql' } };
+                return {
+                    success: true,
+                    data: { meshId: 'mesh-1', endpoint: 'https://new/graphql' },
+                };
             });
 
             await deployMeshHeadless(deps());
@@ -202,7 +213,10 @@ describe('deployMeshHeadless', () => {
             let target: OrgContextTarget | undefined;
             mockDeploy.mockImplementation(async () => {
                 target = getActiveOrgContext();
-                return { success: true, data: { meshId: 'mesh-1', endpoint: 'https://new/graphql' } };
+                return {
+                    success: true,
+                    data: { meshId: 'mesh-1', endpoint: 'https://new/graphql' },
+                };
             });
 
             await deployMeshHeadless(deps());
@@ -469,6 +483,69 @@ describe('deployMeshHeadless', () => {
             expect(entry.status).toBe('deployed');
             expect(entry.userDeclinedUpdate).toBeUndefined();
             expect(entry.declinedAt).toBeUndefined();
+        });
+    });
+
+    // This core backs DeployMeshCommand, the projects-dashboard deploy handler,
+    // AND the deploy_mesh MCP tool — every mesh redeploy in the extension. It
+    // reused whatever .env creation wrote, so a redeploy after a credential
+    // change in Configure shipped the previous endpoints and looked like the
+    // change had silently failed. `mesh.config.js` resolves every endpoint
+    // through `{env.*}`, so the file has to be current BEFORE `aio api-mesh`.
+    describe('mesh .env refresh', () => {
+        it('regenerates the mesh .env from the registry before deploying', async () => {
+            const d = deps();
+            await deployMeshHeadless(d);
+
+            expect(mockRegenerateComponentEnvFile).toHaveBeenCalledWith(
+                d.project,
+                expect.anything(),
+                expect.anything(),
+                'commerce-mesh',
+                '/p/mesh'
+            );
+        });
+
+        it('writes the .env BEFORE the deploy tail runs', async () => {
+            const order: string[] = [];
+            mockRegenerateComponentEnvFile.mockImplementation(async () => {
+                order.push('env');
+            });
+            mockDeploy.mockImplementation(async () => {
+                order.push('deploy');
+                return { success: true, data: { meshId: 'm', endpoint: 'https://new/graphql' } };
+            });
+
+            await deployMeshHeadless(deps());
+
+            expect(order).toEqual(['env', 'deploy']);
+        });
+
+        // Deliberately best-effort, unlike the dashboard ADD path (which aborts —
+        // see appBuilderComponentRunner-envFile.test.ts). An add has no .env yet,
+        // so deploying without one is the ENOENT being fixed; here the mesh is
+        // already installed and creation wrote its .env, so a mesh whose id has no
+        // registry definition must keep deploying rather than break outright.
+        it('still deploys with the existing .env when the refresh fails', async () => {
+            mockRegenerateComponentEnvFile.mockRejectedValue(new Error('no registry definition'));
+            const d = deps();
+
+            const result = await deployMeshHeadless(d);
+
+            expect(result.success).toBe(true);
+            expect(mockDeploy).toHaveBeenCalledTimes(1);
+        });
+
+        it('warns that the deployed .env may be stale when the refresh fails', async () => {
+            mockRegenerateComponentEnvFile.mockRejectedValue(new Error('no registry definition'));
+            const d = deps();
+
+            await deployMeshHeadless(d);
+
+            const warned = (d.logger as unknown as { warn: jest.Mock }).warn.mock.calls
+                .map((c: unknown[]) => String(c[0]))
+                .join('\n');
+            expect(warned).toMatch(/stale/i);
         });
     });
 });
