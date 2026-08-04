@@ -24,7 +24,7 @@ page was on a domain none of the doc servers index.
 | AEM as a Cloud Service, pipelines, replication | **`fluffyjaws`** `experience_league_documentation_search` | ExL Q&A, AEM-weighted by design |
 | "Has Adobe said anything about this?" — internal guidance, known issues, field intel | **`fluffyjaws`**, non-ExL tools — see below | Corpora NOTHING else reaches |
 | Helix / EDS / aem.live | **`helix-mcp-server`** `aem-docs-search` | Its own corpus |
-| **Spectrum DESIGN guidance** (should a card have X, which control for Y) | **`fluffyjaws`** `full_documentation_search` / `slack_search` | `spectrum.adobe.com` is unreadable (below), and the design team answers these in internal channels. Context7's react-spectrum is the API, not the usage rule |
+| **Spectrum DESIGN guidance** (should a card have X, which control for Y) | **Playwright browser** on `spectrum.adobe.com/page/<component>/`; `fluffyjaws` only if the public page is silent | The site is client-rendered, so `fetch` returns a shell — drive a real browser (see below). Context7's react-spectrum is the API, not the usage rule |
 | Nothing above, or need sourced cross-checking | **Perplexity** (`perplexity_ask` / `perplexity_research`) | Project CLAUDE.md prefers it over WebSearch |
 
 **Default for anything App Builder:** go to `developer.adobe.com` via `fetch` first. Reach for
@@ -175,11 +175,23 @@ and read its links, or use `adobe-exl` / Perplexity to SURFACE the URL and then 
 page itself. Community posts are useful for locating a page and unreliable for its content:
 the post that pointed here cited a path whose `app_builder_guides` segment now 404s.
 
-**`spectrum.adobe.com` cannot be fetched at all.** Verified 2026-08-04: it is a
-client-rendered Next.js app and returns a bare `<head>` shell with `raw: true` too.
-The design guidance is real but unreachable this way — route Spectrum questions to
-fluffyjaws (row above), and if a PUBLIC citation is required, say the page needs a
-browser rather than paraphrasing from memory.
+**Client-rendered doc sites: escalate, do not give up.** `fetch` returns a bare `<head>`
+shell for `spectrum.adobe.com` and `cursor.com/docs` — the content is rendered by JS that
+`fetch` never runs, and `raw: true` does not help. "Unreadable" was recorded here on
+2026-08-04 and was WRONG; both pages read fine one rung up. The ladder:
+
+1. **Doc-platform conventions** — try `<url>.md` and `/llms.txt` first (one cheap fetch
+   each). Mintlify and several Adobe properties serve them; `cursor.com` 404s both, so do
+   not spend more than two calls here.
+2. **The Playwright MCP browser** — `mcp__MCP_DOCKER__browser_navigate` then
+   `mcp__MCP_DOCKER__browser_evaluate` to pull `document.body.innerText`, the headings, or
+   a regex slice. This runs the JS and reads what a human sees. It answered BOTH pages
+   immediately. `browser_close` when done.
+3. **fluffyjaws** — only when the answer is genuinely internal, not merely JS-rendered.
+
+Prefer a PUBLIC citation whenever one exists: internal sources cannot be quoted into this
+repo, and on 2026-08-04 the public Spectrum page turned out to state the conclusion more
+plainly than the internal thread that stood in for it.
 
 **A fetch that returns empty or near-empty is not proof the page is empty.** Some pages are
 JS-rendered and come back as a shell. Check `raw: true` before concluding the content does not

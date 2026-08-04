@@ -10,10 +10,11 @@ every verb live in the kebab? Asked of the mesh card; answered for every tile.
 
 The integrations surface is the only place in the extension with a card-face action
 button. Every other tile — projects, prompts — puts all verbs in the kebab and makes
-the card body itself the affordance that opens the detail view. Adobe's own Spectrum
-guidance points the same way. **Recommendation: remove face buttons, move their verbs
-into the kebab, and keep the card body as the open-detail affordance.** Confidence:
-high on the direction, medium on the treatment for a never-deployed card.
+the card body itself the affordance that opens the detail view. Spectrum deprecated
+that face button ("quick actions") and names our exact failure mode as the reason.
+**Recommendation: remove face buttons, move their verbs into the kebab, and keep the
+card body as the open-detail affordance.** Confidence: high on the direction, medium
+on the treatment for a never-deployed card.
 
 ## Finding 1 — face buttons exist on exactly one surface (confidence: high)
 
@@ -81,24 +82,41 @@ This asymmetry is why a mesh-only fix cannot work. It was attempted twice on
 verbs for stale/error — and both produced a mesh that disagreed with every
 integration beside it. Both reverted.
 
-## Finding 4 — Spectrum says the same thing (confidence: medium-high)
+## Finding 4 — Spectrum names this exact pattern and rejects it (confidence: high)
 
-Two independent statements from Adobe's Spectrum design team:
+[spectrum.adobe.com/page/cards](https://spectrum.adobe.com/page/cards/) carries a
+section headed **"Don't use quick actions"** — a quick action being an inline button on
+the card face. Its stated reason describes our tile precisely:
 
-1. **Cards are meant to be simple.** Card "quick actions" — inline action buttons on
-   the face — were slated for removal from the pattern. Additional actions belong in
-   an action bar and/or a **detail view (side panel)**.
-2. **Spectrum cards use an Action button as the "more" menu trigger** — which is
-   exactly what `CardActionsMenu` renders.
+> Quick actions — a deprecated component — presents conflicting nested actions (for
+> example, a whole asset card could open a detailed view). This makes targeting specific
+> actions very difficult, especially on smaller screens or with the keyboard.
 
-Sourcing note: this came from Adobe-internal channels. This repository is public, so
-the conclusion is recorded here and the sources are not. Anyone re-verifying should
-route through the `adobe-docs-lookup` skill rather than re-deriving.
+"A whole card could open a detailed view" **is** `IntegrationCard`: `role="button"`,
+`onClick` → open the flyout. The `stopPropagation` wrapper in Finding 2 is the
+conflicting-nested-action problem Spectrum deprecated the component over, reproduced by
+hand.
 
-**Could not read:** `spectrum.adobe.com/page/cards/` is a client-rendered Next.js app
-and returns an empty shell to `fetch`, `raw` included. The public page was not read —
-this is "could not read it", not "it does not say it". If public citation is ever
-needed, that page must be opened in a browser.
+Three more rules from the same page, all pointing the same way:
+
+- **"Keep cards simple"** is its own guidance section.
+- "Any type of card can have an **action menu**, which is placed on the right side of the
+  header" — the kebab is the sanctioned control, and `CardActionsMenu` already renders it
+  in the sanctioned place.
+- "If a card has other interactive elements (e.g., a hidden action menu or an avatar) but
+  **no buttons, the whole card (outside of those elements) should be clickable**." That is
+  exactly Option A: kebab plus a clickable body, no face button.
+
+Spectrum's replacement for quick actions is an **action bar** for single and bulk
+selection — a selection-mode surface, not a per-card control. We have no selection mode,
+so for us the guidance collapses to: action menu on the card, richer actions in the
+detail view.
+
+Method note: this page is a client-rendered Next.js app and returns an empty shell to
+`fetch`, `raw` included. It was read with the Playwright MCP browser
+(`browser_navigate` + `browser_evaluate`). An earlier pass recorded it as "could not
+read" and fell back to Adobe-internal channels for the same conclusion; the public page
+says it plainly and is citable, which the internal sources were not.
 
 ## Options
 
