@@ -26,12 +26,12 @@ jest.mock(
     () => ({
         window: {
             withProgress: jest.fn(async (_o: unknown, task: (p: unknown) => unknown) =>
-                task({ report: jest.fn() }),
+                task({ report: jest.fn() })
             ),
         },
         ProgressLocation: { Notification: 15 },
     }),
-    { virtual: true },
+    { virtual: true }
 );
 
 import { handleDeployApiMesh } from '@/features/mesh/handlers/deployHandler';
@@ -97,15 +97,15 @@ describe('handleDeployApiMesh — an agent-triggered deploy reports itself', () 
 
         expect(vscode.window.withProgress).toHaveBeenCalledWith(
             expect.objectContaining({ title: 'Deploying API Mesh' }),
-            expect.any(Function),
+            expect.any(Function)
         );
     });
 
-    it('pushes step detail to the mesh CARD, not into the notification', async () => {
+    it('pushes step detail into the NOTIFICATION, not onto the card', async () => {
         const report = jest.fn();
         const vscode = require('vscode');
         vscode.window.withProgress.mockImplementation(
-            async (_o: unknown, task: (p: unknown) => unknown) => task({ report }),
+            async (_o: unknown, task: (p: unknown) => unknown) => task({ report })
         );
         mockDeployMeshHeadless.mockImplementation(async (deps: any) => {
             deps.onProgress('Building component…');
@@ -114,9 +114,15 @@ describe('handleDeployApiMesh — an agent-triggered deploy reports itself', () 
 
         await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
 
-        // The same register split the UI path uses: notification stays coarse.
-        expect(report).not.toHaveBeenCalled();
-        expect(mockSendMeshStatusUpdate).toHaveBeenCalledWith('deploying', 'Building component…');
+        // The same register split the UI path uses — reversed 2026-08-04: the
+        // notification carries the steps, the card names the operation once.
+        expect(report).toHaveBeenCalledWith(
+            expect.objectContaining({ message: 'Building component…' })
+        );
+        expect(mockSendMeshStatusUpdate).not.toHaveBeenCalledWith(
+            'deploying',
+            'Building component…'
+        );
     });
 
     it('pushes status transitions to the card, endpoint included on success', async () => {
@@ -128,11 +134,21 @@ describe('handleDeployApiMesh — an agent-triggered deploy reports itself', () 
 
         await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
 
-        expect(mockSendMeshStatusUpdate).toHaveBeenCalledWith('deploying', 'Starting deployment…');
+        // An in-flight 'deploying' is normalised to the stable operation name.
+        // The core sends step-ish text on this channel too ("Starting
+        // deployment…"), and letting it through would put narration back on the
+        // card via a second door, undoing the register split.
+        const deploying = mockSendMeshStatusUpdate.mock.calls.filter(
+            (c: unknown[]) => c[0] === 'deploying'
+        );
+        expect(deploying.length).toBeGreaterThan(0);
+        expect(deploying.every((c: unknown[]) => c[1] === 'Deploying Mesh')).toBe(true);
+
+        // A TERMINAL status still carries its own message and endpoint.
         expect(mockSendMeshStatusUpdate).toHaveBeenCalledWith(
             'deployed',
             undefined,
-            'https://mesh/graphql',
+            'https://mesh/graphql'
         );
     });
 });

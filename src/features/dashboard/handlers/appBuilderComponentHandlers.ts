@@ -27,6 +27,7 @@
 import * as vscode from 'vscode';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ServiceLocator } from '@/core/di';
+import { cardInFlightLabel, withProgressRegister } from '@/core/vscode/progressRegister';
 import {
     addAppBuilderComponent,
     deployAppBuilderComponent,
@@ -398,36 +399,19 @@ async function withComponentProgress<T extends GuardableResult>(
     const { title, id, label, noun, logger } = options;
     logger.info(`${title} ${label}...`);
 
-    let result = { success: false } as T;
-    await vscode.window.withProgress(
+    // The register split (steps -> notification, card -> one static line) is
+    // SHARED with the mesh path, which is a separate implementation of the same
+    // operation. It lived in both and was reversed in only one, so a mesh
+    // redeploy narrated the old way for a round of testing. It now lives once.
+    const result = await withProgressRegister(
         {
-            location: vscode.ProgressLocation.Notification,
             title: `${title} ${label}`,
-            cancellable: false,
+            cardLabel: cardInFlightLabel(title, noun),
+            pushCardStatus: (cardLabel) => {
+                void postRowStatus(id, 'deploying', cardLabel);
+            },
         },
-        async (progress) => {
-            // The card names the operation ONCE and then holds still; `report`
-            // drives the NOTIFICATION.
-            //
-            // The split itself is unchanged — no two surfaces narrate the same
-            // step — but the assignment is reversed from the first attempt at it.
-            // Steps went to the card on the theory that the object being acted on
-            // should carry them; seen running, that was backwards. The card's
-            // status line is small, uppercase and inside a ~450px tile, so
-            // "VERIFYING DEPLOYMENT… CHECKING DEPLOYMENT STATUS…" wrapped to two
-            // shouting lines in the middle of the object's own summary, while the
-            // notification — transient, roomy, and where VS Code users already
-            // look for progress — sat on one static line.
-            //
-            // Verb + KIND on the card, never the component name: its heading
-            // already carries the name, so "Deploying ERP Sync" under "ERP Sync"
-            // would spend the tile's one status line restating its title. The
-            // kind is the one thing the heading does not say.
-            void postRowStatus(id, 'deploying', `${title} ${noun}`);
-            result = await run((message) => {
-                progress.report({ message });
-            });
-        },
+        run,
     );
 
     if (result.success) {
