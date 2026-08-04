@@ -2838,7 +2838,11 @@ button[class*="spectrum-Button"][disabled],
     /* Match .brand-card-description (gray-600) — the package card's description tone. */
     color: var(--spectrum-global-color-gray-600) !important;
     line-height: 1.4 !important;
-    flex: 1 !important;
+    /* NO `flex: 1`. The card is a flex COLUMN, so growing this line absorbed all
+       leftover height and pushed every status row to the bottom edge — which made
+       the first status sit lower on a card with one status than on a card with
+       three. The statuses read top-down from directly beneath this line; the
+       card's slack belongs below them. */
 }
 
 /* Typography - status gets wizard label treatment */

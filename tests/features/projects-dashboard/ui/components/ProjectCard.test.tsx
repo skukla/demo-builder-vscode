@@ -168,6 +168,75 @@ describe('ProjectCard', () => {
         });
     });
 
+    // NOTE: only the ORDER is verifiable here. The block's vertical ANCHORING is
+    // pure flex layout — jsdom resolves no Spectrum tokens (gap renders as the
+    // literal "size-100") and `marginTop="auto"` never reaches the DOM — so a test
+    // asserting it would pass whether or not the bug is present. That half needs
+    // eyes on the running card.
+    //
+    // The statuses read TOP-DOWN from just beneath the stack description:
+    // storefront highest, then mesh, then integrations. The list is
+    // variable-length — a project may have one line or three — so anchoring it to
+    // the card's BOTTOM (margin-top:auto on the first row, in a flex column) made
+    // the first line's position depend on how many followed it. Order was always
+    // right; POSITION moved, which is what read as inconsistent when scanning a
+    // grid of cards.
+    describe('status order', () => {
+        function statusLines(container: HTMLElement): string[] {
+            return Array.from(container.querySelectorAll('.project-card-spectrum-status')).map(
+                (n) => n.textContent ?? ''
+            );
+        }
+
+        // The stack summary must NOT absorb the card's leftover height. `flex: 1`
+        // on it made it grow to fill, pushing every status row to the card's
+        // bottom edge — so on a card with one status line "Published" sat lower
+        // than on a card with three. This is the second anchor: removing
+        // `marginTop="auto"` from the first status row changed nothing, because
+        // the summary was doing the same job one element earlier. Unlike the
+        // margin, THIS one is a stylesheet rule, so it is observable here.
+        it('does not let the stack summary absorb the card height', () => {
+            const css = require('fs').readFileSync(
+                'src/core/ui/styles/custom-spectrum.css',
+                'utf8'
+            ) as string;
+            const start = css.indexOf('.project-card-spectrum-components {');
+            // Comments stripped first: the rule's own comment explains why there is
+            // no flex-grow, and matching that text would make this pass on prose.
+            const rule = css
+                .slice(start, css.indexOf('}', start))
+                .replace(/\/\*[\s\S]*?\*\//g, '');
+
+            expect(rule).not.toMatch(/flex:\s*1/);
+            expect(rule).not.toMatch(/flex-grow/);
+        });
+
+        it('lists storefront, then mesh, then integrations', () => {
+            const project = createMockProject({
+                edsStorefrontStatusSummary: 'published',
+                meshStatusSummary: 'deployed',
+                appBuilderComponents: {
+                    'acme-widget': {
+                        kind: 'integration',
+                        status: 'deployed',
+                        source: { owner: 'acme', repo: 'widget' },
+                    },
+                },
+            } as never);
+            const { container } = renderWithProvider(
+                <ProjectCard project={project} onSelect={jest.fn()} />
+            );
+
+            const lines = statusLines(container);
+            expect(lines).toHaveLength(3);
+            // Line 0 is the project/storefront status — its wording depends on
+            // whether the project is EDS, which is not what this pins.
+            expect(lines[1]).toBe('Mesh Deployed');
+            expect(lines[2]).toBe('1 integration deployed');
+        });
+
+    });
+
     describe('interactions', () => {
         it('should call onSelect when clicked', () => {
             const project = createMockProject({ name: 'Clickable Demo' });

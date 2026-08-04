@@ -117,8 +117,17 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                 <Text UNSAFE_className="project-card-spectrum-components">{brandStackSummary}</Text>
             )}
 
-            {/* Status Row */}
-            <Flex alignItems="center" gap="size-100" marginTop="auto">
+            {/* Status rows, read TOP-DOWN from directly beneath the stack summary:
+                storefront, then mesh, then integrations.
+
+                No `marginTop="auto"` here. In this flex column that pushed the row
+                — and every status row after it — to the card's BOTTOM edge, so the
+                first status sat at a different height depending on how many
+                followed it. Order was always storefront-first; the POSITION moved,
+                which is what read as inconsistent across a grid of cards. Anchored
+                to the top, the first status lands in the same place on every card
+                and the slack falls below. */}
+            <Flex alignItems="center" gap="size-100">
                 <StatusDot variant={statusVariant} size={6} />
                 <Text UNSAFE_className="project-card-spectrum-status">{statusText}</Text>
             </Flex>
