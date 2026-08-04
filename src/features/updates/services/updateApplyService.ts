@@ -19,11 +19,10 @@
  */
 
 import * as vscode from 'vscode';
-import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils';
 import { sanitizeErrorForLogging } from '@/core/validation';
-import { generateAIContextFiles } from '@/features/project-creation/services';
+import { generateAIContextFiles, resolveMcpToolsDir } from '@/features/project-creation/services';
 import {
     applyBlockLibraryUpdateResolved,
     updateCommitShaWithRollback,
@@ -192,16 +191,19 @@ async function applyAdobeMcp(
     if (items.length === 0) return result;
     const commandManager = ServiceLocator.getCommandExecutor();
     for (const { project, packageName, latestVersion } of items) {
-        const storefrontPath = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path;
-        if (!storefrontPath) {
-            result.failCount++;
-            result.errors.push(`${project.name}: no storefront path for Adobe MCP update`);
-            continue;
-        }
+        // The MCP packages live in the per-project ISOLATED tools dir, not the
+        // storefront's node_modules — run the update there, exactly as the
+        // interactive sibling `performAdobeMcpUpdates` does.
+        //
+        // This ran in the storefront path until 2026-08-04. npm updates nothing
+        // there and still exits 0, so `apply_updates` reported success while
+        // changing nothing, and AdobeMcpUpdateChecker — which reads the version
+        // FROM the tools dir — re-offered the same update forever.
+        const toolsDir = resolveMcpToolsDir(project.path);
         onProgress?.(`Updating ${packageName} → ${latestVersion} in ${project.name}...`);
         try {
             const r = await commandManager.execute(`npm update ${packageName} --no-fund`, {
-                cwd: storefrontPath,
+                cwd: toolsDir,
                 timeout: TIMEOUTS.VERY_LONG,
                 shell: DEFAULT_SHELL,
                 enhancePath: true,

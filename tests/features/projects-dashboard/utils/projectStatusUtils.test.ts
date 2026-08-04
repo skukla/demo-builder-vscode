@@ -10,6 +10,7 @@
  * Tests for those functions are in tests/types/typeGuards-project-accessors.test.ts.
  */
 
+import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import type { ProjectStatus } from '@/types/base';
 import {
     getStatusText,
@@ -640,3 +641,35 @@ describe('projectStatusUtils', () => {
         });
     });
 });
+
+// The mesh a project's STATUS LINE describes must be the mesh its card ACTS on.
+//
+// Found 2026-08-04 by a chokepoint audit. `getIdentifiedMeshAppBuilderComponent`
+// owns a two-step resolution — the canonical `mesh` key first, then first-by-kind
+// — and this reader re-derived only the fallback half. That is the exact shape of
+// the same-day defect where a card showed one mesh while Remove tore down another;
+// it escaped that fix because the canonical docblock scopes itself to code that
+// ACTS on the mesh, and this is a read.
+describe('mesh status resolution matches the canonical resolver', () => {
+    it('prefers the canonical `mesh` key over another mesh entry', () => {
+        const project = {
+            appBuilderComponents: {
+                // Insertion order deliberately puts the non-canonical one FIRST,
+                // which is what a bare find() would return.
+                'eds-accs-mesh': { kind: 'mesh', status: 'error' },
+                mesh: { kind: 'mesh', status: 'deployed' },
+            },
+        } as never;
+
+        expect(getMeshStatusText(project)).toBe(getMeshStatusDisplay('deployed')?.text);
+    });
+
+    it('still falls back to the only mesh when there is no canonical key', () => {
+        const project = {
+            appBuilderComponents: { 'eds-accs-mesh': { kind: 'mesh', status: 'deployed' } },
+        } as never;
+
+        expect(getMeshStatusText(project)).toBe(getMeshStatusDisplay('deployed')?.text);
+    });
+});
+

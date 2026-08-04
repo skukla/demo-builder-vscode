@@ -8,6 +8,7 @@
 
 import { getAppStatusDisplay } from '@/core/ui/utils/appStatusDisplay';
 import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
+import { getIdentifiedMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import type { AppBuilderComponentState, Project, ProjectStatus } from '@/types/base';
 import { getComponentInstanceValues, isEdsProject } from '@/types/typeGuards';
 
@@ -111,9 +112,13 @@ export function getStatusVariant(status: ProjectStatus, isEds?: boolean): Status
  */
 function getMeshStatusKey(project: Project): string | undefined {
     if (project.meshStatusSummary) return project.meshStatusSummary;
-    return Object.values(project.appBuilderComponents ?? {}).find(
-        (state) => state.kind === 'mesh',
-    )?.status;
+    // Route through the canonical resolver rather than re-deriving "which entry
+    // is the mesh". It applies a two-step priority — the canonical `mesh` key
+    // first, then first-by-kind — and this reader used to run only the fallback
+    // half. On a project holding two mesh entries that showed the status of a
+    // DIFFERENT mesh than the one the card acts on: the same shape as the
+    // 2026-08-04 defect where Remove tore down the wrong component.
+    return getIdentifiedMeshAppBuilderComponent(project)?.state.status;
 }
 
 export function getMeshStatusText(project: Project): string | null {
