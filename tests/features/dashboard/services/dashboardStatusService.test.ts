@@ -145,6 +145,69 @@ describe('dashboardStatusService', () => {
             expect(result).toBe(true);
         });
 
+        // REGRESSION (2026-08-04, live): a mesh added from the dashboard verified
+        // successfully, wrote a keyed entry reading `status: 'deployed'` with an
+        // endpoint and a lastDeployed timestamp — and the integrations grid still
+        // said "Not Deployed", because this predicate tested `envVars`.
+        //
+        // `envVars` is the mesh STALENESS BASELINE (ADR-011 D3 Step 06), written by
+        // `updateMeshState` on the deployMeshHeadless path and NOT by the keyed
+        // runner's add. So a redeploy looked deployed and an add did not. The
+        // question this predicate answers — "has this mesh ever been deployed?" —
+        // is answered by the deploy record, not by a staleness baseline that only
+        // one of two deploy paths happens to write.
+        it('returns true for a keyed entry with an endpoint but NO staleness baseline', () => {
+            const project = {
+                name: 'test-project',
+                path: '/path/to/project',
+                appBuilderComponents: {
+                    'eds-accs-mesh': {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        endpoint: 'https://edge-sandbox-graph.adobe.io/api/abc/graphql',
+                        lastDeployed: '2026-08-04T23:37:12.261Z',
+                        source: { owner: 'skukla', repo: 'eds-accs-mesh' },
+                    },
+                },
+            } as never;
+
+            expect(hasMeshDeploymentRecord(project)).toBe(true);
+        });
+
+        it('returns true on lastDeployed alone (deployed, endpoint since cleared)', () => {
+            const project = {
+                name: 'test-project',
+                path: '/path/to/project',
+                appBuilderComponents: {
+                    'eds-accs-mesh': {
+                        kind: 'mesh',
+                        status: 'error',
+                        lastDeployed: '2026-08-04T23:37:12.261Z',
+                        source: { owner: 'skukla', repo: 'eds-accs-mesh' },
+                    },
+                },
+            } as never;
+
+            expect(hasMeshDeploymentRecord(project)).toBe(true);
+        });
+
+        // Control: a mesh that exists but has never deployed is still not-deployed.
+        it('returns false for a keyed entry with no endpoint, timestamp or baseline', () => {
+            const project = {
+                name: 'test-project',
+                path: '/path/to/project',
+                appBuilderComponents: {
+                    'eds-accs-mesh': {
+                        kind: 'mesh',
+                        status: 'not-deployed',
+                        source: { owner: 'skukla', repo: 'eds-accs-mesh' },
+                    },
+                },
+            } as never;
+
+            expect(hasMeshDeploymentRecord(project)).toBe(false);
+        });
+
         it('should return false when meshState is undefined', () => {
             // Given: A project without meshState
             const project: Project = {
