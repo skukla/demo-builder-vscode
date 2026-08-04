@@ -266,6 +266,76 @@ describe('addAppBuilderComponent partial-failure', () => {
         expect(deps.componentManager.removeComponent).not.toHaveBeenCalled();
     });
 
+    // CHARACTERISATION, guarding the consolidation onto recordDeployOutcome.
+    // That writer resolves its key through resolveKeyedComponentId, whose
+    // legacy-migration branch reuses the ONE existing same-kind entry's key when
+    // the given id is not yet keyed. That is right for an UPDATE and catastrophic
+    // for a CREATE: adding a second integration would overwrite the first. An add
+    // must key by its own id, always.
+    it('keys a SECOND integration under its own id, never the first ones', async () => {
+        const project = createProject({
+            appBuilderComponents: {
+                // A DIFFERENT id from the one being added — otherwise this is an
+                // update, which is the case the migration branch exists for.
+                'order-sync': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    name: 'Order Sync',
+                    source: { owner: 'acme', repo: 'order-sync' },
+                    url: 'https://orders/api',
+                },
+            },
+        });
+        const deps = createDeps();
+
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+
+        const persisted = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
+        // The newcomer under its OWN key...
+        expect(persisted.appBuilderComponents?.[INTEGRATION_ENTRY.id]?.status).toBe('deployed');
+        // ...and the incumbent untouched.
+        expect(persisted.appBuilderComponents?.['order-sync']).toEqual(
+            expect.objectContaining({ name: 'Order Sync', url: 'https://orders/api' }),
+        );
+    });
+
+    // BEHAVIOUR CHANGE (2026-08-04 consolidation): a redeploy used to REPLACE the
+    // entry with a freshly built state, dropping every field the new state did not
+    // mention. Routed through recordDeployOutcome it merges instead, so fields the
+    // deploy has no opinion about survive it.
+    it('a redeploy preserves fields its outcome says nothing about', async () => {
+        const project = createProject({
+            appBuilderComponents: {
+                'erp-bridge': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    name: 'ERP Bridge',
+                    source: { owner: 'acme', repo: 'erp-bridge' },
+                    sourceHash: 'abc123',
+                    userDeclinedUpdate: true,
+                },
+            },
+            componentInstances: {
+                'erp-bridge': {
+                    id: 'erp-bridge',
+                    name: 'ERP',
+                    type: 'app-builder',
+                    status: 'ready',
+                    path: '/proj/components/erp-bridge',
+                } as never,
+            },
+        });
+        const deps = createDeps();
+
+        await deployAppBuilderComponent(project, 'erp-bridge', deps as never);
+
+        const saved = (deps.saveProject as jest.Mock).mock.calls.at(-1)![0] as Project;
+        const entry = saved.appBuilderComponents?.['erp-bridge'];
+        expect(entry?.status).toBe('deployed');
+        expect(entry?.sourceHash).toBe('abc123');
+        expect(entry?.userDeclinedUpdate).toBe(true);
+    });
+
     it('persists the reason for an INTEGRATION add failure too', async () => {
         const project = createProject();
         const deps = createDeps({

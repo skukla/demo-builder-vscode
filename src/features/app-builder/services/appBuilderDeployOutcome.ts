@@ -34,7 +34,11 @@ export type DeployOutcome = Pick<
     | 'userDeclinedUpdate'
     | 'declinedAt'
     | 'error'
->;
+> &
+    // Identity, supplied only when CREATING an entry. An update inherits these
+    // from the entry it is updating — which is why they are optional rather than
+    // part of the Pick above.
+    Partial<Pick<AppBuilderComponentState, 'name' | 'source' | 'providesEnvVars'>>;
 
 /**
  * Resolve the keyed id an operation on a component INSTANCE should land on.
@@ -73,7 +77,9 @@ function refreshProvidedEnvVars(
     existing: AppBuilderComponentState | undefined,
     outcome: DeployOutcome,
 ): Record<string, string> | undefined {
-    const provided = existing?.providesEnvVars;
+    // The existing entry is authoritative on an update; on a CREATE there is none,
+    // so the outcome carries what the catalog says this component provides.
+    const provided = existing?.providesEnvVars ?? outcome.providesEnvVars;
     if (!provided || outcome.endpoint === undefined || !('MESH_ENDPOINT' in provided)) {
         return provided;
     }
@@ -112,16 +118,26 @@ export function recordDeployOutcome(
     kind: AppBuilderComponentKind,
     instanceId: string,
     outcome: DeployOutcome,
+    options: { create?: boolean } = {},
 ): void {
-    const id = resolveKeyedComponentId(project, kind, instanceId);
+    // `create` bypasses resolveKeyedComponentId deliberately. That helper's
+    // legacy-migration branch reuses the ONE existing same-kind entry's key when
+    // the given id is not yet keyed — correct for an update of a migrated
+    // singleton, catastrophic for a create: adding a second integration would
+    // land on the first one's key and overwrite it. An add keys by its own id.
+    const id = options.create ? instanceId : resolveKeyedComponentId(project, kind, instanceId);
     const existing = project.appBuilderComponents?.[id];
     project.appBuilderComponents = {
         ...(project.appBuilderComponents ?? {}),
         [id]: {
-            source: { owner: '', repo: '' },
             ...existing,
             ...outcome,
             kind,
+            // Identity: the outcome supplies it on a create, the existing entry
+            // keeps it on an update. Spreading alone would let an update carrying
+            // no name blank the one already stored.
+            name: outcome.name ?? existing?.name,
+            source: outcome.source ?? existing?.source ?? { owner: '', repo: '' },
             providesEnvVars: refreshProvidedEnvVars(existing, outcome),
             error: resolveErrorReason(existing, outcome),
         },

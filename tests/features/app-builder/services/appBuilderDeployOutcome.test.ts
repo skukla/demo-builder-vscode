@@ -82,3 +82,82 @@ describe('recordDeployOutcome — failure reason', () => {
         expect(p.appBuilderComponents?.mesh.error).toBe('the real reason');
     });
 });
+
+// ---------------------------------------------------------------------------
+// create mode — added 2026-08-04 when the ADD path was consolidated onto this
+// writer. Until then the add built and persisted its own state, which is how the
+// failure reason came to be dropped: a second writer that reimplemented the
+// merge and omitted a field.
+// ---------------------------------------------------------------------------
+describe('recordDeployOutcome — create', () => {
+    it('keys by the given id, NOT the migration branch of resolveKeyedComponentId', () => {
+        // One same-kind entry exists under a different key. Without `create`, the
+        // migration branch reuses it — which for an ADD overwrites the incumbent.
+        const p = project();
+
+        recordDeployOutcome(
+            p,
+            'mesh',
+            'commerce-eds-mesh',
+            { status: 'deployed', name: 'New Mesh', source: { owner: 'skukla', repo: 'x' } },
+            { create: true },
+        );
+
+        expect(p.appBuilderComponents?.['commerce-eds-mesh']?.name).toBe('New Mesh');
+        // The incumbent, untouched.
+        expect(p.appBuilderComponents?.mesh?.endpoint).toBe(
+            'https://graph.adobe.io/api/demo/graphql',
+        );
+    });
+
+    it('WITHOUT create, the same call lands on the migrated singleton', () => {
+        const p = project();
+
+        recordDeployOutcome(p, 'mesh', 'commerce-eds-mesh', { status: 'deployed' });
+
+        // Proof the guard above is load-bearing rather than decorative.
+        expect(p.appBuilderComponents?.['commerce-eds-mesh']).toBeUndefined();
+        expect(p.appBuilderComponents?.mesh?.status).toBe('deployed');
+    });
+
+    it('takes identity from the outcome when there is no entry to inherit it from', () => {
+        const p = { name: 'p', path: '/p' } as unknown as Project;
+
+        recordDeployOutcome(
+            p,
+            'integration',
+            'erp-bridge',
+            {
+                status: 'deployed',
+                name: 'ERP Bridge',
+                source: { owner: 'acme', repo: 'erp-bridge', branch: 'main' },
+            },
+            { create: true },
+        );
+
+        const created = p.appBuilderComponents?.['erp-bridge'];
+        expect(created).toEqual(
+            expect.objectContaining({
+                kind: 'integration',
+                status: 'deployed',
+                name: 'ERP Bridge',
+                source: { owner: 'acme', repo: 'erp-bridge', branch: 'main' },
+            }),
+        );
+    });
+
+    it('an UPDATE keeps the identity it already has', () => {
+        const p = project();
+        p.appBuilderComponents!.mesh.name = 'Commerce Mesh';
+
+        recordDeployOutcome(p, 'mesh', 'mesh', { status: 'deployed' });
+
+        // An outcome carrying no name must not blank the stored one.
+        expect(p.appBuilderComponents?.mesh?.name).toBe('Commerce Mesh');
+        expect(p.appBuilderComponents?.mesh?.source).toEqual({
+            owner: 'skukla',
+            repo: 'commerce-mesh',
+        });
+    });
+});
+

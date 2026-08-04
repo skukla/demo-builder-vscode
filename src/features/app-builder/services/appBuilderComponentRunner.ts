@@ -15,6 +15,12 @@
  * - remove: integration → `aio app undeploy`; mesh → `aio api-mesh:delete` → clear
  *           `appBuilderComponents[id]` → if it provided vars, republish WITHOUT them.
  *
+ * Every deploy — add and redeploy, success and failure — records its outcome
+ * through `recordDeployOutcome`, the one keyed deploy-record writer. The add
+ * passes `create: true` so it keys by its own id instead of resolveKeyedComponentId's
+ * legacy-migration branch, which would land a second integration on the first
+ * one's key.
+ *
  * Partial-failure: a clone-OK-but-deploy-failed add persists `status:'error'` and
  * RETAINS the local folder for retry (never clears the entry).
  *
@@ -24,7 +30,8 @@
  * defaults wire the real functions; unit tests mock them.
  */
 
-import { setAppBuilderComponent, getProvidedEnvVars } from './appBuilderComponentState';
+import { getProvidedEnvVars } from './appBuilderComponentState';
+import { recordDeployOutcome, type DeployOutcome } from './appBuilderDeployOutcome';
 import { isStandaloneApp } from './appConfigPackages';
 import { deriveOwPackage } from './owPackageName';
 import type { AppDeploymentResult } from './types';
@@ -153,16 +160,22 @@ function findMissingProvider(
  * the runner returns — without the sync, those later saves clobbered the keyed
  * write and a creation-deployed integration vanished from the manifest.
  */
-async function persistResult(
+/**
+ * Record an ADD's outcome and save.
+ *
+ * `create: true` keys the entry by the component's OWN id. Without it the write
+ * would go through resolveKeyedComponentId, whose legacy-migration branch reuses
+ * the one existing same-kind entry's key — which for an add means the second
+ * integration lands on the first one's key and overwrites it.
+ */
+async function persistOutcome(
     project: Project,
-    id: string,
-    state: AppBuilderComponentState,
+    entry: AppBuilderComponentCatalogEntry,
+    outcome: DeployOutcome,
     deps: AppBuilderComponentRunnerDeps,
-): Promise<Project> {
-    const updated = setAppBuilderComponent(project, id, state);
-    project.appBuilderComponents = updated.appBuilderComponents;
-    await deps.saveProject(updated);
-    return updated;
+): Promise<void> {
+    recordDeployOutcome(project, entry.kind, entry.id, outcome, { create: true });
+    await deps.saveProject(project);
 }
 
 /** Republish the storefront when the project carries provided env vars (else no-op). */
@@ -177,16 +190,14 @@ async function republishIfProvided(
 }
 
 /** Build the persisted AppBuilderComponentState from a successful mesh deploy. */
-function meshState(
+function meshOutcome(
     entry: AppBuilderComponentCatalogEntry,
     data: MeshDeploymentResult['data'],
-): AppBuilderComponentState {
+): DeployOutcome {
     const endpoint = data?.endpoint ?? '';
     return {
-        kind: 'mesh',
         status: 'deployed',
-        name: entry.name,
-        source: { owner: entry.source.owner, repo: entry.source.repo, branch: entry.source.branch },
+        ...identityOf(entry),
         endpoint,
         lastDeployed: new Date().toISOString(),
         providesEnvVars: entry.providesEnvVars?.includes('MESH_ENDPOINT')
@@ -196,69 +207,60 @@ function meshState(
 }
 
 /** Build the persisted AppBuilderComponentState from a successful integration deploy. */
-function integrationState(
+function integrationOutcome(
     entry: AppBuilderComponentCatalogEntry,
     data: AppDeploymentResult['data'],
-): AppBuilderComponentState {
+): DeployOutcome {
     return {
-        kind: 'integration',
         status: 'deployed',
-        name: entry.name,
-        source: { owner: entry.source.owner, repo: entry.source.repo, branch: entry.source.branch },
+        ...identityOf(entry),
         url: data?.url,
         deployedUrls: data?.deployedUrls,
         lastDeployed: new Date().toISOString(),
     };
 }
 
-/**
- * An error-status entry that keeps coherent state after a failed deploy —
- * INCLUDING why it failed.
- *
- * The reason used to be returned to the caller and dropped from state, so a
- * failed add persisted `status:'error'` with nothing to explain it and no
- * surface could answer "why?" after the notification faded. `error` is the one
- * field a failed entry exists to carry.
- *
- * NOTE: this path builds and persists its own state instead of going through
- * `recordDeployOutcome`, which features/CLAUDE.md calls "the one keyed
- * deploy-record writer every deploy path lands on" — and which already merges
- * `error` correctly. It cannot be used as-is here because it merges onto an
- * EXISTING entry, and a failed add has none. Reconciling the two writers is a
- * refactor, not a bug fix; flagged rather than done.
- */
-function errorState(
+/** The identity a CREATE must supply; an update inherits it from its entry. */
+function identityOf(
     entry: AppBuilderComponentCatalogEntry,
-    reason: string,
-): AppBuilderComponentState {
+): Pick<DeployOutcome, 'name' | 'source'> {
     return {
-        kind: entry.kind,
-        status: 'error',
         name: entry.name,
         source: { owner: entry.source.owner, repo: entry.source.repo, branch: entry.source.branch },
-        error: reason,
     };
 }
 
-/** Dispatch the deploy by kind; returns success + the persisted state. */
+/**
+ * A failed deploy's outcome — INCLUDING why it failed.
+ *
+ * The reason used to be returned to the caller and dropped from state, so a
+ * failed add persisted `status:'error'` with nothing to explain it and no surface
+ * could answer "why?" once the notification faded. `error` is the one field a
+ * failed entry exists to carry.
+ */
+function errorOutcome(entry: AppBuilderComponentCatalogEntry, reason: string): DeployOutcome {
+    return { status: 'error', ...identityOf(entry), error: reason };
+}
+
+/** Dispatch the deploy by kind; returns success + the outcome to record. */
 async function dispatchDeploy(
     project: Project,
     entry: AppBuilderComponentCatalogEntry,
     componentPath: string,
     deps: AppBuilderComponentRunnerDeps,
-): Promise<{ ok: true; state: AppBuilderComponentState } | { ok: false; error: string }> {
+): Promise<{ ok: true; outcome: DeployOutcome } | { ok: false; error: string }> {
     if (entry.kind === 'mesh') {
         // The mesh tail picks create-vs-update internally (its own verification
         // resolves the existing mesh); D1 persists no separate meshId to pass.
         const result = await deps.deployMesh(componentPath, deps.commandManager, deps.logger);
         return result.success
-            ? { ok: true, state: meshState(entry, result.data) }
+            ? { ok: true, outcome: meshOutcome(entry, result.data) }
             : { ok: false, error: result.error || 'Mesh deployment failed.' };
     }
     const owPackage = deriveOwPackage(entry.id);
     const result = await deps.deployApp(componentPath, owPackage, deps.commandManager, deps.logger);
     return result.success
-        ? { ok: true, state: integrationState(entry, result.data) }
+        ? { ok: true, outcome: integrationOutcome(entry, result.data) }
         : { ok: false, error: result.error || 'App deployment failed.' };
 }
 
@@ -309,12 +311,12 @@ export async function addAppBuilderComponent(
         );
 
         if (!deployed.ok) {
-            await persistResult(project, entry.id, errorState(entry, deployed.error), deps);
+            await persistOutcome(project, entry, errorOutcome(entry, deployed.error), deps);
             return { success: false, error: deployed.error };
         }
 
-        const updated = await persistResult(project, entry.id, deployed.state, deps);
-        await republishIfProvided(updated, deps);
+        await persistOutcome(project, entry, deployed.outcome, deps);
+        await republishIfProvided(project, deps);
         return { success: true };
     } catch (error) {
         deps.logger.error('[AppBuilderComponent Runner] add failed', error as Error);
@@ -346,8 +348,9 @@ export async function deployAppBuilderComponent(
         if (!deployed.ok) {
             return { success: false, error: deployed.error };
         }
-        const updated = await persistResult(project, id, deployed.state, deps);
-        await republishIfProvided(updated, deps);
+        recordDeployOutcome(project, entry.kind, id, deployed.outcome);
+        await deps.saveProject(project);
+        await republishIfProvided(project, deps);
         return { success: true };
     } catch (error) {
         deps.logger.error('[AppBuilderComponent Runner] deploy failed', error as Error);
@@ -461,7 +464,7 @@ export async function removeAppBuilderComponent(
     };
     delete cleared.appBuilderComponents[id];
     // Sync the caller's reference too — a later save from a stale reference
-    // would otherwise RESURRECT the removed integration (see persistResult).
+    // would otherwise RESURRECT the removed integration (see persistOutcome).
     project.appBuilderComponents = cleared.appBuilderComponents;
     await deps.saveProject(cleared);
 

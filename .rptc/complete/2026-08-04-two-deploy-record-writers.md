@@ -1,6 +1,23 @@
 # The add path bypasses the "one deploy-record writer"
 
 **Filed:** 2026-08-04
+**Status: DONE 2026-08-04.** Both deploy paths — add and redeploy, success and
+failure — now record through `recordDeployOutcome`. `errorState`/`meshState`/
+`integrationState` and `persistResult` are deleted; nothing constructs component
+state outside the writer.
+
+**The create case, as predicted, was the whole difficulty** — and the hazard was
+worse than this doc guessed. It is not only that identity fields must be supplied:
+`resolveKeyedComponentId`'s migration branch reuses the ONE existing same-kind
+entry's key when the given id is not yet keyed, so routing an ADD through it
+unchanged would land a second integration on the first one's key and overwrite it.
+`create: true` bypasses that resolution and keys by the component's own id. Both
+halves are pinned, each verified against its broken state.
+
+**One behaviour change, deliberate and pinned:** a redeploy now MERGES onto its
+entry where `persistResult` replaced it wholesale, so `sourceHash`,
+`userDeclinedUpdate` and anything else the deploy has no opinion about survive it.
+
 **Type:** Consolidation. Behaviour-preserving if done right.
 **Origin:** Surfaced while fixing the failed-add debris — a failed add persisted
 `status:'error'` with no reason, and nothing could say why.
