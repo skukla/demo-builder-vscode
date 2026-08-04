@@ -1,15 +1,28 @@
 /**
  * AppBuilderComponent Catalog Loader
  *
- * Loads and filters the pre-built appBuilderComponent catalog (app-builder-components.json) — the
- * 6th declarative config, mirroring blockLibraryLoader. Filters by the user's
- * chosen backend/frontend and resolves entry source + env schema for the
+ * Loads and filters the pre-built appBuilderComponent catalog — the 6th
+ * declarative config, mirroring blockLibraryLoader. Filters by the user's chosen
+ * backend/frontend and resolves entry source + env schema for the
  * selection/deploy paths.
+ *
+ * The catalog has TWO halves and only one of them is authored:
+ *
+ *   - integrations — authored in `app-builder-components.json`
+ *   - meshes       — DERIVED from `stacks.json` + `components.json`
+ *                    (see {@link deriveMeshCatalogEntries})
+ *
+ * Meshes are derived because they already existed in the registry, and the
+ * hand-authored copies had drifted: both EDS rows cloned the wrong repository.
+ * Authoring a mesh row here again would re-create that second contract — add it
+ * to `stacks.json` and `components.json` instead, exactly as project creation
+ * expects.
  *
  * @module features/project-creation/services/appBuilderComponentCatalogLoader
  */
 
 import appBuilderComponentsConfig from '../config/app-builder-components.json';
+import { deriveMeshCatalogEntries } from './meshCatalogDerivation';
 import type {
     AppBuilderComponentsCatalog,
     AppBuilderComponentCatalogEntry,
@@ -17,7 +30,20 @@ import type {
 } from '@/types/appBuilderComponents';
 import type { AddonSource } from '@/types/demoPackages';
 
-const config = appBuilderComponentsConfig as unknown as AppBuilderComponentsCatalog;
+const authored = appBuilderComponentsConfig as unknown as AppBuilderComponentsCatalog;
+
+/**
+ * The full catalog: derived meshes first, then authored integrations.
+ *
+ * Computed once at module load — both inputs are static JSON, so there is
+ * nothing to invalidate.
+ */
+const allEntries: AppBuilderComponentCatalogEntry[] = [
+    ...deriveMeshCatalogEntries(),
+    ...authored.appBuilderComponents,
+];
+
+const config = { ...authored, appBuilderComponents: allEntries };
 
 /** An App Builder component fits an axis if it is unconstrained on it OR lists the id. */
 function fitsAxis(constraint: string[] | undefined, id: string): boolean {
@@ -49,7 +75,7 @@ export function getAvailableAppBuilderComponents(
 /**
  * Resolve a catalog entry by id.
  *
- * @param id - The appBuilderComponent id (e.g. "commerce-paas-mesh")
+ * @param id - The appBuilderComponent id (e.g. "eds-commerce-mesh")
  * @returns The entry, or undefined if unknown
  */
 export function getAppBuilderComponentEntry(

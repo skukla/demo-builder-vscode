@@ -16,7 +16,7 @@ export function state(overrides: Partial<WizardState> = {}): WizardState {
 
 /** The stack's mesh entry (as meshComponentForStack resolves it). */
 export const MESH_ENTRY: AppBuilderComponentCatalogEntry = {
-    id: 'commerce-eds-mesh',
+    id: 'eds-accs-mesh',
     name: 'Commerce API Mesh',
     description: 'Unified GraphQL endpoint over Commerce services',
     kind: 'mesh',

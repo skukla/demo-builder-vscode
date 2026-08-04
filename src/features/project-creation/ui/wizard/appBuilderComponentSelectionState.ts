@@ -15,23 +15,10 @@
  * @module features/project-creation/ui/wizard/appBuilderComponentSelectionState
  */
 
-import { COMPONENT_IDS } from '@/core/constants';
+import { isMeshComponentId } from '@/core/constants';
 
 /** Stable empty array for hook defaults (avoids the infinite-re-render gotcha). */
 const EMPTY_STRING_ARRAY: readonly string[] = [];
-
-/**
- * Mesh catalog appBuilderComponent id → legacy mesh component id(s).
- *
- * Catalog ids (app-builder-components.json) live in a different namespace than the stack
- * optionalDependencies component ids (components.json). This map bridges the
- * two so a selected mesh appBuilderComponent still drives hasMeshInDependencies.
- */
-const MESH_APP_BUILDER_COMPONENT_TO_COMPONENT_IDS: Readonly<Record<string, string[]>> = {
-    'commerce-paas-mesh': [COMPONENT_IDS.EDS_COMMERCE_MESH],
-    'commerce-eds-mesh': [COMPONENT_IDS.EDS_ACCS_MESH],
-    'headless-commerce-mesh': [COMPONENT_IDS.HEADLESS_COMMERCE_MESH],
-};
 
 /**
  * Add or remove an App Builder component id immutably.
@@ -51,7 +38,7 @@ export function withSelectedAppBuilderComponent(
         if (current.includes(id)) return [...current];
         return [...current, id];
     }
-    return current.filter(existing => existing !== id);
+    return current.filter((existing) => existing !== id);
 }
 
 /**
@@ -70,11 +57,18 @@ export function computeSelectedAppBuilderComponents(
 }
 
 /**
- * Map a mesh catalog appBuilderComponent id to its legacy mesh component id(s).
+ * Map a mesh catalog appBuilderComponent id to its mesh component id(s).
+ *
+ * Now an identity check rather than a translation table. Mesh catalog entries are
+ * derived from the registry (`meshCatalogDerivation`), so a mesh appBuilderComponent
+ * id IS its component id and the two namespaces this function once bridged are one.
+ * The table it replaced was the last place the catalog's own id namespace survived —
+ * and it was correct, which is how the mismatched `source.repo` beside it went
+ * unnoticed.
  *
  * @param appBuilderComponentId - A catalog appBuilderComponent id
- * @returns The mesh component ids for a mesh appBuilderComponent, or [] for non-mesh
+ * @returns `[id]` for a mesh appBuilderComponent, or [] for non-mesh
  */
 export function meshAppBuilderComponentToComponentIds(appBuilderComponentId: string): string[] {
-    return MESH_APP_BUILDER_COMPONENT_TO_COMPONENT_IDS[appBuilderComponentId] ?? [];
+    return isMeshComponentId(appBuilderComponentId) ? [appBuilderComponentId] : [];
 }

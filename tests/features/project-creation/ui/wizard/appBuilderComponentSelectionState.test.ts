@@ -59,7 +59,7 @@ describe('computeSelectedAppBuilderComponents (required auto-included)', () => {
 
     it('does not duplicate an id that is both selected and required', () => {
         const result = computeSelectedAppBuilderComponents(['req-mesh', 'opt-1'], requiredIds);
-        expect(result.filter(id => id === 'req-mesh')).toHaveLength(1);
+        expect(result.filter((id) => id === 'req-mesh')).toHaveLength(1);
     });
 
     it('toggling an optional off leaves required + other optionals', () => {
@@ -71,22 +71,32 @@ describe('computeSelectedAppBuilderComponents (required auto-included)', () => {
 });
 
 describe('meshAppBuilderComponentToComponentIds (mesh dual-flow backward-compat)', () => {
-    it('maps each seeded mesh catalog id to its mesh component id(s)', () => {
-        expect(meshAppBuilderComponentToComponentIds('commerce-paas-mesh')).toContain('eds-commerce-mesh');
-        expect(meshAppBuilderComponentToComponentIds('commerce-eds-mesh')).toContain('eds-accs-mesh');
-        expect(meshAppBuilderComponentToComponentIds('headless-commerce-mesh')).toContain(
+    // Mesh catalog entries are derived from the registry now, so a mesh
+    // appBuilderComponent id IS its component id — this is an identity check
+    // rather than the translation table it replaced. The table was correct,
+    // which is how the mismatched source.repo beside it survived unnoticed.
+    it('maps each mesh id to itself', () => {
+        expect(meshAppBuilderComponentToComponentIds('eds-commerce-mesh')).toEqual([
+            'eds-commerce-mesh',
+        ]);
+        expect(meshAppBuilderComponentToComponentIds('eds-accs-mesh')).toEqual(['eds-accs-mesh']);
+        expect(meshAppBuilderComponentToComponentIds('headless-commerce-mesh')).toEqual([
             'headless-commerce-mesh',
-        );
+        ]);
     });
 
     it('returns [] for a non-mesh appBuilderComponent id', () => {
         expect(meshAppBuilderComponentToComponentIds('some-integration')).toEqual([]);
     });
 
+    it('returns [] for a retired catalog id (no longer a mesh anywhere)', () => {
+        expect(meshAppBuilderComponentToComponentIds('commerce-paas-mesh')).toEqual([]);
+    });
+
     it('round-trips: a selected mesh appBuilderComponent drives hasMeshInDependencies', () => {
-        // Selecting the PaaS mesh appBuilderComponent must map to a mesh component id so
+        // Selecting a mesh appBuilderComponent must yield a mesh component id so
         // the existing Adobe-I/O step-filter (hasMeshInDependencies) still fires.
-        const selected = withSelectedAppBuilderComponent([], 'commerce-paas-mesh', true);
+        const selected = withSelectedAppBuilderComponent([], 'eds-commerce-mesh', true);
         const componentIds = selected.flatMap(meshAppBuilderComponentToComponentIds);
         expect(hasMeshInDependencies(componentIds)).toBe(true);
     });

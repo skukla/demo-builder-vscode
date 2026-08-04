@@ -16,7 +16,7 @@ import type { AppBuilderComponentCatalogEntry, AppBuilderComponentEnvVar } from 
 export interface ConnectedFieldModel {
     name: string;
     label: string;
-    /** The provider appBuilderComponent id (e.g. "commerce-paas-mesh"). */
+    /** The provider appBuilderComponent id (e.g. "eds-commerce-mesh"). */
     providedBy: string;
     /** The resolved provided value, if known yet. */
     value?: string;

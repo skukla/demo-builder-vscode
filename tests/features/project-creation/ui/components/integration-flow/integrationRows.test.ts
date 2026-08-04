@@ -33,21 +33,21 @@ const DESTINATION = {
 describe('resolveIntegrationRows — mesh row (both-key check)', () => {
     it('yields a mesh row when selected via selectedAppBuilderComponents', () => {
         const rows = resolveIntegrationRows(
-            state({ selectedAppBuilderComponents: ['commerce-eds-mesh'] }),
+            state({ selectedAppBuilderComponents: ['eds-accs-mesh'] }),
             MESH_ENTRY,
             CATALOG
         );
 
         expect(rows).toHaveLength(1);
         expect(rows[0]).toMatchObject({
-            id: 'commerce-eds-mesh',
+            id: 'eds-accs-mesh',
             kind: 'mesh',
             name: 'Commerce API Mesh',
         });
     });
 
     it('yields a mesh row via dependencies-only selection (package-seeded) with needsSetup', () => {
-        // 'commerce-eds-mesh' maps to the legacy 'eds-accs-mesh' component id.
+        // 'eds-accs-mesh' maps to the legacy 'eds-accs-mesh' component id.
         const rows = resolveIntegrationRows(
             state({ selectedOptionalDependencies: ['eds-accs-mesh'] }),
             MESH_ENTRY,
@@ -74,7 +74,7 @@ describe('resolveIntegrationRows — mesh row (both-key check)', () => {
 
     it('mesh sourceLine reads the entry description', () => {
         const rows = resolveIntegrationRows(
-            state({ selectedAppBuilderComponents: ['commerce-eds-mesh'] }),
+            state({ selectedAppBuilderComponents: ['eds-accs-mesh'] }),
             MESH_ENTRY,
             CATALOG
         );
@@ -85,7 +85,7 @@ describe('resolveIntegrationRows — mesh row (both-key check)', () => {
     it('mesh name and sourceLine fall back when the entry carries neither', () => {
         const bareMesh = { ...MESH_ENTRY, name: '', description: '' };
         const rows = resolveIntegrationRows(
-            state({ selectedAppBuilderComponents: ['commerce-eds-mesh'] }),
+            state({ selectedAppBuilderComponents: ['eds-accs-mesh'] }),
             bareMesh,
             [bareMesh]
         );
@@ -129,10 +129,10 @@ describe('resolveIntegrationRows — catalog rows', () => {
     it('excludes ids that resolve to mesh-kind catalog entries (mesh never doubles as catalog)', () => {
         const otherMesh: AppBuilderComponentCatalogEntry = {
             ...MESH_ENTRY,
-            id: 'commerce-paas-mesh',
+            id: 'eds-commerce-mesh',
         };
         const rows = resolveIntegrationRows(
-            state({ selectedAppBuilderComponents: ['commerce-paas-mesh'] }),
+            state({ selectedAppBuilderComponents: ['eds-commerce-mesh'] }),
             MESH_ENTRY,
             [MESH_ENTRY, otherMesh]
         );
@@ -227,7 +227,7 @@ describe('resolveIntegrationRows — ordering, apis, needsSetup, reserved key', 
     it('orders a mixed set mesh first, then catalog, then custom (regardless of selection order)', () => {
         const rows = resolveIntegrationRows(
             state({
-                selectedAppBuilderComponents: ['acme-widget', 'erp-sync', 'commerce-eds-mesh'],
+                selectedAppBuilderComponents: ['acme-widget', 'erp-sync', 'eds-accs-mesh'],
                 appBuilderComponentSources: { 'acme-widget': { owner: 'acme', repo: 'widget' } },
             }),
             MESH_ENTRY,
@@ -240,7 +240,7 @@ describe('resolveIntegrationRows — ordering, apis, needsSetup, reserved key', 
     it('carries the baseline + selectedConsoleApis picks per id (missing key → baseline only)', () => {
         const rows = resolveIntegrationRows(
             state({
-                selectedAppBuilderComponents: ['erp-sync', 'commerce-eds-mesh'],
+                selectedAppBuilderComponents: ['erp-sync', 'eds-accs-mesh'],
                 selectedConsoleApis: { 'erp-sync': ['AnalyticsSDK', 'TargetSDK'] },
             }),
             MESH_ENTRY,
@@ -250,7 +250,7 @@ describe('resolveIntegrationRows — ordering, apis, needsSetup, reserved key', 
         const byId = Object.fromEntries(rows.map((r) => [r.id, r.apis]));
         expect(byId['erp-sync']).toEqual([BASELINE_CODE, 'AnalyticsSDK', 'TargetSDK']);
         // The mesh row surfaces its deterministic requiredApis (baseline + API Mesh).
-        expect(byId['commerce-eds-mesh']).toEqual([BASELINE_CODE, 'GraphQLServiceSDK']);
+        expect(byId['eds-accs-mesh']).toEqual([BASELINE_CODE, 'GraphQLServiceSDK']);
     });
 
     it("surfaces a catalog entry's requiredApis (deterministic), baseline first then required", () => {
@@ -319,7 +319,7 @@ describe('resolveIntegrationRows — ordering, apis, needsSetup, reserved key', 
         const rows = resolveIntegrationRows(
             state({
                 ...DESTINATION,
-                selectedAppBuilderComponents: ['erp-sync', 'commerce-eds-mesh'],
+                selectedAppBuilderComponents: ['erp-sync', 'eds-accs-mesh'],
             }),
             MESH_ENTRY,
             CATALOG

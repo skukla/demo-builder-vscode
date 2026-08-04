@@ -43,22 +43,22 @@ describe('summarizeSelectedAppBuilderComponents', () => {
     });
 
     it('lists each selected appBuilderComponent resolved to its display name', () => {
-        const result = summarizeSelectedAppBuilderComponents(['commerce-paas-mesh'], []);
+        const result = summarizeSelectedAppBuilderComponents(['eds-commerce-mesh'], []);
         expect(result).toHaveLength(1);
         // getAppBuilderComponentName resolves the seeded mesh to a non-id display name.
-        expect(result[0].name).toBe('Commerce PaaS API Mesh');
+        expect(result[0].name).toBe('EDS Commerce API Mesh');
     });
 
     it('flags required appBuilderComponents as included (locked)', () => {
         const result = summarizeSelectedAppBuilderComponents(
-            ['commerce-paas-mesh'],
-            ['commerce-paas-mesh'],
+            ['eds-commerce-mesh'],
+            ['eds-commerce-mesh'],
         );
         expect(result[0].included).toBe(true);
     });
 
     it('marks optional (non-required) appBuilderComponents as not included/locked', () => {
-        const result = summarizeSelectedAppBuilderComponents(['commerce-paas-mesh'], []);
+        const result = summarizeSelectedAppBuilderComponents(['eds-commerce-mesh'], []);
         expect(result[0].included).toBe(false);
     });
 

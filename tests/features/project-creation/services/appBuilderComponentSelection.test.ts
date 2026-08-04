@@ -60,7 +60,7 @@ function makePackage(overrides: Partial<DemoPackage> = {}): DemoPackage {
     };
 }
 
-// EDS + PaaS → seeded catalog has the `commerce-paas-mesh` mesh entry.
+// EDS + PaaS → seeded catalog has the `eds-commerce-mesh` mesh entry.
 const EDS_PAAS = { backend: 'adobe-commerce-paas', frontend: 'eds-storefront' };
 
 describe('getSelectableAppBuilderComponents (real seed catalog)', () => {
@@ -72,8 +72,8 @@ describe('getSelectableAppBuilderComponents (real seed catalog)', () => {
                 EDS_PAAS.frontend
             );
             const ids = result.map((d) => d.id);
-            expect(ids).toContain('commerce-paas-mesh');
-            expect(ids).not.toContain('commerce-eds-mesh');
+            expect(ids).toContain('eds-commerce-mesh');
+            expect(ids).not.toContain('eds-accs-mesh');
             expect(ids).not.toContain('headless-commerce-mesh');
         });
 
@@ -97,7 +97,7 @@ describe('getSelectableAppBuilderComponents (real seed catalog)', () => {
                 EDS_PAAS.backend,
                 EDS_PAAS.frontend
             );
-            const mesh = result.find((d) => d.id === 'commerce-paas-mesh');
+            const mesh = result.find((d) => d.id === 'eds-commerce-mesh');
             expect(mesh?.requirement).toBe('optional');
         });
 
@@ -107,7 +107,7 @@ describe('getSelectableAppBuilderComponents (real seed catalog)', () => {
                 EDS_PAAS.backend,
                 EDS_PAAS.frontend
             );
-            const mesh = result.find((d) => d.id === 'commerce-paas-mesh');
+            const mesh = result.find((d) => d.id === 'eds-commerce-mesh');
             expect(mesh?.requirement).toBe('required');
         });
 
@@ -117,7 +117,7 @@ describe('getSelectableAppBuilderComponents (real seed catalog)', () => {
                 EDS_PAAS.backend,
                 EDS_PAAS.frontend
             );
-            const mesh = result.find((d) => d.id === 'commerce-paas-mesh');
+            const mesh = result.find((d) => d.id === 'eds-commerce-mesh');
             // No package requirement and no native scoping → user-toggleable.
             expect(mesh?.requirement).toBe('optional');
         });

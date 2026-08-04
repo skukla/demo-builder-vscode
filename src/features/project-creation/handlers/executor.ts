@@ -275,12 +275,16 @@ function nonEmptyArray<T>(items: T[] | undefined): T[] | undefined {
  * Selected App Builder integration ids for `componentSelections.appBuilder`.
  *
  * Excludes mesh-kind ids (they dual-flow through `components.dependencies` and
- * are installed by the mesh phase — the mirrored dependency id can DIFFER from
- * the appBuilder id, e.g. commerce-paas-mesh → eds-commerce-mesh, so exclusion
- * keys on the catalog kind, not id identity) plus anything literally riding
- * dependencies, so reset/edit flows never see the same component under two
- * categories. Falls back to the legacy `components.appBuilder` list when no
- * Model B selection is present.
+ * are installed by the mesh phase) plus anything literally riding dependencies,
+ * so reset/edit flows never see the same component under two categories.
+ *
+ * Exclusion keys on the catalog KIND rather than on membership in dependencies.
+ * That mattered when the two id namespaces differed and it still does: mesh
+ * catalog entries are derived from the registry now, so the ids always match and
+ * the dependencies check would silently cover for a broken kind check.
+ *
+ * Falls back to the legacy `components.appBuilder` list when no Model B
+ * selection is present.
  */
 function selectedAppBuilderIds(typedConfig: ProjectCreationConfig): string[] {
     const dependencies = typedConfig.components?.dependencies ?? [];
@@ -1036,9 +1040,7 @@ function logMeshDecisionContext(
 ): void {
     context.logger.debug(`[Mesh Setup] Decision context:`);
     context.logger.debug(`  - isEditMode: ${isEditMode}`);
-    context.logger.debug(
-        `  - existing project mesh endpoint: ${getMeshEndpoint(existingProject)}`,
-    );
+    context.logger.debug(`  - existing project mesh endpoint: ${getMeshEndpoint(existingProject)}`);
     context.logger.debug(`  - typedConfig.apiMesh: ${JSON.stringify(typedConfig.apiMesh)}`);
     context.logger.debug(`  - meshComponent?.path: ${meshComponent?.path}`);
     context.logger.debug(`  - meshId: ${meshId}`);

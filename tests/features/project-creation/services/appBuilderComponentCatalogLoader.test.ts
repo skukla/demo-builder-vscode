@@ -29,8 +29,8 @@ describe('appBuilderComponentCatalogLoader', () => {
                 'eds-storefront'
             );
             const ids = result.map((d) => d.id);
-            expect(ids).toContain('commerce-paas-mesh');
-            expect(ids).not.toContain('commerce-eds-mesh');
+            expect(ids).toContain('eds-commerce-mesh');
+            expect(ids).not.toContain('eds-accs-mesh');
         });
 
         it('returns the ACCS mesh for an EDS + ACCS selection', () => {
@@ -39,8 +39,8 @@ describe('appBuilderComponentCatalogLoader', () => {
                 'eds-storefront'
             );
             const ids = result.map((d) => d.id);
-            expect(ids).toContain('commerce-eds-mesh');
-            expect(ids).not.toContain('commerce-paas-mesh');
+            expect(ids).toContain('eds-accs-mesh');
+            expect(ids).not.toContain('eds-commerce-mesh');
         });
 
         it('returns the headless mesh for a headless frontend (either backend)', () => {
@@ -76,7 +76,7 @@ describe('appBuilderComponentCatalogLoader', () => {
 
     describe('getAppBuilderComponentEntry', () => {
         it('resolves a seeded entry by id', () => {
-            const entry = getAppBuilderComponentEntry('commerce-paas-mesh');
+            const entry = getAppBuilderComponentEntry('eds-commerce-mesh');
             expect(entry).toBeDefined();
             expect(entry?.kind).toBe('mesh');
         });
@@ -102,9 +102,11 @@ describe('appBuilderComponentCatalogLoader', () => {
 
     describe('getAppBuilderComponentSource', () => {
         it('returns the {owner, repo, branch} source for a seeded entry', () => {
-            const source = getAppBuilderComponentSource('commerce-paas-mesh');
+            const source = getAppBuilderComponentSource('eds-commerce-mesh');
+            // Derived from the registry git url — the repo name deliberately
+            // differs from the id, which is what the deleted authored rows got wrong.
             expect(source).toEqual(
-                expect.objectContaining({ owner: 'skukla', repo: 'commerce-paas-mesh' })
+                expect.objectContaining({ owner: 'skukla', repo: 'commerce-eds-mesh' })
             );
         });
 
@@ -115,7 +117,7 @@ describe('appBuilderComponentCatalogLoader', () => {
 
     describe('getAppBuilderComponentEnvSchema', () => {
         it('returns the env schema array for a seeded entry', () => {
-            const schema = getAppBuilderComponentEnvSchema('commerce-paas-mesh');
+            const schema = getAppBuilderComponentEnvSchema('eds-commerce-mesh');
             expect(Array.isArray(schema)).toBe(true);
         });
 
@@ -126,7 +128,7 @@ describe('appBuilderComponentCatalogLoader', () => {
 
     describe('getAppBuilderComponentName', () => {
         it('returns the display name, falling back to id', () => {
-            expect(getAppBuilderComponentName('commerce-paas-mesh')).toBeTruthy();
+            expect(getAppBuilderComponentName('eds-commerce-mesh')).toBeTruthy();
             expect(getAppBuilderComponentName('unknown-xyz')).toBe('unknown-xyz');
         });
     });
@@ -276,9 +278,9 @@ describe('appBuilderComponentCatalogLoader', () => {
         });
 
         it('rejects an explicit id with whitespace or shell metacharacters (folder + ow.package input)', () => {
-            expect(() => buildCustomIntegrationEntry({ owner: 'acme', repo: 'app' }, 'a b')).toThrow(
-                /invalid/i
-            );
+            expect(() =>
+                buildCustomIntegrationEntry({ owner: 'acme', repo: 'app' }, 'a b')
+            ).toThrow(/invalid/i);
             expect(() =>
                 buildCustomIntegrationEntry({ owner: 'acme', repo: 'app' }, 'x;rm')
             ).toThrow(/invalid/i);
@@ -336,15 +338,23 @@ describe('appBuilderComponentCatalogLoader', () => {
             }
         });
 
-        it('seeds the three meshes (spike-mapped sources) plus the blank shell integration', () => {
+        it('authors the blank shell integration', () => {
             const byId = Object.fromEntries(
                 catalog.appBuilderComponents.map((d: { id: string }) => [d.id, d])
             );
-            expect(byId['commerce-paas-mesh'].source.repo).toBe('commerce-paas-mesh');
-            expect(byId['commerce-eds-mesh'].source.repo).toBe('commerce-eds-mesh');
-            expect(byId['headless-commerce-mesh'].source.repo).toBe('headless-commerce-mesh');
             expect(byId['app-builder-shell'].source.repo).toBe('app-builder-shell');
             expect(byId['app-builder-shell'].kind).toBe('integration');
+        });
+
+        // The file used to author three mesh rows whose sources were, in the
+        // words of the test this replaces, "spike-mapped" — each row cloned the
+        // repo matching its own id string rather than the registry component it
+        // stood for, so both EDS rows cloned the wrong repository. Meshes are
+        // derived from stacks.json + components.json now; authoring one here
+        // again would restore the second contract that allowed the drift.
+        it('authors NO mesh rows — meshes are derived from the registry', () => {
+            const kinds = catalog.appBuilderComponents.map((d: { kind: string }) => d.kind);
+            expect(kinds).not.toContain('mesh');
         });
 
         it('the shell integration is unrestricted: no axis filters, no APIs, no env schema', () => {
@@ -362,11 +372,7 @@ describe('appBuilderComponentCatalogLoader', () => {
 
     describe('load-bearing mesh API + env contracts (steps 04 + 07)', () => {
         it('every mesh entry requires GraphQLServiceSDK and provides MESH_ENDPOINT', () => {
-            for (const id of [
-                'commerce-paas-mesh',
-                'commerce-eds-mesh',
-                'headless-commerce-mesh',
-            ]) {
+            for (const id of ['eds-commerce-mesh', 'eds-accs-mesh', 'headless-commerce-mesh']) {
                 const entry = getAppBuilderComponentEntry(id);
                 expect(entry?.requiredApis).toContain('GraphQLServiceSDK');
                 expect(entry?.providesEnvVars).toContain('MESH_ENDPOINT');

@@ -144,9 +144,9 @@ describe('useWizardState - edit-mode mesh dual-flow seeding', () => {
             })
         );
 
-        // 'commerce-eds-mesh' is the catalog id whose legacy mapping is
+        // 'eds-accs-mesh' is the catalog id whose legacy mapping is
         // 'eds-accs-mesh' — the exact gate integrationRows checks at :94.
-        expect(isMeshSelected(state, 'commerce-eds-mesh')).toBe(true);
+        expect(isMeshSelected(state, 'eds-accs-mesh')).toBe(true);
     });
 
     it('resolves the mesh ROW from the seeded edit state (symptom inversion)', () => {
@@ -156,7 +156,7 @@ describe('useWizardState - edit-mode mesh dual-flow seeding', () => {
             })
         );
         const meshCatalogEntry = {
-            id: 'commerce-eds-mesh',
+            id: 'eds-accs-mesh',
             kind: 'mesh',
             name: 'API Mesh',
             description: 'GraphQL bridge',

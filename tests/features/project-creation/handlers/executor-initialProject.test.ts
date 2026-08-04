@@ -118,20 +118,21 @@ describe('buildInitialProject', () => {
             expect(project.componentSelections?.dependencies).toEqual(['headless-commerce-mesh']);
         });
 
-        it('excludes EDS mesh ids whose dependency mirror uses a DIFFERENT component id', () => {
-            // commerce-paas-mesh mirrors into dependencies as eds-commerce-mesh —
-            // exclusion must key on the catalog kind, not id identity, or the
-            // mesh persists under two categories (appBuilder + dependencies).
+        it('excludes a mesh id by KIND even when dependencies does not carry it', () => {
+            // Exclusion must key on the catalog kind, not on membership in
+            // dependencies, or a mesh persists under two categories (appBuilder +
+            // dependencies). Mesh catalog ids are registry ids now, so the two
+            // always match — which means the dependencies check would mask a
+            // regression in the kind check. Omitting the mirror isolates it.
             const project = buildInitialProject(
                 config({
-                    components: { dependencies: ['eds-commerce-mesh'] },
-                    selectedAppBuilderComponents: ['commerce-paas-mesh', 'erp-sync'],
+                    components: { dependencies: [] },
+                    selectedAppBuilderComponents: ['eds-commerce-mesh', 'erp-sync'],
                 }),
                 PROJECT_PATH
             );
 
             expect(project.componentSelections?.appBuilder).toEqual(['erp-sync']);
-            expect(project.componentSelections?.dependencies).toEqual(['eds-commerce-mesh']);
         });
 
         it('falls back to components.appBuilder when selectedAppBuilderComponents is absent', () => {

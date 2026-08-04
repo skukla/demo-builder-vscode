@@ -85,8 +85,8 @@ const meshStack = {
 const stacks = [meshStack] as Stack[];
 
 /** The stack's mesh catalog entry (real catalog) and its legacy dependency mirror. */
-const MESH_ID = 'commerce-paas-mesh';
-const MESH_NAME = 'Commerce PaaS API Mesh';
+const MESH_ID = 'eds-commerce-mesh';
+const MESH_NAME = 'EDS Commerce API Mesh';
 const MESH_LEGACY_DEP = 'eds-commerce-mesh';
 
 const SIGNED_IN: Partial<WizardState> = {
@@ -347,8 +347,8 @@ describe('IntegrationsStep — modal wiring', () => {
         // Slugs to 'app-builder-shell' — the blank catalog entry's own id.
         fireEvent.change(input, { target: { value: 'App Builder Shell' } });
         expect(within(dialog).getByText(DUPLICATE)).toBeInTheDocument();
-        // Slugs to 'commerce-paas-mesh' — the stack's mesh CATALOG id (wrong-repo guard).
-        fireEvent.change(input, { target: { value: 'Commerce PaaS Mesh' } });
+        // Slugs to 'eds-commerce-mesh' — the eds-paas stack's mesh id.
+        fireEvent.change(input, { target: { value: 'EDS Commerce Mesh' } });
         expect(within(dialog).getByText(DUPLICATE)).toBeInTheDocument();
         // A non-colliding name clears the error.
         fireEvent.change(input, { target: { value: 'Order Sync' } });
@@ -392,9 +392,7 @@ describe('IntegrationsStep — Rename (AI-built instance rows only)', () => {
             within(row('Firefly Image Gen')).getByRole('button', { name: 'Rename' })
         ).toBeInTheDocument();
         expect(within(row('widget')).queryByRole('button', { name: 'Rename' })).toBeNull();
-        expect(
-            within(row('Recommendations')).queryByRole('button', { name: 'Rename' })
-        ).toBeNull();
+        expect(within(row('Recommendations')).queryByRole('button', { name: 'Rename' })).toBeNull();
         expect(within(row(MESH_NAME)).queryByRole('button', { name: 'Rename' })).toBeNull();
     });
 

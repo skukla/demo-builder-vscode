@@ -140,7 +140,7 @@ describe('meshComponentForStack', () => {
     it('resolves the mesh component for an eds-storefront + PaaS stack', () => {
         const s = state({ selectedPackage: 'citisignal', selectedStack: 'eds-paas' });
         const mesh = meshComponentForStack(s, packages, stacks);
-        expect(mesh?.id).toBe('commerce-paas-mesh');
+        expect(mesh?.id).toBe('eds-commerce-mesh');
         expect(mesh?.kind).toBe('mesh');
     });
 
@@ -157,14 +157,14 @@ describe('meshComponentForStack', () => {
 
 describe('isMeshSelected', () => {
     it('is false when the mesh id is in neither selection list', () => {
-        expect(isMeshSelected(state({}), 'commerce-paas-mesh')).toBe(false);
+        expect(isMeshSelected(state({}), 'eds-commerce-mesh')).toBe(false);
     });
 
     it('is true when the mesh catalog id is in selectedAppBuilderComponents', () => {
         expect(
             isMeshSelected(
-                state({ selectedAppBuilderComponents: ['commerce-paas-mesh'] }),
-                'commerce-paas-mesh'
+                state({ selectedAppBuilderComponents: ['eds-commerce-mesh'] }),
+                'eds-commerce-mesh'
             )
         ).toBe(true);
     });
@@ -173,7 +173,7 @@ describe('isMeshSelected', () => {
         expect(
             isMeshSelected(
                 state({ selectedOptionalDependencies: ['eds-commerce-mesh'] }),
-                'commerce-paas-mesh'
+                'eds-commerce-mesh'
             )
         ).toBe(true);
     });
@@ -194,7 +194,7 @@ describe('isIntegrationsComplete', () => {
         const s = state({
             selectedPackage: 'citisignal',
             selectedStack: 'eds-paas',
-            selectedAppBuilderComponents: ['commerce-paas-mesh'],
+            selectedAppBuilderComponents: ['eds-commerce-mesh'],
         });
         expect(isIntegrationsComplete(s, packages, stacks)).toBe(false);
     });
@@ -203,7 +203,7 @@ describe('isIntegrationsComplete', () => {
         const s = state({
             selectedPackage: 'citisignal',
             selectedStack: 'eds-paas',
-            selectedAppBuilderComponents: ['commerce-paas-mesh'],
+            selectedAppBuilderComponents: ['eds-commerce-mesh'],
             adobeProject: { id: 'p1', name: 'proj' },
         });
         expect(isIntegrationsComplete(s, packages, stacks)).toBe(false);
@@ -213,7 +213,7 @@ describe('isIntegrationsComplete', () => {
         const s = state({
             selectedPackage: 'citisignal',
             selectedStack: 'eds-paas',
-            selectedAppBuilderComponents: ['commerce-paas-mesh'],
+            selectedAppBuilderComponents: ['eds-commerce-mesh'],
             adobeAuth: { isAuthenticated: true, isChecking: false },
             adobeOrg: { id: 'org-1', name: 'Acme', code: 'ACME' } as WizardState['adobeOrg'],
             adobeProject: { id: 'p1', name: 'proj' },
@@ -295,7 +295,7 @@ describe('anyDeployableSelected', () => {
 
     it('is true when a catalog component is selected', () => {
         expect(
-            anyDeployableSelected(state({ selectedAppBuilderComponents: ['commerce-paas-mesh'] }))
+            anyDeployableSelected(state({ selectedAppBuilderComponents: ['eds-commerce-mesh'] }))
         ).toBe(true);
     });
 

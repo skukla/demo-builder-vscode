@@ -181,10 +181,10 @@ describe('useProjectBuilder — non-mesh isolation', () => {
 });
 
 describe('useProjectBuilder — mesh mapping coverage', () => {
-    it('maps the EDS commerce mesh appBuilderComponent to its legacy component id', () => {
+    it('mirrors the EDS commerce mesh into the dependency selection', () => {
         const { result, updateState } = setup({ selectedStack: 'eds-paas' });
         act(() => {
-            result.current.onAppBuilderComponentToggle('commerce-paas-mesh', true);
+            result.current.onAppBuilderComponentToggle(COMPONENT_IDS.EDS_COMMERCE_MESH, true);
         });
         expect(updateState).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -193,16 +193,25 @@ describe('useProjectBuilder — mesh mapping coverage', () => {
         );
     });
 
-    it('maps the EDS ACCS mesh appBuilderComponent to its legacy component id', () => {
-        const { result, updateState } = setup({ selectedStack: 'eds-paas' });
+    it('mirrors the EDS ACCS mesh into the dependency selection', () => {
+        const { result, updateState } = setup({ selectedStack: 'eds-accs' });
         act(() => {
-            result.current.onAppBuilderComponentToggle('commerce-eds-mesh', true);
+            result.current.onAppBuilderComponentToggle(COMPONENT_IDS.EDS_ACCS_MESH, true);
         });
         expect(updateState).toHaveBeenCalledWith(
             expect.objectContaining({
                 selectedOptionalDependencies: [COMPONENT_IDS.EDS_ACCS_MESH],
             })
         );
+    });
+
+    it('does not mirror a retired catalog id into the dependency selection', () => {
+        const { result, updateState } = setup({ selectedStack: 'eds-paas' });
+        act(() => {
+            result.current.onAppBuilderComponentToggle('commerce-paas-mesh', true);
+        });
+        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        expect(call.selectedOptionalDependencies).toBeUndefined();
     });
 
     it('preserves a previously-selected non-mesh component when toggling a mesh', () => {

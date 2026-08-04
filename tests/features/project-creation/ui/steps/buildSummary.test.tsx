@@ -20,7 +20,7 @@ jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader
     );
     const entries = [
         {
-            id: 'commerce-eds-mesh',
+            id: 'eds-accs-mesh',
             name: 'API Mesh',
             description: 'GraphQL bridge',
             kind: 'mesh',
@@ -226,7 +226,7 @@ describe('integrationsSummaryGroup', () => {
             state({
                 selectedPackage: 'citisignal',
                 selectedStack: 'eds-accs',
-                selectedAppBuilderComponents: ['commerce-eds-mesh'],
+                selectedAppBuilderComponents: ['eds-accs-mesh'],
             }),
             packages,
             stacks
@@ -253,7 +253,7 @@ describe('integrationsSummaryGroup', () => {
             state({
                 selectedPackage: 'citisignal',
                 selectedStack: 'eds-accs',
-                selectedAppBuilderComponents: ['commerce-eds-mesh'],
+                selectedAppBuilderComponents: ['eds-accs-mesh'],
                 ...COMMITTED_DEST,
             }),
             packages,
@@ -267,7 +267,7 @@ describe('integrationsSummaryGroup', () => {
             state({
                 selectedPackage: 'citisignal',
                 selectedStack: 'eds-accs',
-                selectedAppBuilderComponents: ['commerce-eds-mesh', 'cat-reco', 'acme-widget'],
+                selectedAppBuilderComponents: ['eds-accs-mesh', 'cat-reco', 'acme-widget'],
                 appBuilderComponentSources: {
                     'acme-widget': { owner: 'acme', repo: 'widget' },
                 },
@@ -317,7 +317,7 @@ describe('buildSummaryGroups', () => {
                 selectedPackage: 'citisignal',
                 selectedStack: 'eds-accs',
                 selectedBackend: 'adobe-commerce-accs',
-                selectedAppBuilderComponents: ['commerce-eds-mesh'],
+                selectedAppBuilderComponents: ['eds-accs-mesh'],
             }),
             ['commerce', 'storefront', 'integrations'],
             packages,
