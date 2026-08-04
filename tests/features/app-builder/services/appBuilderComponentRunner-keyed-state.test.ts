@@ -184,3 +184,53 @@ describe('keyed entry persists the display name', () => {
         expect(persisted.appBuilderComponents?.['order-sync']?.name).toBe('order-sync');
     });
 });
+
+// The OTHER half of "the add persisted": alongside the keyed
+// `appBuilderComponents` entry, the add must attach the installed
+// ComponentInstance to `project.componentInstances`.
+//
+// REGRESSION (2026-08-04, live): a mesh added from the dashboard deployed
+// successfully, persisted a correct keyed entry, republished the storefront —
+// and then reported `mesh=none` on the next reload, with the integrations grid
+// rendering EMPTY. `installComponent` builds the instance carrying
+// `subType: 'mesh'` and RETURNS it; `cloneAndInstall` kept only
+// `result.component.path` and dropped the rest. With no instance persisted, the
+// next project load let `discoverComponents` synthesize a thin one from the
+// directory — no `subType` — so `getMeshComponentInstance` (which matches on
+// subType === 'mesh') found nothing. The dashboard reads the INSTANCE while the
+// projects-list card reads the KEYED MAP, which is why one said Deployed and
+// the other said none.
+describe('the add attaches the installed component instance', () => {
+    it('persists a componentInstances entry for a mesh, carrying subType', async () => {
+        const project = createProject();
+        const deps = createDeps();
+
+        await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+
+        const instance = project.componentInstances?.[MESH_ENTRY.id];
+        expect(instance).toBeDefined();
+        // subType is the whole point: getMeshComponentInstance matches on it, so
+        // an instance without it is invisible to every mesh-aware surface.
+        expect(instance?.subType).toBe('mesh');
+        expect(instance?.path).toBe(`/proj/components/${MESH_ENTRY.id}`);
+    });
+
+    it('persists a componentInstances entry for an integration too', async () => {
+        const project = createProject();
+        const deps = createDeps();
+
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+
+        expect(project.componentInstances?.[INTEGRATION_ENTRY.id]).toBeDefined();
+    });
+
+    it('saves the instance, not just the keyed entry', async () => {
+        const project = createProject();
+        const deps = createDeps();
+
+        await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+
+        const saved = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
+        expect(saved.componentInstances?.[MESH_ENTRY.id]?.subType).toBe('mesh');
+    });
+});

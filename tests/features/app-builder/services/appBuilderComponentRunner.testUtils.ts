@@ -44,19 +44,31 @@ export interface ComponentManagerLike {
 
 export function createComponentManager(): ComponentManagerLike {
     return {
-        installComponent: jest.fn(async (project: Project, def: { id: string; name?: string }) => {
-            const instance = {
-                id: def.id,
-                name: def.name ?? def.id,
-                type: 'app-builder',
-                status: 'ready',
-                path: `/proj/components/${def.id}`,
-                lastUpdated: new Date(),
-            };
-            project.componentInstances = project.componentInstances ?? {};
-            project.componentInstances[def.id] = instance as never;
-            return { success: true, component: instance };
-        }),
+        // FAITHFUL to production: the real installComponent BUILDS the instance
+        // (carrying `subType` off the definition) and RETURNS it — it does not
+        // attach it to the project. Attaching is the caller's job.
+        //
+        // This mock used to do `project.componentInstances[def.id] = instance`,
+        // which is why every runner test passed while a dashboard-added mesh
+        // persisted no instance at all: on the next load `discoverComponents`
+        // synthesized a thin one with no `subType`, `getMeshComponentInstance`
+        // (which matches on subType === 'mesh') found nothing, the dashboard
+        // reported mesh=none, and the integrations grid dropped the mesh card.
+        // A mock more generous than production hides exactly this class of bug.
+        installComponent: jest.fn(
+            async (_project: Project, def: { id: string; name?: string; subType?: string }) => ({
+                success: true,
+                component: {
+                    id: def.id,
+                    name: def.name ?? def.id,
+                    type: 'app-builder',
+                    subType: def.subType,
+                    status: 'ready',
+                    path: `/proj/components/${def.id}`,
+                    lastUpdated: new Date(),
+                },
+            })
+        ),
         removeComponent: jest.fn(async (project: Project, id: string) => {
             if (project.componentInstances) {
                 delete project.componentInstances[id];

@@ -158,6 +158,23 @@ async function cloneAndInstall(
     if (!result.success || !result.component?.path) {
         return { error: result.error || 'Component installation failed.' };
     }
+
+    // ATTACH the instance, don't just take its path. `installComponent` builds
+    // it — carrying `subType` off the definition — and returns it; it does not
+    // put it on the project. That is the caller's job, and this caller used to
+    // skip it.
+    //
+    // REGRESSION (2026-08-04, live): a dashboard-added mesh deployed, persisted a
+    // correct keyed entry, republished the storefront — and came back as
+    // `mesh=none` on the next reload with an EMPTY integrations grid. With no
+    // instance persisted, the next project load let `discoverComponents`
+    // synthesize a thin one from the directory alone, with no `subType`, and
+    // `getMeshComponentInstance` matches on `subType === 'mesh'`. The keyed map
+    // and the instance are read by different surfaces, so the projects-list card
+    // said Deployed while the dashboard said none.
+    project.componentInstances = project.componentInstances ?? {};
+    project.componentInstances[entry.id] = result.component;
+
     return { path: result.component.path };
 }
 
