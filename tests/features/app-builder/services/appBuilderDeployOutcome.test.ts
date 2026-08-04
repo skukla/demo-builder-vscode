@@ -161,3 +161,72 @@ describe('recordDeployOutcome — create', () => {
     });
 });
 
+
+// The keyed entry and the COMPONENT INSTANCE both carry a status, and different
+// surfaces read different ones: the integrations grid reads the keyed entry, while
+// `handleRequestStatus` reads `getMeshComponentInstance(project)?.status`.
+//
+// REGRESSION (2026-08-04, live): after adding a mesh the keyed entry said
+// "deployed" and the instance still said "ready" — the install outcome, never
+// advanced. `deployMeshHeadless` sets `meshComponent.status` by hand, so a
+// REDEPLOY looked right and an ADD did not; the dashboard reported mesh=ready and
+// the grid rendered "Not Deployed" for a mesh that had just verified successfully.
+//
+// Advancing it HERE — in the one keyed deploy-record writer every deploy path
+// lands on — is what makes the two paths agree, instead of adding a third writer.
+describe('recordDeployOutcome also advances the component instance', () => {
+    function projectWithInstance(status = 'ready') {
+        return {
+            componentInstances: {
+                'eds-accs-mesh': { id: 'eds-accs-mesh', subType: 'mesh', status },
+            },
+            appBuilderComponents: {},
+        } as never;
+    }
+
+    it('marks the instance deployed on a successful deploy', () => {
+        const project = projectWithInstance();
+
+        recordDeployOutcome(project, 'mesh', 'eds-accs-mesh', {
+            status: 'deployed',
+            endpoint: 'https://mesh/graphql',
+        });
+
+        expect(project.componentInstances['eds-accs-mesh'].status).toBe('deployed');
+    });
+
+    it('marks the instance errored on a failed deploy', () => {
+        const project = projectWithInstance();
+
+        recordDeployOutcome(project, 'mesh', 'eds-accs-mesh', {
+            status: 'error',
+            error: 'boom',
+        });
+
+        expect(project.componentInstances['eds-accs-mesh'].status).toBe('error');
+    });
+
+    // The keyed entry stays the authority on everything else; this only mirrors
+    // the deploy STATUS onto the instance the dashboard happens to read.
+    it('still records the keyed entry as before', () => {
+        const project = projectWithInstance();
+
+        recordDeployOutcome(project, 'mesh', 'eds-accs-mesh', {
+            status: 'deployed',
+            endpoint: 'https://mesh/graphql',
+        });
+
+        expect(project.appBuilderComponents['eds-accs-mesh']).toMatchObject({
+            status: 'deployed',
+            endpoint: 'https://mesh/graphql',
+        });
+    });
+
+    it('is a no-op when the project has no such instance', () => {
+        const project = { appBuilderComponents: {} } as never;
+
+        expect(() =>
+            recordDeployOutcome(project, 'mesh', 'eds-accs-mesh', { status: 'deployed' }),
+        ).not.toThrow();
+    });
+});

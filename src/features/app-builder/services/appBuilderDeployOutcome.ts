@@ -142,4 +142,27 @@ export function recordDeployOutcome(
             error: resolveErrorReason(existing, outcome),
         },
     };
+
+    // Mirror the deploy STATUS onto the component instance.
+    //
+    // Two records carry a status and different surfaces read different ones: the
+    // integrations grid reads the keyed entry above, while `handleRequestStatus`
+    // reads `getMeshComponentInstance(project)?.status`. `deployMeshHeadless` set
+    // the instance by hand and the keyed runner did not, so after an ADD the keyed
+    // entry said "deployed" while the instance still said "ready" — the INSTALL
+    // outcome, never advanced — and the dashboard reported mesh=ready for a mesh
+    // that had just verified successfully (2026-08-04, live).
+    //
+    // Doing it here rather than in the add path keeps the two deploy paths agreeing
+    // by construction instead of adding a third writer. `deployMeshHeadless`'s own
+    // assignments become redundant, not wrong.
+    //
+    // Keyed by `instanceId`, NOT the resolved `id`: a migrated project can hold its
+    // keyed entry under the legacy `mesh` key while the instance keeps its real
+    // component id.
+    const instance = project.componentInstances?.[instanceId];
+    if (instance && (outcome.status === 'deployed' || outcome.status === 'error')) {
+        instance.status = outcome.status;
+        instance.lastUpdated = new Date();
+    }
 }
