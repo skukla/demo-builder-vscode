@@ -52,6 +52,15 @@ yarn-error.log*
 # NOTE: `.claude/*` not `.claude/` — git can't re-include below an excluded dir.
 .claude/*
 !.claude/skills/
+# .claude/hooks/ + settings.json are TRACKED. A hook enforces the skills above, so
+# a hook that does not travel is enforcement only one checkout has. The WIRING has
+# to travel with it — that lives in settings.json (shared), NOT in
+# settings.local.json (personal permissions, still ignored).
+!.claude/hooks/
+!.claude/settings.json
+# ...but never hook runtime state or bytecode.
+.claude/hooks/state/
+.claude/hooks/lib/__pycache__/
 
 # Cursor IDE rules — per-developer AI tool config, same policy as .claude/.
 .cursor/

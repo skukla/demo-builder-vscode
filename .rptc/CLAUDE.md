@@ -43,9 +43,11 @@ Write working artifacts to these locations, never ad-hoc paths:
 - All worktrees live in the **visible sibling directory**
   `demo-builder-vscode.worktrees/<prefix>/` (prefixes: `claude/`, `feature/`,
   `fix/`) — NOT the hidden `.claude/worktrees/`.
-- `.claude/` is gitignored and per-checkout: a fresh worktree starts with no
-  settings, skills, or permissions. Copy them from the main checkout before
-  working there.
+- Most of `.claude/` is TRACKED — `skills/`, `hooks/`, and `settings.json` (the
+  hook wiring) arrive with the checkout. A hook enforces a skill, so enforcement
+  that lived in only one checkout was a gap.
+- Still per-checkout and ignored: `settings.local.json` (personal permission
+  allowlist). Copy it from the main checkout or expect permission prompts.
 
 ## Project SOPs (`.rptc/sop/`)
 

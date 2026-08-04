@@ -1,6 +1,6 @@
 ---
 name: worktree-setup
-description: Create or relocate a git worktree for this repo the way it expects — correct sibling location, copy the gitignored .claude config that does NOT travel via git, and start the preview loop. Use when spinning up a worktree by hand, when a worktree session has no permissions/hooks/skills, or when a worktree ended up in the wrong (hidden) place.
+description: Create or relocate a git worktree for this repo the way it expects — correct sibling location, copy the one .claude file that still does NOT travel via git (settings.local.json — permissions), and start the preview loop. Use when spinning up a worktree by hand, when a worktree session has no permissions/hooks/skills, or when a worktree ended up in the wrong (hidden) place.
 ---
 # Set Up a Git Worktree (location + config + preview loop)
 
@@ -17,13 +17,15 @@ description: Create or relocate a git worktree for this repo the way it expects 
    ```
    Prefix is the branch prefix (`claude/`, `feature/`, `fix/`); the prefix subdirs already exist.
    e.g. branch `feature/foo` → `demo-builder-vscode.worktrees/feature/foo`.
-2. **Copy the gitignored `.claude` config** the checkout does NOT carry (see Gotchas for why):
+2. **Copy the one `.claude` file the checkout does NOT carry** (see Gotchas for why):
    ```bash
    WT="$MAIN.worktrees/<prefix>/<name>"
    mkdir -p "$WT/.claude"
-   cp -R "$MAIN/.claude/hooks" "$MAIN/.claude/settings.local.json" "$WT/.claude/"
+   # hooks/, settings.json and skills/ are TRACKED — git brings them. Only the
+   # personal permission allowlist is still ignored and needs copying.
+   cp "$MAIN/.claude/settings.local.json" "$WT/.claude/"
    ```
-   `skills/` is tracked — it arrives with the checkout, don't copy it.
+   `skills/`, `hooks/` and `settings.json` are tracked — they arrive with the checkout.
 3. **Give the worktree its OWN `dist/` — never a symlink** (share `node_modules`, not build
    output):
    ```bash
@@ -46,11 +48,12 @@ description: Create or relocate a git worktree for this repo the way it expects 
    `[watch] build finished, watching for changes...` line before iterating.
 
 ## Gotchas
-- **`.claude/` is gitignored EXCEPT `.claude/skills/`** (`.gitignore`: `.claude/*` then
-  `!.claude/skills/`). So a fresh worktree already has the project skills via git, but has **no
-  `settings.local.json` and no `hooks/`** → constant permission prompts and no jest-pipe/format
-  hooks until you copy them (step 2). Update dev config in the **main checkout** copy so future
-  worktrees inherit it on copy.
+- **`.claude/` is gitignored EXCEPT `skills/`, `hooks/` and `settings.json`** (`.gitignore`:
+  `.claude/*` then three `!` re-includes). A fresh worktree therefore has the project skills,
+  the hooks, AND the hook wiring already — a hook that enforces a skill has to travel with the
+  skill, or the enforcement exists in one checkout only. What it does NOT have is
+  **`settings.local.json`** → constant permission prompts until you copy it (step 2). Edit
+  permissions in the **main checkout** copy so future worktrees inherit it.
 - **Never place a worktree under `.claude/worktrees/`** — a dotfolder is invisible in Finder and
   VS Code open dialogs; the user won't find it. The sibling `.worktrees/` dir is the convention.
 - **NEVER symlink `dist/` between checkouts** (step 3). Older worktrees here were created with
@@ -80,7 +83,7 @@ description: Create or relocate a git worktree for this repo the way it expects 
 ## Verify
 1. In the worktree session, run any allowlisted command (e.g. `npx tsc --noEmit`) — it should run
    without a fresh permission prompt (proves `settings.local.json` copied and was reloaded).
-2. `ls "$WT/.claude/hooks"` shows the shell hooks; `ls "$WT/.claude/skills"` shows the project
+2. `ls "$WT/.claude/hooks"` shows the shell hooks (via git, not the copy); `ls "$WT/.claude/skills"` shows the project
    skills (the latter from git, not the copy).
 3. The background `watch:all` printed `build finished, watching for changes...`; edit a webview
    file, save, and confirm a rebuild line — then Cmd+R in the Extension Dev Host picks it up (F5
