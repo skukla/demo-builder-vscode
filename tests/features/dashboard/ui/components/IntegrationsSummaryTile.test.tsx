@@ -255,4 +255,27 @@ describe('IntegrationsSummaryTile', () => {
 
         expect(getClient().postMessage).toHaveBeenCalledWith('openIntegrations');
     });
+
+    // THE BUG (2026-08-04, reported live): the integration CARD's blue dot blinked
+    // while work was in flight; the same blue dot on this tile sat still. The tile
+    // hand-rolled its dot markup instead of using StatusDot, so it never got the
+    // pulse — motion was a caller responsibility rather than a property of the
+    // status. This tile is the surface that proved it.
+    it('pulses while an integration is deploying', () => {
+        render(
+            <IntegrationsSummaryTile hasAdobeContext appBuilderComponents={components('deploying')} />
+        );
+
+        const dot = screen.getByTestId('integrations-tile-dot');
+        expect(dot).toHaveAttribute('data-variant', 'info');
+        expect(dot).toHaveClass('status-dot--pulse');
+    });
+
+    it('does not pulse once everything has settled', () => {
+        render(
+            <IntegrationsSummaryTile hasAdobeContext appBuilderComponents={components('deployed')} />
+        );
+
+        expect(screen.getByTestId('integrations-tile-dot')).not.toHaveClass('status-dot--pulse');
+    });
 });

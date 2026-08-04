@@ -172,7 +172,10 @@ describe('IntegrationCard', () => {
             }),
         );
 
-        expect(screen.getByTestId('status-dot')).toHaveClass('integration-dot--deploying');
+        // StatusDot is MOCKED here, so asserting the pulse class would test the
+        // mock. The card's own responsibility is handing over the right variant;
+        // that `info` pulses is StatusDot's contract, pinned in its suite.
+        expect(screen.getByTestId('status-dot')).toHaveAttribute('data-variant', 'info');
         expect(card.querySelector('.integration-card-foot button')).toBeNull();
         expect(card.querySelector('.integration-card-foot [role="link"]')).toBeNull();
     });
@@ -180,7 +183,7 @@ describe('IntegrationCard', () => {
     it('does not pulse the dot outside deploying', () => {
         renderCard(makeModel());
 
-        expect(screen.getByTestId('status-dot')).not.toHaveClass('integration-dot--deploying');
+        expect(screen.getByTestId('status-dot')).not.toHaveAttribute('data-variant', 'info');
     });
 
     it('renders the mesh card with the SAME chrome as an integration card', () => {

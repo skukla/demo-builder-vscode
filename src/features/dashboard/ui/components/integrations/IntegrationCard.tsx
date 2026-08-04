@@ -92,13 +92,10 @@ export function IntegrationCard({
             <div className="integration-card-statusline">
                 {/* size 6 matches the project card's status dot — the 8px default
                     sat heavier beside the same 11px uppercase label. */}
-                <StatusDot
-                    variant={model.dotVariant}
-                    size={6}
-                    className={
-                        model.status === 'deploying' ? 'integration-dot--deploying' : undefined
-                    }
-                />
+                {/* No pulse class here: `deploying` maps to the `info` variant, and
+                    StatusDot pulses on info by itself. Applying it per-caller is
+                    what let the dashboard tile forget. */}
+                <StatusDot variant={model.dotVariant} size={6} />
                 <span
                     className={cn(
                         'integration-card-status',

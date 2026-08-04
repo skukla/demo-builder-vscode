@@ -141,6 +141,31 @@
    Other CSS files reference these definitions
    =========================================== */
 
+/* THE in-progress pulse for status dots. StatusDot applies `status-dot--pulse`
+   itself whenever its variant is `info`, so no surface has to remember. Kept
+   distinct from the generic `.pulse` below, which is a layout-level effect with
+   its own timing and callers. */
+.status-dot--pulse {
+    animation: status-dot-pulse 1.2s ease-in-out infinite;
+}
+@keyframes status-dot-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.35;
+    }
+}
+/* Ships WITH the animation, not in the surface that happens to use it — the
+   previous per-card pulse carried its own reduced-motion rule, which a second
+   implementation would simply have missed. */
+@media (prefers-reduced-motion: reduce) {
+    .status-dot--pulse {
+        animation: none;
+    }
+}
+
 /* Pulse animation for checking status */
 @keyframes pulse {
     0% { opacity: 1; }

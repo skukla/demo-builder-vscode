@@ -143,4 +143,46 @@ describe('StatusDot', () => {
             });
         });
     });
+
+    // THE STANDARD (2026-08-04): an `info` dot means "in progress", and in-progress
+    // pulses — on every surface, owned by the component. It used to be a class the
+    // CALLER applied (`integration-dot--deploying`), so the integration card
+    // pulsed while the dashboard's integrations tile showed the same blue dot
+    // sitting perfectly still. Motion is a property of the status, not of the
+    // surface that happens to render it.
+    describe('in-progress pulse (the standard)', () => {
+        it('pulses on the info variant', () => {
+            renderWithProviders(<StatusDot variant="info" />);
+            expect(screen.getByRole('presentation')).toHaveClass('status-dot--pulse');
+        });
+
+        it.each(['success', 'error', 'warning', 'neutral'] as const)(
+            'does not pulse on %s',
+            (variant) => {
+                renderWithProviders(<StatusDot variant={variant} />);
+                expect(screen.getByRole('presentation')).not.toHaveClass('status-dot--pulse');
+            }
+        );
+
+        it('keeps a caller className alongside the pulse', () => {
+            renderWithProviders(<StatusDot variant="info" className="integrations-tile-dot" />);
+            const dot = screen.getByRole('presentation');
+            expect(dot).toHaveClass('integrations-tile-dot');
+            expect(dot).toHaveClass('status-dot--pulse');
+        });
+    });
+
+    // Surfaces need to target one dot among several, and tests need a hook that
+    // does not depend on a hand-rolled wrapper span.
+    describe('identification', () => {
+        it('always exposes its variant as a data attribute', () => {
+            renderWithProviders(<StatusDot variant="warning" />);
+            expect(screen.getByRole('presentation')).toHaveAttribute('data-variant', 'warning');
+        });
+
+        it('takes an optional test id', () => {
+            renderWithProviders(<StatusDot variant="success" testId="my-dot" />);
+            expect(screen.getByTestId('my-dot')).toBeInTheDocument();
+        });
+    });
 });

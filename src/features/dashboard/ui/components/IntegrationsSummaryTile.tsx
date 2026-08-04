@@ -21,7 +21,7 @@ import Data from '@spectrum-icons/workflow/Data';
 import React from 'react';
 import type { MeshStatus } from '../hooks/useDashboardStatus';
 import { toMeshCardStatus } from './integrations/integrationCardModel';
-import type { StatusDotVariant } from '@/core/ui/components/ui/StatusDot';
+import { StatusDot, type StatusDotVariant } from '@/core/ui/components/ui/StatusDot';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { AppBuilderComponentState } from '@/types/base';
 
@@ -101,13 +101,19 @@ export function IntegrationsSummaryTile({
             <Data size="L" />
             <Text UNSAFE_className="icon-label">Integrations</Text>
             {variant && (
-                <span
-                    // `tile-status-dot` is the marker exempting it from the tile's
-                    // blanket "no descendant backgrounds on hover" rule, which would
-                    // otherwise blank the dot exactly when the pointer is on it.
-                    className={`integrations-tile-dot tile-status-dot status-dot--${variant}`}
-                    data-testid="integrations-tile-dot"
-                    data-variant={variant}
+                // The SHARED dot, not a hand-rolled span. Rolling its own is what
+                // cost this tile the in-progress pulse: the card used StatusDot and
+                // got it, the tile reimplemented colour from Spectrum globals and
+                // got a permanently still blue dot (reported 2026-08-04).
+                // `integrations-tile-dot` supplies only POSITION now; colour, size
+                // and motion come from the component. `tile-status-dot` is the
+                // marker exempting it from the tile's blanket "no descendant
+                // backgrounds on hover" rule, which would otherwise blank the dot
+                // exactly when the pointer is on it.
+                <StatusDot
+                    variant={variant}
+                    className="integrations-tile-dot tile-status-dot"
+                    testId="integrations-tile-dot"
                 />
             )}
         </ActionButton>

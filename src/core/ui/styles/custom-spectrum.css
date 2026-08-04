@@ -5355,19 +5355,8 @@ div[class*="spectrum"] input[type="search"] {
     display: flex;
     align-items: center;
 }
-/* Deploying: the status dot pulses (the ONLY motion on a card face). */
-.integration-dot--deploying {
-    animation: integration-dot-pulse 1.2s ease-in-out infinite;
-}
-@keyframes integration-dot-pulse {
-    0%,
-    100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.35;
-    }
-}
+/* The deploying pulse lives in StatusDot now (`status-dot--pulse`, index.css) —
+   it is a property of the `info` status, not of this card. */
 /* The add tile IS the empty state: a dashed last grid cell. */
 .integration-add-tile {
     border: 1.5px dashed var(--spectrum-global-color-gray-400);
@@ -5446,9 +5435,6 @@ div[class*="spectrum"] input[type="search"] {
     .db-drawer,
     .db-drawer-scrim {
         transition: none;
-    }
-    .integration-dot--deploying {
-        animation: none;
     }
 }
 /* The flyout's sections: fixed head, scrolling body, fixed action bar. */
@@ -5583,29 +5569,13 @@ div[class*="spectrum"] input[type="search"] {
     position: relative;
 }
 /* Status dot rides the tile's top-right corner. */
+/* POSITION only. Colour, size and the in-progress pulse come from StatusDot;
+   this tile used to restate all three from Spectrum globals, which is how it
+   ended up with a blue dot that never pulsed. */
 .integrations-tile-dot {
     position: absolute;
     top: 8px;
     right: 8px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--spectrum-global-color-gray-500);
-}
-.integrations-tile-dot.status-dot--success {
-    background: var(--spectrum-global-color-green-500);
-}
-.integrations-tile-dot.status-dot--warning {
-    background: var(--spectrum-global-color-orange-500);
-}
-.integrations-tile-dot.status-dot--error {
-    background: var(--spectrum-global-color-red-500);
-}
-.integrations-tile-dot.status-dot--info {
-    background: var(--spectrum-global-color-blue-500);
-}
-.integrations-tile-dot.status-dot--neutral {
-    background: var(--spectrum-global-color-gray-500);
 }
 /* Count rides the bottom-right, out of the label's way. */
 } /* End of second @layer theme block */
