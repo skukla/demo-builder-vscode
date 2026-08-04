@@ -34,9 +34,9 @@ describe('ProjectCard', () => {
             const statusElements = screen.getAllByText(/running/i);
             // Should have at least the status text
             expect(statusElements.length).toBeGreaterThanOrEqual(1);
-            // Status dot should be present
-            const statusIndicator = screen.getByRole('presentation');
-            expect(statusIndicator).toBeInTheDocument();
+            // Status dots should be present. Plural now: a mesh-supporting stack
+            // always renders its mesh slot beside the project status.
+            expect(screen.getAllByRole('presentation').length).toBeGreaterThanOrEqual(1);
         });
 
         it('should show stopped status with gray indicator', () => {
@@ -148,18 +148,23 @@ describe('ProjectCard', () => {
             expect(screen.getByText('Mesh Incomplete')).toBeInTheDocument();
         });
 
-        it('should show "Mesh Error" when error', () => {
+        // The mesh line is a SLOT on stacks that support a mesh: always present,
+        // and honest when there is nothing there. "Mesh Error" is reserved for a
+        // mesh that deployed and then broke — an error status with no deployed
+        // mesh behind it means the mesh never existed.
+        it('says no mesh exists when an error left no deployed mesh', () => {
             const project = createMockProject({ meshStatusSummary: 'error' });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
-            expect(screen.getByText('Mesh Error')).toBeInTheDocument();
+            expect(screen.getByText('No Mesh Exists')).toBeInTheDocument();
+            expect(screen.queryByText('Mesh Error')).not.toBeInTheDocument();
         });
 
-        it('should not show mesh status when not-deployed', () => {
+        it('says no mesh exists when not-deployed, rather than hiding the slot', () => {
             const project = createMockProject({ meshStatusSummary: 'not-deployed' });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
-            expect(screen.queryByText(/Mesh/)).not.toBeInTheDocument();
+            expect(screen.getByText('No Mesh Exists')).toBeInTheDocument();
         });
     });
 
