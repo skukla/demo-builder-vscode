@@ -211,13 +211,32 @@ function integrationState(
     };
 }
 
-/** An error-status entry that keeps coherent state after a failed deploy. */
-function errorState(entry: AppBuilderComponentCatalogEntry): AppBuilderComponentState {
+/**
+ * An error-status entry that keeps coherent state after a failed deploy —
+ * INCLUDING why it failed.
+ *
+ * The reason used to be returned to the caller and dropped from state, so a
+ * failed add persisted `status:'error'` with nothing to explain it and no
+ * surface could answer "why?" after the notification faded. `error` is the one
+ * field a failed entry exists to carry.
+ *
+ * NOTE: this path builds and persists its own state instead of going through
+ * `recordDeployOutcome`, which features/CLAUDE.md calls "the one keyed
+ * deploy-record writer every deploy path lands on" — and which already merges
+ * `error` correctly. It cannot be used as-is here because it merges onto an
+ * EXISTING entry, and a failed add has none. Reconciling the two writers is a
+ * refactor, not a bug fix; flagged rather than done.
+ */
+function errorState(
+    entry: AppBuilderComponentCatalogEntry,
+    reason: string,
+): AppBuilderComponentState {
     return {
         kind: entry.kind,
         status: 'error',
         name: entry.name,
         source: { owner: entry.source.owner, repo: entry.source.repo, branch: entry.source.branch },
+        error: reason,
     };
 }
 
@@ -290,7 +309,7 @@ export async function addAppBuilderComponent(
         );
 
         if (!deployed.ok) {
-            await persistResult(project, entry.id, errorState(entry), deps);
+            await persistResult(project, entry.id, errorState(entry, deployed.error), deps);
             return { success: false, error: deployed.error };
         }
 

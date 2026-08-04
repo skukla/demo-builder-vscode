@@ -255,8 +255,29 @@ describe('addAppBuilderComponent partial-failure', () => {
         const persisted = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
         const entry = persisted.appBuilderComponents?.[MESH_ENTRY.id];
         expect(entry?.status).toBe('error');
+        // WITH the reason. This assertion is the gap that let the bug through: the
+        // old test proved the status persisted AND that the message came back, but
+        // never that the two were connected — so `errorState` dropping the reason
+        // looked green. A failed add left `status:'error'` with an empty error, and
+        // nothing on any surface could say why (live, 2026-08-04:
+        // demo-builder-test's commerce-eds-mesh).
+        expect(entry?.error).toMatch(/deploy boom/);
         // Local folder retained for retry: removeComponent must NOT have been called.
         expect(deps.componentManager.removeComponent).not.toHaveBeenCalled();
+    });
+
+    it('persists the reason for an INTEGRATION add failure too', async () => {
+        const project = createProject();
+        const deps = createDeps({
+            deployApp: jest.fn().mockResolvedValue({ success: false, error: 'runtime rejected it' }),
+        });
+
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+
+        const persisted = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
+        expect(persisted.appBuilderComponents?.[INTEGRATION_ENTRY.id]?.error).toMatch(
+            /runtime rejected it/,
+        );
     });
 
     it('clone failure → no deploy, no persisted entry', async () => {
