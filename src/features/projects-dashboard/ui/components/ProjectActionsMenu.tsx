@@ -30,7 +30,7 @@ import React, { useCallback, useMemo } from 'react';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 import {
-    listRedeployableIntegrations,
+    hasIntegrations,
     meshNeedsRedeploy,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import type { Project } from '@/types/base';
@@ -75,7 +75,11 @@ export interface ProjectActions {
      * Redeploy ONE App Builder integration by its keyed id (one submenu item
      * per redeployable integration — ADR-011 D3 Step 04).
      */
-    onRedeployApp?: (project: Project, integrationId: string) => void;
+    /**
+     * Open the Integrations page for this project. Replaced the per-integration
+     * redeploy callbacks — that surface owns those actions now.
+     */
+    onOpenIntegrations?: (project: Project) => void;
     onEdit?: (project: Project) => void;
     /**
      * Commit an inline rename (consumed by the CARD's InlineRenameField, not
@@ -99,11 +103,8 @@ export interface ProjectActions {
 /** Callbacks that decide which "More…" submenu items appear. */
 type MoreCallbacks = Pick<
     ProjectActions,
-    'onCopyPath' | 'onExport' | 'onRepublishContent' | 'onRedeployMesh' | 'onRedeployApp'
+    'onCopyPath' | 'onExport' | 'onRepublishContent' | 'onRedeployMesh'
 >;
-
-/** Key prefix carrying the integration id for per-integration redeploy items. */
-const REDEPLOY_APP_KEY_PREFIX = 'redeployApp:';
 
 /**
  * The "More…" submenu items, gated by callback presence AND project state:
@@ -125,15 +126,6 @@ function buildMoreItems(project: Project, isEds: boolean, cb: MoreCallbacks): Me
     }
     if (cb.onRedeployMesh && meshNeedsRedeploy(project)) {
         more.push({ key: 'redeployMesh', label: 'Redeploy Mesh', icon: 'redeploy' });
-    }
-    if (cb.onRedeployApp) {
-        for (const { id, label } of listRedeployableIntegrations(project)) {
-            more.push({
-                key: `${REDEPLOY_APP_KEY_PREFIX}${id}`,
-                label: `Redeploy ${label}`,
-                icon: 'redeploy',
-            });
-        }
     }
     return more;
 }
@@ -171,7 +163,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         onResetProject,
         onRepublishContent,
         onRedeployMesh,
-        onRedeployApp,
+        onOpenIntegrations,
         onEdit,
         onCopyPath,
         onExport,
@@ -183,9 +175,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     const isEds = isEdsProject(project);
 
     // Action dispatch map - avoids a large switch statement. Each key maps to
-    // the callback that handles it. Per-integration redeploy items carry their
-    // integration id in the key (redeployApp:<id>) and are dispatched in
-    // handleMenuAction instead. The "more" submenu trigger has no entry
+    // the callback that handles it. The "more" submenu trigger has no entry
     // (it only opens the submenu), so dispatching it is a harmless no-op.
     const actionMap = useMemo<Record<string, ((p: Project) => void) | undefined>>(
         () => ({
@@ -198,6 +188,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             resetProject: onResetProject,
             republishContent: onRepublishContent,
             redeployMesh: onRedeployMesh,
+            openIntegrations: onOpenIntegrations,
             edit: onEdit,
             copyPath: onCopyPath,
             export: onExport,
@@ -215,6 +206,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             onResetProject,
             onRepublishContent,
             onRedeployMesh,
+            onOpenIntegrations,
             onEdit,
             onCopyPath,
             onExport,
@@ -227,13 +219,9 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     const handleMenuAction = useCallback(
         (key: React.Key) => {
             const actionKey = String(key);
-            if (actionKey.startsWith(REDEPLOY_APP_KEY_PREFIX)) {
-                onRedeployApp?.(project, actionKey.slice(REDEPLOY_APP_KEY_PREFIX.length));
-                return;
-            }
             actionMap[actionKey]?.(project);
         },
-        [project, actionMap, onRedeployApp],
+        [project, actionMap],
     );
 
     // Stop click propagation to prevent triggering parent selection
@@ -277,6 +265,14 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         if (isEds ? onEdit : !isRunning && onEdit) {
             manage.push({ key: 'edit', label: 'Edit', icon: 'edit' });
         }
+        // ONE entry to the surface that owns integrations, replacing the
+        // per-integration "Redeploy <name>" items that used to sit in More… and
+        // grew with N. Those predate the dedicated Integrations page; now that it
+        // exists, per-integration actions belong there and this is the route —
+        // the projects list otherwise has none (project → dashboard → Integrations).
+        if (onOpenIntegrations && hasIntegrations(project)) {
+            manage.push({ key: 'openIntegrations', label: 'Integrations…', icon: 'apiAccess' });
+        }
         if (onPinToggle) {
             manage.push({
                 key: 'pinToggle',
@@ -294,7 +290,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             onExport,
             onRepublishContent,
             onRedeployMesh,
-            onRedeployApp,
         });
 
         return { use, manage, more };
@@ -311,7 +306,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         onResetProject,
         onRepublishContent,
         onRedeployMesh,
-        onRedeployApp,
+        onOpenIntegrations,
         onEdit,
         onCopyPath,
         onExport,

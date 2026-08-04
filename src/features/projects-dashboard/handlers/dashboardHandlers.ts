@@ -151,9 +151,10 @@ export const handleGetProjects: MessageHandler = async (
 export const handleSelectProject: MessageHandler<{
     projectPath: string;
     forceNewWindow?: boolean;
+    surface?: 'integrations';
 }> = async (
     context: HandlerContext,
-    payload?: { projectPath: string; forceNewWindow?: boolean },
+    payload?: { projectPath: string; forceNewWindow?: boolean; surface?: 'integrations' },
 ): Promise<HandlerResponse> => {
     try {
         if (!payload?.projectPath) {
@@ -217,9 +218,17 @@ export const handleSelectProject: MessageHandler<{
             //
             // Mark a webview transition so the outgoing Projects List's
             // dispose() doesn't fight the dashboard handoff.
+            //
+            // `surface` picks WHICH webview opens. Selection is otherwise
+            // identical — path validation, load, set-current — so the project
+            // kebab's "Integrations…" rides this handler rather than forking it.
             await BaseWebviewCommand.startWebviewTransition();
             try {
-                await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+                await vscode.commands.executeCommand(
+                    payload.surface === 'integrations'
+                        ? 'demoBuilder.showIntegrations'
+                        : 'demoBuilder.showProjectDashboard',
+                );
             } catch (navError) {
                 context.logger.error(
                     'Failed to navigate to dashboard',
@@ -1082,39 +1091,6 @@ export const handleRedeployMesh: MessageHandler<{ projectPath: string }> = async
     );
 };
 
-/**
- * Handle 'redeployApp' — redeploy ONE App Builder integration from the projects
- * kebab (one item per redeployable keyed integration; the payload carries its
- * id — ADR-011 D3 Step 04). Reuses the shared
- * {@link import('@/features/app-builder/services/deployAppHeadless').deployAppHeadless}
- * core, which preserves the full guard chain (auth → org → permission → no-app)
- * and targets the id-matched integration. The id is REQUIRED — a payload
- * without one fails fast; there is no singular fallback to guess at.
- */
-export const handleRedeployApp: MessageHandler<{ projectPath: string; id: string }> = async (
-    context: HandlerContext,
-    payload?: { projectPath: string; id: string },
-): Promise<HandlerResponse> => {
-    if (!payload?.id) {
-        return { success: false, error: 'Integration id is required' };
-    }
-    const componentId = payload.id;
-    const { deployAppHeadless } = await import('@/features/app-builder/services/deployAppHeadless');
-    return runProjectRedeploy(
-        context,
-        payload.projectPath,
-        'Redeploying app',
-        (project, onProgress) =>
-            deployAppHeadless({
-                project,
-                stateManager: context.stateManager,
-                logger: context.logger,
-                extensionPath: context.context.extensionPath,
-                onProgress,
-                componentId,
-            }),
-    );
-};
 
 /**
  * Handle 'resetProject' message - Reset project to initial state

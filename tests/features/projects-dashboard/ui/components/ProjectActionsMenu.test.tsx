@@ -217,32 +217,12 @@ describe('ProjectActionsMenu', () => {
             expect(within(submenu()).queryByText('Redeploy Mesh')).not.toBeInTheDocument();
         });
 
-        // ADR-011 D3 Step 04: redeploy is per-integration — one item per deployed
-        // keyed integration entry (label from the entry's name ?? id), each firing
-        // the callback with the integration id.
-        it('shows a per-integration Redeploy item and fires onRedeployApp with the id', () => {
-            const onRedeployApp = jest.fn();
-            const project = createMockProject({
-                name: 'Test',
-                appBuilderComponents: {
-                    'int-a': {
-                        kind: 'integration',
-                        status: 'deployed',
-                        name: 'My Integration',
-                        source: { owner: 'acme', repo: 'a' },
-                    },
-                },
-            } as any);
-            renderWithProvider(
-                <ProjectActionsMenu project={project} actions={{ onRedeployApp }} />
-            );
-            openMenu();
-
-            within(submenu()).getByText('Redeploy My Integration').click();
-            expect(onRedeployApp).toHaveBeenCalledWith(project, 'int-a');
-        });
-
-        it('renders one Redeploy item per deployed integration (id label fallback)', () => {
+        // ADR-011 D3 Step 04 built one "Redeploy <name>" item per integration
+        // here. They grew with N and predate the dedicated Integrations page —
+        // which now owns per-integration actions — so they collapsed into a
+        // single route to that page, in Manage rather than More.
+        it('offers ONE Integrations… entry, whatever the integration count', () => {
+            const onOpenIntegrations = jest.fn();
             const project = createMockProject({
                 name: 'Test',
                 appBuilderComponents: {
@@ -254,31 +234,31 @@ describe('ProjectActionsMenu', () => {
                     },
                     'int-b': {
                         kind: 'integration',
-                        status: 'deployed',
+                        status: 'error',
                         source: { owner: 'acme', repo: 'b' },
                     },
                 },
             } as any);
             renderWithProvider(
-                <ProjectActionsMenu project={project} actions={{ onRedeployApp: jest.fn() }} />
+                <ProjectActionsMenu project={project} actions={{ onOpenIntegrations }} />
             );
             openMenu();
 
-            const inSubmenu = within(submenu());
-            expect(inSubmenu.getByText('Redeploy My Integration')).toBeInTheDocument();
-            expect(inSubmenu.getByText('Redeploy int-b')).toBeInTheDocument();
+            expect(screen.queryByText(/^Redeploy /)).not.toBeInTheDocument();
+            screen.getByText('Integrations…').click();
+            expect(onOpenIntegrations).toHaveBeenCalledWith(project);
         });
 
-        it('hides Redeploy items when no keyed integration is deployed', () => {
-            // A bare appStatusSummary no longer gates the item — the keyed map does.
+        it('omits Integrations… when the project has no App Builder components', () => {
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test', appStatusSummary: 'deployed' })}
-                    actions={{ onRedeployApp: jest.fn(), onCopyPath: jest.fn() }}
+                    project={createMockProject({ name: 'Test' })}
+                    actions={{ onOpenIntegrations: jest.fn(), onCopyPath: jest.fn() }}
                 />
             );
             openMenu();
-            expect(within(submenu()).queryByText(/^Redeploy /)).not.toBeInTheDocument();
+
+            expect(screen.queryByText('Integrations…')).not.toBeInTheDocument();
         });
 
         it('offers NO Rename item anywhere — inline rename on the card owns it', () => {

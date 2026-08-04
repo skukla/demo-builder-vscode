@@ -171,11 +171,10 @@ Core messages (non-exhaustive — the handler map in `handlers/projectsListHandl
 | Message | Direction | Payload | Response |
 |---------|-----------|---------|----------|
 | `getProjects` | UI → Extension | - | `{ success, data: { projects } }` |
-| `selectProject` | UI → Extension | `{ projectPath }` | `{ success, data: { project } }` |
+| `selectProject` | UI → Extension | `{ projectPath, forceNewWindow?, surface? }` | `{ success, data: { project } }` — `surface: 'integrations'` opens the Integrations page instead of the dashboard (the kebab's `Integrations…`), reusing this handler's validation/load/set-current rather than forking it |
 | `createProject` | UI → Extension | - | `{ success }` |
 | `openAdminPanel` | UI → Extension | `{ projectPath }` | `{ success }` (opens the admin URL — derived for SaaS, `ADOBE_COMMERCE_ADMIN_URL` field for PaaS — or prompts "Open Configure") |
 | `redeployMesh` | UI → Extension | `{ projectPath }` | `{ success }` (kebab More item, shown when the mesh is in a "Redeploy Mesh" state; runs `deployMeshHeadless` under a progress notification) |
-| `redeployApp` | UI → Extension | `{ projectPath, id? }` | `{ success }` (kebab More items — one per redeployable keyed integration, labeled from the entry's `name ?? id`; `id` targets that integration via `deployAppHeadless`'s `componentId`) |
 | `openHelp` | UI → Extension | - | `{ success }` |
 | `openSettings` | UI → Extension | - | `{ success }` |
 | `projectsUpdated` | Extension → UI | `{ projects }` | - |

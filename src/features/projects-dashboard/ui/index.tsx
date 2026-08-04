@@ -339,22 +339,20 @@ const ProjectsDashboardApp: React.FC = () => {
 
     // Handle per-integration redeploy (one kebab item per redeployable keyed
     // integration; the id targets that integration only — ADR-011 D3 Step 04).
-    const handleRedeployApp = useCallback(
-        async (project: Project, integrationId: string) => {
-            try {
-                const response = await webviewClient.request<{ success: boolean }>('redeployApp', {
-                    projectPath: project.path,
-                    id: integrationId,
-                });
-                if (response?.success) {
-                    fetchProjects(true);
-                }
-            } catch (error) {
-                console.error('Failed to redeploy app:', error);
-            }
-        },
-        [fetchProjects],
-    );
+    // ONE route to the surface that owns integrations, replacing the
+    // per-integration redeploys that used to live in the project kebab. Reuses
+    // `selectProject` (path validation, load, set-current) and only changes which
+    // surface it opens — a second selection path would be a fork of that logic.
+    const handleOpenIntegrations = useCallback(async (project: Project) => {
+        try {
+            await webviewClient.postMessage('selectProject', {
+                projectPath: project.path,
+                surface: 'integrations',
+            });
+        } catch (error) {
+            console.error('Failed to open integrations:', error);
+        }
+    }, []);
 
     // Handle edit project
     const handleEditProject = useCallback(async (project: Project) => {
@@ -459,7 +457,7 @@ const ProjectsDashboardApp: React.FC = () => {
             onResetProject: handleResetProject,
             onRepublishContent: handleRepublishContent,
             onRedeployMesh: handleRedeployMesh,
-            onRedeployApp: handleRedeployApp,
+            onOpenIntegrations: handleOpenIntegrations,
             onEdit: handleEditProject,
             onRenameSubmit: handleRenameSubmit,
             onCopyPath: handleCopyPath,
@@ -478,7 +476,7 @@ const ProjectsDashboardApp: React.FC = () => {
             handleResetProject,
             handleRepublishContent,
             handleRedeployMesh,
-            handleRedeployApp,
+            handleOpenIntegrations,
             handleEditProject,
             handleRenameSubmit,
             handleCopyPath,

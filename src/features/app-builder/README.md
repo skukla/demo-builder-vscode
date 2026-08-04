@@ -21,7 +21,6 @@ features/app-builder/
     ├── appBuilderComponentRunner.ts  # keyed runner: clone → install → subscribe → deploy per id
     ├── appBuilderComponentRunnerDeps.ts # RunnerDepsContext factory (catalog, subscriber, secrets)
     ├── appComponentManager.ts        # addAppComponent / removeAppComponent (live add/remove)
-    ├── deployAppHeadless.ts          # UI-free per-integration deploy core (componentId required)
     ├── deployAppIsolated.ts          # package-isolated deploy (applyIsolatedPackages + deploy)
     ├── appDeployment.ts              # deployAppComponent — org-agnostic deploy helper
     ├── appConfigPackages.ts          # app.config.yaml package rewrite (isolation)
@@ -87,24 +86,23 @@ one-app guard.
   The in-memory legacy singletons (`appState`/`appStatusSummary`) clear when the LAST
   integration goes, so the accessors' legacy synthesis cannot resurrect a removed integration.
 
-### `deployAppHeadless(deps)` (`services/deployAppHeadless.ts`)
+### Per-integration deploy — one path
 
-The UI-free per-integration deploy core. `componentId` is **required** — it targets exactly one
-integration by component-instance id (an unknown or missing id blocks with `no-app`; there is no
-singular fallback). Guard order:
+Every per-integration deploy goes through the keyed runner
+(`appBuilderComponentRunner`) behind the per-id handlers, whether it was started by
+the Integrations page or by an AI agent (`deploy_integration` / `redeploy_integration`
+route to the same `dashboardHandlers` entries).
 
-```
-ensureProjectAdobeContext (auth + org)
-  → projectRequiresAppBuilder + testDeveloperPermissions
-  → resolve the id-matched instance
-  → withOrgContext(buildOrgTargetFromProjectAdobe(project.adobe, cachedOrg))
-      → deployAppComponentIsolated(path, deriveOwPackage(instance.id))
-  → recordDeployOutcome on the keyed entry; save project
-```
+There is no singular headless variant. `deployAppHeadless` existed as the mesh's
+`deployMeshHeadless` sibling, but never gained the second caller that justifies a
+UI-free core: the MCP tools were already on the keyed path, so its only caller was
+one projects-list kebab item. When that item became a route to the Integrations page
+(2026-08-04) the service was retired rather than left orphaned.
 
-Caller: the projects-list `redeployApp` handler (one kebab item per redeployable keyed
-integration). Dashboard-driven deploys go through the keyed runner
-(`appBuilderComponentRunner`) instead, behind the per-id handlers.
+The deeper reason it was the wrong shape: an agent-triggered deploy is exactly when a
+user needs telling, so "UI-free" was a liability, not a feature. The mesh's headless
+core survives because it is genuinely shared — but both its callers now wrap it in
+`deployMeshWithFeedback`, so the agent path reports itself too.
 
 ## Dashboard surface
 

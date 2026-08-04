@@ -24,7 +24,6 @@ import {
     handleResetProject,
     handleRepublishContent,
     handleRedeployMesh,
-    handleRedeployApp,
     handleEditProject,
     handleRenameProject,
     handleOpenHelp,
@@ -74,7 +73,6 @@ export const projectsListHandlers = defineHandlers({
 
     // Mesh / App Builder redeploy handlers (kebab More items)
     redeployMesh: handleRedeployMesh,
-    redeployApp: handleRedeployApp,
 
     // Project edit handler
     editProject: handleEditProject,

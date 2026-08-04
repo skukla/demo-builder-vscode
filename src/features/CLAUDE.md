@@ -121,11 +121,14 @@ kind in that map; the legacy singular `meshState`/`appState` fields are legacy-r
   `getIntegrationAppBuilderComponents`, `listAppBuilderComponents`, `getProvidedEnvVars`);
   legacy synthesis only for pre-migration in-memory projects. `appBuilderDeployOutcome.ts` -
   `recordDeployOutcome`, the one keyed deploy-record writer every deploy path lands on.
-- `deployAppHeadless(deps)` (`services/deployAppHeadless.ts`) - UI-free per-integration deploy
-  core (guards: auth → org-mismatch → App Builder permission → id-matched instance;
-  `componentId` REQUIRED, no singular fallback), used by the projects-list `redeployApp`
-  handler. Dashboard-driven deploys go through the keyed runner
-  (`appBuilderComponentRunner.ts`) behind the per-id handlers.
+- Every per-integration deploy — UI and AI alike — goes through the keyed runner
+  (`appBuilderComponentRunner.ts`) behind the per-id handlers. There is no singular
+  headless variant: `deployAppHeadless` was retired 2026-08-04 once its only caller
+  (the projects-list `redeployApp` kebab item) was replaced by a route to the
+  Integrations page. It never earned the second caller its mesh sibling has, because
+  the MCP tools were already on the keyed path — and being UI-free turned out to be
+  the wrong goal for an agent-triggered deploy, which is precisely when the user
+  needs telling.
 
 **Responsibilities:**
 - First-class `appBuilder` registry category + `componentSelections.appBuilder` round-trip

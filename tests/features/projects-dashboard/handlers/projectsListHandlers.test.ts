@@ -97,9 +97,12 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'republishContent')).toBe(true);
         });
 
-        it('should include the mesh/app redeploy handlers', () => {
+        it('should include the mesh redeploy handler', () => {
             expect(hasHandler(projectsListHandlers, 'redeployMesh')).toBe(true);
-            expect(hasHandler(projectsListHandlers, 'redeployApp')).toBe(true);
+            // redeployApp retired 2026-08-04 with deployAppHeadless: the kebab
+            // items it served became one route to the Integrations page, and the
+            // MCP deploy tools were always on the keyed-runner path.
+            expect(hasHandler(projectsListHandlers, 'redeployApp')).toBe(false);
         });
 
         it('should include copy path handler', () => {
@@ -118,9 +121,9 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'setAuthoringExperience')).toBe(false);
         });
 
-        it('should have exactly 25 handlers', () => {
+        it('should have exactly 24 handlers', () => {
             const types = getRegisteredTypes(projectsListHandlers);
-            expect(types).toHaveLength(25);
+            expect(types).toHaveLength(24);
         });
 
         it('should have handlers as functions', () => {
