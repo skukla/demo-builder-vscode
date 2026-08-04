@@ -122,24 +122,60 @@ const APP_STATUS_PRECEDENCE: ReadonlyArray<AppBuilderComponentState['status']> =
  * deploy-time-only `appStatusSummary` is NOT read here: it is never persisted
  * or recomputed, so a reloaded project only carries the keyed entries.
  */
+function getIntegrationStatuses(project: Project): AppBuilderComponentState['status'][] {
+    return Object.values(project.appBuilderComponents ?? {})
+        .filter((state) => state.kind === 'integration')
+        .map((state) => state.status);
+}
+
 function getWorstIntegrationStatus(
     project: Project,
 ): AppBuilderComponentState['status'] | undefined {
-    const statuses = Object.values(project.appBuilderComponents ?? {})
-        .filter((state) => state.kind === 'integration')
-        .map((state) => state.status);
+    const statuses = getIntegrationStatuses(project);
     return APP_STATUS_PRECEDENCE.find((status) => statuses.includes(status));
 }
 
+/** What each worst-status reads as, once the counts are in front of it. */
+const INTEGRATION_STATUS_PHRASE: Record<AppBuilderComponentState['status'], string> = {
+    deployed: 'deployed',
+    error: 'failed',
+    stale: 'need redeploy',
+    'not-deployed': 'not deployed',
+};
+
 /**
- * Gets the App Builder app status display text for a project card, derived
- * from the keyed `appBuilderComponents` map (worst status across integrations).
+ * The project card's integrations line.
  *
- * @returns Display text or null if the project has no integrations
+ * It used to read "App Deployed" — naming a thing that does not exist. A project
+ * has no single app; it has N integrations that happen to deploy to one shared
+ * workspace. At N > 1 the old text also hid the two facts that matter: how many
+ * there are, and how many are actually in the state being reported. "App Error"
+ * across two integrations told you neither which had failed nor that the other
+ * was fine.
+ *
+ * So: name the integrations, and count them. The "of N" appears only when it
+ * says something — with one integration, "1 of 1" is noise.
+ *
+ * @param project - the project whose integrations are being summarised
+ * @returns the display line, or null when the project has no integrations
  */
 export function getAppStatusText(project: Project): string | null {
-    const display = getAppStatusDisplay(getWorstIntegrationStatus(project));
-    return display?.text ?? null;
+    const statuses = getIntegrationStatuses(project);
+    if (statuses.length === 0) return null;
+
+    const worst = APP_STATUS_PRECEDENCE.find((status) => statuses.includes(status));
+    if (!worst) return null;
+
+    const total = statuses.length;
+    const matching = statuses.filter((status) => status === worst).length;
+    const phrase = INTEGRATION_STATUS_PHRASE[worst];
+    const noun = total === 1 ? 'integration' : 'integrations';
+
+    // "1 of 2 integrations failed" only when some are NOT in that state; when
+    // they all are, the count alone is the whole truth.
+    return matching === total
+        ? `${total} ${noun} ${phrase}`
+        : `${matching} of ${total} ${noun} ${phrase}`;
 }
 
 /**

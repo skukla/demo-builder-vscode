@@ -392,8 +392,39 @@ describe('projectStatusUtils', () => {
             const project = createMockProject({
                 appBuilderComponents: { 'acme-widget': integration('deployed') },
             });
-            expect(getAppStatusText(project)).toBe('App Deployed');
+            expect(getAppStatusText(project)).toBe('1 integration deployed');
             expect(getAppStatusVariant(project)).toBe('success');
+        });
+
+        // "App Deployed" named a thing that does not exist: there is no single
+        // app, and the line is a roll-up of N integrations that happen to share
+        // one workspace. Worse, at N > 1 it hid both the count and how many were
+        // actually in the reported state.
+        it('counts the integrations instead of naming a nonexistent app', () => {
+            const two = createMockProject({
+                appBuilderComponents: {
+                    a: integration('deployed'),
+                    b: integration('deployed'),
+                },
+            });
+            expect(getAppStatusText(two)).toBe('2 integrations deployed');
+        });
+
+        it('reports how many of how many are in the WORST state', () => {
+            const bothFailed = createMockProject({
+                appBuilderComponents: {
+                    a: integration('error'),
+                    b: integration('error'),
+                },
+            });
+            expect(getAppStatusText(bothFailed)).toBe('2 integrations failed');
+        });
+
+        it('drops the "of N" when there is only one integration', () => {
+            const single = createMockProject({
+                appBuilderComponents: { a: integration('error') },
+            });
+            expect(getAppStatusText(single)).toBe('1 integration failed');
         });
 
         it('shows the WORST status across integration entries', () => {
@@ -403,7 +434,7 @@ describe('projectStatusUtils', () => {
                     b: integration('error'),
                 },
             });
-            expect(getAppStatusText(errorProject)).toBe('App Error');
+            expect(getAppStatusText(errorProject)).toBe('1 of 2 integrations failed');
             expect(getAppStatusVariant(errorProject)).toBe('error');
 
             const staleProject = createMockProject({
@@ -412,7 +443,7 @@ describe('projectStatusUtils', () => {
                     b: integration('stale'),
                 },
             });
-            expect(getAppStatusText(staleProject)).toBe('Redeploy App');
+            expect(getAppStatusText(staleProject)).toBe('1 of 2 integrations need redeploy');
             expect(getAppStatusVariant(staleProject)).toBe('warning');
 
             const notDeployedProject = createMockProject({
@@ -421,7 +452,7 @@ describe('projectStatusUtils', () => {
                     b: integration('not-deployed'),
                 },
             });
-            expect(getAppStatusText(notDeployedProject)).toBe('Not Deployed');
+            expect(getAppStatusText(notDeployedProject)).toBe('1 of 2 integrations not deployed');
             expect(getAppStatusVariant(notDeployedProject)).toBe('neutral');
         });
 

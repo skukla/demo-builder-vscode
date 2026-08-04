@@ -1,28 +1,31 @@
 /**
- * App Builder App Status Display
+ * Integration Status Display
  *
- * Shared display text and color mappings for the App Builder app status, the
- * sibling of {@link import('./meshStatusDisplay').getMeshStatusDisplay}. Used by
- * the projects card grid to surface an app status dot beside the mesh one.
+ * The DOT VARIANT for a project card's integrations line — its text lives with
+ * the counts in `projectStatusUtils.getAppStatusText`, because the line names how
+ * many integrations are in the state ("1 of 2 integrations failed") and a
+ * status→string map cannot count.
  *
- * The status key is the persisted `appStatusSummary` value.
+ * Sibling of {@link import('./meshStatusDisplay').getMeshStatusDisplay}, which
+ * still owns its own text — a project has exactly one mesh, so there is nothing
+ * to count there.
  */
 
 import type { MeshStatusColor, MeshStatusDisplay, MeshStatusVariant } from './meshStatusDisplay';
 
 export type AppStatusColor = MeshStatusColor;
 export type AppStatusVariant = MeshStatusVariant;
-export type AppStatusDisplay = MeshStatusDisplay;
+export type AppStatusDisplay = Pick<MeshStatusDisplay, 'color' | 'variant'>;
 
 /**
- * Display mapping for persisted `appStatusSummary` values. `stale` is included for
- * parity with the mesh model, though no app-staleness detector sets it today.
+ * Colour mapping per worst-integration status. `stale` is included for parity
+ * with the mesh model, though no staleness detector sets it on an integration yet.
  */
 const APP_STATUS_DISPLAY: Record<string, AppStatusDisplay> = {
-    deployed: { text: 'App Deployed', color: 'green', variant: 'success' },
-    stale: { text: 'Redeploy App', color: 'yellow', variant: 'warning' },
-    error: { text: 'App Error', color: 'red', variant: 'error' },
-    'not-deployed': { text: 'Not Deployed', color: 'gray', variant: 'neutral' },
+    deployed: { color: 'green', variant: 'success' },
+    stale: { color: 'yellow', variant: 'warning' },
+    error: { color: 'red', variant: 'error' },
+    'not-deployed': { color: 'gray', variant: 'neutral' },
 };
 
 /**

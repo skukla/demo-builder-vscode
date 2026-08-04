@@ -131,13 +131,14 @@ describe('ProjectCard', () => {
                 },
             });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
-            expect(screen.getByText('App Deployed')).toBeInTheDocument();
+            // Counts the integrations rather than naming an "app" the project
+            // does not have — see projectStatusUtils.getAppStatusText.
+            expect(screen.getByText('1 integration deployed')).toBeInTheDocument();
         });
 
         it('shows no app status when the project has no keyed integrations', () => {
             renderWithProvider(<ProjectCard project={createMockProject()} onSelect={jest.fn()} />);
-            expect(screen.queryByText('App Deployed')).not.toBeInTheDocument();
-            expect(screen.queryByText('App Error')).not.toBeInTheDocument();
+            expect(screen.queryByText(/integration/i)).not.toBeInTheDocument();
         });
 
         it('should show "Mesh Incomplete" when config-incomplete', () => {
