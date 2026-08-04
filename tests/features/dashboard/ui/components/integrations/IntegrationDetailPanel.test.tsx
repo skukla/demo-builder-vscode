@@ -74,7 +74,6 @@ function makeModel(overrides: Partial<IntegrationCardModel> = {}): IntegrationCa
         faceAction: { kind: 'open', url: 'https://example.com/app' },
         barActions: [
             { action: 'redeploy', label: 'Redeploy', emphasis: 'secondary' },
-            { action: 'verify', label: 'Verify', emphasis: 'secondary' },
             { action: 'manage-apis', label: 'Manage APIs', emphasis: 'secondary' },
             { action: 'remove', label: 'Remove', emphasis: 'danger' },
         ],

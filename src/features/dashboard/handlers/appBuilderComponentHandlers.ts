@@ -50,7 +50,6 @@ import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
-import { toError } from '@/types/typeGuards';
 
 /**
  * Run the deploy guard order (auth → org-mismatch → App Builder permission).
@@ -401,8 +400,11 @@ async function deployById(context: HandlerContext, requestedId: string | undefin
     if (!target.ok) return target.error;
     const { id, project } = target;
 
+    // The display name, as Add and Remove already pass — the notification title is
+    // now its whole content, so a raw slug is what a background user would read.
+    const displayName = getAppBuilderComponent(project, id)?.name ?? id;
     const result = await withComponentProgress(
-        { title: 'Deploying', id, label: id, logger: context.logger },
+        { title: 'Deploying', id, label: displayName, logger: context.logger },
         async (report): Promise<GuardableResult> => {
             report('Checking requirements…');
             const guardError = await runGuards(context, project);
@@ -594,32 +596,3 @@ export const handleRenameAppBuilderComponent: MessageHandler<{
     return { success: true };
 };
 
-/**
- * Handle 'verifyAppBuilderComponent' — an ON-DEMAND, non-interactive probe (P1). It uses
- * the SDK-only org read (never a CLI/browser path, never a deploy or aio write)
- * to confirm the project's org is reachable, then posts a typed `deployed` or
- * `error` row status (P2: always a typed outcome, never a silent flip).
- */
-export const handleVerifyAppBuilderComponent: MessageHandler<{ id?: string }> = async (
-    context,
-    payload,
-) => {
-    // The project is loaded as a GUARD only — verify reads the org, not the project.
-    const target = await resolveComponentTarget(context, payload?.id);
-    if (!target.ok) return target.error;
-    const { id } = target;
-
-    const authManager = ServiceLocator.getAuthenticationService();
-    try {
-        const orgs = await authManager.getOrganizationsSdkOnly();
-        const reachable = Array.isArray(orgs) && orgs.length > 0;
-        if (reachable) {
-            await postRowStatus(id, 'deployed', undefined);
-        } else {
-            await postRowStatus(id, 'error', 'Could not verify (sign in to check).');
-        }
-    } catch (error) {
-        await postRowStatus(id, 'error', toError(error).message);
-    }
-    return { success: true };
-};

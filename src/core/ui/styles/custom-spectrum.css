@@ -5208,29 +5208,6 @@ div[class*="spectrum"] input[type="search"] {
  * `.page-container-padded` (the canonical --content-width band), so this file
  * carries NO page padding, breadcrumb, or banner rules — those were bespoke
  * re-implementations of shared primitives and were removed. */
-/* The shared deploy destination, stated once at page level (every integration
- * on the project deploys to this one Adobe project + workspace).
- *
- * Deliberately quiet and keyed like the flyout's `.integration-panel-row`
- * (12px gray-600 key, mono value): the two surfaces show the same fact, so they
- * should not disagree on how it looks. No border — the action band already has
- * one below it, and a second rule here read as a divider inside the band. */
-.integrations-destination {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    margin-bottom: var(--spectrum-global-dimension-size-200);
-}
-.integrations-destination-key {
-    font-size: 12px;
-    color: var(--spectrum-global-color-gray-600);
-}
-.integrations-destination-value {
-    font-family: var(--spectrum-font-family-code, monospace);
-    font-size: 12px;
-    color: var(--spectrum-global-color-gray-800);
-    overflow-wrap: anywhere;
-}
 
 /* Heading · count pill · Add button on one baseline; the Add button trails. */
 .integrations-header {

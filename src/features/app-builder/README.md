@@ -112,7 +112,7 @@ The dashboard renders ONE integrations card grid: `IntegrationsBlock` →
 `integrations/IntegrationsGrid`, with the mesh as its first peer card and one card per keyed
 integration; every card's detail and non-face actions live in the shared detail drawer. Per-id
 handlers (`addAppBuilderComponent`, `deployAppBuilderComponent`, `redeployAppBuilderComponent`,
-`removeAppBuilderComponent`, `renameAppBuilderComponent`, `verifyAppBuilderComponent` —
+`removeAppBuilderComponent`, `renameAppBuilderComponent` —
 `features/dashboard/handlers/appBuilderComponentHandlers.ts`) drive the keyed runner and push
 per-card status via `sendAppBuilderComponentStatusUpdate`, plus the whole fresh persisted map via
 `sendAppBuilderComponentsSnapshot` after each terminal op (see `features/dashboard/README.md`).

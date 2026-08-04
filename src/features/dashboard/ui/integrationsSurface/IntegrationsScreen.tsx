@@ -79,6 +79,30 @@ export function formatDestination(destination?: {
     return parts.length > 0 ? parts.join(' · ') : undefined;
 }
 
+/**
+ * The header crumb: "<project>", "<project> · <destination>", or undefined.
+ *
+ * The deploy destination rides here rather than in the action band because it is
+ * a property of the PROJECT, and the band is otherwise about acting on the list.
+ *
+ * Known trade-off, chosen deliberately: the local project name and the remote
+ * Adobe project/workspace become peers in one dot-separated run, so nothing
+ * distinguishes "demo-builder-test" (local) from "Kukla Mesh · Stage" (Adobe).
+ * The alternative — a labelled second line in PageHeader's `description` slot —
+ * keeps that distinction but costs a line of header height.
+ *
+ * @param projectName - the local demo project's name
+ * @param destination - the Adobe project/workspace titles
+ * @returns the crumb, or undefined when neither part is known
+ */
+export function formatHeaderSubtitle(
+    projectName: string | undefined,
+    destination: { projectTitle?: string; workspaceTitle?: string } | undefined,
+): string | undefined {
+    const parts = [projectName, formatDestination(destination)].filter(Boolean);
+    return parts.length > 0 ? parts.join(' · ') : undefined;
+}
+
 /** Case-insensitive match over the fields a user would search by. */
 /** The card fields a search query matches against. */
 const CARD_SEARCH_FIELDS = ['name', 'kindLabel', 'sourceLine'] as const;
@@ -118,6 +142,7 @@ export function IntegrationsScreen({
     const [addOpen, setAddOpen] = useState(false);
 
     const destinationLabel = formatDestination(destination);
+    const headerSubtitle = formatHeaderSubtitle(projectName, destination);
     const catalog = appBuilderComponentCatalog ?? EMPTY_CATALOG;
 
     const cards = useMemo((): IntegrationCardModel[] => {
@@ -212,7 +237,9 @@ export function IntegrationsScreen({
                     // (DashboardStatusHeader), so this surface's back button lives
                     // in the equivalent band too.
                     title="Integrations"
-                    subtitle={projectName}
+                    // Project name AND the shared deploy destination — see
+                    // formatHeaderSubtitle for why the destination lives here.
+                    subtitle={headerSubtitle}
                     constrainWidth
                 />
             }
@@ -222,27 +249,6 @@ export function IntegrationsScreen({
                 <div className="page-container-padded page-header-section">
                     <Flex alignItems="start" gap="size-300">
                         <View flex>
-                            {/* The shared deploy destination, stated once at PAGE
-                                level because that is its scope: every integration
-                                here deploys to this one Adobe project + workspace.
-                                It also appears per-card in the detail flyout, which
-                                on its own framed a project-wide fact as a per-card
-                                property — you had to open a card to learn it.
-                                Omitted entirely (not rendered empty) before the
-                                project has an Adobe target. */}
-                            {destinationLabel && (
-                                <div
-                                    className="integrations-destination"
-                                    data-testid="page-destination"
-                                >
-                                    <span className="integrations-destination-key">
-                                        Destination
-                                    </span>
-                                    <span className="integrations-destination-value">
-                                        {destinationLabel}
-                                    </span>
-                                </div>
-                            )}
                             <SearchHeader
                                 searchQuery={searchQuery}
                                 onSearchQueryChange={setSearchQuery}

@@ -15,7 +15,7 @@
  */
 
 import React from 'react';
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AppBuilderComponentState } from '@/types/base';
 import '@testing-library/jest-dom';
@@ -113,6 +113,7 @@ jest.mock('@/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter
 // above every import, so the screen always loads against the mocks.
 import {
     formatDestination,
+    formatHeaderSubtitle,
     IntegrationsScreen,
 } from '@/features/dashboard/ui/integrationsSurface/IntegrationsScreen';
 
@@ -225,7 +226,32 @@ describe('IntegrationsScreen', () => {
         });
     });
 
-    describe('header', () => {
+    describe('formatHeaderSubtitle', () => {
+    it('joins the project name and the destination', () => {
+        expect(
+            formatHeaderSubtitle('demo-builder-test', {
+                projectTitle: 'Kukla Mesh',
+                workspaceTitle: 'Stage',
+            })
+        ).toBe('demo-builder-test · Kukla Mesh · Stage');
+    });
+
+    it('returns the project alone when there is no destination', () => {
+        expect(formatHeaderSubtitle('demo-builder-test', undefined)).toBe('demo-builder-test');
+    });
+
+    it('returns the destination alone when the project is unnamed', () => {
+        expect(formatHeaderSubtitle(undefined, { projectTitle: 'Kukla Mesh' })).toBe('Kukla Mesh');
+    });
+
+    // Undefined, not '' — PageHeader omits the crumb element entirely on undefined
+    // rather than rendering an empty one.
+    it('returns undefined when neither is known', () => {
+        expect(formatHeaderSubtitle(undefined, undefined)).toBeUndefined();
+    });
+});
+
+describe('header', () => {
         it('names the project', () => {
             const handlers = captureHandlers();
             render(
@@ -242,16 +268,50 @@ describe('IntegrationsScreen', () => {
         });
 
         // Every integration deploys to ONE Adobe project + workspace, so the
-        // destination is a property of the PROJECT. It used to appear only inside
-        // each card's detail flyout, which framed a project-wide fact as a
-        // per-card one — you had to open a card to learn where anything deploys.
+        // destination is a property of the PROJECT — it rides the header crumb
+        // beside the project name rather than sitting in the action band, which
+        // is otherwise about acting on the list.
         //
-        // The two tests replaced here asserted `queryByTestId('destination-row')`
-        // was absent and read as protecting that decision. They protected nothing:
-        // `destination-row` is this suite's mock of StatusCard, which this screen
-        // has never rendered, so both passed no matter what the band contained.
+        // The band placement this replaced was itself a replacement for two tests
+        // that asserted `queryByTestId('destination-row')` was absent. Those
+        // protected nothing: `destination-row` is this suite's mock of StatusCard,
+        // which this screen has never rendered, so both passed regardless.
         describe('destination', () => {
-            it('names the shared deploy destination in the action band', () => {
+            it('follows the project name in the header crumb', () => {
+                const handlers = captureHandlers();
+                render(
+                    <IntegrationsScreen
+                        hasAdobeContext
+                        projectName="demo-builder-test"
+                        appBuilderComponents={{ a: DEPLOYED }}
+                        destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
+                    />
+                );
+                settleStatus(handlers);
+
+                expect(screen.getByTestId('page-subtitle')).toHaveTextContent(
+                    'demo-builder-test · Kukla Mesh · Stage'
+                );
+            });
+
+            // The case the original band tests were really reaching for: a project
+            // with no Adobe target must not leave a dangling separator.
+            it('leaves the crumb as the project alone when there is no Adobe target', () => {
+                const handlers = captureHandlers();
+                render(
+                    <IntegrationsScreen
+                        hasAdobeContext
+                        projectName="demo-builder-test"
+                        appBuilderComponents={{ a: DEPLOYED }}
+                    />
+                );
+                settleStatus(handlers);
+
+                expect(screen.getByTestId('page-subtitle')).toHaveTextContent('demo-builder-test');
+                expect(screen.getByTestId('page-subtitle').textContent).not.toContain('·');
+            });
+
+            it('renders no destination line in the action band', () => {
                 const handlers = captureHandlers();
                 render(
                     <IntegrationsScreen
@@ -259,23 +319,6 @@ describe('IntegrationsScreen', () => {
                         appBuilderComponents={{ a: DEPLOYED }}
                         destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
                     />
-                );
-                settleStatus(handlers);
-
-                const line = within(screen.getByTestId('page-destination'));
-                // Both halves: `toHaveTextContent` alone is a substring match over
-                // "DestinationKukla Mesh · Stage", so deleting the key span would
-                // still pass — and a bare "Kukla Mesh · Stage" means nothing.
-                expect(line.getByText('Destination')).toBeInTheDocument();
-                expect(line.getByText('Kukla Mesh · Stage')).toBeInTheDocument();
-            });
-
-            // The case the old tests were really reaching for: a project with no
-            // Adobe target must show no line and no orphaned "Destination" label.
-            it('renders nothing when the project has no Adobe target', () => {
-                const handlers = captureHandlers();
-                render(
-                    <IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />
                 );
                 settleStatus(handlers);
 

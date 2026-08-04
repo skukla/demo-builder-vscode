@@ -105,18 +105,6 @@ describe('IntegrationsGrid actions', () => {
             });
         });
 
-        it('routes panel Verify to verifyAppBuilderComponent', async () => {
-            const user = setupUser();
-            renderGrid({ appBuilderComponents: oneDeployed() });
-
-            const panel = await openPanel(user, 'custom-app', 'Deployed');
-            await user.click(within(panel).getByRole('button', { name: /^verify$/i }));
-
-            expect(getClient().postMessage).toHaveBeenCalledWith('verifyAppBuilderComponent', {
-                id: 'custom-app',
-            });
-        });
-
         it('routes an error card Retry to deployAppBuilderComponent', async () => {
             const user = setupUser();
             renderGrid({

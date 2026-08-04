@@ -9,7 +9,6 @@
  *   - handleRedeployAppBuilderComponent— deployAppBuilderComponent {id}
  *   - handleRemoveAppBuilderComponent  — removeAppBuilderComponent {id}
  *   - handleRenameAppBuilderComponent  — display-name rename via the input box
- *   - handleVerifyAppBuilderComponent  — on-demand, non-interactive SDK-only probe
  *
  * The guard order is auth → org-mismatch → App Builder permission; a failing guard surfaces the message and NEVER calls the runner.
  *
@@ -27,7 +26,6 @@ import {
     handleRedeployAppBuilderComponent,
     handleRemoveAppBuilderComponent,
     handleRenameAppBuilderComponent,
-    handleVerifyAppBuilderComponent,
     mockAddAppBuilderComponent,
     mockBuildDefaultRunnerDeps,
     mockBuildRunnerDepsContext,
@@ -417,55 +415,3 @@ describe('handleRenameAppBuilderComponent (display name only — shell instancin
     });
 });
 
-describe('handleVerifyAppBuilderComponent (on-demand, non-interactive)', () => {
-    it('posts a deployed outcome when the SDK-only probe reaches the org', async () => {
-        const { mockContext } = setupMocks({
-            appBuilderComponents: {
-                'erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'acme', repo: 'erp-sync' } },
-            },
-        } as never);
-        const svc = require('@/core/di').ServiceLocator.getAuthenticationService();
-        svc.getOrganizationsSdkOnly = jest.fn().mockResolvedValue([{ id: 'org123' }]);
-
-        const result = await handleVerifyAppBuilderComponent(mockContext, { id: 'erp-sync' });
-
-        expect(result.success).toBe(true);
-        // Trailing undefined = the optional display-name slot (rename channel).
-        expect(mockSendAppBuilderComponentStatusUpdate).toHaveBeenCalledWith(
-            'erp-sync', 'deployed', undefined, undefined,
-        );
-    });
-
-    it('never performs an aio/CLI write or a deploy on verify', async () => {
-        const { mockContext } = setupMocks({
-            appBuilderComponents: {
-                'erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'acme', repo: 'erp-sync' } },
-            },
-        } as never);
-        const svc = require('@/core/di').ServiceLocator.getAuthenticationService();
-        svc.getOrganizationsSdkOnly = jest.fn().mockResolvedValue([{ id: 'org123' }]);
-
-        await handleVerifyAppBuilderComponent(mockContext, { id: 'erp-sync' });
-
-        expect(mockDeployAppBuilderComponent).not.toHaveBeenCalled();
-        expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
-    });
-
-    it('posts an error outcome when the probe cannot reach the org', async () => {
-        const { mockContext } = setupMocks({
-            appBuilderComponents: {
-                'erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'acme', repo: 'erp-sync' } },
-            },
-        } as never);
-        const svc = require('@/core/di').ServiceLocator.getAuthenticationService();
-        svc.getOrganizationsSdkOnly = jest.fn().mockResolvedValue([]);
-
-        const result = await handleVerifyAppBuilderComponent(mockContext, { id: 'erp-sync' });
-
-        expect(result.success).toBe(true); // handler resolved (P2: typed outcome, no throw)
-        // Trailing undefined = the optional display-name slot (rename channel).
-        expect(mockSendAppBuilderComponentStatusUpdate).toHaveBeenCalledWith(
-            'erp-sync', 'error', expect.any(String), undefined,
-        );
-    });
-});

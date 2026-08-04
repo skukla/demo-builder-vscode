@@ -10,7 +10,7 @@
  * cross-card state leak), and ONE `handleAction` switch — the single place a
  * card model turns into an id-scoped message or a mesh callback:
  *   - mesh card    → onDeployMesh / onReAuthenticate (never keyed messages)
- *   - integration  → deploy/redeploy/verifyAppBuilderComponent {id}, or the
+ *   - integration  → deploy/redeploy {id}, or the
  *                    hosted dialogs for remove / manage-apis
  *   - open         → openLiveSite {url} (both card face and drawer link)
  *
@@ -64,7 +64,6 @@ const KEYED_MESSAGES: Partial<Record<CardAction, string>> = {
     retry: 'deployAppBuilderComponent',
     redeploy: 'redeployAppBuilderComponent',
     update: 'redeployAppBuilderComponent',
-    verify: 'verifyAppBuilderComponent',
 };
 
 /**

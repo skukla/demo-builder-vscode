@@ -93,8 +93,6 @@ See `appBuilderComponentHandlers.ts` and `@/features/app-builder` for the underl
   the isolating keyed deploy tail for THAT component (idempotent, so both are the same path).
 - `removeAppBuilderComponent` (payload `{ id }`) — guards → per-id remote undeploy
   (best-effort) + local cleanup; siblings untouched. The confirm dialog is UI-side.
-- `verifyAppBuilderComponent` (payload `{ id }`) — on-demand non-interactive org probe;
-  posts a typed row status (never a silent flip).
 
 Note: the mesh row does NOT use these — its Deploy/Redeploy posts the existing `deployMesh`
 message (the mesh deploy verb is `demoBuilder.deployMesh`, not `aio app deploy`).

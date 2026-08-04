@@ -77,7 +77,14 @@ describe('deriveIntegrationCard — status matrix', () => {
         ]);
     });
 
-    it('deploying: info dot, "Deploying…", NO face, EMPTY bar', () => {
+    // REGRESSION: the live step text used to land ONLY on `message`, which the
+    // card FACE never renders (it prints `statusLabel`, IntegrationCard.tsx:181)
+    // — so a deploying integration card sat on a constant "Deploying…" while the
+    // steps went to a drawer nobody has open during a deploy. Harmless while the
+    // progress notification also carried them; a silent regression the moment it
+    // stopped. The mesh card never had this problem: its statusLabel IS the live
+    // text. Both card kinds now behave the same way.
+    it('deploying: info dot, the LIVE STEP as the label, NO face, EMPTY bar', () => {
         const model = deriveIntegrationCard(
             integration({ status: 'not-deployed' }),
             { status: 'deploying', message: 'Deploying erp-sync…' },
@@ -85,10 +92,35 @@ describe('deriveIntegrationCard — status matrix', () => {
 
         expect(model.status).toBe('deploying');
         expect(model.dotVariant).toBe('info');
-        expect(model.statusLabel).toBe('Deploying…');
-        expect(model.message).toBe('Deploying erp-sync…');
+        expect(model.statusLabel).toBe('Deploying erp-sync…');
+        // NOT also on `message`: the drawer prints label AND message, so leaving
+        // both set would print the same step twice in the flyout.
+        expect(model.message).toBeUndefined();
         expect(model.faceAction).toBeUndefined();
         expect(model.barActions).toEqual([]);
+    });
+
+    it('deploying with no step reported yet: falls back to the static label', () => {
+        const model = deriveIntegrationCard(integration(), { status: 'deploying' });
+
+        expect(model.statusLabel).toBe('Deploying…');
+    });
+
+    // Deliberately NOT promoted to the label: a failure reason is a full CLI
+    // sentence and would blow out an 11px uppercase card face. The face says
+    // "Deploy failed"; the reason stays in the drawer.
+    it('error: keeps the reason on message and the terse label on the face', () => {
+        const model = deriveIntegrationCard(
+            integration({
+                status: 'error',
+                error: 'The specified organization, project, and workspace combination is invalid',
+            }),
+        );
+
+        expect(model.statusLabel).toBe('Deploy failed');
+        expect(model.message).toBe(
+            'The specified organization, project, and workspace combination is invalid'
+        );
     });
 
     it('deployed (with url): success dot, "Deployed", NO face, Open leads the menu', () => {
@@ -106,18 +138,23 @@ describe('deriveIntegrationCard — status matrix', () => {
         expect(model.menuActions[0]).toBe('open');
         expect(model.barActions).toEqual([
             { action: 'redeploy', label: 'Redeploy', emphasis: 'secondary' },
-            { action: 'verify', label: 'Verify', emphasis: 'secondary' },
             { action: 'manage-apis', label: 'Manage APIs', emphasis: 'secondary' },
             { action: 'remove', label: 'Remove', emphasis: 'danger' },
         ]);
     });
 
+    // Verify was REMOVED (2026-08-03). It never verified the integration: the
+    // handler called getOrganizationsSdkOnly() and posted 'deployed' if the token
+    // could list ANY org, so a deleted integration verified green and a genuinely
+    // failed card flipped to Deployed until the next reload. The org-reachability
+    // question it actually answered is already covered by the deploy guards and
+    // the org-mismatch detection.
     it('deployed WITHOUT any url: no face affordance at all', () => {
         const model = deriveIntegrationCard(integration({ status: 'deployed' }));
         expect(model.faceAction).toBeUndefined();
     });
 
-    it('stale: warning dot, "Update available", Update face, Update(primary)·Verify·Manage APIs·Remove bar', () => {
+    it('stale: warning dot, "Update available", Update face, Update(primary)·Manage APIs·Remove bar', () => {
         const model = deriveIntegrationCard(integration({ status: 'stale' }));
 
         expect(model.status).toBe('stale');
@@ -126,7 +163,6 @@ describe('deriveIntegrationCard — status matrix', () => {
         expect(model.faceAction).toEqual({ kind: 'update' });
         expect(model.barActions).toEqual([
             { action: 'update', label: 'Update', emphasis: 'primary' },
-            { action: 'verify', label: 'Verify', emphasis: 'secondary' },
             { action: 'manage-apis', label: 'Manage APIs', emphasis: 'secondary' },
             { action: 'remove', label: 'Remove', emphasis: 'danger' },
         ]);
@@ -281,12 +317,16 @@ describe('deriveIntegrationCard — override precedence', () => {
         expect(model.name).toBe('erp-sync');
     });
 
-    it('passes the override message through (deploy progress / failure detail)', () => {
+    // The override message still reaches the card — as the LABEL, which is the
+    // only status text the card face renders. It used to land on `message`, where
+    // nothing on the face read it.
+    it('passes the override message through as the status label while deploying', () => {
         const model = deriveIntegrationCard(integration(), {
             status: 'deploying',
             message: 'Installing dependencies…',
         });
-        expect(model.message).toBe('Installing dependencies…');
+        expect(model.statusLabel).toBe('Installing dependencies…');
+        expect(model.message).toBeUndefined();
     });
 
     it('message is undefined without an override', () => {

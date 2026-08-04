@@ -384,6 +384,31 @@ describe('progress register', () => {
         );
     });
 
+    // Now that the title is the notification's ENTIRE content, a slug is what a
+    // palette/background user reads. Add and Remove already pass the display
+    // name; Deploy passed the raw id.
+    it('names the component, not its id, in the notification title', async () => {
+        const { mockContext } = setupMocks({
+            appBuilderComponents: {
+                'erp-sync': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    name: 'ERP Sync',
+                    source: { owner: 'acme', repo: 'erp-sync' },
+                },
+            },
+        } as never);
+        mockTestDeveloperPermissions(true);
+        const vscode = require('vscode');
+
+        await handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(vscode.window.withProgress).toHaveBeenCalledWith(
+            expect.objectContaining({ title: 'Deploying ERP Sync' }),
+            expect.any(Function),
+        );
+    });
+
     it('still pushes the step detail to the card', async () => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);

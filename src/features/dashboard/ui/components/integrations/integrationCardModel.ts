@@ -44,7 +44,6 @@ export type CardAction =
     | 'redeploy'
     | 'update'
     | 'retry'
-    | 'verify'
     | 'manage-apis'
     | 'remove'
     | 'sign-in'
@@ -147,7 +146,6 @@ const MANAGE_APIS: BarAction = {
     emphasis: 'secondary',
 };
 const REMOVE: BarAction = { action: 'remove', label: 'Remove', emphasis: 'danger' };
-const VERIFY: BarAction = { action: 'verify', label: 'Verify', emphasis: 'secondary' };
 
 /**
  * The integration action matrix: face verb + drawer bar per status. Manage
@@ -165,7 +163,6 @@ const INTEGRATION_ACTIONS: Record<IntegrationStatus, { face?: FaceAction; bar: B
         // no face when deployed — a healthy card is calm; Open lives in the menu
         bar: [
             { action: 'redeploy', label: 'Redeploy', emphasis: 'secondary' },
-            VERIFY,
             MANAGE_APIS,
             REMOVE,
         ],
@@ -174,7 +171,6 @@ const INTEGRATION_ACTIONS: Record<IntegrationStatus, { face?: FaceAction; bar: B
         face: { kind: 'update' },
         bar: [
             { action: 'update', label: 'Update', emphasis: 'primary' },
-            VERIFY,
             MANAGE_APIS,
             REMOVE,
         ],
@@ -273,6 +269,36 @@ function deriveKindFacet(entry: IdentifiedAppBuilderComponent): {
 }
 
 /**
+ * What the DRAWER's message row shows, beneath the status label.
+ *
+ * A live deploy step is already the label (the card face renders only that), and
+ * the drawer prints label AND message — so returning it here too would print the
+ * same step twice in the flyout. What remains for this slot is the failure reason
+ * persisted with an error, which survives a reload and is the only thing that can
+ * answer "why?" once the live push is gone.
+ *
+ * @param status - the card's normalized status
+ * @param liveStep - the in-flight step already promoted to the label, if any
+ * @param override - the live per-row push
+ * @param entry - the persisted component
+ * @returns the message row's text, or undefined to omit the row
+ */
+function resolveCardMessage(
+    status: CardStatus,
+    liveStep: string | undefined,
+    override: RowStatusOverride | undefined,
+    entry: IdentifiedAppBuilderComponent,
+): string | undefined {
+    if (liveStep) {
+        return undefined;
+    }
+    if (override?.message) {
+        return override.message;
+    }
+    return status === 'error' ? entry.error : undefined;
+}
+
+/**
  * Derive an integration entry's card model, applying its live override
  * (status/name/message win over the persisted entry; a name-less override
  * keeps the persisted name — the hook's merge already preserved rename labels).
@@ -284,8 +310,21 @@ export function deriveIntegrationCard(
     const status = normalizeIntegrationStatus(override?.status ?? entry.status);
     const facet = deriveKindFacet(entry);
     const primaryUrl = resolvePrimaryUrl(entry);
-    const { label: statusLabel, dot: dotVariant } = INTEGRATION_STATUS_DISPLAY[status];
+    const { label: staticLabel, dot: dotVariant } = INTEGRATION_STATUS_DISPLAY[status];
     const actions = INTEGRATION_ACTIONS[status];
+
+    // While deploying, the live step IS the label — because the card FACE renders
+    // `statusLabel` and nothing else (IntegrationCard.tsx). Putting the step on
+    // `message` alone left the face stuck on a constant "Deploying…" and sent the
+    // detail to a drawer that is closed during a deploy. The mesh card has always
+    // worked this way (its statusLabel is the live status text); this makes the
+    // two kinds agree.
+    //
+    // Only while DEPLOYING. A failure reason is a full CLI sentence and would
+    // blow out an 11px uppercase card face, so an error keeps the terse label and
+    // leaves its reason for the drawer.
+    const liveStep = status === 'deploying' ? override?.message : undefined;
+    const statusLabel = liveStep ?? staticLabel;
 
 
     return {
@@ -298,10 +337,7 @@ export function deriveIntegrationCard(
         status,
         statusLabel,
         dotVariant,
-        // Live override first (an in-flight deploy is fresher), else the reason
-        // persisted with the failure — which is what survives a reload, and the
-        // only thing that can answer "why?" once the push is gone.
-        message: override?.message ?? (status === 'error' ? entry.error : undefined),
+        message: resolveCardMessage(status, liveStep, override, entry),
         url: primaryUrl,
         urlLabel: 'App URL',
         deployedUrls: entry.deployedUrls,

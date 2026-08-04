@@ -118,7 +118,10 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'redeployAppBuilderComponent')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'removeAppBuilderComponent')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'renameAppBuilderComponent')).toBe(true);
-            expect(hasHandler(dashboardHandlers, 'verifyAppBuilderComponent')).toBe(true);
+            // verifyAppBuilderComponent was REMOVED (2026-08-03): it probed org
+            // reachability and reported the answer as a per-component verdict, so
+            // a deleted integration verified green.
+            expect(hasHandler(dashboardHandlers, 'verifyAppBuilderComponent')).toBe(false);
         });
 
         it('registers the headless exportProjectSettings handler (export_project_settings tool)', () => {
@@ -142,17 +145,18 @@ describe('dashboardHandlers', () => {
             // switchOrg) + 1 project + 1 reset = 18, plus the 4 More-menu actions
             // (editProject, exportProject, republishContent, renameProject) = 22
             // (copyPath removed — Copy Path lives on the project-card kebab),
-            // plus the 6 appBuilderComponent (integrations list) actions
+            // plus the 5 appBuilderComponent (integrations list) actions
             // (addAppBuilderComponent, deployAppBuilderComponent,
             // redeployAppBuilderComponent, removeAppBuilderComponent,
-            // renameAppBuilderComponent — shell instancing Step 10 —
-            // verifyAppBuilderComponent) = 28, plus the 3 console-API actions
-            // (listConsoleApis, addConsoleApis, setConsoleApis) = 31, plus the
-            // headless exportProjectSettings (export_project_settings MCP tool) = 34.
+            // renameAppBuilderComponent — shell instancing Step 10) = 27,
+            // plus the 3 console-API actions
+            // (listConsoleApis, addConsoleApis, setConsoleApis) = 30, plus the
+            // headless exportProjectSettings (export_project_settings MCP tool) = 33.
+            // verifyAppBuilderComponent retired 2026-08-03 (see above).
             // The 4 singular App Builder actions (addApp, deployApp, redeployApp,
             // removeApp) retired with the dormant AppBuilderCard (D3 Step 08).
             // setAuthoringExperience lives in the Configure webview, not this map.
-            expect(types).toHaveLength(34);
+            expect(types).toHaveLength(33);
         });
 
         it('should have handlers as functions', () => {
