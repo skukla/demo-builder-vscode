@@ -27,36 +27,36 @@ import type { IntegrationCardModel } from '@/features/dashboard/ui/components/in
 import '@testing-library/jest-dom';
 
 jest.mock('@adobe/react-spectrum', () => ({
-        ActionButton: ({ children, onPress, isQuiet: _q, UNSAFE_className, ...props }: any) => (
-            <button onClick={onPress} className={UNSAFE_className} {...props}>
-                {children}
-            </button>
-        ),
-        Button: ({ children, onPress, isDisabled, variant, ...props }: any) => (
-            <button onClick={onPress} disabled={isDisabled} data-variant={variant} {...props}>
-                {children}
-            </button>
-        ),
-        Link: ({ children, onPress, isQuiet, ...props }: any) => (
-            <span role="link" tabIndex={0} data-quiet={isQuiet} onClick={onPress} {...props}>
-                {children}
-            </span>
-        ),
-        MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
-        Menu: ({ children, onAction }: any) => (
-            <ul data-testid="card-menu">
-                {require('react').Children.map(children, (child: any) =>
-                    child ? (
-                        <li>
-                            <button onClick={() => onAction?.(child.key)}>
-                                {child.props.children}
-                            </button>
-                        </li>
-                    ) : null
-                )}
-            </ul>
-        ),
-        Item: ({ children }: any) => <>{children}</>,
+    ActionButton: ({ children, onPress, isQuiet: _q, UNSAFE_className, ...props }: any) => (
+        <button onClick={onPress} className={UNSAFE_className} {...props}>
+            {children}
+        </button>
+    ),
+    Button: ({ children, onPress, isDisabled, variant, ...props }: any) => (
+        <button onClick={onPress} disabled={isDisabled} data-variant={variant} {...props}>
+            {children}
+        </button>
+    ),
+    Link: ({ children, onPress, isQuiet, ...props }: any) => (
+        <span role="link" tabIndex={0} data-quiet={isQuiet} onClick={onPress} {...props}>
+            {children}
+        </span>
+    ),
+    MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
+    Menu: ({ children, onAction }: any) => (
+        <ul data-testid="card-menu">
+            {require('react').Children.map(children, (child: any) =>
+                child ? (
+                    <li>
+                        <button onClick={() => onAction?.(child.key)}>
+                            {child.props.children}
+                        </button>
+                    </li>
+                ) : null
+            )}
+        </ul>
+    ),
+    Item: ({ children }: any) => <>{children}</>,
     Text: ({ children }: any) => <span>{children}</span>,
 }));
 
@@ -263,13 +263,131 @@ describe('IntegrationDetailPanel', () => {
             expect(onAction).toHaveBeenCalledWith(model, 'open');
         });
 
-        it('renders each deployed URL row (mono)', () => {
-            renderPanel(makeModel());
+        // These rows are the app's deployed endpoint URLs, one per action or web
+        // asset. Before 2026-08-04 they were inert mono text sitting directly under
+        // an endpoint row that WAS copyable and a URL row that WAS a link — three
+        // kinds of URL, three affordances, in one panel. An endpoint's whole use is
+        // to leave the panel and land in curl or a browser, so it gets the same
+        // click-to-copy the mesh endpoint already had.
+        it('renders each deployed URL as click-to-copy under one Endpoints heading', () => {
+            const { panel } = renderPanel(
+                makeModel({
+                    deployedUrls: {
+                        Frontend: 'https://example.com/front',
+                        'generic/fetch': 'https://example.com/api/fetch',
+                    },
+                })
+            );
+
+            // ONE heading for the group, not one per row: N unlabelled mono rows
+            // read as metadata peers of Status and Kind, which is what made the
+            // list look like information with nothing to do.
+            expect(panel!.querySelectorAll('.integration-panel-group-label')).toHaveLength(1);
+            expect(screen.getByText('Endpoints')).toBeInTheDocument();
 
             expect(screen.getByText('Frontend')).toBeInTheDocument();
-            expect(screen.getByText('https://example.com/front')).toHaveClass(
-                'integration-panel-row-value--mono'
+            expect(screen.getByText('fetch')).toBeInTheDocument();
+            for (const url of ['https://example.com/front', 'https://example.com/api/fetch']) {
+                expect(screen.getByText(url, { selector: '.copyable-text' })).toHaveAttribute(
+                    'role',
+                    'button'
+                );
+            }
+            // The App URL above them stays a navigable link — a browsable page and
+            // an endpoint are different things and keep different affordances.
+            expect(
+                screen.getByRole('link', { name: 'https://example.com/app' })
+            ).toBeInTheDocument();
+        });
+
+        // `aio app get-url --json` returns ONE flat map, and parseGetUrlOutput picks
+        // the primary `url` by finding the first web/ key INSIDE it — so the primary
+        // is always also an entry. Verified byte-identical on both live integrations
+        // (`runtime/crm-integration/hello`). Printing it twice gives two identical
+        // copy targets stacked, and the old fixture hid it by giving `url` and the
+        // lone entry different values — a shape production never produces.
+        it('omits the entry that merely repeats the primary URL', () => {
+            renderPanel(
+                makeModel({
+                    url: 'https://example.com/api/v1/web/acme/hello',
+                    deployedUrls: {
+                        'runtime/acme/hello': 'https://example.com/api/v1/web/acme/hello',
+                        'runtime/acme/sync': 'https://example.com/api/v1/web/acme/sync',
+                    },
+                })
             );
+
+            expect(screen.queryByText('hello')).not.toBeInTheDocument();
+            expect(screen.getByText('sync')).toBeInTheDocument();
+            // One copy target for that URL, not two.
+            expect(
+                screen.queryAllByText('https://example.com/api/v1/web/acme/hello', {
+                    selector: '.copyable-text',
+                })
+            ).toHaveLength(0);
+        });
+
+        // A single-web-action integration is the common case today, and its one
+        // entry IS the primary — so the whole group drops out rather than heading a
+        // list of nothing.
+        it('drops the group entirely when the primary was its only entry', () => {
+            renderPanel(
+                makeModel({
+                    url: 'https://example.com/api/v1/web/acme/hello',
+                    deployedUrls: {
+                        'runtime/acme/hello': 'https://example.com/api/v1/web/acme/hello',
+                    },
+                })
+            );
+
+            expect(screen.queryByText('Endpoints')).not.toBeInTheDocument();
+        });
+
+        // The Endpoints group is the only unbounded thing in the panel — it grows
+        // with the app's web actions while every other row is fixed at one. Placed
+        // above the metadata it strands `APIs in use` and `Last deploy` below a
+        // scroll; placed last, the drawer's own overflow absorbs the length. That
+        // ordering is what makes a nested scroll container unnecessary, so a later
+        // move back up would quietly reintroduce the problem it solves.
+        it('renders the unbounded Endpoints group AFTER the fixed-size rows', () => {
+            const { panel } = renderPanel(
+                makeModel({
+                    url: undefined,
+                    deployedUrls: { 'runtime/acme/sync': 'https://example.com/sync' },
+                })
+            );
+
+            const labels = Array.from(
+                panel!.querySelectorAll(
+                    '.integration-panel-row-key, .integration-panel-group-label'
+                )
+            ).map((n) => n.textContent);
+
+            expect(labels.indexOf('Endpoints')).toBeGreaterThan(labels.indexOf('APIs in use'));
+            expect(labels.indexOf('Endpoints')).toBeGreaterThan(labels.indexOf('Last deploy'));
+            expect(labels[labels.length - 1]).toBe('sync');
+        });
+
+        // Keys arrive as `runtime/<package>/<action>` paths, and the package IS the
+        // integration id already titling the panel. In an 88px key column the full
+        // path wraps to three cramped lines — times N actions, a wall.
+        it('labels each endpoint by its last path segment', () => {
+            renderPanel(
+                makeModel({
+                    url: undefined,
+                    deployedUrls: {
+                        'runtime/crm-integration/hello': 'https://example.com/a',
+                        'web/index.html': 'https://example.com/b',
+                        Frontend: 'https://example.com/c',
+                    },
+                })
+            );
+
+            expect(screen.getByText('hello')).toBeInTheDocument();
+            expect(screen.getByText('index.html')).toBeInTheDocument();
+            // A key with no path separator is already short — left alone.
+            expect(screen.getByText('Frontend')).toBeInTheDocument();
+            expect(screen.queryByText('runtime/crm-integration/hello')).not.toBeInTheDocument();
         });
 
         it('renders APIs ONE PER LINE and the Last deploy row', () => {
@@ -302,6 +420,9 @@ describe('IntegrationDetailPanel', () => {
             expect(screen.queryByText('APIs in use')).not.toBeInTheDocument();
             expect(screen.queryByText('Last deploy')).not.toBeInTheDocument();
             expect(screen.queryByText('Frontend')).not.toBeInTheDocument();
+            // The heading is part of the group, so it goes with it — an "Endpoints"
+            // label over nothing is the empty-label case the row guards prevent.
+            expect(screen.queryByText('Endpoints')).not.toBeInTheDocument();
         });
     });
 
@@ -348,7 +469,9 @@ describe('IntegrationDetailPanel', () => {
 
             expect(screen.queryByRole('button', { name: 'Deploy' })).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: 'Update' })).not.toBeInTheDocument();
-            expect(within(screen.getByTestId('card-menu')).getByText('Redeploy')).toBeInTheDocument();
+            expect(
+                within(screen.getByTestId('card-menu')).getByText('Redeploy')
+            ).toBeInTheDocument();
         });
 
         it('offers nothing at all mid-deploy — every action would race the runner', () => {

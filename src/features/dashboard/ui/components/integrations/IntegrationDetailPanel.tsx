@@ -48,6 +48,29 @@ export interface IntegrationDetailPanelProps {
     destinationLabel?: string;
 }
 
+/**
+ * The deployed endpoints worth their own rows, shortest useful label first.
+ *
+ * Drops the entry that merely repeats `primaryUrl`: `aio app get-url --json`
+ * returns ONE flat map, and `parseGetUrlOutput` picks the primary by finding the
+ * first `web/` key inside it — so the primary is ALWAYS also an entry. Verified
+ * byte-identical on both live integrations. Left in, it renders a second copy
+ * target for a URL already on screen.
+ *
+ * Labels drop to the last path segment: keys arrive as `runtime/<package>/<action>`
+ * and the package is the integration id already titling the panel, so the full path
+ * spends three wrapped lines of an 88px key column to restate it. The full key stays
+ * the React key, so two actions that shorten alike stay distinct rows.
+ */
+function selectEndpoints(
+    deployedUrls: Record<string, string> | undefined,
+    primaryUrl: string | undefined,
+): { key: string; label: string; url: string }[] {
+    return Object.entries(deployedUrls ?? {})
+        .filter(([, url]) => url !== primaryUrl)
+        .map(([key, url]) => ({ key, label: key.split('/').pop() || key, url }));
+}
+
 /** One key/value detail row. */
 function PanelRow({
     label,
@@ -81,7 +104,6 @@ function PanelContent({
     onRename,
     destinationLabel,
 }: IntegrationDetailPanelProps & { model: IntegrationCardModel }): React.ReactElement {
-
     // Kind is cut when it repeats the TITLE (the mesh: "API Mesh" under "API Mesh").
     //
     // There is no Source row. `model.sourceLine` is what the CARD renders on its
@@ -92,6 +114,7 @@ function PanelContent({
     // reads as arbitrary without it.) An earlier pass compared rows only against
     // EACH OTHER, which is how a card-duplicating row survived being audited.
     const showKind = model.kindLabel !== model.name;
+    const deployedEndpoints = selectEndpoints(model.deployedUrls, model.url);
 
     return (
         <>
@@ -159,11 +182,6 @@ function PanelContent({
                             </Link>
                         </PanelRow>
                     ))}
-                {Object.entries(model.deployedUrls ?? {}).map(([name, url]) => (
-                    <PanelRow key={name} label={name} mono>
-                        {url}
-                    </PanelRow>
-                ))}
                 {model.apis && model.apis.length > 0 && (
                     <PanelRow label="APIs in use">
                         {/* One per line (the prototype's treatment) — a comma-joined run
@@ -178,8 +196,32 @@ function PanelContent({
                 {model.lastDeployed && (
                     <PanelRow label="Last deploy">{model.lastDeployed}</PanelRow>
                 )}
-            </div>
+                {/* LAST, deliberately. Every row above is fixed-size — one apiece —
+                    while this group grows with the app's web actions and is the only
+                    thing here without a bound. Above the metadata it strands Last
+                    deploy and APIs in use below a scroll; below it, the drawer's own
+                    overflow absorbs the length and nothing short gets pushed away.
+                    That ordering is why the group needs no scroll container of its
+                    own: a nested scroller in a 352px drawer traps trackpad momentum
+                    and hides content behind a scrollbar inside a scrollbar.
 
+                    The rows carry the same click-to-copy as the mesh endpoint — an
+                    endpoint's whole use is to leave this panel for curl or a browser.
+                    As inert mono text they sat between a copyable row and a linked
+                    row, three kinds of URL wearing three affordances. One heading
+                    covers the group; N unlabelled rows otherwise impersonate metadata
+                    peers of Status and Kind. */}
+                {deployedEndpoints.length > 0 && (
+                    <>
+                        <div className="integration-panel-group-label">Endpoints</div>
+                        {deployedEndpoints.map(({ key, label, url }) => (
+                            <PanelRow key={key} label={label}>
+                                <CopyableText>{url}</CopyableText>
+                            </PanelRow>
+                        ))}
+                    </>
+                )}
+            </div>
         </>
     );
 }
