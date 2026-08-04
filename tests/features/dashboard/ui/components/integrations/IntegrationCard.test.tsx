@@ -2,7 +2,7 @@
  * IntegrationCard Tests (integrations grid — Step 4)
  *
  * The grid's calm card face: name, status dot + label, a source line when the
- * card has one, AT MOST ONE ATTENTION affordance from `model.faceAction`, and
+ * card has one, its kebab (`model.menuActions`) carrying EVERY verb, and
  * the overflow menu carrying `model.menuActions`. A healthy card shows NO face
  * button — Open lives in the menu — so a visible one always means the card needs
  * you. The card is dumb: clicks open the drawer via `onOpen(id)`, and every
@@ -78,8 +78,6 @@ function makeModel(overrides: Partial<IntegrationCardModel> = {}): IntegrationCa
         dotVariant: 'success',
         url: 'https://example.com/app',
         urlLabel: 'App URL',
-        faceAction: undefined,
-        barActions: [],
         menuActions: ['open', 'manage-apis', 'remove'],
         canRename: true,
         ...overrides,
@@ -134,16 +132,20 @@ describe('IntegrationCard', () => {
         expect(onOpen).toHaveBeenCalledWith('erp-sync');
     });
 
-    it('fires onAction for an attention face WITHOUT opening the drawer (containment pin)', () => {
+    // The status verb is a MENU item, not a face button. It used to be the latter,
+    // wrapped in stopPropagation so it would not also trigger the card's own click
+    // — the conflicting-nested-action problem Spectrum deprecated quick actions
+    // over. The containment pin still matters; it is just the kebab's job now.
+    it('fires onAction for the status verb WITHOUT opening the drawer (containment pin)', () => {
         const model = makeModel({
             status: 'not-deployed',
             statusLabel: 'Not deployed',
             dotVariant: 'neutral',
-            faceAction: { kind: 'deploy' },
+            menuActions: ['deploy', 'manage-apis', 'remove'],
         });
         const { onOpen, onAction } = renderCard(model);
 
-        fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
+        fireEvent.click(screen.getByRole('button', { name: /^deploy$/i }));
 
         expect(onAction).toHaveBeenCalledWith(model, 'deploy');
         expect(onOpen).not.toHaveBeenCalled();
@@ -167,7 +169,6 @@ describe('IntegrationCard', () => {
                 status: 'deploying',
                 statusLabel: 'Deploying…',
                 dotVariant: 'info',
-                faceAction: undefined,
             }),
         );
 
@@ -209,7 +210,6 @@ describe('IntegrationCard', () => {
                 status: 'error',
                 statusLabel: 'Deploy failed',
                 dotVariant: 'error',
-                faceAction: { kind: 'retry' },
             }),
         );
 

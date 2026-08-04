@@ -49,21 +49,23 @@ export type CardAction =
     | 'sign-in'
     | 'open';
 
-/** The attention verbs a card face may surface (everything except Open↗). */
-type AttentionKind = 'deploy' | 'update' | 'retry' | 'sign-in';
-
 /**
- * The card face's at-most-one affordance — an ATTENTION verb only (Deploy /
- * Update / Retry / Sign in). `disabled` is set only by the mesh producer (its
- * actions gate on in-flight operations).
+ * The verb a status is ASKING for, or undefined when the card is idle.
  *
- * Open↗ deliberately does NOT live here. It is an ordinary action on a healthy
- * integration, and it sat in the attention slot only because the slot existed —
- * so it moved to the kebab, where ProjectCard has always kept "Open in Browser"
- * (that card has no face affordance at all). The payoff is that a healthy card
- * now carries NO button, so any card showing one is a card that needs you.
+ * It is a kebab item like every other verb — cards carry no face button. Spectrum
+ * deprecated that pattern ("Don't use quick actions") precisely because a button on
+ * a card that is itself clickable presents conflicting nested actions, and ours
+ * needed a stopPropagation wrapper to survive its own container's click. Both card
+ * kinds resolve through here, so neither can drift from the other.
+ * See `.rptc/research/card-face-buttons-vs-kebab/research.md`.
  */
-export type FaceAction = { kind: AttentionKind; disabled?: boolean };
+function statusVerb(status: CardStatus): CardAction | undefined {
+    if (status === 'not-deployed') return 'deploy';
+    if (status === 'stale') return 'update';
+    if (status === 'error') return 'retry';
+    if (status === 'needs-auth') return 'sign-in';
+    return undefined;
+}
 
 
 /**
@@ -107,7 +109,6 @@ export interface IntegrationCardModel {
     apis?: string[];
     /** Preformatted locale display string (already display-ready). */
     lastDeployed?: string;
-    faceAction?: FaceAction;
     /**
      * The card's own kebab menu. Kept OFF the face so the at-most-one-affordance
      * rule survives: the face carries the urgent verb (Deploy / Update / Retry),
@@ -151,14 +152,6 @@ const INTEGRATION_STATUS_DISPLAY: Record<
  * verb plus the same kebab the card uses. Deployed has no verb on purpose: a
  * healthy card is calm, so any card showing a button is a card that needs you.
  */
-const INTEGRATION_ACTIONS: Record<IntegrationStatus, { face?: FaceAction }> = {
-    'not-deployed': { face: { kind: 'deploy' } },
-    deploying: {},
-    deployed: {},
-    stale: { face: { kind: 'update' } },
-    error: { face: { kind: 'retry' } },
-};
-
 /**
  * The card's kebab items.
  *
@@ -175,12 +168,14 @@ const INTEGRATION_ACTIONS: Record<IntegrationStatus, { face?: FaceAction }> = {
  */
 function buildMenuActions(status: IntegrationStatus, url: string | undefined): CardAction[] {
     if (status === 'deploying') return [];
-    // Redeploy is a DELIBERATE action on a card that is already working, so it
-    // belongs in the menu rather than on the face (a face button means the card
-    // needs you). A stale card's urgent verb is Update, on the face — redeploying
-    // it anyway is the deliberate variant, so the menu carries that too.
+    // The status verb leads: on a card that needs something, that something is the
+    // first thing in the menu. Redeploy only where there is a deployment to redo —
+    // 'deploy'/'retry'/'update' already cover the other states, and offering both
+    // would put two names for one intent in one menu.
+    const verb = statusVerb(status);
     const redeploy: CardAction[] = status === 'deployed' ? ['redeploy'] : [];
     return [
+        ...(verb ? [verb] : []),
         ...(url ? (['open'] as CardAction[]) : []),
         ...redeploy,
         'manage-apis',
@@ -299,7 +294,7 @@ export function deriveIntegrationCard(
     const facet = deriveKindFacet(entry);
     const primaryUrl = resolvePrimaryUrl(entry);
     const { label: staticLabel, dot: dotVariant } = INTEGRATION_STATUS_DISPLAY[status];
-    const actions = INTEGRATION_ACTIONS[status];
+
 
     // While deploying, the live step IS the label — because the card FACE renders
     // `statusLabel` and nothing else (IntegrationCard.tsx). Putting the step on
@@ -331,7 +326,6 @@ export function deriveIntegrationCard(
         deployedUrls: entry.deployedUrls,
         apis: facet.apis,
         lastDeployed: formatLastDeployed(entry.lastDeployed),
-        faceAction: actions.face ? { ...actions.face } : undefined,
         menuActions: buildMenuActions(status, primaryUrl),
         canRename: entry.kind === 'integration' && !facet.isCatalog,
     };
@@ -359,14 +353,14 @@ export function toMeshCardStatus(status: MeshStatus | undefined): CardStatus {
  * Deployed carries no face verb — redeploying a healthy mesh is deliberate, so
  * it is the one thing in the mesh's kebab (see deriveMeshCard).
  */
-const MESH_MATRIX: Record<CardStatus, { dot: StatusDotVariant; face?: AttentionKind }> = {
+const MESH_MATRIX: Record<CardStatus, { dot: StatusDotVariant }> = {
     checking: { dot: 'neutral' },
-    'needs-auth': { dot: 'warning', face: 'sign-in' },
-    'not-deployed': { dot: 'neutral', face: 'deploy' },
+    'needs-auth': { dot: 'warning' },
+    'not-deployed': { dot: 'neutral' },
     deploying: { dot: 'info' },
     deployed: { dot: 'success' },
-    stale: { dot: 'warning', face: 'update' },
-    error: { dot: 'error', face: 'retry' },
+    stale: { dot: 'warning' },
+    error: { dot: 'error' },
 };
 
 /**
@@ -392,9 +386,10 @@ function meshMenuActions(
     componentId: string | undefined,
 ): CardAction[] {
     if (isActionDisabled) return [];
+    const verb = statusVerb(cardStatus);
     const redeploy: CardAction[] = cardStatus === 'deployed' ? ['redeploy'] : [];
     const remove: CardAction[] = componentId ? ['remove'] : [];
-    return [...redeploy, ...remove];
+    return [...(verb ? [verb] : []), ...redeploy, ...remove];
 }
 
 /**
@@ -427,7 +422,6 @@ export function deriveMeshCard(
         url: meshEntry?.endpoint,
         urlLabel: 'Endpoint',
         lastDeployed: formatLastDeployed(meshEntry?.lastDeployed),
-        faceAction: row.face ? { kind: row.face, disabled: isActionDisabled } : undefined,
         // The mesh has no display name to change (canRename false) and no API
         // access of its own, so the menu holds only the two verbs that apply:
         // Redeploy on a healthy idle mesh, and Remove whenever a mesh component

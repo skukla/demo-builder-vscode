@@ -186,6 +186,33 @@ describe('IntegrationsScreen', () => {
             expect(screen.queryByTestId('grid')).not.toBeInTheDocument();
         });
 
+        // LIVE 2026-08-04: removing the last integration dropped the user onto a
+        // full-screen takeover with no title, no project · destination subtitle,
+        // and no Project Dashboard button — no context and no way back. The empty
+        // state belongs INSIDE the page chrome, not instead of it.
+        it('keeps the project context and the way back in the empty state', () => {
+            const handlers = captureHandlers();
+            render(
+                <IntegrationsScreen
+                    hasAdobeContext
+                    appBuilderComponents={{}}
+                    projectName="demo-builder-test"
+                    destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
+                />
+            );
+            settleStatus(handlers);
+
+            expect(screen.getByTestId('empty-state')).toBeInTheDocument();
+            expect(screen.getByText('Integrations')).toBeInTheDocument();
+            expect(
+                screen.getByText('demo-builder-test · Kukla Mesh · Stage')
+            ).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Project Dashboard' })).toBeInTheDocument();
+            // Exactly ONE Add integration: the empty state's CTA. The band's copy
+            // is withheld while empty rather than doubling it.
+            expect(screen.getAllByRole('button', { name: 'Add integration' })).toHaveLength(1);
+        });
+
         it('opens the add modal from the empty state CTA', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handlers = captureHandlers();

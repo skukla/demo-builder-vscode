@@ -200,6 +200,48 @@ describe('IntegrationsSummaryTile', () => {
         });
     });
 
+    // The dot reports HEALTH. With nothing deployed there is no health to report,
+    // and worstStatusVariant's `?? 'success'` fallback painted an empty project
+    // green — "all good" about nothing at all.
+    describe('nothing to report → no dot', () => {
+        it('shows no dot when the project has no integrations and no mesh', () => {
+            render(<IntegrationsSummaryTile hasAdobeContext appBuilderComponents={{}} />);
+
+            expect(screen.queryByTestId('integrations-tile-dot')).not.toBeInTheDocument();
+            // The tile itself still renders — it is the way IN to add the first one.
+            expect(screen.getByText('Integrations')).toBeInTheDocument();
+        });
+
+        it('shows no dot when the only mesh is still being checked', () => {
+            render(
+                <IntegrationsSummaryTile
+                    hasAdobeContext
+                    hasMesh
+                    meshStatus="checking"
+                    appBuilderComponents={{}}
+                />
+            );
+
+            expect(screen.queryByTestId('integrations-tile-dot')).not.toBeInTheDocument();
+        });
+
+        it('still shows a dot once a mesh resolves, with no integrations', () => {
+            render(
+                <IntegrationsSummaryTile
+                    hasAdobeContext
+                    hasMesh
+                    meshStatus="error"
+                    appBuilderComponents={{}}
+                />
+            );
+
+            expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute(
+                'data-variant',
+                'error'
+            );
+        });
+    });
+
     it('opens the integrations surface on press', async () => {
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
         render(

@@ -125,6 +125,7 @@ import {
     deriveMeshCard,
 } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
 import {
+    getIdentifiedMeshAppBuilderComponent,
     getMeshAppBuilderComponent,
     listAppBuilderComponents,
 } from '@/features/app-builder/services/appBuilderComponentState';
@@ -239,9 +240,10 @@ export function renderGrid({
                   meshStatus,
                   getMeshAppBuilderComponent(project),
                   isMeshActionDisabled,
-                  // Same derivation as the screen: the mesh's REAL keyed id, which
-                  // is what Remove addresses. Absent when no mesh entry exists.
-                  listAppBuilderComponents(project).find((c) => c.kind === 'mesh')?.id,
+                  // Same SINGLE resolver the screen uses — id and state from one
+                  // lookup, so the harness cannot pass a mismatched pair the real
+                  // screen could never produce.
+                  getIdentifiedMeshAppBuilderComponent(project)?.id,
               ),
               ...integrationCards,
           ]

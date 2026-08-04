@@ -209,6 +209,34 @@ describe('IntegrationsGrid actions', () => {
             expect(onDeployMesh).not.toHaveBeenCalled();
         });
 
+        // THE live regression (2026-08-04): a project with TWO mesh components
+        // showed one mesh on the card and removed the other, because the card's
+        // state and its id came from two different searches of the same map.
+        // 'mesh' wins the canonical-key priority, so that is the one the card is
+        // showing and the only one Remove may touch.
+        it('removes the mesh the card is SHOWING when the project has two', async () => {
+            const user = setupUser();
+            renderGrid({
+                withMesh: true,
+                appBuilderComponents: {
+                    'commerce-eds-mesh': { ...MESH_COMPONENT, status: 'error' },
+                    mesh: { ...MESH_COMPONENT },
+                },
+            });
+
+            const panel = await openPanel(user, 'API Mesh', 'Deployed');
+            await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
+            const dialog = screen.getByRole('dialog', { name: /remove app builder component/i });
+            await user.click(within(dialog).getByRole('button', { name: /^remove$/i }));
+
+            expect(getClient().postMessage).toHaveBeenCalledWith('removeAppBuilderComponent', {
+                id: 'mesh',
+            });
+            expect(getClient().postMessage).not.toHaveBeenCalledWith('removeAppBuilderComponent', {
+                id: 'commerce-eds-mesh',
+            });
+        });
+
         it('warns that removing the mesh costs the storefront its endpoint', async () => {
             const user = setupUser();
             renderGrid({
@@ -233,12 +261,19 @@ describe('IntegrationsGrid actions', () => {
             });
 
             const tile = card('API Mesh', 'Sign in required');
-            await user.click(within(tile).getByRole('button', { name: /sign in/i }));
+            // Sign in is a kebab item like every other verb — no face button.
+            await user.click(within(tile).getByRole('button', { name: /more actions/i }));
+            // Scope to the menu: the CARD is role=button too, and its accessible
+            // name contains "Sign in required" — querying globally clicks the card.
+            const menu = within(tile).getByTestId('card-menu');
+            await user.click(within(menu).getByRole('button', { name: /^sign in$/i }));
 
             expect(onReAuthenticate).toHaveBeenCalled();
         });
 
-        it('disables the mesh face affordance while a mesh operation is in flight', () => {
+        // A menu item has no disabled state, so an action you cannot take is
+        // WITHHELD rather than shown greyed. That replaced a disabled face button.
+        it('withholds every mesh action while a mesh operation is in flight', () => {
             renderGrid({
                 withMesh: true,
                 meshStatus: 'needs-auth',
@@ -247,7 +282,12 @@ describe('IntegrationsGrid actions', () => {
             });
 
             const tile = card('API Mesh', 'Sign in required');
-            expect(within(tile).getByRole('button', { name: /sign in/i })).toBeDisabled();
+            // Nothing is offered, so the kebab itself does not render — there is
+            // no menu to open and no greyed item to mistake for an available one.
+            expect(
+                within(tile).queryByRole('button', { name: /more actions/i }),
+            ).not.toBeInTheDocument();
+            expect(within(tile).queryByRole('button', { name: /sign in/i })).not.toBeInTheDocument();
         });
     });
 

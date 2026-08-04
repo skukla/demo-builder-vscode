@@ -361,6 +361,87 @@ describe('deployAppBuilderComponent (redeploy)', () => {
 // removeAppBuilderComponent
 // =============================================================================
 
+describe('removeAppBuilderComponent — a removed mesh is a mesh the project no longer wants', () => {
+    // LIVE 2026-08-04: removing the mesh cleared its keyed entry and nothing else,
+    // so `hasMesh` (showDashboard.ts — instance OR state OR dependency) stayed
+    // true. The card kept rendering over a component that no longer existed,
+    // stuck on "Checking requirements…", and its Redeploy answered "This project
+    // does not have an API Mesh component."
+    //
+    // Removing a mesh means the project does not want one. A selected-but-absent
+    // mesh is an error state, not a resting state, so the SELECTION goes too.
+    function meshProject(): Project {
+        return createProject({
+            componentSelections: {
+                frontend: 'eds-storefront',
+                backend: 'adobe-commerce-accs',
+                dependencies: ['eds-accs-mesh', 'some-other-dep'],
+                integrations: [],
+                appBuilder: [],
+            } as never,
+            componentInstances: {
+                'eds-accs-mesh': {
+                    id: 'eds-accs-mesh',
+                    name: 'Mesh',
+                    type: 'dependency',
+                    subType: 'mesh',
+                    status: 'ready',
+                    path: '/proj/components/eds-accs-mesh',
+                } as never,
+            },
+            appBuilderComponents: {
+                'eds-accs-mesh': {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: 'skukla', repo: 'commerce-eds-mesh' },
+                    endpoint: 'https://mesh/graphql',
+                },
+            },
+        });
+    }
+
+    it('drops the mesh from componentSelections.dependencies', async () => {
+        const project = meshProject();
+        const deps = createDeps();
+
+        await removeAppBuilderComponent(project, 'eds-accs-mesh', deps as never);
+
+        const saved = (deps.saveProject as jest.Mock).mock.calls.at(-1)![0] as Project;
+        // All THREE arms of showDashboard's `hasMesh` must fall together —
+        // instance OR keyed-state OR dependency. Any one left standing keeps the
+        // card alive over a component that no longer exists.
+        expect(saved.componentSelections?.dependencies).toEqual(['some-other-dep']);
+        expect(saved.appBuilderComponents?.['eds-accs-mesh']).toBeUndefined();
+        expect(saved.componentInstances?.['eds-accs-mesh']).toBeUndefined();
+    });
+
+    it('leaves the selections of a NON-mesh removal alone', async () => {
+        const project = createProject({
+            componentSelections: {
+                frontend: 'eds-storefront',
+                backend: 'adobe-commerce-accs',
+                dependencies: ['eds-accs-mesh'],
+                integrations: [],
+                appBuilder: ['erp-bridge'],
+            } as never,
+            appBuilderComponents: {
+                'erp-bridge': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'erp-bridge' },
+                },
+            },
+        });
+        const deps = createDeps();
+
+        await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+
+        const saved = (deps.saveProject as jest.Mock).mock.calls.at(-1)![0] as Project;
+        // The mesh dependency belongs to the mesh, not to the integration.
+        expect(saved.componentSelections?.dependencies).toEqual(['eds-accs-mesh']);
+    });
+});
+
 describe('removeAppBuilderComponent (integration)', () => {
     function integrationProject(): Project {
         return createProject({

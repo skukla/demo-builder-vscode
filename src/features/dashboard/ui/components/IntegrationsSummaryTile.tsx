@@ -77,10 +77,16 @@ export function IntegrationsSummaryTile({
     // can never disagree with the card the surface shows. 'checking' is not a
     // health signal, so it is excluded rather than reported as neutral.
     const meshCardStatus = hasMesh ? toMeshCardStatus(meshStatus) : undefined;
-    const variant = worstStatusVariant([
+    const reportable = [
         ...integrations.map((entry) => entry.status),
         ...(meshCardStatus && meshCardStatus !== 'checking' ? [meshCardStatus] : []),
-    ]);
+    ];
+    // The dot reports HEALTH, so with nothing deployed there is nothing to report
+    // and the tile carries no dot at all. worstStatusVariant falls back to
+    // 'success' on an empty list, which painted an empty project green — "all
+    // good" about nothing. The tile still renders: it is the way in to add the
+    // first integration.
+    const variant = reportable.length > 0 ? worstStatusVariant(reportable) : undefined;
 
     // Shaped like its build-zone neighbours (icon above label) so the row reads
     // as one bar; the dot rides the icon as a small overlay rather than widening
@@ -94,14 +100,16 @@ export function IntegrationsSummaryTile({
         >
             <Data size="L" />
             <Text UNSAFE_className="icon-label">Integrations</Text>
-            <span
-                // `tile-status-dot` is the marker exempting it from the tile's
-                // blanket "no descendant backgrounds on hover" rule, which would
-                // otherwise blank the dot exactly when the pointer is on it.
-                className={`integrations-tile-dot tile-status-dot status-dot--${variant}`}
-                data-testid="integrations-tile-dot"
-                data-variant={variant}
-            />
+            {variant && (
+                <span
+                    // `tile-status-dot` is the marker exempting it from the tile's
+                    // blanket "no descendant backgrounds on hover" rule, which would
+                    // otherwise blank the dot exactly when the pointer is on it.
+                    className={`integrations-tile-dot tile-status-dot status-dot--${variant}`}
+                    data-testid="integrations-tile-dot"
+                    data-variant={variant}
+                />
+            )}
         </ActionButton>
     );
 }

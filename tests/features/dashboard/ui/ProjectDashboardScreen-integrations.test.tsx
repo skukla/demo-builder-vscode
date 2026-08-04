@@ -84,9 +84,26 @@ describe('ProjectDashboardScreen - Integrations summary tile', () => {
     it('renders the tile for a mesh-only project (hasMesh threads through)', async () => {
         renderDashboard({ hasAdobeContext: true, hasMesh: true, appBuilderComponents: {} });
 
+        // The TILE is the claim — a mesh-only project still has a way through to
+        // the surface. This used to assert the status DOT instead, which was only
+        // ever a proxy: the dot became conditional on 2026-08-04 (nothing
+        // deployed ⇒ nothing to report ⇒ no dot), and an unresolved mesh has no
+        // status yet at this level. What the dot CONTAINS is the tile suite's job,
+        // as the comment above already said.
         await waitFor(() => {
-            expect(screen.getByTestId('integrations-tile-dot')).toBeInTheDocument();
+            expect(screen.getByText('Integrations')).toBeInTheDocument();
         });
+    });
+
+    it('renders the tile with nothing deployed at all, and no dot', async () => {
+        renderDashboard({ hasAdobeContext: true, appBuilderComponents: {} });
+
+        await waitFor(() => {
+            expect(screen.getByText('Integrations')).toBeInTheDocument();
+        });
+        // The tile is the way IN to adding the first integration; the dot would be
+        // reporting health about nothing.
+        expect(screen.queryByTestId('integrations-tile-dot')).not.toBeInTheDocument();
     });
 
     it('does not render a Deploy Mesh tile in the ActionGrid', () => {

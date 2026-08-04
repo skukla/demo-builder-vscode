@@ -8,6 +8,7 @@
 
 import {
     getAppBuilderComponent,
+    getIdentifiedMeshAppBuilderComponent,
     listAppBuilderComponents,
     setAppBuilderComponent,
     getMeshAppBuilderComponent,
@@ -326,5 +327,52 @@ describe('appBuilderComponentState accessors', () => {
             expect(isAppBuilderComponentState('mesh')).toBe(false);
             expect(isAppBuilderComponentState(undefined)).toBe(false);
         });
+    });
+});
+
+
+// ---------------------------------------------------------------------------
+// getIdentifiedMeshAppBuilderComponent — id and state from ONE lookup
+// ---------------------------------------------------------------------------
+describe('getIdentifiedMeshAppBuilderComponent', () => {
+    // REGRESSION (2026-08-04, live): the integrations screen resolved the mesh
+    // ENTRY with getMeshAppBuilderComponent (which prefers the 'mesh' key, then
+    // falls back to the first mesh found) but resolved its ID with a bare
+    // `listAppBuilderComponents().find(kind === 'mesh')`. With TWO mesh
+    // components those disagree — the card showed one mesh and its Remove tore
+    // down the other. Callers must not be able to resolve the two separately.
+    it('returns the id belonging to the state it returns, with two meshes present', () => {
+        const project = {
+            appBuilderComponents: {
+                'commerce-eds-mesh': { kind: 'mesh', status: 'error', source: { owner: 'a', repo: 'b' } },
+                'eds-accs-mesh': { kind: 'mesh', status: 'deployed', source: { owner: 'a', repo: 'b' } },
+            },
+        } as never as Parameters<typeof getIdentifiedMeshAppBuilderComponent>[0];
+
+        const identified = getIdentifiedMeshAppBuilderComponent(project);
+
+        expect(identified).toBeDefined();
+        expect(identified!.state).toBe(getMeshAppBuilderComponent(project));
+        expect((project as never as { appBuilderComponents: Record<string, unknown> })
+            .appBuilderComponents[identified!.id]).toBe(identified!.state);
+    });
+
+    it("prefers the canonical 'mesh' key, matching getMeshAppBuilderComponent", () => {
+        const project = {
+            appBuilderComponents: {
+                'other-mesh': { kind: 'mesh', status: 'error', source: { owner: 'a', repo: 'b' } },
+                mesh: { kind: 'mesh', status: 'deployed', source: { owner: 'a', repo: 'b' } },
+            },
+        } as never as Parameters<typeof getIdentifiedMeshAppBuilderComponent>[0];
+
+        expect(getIdentifiedMeshAppBuilderComponent(project)!.id).toBe('mesh');
+    });
+
+    it('returns undefined when the project has no mesh component', () => {
+        const project = { appBuilderComponents: {} } as never as Parameters<
+            typeof getIdentifiedMeshAppBuilderComponent
+        >[0];
+
+        expect(getIdentifiedMeshAppBuilderComponent(project)).toBeUndefined();
     });
 });

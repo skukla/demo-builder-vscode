@@ -12,8 +12,8 @@
  *     while the mesh endpoint and every deployed endpoint are click-to-copy
  *     (a GraphQL POST endpoint is not browsable, and an action URL's use is to
  *     leave the panel). Kind is NOT its own row — it is a prefix on Source.
- *   - action bar: model.barActions with emphasis→variant mapping and
- *     disabled honored; deploying → a single disabled "Deploying…"
+ *   - actions: ONE kebab (model.menuActions), no face button — deploying
+ *     offers nothing at all, since every item would race the runner
  *
  * Uses the REAL InlineRenameField (the inline-error pin needs the
  * real field); Spectrum primitives are mocked per the directory convention.
@@ -93,12 +93,6 @@ function makeModel(overrides: Partial<IntegrationCardModel> = {}): IntegrationCa
         deployedUrls: { Frontend: 'https://example.com/front' },
         apis: ['I/O Events', 'I/O Management'],
         lastDeployed: '6/1/2026, 10:00:00 AM',
-        faceAction: { kind: 'open', url: 'https://example.com/app' },
-        barActions: [
-            { action: 'redeploy', label: 'Redeploy', emphasis: 'secondary' },
-            { action: 'manage-apis', label: 'Manage APIs', emphasis: 'secondary' },
-            { action: 'remove', label: 'Remove', emphasis: 'danger' },
-        ],
         menuActions: ['manage-apis', 'remove'],
         canRename: true,
         ...overrides,
@@ -118,8 +112,6 @@ function makeMeshModel(overrides: Partial<IntegrationCardModel> = {}): Integrati
         urlLabel: 'Endpoint',
         deployedUrls: undefined,
         apis: undefined,
-        faceAction: undefined,
-        barActions: [{ action: 'redeploy', label: 'Redeploy', emphasis: 'secondary' }],
         canRename: false,
         ...overrides,
     });
@@ -438,16 +430,15 @@ describe('IntegrationDetailPanel', () => {
     // a row of Buttons holding those same actions — a third control for them,
     // which is what made the three surfaces disagree.
     describe('actions', () => {
-        it('renders the attention verb as a button and fires onAction', () => {
+        it('renders the status verb as a menu item and fires onAction', () => {
             const model = makeModel({
                 status: 'not-deployed',
                 statusLabel: 'Not deployed',
-                faceAction: { kind: 'deploy' },
-                menuActions: ['manage-apis', 'remove'],
+                menuActions: ['deploy', 'manage-apis', 'remove'],
             });
             const { onAction } = renderPanel(model);
 
-            fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
+            fireEvent.click(screen.getByRole('button', { name: /^deploy$/i }));
 
             expect(onAction).toHaveBeenCalledWith(model, 'deploy');
         });
@@ -472,7 +463,7 @@ describe('IntegrationDetailPanel', () => {
         // A healthy card is calm — no verb. Redeploy is reachable, but only
         // through the kebab, which is the whole point of moving it there.
         it('shows no attention verb on a deployed integration', () => {
-            renderPanel(makeModel({ faceAction: undefined, menuActions: ['redeploy'] }));
+            renderPanel(makeModel({ menuActions: ['redeploy'] }));
 
             expect(screen.queryByRole('button', { name: 'Deploy' })).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: 'Update' })).not.toBeInTheDocument();
@@ -486,7 +477,6 @@ describe('IntegrationDetailPanel', () => {
                 makeModel({
                     status: 'deploying',
                     statusLabel: 'Deploying…',
-                    faceAction: undefined,
                     menuActions: [],
                 })
             );

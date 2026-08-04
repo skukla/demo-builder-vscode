@@ -4,7 +4,7 @@
  * Pure presentation over an {@link IntegrationCardModel}: name, status dot
  * (+ pulse while deploying) with label, a source line WHEN THERE IS ONE (the
  * mesh has no owner/repo and carries none), and AT MOST ONE face affordance
- * from `model.faceAction`. The card is dumb:
+ * from `model.menuActions` — no face button. The card is dumb:
  *   - card click / Enter / Space → `onOpen(model.id)` (the ProjectCard
  *     div-card keyboard precedent)
  *   - every face affordance → `onAction(model, kind)` — including the
@@ -20,7 +20,7 @@
  */
 
 import React, { useCallback } from 'react';
-import { IntegrationActionsMenu, IntegrationFaceButton } from './IntegrationActions';
+import { IntegrationActionsMenu } from './IntegrationActions';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
 import { InlineRenameField } from '@/core/ui/components/forms';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
@@ -59,11 +59,6 @@ export function IntegrationCard({
     const handleKeyDown = useActivateOnKey(handleClick);
 
     // Contain face presses: click/keydown must never bubble into the
-    // card's open-the-drawer handlers (InlineRenameField.tsx precedent).
-    const stopPropagation = useCallback(
-        (event: React.SyntheticEvent): void => event.stopPropagation(),
-        [],
-    );
 
     return (
         <div
@@ -112,14 +107,6 @@ export function IntegrationCard({
                 >
                     {model.statusLabel}
                 </span>
-            </div>
-            <div className="integration-card-foot">
-                {model.faceAction && (
-                    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- containment only; interaction lives on the child Button/Link
-                    <span onClick={stopPropagation} onKeyDown={stopPropagation}>
-                        <IntegrationFaceButton model={model} onAction={onAction} />
-                    </span>
-                )}
             </div>
         </div>
     );

@@ -28,7 +28,7 @@ import { ActionButton, Link } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
 import React from 'react';
 import { Drawer } from './Drawer';
-import { IntegrationActionsMenu, IntegrationFaceButton } from './IntegrationActions';
+import { IntegrationActionsMenu } from './IntegrationActions';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
 import { InlineRenameField } from '@/core/ui/components/forms';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
@@ -129,13 +129,7 @@ function PanelContent({
                         <span>{model.name}</span>
                     )}
                 </div>
-                {/* The flyout mirrors the CARD: the at-most-one attention verb as a
-                    button, everything deliberate behind the kebab. It used to carry a
-                    row of Buttons duplicating those same actions — a third place for
-                    them, in a control the card does not use. */}
-                {model.status !== 'deploying' && (
-                    <IntegrationFaceButton model={model} onAction={onAction} />
-                )}
+                {/* The flyout mirrors the CARD: one kebab, no face button. */}
                 <IntegrationActionsMenu model={model} onAction={onAction} />
                 <ActionButton isQuiet aria-label="Close details" onPress={onClose}>
                     <Close size="S" />

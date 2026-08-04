@@ -37,6 +37,7 @@ import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import {
+    getIdentifiedMeshAppBuilderComponent,
     getMeshAppBuilderComponent,
     listAppBuilderComponents,
 } from '@/features/app-builder/services/appBuilderComponentState';
@@ -155,17 +156,17 @@ export function IntegrationsScreen({
         if (!meshStatusDisplay) {
             return integrationCards;
         }
-        // The mesh's REAL keyed id (`eds-accs-mesh`), not the card's stable
-        // `'mesh'` identity — Remove addresses the component, not the card.
-        const meshComponentId = listAppBuilderComponents(project).find(
-            (component) => component.kind === 'mesh',
-        )?.id;
+        // ONE lookup for id AND state. Resolving them separately let the card
+        // show one mesh while its Remove tore down another (2026-08-04, live) —
+        // the map search has a priority, and a second search that omits it picks
+        // a different component whenever a project holds more than one mesh.
+        const mesh = getIdentifiedMeshAppBuilderComponent(project);
         const meshCard = deriveMeshCard(
             meshStatusDisplay,
             meshStatus,
-            getMeshAppBuilderComponent(project),
+            mesh?.state ?? getMeshAppBuilderComponent(project),
             isMeshBusy(meshStatus) || isTransitioning,
-            meshComponentId,
+            mesh?.id,
         );
         return [meshCard, ...integrationCards];
     }, [components, overrides, catalog, meshStatusDisplay, meshStatus, isTransitioning]);
@@ -201,34 +202,6 @@ export function IntegrationsScreen({
                 <Flex justifyContent="center" alignItems="center" height="100%">
                     <LoadingDisplay size="L" message="Loading integrations…" />
                 </Flex>
-            </View>
-        );
-    }
-
-    // Nothing to show at all — a full-screen CTA rather than a lone add tile in
-    // an empty grid (ProjectsDashboard's empty-state treatment). Uses the CORE
-    // StatusDisplay: DashboardEmptyState belongs to the projects-dashboard
-    // feature and features must not import across feature boundaries.
-    if (cards.length === 0) {
-        return (
-            <View height="100vh" backgroundColor="gray-50">
-                <StatusDisplay
-                    variant="info"
-                    title="No integrations yet"
-                    message="Add an API Mesh, a pre-built integration, or your own custom integration — each deploys to this project's shared Adobe I/O workspace."
-                    actions={[{ label: 'Add integration', variant: 'accent', onPress: openAdd }]}
-                />
-                <AddIntegrationFlowAdapter
-                    isOpen={addOpen}
-                    onClose={closeAdd}
-                    catalog={catalog}
-                    appBuilderComponents={components}
-                    adobeProjectId={adobeProjectId}
-                    adobeWorkspaceId={adobeWorkspaceId}
-                    adobeProjectTitle={destination?.projectTitle}
-                    adobeWorkspaceTitle={destination?.workspaceTitle}
-                    adobeOrgId={adobeOrgId}
-                />
             </View>
         );
     }
@@ -275,21 +248,41 @@ export function IntegrationsScreen({
                         <Button variant="secondary" onPress={handleBack}>
                             Project Dashboard
                         </Button>
-                        <Button variant="cta" onPress={openAdd}>
-                            Add integration
-                        </Button>
+                        {/* Withheld while empty: the empty state carries the CTA,
+                            and it is the thing the eye lands on. Two Add buttons
+                            for one action is the duplication this surface spent
+                            2026-08-04 removing everywhere else. */}
+                        {cards.length > 0 && (
+                            <Button variant="cta" onPress={openAdd}>
+                                Add integration
+                            </Button>
+                        )}
                     </Flex>
                 </div>
             </div>
 
             <div className="page-container-padded pb-6">
-                <IntegrationsGrid
-                    cards={visibleCards}
-                    onAddRequest={openAdd}
-                    onDeployMesh={handleDeployMesh}
-                    onReAuthenticate={handleReAuthenticate}
-                    destinationLabel={destinationLabel}
-                />
+                {/* The empty state renders INSIDE the page chrome, not instead of
+                    it. As a full-screen takeover it dropped the title, the
+                    project · destination subtitle, and the Project Dashboard
+                    button — so removing your last integration stranded you on a
+                    screen with no project context and no way back. */}
+                {cards.length === 0 ? (
+                    <StatusDisplay
+                        variant="info"
+                        title="No integrations yet"
+                        message="Add an API Mesh, a pre-built integration, or your own custom integration — each deploys to this project's shared Adobe I/O workspace."
+                        actions={[{ label: 'Add integration', variant: 'accent', onPress: openAdd }]}
+                    />
+                ) : (
+                    <IntegrationsGrid
+                        cards={visibleCards}
+                        onAddRequest={openAdd}
+                        onDeployMesh={handleDeployMesh}
+                        onReAuthenticate={handleReAuthenticate}
+                        destinationLabel={destinationLabel}
+                    />
+                )}
 
                 {/* Hosted HERE so the header button and the grid's add tile open
                     the same one instance. */}

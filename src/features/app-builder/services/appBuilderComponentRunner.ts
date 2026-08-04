@@ -28,6 +28,7 @@ import { setAppBuilderComponent, getProvidedEnvVars } from './appBuilderComponen
 import { isStandaloneApp } from './appConfigPackages';
 import { deriveOwPackage } from './owPackageName';
 import type { AppDeploymentResult } from './types';
+import { isMeshComponentId } from '@/core/constants';
 import {
     buildOrgTargetFromProjectAdobe,
     withOrgContext,
@@ -379,6 +380,24 @@ async function teardownRemote(
 }
 
 /**
+ * The project's selections with every mesh dependency dropped.
+ *
+ * Keyed by the LEGACY component ids (`eds-accs-mesh` and friends), which is what
+ * `componentSelections.dependencies` holds — not the catalog ids.
+ *
+ * @param project - the project whose mesh selection is being revoked
+ * @returns componentSelections with mesh dependencies removed
+ */
+function withoutMeshDependencies(project: Project): Project['componentSelections'] {
+    const selections = project.componentSelections;
+    if (!selections?.dependencies) return selections;
+    return {
+        ...selections,
+        dependencies: selections.dependencies.filter((dep) => !isMeshComponentId(dep)),
+    };
+}
+
+/**
  * Remove an App Builder component: kind-dispatched remote teardown (best-effort) → delete the
  * local folder → clear `appBuilderComponents[id]` → if it provided env vars, regenerate the
  * storefront config WITHOUT them.
@@ -410,6 +429,16 @@ export async function removeAppBuilderComponent(
     const cleared = {
         ...project,
         appBuilderComponents: { ...(project.appBuilderComponents ?? {}) },
+        // Removing a MESH revokes the project's claim to one. `hasMesh`
+        // (showDashboard) is instance OR keyed-state OR dependency, so clearing
+        // only the keyed entry left the other two asserting a mesh that no longer
+        // existed: the card kept rendering, stuck on "Checking requirements…",
+        // and its Redeploy answered "This project does not have an API Mesh
+        // component". A selected-but-absent mesh is an error state, not a resting
+        // one — so the selection goes with the component.
+        ...(state.kind === 'mesh'
+            ? { componentSelections: withoutMeshDependencies(project) }
+            : {}),
     };
     delete cleared.appBuilderComponents[id];
     // Sync the caller's reference too — a later save from a stale reference

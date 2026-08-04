@@ -81,10 +81,27 @@ function synthesizeAppFromLegacy(project: Project): AppBuilderComponentState | u
 export function getKeyedMeshAppBuilderComponent(
     project: Project,
 ): AppBuilderComponentState | undefined {
+    return getIdentifiedMeshAppBuilderComponent(project)?.state;
+}
+
+/**
+ * The keyed mesh entry WITH the id it is stored under.
+ *
+ * The single resolver for "which mesh?". Anything that needs to ACT on the mesh
+ * — remove, redeploy — must take the id from here rather than searching the map
+ * itself, because the search has a priority (the canonical `mesh` key first,
+ * then the first mesh found) and a second search that omits it can select a
+ * DIFFERENT component. That happened live on 2026-08-04: a project with two mesh
+ * components showed one mesh on the card and removed the other.
+ */
+export function getIdentifiedMeshAppBuilderComponent(
+    project: Project,
+): { id: string; state: AppBuilderComponentState } | undefined {
     const map = project.appBuilderComponents;
     if (!map) return undefined;
-    if (map[MESH_ID]?.kind === 'mesh') return map[MESH_ID];
-    return Object.values(map).find(state => state.kind === 'mesh');
+    if (map[MESH_ID]?.kind === 'mesh') return { id: MESH_ID, state: map[MESH_ID] };
+    const found = Object.entries(map).find(([, state]) => state.kind === 'mesh');
+    return found ? { id: found[0], state: found[1] } : undefined;
 }
 
 /**

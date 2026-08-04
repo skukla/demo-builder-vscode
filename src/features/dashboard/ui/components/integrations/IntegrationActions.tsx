@@ -21,23 +21,27 @@
  * @module features/dashboard/ui/components/integrations/IntegrationActions
  */
 
-import { Button, Item, Text } from '@adobe/react-spectrum';
+import { Item, Text } from '@adobe/react-spectrum';
 import React from 'react';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 
 /**
- * Label + icon per menu action.
- *
- * `redeploy` lives in the MENU, not on the card face: a deployed card is calm by
- * design — a visible face button means the card needs you — so redeploying a
- * healthy integration is a deliberate action, which is what a kebab is for.
+ * Label + icon per menu action — EVERY action, since the kebab is the only
+ * control a card has. Cards carry no face button (Spectrum: "Don't use quick
+ * actions"), so a verb missing from this map renders as its raw id with no icon.
  *
  * Rename is deliberately absent: it is the name's own inline pencil, matching
  * ProjectCard.
  */
 const MENU_ROWS: Partial<Record<CardAction, { label: string; icon: string }>> = {
+    // The status verbs — what the card is asking for, listed first by the model.
+    deploy: { label: 'Deploy', icon: 'play' },
+    update: { label: 'Update', icon: 'redeploy' },
+    retry: { label: 'Retry', icon: 'reset' },
+    'sign-in': { label: 'Sign in', icon: 'admin' },
+    // The deliberate ones.
     open: { label: 'Open', icon: 'globe' },
     redeploy: { label: 'Redeploy', icon: 'redeploy' },
     'manage-apis': { label: 'Manage APIs', icon: 'apiAccess' },
@@ -80,35 +84,5 @@ export function IntegrationActionsMenu({
                 );
             })}
         </CardActionsMenu>
-    );
-}
-
-/** The attention verb's label, keyed by the face action's kind. */
-const FACE_LABELS: Record<string, string> = {
-    deploy: 'Deploy',
-    update: 'Update',
-    retry: 'Retry',
-    'sign-in': 'Sign in',
-};
-
-/**
- * The at-most-one attention verb — Deploy / Update / Retry / Sign in.
- *
- * Shared by the card face and the detail flyout so the two never disagree on
- * which verb is urgent, or on what it is called.
- *
- * @param props - the card model and the action sink
- * @returns the button, or null when the card needs nothing
- */
-export function IntegrationFaceButton({
-    model,
-    onAction,
-}: Omit<IntegrationActionsMenuProps, 'className'>): React.ReactElement | null {
-    const face = model.faceAction;
-    if (!face) return null;
-    return (
-        <Button variant="accent" isDisabled={face.disabled} onPress={() => onAction(model, face.kind)}>
-            {FACE_LABELS[face.kind]}
-        </Button>
     );
 }

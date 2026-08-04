@@ -62,16 +62,15 @@ describe('deriveIntegrationCard — failure reason', () => {
 // deriveIntegrationCard — status matrix
 // ---------------------------------------------------------------------------
 describe('deriveIntegrationCard — status matrix', () => {
-    it('not-deployed: neutral dot, "Not deployed", Deploy face, Manage APIs·Remove menu', () => {
+    it('not-deployed: neutral dot, "Not deployed", Deploy LEADS the menu', () => {
         const model = deriveIntegrationCard(integration({ status: 'not-deployed' }));
 
         expect(model.status).toBe('not-deployed');
         expect(model.dotVariant).toBe('neutral');
         expect(model.statusLabel).toBe('Not deployed');
-        expect(model.faceAction).toEqual({ kind: 'deploy' });
-        // The verb is the FACE's; the menu carries the deliberate actions. There
-        // is no third list — the flyout renders these same two.
-        expect(model.menuActions).toEqual(['manage-apis', 'remove']);
+        // The status verb is a kebab item like every other verb, and it leads:
+        // on a card that needs something, that something is the first item.
+        expect(model.menuActions).toEqual(['deploy', 'manage-apis', 'remove']);
     });
 
     // REGRESSION: the live step text used to land ONLY on `message`, which the
@@ -93,7 +92,7 @@ describe('deriveIntegrationCard — status matrix', () => {
         // NOT also on `message`: the drawer prints label AND message, so leaving
         // both set would print the same step twice in the flyout.
         expect(model.message).toBeUndefined();
-        expect(model.faceAction).toBeUndefined();
+        // Nothing is offered mid-deploy: every item would race the runner.
         expect(model.menuActions).toEqual([]);
     });
 
@@ -128,13 +127,9 @@ describe('deriveIntegrationCard — status matrix', () => {
         expect(model.status).toBe('deployed');
         expect(model.dotVariant).toBe('success');
         expect(model.statusLabel).toBe('Deployed');
-        // A healthy card is CALM: no face button at all. Open moved to the kebab,
-        // where ProjectCard has always kept "Open in Browser" — so a visible face
-        // button now always means the card needs you.
-        expect(model.faceAction).toBeUndefined();
-        // Redeploy joins the menu here and ONLY here: redeploying something that
-        // already works is deliberate, and the face is reserved for cards that
-        // need you.
+        // A healthy card asks for nothing, so its menu carries no status verb —
+        // just the deliberate actions. Redeploy appears here and only here:
+        // there has to be a deployment before redoing one means anything.
         expect(model.menuActions).toEqual(['open', 'redeploy', 'manage-apis', 'remove']);
     });
 
@@ -144,20 +139,23 @@ describe('deriveIntegrationCard — status matrix', () => {
     // failed card flipped to Deployed until the next reload. The org-reachability
     // question it actually answered is already covered by the deploy guards and
     // the org-mismatch detection.
-    it('deployed WITHOUT any url: no face affordance at all', () => {
+    // No url ⇒ no Open. The other three still stand, so the kebab renders.
+    it('deployed WITHOUT any url: menu drops Open, keeps the rest', () => {
         const model = deriveIntegrationCard(integration({ status: 'deployed' }));
-        expect(model.faceAction).toBeUndefined();
+
+        expect(model.url).toBeUndefined();
+        expect(model.menuActions).toEqual(['redeploy', 'manage-apis', 'remove']);
     });
 
-    it('stale: warning dot, "Update available", Update face, Manage APIs·Remove menu', () => {
+    it('stale: warning dot, "Update available", Update LEADS the menu', () => {
         const model = deriveIntegrationCard(integration({ status: 'stale' }));
 
         expect(model.status).toBe('stale');
         expect(model.dotVariant).toBe('warning');
         expect(model.statusLabel).toBe('Update available');
-        expect(model.faceAction).toEqual({ kind: 'update' });
-        // No Redeploy: the urgent verb IS the deploy here, on the face.
-        expect(model.menuActions).toEqual(['manage-apis', 'remove']);
+        // No Redeploy beside it: Update IS the redeploy here, and two names for
+        // one intent in one menu is what this whole change removed.
+        expect(model.menuActions).toEqual(['update', 'manage-apis', 'remove']);
     });
 
     it('error: error dot, "Deploy failed", Retry face, Manage APIs·Remove menu', () => {
@@ -170,21 +168,20 @@ describe('deriveIntegrationCard — status matrix', () => {
         expect(model.dotVariant).toBe('error');
         expect(model.statusLabel).toBe('Deploy failed');
         expect(model.message).toBe('aio deploy failed');
-        expect(model.faceAction).toEqual({ kind: 'retry' });
-        expect(model.menuActions).toEqual(['manage-apis', 'remove']);
+        expect(model.menuActions).toEqual(['retry', 'manage-apis', 'remove']);
     });
 
-    it('stale is DISTINCT from deployed (dot, label, face, menu)', () => {
+    it('stale is DISTINCT from deployed (dot, label, menu verb)', () => {
         const stale = deriveIntegrationCard(integration({ status: 'stale' }));
         const deployed = deriveIntegrationCard(integration({ status: 'deployed' }));
 
         expect(stale.dotVariant).not.toBe(deployed.dotVariant);
         expect(stale.statusLabel).not.toBe(deployed.statusLabel);
-        expect(stale.faceAction).toEqual({ kind: 'update' });
-        // Deployed offers Redeploy in the menu; stale does not — its deploy verb
-        // is the urgent one, on the face.
-        expect(deployed.menuActions).toContain('redeploy');
+        // Each carries the redeploy under the name its state earns, never both.
+        expect(stale.menuActions).toContain('update');
         expect(stale.menuActions).not.toContain('redeploy');
+        expect(deployed.menuActions).toContain('redeploy');
+        expect(deployed.menuActions).not.toContain('update');
     });
 
     it('Remove is present on every status EXCEPT deploying', () => {
@@ -218,29 +215,26 @@ describe('deriveIntegrationCard — status matrix', () => {
 });
 
 // ---------------------------------------------------------------------------
-// ≤1 face affordance — the calm-card invariant, both producers, every status
+// NO face affordance — the calm-card invariant, both producers, every status
 // ---------------------------------------------------------------------------
-describe('at-most-one face affordance invariant', () => {
-    it('integration cards: faceAction is a single object or undefined for EVERY status', () => {
+describe('no face affordance — every verb is a menu item', () => {
+    // Spectrum deprecated the card-face button ("Don't use quick actions"): a
+    // button on a card that is itself clickable presents conflicting nested
+    // actions. Neither producer may reintroduce one.
+    it('integration cards: no faceAction on ANY status', () => {
         for (const status of INTEGRATION_STATUSES) {
             const model = deriveIntegrationCard(
                 integration({ status: 'not-deployed', url: 'https://a.example' }),
                 { status },
             );
-            expect(Array.isArray(model.faceAction)).toBe(false);
-            if (model.faceAction !== undefined) {
-                expect(typeof model.faceAction.kind).toBe('string');
-            }
+            expect('faceAction' in model).toBe(false);
         }
     });
 
-    it('mesh cards: faceAction is a single object or undefined for EVERY mesh status', () => {
+    it('mesh cards: no faceAction on ANY mesh status', () => {
         for (const status of MESH_STATUSES) {
             const model = deriveMeshCard(display(), status, meshEntry(), false);
-            expect(Array.isArray(model.faceAction)).toBe(false);
-            if (model.faceAction !== undefined) {
-                expect(typeof model.faceAction.kind).toBe('string');
-            }
+            expect('faceAction' in model).toBe(false);
         }
     });
 });
@@ -457,13 +451,14 @@ describe('deriveIntegrationCard — url + lastDeployed derivation', () => {
     // without opening the flyout first. Rename is NOT here — it is the name's
     // own inline pencil, matching ProjectCard.
     describe('menuActions', () => {
-        it.each(['not-deployed', 'stale', 'error'] as const)(
-            'offers Manage APIs + Remove on %s',
-            (status) => {
-                const model = deriveIntegrationCard(integration({ status }));
-                expect(model.menuActions).toEqual(['manage-apis', 'remove']);
-            }
-        );
+        it.each([
+            ['not-deployed', 'deploy'],
+            ['stale', 'update'],
+            ['error', 'retry'],
+        ] as const)('leads with the status verb, then Manage APIs + Remove on %s', (status, verb) => {
+            const model = deriveIntegrationCard(integration({ status }));
+            expect(model.menuActions).toEqual([verb, 'manage-apis', 'remove']);
+        });
 
         // Deployed is the exception: its deploy verb is not on the face (a healthy
         // card is calm), so Redeploy joins the menu.
