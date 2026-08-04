@@ -48,6 +48,7 @@ import {
 import { classifyEnvSchema } from '@/features/project-creation/services/envVarClassifier';
 import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import type { AppBuilderComponentKind } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 
@@ -226,7 +227,13 @@ export const handleAddAppBuilderComponent: MessageHandler<{
     // `aio config get` spawn costs seconds on a cold cache. Running it first left
     // the user clicking Add and staring at nothing until it returned.
     const result = await withComponentProgress(
-        { title: 'Adding', id: entry.id, label: entry.name ?? entry.id, logger: context.logger },
+        {
+            title: 'Adding',
+            id: entry.id,
+            label: entry.name ?? entry.id,
+            noun: kindNoun(entry.kind),
+            logger: context.logger,
+        },
         async (report): Promise<GuardableResult> => {
             report('Checking requirements…');
             const guardError = await runGuards(context, project);
@@ -327,6 +334,11 @@ type GuardableResult = {
     blocked?: boolean;
 };
 
+/** What the card calls a component: its kind, title-cased for the status line. */
+function kindNoun(kind: AppBuilderComponentKind | undefined): string {
+    return kind === 'mesh' ? 'Mesh' : 'Integration';
+}
+
 /**
  * Run a slow per-integration operation with the telegraph the rest of the
  * extension already uses: a VS Code progress notification, a live row status on
@@ -334,17 +346,25 @@ type GuardableResult = {
  *
  * They carry DIFFERENT registers, and that split is the point. The question that
  * produced it was not "why do these two say the same words" — it was **why do we
- * run two notification systems at once, and what is each one worth?** Answer: the
- * notification is the only feedback for someone who is NOT on the Integrations
- * page, so it earns its place, but it needs no more than the operation and its
- * object ("Deploying ERP Sync") plus a spinner. The row is for someone watching
- * the card, and carries the STEPS. Both used to receive the identical string,
- * which is what made the redundancy visible — but sameness of wording was the
- * symptom, not the reason to change it.
+ * run two notification systems at once, and what is each one worth?** Both used
+ * to receive the identical string, which is what made the redundancy visible, but
+ * sameness of wording was the symptom rather than the reason to change it.
  *
- * The rule that falls out: no two surfaces narrate the same step, and the surface
- * that exists carries it. A path with no card — the projects-list kebab redeploy
- * — correctly keeps step text in its notification.
+ * The rule: **no two surfaces narrate the same step.** The NOTIFICATION carries
+ * the steps, under a static title naming the operation and its object ("Deploying
+ * ERP Sync"). The CARD names the operation once ("Deploying…") and holds still.
+ *
+ * That assignment is reversed from the first attempt at this split, which gave
+ * the steps to the card on the theory that the object being acted on should carry
+ * them. Seen running (2026-08-04) it was backwards: the card's status line is
+ * small, uppercase and inside a ~450px tile, so a two-part step wrapped to two
+ * shouting lines in the middle of the object's own summary, while the
+ * notification — transient, roomy, and where VS Code users already look for
+ * progress — sat on one static line. The notification is also the only feedback
+ * for someone who is NOT on the Integrations page, so the detail is wasted
+ * anywhere else. A path with no card (the projects-list kebab redeploy) always
+ * kept step text in its notification; that is now simply the general rule rather
+ * than an exception to one.
  *
  * Before this, add/remove/deploy ran silently — the modal closed, `aio app
  * undeploy` ground away for tens of seconds, and nothing anywhere said so
@@ -361,14 +381,21 @@ type GuardableResult = {
  * as its first line — the same shape `deployMeshHeadless` uses.
  *
  * @param options - the notification title, the row to telegraph, the user logger
- * @param run - the work; call its `report` to push sub-progress to the CARD
+ * @param run - the work; call its `report` to push each step to the NOTIFICATION
  * @returns whatever `run` resolves to
  */
 async function withComponentProgress<T extends GuardableResult>(
-    options: { title: string; id: string; label: string; logger: HandlerContext['logger'] },
+    options: {
+        title: string;
+        id: string;
+        label: string;
+        /** What the card calls the thing — its KIND ("Mesh" / "Integration"). */
+        noun: string;
+        logger: HandlerContext['logger'];
+    },
     run: (report: (message: string) => void) => Promise<T>,
 ): Promise<T> {
-    const { title, id, label, logger } = options;
+    const { title, id, label, noun, logger } = options;
     logger.info(`${title} ${label}...`);
 
     let result = { success: false } as T;
@@ -378,18 +405,27 @@ async function withComponentProgress<T extends GuardableResult>(
             title: `${title} ${label}`,
             cancellable: false,
         },
-        async () => {
-            // `report` drives the CARD only. It used to also call
-            // `progress.report({ message })`, so the notification and the row
-            // narrated the same steps at the same moment in slightly different
-            // words — a card reading "Checking requirements…" beside a toast
-            // saying the same thing. Each surface gets one job instead:
-            // the notification is the ambient "this is running, and what"
-            // (its title, above, plus a spinner) for a user whose attention is
-            // elsewhere; the card is where the steps belong, because that is the
-            // object being acted on and it is already on screen.
+        async (progress) => {
+            // The card names the operation ONCE and then holds still; `report`
+            // drives the NOTIFICATION.
+            //
+            // The split itself is unchanged — no two surfaces narrate the same
+            // step — but the assignment is reversed from the first attempt at it.
+            // Steps went to the card on the theory that the object being acted on
+            // should carry them; seen running, that was backwards. The card's
+            // status line is small, uppercase and inside a ~450px tile, so
+            // "VERIFYING DEPLOYMENT… CHECKING DEPLOYMENT STATUS…" wrapped to two
+            // shouting lines in the middle of the object's own summary, while the
+            // notification — transient, roomy, and where VS Code users already
+            // look for progress — sat on one static line.
+            //
+            // Verb + KIND on the card, never the component name: its heading
+            // already carries the name, so "Deploying ERP Sync" under "ERP Sync"
+            // would spend the tile's one status line restating its title. The
+            // kind is the one thing the heading does not say.
+            void postRowStatus(id, 'deploying', `${title} ${noun}`);
             result = await run((message) => {
-                void postRowStatus(id, 'deploying', message);
+                progress.report({ message });
             });
         },
     );
@@ -415,7 +451,13 @@ async function deployById(context: HandlerContext, requestedId: string | undefin
     // now its whole content, so a raw slug is what a background user would read.
     const displayName = getAppBuilderComponent(project, id)?.name ?? id;
     const result = await withComponentProgress(
-        { title: 'Deploying', id, label: displayName, logger: context.logger },
+        {
+            title: 'Deploying',
+            id,
+            label: displayName,
+            noun: kindNoun(getAppBuilderComponent(project, id)?.kind),
+            logger: context.logger,
+        },
         async (report): Promise<GuardableResult> => {
             report('Checking requirements…');
             const guardError = await runGuards(context, project);
@@ -471,7 +513,13 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
 
     const displayName = getAppBuilderComponent(project, id)?.name ?? id;
     const result = await withComponentProgress(
-        { title: 'Removing', id, label: displayName, logger: context.logger },
+        {
+            title: 'Removing',
+            id,
+            label: displayName,
+            noun: kindNoun(getAppBuilderComponent(project, id)?.kind),
+            logger: context.logger,
+        },
         async (report): Promise<GuardableResult> => {
             report('Checking requirements…');
             const guardError = await runGuards(context, project);
@@ -610,4 +658,3 @@ export const handleRenameAppBuilderComponent: MessageHandler<{
     await postComponentsSnapshot(context);
     return { success: true };
 };
-

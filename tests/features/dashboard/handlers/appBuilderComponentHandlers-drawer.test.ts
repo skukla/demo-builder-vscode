@@ -100,7 +100,7 @@ describe('handleRenameAppBuilderComponent — inline payload name (drawer rename
             'firefly-image-gen',
             'deployed',
             undefined,
-            'Firefly Video Gen',
+            'Firefly Video Gen'
         );
     });
 
@@ -186,7 +186,7 @@ describe('handleRenameAppBuilderComponent — inline payload name (drawer rename
         await handleRenameAppBuilderComponent(mockContext, { id: 'firefly-image-gen' });
 
         expect(showInputBox).toHaveBeenCalledWith(
-            expect.objectContaining({ value: 'Firefly Image Gen' }),
+            expect.objectContaining({ value: 'Firefly Image Gen' })
         );
     });
 });
@@ -286,7 +286,10 @@ describe('appBuilderComponentsSnapshot channel (fresh persisted map after termin
             appBuilderComponents: { 'erp-sync': DEPLOYED_ENTRY },
         } as never);
         mockTestDeveloperPermissions(true);
-        mockRemoveAppBuilderComponent.mockResolvedValue({ success: false, error: 'undeploy failed' });
+        mockRemoveAppBuilderComponent.mockResolvedValue({
+            success: false,
+            error: 'undeploy failed',
+        });
 
         await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
@@ -344,31 +347,36 @@ describe('appBuilderComponentsSnapshot channel (fresh persisted map after termin
 
 // The notification and the card each get ONE job.
 //
-// Both used to narrate the same steps: `withComponentProgress`'s report pushed
-// the identical string to `progress.report` AND to the row status, so a user on
-// the Integrations page watched a card say "Checking requirements…" while a
-// toast beside it said the same thing in different words. That fan-out was the
-// fix for operations running silently (2026-07-31) and is still right for a user
-// whose attention is elsewhere — it just needs a coarser register.
+// Both used to narrate the same steps, which read as redundant, so the steps were
+// given to the CARD and the notification kept to its title (2026-08-04). Seen
+// running, that was backwards: the card is a ~450px tile whose status line renders
+// small and uppercase, so "VERIFYING DEPLOYMENT… CHECKING DEPLOYMENT STATUS…"
+// wrapped to two shouting lines inside the object's own summary, while the
+// notification — which has the room, is transient, and is where VS Code users
+// already look for progress — sat on one static line.
 //
-// Notification: its title, and a spinner. Card: the steps.
+// Reversed the same day: Notification carries the STEPS under its static title.
+// Card names the operation once and holds still.
+//
+// The invariant survives the swap unchanged: no two surfaces narrate the same
+// step, and a path with no card (the projects-list kebab redeploy) still keeps
+// step text in its notification — which is now simply the general rule.
 describe('progress register', () => {
-    it('keeps step detail off the notification', async () => {
+    it('sends the step detail to the notification', async () => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);
         const vscode = require('vscode');
         const report = jest.fn();
         vscode.window.withProgress.mockImplementation(
-            async (_o: unknown, task: (p: unknown) => unknown) => task({ report }),
+            async (_o: unknown, task: (p: unknown) => unknown) => task({ report })
         );
 
         await handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
-        // Control FIRST: a negative assertion alone would go green if the handler
-        // ever bailed before withProgress (a fixture change, a new early return),
-        // proving nothing.
         expect(vscode.window.withProgress).toHaveBeenCalled();
-        expect(report).not.toHaveBeenCalled();
+        expect(report).toHaveBeenCalledWith(
+            expect.objectContaining({ message: expect.stringContaining('Checking requirements') })
+        );
     });
 
     it('still names the operation in the notification title', async () => {
@@ -380,7 +388,7 @@ describe('progress register', () => {
 
         expect(vscode.window.withProgress).toHaveBeenCalledWith(
             expect.objectContaining({ title: expect.stringContaining('Deploying') }),
-            expect.any(Function),
+            expect.any(Function)
         );
     });
 
@@ -405,22 +413,71 @@ describe('progress register', () => {
 
         expect(vscode.window.withProgress).toHaveBeenCalledWith(
             expect.objectContaining({ title: 'Deploying ERP Sync' }),
-            expect.any(Function),
+            expect.any(Function)
         );
     });
 
-    it('still pushes the step detail to the card', async () => {
+    it('names the operation on the card, once', async () => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);
 
         await handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
-        expect(mockSendAppBuilderComponentStatusUpdate).toHaveBeenCalledWith(
+        // ONCE is the assertion, not merely "at some point". Before the swap the
+        // card received a push per step and one of them happened to read
+        // "Deploying…", so a toHaveBeenCalledWith would have passed against the
+        // broken code and proved nothing.
+        const inProgress = mockSendAppBuilderComponentStatusUpdate.mock.calls.filter(
+            (call: unknown[]) => call[1] === 'deploying'
+        );
+        expect(inProgress).toHaveLength(1);
+        // Verb + KIND, never the component name: the card's own heading already
+        // carries the name, so "Deploying ERP Sync" under "ERP Sync" would spend
+        // the tile's one status line restating its title. The kind is what the
+        // heading does NOT say.
+        expect(inProgress[0]).toEqual([
             'erp-sync',
             'deploying',
-            expect.stringContaining('Checking requirements'),
-            undefined, // no endpoint on a progress tick
+            'Deploying Integration',
+            undefined,
+        ]);
+    });
+
+    it('says "Adding Mesh" on a mesh card', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+        mockGetAppBuilderComponentEntry.mockReturnValue({
+            id: 'eds-accs-mesh',
+            name: 'EDS ACCS API Mesh',
+            description: 'API Mesh',
+            kind: 'mesh',
+            source: { owner: 'skukla', repo: 'eds-accs-mesh' },
+        });
+
+        await handleAddAppBuilderComponent(mockContext, { id: 'eds-accs-mesh' });
+
+        const inProgress = mockSendAppBuilderComponentStatusUpdate.mock.calls.filter(
+            (call: unknown[]) => call[1] === 'deploying'
         );
+        expect(inProgress).toHaveLength(1);
+        expect(inProgress[0][2]).toBe('Adding Mesh');
+    });
+
+    // The half of the swap a "does the notification get steps" test cannot see:
+    // forwarding to the notification while ALSO leaving the card push in place
+    // would pass every other test here and reproduce the double narration the
+    // original split existed to remove.
+    it('keeps step detail off the card', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+
+        await handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        const stepPushes = mockSendAppBuilderComponentStatusUpdate.mock.calls.filter(
+            (call: unknown[]) =>
+                typeof call[2] === 'string' && /Checking requirements/.test(call[2])
+        );
+        expect(stepPushes).toEqual([]);
     });
 });
 
@@ -444,7 +501,7 @@ describe('progress opens before the guards run', () => {
             async (_o: unknown, task: (p: unknown) => unknown) => {
                 order.push('progress');
                 return task({ report: jest.fn() });
-            },
+            }
         );
         mockEnsureAdobeIOAuth.mockImplementation(async () => {
             order.push('guards');
