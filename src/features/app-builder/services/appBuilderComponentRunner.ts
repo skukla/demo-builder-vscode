@@ -74,6 +74,15 @@ export interface AppBuilderComponentRunnerDeps {
     logger: Logger;
     saveProject: (project: Project) => Promise<void>;
     getCachedOrganization: () => CachedOrgRef | undefined;
+    /**
+     * Where the deploy tails' step reports go.
+     *
+     * The tails already emit every step and their signatures have always declared
+     * `onProgress`; the add path just called them without it, so a dashboard add
+     * showed one static title while the build and deploy ran silently. Optional
+     * because the headless/MCP callers have nobody to tell.
+     */
+    onProgress?: (message: string, subMessage?: string) => void;
     /** Mesh deploy tail (org-agnostic; the runner wraps it in withOrgContext). */
     deployMesh: (
         componentPath: string,
@@ -252,13 +261,24 @@ async function dispatchDeploy(
     if (entry.kind === 'mesh') {
         // The mesh tail picks create-vs-update internally (its own verification
         // resolves the existing mesh); D1 persists no separate meshId to pass.
-        const result = await deps.deployMesh(componentPath, deps.commandManager, deps.logger);
+        const result = await deps.deployMesh(
+            componentPath,
+            deps.commandManager,
+            deps.logger,
+            deps.onProgress,
+        );
         return result.success
             ? { ok: true, outcome: meshOutcome(entry, result.data) }
             : { ok: false, error: result.error || 'Mesh deployment failed.' };
     }
     const owPackage = deriveOwPackage(entry.id);
-    const result = await deps.deployApp(componentPath, owPackage, deps.commandManager, deps.logger);
+    const result = await deps.deployApp(
+        componentPath,
+        owPackage,
+        deps.commandManager,
+        deps.logger,
+        deps.onProgress,
+    );
     return result.success
         ? { ok: true, outcome: integrationOutcome(entry, result.data) }
         : { ok: false, error: result.error || 'App deployment failed.' };

@@ -299,6 +299,54 @@ describe('addAppBuilderComponent partial-failure', () => {
         );
     });
 
+    // The deploy tails ALREADY report every step — buildMeshComponent,
+    // "Reading mesh configuration…", "Deploying…" — and the dep type has declared
+    // `onProgress` all along. The creation path passes one; dispatchDeploy called
+    // the tail with three arguments and dropped it, so a dashboard add showed one
+    // static title for 70 seconds while 42s of API subscribe, 21s of npm install
+    // and 9s of build went unreported (live, 2026-08-04). Reusing the tail means
+    // reusing its whole contract, not just its return value.
+    it('forwards progress from the MESH deploy tail to its caller', async () => {
+        const project = createProject();
+        const deps = createDeps();
+        const seen: string[] = [];
+
+        (deps.deployMesh as jest.Mock).mockImplementation(
+            async (_path, _cmd, _log, onProgress?: (m: string, s?: string) => void) => {
+                onProgress?.('Reading mesh configuration...', '');
+                onProgress?.('Deploying...', 'Validating configuration');
+                return { success: true, data: { endpoint: 'https://mesh/graphql' } };
+            },
+        );
+
+        await addAppBuilderComponent(project, MESH_ENTRY, {
+            ...deps,
+            onProgress: (m: string) => seen.push(m),
+        } as never);
+
+        expect(seen).toEqual(['Reading mesh configuration...', 'Deploying...']);
+    });
+
+    it('forwards progress from the INTEGRATION deploy tail too', async () => {
+        const project = createProject();
+        const deps = createDeps();
+        const seen: string[] = [];
+
+        (deps.deployApp as jest.Mock).mockImplementation(
+            async (_path, _pkg, _cmd, _log, onProgress?: (m: string, s?: string) => void) => {
+                onProgress?.('Building…');
+                return { success: true, data: { url: 'https://app/api' } };
+            },
+        );
+
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, {
+            ...deps,
+            onProgress: (m: string) => seen.push(m),
+        } as never);
+
+        expect(seen).toEqual(['Building…']);
+    });
+
     // BEHAVIOUR CHANGE (2026-08-04 consolidation): a redeploy used to REPLACE the
     // entry with a freshly built state, dropping every field the new state did not
     // mention. Routed through recordDeployOutcome it merges instead, so fields the

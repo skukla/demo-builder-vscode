@@ -59,6 +59,9 @@ describe('handleAddAppBuilderComponent', () => {
                 getCachedOrganization: expect.any(Function),
                 secrets: expect.anything(),
             }),
+            // The notification's reporter, so the deploy tail's steps reach the
+            // user instead of one static title for the whole add.
+            expect.any(Function),
         );
         expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(mockProject, ERP_ENTRY, expect.anything());
     });

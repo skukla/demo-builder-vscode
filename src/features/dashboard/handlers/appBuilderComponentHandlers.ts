@@ -249,7 +249,13 @@ export const handleAddAppBuilderComponent: MessageHandler<{
             }
 
             report('Adding integration…');
-            const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
+            // The deploy tails report every step; hand them the notification's
+            // reporter so a slow add narrates itself instead of sitting on one
+            // static title for the ~70s of subscribe + install + build + deploy.
+            const deps = buildDefaultRunnerDeps(
+                await buildRunnerDepsContext(context, project),
+                (message, subMessage) => report(subMessage ? `${message} ${subMessage}` : message),
+            );
             return addAppBuilderComponent(project, entry, deps);
         },
     );
@@ -426,7 +432,11 @@ async function deployById(context: HandlerContext, requestedId: string | undefin
             }
 
             report('Deploying…');
-            const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
+            // Same reuse as the add path: the deploy tail narrates its own steps.
+            const deps = buildDefaultRunnerDeps(
+                await buildRunnerDepsContext(context, project),
+                (message, subMessage) => report(subMessage ? `${message} ${subMessage}` : message),
+            );
             return deployAppBuilderComponent(project, id, deps);
         },
     );

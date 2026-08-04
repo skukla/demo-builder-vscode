@@ -53,8 +53,14 @@ export function subscriberTarget(project: MeshSubscribeTarget): OrgTarget {
 }
 
 /** Wire the runner's deps to the real deploy tails + subscriber + republish. */
-export function buildDefaultRunnerDeps(ctx: RunnerDepsContext): AppBuilderComponentRunnerDeps {
+export function buildDefaultRunnerDeps(
+    ctx: RunnerDepsContext,
+    onProgress?: (message: string, subMessage?: string) => void,
+): AppBuilderComponentRunnerDeps {
     return {
+        // Where the deploy tails' steps go. Callers with a progress notification
+        // pass their reporter; headless/MCP callers pass nothing.
+        onProgress,
         componentManager: ctx.componentManager,
         commandManager: ctx.commandManager,
         logger: ctx.logger,
