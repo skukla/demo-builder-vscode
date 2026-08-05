@@ -5,10 +5,19 @@ module.exports = {
   // Note: Heap size configured via package.json test script (--max-old-space-size=4096)
   cache: true,
   cacheDirectory: '<rootDir>/.jest-cache',
-  maxWorkers: '25%',
+  // 25% was set in 87db88e7 alongside the fix for OOM kills (exit 137). That commit's
+  // actual cure was replacing real setTimeout delays with fake timers; the worker cut
+  // was belt-and-braces on top. With the remaining real-timer sleeps now routed through
+  // core/utils/sleep and mocked in the suites that hit them, the pressure is lower again.
+  // Measured on 16 cores: 25% = 35s @ 1.8GB, 75% = 18s @ 4.0GB. On CI (ubuntu-latest,
+  // 4 cores / 16GB) 75% is 3 workers, ~1.2GB — cores bind there, never memory.
+  maxWorkers: '75%',
 
   // Memory management - recycle workers when they exceed 256MB
-  // Reduced from 512MB to prevent OOM issues during large test runs
+  // Reduced from 512MB to prevent OOM issues during large test runs.
+  // KEEP AT 256MB. Raising it back to 512MB measured only 1.7s faster but took peak
+  // RSS from 4.0GB to 6.8GB — reintroducing the exact exposure 87db88e7 closed, for
+  // a rounding error. The worker count above is the safe lever; this one is not.
   workerIdleMemoryLimit: '256MB',
 
   // Separate test environments for Node and React tests
