@@ -20,7 +20,7 @@
  * @module features/dashboard/ui/components/ManageApisModal
  */
 
-import { DialogContainer, Flex, Text } from '@adobe/react-spectrum';
+import { DialogContainer, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import { renderApiCatalogFeedback } from '@/core/ui/components/feedback/ApiCatalogFeedback';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
@@ -72,9 +72,11 @@ export interface ManageApisModalProps {
 }
 
 /**
- * Reserved height for the loading/error views so the modal does not resize when
- * the list lands. A plain px value: Spectrum's dimension tokens top out well
- * below this, and `size-3600` is not one of them.
+ * The ONE reserved height for this dialog's swappable region — the loading/error
+ * views AND the API list's scroll area. Every state renders at this height, so the
+ * dialog never resizes: not when the fetch lands, and not when a search term
+ * narrows the list to three rows. A plain px value: Spectrum's dimension tokens
+ * top out well below this, and `size-3600` is not one of them.
  */
 const FEEDBACK_HEIGHT = '320px';
 
@@ -129,12 +131,15 @@ function ManageApisBody({
         );
     }
 
+    // Same reserved height as the feedback views above, so loading → loaded →
+    // filtered → empty all render at ONE height and the dialog never resizes.
     return (
         <ApiAccessPicker
             apis={apis}
             selected={selected}
             onToggle={onToggle}
             helperText={HELPER_TEXT}
+            listHeight={FEEDBACK_HEIGHT}
         />
     );
 }
@@ -268,7 +273,12 @@ export function ManageApisModal({
                         },
                     ]}
                 >
-                    <Flex direction="column" gap="size-150">
+                    {/* A plain div, NOT Spectrum's Flex: Flex caps its width at
+                        ~450px (root CLAUDE.md gotcha), and inside a size-L dialog
+                        the API list is wider than that — so the body overflowed
+                        its own container and the modal grew a horizontal
+                        scrollbar. */}
+                    <div className="manage-apis-body">
                         <Text>
                             Manage Adobe API access for <strong>{componentName}</strong>.
                         </Text>
@@ -286,7 +296,7 @@ export function ManageApisModal({
                         {applyError && (
                             <Text UNSAFE_className="text-sm text-red-600">{applyError}</Text>
                         )}
-                    </Flex>
+                    </div>
                 </Modal>
             )}
         </DialogContainer>

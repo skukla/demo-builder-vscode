@@ -5013,6 +5013,19 @@ div[class*="spectrum"] input[type="search"] {
 .intflow-api-picker .search-header > div {
     margin-bottom: 6px !important;
 }
+/* Kill the HORIZONTAL half of `.search-header`'s `margin: -4px` bleed.
+   That negative margin pairs with `padding: 4px` to give the search field's focus
+   ring room without shifting layout — invisible on a full-page list, but it makes
+   the element's box 4px wider than its container on EACH side. Inside a modal
+   whose body sets `overflow-y: auto` (which computes overflow-x to auto), that
+   overhang is a real horizontal scroll region: the modal scrolled a few px
+   sideways under a two-finger swipe.
+   Only left/right are neutralised — the vertical bleed costs nothing, and the
+   4px padding stays so the focus ring is still unclipped. */
+.intflow-api-picker .search-header {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
 /* Left browse-column header + at-a-glance picks count (Selected has no mirror). */
 .intflow-api-browse-head {
     display: flex;
@@ -5583,3 +5596,29 @@ div[class*="spectrum"] input[type="search"] {
 }
 /* Count rides the bottom-right, out of the label's way. */
 } /* End of second @layer theme block */
+
+/* API picker: the ROW AREA as its own fixed scroll region (opt-in via the
+   picker's `listHeight`). The height comes from the prop — the surface decides
+   how much room it can reserve — so only the scroll behaviour lives here.
+
+   Why fixed rather than max-height: this list has a search box above it, and a
+   max-height still lets the container SHRINK when a query narrows 90 rows to 3,
+   which resized the host dialog on every keystroke. Same intent as
+   `.ai-capabilities-body` ("the modal frame never resizes"), tightened because
+   that list has no filter.
+
+   overflow-x is hidden deliberately: a long API name should wrap or clip, never
+   turn the region into a two-axis scroller. */
+.intflow-api-scroll {
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 8px; /* keep the scrollbar off the row labels */
+}
+/* The modal body owns its own column layout — a plain div, because Spectrum's
+   Flex caps width at ~450px and clipped the API list inside the L dialog. */
+.manage-apis-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0; /* a flex child defaults to min-width:auto and refuses to shrink */
+}
