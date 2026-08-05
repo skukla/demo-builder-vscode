@@ -41,7 +41,23 @@ for p in glob.glob('src/**/*.tsx', recursive=True):
 def kebab(name):
     return re.sub(r'(?<!^)(?=[A-Z])', '-', name).lower()
 
-owned = {kebab(n): (n, p) for n, p in components.items()}   # 'choice-card' -> (ChoiceCard, path)
+# OWNERSHIP IS PER CLASS, PROVEN BY USE — not inferred from the filename, and not
+# inherited across a prefix family. Two false-positive classes were measured on the
+# first run (2026-08-05, 3 real of 6):
+#   - `empty-state-text` looked like EmptyState's; EmptyState renders no such class.
+#   - `sidebar-action-tile` looked like Sidebar's; Sidebar renders only `sidebar-view`.
+#     Owning one class in a family does not mean owning the family.
+# A component owns EXACTLY the classes it renders whose names it prefixes. NO
+# sole-renderer condition: a first attempt required the component to be the only
+# renderer, which deleted both real findings — `choice-card-name` has three
+# renderers precisely BECAUSE it is being duplicated. A uniqueness test is defeated
+# by the very thing it is meant to detect.
+owned = {}
+for n, path in components.items():
+    pre = kebab(n)
+    for cls in set(re.findall(r'className="([a-z][a-z0-9-]+)"', open(path, errors='ignore').read())):
+        if cls.startswith(pre):
+            owned[cls] = (n, path)
 
 hits = []
 for f in changed:
@@ -49,13 +65,14 @@ for f in changed:
         continue
     body = open(f, errors='ignore').read()
     for cls in set(re.findall(r'className="([a-z][a-z0-9-]+)"', body)):
-        for prefix, (comp, path) in owned.items():
-            if cls == prefix or cls.startswith(prefix + '-'):
-                if os.path.abspath(path) == os.path.abspath(f):
-                    continue                      # the component's own file
-                if re.search(rf'\b{comp}\b', body):
-                    continue                      # already imports/uses it
-                hits.append((f, cls, comp, path))
+        if cls not in owned:
+            continue
+        comp, path = owned[cls]
+        if os.path.abspath(path) == os.path.abspath(f):
+            continue                              # the component's own file
+        if re.search(rf'\b{comp}\b', body):
+            continue                              # already imports/uses it
+        hits.append((f, cls, comp, path))
 if hits:
     print('[component-reuse] markup using a component\'s classes without using the component:')
     for f, cls, comp, path in sorted(set(hits)):
