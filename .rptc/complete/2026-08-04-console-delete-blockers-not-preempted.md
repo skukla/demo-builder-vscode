@@ -6,6 +6,37 @@
 cause, which is exactly the failure `consoleProjectTeardown.ts` exists to prevent.
 **Present in:** `consoleProjectTeardown.ts` as written.
 
+## ✅ CLOSED 2026-08-05 — explained rather than pre-empted
+
+**The proposed fix shape was not achievable, and the item's own severity line
+pointed at what was.** It asked to "add the two checks to that same gate". Neither
+check exists to add:
+
+- **App submitted for approval.** `@adobe/aio-lib-console` exposes no
+  app-submission status. The nearest methods are `getAtlasApplicationPolicy` and
+  `getApplicationExtensions`; the latter needs an `applicationId` this flow never
+  has, and neither reports Pending/Published.
+- **Shared Runtime package.** No SDK surface at all. It would take
+  `aio runtime package list` per workspace, using Runtime credentials teardown does
+  not hold (it carries S2S Console credentials, which are a different thing).
+
+Half-building two checks that silently answer "no" would be worse than none: the
+gate would read as covering all three blockers while covering one.
+
+So the fix targets the stated severity instead — *"an opaque Console 409 that does
+not name its cause"*. A failed project delete now appends both unpreemptable
+blockers and Adobe's own remedy for the published case, with the raw Console
+message preserved rather than replaced. The user gets a teardown that stopped for a
+STATED reason, which is what the module exists for.
+
+The module docstring now records that only one of three blockers is pre-emptable,
+so the next reader does not re-derive this.
+
+**Still not covered:** if either blocker is the real cause, the delete still fails.
+This makes the failure legible, not preventable. Should Adobe expose submission
+status on the Console SDK, the pre-flight gate is the right home for it and this
+item's original fix shape applies unchanged.
+
 ## The gap
 
 `consoleProjectTeardown.ts` deletes a Developer Console project after clearing the

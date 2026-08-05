@@ -342,5 +342,28 @@ describe('teardownConsoleProject failure handling', () => {
             expect(projectItem.outcome).toBe('failed');
             expect(projectItem.error).toContain('ERR_MSG_PROJECT_DELETE_FORBIDDEN');
         });
+
+        // Adobe documents THREE conditions that block a project delete; this
+        // teardown pre-empts one (event registrations + 3rd-party providers).
+        // The other two are not detectable from here — the Console SDK exposes
+        // no app-submission status, and the shared-package check would need
+        // Runtime credentials per workspace that this flow never holds. So the
+        // failure cannot be prevented, only explained: Console's 409 never names
+        // its cause, which is the whole reason this module exists.
+        it('names the blockers it could not pre-empt, and the remedy', async () => {
+            const harness = makeHarness();
+            harness.deps.deleteConsoleProject.mockRejectedValue(
+                new Error('409 ERR_MSG_PROJECT_DELETE_FORBIDDEN'),
+            );
+
+            const result = await teardownConsoleProject(harness.deps, TARGET);
+
+            const error = result.items[result.items.length - 1].error ?? '';
+            // The raw Console message survives — guidance is added, never swapped in.
+            expect(error).toContain('ERR_MSG_PROJECT_DELETE_FORBIDDEN');
+            expect(error).toMatch(/submitted for approval/i);
+            expect(error).toMatch(/revoke/i);
+            expect(error).toMatch(/shared package/i);
+        });
     });
 });

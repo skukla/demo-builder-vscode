@@ -16,6 +16,9 @@
  *   credential ⇒ no providers can exist).
  * - Collect-don't-throw per entity; abort BEFORE the project delete when any
  *   entity failed (pre-emptive — the Console 409 never names the blocker).
+ * - Of Adobe's THREE documented delete blockers only the event one is
+ *   pre-emptable from here; the other two are named in the failure message
+ *   instead (see UNPREEMPTED_DELETE_BLOCKERS).
  * - `shouldClearConsoleSelection` signals the HANDLER to clear the aio
  *   console selection; this module never touches local state itself.
  *
@@ -201,6 +204,36 @@ function skipAllWorkspaces(items: TeardownItem[], workspaces: ConsoleWorkspace[]
     }
 }
 
+/**
+ * The delete blockers this teardown cannot pre-empt, appended to a failed
+ * project delete.
+ *
+ * Adobe documents three conditions that block a Console project delete. This
+ * module clears the first before deleting; the other two are not detectable from
+ * here — the Console SDK exposes no app-submission status (only
+ * `getApplicationExtensions`, which needs an applicationId this flow never has),
+ * and the shared-package check would need Runtime credentials per workspace that
+ * teardown does not hold.
+ *
+ * So they cannot be prevented, only explained. Console's 409 never names its
+ * cause, which is the failure mode this whole module exists to avoid; leaving the
+ * bare message would hand the user a teardown that stopped for no stated reason.
+ * The remedy for the published case is Adobe's own ("revoke a published app and
+ * then delete the Project").
+ *
+ * @see https://developer.adobe.com/developer-console/docs/guides/projects/
+ */
+const UNPREEMPTED_DELETE_BLOCKERS =
+    'Adobe does not say which condition blocked the delete. Two it could be, ' +
+    'neither of which this teardown can check for you: an App Builder app ' +
+    'submitted for approval (Pending or Published) — revoke the published app, ' +
+    'then retry; or a workspace whose Runtime namespace exposes a shared package.';
+
+/** The raw Console error, plus what it declines to tell you. */
+function explainDeleteFailure(error: unknown): string {
+    return `${errorMessage(error)} — ${UNPREEMPTED_DELETE_BLOCKERS}`;
+}
+
 /** Step 4: delete the Console project (only reached with zero failed items). */
 async function deleteProject(
     deps: TeardownDeps,
@@ -222,7 +255,7 @@ async function deleteProject(
             id: target.projectId,
             label: target.projectTitle,
             outcome: 'failed',
-            error: errorMessage(error),
+            error: explainDeleteFailure(error),
         });
         return buildResult(items, false);
     }
