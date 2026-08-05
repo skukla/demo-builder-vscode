@@ -13,10 +13,7 @@ export type MessageType =
     | 'ready'
     | 'cancel'
     | 'cancel-project-creation'
-    | 'cancel-mesh-creation'
-    | 'cancel-auth-polling'
     | 'openProject'
-    | 'browseFiles'
     | 'log'
 
     // Prerequisites messages

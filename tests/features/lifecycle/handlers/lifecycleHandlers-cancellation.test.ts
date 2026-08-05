@@ -5,14 +5,11 @@
  * - handleCancel: User cancels wizard
  * - handleCancelProjectCreation: Cancels project creation
  * - handleCancelMeshCreation: Cancels mesh creation
- * - handleCancelAuthPolling: Cancels authentication
  */
 
 import {
     handleCancel,
     handleCancelProjectCreation,
-    handleCancelMeshCreation,
-    handleCancelAuthPolling
 } from '@/features/lifecycle/handlers/lifecycleHandlers';
 import { HandlerContext as _HandlerContext } from '@/commands/handlers/HandlerContext';
 import { createMockContext } from './lifecycleHandlers.testUtils';
@@ -103,52 +100,7 @@ describe('lifecycleHandlers - Cancellation', () => {
         });
     });
 
-    describe('handleCancelMeshCreation', () => {
-        it('should acknowledge mesh creation cancellation', async () => {
-            const result = await handleCancelMeshCreation(mockContext);
 
-            expect(result.success).toBe(true);
-            expect(result.data!.cancelled).toBe(true);
-            expect(mockContext.logger.debug).toHaveBeenCalledWith(
-                '[API Mesh] User cancelled mesh creation'
-            );
-        });
-
-        it('should handle errors during cancellation', async () => {
-            // Force an error by making logger throw
-            mockContext.logger.debug = jest.fn().mockImplementation(() => {
-                throw new Error('Logger failed');
-            });
-
-            const result = await handleCancelMeshCreation(mockContext);
-
-            expect(result.success).toBe(false);
-            expect(result.error).toBe('Logger failed');
-        });
-    });
-
-    describe('handleCancelAuthPolling', () => {
-        it('should cancel authentication polling', async () => {
-            mockContext.sharedState.isAuthenticating = true;
-
-            const result = await handleCancelAuthPolling(mockContext);
-
-            expect(result.success).toBe(true);
-            expect(mockContext.sharedState.isAuthenticating).toBe(false);
-            expect(mockContext.logger.debug).toHaveBeenCalledWith(
-                '[Auth] Cancelled authentication request'
-            );
-        });
-
-        it('should work even if not currently authenticating', async () => {
-            mockContext.sharedState.isAuthenticating = false;
-
-            const result = await handleCancelAuthPolling(mockContext);
-
-            expect(result.success).toBe(true);
-            expect(mockContext.sharedState.isAuthenticating).toBe(false);
-        });
-    });
 
     describe('Integration Scenarios', () => {
         it('should handle wizard cancellation at any point', async () => {

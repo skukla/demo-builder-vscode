@@ -126,8 +126,6 @@ export {
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
     handleStoreDaLiveToken,
-    handleVerifyDaLiveOrg,
-    handleValidateAccsCredentials,
     handleDiscoverStoreStructure,
 } from './handlers';
 

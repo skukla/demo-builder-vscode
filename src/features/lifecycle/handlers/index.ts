@@ -13,11 +13,7 @@ export {
     handleReady,
     handleCancel,
     handleCancelProjectCreation,
-    handleCancelMeshCreation,
-    handleCancelAuthPolling,
     handleOpenProject,
-    handleBrowseFiles,
     handleLog,
-    handleOpenAdobeConsole,
     handleOpenExternal,
 } from './lifecycleHandlers';

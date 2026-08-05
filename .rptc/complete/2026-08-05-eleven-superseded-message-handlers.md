@@ -7,6 +7,33 @@ after four such loops shipped undetected the same day.
 **Present in:** `lifecycleHandlers.ts`, `edsHandlers.ts`, `configureHandlers.ts`,
 `aiHandlers.ts`, plus `ProjectCreationHandlerRegistry.ts` and `types/messages.ts`.
 
+## ✅ SHIPPED 2026-08-05
+
+All eleven removed. Every key re-verified against the four origins first.
+
+**`inspect-mcp` was the caveat, and it resolved as dead — with a twist.**
+`ai/README.md` stated the AI surface's "Refresh" action calls it. There is no
+Refresh action in `AiOverviewScreen`; the whole aiSurface tree sends only `cancel`,
+`copyAiPrompt`, `openInClaude` and `delete-ai-prompt`. The doc was asserting a
+caller that does not exist — exactly why the item said to check this one by hand
+rather than by grep. Both that line and `features/CLAUDE.md`'s "8 handlers" are
+corrected.
+
+**Cascade, as predicted.** `edsDaLiveOrgHandlers.ts` lost every export and went
+with its test file, taking an empty `export {} from` block in `edsDaLiveHandlers.ts`
+with it. Orphaned behind the handlers: `inspectAllServers`/`TIMEOUTS`/
+`validateProjectPath`/`VerifyGitHubRepoPayload`/`ValidateAccsCredentialsPayload`
+imports, plus `securityValidation`, `mockVSCode` and a `vscode` import left unused
+in the lifecycle tests. Net −1500 lines across 23 files.
+
+**Cascade that did NOT happen, checked rather than assumed:** `mcpInspector`
+survives. `clearMcpCache` still serves `aiHandlers` and `inspectAllServers` backs
+`aiSetupVerifier`, which powers the live `verify-ai-setup`.
+
+Five handler-map COUNT assertions moved rather than being deleted (eds 20→15,
+lifecycle 10→6, configure 6→5, ai 8→7, openAi streaming 4→3), each with the reason
+inline so the number is not later mistaken for drift.
+
 ## The finding
 
 Eleven message types are registered in handler maps that nothing sends. Verified

@@ -9,9 +9,9 @@
  * it depends on private notification/deployment methods. Same mixed pattern
  * as the Wizard (simple handlers in map, complex middleware inline).
  *
- * AI-related handlers (`verify-ai-setup`, `inspect-mcp`,
- * `regenerate-ai-files`, `openInClaude`) now live in `aiHandlers.ts` and are
- * routed by the standalone AI surface.
+ * AI-related handlers (`verify-ai-setup`, `regenerate-ai-files`,
+ * `openInClaude`) now live in `aiHandlers.ts` and are routed by the standalone
+ * AI surface.
  *
  * @module features/dashboard/handlers/configureHandlers
  */
@@ -20,7 +20,6 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { validateURL } from '@/core/validation';
-import { handleCreateWorkspaceCredential } from '@/features/authentication';
 import { handleDiscoverStoreStructure } from '@/features/eds';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 import { parseJSON } from '@/types/typeGuards';
@@ -94,5 +93,4 @@ export const configureHandlers = defineHandlers({
     'openExternal': handleOpenExternal,
     'open-eds-settings': handleOpenEdsSettings,
     'discover-store-structure': handleDiscoverStoreStructure,
-    'create-workspace-credential': handleCreateWorkspaceCredential,
 });

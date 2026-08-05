@@ -29,7 +29,6 @@ describe('edsHandlers', () => {
             expect(hasHandler(edsHandlers, 'github-oauth')).toBe(true);
             expect(hasHandler(edsHandlers, 'github-change-account')).toBe(true);
             expect(hasHandler(edsHandlers, 'get-github-repos')).toBe(true);
-            expect(hasHandler(edsHandlers, 'verify-github-repo')).toBe(true);
         });
 
         it('should include DA.live handlers', () => {
@@ -41,16 +40,12 @@ describe('edsHandlers', () => {
             expect(hasHandler(edsHandlers, 'store-dalive-token')).toBe(true);
             expect(hasHandler(edsHandlers, 'store-dalive-token-with-org')).toBe(true);
             expect(hasHandler(edsHandlers, 'clear-dalive-auth')).toBe(true);
-            expect(hasHandler(edsHandlers, 'get-dalive-sites')).toBe(true);
-            expect(hasHandler(edsHandlers, 'verify-dalive-org')).toBe(true);
-            expect(hasHandler(edsHandlers, 'list-dalive-orgs')).toBe(true);
         });
 
         it('should include ACCS handlers', () => {
             // Given: edsHandlers object
             // When: Checking for ACCS message types
             // Then: ACCS handlers present
-            expect(hasHandler(edsHandlers, 'validate-accs-credentials')).toBe(true);
             expect(hasHandler(edsHandlers, 'discover-store-structure')).toBe(true);
         });
 
@@ -77,7 +72,8 @@ describe('edsHandlers', () => {
 
             // Then: Exactly 20 handlers (6 GitHub + 8 DA.live + 2 ACCS/Store +
             // 3 Storefront Setup + 1 refresh-block-library)
-            expect(types).toHaveLength(20);
+            // 20 → 15: five superseded handlers removed 2026-08-05 (nothing sent them).
+            expect(types).toHaveLength(15);
         });
 
         it('should have handlers as functions', () => {

@@ -17,7 +17,6 @@ import * as vscode from 'vscode';
 import { sanitizeErrorForLogging } from '@/core/validation';
 import {
     clearMcpCache,
-    inspectAllServers,
     verifyAiSetup,
     type AiVerificationResult,
 } from '@/features/ai';
@@ -108,34 +107,6 @@ export function logAiVerification(context: HandlerContext, result: AiVerificatio
     );
 }
 
-/**
- * Handle inspect-mcp — force refresh of MCP inventory by clearing the
- * mcpInspector cache then re-running `inspectAllServers`.
- *
- * Payload `{ serverId? }`:
- *   - When `serverId` is provided, only that entry is cleared and re-fetched.
- *     Other cached entries return immediately (saves spawning every server).
- *   - When omitted, every cached entry is cleared and all servers are
- *     re-inspected.
- *
- * Reads `projectPath` from `stateManager` (server-side) and ignores any
- * webview-supplied paths to prevent path-injection.
- */
-export async function handleInspectMcp(
-    context: HandlerContext,
-    payload?: { serverId?: string },
-): Promise<HandlerResponse> {
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
-    // Treat empty-string serverId as "clear all" — a webview form field that
-    // submits an empty value should not silently degrade to a no-op cache delete.
-    const serverId = payload?.serverId ? payload.serverId : undefined;
-    clearMcpCache(serverId);
-    const mcps = await inspectAllServers(project.path);
-    return { success: true, mcps };
-}
 
 /**
  * Handle openInClaude — dispatch Claude Code with optional prompt pre-fill.
@@ -517,7 +488,6 @@ export async function handleCopyAiPrompt(
 
 export const aiHandlers = defineHandlers({
     'verify-ai-setup': handleVerifyAiSetup,
-    'inspect-mcp': handleInspectMcp,
     'regenerate-ai-files': handleRegenerateAiFiles,
     openInClaude: handleOpenInClaude,
     'save-ai-prompt': handleSaveAiPrompt,

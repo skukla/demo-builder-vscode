@@ -15,8 +15,8 @@
  * timeouts and errors are retried on the next call.
  *
  * The cache key is the server id (the key in `mcpServers`). Config changes
- * (command, args, env) require an explicit `clearMcpCache(id)` from the
- * `inspect-mcp` handler — there is no automatic config-change invalidation;
+ * (command, args, env) require an explicit `clearMcpCache(id)` from a caller —
+ * there is no automatic config-change invalidation;
  * the 5-minute TTL keeps the staleness window short.
  *
  * Pure stdlib + SDK + cache utils — no VS Code coupling.
@@ -90,8 +90,8 @@ const cache: Map<string, CacheEntry<McpInventoryEntry>> = new Map();
 
 /**
  * Clear cached inspection results. With no argument, clears every entry.
- * With a `serverId`, clears that single entry — useful when the `inspect-mcp`
- * handler wants to force a refresh for one server without disturbing others.
+ * With a `serverId`, clears that single entry — a caller can force a refresh for
+ * one server without disturbing the others.
  */
 export function clearMcpCache(serverId?: string): void {
     if (serverId === undefined) {

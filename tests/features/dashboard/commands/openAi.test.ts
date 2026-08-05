@@ -38,7 +38,6 @@ jest.mock('@/core/logging', () => ({
 jest.mock('@/features/dashboard/handlers/aiHandlers', () => ({
     aiHandlers: {
         'verify-ai-setup': jest.fn(),
-        'inspect-mcp': jest.fn(),
         'regenerate-ai-files': jest.fn(),
         'openInClaude': jest.fn(),
     },
@@ -181,12 +180,13 @@ describe('ShowAiCommand', () => {
             expect(calledTypes).toEqual(
                 expect.arrayContaining([
                     'verify-ai-setup',
-                    'inspect-mcp',
                     'regenerate-ai-files',
                     'openInClaude',
                 ]),
             );
-            expect(calledTypes).toHaveLength(4);
+            // 4 → 3: inspect-mcp removed 2026-08-05. It was registered but
+            // unreachable — the AI surface has no Refresh action to send it.
+            expect(calledTypes).toHaveLength(3);
         });
 
         it('registers a cancel handler (footer Close) that disposes the panel', async () => {

@@ -5,8 +5,6 @@
  * - ready: Initial wizard ready event
  * - cancel: User cancels wizard
  * - cancel-project-creation: User cancels project creation
- * - cancel-mesh-creation: User cancels mesh creation
- * - cancel-auth-polling: User cancels authentication
  */
 
 import * as fsPromises from 'fs/promises';
@@ -15,7 +13,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { openUrl } from '@/core/utils/browserUtils';
-import { validateProjectPath, validateURL } from '@/core/validation';
+import { validateURL } from '@/core/validation';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers } from '@/types/handlers';
 import { SimpleResult, DataResult } from '@/types/results';
@@ -68,42 +66,7 @@ export async function handleCancelProjectCreation(
     return { success: false, data: { message: 'No active project creation to cancel' }, code: ErrorCode.PROJECT_NOT_FOUND };
 }
 
-/**
- * cancel-mesh-creation - User cancels mesh creation
- *
- * Acknowledges mesh creation cancellation.
- * (Actual cancellation logic handled by mesh creation handler)
- */
-export async function handleCancelMeshCreation(
-    context: HandlerContext,
-): Promise<DataResult<{ cancelled: boolean }>> {
-    try {
-        context.logger.debug('[API Mesh] User cancelled mesh creation');
-        // Set cancellation flag if needed (for future implementation)
-        // For now, just acknowledge the cancellation
-        return { success: true, data: { cancelled: true } };
-    } catch (error) {
-        context.logger.error('[API Mesh] Cancel failed', error as Error);
-        return {
-            success: false,
-            error: toError(error).message,
-            code: ErrorCode.UNKNOWN,
-        };
-    }
-}
 
-/**
- * cancel-auth-polling - User cancels authentication
- *
- * Cancels the Adobe authentication polling process.
- * (Polling is now handled internally by authManager.login())
- */
-export async function handleCancelAuthPolling(context: HandlerContext): Promise<SimpleResult> {
-    // Polling is now handled internally by authManager.login()
-    context.sharedState.isAuthenticating = false;
-    context.logger.debug('[Auth] Cancelled authentication request');
-    return { success: true };
-}
 
 /**
  * openProject - Returns to the projects list after wizard completion
@@ -150,42 +113,6 @@ export async function handleOpenProject(context: HandlerContext): Promise<Simple
     return { success: true };
 }
 
-/**
- * browseFiles - Opens project directory in VS Code Explorer
- *
- * Reveals the project folder in the VS Code file explorer.
- */
-export async function handleBrowseFiles(
-    context: HandlerContext,
-    payload: { projectPath: string },
-): Promise<SimpleResult> {
-
-
-    try {
-        const projectPath = payload.projectPath;
-        if (projectPath) {
-            // SECURITY: Validate path to prevent directory traversal
-            try {
-                validateProjectPath(projectPath);
-            } catch (validationError) {
-                context.logger.error('[Project Creation] Invalid project path', validationError as Error);
-                return {
-                    success: false,
-                    error: `Access denied: ${toError(validationError).message}`,
-                    code: ErrorCode.CONFIG_INVALID,
-                };
-            }
-
-            await vscode.commands.executeCommand('workbench.view.explorer');
-            await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(projectPath));
-            context.logger.debug('[Project Creation] Opened project in Explorer');
-        }
-        return { success: true };
-    } catch (error) {
-        context.logger.error('[Project Creation] Failed to open Explorer', error as Error);
-        return { success: false, error: 'Failed to open file browser', code: ErrorCode.UNKNOWN };
-    }
-}
 
 /**
  * log - Handles logging messages from webview
@@ -213,51 +140,6 @@ export async function handleLog(
     return { success: true };
 }
 
-/**
- * openAdobeConsole - Opens Adobe Developer Console in browser
- *
- * Opens the Adobe Developer Console with optional direct links to
- * specific workspace, project, or organization.
- *
- * SECURITY: Validates all constructed URLs to prevent open redirect attacks
- * even though the base URL is hardcoded.
- */
-export async function handleOpenAdobeConsole(
-    context: HandlerContext,
-    payload?: { orgId?: string; projectId?: string; workspaceId?: string },
-): Promise<SimpleResult> {
-
-
-    try {
-        let consoleUrl = 'https://developer.adobe.com/console';
-
-        // Construct direct link to workspace if IDs are provided
-        if (payload?.orgId && payload?.projectId && payload?.workspaceId) {
-            consoleUrl = `https://developer.adobe.com/console/projects/${payload.orgId}/${payload.projectId}/workspaces/${payload.workspaceId}/details`;
-            context.logger.debug('[Adobe Console] Opening workspace-specific URL');
-        } else if (payload?.orgId && payload?.projectId) {
-            consoleUrl = `https://developer.adobe.com/console/projects/${payload.orgId}/${payload.projectId}/overview`;
-            context.logger.debug('[Adobe Console] Opening project-specific URL');
-        } else {
-            context.logger.debug('[Adobe Console] Opening generic console URL');
-        }
-
-        // SECURITY: Validate URL before opening in browser
-        // This provides defense-in-depth even though base URL is hardcoded
-        try {
-            validateURL(consoleUrl);
-        } catch (validationError) {
-            context.logger.error('[Adobe Console] URL validation failed', validationError as Error);
-            return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
-        }
-
-        await vscode.env.openExternal(vscode.Uri.parse(consoleUrl));
-        return { success: true };
-    } catch (error) {
-        context.logger.error('[Adobe Console] Failed to open URL', error as Error);
-        return { success: false, error: 'Failed to open Adobe Console', code: ErrorCode.UNKNOWN };
-    }
-}
 
 // Re-export for the sidebar Logs utility, which toggles the panel via this function
 export { toggleLogsPanel } from '../services/lifecycleService';
@@ -345,15 +227,11 @@ export const lifecycleHandlers = defineHandlers({
 
     // Cancellation handlers
     'cancel-project-creation': handleCancelProjectCreation,
-    'cancel-mesh-creation': handleCancelMeshCreation,
-    'cancel-auth-polling': handleCancelAuthPolling,
 
     // Project actions
     'openProject': handleOpenProject,
-    'browseFiles': handleBrowseFiles,
 
     // Utilities
     'log': handleLog,
-    'open-adobe-console': handleOpenAdobeConsole,
     'openExternal': handleOpenExternal,
 });

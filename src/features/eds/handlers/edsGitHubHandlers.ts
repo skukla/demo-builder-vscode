@@ -26,10 +26,6 @@ import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 /**
  * Payload for handleVerifyGitHubRepo
  */
-interface VerifyGitHubRepoPayload {
-    repoFullName: string;
-}
-
 // ==========================================================
 // Handlers
 // ==========================================================
@@ -353,69 +349,6 @@ export async function handleGetGitHubRepos(
     }
 }
 
-/**
- * Verify GitHub repository access
- *
- * Checks if user has write access to an existing repository.
- *
- * @param context - Handler context with logging and messaging
- * @param payload - Contains repository name to verify
- * @returns Success with verification status
- */
-export async function handleVerifyGitHubRepo(
-    context: HandlerContext,
-    payload?: VerifyGitHubRepoPayload,
-): Promise<HandlerResponse> {
-    const { repoFullName } = payload || {};
-
-    if (!repoFullName) {
-        context.logger.error('[EDS] handleVerifyGitHubRepo missing repoFullName');
-        await context.sendMessage('github-repo-verified', {
-            verified: false,
-            repoFullName: '',
-            error: 'Repository name required',
-        });
-        return { success: false, error: 'Repository name required' };
-    }
-
-    // Parse owner/repo format
-    const parts = repoFullName.split('/');
-    if (parts.length !== 2) {
-        context.logger.error('[EDS] Invalid repository format:', repoFullName);
-        await context.sendMessage('github-repo-verified', {
-            verified: false,
-            repoFullName,
-            error: 'Invalid format. Use owner/repository',
-        });
-        return { success: false, error: 'Invalid format. Use owner/repository' };
-    }
-
-    const [owner, repo] = parts;
-
-    try {
-        context.logger.debug('[EDS] Verifying GitHub repo access:', repoFullName);
-        const { repoOperations } = getGitHubServices(context);
-
-        const result = await repoOperations.checkRepositoryAccess(owner, repo);
-
-        context.logger.debug('[EDS] GitHub repo verification result:', result);
-        await context.sendMessage('github-repo-verified', {
-            verified: result.hasAccess,
-            repoFullName,
-            error: result.error,
-        });
-
-        return { success: true };
-    } catch (error) {
-        context.logger.error('[EDS] Error verifying GitHub repo:', error as Error);
-        await context.sendMessage('github-repo-verified', {
-            verified: false,
-            repoFullName,
-            error: (error as Error).message,
-        });
-        return { success: false, error: (error as Error).message };
-    }
-}
 
 // ==========================================================
 // GitHub Repository Creation Handler

@@ -35,12 +35,8 @@ export const projectCreationHandlers = defineHandlers({
     ready: lifecycle.handleReady,
     cancel: lifecycle.handleCancel,
     openProject: lifecycle.handleOpenProject,
-    browseFiles: lifecycle.handleBrowseFiles,
     log: lifecycle.handleLog,
     'cancel-project-creation': lifecycle.handleCancelProjectCreation,
-    'cancel-mesh-creation': lifecycle.handleCancelMeshCreation,
-    'cancel-auth-polling': lifecycle.handleCancelAuthPolling,
-    'open-adobe-console': lifecycle.handleOpenAdobeConsole,
     openExternal: lifecycle.handleOpenExternal,
 
     // Prerequisite handlers
@@ -66,8 +62,6 @@ export const projectCreationHandlers = defineHandlers({
     'check-project-apis': authentication.handleCheckProjectApis,
 
     // Workspace handlers
-    'create-workspace-credential': authentication.handleCreateWorkspaceCredential,
-
     // Mesh handlers
     'check-api-mesh': meshHandlers['check-api-mesh'],
     'delete-api-mesh': meshHandlers['delete-api-mesh'],
@@ -80,21 +74,13 @@ export const projectCreationHandlers = defineHandlers({
     'github-oauth': eds.handleGitHubOAuth,
     'github-change-account': eds.handleGitHubChangeAccount,
     'get-github-repos': eds.handleGetGitHubRepos,
-    'verify-github-repo': eds.handleVerifyGitHubRepo,
-
     // EDS handlers - DA.live
     'check-dalive-auth': eds.handleCheckDaLiveAuth,
     'open-dalive-login': eds.handleOpenDaLiveLogin,
     'store-dalive-token': eds.handleStoreDaLiveToken,
     'store-dalive-token-with-org': eds.handleStoreDaLiveTokenWithOrg,
     'clear-dalive-auth': eds.handleClearDaLiveAuth,
-    'get-dalive-sites': eds.handleGetDaLiveSites,
-    'verify-dalive-org': eds.handleVerifyDaLiveOrg,
-    'list-dalive-orgs': eds.handleListDaLiveOrgs,
-
     // EDS handlers - ACCS
-    'validate-accs-credentials': eds.handleValidateAccsCredentials,
-
     // EDS handlers - Store Discovery
     'discover-store-structure': eds.handleDiscoverStoreStructure,
 

@@ -4,7 +4,6 @@
  * Message handlers for DA.live (Dark Alley) related EDS operations.
  *
  * This module re-exports handlers from domain-specific files:
- * - `edsDaLiveOrgHandlers.ts` - Organization and site operations
  * - `edsDaLiveAuthHandlers.ts` - Authentication operations
  *
  * Handlers:
@@ -20,12 +19,6 @@
  * @module features/eds/handlers/edsDaLiveHandlers
  */
 
-// Re-export all DA.live org handlers
-export {
-    handleVerifyDaLiveOrg,
-    handleGetDaLiveSites,
-    handleListDaLiveOrgs,
-} from './edsDaLiveOrgHandlers';
 // hasWriteAccess moved to the service layer (daLiveOrgOperations) as
 // part of the AEM Assets first-time-user fix. Re-export removed; no
 // external consumer was importing it via this barrel — direct importers

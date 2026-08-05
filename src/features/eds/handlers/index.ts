@@ -8,19 +8,15 @@
 export { edsHandlers } from './edsHandlers';
 
 // Export individual handlers
-export { handleValidateAccsCredentials, handleDiscoverStoreStructure } from './edsHandlers';
+export { handleDiscoverStoreStructure } from './edsHandlers';
 export {
     handleCheckGitHubAuth,
     handleGitHubOAuth,
     handleGitHubChangeAccount,
     handleGetGitHubRepos,
-    handleVerifyGitHubRepo,
     handleCreateGitHubRepo,
 } from './edsGitHubHandlers';
 export {
-    handleVerifyDaLiveOrg,
-    handleGetDaLiveSites,
-    handleListDaLiveOrgs,
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
     handleStoreDaLiveToken,

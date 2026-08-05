@@ -122,12 +122,12 @@ describe('configureHandlers', () => {
             expect(hasHandler(configureHandlers, 'openExternal')).toBe(true);
             expect(hasHandler(configureHandlers, 'open-eds-settings')).toBe(true);
             expect(hasHandler(configureHandlers, 'discover-store-structure')).toBe(true);
-            expect(hasHandler(configureHandlers, 'create-workspace-credential')).toBe(true);
         });
 
         it('should have exactly 6 handlers', () => {
             const types = getRegisteredTypes(configureHandlers);
-            expect(types).toHaveLength(6);
+            // 6 → 5: create-workspace-credential removed 2026-08-05 (nothing sent it).
+            expect(types).toHaveLength(5);
         });
 
         it('should NOT include AI handlers (they live in aiHandlers.ts)', () => {

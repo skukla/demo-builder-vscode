@@ -41,7 +41,6 @@ export { handleDeleteAdobeProject } from './handlers/deleteAdobeProjectHandler';
 export {
     handleGetWorkspaces,
     handleSelectWorkspace,
-    handleCreateWorkspaceCredential,
     handleCreateAdobeWorkspace,
 } from './handlers/workspaceHandlers';
 

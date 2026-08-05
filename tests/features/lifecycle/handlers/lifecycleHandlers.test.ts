@@ -35,8 +35,6 @@ describe('lifecycleHandlers', () => {
             // When: Checking for cancellation message types
             // Then: Cancellation handlers present
             expect(hasHandler(lifecycleHandlers, 'cancel-project-creation')).toBe(true);
-            expect(hasHandler(lifecycleHandlers, 'cancel-mesh-creation')).toBe(true);
-            expect(hasHandler(lifecycleHandlers, 'cancel-auth-polling')).toBe(true);
         });
 
         it('should include project action handlers', () => {
@@ -44,7 +42,6 @@ describe('lifecycleHandlers', () => {
             // When: Checking for project action message types
             // Then: Project action handlers present
             expect(hasHandler(lifecycleHandlers, 'openProject')).toBe(true);
-            expect(hasHandler(lifecycleHandlers, 'browseFiles')).toBe(true);
         });
 
         it('should include utility handlers', () => {
@@ -52,7 +49,6 @@ describe('lifecycleHandlers', () => {
             // When: Checking for utility message types
             // Then: Utility handlers present
             expect(hasHandler(lifecycleHandlers, 'log')).toBe(true);
-            expect(hasHandler(lifecycleHandlers, 'open-adobe-console')).toBe(true);
             expect(hasHandler(lifecycleHandlers, 'openExternal')).toBe(true);
         });
 
@@ -63,7 +59,8 @@ describe('lifecycleHandlers', () => {
 
             // Then: Exactly 10 handlers
             // (show-logs removed — the Logs toggle moved to the sidebar utility)
-            expect(types).toHaveLength(10);
+            // 10 → 6: four superseded handlers removed 2026-08-05 (nothing sent them).
+            expect(types).toHaveLength(6);
         });
 
         it('should have handlers as functions', () => {

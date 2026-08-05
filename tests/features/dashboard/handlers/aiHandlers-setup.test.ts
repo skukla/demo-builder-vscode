@@ -1,14 +1,13 @@
 /**
  * aiHandlers Tests — Setup & verification
  *
- * Handler registration, handleVerifyAiSetup, handleInspectMcp, and
+ * Handler registration, handleVerifyAiSetup, and
  * handleRegenerateAiFiles. Shared setup lives in aiHandlers.testUtils.ts.
  */
 
 import {
     aiHandlers,
     handleVerifyAiSetup,
-    handleInspectMcp,
     handleRegenerateAiFiles,
     handleOpenInClaude,
     handleSaveAiPrompt,
@@ -18,7 +17,6 @@ import {
     hasHandler,
     getRegisteredTypes,
     clearMcpCache,
-    inspectAllServers,
     verifyAiSetup,
     generateAIContextFiles,
     installAiDefaultsMcpTools,
@@ -56,16 +54,16 @@ describe('aiHandlers — setup & verification', () => {
 
         it('should have exactly 8 handlers', () => {
             const types = getRegisteredTypes(aiHandlers);
-            expect(types).toHaveLength(8);
+            // 8 → 7: inspect-mcp removed 2026-08-05. The AI surface's documented
+            // "Refresh" action that supposedly sent it does not exist in
+            // AiOverviewScreen; the README claiming otherwise was stale.
+            expect(types).toHaveLength(7);
         });
 
         it('should include verify-ai-setup', () => {
             expect(hasHandler(aiHandlers, 'verify-ai-setup')).toBe(true);
         });
 
-        it('should include inspect-mcp', () => {
-            expect(hasHandler(aiHandlers, 'inspect-mcp')).toBe(true);
-        });
 
         it('should include regenerate-ai-files', () => {
             expect(hasHandler(aiHandlers, 'regenerate-ai-files')).toBe(true);
@@ -100,7 +98,6 @@ describe('aiHandlers — setup & verification', () => {
 
         it('map references the exported handler functions', () => {
             expect(aiHandlers['verify-ai-setup']).toBe(handleVerifyAiSetup);
-            expect(aiHandlers['inspect-mcp']).toBe(handleInspectMcp);
             expect(aiHandlers['regenerate-ai-files']).toBe(handleRegenerateAiFiles);
             expect(aiHandlers['openInClaude']).toBe(handleOpenInClaude);
             expect(aiHandlers['save-ai-prompt']).toBe(handleSaveAiPrompt);
@@ -269,86 +266,6 @@ describe('aiHandlers — setup & verification', () => {
         });
     });
 
-    describe('handleInspectMcp', () => {
-        beforeEach(() => {
-            (clearMcpCache as jest.Mock).mockClear();
-            (inspectAllServers as jest.Mock).mockClear().mockResolvedValue([]);
-        });
-
-        it('clears the full cache and re-inspects when no serverId is provided', async () => {
-            (inspectAllServers as jest.Mock).mockResolvedValueOnce([
-                { id: 'demo-builder', status: 'ok', tools: [{ name: 't', description: 'd' }] },
-            ]);
-            const mockProject = { name: 'p', path: '/projects/p', stack: 'paas' };
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(mockProject),
-                } as unknown as HandlerContext['stateManager'],
-            });
-
-            const result = await handleInspectMcp(context);
-
-            expect(clearMcpCache).toHaveBeenCalledWith(undefined);
-            expect(inspectAllServers).toHaveBeenCalledWith('/projects/p');
-            expect(result).toMatchObject({
-                success: true,
-                mcps: [{ id: 'demo-builder', status: 'ok' }],
-            });
-        });
-
-        it('treats an empty-string serverId as "clear all"', async () => {
-            const mockProject = { name: 'p', path: '/projects/p', stack: 'paas' };
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(mockProject),
-                } as unknown as HandlerContext['stateManager'],
-            });
-
-            await handleInspectMcp(context, { serverId: '' });
-
-            expect(clearMcpCache).toHaveBeenCalledWith(undefined);
-        });
-
-        it('clears a single serverId when provided in the payload', async () => {
-            const mockProject = { name: 'p', path: '/projects/p', stack: 'paas' };
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(mockProject),
-                } as unknown as HandlerContext['stateManager'],
-            });
-
-            await handleInspectMcp(context, { serverId: 'demo-builder' });
-
-            expect(clearMcpCache).toHaveBeenCalledWith('demo-builder');
-        });
-
-        it('uses server-side project.path (ignores any path the webview might supply)', async () => {
-            const mockProject = { name: 'p', path: '/safe/path', stack: 'paas' };
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(mockProject),
-                } as unknown as HandlerContext['stateManager'],
-            });
-
-            await handleInspectMcp(context);
-
-            expect(inspectAllServers).toHaveBeenCalledWith('/safe/path');
-        });
-
-        it('returns project-not-found error when no current project is loaded', async () => {
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(null),
-                } as unknown as HandlerContext['stateManager'],
-            });
-
-            const result = await handleInspectMcp(context);
-
-            expect(clearMcpCache).not.toHaveBeenCalled();
-            expect(inspectAllServers).not.toHaveBeenCalled();
-            expect(result).toMatchObject({ success: false });
-        });
-    });
 
     describe('handleRegenerateAiFiles', () => {
         it('calls generateAIContextFiles using server-side project.path (ignores payload)', async () => {
