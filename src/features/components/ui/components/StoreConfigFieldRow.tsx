@@ -8,7 +8,7 @@
  * - Store/view code fields: skipped (rendered by StoreSelectionRow)
  * - Other fields: standard renderer
  *
- * Shared by ComponentConfigStep and ConnectStoreStepContent.
+ * Used by ConnectStoreStepContent.
  */
 import { Button, Flex, Text } from '@adobe/react-spectrum';
 import React from 'react';

@@ -53,7 +53,6 @@ export interface TwoColumnLayoutProps {
  *
  * Used in:
  * - ConfigureScreen (form + summary)
- * - ComponentConfigStep
  *
  * @example
  * ```tsx

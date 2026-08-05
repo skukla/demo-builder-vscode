@@ -77,8 +77,10 @@ if hits:
     print('[component-reuse] markup using a component\'s classes without using the component:')
     for f, cls, comp, path in sorted(set(hits)):
         print(f'  {f}: "{cls}" belongs to {comp} ({path})')
-    print('  Use the component, or extract the shared part. If the component carries an')
-    print('  affordance you deliberately do not want, say so in a comment so the next')
-    print('  reader does not "fix" it.')
+    print('  VERIFY by opening both files, then FIX IT THIS TURN if they do the same job —')
+    print('  do not report it back (see CLAUDE.md "Verified duplication gets FIXED").')
+    print('  A behaviour-preserving swap proves itself: the consumer tests pass unchanged.')
+    print('  If the component carries an affordance this caller must NOT have, that is a')
+    print('  variant — say so in a comment so the next reader does not "fix" it.')
 PY
 exit 0

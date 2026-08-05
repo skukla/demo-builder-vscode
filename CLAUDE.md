@@ -125,6 +125,33 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 - `architecture-duplication-scan` — guided review for competing/parallel implementations (same job solved twice); resolve by deleting one
 - `decompose-god-file` — split an oversized multi-responsibility file into single-responsibility units without breaking its public API (the fix to the scan skills' find)
 
+## Verified duplication gets FIXED, not reported
+
+When a scan or hook surfaces duplication, the default is to fix it in the same turn —
+not to file it, not to ask. Reporting it back is what made the user the detection
+layer for months.
+
+**Two conditions, both required:**
+
+1. **Verified** — you opened BOTH implementations and confirmed they do the same job.
+   A name match, a shared class, or a scan hit is NOT verification. The 2026-08-05
+   run scored 3 real of 6 on names alone; reading the files was what separated them.
+   If they turn out to be variants (different props, different behaviour, one has an
+   affordance the other must not), say so and move on — that is a finding too.
+2. **In reach** — the duplication is in code this turn already touches, or one import
+   away from it. Duplication discovered elsewhere gets mentioned, not chased; that is
+   scope creep wearing a tidy hat.
+
+**When both hold, just do it**: use the existing component, run the consumer's tests
+unchanged (a behaviour-preserving refactor proves itself by not moving them), and say
+what you did. `ServiceGroupList` → `ConfigSection` is the reference — 78 tests, zero
+edits to any of them.
+
+**When only the first holds**, state the finding with file:line and the verdict, and
+let the user choose. Do not file a backlog item for a two-line fix.
+
+The judgement call is whether two things are the same job — not whether to bother.
+
 ## Gotchas (verified, load-bearing)
 
 - **Adobe Spectrum Flex constrains width** (450px): use a standard HTML div with flex styles for critical wizard layouts.
