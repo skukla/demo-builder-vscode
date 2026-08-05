@@ -187,6 +187,45 @@ describe('removeAppBuilderComponent (integration)', () => {
         expect(persisted.appBuilderComponents?.['commerce-mesh']).toBeDefined();
     });
 
+    // Attribution only pays off if removal spends it. `componentApiPicks` records
+    // WHICH integration wanted an API precisely so this moment can answer "is it
+    // safe to drop?" — but nothing dropped anything: three writers, no remover.
+    // Harmless until a dashboard add started attributing picks (2026-08-04);
+    // after that a removed integration's APIs stayed in resolveDesiredApis' union
+    // forever, so the next reconcile PUT kept subscribing for a component that no
+    // longer exists and Manage APIs kept listing it.
+    it('drops the removed integration’s API picks', async () => {
+        const project = integrationProject();
+        project.componentApiPicks = {
+            'erp-bridge': ['ErpSDK'],
+            'order-sync': ['EventsSDK'],
+        };
+        const deps = createDeps();
+
+        await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+
+        const persisted = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
+        expect(persisted.componentApiPicks).toEqual({ 'order-sync': ['EventsSDK'] });
+    });
+
+    it('leaves UNATTRIBUTED picks alone — they have no owner to have been removed', async () => {
+        // `__existing__` holds picks made from the union view (Manage APIs) and
+        // migrated legacy ones. No component claims them, so no removal can prove
+        // them safe to drop — dropping them here would silently unsubscribe APIs
+        // the user chose deliberately.
+        const project = integrationProject();
+        project.componentApiPicks = {
+            'erp-bridge': ['ErpSDK'],
+            __existing__: ['commerceeventing'],
+        };
+        const deps = createDeps();
+
+        await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+
+        const persisted = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
+        expect(persisted.componentApiPicks).toEqual({ __existing__: ['commerceeventing'] });
+    });
+
     it('does NOT republish (integration provided no env vars)', async () => {
         const project = integrationProject();
         const deps = createDeps();

@@ -577,11 +577,32 @@ export async function removeAppBuilderComponent(
         // component". A selected-but-absent mesh is an error state, not a resting
         // one — so the selection goes with the component.
         ...(state.kind === 'mesh' ? { componentSelections: withoutMeshDependencies(project) } : {}),
+        // The component's API picks go with it. `componentApiPicks` records WHICH
+        // integration wanted an API precisely so this moment can answer "is it safe
+        // to drop?" — and nothing was spending that: three writers, no remover.
+        // Left behind, the picks stay in resolveDesiredApis' union, so the next
+        // reconcile PUT keeps subscribing for a component that no longer exists and
+        // Manage APIs keeps listing it.
+        //
+        // Only the ATTRIBUTED key is dropped. UNATTRIBUTED_PICKS_KEY holds picks
+        // made from the union view (Manage APIs) and migrated legacy ones; no
+        // component claims them, so no removal can prove them safe to drop.
+        ...(project.componentApiPicks
+            ? { componentApiPicks: { ...project.componentApiPicks } }
+            : {}),
     };
     delete cleared.appBuilderComponents[id];
+    if (cleared.componentApiPicks) {
+        delete cleared.componentApiPicks[id];
+    }
     // Sync the caller's reference too — a later save from a stale reference
     // would otherwise RESURRECT the removed integration (see persistOutcome).
     project.appBuilderComponents = cleared.appBuilderComponents;
+    // Same stale-reference hazard as the entry above: a later save from the
+    // caller's copy would otherwise restore the picks we just dropped.
+    if (cleared.componentApiPicks) {
+        project.componentApiPicks = cleared.componentApiPicks;
+    }
     await deps.saveProject(cleared);
 
     if (provided) {
