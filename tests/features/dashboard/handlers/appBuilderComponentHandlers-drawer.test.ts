@@ -217,6 +217,44 @@ describe('appBuilderComponentsSnapshot channel (fresh persisted map after termin
         });
     });
 
+    // The dashboard Add flow lets the user pick free Adobe APIs, and those picks
+    // have to reach `project.componentApiPicks` BEFORE the runner runs: the
+    // subscribe union is `resolveDesiredApis(project)`, so a pick that never lands
+    // is never subscribed. Until 2026-08-04 the handler took only the catalog
+    // entry — the picks were written into WIZARD state, which the dashboard never
+    // persists. Symptom on a real project: "Adobe I/O Events for Commerce" was
+    // chosen at add time, componentApiPicks stayed null, the API was never
+    // subscribed, and Manage APIs showed nothing preselected.
+    it('persists the picked APIs before the runner subscribes', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+
+        await handleAddAppBuilderComponent(mockContext, {
+            id: 'erp-sync',
+            apis: ['AdobeIOEventsSDK'],
+        } as never);
+
+        const project = mockAddAppBuilderComponent.mock.calls.at(-1)?.[0] as {
+            componentApiPicks?: Record<string, string[]>;
+        };
+        expect(project.componentApiPicks).toEqual({ 'erp-sync': ['AdobeIOEventsSDK'] });
+    });
+
+    it('leaves existing picks alone when an add carries none', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+
+        await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        // An empty/absent pick set must not write a key: the subscribe PUT sets
+        // extras to EXACTLY the union, so an empty entry is harmless but a wrong
+        // one is not — and other integrations' picks must survive untouched.
+        const project = mockAddAppBuilderComponent.mock.calls.at(-1)?.[0] as {
+            componentApiPicks?: Record<string, string[]>;
+        };
+        expect(project.componentApiPicks?.['erp-sync']).toBeUndefined();
+    });
+
     it('still posts the snapshot after a FAILED add (the entry may have persisted)', async () => {
         const { mockContext } = setupMocks({
             appBuilderComponents: { 'erp-sync': { ...DEPLOYED_ENTRY, status: 'error' } },

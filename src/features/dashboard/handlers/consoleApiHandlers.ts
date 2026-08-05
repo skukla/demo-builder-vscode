@@ -23,7 +23,7 @@
 import { runGuards } from './appBuilderComponentHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
-import { resolveDesiredApis, UNATTRIBUTED_PICKS_KEY } from '@/core/state/componentApiPicks';
+import { applyDesiredApis, resolveDesiredApis } from '@/core/state/componentApiPicks';
 import { deriveAllowedDomain } from '@/features/app-builder/services/allowedDomain';
 import { fetchApiAccessRows } from '@/features/app-builder/services/apiAccessRows';
 import {
@@ -146,7 +146,12 @@ async function reconcileExtras(
         // Both forms until the flat write path is retired (step 07). The keyed
         // map is authoritative; the flat field is its union, kept so a manifest
         // written now still loads on an older build.
-        project.componentApiPicks = { [UNATTRIBUTED_PICKS_KEY]: desiredExtras };
+        //
+        // Reconciled, not replaced. This edits the UNION, and overwriting the map
+        // with a single unattributed bucket erased which integration wanted what —
+        // harmless only while nothing attributed picks, which stopped being true
+        // when the dashboard Add flow began recording them.
+        project.componentApiPicks = applyDesiredApis(project, desiredExtras);
         project.additionalConsoleApis = desiredExtras;
         await context.stateManager.saveProject(project);
         return { success: true, data: { subscribed } };

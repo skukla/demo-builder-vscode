@@ -237,6 +237,16 @@ export const handleAddAppBuilderComponent: MessageHandler<{
     name?: string;
     /** Collision-checked instance id for a named blank instance. */
     instanceId?: string;
+    /**
+     * The free Adobe APIs the user picked in the flow's API stage.
+     *
+     * These MUST land on the project before the runner runs: the subscribe union
+     * is `resolveDesiredApis(project)`, so a pick that is not persisted is never
+     * subscribed. The dashboard flow used to write them into WIZARD state, which
+     * the dashboard never persists — the picks were silently dropped, the API was
+     * not subscribed, and Manage APIs opened with nothing checked (2026-08-04).
+     */
+    apis?: string[];
 }> = async (context, payload) => {
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
@@ -282,6 +292,19 @@ export const handleAddAppBuilderComponent: MessageHandler<{
             if (needsUserInputs(entry)) {
                 await vscode.commands.executeCommand('demoBuilder.configureProject');
                 return { success: true };
+            }
+
+            // Attribute the picks to THIS integration before anything subscribes.
+            // Keyed by `entry.id`, which for a named blank instance is the
+            // collision-checked instanceId that resolveAddEntry already applied —
+            // the same key Manage APIs and the reconcile union read back.
+            const picks = payload?.apis ?? [];
+            if (picks.length > 0) {
+                project.componentApiPicks = {
+                    ...(project.componentApiPicks ?? {}),
+                    [entry.id]: [...new Set(picks)],
+                };
+                await context.stateManager.saveProject(project);
             }
 
             report('Adding integration…');

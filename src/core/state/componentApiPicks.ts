@@ -86,3 +86,56 @@ export function migrateApiPicks<T extends ApiPickSource>(project: T): T {
     }
     return { ...project, componentApiPicks: { [UNATTRIBUTED_PICKS_KEY]: [...legacy] } };
 }
+
+/**
+ * Reconcile a user-edited DESIRED union back onto the keyed map, preserving
+ * attribution.
+ *
+ * Manage APIs shows the union of every integration's picks and Apply hands back
+ * the whole edited set. The handler used to persist that as
+ * `{ [UNATTRIBUTED_PICKS_KEY]: desired }`, which is correct about the union and
+ * destroys everything else: after one Apply no code has an owner, so nothing can
+ * answer "is this API still needed if I remove that integration?" — the question
+ * this module exists for. It went unnoticed while nothing attributed picks; the
+ * dashboard Add flow started doing so on 2026-08-04.
+ *
+ * The reconciliation:
+ * - a code still desired keeps every owner that claimed it;
+ * - a code no longer desired is dropped from ALL owners (a single owner keeping
+ *   it would put it straight back into the next reconcile union, undoing the
+ *   user's removal);
+ * - a code with no prior owner lands in {@link UNATTRIBUTED_PICKS_KEY} — it was
+ *   added from the union view, so there is genuinely no owner to infer, and
+ *   guessing one is worse than recording that we do not know;
+ * - an owner left with nothing is removed rather than kept as an empty key.
+ *
+ * @param project - the project whose picks are being edited (legacy flat field migrates)
+ * @param desired - the full desired extras set, exactly as the user left it
+ * @returns the new keyed map (the caller assigns and saves)
+ */
+export function applyDesiredApis(
+    project: ApiPickSource,
+    desired: string[],
+): Record<string, string[]> {
+    const wanted = new Set(desired);
+    const current = project.componentApiPicks ?? {
+        [UNATTRIBUTED_PICKS_KEY]: [...new Set(project.additionalConsoleApis ?? [])],
+    };
+
+    const next: Record<string, string[]> = {};
+    const claimed = new Set<string>();
+    for (const [owner, codes] of Object.entries(current)) {
+        const kept = [...new Set(codes)].filter((code) => wanted.has(code));
+        if (kept.length === 0) continue;
+        next[owner] = kept;
+        for (const code of kept) claimed.add(code);
+    }
+
+    const unowned = desired.filter((code) => !claimed.has(code));
+    if (unowned.length > 0) {
+        next[UNATTRIBUTED_PICKS_KEY] = [
+            ...new Set([...(next[UNATTRIBUTED_PICKS_KEY] ?? []), ...unowned]),
+        ];
+    }
+    return next;
+}

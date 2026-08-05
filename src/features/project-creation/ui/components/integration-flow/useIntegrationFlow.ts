@@ -241,15 +241,19 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
         // guarantees draft.instance, and the custom-add handler selects the
         // instance id + records the shell source with the display name. Picks key
         // under the instance id so N instances carry independent API picks.
+        // Picks are recorded BEFORE the builder call, not after. The wizard did not
+        // care — it persists its state later either way — but the dashboard host
+        // POSTS the add inside that callback, so picks written afterwards missed
+        // the message entirely and were dropped at the boundary.
         if (draft.kind === 'blank' && blankComponent && draft.instance) {
-            builder.onAddCustomAppBuilderComponent(blankComponent.source, draft.instance);
             writeApiPicks(draft.instance.id);
+            builder.onAddCustomAppBuilderComponent(blankComponent.source, draft.instance);
             return;
         }
         if (draft.kind === 'custom' && draft.customSource) {
-            builder.onAddCustomAppBuilderComponent(draft.customSource);
             // Mirror useProjectBuilder's id derivation so the picks key matches the row.
             writeApiPicks(`${draft.customSource.owner}-${draft.customSource.repo}`);
+            builder.onAddCustomAppBuilderComponent(draft.customSource);
         }
     }, [draft, meshComponent, blankComponent, builder, writeApiPicks]);
 

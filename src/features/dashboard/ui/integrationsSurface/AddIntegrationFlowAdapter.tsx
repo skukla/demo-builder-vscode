@@ -30,7 +30,7 @@
  * @module features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { AddIntegrationFlowModal } from '@/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal';
 import { buildReservedIds } from '@/features/project-creation/ui/components/integration-flow/instanceId';
@@ -92,7 +92,19 @@ export function AddIntegrationFlowAdapter({
     // the page-level destination control's job, not this adapter's.
     const [overrides, setOverrides] = useState<Partial<WizardState>>({});
 
+    // The API picks, mirrored SYNCHRONOUSLY.
+    //
+    // `commitSelection` records picks and then posts the add in the same tick, so
+    // a setState-backed read here would still see the previous render's value and
+    // post without them. A ref updated inside updateState is current by the time
+    // the builder callback runs. (The ordering in useIntegrationFlow was fixed too;
+    // both halves are needed — ordering alone still loses the React batch.)
+    const apiPicksRef = useRef<Record<string, string[]>>({});
+
     const updateState = useCallback((updates: Partial<WizardState>): void => {
+        if (updates.selectedConsoleApis) {
+            apiPicksRef.current = updates.selectedConsoleApis as Record<string, string[]>;
+        }
         setOverrides((current) => ({ ...current, ...updates }));
     }, []);
 
@@ -175,7 +187,7 @@ export function AddIntegrationFlowAdapter({
         () => ({
             onAppBuilderComponentToggle: (id: string, selected: boolean): void => {
                 if (selected) {
-                    postAdd({ id });
+                    postAdd({ id, apis: apiPicksRef.current[id] });
                 }
             },
             onAddCustomAppBuilderComponent: (
@@ -186,9 +198,14 @@ export function AddIntegrationFlowAdapter({
                 // AND the collision-checked id. Sending only the name let the id
                 // fall back to `${owner}-${repo}`, so the card came back titled
                 // "skukla-app-builder-shell" instead of what they named it.
+                // Picks key under the instance id for a named blank, else the
+                // owner-repo slug useProjectBuilder derives — the same key
+                // useIntegrationFlow just wrote them under.
+                const picksKey = instance ? instance.id : `${source.owner}-${source.repo}`;
                 postAdd({
                     source,
                     ...(instance ? { name: instance.name, instanceId: instance.id } : {}),
+                    apis: apiPicksRef.current[picksKey],
                 });
             },
         }),

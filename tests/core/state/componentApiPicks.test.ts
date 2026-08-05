@@ -12,11 +12,7 @@
  * on a working project. That is the golden test below.
  */
 
-import {
-    migrateApiPicks,
-    resolveDesiredApis,
-    UNATTRIBUTED_PICKS_KEY,
-} from '@/core/state/componentApiPicks';
+import { UNATTRIBUTED_PICKS_KEY, applyDesiredApis, migrateApiPicks, resolveDesiredApis } from '@/core/state/componentApiPicks';
 import type { Project } from '@/types/base';
 
 function project(overrides: Partial<Project> = {}): Project {
@@ -132,5 +128,69 @@ describe('migration is UNION-PRESERVING', () => {
         const afterSet = [...new Set(resolveDesiredApis(migrateApiPicks(before)))].sort();
 
         expect(afterSet).toEqual(beforeSet);
+    });
+});
+
+/**
+ * Manage APIs edits the UNION of every integration's picks, then Apply persists
+ * the result. Persisting it as `{ __existing__: desired }` — which is what the
+ * handler did — throws away the attribution this whole module exists to keep:
+ * afterwards nothing can tell whose requirement an API is, so nothing can tell
+ * whether removing an integration makes it safe to drop.
+ *
+ * That was latent while nothing attributed picks. Once the dashboard Add flow
+ * started recording them (2026-08-04), the first Apply would have erased it.
+ */
+describe('applyDesiredApis — editing the union without losing attribution', () => {
+    const picks = {
+        'order-sync': ['EventsSDK', 'SharedSDK'],
+        'erp-bridge': ['SharedSDK', 'ErpSDK'],
+    };
+
+    it('keeps each surviving code attributed to its owner', () => {
+        const next = applyDesiredApis({ componentApiPicks: picks }, [
+            'EventsSDK',
+            'SharedSDK',
+            'ErpSDK',
+        ]);
+
+        expect(next).toEqual(picks);
+    });
+
+    it('drops a removed code from EVERY owner that claimed it', () => {
+        // SharedSDK is wanted by both; unchecking it in the union must clear both,
+        // or the next reconcile would re-add what the user just removed.
+        const next = applyDesiredApis({ componentApiPicks: picks }, ['EventsSDK', 'ErpSDK']);
+
+        expect(next).toEqual({ 'order-sync': ['EventsSDK'], 'erp-bridge': ['ErpSDK'] });
+    });
+
+    it('files a newly added code under the unattributed bucket', () => {
+        // Added from the union view, so there is no owner to infer — and guessing
+        // one would be worse than admitting we do not know.
+        const next = applyDesiredApis({ componentApiPicks: picks }, [
+            'EventsSDK',
+            'SharedSDK',
+            'ErpSDK',
+            'NewSDK',
+        ]);
+
+        expect(next[UNATTRIBUTED_PICKS_KEY]).toEqual(['NewSDK']);
+    });
+
+    it('drops an owner whose every code was removed, rather than leaving an empty key', () => {
+        const next = applyDesiredApis({ componentApiPicks: picks }, ['ErpSDK']);
+
+        expect(next).toEqual({ 'erp-bridge': ['ErpSDK'] });
+        expect('order-sync' in next).toBe(false);
+    });
+
+    it('migrates a legacy flat project instead of silently starting empty', () => {
+        const next = applyDesiredApis({ additionalConsoleApis: ['LegacySDK'] }, [
+            'LegacySDK',
+            'NewSDK',
+        ]);
+
+        expect(next[UNATTRIBUTED_PICKS_KEY]).toEqual(['LegacySDK', 'NewSDK']);
     });
 });
