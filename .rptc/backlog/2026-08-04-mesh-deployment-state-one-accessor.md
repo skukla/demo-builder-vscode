@@ -1,0 +1,73 @@
+# Mesh deployment state: one fact, five readers, two writers
+
+**Filed:** 2026-08-04
+**Origin:** Six commits in one day on the mesh add/deploy path, each fixing a different
+reader of the same fact. See `docs/research/2026-08-04-mesh-scenarios-and-catalogs.md`.
+**Severity:** Medium — no live defect remains, but the arrangement that produced six is intact.
+**Present in:** the readers listed below.
+
+## The shape
+
+Every mesh bug fixed on 2026-08-04 was the same thing: **two writers of "is this mesh
+deployed, and which mesh is it", and a reader consulting the wrong one.** Each fix moved the
+failure one reader downstream.
+
+| Reader | Consulted | Should have | Fixed in |
+|---|---|---|---|
+| Add picker | hand-authored catalog | the registry | `bc70668a` |
+| `aio api-mesh` | no `.env` written | the registry env contract | `68d4d7fa` |
+| `getMeshComponentInstance` | an absent instance | the instance `installComponent` returned | `d69aa309` |
+| `handleRequestStatus` | instance status stuck at `ready` | the deploy outcome | `8111fd3d` |
+| `hasMeshDeploymentRecord` | `envVars` staleness baseline | the deploy record | `9f8321cb` |
+| `projectStatusUtils.getMeshStatusKey` | bare find-by-kind | the canonical resolver | `12f82063` |
+
+That is not six unrelated bugs. It is one fact with six readers and two writers
+(`recordDeployOutcome` and `deployMeshHeadless`'s hand-written assignments) that never fully
+agreed. Each reader looked correct in isolation, which is exactly why every one was found by
+a user reporting a symptom rather than by review or tooling.
+
+## Goal
+
+One accessor every surface calls for mesh deployment state — the way
+`core/vscode/progressRegister` became the one answer for "how does an operation narrate
+itself", and for the same reason: a shared decision with no shared implementation drifts.
+
+## Execution plan
+
+1. **Inventory the readers.** Run `.claude/skills/architecture-duplication-scan` §4 narrowed
+   to the mesh fact. It returns a five-site shortlist today (the owner plus re-derivations).
+   Add the status readers by hand: `hasMeshDeploymentRecord`, `handleRequestStatus`'s mesh
+   branch, `getMeshStatusKey`, the integrations grid, the projects-list card.
+2. **Name the questions.** They are not one question. At least: *which entry is the mesh*
+   (solved — `getIdentifiedMeshAppBuilderComponent`), *has it ever deployed*, *is it deployed
+   NOW*, *is it stale*. Conflating them is what let a staleness baseline answer an existence
+   question.
+3. **One accessor per question**, in `features/app-builder/services/appBuilderComponentState`
+   beside the resolver that already lives there.
+4. **Collapse the writers.** `recordDeployOutcome` already advances both the keyed entry and
+   the instance (`8111fd3d`); `deployMeshHeadless`'s direct `meshComponent.status =` lines are
+   now redundant. Delete them, so one writer remains.
+5. **Contract test**, not a comment. The bar: one edit to the shared accessor must fail tests
+   on every surface. `progressRegister` is the reference — breaking its rule fails 12 tests
+   across 5 suites.
+
+## Constraints
+
+- **Do not conflate the four questions into one boolean.** The `hasMeshDeploymentRecord` bug
+  was precisely that.
+- Legacy `meshState` synthesis must keep working — pre-migration manifests carry the baseline
+  without the newer fields, and `9f8321cb` deliberately kept `envVars` in the disjunction for
+  them.
+- The keyed `appBuilderComponents` map stays the persisted authority (ADR-011 D3). This is
+  about READ paths, not a new store.
+- Rule of Three does not apply: the `reuse-first` skill's demonstrated-drift exception does,
+  and six instances is well past it.
+
+## Kickoff prompt
+
+> Mesh deployment state has six readers and two writers that repeatedly disagreed — six
+> user-reported bugs on 2026-08-04, each a different reader. Separate the questions (which
+> entry is the mesh / has it deployed / is it deployed now / is it stale), give each ONE
+> accessor, delete `deployMeshHeadless`'s now-redundant direct status writes, and add a
+> contract test that fails on every surface when the shared answer changes. See
+> `.rptc/backlog/2026-08-04-mesh-deployment-state-one-accessor.md`.
