@@ -1,6 +1,6 @@
 ---
 name: dead-code-scan
-description: Find dead code — unused exports, unimported files, and self-declared abandonment markers (deprecated/legacy/superseded stubs). Use when reviewing for cruft, right after superseding an implementation, or when asked "is this still used?" / "can I delete this?". Serves the "no soft deprecation" rule — obsolete code gets deleted, not stubbed.
+description: Find dead code — unused exports, unimported files, self-declared abandonment markers (deprecated/legacy/superseded stubs), and CLOSED REFERENCE LOOPS (code referenced only by other dead code, which ts-prune cannot see). Use when reviewing for cruft, right after superseding an implementation, or when asked "is this still used?" / "can I delete this?". Serves the "no soft deprecation" rule — obsolete code gets deleted, not stubbed.
 ---
 
 # Dead-Code Scan
@@ -44,6 +44,63 @@ overlap `/sop-scan` (God files, oversized components, complexity) — cross-refe
 
 4. **Delete outright** — remove the symbol/file and its dead imports, and any test that
    only covered it. No `(Deprecated)` stub, no commented-out block.
+
+## Closed reference loops — the class ts-prune cannot see
+
+`ts-prune` answers "does anything import this?". It cannot answer "does anything
+*reach* this?", so a group of dead symbols that reference each other reports as fully
+used. Every one of these shipped undetected until a human went looking (2026-08-05):
+
+| What it looked like | What it was |
+|---|---|
+| `handleCreateApiMesh` — 6 registration sites | A message no webview ever sent |
+| `api-mesh-progress` | A sender whose listener did not exist |
+| `cloudGrouping` | A field plumbed through 5 files to a prop nobody read |
+| `PROGRESS_CALLBACK_TYPES` | A config whose sole member was the dead message above |
+
+**A grep-based detector does not work here — verified, not assumed.** One was written
+and regression-tested against the tree before the deletion: it missed
+`create-api-mesh`, because `progressCallbackConfig.ts` referenced the key and looked
+like a sender. It was dead too. The loop supplies the references that defeat the
+check, which is the definition of the shape. Do not re-attempt this as a script
+without real reachability analysis; the previous attempt also produced 11 unverified
+candidates.
+
+### The manual check that does work
+
+Pick a suspected symbol and ask **who ORIGINATES a call**, never "who mentions it":
+
+```bash
+KEY='create-api-mesh'          # or a field name, or a message type
+grep -rn "$KEY" src | grep -viE 'Handlers\.ts|Registry\.ts|messages\.ts|webviewCommunicationManager'
+```
+
+Then confirm each surviving reference is a real ORIGIN, not more plumbing:
+
+1. **A UI sender** — `postMessage('$KEY')` / `request('$KEY')` under any `ui/`.
+2. **An MCP descriptor** — `features/ai/server/*Descriptors.ts` (these are real
+   senders and are easy to mistake for docs).
+3. **A command** — a `package.json` `contributes.commands` entry.
+4. **Its own docblock** — NOT a reference. This is what most often keeps a dead
+   symbol looking alive.
+
+Zero origins across all four ⇒ dead, however many files mention it.
+
+### Signals worth suspecting
+
+- A registry row whose value is another registry's lookup (`'x': otherMap['x']`) —
+  registration referencing registration.
+- A `sendMessage('x')` with no matching listener, or a listener with no sender. Check
+  BOTH directions; a dead pair keeps each other alive.
+- A typed field that only ever appears in assignments and type declarations, never in
+  a condition, a render, or an argument. Grep the field and read whether any hit
+  actually *consumes* the value.
+- A config collection with exactly one member — deleting that member may kill the
+  collection, its accessor, and its call site.
+
+**Expect the cascade.** Removing one of these usually kills several: the 2026-08-05
+deletion took 3 source files, 4 test files, and 6 registration sites, none of which
+the original scan named.
 
 ## Heuristics
 - An abandonment marker (`// deprecated`, `legacyFoo`) is itself the bug: delete the code
