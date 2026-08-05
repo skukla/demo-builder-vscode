@@ -148,14 +148,29 @@ export function resolveServiceInfos(
     });
 }
 
-/** Split services into apiKey vs oauth_server_to_server by `platformList`. */
+/**
+ * Split services into apiKey vs oauth_server_to_server by `platformList`.
+ *
+ * `unmatched` is the third outcome and the reason this returns it: a service
+ * listing NEITHER platform reaches neither subscribe endpoint, so no PUT ever
+ * covers it. That used to pass silently — the service still came back in
+ * {@link subscribeRequiredApis}'s result and still counted toward a successful
+ * "extras set to N". Naming the bucket lets the caller drop it from what it
+ * CLAIMS to have subscribed, which is what makes the silence audible.
+ */
 export function partitionByPlatform(services: ServiceInfo[]): {
     apiKey: ServiceInfo[];
     oauthS2S: ServiceInfo[];
+    unmatched: ServiceInfo[];
 } {
     const apiKey = services.filter((s) => s.platformList.includes('apiKey'));
     const oauthS2S = services.filter((s) => s.platformList.includes('oauth_server_to_server'));
-    return { apiKey, oauthS2S };
+    const unmatched = services.filter(
+        (s) =>
+            !s.platformList.includes('apiKey') &&
+            !s.platformList.includes('oauth_server_to_server'),
+    );
+    return { apiKey, oauthS2S, unmatched };
 }
 
 /** Free-service subscription shape: `{ sdkCode, licenseConfigs:null, roles:null }`. */
@@ -275,7 +290,7 @@ export async function subscribeRequiredApis(
     const requiredApis = computeRequiredApis(appBuilderComponents, extraApis);
     const servicesForOrg = await client.getServicesForOrg(target.orgId);
     const services = resolveServiceInfos(requiredApis, servicesForOrg);
-    const { apiKey, oauthS2S } = partitionByPlatform(services);
+    const { apiKey, oauthS2S, unmatched } = partitionByPlatform(services);
 
     // The two groups use INDEPENDENT credentials and subscribe endpoints, so run
     // them CONCURRENTLY. The subscribe PUTs are the slow part (~30s each, Adobe-
@@ -287,5 +302,10 @@ export async function subscribeRequiredApis(
         subscribeApiKeyServices(apiKey, target, client, domain, onProgress),
     ]);
 
-    return services.map((service) => ({ code: service.sdkCode, name: service.name }));
+    // Report only what a subscribe endpoint actually took. An unmatched service
+    // was never PUT anywhere, so including it here would let the caller log it as
+    // subscribed — the exact silent success this return value exists to prevent.
+    return services
+        .filter((service) => !unmatched.includes(service))
+        .map((service) => ({ code: service.sdkCode, name: service.name }));
 }

@@ -134,6 +134,25 @@ describe('apiSubscriber', () => {
             expect(apiKey.map((s) => s.sdkCode)).toEqual([MESH]);
             expect(oauthS2S.map((s) => s.sdkCode)).toEqual([MGMT]);
         });
+
+        // A service listing NEITHER platform reaches neither subscribe endpoint, so
+        // no PUT covers it — yet it used to be reported as subscribed all the same.
+        // Reporting it is the whole fix: the caller can only warn about a silent
+        // skip it is told about.
+        it('reports a service that matches NEITHER platform', () => {
+            const orphan: ServiceInfo = {
+                sdkCode: 'OrphanSDK',
+                name: 'Orphan',
+                platformList: [],
+                domainMandatory: false,
+            };
+
+            const { apiKey, oauthS2S, unmatched } = partitionByPlatform([orphan]);
+
+            expect(apiKey).toEqual([]);
+            expect(oauthS2S).toEqual([]);
+            expect(unmatched.map((s) => s.sdkCode)).toEqual(['OrphanSDK']);
+        });
     });
 
     describe('subscribeRequiredApis (orchestrator, mocked SDK client)', () => {

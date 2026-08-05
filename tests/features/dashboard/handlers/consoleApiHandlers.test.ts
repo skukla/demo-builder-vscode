@@ -242,6 +242,52 @@ describe('handleSetConsoleApis', () => {
         expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
     });
 
+    // "Set extras to 1: commerceeventing" reads identically whether that API was
+    // subscribed or merely requested — it printed the INPUT. The resolved set was
+    // already available (subscribeRequiredApis' return) and simply never logged,
+    // so the one question a user asks of this line ("did it actually apply?") was
+    // the one it could not answer.
+    it('logs the CONFIRMED set, not the requested one', async () => {
+        const { subscribeRequiredApis } = jest.requireMock(
+            '@/features/app-builder/services/apiSubscriber'
+        );
+        // The confirmed set is the full UNION (baseline + catalog required +
+        // extras), so it contains a code the request never mentioned. Asserting on
+        // THAT code is what proves the line reports the outcome rather than
+        // echoing the input.
+        subscribeRequiredApis.mockResolvedValue([
+            { code: 'NewSDK', name: 'New Thing' },
+            { code: 'BaselineSDK', name: 'Always On' },
+        ]);
+        const project = makeProject({});
+        const context = makeContext(project);
+
+        await handleSetConsoleApis(context, { apis: ['NewSDK'] });
+
+        const logged = (context.logger.info as jest.Mock).mock.calls.flat().join(' ');
+        expect(logged).toContain('BaselineSDK');
+        expect(context.logger.warn).not.toHaveBeenCalled();
+    });
+
+    it('WARNS when a requested API is absent from what was actually subscribed', async () => {
+        // The silent-skip path: a service matching neither platform reaches no
+        // subscribe endpoint, so subscribeRequiredApis now omits it from its
+        // result. Success alone must not imply every request landed.
+        const { subscribeRequiredApis } = jest.requireMock(
+            '@/features/app-builder/services/apiSubscriber'
+        );
+        subscribeRequiredApis.mockResolvedValue([{ code: 'KeptSDK', name: 'Kept' }]);
+        const project = makeProject({});
+        const context = makeContext(project);
+
+        const result = await handleSetConsoleApis(context, { apis: ['KeptSDK', 'GhostSDK'] });
+
+        expect(result.success).toBe(true);
+        const warned = (context.logger.warn as jest.Mock).mock.calls.flat().join(' ');
+        expect(warned).toContain('GhostSDK');
+        expect(warned).not.toContain('KeptSDK');
+    });
+
     it('accepts an EMPTY list (remove all extras)', async () => {
         const project = makeProject({ additionalConsoleApis: ['DropSDK'] });
         const context = makeContext(project);

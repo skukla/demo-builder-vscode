@@ -29,6 +29,7 @@ import { fetchApiAccessRows } from '@/features/app-builder/services/apiAccessRow
 import {
     computeRequiredApis,
     subscribeRequiredApis,
+    type SubscribedApi,
 } from '@/features/app-builder/services/apiSubscriber';
 import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
 import { subscriberTarget } from '@/features/app-builder/services/appBuilderComponentRunnerDeps';
@@ -126,7 +127,7 @@ async function reconcileExtras(
     context: HandlerContext,
     project: Project,
     desiredExtras: string[],
-): Promise<{ success: boolean; error?: string; data?: { subscribed: unknown } }> {
+): Promise<{ success: boolean; error?: string; data?: { subscribed?: SubscribedApi[] } }> {
     const authService = ServiceLocator.getAuthenticationService();
     const client = createApiSubscriberClient(authService);
     const orgTarget = buildOrgTargetFromProjectAdobe(
@@ -227,9 +228,29 @@ export const handleSetConsoleApis: MessageHandler<{ apis?: string[] }> = async (
     const desired = [...new Set(apis as string[])];
     const result = await reconcileExtras(context, project, desired);
     if (result.success) {
+        // Report the OUTCOME, not the request. This line used to print `desired`,
+        // so "Set extras to 1: commerceeventing" read identically whether that API
+        // was subscribed or merely asked for — the one question it gets asked.
+        // `subscribed` is the resolved union a subscribe endpoint actually took.
+        const confirmed = result.data?.subscribed ?? [];
+        const confirmedCodes = confirmed.map((api) => api.code);
         context.logger.info(
-            `[Console APIs] Set extras to ${desired.length}: ${desired.join(', ')}`,
+            `[Console APIs] Extras set to ${desired.length} ` +
+                `(${desired.join(', ') || 'none'}); subscribed ${confirmedCodes.length}: ` +
+                `${confirmedCodes.join(', ') || 'none'}`,
         );
+
+        // A requested code missing from the confirmed set means a subscribe
+        // silently skipped it — today that happens when a service lists neither
+        // platform, so no PUT covers it. Success is still correct for everything
+        // else; this is the part that must not pass unremarked.
+        const missing = desired.filter((code) => !confirmedCodes.includes(code));
+        if (missing.length > 0) {
+            context.logger.warn(
+                `[Console APIs] Requested but NOT subscribed: ${missing.join(', ')} — ` +
+                    'the service matched no subscribe platform for this org.',
+            );
+        }
     }
     return result;
 };
