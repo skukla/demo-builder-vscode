@@ -28,6 +28,20 @@ branch-protection notice, **not** a failure.
 4. Determine `<N>`: current `package.json` version is `1.0.0-beta.<prev>`; the new
    one is `<prev>+1` unless the user says otherwise.
 
+## Out-of-band passes (offer BEFORE cutting, once the tree is clean)
+
+A release cut is the natural periodic boundary — the only moment when "look at the
+whole thing rather than the thing you just changed" is cheap. Both passes PROPOSE
+and never apply, so neither blocks the cut; run them, show the user, and let them
+decide what (if anything) to fix before tagging.
+
+- **`codebase-sweep`** — duplication, extraction, cycles, orphans, doc drift (~30s).
+- **`dream`** — memory / skills / CLAUDE.md staleness across recent sessions.
+
+Offer them; do not silently skip. If the user declines, say so in the release notes
+so the next cut knows the interval. These were documented as "runs at release cuts"
+long before anything invoked them — naming the step here is what makes that true.
+
 ## Steps (run from `develop`)
 
 Let `N` = new beta number, `PREV` = current one.
