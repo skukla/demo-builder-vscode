@@ -8,6 +8,11 @@
  * Card face, drawer body, and drawer action bar all consume the same
  * `IntegrationCardModel` — the mesh/integration asymmetry lives ONLY here.
  *
+ * The asymmetry is which DERIVATION runs, not what the states are called: the
+ * status vocabulary itself moved to `@/core/ui/utils/statusVocabulary`, which
+ * every surface now shares. This file used to hold a second table, and the mesh
+ * card took its label from one and its dot from another.
+ *
  * React-free and webview-safe: the only cross-feature imports are the pure
  * bundled-JSON catalog lookups (same precedent as AppBuilderComponentRow).
  *
@@ -20,6 +25,11 @@
 
 import type { StatusDisplay, MeshStatus } from '../../hooks/useDashboardStatus';
 import type { StatusDotVariant } from '@/core/ui/components/ui/StatusDot';
+import {
+    getStatusDisplay,
+    severityToDot,
+    type DisplayStatus,
+} from '@/core/ui/utils/statusVocabulary';
 import type { IdentifiedAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import {
     getAppBuilderComponentEntry,
@@ -28,15 +38,12 @@ import {
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 
-/** Card status vocabulary: the integration union plus the mesh-only states. */
-export type CardStatus =
-    | 'not-deployed'
-    | 'deploying'
-    | 'deployed'
-    | 'stale'
-    | 'error'
-    | 'needs-auth'
-    | 'checking';
+/**
+ * Card status vocabulary — the shared one. Re-exported under the grid's own name
+ * because every consumer in this feature already spells it `CardStatus`; there is
+ * no second vocabulary behind it.
+ */
+export type CardStatus = DisplayStatus;
 
 /** Action identifiers dispatched by the grid's single handleAction switch. */
 export type CardAction =
@@ -61,7 +68,7 @@ export type CardAction =
  */
 function statusVerb(status: CardStatus): CardAction | undefined {
     if (status === 'not-deployed') return 'deploy';
-    if (status === 'stale') return 'update';
+    if (status === 'stale' || status === 'config-incomplete') return 'update';
     if (status === 'error') return 'retry';
     if (status === 'needs-auth') return 'sign-in';
     return undefined;
@@ -129,27 +136,20 @@ export interface IntegrationCardModel {
 
 type IntegrationStatus = 'not-deployed' | 'deploying' | 'deployed' | 'stale' | 'error';
 
-/** statusLabel + dot per integration status (the prototype's STATUS map). */
-const INTEGRATION_STATUS_DISPLAY: Record<
-    IntegrationStatus,
-    { label: string; dot: StatusDotVariant }
-> = {
-    'not-deployed': { label: 'Not deployed', dot: 'neutral' },
-    deploying: { label: 'Deploying…', dot: 'info' },
-    deployed: { label: 'Deployed', dot: 'success' },
-    stale: { label: 'Update available', dot: 'warning' },
-    error: { label: 'Deploy failed', dot: 'error' },
-};
-
 /**
- * The integration face matrix: the at-most-one ATTENTION verb per status.
- *
- * There is no bar half any more. Each status used to carry a drawer button row
- * (the verb + Manage APIs + Remove) which was the kebab's items wearing a
- * different control, in a third place — so the flyout now renders this same face
- * verb plus the same kebab the card uses. Deployed has no verb on purpose: a
- * healthy card is calm, so any card showing a button is a card that needs you.
+ * The subset of the shared vocabulary an INTEGRATION can be in. The mesh-only
+ * states (config-incomplete / needs-auth / checking) are absent by design, so a
+ * live push carrying one lands on the not-deployed treatment rather than
+ * rendering a mesh state on an integration card.
  */
+const INTEGRATION_STATUSES: readonly string[] = [
+    'not-deployed',
+    'deploying',
+    'deployed',
+    'stale',
+    'error',
+];
+
 /**
  * The card's kebab items.
  *
@@ -187,7 +187,7 @@ function buildMenuActions(status: IntegrationStatus, url: string | undefined): C
  * the not-deployed treatment so a bad push can never blank the grid.
  */
 function normalizeIntegrationStatus(status: string): IntegrationStatus {
-    return status in INTEGRATION_STATUS_DISPLAY ? (status as IntegrationStatus) : 'not-deployed';
+    return INTEGRATION_STATUSES.includes(status) ? (status as IntegrationStatus) : 'not-deployed';
 }
 
 /** Mono `owner/repo`, or an em-dash for empty legacy sources. */
@@ -291,14 +291,17 @@ export function deriveIntegrationCard(
     const status = normalizeIntegrationStatus(override?.status ?? entry.status);
     const facet = deriveKindFacet(entry);
     const primaryUrl = resolvePrimaryUrl(entry);
-    const { label: staticLabel, dot: dotVariant } = INTEGRATION_STATUS_DISPLAY[status];
+    const shared = getStatusDisplay(status);
+    const staticLabel = shared?.label ?? '';
+    const dotVariant = severityToDot(shared?.severity ?? 'neutral');
 
     // While deploying, the live step IS the label — because the card FACE renders
     // `statusLabel` and nothing else (IntegrationCard.tsx). Putting the step on
     // `message` alone left the face stuck on a constant "Deploying…" and sent the
-    // detail to a drawer that is closed during a deploy. The mesh card has always
-    // worked this way (its statusLabel is the live status text); this makes the
-    // two kinds agree.
+    // detail to a drawer that is closed during a deploy. The mesh card does the
+    // same for its transient states, so the two kinds agree — and since 2026-08-04
+    // they agree on the SETTLED states by construction too, both reading their
+    // label and severity from the one shared table.
     //
     // Only while DEPLOYING. A failure reason is a full CLI sentence and would
     // blow out an 11px uppercase card face, so an error keeps the terse label and
@@ -330,8 +333,11 @@ export function deriveIntegrationCard(
 /** Collapse a raw MeshStatus onto the card vocabulary (config drift = stale). */
 export function toMeshCardStatus(status: MeshStatus | undefined): CardStatus {
     switch (status) {
+        // 'config-changed' is the dashboard's spelling of stale, and a declined
+        // update is still an available one. 'config-incomplete' is NOT here: it
+        // means required config is missing, and collapsing it would relabel the
+        // card "Update available".
         case 'config-changed':
-        case 'config-incomplete':
         case 'update-declined':
             return 'stale';
         case undefined:
@@ -340,24 +346,6 @@ export function toMeshCardStatus(status: MeshStatus | undefined): CardStatus {
             return status;
     }
 }
-
-/**
- * The mesh matrix: dot + the at-most-one face verb per card status. No Manage
- * APIs and no Remove anywhere (the mesh's lifecycle is owned by the project
- * configuration); the deployed card has NO Open↗ face (see module doc).
- *
- * Deployed carries no face verb — redeploying a healthy mesh is deliberate, so
- * it is the one thing in the mesh's kebab (see deriveMeshCard).
- */
-const MESH_MATRIX: Record<CardStatus, { dot: StatusDotVariant }> = {
-    checking: { dot: 'neutral' },
-    'needs-auth': { dot: 'warning' },
-    'not-deployed': { dot: 'neutral' },
-    deploying: { dot: 'info' },
-    deployed: { dot: 'success' },
-    stale: { dot: 'warning' },
-    error: { dot: 'error' },
-};
 
 /**
  * The mesh card's kebab items.
@@ -401,7 +389,16 @@ export function deriveMeshCard(
     meshComponentId?: string,
 ): IntegrationCardModel {
     const cardStatus = toMeshCardStatus(status);
-    const row = MESH_MATRIX[cardStatus];
+    const shared = getStatusDisplay(cardStatus);
+    const label = shared?.label ?? '';
+    const dot = severityToDot(shared?.severity ?? 'neutral');
+
+    // The live text wins ONLY while transient: those three states carry detail the
+    // table cannot hold — the deploy step in flight, and the in-flight verb the
+    // notification is showing. Every settled state reads from the table, so the
+    // mesh card and its integration peers cannot describe one state two ways.
+    const isTransient =
+        cardStatus === 'checking' || cardStatus === 'needs-auth' || cardStatus === 'deploying';
 
     return {
         id: 'mesh',
@@ -410,8 +407,8 @@ export function deriveMeshCard(
         kindLabel: 'API Mesh',
         sourceIsAi: false,
         status: cardStatus,
-        statusLabel: statusDisplay.text,
-        dotVariant: row.dot,
+        statusLabel: isTransient ? statusDisplay.text : label,
+        dotVariant: dot,
         // The label is the live status text; the REASON comes off the persisted
         // entry, so an errored mesh can still explain itself after a reload.
         message: cardStatus === 'error' ? meshEntry?.error : undefined,

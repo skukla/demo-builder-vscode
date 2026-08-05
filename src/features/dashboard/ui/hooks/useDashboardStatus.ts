@@ -613,10 +613,11 @@ export function useDashboardStatus(
                 return { color: 'blue', text: meshMessage || 'Deploying...' };
         }
 
-        // Persisted statuses — use shared display mapping
-        // Dashboard uses 'config-changed' for what's stored as 'stale'
-        const lookupKey = effectiveMeshStatus === 'config-changed' ? 'stale' : effectiveMeshStatus;
-        const display = getMeshStatusDisplay(lookupKey);
+        // Persisted statuses — the shared vocabulary. The 'config-changed' →
+        // 'stale' translation used to happen here AND in the grid's
+        // toMeshCardStatus; it now happens once, in normalizeDisplayStatus, so
+        // the alias cannot mean one thing on this badge and another on the card.
+        const display = getMeshStatusDisplay(effectiveMeshStatus);
         if (display) {
             return { color: display.color, text: display.text };
         }

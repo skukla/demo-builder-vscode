@@ -1,0 +1,81 @@
+/**
+ * The two status vocabularies must stay word-for-word in step.
+ *
+ * One mesh state is rendered on two surfaces by two tables:
+ *
+ * - the integrations grid's mesh card reads `CARD_STATUS_DISPLAY`
+ *   (integrationCardModel), keyed by the CARD status;
+ * - the projects-list card reads `MESH_STATUS_DISPLAY` (core/ui/utils), keyed by
+ *   the PERSISTED mesh status, and adds its own `Mesh · ` prefix.
+ *
+ * They were not merged, deliberately. The persisted vocabulary carries a
+ * `color`/`variant` the grid has no use for and draws distinctions the grid
+ * collapses (`stale` yellow vs `update-declined` orange), so one table would have
+ * had to flatten something true. What must never drift is the WORDING: the two
+ * cards sit one click apart, and until 2026-08-04 they described the same state
+ * differently — "Deployed" vs "Mesh Deployed", "Deploy failed" vs "Mesh Error".
+ *
+ * So this pins the overlap instead of the implementation. It drives both public
+ * derivations and compares what a user would actually read, which means it also
+ * catches a divergence introduced through `toMeshCardStatus` rather than through
+ * either table.
+ */
+
+import { deriveMeshCard, display, meshEntry } from './integrationCardModel.testUtils';
+import { getMeshStatusText } from '@/features/projects-dashboard/utils/projectStatusUtils';
+import type { MeshStatus } from '@/features/dashboard/ui/hooks/useDashboardStatus';
+import type { Project } from '@/types';
+
+jest.mock('@/core/logging', () => ({
+    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
+}));
+
+/**
+ * The persisted mesh states — every one a project can still be in after a reload.
+ * The transient three (checking / needs-auth / deploying) are excluded on purpose:
+ * they never reach the projects-list card, and the grid answers them with live
+ * text rather than a table, so there is no shared wording to pin.
+ *
+ * 'config-changed' is absent for a different reason: it is never persisted.
+ * `dashboardHandlers` normalizes it to 'stale' on the way in, and
+ * `useDashboardStatus` invents it on the way out only to translate it back for
+ * the lookup — a round trip from 'stale' to 'stale'.
+ */
+const SETTLED_MESH_STATUSES = [
+    'deployed',
+    'stale',
+    'config-incomplete',
+    'update-declined',
+    'error',
+    'not-deployed',
+] as const;
+
+/** A project whose persisted summary is the status under test. */
+function projectWithMesh(status: string): Project {
+    return { name: 'demo', path: '/tmp/demo', meshStatusSummary: status } as unknown as Project;
+}
+
+describe('grid and projects-list describe a mesh state identically', () => {
+    it.each(SETTLED_MESH_STATUSES)('%s reads the same on both surfaces', (status) => {
+        const gridLabel = deriveMeshCard(
+            display({ text: 'live text the settled path must ignore' }),
+            status as MeshStatus,
+            meshEntry(),
+            false
+        ).statusLabel;
+
+        // The prefix is the projects-list card's own composition — that card is
+        // headed with the PROJECT name, so it supplies the noun the grid's card
+        // already has in its heading. Strip it and the state name must match.
+        expect(getMeshStatusText(projectWithMesh(status))).toBe(`Mesh · ${gridLabel}`);
+    });
+
+    it('is not vacuous — a wording change on one surface alone would fail', () => {
+        // Guards the assertion above against silently comparing undefined to
+        // undefined: both surfaces must actually produce a label.
+        const gridLabel = deriveMeshCard(display(), 'deployed', meshEntry(), false).statusLabel;
+
+        expect(gridLabel).toBe('Deployed');
+        expect(getMeshStatusText(projectWithMesh('deployed'))).toBe('Mesh · Deployed');
+    });
+});

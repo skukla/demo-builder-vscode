@@ -22,6 +22,7 @@ import {
     meshEntry,
     type IdentifiedAppBuilderComponent,
 } from './integrationCardModel.testUtils';
+import type { MeshStatus } from '@/features/dashboard/ui/hooks/useDashboardStatus';
 
 // ---------------------------------------------------------------------------
 // deriveMeshCard — mesh matrix
@@ -145,8 +146,8 @@ describe('deriveMeshCard — status matrix', () => {
         expect(model.menuActions).toEqual([]);
     });
 
-    it.each(['config-changed', 'update-declined', 'config-incomplete'] as const)(
-        '%s maps to the stale treatment: warning dot, Update leads the menu',
+    it.each(['config-changed', 'update-declined'] as const)(
+        '%s collapses to stale: warning dot, Update leads the menu',
         (meshStatus) => {
             const model = deriveMeshCard(
                 display({ color: 'yellow', text: 'Update available' }),
@@ -160,6 +161,26 @@ describe('deriveMeshCard — status matrix', () => {
             expect(model.menuActions[0]).toBe('update');
         },
     );
+
+    // config-incomplete used to collapse into 'stale' with the other two. It no
+    // longer does, and the reason is the label: once the card takes its label from
+    // the same table as its dot, collapsing would have relabelled an incomplete
+    // mesh "Update available" — which is not what missing required config means.
+    // Its TREATMENT is deliberately unchanged (warning dot, Update leads); only
+    // the status it keeps, and therefore the word it shows, is different.
+    it('config-incomplete keeps its own status and label, with the stale treatment', () => {
+        const model = deriveMeshCard(
+            display({ color: 'orange', text: 'ignored — settled states read the table' }),
+            'config-incomplete',
+            meshEntry(),
+            false,
+        );
+
+        expect(model.status).toBe('config-incomplete');
+        expect(model.statusLabel).toBe('Incomplete');
+        expect(model.dotVariant).toBe('warning');
+        expect(model.menuActions[0]).toBe('update');
+    });
 
     it('error: error dot, Retry LEADS the menu', () => {
         const model = deriveMeshCard(
@@ -217,8 +238,23 @@ describe('deriveMeshCard — identity + propagation', () => {
         }
     });
 
-    it('statusLabel is ALWAYS statusDisplay.text (the live vocabulary is unchanged)', () => {
-        for (const status of MESH_STATUSES) {
+    // The live text used to win for EVERY status, which is how the mesh card came
+    // to take its label from one table and its dot from another. Now it wins only
+    // where it carries something a table cannot hold: the deploy step in flight,
+    // and the two dashboard-only states. Every settled status reads the shared
+    // table, so a mesh card and its integration peers cannot describe one state
+    // two different ways.
+    // `undefined` is here because toMeshCardStatus maps a missing status to
+    // 'checking' — the card is still working out what it is looking at.
+    const TRANSIENT: (MeshStatus | undefined)[] = [
+        'checking',
+        'needs-auth',
+        'deploying',
+        undefined,
+    ];
+
+    it('statusLabel is the live text while transient', () => {
+        for (const status of MESH_STATUSES.filter((s) => TRANSIENT.includes(s))) {
             const model = deriveMeshCard(
                 display({ text: 'The live text' }),
                 status,
@@ -226,6 +262,19 @@ describe('deriveMeshCard — identity + propagation', () => {
                 false,
             );
             expect(model.statusLabel).toBe('The live text');
+        }
+    });
+
+    it('statusLabel ignores the live text once settled, reading the shared table', () => {
+        for (const status of MESH_STATUSES.filter((s) => !TRANSIENT.includes(s))) {
+            const model = deriveMeshCard(
+                display({ text: 'The live text' }),
+                status,
+                meshEntry(),
+                false,
+            );
+            expect(model.statusLabel).not.toBe('The live text');
+            expect(model.statusLabel).toBeTruthy();
         }
     });
 
