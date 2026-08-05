@@ -246,16 +246,17 @@ describe('ApiAccessPicker', () => {
         });
     });
 
-    describe('product-family filter chips', () => {
-        const EC = { code: 'marketing_cloud', name: 'Experience Cloud' };
-        const AEP = { code: 'experience_platform', name: 'Adobe Experience Platform' };
-        const WITH_FAMILY: ApiOption[] = [
-            { code: 'TargetSDK', name: 'Adobe Target', locked: false, group: EC },
-            { code: 'MeshSDK', name: 'API Mesh', locked: false, group: AEP },
-            { code: 'CampaignSDK', name: 'Adobe Campaign', locked: false, group: EC },
-            { code: 'PlatformSDK', name: 'AEP Query', locked: false, group: AEP },
-            { code: 'LooseSDK', name: 'Ungrouped Thing', locked: false },
-            { code: 'MoreSDK', name: 'More Filler', locked: false, group: EC },
+    describe('product filter chips', () => {
+        // Curated pills, NOT Adobe's cloudGrouping. Adobe groups by CLOUD
+        // (Experience/Creative/Document), which put every API this extension cares
+        // about in one bucket and surfaced two the user never wants.
+        const REAL: ApiOption[] = [
+            { code: 'commerceeventing', name: 'I/O Events for Adobe Commerce', locked: false },
+            { code: 'CommerceIntegrationSDK', name: 'Commerce Integration', locked: false },
+            { code: 'AppBuilderDataServicesSDK', name: 'App Builder Data Services', locked: false },
+            { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API', locked: false },
+            { code: 'GraphQLServiceSDK', name: 'API Mesh', locked: false },
+            { code: 'FireflyAPISDK', name: 'Firefly Services', locked: false },
         ];
 
         function chipLabels(container: HTMLElement): (string | null)[] {
@@ -264,49 +265,82 @@ describe('ApiAccessPicker', () => {
             );
         }
 
-        it('renders a chip per family: All first, families alphabetical, Other last', () => {
-            const { container } = renderPicker({ apis: WITH_FAMILY });
-            expect(chipLabels(container)).toEqual([
-                'All',
-                'Adobe Experience Platform',
-                'Experience Cloud',
-                'Other',
+        it('renders All plus the two curated product pills', () => {
+            const { container } = renderPicker({ apis: REAL });
+            expect(chipLabels(container)).toEqual(['All', 'Adobe Commerce', 'App Builder']);
+        });
+
+        it('classifies on the display name OR the code', () => {
+            const { container } = renderPicker({ apis: REAL });
+
+            fireEvent.click(screen.getByRole('button', { name: 'App Builder' }));
+            // Matched three different ways: name ("App Builder Data Services"),
+            // name with punctuation ("I/O Management API"), and code alone
+            // (GraphQLServiceSDK, whose NAME "API Mesh" also matches).
+            expect(listNames(container)).toEqual([
+                'API Mesh',
+                'App Builder Data Services',
+                'I/O Management API',
             ]);
         });
 
-        it('shows every family by default (no chip active)', () => {
-            const { container } = renderPicker({ apis: WITH_FAMILY });
-            const names = listNames(container);
-            expect(names).toContain('API Mesh'); // AEP
-            expect(names).toContain('Adobe Target'); // EC
-            expect(names).toContain('Ungrouped Thing'); // Other
+        it('gives a service matching BOTH patterns to the first pill', () => {
+            // "I/O Events for Adobe Commerce" reads as Commerce and as I/O. Order
+            // decides, and Commerce leads — an ambiguous row must land in exactly
+            // one pill, never both, or the counts stop adding up.
+            const { container } = renderPicker({ apis: REAL });
+
+            fireEvent.click(screen.getByRole('button', { name: 'Adobe Commerce' }));
+            expect(listNames(container)).toEqual([
+                'Commerce Integration',
+                'I/O Events for Adobe Commerce',
+            ]);
         });
 
-        it('clicking a family chip filters the list to that family', () => {
-            const { container } = renderPicker({ apis: WITH_FAMILY });
-            fireEvent.click(screen.getByRole('button', { name: 'Adobe Experience Platform' }));
-            const names = listNames(container);
-            expect(names).toEqual(['AEP Query', 'API Mesh']); // AEP only, alphabetical
+        it('keeps a non-matching API listed under All', () => {
+            // The pills narrow; they do not whitelist. This picker is the only
+            // surface that can subscribe anything, so hiding an entitled API would
+            // make it unreachable.
+            const { container } = renderPicker({ apis: REAL });
+            expect(listNames(container)).toContain('Firefly Services');
+
+            fireEvent.click(screen.getByRole('button', { name: 'Adobe Commerce' }));
+            expect(listNames(container)).not.toContain('Firefly Services');
+
+            fireEvent.click(screen.getByRole('button', { name: 'All' }));
+            expect(listNames(container)).toContain('Firefly Services');
         });
 
         it('marks the active chip pressed', () => {
-            renderPicker({ apis: WITH_FAMILY });
-            const chip = screen.getByRole('button', { name: 'Experience Cloud' });
+            renderPicker({ apis: REAL });
+            const chip = screen.getByRole('button', { name: 'Adobe Commerce' });
             expect(chip).toHaveAttribute('aria-pressed', 'false');
             fireEvent.click(chip);
             expect(chip).toHaveAttribute('aria-pressed', 'true');
         });
 
-        it('renders no chip row when fewer than two families are present', () => {
-            const { container } = renderPicker(); // APIS carry no group
+        it('renders no chip row when neither product is present', () => {
+            // A row of pills that filter nothing is noise.
+            const { container } = renderPicker({
+                apis: [{ code: 'FireflyAPISDK', name: 'Firefly Services', locked: false }],
+            });
             expect(container.querySelector('.intflow-api-chips')).toBeNull();
         });
 
-        it('still toggles a pickable row after filtering to its family', () => {
-            const { onToggle } = renderPicker({ apis: WITH_FAMILY });
-            fireEvent.click(screen.getByRole('button', { name: 'Adobe Experience Platform' }));
+        it('omits a pill no API matches', () => {
+            const { container } = renderPicker({
+                apis: [{ code: 'commerceeventing', name: 'Commerce Events', locked: false }],
+            });
+            expect(chipLabels(container)).toEqual(['All', 'Adobe Commerce']);
+        });
+
+        it('still toggles a pickable row after filtering to a pill', () => {
+            // Filtering narrows the rendered list; it must not detach the rows
+            // from their handler.
+            const { onToggle } = renderPicker({ apis: REAL });
+            fireEvent.click(screen.getByRole('button', { name: 'App Builder' }));
             fireEvent.click(checkboxFor('API Mesh'));
-            expect(onToggle).toHaveBeenCalledWith('MeshSDK');
+            expect(onToggle).toHaveBeenCalledWith('GraphQLServiceSDK');
         });
     });
 

@@ -10,8 +10,9 @@
  *     at the top, but required and not removable here;
  *   - review- and profile-gated APIs can't be subscribed in this self-serve flow,
  *     so they are hidden entirely (never listed, never counted);
- *   - product-family filter chips (Console's "Filter by product") narrow the list
- *     to one family; shown only when ≥2 families are present;
+ *   - product filter pills narrow the list to Adobe Commerce or App Builder — a
+ *     CURATED pair (see API_FAMILIES), not Console's cloud-level "Filter by
+ *     product"; a pill nothing matches is omitted and an empty set hides the row;
  *   - search across display name + code past the catalog threshold ({@link SearchHeader});
  *   - display names primary, sdk codes secondary (hidden when the code is a GUID
  *     or just the name again);
@@ -23,7 +24,6 @@
 import { Checkbox } from '@adobe/react-spectrum';
 import React, { useEffect, useState } from 'react';
 import { SearchHeader } from '../navigation/SearchHeader';
-import type { CloudGrouping } from '@/types/adobeApis';
 
 /** Show the filter only once the list is big enough to warrant it (catalog parity). */
 const API_SEARCH_THRESHOLD = 5;
@@ -49,12 +49,6 @@ export interface ApiAccessOption {
      * subscribe it. Optional; absent ⇒ not review-gated.
      */
     requiresReview?: boolean;
-    /**
-     * Product family (Console's "Filter by product"). When present on any
-     * "All available" row, that group is sub-headed by family; absent ⇒ the group
-     * stays flat (dashboard parity / lean fixtures).
-     */
-    group?: CloudGrouping;
 }
 
 export interface ApiAccessPickerProps {
@@ -90,12 +84,38 @@ interface FamilyChip {
     name: string;
 }
 
-/** Family key for the ungrouped bucket (APIs the catalog gives no `cloudGrouping`). */
-const OTHER_FAMILY_KEY = '__other__';
-const OTHER_FAMILY_LABEL = 'Other';
+/**
+ * The picker's product pills — a CURATED pair, deliberately not Adobe's
+ * `cloudGrouping`.
+ *
+ * Adobe groups services by CLOUD (Experience / Creative / Document). Deriving the
+ * chips from that gave this picker rows for Document Cloud and Creative Cloud —
+ * products a Commerce demo never subscribes — while everything the extension
+ * actually deploys landed in one undifferentiated bucket. The two groupings a
+ * user of THIS tool wants are product-level and do not exist in that taxonomy.
+ *
+ * Matched by keyword over `name + code` rather than an sdkCode allowlist: Adobe
+ * adds services, and an allowlist goes stale silently — a new Commerce API would
+ * simply never appear under its pill, with nothing to notice. A keyword miss is
+ * visible and is one pattern to widen.
+ *
+ * ORDER IS SEMANTIC: the first match wins, so a service reading as both (e.g.
+ * "I/O Events for Adobe Commerce") lands in exactly one pill. Commerce leads
+ * because that is the more specific claim.
+ */
+const API_FAMILIES: ReadonlyArray<{ code: string; name: string; pattern: RegExp }> = [
+    { code: 'commerce', name: 'Adobe Commerce', pattern: /commerce/i },
+    {
+        code: 'app-builder',
+        name: 'App Builder',
+        pattern: /app\s*builder|adobe\s*i\/?o|runtime|api\s*mesh|graphql\s*service/i,
+    },
+];
 
-function familyKey(api: ApiAccessOption): string {
-    return api.group?.code ?? OTHER_FAMILY_KEY;
+/** The pill an API belongs to, or undefined — reachable only under "All". */
+function familyOf(api: ApiAccessOption): string | undefined {
+    const haystack = `${api.name} ${api.code}`;
+    return API_FAMILIES.find((family) => family.pattern.test(haystack))?.code;
 }
 
 function byDisplayName(a: ApiAccessOption, b: ApiAccessOption): number {
@@ -113,22 +133,23 @@ function pickableApis(apis: ApiAccessOption[]): ApiAccessOption[] {
 }
 
 /**
- * Product-family chips for the pickable set: "All" first, then each present family
- * alphabetically, with the ungrouped "Other" bucket last. Returns [] when there
- * is nothing to filter by (0 or 1 family) so the chip row hides.
+ * "All" plus each curated pill that actually matches something, in declared order.
+ *
+ * A pill nothing matches is omitted, and an empty set hides the row entirely — a
+ * chip that filters to nothing is noise. There is deliberately no "Other" pill:
+ * non-matching APIs stay reachable under "All", so the pills narrow rather than
+ * whitelist. This picker is the only surface that can subscribe an API, so hiding
+ * an entitled one would put it out of reach.
  */
 function familyChips(pickable: ApiAccessOption[]): FamilyChip[] {
-    const byCode = new Map<string, string>();
-    for (const api of pickable) byCode.set(familyKey(api), api.group?.name ?? OTHER_FAMILY_LABEL);
-    if (byCode.size < 2) return [];
-    const chips = [...byCode.entries()]
-        .map(([code, name]) => ({ code, name }))
-        .sort((a, b) => {
-            if (a.code === OTHER_FAMILY_KEY) return 1;
-            if (b.code === OTHER_FAMILY_KEY) return -1;
-            return a.name.localeCompare(b.name);
-        });
-    return [{ code: null, name: 'All' }, ...chips];
+    const present = API_FAMILIES.filter((family) =>
+        pickable.some((api) => familyOf(api) === family.code),
+    );
+    if (present.length === 0) return [];
+    return [
+        { code: null, name: 'All' },
+        ...present.map(({ code, name }) => ({ code, name })),
+    ];
 }
 
 /** Case-insensitive match across display name AND code. */
@@ -253,7 +274,7 @@ export function ApiAccessPicker({
     const isChecked = (api: ApiAccessOption): boolean =>
         api.locked || orderSeed.has(api.code);
     const list = searched
-        .filter((api) => family === null || familyKey(api) === family)
+        .filter((api) => family === null || familyOf(api) === family)
         .sort((a, b) => {
             const rank = Number(isChecked(b)) - Number(isChecked(a));
             return rank !== 0 ? rank : byDisplayName(a, b);

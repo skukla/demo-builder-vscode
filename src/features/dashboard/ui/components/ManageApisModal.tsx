@@ -31,7 +31,6 @@ import {
     ORG_SERVICES_LOADING_STAGES,
 } from '@/core/ui/hooks/useElapsedStage';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import type { CloudGrouping } from '@/types/adobeApis';
 import { ErrorCode } from '@/types/errorCodes';
 
 /** One org service as the `listConsoleApis` handler reports it. */
@@ -44,8 +43,6 @@ interface ConsoleApiEntry {
     requiresProfile?: boolean;
     /** Needs Adobe review/approval → rendered disabled. */
     requiresReview?: boolean;
-    /** Product family (Console "Filter by product") for the picker's sub-headers. */
-    group?: CloudGrouping;
 }
 
 interface ListConsoleApisResponse {
@@ -193,7 +190,6 @@ export function ManageApisModal({
                             locked: api.managed,
                             requiresProfile: api.requiresProfile,
                             requiresReview: api.requiresReview,
-                            group: api.group,
                         })),
                     );
                     const added = res.data.added ?? [];
