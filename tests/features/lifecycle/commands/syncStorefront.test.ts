@@ -11,6 +11,11 @@
  *  - "Cancel and Reset" branch runs git rebase --abort
  */
 
+// Delays in this path are real wall-clock waits on the node project's real timers.
+// Mocking the shared sleep keeps the orchestration under test and drops the waiting.
+// Assertions here pin the SEQUENCE of attempts, never elapsed duration.
+jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
+
 import * as childProcess from 'child_process';
 import * as fsPromises from 'fs/promises';
 import * as vscode from 'vscode';

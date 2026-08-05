@@ -6,6 +6,10 @@
  * 1b. Per-batch token re-fetch in copyContentFromSource
  */
 
+// Real wall-clock retry/UI delays; mock the shared sleep so only orchestration is
+// under test. Assertions pin the SEQUENCE of attempts, never elapsed duration.
+jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
+
 import type { DaLiveContentDiscovery } from '@/features/eds/services/daLiveContentDiscovery';
 import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import { DaLiveAuthError } from '@/features/eds/services/types';

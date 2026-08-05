@@ -20,12 +20,16 @@
  *     App is missing on evidence that says nothing about the App.
  */
 
+// Delays in this path are real wall-clock waits on the node project's real timers.
+// Mocking the shared sleep keeps the orchestration under test and drops the waiting.
+// Assertions here pin the SEQUENCE of attempts, never elapsed duration.
+jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
+
 import { checkGitHubAppForExistingRepo } from '@/features/eds/handlers/storefrontSetupPhaseHelpers';
 import type { RepoInfo, SetupServices } from '@/features/eds/handlers/storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
-jest.setTimeout(15000);
 
 const REPO_INFO: RepoInfo = {
     repoOwner: 'sayurihanki',
