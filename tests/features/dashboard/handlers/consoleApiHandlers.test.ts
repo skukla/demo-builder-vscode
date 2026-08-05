@@ -49,6 +49,10 @@ jest.mock('@/features/app-builder/services/allowedDomain', () => ({
 }));
 jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => ({
     getAvailableAppBuilderComponents: jest.fn(() => []),
+    // resolveApiOwners reads this per integration. A partial module mock left it
+    // undefined and the handler failed inside its own try/catch, surfacing as a
+    // missing `data` rather than as the real cause.
+    getAppBuilderComponentEntry: jest.fn(() => undefined),
 }));
 jest.mock('@/core/shell', () => ({
     buildOrgTargetFromProjectAdobe: jest.fn(() => ({ orgId: 'org-1' })),
@@ -331,5 +335,116 @@ describe('handleSetConsoleApis', () => {
         const result = await handleSetConsoleApis(makeContext(makeProject()), { apis: ['X'] });
         expect(result.success).toBe(false);
         expect(subscribeRequiredApis).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * Step 04 — per-integration attribution on the dashboard surface.
+ *
+ * Before this, both handlers were project-scoped: list returned the whole union as
+ * `added`, and set overwrote the union. That is what discarded attribution at the
+ * write — the defect this plan exists to fix.
+ *
+ * The load-bearing case is the last one. Two integrations can hold the same code;
+ * unchecking it on one must NOT unsubscribe it, because the other still needs it.
+ * Getting this wrong unsubscribes a live API on a working workspace, which is the
+ * one failure mode here that damages something real rather than just the UI.
+ */
+describe('per-integration attribution (step 04)', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    /** Two integrations, each holding one code, both also holding SharedSDK. */
+    function twoIntegrationProject() {
+        return makeProject({
+            appBuilderComponents: {
+                'erp-sync': { kind: 'integration', status: 'deployed', name: 'ERP Sync', source: { owner: 'o', repo: 'r' } },
+                'firefly-app': { kind: 'integration', status: 'deployed', name: 'Firefly App', source: { owner: 'o', repo: 'r' } },
+            },
+            componentApiPicks: {
+                'erp-sync': ['FireflyAPISDK', 'GraphQLServiceSDK'],
+                'firefly-app': ['GraphQLServiceSDK'],
+            },
+        });
+    }
+
+    describe('list', () => {
+        it('returns only THIS integration\'s picks as `added`, not the union', async () => {
+            const context = makeContext(twoIntegrationProject());
+
+            const result = await handleListConsoleApis(context, { componentId: 'firefly-app' });
+
+            const data = result.data as { added: string[] };
+            // The union is [FireflyAPISDK, GraphQLServiceSDK]; firefly-app holds one.
+            expect(data.added).toEqual(['GraphQLServiceSDK']);
+        });
+
+        it('attributes a code another integration holds, naming the holder', async () => {
+            const context = makeContext(twoIntegrationProject());
+
+            const result = await handleListConsoleApis(context, { componentId: 'firefly-app' });
+
+            const data = result.data as {
+                apis: Array<{ code: string; ownership?: string; requiredBy?: string[] }>;
+            };
+            const shared = data.apis.find((a) => a.code === 'FireflyAPISDK');
+            // erp-sync holds it; from firefly-app's view it is someone else's, and the
+            // row must say whose — an unexplained lock is what this replaced.
+            expect(shared?.ownership).toBe('other-required');
+            expect(shared?.requiredBy).toEqual(['ERP Sync']);
+        });
+
+        it('stays project-scoped when no componentId is given', async () => {
+            // The MCP tools and any pre-step-04 caller pass no componentId. They must
+            // keep seeing the union, not an empty list.
+            const context = makeContext(twoIntegrationProject());
+
+            const result = await handleListConsoleApis(context, undefined);
+
+            const data = result.data as { added: string[] };
+            expect(data.added.sort()).toEqual(['FireflyAPISDK', 'GraphQLServiceSDK']);
+        });
+    });
+
+    describe('set', () => {
+        it('writes only this integration\'s entry, leaving the others intact', async () => {
+            const project = twoIntegrationProject();
+            const context = makeContext(project);
+
+            await handleSetConsoleApis(context, {
+                componentId: 'firefly-app',
+                apis: ['GraphQLServiceSDK', 'CommerceEventingSDK'],
+            });
+
+            const saved = (context.stateManager.saveProject as jest.Mock).mock.calls[0][0];
+            expect(saved.componentApiPicks['firefly-app'].sort()).toEqual([
+                'CommerceEventingSDK',
+                'GraphQLServiceSDK',
+            ]);
+            // Untouched — this is the attribution that used to be discarded.
+            expect(saved.componentApiPicks['erp-sync'].sort()).toEqual([
+                'FireflyAPISDK',
+                'GraphQLServiceSDK',
+            ]);
+        });
+
+        it('SUBSCRIBES THE FULL UNION, so unchecking a shared code does not unsubscribe it', async () => {
+            // THE safety property. firefly-app drops GraphQLServiceSDK, but erp-sync
+            // still holds it, so the subscribe must still include it. If this regresses,
+            // a working integration loses an API it needs.
+            const project = twoIntegrationProject();
+            const context = makeContext(project);
+
+            await handleSetConsoleApis(context, { componentId: 'firefly-app', apis: [] });
+
+            const desired = (subscribeRequiredApis as jest.Mock).mock.calls[0][4] as string[];
+            expect(desired).toContain('GraphQLServiceSDK');
+            expect(desired).toContain('FireflyAPISDK');
+
+            const saved = (context.stateManager.saveProject as jest.Mock).mock.calls[0][0];
+            // firefly-app's own claim is gone...
+            expect(saved.componentApiPicks['firefly-app']).toBeUndefined();
+            // ...and erp-sync's is not.
+            expect(saved.componentApiPicks['erp-sync']).toContain('GraphQLServiceSDK');
+        });
     });
 });

@@ -23,6 +23,8 @@
 import { runGuards } from './appBuilderComponentHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { resolveApiOwners } from '@/core/state/apiOwners';
+import { resolveApiRowStates } from '@/core/state/apiRowState';
 import { applyDesiredApis, resolveDesiredApis } from '@/core/state/componentApiPicks';
 import { deriveAllowedDomain } from '@/features/app-builder/services/allowedDomain';
 import { fetchApiAccessRows } from '@/features/app-builder/services/apiAccessRows';
@@ -56,7 +58,10 @@ function resolveProjectCatalog(project: Project): AppBuilderComponentCatalogEntr
  * flagged `managed: true` when Demo Builder's reconcile union already covers
  * it (catalog requiredApis + baseline + runtime-added extras).
  */
-export const handleListConsoleApis: MessageHandler = async (context) => {
+export const handleListConsoleApis: MessageHandler<{ componentId?: string }> = async (
+    context,
+    payload,
+) => {
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
@@ -78,19 +83,43 @@ export const handleListConsoleApis: MessageHandler = async (context) => {
         // `managed` = ALWAYS-ON only (baseline + catalog required, NO extras) — these
         // are locked, non-removable. The optional extras are returned as `added`
         // (checked + removable in the modal). Both survive the noise filter.
-        // The union across every integration's picks. Step 04 will make this
-        // per-component; today it is the same set the flat field held.
-        const added = resolveDesiredApis(project);
+        const componentId = payload?.componentId;
+        const union = resolveDesiredApis(project);
+        // Scoped to the asking integration when one asks. A caller with no
+        // componentId (the MCP tools, any pre-step-04 surface) still gets the union.
+        const added = componentId ? (project.componentApiPicks?.[componentId] ?? []) : union;
         const managed = new Set(computeRequiredApis(resolveProjectCatalog(project), []));
         const rows = await fetchApiAccessRows(
             ServiceLocator.getAuthenticationService(),
             orgId,
-            new Set([...managed, ...added]),
+            new Set([...managed, ...union]),
         );
+
+        // Attribution: which integration is holding each code, and under what claim.
+        // Only meaningful from some integration's point of view, so it is absent
+        // entirely for a project-scoped call rather than faked with a placeholder id.
+        const states = componentId
+            ? resolveApiRowStates({
+                componentId,
+                owners: resolveApiOwners(project),
+                picks: project.componentApiPicks ?? {},
+                baseline: [...managed],
+            })
+            : undefined;
+
         return {
             success: true,
             data: {
-                apis: rows.map((row) => ({ ...row, managed: managed.has(row.code) })),
+                apis: rows.map((row) => {
+                    const state = states?.get(row.code);
+                    return {
+                        ...row,
+                        managed: managed.has(row.code),
+                        ...(state
+                            ? { ownership: state.ownership, requiredBy: state.requiredBy }
+                            : {}),
+                    };
+                }),
                 added,
             },
         };
@@ -127,7 +156,25 @@ async function reconcileExtras(
     context: HandlerContext,
     project: Project,
     desiredExtras: string[],
+    componentId?: string,
 ): Promise<{ success: boolean; error?: string; data?: { subscribed?: SubscribedApi[] } }> {
+    // Per-integration edit: `desiredExtras` is THIS component's list, not the union.
+    // The subscribe still has to send the union, or dropping a code here would
+    // unsubscribe it out from under every other integration that holds it — the one
+    // failure mode in this plan that damages a live workspace.
+    let nextPicks: Record<string, string[]> | undefined;
+    if (componentId) {
+        const current = { ...(project.componentApiPicks ?? {}) };
+        if (desiredExtras.length > 0) {
+            current[componentId] = [...new Set(desiredExtras)];
+        } else {
+            // An owner left with nothing is removed, not kept as an empty key —
+            // same rule applyDesiredApis follows, so the two writers agree.
+            delete current[componentId];
+        }
+        nextPicks = current;
+        desiredExtras = [...new Set(Object.values(current).flat())];
+    }
     const authService = ServiceLocator.getAuthenticationService();
     const client = createApiSubscriberClient(authService);
     const orgTarget = buildOrgTargetFromProjectAdobe(
@@ -152,7 +199,7 @@ async function reconcileExtras(
         // with a single unattributed bucket erased which integration wanted what —
         // harmless only while nothing attributed picks, which stopped being true
         // when the dashboard Add flow began recording them.
-        project.componentApiPicks = applyDesiredApis(project, desiredExtras);
+        project.componentApiPicks = nextPicks ?? applyDesiredApis(project, desiredExtras);
         project.additionalConsoleApis = desiredExtras;
         await context.stateManager.saveProject(project);
         return { success: true, data: { subscribed } };
@@ -206,7 +253,7 @@ export const handleAddConsoleApis: MessageHandler<{ apis?: string[] }> = async (
  * Always-on codes (baseline + catalog required) can't be removed — the subscribe
  * union re-includes them regardless of `apis`.
  */
-export const handleSetConsoleApis: MessageHandler<{ apis?: string[] }> = async (
+export const handleSetConsoleApis: MessageHandler<{ apis?: string[]; componentId?: string }> = async (
     context,
     payload,
 ) => {
@@ -226,7 +273,7 @@ export const handleSetConsoleApis: MessageHandler<{ apis?: string[] }> = async (
     }
 
     const desired = [...new Set(apis as string[])];
-    const result = await reconcileExtras(context, project, desired);
+    const result = await reconcileExtras(context, project, desired, payload?.componentId);
     if (result.success) {
         // Report the OUTCOME, not the request. This line used to print `desired`,
         // so "Set extras to 1: commerceeventing" read identically whether that API
