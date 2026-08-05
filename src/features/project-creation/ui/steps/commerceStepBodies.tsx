@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import { SelectionCheck } from '../components/SelectionCheck';
+import { ChoiceCard } from '../components/ChoiceCard';
 import { BACKEND_LABELS, type CommerceSectionId } from './commerceSections';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import type { WizardState } from '@/types/webview';
@@ -39,23 +39,17 @@ export const BackendCard: React.FC<{
     selected: boolean;
     onSelect: (backend: string) => void;
 }> = ({ backend, pkgName, available, selected, onSelect }) => (
-    <button
-        type="button"
-        data-testid={`backend-card-${backend}`}
-        className="choice-card"
-        data-selected={selected ? 'true' : 'false'}
+    <ChoiceCard
+        name={BACKEND_LABELS[backend] ?? backend}
+        description={BACKEND_DESCRIPTIONS[backend] ?? ''}
+        selected={selected}
         disabled={!available}
-        onClick={available ? () => onSelect(backend) : undefined}
-    >
-        {selected ? <SelectionCheck corner testId="backend-card-check" /> : null}
-        <span className="choice-card-name">{BACKEND_LABELS[backend] ?? backend}</span>
-        <span className="choice-card-description">{BACKEND_DESCRIPTIONS[backend] ?? ''}</span>
-        {available ? null : (
-            <span className="choice-card-note" data-testid={`backend-note-${backend}`}>
-                Not available for {pkgName}
-            </span>
-        )}
-    </button>
+        note={available ? undefined : `Not available for ${pkgName}`}
+        noteTestId={`backend-note-${backend}`}
+        onSelect={() => onSelect(backend)}
+        testId={`backend-card-${backend}`}
+        checkTestId="backend-card-check"
+    />
 );
 
 /** Context passed to the per-section body builder. */

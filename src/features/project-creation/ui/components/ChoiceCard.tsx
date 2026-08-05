@@ -35,6 +35,14 @@ export interface ChoiceCardProps {
     testId?: string;
     /** Optional test id for the selection check (when `selected`). */
     checkTestId?: string;
+    /** Optional test id on the note span. */
+    noteTestId?: string;
+    /**
+     * Toggle semantics: emits `aria-pressed`. Omit for a pick-one card — a radio-like
+     * choice must NOT claim to be a pressed toggle, so the attribute is absent rather
+     * than false when this is undefined.
+     */
+    pressed?: boolean;
 }
 
 /**
@@ -53,12 +61,15 @@ export function ChoiceCard({
     onSelect,
     testId,
     checkTestId,
+    noteTestId,
+    pressed,
 }: ChoiceCardProps): React.ReactElement {
     return (
         <button
             type="button"
             className={variant === 'tile' ? 'choice-card choice-card--tile' : 'choice-card'}
             data-selected={selected ? 'true' : 'false'}
+            aria-pressed={pressed}
             data-testid={testId}
             disabled={disabled}
             onClick={disabled ? undefined : onSelect}
@@ -68,7 +79,11 @@ export function ChoiceCard({
             {description !== undefined ? (
                 <span className="choice-card-description">{description}</span>
             ) : null}
-            {note !== undefined ? <span className="choice-card-note">{note}</span> : null}
+            {note !== undefined ? (
+                <span className="choice-card-note" data-testid={noteTestId}>
+                    {note}
+                </span>
+            ) : null}
         </button>
     );
 }

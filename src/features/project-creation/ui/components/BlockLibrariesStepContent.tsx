@@ -12,7 +12,7 @@
 
 import { Text, Divider, Link } from '@adobe/react-spectrum';
 import React from 'react';
-import { SelectionCheck } from './SelectionCheck';
+import { ChoiceCard } from './ChoiceCard';
 import type { BlockLibrary, CustomBlockLibrary } from '@/types/blockLibraries';
 
 /** One block-library selection card (a multi-select toggle; disabled = locked native). */
@@ -23,18 +23,14 @@ const LibraryCard: React.FC<{
     disabled?: boolean;
     onToggle?: (next: boolean) => void;
 }> = ({ name, description, selected, disabled = false, onToggle }) => (
-    <button
-        type="button"
-        className="choice-card"
-        data-selected={selected ? 'true' : 'false'}
-        aria-pressed={selected}
+    <ChoiceCard
+        name={name}
+        description={description}
+        selected={selected}
         disabled={disabled}
-        onClick={disabled || !onToggle ? undefined : () => onToggle(!selected)}
-    >
-        {selected && <SelectionCheck corner />}
-        <span className="choice-card-name">{name}</span>
-        <span className="choice-card-description">{description}</span>
-    </button>
+        pressed={selected}
+        onSelect={onToggle ? () => onToggle(!selected) : undefined}
+    />
 );
 
 export interface BlockLibrariesStepContentProps {

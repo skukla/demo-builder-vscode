@@ -52,6 +52,27 @@ describe('ChoiceCard', () => {
         expect(onSelect).toHaveBeenCalledTimes(1);
     });
 
+    // Both props exist because two callers had hand-rolled the whole card to get
+    // them (2026-08-05). Neither was a variant — each was this component plus one
+    // attribute it did not expose.
+    it('exposes a test id on the note, for callers that assert on it', () => {
+        render(<ChoiceCard name="ACCS" note="Not available" noteTestId="backend-note-accs" />);
+        expect(screen.getByTestId('backend-note-accs')).toHaveTextContent('Not available');
+    });
+
+    it('sets aria-pressed only when `pressed` is given (toggle vs pick-one)', () => {
+        // A multi-select toggle must announce its state; a pick-one must NOT, or
+        // every card in a radio group claims to be a pressed toggle.
+        const { rerender } = render(<ChoiceCard name="Lib" pressed={false} />);
+        expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'false');
+
+        rerender(<ChoiceCard name="Lib" pressed />);
+        expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'true');
+
+        rerender(<ChoiceCard name="Lib" />);
+        expect(screen.getByRole('button')).not.toHaveAttribute('aria-pressed');
+    });
+
     it('when disabled: is not clickable and does not fire onSelect', () => {
         const onSelect = jest.fn();
         renderCard(<ChoiceCard name="A" testId="card-a" disabled onSelect={onSelect} />);
