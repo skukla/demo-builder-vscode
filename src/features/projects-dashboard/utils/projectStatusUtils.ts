@@ -8,6 +8,7 @@
 
 import { getAppStatusDisplay } from '@/core/ui/utils/appStatusDisplay';
 import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
+import { isUpdatePending } from '@/core/ui/utils/statusVocabulary';
 import { getIdentifiedMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import type { AppBuilderComponentState, Project, ProjectStatus } from '@/types/base';
 import { getComponentInstanceValues, isEdsProject } from '@/types/typeGuards';
@@ -217,12 +218,15 @@ export function getAppStatusVariant(project: Project): StatusVariant | null {
 }
 
 /**
- * Whether the project's API Mesh is in a "Redeploy Mesh" state — the config has
- * drifted from what is deployed (`stale`) or the user declined an update
- * (`update-declined`). Gates the kebab's "Redeploy Mesh" action.
+ * Whether the project's API Mesh needs redeploying — the config has drifted from
+ * what is deployed, or the user declined an update. Gates the kebab's "Redeploy
+ * Mesh" action, which stays imperative because it IS a button.
+ *
+ * Asks the shared vocabulary rather than testing the two literals: that alias set
+ * already grew once, and it is now collapsed in exactly one place.
  */
 export function meshNeedsRedeploy(project: Project): boolean {
-    return project.meshStatusSummary === 'stale' || project.meshStatusSummary === 'update-declined';
+    return isUpdatePending(project.meshStatusSummary);
 }
 
 /**

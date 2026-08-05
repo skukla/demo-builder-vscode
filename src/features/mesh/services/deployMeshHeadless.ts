@@ -207,7 +207,11 @@ export async function deployMeshHeadless(
             // Persist deployed status (the endpoint + runtime baseline live on the
             // keyed mesh appBuilderComponents entry, written by updateMeshState —
             // the single writer chokepoint, ADR-011 D3 Steps 07+09).
-            meshComponent.status = 'deployed';
+            // The instance status is NOT set here. updateMeshState below routes
+            // through recordDeployOutcome, which advances the keyed entry AND
+            // mirrors onto this same instance object — with a lastUpdated stamp
+            // the hand-write never set. Two writers of one fact is the shape that
+            // produced six mesh bugs in a day; this leaves one.
             meshComponent.metadata = {
                 ...meshComponent.metadata,
                 meshId: deployedMeshId || '',
@@ -222,7 +226,9 @@ export async function deployMeshHeadless(
         });
     } catch (error) {
         await onStatus?.('error', 'Deployment failed');
-        meshComponent.status = 'error';
+        // Same as the success path: recordDeployOutcome below mirrors 'error'
+        // onto the instance, so setting it by hand here only risks the two
+        // disagreeing.
         // Persist WHY. Redacted + first-line-only: this lands in the project
         // manifest on disk, and raw `aio` output can carry tokens and home paths.
         recordDeployOutcome(project, 'mesh', meshComponent.id, {

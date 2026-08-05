@@ -91,6 +91,21 @@ export function getStatusDisplay(status: string | undefined): StatusDisplayEntry
     return normalized ? STATUS_DISPLAY[normalized] : null;
 }
 
+/**
+ * Is an update available and not yet applied?
+ *
+ * Both spellings collapse to `stale`, so asking this beats testing the two
+ * literals: a caller that hard-codes `=== 'stale' || === 'update-declined'`
+ * silently stops covering a case the day a third spelling appears, and the
+ * alias set already grew once.
+ *
+ * Values outside the vocabulary answer false, which is what a caller whose
+ * subject has extra states of its own (e.g. a storefront's 'published') wants.
+ */
+export function isUpdatePending(status: string | undefined): boolean {
+    return normalizeDisplayStatus(status) === 'stale';
+}
+
 // ==========================================================
 // Severity adapters — one per consuming component
 // ==========================================================

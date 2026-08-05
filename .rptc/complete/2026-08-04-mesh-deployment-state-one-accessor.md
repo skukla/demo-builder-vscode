@@ -6,6 +6,51 @@ reader of the same fact. See `docs/research/2026-08-04-mesh-scenarios-and-catalo
 **Severity:** Medium — no live defect remains, but the arrangement that produced six is intact.
 **Present in:** the readers listed below.
 
+---
+
+## ✅ RESOLVED 2026-08-04 — with two of the four questions found already solved
+
+The inventory (step 1) did not match the item's own premise, so recording what was
+actually there:
+
+| Question | State when opened | Action |
+|---|---|---|
+| Which entry is the mesh | `getIdentifiedMeshAppBuilderComponent`, one accessor | none needed |
+| Has it EVER deployed | `hasMeshDeploymentRecord`, ONE accessor, 4 call sites | none needed |
+| Is it deployed NOW | one real mesh reader (`meshVerifier.ts:339`) | none needed — no drift surface |
+| Is it STALE | **three** encodings of "stale or update-declined" | fixed |
+
+So the six readers had already converged; the item over-counted by treating each
+2026-08-04 fix site as a standing duplication. What was genuinely open:
+
+**1. The second writer (step 4) — closed.** Verified rather than assumed:
+`updateMeshStateImpl` calls `recordDeployOutcome`, which mirrors status onto the
+same instance object `deployMeshHeadless` held. Its `meshComponent.status =
+'deployed'` and `= 'error'` lines were therefore redundant and are deleted. The
+`= 'deploying'` line STAYS — `recordDeployOutcome` mirrors only `deployed`/`error`,
+so that one has no other writer. Deleting the two also fixed a real inconsistency:
+`recordDeployOutcome` stamps `lastUpdated`, the hand-writes did not.
+
+**2. The stale predicate — closed.** `isUpdatePending` in `statusVocabulary` is now
+the one place that knows `stale` and `update-declined` are the same answer;
+`meshNeedsRedeploy` asks it instead of testing both literals. `needsStorefrontRepublish`
+deliberately keeps its own one-liner: different subject, different field, and Rule
+of Three is not met at two.
+
+**3. A test double that was lying — found by the writer collapse.** `deployMesh-storage`
+mocked `updateMeshState` as writing the legacy `meshState` singleton and nothing
+else — behaviour production retired at ADR-011 D3. Three assertions in that suite
+were validating the pre-migration model and passed only because the redundant
+writer masked the gap. The double now reproduces what the real function writes, and
+the assertions target the keyed entry.
+
+**Not done, deliberately:** relocating `hasMeshDeploymentRecord` from
+`dashboard/services` to sit beside the resolver. It is already a single accessor;
+moving it is a file move, not a fix, and both feature dirs already import it.
+
+---
+
+
 ## The shape
 
 Every mesh bug fixed on 2026-08-04 was the same thing: **two writers of "is this mesh

@@ -9,6 +9,7 @@
 
 import {
     getStatusDisplay,
+    isUpdatePending,
     normalizeDisplayStatus,
     severityToColor,
     severityToDot,
@@ -99,5 +100,27 @@ describe('the persisted mesh view of the shared table', () => {
 
     it('hides itself for an unknown status', () => {
         expect(getMeshStatusDisplay('unknown')).toBeNull();
+    });
+});
+
+describe('isUpdatePending — one predicate for both spellings', () => {
+    it.each(['stale', 'update-declined', 'config-changed'])('%s is pending', (status) => {
+        expect(isUpdatePending(status)).toBe(true);
+    });
+
+    it.each(['deployed', 'not-deployed', 'error', 'config-incomplete', 'unknown', undefined])(
+        '%s is not pending',
+        (status) => {
+            expect(isUpdatePending(status)).toBe(false);
+        },
+    );
+
+    it('answers false for a subject with states outside this vocabulary', () => {
+        // The storefront summary carries 'published'/'not-published'. It keeps its
+        // own predicate today (one line, a different field, and Rule of Three is
+        // not met at two) — but if it is ever routed here, these must not be
+        // mistaken for a pending update.
+        expect(isUpdatePending('published')).toBe(false);
+        expect(isUpdatePending('not-published')).toBe(false);
     });
 });
