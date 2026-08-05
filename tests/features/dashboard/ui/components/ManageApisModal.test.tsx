@@ -201,7 +201,6 @@ describe('ManageApisModal', () => {
             const managed = checkboxFor('API Mesh');
             expect(managed).toBeChecked();
             expect(managed).toBeDisabled();
-            expect(screen.getByText(/uncheck to remove/i)).toBeInTheDocument();
         });
     });
 

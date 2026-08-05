@@ -80,11 +80,6 @@ export interface ManageApisModalProps {
  */
 const FEEDBACK_HEIGHT = '320px';
 
-/** Helper copy above the dashboard's Manage APIs list. */
-const HELPER_TEXT =
-    'Check to add an API, uncheck to remove one. Locked entries are always-on and ' +
-    'can’t be removed.';
-
 function toMessage(err: unknown): string {
     return err instanceof Error ? err.message : String(err);
 }
@@ -138,7 +133,6 @@ function ManageApisBody({
             apis={apis}
             selected={selected}
             onToggle={onToggle}
-            helperText={HELPER_TEXT}
             listHeight={FEEDBACK_HEIGHT}
         />
     );
