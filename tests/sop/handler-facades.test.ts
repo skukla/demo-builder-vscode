@@ -96,7 +96,6 @@ describe('SOP: Handler Facades', () => {
              * They are internal implementation details
              */
             const INTERNAL_HELPERS = [
-                'createHandlerHelpers',
                 'meshStatusHelpers',
                 'edsHelpers',
                 'shared',

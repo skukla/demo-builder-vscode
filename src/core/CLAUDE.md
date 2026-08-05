@@ -189,7 +189,7 @@ Features define handler maps as simple object literals, then use `dispatchHandle
 // Feature handler map (object literal)
 export const meshHandlers = defineHandlers({
     'check-api-mesh': handleCheckApiMesh,
-    'create-api-mesh': handleCreateApiMesh,
+    'delete-api-mesh': handleDeleteApiMesh,
 });
 
 // Dispatch in command

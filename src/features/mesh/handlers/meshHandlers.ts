@@ -8,7 +8,6 @@
  */
 
 import { handleCheckApiMesh } from './checkHandler';
-import { handleCreateApiMesh } from './createHandler';
 import { handleDeleteApiMesh } from './deleteHandler';
 import { handleDeployApiMesh } from './deployHandler';
 import { handleEnsureMeshApiSubscribed } from './subscribeHandler';
@@ -20,7 +19,6 @@ import { defineHandlers } from '@/types/handlers';
  */
 export const meshHandlers = defineHandlers({
     'check-api-mesh': handleCheckApiMesh,
-    'create-api-mesh': handleCreateApiMesh,
     'delete-api-mesh': handleDeleteApiMesh,
     'deploy-api-mesh': handleDeployApiMesh,
     'ensure-mesh-api-subscribed': handleEnsureMeshApiSubscribed,

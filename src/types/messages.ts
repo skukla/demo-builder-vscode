@@ -56,7 +56,6 @@ export type MessageType =
 
     // API Mesh messages
     | 'check-api-mesh'
-    | 'create-api-mesh'
     | 'delete-api-mesh'
     | 'ensure-mesh-api-subscribed'
     | 'check-mesh-status-async'

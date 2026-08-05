@@ -70,7 +70,6 @@ export const projectCreationHandlers = defineHandlers({
 
     // Mesh handlers
     'check-api-mesh': meshHandlers['check-api-mesh'],
-    'create-api-mesh': meshHandlers['create-api-mesh'],
     'delete-api-mesh': meshHandlers['delete-api-mesh'],
 
     // EDS handlers - GitHub

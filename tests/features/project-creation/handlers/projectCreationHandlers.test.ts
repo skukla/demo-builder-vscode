@@ -7,7 +7,6 @@
 
 import {
     projectCreationHandlers,
-    needsProgressCallback,
 } from '@/features/project-creation/handlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers';
 
@@ -55,7 +54,6 @@ describe('projectCreationHandlers', () => {
 
         it('should register mesh handlers', () => {
             expect(hasHandler(projectCreationHandlers, 'check-api-mesh')).toBe(true);
-            expect(hasHandler(projectCreationHandlers, 'create-api-mesh')).toBe(true);
         });
 
         it('should register EDS handlers', () => {
@@ -77,15 +75,4 @@ describe('projectCreationHandlers', () => {
         });
     });
 
-    describe('needsProgressCallback', () => {
-        it('should return true for create-api-mesh', () => {
-            expect(needsProgressCallback('create-api-mesh')).toBe(true);
-        });
-
-        it('should return false for other message types', () => {
-            expect(needsProgressCallback('check-auth')).toBe(false);
-            expect(needsProgressCallback('validate')).toBe(false);
-            expect(needsProgressCallback('ready')).toBe(false);
-        });
-    });
 });

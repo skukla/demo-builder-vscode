@@ -286,7 +286,7 @@ comm.on('status-update', (payload: { status: string; message: string }) => {
 const REQUEST_TIMEOUTS: Record<string, number> = {
     'authenticate': 60000,        // Browser auth flow
     'get-projects': 30000,        // API call
-    'create-api-mesh': 180000,    // Mesh creation
+    'deploy-api-mesh': 180000,    // Mesh deploy
     'update-api-mesh': 180000,    // Mesh update
 };
 

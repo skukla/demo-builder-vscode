@@ -7,6 +7,34 @@ one of the pair, and an unwrapped `aio` create is exactly the 2026-08-03 inciden
 where `deployMeshHeadless` deployed into a DELETED project for two days.
 **Present in:** `features/mesh/handlers/createHandler.ts`, `createHandlerHelpers.ts`.
 
+## ✅ SHIPPED 2026-08-05 — confirmed dead, removed
+
+Step 1 (re-verify) passed on four independent checks: no UI file references the
+message, nothing calls `postMessage('create-api-mesh')`, no MCP tool exposes it,
+and `package.json` registers no command. The only mention outside registration
+sites was the handler's own docblock.
+
+**The removal was wider than this item scoped.** `create-api-mesh` turned out to be
+the SOLE member of `PROGRESS_CALLBACK_TYPES`, so deleting it also killed
+`needsProgressCallback`, its config file, its two barrel exports, and the streaming
+special case in `createProject.ts` — along with the `api-mesh-progress` message
+that branch sent, which had no listener either. A dead sender and a dead receiver
+kept each other looking alive.
+
+Removed: `createHandler.ts`, `createHandlerHelpers.ts`, `progressCallbackConfig.ts`,
+four test files, the `meshHandlers` row, the `ProjectCreationHandlerRegistry` row,
+the `messages.ts` union member, the `webviewCommunicationManager` timeout row, two
+barrel exports, and the `createProject.ts` if/else (now a plain loop).
+
+Kept: `mesh/handlers/shared.ts`. Step 3 asked whether `getEndpoint` /
+`ensureAuthenticated` went with it — they do not; both still serve the check,
+delete and subscribe handlers plus two EDS services.
+
+Docs synced: `src/core/CLAUDE.md` and `core/communication/README.md` both used the
+handler as a live example and now use a surviving one; `docs/architecture/error-handling.md`
+lost its two entries. Historical `.rptc/complete/*` records were left alone — they
+describe what was true when written.
+
 ## The finding
 
 Two implementations of "create a mesh":

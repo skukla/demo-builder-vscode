@@ -194,7 +194,6 @@ return {
 
 **Handlers using this format:**
 - `handleCheckApiMesh`
-- `handleCreateApiMesh`
 
 ---
 
@@ -497,7 +496,6 @@ if (response.code === ErrorCode.AUTH_NO_APP_BUILDER) {
 
 **Mesh handlers:**
 - `handleCheckApiMesh` - `code: ErrorCode.MESH_CONFIG_INVALID | ErrorCode.AUTH_REQUIRED | ErrorCode.UNKNOWN`
-- `handleCreateApiMesh` - `code: ErrorCode.MESH_CONFIG_INVALID | ErrorCode.AUTH_REQUIRED | ErrorCode.UNKNOWN`
 - `handleDeleteApiMesh` - `code: ErrorCode.UNKNOWN`
 
 **Dashboard handlers:**

@@ -15,10 +15,7 @@ import { AuthenticationService } from '@/features/authentication';
 // Prerequisites checking is handled by PrerequisitesManager
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 // Handler utilities and handlers
-import {
-    projectCreationHandlers,
-    needsProgressCallback,
-} from '@/features/project-creation/handlers';
+import { projectCreationHandlers } from '@/features/project-creation/handlers';
 import {
     formatGroupName as formatGroupNameHelper,
     getEndpoint as getEndpointHelper,
@@ -465,8 +462,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
         // Auto-register all handlers from projectCreationHandlers object literal
         // This eliminates boilerplate by automatically discovering and registering
-        // all message handlers. Special cases (like progress callbacks) are handled
-        // via needsProgressCallback() utility function.
+        // all message handlers.
         //
         // SharedState is passed by reference, so handlers can modify state directly
         // without manual synchronization. Changes to context.sharedState automatically persist.
@@ -474,30 +470,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         const messageTypes = getRegisteredTypes(projectCreationHandlers);
 
         for (const messageType of messageTypes) {
-            // Check if this handler needs special progress callback handling
-            if (needsProgressCallback(messageType)) {
-                // Special case: create-api-mesh needs progress updates
-                comm.onStreaming(messageType, async (data: unknown) => {
-                    const onProgress = (message: string, subMessage?: string) => {
-                        comm.sendMessage('api-mesh-progress', { message, subMessage }).catch(
-                            (err) => {
-                                this.logger.warn('[API Mesh] Failed to send progress update', err);
-                            },
-                        );
-                    };
-                    const context = await this.createHandlerContext();
-                    return dispatchHandler(projectCreationHandlers, context, messageType, {
-                        ...(data as object),
-                        onProgress,
-                    });
-                });
-            } else {
-                // Standard handler registration (all other handlers)
-                comm.onStreaming(messageType, async (data: unknown) => {
-                    const context = await this.createHandlerContext();
-                    return dispatchHandler(projectCreationHandlers, context, messageType, data);
-                });
-            }
+            comm.onStreaming(messageType, async (data: unknown) => {
+                const context = await this.createHandlerContext();
+                return dispatchHandler(projectCreationHandlers, context, messageType, data);
+            });
         }
 
         // Listen for block library settings changes and propagate to webview

@@ -66,7 +66,6 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
 
     // API Mesh operations
     'check-api-mesh': TIMEOUTS.AUTH.BROWSER,         // 60s - workspace download + mesh describe
-    'create-api-mesh': TIMEOUTS.LONG,                // 180s - create and deploy mesh
     'update-api-mesh': TIMEOUTS.LONG,                // 180s - update and deploy mesh
     'ensure-mesh-api-subscribed': TIMEOUTS.LONG,     // 180s - subscribe required APIs (getCredentials + create + subscribe; multiple Adobe calls)
 

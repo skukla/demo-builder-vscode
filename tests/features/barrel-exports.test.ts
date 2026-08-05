@@ -21,16 +21,13 @@ describe('Feature Barrel Exports', () => {
             expect(typeof exports.CreateProjectWebviewCommand).toBe('function');
         });
 
-        it('should export projectCreationHandlers map and needsProgressCallback', async () => {
+        it('should export the projectCreationHandlers map', async () => {
             const exports = await import('@/features/project-creation');
 
             // Handler map (object literal) should be exported
             expect(exports.projectCreationHandlers).toBeDefined();
             expect(typeof exports.projectCreationHandlers).toBe('object');
 
-            // needsProgressCallback function should be exported
-            expect(exports.needsProgressCallback).toBeDefined();
-            expect(typeof exports.needsProgressCallback).toBe('function');
 
             // Deprecated class should NOT be exported
             expect((exports as Record<string, unknown>).ProjectCreationHandlerRegistry).toBeUndefined();
