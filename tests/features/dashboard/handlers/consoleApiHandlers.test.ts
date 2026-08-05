@@ -132,18 +132,20 @@ describe('handleListConsoleApis', () => {
         });
     });
 
-    it('cleans the catalog the same way as the wizard (drops noise)', async () => {
+    it('cleans the catalog the same way as the wizard (drops noise, carries product family)', async () => {
+        const EC = { code: 'marketing_cloud', name: 'Experience Cloud' };
         (createApiSubscriberClient as jest.Mock).mockReturnValueOnce({
             getServicesForOrg: jest.fn().mockResolvedValue([
-                { code: 'FireflyAPISDK', name: 'Firefly', enabled: true },
+                { code: 'FireflyAPISDK', name: 'Firefly', enabled: true, cloudGrouping: EC },
                 { code: 'OldThing', name: 'Old', enabled: false, disabledReasons: ['DEPRECATED'] },
             ]),
         });
 
         const result = await handleListConsoleApis(makeContext(makeProject()), undefined);
 
-        const apis = (result.data as { apis: Array<{ code: string }> }).apis;
+        const apis = (result.data as { apis: Array<{ code: string; group?: unknown }> }).apis;
         expect(apis.map((a) => a.code)).toEqual(['FireflyAPISDK']); // DEPRECATED dropped
+        expect(apis[0].group).toEqual(EC);
     });
 });
 

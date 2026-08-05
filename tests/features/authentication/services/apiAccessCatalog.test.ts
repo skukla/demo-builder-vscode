@@ -8,29 +8,29 @@
  *   - dedupe by code, preferring the enabled variant
  *   - `requiresApproval` → requiresReview; `USER_MISSING_PRODUCT_PROFILES` →
  *     requiresProfile; other disabled reasons (DEPRECATED, …) are hidden
+ *   - carry `cloudGrouping` through as `group`
  */
 
 import { buildApiAccessCatalog } from '@/features/authentication/services/apiAccessCatalog';
 import type { OrgServiceInfo } from '@/features/authentication/services/types';
 
+const EC = { code: 'marketing_cloud', name: 'Experience Cloud' };
+const AEP = { code: 'experience_platform', name: 'Adobe Experience Platform' };
 
 function svc(over: Partial<OrgServiceInfo> & { code: string }): OrgServiceInfo {
     return { name: over.code, enabled: true, ...over };
 }
 
 describe('buildApiAccessCatalog', () => {
-    it('keeps enabled rows and carries the name through', () => {
-        // `group` (Adobe's cloudGrouping) was dropped from the row on 2026-08-04:
-        // the picker's pills became a curated Commerce / App Builder pair, and
-        // nothing read the cloud family any more. The exact-shape assertion is the
-        // point — it fails if a field creeps back in unowned.
+    it('keeps enabled rows and carries name + product group through', () => {
         const rows = buildApiAccessCatalog([
-            svc({ code: 'ACCS-REST-API', name: 'Adobe Commerce' }),
+            svc({ code: 'ACCS-REST-API', name: 'Adobe Commerce', cloudGrouping: EC }),
         ]);
         expect(rows).toEqual([
             {
                 code: 'ACCS-REST-API',
                 name: 'Adobe Commerce',
+                group: EC,
                 requiresReview: false,
                 requiresProfile: false,
             },
@@ -39,7 +39,7 @@ describe('buildApiAccessCatalog', () => {
 
     it('flags requiresReview from requiresApproval (the "Requires Adobe review" badge)', () => {
         const [row] = buildApiAccessCatalog([
-            svc({ code: 'AdobeCommerceWithAdobeID', requiresApproval: true }),
+            svc({ code: 'AdobeCommerceWithAdobeID', requiresApproval: true, cloudGrouping: EC }),
         ]);
         expect(row.requiresReview).toBe(true);
         expect(row.requiresProfile).toBe(false);
@@ -70,11 +70,10 @@ describe('buildApiAccessCatalog', () => {
     it('dedupes by code, preferring the enabled variant over a disabled duplicate', () => {
         const rows = buildApiAccessCatalog([
             svc({ code: 'ACCS-REST-API', enabled: false, disabledReasons: ['EXCEPTION'] }),
-            svc({ code: 'ACCS-REST-API', name: 'Adobe Commerce', enabled: true }),
+            svc({ code: 'ACCS-REST-API', enabled: true, cloudGrouping: EC }),
         ]);
         expect(rows).toHaveLength(1);
-        // The ENABLED variant won: it is the one carrying a real name.
-        expect(rows[0]).toMatchObject({ code: 'ACCS-REST-API', name: 'Adobe Commerce' });
+        expect(rows[0]).toMatchObject({ code: 'ACCS-REST-API', group: EC });
     });
 
     it('always keeps a code named in `keep` even if it were disabled', () => {
@@ -102,8 +101,8 @@ describe('buildApiAccessCatalog', () => {
 
     it('mixes a realistic catalog down to the pickable + gated survivors', () => {
         const rows = buildApiAccessCatalog([
-            svc({ code: 'GraphQLServiceSDK', name: 'API Mesh' }),
-            svc({ code: 'AdobeCommerceWithAdobeID', requiresApproval: true }),
+            svc({ code: 'GraphQLServiceSDK', name: 'API Mesh', cloudGrouping: AEP }),
+            svc({ code: 'AdobeCommerceWithAdobeID', requiresApproval: true, cloudGrouping: EC }),
             svc({
                 code: 'AEMAssetsAuthor',
                 enabled: false,

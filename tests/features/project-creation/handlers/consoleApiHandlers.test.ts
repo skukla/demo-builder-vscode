@@ -85,6 +85,7 @@ type ApiRow = {
     locked: boolean;
     requiresProfile: boolean;
     requiresReview: boolean;
+    group?: { code: string; name: string };
 };
 
 function apisOf(result: { data?: unknown }): ApiRow[] {
@@ -117,6 +118,7 @@ describe('handleListOrgConsoleApis', () => {
                 locked: true,
                 requiresProfile: false,
                 requiresReview: false,
+                group: undefined,
             });
         });
 
@@ -275,6 +277,18 @@ describe('handleListOrgConsoleApis', () => {
                 code: 'AdobeCommerceWithAdobeID',
                 requiresReview: true,
             });
+        });
+
+        it('carries the product family (cloudGrouping) through as group', async () => {
+            const EC = { code: 'marketing_cloud', name: 'Experience Cloud' };
+            mockGetServicesForOrg.mockResolvedValue([
+                { code: 'ACCS-REST-API', name: 'Adobe Commerce', enabled: true, cloudGrouping: EC },
+            ]);
+
+            const apis = apisOf(
+                await handleListOrgConsoleApis(makeContext(), { componentIds: [] })
+            );
+            expect(apis[0].group).toEqual(EC);
         });
 
         it('keeps a locked code even if the catalog marks it disabled', async () => {

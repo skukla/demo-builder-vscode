@@ -247,16 +247,26 @@ describe('ApiAccessPicker', () => {
     });
 
     describe('product filter chips', () => {
-        // Curated pills, NOT Adobe's cloudGrouping. Adobe groups by CLOUD
-        // (Experience/Creative/Document), which put every API this extension cares
-        // about in one bucket and surfaced two the user never wants.
+        const EC = { code: 'marketing_cloud', name: 'Experience Cloud' };
+        const AEP = { code: 'experience_platform', name: 'Adobe Experience Platform' };
+        const DC = { code: 'document_cloud', name: 'Document Cloud' };
+        const CC = { code: 'creative_cloud', name: 'Creative Cloud' };
+
+        // Two lenses over one list: Adobe's cloud families (from the catalog's
+        // cloudGrouping) AND a curated Commerce / App Builder pair keyed off the
+        // name+code. An API can sit in both.
         const REAL: ApiOption[] = [
-            { code: 'commerceeventing', name: 'I/O Events for Adobe Commerce', locked: false },
-            { code: 'CommerceIntegrationSDK', name: 'Commerce Integration', locked: false },
-            { code: 'AppBuilderDataServicesSDK', name: 'App Builder Data Services', locked: false },
-            { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API', locked: false },
-            { code: 'GraphQLServiceSDK', name: 'API Mesh', locked: false },
-            { code: 'FireflyAPISDK', name: 'Firefly Services', locked: false },
+            {
+                code: 'commerceeventing',
+                name: 'I/O Events for Adobe Commerce',
+                locked: false,
+                group: EC,
+            },
+            { code: 'GraphQLServiceSDK', name: 'API Mesh', locked: false, group: AEP },
+            { code: 'TargetSDK', name: 'Adobe Target', locked: false, group: EC },
+            { code: 'SignSDK', name: 'Adobe Sign', locked: false, group: DC },
+            { code: 'PhotoshopSDK', name: 'Photoshop', locked: false, group: CC },
+            { code: 'LooseSDK', name: 'Ungrouped Thing', locked: false },
         ];
 
         function chipLabels(container: HTMLElement): (string | null)[] {
@@ -265,50 +275,53 @@ describe('ApiAccessPicker', () => {
             );
         }
 
-        it('renders All plus the two curated product pills', () => {
+        it('renders All, the curated pills, then the remaining cloud families', () => {
             const { container } = renderPicker({ apis: REAL });
-            expect(chipLabels(container)).toEqual(['All', 'Adobe Commerce', 'App Builder']);
-        });
-
-        it('classifies on the display name OR the code', () => {
-            const { container } = renderPicker({ apis: REAL });
-
-            fireEvent.click(screen.getByRole('button', { name: 'App Builder' }));
-            // Matched three different ways: name ("App Builder Data Services"),
-            // name with punctuation ("I/O Management API"), and code alone
-            // (GraphQLServiceSDK, whose NAME "API Mesh" also matches).
-            expect(listNames(container)).toEqual([
-                'API Mesh',
-                'App Builder Data Services',
-                'I/O Management API',
+            expect(chipLabels(container)).toEqual([
+                'All',
+                'Adobe Commerce',
+                'App Builder',
+                'Adobe Experience Platform',
+                'Experience Cloud',
             ]);
         });
 
-        it('gives a service matching BOTH patterns to the first pill', () => {
-            // "I/O Events for Adobe Commerce" reads as Commerce and as I/O. Order
-            // decides, and Commerce leads — an ambiguous row must land in exactly
-            // one pill, never both, or the counts stop adding up.
+        it('omits the Document Cloud and Creative Cloud pills', () => {
+            const { container } = renderPicker({ apis: REAL });
+            expect(chipLabels(container)).not.toContain('Document Cloud');
+            expect(chipLabels(container)).not.toContain('Creative Cloud');
+        });
+
+        it('still lists the excluded families’ APIs under All', () => {
+            // The PILLS go, not the services. This picker is the only surface that
+            // can subscribe anything, so hiding them would put them out of reach.
+            const { container } = renderPicker({ apis: REAL });
+            const names = listNames(container);
+            expect(names).toContain('Adobe Sign'); // Document Cloud
+            expect(names).toContain('Photoshop'); // Creative Cloud
+            expect(names).toContain('Ungrouped Thing'); // no cloudGrouping at all
+        });
+
+        it('puts an API in BOTH its curated pill and its cloud pill', () => {
+            // The curated pills are a second lens, not a re-bucketing: clicking
+            // "Experience Cloud" must still show everything Adobe groups there.
             const { container } = renderPicker({ apis: REAL });
 
             fireEvent.click(screen.getByRole('button', { name: 'Adobe Commerce' }));
+            expect(listNames(container)).toEqual(['I/O Events for Adobe Commerce']);
+
+            fireEvent.click(screen.getByRole('button', { name: 'Experience Cloud' }));
             expect(listNames(container)).toEqual([
-                'Commerce Integration',
+                'Adobe Target',
                 'I/O Events for Adobe Commerce',
             ]);
         });
 
-        it('keeps a non-matching API listed under All', () => {
-            // The pills narrow; they do not whitelist. This picker is the only
-            // surface that can subscribe anything, so hiding an entitled API would
-            // make it unreachable.
+        it('matches the curated pills on the display name OR the code', () => {
             const { container } = renderPicker({ apis: REAL });
-            expect(listNames(container)).toContain('Firefly Services');
-
-            fireEvent.click(screen.getByRole('button', { name: 'Adobe Commerce' }));
-            expect(listNames(container)).not.toContain('Firefly Services');
-
-            fireEvent.click(screen.getByRole('button', { name: 'All' }));
-            expect(listNames(container)).toContain('Firefly Services');
+            fireEvent.click(screen.getByRole('button', { name: 'App Builder' }));
+            // API Mesh matches by name; GraphQLServiceSDK would match by code too.
+            expect(listNames(container)).toEqual(['API Mesh']);
         });
 
         it('marks the active chip pressed', () => {
@@ -319,24 +332,22 @@ describe('ApiAccessPicker', () => {
             expect(chip).toHaveAttribute('aria-pressed', 'true');
         });
 
-        it('renders no chip row when neither product is present', () => {
-            // A row of pills that filter nothing is noise.
+        it('renders no chip row when nothing is groupable', () => {
+            // Only ungrouped, non-curated APIs: every pill would filter to nothing.
             const { container } = renderPicker({
-                apis: [{ code: 'FireflyAPISDK', name: 'Firefly Services', locked: false }],
+                apis: [{ code: 'LooseSDK', name: 'Ungrouped Thing', locked: false }],
             });
             expect(container.querySelector('.intflow-api-chips')).toBeNull();
         });
 
-        it('omits a pill no API matches', () => {
+        it('renders no chip row when the ONLY families present are excluded', () => {
             const { container } = renderPicker({
-                apis: [{ code: 'commerceeventing', name: 'Commerce Events', locked: false }],
+                apis: [{ code: 'SignSDK', name: 'Adobe Sign', locked: false, group: DC }],
             });
-            expect(chipLabels(container)).toEqual(['All', 'Adobe Commerce']);
+            expect(container.querySelector('.intflow-api-chips')).toBeNull();
         });
 
         it('still toggles a pickable row after filtering to a pill', () => {
-            // Filtering narrows the rendered list; it must not detach the rows
-            // from their handler.
             const { onToggle } = renderPicker({ apis: REAL });
             fireEvent.click(screen.getByRole('button', { name: 'App Builder' }));
             fireEvent.click(checkboxFor('API Mesh'));

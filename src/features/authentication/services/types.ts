@@ -5,6 +5,7 @@
  * in src/core/ui/types/index.ts and re-exported here for backward compatibility.
  */
 
+import type { CloudGrouping } from '@/types/adobeApis';
 
 // Re-export Adobe entity types from centralized location for backward compatibility
 export type {
@@ -161,6 +162,12 @@ export interface OrgServiceInfo {
     requiresApproval?: boolean;
     /** Reason codes when `enabled` is false (e.g. `USER_MISSING_PRODUCT_PROFILES`, `DEPRECATED`). */
     disabledReasons?: string[];
+    /**
+     * Product family the service belongs to (Console's "Filter by product":
+     * Experience Cloud, Adobe Experience Platform, Adobe Services, …). Drives the
+     * picker's "All available" product sub-headers.
+     */
+    cloudGrouping?: CloudGrouping;
 }
 
 /** Input to `createAdobeIdCredential` (apiKey path). `domain` mandatory for API Mesh. */

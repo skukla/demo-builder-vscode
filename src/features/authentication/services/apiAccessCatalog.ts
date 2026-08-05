@@ -13,6 +13,7 @@
  *     Adobe review", `USER_MISSING_PRODUCT_PROFILES` → "Requires a product
  *     profile" (NOT the `licenseConfigs` length, which the live catalog proved
  *     wrong — profile-missing rows carry an empty `licenseConfigs`);
+ *   - carry `cloudGrouping` through as the product `group` for sub-headers.
  *
  * Pure and shared by the wizard + dashboard console-API handlers.
  *
@@ -20,6 +21,7 @@
  */
 
 import type { OrgServiceInfo } from './types';
+import type { CloudGrouping } from '@/types/adobeApis';
 
 /** The disabled-reason that means "you could subscribe, but you lack a product profile". */
 const PROFILE_MISSING_REASON = 'USER_MISSING_PRODUCT_PROFILES';
@@ -30,6 +32,8 @@ export interface ApiCatalogRow {
     code: string;
     /** Display name (falls back to the code). */
     name: string;
+    /** Product family (Console's "Filter by product"); absent when the catalog omits it. */
+    group?: CloudGrouping;
     /** Adobe must approve access first — shown disabled under "Requires Adobe review". */
     requiresReview: boolean;
     /** Blocked only by a missing product profile — shown disabled under "Requires a product profile". */
@@ -92,6 +96,7 @@ export function buildApiAccessCatalog(
         rows.push({
             code: service.code,
             name: service.name ?? service.code,
+            group: service.cloudGrouping,
             requiresReview: enabled && service.requiresApproval === true,
             requiresProfile: profileMissing,
         });
