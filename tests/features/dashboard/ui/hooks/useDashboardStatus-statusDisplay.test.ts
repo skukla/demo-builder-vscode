@@ -180,7 +180,7 @@ describe('useDashboardStatus — Status Display Strings', () => {
 
             expect(result.current.meshStatusDisplay).toEqual({
                 color: 'green',
-                text: 'Mesh Deployed',
+                text: 'Deployed',
             });
         });
 
@@ -202,7 +202,7 @@ describe('useDashboardStatus — Status Display Strings', () => {
             });
         });
 
-        it('should return Redeploy Mesh for config-changed', () => {
+        it('should return Update available for config-changed', () => {
             const { result } = renderHook(() => useDashboardStatus());
 
             act(() => {
@@ -216,7 +216,7 @@ describe('useDashboardStatus — Status Display Strings', () => {
 
             expect(result.current.meshStatusDisplay).toEqual({
                 color: 'yellow',
-                text: 'Redeploy Mesh',
+                text: 'Update available',
             });
         });
 
@@ -235,7 +235,7 @@ describe('useDashboardStatus — Status Display Strings', () => {
                 });
             });
 
-            expect(result.current.meshStatusDisplay?.text).toBe('Not Deployed');
+            expect(result.current.meshStatusDisplay?.text).toBe('Not deployed');
         });
 
         it('should return Deploying... with message for deploying', () => {
@@ -256,7 +256,7 @@ describe('useDashboardStatus — Status Display Strings', () => {
             });
         });
 
-        it('should return Mesh Error for error', () => {
+        it('should return Deploy failed for error', () => {
             const { result } = renderHook(() => useDashboardStatus());
 
             act(() => {
@@ -270,7 +270,7 @@ describe('useDashboardStatus — Status Display Strings', () => {
 
             expect(result.current.meshStatusDisplay).toEqual({
                 color: 'red',
-                text: 'Mesh Error',
+                text: 'Deploy failed',
             });
         });
     });

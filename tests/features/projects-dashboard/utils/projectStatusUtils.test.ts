@@ -268,14 +268,14 @@ describe('projectStatusUtils', () => {
             expect(getMeshStatusText(project)).toBeNull();
         });
 
-        it('should return "Redeploy Mesh" when stale', () => {
+        it('should return "Mesh · Update available" when stale', () => {
             const project = createMockProject({ meshStatusSummary: 'stale' });
-            expect(getMeshStatusText(project)).toBe('Redeploy Mesh');
+            expect(getMeshStatusText(project)).toBe('Mesh · Update available');
         });
 
-        it('should return "Mesh Deployed" when deployed', () => {
+        it('should return "Mesh · Deployed" when deployed', () => {
             const project = createMockProject({ meshStatusSummary: 'deployed' });
-            expect(getMeshStatusText(project)).toBe('Mesh Deployed');
+            expect(getMeshStatusText(project)).toBe('Mesh · Deployed');
         });
 
         it('should return null when unknown', () => {
@@ -283,24 +283,24 @@ describe('projectStatusUtils', () => {
             expect(getMeshStatusText(project)).toBeNull();
         });
 
-        it('should return "Mesh Incomplete" when config-incomplete', () => {
+        it('should return "Mesh · Incomplete" when config-incomplete', () => {
             const project = createMockProject({ meshStatusSummary: 'config-incomplete' });
-            expect(getMeshStatusText(project)).toBe('Mesh Incomplete');
+            expect(getMeshStatusText(project)).toBe('Mesh · Incomplete');
         });
 
-        it('should return "Redeploy Mesh" when update-declined', () => {
+        it('should return "Mesh · Update available" when update-declined', () => {
             const project = createMockProject({ meshStatusSummary: 'update-declined' });
-            expect(getMeshStatusText(project)).toBe('Redeploy Mesh');
+            expect(getMeshStatusText(project)).toBe('Mesh · Update available');
         });
 
-        it('should return "Not Deployed" when not-deployed', () => {
+        it('should return "Mesh · Not deployed" when not-deployed', () => {
             const project = createMockProject({ meshStatusSummary: 'not-deployed' });
-            expect(getMeshStatusText(project)).toBe('Not Deployed');
+            expect(getMeshStatusText(project)).toBe('Mesh · Not deployed');
         });
 
-        it('should return "Mesh Error" when error', () => {
+        it('should return "Mesh · Deploy failed" when error', () => {
             const project = createMockProject({ meshStatusSummary: 'error' });
-            expect(getMeshStatusText(project)).toBe('Mesh Error');
+            expect(getMeshStatusText(project)).toBe('Mesh · Deploy failed');
         });
     });
 
@@ -431,14 +431,14 @@ describe('projectStatusUtils', () => {
                 appBuilderComponents: { 'eds-accs-mesh': meshEntry('deployed') },
             });
 
-            expect(getMeshStatusText(project)).toBe('Mesh Deployed');
+            expect(getMeshStatusText(project)).toBe('Mesh · Deployed');
             expect(getMeshStatusVariant(project)).toBe('success');
         });
 
         it.each([
-            ['error', 'Mesh Error', 'error'],
-            ['stale', 'Redeploy Mesh', 'warning'],
-            ['not-deployed', 'Not Deployed', 'neutral'],
+            ['error', 'Mesh · Deploy failed', 'error'],
+            ['stale', 'Mesh · Update available', 'warning'],
+            ['not-deployed', 'Mesh · Not deployed', 'neutral'],
         ] as const)('maps a keyed %s mesh to %s', (status, text, variant) => {
             const project = createMockProject({
                 meshStatusSummary: undefined,
@@ -455,7 +455,7 @@ describe('projectStatusUtils', () => {
                 appBuilderComponents: { 'eds-accs-mesh': meshEntry('deployed') },
             });
 
-            expect(getMeshStatusText(project)).toBe('Redeploy Mesh');
+            expect(getMeshStatusText(project)).toBe('Mesh · Update available');
         });
     });
 
@@ -661,7 +661,11 @@ describe('mesh status resolution matches the canonical resolver', () => {
             },
         } as never;
 
-        expect(getMeshStatusText(project)).toBe(getMeshStatusDisplay('deployed')?.text);
+        // Derived from the shared table rather than hard-coded, so a wording
+        // change moves this with it — the claim under test is WHICH mesh was
+        // resolved, not how 'deployed' is spelled. The `Mesh · ` prefix is the
+        // project card's own composition (see getMeshStatusText).
+        expect(getMeshStatusText(project)).toBe(`Mesh · ${getMeshStatusDisplay('deployed')?.text}`);
     });
 
     it('still falls back to the only mesh when there is no canonical key', () => {
@@ -669,7 +673,11 @@ describe('mesh status resolution matches the canonical resolver', () => {
             appBuilderComponents: { 'eds-accs-mesh': { kind: 'mesh', status: 'deployed' } },
         } as never;
 
-        expect(getMeshStatusText(project)).toBe(getMeshStatusDisplay('deployed')?.text);
+        // Derived from the shared table rather than hard-coded, so a wording
+        // change moves this with it — the claim under test is WHICH mesh was
+        // resolved, not how 'deployed' is spelled. The `Mesh · ` prefix is the
+        // project card's own composition (see getMeshStatusText).
+        expect(getMeshStatusText(project)).toBe(`Mesh · ${getMeshStatusDisplay('deployed')?.text}`);
     });
 });
 

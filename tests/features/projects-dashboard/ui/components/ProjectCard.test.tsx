@@ -99,22 +99,22 @@ describe('ProjectCard', () => {
             const project = createMockProject({ meshStatusSummary: 'deployed' });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
-            expect(screen.getByText('Mesh Deployed')).toBeInTheDocument();
+            expect(screen.getByText('Mesh · Deployed')).toBeInTheDocument();
         });
 
         it('should show redeploy needed when meshStatusSummary is stale', () => {
             const project = createMockProject({ meshStatusSummary: 'stale' });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
-            expect(screen.getByText('Redeploy Mesh')).toBeInTheDocument();
+            expect(screen.getByText('Mesh · Update available')).toBeInTheDocument();
         });
 
         it('should not show mesh status when meshStatusSummary is not set', () => {
             const project = createMockProject();
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
-            expect(screen.queryByText('Mesh Deployed')).not.toBeInTheDocument();
-            expect(screen.queryByText('Redeploy Mesh')).not.toBeInTheDocument();
+            expect(screen.queryByText('Mesh · Deployed')).not.toBeInTheDocument();
+            expect(screen.queryByText('Mesh · Update available')).not.toBeInTheDocument();
         });
     });
 
@@ -141,18 +141,18 @@ describe('ProjectCard', () => {
             expect(screen.queryByText(/integration/i)).not.toBeInTheDocument();
         });
 
-        it('should show "Mesh Incomplete" when config-incomplete', () => {
+        it('should show "Mesh · Incomplete" when config-incomplete', () => {
             const project = createMockProject({ meshStatusSummary: 'config-incomplete' });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
-            expect(screen.getByText('Mesh Incomplete')).toBeInTheDocument();
+            expect(screen.getByText('Mesh · Incomplete')).toBeInTheDocument();
         });
 
-        it('should show "Mesh Error" when error', () => {
+        it('should show "Mesh · Deploy failed" when error', () => {
             const project = createMockProject({ meshStatusSummary: 'error' });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
-            expect(screen.getByText('Mesh Error')).toBeInTheDocument();
+            expect(screen.getByText('Mesh · Deploy failed')).toBeInTheDocument();
         });
 
         // No placeholder line for a project without a mesh: cards are allowed to
@@ -231,7 +231,7 @@ describe('ProjectCard', () => {
             expect(lines).toHaveLength(3);
             // Line 0 is the project/storefront status — its wording depends on
             // whether the project is EDS, which is not what this pins.
-            expect(lines[1]).toBe('Mesh Deployed');
+            expect(lines[1]).toBe('Mesh · Deployed');
             expect(lines[2]).toBe('1 integration deployed');
         });
 

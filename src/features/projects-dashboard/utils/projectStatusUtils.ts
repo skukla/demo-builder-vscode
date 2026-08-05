@@ -121,8 +121,14 @@ function getMeshStatusKey(project: Project): string | undefined {
     return getIdentifiedMeshAppBuilderComponent(project)?.state.status;
 }
 
+/**
+ * The project card's mesh line. The shared table holds the bare state; this card
+ * is headed with the PROJECT name, so it supplies the noun — as
+ * {@link getAppStatusText} already does for integrations.
+ */
 export function getMeshStatusText(project: Project): string | null {
-    return getMeshStatusDisplay(getMeshStatusKey(project))?.text ?? null;
+    const text = getMeshStatusDisplay(getMeshStatusKey(project))?.text;
+    return text ? `Mesh · ${text}` : null;
 }
 
 export function getMeshStatusVariant(project: Project): StatusVariant | null {
@@ -218,7 +224,6 @@ export function getAppStatusVariant(project: Project): StatusVariant | null {
 export function meshNeedsRedeploy(project: Project): boolean {
     return project.meshStatusSummary === 'stale' || project.meshStatusSummary === 'update-declined';
 }
-
 
 /**
  * Whether the project has any App Builder component at all — the test for
