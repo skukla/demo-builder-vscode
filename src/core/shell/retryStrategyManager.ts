@@ -2,6 +2,7 @@ import { RateLimiter } from './rateLimiter';
 import type { RetryStrategy, CommandResult } from './types';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS, formatDuration } from '@/core/utils';
+import { sleep } from '@/core/utils/sleep';
 import { toAppError, isTimeout, isNetwork } from '@/types/errors';
 
 /**
@@ -185,7 +186,7 @@ export class RetryStrategyManager {
                     );
 
                     this.logger.debug(`[Retry Strategy] Retrying in ${delay}ms...`);
-                    await this.delay(delay);
+                    await sleep(delay);
                 } else {
                     this.logger.warn(`[Retry Strategy] All ${strategy.maxAttempts} attempts exhausted`);
                     throw error;
@@ -196,10 +197,4 @@ export class RetryStrategyManager {
         throw lastError || new Error('Command failed after retries');
     }
 
-    /**
-     * Delay for specified milliseconds
-     */
-    private delay(ms: number): Promise<void> {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
 }

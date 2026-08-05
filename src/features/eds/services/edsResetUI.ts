@@ -17,6 +17,7 @@
  */
 
 import { executeEdsReset, extractResetParams, type EdsResetParams, type EdsResetResult } from './edsResetService';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -249,7 +250,7 @@ async function showResetResultNotifications(
     if (result.success) {
         void vscode.window.withProgress(
             { location: vscode.ProgressLocation.Notification, title: `"${projectName}" reset successfully` },
-            async () => new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION)),
+            async () => sleep(TIMEOUTS.UI.NOTIFICATION),
         );
 
         if (result.errorType === 'MESH_REDEPLOY_FAILED') {

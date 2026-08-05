@@ -25,6 +25,7 @@ import {
 } from './ioEventsClient';
 import type { WorkspaceS2SCredentialIds } from './types';
 import { withTimeout } from '@/core/utils/promiseUtils';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
@@ -33,10 +34,6 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
  * (spike: the 403 usually clears within seconds).
  */
 export const PROPAGATION_RETRY_DELAYS: readonly number[] = [2_000, 5_000, 10_000];
-
-function sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /** Human-readable message for a collected item; never includes auth material. */
 export function errorMessage(error: unknown): string {

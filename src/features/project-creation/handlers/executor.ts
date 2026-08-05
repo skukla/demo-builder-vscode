@@ -41,6 +41,7 @@ import {
     type OrgContextTarget,
 } from '@/core/shell';
 import { parseGitHubUrl } from '@/core/utils';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
@@ -1374,7 +1375,7 @@ async function handlePortConflicts(
             );
 
             await vscode.commands.executeCommand('demoBuilder.stopDemo');
-            await new Promise((resolve) => setTimeout(resolve, TIMEOUTS.DEMO_STOP_WAIT));
+            await sleep(TIMEOUTS.DEMO_STOP_WAIT);
         }
     }
 }

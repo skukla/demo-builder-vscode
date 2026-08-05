@@ -15,6 +15,7 @@ import * as vscode from 'vscode';
 import { getLinkedEdsProjects } from '../services/resourceCleanupHelpers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger } from '@/core/logging';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -219,7 +220,7 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
                     cancellable: false,
                 },
                 async () => {
-                    await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION));
+                    await sleep(TIMEOUTS.UI.NOTIFICATION);
                 },
             );
         } else if (deleted.length > 0 && failed.length > 0) {

@@ -19,6 +19,7 @@ import {
 import { COMPONENT_IDS } from '@/core/constants';
 import type { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils';
+import { sleep } from '@/core/utils/sleep';
 import { sanitizeErrorForLogging } from '@/core/validation';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
@@ -83,7 +84,7 @@ async function ensureProjectStopped(
     const currentProject = await ctx.stateManager.getCurrentProject();
     if (currentProject?.path === project.path) {
         await vscode.commands.executeCommand('demoBuilder.stopDemo');
-        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DEMO_STOP_WAIT));
+        await sleep(TIMEOUTS.DEMO_STOP_WAIT);
     }
 
     return true;

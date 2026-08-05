@@ -8,6 +8,7 @@ import { ServiceLocator } from '@/core/di';
 import { initializeLogger, getLogger } from '@/core/logging';
 import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
@@ -235,9 +236,7 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand('demoBuilder.restartDemo', async () => {
                 await vscode.commands.executeCommand('demoBuilder.stopDemo');
                 // Small delay to ensure clean stop
-                await new Promise((resolve) =>
-                    setTimeout(resolve, TIMEOUTS.DEMO_STATUS_UPDATE_DELAY),
-                );
+                await sleep(TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
                 await vscode.commands.executeCommand('demoBuilder.startDemo');
             }),
         );

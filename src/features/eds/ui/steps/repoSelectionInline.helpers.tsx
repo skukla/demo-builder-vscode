@@ -27,6 +27,7 @@ import { LoadingOverlay } from '@/core/ui/components/feedback/LoadingOverlay';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
+import { sleep } from '@/core/utils/sleep';
 import { isValidRepositoryName } from '@/core/validation/normalizers';
 import type { GitHubRepoItem } from '@/types/webview';
 
@@ -88,7 +89,7 @@ export async function pollGitHubAppInstallation(
                 setRecheckMessage(
                     `Repository is still being registered... (attempt ${attempt + 1} of ${maxAttempts})`,
                 );
-                await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+                await sleep(retryDelayMs);
                 continue;
             }
 

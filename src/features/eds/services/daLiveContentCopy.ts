@@ -35,6 +35,7 @@ import {
     type DaLiveProgressCallback,
     type DaLiveContentSource,
 } from './types';
+import { sleep } from '@/core/utils/sleep';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { ContentPatchSource } from '@/types/demoPackages';
@@ -365,7 +366,7 @@ export class DaLiveContentCopy {
                     RETRYABLE_STATUS_CODES.includes(response.status) &&
                     attempt < MAX_RETRY_ATTEMPTS
                 ) {
-                    await new Promise((resolve) => setTimeout(resolve, getRetryDelay(attempt)));
+                    await sleep(getRetryDelay(attempt));
                     continue;
                 }
 
@@ -386,7 +387,7 @@ export class DaLiveContentCopy {
                 if (error instanceof DaLiveAuthError) throw error;
 
                 if (attempt < MAX_RETRY_ATTEMPTS) {
-                    await new Promise((resolve) => setTimeout(resolve, getRetryDelay(attempt)));
+                    await sleep(getRetryDelay(attempt));
                     continue;
                 }
                 this.logger.error(`[DA.live] Copy error for ${destPath}`, error as Error);

@@ -1,4 +1,5 @@
 import { getLogger } from '@/core/logging';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
@@ -67,7 +68,7 @@ export class RateLimiter {
             );
 
             // Wait until rate limit resets
-            await this.delay(waitTime);
+            await sleep(waitTime);
 
             // Recursively check again after waiting
             return this.checkRateLimit(resource);
@@ -110,10 +111,4 @@ export class RateLimiter {
         return recentOps.length;
     }
 
-    /**
-     * Delay helper
-     */
-    private delay(ms: number): Promise<void> {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
 }

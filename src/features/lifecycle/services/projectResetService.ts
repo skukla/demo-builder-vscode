@@ -17,6 +17,7 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import stacksConfig from '@/features/project-creation/config/stacks.json';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
@@ -483,9 +484,7 @@ export async function resetProjectWithUI(
                         title: successMessage,
                     },
                     async () =>
-                        new Promise(resolve =>
-                            setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION),
-                        ),
+                        sleep(TIMEOUTS.UI.NOTIFICATION),
                 );
 
                 context.logger.info(`${logPrefix} Project reset completed`);

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
@@ -163,7 +164,7 @@ export async function setLoadingState(
 ): Promise<void> {
     // Give VSCode a moment to fully initialize the panel
     // This helps prevent the "Initializing web view..." message
-    await new Promise((resolve) => setTimeout(resolve, INIT_DELAY));
+    await sleep(INIT_DELAY);
 
     // Set loading HTML
     panel.webview.html = getLoadingHTML(message, header);
@@ -177,7 +178,7 @@ export async function setLoadingState(
     // transitions).
     if (elapsed < MIN_DISPLAY_TIME) {
         const remainingTime = MIN_DISPLAY_TIME - elapsed;
-        await new Promise((resolve) => setTimeout(resolve, remainingTime));
+        await sleep(remainingTime);
     }
 
     // Set actual HTML content

@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import * as vscode from 'vscode';
 import { getLogger } from '@/core/logging';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     Message,
@@ -442,7 +443,7 @@ export class WebviewCommunicationManager {
                     this.logger.debug(`[WebviewComm] Retrying message ${message.type} (attempt ${retryCount + 1})`);
                 }
                 
-                await new Promise(resolve => setTimeout(resolve, this.config.retryDelay));
+                await sleep(this.config.retryDelay);
                 await this.sendWithRetry(message, retryCount + 1);
             } else {
                 throw error;

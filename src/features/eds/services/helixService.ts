@@ -23,6 +23,7 @@ import {
 } from '@/core/cache/cacheUtils';
 import { getLogger } from '@/core/logging';
 import { runInBatches } from '@/core/utils/promiseUtils';
+import { sleep } from '@/core/utils/sleep';
 import { CACHE_TTL, TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -508,9 +509,7 @@ export class HelixService {
                     // Job endpoint may not exist immediately, retry
                     if (response.status === 404) {
                         this.logger.debug(`[Helix] Job not found yet, retrying...`);
-                        await new Promise((resolve) =>
-                            setTimeout(resolve, HelixService.JOB_POLL_INTERVAL_MS),
-                        );
+                        await sleep(HelixService.JOB_POLL_INTERVAL_MS);
                         continue;
                     }
                     throw new Error(
@@ -543,17 +542,13 @@ export class HelixService {
                 this.logger.debug(
                     `[Helix] Job state: ${status.state || status.status}, progress: ${status.progress?.processed ?? status.processed ?? '?'}/${status.progress?.total ?? status.total ?? '?'}`,
                 );
-                await new Promise((resolve) =>
-                    setTimeout(resolve, HelixService.JOB_POLL_INTERVAL_MS),
-                );
+                await sleep(HelixService.JOB_POLL_INTERVAL_MS);
             } catch (error) {
                 const errorMessage = (error as Error).message;
                 // Timeout errors should be retried
                 if (errorMessage.includes('timed out') || errorMessage.includes('timeout')) {
                     this.logger.debug(`[Helix] Job status request timed out, retrying...`);
-                    await new Promise((resolve) =>
-                        setTimeout(resolve, HelixService.JOB_POLL_INTERVAL_MS),
-                    );
+                    await sleep(HelixService.JOB_POLL_INTERVAL_MS);
                     continue;
                 }
                 throw error;
@@ -900,7 +895,7 @@ export class HelixService {
                 `[Helix] Rate limited on ${partition} ${cleanPath}, ` +
                     `retrying after ${retryAfter}s (attempt ${retryCount + 1}/${HELIX_RATE_LIMIT_MAX_RETRIES})`,
             );
-            await new Promise((resolve) => setTimeout(resolve, waitMs));
+            await sleep(waitMs);
             return this.deleteResource(partition, org, site, path, branch, retryCount + 1);
         }
         if (response.status === 204 || response.status === 404) {
@@ -1685,7 +1680,7 @@ export class HelixService {
                     `[Helix] previewCode 400 on attempt ${retryIndex + 1} — ` +
                         `Helix mirror not caught up, retrying in ${delayMs}ms`,
                 );
-                await new Promise((resolve) => setTimeout(resolve, delayMs));
+                await sleep(delayMs);
                 continue;
             }
 

@@ -22,6 +22,7 @@ import {
 } from './updateTypes';
 import { BaseCommand } from '@/core/base';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
+import { sleep } from '@/core/utils/sleep';
 import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
 import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
@@ -62,7 +63,7 @@ export class CheckUpdatesCommand extends BaseCommand {
                         progress.report({ message: 'Checking for updates...' });
 
                         // Wait to ensure message is visible before making GitHub API call
-                        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UPDATE_MESSAGE_DELAY));
+                        await sleep(TIMEOUTS.UPDATE_MESSAGE_DELAY);
 
                         const updateManager = new UpdateManager(this.context, this.logger);
                         const currentProject = await this.stateManager.getCurrentProject();
@@ -132,7 +133,7 @@ export class CheckUpdatesCommand extends BaseCommand {
                             progress.report({
                                 message: `Up to date (v${extensionUpdate.current})`,
                             });
-                            await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UPDATE_RESULT_DISPLAY));
+                            await sleep(TIMEOUTS.UPDATE_RESULT_DISPLAY);
                         }
 
                         return {

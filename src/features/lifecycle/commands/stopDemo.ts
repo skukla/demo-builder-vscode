@@ -18,6 +18,7 @@ import { BaseCommand, BaseWebviewCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
+import { sleep } from '@/core/utils/sleep';
 import { DEFAULT_SHELL } from '@/types/shell';
 import { getComponentInstancesByType } from '@/types/typeGuards';
 
@@ -193,7 +194,7 @@ export class StopDemoCommand extends BaseCommand {
 
                 // Update notification in place and pause briefly so user can see success
                 progress.report({ message: '✓ Demo stopped' });
-                await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.MIN_LOADING));
+                await sleep(TIMEOUTS.UI.MIN_LOADING);
             });
 
             // Status bar update only (notification already shown above)

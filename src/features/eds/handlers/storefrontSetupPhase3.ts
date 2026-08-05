@@ -18,6 +18,7 @@ import { DaLiveAuthError } from '../services/types';
 import { configureDaLivePermissions, surfaceOverlayRegistrationFailure } from './edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -220,7 +221,7 @@ async function verifyCodeSync(
 
             if (!syncVerified && attempt < CODE_SYNC_MAX_ATTEMPTS - 1) {
                 // 2s interval (faster than TIMEOUTS.EDS_CODE_SYNC_POLL=5s) — code sync typically settles quickly
-                await new Promise((resolve) => setTimeout(resolve, CODE_SYNC_POLL_INTERVAL_MS));
+                await sleep(CODE_SYNC_POLL_INTERVAL_MS);
             }
         }
 
@@ -396,7 +397,7 @@ async function retryRegistrationAfterDelay(
             message: `Waiting for Configuration Service access (${attempt + 1}/${RETRY_DELAYS_MS.length})...`,
             progress: 46,
         });
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        await sleep(delayMs);
 
         const retryResult = await configurationService.registerSite(siteParams);
         if (retryResult.success) {

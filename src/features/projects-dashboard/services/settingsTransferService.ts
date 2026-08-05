@@ -16,6 +16,7 @@ import {
     getSuggestedFilename,
 } from './settingsSerializer';
 import { showWebviewQuickPick } from '@/core/utils';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import { assertPathInsideSync } from '@/core/validation';
@@ -250,7 +251,7 @@ export async function exportProjectSettings(
                 cancellable: false,
             },
             async () => {
-                await new Promise((resolve) => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION));
+                await sleep(TIMEOUTS.UI.NOTIFICATION);
             },
         );
 

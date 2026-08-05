@@ -19,6 +19,7 @@ import { GitHubTokenService } from '../services/githubTokenService';
 import { getLinkedEdsProjects } from '../services/resourceCleanupHelpers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger } from '@/core/logging';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 interface SiteQuickPickItem extends vscode.QuickPickItem {
@@ -226,7 +227,7 @@ export async function cleanupDaLiveSitesCommand(context: vscode.ExtensionContext
                     cancellable: false,
                 },
                 async () => {
-                    await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION));
+                    await sleep(TIMEOUTS.UI.NOTIFICATION);
                 },
             );
         } else if (deleted.length > 0 && failed.length > 0) {

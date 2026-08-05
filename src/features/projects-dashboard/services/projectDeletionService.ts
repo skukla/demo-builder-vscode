@@ -12,6 +12,7 @@
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { TIMEOUTS, showOneTimeTip } from '@/core/utils';
+import { sleep } from '@/core/utils/sleep';
 import { ensureDaLiveAuth as ensureDaLiveAuthShared, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { createDaLiveServiceTokenProvider, DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
@@ -125,7 +126,7 @@ export async function deleteProject(
 
             // Show success message
             progress.report({ message: `"${project.name}" deleted` });
-            await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UPDATE_RESULT_DISPLAY));
+            await sleep(TIMEOUTS.UPDATE_RESULT_DISPLAY);
         },
     );
 
@@ -182,7 +183,7 @@ export async function deleteProjectFiles(
     const projectPath = project.path;
     if (projectPath) {
         context.logger.debug(`[Delete Project] Deleting directory: ${projectPath}`);
-        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.FILE_HANDLE_RELEASE));
+        await sleep(TIMEOUTS.FILE_HANDLE_RELEASE);
         await deleteDirectoryWithRetry(projectPath, context);
         await context.stateManager.removeFromRecentProjects(projectPath);
     }
@@ -588,7 +589,7 @@ async function deleteDirectoryWithRetry(path: string, context: HandlerContext): 
             if (isRetryable && attempt < MAX_RETRIES - 1) {
                 const delay = BASE_DELAY * Math.pow(2, attempt);
                 context.logger.debug(`[Delete Project] Waiting ${delay}ms before retry...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
+                await sleep(delay);
             } else if (isRetryable) {
                 throw new Error(`Failed to delete project after ${MAX_RETRIES} attempts: ${err.message}`);
             } else {

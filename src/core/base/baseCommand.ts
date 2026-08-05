@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { StateManager } from '@/core/state';
 import { DisposableStore } from '@/core/utils/disposableStore';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -151,7 +152,7 @@ export abstract class BaseCommand implements vscode.Disposable {
                 cancellable: false,
             },
             async () => {
-                await new Promise(resolve => setTimeout(resolve, duration));
+                await sleep(duration);
             },
         );
     }

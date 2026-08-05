@@ -14,6 +14,7 @@
 
 import { MAX_RETRY_ATTEMPTS, RETRYABLE_STATUS_CODES, getRetryDelay } from './daLiveConstants';
 import { DaLiveError, DaLiveAuthError, DaLiveNetworkError } from './types';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -67,7 +68,7 @@ export class DaLiveApiClient {
                     this.logger.debug(
                         `[DA.live] Retrying after ${response.status}, attempt ${attempt}`,
                     );
-                    await new Promise((resolve) => setTimeout(resolve, getRetryDelay(attempt)));
+                    await sleep(getRetryDelay(attempt));
                     continue;
                 }
 
@@ -79,7 +80,7 @@ export class DaLiveApiClient {
                 const errorMessage = (error as Error).message || 'Unknown error';
                 if (attempt < MAX_RETRY_ATTEMPTS && !errorMessage.includes('abort')) {
                     this.logger.debug(`[DA.live] Network error, retrying: ${errorMessage}`);
-                    await new Promise((resolve) => setTimeout(resolve, getRetryDelay(attempt)));
+                    await sleep(getRetryDelay(attempt));
                     continue;
                 }
 

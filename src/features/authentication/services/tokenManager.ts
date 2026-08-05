@@ -3,6 +3,7 @@ import { AuthenticationErrorFormatter } from './authenticationErrorFormatter';
 import { getLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
 import { SingleFlight, TIMEOUTS, formatMinutes } from '@/core/utils';
+import { sleep } from '@/core/utils/sleep';
 import { toAppError, isTimeout } from '@/types/errors';
 import type { Logger } from '@/types/logger';
 import { toError } from '@/types/typeGuards';
@@ -185,7 +186,7 @@ export class TokenManager {
                     // Exponential backoff: 500ms, 1000ms, 2000ms
                     const backoffMs = TIMEOUTS.TOKEN_RETRY_BASE * Math.pow(2, attempt - 1);
                     this.logger.warn(`[Token] Timeout on attempt ${attempt}/${maxRetries}, retrying in ${backoffMs}ms...`);
-                    await new Promise(resolve => setTimeout(resolve, backoffMs));
+                    await sleep(backoffMs);
                     continue; // Retry
                 }
 

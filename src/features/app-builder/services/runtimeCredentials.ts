@@ -27,6 +27,7 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import type { CommandExecutor } from '@/core/shell';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 import { parseJSON, toError } from '@/types/typeGuards';
@@ -153,15 +154,10 @@ export async function ensureWorkspaceRuntime(
             return;
         }
         if (attempt < RUNTIME_PROVISION_ATTEMPTS) {
-            await delay(pollDelayMs);
+            await sleep(pollDelayMs);
         }
     }
     throw new Error(RUNTIME_PROVISION_FAILED_MESSAGE);
-}
-
-/** Resolve after `ms` (post-provision poll spacing; the namespace can lag). */
-function delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**

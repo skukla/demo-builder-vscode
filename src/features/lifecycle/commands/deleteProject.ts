@@ -2,6 +2,7 @@ import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { BaseCommand, BaseWebviewCommand } from '@/core/base';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
+import { sleep } from '@/core/utils/sleep';
 import { toError } from '@/types/typeGuards';
 
 export class DeleteProjectCommand extends BaseCommand {
@@ -55,7 +56,7 @@ export class DeleteProjectCommand extends BaseCommand {
                         this.logger.debug(`[Delete Project] Deleting directory: ${projectPath}`);
 
                         // Wait for OS to release file handles (watchers, etc.)
-                        await new Promise(resolve => setTimeout(resolve, this.HANDLE_RELEASE_DELAY));
+                        await sleep(this.HANDLE_RELEASE_DELAY);
 
                         // Delete with retry logic for transient filesystem errors
                         // No post-deletion verification needed - fs.rm() success means deletion complete
@@ -170,7 +171,7 @@ export class DeleteProjectCommand extends BaseCommand {
                     // Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms
                     const delay = this.BASE_DELAY * Math.pow(2, attempt);
                     this.logger.debug(`[Delete Project] Waiting ${delay}ms before retry...`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
+                    await sleep(delay);
                 } else if (isRetryable) {
                     // Last retry failed
                     this.logger.error('[Delete Project] Failed to delete project files after all retries', err);

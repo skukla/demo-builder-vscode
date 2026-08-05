@@ -24,6 +24,7 @@ import { executeCommandForProject } from '@/core/handlers';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito, TIMEOUTS } from '@/core/utils';
+import { sleep } from '@/core/utils/sleep';
 import { validateProjectPath, validateURL } from '@/core/validation';
 import {
     hasMeshDeploymentRecord,
@@ -999,7 +1000,7 @@ export const handleRepublishContent: MessageHandler<{ projectPath: string }> = a
                             title: `Content republished for "${project.name}"`,
                         },
                         async () =>
-                            new Promise((resolve) => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION)),
+                            sleep(TIMEOUTS.UI.NOTIFICATION),
                     );
 
                     return { success: true };

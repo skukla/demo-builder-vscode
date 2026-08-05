@@ -28,6 +28,8 @@ export { formatDuration, formatMinutes } from './timeFormatting';
 
 export * from './promiseUtils';
 
+export { sleep } from './sleep';
+
 export { ExecutionLock } from './executionLock';
 
 export { showWebviewQuickPick, showWebviewQuickPickMany } from './quickPickUtils';

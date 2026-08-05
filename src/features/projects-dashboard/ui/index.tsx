@@ -11,6 +11,7 @@ import type { ProjectActions } from './components/ProjectActionsMenu';
 import { ProjectsDashboard } from './ProjectsDashboard';
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { sleep } from '@/core/utils/sleep';
 import type { Project } from '@/types/base';
 
 // Import global styles
@@ -211,7 +212,7 @@ const ProjectsDashboardApp: React.FC = () => {
             try {
                 await webviewClient.request('startDemo', { projectPath: project.path });
                 // Allow project manifest to be written to disk before refreshing
-                await new Promise((resolve) => setTimeout(resolve, PROJECT_STATE_PERSIST_DELAY));
+                await sleep(PROJECT_STATE_PERSIST_DELAY);
                 fetchProjects(true);
             } catch (error) {
                 console.error('Failed to start demo:', error);
@@ -226,7 +227,7 @@ const ProjectsDashboardApp: React.FC = () => {
             try {
                 await webviewClient.request('stopDemo', { projectPath: project.path });
                 // Allow project manifest to be written to disk before refreshing
-                await new Promise((resolve) => setTimeout(resolve, PROJECT_STATE_PERSIST_DELAY));
+                await sleep(PROJECT_STATE_PERSIST_DELAY);
                 fetchProjects(true);
             } catch (error) {
                 console.error('Failed to stop demo:', error);
