@@ -16,6 +16,7 @@
 
 import { getAppBuilderComponentEntry } from '../services/appBuilderComponentCatalogLoader';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { resolveApiRowStates, type ApiOwner } from '@/core/state/apiRowState';
 import { fetchApiAccessRows } from '@/features/app-builder/services/apiAccessRows';
 import { computeRequiredApis } from '@/features/app-builder/services/apiSubscriber';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -28,10 +29,23 @@ import { toError } from '@/types/typeGuards';
  * flagged `locked: true` when the wizard's reconcile union already covers it
  * (selected catalog entries' requiredApis + baseline).
  */
-export const handleListOrgConsoleApis: MessageHandler<{ componentIds?: string[] }> = async (
-    _context,
-    payload,
-) => {
+export const handleListOrgConsoleApis: MessageHandler<{
+    componentIds?: string[];
+    /**
+     * The integration these rows are FOR, when there is one. Absent on the add
+     * flow — the integration being added does not exist yet, so nothing is "mine"
+     * and every required code legitimately belongs to somebody else.
+     */
+    componentId?: string;
+    /**
+     * In-flight ad-hoc picks (`selectedConsoleApis`), keyed by integration id.
+     *
+     * The dashboard reads these off the project; the wizard's live in the webview
+     * draft, so this handler has to be told them. Without it the same code reads
+     * unowned here and owned there — the drift this step exists to prevent.
+     */
+    picks?: Record<string, string[]>;
+}> = async (_context, payload) => {
     const authService = ServiceLocator.getAuthenticationService();
     if (!(await authService.isAuthenticated())) {
         // TYPED, not just prose: the picker renders a "Sign In with Adobe" action for
@@ -59,14 +73,40 @@ export const handleListOrgConsoleApis: MessageHandler<{ componentIds?: string[] 
     const entries = (payload?.componentIds ?? [])
         .map((id) => getAppBuilderComponentEntry(id))
         .filter((entry): entry is AppBuilderComponentCatalogEntry => entry !== undefined);
-    const locked = new Set(computeRequiredApis(entries));
+    const picks = payload?.picks ?? {};
+    // A pick is a claim exactly as a catalog requirement is: dropping the code breaks
+    // whoever holds it either way. So the locked set is both, not just the catalog's.
+    const locked = new Set([...computeRequiredApis(entries), ...Object.values(picks).flat()]);
+
+    // Same resolver the dashboard uses. Owners come from the catalog rather than a
+    // project, because pre-deploy there is no project — but the shape it produces,
+    // and therefore what a row says, is identical on both surfaces.
+    const owners: ApiOwner[] = entries.map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        requiredApis: entry.requiredApis ?? [],
+    }));
+    const states = resolveApiRowStates({
+        componentId: payload?.componentId ?? '',
+        owners,
+        picks,
+        baseline: computeRequiredApis([]),
+    });
 
     try {
         const rows = await fetchApiAccessRows(authService, org.id, locked);
         return {
             success: true,
             data: {
-                apis: rows.map((row) => ({ ...row, locked: locked.has(row.code) })),
+                apis: rows.map((row) => {
+                    const state = states.get(row.code);
+                    return {
+                        ...row,
+                        locked: locked.has(row.code),
+                        ownership: state?.ownership,
+                        requiredBy: state?.requiredBy ?? [],
+                    };
+                }),
             },
         };
     } catch (err) {

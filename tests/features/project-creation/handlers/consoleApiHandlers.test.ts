@@ -112,6 +112,9 @@ describe('handleListOrgConsoleApis', () => {
 
             expect(result.success).toBe(true);
             expect(apisOf(result)).toHaveLength(4);
+            // Row shape gained `ownership` + `requiredBy` in step 04 — the pin is
+            // updated rather than loosened, so the next field to appear here is a
+            // deliberate act too. Baseline is owned by nobody: nothing chose it.
             expect(apisOf(result)[0]).toEqual({
                 code: 'AdobeIOManagementAPISDK',
                 name: 'I/O Management API',
@@ -119,6 +122,8 @@ describe('handleListOrgConsoleApis', () => {
                 requiresProfile: false,
                 requiresReview: false,
                 group: undefined,
+                ownership: 'baseline',
+                requiredBy: [],
             });
         });
 
@@ -363,5 +368,90 @@ describe('handleListOrgConsoleApis', () => {
             expect(result.error).toMatch(/Could not list Adobe APIs/);
             expect(result.error).toMatch(/503 from Console/);
         });
+    });
+});
+
+/**
+ * Step 04 — attribution on the WIZARD surface.
+ *
+ * The dashboard half landed first. This is the other side of the plan's
+ * "two handler files drifting on attribution" risk: both must answer WHO holds a
+ * code with the same resolver, or the same row reads differently depending on
+ * which surface you opened.
+ *
+ * `locked` was a binary — covered or not — so a disabled checkbox could never say
+ * why. That is exactly the gap step 05 has to fill for `ApiAccessPicker`.
+ *
+ * Note the add-flow case: there is no "mine" here at all. The integration being
+ * added does not exist yet, so every required code belongs to somebody else, and
+ * naming them is the whole point.
+ */
+describe('attribution (step 04)', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockIsAuthenticated.mockResolvedValue(true);
+        mockGetCachedOrganization.mockReturnValue({ id: 'org-1', code: 'o@AdobeOrg', name: 'Org One' });
+        mockGetOrganizationsSdkOnly.mockResolvedValue([]);
+        mockGetServicesForOrg.mockResolvedValue(ORG_SERVICES);
+        (getAppBuilderComponentEntry as jest.Mock).mockImplementation((id: string) => CATALOG[id]);
+    });
+
+    it('names the integration that requires a locked code', async () => {
+        const result = await handleListOrgConsoleApis(makeContext(), {
+            componentIds: ['commerce-events'],
+        });
+
+        const row = apisOf(result).find((a) => a.code === 'FireflyAPISDK');
+        expect(row?.locked).toBe(true);
+        expect(row?.ownership).toBe('other-required');
+        // The reason slot. A bare disabled checkbox is what this replaces.
+        expect(row?.requiredBy).toEqual([CATALOG['commerce-events'].name]);
+    });
+
+    it('marks the always-on baseline as baseline, owned by nobody', async () => {
+        const result = await handleListOrgConsoleApis(makeContext(), { componentIds: [] });
+
+        const row = apisOf(result).find((a) => a.code === 'AdobeIOManagementAPISDK');
+        expect(row?.ownership).toBe('baseline');
+        // Naming an owner here would be a lie — nothing chose it, it is always on.
+        expect(row?.requiredBy).toEqual([]);
+    });
+
+    it('treats the asking integration\'s own requirement as mine, not another\'s', async () => {
+        // Edit mode: re-opening the API picker FOR commerce-events. Its own required
+        // codes must not read as somebody else holding them.
+        const result = await handleListOrgConsoleApis(makeContext(), {
+            componentIds: ['commerce-events'],
+            componentId: 'commerce-events',
+        });
+
+        const row = apisOf(result).find((a) => a.code === 'FireflyAPISDK');
+        expect(row?.ownership).toBe('mine-required');
+    });
+
+    it('attributes ad-hoc picks passed from the draft', async () => {
+        // The wizard holds in-flight picks webview-side (`selectedConsoleApis`), so
+        // unlike the dashboard this handler has to be TOLD them. Without this the two
+        // surfaces disagree: the same code reads unowned here and owned there.
+        const result = await handleListOrgConsoleApis(makeContext(), {
+            componentIds: ['commerce-events'],
+            componentId: 'new-thing',
+            picks: { 'commerce-events': ['GraphQLServiceSDK'] },
+        });
+
+        const row = apisOf(result).find((a) => a.code === 'GraphQLServiceSDK');
+        expect(row?.ownership).toBe('other-required');
+        expect(row?.requiredBy).toEqual([CATALOG['commerce-events'].name]);
+        // A pick is a claim exactly as a catalog requirement is — so it locks.
+        expect(row?.locked).toBe(true);
+    });
+
+    it('leaves an unclaimed code unowned and unlocked', async () => {
+        const result = await handleListOrgConsoleApis(makeContext(), { componentIds: [] });
+
+        const row = apisOf(result).find((a) => a.code === 'GraphQLServiceSDK');
+        expect(row?.locked).toBe(false);
+        expect(row?.ownership).toBeUndefined();
+        expect(row?.requiredBy).toEqual([]);
     });
 });

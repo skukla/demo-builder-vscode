@@ -58,6 +58,22 @@ export interface ApiAccessOption {
      * cloud pill and is reachable under "All".
      */
     group?: CloudGrouping;
+    /**
+     * Why this row is claimed, from the asking integration's point of view —
+     * `resolveApiRowStates`' verdict, sent by both handler surfaces since step 04.
+     *
+     * Absent ⇒ nobody holds the code (freely pickable).
+     */
+    ownership?: 'baseline' | 'mine-required' | 'other-required' | 'mine-optional';
+    /**
+     * Integrations to NAME as the reason a row is locked. Empty for `baseline`
+     * (nothing chose it), for the asker's own optional picks, and for legacy
+     * picks whose owner is unrecoverable.
+     *
+     * Carried, not yet rendered: step 05 gives `locked` its reason slot. Until
+     * then a locked row still renders checked + disabled exactly as before.
+     */
+    requiredBy?: string[];
 }
 
 export interface ApiAccessPickerProps {
@@ -300,8 +316,7 @@ export function ApiAccessPicker({
     // sent that row to the top and everything below it shifted, so the next row the
     // user was aiming at had moved. Checkboxes still reflect the live selection —
     // only the ORDER is held still.
-    const isChecked = (api: ApiAccessOption): boolean =>
-        api.locked || orderSeed.has(api.code);
+    const isChecked = (api: ApiAccessOption): boolean => api.locked || orderSeed.has(api.code);
     const list = searched
         .filter((api) => family === null || familiesOf(api).includes(family))
         .sort((a, b) => {
