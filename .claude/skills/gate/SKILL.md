@@ -80,7 +80,17 @@ pushing, match CI exactly:
 npm run lint                                  # whole repo — the one that's easy to miss
 npx tsc --noEmit
 npx jest --no-coverage 2>&1 > /tmp/gate-jest.txt   # full suite; never pipe through tail
+bash .claude/skills/dead-code-scan/scan.sh src     # ~5s — cruft the compiler cannot see
 ```
+
+The scan is advisory, not a gate: ts-prune reports entry points and DI/config-registered
+symbols as unused. Read it, do not obey it. What IS reliable is its doc-drift section —
+docs naming a symbol that no longer exists, confirmed against `git log`. Treat a hit
+there as a real finding.
+
+Pre-push is the last honest moment for it. Everything the compiler and tests can see is
+already covered above; this covers what they structurally cannot — a symbol nothing
+imports, and a doc describing code that is gone.
 
 ## Notes
 - This is the inner loop. For agent-driven review use `/rptc:verify`; to ship use `/rptc:commit`.
