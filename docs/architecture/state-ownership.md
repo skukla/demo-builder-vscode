@@ -183,7 +183,7 @@ The wizard-side `WizardState` (React, not persisted to disk) contains caches tha
 
 | Field | Purpose | Write Authority | Cleared When |
 |-------|---------|-----------------|--------------|
-| `storeDiscoveryData` | Commerce store hierarchy (websites / store groups / store views) fetched from the REST API during the Connect Commerce step | `WizardContainer` via `onStoreDiscoveryDataChange` callback | Architecture change (`handleArchitectureChange`) |
+| `storeDiscoveryData` | Commerce store hierarchy (websites / store groups / store views) fetched from the REST API during the Connect Commerce step | `WizardContainer` via `onStoreDiscoveryDataChange` callback | Architecture change |
 
 `storeDiscoveryData` is **not** part of the extension-side `Project` type and is **not** persisted to disk. It is a transient wizard cache that drives the progressive store-code pickers.
 

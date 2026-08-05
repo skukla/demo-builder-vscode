@@ -22,12 +22,24 @@ overlap `/sop-scan` (God files, oversized components, complexity) — cross-refe
 
 ## Procedure
 
-1. **Shortlist** the two mechanical signals:
+1. **Shortlist** the three mechanical signals:
    ```bash
    bash .claude/skills/dead-code-scan/scan.sh src
    ```
    Section 1 = ts-prune unused exports (filtered to `src/`). Section 2 = abandonment
-   markers. Treat both as candidates, not verdicts.
+   markers. Section 3 = doc drift. Treat 1 and 2 as candidates, not verdicts;
+   section 3 is reliable (see below).
+
+   **Know which half you are in.** This skill covers two different problems with
+   very different reliability:
+
+   | Question | Mechanizable? | Why |
+   |---|---|---|
+   | Does this thing the docs NAME still exist? | **Yes** — section 3 | one-way existence check; nothing can fake a definition into being |
+   | Does anything REACH this code? | **No** | dead code references dead code, which defeats any pattern match |
+
+   Trust section 3's output. Treat everything about reachability as a lead requiring
+   the protocol below.
 
 2. **Triage ts-prune FALSE POSITIVES** — these are live despite showing "unused":
    - **Entry points** — `extension.ts`, `mcp-server.ts` (VS Code / MCP call them).
@@ -68,7 +80,29 @@ candidates.
 
 ### The manual check that does work
 
-Pick a suspected symbol and ask **who ORIGINATES a call**, never "who mentions it":
+**Step 0 — run a CONTROL first. Non-negotiable.** Pick 3-4 symbols you have
+personally watched work, and run the identical check on them. If it does not find
+their callers, your origin list is incomplete and every "dead" verdict is noise.
+
+This is the step that decides whether the pass is worth anything. On 2026-08-05 the
+first run flagged `check-api-mesh` and `deploy-api-mesh` as dead; both are live,
+sent from `features/ai/server/*Descriptors.ts` — an origin the check did not know
+about. The control caught it. Skipping it would have produced a list two-thirds
+wrong, delivered with full confidence.
+
+```bash
+# CONTROL — expect a hit for every one of these:
+for k in <symbols-you-know-are-live>; do ...same check...; done
+```
+
+**The origin list is PER MECHANISM, not fixed.** Derive it before you start by
+asking "what could legitimately invoke this kind of thing?" For webview messages in
+this repo that is: a `ui/` sender, an MCP descriptor, a `package.json` command. For
+a VS Code command it is `registerCommand` + the `contributes` entry. For a config
+id it is whatever loads the config. Get this list wrong and the control fails —
+which is the point of the control.
+
+Then pick a suspected symbol and ask **who ORIGINATES a call**, never "who mentions it":
 
 ```bash
 KEY='create-api-mesh'          # or a field name, or a message type
@@ -84,7 +118,21 @@ Then confirm each surviving reference is a real ORIGIN, not more plumbing:
 4. **Its own docblock** — NOT a reference. This is what most often keeps a dead
    symbol looking alive.
 
-Zero origins across all four ⇒ dead, however many files mention it.
+Zero origins ⇒ dead, however many files mention it.
+
+### Where this does NOT apply
+
+- **Iterated consumption.** Config entries are consumed by looping, not by name, and
+  their references live in OTHER CONFIG. "No reference by name" is normal there. A
+  2026-08-05 pass flagged `index-product-teaser-sku-accs` as orphaned; it is
+  referenced by `demo-packages.json` and iterated by `contentPatchRegistry`. Only
+  apply this to NAMED dispatch whose references live in code.
+- **Surfaces with a runtime feedback loop.** Measured the same day: webview message
+  handlers had 11 orphans, while VS Code commands, `ErrorCode` members and config ids
+  had none. The predictor is not "string-keyed dispatch" — it is whether registering
+  something unused produces any symptom. VS Code errors on an unregistered command;
+  an unsent webview handler is silent forever. **Spend the effort where the silence
+  is.**
 
 ### Signals worth suspecting
 

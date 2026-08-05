@@ -501,7 +501,6 @@ if (response.code === ErrorCode.AUTH_NO_APP_BUILDER) {
 **Dashboard handlers:**
 - `handleRequestStatus` - `code: ErrorCode.PROJECT_NOT_FOUND`
 - `handleReAuthenticate` - `code: ErrorCode.PROJECT_NOT_FOUND | ErrorCode.AUTH_REQUIRED`
-- `handleOpenAdobeConsole` - `code: ErrorCode.CONFIG_INVALID`
 
 **Lifecycle handlers:**
 - `handleDeleteProject` - `code: ErrorCode.PROJECT_NOT_FOUND | ErrorCode.CONFIG_INVALID | ErrorCode.UNKNOWN`
@@ -509,8 +508,6 @@ if (response.code === ErrorCode.AUTH_NO_APP_BUILDER) {
 
 **Prerequisites handlers:**
 - `handleCheckPrerequisites` - `code: ErrorCode.PREREQ_CHECK_FAILED | ErrorCode.UNKNOWN`
-- `handleContinue` - `code: ErrorCode.UNKNOWN`
-- `handleInstall` - `code: ErrorCode.UNKNOWN`
 
 **Component handlers:**
 - `handleLoadComponents` - `code: ErrorCode`
