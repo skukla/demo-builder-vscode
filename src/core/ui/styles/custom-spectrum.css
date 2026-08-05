@@ -677,6 +677,25 @@ button[class*="spectrum-Button"][disabled],
        would make overflow-y here do nothing. */
     overflow-y: auto !important;
 }
+/* ONE scroller in the Manage APIs dialog: the API row list.
+ *
+ * `.modal-body` is a scroll container for every modal (long content has to go
+ * somewhere), which meant this dialog had two: a gesture over the search box or
+ * the product pills fell through to the body and scrolled the whole thing, while
+ * the same gesture over the rows scrolled only the list. Two scroll surfaces a few
+ * pixels apart, behaving differently.
+ *
+ * Turning it off here is safe because this dialog's content is height-bounded by
+ * `.manage-apis-body` — there is nothing for the body to scroll that the list is
+ * not already scrolling. Scoped with `:has()` so no other modal loses its scroll
+ * (precedent: the architecture-addons checkbox rule above).
+ *
+ * This also removes the need for `overscroll-behavior` anywhere in this dialog: a
+ * non-scrollable ancestor is nothing to chain INTO, so the list bottoming out has
+ * nowhere to hand the gesture and the header simply stays put. */
+.modal-body:has(.manage-apis-body) {
+    overflow: hidden !important;
+}
 /* Content-aware height — opt-in via Modal's `fitContent`.
    Spectrum's modal Dialog claims a height independent of its content, which is why
    .modal-body grows to push the footer to the bottom. For a SHORT body that leaves a
@@ -5597,35 +5616,96 @@ div[class*="spectrum"] input[type="search"] {
 /* Count rides the bottom-right, out of the label's way. */
 } /* End of second @layer theme block */
 
-/* API picker: the ROW AREA as its own fixed scroll region (opt-in via the
-   picker's `listHeight`). The height comes from the prop — the surface decides
-   how much room it can reserve — so only the scroll behaviour lives here.
+/* API picker: the row area as its own element, so a host can make it THE scroll
+   region. Unconstrained (the wizard stage) it just stacks and the page scrolls;
+   constrained by a flex chain (the Manage APIs modal, below) it becomes the only
+   thing in the dialog that moves.
 
-   Why fixed rather than max-height: this list has a search box above it, and a
-   max-height still lets the container SHRINK when a query narrows 90 rows to 3,
-   which resized the host dialog on every keystroke. Same intent as
-   `.ai-capabilities-body` ("the modal frame never resizes"), tightened because
-   that list has no filter.
+   DO NOT add `overscroll-behavior: contain` here. It pins the header above this
+   region — without it, scrolling past the last row hands the leftover gesture to an
+   ancestor which carries the search box and chips out of view — but it also stops
+   this region scrolling at all.
+
+   That was isolated by experiment (2026-08-05), not inferred: with the region
+   genuinely overflowing (255px of rows in ~258px) the line was re-added alone and
+   the list went unscrollable again; removed alone, it scrolls. The spec says
+   `contain` should only prevent CHAINING, never an element's own scroll, so
+   something in this Spectrum dialog does not behave the way the property is
+   documented. Believe the experiment.
+
+   The fixed header is therefore an open trade, not a solved problem. If it is worth
+   another attempt, put the containment on an ANCESTOR scroll container (.modal-body)
+   so the chain stops above this element instead of on it.
 
    overflow-x is hidden deliberately: a long API name should wrap or clip, never
-   turn the region into a two-axis scroller. */
+   turn the region into a two-axis scroller. The bottom padding keeps the final row
+   off the clip edge, so a list that ALMOST fits reads as "scroll me" rather than
+   as a rendering fault. */
 .intflow-api-scroll {
     overflow-y: auto;
     overflow-x: hidden;
+    min-height: 0;
     padding-right: 8px; /* keep the scrollbar off the row labels */
-    /* Stop scroll CHAINING. On reaching the last row, further scrolling was handed
-       to .modal-body (which is itself `overflow-y: auto`), so the whole body moved
-       and carried the search box and product chips out of view — they never
-       scrolled themselves, they were pushed. `contain` keeps the gesture inside
-       this region, which is what pins the controls above it: the only thing that
-       scrolls in this dialog is the row list. */
-    overscroll-behavior: contain;
+    padding-bottom: 4px;
 }
 /* The modal body owns its own column layout — a plain div, because Spectrum's
-   Flex caps width at ~450px and clipped the API list inside the L dialog. */
+   Flex caps width at ~450px and clipped the API list inside the L dialog.
+
+   It also makes the API LIST the dialog's only scroll region. The list used to be
+   a fixed 320px inside a `fitContent` dialog, which gave the modal TWO scrollers:
+   once the content outgrew the dialog, .modal-body scrolled as well — and being
+   the outer one it won, so the row list would not move while the whole body did,
+   carrying the search box and chips away with it.
+
+   The fix is a CONSTANT height here, and a flex chain that hands every spare
+   pixel down to the row area: body → picker → rows, each `min-height: 0` so a
+   flex item is actually allowed to shrink below its content (the default `auto`
+   refuses, and the overflow would silently move back up to .modal-body).
+
+   Why an explicit height rather than `height: 100%`: 100% only resolves against a
+   parent with a definite height, which depends on whether Spectrum's modal wrapper
+   stretches the dialog — behaviour this codebase has already been surprised by once
+   (see .modal-fit-content). Setting it here makes the dialog's size independent of
+   that question: `fitContent` collapses the dialog to its content, and its content
+   is this. Filtering to four APIs cannot resize anything; only the row area's
+   scrollback changes.
+
+   Why it is VIEWPORT-CAPPED and not a bare 480px: a flat 480 was taller than a
+   short window could give. The dialog hit its max-height, `.modal-content` shrank
+   (`flex: 0 1 auto`), `.modal-body` ended up shorter than this box — and clipped
+   it. Measured on a ~628px-tall viewport: the row area reported clientHeight ===
+   scrollHeight === 276, i.e. NOT overflowing, while the last row was visibly cut.
+   The cut came from `.modal-body` above, not the list below, and because the list
+   had nothing to scroll while `overscroll-behavior: contain` blocked the gesture
+   reaching the body, nothing moved at all.
+
+   `min()` keeps it stable where it matters: the viewport does not change while you
+   type in the filter, so this is constant across filtering — which is the actual
+   requirement — while still fitting a short window.
+
+   The subtraction is the dialog's own chrome — heading, footer, backdrop margins.
+   A bare `Nvh` ignores it, and the dialog can only absorb the difference while it
+   has room to grow (`max-height: none`, so it is sized BY this box). Zoomed in,
+   the viewport shrinks, the dialog runs out of room, `.modal-body` ends up shorter
+   than this box and starts scrolling — a SECOND scroller, which is what dragged
+   the header away again.
+
+   The tell was that it happened for exactly one pill: every other filter overflows
+   the row list, so the list consumes the gesture and nothing reaches `.modal-body`.
+   The one whose rows FIT let the gesture through to the oversized body underneath. */
 .manage-apis-body {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    height: min(560px, calc(100vh - 260px));
+    /* The body no longer scrolls, so overrunning it would CLIP rather than
+       scroll. This yields to the parent whenever the calc guesses high. */
+    max-height: 100%;
+    min-height: 0;
     min-width: 0; /* a flex child defaults to min-width:auto and refuses to shrink */
+}
+.manage-apis-body .intflow-api-picker,
+.manage-apis-body .intflow-api-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
 }

@@ -69,22 +69,6 @@ export interface ApiAccessPickerProps {
     onToggle: (code: string) => void;
     /** Optional guidance line rendered above the list. */
     helperText?: string;
-    /**
-     * Fix the ROW AREA to this height, making it its own scroll region.
-     *
-     * Without it the list's length drives the container's height, so typing in
-     * the search box resized the host dialog on every keystroke. Same shape as
-     * `.ai-capabilities-body` in the AI Skills modal ("the modal frame never
-     * resizes"): the surface owns a fixed scroll region and the list just stacks
-     * inside it.
-     *
-     * Only the ROWS scroll — the helper line, search box and family chips stay
-     * pinned, so the control you are typing into cannot scroll away from you.
-     *
-     * Omit for a surface that wants the list to size itself (the wizard stage,
-     * which scrolls at the modal body instead).
-     */
-    listHeight?: string;
 }
 
 /** A product-family filter chip. `code === null` is the "All" chip. */
@@ -284,7 +268,6 @@ export function ApiAccessPicker({
     selected,
     onToggle,
     helperText,
-    listHeight,
 }: ApiAccessPickerProps): React.ReactElement {
     const [query, setQuery] = useState('');
     const [family, setFamily] = useState<string | null>(null);
@@ -354,10 +337,10 @@ export function ApiAccessPicker({
                     ))}
                 </div>
             )}
-            <div
-                className={listHeight ? 'intflow-api-scroll' : undefined}
-                style={listHeight ? { height: listHeight } : undefined}
-            >
+            {/* The row area is always its own element so a HOST can make it the
+                one scroll region (see .manage-apis-body). Unconstrained — as in
+                the wizard stage — it simply stacks and the page scrolls. */}
+            <div className="intflow-api-scroll">
                 {list.length === 0 ? (
                     <div className="intflow-api-empty">No APIs match “{query}”.</div>
                 ) : (

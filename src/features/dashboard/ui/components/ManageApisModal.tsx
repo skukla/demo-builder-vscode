@@ -72,11 +72,9 @@ export interface ManageApisModalProps {
 }
 
 /**
- * The ONE reserved height for this dialog's swappable region — the loading/error
- * views AND the API list's scroll area. Every state renders at this height, so the
- * dialog never resizes: not when the fetch lands, and not when a search term
- * narrows the list to three rows. A plain px value: Spectrum's dimension tokens
- * top out well below this, and `size-3600` is not one of them.
+ * Reserved height for the loading/error views, so the pre-list states fill the
+ * same band the list will. The dialog's height comes from `.manage-apis-body`
+ * (custom-spectrum.css), which is a constant — see there for why.
  */
 const FEEDBACK_HEIGHT = '320px';
 
@@ -126,14 +124,11 @@ function ManageApisBody({
         );
     }
 
-    // Same reserved height as the feedback views above, so loading → loaded →
-    // filtered → empty all render at ONE height and the dialog never resizes.
     return (
         <ApiAccessPicker
             apis={apis}
             selected={selected}
             onToggle={onToggle}
-            listHeight={FEEDBACK_HEIGHT}
         />
     );
 }
