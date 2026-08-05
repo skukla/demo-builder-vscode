@@ -5613,6 +5613,13 @@ div[class*="spectrum"] input[type="search"] {
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 8px; /* keep the scrollbar off the row labels */
+    /* Stop scroll CHAINING. On reaching the last row, further scrolling was handed
+       to .modal-body (which is itself `overflow-y: auto`), so the whole body moved
+       and carried the search box and product chips out of view — they never
+       scrolled themselves, they were pushed. `contain` keeps the gesture inside
+       this region, which is what pins the controls above it: the only thing that
+       scrolls in this dialog is the row list. */
+    overscroll-behavior: contain;
 }
 /* The modal body owns its own column layout — a plain div, because Spectrum's
    Flex caps width at ~450px and clipped the API list inside the L dialog. */
