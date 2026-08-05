@@ -25,6 +25,10 @@ import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import { republishStorefrontConfig } from '@/features/eds/services/storefrontRepublishService';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
+import {
+    calculateMeshSourceHash,
+    readMeshEnvVarsFromFile,
+} from '@/features/mesh/services/stalenessDetector';
 import { regenerateComponentEnvFile } from '@/features/project-creation/helpers';
 import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import type { Project } from '@/types';
@@ -78,6 +82,14 @@ export function buildDefaultRunnerDeps(
         catalog: ctx.catalog,
         secrets: ctx.secrets,
         deployMesh: deployMeshComponent,
+        // The staleness baseline the headless path gets from updateMeshState.
+        // Both helpers already swallow their own I/O errors (missing .env → {},
+        // unreadable source → null), so a capture failure degrades staleness
+        // detection rather than failing a deploy that already succeeded.
+        captureMeshBaseline: async (componentPath) => ({
+            envVars: await readMeshEnvVarsFromFile(componentPath),
+            sourceHash: await calculateMeshSourceHash(componentPath),
+        }),
         // The same registry-driven .env path project creation and EDS Reset use —
         // not a dashboard-local variant. Loading the registry lazily keeps it off
         // the remove path, which needs no env file.

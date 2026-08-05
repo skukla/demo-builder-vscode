@@ -44,6 +44,40 @@ were validating the pre-migration model and passed only because the redundant
 writer masked the gap. The double now reproduces what the real function writes, and
 the assertions target the keyed entry.
 
+### Correction — closed too early, reopened and fixed the same day
+
+The closure above was wrong in a way worth recording. It reported "the writers are
+collapsed" on the strength of an inventory that compared READERS and STATUS writes.
+It never compared what the two mesh deploy paths **record** — and they disagreed on
+three fields:
+
+| Field | `deployMeshHeadless` | keyed runner (dashboard Add/Redeploy) |
+|---|---|---|
+| status / endpoint / lastDeployed | ✓ | ✓ |
+| `envVars` (staleness baseline) | ✓ via `updateMeshState` | ✗ |
+| `sourceHash` | ✓ via `updateMeshState` | ✗ |
+| instance `metadata.meshId` | ✓ | ✗ |
+
+Found in a user's debug logs hours later, from a real project whose manifest showed
+`sourceHash: None`, `envVars: {}`, `metadata: null` on a mesh reading `deployed`.
+Two live consequences: staleness could NEVER be computed for a dashboard-added mesh
+(empty baseline → an Adobe I/O fetch on every window open → "Failed to parse mesh
+data" → give up), so no redeploy prompt would ever fire after a credential change;
+and every status request fell back to `aio api-mesh:describe` to recover the mesh
+id, costing ~3s and logging a failure each time.
+
+Fixed by giving the runner a `captureMeshBaseline` dep — injected at the
+`appBuilderComponentRunnerDeps` seam, because that module's docstring is explicit
+that the runner stays free of cross-feature deploy imports (a first attempt
+imported the mesh helpers directly and violated it) — plus stamping `meshId` onto
+the instance in the mesh branch. `appBuilderComponentRunner-meshRecordParity.test.ts`
+pins the RECORD rather than the mechanism, so any future path landing a poorer one
+fails.
+
+**The lesson for the next audit:** "one writer" was verified for the field the
+symptom pointed at (status) and assumed for the rest of the record. Compare the
+whole persisted shape, not the field currently misbehaving.
+
 **Not done, deliberately:** relocating `hasMeshDeploymentRecord` from
 `dashboard/services` to sit beside the resolver. It is already a single accessor;
 moving it is a file move, not a fix, and both feature dirs already import it.

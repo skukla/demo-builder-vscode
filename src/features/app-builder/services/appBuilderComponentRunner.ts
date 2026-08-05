@@ -97,6 +97,15 @@ export interface AppBuilderComponentRunnerDeps {
         componentId: string,
         componentPath: string
     ) => Promise<void>;
+    /**
+     * Capture the mesh staleness baseline (`envVars` + `sourceHash`) for a
+     * deployed mesh. Injected like every other cross-feature boundary here —
+     * the real implementation lives in `@/features/mesh`, and this module stays
+     * free of cross-feature deploy imports (see appBuilderComponentRunnerDeps).
+     */
+    captureMeshBaseline: (
+        componentPath: string
+    ) => Promise<{ envVars: Record<string, string>; sourceHash: string | null }>;
     /** Mesh deploy tail (org-agnostic; the runner wraps it in withOrgContext). */
     deployMesh: (
         componentPath: string,
@@ -230,16 +239,36 @@ async function republishIfProvided(
 }
 
 /** Build the persisted AppBuilderComponentState from a successful mesh deploy. */
-function meshOutcome(
+/**
+ * Build the persisted state from a successful mesh deploy.
+ *
+ * Captures the STALENESS BASELINE (`envVars` + `sourceHash`) as well as the
+ * endpoint. The headless path gets these from `updateMeshState`; this path
+ * called nothing equivalent, so a dashboard-added mesh persisted an endpoint
+ * with no baseline — and `detectMeshChanges`, finding an empty one, went to
+ * Adobe I/O on every window open and gave up ("Failed to parse mesh data").
+ * A mesh that can never be found stale can never prompt a redeploy.
+ *
+ * The two clears mirror updateMeshState: a freshly deployed mesh is no longer
+ * a declined update.
+ */
+async function meshOutcome(
     entry: AppBuilderComponentCatalogEntry,
     data: MeshDeploymentResult['data'],
-): DeployOutcome {
+    componentPath: string,
+    captureBaseline: AppBuilderComponentRunnerDeps['captureMeshBaseline'],
+): Promise<DeployOutcome> {
     const endpoint = data?.endpoint ?? '';
+    const { envVars, sourceHash } = await captureBaseline(componentPath);
     return {
         status: 'deployed',
         ...identityOf(entry),
         endpoint,
         lastDeployed: new Date().toISOString(),
+        envVars,
+        sourceHash,
+        userDeclinedUpdate: undefined,
+        declinedAt: undefined,
         providesEnvVars: entry.providesEnvVars?.includes('MESH_ENDPOINT')
             ? { MESH_ENDPOINT: endpoint }
             : undefined,
@@ -315,9 +344,30 @@ async function dispatchDeploy(
             deps.logger,
             deps.onProgress,
         );
-        return result.success
-            ? { ok: true, outcome: meshOutcome(entry, result.data) }
-            : { ok: false, error: result.error || 'Mesh deployment failed.' };
+        if (!result.success) {
+            return { ok: false, error: result.error || 'Mesh deployment failed.' };
+        }
+        // Stamp the mesh id where meshVerifier looks for it. Without it, every
+        // status request fell back to `aio api-mesh:describe` to recover the id,
+        // which costs ~3s and logs a failure. The headless path has always done
+        // this; only this one did not.
+        const meshInstance = project.componentInstances?.[entry.id];
+        if (meshInstance) {
+            meshInstance.metadata = {
+                ...meshInstance.metadata,
+                meshId: result.data?.meshId || '',
+                meshStatus: 'deployed',
+            };
+        }
+        return {
+            ok: true,
+            outcome: await meshOutcome(
+                entry,
+                result.data,
+                componentPath,
+                deps.captureMeshBaseline,
+            ),
+        };
     }
     const owPackage = deriveOwPackage(entry.id);
     const result = await deps.deployApp(

@@ -103,6 +103,10 @@ export function createDeps(overrides: Partial<Record<string, unknown>> = {}) {
             success: true,
             data: { url: 'https://app/api', deployedUrls: { 'web/app': 'https://app/api' } },
         }),
+        // Mesh staleness baseline (mesh only; see -meshRecordParity.test.ts).
+        captureMeshBaseline: jest
+            .fn()
+            .mockResolvedValue({ envVars: { MESH_KEY: 'v' }, sourceHash: 'sha-default' }),
         // Registry-driven .env write (mesh only; see appBuilderComponentRunner-envFile.test.ts).
         writeComponentEnv: jest.fn().mockResolvedValue(undefined),
         // API subscriber (mocked).
