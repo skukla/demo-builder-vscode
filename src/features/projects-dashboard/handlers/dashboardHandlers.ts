@@ -21,6 +21,7 @@ import {
 import { BaseWebviewCommand } from '@/core/base';
 import { COMPONENT_IDS } from '@/core/constants';
 import { executeCommandForProject } from '@/core/handlers';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito, TIMEOUTS } from '@/core/utils';
 import { validateProjectPath, validateURL } from '@/core/validation';
@@ -73,14 +74,23 @@ export const handleGetProjects: MessageHandler = async (
             if (meshComponent && project.componentConfigs) {
                 try {
                     if (hasMeshDeploymentRecord(project)) {
-                        const meshChanges = await detectMeshChanges(
-                            project,
-                            project.componentConfigs,
-                        );
-                        const status = await determineMeshStatus(
-                            meshChanges,
-                            meshComponent,
-                            project,
+                        // Org-targeted PER PROJECT. detectMeshChanges reaches the
+                        // `aio` CLI whenever the staleness baseline is empty, and an
+                        // unwrapped call inherits the CLI's process-global console
+                        // selection — which this extension deliberately stopped
+                        // writing, so it holds whatever an earlier session left
+                        // there. Wrapping the LOOP instead of each iteration would
+                        // be worse than nothing: every project would be queried
+                        // against the first one's org.
+                        // Captured, not asserted: the enclosing `if` narrows
+                        // componentConfigs, but the closure below loses it.
+                        const configs = project.componentConfigs;
+                        const status = await withOrgContext(
+                            buildOrgTargetFromProjectAdobe(project.adobe),
+                            async () => {
+                                const meshChanges = await detectMeshChanges(project, configs);
+                                return determineMeshStatus(meshChanges, meshComponent, project);
+                            },
                         );
                         project.meshStatusSummary = status === 'config-changed' ? 'stale' : status;
                     } else {

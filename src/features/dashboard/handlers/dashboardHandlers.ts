@@ -19,6 +19,7 @@ import { withBrowserSignInNotice } from '@/core/auth/browserSignInNotice';
 import { BaseWebviewCommand } from '@/core/base';
 import { AI_CONTEXT_VERSION, COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { openInIncognito } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
@@ -210,7 +211,17 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         const meshVerifier = await import('@/features/mesh/services/meshVerifier');
         checks.push(
             createMeshVerifyCheck({
-                verify: (p) => meshVerifier.verifyMeshDeployment(p),
+                // Org-targeted: verifyMeshDeployment issues `aio api-mesh:describe`
+                // (directly, and again via its mesh-id recovery). Unwrapped it
+                // inherits the CLI's process-global console selection, and the
+                // same describe that succeeds inside the deploy's wrapper returns
+                // code=2 here — observed minutes apart against one mesh on
+                // 2026-08-04, surfacing as "Verification failed" on every status
+                // request.
+                verify: (p) =>
+                    withOrgContext(buildOrgTargetFromProjectAdobe(p.adobe), () =>
+                        meshVerifier.verifyMeshDeployment(p),
+                    ),
                 syncMeshStatus: (p, r) => meshVerifier.syncMeshStatus(p, r),
                 markDirty: (key) => context.stateManager.markDirty(key),
             }),

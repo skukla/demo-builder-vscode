@@ -36,6 +36,7 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     detectMeshChanges: jest.fn().mockResolvedValue({ hasChanges: false }),
 }));
 
+
 // Mock vscode
 jest.mock(
     'vscode',

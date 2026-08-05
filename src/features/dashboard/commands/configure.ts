@@ -15,6 +15,7 @@ import { WebviewCommunicationManager } from '@/core/communication';
 import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { parseEnvFile } from '@/core/utils/envParser';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
@@ -287,8 +288,15 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                         this.logger,
                     );
 
-                    // Detect if mesh configuration changed BEFORE saving
-                    const meshChanges = await detectMeshChanges(project, sanitizedConfigs);
+                    // Detect if mesh configuration changed BEFORE saving.
+                    // Org-targeted: with an empty staleness baseline this fetches
+                    // the deployed config over the `aio` CLI, and an unwrapped call
+                    // queries whatever org the CLI's process-global selection
+                    // happens to hold.
+                    const meshChanges = await withOrgContext(
+                        buildOrgTargetFromProjectAdobe(project.adobe),
+                        () => detectMeshChanges(project, sanitizedConfigs),
+                    );
 
                     // Detect if storefront configuration changed (EDS projects only)
                     const storefrontChanges = detectStorefrontChanges(project, sanitizedConfigs);
