@@ -17,10 +17,33 @@
 DIR="${CLAUDE_PROJECT_DIR:-$PWD}"
 cd "$DIR" || exit 0
 
-removed=$( { git diff -U0; git diff --cached -U0; } 2>/dev/null \
-  | grep -E '^-\s*export (async )?(function|const|class|interface|type) ' \
-  | grep -oE '(function|const|class|interface|type) [A-Za-z_][A-Za-z0-9_]*' \
-  | awk '{print $2}' | sort -u )
+names_on() {  # $1 = '-' or '+' : exported symbol names on removed/added diff lines
+  { git diff -U0; git diff --cached -U0; } 2>/dev/null \
+    | grep -E "^\\$1\\s*export (async )?(function|const|class|interface|type) " \
+    | grep -oE '(function|const|class|interface|type) [A-Za-z_][A-Za-z0-9_]*' \
+    | awk '{print $2}' | sort -u
+}
+
+# A signature change shows up as a removed line AND an added one for the same
+# symbol. Reporting those as deletions is noise that trains the reader to dismiss
+# the hook — which is worse than not having it. Only names with no surviving
+# definition anywhere in the tree count as deleted.
+#
+# The tree check is what makes this correct rather than merely quieter: a symbol
+# MOVED between files also has a +/- pair, and a symbol re-signed across several
+# hunks may not pair up line-for-line. Asking "does a definition still exist?"
+# settles both, and is the one question about deletion that is decidable.
+removed=$(comm -23 <(names_on -) <(names_on +))
+[ -z "$removed" ] && exit 0
+
+still_defined=$(printf '%s\n' "$removed" | while read -r sym; do
+  [ -z "$sym" ] && continue
+  if ! grep -rqE "export (async )?(function|const|class|interface|type) $sym\b" \
+       --include='*.ts' --include='*.tsx' src 2>/dev/null; then
+    echo "$sym"
+  fi
+done)
+removed="$still_defined"
 [ -z "$removed" ] && exit 0
 
 session="${CLAUDE_SESSION_ID:-nosession}"
