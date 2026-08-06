@@ -30,6 +30,18 @@ overlap `/sop-scan` (God files, oversized components, complexity) — cross-refe
    markers. Section 3 = doc drift. Treat 1 and 2 as candidates, not verdicts;
    section 3 is reliable (see below).
 
+   **Section 3 covers `.ts`/`.tsx` COMMENTS as well as `.md`, and every distinctive
+   symbol rather than only `` `handle*` ``.** It splits present-tense claims from
+   historically-framed ones ("the former X", "replaces X") and reports only the
+   first group; the tail count is history, not drift. It also self-tests — a
+   `*** CONTROL FAILED ***` banner means the output is noise and you must fix the
+   check before reading it.
+
+   Scoped narrower until 2026-08-06, it reported `(none)` against a tree holding
+   ~89 real stale references: comment drift and non-handler names both fell outside
+   what it read. If a scan section returns a suspiciously clean result, confirm it
+   can still see a defect you plant by hand before believing it.
+
    **Know which half you are in.** This skill covers two different problems with
    very different reliability:
 
