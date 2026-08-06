@@ -177,7 +177,21 @@ export function computeCodeSyncValid(
     if (repoMode === 'new') {
         return githubAppStatus.isInstalled === true && !githubAppStatus.isChecking;
     }
-    return !!selectedRepo;
+
+    // Existing repos used to gate on nothing, so the only Code Sync check was
+    // mid-pipeline — after fstab, block collection, smart-404 and quick-edit had
+    // already written to the user's repo. That deferral was a workaround for a
+    // classifier since fixed (89ef6fba, shipped beta.122); it outlived its reason.
+    if (!selectedRepo) return false;
+    if (githubAppStatus.isChecking) return false;
+
+    // Block ONLY on a definitive answer. AEM returns the same 404 for
+    // repo-does-not-exist, not-a-Helix-site, and App-not-installed, so treating
+    // "could not tell" as "missing" would strand the users whose credential AEM
+    // refuses — the exact bug class this check was broken by before.
+    const definitivelyMissing =
+        githubAppStatus.isInstalled === false && githubAppStatus.codeStatus === 404;
+    return !definitivelyMissing;
 }
 
 /**

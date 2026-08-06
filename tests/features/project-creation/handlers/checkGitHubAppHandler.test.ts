@@ -198,4 +198,51 @@ describe('checkGitHubApp handler', () => {
 
         expect(mockPreviewCode).not.toHaveBeenCalled();
     });
+
+    /**
+     * Selection-time checks must answer fast. A genuine 404 (Helix has never indexed
+     * the repo) otherwise triggers a code sync and polls for up to three minutes —
+     * fine mid-pipeline, unusable behind a step's Continue button.
+     *
+     * `skipTrigger` reports what Helix says right now and stops. The mid-pipeline
+     * gate keeps the trigger, because that is where the latency is affordable and
+     * where a repo genuinely needs indexing before setup can proceed.
+     */
+    describe('skipTrigger — for the selection-time check', () => {
+        it('does NOT trigger a code sync on a 404 when asked to skip', async () => {
+            mockIsAppInstalled.mockResolvedValue({
+                isInstalled: false,
+                httpNotFound: true,
+                httpStatus: 404,
+            });
+
+            await checkGitHubApp(makeContext(), { ...REQUEST, skipTrigger: true });
+
+            expect(mockPreviewCode).not.toHaveBeenCalled();
+        });
+
+        it('still reports the 404 verdict rather than swallowing it', async () => {
+            mockIsAppInstalled.mockResolvedValue({
+                isInstalled: false,
+                httpNotFound: true,
+                httpStatus: 404,
+            });
+
+            const res = await checkGitHubApp(makeContext(), { ...REQUEST, skipTrigger: true });
+
+            expect(res.isInstalled).toBe(false);
+        });
+
+        it('leaves the default path triggering, so the mid-pipeline gate is unchanged', async () => {
+            mockIsAppInstalled.mockResolvedValue({
+                isInstalled: false,
+                httpNotFound: true,
+                httpStatus: 404,
+            });
+
+            await checkGitHubApp(makeContext(), REQUEST);
+
+            expect(mockPreviewCode).toHaveBeenCalled();
+        });
+    });
 });

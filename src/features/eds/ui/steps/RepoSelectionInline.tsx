@@ -243,6 +243,31 @@ export function RepoSelectionInline({
         setRepoNameError(getRepositoryNameError(repoName));
     }, [repoName]);
 
+    /**
+     * Selection-time check for an existing repo: report what Helix says now and
+     * stop. Lenient (a 400 code.status means installed-but-unsynced, which is fine
+     * at selection) and non-triggering, so the answer lands in ~1s.
+     */
+    const checkExistingRepoApp = useCallback(
+        async (owner: string, repo: string) => {
+            const repoKey = `${owner}/${repo}`;
+            if (lastCheckedRepo.current === repoKey) return;
+            lastCheckedRepo.current = repoKey;
+            setGitHubAppStatus({ isChecking: true, isInstalled: null });
+            try {
+                const result = await webviewClient.request<GitHubAppCheckResult>(
+                    'check-github-app',
+                    { owner, repo, lenient: true, skipTrigger: true },
+                );
+                setGitHubAppStatus(buildAppStatusFromResult(result));
+            } catch {
+                // Undetermined, not missing — the gate lets this through.
+                setGitHubAppStatus({ isChecking: false, isInstalled: false });
+            }
+        },
+        [],
+    );
+
     const checkGitHubApp = useCallback(async (owner: string, repo: string, lenient = false) => {
         const repoKey = `${owner}/${repo}`;
         if (lastCheckedRepo.current === repoKey && !lenient) return;
@@ -367,6 +392,21 @@ export function RepoSelectionInline({
         setIsModalDismissed(false);
         lastCheckedRepo.current = null;
     }, [repoMode, selectedRepo]);
+
+    // Check Code Sync as soon as an EXISTING repo is picked, not mid-pipeline.
+    //
+    // The mid-pipeline gate sits after fstab, block collection, smart-404 and
+    // quick-edit have written to the repo, so a user missing the App learned about
+    // it only once their repository had been modified. `skipTrigger` keeps this
+    // fast: a repo Helix has never indexed 404s, and the default path answers that
+    // by triggering a code sync and polling for up to three minutes — fine there,
+    // unusable behind a Continue button.
+    useEffect(() => {
+        if (repoMode !== 'existing' || !selectedRepo) return;
+        const [owner, name] = (selectedRepo.fullName ?? '').split('/');
+        if (!owner || !name) return;
+        void checkExistingRepoApp(owner, name);
+    }, [repoMode, selectedRepo, checkExistingRepoApp]);
 
     // Re-check GitHub App when returning with an already-created repo.
     useEffect(() => {

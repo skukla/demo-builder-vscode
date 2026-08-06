@@ -525,3 +525,65 @@ describe('RepoSelectionInline - GitHub App Check', () => {
         });
     });
 });
+
+/**
+ * Restoring the selection-time Code Sync check for EXISTING repos (2026-08-06).
+ *
+ * The new-repo path has always gated Continue on the App being installed. The
+ * existing-repo path returned `!!selectedRepo` and gated on nothing, so the only
+ * check was mid-pipeline — at storefrontSetupPhase2, AFTER the fstab push, block
+ * collection, smart-404 and quick-edit had already written to the user's repo.
+ *
+ * That deferral (3b178875) was a workaround for a classifier that read "Helix
+ * doesn't know this repo" as "App not installed". The classifier was fixed in
+ * 89ef6fba (shipped beta.122); the deferral outlived its reason.
+ *
+ * The rule blocks only on a DEFINITIVE answer. AEM cannot distinguish
+ * repo-does-not-exist from not-a-Helix-site from App-not-installed — all three
+ * return the same 404 — so blocking on "we could not tell" would strand exactly the
+ * users whose credential AEM refuses, which is the bug class that started this.
+ */
+describe('computeCodeSyncValid — existing repos (2026-08-06)', () => {
+    const repo = { fullName: 'o/r' } as never;
+
+    it('blocks when Helix definitively reports the App missing', () => {
+        expect(
+            computeCodeSyncValid('existing', { isChecking: false, isInstalled: false, codeStatus: 404 }, repo)
+        ).toBe(false);
+    });
+
+    it('allows once the App is verified', () => {
+        expect(
+            computeCodeSyncValid('existing', { isChecking: false, isInstalled: true, codeStatus: 200 }, repo)
+        ).toBe(true);
+    });
+
+    it('blocks while the check is still running', () => {
+        expect(
+            computeCodeSyncValid('existing', { isChecking: true, isInstalled: null }, repo)
+        ).toBe(false);
+    });
+
+    it('ALLOWS an undetermined answer rather than stranding the user', () => {
+        // No codeStatus = Helix refused the credential or does not know the site.
+        // Not the same as "App missing", and no install fixes it.
+        expect(
+            computeCodeSyncValid('existing', { isChecking: false, isInstalled: false }, repo)
+        ).toBe(true);
+    });
+
+    it('still requires a repo to be selected at all', () => {
+        expect(
+            computeCodeSyncValid('existing', { isChecking: false, isInstalled: true }, undefined)
+        ).toBe(false);
+    });
+
+    it('leaves the new-repo rule untouched', () => {
+        expect(
+            computeCodeSyncValid('new', { isChecking: false, isInstalled: true }, undefined)
+        ).toBe(true);
+        expect(
+            computeCodeSyncValid('new', { isChecking: false, isInstalled: false }, undefined)
+        ).toBe(false);
+    });
+});
