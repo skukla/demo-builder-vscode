@@ -49,4 +49,31 @@ describe('sleep', () => {
         jest.advanceTimersByTime(0);
         await expect(pending).resolves.toBeUndefined();
     });
+
+    it('does not hold the event loop open', () => {
+        // A pending sleep used to keep a jest worker alive past its last test —
+        // "A worker process has failed to exit gracefully". A fire-and-forget deploy
+        // polls with sleep(2000), the test asserts and ends, and six armed timers
+        // outlive it. unref'd timers still FIRE while the loop is alive; they just
+        // stop being a reason for it to stay alive.
+        jest.useRealTimers();
+        const spy = jest.spyOn(global, 'setTimeout');
+        void sleep(50_000);
+        const timer = spy.mock.results[0].value as NodeJS.Timeout;
+        expect(timer.hasRef()).toBe(false);
+        clearTimeout(timer);
+        spy.mockRestore();
+    });
+
+    it('survives an environment whose timers have no unref (the webview)', () => {
+        // sleep.ts is bundled into webviews too, where setTimeout returns a number.
+        // Calling .unref() unguarded there is a TypeError on every delay.
+        jest.useRealTimers();
+        const spy = jest.spyOn(global, 'setTimeout').mockImplementation(((fn: () => void) => {
+            fn();
+            return 1 as unknown as NodeJS.Timeout;
+        }) as never);
+        expect(() => sleep(1)).not.toThrow();
+        spy.mockRestore();
+    });
 });

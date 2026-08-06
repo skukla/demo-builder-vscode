@@ -168,7 +168,7 @@ jest.mock('vscode', () => ({
 }));
 
 // Import activate after all mocks are set up
-import { activate } from '../src/extension';
+import { activate, deactivate } from '../src/extension';
 
 /**
  * Create mock ExtensionContext for activation tests
@@ -207,6 +207,15 @@ function createMockExtensionContext(): vscode.ExtensionContext {
 }
 
 describe('Extension - Context Variables Initialization', () => {
+    // These tests call the REAL activate(), which starts the in-extension MCP server
+    // (a live socket), the state manager, and the command manager. Without the
+    // matching teardown those outlive the suite and hold the jest worker open —
+    // "A worker process has failed to exit gracefully", 2/2 runs on this file alone.
+    // deactivate() is what production calls; the test owes the same courtesy.
+    afterEach(() => {
+        deactivate();
+    });
+
     beforeEach(() => {
         jest.clearAllMocks();
         mockHasProject.mockResolvedValue(false);

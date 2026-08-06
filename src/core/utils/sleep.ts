@@ -24,5 +24,22 @@
  * using real timers.
  */
 export function sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise((resolve) => {
+        const timer = setTimeout(resolve, ms);
+        // Do not let a pending sleep be the reason a process stays alive.
+        //
+        // An unref'd timer still FIRES normally while the event loop is running — it
+        // just stops counting as work keeping the loop open. In the extension host and
+        // the MCP entry points there is always other live work (stdio, watchers, the
+        // host itself), so production behaviour is unchanged.
+        //
+        // What it fixes: a fire-and-forget deploy polls with sleep(2000), a test
+        // asserts and ends, and the still-armed timers hold the jest worker open —
+        // "A worker process has failed to exit gracefully". Six of them, in
+        // deployMesh-storage alone.
+        //
+        // Guarded because this module is bundled into webviews, where setTimeout
+        // returns a number and .unref does not exist.
+        (timer as unknown as { unref?: () => void }).unref?.();
+    });
 }

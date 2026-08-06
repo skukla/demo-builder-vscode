@@ -140,7 +140,7 @@ export async function sendCompletionAndCleanup(context: FinalizationContext): Pr
 
     // Auto-close the webview panel after timeout as a fallback
     if (panel) {
-        setTimeout(() => {
+        const autoClose = setTimeout(() => {
             try {
                 if (panel.visible) {
                     panel.dispose();
@@ -150,6 +150,12 @@ export async function sendCompletionAndCleanup(context: FinalizationContext): Pr
                 // Panel was already disposed by user action - expected
             }
         }, TIMEOUTS.WEBVIEW_AUTO_CLOSE);
+        // A two-minute fallback must not be a reason for a process to stay alive.
+        // It still fires normally in the extension host, which has plenty of other
+        // live work; what it stops doing is holding a jest worker open long after
+        // the test that created it finished — six of these were the largest
+        // remaining source of "worker process has failed to exit gracefully".
+        (autoClose as unknown as { unref?: () => void }).unref?.();
     }
 
     logger.debug('[Project Creation] ===== PROJECT CREATION WORKFLOW COMPLETE =====');
