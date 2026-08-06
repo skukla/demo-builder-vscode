@@ -119,7 +119,7 @@ async function handleDeployFailure(
  * Builds mesh.json (if needed), then deploys it to Adobe I/O
  *
  * @param componentPath - Path to the component directory containing mesh.json
- * @param commandManager - ExternalCommandManager instance for executing commands
+ * @param commandManager - CommandExecutor instance for executing commands
  * @param logger - Logger instance for info/error messages
  * @param onProgress - Optional callback for progress updates
  * @returns Deployment result with success status, meshId, endpoint, or error

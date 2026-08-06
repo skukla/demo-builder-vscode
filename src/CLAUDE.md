@@ -38,7 +38,7 @@ src/
 │   ├── errors/          # Error types
 │   ├── handlers/        # Handler dispatch & error handling
 │   ├── logging/         # Logging system (StepLogger, ErrorLogger)
-│   ├── shell/           # Command execution (ExternalCommandManager)
+│   ├── shell/           # Command execution (CommandExecutor)
 │   ├── state/           # State management (StateManager, StateCoordinator)
 │   ├── ui/              # Shared UI components & hooks
 │   ├── utils/           # Core utilities

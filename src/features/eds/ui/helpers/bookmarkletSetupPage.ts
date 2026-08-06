@@ -2,7 +2,7 @@
  * Bookmarklet Setup Page Generator
  *
  * Generates a data URL for a browser-based bookmarklet setup page.
- * Used by both DaLiveSetupStep and ConnectServicesStep when the user
+ * Used by both DaLiveSetupStep and StorefrontStep when the user
  * hasn't completed the one-time bookmarklet installation.
  *
  * @param bookmarkletUrl - The javascript: URL for the bookmarklet (from backend)

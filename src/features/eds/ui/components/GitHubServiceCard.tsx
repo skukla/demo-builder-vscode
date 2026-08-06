@@ -1,7 +1,7 @@
 /**
  * GitHubServiceCard
  *
- * Presentational component for GitHub authentication in ConnectServicesStep.
+ * Presentational component for GitHub authentication, rendered by StorefrontStep.
  * Supports both card and checklist layout variants.
  *
  * @example

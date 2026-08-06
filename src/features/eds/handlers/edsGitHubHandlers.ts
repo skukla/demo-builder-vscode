@@ -8,7 +8,6 @@
  * - `handleGitHubOAuth`: Initiate OAuth flow via VS Code authentication
  * - `handleGitHubChangeAccount`: Switch to a different GitHub account
  * - `handleGetGitHubRepos`: List repositories user has write access to
- * - `handleVerifyGitHubRepo`: Check user has write access to existing repository
  *
  * @module features/eds/handlers/edsGitHubHandlers
  */
@@ -23,9 +22,6 @@ import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 // Payload Types
 // ==========================================================
 
-/**
- * Payload for handleVerifyGitHubRepo
- */
 // ==========================================================
 // Handlers
 // ==========================================================
@@ -368,7 +364,7 @@ interface CreateGitHubRepoPayload {
  * Create a GitHub repository from a template
  *
  * Creates the repository and waits for template content to be populated.
- * This is called from GitHubRepoSelectionStep when creating a new repository,
+ * This is called from RepoSelectionInline when creating a new repository,
  * allowing the repo to exist before proceeding to code sync verification.
  *
  * @param context - Handler context with logging and messaging

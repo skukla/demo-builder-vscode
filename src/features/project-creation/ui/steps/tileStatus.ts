@@ -120,7 +120,7 @@ export function anyDeployableSelected(state: WizardState): boolean {
  *
  * Integrations is conditionally required and NOT mesh-specific: any deployable —
  * a mesh OR an App Builder integration — needs an Adobe I/O destination before
- * Finish. Mirrors {@link isIntegrationsStepComplete}:
+ * Finish. The rule is:
  *  - nothing deployable selected → true (integrations are optional);
  *  - a deployable selected → require Adobe sign-in AND a project AND a workspace.
  *

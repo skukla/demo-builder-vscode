@@ -170,6 +170,6 @@ export async function runInBatches<T, R>(
 }
 
 // Note: For command-level retry logic with exponential backoff,
-// see ExternalCommandManager.executeWithRetry() which already
+// see CommandExecutor.executeWithRetry() which already
 // handles retries for git, npm, aio, and other CLI commands.
 

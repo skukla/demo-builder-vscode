@@ -4,7 +4,7 @@
  * Barrel exports for EDS feature UI components.
  */
 
-// Service cards for ConnectServicesStep
+// Service cards rendered by StorefrontStep
 export { GitHubServiceCard } from './GitHubServiceCard';
 export type { GitHubServiceCardProps, GitHubUser } from './GitHubServiceCard';
 

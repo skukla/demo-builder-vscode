@@ -1,13 +1,12 @@
 /**
  * Deploy-outcome → keyed appBuilderComponents write (ADR-011 D3 Step 02).
  *
- * The singular headless deploy paths (`deployAppHeadless`/`deployMeshHeadless`)
- * historically wrote only the legacy `appState`/`meshState` singletons, while
- * the keyed runner wrote only `appBuilderComponents[id]` — two surfaces reading
- * different state. This helper is the "one writer" seam: the singular paths
- * call it on success AND on error so both models agree. The singular writes
- * remain beside it until D3 Step 07 retires them; D3 Step 03 collapses the
- * paths themselves onto the keyed runner.
+ * The singular headless deploy paths historically wrote only the legacy
+ * `appState`/`meshState` singletons, while the keyed runner wrote only
+ * `appBuilderComponents[id]` — two surfaces reading different state. This helper
+ * is the "one writer" seam: a caller invokes it on success AND on error so both
+ * models agree. Of the two singular paths only `deployMeshHeadless` remains;
+ * `deployAppHeadless` was retired on 2026-08-04.
  *
  * @module features/app-builder/services/appBuilderDeployOutcome
  */

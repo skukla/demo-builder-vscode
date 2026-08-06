@@ -27,7 +27,7 @@ This feature provides seamless integration between local mesh configuration and 
 
 **Parameters**:
 - `componentPath` - Path to mesh component directory containing mesh.json (eds-commerce-mesh or headless-commerce-mesh)
-- `commandManager` - ExternalCommandManager for executing commands
+- `commandManager` - CommandExecutor for executing commands
 - `logger` - Logger for info/error messages
 - `onProgress?` - Optional callback for progress updates
 
@@ -223,9 +223,9 @@ If hasChanges: Show "Redeploy Mesh" prompt
 ## Integration Points
 
 ### Dependencies
-- `@/shared/command-execution` - ExternalCommandManager for CLI operations
-- `@/shared/logging` - Logger for mesh operations
-- `@/shared/state` - getFrontendEnvVars, updateFrontendState for frontend change detection
+- `@/core/shell` - CommandExecutor for CLI operations
+- `@/core/logging` - Logger for mesh operations
+- `@/core/state` - getFrontendEnvVars, updateFrontendState for frontend change detection
 - `@/types/typeGuards` - parseJSON for safe JSON parsing
 - `@/utils/timeoutConfig` - TIMEOUTS.API_MESH_UPDATE constant
 - `@/utils/errorFormatter` - formatAdobeCliError for user-friendly errors

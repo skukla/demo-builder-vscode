@@ -29,7 +29,7 @@ Do NOT use when:
 
 **Usage**:
 ```typescript
-import { StateManager } from '@/shared/state';
+import { StateManager } from '@/core/state';
 
 const stateManager = new StateManager(context);
 await stateManager.initialize();
@@ -67,7 +67,7 @@ const project = await stateManager.getCurrentProject();
 
 **Example**:
 ```typescript
-import { StateManager } from '@/shared/state';
+import { StateManager } from '@/core/state';
 
 const stateManager = new StateManager(context);
 await stateManager.initialize();
@@ -110,7 +110,7 @@ await stateManager.removeProcess('frontend');
 
 **Usage**:
 ```typescript
-import { updateFrontendState } from '@/shared/state';
+import { updateFrontendState } from '@/core/state';
 
 await updateFrontendState(project, logger);
 ```
@@ -136,7 +136,7 @@ if (project && getMeshEndpointUrl(project)) {
 
 **Usage**:
 ```typescript
-import { getFrontendEnvVars } from '@/shared/state';
+import { getFrontendEnvVars } from '@/core/state';
 
 const envVars = getFrontendEnvVars(project);
 // Returns: { MESH_ID: '...', MESH_ENDPOINT: '...' }
@@ -424,8 +424,8 @@ This module was migrated from `src/utils/stateManager.ts` as part of the shared 
 ## See Also
 
 - **Related Shared Modules**:
-  - `@/shared/logging` - Used for logging state operations
-  - `@/shared/base` - BaseCommand uses StateManager
+  - `@/core/logging` - Used for logging state operations
+  - `@/core/base` - BaseCommand uses StateManager
 
 - **Related Documentation**:
   - Main architecture: `../../CLAUDE.md`

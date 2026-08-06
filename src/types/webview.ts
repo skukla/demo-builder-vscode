@@ -481,7 +481,7 @@ export interface EDSConfig {
         path: string;
     };
 
-    // Repository creation state (set by GitHubRepoSelectionStep when creating new repo)
+    // Repository creation state (set by RepoSelectionInline when creating a new repo)
     /** Created repository info - set when repo is created in selection step, before proceeding */
     createdRepo?: {
         owner: string;

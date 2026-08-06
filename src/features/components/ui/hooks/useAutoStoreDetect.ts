@@ -2,7 +2,7 @@
  * useAutoStoreDetect Hook
  *
  * Shared logic for triggering Commerce store discovery automatically when
- * connection fields are filled. Used by both ComponentConfigStep (wizard)
+ * connection fields are filled. Used by both ConnectStoreStepContent (wizard)
  * and ConnectStoreStepContent (connect-store step).
  *
  * Both ACCS and PaaS paths parse the user-supplied URL and restrict the

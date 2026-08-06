@@ -115,7 +115,7 @@ export interface StorefrontSetupStartPayload {
         // Whether to reset existing site content (repopulate with demo data)
         // Only applies when selectedSite is set (existing site mode)
         resetSiteContent?: boolean;
-        // Created repository info (set when repo was created in GitHubRepoSelectionStep)
+        // Created repository info (set when the repo was created in RepoSelectionInline)
         // If present, skip repo creation in StorefrontSetupStep
         createdRepo?: {
             owner: string;

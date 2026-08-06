@@ -6,10 +6,10 @@
  * integration must deploy under a DISTINCT `ow.package` — never the shared
  * `application`/`dx-excshell-1`. This seam rewrites the app's `app.config.yaml`
  * to the derived package ({@link applyIsolatedPackages}) and THEN runs the
- * deploy tail. Both deploy surfaces route through it — the keyed runner deps
- * wiring ({@link import('./appBuilderComponentRunnerDeps').buildDefaultRunnerDeps})
- * and the singular {@link import('./deployAppHeadless').deployAppHeadless} —
- * so no un-isolated `aio app deploy` path survives.
+ * deploy tail. Every deploy routes through it via the keyed runner deps wiring
+ * ({@link import('./appBuilderComponentRunnerDeps').buildDefaultRunnerDeps}),
+ * so no un-isolated `aio app deploy` path survives. The singular headless
+ * deploy was the other route until it was retired on 2026-08-04.
  *
  * @module features/app-builder/services/deployAppIsolated
  */

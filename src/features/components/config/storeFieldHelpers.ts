@@ -1,7 +1,7 @@
 /**
  * Store field classification helpers
  *
- * Shared predicates and constant sets used by ComponentConfigStep and
+ * Shared predicates and constant sets used by ConnectStoreStepContent and
  * ConnectStoreStepContent to determine how commerce store fields are
  * rendered with progressive disclosure.
  *

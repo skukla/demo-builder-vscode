@@ -103,8 +103,8 @@ export function buildDefaultRunnerDeps(
                 componentPath,
             );
         },
-        // The ONE isolating deploy seam (ADR-011 D3 Step 03) — shared with the
-        // singular deployAppHeadless path so no un-isolated deploy survives.
+        // The ONE isolating deploy seam (ADR-011 D3 Step 03) — every deploy routes
+        // through it, so no un-isolated deploy survives.
         deployApp: deployAppComponentIsolated,
         // The runner's dep contract is void — swallow the returned API list.
         subscribeRequiredApis: async (appBuilderComponents, project) => {

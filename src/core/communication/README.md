@@ -29,7 +29,7 @@ Do NOT use when:
 
 **Usage**:
 ```typescript
-import { createWebviewCommunication } from '@/shared/communication';
+import { createWebviewCommunication } from '@/core/communication';
 
 const comm = await createWebviewCommunication(panel, {
     enableLogging: true,
@@ -70,7 +70,7 @@ const result = await comm.request('check-auth');
 
 **Example**:
 ```typescript
-import { createWebviewCommunication } from '@/shared/communication';
+import { createWebviewCommunication } from '@/core/communication';
 
 // Create communication manager
 const comm = await createWebviewCommunication(panel, {
@@ -106,7 +106,7 @@ const result = await comm.request('validate-form', { field: 'name', value: 'test
 
 **Usage**:
 ```typescript
-import { createWebviewCommunication } from '@/shared/communication';
+import { createWebviewCommunication } from '@/core/communication';
 
 const comm = await createWebviewCommunication(panel, config);
 ```
@@ -218,8 +218,8 @@ Extension                          Webview
 ### Pattern 1: Webview Command Setup
 
 ```typescript
-import { BaseWebviewCommand } from '@/shared/base';
-import { WebviewCommunicationManager } from '@/shared/communication';
+import { BaseWebviewCommand } from '@/core/base';
+import { WebviewCommunicationManager } from '@/core/communication';
 
 class MyWebviewCommand extends BaseWebviewCommand {
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
@@ -326,7 +326,7 @@ await comm.initialize();
 - VS Code API (`vscode`) - WebviewPanel, Disposable
 - `uuid` - Message ID generation
 - `@/types/messages` - Message types and payloads
-- `@/shared/logging` - Debug logging
+- `@/core/logging` - Debug logging
 - `@/utils/timeoutConfig` - Timeout configuration
 
 ## Best Practices
@@ -488,8 +488,8 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
 ## See Also
 
 - **Related Shared Modules**:
-  - `@/shared/base` - BaseWebviewCommand uses this module
-  - `@/shared/logging` - Used for debug logging
+  - `@/core/base` - BaseWebviewCommand uses this module
+  - `@/core/logging` - Used for debug logging
   - `@/utils/timeoutConfig` - Timeout configuration
 
 - **Related Documentation**:

@@ -5,7 +5,7 @@
  * (endpoint URLs, credentials) and selecting website/store/view
  * via store discovery with progressive disclosure.
  *
- * Reuses the same hooks and rendering pattern as ComponentConfigStep
+ * Reuses the same hooks and rendering pattern as the Configure screen
  * but without navigation panel or two-column layout.
  */
 

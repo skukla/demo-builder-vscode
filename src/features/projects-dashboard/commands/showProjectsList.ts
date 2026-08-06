@@ -133,7 +133,7 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
         // Set context to show webview sidebar instead of tree view
         await vscode.commands.executeCommand('setContext', 'demoBuilder.showingProjectsList', true);
 
-        // Update sidebar context to show ProjectsListView
+        // Update sidebar context to the projects-list surface
         if (ServiceLocator.isSidebarInitialized()) {
             const sidebarProvider = ServiceLocator.getSidebarProvider();
             await sidebarProvider.setShowingProjectsList(true);

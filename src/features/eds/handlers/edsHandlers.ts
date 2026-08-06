@@ -47,9 +47,6 @@ export { clearServiceCache } from './edsHelpers';
 // Payload Types
 // ==========================================================
 
-/**
- * Payload for handleValidateAccsCredentials
- */
 // ==========================================================
 // ACCS Handler
 // ==========================================================

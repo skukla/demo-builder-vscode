@@ -214,8 +214,8 @@ Mesh deployed? → YES → checkMeshStatusAsync()
 ### Dependencies
 - `@/features/authentication` - AuthenticationService for auth checks
 - `@/features/mesh` - detectMeshChanges, detectFrontendChanges, verifyMeshDeployment
-- `@/shared/validation` - validateURL for Dev Console links
-- `@/shared/logging` - Logger for dashboard operations
+- `@/core/validation` - validateURL for Dev Console links
+- `@/core/logging` - Logger for dashboard operations
 - `@/services/serviceLocator` - ServiceLocator for CommandExecutor
 - `vscode` - Commands, window, env APIs
 

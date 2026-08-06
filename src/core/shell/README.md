@@ -31,7 +31,7 @@ Do NOT use when:
 
 **Usage**:
 ```typescript
-import { CommandExecutor } from '@/shared/command-execution';
+import { CommandExecutor } from '@/core/shell';
 
 const executor = new CommandExecutor();
 
@@ -66,7 +66,7 @@ const result = await executor.execute('aio console:org:select 12345', {
 
 **Example**:
 ```typescript
-import { CommandExecutor } from '@/shared/command-execution';
+import { CommandExecutor } from '@/core/shell';
 
 const executor = new CommandExecutor();
 
@@ -458,9 +458,9 @@ const parallelResults = await executor.executeParallel(parallelCommands);
 
 ### Dependencies
 - Node.js `child_process` - spawn for command execution
-- `@/shared/logging` - Command logging
+- `@/core/logging` - Command logging
 - `@/utils/timeoutConfig` - Timeout configuration
-- `@/shared/validation` - Command name validation
+- `@/core/validation` - Command name validation
 
 ## Best Practices
 
@@ -559,7 +559,7 @@ if (result.code !== 0) {
 ## Security Considerations
 
 - **Shell Injection**: Default `shell: false` prevents injection attacks
-- **Input Validation**: Use `@/shared/validation` before executing with user input
+- **Input Validation**: Use `@/core/validation` before executing with user input
 - **Command Whitelist**: `commandExists()` validates command names
 - **Timeout Protection**: Prevents DoS via long-running commands
 - **Resource Locking**: Prevents race conditions in critical sections
@@ -569,7 +569,7 @@ if (result.code !== 0) {
 Enable command logging for debugging:
 
 ```typescript
-import { getLogger } from '@/shared/logging';
+import { getLogger } from '@/core/logging';
 
 const logger = getLogger();
 
@@ -605,8 +605,8 @@ When you find command execution patterns duplicated:
 ## See Also
 
 - **Related Shared Modules**:
-  - `@/shared/logging` - Command execution logging
-  - `@/shared/validation` - Input validation before execution
+  - `@/core/logging` - Command execution logging
+  - `@/core/validation` - Input validation before execution
   - `@/utils/timeoutConfig` - Timeout configuration
 
 - **Related Documentation**:
