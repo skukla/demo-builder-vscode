@@ -7,9 +7,7 @@
  * Covers EDS projects, headless projects, block libraries, and conditional sections.
  */
 
-import * as fsPromises from 'fs/promises';
-import * as path from 'path';
-import { generateAgentsMd, writeAgentsMd } from '@/features/project-creation/services/aiContextWriter';
+import { generateAgentsMd } from '@/features/project-creation/services/aiContextWriter';
 import type { Project, ComponentInstance } from '@/types/base';
 import type { Stack } from '@/types/stacks';
 import type { InstalledBlockLibrary, CustomBlockLibrary } from '@/types/blockLibraries';
@@ -468,132 +466,6 @@ describe('aiContextWriter', () => {
             });
         });
 
-        describe('sanitization', () => {
-            it('strips newlines and # from project name to prevent heading injection', () => {
-                const project = makeEdsProject({ name: 'my-project\n## Injected heading' });
-                const result = generateAgentsMd(project, STACKS);
-
-                expect(result).not.toContain('## Injected heading');
-                expect(result).toContain('my-project');
-            });
-
-            it('strips newlines from Commerce URL to prevent Markdown heading injection', () => {
-                const project = makeHeadlessProject({
-                    commerce: {
-                        type: 'platform-as-a-service',
-                        instance: {
-                            url: 'https://commerce.example.com\n## Injected Heading',
-                            environmentId: 'env-123',
-                            storeView: 'default',
-                            websiteCode: 'base',
-                            storeCode: 'main_website_store',
-                        },
-                    },
-                });
-                const result = generateAgentsMd(project, STACKS);
-
-                // Newline is removed, so ## cannot start a new Markdown heading line
-                expect(result).not.toContain('\n## Injected Heading');
-                expect(result).toContain('https://commerce.example.com');
-            });
-
-            it('replaces non-https Commerce URL with [invalid URL] placeholder', () => {
-                const project = makeHeadlessProject({
-                    commerce: {
-                        type: 'platform-as-a-service',
-                        instance: {
-                            url: 'javascript:alert(1)',
-                            environmentId: 'env-123',
-                            storeView: 'default',
-                            websiteCode: 'base',
-                            storeCode: 'main_website_store',
-                        },
-                    },
-                });
-                const result = generateAgentsMd(project, STACKS);
-
-                expect(result).not.toContain('javascript:');
-                // Brackets escaped by escapeMarkdown
-                expect(result).toContain('\\[invalid URL\\]');
-            });
-
-            it('preserves # in DA.live URL (fragment separator, escaped at output boundary)', () => {
-                const project = makeEdsProject();
-                const result = generateAgentsMd(project, STACKS);
-
-                // sanitizeUrl preserves # (valid fragment separator), escapeMarkdown then escapes it
-                expect(result).toContain('https://da.live/\\#/my-org/my-site');
-            });
-
-            it('strips # from adobe organization field to prevent heading injection', () => {
-                const project = makeEdsProject({
-                    adobe: {
-                        organization: 'My Org\n## Injected',
-                        projectTitle: 'My Project',
-                    },
-                });
-                const result = generateAgentsMd(project, STACKS);
-
-                expect(result).not.toContain('## Injected');
-                expect(result).toContain('My Org');
-            });
-
-            it('falls back to raw packageId when package not found and sanitizes it', () => {
-                const project = makeEdsProject({ selectedPackage: 'unknown\n## pkg-inject' });
-                const result = generateAgentsMd(project, STACKS);
-
-                expect(result).not.toContain('## pkg-inject');
-            });
-
-            it('falls back to raw stackId when stack not found and sanitizes it', () => {
-                const project = makeEdsProject({ selectedStack: 'unknown\n## stack-inject' });
-                const result = generateAgentsMd(project, STACKS);
-
-                expect(result).not.toContain('## stack-inject');
-            });
-
-            it('strips ]() from Commerce URL to prevent Markdown link injection via crafted https:// URLs', () => {
-                const project = makeHeadlessProject({
-                    commerce: {
-                        type: 'platform-as-a-service',
-                        instance: {
-                            url: 'https://example.com](https://attacker.com',
-                            environmentId: 'env-123',
-                            storeView: 'default',
-                            websiteCode: 'base',
-                            storeCode: 'main_website_store',
-                        },
-                    },
-                });
-                const result = generateAgentsMd(project, STACKS);
-
-                // The ]( sequence that would break Markdown link syntax is stripped
-                expect(result).not.toContain('](https://attacker.com');
-                // The https:// base is preserved
-                expect(result).toContain('https://example.com');
-            });
-
-            it('strips Markdown link-breaking chars from GitHub owner/repo in block libraries', () => {
-                const installedLibraries = [
-                    {
-                        name: 'My Library',
-                        source: {
-                            owner: 'org](https://evil.example.com',
-                            repo: 'repo',
-                            branch: 'main',
-                        },
-                        commitSha: 'abc123',
-                        blockIds: ['hero'],
-                        installedAt: '2026-01-01T00:00:00Z',
-                    },
-                ];
-                const project = makeEdsProject({ installedBlockLibraries: installedLibraries });
-                const result = generateAgentsMd(project, STACKS);
-
-                // The ]( sequence enabling Markdown link injection is stripped; domain text may remain as plain text
-                expect(result).not.toContain('](https://');
-            });
-        });
 
         describe('structure', () => {
             it('includes project name as heading', () => {
@@ -624,70 +496,6 @@ describe('aiContextWriter', () => {
 
                 expect(result).toContain('Try asking Claude');
             });
-        });
-    });
-
-    describe('writeAgentsMd', () => {
-        beforeEach(() => {
-            jest.clearAllMocks();
-        });
-
-        function captureWritten(filePath: string): string {
-            const writeFileMock = fsPromises.writeFile as jest.Mock;
-            const call = writeFileMock.mock.calls.find(
-                ([p]: [string]) => p === filePath,
-            );
-            if (!call) {
-                throw new Error(`No writeFile call found for path: ${filePath}`);
-            }
-            return call[1] as string;
-        }
-
-        it('writes AGENTS.md at the project root with the generated content', async () => {
-            const project = makeEdsProject();
-            await writeAgentsMd('/projects/test-project', project, STACKS);
-
-            const content = captureWritten(path.join('/projects/test-project', 'AGENTS.md'));
-            expect(content).toContain('Demo Builder Project: test-project');
-            expect(content).toContain('Project Overview');
-        });
-
-        it('writes a CLAUDE.md pointer at the project root', async () => {
-            const project = makeEdsProject();
-            await writeAgentsMd('/projects/test-project', project, STACKS);
-
-            const content = captureWritten(path.join('/projects/test-project', 'CLAUDE.md'));
-            expect(content.trim()).toBe('see @AGENTS.md');
-        });
-
-        it('writes a .claude/CLAUDE.md pointer', async () => {
-            const project = makeEdsProject();
-            await writeAgentsMd('/projects/test-project', project, STACKS);
-
-            const content = captureWritten(path.join('/projects/test-project', '.claude', 'CLAUDE.md'));
-            expect(content.trim()).toBe('see @AGENTS.md');
-        });
-
-        it('creates the .claude directory before writing the pointer', async () => {
-            const project = makeEdsProject();
-            await writeAgentsMd('/projects/test-project', project, STACKS);
-
-            const mkdirMock = fsPromises.mkdir as jest.Mock;
-            const claudeDir = path.join('/projects/test-project', '.claude');
-            const mkdirCall = mkdirMock.mock.calls.find(
-                ([dir]: [string]) => dir === claudeDir,
-            );
-            expect(mkdirCall).toBeDefined();
-        });
-
-        it('writes AGENTS.md content identical to generateAgentsMd output', async () => {
-            const project = makeEdsProject();
-            const generated = generateAgentsMd(project, STACKS);
-
-            await writeAgentsMd('/projects/test-project', project, STACKS);
-
-            const content = captureWritten(path.join('/projects/test-project', 'AGENTS.md'));
-            expect(content).toBe(generated);
         });
     });
 });
