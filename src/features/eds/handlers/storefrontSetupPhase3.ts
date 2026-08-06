@@ -284,6 +284,10 @@ async function registerConfigurationService(
         // the storefront ships with smart-404 client code but no overlay to back
         // it — every PDP would 404. Surface it so the user knows to reset.
         if (edsConfig.byomOverlayUrl && !registered) {
+            // Record it, do not just warn: a toast is dismissible and the run
+            // otherwise ends by announcing success for a storefront that cannot
+            // serve PDPs.
+            repoInfo.byomOverlayFailed = true;
             surfaceOverlayRegistrationFailure(logger, vscode.window.showWarningMessage);
         }
     } catch (error) {
@@ -298,6 +302,7 @@ async function registerConfigurationService(
             progress: 49,
         });
         if (edsConfig.byomOverlayUrl) {
+            repoInfo.byomOverlayFailed = true;
             surfaceOverlayRegistrationFailure(logger, vscode.window.showWarningMessage);
         }
     }
