@@ -32,6 +32,8 @@ export interface StorefrontSetupResult {
     repoUrl?: string;
     repoOwner?: string;
     repoName?: string;
+    /** See {@link RepoInfo.byomOverlayFailed} — spread in from the threaded repoInfo. */
+    byomOverlayFailed?: boolean;
     // Note: previewUrl/liveUrl not included - derived from githubRepo by typeGuards
 }
 
@@ -56,4 +58,13 @@ export interface RepoInfo {
     repoUrl?: string;
     repoOwner: string;
     repoName: string;
+    /**
+     * The BYOM overlay was configured but its Configuration Service registration
+     * did not land, so the storefront cannot serve product detail pages.
+     *
+     * Set in phase 3 and spread into {@link StorefrontSetupResult}, because the
+     * pipeline otherwise finishes and reports "Complete" for a storefront missing
+     * the one thing the overlay exists for.
+     */
+    byomOverlayFailed?: boolean;
 }
