@@ -120,6 +120,17 @@ export interface SettingsFile {
      * so existing picks survive a rebuild.
      */
     additionalConsoleApis?: string[];
+    /**
+     * The ATTRIBUTED form of the same picks — which integration wanted each code.
+     *
+     * Carried alongside the flat field, not instead of it: a settings file written
+     * now must still import on a build that only knows the flat form. It is the form
+     * that survives step 07, which is why export cannot rely on the flat field alone.
+     *
+     * On import it seeds `selectedConsoleApis` per integration; the flat field is the
+     * fallback and lands everything under the unattributed key.
+     */
+    componentApiPicks?: Record<string, string[]>;
 }
 
 /** Current schema version */

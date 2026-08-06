@@ -207,19 +207,28 @@ function buildEditModeAdobeContext(adobe: ImportedSettings['adobe']) {
  *   silently drops the mesh. Non-mesh base deps are filtered — seeding them
  *   would falsely trip anyDeployableSelected and force the destination gate.
  * - `appBuilderComponentSources` → custom-URL sources (else custom rows vanish)
- * - flat `additionalConsoleApis` → `selectedConsoleApis['__existing__']`
+ * - `componentApiPicks` → `selectedConsoleApis` per integration, PREFERRED: it is
+ *   the attributed form, and the only one that survives step 07. Seeding from the
+ *   flat field instead collapsed every pick into one anonymous bucket, so reopening
+ *   a project forgot which integration wanted what.
+ * - flat `additionalConsoleApis` → `selectedConsoleApis['__existing__']`, the
+ *   fallback for a settings file written before the keyed form existed
  *   (reserved key: joins the serialization union, never shown per-row)
  */
 function buildEditModeIntegrationState(editSettings: ImportedSettings): Partial<WizardState> {
+    const keyedPicks = editSettings.componentApiPicks;
+    const hasKeyedPicks = keyedPicks && Object.keys(keyedPicks).length > 0;
     const existingApis = editSettings.additionalConsoleApis;
     const meshDeps = editSettings.selections?.dependencies?.filter(isMeshComponentId);
     return {
         selectedAppBuilderComponents: editSettings.selections?.appBuilder,
         selectedOptionalDependencies: meshDeps?.length ? meshDeps : undefined,
         appBuilderComponentSources: editSettings.appBuilderComponentSources,
-        selectedConsoleApis: existingApis?.length
-            ? { [RESERVED_EXISTING_KEY]: existingApis }
-            : undefined,
+        selectedConsoleApis: hasKeyedPicks
+            ? keyedPicks
+            : existingApis?.length
+              ? { [RESERVED_EXISTING_KEY]: existingApis }
+              : undefined,
     };
 }
 

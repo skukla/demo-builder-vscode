@@ -82,6 +82,37 @@ describe('useWizardState - edit-mode App Builder seeding', () => {
         });
     });
 
+    /**
+     * Step 07 precondition, import side. The flat field lands everything under the
+     * unattributed key, so an edit round-trip USED to destroy attribution even when
+     * it preserved the union — reopen a project and every pick had forgotten which
+     * integration wanted it. The keyed form is also the only one that will exist
+     * once the flat write is retired.
+     */
+    it('prefers the KEYED picks, preserving which integration wanted what', () => {
+        const state = renderWizardState(
+            makeEditProject({
+                componentApiPicks: { 'erp-sync': ['CCAPI'], 'firefly-app': ['AssetComputeSDK'] },
+                additionalConsoleApis: ['CCAPI', 'AssetComputeSDK'],
+            })
+        );
+
+        expect(state.selectedConsoleApis).toEqual({
+            'erp-sync': ['CCAPI'],
+            'firefly-app': ['AssetComputeSDK'],
+        });
+    });
+
+    it('falls back to the flat field when a settings file predates the keyed form', () => {
+        // An older export has only the flat field; it must still seed something,
+        // under the unattributed key, rather than importing as no picks at all.
+        const state = renderWizardState(
+            makeEditProject({ additionalConsoleApis: ['CCAPI'] })
+        );
+
+        expect(state.selectedConsoleApis).toEqual({ __existing__: ['CCAPI'] });
+    });
+
     it('does not set selectedConsoleApis when additionalConsoleApis is absent', () => {
         const state = renderWizardState(makeEditProject({}));
 

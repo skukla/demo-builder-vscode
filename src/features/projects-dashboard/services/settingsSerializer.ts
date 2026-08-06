@@ -180,7 +180,12 @@ export function extractSettingsFromProject(project: Project, includeSecrets = tr
         // DERIVED from the keyed appBuilderComponents map (§E); the Console API
         // picks beyond requiredApis persist on the project (manifest field)
         appBuilderComponentSources: deriveAppBuilderComponentSources(project),
+        // BOTH forms. The keyed map is the one that survives step 07 — exporting the
+        // flat field alone meant a settings file would carry nothing once the flat
+        // write is retired, and an edit round-trip collapsed every pick into the
+        // unattributed bucket even before then.
         additionalConsoleApis: project.additionalConsoleApis,
+        componentApiPicks: project.componentApiPicks,
     };
 }
 

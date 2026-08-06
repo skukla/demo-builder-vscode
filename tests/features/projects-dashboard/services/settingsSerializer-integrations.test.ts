@@ -168,6 +168,30 @@ describe('settingsSerializer', () => {
             expect(result.additionalConsoleApis).toBeUndefined();
         });
 
+        /**
+         * Step 07 precondition. Export carried the flat field ALONE, so retiring the
+         * flat write would have made every exported settings file silently drop the
+         * user's API picks — and an edit round-trip already collapsed attribution
+         * into the unattributed bucket even while it worked.
+         */
+        it('exports the KEYED picks, the form that survives step 07', () => {
+            const project = createProject({
+                componentApiPicks: { 'erp-sync': ['CCAPI'], 'firefly-app': ['AssetComputeSDK'] },
+                additionalConsoleApis: ['CCAPI', 'AssetComputeSDK'],
+            });
+
+            const result = extractSettingsFromProject(project);
+
+            expect(result.componentApiPicks).toEqual({
+                'erp-sync': ['CCAPI'],
+                'firefly-app': ['AssetComputeSDK'],
+            });
+        });
+
+        it('omits the keyed picks when there are none', () => {
+            expect(extractSettingsFromProject(createProject()).componentApiPicks).toBeUndefined();
+        });
+
         it('should keep the existing shape stable alongside the derived fields', () => {
             const project = createProject({
                 appBuilderComponents: { 'acme-widget': CUSTOM_IMPORT_STATE },
