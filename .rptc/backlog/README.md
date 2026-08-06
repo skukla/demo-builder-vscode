@@ -165,17 +165,6 @@ floor — which is precisely what this item exists to protect.
 
 ### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
 
-#### Resume storefront setup after an AEM Code Sync install ([`2026-08-06-resume-storefront-setup-after-app-install.md`](2026-08-06-resume-storefront-setup-after-app-install.md))
-
-The stub that always answered "Resume not yet supported" was DELETED 2026-08-06 rather than
-kept — an unbuilt path that cannot work is not made acceptable by failing politely. This is
-the other half: resume is buildable (phase 1's repo resolution is read-only and reusable, so
-it is "re-derive repoInfo, run phase 3 onward" — no mid-pipeline state to persist) and worth
-having, because the case that reaches it is App revocation mid-run, where the user has work
-in flight. Rarer since the selection-time check landed (`dad3ee38`), and a restart is safe
-in the meantime: phases 1–2 write idempotently. Three tests currently pin the handler's
-ABSENCE; they flip when the real one lands.
-
 #### Reset consent only when there is something to lose ([`2026-07-29-reset-consent-only-when-there-is-something-to-lose.md`](2026-07-29-reset-consent-only-when-there-is-something-to-lose.md))
 
 **In progress** — classifier landed on `develop`; UI wiring remains. New repos already pin + patch
