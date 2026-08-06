@@ -305,7 +305,7 @@ async function pollGitHubAppInstallation(
  * Compute whether the user can proceed based on repo mode and current state.
  * Extracted from useEffect to reduce component complexity.
  */
-function computeCanProceed(
+export function computeCanProceed(
     repoMode: string,
     repoCreationState: RepoCreationState,
     githubAppStatus: GitHubAppStatus,
@@ -320,7 +320,20 @@ function computeCanProceed(
             !repoCreationState.isCreating
         );
     }
-    return !!selectedRepo && !isLoading;
+    // Existing repos used to gate on nothing, so the only Code Sync check was
+    // mid-pipeline — after fstab, block collection, smart-404 and quick-edit had
+    // already written to the user's repo. That deferral worked around a classifier
+    // since fixed (89ef6fba, beta.122); it outlived its reason.
+    if (!selectedRepo || isLoading) return false;
+    if (githubAppStatus.isChecking) return false;
+
+    // Block ONLY on a definitive answer. AEM returns the same 404 for
+    // repo-does-not-exist, not-a-Helix-site and App-not-installed, so treating
+    // "could not tell" as "missing" would strand the users whose credential AEM
+    // refuses — the exact bug class that caused the original deferral.
+    const definitivelyMissing =
+        githubAppStatus.isInstalled === false && githubAppStatus.codeStatus === 404;
+    return !definitivelyMissing;
 }
 
 /**
@@ -691,6 +704,32 @@ export function GitHubRepoSelectionStep({
         });
         setIsModalDismissed(false);
         lastCheckedRepo.current = null;
+    }, [repoMode, selectedRepo]);
+
+    // Check Code Sync as soon as an EXISTING repo is picked, not mid-pipeline.
+    // skipTrigger keeps it ~1s: a repo Helix has never indexed 404s, and the default
+    // path answers that by triggering a code sync and polling for up to three
+    // minutes — fine mid-pipeline, unusable behind a Continue button.
+    useEffect(() => {
+        if (repoMode !== 'existing' || !selectedRepo) return;
+        const owner = selectedRepo.owner ?? selectedRepo.fullName?.split('/')[0];
+        const name = selectedRepo.name;
+        if (!owner || !name) return;
+        let cancelled = false;
+        setGitHubAppStatus({ isChecking: true, isInstalled: null });
+        void (async () => {
+            try {
+                const result = await webviewClient.request<GitHubAppCheckResult>(
+                    'check-github-app',
+                    { owner, repo: name, lenient: true, skipTrigger: true },
+                );
+                if (!cancelled) setGitHubAppStatus(buildAppStatusFromResult(result));
+            } catch {
+                // Undetermined, not missing — the gate lets this through.
+                if (!cancelled) setGitHubAppStatus({ isChecking: false, isInstalled: false });
+            }
+        })();
+        return () => { cancelled = true; };
     }, [repoMode, selectedRepo]);
 
     // Re-check GitHub App when returning to this step with an already-created repo.

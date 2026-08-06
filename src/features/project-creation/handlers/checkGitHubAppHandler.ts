@@ -29,6 +29,15 @@ interface CheckGitHubAppRequest {
     repo: string;
     /** If true, use lenient mode (accept non-404). Default: false (strict mode). */
     lenient?: boolean;
+    /**
+     * Report what Helix says right now and stop — do NOT trigger a code sync.
+     *
+     * A genuine 404 means Helix has never indexed the repo, and the default path
+     * answers that by triggering a sync and polling for up to three minutes. Right
+     * mid-pipeline, unusable behind a step's Continue button, so the selection-time
+     * check sets this. Default false: the mid-pipeline gate keeps triggering.
+     */
+    skipTrigger?: boolean;
 }
 
 interface CheckGitHubAppResponse {
@@ -181,7 +190,12 @@ export async function checkGitHubApp(
             );
         }
 
-        if (isHttpNotFound) {
+        if (isHttpNotFound && request.skipTrigger) {
+            context.logger.info(
+                `[GitHub App Check] HTTP 404 for ${request.owner}/${request.repo} — ` +
+                    'reporting without triggering a code sync (selection-time check)',
+            );
+        } else if (isHttpNotFound) {
             context.logger.info(
                 `[GitHub App Check] HTTP 404 detected - repo not indexed yet, triggering code sync`,
             );

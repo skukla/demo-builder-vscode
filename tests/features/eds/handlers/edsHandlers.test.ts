@@ -60,16 +60,21 @@ describe('edsHandlers', () => {
             // Then: Storefront setup handlers present
             expect(hasHandler(edsHandlers, 'storefront-setup-start')).toBe(true);
             expect(hasHandler(edsHandlers, 'storefront-setup-cancel')).toBe(true);
-            expect(hasHandler(edsHandlers, 'storefront-setup-resume')).toBe(true);
+            // Removed 2026-08-06: the handler was a stub that always returned
+            // "Resume not yet supported", while the install dialog's success path
+            // posted to it. Re-registering it without implementing resume would
+            // restore a button that cannot work. See the backlog item on develop:
+            // 2026-08-06-resume-storefront-setup-after-app-install.md
+            expect(hasHandler(edsHandlers, 'storefront-setup-resume')).toBe(false);
         });
 
-        it('should have exactly 19 handlers', () => {
+        it('should have exactly 18 handlers', () => {
             // Given: edsHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(edsHandlers);
 
             // Then: Exactly 19 handlers (6 GitHub + 8 DA.live + 2 ACCS/Store + 3 Storefront Setup)
-            expect(types).toHaveLength(19);
+            expect(types).toHaveLength(18);
         });
 
         it('should have handlers as functions', () => {

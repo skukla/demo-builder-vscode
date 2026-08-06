@@ -319,18 +319,19 @@ export function StorefrontSetupStep({
      * Handle GitHub App installation detected
      */
     const handleInstallDetected = useCallback(() => {
-        // Resume setup operations after app installation
-        vscode.postMessage('storefront-setup-resume', {
-            projectName: state.projectName,
-            edsConfig: state.edsConfig,
-        });
+        // Setup cannot continue from where it stopped — there is no resume, and this
+        // used to advance the wizard to 'code-sync' before discovering that, so the
+        // user watched it appear to continue and was then told to start over. Land on
+        // the state that is true, where Retry re-runs setup for real.
         setSetupState(prev => ({
             ...prev,
-            phase: 'code-sync',
-            message: 'Verifying code synchronization...',
+            phase: 'error',
+            error:
+                'AEM Code Sync is now installed. Setup stopped before it could use it — '
+                + 'select Retry to run it again.',
             githubAppData: undefined,
         }));
-    }, [state.projectName, state.edsConfig]);
+    }, []);
 
     // Track if setup has been started to prevent duplicate sends
     const setupStartedRef = useRef(false);
