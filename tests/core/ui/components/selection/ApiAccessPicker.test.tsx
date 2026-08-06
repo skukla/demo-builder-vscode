@@ -16,7 +16,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
-import { ApiAccessPicker } from '@/core/ui/components/selection';
+import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection';
 
 interface ApiOption {
     code: string;
@@ -409,6 +409,73 @@ describe('ApiAccessPicker', () => {
             const label = screen.getByText('Adobe Analytics').closest('label');
             expect(label?.querySelector('.intflow-api-name')?.textContent).toBe('Adobe Analytics');
             expect(label?.querySelector('.intflow-api-code')?.textContent).toBe('AnalyticsSDK');
+        });
+    });
+
+    /**
+     * Step 05 — the reason slot.
+     *
+     * A locked row renders checked + disabled and, until now, said nothing about
+     * why. Step 04 made both handlers send `requiredBy`; this is where it becomes
+     * something a user can act on: "you cannot uncheck this, ERP Sync needs it."
+     *
+     * The cases that must NOT name anyone are as load-bearing as the one that must.
+     * Baseline is always-on — nothing chose it, so attributing it to an integration
+     * would be a lie. And a legacy pick's owner is genuinely unrecoverable, so an
+     * invented reason is worse than none.
+     */
+    describe('locked reason', () => {
+        function withOwnership(over: Partial<ApiAccessOption>): ApiAccessOption[] {
+            return [{ code: 'MeshSDK', name: 'API Mesh', locked: true, ...over }];
+        }
+
+        it('names the integration holding a locked code', () => {
+            const { container } = renderPicker({
+                apis: withOwnership({ ownership: 'other-required', requiredBy: ['ERP Sync'] }),
+            });
+            expect(container.querySelector('.intflow-api-reason')?.textContent).toBe(
+                'Required by ERP Sync'
+            );
+        });
+
+        it('names every holder when more than one integration requires it', () => {
+            const { container } = renderPicker({
+                apis: withOwnership({
+                    ownership: 'other-required',
+                    requiredBy: ['ERP Sync', 'Firefly App'],
+                }),
+            });
+            expect(container.querySelector('.intflow-api-reason')?.textContent).toBe(
+                'Required by ERP Sync and Firefly App'
+            );
+        });
+
+        it('says nothing for the always-on baseline', () => {
+            // Nothing chose it. Naming an owner here would be false.
+            const { container } = renderPicker({
+                apis: withOwnership({ ownership: 'baseline', requiredBy: [] }),
+            });
+            expect(container.querySelector('.intflow-api-reason')).toBeNull();
+        });
+
+        it('says nothing when the holder is unrecoverable', () => {
+            // A legacy unattributed pick locks the row but can name nobody.
+            const { container } = renderPicker({
+                apis: withOwnership({ ownership: 'other-required', requiredBy: [] }),
+            });
+            expect(container.querySelector('.intflow-api-reason')).toBeNull();
+        });
+
+        it('says nothing on a row the asking integration can itself uncheck', () => {
+            // mine-optional is removable — a reason would contradict the checkbox.
+            const { container } = renderPicker({
+                apis: withOwnership({
+                    locked: false,
+                    ownership: 'mine-optional',
+                    requiredBy: [],
+                }),
+            });
+            expect(container.querySelector('.intflow-api-reason')).toBeNull();
         });
     });
 });

@@ -70,8 +70,8 @@ export interface ApiAccessOption {
      * (nothing chose it), for the asker's own optional picks, and for legacy
      * picks whose owner is unrecoverable.
      *
-     * Carried, not yet rendered: step 05 gives `locked` its reason slot. Until
-     * then a locked row still renders checked + disabled exactly as before.
+     * Rendered as the row's reason line (step 05) — see {@link lockedReason} for
+     * which ownership states earn one and which must stay silent.
      */
     requiredBy?: string[];
 }
@@ -217,6 +217,26 @@ function isMeaningfulCode(code: string, name: string): boolean {
     return !GUID_RE.test(code);
 }
 
+/**
+ * The reason a row cannot be unchecked, or undefined when there is none to give.
+ *
+ * Only `other-required` earns one. `baseline` is always-on — nothing chose it, so
+ * naming an owner would be false. `mine-optional` is removable, so a reason would
+ * contradict its own checkbox. And a legacy unattributed pick locks the row while
+ * naming nobody, which is why an empty `requiredBy` yields silence rather than a
+ * placeholder.
+ */
+function lockedReason(api: ApiAccessOption): string | undefined {
+    if (api.ownership !== 'other-required') return undefined;
+    const owners = api.requiredBy ?? [];
+    if (owners.length === 0) return undefined;
+    const names =
+        owners.length === 1
+            ? owners[0]
+            : `${owners.slice(0, -1).join(', ')} and ${owners[owners.length - 1]}`;
+    return `Required by ${names}`;
+}
+
 /** One checkbox row: display name primary, code secondary; locked = checked + disabled. */
 function ApiRow({
     api,
@@ -231,6 +251,7 @@ function ApiRow({
     // unchecked + disabled (the self-serve flow can't subscribe them). All guard onToggle.
     const pickable = isPickable(api);
     const unavailable = api.requiresProfile || api.requiresReview;
+    const reason = lockedReason(api);
     return (
         <div className="intflow-api-row" data-unavailable={unavailable ? '' : undefined}>
             <Checkbox
@@ -244,6 +265,7 @@ function ApiRow({
                 {isMeaningfulCode(api.code, api.name) && (
                     <span className="intflow-api-code">{api.code}</span>
                 )}
+                {reason !== undefined && <span className="intflow-api-reason">{reason}</span>}
             </Checkbox>
         </div>
     );

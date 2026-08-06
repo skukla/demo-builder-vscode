@@ -107,9 +107,9 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
 // The Manage-APIs modal has its own suite; a stub proves the GRID's
 // single-shared-instance wiring (open-for-id / close).
 jest.mock('@/features/dashboard/ui/components/ManageApisModal', () => ({
-    ManageApisModal: ({ isOpen, componentName, onClose }: any) =>
+    ManageApisModal: ({ isOpen, componentName, componentId, onClose }: any) =>
         isOpen ? (
-            <div data-testid="manage-apis-modal">
+            <div data-testid="manage-apis-modal" data-component-id={componentId}>
                 managing: {componentName}
                 <button onClick={onClose}>close-manage-apis</button>
             </div>

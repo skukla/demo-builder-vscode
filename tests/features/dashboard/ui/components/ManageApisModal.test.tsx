@@ -107,7 +107,10 @@ describe('ManageApisModal', () => {
             const { rerender, onClose } = renderModal();
             await flush();
 
-            expect(getClient().request).toHaveBeenCalledWith('listConsoleApis');
+            // Arity, not behaviour: the project-scoped call now passes an explicit
+            // `undefined` payload. Identical to the handler; the pin follows the call
+            // rather than the call contorting to preserve the pin.
+            expect(getClient().request).toHaveBeenCalledWith('listConsoleApis', undefined);
             expect(getClient().request).toHaveBeenCalledTimes(1);
 
             // A re-render while open must NOT refetch.
@@ -381,5 +384,54 @@ describe('ManageApisModal', () => {
             expect(screen.getByRole('button', { name: /^retry$/i })).toBeInTheDocument();
             expect(screen.queryByText('Sign in to Adobe')).not.toBeInTheDocument();
         });
+    });
+
+    /**
+     * Step 05 — the modal edits ONE integration, not the project.
+     *
+     * It was already opened per-card (`setManageApisId(model.id)`) and already named
+     * the integration in its copy, then sent both requests project-scoped. So the UI
+     * promised per-integration and the write was project-wide — the plan's
+     * "attribution discarded at the write", visible on screen.
+     *
+     * The no-componentId path is deliberately kept: step 06's project-level union
+     * view is this same modal without one.
+     */
+    describe('per-integration scope (step 05)', () => {
+        it('asks for THIS integration\'s rows', async () => {
+            mockRequest();
+            renderModal({ componentId: 'erp-sync' });
+            await flush();
+
+            expect(getClient().request).toHaveBeenCalledWith('listConsoleApis', {
+                componentId: 'erp-sync',
+            });
+        });
+
+        it('applies against THIS integration, not the project', async () => {
+            mockRequest();
+            renderModal({ componentId: 'erp-sync' });
+            await flush();
+            fireEvent.click(checkboxFor('AEM Assets'));
+            fireEvent.click(applyButton());
+            await flush();
+
+            expect(getClient().request).toHaveBeenCalledWith(
+                'setConsoleApis',
+                expect.objectContaining({ componentId: 'erp-sync' })
+            );
+        });
+
+        it('stays project-scoped when no integration is named', async () => {
+            // Step 06 reuses this modal for the union view; that path must not start
+            // sending an undefined componentId, which the handler would treat as a
+            // real (empty) owner.
+            mockRequest();
+            renderModal();
+            await flush();
+
+            expect(getClient().request).toHaveBeenCalledWith('listConsoleApis', undefined);
+        });
+
     });
 });

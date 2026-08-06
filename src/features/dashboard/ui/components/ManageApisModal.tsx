@@ -65,8 +65,17 @@ interface SetConsoleApisResponse {
 export interface ManageApisModalProps {
     /** Whether the modal is shown (the list keeps ONE instance for all rows). */
     isOpen: boolean;
-    /** The integration id whose API access is being managed (named in the copy). */
+    /** Display name of the integration whose API access is being managed. */
     componentName: string;
+    /**
+     * The integration these picks belong to. Scopes both the list (its own rows,
+     * with attribution for everyone else's) and the write (only its entry in
+     * componentApiPicks).
+     *
+     * Optional on purpose: step 06's project-level union view is THIS modal with
+     * no componentId, and the handlers already treat its absence as project scope.
+     */
+    componentId?: string;
     /** Called on Cancel/dismiss and after a successful Apply. */
     onClose: () => void;
 }
@@ -140,6 +149,7 @@ function ManageApisBody({
 export function ManageApisModal({
     isOpen,
     componentName,
+    componentId,
     onClose,
 }: ManageApisModalProps): React.ReactElement {
     const [apis, setApis] = useState<ApiAccessOption[]>([]);
@@ -177,7 +187,10 @@ export function ManageApisModal({
         setApplyError(null);
         setIsLoading(true);
         webviewClient
-            .request<ListConsoleApisResponse>('listConsoleApis')
+            .request<ListConsoleApisResponse>(
+                'listConsoleApis',
+                componentId ? { componentId } : undefined,
+            )
             .then((res) => {
                 if (cancelled) return;
                 if (res?.success && res.data) {
@@ -208,7 +221,9 @@ export function ManageApisModal({
         return () => {
             cancelled = true;
         };
-    }, [isOpen, reloadKey]);
+        // componentId included: the grid keeps ONE modal instance for every row, so
+        // the integration under edit can change without a remount.
+    }, [isOpen, reloadKey, componentId]);
 
     const handleToggle = (code: string): void => {
         setSelected((prev) =>
@@ -229,6 +244,7 @@ export function ManageApisModal({
             // are removed (unsubscribed on the reconcile PUT).
             const res = await webviewClient.request<SetConsoleApisResponse>('setConsoleApis', {
                 apis: selected,
+                ...(componentId ? { componentId } : {}),
             });
             if (res?.success) {
                 onClose();

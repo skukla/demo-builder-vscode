@@ -359,6 +359,26 @@ describe('IntegrationsGrid actions', () => {
             expect(modals[0]).toHaveTextContent('other-app');
         });
 
+        it('scopes the modal to the card\'s component id, and names it by DISPLAY name', async () => {
+            // The grid used to pass the id as `componentName`, so the modal's copy
+            // read "Manage Adobe API access for other-app". Both halves now travel:
+            // the id scopes the write, the name is what the user reads.
+            // A persisted display name that DIFFERS from the id — otherwise the two
+            // are indistinguishable and the test proves nothing about which travelled.
+            const user = setupUser();
+            const components = twoDeployed();
+            components['other-app'] = { ...components['other-app'], name: 'NetSuite Sync' };
+            renderGrid({ appBuilderComponents: components });
+
+            const panel = await openPanel(user, 'NetSuite Sync', 'Deployed');
+            await user.click(within(panel).getByRole('button', { name: /manage apis/i }));
+
+            const modal = screen.getByTestId('manage-apis-modal');
+            expect(modal).toHaveAttribute('data-component-id', 'other-app');
+            expect(modal).toHaveTextContent('NetSuite Sync');
+            expect(modal).not.toHaveTextContent('managing: other-app');
+        });
+
         it('clears the modal when its onClose fires', async () => {
             const user = setupUser();
             renderGrid({ appBuilderComponents: twoDeployed() });

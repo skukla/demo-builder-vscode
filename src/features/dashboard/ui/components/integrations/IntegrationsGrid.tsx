@@ -95,7 +95,10 @@ export function IntegrationsGrid({
     // One dialog/modal instance for the whole grid; the pending id identifies
     // the card awaiting confirmation (no per-card dialog, no state leak).
     const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
-    const [manageApisId, setManageApisId] = useState<string | null>(null);
+    // Both halves: the id scopes the write, the name is what the copy says. This
+    // used to hold the id alone and pass it as `componentName`, so the modal read
+    // "Manage Adobe API access for erp-sync".
+    const [manageApis, setManageApis] = useState<{ id: string; name: string } | null>(null);
 
     // Looked up fresh each render: the open drawer tracks live pushes, and a
     // card that left the map closes it.
@@ -141,7 +144,7 @@ export function IntegrationsGrid({
                 return;
             }
             if (action === 'manage-apis') {
-                setManageApisId(model.id);
+                setManageApis({ id: model.componentId ?? model.id, name: model.name });
                 return;
             }
             const message = KEYED_MESSAGES[action];
@@ -216,9 +219,10 @@ export function IntegrationsGrid({
             />
 
             <ManageApisModal
-                isOpen={manageApisId !== null}
-                componentName={manageApisId ?? ''}
-                onClose={() => setManageApisId(null)}
+                isOpen={manageApis !== null}
+                componentId={manageApis?.id}
+                componentName={manageApis?.name ?? ''}
+                onClose={() => setManageApis(null)}
             />
         </div>
     );
