@@ -37,7 +37,6 @@ import {
 import {
     handleStartStorefrontSetup,
     handleCancelStorefrontSetup,
-    handleResumeStorefrontSetup,
 } from './storefrontSetupHandlers';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -402,5 +401,4 @@ export const edsHandlers = defineHandlers({
     // Storefront setup handlers (renamed from eds-preflight-*)
     'storefront-setup-start': handleStartStorefrontSetup,
     'storefront-setup-cancel': handleCancelStorefrontSetup,
-    'storefront-setup-resume': handleResumeStorefrontSetup,
 });

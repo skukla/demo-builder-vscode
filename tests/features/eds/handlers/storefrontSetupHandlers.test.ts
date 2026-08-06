@@ -27,10 +27,9 @@ describe('Storefront Setup Handlers - Rename Validation', () => {
             expect(typeof edsHandlers['storefront-setup-cancel']).toBe('function');
         });
 
-        it('should have storefront-setup-resume handler registered', () => {
-            // After rename: eds-preflight-resume → storefront-setup-resume
-            expect(edsHandlers['storefront-setup-resume']).toBeDefined();
-            expect(typeof edsHandlers['storefront-setup-resume']).toBe('function');
+        it('has NO storefront-setup-resume handler (removed 2026-08-06)', () => {
+            // Was a stub that always errored while the dialog posted to it.
+            expect(edsHandlers['storefront-setup-resume']).toBeUndefined();
         });
 
         it('should NOT have old eds-preflight-start handler', () => {
@@ -68,13 +67,10 @@ describe('Storefront Setup Handlers - Rename Validation', () => {
             expect(typeof handleCancelStorefrontSetup).toBe('function');
         });
 
-        it('should export handleResumeStorefrontSetup function', async () => {
+        it('no longer exports handleResumeStorefrontSetup (removed 2026-08-06)', async () => {
             // After rename: handleResumeEdsPreflight → handleResumeStorefrontSetup
-            const { handleResumeStorefrontSetup } = await import(
-                '@/features/eds/handlers/storefrontSetupHandlers'
-            );
-            expect(handleResumeStorefrontSetup).toBeDefined();
-            expect(typeof handleResumeStorefrontSetup).toBe('function');
+            const mod = await import('@/features/eds/handlers/storefrontSetupHandlers');
+            expect((mod as Record<string, unknown>).handleResumeStorefrontSetup).toBeUndefined();
         });
     });
 });

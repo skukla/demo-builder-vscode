@@ -10,6 +10,7 @@
 import { pinRepoToLkg } from '../services/lkgPinHelper';
 import type { PatchReport } from '../services/patchReportHelper';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
+import { checkGitHubAppForExistingRepo } from './storefrontSetupPhaseHelpers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -32,7 +33,8 @@ export async function executePhaseGitHubRepo(
     }
 
     const repoMode = edsConfig.repoMode || 'new';
-    const useExistingRepo = repoMode === 'existing' && (edsConfig.selectedRepo || edsConfig.existingRepo);
+    const useExistingRepo =
+        repoMode === 'existing' && (edsConfig.selectedRepo || edsConfig.existingRepo);
     const usePreCreatedRepo = repoMode === 'new' && !!edsConfig.createdRepo;
 
     if (usePreCreatedRepo && edsConfig.createdRepo) {
@@ -40,7 +42,9 @@ export async function executePhaseGitHubRepo(
         repoInfo.repoName = edsConfig.createdRepo.name;
         repoInfo.repoUrl = edsConfig.createdRepo.url;
 
-        logger.info(`[Storefront Setup] Using pre-created repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`);
+        logger.info(
+            `[Storefront Setup] Using pre-created repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
+        );
         await context.sendMessage('storefront-setup-progress', {
             phase: 'repository',
             message: `Using repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
@@ -56,11 +60,36 @@ export async function executePhaseGitHubRepo(
         // aem-assets-sku-sanitization) silently do NOT apply — only block-phase
         // patches (which run later in the pipeline) land. No-op for forked
         // storefronts (codePatchSource absent).
-        await announcePinAndComplete(context, edsConfig, services, repoInfo, templateOwner, templateRepo, patchReport);
+        await announcePinAndComplete(
+            context,
+            edsConfig,
+            services,
+            repoInfo,
+            templateOwner,
+            templateRepo,
+            patchReport,
+        );
     } else if (useExistingRepo) {
-        await executePhaseExistingRepo(context, edsConfig, services, repoInfo, templateOwner, templateRepo, patchReport);
+        return executePhaseExistingRepo(
+            context,
+            edsConfig,
+            services,
+            repoInfo,
+            templateOwner,
+            templateRepo,
+            patchReport,
+        );
     } else {
-        await executePhaseNewRepo(context, edsConfig, services, repoInfo, signal, templateOwner, templateRepo, patchReport);
+        await executePhaseNewRepo(
+            context,
+            edsConfig,
+            services,
+            repoInfo,
+            signal,
+            templateOwner,
+            templateRepo,
+            patchReport,
+        );
     }
 
     return null;
@@ -89,11 +118,24 @@ async function announcePinAndComplete(
     patchReport: PatchReport | undefined,
 ): Promise<void> {
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'repository', message: 'Pinning to verified canonical state...', progress: 12,
+        phase: 'repository',
+        message: 'Pinning to verified canonical state...',
+        progress: 12,
     });
-    await pinIfThinLayer(edsConfig, services, repoInfo, templateOwner, templateRepo, context.logger, patchReport);
+    await pinIfThinLayer(
+        edsConfig,
+        services,
+        repoInfo,
+        templateOwner,
+        templateRepo,
+        context.logger,
+        patchReport,
+    );
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'repository', message: 'Repository ready', progress: 15, ...repoInfo,
+        phase: 'repository',
+        message: 'Repository ready',
+        progress: 15,
+        ...repoInfo,
     });
 }
 
@@ -122,11 +164,13 @@ async function pinIfThinLayer(
         return;
     }
     const { repoOwner, repoName } = repoInfo;
-    if (!repoOwner || !repoName) return;  // Defensive — phases above populate both before this runs.
+    if (!repoOwner || !repoName) return; // Defensive — phases above populate both before this runs.
     await pinRepoToLkg(
         {
-            repoOwner, repoName,
-            templateOwner, templateRepo,
+            repoOwner,
+            repoName,
+            templateOwner,
+            templateRepo,
             codePatches: edsConfig.codePatches,
             codePatchSource: edsConfig.codePatchSource,
             patchReport,
@@ -137,7 +181,20 @@ async function pinIfThinLayer(
 }
 
 /**
- * Handle existing repository setup (parse info, optional reset to template)
+ * Handle existing repository setup (parse info, gate on the App, optional reset).
+ *
+ * The AEM Code Sync gate runs HERE, between resolving the repo and the first
+ * write to it. It used to run in Phase 2 (progress 28), which is after this
+ * phase's `resetToTemplate` (progress 6) and after Phase 2 has pushed fstab.yaml,
+ * installed block collections, and vendored the smart-404 and Quick Edit
+ * scripts. A user whose repo lacked the App therefore had it rewritten and was
+ * only then told setup could not continue — and the reset branch is not the only
+ * casualty: declining the reset still leaves the Phase 2 writes landing in a repo
+ * the user asked to preserve.
+ *
+ * Returning a result here aborts the pipeline before anything is written.
+ *
+ * @returns an early result when the App is missing or unverifiable, else null
  */
 async function executePhaseExistingRepo(
     context: HandlerContext,
@@ -147,7 +204,7 @@ async function executePhaseExistingRepo(
     templateOwner: string,
     templateRepo: string,
     patchReport?: PatchReport,
-): Promise<void> {
+): Promise<StorefrontSetupResult | null> {
     const logger = context.logger;
 
     if (edsConfig.selectedRepo) {
@@ -170,7 +227,9 @@ async function executePhaseExistingRepo(
         repoInfo.repoUrl = `https://github.com/${edsConfig.existingRepo}`;
     }
 
-    logger.info(`[Storefront Setup] Using existing repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`);
+    logger.info(
+        `[Storefront Setup] Using existing repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
+    );
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
         message: `Using existing repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
@@ -178,29 +237,51 @@ async function executePhaseExistingRepo(
         ...repoInfo,
     });
 
+    const appGateResult = await checkGitHubAppForExistingRepo(context, services, repoInfo);
+    if (appGateResult) return appGateResult;
+
     if (edsConfig.resetToTemplate) {
         logger.info('[Storefront Setup] Resetting repository to template...');
         await context.sendMessage('storefront-setup-progress', {
-            phase: 'repository', message: 'Resetting repository to template...', progress: 6,
+            phase: 'repository',
+            message: 'Resetting repository to template...',
+            progress: 6,
         });
 
         if (edsConfig.codePatchSource) {
             // Thin-layer flow: bulk Tree reset to canonical@LKG + apply canonical
             // patches in the same atomic commit. Mirrors the dashboard reset action.
-            await pinIfThinLayer(edsConfig, services, repoInfo, templateOwner, templateRepo, logger, patchReport);
+            await pinIfThinLayer(
+                edsConfig,
+                services,
+                repoInfo,
+                templateOwner,
+                templateRepo,
+                logger,
+                patchReport,
+            );
         } else {
             // Legacy/forked flow: simple resetToTemplate against template main.
             await services.githubRepoOps.resetToTemplate(
-                repoInfo.repoOwner, repoInfo.repoName,
-                templateOwner, templateRepo, 'main', 'chore: reset to template',
+                repoInfo.repoOwner,
+                repoInfo.repoName,
+                templateOwner,
+                templateRepo,
+                'main',
+                'chore: reset to template',
             );
         }
         logger.info('[Storefront Setup] Repository reset to template');
     }
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'repository', message: 'Repository ready', progress: 15, ...repoInfo,
+        phase: 'repository',
+        message: 'Repository ready',
+        progress: 15,
+        ...repoInfo,
     });
+
+    return null;
 }
 
 /**
@@ -219,13 +300,18 @@ async function executePhaseNewRepo(
     const logger = context.logger;
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'repository', message: 'Creating GitHub repository from template...', progress: 5,
+        phase: 'repository',
+        message: 'Creating GitHub repository from template...',
+        progress: 5,
     });
 
     logger.info(`[Storefront Setup] Creating repository: ${repoInfo.repoName}`);
 
     const repo = await services.githubRepoOps.createFromTemplate(
-        templateOwner, templateRepo, repoInfo.repoName, edsConfig.isPrivate ?? false,
+        templateOwner,
+        templateRepo,
+        repoInfo.repoName,
+        edsConfig.isPrivate ?? false,
     );
 
     repoInfo.repoUrl = repo.htmlUrl;
@@ -240,7 +326,10 @@ async function executePhaseNewRepo(
     logger.info(`[Storefront Setup] Repository created: ${repoInfo.repoUrl}`);
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'repository', message: 'Waiting for repository content...', progress: 10, ...repoInfo,
+        phase: 'repository',
+        message: 'Waiting for repository content...',
+        progress: 10,
+        ...repoInfo,
     });
 
     await services.githubRepoOps.waitForContent(repoInfo.repoOwner, repoInfo.repoName, signal);
@@ -250,5 +339,13 @@ async function executePhaseNewRepo(
     // canonical HEAD; this follow-up Tree reset brings the repo to byte-
     // identical parity with what a reset would produce. No-op for forked
     // storefronts (codePatchSource absent).
-    await announcePinAndComplete(context, edsConfig, services, repoInfo, templateOwner, templateRepo, patchReport);
+    await announcePinAndComplete(
+        context,
+        edsConfig,
+        services,
+        repoInfo,
+        templateOwner,
+        templateRepo,
+        patchReport,
+    );
 }
