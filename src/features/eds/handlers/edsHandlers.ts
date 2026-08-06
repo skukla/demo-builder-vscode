@@ -34,7 +34,6 @@ import { handleRefreshBlockLibraryHeadless } from './refreshBlockLibraryHandler'
 import {
     handleStartStorefrontSetup,
     handleCancelStorefrontSetup,
-    handleResumeStorefrontSetup,
 } from './storefrontSetupHandlers';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { validateURL } from '@/core/validation';
@@ -305,7 +304,6 @@ export const edsHandlers = defineHandlers({
     // Storefront setup handlers (renamed from eds-preflight-*)
     'storefront-setup-start': handleStartStorefrontSetup,
     'storefront-setup-cancel': handleCancelStorefrontSetup,
-    'storefront-setup-resume': handleResumeStorefrontSetup,
 
     // Agent-facing: headless block-library rebuild behind the refresh_block_library MCP tool
     'refresh-block-library': handleRefreshBlockLibraryHeadless,

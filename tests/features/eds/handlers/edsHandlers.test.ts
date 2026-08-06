@@ -55,7 +55,10 @@ describe('edsHandlers', () => {
             // Then: Storefront setup handlers present
             expect(hasHandler(edsHandlers, 'storefront-setup-start')).toBe(true);
             expect(hasHandler(edsHandlers, 'storefront-setup-cancel')).toBe(true);
-            expect(hasHandler(edsHandlers, 'storefront-setup-resume')).toBe(true);
+            // Removed 2026-08-06: the handler was a stub that always errored, and
+            // the dialog's success path posted to it. Re-registering it without
+            // implementing resume would restore a button that cannot work.
+            expect(hasHandler(edsHandlers, 'storefront-setup-resume')).toBe(false);
         });
 
         it('should include the agent-facing refresh-block-library handler', () => {
@@ -65,7 +68,7 @@ describe('edsHandlers', () => {
             expect(hasHandler(edsHandlers, 'refresh-block-library')).toBe(true);
         });
 
-        it('should have exactly 20 handlers', () => {
+        it('should have exactly 19 handlers', () => {
             // Given: edsHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(edsHandlers);
@@ -73,7 +76,7 @@ describe('edsHandlers', () => {
             // Then: Exactly 20 handlers (6 GitHub + 8 DA.live + 2 ACCS/Store +
             // 3 Storefront Setup + 1 refresh-block-library)
             // 20 → 15: five superseded handlers removed 2026-08-05 (nothing sent them).
-            expect(types).toHaveLength(15);
+            expect(types).toHaveLength(14);
         });
 
         it('should have handlers as functions', () => {

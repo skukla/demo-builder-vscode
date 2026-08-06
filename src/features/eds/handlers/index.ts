@@ -29,7 +29,6 @@ export { clearServiceCache } from './edsHandlers';
 export {
     handleStartStorefrontSetup,
     handleCancelStorefrontSetup,
-    handleResumeStorefrontSetup,
 } from './storefrontSetupHandlers';
 
 // Note: edsHelpers are internal implementation details

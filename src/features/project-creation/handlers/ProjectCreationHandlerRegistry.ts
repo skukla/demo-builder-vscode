@@ -87,7 +87,6 @@ export const projectCreationHandlers = defineHandlers({
     // EDS handlers - Storefront Setup (renamed from Preflight)
     'storefront-setup-start': eds.handleStartStorefrontSetup,
     'storefront-setup-cancel': eds.handleCancelStorefrontSetup,
-    'storefront-setup-resume': eds.handleResumeStorefrontSetup,
 
     // Project creation handlers
     validate: creation.handleValidate,

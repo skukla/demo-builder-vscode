@@ -438,30 +438,6 @@ export async function handleStartStorefrontSetup(
     }
 }
 
-/**
- * Handle resume request after GitHub App installation
- *
- * @param context - Handler context
- * @param payload - Resume payload
- * @returns Success
- */
-export async function handleResumeStorefrontSetup(
-    context: HandlerContext,
-    _payload?: StorefrontSetupStartPayload,
-): Promise<HandlerResponse> {
-    context.logger.info('[Storefront Setup] Resume requested after GitHub App installation');
-
-    // TODO: Re-enter the storefront setup pipeline from the code-sync phase.
-    // Implement by re-invoking executePhaseCodeSync with the stored abort signal and edsConfig.
-    // Until then, return failure so the UI surfaces the incomplete state rather than
-    // silently claiming success.
-    await context.sendMessage('storefront-setup-error', {
-        message: 'Resume not yet supported',
-        error: 'Please restart the storefront setup from the beginning after installing the GitHub App.',
-    });
-
-    return { success: false, error: 'Setup resume is not yet implemented' };
-}
 
 // ==========================================================
 // Helper Functions

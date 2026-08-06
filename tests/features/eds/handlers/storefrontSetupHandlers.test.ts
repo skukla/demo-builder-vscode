@@ -27,10 +27,13 @@ describe('Storefront Setup Handlers - Rename Validation', () => {
             expect(typeof edsHandlers['storefront-setup-cancel']).toBe('function');
         });
 
-        it('should have storefront-setup-resume handler registered', () => {
-            // After rename: eds-preflight-resume → storefront-setup-resume
-            expect(edsHandlers['storefront-setup-resume']).toBeDefined();
-            expect(typeof edsHandlers['storefront-setup-resume']).toBe('function');
+        it('has NO storefront-setup-resume handler (removed 2026-08-06)', () => {
+            // It was a stub: it always returned "Resume not yet supported", while the
+            // install dialog's success path posted to it and the wizard optimistically
+            // advanced first — so the user watched setup appear to continue and was
+            // then told to start over. Implementing resume is a backlog item; until
+            // then the honest path is the existing Retry, which re-runs setup.
+            expect(edsHandlers['storefront-setup-resume']).toBeUndefined();
         });
 
         it('should NOT have old eds-preflight-start handler', () => {
@@ -68,13 +71,13 @@ describe('Storefront Setup Handlers - Rename Validation', () => {
             expect(typeof handleCancelStorefrontSetup).toBe('function');
         });
 
-        it('should export handleResumeStorefrontSetup function', async () => {
-            // After rename: handleResumeEdsPreflight → handleResumeStorefrontSetup
-            const { handleResumeStorefrontSetup } = await import(
-                '@/features/eds/handlers/storefrontSetupHandlers'
-            );
-            expect(handleResumeStorefrontSetup).toBeDefined();
-            expect(typeof handleResumeStorefrontSetup).toBe('function');
+        it('no longer exports handleResumeStorefrontSetup (removed 2026-08-06)', async () => {
+            // It was a stub that always returned "Resume not yet supported" while the
+            // install dialog posted to it. Deleted rather than kept: an unbuilt path
+            // that cannot work is not made acceptable by failing politely. Resume is
+            // a backlog item; the honest remedy today is the existing Retry.
+            const mod = await import('@/features/eds/handlers/storefrontSetupHandlers');
+            expect((mod as Record<string, unknown>).handleResumeStorefrontSetup).toBeUndefined();
         });
     });
 });
