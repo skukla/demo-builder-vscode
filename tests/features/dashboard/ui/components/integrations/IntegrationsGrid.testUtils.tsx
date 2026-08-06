@@ -199,8 +199,6 @@ export function twoDeployed(): Record<string, AppBuilderComponentState> {
 
 export interface RenderOptions {
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
-    /** Step 06: open the project-level union view (no componentId). */
-    unionViewOpen?: boolean;
     withMesh?: boolean;
     /** Raw mesh status (only meaningful with withMesh). */
     meshStatus?: MeshStatus;
@@ -228,7 +226,6 @@ export function renderGrid({
     onDeployMesh = jest.fn(),
     onReAuthenticate = jest.fn(),
     onAddRequest = jest.fn(),
-    unionViewOpen,
 }: RenderOptions = {}) {
     const project = { appBuilderComponents } as never;
     const integrationCards = buildIntegrationCards(
@@ -258,7 +255,6 @@ export function renderGrid({
             onAddRequest={onAddRequest}
             onDeployMesh={onDeployMesh}
             onReAuthenticate={onReAuthenticate}
-            unionViewOpen={unionViewOpen}
         />,
     );
     return { ...result, onDeployMesh, onReAuthenticate, onAddRequest };

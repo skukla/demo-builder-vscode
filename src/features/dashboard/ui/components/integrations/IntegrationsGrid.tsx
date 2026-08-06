@@ -31,19 +31,6 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 export interface IntegrationsGridProps {
     /**
-     * Open the PROJECT-level union view (step 06) — the same Manage APIs modal with
-     * no componentId, which is what makes the handler return the union plus orphans.
-     *
-     * Controlled from the screen because the trigger lives in its header, while the
-     * grid keeps owning the single modal instance. A second instance up there would
-     * reintroduce exactly the cross-surface state leak this grid was built to avoid.
-     */
-    unionViewOpen?: boolean;
-    /** Called when the union view closes, so the screen can clear its trigger. */
-    onUnionViewClose?: () => void;
-    /** Project display name — what the union view calls its scope. */
-    projectName?: string;
-    /**
      * The cards to render, already derived and filtered. Derivation lives in the
      * SCREEN (same split as ProjectsDashboard → ProjectsGrid: the screen owns and
      * filters the data, the grid renders it), so the screen can count and filter
@@ -99,9 +86,6 @@ async function requestRename(id: string, name: string): Promise<string | null> {
 /** The integrations card grid + its hosted drawer, modals, and confirm dialog. */
 export function IntegrationsGrid({
     cards,
-    unionViewOpen,
-    onUnionViewClose,
-    projectName,
     onAddRequest,
     onDeployMesh,
     onReAuthenticate,
@@ -235,13 +219,10 @@ export function IntegrationsGrid({
             />
 
             <ManageApisModal
-                isOpen={manageApis !== null || unionViewOpen === true}
+                isOpen={manageApis !== null}
                 componentId={manageApis?.id}
-                componentName={manageApis?.name ?? projectName ?? 'this project'}
-                onClose={() => {
-                    setManageApis(null);
-                    onUnionViewClose?.();
-                }}
+                componentName={manageApis?.name ?? ''}
+                onClose={() => setManageApis(null)}
             />
         </div>
     );

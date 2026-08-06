@@ -20,7 +20,7 @@
  * @module features/dashboard/ui/components/ManageApisModal
  */
 
-import { Button, DialogContainer, Text } from '@adobe/react-spectrum';
+import { DialogContainer, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import { renderApiCatalogFeedback } from '@/core/ui/components/feedback/ApiCatalogFeedback';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
@@ -33,13 +33,6 @@ import {
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { CloudGrouping } from '@/types/adobeApis';
 import { ErrorCode } from '@/types/errorCodes';
-
-/**
- * Codes Adobe still has subscribed that nothing in the project claims — surfaced
- * only in the project-level view (the handler does not compute them per
- * integration). Removing them is a real unsubscribe, so it is confirmed.
- */
-type OrphanState = { codes: string[]; confirming: boolean };
 
 /** One org service as the `listConsoleApis` handler reports it. */
 interface ConsoleApiEntry {
@@ -58,7 +51,7 @@ interface ConsoleApiEntry {
 interface ListConsoleApisResponse {
     success?: boolean;
     /** `added` = the project's current OPTIONAL extras (checked + removable). */
-    data?: { apis: ConsoleApiEntry[]; added?: string[]; orphans?: string[] };
+    data?: { apis: ConsoleApiEntry[]; added?: string[] };
     error?: string;
     /** AUTH_REQUIRED distinguishes "signed out" from a retryable failure. */
     code?: ErrorCode;
@@ -181,7 +174,6 @@ export function ManageApisModal({
         [],
     );
     const [applyError, setApplyError] = useState<string | null>(null);
-    const [orphans, setOrphans] = useState<OrphanState>({ codes: [], confirming: false });
 
     useEffect(() => {
         if (!isOpen) return undefined;
@@ -202,7 +194,6 @@ export function ManageApisModal({
             .then((res) => {
                 if (cancelled) return;
                 if (res?.success && res.data) {
-                    setOrphans({ codes: res.data.orphans ?? [], confirming: false });
                     setApis(
                         res.data.apis.map((api) => ({
                             code: api.code,
@@ -267,33 +258,6 @@ export function ManageApisModal({
         }
     };
 
-    /**
-     * Drop the orphans by reconciling to what the project still claims.
-     *
-     * There is no unsubscribe endpoint — the subscribe PUT sets the workspace to
-     * EXACTLY the union it is handed, so a code absent from `selected` is dropped by
-     * the same call that keeps the rest. That is why this is a confirmed action and
-     * not a quiet tidy-up.
-     */
-    const handleRemoveOrphans = async (): Promise<void> => {
-        setApplyError(null);
-        try {
-            const res = await webviewClient.request<SetConsoleApisResponse>('setConsoleApis', {
-                apis: selected,
-                ...(componentId ? { componentId } : {}),
-            });
-            if (res?.success) {
-                setOrphans({ codes: [], confirming: false });
-            } else {
-                setApplyError(res?.error ?? 'Could not remove the unused APIs.');
-                setOrphans((o) => ({ ...o, confirming: false }));
-            }
-        } catch (err) {
-            setApplyError(err instanceof Error ? err.message : String(err));
-            setOrphans((o) => ({ ...o, confirming: false }));
-        }
-    };
-
     return (
         <DialogContainer onDismiss={onClose}>
             {isOpen && (
@@ -323,48 +287,6 @@ export function ManageApisModal({
                         <Text>
                             Manage Adobe API access for <strong>{componentName}</strong>.
                         </Text>
-                        {orphans.codes.length > 0 && (
-                            <div className="manage-apis-orphans" data-testid="orphan-notice">
-                                <Text>
-                                    {orphans.codes.length === 1 ? 'One API is' : `${orphans.codes.length} APIs are`}{' '}
-                                    subscribed but required by nothing in this project:{' '}
-                                    <strong>{orphans.codes.join(', ')}</strong>.
-                                </Text>
-                                {orphans.confirming ? (
-                                    <div data-testid="orphan-confirm">
-                                        <Text>
-                                            Removing unsubscribes them from the Adobe workspace. Any
-                                            code still in use stays.
-                                        </Text>
-                                        <Button
-                                            variant="negative"
-                                            onPress={() => {
-                                                void handleRemoveOrphans();
-                                            }}
-                                        >
-                                            Remove
-                                        </Button>
-                                        <Button
-                                            variant="secondary"
-                                            onPress={() =>
-                                                setOrphans((o) => ({ ...o, confirming: false }))
-                                            }
-                                        >
-                                            Keep them
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <Button
-                                        variant="secondary"
-                                        onPress={() =>
-                                            setOrphans((o) => ({ ...o, confirming: true }))
-                                        }
-                                    >
-                                        Remove unused
-                                    </Button>
-                                )}
-                            </div>
-                        )}
                         <ManageApisBody
                             onRetry={retry}
                             loadingStage={loadingStage}

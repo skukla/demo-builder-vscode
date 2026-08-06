@@ -140,7 +140,6 @@ export function IntegrationsScreen({
     const components = useLiveAppBuilderComponents(appBuilderComponents);
     const overrides = useRowStatusOverrides();
     const [searchQuery, setSearchQuery] = useState('');
-    const [unionViewOpen, setUnionViewOpen] = useState(false);
     const [addOpen, setAddOpen] = useState(false);
 
     const destinationLabel = formatDestination(destination);
@@ -260,15 +259,6 @@ export function IntegrationsScreen({
                             and it is the thing the eye lands on. Two Add buttons
                             for one action is the duplication this surface spent
                             2026-08-04 removing everywhere else. */}
-                        {/* The project-level union view (step 06): every subscribed
-                            API, who requires it, and anything required by nothing.
-                            Withheld while empty for the same reason Add is — there is
-                            no union to view before the first integration. */}
-                        {cards.length > 0 && (
-                            <Button variant="secondary" onPress={() => setUnionViewOpen(true)}>
-                                All APIs
-                            </Button>
-                        )}
                         {cards.length > 0 && (
                             <Button variant="cta" onPress={openAdd}>
                                 Add integration
@@ -295,9 +285,6 @@ export function IntegrationsScreen({
                     />
                 ) : (
                     <IntegrationsGrid
-                        unionViewOpen={unionViewOpen}
-                        onUnionViewClose={() => setUnionViewOpen(false)}
-                        projectName={projectName}
                         cards={visibleCards}
                         onAddRequest={openAdd}
                         onDeployMesh={handleDeployMesh}

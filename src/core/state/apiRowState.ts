@@ -133,7 +133,3 @@ export function resolveApiRowStates(input: ResolveApiRowsInput): Map<string, Api
     return map;
 }
 
-/** True when this row's code may be unchecked by this integration. */
-export function isRemovable(state: ApiRowState | undefined): boolean {
-    return state?.ownership === 'mine-optional';
-}

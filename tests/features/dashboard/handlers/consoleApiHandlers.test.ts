@@ -32,7 +32,6 @@ jest.mock('@/features/app-builder/services/apiSubscriber', () => ({
         { code: 'FireflyAPISDK', name: 'Firefly Services' },
     ]),
 }));
-const mockGetSubscribedServiceCodes = jest.fn().mockResolvedValue([]);
 jest.mock('@/features/app-builder/services/apiSubscriberClientAdapter', () => ({
     createApiSubscriberClient: jest.fn(() => ({
         getServicesForOrg: jest.fn().mockResolvedValue([
@@ -40,7 +39,6 @@ jest.mock('@/features/app-builder/services/apiSubscriberClientAdapter', () => ({
             { code: 'FireflyAPISDK', name: 'Firefly Services' },
             { code: 'GraphQLServiceSDK', name: 'API Mesh' },
         ]),
-        getSubscribedServiceCodes: (...a: unknown[]) => mockGetSubscribedServiceCodes(...a),
     })),
 }));
 jest.mock('@/features/app-builder/services/appBuilderComponentRunnerDeps', () => ({
@@ -60,14 +58,10 @@ jest.mock('@/core/shell', () => ({
     buildOrgTargetFromProjectAdobe: jest.fn(() => ({ orgId: 'org-1' })),
     withOrgContext: jest.fn((_t: unknown, fn: () => Promise<unknown>) => fn()),
 }));
-const mockGetWorkspaceS2SCredential = jest.fn().mockResolvedValue({ idIntegration: 'cred-1' });
-const mockEnsureOAuthCredentialId = jest.fn();
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
             getCachedOrganization: jest.fn().mockReturnValue(undefined),
-            getWorkspaceS2SCredential: (...a: unknown[]) => mockGetWorkspaceS2SCredential(...a),
-            ensureOAuthCredentialId: (...a: unknown[]) => mockEnsureOAuthCredentialId(...a),
         })),
     },
 }));
@@ -455,91 +449,3 @@ describe('per-integration attribution (step 04)', () => {
     });
 });
 
-/**
- * Step 06 — the project-level union view.
- *
- * An orphan is a code Adobe still has subscribed that nothing in the project claims.
- * They exist because removing an integration deletes its componentApiPicks entry but
- * deliberately does NOT reconcile (leave APIs subscribed on removal), so the
- * subscription outlives its only reason. Nothing surfaced them until now.
- *
- * Detection needs REMOTE truth — what Adobe actually has — not the local desired
- * set, which is exactly the thing the orphan is missing from.
- */
-describe('orphan detection (step 06)', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-        mockGetWorkspaceS2SCredential.mockResolvedValue({ idIntegration: 'cred-1' });
-        mockGetSubscribedServiceCodes.mockResolvedValue([]);
-    });
-
-    it('reports a subscribed code that nothing claims', async () => {
-        // Adobe has Firefly; the project claims nothing. Its integration was removed.
-        mockGetSubscribedServiceCodes.mockResolvedValue([
-            'AdobeIOManagementAPISDK',
-            'FireflyAPISDK',
-        ]);
-        const result = await handleListConsoleApis(makeContext(makeProject()), undefined);
-
-        expect((result.data as { orphans: string[] }).orphans).toEqual(['FireflyAPISDK']);
-    });
-
-    it('never calls a code the project still claims an orphan', async () => {
-        mockGetSubscribedServiceCodes.mockResolvedValue([
-            'AdobeIOManagementAPISDK',
-            'FireflyAPISDK',
-        ]);
-        const project = makeProject({ componentApiPicks: { 'erp-sync': ['FireflyAPISDK'] } });
-
-        const result = await handleListConsoleApis(makeContext(project), undefined);
-
-        expect((result.data as { orphans: string[] }).orphans).toEqual([]);
-    });
-
-    it('never calls the always-on baseline an orphan', async () => {
-        // It is subscribed and claimed by no integration, which is precisely what an
-        // orphan looks like — but unsubscribing it would break every deploy.
-        mockGetSubscribedServiceCodes.mockResolvedValue(['AdobeIOManagementAPISDK']);
-
-        const result = await handleListConsoleApis(makeContext(makeProject()), undefined);
-
-        expect((result.data as { orphans: string[] }).orphans).toEqual([]);
-    });
-
-    it('reports none, and creates nothing, when the workspace has no credential', async () => {
-        // A list must never provision. ensureOAuthCredentialId is get-OR-CREATE, so
-        // reaching for it here would create an Adobe credential as a side effect of
-        // opening a modal.
-        mockGetWorkspaceS2SCredential.mockResolvedValue(undefined);
-
-        const result = await handleListConsoleApis(makeContext(makeProject()), undefined);
-
-        expect((result.data as { orphans: string[] }).orphans).toEqual([]);
-        expect(mockEnsureOAuthCredentialId).not.toHaveBeenCalled();
-        expect(mockGetSubscribedServiceCodes).not.toHaveBeenCalled();
-    });
-
-    it('does not compute orphans for a single integration', async () => {
-        // Orphans are a project-level fact; a per-integration view has no standing to
-        // judge whether a code some OTHER integration holds is unclaimed.
-        mockGetSubscribedServiceCodes.mockResolvedValue(['FireflyAPISDK']);
-
-        const result = await handleListConsoleApis(makeContext(makeProject()), {
-            componentId: 'erp-sync',
-        });
-
-        expect((result.data as { orphans?: string[] }).orphans).toBeUndefined();
-        expect(mockGetSubscribedServiceCodes).not.toHaveBeenCalled();
-    });
-
-    it('still lists the org services when the orphan probe fails', async () => {
-        // A network hiccup on a secondary probe must not blank the modal.
-        mockGetSubscribedServiceCodes.mockRejectedValue(new Error('403 from Console'));
-
-        const result = await handleListConsoleApis(makeContext(makeProject()), undefined);
-
-        expect(result.success).toBe(true);
-        expect((result.data as { apis: unknown[] }).apis.length).toBeGreaterThan(0);
-        expect((result.data as { orphans: string[] }).orphans).toEqual([]);
-    });
-});
