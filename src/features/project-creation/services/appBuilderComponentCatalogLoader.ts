@@ -73,6 +73,28 @@ export function getAvailableAppBuilderComponents(
 }
 
 /**
+ * Is this entry a genuine PRE-BUILT integration — something the "Pre-built
+ * integration" gallery should offer?
+ *
+ * The catalog is a mixed list and most of it is not. Meshes are DERIVED from
+ * stacks.json + components.json and the kind picker already offers them as
+ * "API Mesh"; the blank shell is authored as `kind:'integration'` but seeds the
+ * "Build custom" flow. Showing either in the gallery lists the same thing twice
+ * under two names — which is what a colleague hit on 2026-08-06, seeing two
+ * options in a catalog that has no pre-built integrations at all.
+ *
+ * The `blank` half is the one that bites: the shell IS `kind:'integration'`, so a
+ * kind-only filter keeps it. That rule previously lived in a prop docblock on
+ * CatalogStage rather than in code, so no caller applied it.
+ *
+ * @param entry - a catalog entry
+ * @returns true when the entry is a finished, pickable integration
+ */
+export function isPrebuiltIntegration(entry: AppBuilderComponentCatalogEntry): boolean {
+    return entry.kind === 'integration' && entry.blank !== true;
+}
+
+/**
  * Resolve a catalog entry by id.
  *
  * @param id - The appBuilderComponent id (e.g. "eds-commerce-mesh")

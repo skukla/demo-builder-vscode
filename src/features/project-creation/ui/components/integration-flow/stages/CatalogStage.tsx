@@ -23,7 +23,15 @@ function matchesQuery(entry: AppBuilderComponentCatalogEntry, query: string): bo
 }
 
 export interface CatalogStageProps {
-    /** Pre-built catalog entries, already filtered to `kind:'integration'`. */
+    /**
+     * Genuine pre-built entries ONLY — the host narrows the mixed catalog with
+     * `isPrebuiltIntegration` before passing it.
+     *
+     * This comment used to state the rule itself ("already filtered to
+     * kind:'integration'"), which was both unenforced and wrong: the blank shell is
+     * kind:'integration' too. A contract that lives in prose is one every caller can
+     * assume someone else honoured — so it now names the predicate instead.
+     */
     catalog: AppBuilderComponentCatalogEntry[];
     /** The draft's picked entry id (marks its tile selected). */
     selectedId?: string;

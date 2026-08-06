@@ -10,6 +10,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import {
+    isPrebuiltIntegration,
     getAvailableAppBuilderComponents,
     getAppBuilderComponentEntry,
     getAppBuilderComponentSource,
@@ -378,5 +379,61 @@ describe('appBuilderComponentCatalogLoader', () => {
                 expect(entry?.providesEnvVars).toContain('MESH_ENDPOINT');
             }
         });
+    });
+});
+const S = { owner: 'o', repo: 'r' };
+
+/**
+ * Reported 2026-08-06: "Pre-built integrations" lists two options on a catalog that
+ * has no pre-built integrations at all.
+ *
+ * The catalog is a MIXED list — meshes derived from stacks.json + components.json,
+ * plus whatever is authored in app-builder-components.json, plus the blank shell
+ * that seeds the Build-custom flow. Every real stack yields exactly two entries and
+ * BOTH already have their own card in the kind picker: the mesh as "API Mesh", the
+ * shell as "Build custom". Neither is a pre-built integration.
+ *
+ * Nothing in the code said what "pre-built" means — the rule lived in a prop
+ * docblock on CatalogStage ("already filtered to kind:'integration'"), which no
+ * caller honoured and which would not have been enough anyway, since the shell IS
+ * kind:'integration'.
+ */
+describe('isPrebuiltIntegration — what belongs in the Pre-built gallery', () => {
+    const mesh = { id: 'eds-accs-mesh', name: 'M', description: '', kind: 'mesh' as const, source: S };
+    const shell = {
+        id: 'app-builder-shell', name: 'Custom Integration', description: '',
+        kind: 'integration' as const, blank: true, source: S,
+    };
+    const real = {
+        id: 'erp-sync', name: 'ERP Sync', description: '',
+        kind: 'integration' as const, source: S,
+    };
+
+    it('excludes a mesh — the kind picker offers it as "API Mesh"', () => {
+        expect(isPrebuiltIntegration(mesh)).toBe(false);
+    });
+
+    it('excludes the blank shell — the kind picker offers it as "Build custom"', () => {
+        // The trap: it IS kind:'integration'. Filtering on kind alone keeps it.
+        expect(isPrebuiltIntegration(shell)).toBe(false);
+    });
+
+    it('includes a genuine authored integration', () => {
+        expect(isPrebuiltIntegration(real)).toBe(true);
+    });
+
+    it('reports ZERO pre-built entries for every real stack today', () => {
+        // The catalog genuinely has none. This is the assertion that would have
+        // caught the report, and it will fail the day a real one is authored —
+        // which is the moment to update it deliberately.
+        for (const [b, f] of [
+            ['adobe-commerce-accs', 'eds-storefront'],
+            ['adobe-commerce-paas', 'eds-storefront'],
+            ['adobe-commerce-accs', 'headless'],
+        ]) {
+            const all = getAvailableAppBuilderComponents(b, f);
+            expect(all.length).toBeGreaterThan(0); // the mixed list is NOT empty
+            expect(all.filter(isPrebuiltIntegration)).toEqual([]);
+        }
     });
 });

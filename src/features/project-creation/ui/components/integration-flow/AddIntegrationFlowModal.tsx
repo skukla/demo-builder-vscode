@@ -23,7 +23,8 @@
  */
 
 import { DialogContainer } from '@adobe/react-spectrum';
-import React from 'react';
+import React, { useMemo } from 'react';
+import { isPrebuiltIntegration } from '../../../services/appBuilderComponentCatalogLoader';
 import type { SelectableAppBuilderComponent } from '../../../services/appBuilderComponentSelection';
 import { isAdobeSignedIn, isMeshSelected } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
@@ -111,6 +112,16 @@ function StageBody({
 }): React.ReactElement {
     const { stage, draft } = flow;
     const { state, updateState, meshComponent, catalog, onSignIn } = props;
+
+    // The catalog prop is the stack-filtered MIXED list: derived meshes, authored
+    // integrations, and the blank shell. Only the last of those three categories
+    // belongs in the Pre-built gallery — the other two already have their own card
+    // in the kind picker, so listing them here offered the same thing twice under
+    // two names (reported 2026-08-06: two options in a catalog with no pre-builts).
+    //
+    // Derived ONCE and used for both the tile count and the gallery, so the count
+    // can never disagree with what the gallery would show.
+    const prebuiltCatalog = useMemo(() => catalog.filter(isPrebuiltIntegration), [catalog]);
     const selectedIds = state.selectedAppBuilderComponents ?? EMPTY_IDS;
     if (stage === 'kind') {
         // Availability and already-added stay SEPARATE here: the tile is hidden
@@ -123,7 +134,7 @@ function StageBody({
             <KindStage
                 meshAvailable={meshAvailable}
                 meshAlreadyAdded={meshAlreadyAdded}
-                catalogCount={catalog.length}
+                catalogCount={prebuiltCatalog.length}
                 kind={draft.kind}
                 onPickKind={flow.pickKind}
             />
@@ -132,7 +143,7 @@ function StageBody({
     if (stage === 'source-catalog') {
         return (
             <CatalogStage
-                catalog={catalog}
+                catalog={prebuiltCatalog}
                 selectedId={draft.catalogId}
                 onPick={flow.pickCatalog}
             />

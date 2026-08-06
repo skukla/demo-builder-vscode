@@ -503,3 +503,53 @@ describe('AddIntegrationFlowModal — build custom (blank instance naming)', () 
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 });
+
+/**
+ * Reported 2026-08-06: "Pre-built integrations" listed two options on a catalog with
+ * no pre-built integrations. Both were entries the kind picker already offers as
+ * their own card — the derived mesh as "API Mesh", the blank shell as "Build
+ * custom" — because the modal passed the raw stack-filtered catalog to both the
+ * tile count and the gallery.
+ *
+ * The correct empty state already existed ("None available yet", tile disabled at
+ * count 0). It simply never fired.
+ */
+describe('AddIntegrationFlowModal — only genuine pre-built entries reach the gallery', () => {
+    /**
+     * The mesh as it appears in the CATALOG (derived from stacks.json), not as the
+     * SelectableAppBuilderComponent the MESH fixture above models.
+     */
+    const MESH_ENTRY: AppBuilderComponentCatalogEntry = {
+        id: 'commerce-mesh',
+        name: 'API Mesh',
+        description: 'Mesh for the stack',
+        kind: 'mesh',
+        source: { owner: 'adobe', repo: 'commerce-mesh', branch: 'main' },
+    };
+
+    /** A stack's real catalog: one derived mesh + the blank shell. No pre-builts. */
+    const MIXED = [MESH_ENTRY, BLANK];
+
+    it('disables the Pre-built tile when the catalog holds only a mesh and the shell', () => {
+        renderModal({ catalog: MIXED });
+
+        expect(screen.getByRole('button', { name: /Pre-built/ })).toBeDisabled();
+    });
+
+    it('counts a genuine authored integration', () => {
+        renderModal({ catalog: [MESH_ENTRY, BLANK, ERP] });
+
+        expect(screen.getByRole('button', { name: /Pre-built/ })).not.toBeDisabled();
+    });
+
+    it('keeps the mesh and the shell OUT of the gallery', async () => {
+        // Reachable only when something real exists, so ERP opens the door.
+        renderModal({ catalog: [MESH_ENTRY, BLANK, ERP] });
+        click(/Pre-built/);
+        click('Continue');
+
+        expect(await screen.findByText(ERP.name)).toBeInTheDocument();
+        expect(screen.queryByText(BLANK.name)).not.toBeInTheDocument();
+        expect(screen.queryByText(MESH_ENTRY.name)).not.toBeInTheDocument();
+    });
+});
