@@ -88,7 +88,7 @@ features/my-feature/
 
 **Responsibilities:**
 - Verifying project AI context files — feeds the Project Dashboard's "AI Ready" health badge (via `useDashboardStatus`)
-- Providing the skills inventory rendered by the dashboard's "View Skills" capability surface (`AiSkillsModal`), plus the project-MCP / session-MCP inventory used by health diagnostics
+- Providing the skills inventory rendered by the dashboard's "View Skills" capability surface (`AiCapabilitiesModal`), plus the project-MCP / session-MCP inventory used by health diagnostics
 - In-extension MCP server for AI agent tool access via Claude Code (CLI), reached through the per-project `.mcp.json` (which points at the `dist/mcp-proxy.js` stdio↔socket forwarder); the former standalone process is retired. Global `~/.claude.json` registration is an explicit opt-in ("Demo Builder: Register Global MCP") whose entry has no pinned socket — the proxy discovers a running extension window at launch (`server/mcpSocketDiscovery.ts`, newest live socket wins), enabling global ops from any cwd
 
 **Path Alias**: `@/features/ai`
@@ -195,7 +195,7 @@ multi-workspace.
 - `dashboardHandlers` - Handler map for project dashboard messages
 - `configureHandlers` - Handler map for Configure screen messages (cancel, components data, store discovery)
 - `aiHandlers` - Handler map for the standalone AI surface, 7 handlers: verify-ai-setup (returns inventory), regenerate-ai-files, save-ai-prompt / delete-ai-prompt / list-ai-prompts (scope-routed by `pinned`: `pinned: true` prompts persist in globalState under `demoBuilder.ai.globalPrompts` and appear in every project; unpinned prompts persist in the current project's `.demo-builder.json` manifest; a pin toggle is a cross-scope move, and list returns the merged deduped list), openInClaude, copyAiPrompt (clipboard write for the kebab Copy prompt action)
-- `AiSkillsModal` / `AiSkillsList` - The dashboard's "View Skills" capability catalog (task-framed name + description) carrying the Regenerate AI files action; opened from a link beside the "AI Ready" health badge (NOT the badge itself)
+- `AiCapabilitiesModal` / `AiSkillsList` - The dashboard's "View Skills" capability catalog (task-framed name + description) carrying the Regenerate AI files action; opened from a link beside the "AI Ready" health badge (NOT the badge itself)
 - Dashboard state management
 - Mesh status display
 

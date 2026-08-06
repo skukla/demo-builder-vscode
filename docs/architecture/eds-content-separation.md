@@ -150,7 +150,7 @@ const fstabContent = `mountpoints:
 
 | File | Purpose | Location |
 |------|---------|----------|
-| `edsSetupPhases.ts` | Orchestrates code & content setup | `src/features/eds/services/` |
+| `storefrontSetupPhases.ts` | Orchestrates code & content setup | `src/features/eds/handlers/` |
 | `githubRepoOperations.ts` | Clones code repository | `src/features/eds/services/` |
 | `daLiveContentOperations.ts` | Copies content | `src/features/eds/services/` |
 | `daLiveConstants.ts` | **Hardcoded source** 👈 | `src/features/eds/services/` |

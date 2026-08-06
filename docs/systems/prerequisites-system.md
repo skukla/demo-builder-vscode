@@ -838,7 +838,7 @@ After 5min:   3-6 seconds (cache expired, re-validation)
 - Adobe AIO CLI checks run in parallel across Node versions (18.x, 20.x, 22.x)
 - Uses `Promise.all()` for concurrent execution
 - Performance: 9-18s sequential → 6s parallel (3x faster)
-- Each check isolated in separate Node environment via ExternalCommandManager
+- Each check isolated in separate Node environment via CommandExecutor
 
 **Sequential Prerequisite Order:**
 - Overall prerequisite checking remains sequential (correct by design)

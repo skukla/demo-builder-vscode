@@ -303,8 +303,6 @@ if (quickPick) {
   - `dashboard` - Current project display
   - `mesh` - Mesh state tracking
   - `components` - Component instance state
-- **Providers**:
-  - `ProjectTreeProvider` - Project explorer
 
 ### Dependencies
 - VS Code API (`vscode`) - ExtensionContext, EventEmitter

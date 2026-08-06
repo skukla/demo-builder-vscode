@@ -453,13 +453,11 @@ if (response.code === ErrorCode.AUTH_NO_APP_BUILDER) {
 
 **Hooks (extract code from responses):**
 - `src/features/authentication/ui/hooks/useAuthStatus.ts`
-- `src/features/mesh/ui/hooks/useMeshOperations.ts`
 
 **Components (accept code prop):**
 - `src/features/authentication/ui/steps/AdobeAuthStep.tsx`
 - `src/features/authentication/ui/steps/components/AuthErrorState.tsx`
 - `src/features/authentication/ui/components/SelectionStepContent.tsx`
-- `src/features/mesh/ui/steps/components/MeshErrorDialog.tsx`
 
 **String checks to replace:**
 - `authData.error === 'timeout'` → `response.code === ErrorCode.TIMEOUT`

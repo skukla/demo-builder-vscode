@@ -121,10 +121,11 @@ export function AddIntegrationFlowAdapter({
         };
     }, [appBuilderComponents]);
 
-    // Passed unconditionally: `meshKindOffered` = meshAvailable && !meshSelected,
-    // so the id list below is what hides the option once a mesh exists. Withholding
-    // the component instead also made `meshSelected` false, which left a mesh-only
-    // project reporting NO references and stopped the destination collapsing.
+    // Passed unconditionally: the flow derives `meshAvailable` from its presence and
+    // `meshAlreadyAdded` from the id list below, which is what hides the option once
+    // a mesh exists. Withholding the component instead also made it read as not
+    // selected, which left a mesh-only project reporting NO references and stopped
+    // the destination collapsing.
     const meshComponent = useMemo(() => catalog.find((entry) => entry.kind === 'mesh'), [catalog]);
     const blankComponent = useMemo(() => catalog.find((entry) => entry.blank === true), [catalog]);
 

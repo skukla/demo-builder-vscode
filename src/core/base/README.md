@@ -438,10 +438,10 @@ async execute(): Promise<void> {
 
 ### Used By
 - **Commands**: All command implementations
-  - `createProjectWebview`
-  - `projectDashboardWebview`
-  - `configureProjectWebview`
-  - `welcomeWebview`
+  - `CreateProjectWebviewCommand`
+  - `ShowDashboardCommand`
+  - `ConfigureProjectWebviewCommand`
+  - `ShowProjectsListCommand`
   - `startDemo`
   - `stopDemo`
   - `deployMesh`
@@ -635,7 +635,7 @@ class MyCommand extends BaseCommand {
 
 - **Usage Examples**:
   - `src/commands/createProjectWebview.ts`
-  - `src/commands/projectDashboardWebview.ts`
+  - `src/features/dashboard/commands/showDashboard.ts`
   - `src/features/lifecycle/commands/startDemo.ts`
   - `src/features/mesh/commands/deployMesh.ts`
 

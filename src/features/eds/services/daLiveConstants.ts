@@ -2,7 +2,8 @@
  * DA.live Service Constants
  *
  * Shared constants for DA.live service operations.
- * Extracted to allow reuse between DaLiveService modules.
+ * Extracted to allow reuse between the DA.live service modules
+ * (daLiveAuthService, daLiveContentOperations, daLiveOrgOperations).
  */
 
 /** DA.live Admin API base URL */

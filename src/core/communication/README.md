@@ -316,9 +316,9 @@ await comm.initialize();
 
 ### Used By
 - **Commands**:
-  - `createProjectWebview` - Wizard communication
-  - `projectDashboardWebview` - Dashboard UI
-  - `configureProjectWebview` - Configuration UI
+  - `CreateProjectWebviewCommand` - Wizard communication
+  - `ShowDashboardCommand` - Dashboard UI
+  - `ConfigureProjectWebviewCommand` - Configuration UI
 - **Shared**:
   - `BaseWebviewCommand` - Base class for all webview commands
 

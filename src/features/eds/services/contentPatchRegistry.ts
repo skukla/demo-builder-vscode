@@ -8,7 +8,7 @@
  * External patches allow decoupling patch maintenance from the Demo Builder release cycle.
  * External repo structure: {path}/patches.json (same format as local content-patches.json)
  *
- * Unlike templatePatchRegistry (which uses separate .ts files for multi-line JS
+ * Unlike the v1 templatePatchRegistry (which used separate .ts files for multi-line JS
  * replacements that benefit from syntax highlighting), content patches are short
  * string replacements that fit naturally in JSON.
  */

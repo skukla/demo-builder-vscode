@@ -98,7 +98,7 @@ vscode.postMessage('action', data);
 const result = await vscode.request('getData', { id: 123 });
 ```
 
-### ExternalCommandManager
+### CommandExecutor
 
 **Purpose**: Manages external command execution with race protection.
 

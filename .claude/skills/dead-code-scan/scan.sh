@@ -83,7 +83,14 @@ for f in src:
 
 def distinctive(n):
     return n.startswith('handle') or sum(1 for c in n[1:] if c.isupper()) >= 2
-gone = {n for n in ever if n not in present and distinctive(n)}
+
+# Names that legitimately live OUTSIDE this repo. They once existed under ROOT too,
+# so the history test cannot separate them — only knowledge of what they refer to can.
+# `getProductLink`/`getSkuFromUrl` are the EDS storefront's own functions, which this
+# extension PATCHES; our comments cite them to say our encoding must match theirs,
+# a true statement about someone else's code.
+EXTERNAL = {'getProductLink', 'getSkuFromUrl'}
+gone = {n for n in ever if n not in present and distinctive(n)} - EXTERNAL
 
 # CONTROL (SKILL.md step 0). Three checks, because each catches a break the others
 # cannot see — every one of them corresponds to a bug this script actually shipped:
@@ -109,28 +116,57 @@ if leaked or not positive_ok or malformed:
     if not positive_ok: print('      the check cannot flag a known-deleted symbol')
     if malformed:       print(f'      non-identifier entries harvested: {malformed}')
 
+def point_in_time(path):
+    """A doc that opens with a supersession note is a record of a past state, so the
+    old symbols it names are its subject matter rather than stale claims."""
+    head = '\n'.join(open(path, errors='ignore').read().split('\n')[:15])
+    return bool(re.search(r'^\s*>.*\b(note|superseded|legacy|historical)\b', head, re.I | re.M))
+
 docs = [d for d in glob.glob(f'{root}/**/*.md', recursive=True) + glob.glob('docs/**/*.md', recursive=True)
-        if not any(x in d for x in ('/research/', '/complete/', '/adr/', 'CHANGELOG'))]
+        if not any(x in d for x in ('/research/', '/complete/', '/adr/', 'CHANGELOG'))
+        and not point_in_time(d)]
+# Historical framing wraps across lines in JSDoc and prose ("Supersedes X +\n * Y"),
+# so this is matched against a CONTEXT WINDOW, not the hit line alone. Per-line
+# matching reported the continuation halves of sentences that name their own subject
+# as history.
 HIST = re.compile(r'\b(former|formerly|renamed|was |used to|previously|supersedes?|superseded|'
-                  r'replaces?|replaced|re-homed|retired|extracted from|split from|moved from|'
-                  r'inlined from|old |no longer|deleted|removed|until )\b', re.I)
+                  r'replaces?|replaced|re-homed|retired|extracted from|split from|moved|'
+                  r'relocated|lifted|recovered from|inlined from|existed|old |no longer|'
+                  r'deleted|removed|until |\bv1\b|verbatim)\b'
+                  # Before/After EXAMPLE headings only — the bare prepositions are far
+                  # too common and would suppress real drift wholesale.
+                  r'|(^|[*#(\s])(before|after)[\s)*:]', re.I)
+
+def framed(lines, i):
+    """History if the framing appears anywhere in the hit's immediate neighbourhood."""
+    return any(HIST.search(l) for l in lines[max(0, i - 3):i + 2])
 RX = re.compile(r'\b(' + '|'.join(map(re.escape, sorted(gone, key=len, reverse=True))) + r')\b') if gone else None
 
 live_hits, hist_hits = [], []
 if RX:
     for f in src:
-        for i, line in enumerate(open(f, errors='ignore').read().split('\n'), 1):
+        lines = open(f, errors='ignore').read().split('\n')
+        for i, line in enumerate(lines):
             if not re.match(r'\s*(//|\*|/\*)', line):
                 continue
             m = RX.search(line)
             if m:
-                (hist_hits if HIST.search(line) else live_hits).append((f, i, m.group(1)))
+                (hist_hits if framed(lines, i) else live_hits).append((f, i + 1, m.group(1)))
     for d in docs:
-        body = re.sub(r'```.*?```', '', open(d, errors='ignore').read(), flags=re.S)
-        for i, line in enumerate(body.split('\n'), 1):
+        # Blank fenced blocks IN PLACE rather than deleting them — removing the text
+        # shifts every line number after the first fence, and the reported location
+        # then points at unrelated content.
+        lines = open(d, errors='ignore').read().split('\n')
+        infence = False
+        for i, line in enumerate(lines):
+            if line.lstrip().startswith('```'):
+                infence = not infence
+                continue
+            if infence:
+                continue
             m = RX.search(line)
             if m:
-                (hist_hits if HIST.search(line) else live_hits).append((d, i, m.group(1)))
+                (hist_hits if framed(lines, i) else live_hits).append((d, i + 1, m.group(1)))
 
 if live_hits:
     for f, i, n in sorted(live_hits):
