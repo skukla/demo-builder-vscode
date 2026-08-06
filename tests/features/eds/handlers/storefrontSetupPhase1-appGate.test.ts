@@ -63,7 +63,7 @@ function makeServices(): SetupServices {
 
 const EXISTING_REPO_CONFIG = {
     repoMode: 'existing',
-    existingRepo: 'kmanns/blaines',
+    existingRepo: 'acme-corp/storefront-demo',
     resetToTemplate: true,
 } as unknown as StorefrontSetupStartPayload['edsConfig'];
 

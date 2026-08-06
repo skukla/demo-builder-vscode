@@ -4,7 +4,7 @@
 
 ## Context
 
-A field report (a partner's `cmco-demo` storefront) surfaced a blank PDP: the shell loads but
+A field report (a partner's `acme-demo-site` storefront) surfaced a blank PDP: the shell loads but
 product data never hydrates. Root cause is lossy SKU→URL slugification in the EDS storefront's
 `scripts/commerce.js` — canonical slugifies the SKU with `sanitizeName()`, then reverses the slug
 on PDP load to query Commerce. Slugifying is one-way, so SKUs with spaces/punctuation/mixed case

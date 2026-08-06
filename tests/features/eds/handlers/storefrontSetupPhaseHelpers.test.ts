@@ -32,9 +32,9 @@ import type { Logger } from '@/types/logger';
 
 
 const REPO_INFO: RepoInfo = {
-    repoOwner: 'sayurihanki',
-    repoName: 'herberaircraftv3',
-    repoUrl: 'https://github.com/sayurihanki/herberaircraftv3',
+    repoOwner: 'acme-demos',
+    repoName: 'aircraft-demo',
+    repoUrl: 'https://github.com/acme-demos/aircraft-demo',
 };
 
 const INSTALL_URL = 'https://github.com/apps/aem-code-sync/installations/select_target';

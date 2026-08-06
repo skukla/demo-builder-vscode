@@ -364,13 +364,13 @@ describe('handleStartStorefrontSetup - Pre-flight Auth Checks', () => {
 });
 
 /**
- * Reported by a colleague 2026-07-28 (kmanns/blaines). The Configuration Service
+ * Reported by a colleague 2026-07-28. The Configuration Service
  * refused the site write with 403 four times over two minutes, so the BYOM overlay
  * never registered and the storefront cannot serve product detail pages. The
  * pipeline then logged:
  *
  *   [error] BYOM ... Product detail pages will not load
- *   [info]  Storefront Setup Complete: https://github.com/kmanns/blaines
+ *   [info]  Storefront Setup Complete: https://github.com/acme-corp/storefront-demo
  *
  * Four minutes of writes — repo reset, 3336 files, blocks, content, publish — for a
  * storefront that cannot do the one thing the overlay exists for, announced as

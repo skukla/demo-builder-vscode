@@ -22,7 +22,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { NORMAL: 30000, QUICK: 5000 },
 }));
 
-const REPO = 'sayurihanki/herberaircraftv3';
+const REPO = 'acme-demos/aircraft-demo';
 const TOKEN = 'gho_SUPERSECRETVALUE';
 
 function makeLogger(): Logger {
@@ -67,7 +67,7 @@ function routeFetch(routes: { user?: unknown; repo?: unknown; admin?: unknown })
     });
 }
 
-const okUser = (login = 'sayurihanki', scopes = 'repo, user, read:org') => ({
+const okUser = (login = 'acme-demos', scopes = 'repo, user, read:org') => ({
     ok: true,
     status: 200,
     json: jest.fn().mockResolvedValue({ login }),
@@ -172,14 +172,14 @@ describe('probeGitHubCredential', () => {
     describe('what it collects', () => {
         it('captures the login and the scopes GitHub actually granted', async () => {
             routeFetch({
-                user: okUser('sayurihanki', 'repo, workflow'),
+                user: okUser('acme-demos', 'repo, workflow'),
                 repo: okRepo(true),
                 admin: adminResponse(200, undefined, 200),
             });
 
             const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
 
-            expect(result.github.login).toBe('sayurihanki');
+            expect(result.github.login).toBe('acme-demos');
             // Granted, not requested — our stored record hardcodes the requested
             // set, so only this header can answer the scope question.
             expect(result.github.grantedScopes).toEqual(['repo', 'workflow']);
@@ -211,7 +211,7 @@ describe('probeGitHubCredential', () => {
                 makeLogger()
             );
 
-            expect(result.github.login).toBe('sayurihanki');
+            expect(result.github.login).toBe('acme-demos');
             expect(result.repo).toBeUndefined();
             expect(result.adminApi).toBeUndefined();
             expect(result.verdict).toMatch(/no .*project|repo/i);
@@ -226,7 +226,7 @@ describe('probeGitHubCredential', () => {
 
             const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
 
-            expect(result.github.login).toBe('sayurihanki');
+            expect(result.github.login).toBe('acme-demos');
             expect(result.repo?.error).toContain('socket hang up');
             expect(result.adminApi?.httpStatus).toBe(200);
         });

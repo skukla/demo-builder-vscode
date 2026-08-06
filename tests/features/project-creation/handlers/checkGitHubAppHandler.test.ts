@@ -57,7 +57,7 @@ function allLogs(context: HandlerContext): string {
         .join('\n');
 }
 
-const REQUEST = { owner: 'sayurihanki', repo: 'herberaircraftv3' };
+const REQUEST = { owner: 'acme-demos', repo: 'aircraft-demo' };
 
 describe('checkGitHubApp handler', () => {
     beforeEach(() => {

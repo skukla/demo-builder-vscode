@@ -399,9 +399,9 @@ export async function handleStartStorefrontSetup(
         if (outcome === 'complete') {
             // "Complete" has to mean it. A storefront whose BYOM overlay never
             // registered is built, published and browsable — and cannot serve a
-            // single product detail page. Reported as plain success (2026-07-28,
-            // kmanns/blaines) that cost four minutes of writes and a silent defect
-            // the user found later. The repo URL still ships: everything except
+            // single product detail page. Reported as plain success (2026-07-28)
+            // after four minutes of writes, leaving a silent defect the user
+            // found later. The repo URL still ships: everything except
             // PDPs works, and withholding it would be the opposite lie.
             const overlayFailed = result.byomOverlayFailed === true;
             context.logger.info(

@@ -28,8 +28,8 @@ function projectWith(metadata: Record<string, unknown>, stack = 'eds-dalive'): P
 
 describe('getEdsGithubRepo', () => {
     it('returns the stored owner/repo', () => {
-        expect(getEdsGithubRepo(projectWith({ githubRepo: 'sayurihanki/herberaircraftv3' }))).toBe(
-            'sayurihanki/herberaircraftv3'
+        expect(getEdsGithubRepo(projectWith({ githubRepo: 'acme-demos/aircraft-demo' }))).toBe(
+            'acme-demos/aircraft-demo'
         );
     });
 
@@ -39,7 +39,7 @@ describe('getEdsGithubRepo', () => {
     });
 
     it('returns undefined when no repo has been recorded yet', () => {
-        expect(getEdsGithubRepo(projectWith({ daLiveOrg: 'sayurihanki' }))).toBeUndefined();
+        expect(getEdsGithubRepo(projectWith({ daLiveOrg: 'acme-demos' }))).toBeUndefined();
     });
 
     it('returns undefined for a missing storefront component instance', () => {
