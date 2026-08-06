@@ -4,7 +4,7 @@
  * @module features/dashboard/services/onOpenChecks
  */
 
-export { runOnOpenChecks, _resetOnOpenChecksGuardForTests } from './orchestrator';
+export { runOnOpenChecks, armOnOpenChecks, _resetOnOpenChecksGuardForTests } from './orchestrator';
 export { orgContextCheck, type OrgContextCheckData } from './orgContextCheck';
 export {
     createMcpHealthCheck,

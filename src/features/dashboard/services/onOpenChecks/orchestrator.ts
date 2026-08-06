@@ -20,6 +20,28 @@ import { CHECK_RESULT_MESSAGE } from '@/types/messages';
 /** Per-session guard: `${project.path}::${checkId}` already run this session. */
 const ranThisSession = new Set<string>();
 
+/**
+ * Re-arm every guarded check for one project — call when its dashboard is OPENED.
+ *
+ * The guard exists to dedupe a re-`requestStatus` within one dashboard mount (the
+ * Integrations refresh button). It must NOT outlive the mount: leaving a project and
+ * returning remounts the webview, which resets the state these checks feed. Without
+ * this, the second visit skipped `ai-verify`, the badge sat on "Verifying" forever,
+ * and the AI Capabilities modal reported "No MCP servers wired yet / No skills yet"
+ * for a project whose files were fine — null rendered as emptiness.
+ *
+ * Scoped to one project on purpose: switching projects must not silently re-run
+ * every other project's checks.
+ *
+ * @param projectPath - the project whose dashboard is being opened
+ */
+export function armOnOpenChecks(projectPath: string): void {
+    const prefix = `${projectPath}::`;
+    for (const key of ranThisSession) {
+        if (key.startsWith(prefix)) ranThisSession.delete(key);
+    }
+}
+
 /** Test helper: reset the re-entrancy guard between tests. Not part of the production API. */
 export function _resetOnOpenChecksGuardForTests(): void {
     ranThisSession.clear();

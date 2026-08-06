@@ -13,6 +13,7 @@ import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appB
 import { dashboardHandlers } from '@/features/dashboard/handlers';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import type { AppBuilderComponentRowStatus } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
+import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
@@ -459,6 +460,18 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
 
         // Store active instance for static refreshStatus calls
         ProjectDashboardWebviewCommand.activeInstance = this;
+
+        // Re-arm this project's on-open checks BEFORE the panel exists.
+        //
+        // The orchestrator's guard runs each check at most once per project per
+        // session, which is right for a re-`requestStatus` within one mount and wrong
+        // across mounts: leaving a project and coming back remounts the webview and
+        // resets the state those checks feed. Returning to a project therefore skipped
+        // `ai-verify`, leaving the AI badge on "Verifying" forever and the AI
+        // Capabilities modal reporting no skills and no MCP servers for a healthy
+        // project. Ordering matters — the panel triggers the first requestStatus, so
+        // arming after it would leave that request guarded.
+        armOnOpenChecks(project.path);
 
         // Create or reveal panel and initialize communication
         await this.createOrRevealPanel();

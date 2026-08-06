@@ -13,6 +13,7 @@
 import {
     runOnOpenChecks,
     _resetOnOpenChecksGuardForTests,
+    armOnOpenChecks,
     type OnOpenCheck,
     type CheckOutcome,
 } from '@/features/dashboard/services/onOpenChecks';
@@ -191,4 +192,71 @@ it('runs multiple checks concurrently and posts each', async () => {
 
     const ids = outcomes(postMessage).map((o) => o.checkId).sort();
     expect(ids).toEqual(['ai-verify', 'mesh-verify', 'org-context']);
+});
+
+/**
+ * Reported 2026-08-06: open demo-builder-test (AI "Ready"), switch to another
+ * project, switch back — the AI badge hangs on "Verifying" forever and the AI
+ * Capabilities modal reads "No MCP servers wired yet / No skills yet" for a project
+ * whose files are fine.
+ *
+ * The guard's lifetime outlived the state it feeds. `ai-verify` is not reRunnable,
+ * so returning to a project skipped it — but the dashboard REMOUNTS on that return,
+ * resetting `verifyResult` to null. No outcome ever arrives to refill it, and null
+ * renders as both "Verifying" (badge) and "nothing here" (modal).
+ *
+ * Re-opening a dashboard must therefore re-arm the checks for that project, while
+ * the guard keeps doing its real job: deduping a re-`requestStatus` within one mount
+ * (the Integrations refresh button).
+ */
+describe('re-opening a project re-arms its checks (2026-08-06 regression)', () => {
+    it('runs a guarded check again after the project dashboard is re-opened', async () => {
+        const { deps, postMessage } = makeDeps();
+        const run = jest.fn(async () => ({ status: 'ok' as const }));
+        const check: OnOpenCheck = { id: 'ai-verify', mode: 'background', run };
+
+        await runOnOpenChecks(deps, [check]);        // first open
+        await runOnOpenChecks(deps, [check]);        // re-requestStatus, same mount → guarded
+        expect(run).toHaveBeenCalledTimes(1);
+
+        armOnOpenChecks(deps.project.path);          // dashboard re-opened for this project
+        await runOnOpenChecks(deps, [check]);
+
+        expect(run).toHaveBeenCalledTimes(2);
+        expect(outcomes(postMessage)).toHaveLength(2);
+    });
+
+    it('still dedupes a re-requestStatus after the re-arm', async () => {
+        // The guard's real job survives: one run per open, not one per status request.
+        const { deps } = makeDeps();
+        const run = jest.fn(async () => ({ status: 'ok' as const }));
+        const check: OnOpenCheck = { id: 'ai-verify', mode: 'background', run };
+
+        await runOnOpenChecks(deps, [check]);
+        armOnOpenChecks(deps.project.path);
+        await runOnOpenChecks(deps, [check]);
+        await runOnOpenChecks(deps, [check]);
+
+        expect(run).toHaveBeenCalledTimes(2);
+    });
+
+    it('re-arms only the named project, leaving another project guarded', async () => {
+        // Switching projects must not silently re-run every other project's checks.
+        // makeDeps shares ONE module-level project object, so a second project needs
+        // its own — mutating the shared one changes both and the test proves nothing.
+        const { deps: a } = makeDeps();
+        const b = { ...a, project: { path: '/projects/other' } as Project, postMessage: jest.fn() };
+        const runA = jest.fn(async () => ({ status: 'ok' as const }));
+        const runB = jest.fn(async () => ({ status: 'ok' as const }));
+
+        await runOnOpenChecks(a, [{ id: 'ai-verify', mode: 'background', run: runA }]);
+        await runOnOpenChecks(b, [{ id: 'ai-verify', mode: 'background', run: runB }]);
+
+        armOnOpenChecks(a.project.path);
+        await runOnOpenChecks(a, [{ id: 'ai-verify', mode: 'background', run: runA }]);
+        await runOnOpenChecks(b, [{ id: 'ai-verify', mode: 'background', run: runB }]);
+
+        expect(runA).toHaveBeenCalledTimes(2);
+        expect(runB).toHaveBeenCalledTimes(1);
+    });
 });

@@ -246,3 +246,35 @@ describe('ProjectDashboardWebviewCommand - sendAuthoringExperienceUpdate', () =>
         ).resolves.toBeUndefined();
     });
 });
+
+/**
+ * The re-arm has to be CALLED to do anything. `armOnOpenChecks` is fully unit-tested
+ * in orchestrator.test.ts; what no unit test covers is that `execute()` — the "the
+ * dashboard is being opened" moment — actually invokes it. Driving execute() here
+ * would mean standing up a panel, a communication manager and the whole handler
+ * context for one line of wiring.
+ *
+ * So this reads the source, matching the flowStages.test.ts precedent. It proves the
+ * call exists and is reached before the panel is created; it does NOT prove runtime
+ * behaviour, which is what the orchestrator tests are for.
+ */
+describe('execute() re-arms the on-open checks (2026-08-06 regression)', () => {
+    const source = require('fs').readFileSync(
+        require('path').resolve(__dirname, '../../../../src/features/dashboard/commands/showDashboard.ts'),
+        'utf-8'
+    ) as string;
+
+    it('calls armOnOpenChecks for the project being opened', () => {
+        expect(source).toContain('armOnOpenChecks(project.path)');
+    });
+
+    it('re-arms BEFORE creating or revealing the panel', () => {
+        // Order matters: the panel triggers requestStatus, which runs the checks. Arm
+        // after that and the first status request of the new mount is still guarded.
+        const arm = source.indexOf('armOnOpenChecks(project.path)');
+        const panel = source.indexOf('await this.createOrRevealPanel()');
+        expect(arm).toBeGreaterThan(-1);
+        expect(panel).toBeGreaterThan(-1);
+        expect(arm).toBeLessThan(panel);
+    });
+});
