@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.124] - 2026-08-06
+
+### Fixed
+
+- **Storefront setup no longer reports "Complete" when product detail pages cannot
+  work.** When the AEM Configuration Service refuses the site registration, the BYOM
+  overlay never lands and PDPs will not load — but setup still announced success,
+  so the problem surfaced later as "product pages are broken". The final message now
+  names the consequence and the remedy, while still handing back the repository:
+  everything except PDPs works.
+
+### Changed
+
+- Cleared the four pre-existing lint warnings (a non-null assertion whose guard lives
+  in the caller, an import order, and two oversized test files split on real seams).
+
 ## [1.0.0-beta.123] - 2026-07-29
 
 ### Added

@@ -21,7 +21,12 @@ import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { ToolManager } from '../services/toolManager';
 import type { EdsMetadata, EdsCleanupOptions } from '../services/types';
-import { ensureDaLiveAuth, getDaLiveAuthService, resolveByomOverlayConfig } from './edsHelpers';
+import {
+    BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE,
+    ensureDaLiveAuth,
+    getDaLiveAuthService,
+    resolveByomOverlayConfig,
+} from './edsHelpers';
 import { rehydratePackageDerivedConfig } from './storefrontSetupConfigRehydration';
 import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
 import type { StorefrontSetupResult } from './storefrontSetupTypes';
@@ -392,9 +397,24 @@ export async function handleStartStorefrontSetup(
         }
 
         if (outcome === 'complete') {
-            context.logger.info(`[Storefront Setup] Complete: ${result.repoUrl}`);
+            // "Complete" has to mean it. A storefront whose BYOM overlay never
+            // registered is built, published and browsable — and cannot serve a
+            // single product detail page. Reported as plain success (2026-07-28,
+            // kmanns/blaines) that cost four minutes of writes and a silent defect
+            // the user found later. The repo URL still ships: everything except
+            // PDPs works, and withholding it would be the opposite lie.
+            const overlayFailed = result.byomOverlayFailed === true;
+            context.logger.info(
+                overlayFailed
+                    ? `[Storefront Setup] Finished WITH ERRORS: ${result.repoUrl} — `
+                      + 'BYOM overlay not registered, product detail pages will not load'
+                    : `[Storefront Setup] Complete: ${result.repoUrl}`,
+            );
             await context.sendMessage('storefront-setup-complete', {
-                message: 'Storefront setup completed successfully!',
+                message: overlayFailed
+                    ? 'Storefront created, but product detail pages will not load.'
+                    : 'Storefront setup completed successfully!',
+                ...(overlayFailed && { warning: BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE }),
                 githubRepo: result.repoUrl,
                 daLiveSite: `https://da.live/${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`,
                 repoOwner: result.repoOwner,

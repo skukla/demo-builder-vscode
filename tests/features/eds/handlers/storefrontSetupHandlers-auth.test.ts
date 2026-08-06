@@ -27,6 +27,11 @@ jest.mock('@/core/auth/adobeAuthGuard', () => ({
 }));
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
+    // The message is a pure constant — take the REAL one so the assertion cannot
+    // pass against a stub whose text has drifted from what users see.
+    BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE: jest.requireActual(
+        '@/features/eds/handlers/edsHelpers',
+    ).BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE,
     ensureDaLiveAuth: jest.fn(),
     configureDaLivePermissions: jest.fn(),
     getDaLiveAuthService: jest.fn().mockReturnValue({ getAccessToken: jest.fn().mockResolvedValue('mock-token') }),
@@ -355,5 +360,108 @@ describe('handleStartStorefrontSetup - Pre-flight Auth Checks', () => {
                 githubRepo: 'https://github.com/test/repo',
             }),
         );
+    });
+});
+
+/**
+ * Reported by a colleague 2026-07-28 (kmanns/blaines). The Configuration Service
+ * refused the site write with 403 four times over two minutes, so the BYOM overlay
+ * never registered and the storefront cannot serve product detail pages. The
+ * pipeline then logged:
+ *
+ *   [error] BYOM ... Product detail pages will not load
+ *   [info]  Storefront Setup Complete: https://github.com/kmanns/blaines
+ *
+ * Four minutes of writes — repo reset, 3336 files, blocks, content, publish — for a
+ * storefront that cannot do the one thing the overlay exists for, announced as
+ * Complete. The only warning was a dismissible toast 70 seconds earlier.
+ *
+ * The 403 itself is not fixable here: registration requires the AEM Code Sync admin
+ * role, which the Configuration Service grants to whoever INSTALLS the GitHub App
+ * (see ConfigurationService.registerSite). What IS fixable is telling the truth
+ * about the outcome.
+ */
+describe('a storefront whose BYOM overlay did not register is not "complete"', () => {
+    beforeEach(() => {
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
+        mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
+    });
+
+    it('does not announce plain success when the overlay failed', async () => {
+        mockExecuteStorefrontSetupPhases.mockResolvedValue({
+            success: true,
+            repoUrl: 'https://github.com/test/repo',
+            repoOwner: 'test',
+            repoName: 'repo',
+            byomOverlayFailed: true,
+        });
+        const context = createMockContext();
+
+        await handleStartStorefrontSetup(context, createValidPayload());
+
+        const [, payload] = (context.sendMessage as jest.Mock).mock.calls.find(
+            ([type]) => type === 'storefront-setup-complete',
+        ) ?? [];
+        expect(payload?.message).not.toMatch(/completed successfully/i);
+    });
+
+    it('names the consequence and the remedy', async () => {
+        mockExecuteStorefrontSetupPhases.mockResolvedValue({
+            success: true,
+            repoUrl: 'https://github.com/test/repo',
+            repoOwner: 'test',
+            repoName: 'repo',
+            byomOverlayFailed: true,
+        });
+        const context = createMockContext();
+
+        await handleStartStorefrontSetup(context, createValidPayload());
+
+        const [, payload] = (context.sendMessage as jest.Mock).mock.calls.find(
+            ([type]) => type === 'storefront-setup-complete',
+        ) ?? [];
+        // The consequence a user can check, and the action that fixes it — not a
+        // bare "something went wrong".
+        expect(payload?.message).toMatch(/product/i);
+        expect(payload?.warning).toBeTruthy();
+    });
+
+    it('still hands back the repo so the storefront stays usable', async () => {
+        // Everything EXCEPT PDPs works. Withholding the repo URL would be a worse
+        // lie in the other direction.
+        mockExecuteStorefrontSetupPhases.mockResolvedValue({
+            success: true,
+            repoUrl: 'https://github.com/test/repo',
+            repoOwner: 'test',
+            repoName: 'repo',
+            byomOverlayFailed: true,
+        });
+        const context = createMockContext();
+
+        const result = await handleStartStorefrontSetup(context, createValidPayload());
+
+        expect(result.success).toBe(true);
+        const [, payload] = (context.sendMessage as jest.Mock).mock.calls.find(
+            ([type]) => type === 'storefront-setup-complete',
+        ) ?? [];
+        expect(payload?.githubRepo).toBe('https://github.com/test/repo');
+    });
+
+    it('leaves the normal completion message alone', async () => {
+        mockExecuteStorefrontSetupPhases.mockResolvedValue({
+            success: true,
+            repoUrl: 'https://github.com/test/repo',
+            repoOwner: 'test',
+            repoName: 'repo',
+        });
+        const context = createMockContext();
+
+        await handleStartStorefrontSetup(context, createValidPayload());
+
+        const [, payload] = (context.sendMessage as jest.Mock).mock.calls.find(
+            ([type]) => type === 'storefront-setup-complete',
+        ) ?? [];
+        expect(payload?.message).toMatch(/completed successfully/i);
+        expect(payload?.warning).toBeFalsy();
     });
 });

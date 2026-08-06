@@ -168,7 +168,10 @@ export async function prewarmCatalog(
 
     let skuPaths: SkuPath[];
     try {
-        skuPaths = await enumerateAccsCatalog(params as ConfigGeneratorParams, logger);
+        skuPaths = await enumerateAccsCatalog(
+            params as ConfigGeneratorParams & { commerceEndpoint: string },
+            logger,
+        );
     } catch (error) {
         const reason = (error as Error).message;
         logger.warn(`[Catalog Prewarm] Catalog enumeration failed: ${reason} — falling back to runtime smart-404 only`);
@@ -230,7 +233,12 @@ export async function prewarmCatalog(
  * for that storefront.
  */
 async function enumerateAccsCatalog(
-    params: ConfigGeneratorParams,
+    // `commerceEndpoint` required, not optional: the caller already guards it and
+    // returns early when absent. Stating that in the signature is what lets the
+    // guard do its job — the previous `ConfigGeneratorParams` widened it back to
+    // optional and the body compensated with a non-null assertion, which asserts
+    // rather than proves.
+    params: ConfigGeneratorParams & { commerceEndpoint: string },
     logger: Logger,
 ): Promise<SkuPath[]> {
     // generateHeaders() returns { all: {...}, cs: {...} }. The catalog
@@ -249,7 +257,7 @@ async function enumerateAccsCatalog(
     let totalPages = 1;
 
     do {
-        const response = await fetch(params.commerceEndpoint!, {
+        const response = await fetch(params.commerceEndpoint, {
             method: 'POST',
             headers,
             body: JSON.stringify({
