@@ -93,6 +93,40 @@ Let `N` = new beta number, `PREV` = current one.
 
 9. **Return to develop:** `git checkout develop`. Report the release URL.
 
+## Hotfix releases — the merge-back is NOT optional
+
+A hotfix branches off the released tag, not off `develop`, so `develop` never receives
+its commits. Steps 5–9 above are unchanged; the branch handling differs:
+
+1. `git checkout -b hotfix/beta.<N>-<slug> v1.0.0-beta.<PREV>`
+2. Fix, bump to `<N>`, gate, then `git checkout master && git merge --no-ff hotfix/...`
+3. Tag, push, package, publish (steps 5–8).
+4. **Merge master back into develop and push it.** This step is the one that gets
+   skipped, and skipping it is what produced the 2026-08-06 reconciliation: three
+   hotfixes (`.123`, `.124`, `.125`) were each *forward-ported* — reimplemented on
+   develop — instead of merged, so git had no record that master's commits were
+   accounted for. By `.125` the deferred merge had grown to **13 conflicts across
+   10 commits**, several in files neither fix touched.
+
+**Forward-porting is not a substitute for the merge.** It reproduces the content and
+leaves the history diverged; only the merge tells git the two branches agree. Do both
+when the file layouts differ (see below) — port the fix so develop is correct *now*,
+then still merge so the divergence closes.
+
+**When develop has restructured the files the hotfix touched**, expect conflicts and
+resolve with one rule: **develop wins.** Develop is the branch that continues, and its
+version is by definition the newer intent. Concretely, from the `.125` reconciliation:
+
+- A file develop deleted (`GitHubRepoSelectionStep.tsx`, superseded by the v6 rail)
+  arrives as a `DU` modify/delete — `git rm` it. Do not resurrect it.
+- Both branches may have split the same oversized test file under *different* names.
+  Keep develop's split; `git rm` master's. Verify no coverage is lost first by diffing
+  the `it(...)` names between the two sets — do not assume.
+- A master test can assert behaviour develop deliberately **removed**. One asserted
+  `toContain('Product not available')` while develop asserted `not.toContain` for the
+  same string. Taking both sides would have committed a contradiction. This is why the
+  full suite, not the conflict count, is the gate.
+
 ## Verify
 
 - `gh release view v1.0.0-beta.<N>` shows the pre-release with the `.vsix` asset.

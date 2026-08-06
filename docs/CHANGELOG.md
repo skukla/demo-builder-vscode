@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.125] - 2026-08-06
+
+### Fixed
+
+- **AEM Code Sync is now checked when you select an existing repository, not midway
+  through setup.** New repositories were always gated on the App being installed;
+  existing ones were not, so the only check ran after fstab, block libraries,
+  smart-404 and Quick Edit had already been written to your repository. You now find
+  out before anything is modified.
+
+- **The wizard no longer appears to continue after installing the App.** It advanced to
+  the code-sync step and then reported that setup could not resume. It now says what
+  happened and offers Retry, which re-runs setup for real (about 24 seconds).
+
+- **Setup stops before touching your repository when the App is missing.** The
+  pipeline's own Code Sync check ran after it had already reset the repository to the
+  template and pushed fstab, block libraries, and the smart-404 and Quick Edit
+  scripts. It now runs before the first write, so a blocked run leaves your
+  repository exactly as it was.
+
+### Removed
+
+- The unimplemented storefront-setup resume handler. It always answered "Resume not yet
+  supported" while the install dialog posted to it. Retry is the working path.
+
 ## [1.0.0-beta.124] - 2026-08-06
 
 Released from `hotfix/beta.124-storefront-complete-honesty`, branched off `.123` — none
