@@ -16,7 +16,9 @@
 import {
     buildAppStatusFromResult,
     computeCanProceed,
+    getGitHubAppStatusText,
 } from '@/features/eds/ui/steps/GitHubRepoSelectionStep';
+import type { GitHubAppStatus } from '@/types/webview';
 import type { GitHubRepoItem } from '@/types/webview';
 
 const repo = { id: 'o/r', name: 'r', owner: 'o', fullName: 'o/r' } as GitHubRepoItem;
@@ -117,5 +119,38 @@ describe('SPIKE: a repo Helix has not indexed does not block the user', () => {
         const status = buildAppStatusFromResult({ success: false, error: 'network' } as never);
 
         expect(computeCanProceed('existing', created, status, repo, false)).toBe(true);
+    });
+});
+
+/**
+ * The blocked user must be told WHY (2026-08-06).
+ *
+ * The gate above can now disable Continue for an existing repo. The status row that
+ * explains it was rendered for new repos only — its guard carried a comment about the
+ * deferral this change removed — so a blocked user would have seen a dead button and
+ * no reason. Caught in the pre-release review, not by a test.
+ *
+ * These pin the vocabulary the row uses, because it has to keep agreeing with the
+ * gate: the same `codeStatus` discriminator decides both what the user reads and
+ * whether they can proceed. If they ever disagree, the row lies.
+ */
+describe('the status text agrees with the gate', () => {
+    const text = (s: Partial<GitHubAppStatus>) =>
+        getGitHubAppStatusText({ isChecking: false, isInstalled: null, ...s } as GitHubAppStatus);
+
+    it('says "Not installed" exactly when the gate blocks', () => {
+        const status = { isChecking: false, isInstalled: false, codeStatus: 404 } as GitHubAppStatus;
+        expect(text(status)).toBe('Not installed');
+        expect(computeCanProceed('existing', created, status, repo, false)).toBe(false);
+    });
+
+    it('says "Registering..." exactly when the gate lets an undetermined answer through', () => {
+        const status = { isChecking: false, isInstalled: false } as GitHubAppStatus;
+        expect(text(status)).toBe('Registering...');
+        expect(computeCanProceed('existing', created, status, repo, false)).toBe(true);
+    });
+
+    it('says "Verified" when installed', () => {
+        expect(text({ isInstalled: true, codeStatus: 200 })).toBe('Verified');
     });
 });

@@ -103,13 +103,6 @@ function GitHubConfigurationSummary({
     const repoDisplayValue = getRepoDisplayValue();
     const isRepoComplete = repoMode === 'new' ? !!repoName : !!selectedRepo;
 
-    // Get GitHub App status text for display
-    const getGitHubAppStatusText = (): string => {
-        if (githubAppStatus.isInstalled === null) return 'Not checked';
-        if (githubAppStatus.isInstalled) return 'Verified';
-        // Distinguish HTTP 404 (repo not indexed) from code.status 404 (app not installed)
-        return githubAppStatus.codeStatus === undefined ? 'Registering...' : 'Not installed';
-    };
 
     // Get GitHub App status indicator
     const getGitHubAppStatusIndicator = (): 'completed' | 'empty' | 'pending' | 'error' => {
@@ -146,14 +139,20 @@ function GitHubConfigurationSummary({
                 emptyText={repoMode === 'new' ? 'Enter repository name' : 'Not selected'}
             />
 
-            {/* GitHub App Status - show ONLY for NEW repos after creation
-                EXISTING repos: App check deferred to StorefrontSetup (Helix needs fstab.yaml first) */}
-            {repoMode === 'new' && repoCreationState.isCreated && (
+            {/* GitHub App status.
+                Shown for BOTH modes as of 2026-08-06. It used to be new-repos-only,
+                because the existing-repo check was deferred to StorefrontSetup — but
+                that check now runs here and GATES Continue, so hiding the row left a
+                blocked user staring at a disabled button with no stated reason.
+                The row's own vocabulary already matches the gate: "Registering..."
+                (undetermined, allowed through) vs "Not installed" (definitive, blocks). */}
+            {((repoMode === 'new' && repoCreationState.isCreated)
+                || (repoMode === 'existing' && !!selectedRepo)) && (
                 <>
                     <Divider size="S" />
                     <StatusSection
                         label="AEM Code Sync App"
-                        value={getGitHubAppStatusText()}
+                        value={getGitHubAppStatusText(githubAppStatus)}
                         status={getGitHubAppStatusIndicator()}
                         emptyText="Installation required"
                     />
@@ -305,6 +304,19 @@ async function pollGitHubAppInstallation(
  * Compute whether the user can proceed based on repo mode and current state.
  * Extracted from useEffect to reduce component complexity.
  */
+/**
+ * The status row's words. Module-level and exported so a test can prove they agree
+ * with {@link computeCanProceed} — both branch on the same `codeStatus`
+ * discriminator, and a row that disagreed with the gate would be a lie.
+ */
+export function getGitHubAppStatusText(githubAppStatus: GitHubAppStatus): string {
+    if (githubAppStatus.isInstalled === null) return 'Not checked';
+    if (githubAppStatus.isInstalled) return 'Verified';
+    // HTTP 404 (no code.status) = Helix does not know the site yet — undetermined.
+    // code.status 404 = Helix knows it and cannot read the code — App missing.
+    return githubAppStatus.codeStatus === undefined ? 'Registering...' : 'Not installed';
+}
+
 export function computeCanProceed(
     repoMode: string,
     repoCreationState: RepoCreationState,

@@ -240,8 +240,12 @@ export async function checkGitHubApp(
             response.installUrl = githubAppService.getInstallUrl(request.owner, request.repo);
         }
 
-        context.logger.debug(
-            `[GitHub App Check] ${request.owner}/${request.repo}: installed=${result.isInstalled}, codeStatus=${result.codeStatus}, codeSyncTriggered=${codeSyncTriggered}`,
+        // INFO, not debug: this verdict now gates the selection step's Continue, and
+        // the Debug Logs channel is what users paste when they are stuck. Logging the
+        // question at info and the answer at debug is why a colleague's log showed two
+        // "Checking kmanns/blaines" lines and no outcome at all (2026-07-28).
+        context.logger.info(
+            `[GitHub App Check] ${request.owner}/${request.repo}: installed=${result.isInstalled}, codeStatus=${result.codeStatus ?? 'none'}, codeSyncTriggered=${codeSyncTriggered}`,
         );
 
         // Return response directly (not wrapped in { data }) so UI can access fields directly
