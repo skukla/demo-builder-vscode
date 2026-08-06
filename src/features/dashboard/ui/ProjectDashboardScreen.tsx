@@ -128,6 +128,7 @@ export function ProjectDashboardScreen({
         aiSkillsError,
         aiMcps,
         aiMcpsError,
+        aiInventoryLoading,
         aiBusy,
         aiRegenProgress,
         regenerateAiFiles,
@@ -307,6 +308,7 @@ export function ProjectDashboardScreen({
                         mcps={aiMcps}
                         hasSkillsError={aiSkillsError}
                         hasMcpsError={aiMcpsError}
+                        isLoading={aiInventoryLoading}
                         onClose={() => setShowCapabilities(false)}
                         onRegenerate={regenerateAiFiles}
                         isBusy={aiBusy}

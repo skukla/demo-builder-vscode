@@ -18,7 +18,7 @@ import '@testing-library/jest-dom';
 function renderList(props: Partial<React.ComponentProps<typeof AiMcpsList>> = {}) {
     return render(
         <Provider theme={defaultTheme}>
-            <AiMcpsList mcps={props.mcps ?? []} hasError={props.hasError} />
+            <AiMcpsList {...props} mcps={props.mcps ?? []} />
         </Provider>,
     );
 }
@@ -101,5 +101,44 @@ describe('AiMcpsList', () => {
         const rows = screen.getAllByTestId(/^ai-mcp-/);
         const ids = rows.map(r => r.getAttribute('data-testid'));
         expect(ids).toEqual(['ai-mcp-alpha', 'ai-mcp-beta', 'ai-mcp-zeta']);
+    });
+});
+
+/**
+ * Reported 2026-08-06 alongside the "Verifying" hang: this list read
+ * "No MCP servers yet. Regenerate AI files to set them up." for a project whose files were
+ * fine — it simply had not loaded. `verifyResult?.inventory` was undefined, collapsed
+ * to an empty array on the way in, and the list could not tell "none exist" from
+ * "not asked yet".
+ *
+ * Telling someone to regenerate healthy files is worse than saying nothing: it is a
+ * confident wrong instruction pointing at the one remedy they should not reach for.
+ */
+describe('loading vs empty (2026-08-06)', () => {
+    it('says it is still checking rather than claiming there are none', () => {
+        renderList({ mcps: [], isLoading: true });
+
+        expect(screen.getByTestId('ai-mcps-loading')).toBeInTheDocument();
+        expect(screen.queryByTestId('ai-mcps-empty')).not.toBeInTheDocument();
+    });
+
+    it('never tells you to regenerate files it has not looked at', () => {
+        renderList({ mcps: [], isLoading: true });
+
+        expect(screen.queryByText(/Regenerate AI files/i)).not.toBeInTheDocument();
+    });
+
+    it('still reports genuine emptiness once loaded', () => {
+        renderList({ mcps: [], isLoading: false });
+
+        expect(screen.getByTestId('ai-mcps-empty')).toBeInTheDocument();
+    });
+
+    it('prefers the error row over the loading row', () => {
+        // An inspector error is a settled answer; "checking" would be a lie.
+        renderList({ mcps: [], isLoading: true, hasError: true });
+
+        expect(screen.getByTestId('ai-mcps-error')).toBeInTheDocument();
+        expect(screen.queryByTestId('ai-mcps-loading')).not.toBeInTheDocument();
     });
 });

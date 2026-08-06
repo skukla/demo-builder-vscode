@@ -41,6 +41,12 @@ export interface AiCapabilitiesModalProps {
     hasSkillsError?: boolean;
     /** True when the MCP inspector errored — MCP section shows a warning row. */
     hasMcpsError?: boolean;
+    /**
+     * The verify has not answered yet. Both sections show "checking" rather than
+     * claiming emptiness — the modal used to tell users to regenerate AI files it
+     * had never looked at.
+     */
+    isLoading?: boolean;
     onClose: () => void;
     /** Regenerates the project's AI files (.claude/* + AGENTS.md), which rewrites skills + MCP config. */
     onRegenerate: () => void | Promise<void>;
@@ -60,6 +66,7 @@ export function AiCapabilitiesModal({
     mcps,
     hasSkillsError = false,
     hasMcpsError = false,
+    isLoading = false,
     onClose,
     onRegenerate,
     isBusy = false,
@@ -144,10 +151,10 @@ export function AiCapabilitiesModal({
                                 >
                                     MCP servers
                                 </Heading>
-                                <AiMcpsList mcps={mcps} hasError={hasMcpsError} />
+                                <AiMcpsList mcps={mcps} hasError={hasMcpsError} isLoading={isLoading} />
                             </Flex>
 
-                            <AiSkillsList skills={skills} hasError={hasSkillsError} />
+                            <AiSkillsList skills={skills} hasError={hasSkillsError} isLoading={isLoading} />
                         </Flex>
                     </div>
                 )}

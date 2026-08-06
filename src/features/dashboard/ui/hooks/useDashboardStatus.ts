@@ -209,6 +209,8 @@ export interface UseDashboardStatusReturn {
     aiMcps: McpInventoryEntry[];
     /** True when the MCP inspector errored (list shows a warning row) */
     aiMcpsError: boolean;
+    /** The AI verify has not produced a result yet (nor failed) — inventory is unknown, not empty. */
+    aiInventoryLoading: boolean;
     /** True while an AI verify/regenerate operation is in flight */
     aiBusy: boolean;
     /**
@@ -687,9 +689,15 @@ export function useDashboardStatus(
     // Capability lists for the "View AI Capabilities" surface.
     const inventory = verifyResult?.inventory;
     const aiSkills = inventory?.skills ?? EMPTY_SKILLS;
-    const aiSkillsError = Boolean(inventory?.skillsError);
     const aiMcps = inventory?.mcps ?? EMPTY_MCPS;
-    const aiMcpsError = Boolean(inventory?.mcpsError);
+    // No result and no failure = still in flight. Without this the modal collapsed
+    // "not asked yet" into "none exist" and told the user to regenerate healthy files.
+    const aiInventoryLoading = !verifyResult && !verifyFailed;
+    // A failed verify is an inspector error as far as these lists are concerned: we
+    // could not read them, which is what the error row already says. Claiming zero
+    // would be a different lie from the one just fixed.
+    const aiSkillsError = Boolean(inventory?.skillsError) || verifyFailed;
+    const aiMcpsError = Boolean(inventory?.mcpsError) || verifyFailed;
 
     return {
         projectStatus,
@@ -709,6 +717,7 @@ export function useDashboardStatus(
         aiSkillsError,
         aiMcps,
         aiMcpsError,
+        aiInventoryLoading,
         aiBusy,
         aiRegenProgress,
         regenerateAiFiles,
