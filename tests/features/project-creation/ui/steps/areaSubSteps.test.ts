@@ -36,11 +36,12 @@ describe('areaSubSteps registry', () => {
 describe('storefront driver', () => {
     const driver = areaSubSteps('storefront')!;
 
-    it('lists the sub-steps for an existing repo (no Code Sync), active = first open', () => {
+    it('lists the sub-steps for an existing repo (Code Sync included), active = first open', () => {
         const s = state({});
         expect(driver.subSteps(s).map((x) => x.id)).toEqual([
             'accounts',
             'repository',
+            'code-sync',
             'block-libraries',
         ]);
         expect(driver.active(s)).toBe('accounts'); // repository is locked
@@ -48,7 +49,7 @@ describe('storefront driver', () => {
         expect(driver.prev(s)).toBeNull();
     });
 
-    it('includes the Code Sync sub-step only for a NEW repo', () => {
+    it('includes the Code Sync sub-step for a NEW repo as well', () => {
         const s = state({ edsConfig: { repoMode: 'new' } } as Partial<WizardState>);
         expect(driver.subSteps(s).map((x) => x.id)).toEqual([
             'accounts',

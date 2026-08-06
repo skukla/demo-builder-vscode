@@ -169,6 +169,60 @@ export function computeRepoValid(
  *             it's deferred to StorefrontSetup after the fstab.yaml push — but the
  *             step isn't "done" until a repo has been chosen)
  */
+/**
+ * Selection-time Code Sync probe for an EXISTING repo: report what Helix says now and
+ * stop. Lenient (a 400 code.status is installed-but-unsynced, fine at selection) and
+ * non-triggering (`skipTrigger`), so it answers in ~1s instead of polling a code sync
+ * for up to three minutes.
+ *
+ * Module-level rather than a component callback: it closes over nothing but its setter,
+ * and inlining it pushed RepoSelectionInline past the complexity limit.
+ *
+ * @param owner - repo owner
+ * @param repo - repo name
+ * @param setStatus - receives the resulting status
+ */
+export async function probeExistingRepoApp(
+    owner: string,
+    repo: string,
+    setStatus: (s: GitHubAppStatus) => void,
+): Promise<void> {
+    setStatus({ isChecking: true, isInstalled: null });
+    try {
+        const result = await webviewClient.request<GitHubAppCheckResult>('check-github-app', {
+            owner,
+            repo,
+            lenient: true,
+            skipTrigger: true,
+        });
+        setStatus(buildAppStatusFromResult(result));
+    } catch {
+        // Undetermined, not missing — the gate lets this through.
+        setStatus({ isChecking: false, isInstalled: false });
+    }
+}
+
+/**
+ * Should the "AEM Code Sync App" status row render?
+ *
+ * Both modes since 2026-08-06 — the existing-repo check moved to selection and feeds
+ * the same gate, so the row that explains a block has to be reachable for it too.
+ * Extracted from the component: with it inline, RepoSelectionInline tripped the
+ * complexity limit.
+ *
+ * @param repoMode - 'new' | 'existing'
+ * @param repoCreated - a new repo has been created
+ * @param hasSelectedRepo - an existing repo is chosen
+ * @returns true when the row should show
+ */
+export function shouldShowAppStatus(
+    repoMode: string,
+    repoCreated: boolean,
+    hasSelectedRepo: boolean,
+): boolean {
+    return repoMode === 'new' ? repoCreated : hasSelectedRepo;
+}
+
 export function computeCodeSyncValid(
     repoMode: string,
     githubAppStatus: GitHubAppStatus,

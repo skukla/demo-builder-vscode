@@ -47,16 +47,24 @@ const STOREFRONT_SECTION_ORDER: StorefrontSectionId[] = [
 ];
 
 /**
- * The Storefront sub-steps for the current state. `code-sync` (the AEM Code Sync app
- * install) is only required for a NEW repo; an existing repo has no app gate here, so
- * the sub-step is omitted — dynamic, like Commerce's conditional Sign-in step.
+ * The Storefront sub-steps for the current state.
  *
- * @param state - Wizard state (provides edsConfig.repoMode)
- * @returns the ordered, applicable sub-step ids
+ * `code-sync` used to be filtered out for an existing repo, on the premise that only a
+ * new repo has an app gate here — the existing-repo check was deferred to
+ * StorefrontSetup, which runs after the pipeline has already written to the repository.
+ * That deferral was removed on 2026-08-06: the check now runs at repo selection for
+ * both modes.
+ *
+ * The step must therefore be VISIBLE in both. `isStorefrontConfigured` has always
+ * required `storefrontCodeSyncValid` regardless of mode, so hiding the sub-step never
+ * removed the gate — it removed the explanation, leaving an existing-repo user with a
+ * Storefront area that silently refused to complete and no step to look at.
+ *
+ * @param state - Wizard state
+ * @returns the ordered sub-step ids
  */
-export function storefrontSectionOrder(state: WizardState): StorefrontSectionId[] {
-    const needsCodeSync = state.edsConfig?.repoMode === 'new';
-    return STOREFRONT_SECTION_ORDER.filter(id => id !== 'code-sync' || needsCodeSync);
+export function storefrontSectionOrder(_state: WizardState): StorefrontSectionId[] {
+    return [...STOREFRONT_SECTION_ORDER];
 }
 
 /**

@@ -18,6 +18,7 @@
 import {
     computeRepoValid,
     computeCodeSyncValid,
+    shouldShowAppStatus,
 } from '@/features/eds/ui/steps/repoSelectionInline.helpers';
 import { isValidRepositoryName } from '@/core/validation/normalizers';
 import type { GitHubRepoItem } from '@/types/webview';
@@ -585,5 +586,20 @@ describe('computeCodeSyncValid — existing repos (2026-08-06)', () => {
         expect(
             computeCodeSyncValid('new', { isChecking: false, isInstalled: false }, undefined)
         ).toBe(false);
+    });
+});
+
+describe('shouldShowAppStatus (the row that explains a block)', () => {
+    it('shows for an existing repo as soon as one is selected', () => {
+        expect(shouldShowAppStatus('existing', false, true)).toBe(true);
+    });
+
+    it('hides for existing until a repo is picked — there is nothing to report yet', () => {
+        expect(shouldShowAppStatus('existing', false, false)).toBe(false);
+    });
+
+    it('shows for a new repo only once it has been created', () => {
+        expect(shouldShowAppStatus('new', true, false)).toBe(true);
+        expect(shouldShowAppStatus('new', false, true)).toBe(false);
     });
 });

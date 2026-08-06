@@ -6,6 +6,7 @@
  */
 
 import {
+    storefrontSectionOrder,
     storefrontSectionStates,
     isStorefrontStepComplete,
     STOREFRONT_SECTION_TITLES,
@@ -48,12 +49,21 @@ describe('STOREFRONT_SECTION_TITLES', () => {
 });
 
 describe('storefrontSectionStates', () => {
-    it('lists 3 sub-steps for an existing repo — Code Sync omitted (not required)', () => {
+    it('lists 4 sub-steps for an existing repo — Code Sync included', () => {
+        // Changed 2026-08-06: Code Sync is present in BOTH modes. The existing-repo
+        // check moved from mid-pipeline (after the repo had been written to) to repo
+        // selection, and isStorefrontConfigured always required storefrontCodeSyncValid
+        // — so hiding the step never removed the gate, only the explanation.
         const states = storefrontSectionStates(UNCONFIGURED);
-        expect(states.map(s => s.id)).toEqual(['accounts', 'repository', 'block-libraries']);
+        expect(states.map(s => s.id)).toEqual([
+            'accounts',
+            'repository',
+            'code-sync',
+            'block-libraries',
+        ]);
     });
 
-    it('includes Code Sync only for a NEW repo (4 sub-steps)', () => {
+    it('includes Code Sync for a NEW repo too (4 sub-steps)', () => {
         const states = storefrontSectionStates(NEW_REPO);
         expect(states.map(s => s.id)).toEqual([
             'accounts',
@@ -112,5 +122,48 @@ describe('isStorefrontStepComplete', () => {
     it('treats block-libraries as always complete (optional/terminal)', () => {
         expect(isStorefrontStepComplete(UNCONFIGURED, 'block-libraries')).toBe(true);
         expect(isStorefrontStepComplete(CONFIGURED, 'block-libraries')).toBe(true);
+    });
+});
+
+/**
+ * The code-sync sub-step must be reachable for EXISTING repos too (2026-08-06).
+ *
+ * It was filtered out when repoMode !== 'new', on the premise that an existing repo has
+ * no app gate here — that gate was deferred to StorefrontSetup, after the pipeline had
+ * already written to the repo. The selection-time check now runs for existing repos and
+ * feeds `storefrontCodeSyncValid`, which `isStorefrontConfigured` requires in BOTH modes.
+ *
+ * So with the step hidden, an existing-repo user whose App is missing gets a Storefront
+ * area that silently never completes, with no sub-step to explain it. Worse than a
+ * blocked button: a blocked button with nowhere to look.
+ */
+describe('code-sync sub-step is present for existing repos too (2026-08-06)', () => {
+    const withMode = (repoMode: string) => ({ edsConfig: { repoMode } }) as never;
+
+    it('appears for an existing repo', () => {
+        expect(storefrontSectionOrder(withMode('existing'))).toContain('code-sync');
+    });
+
+    it('still appears for a new repo', () => {
+        expect(storefrontSectionOrder(withMode('new'))).toContain('code-sync');
+    });
+
+    it('keeps its position in the order', () => {
+        const order = storefrontSectionOrder(withMode('existing'));
+        expect(order.indexOf('code-sync')).toBeGreaterThan(order.indexOf('repository'));
+        expect(order.indexOf('code-sync')).toBeLessThan(order.indexOf('block-libraries'));
+    });
+
+    it('gates the area in both modes, which is why it must be visible in both', () => {
+        // isStorefrontConfigured requires storefrontCodeSyncValid regardless of mode.
+        // Hiding the step did not remove the gate — it removed the explanation.
+        for (const mode of ['new', 'existing']) {
+            expect(
+                isStorefrontStepComplete(
+                    { ...withMode(mode), storefrontCodeSyncValid: false } as never,
+                    'code-sync',
+                )
+            ).toBe(false);
+        }
     });
 });

@@ -30,6 +30,8 @@ import {
     computeRepoValid,
     type RepoReadinessState,
     pollGitHubAppInstallation,
+    probeExistingRepoApp,
+    shouldShowAppStatus,
     type GitHubAppCheckResult,
     type GitHubAppStatus,
     type RepoCreationState,
@@ -248,26 +250,6 @@ export function RepoSelectionInline({
      * stop. Lenient (a 400 code.status means installed-but-unsynced, which is fine
      * at selection) and non-triggering, so the answer lands in ~1s.
      */
-    const checkExistingRepoApp = useCallback(
-        async (owner: string, repo: string) => {
-            const repoKey = `${owner}/${repo}`;
-            if (lastCheckedRepo.current === repoKey) return;
-            lastCheckedRepo.current = repoKey;
-            setGitHubAppStatus({ isChecking: true, isInstalled: null });
-            try {
-                const result = await webviewClient.request<GitHubAppCheckResult>(
-                    'check-github-app',
-                    { owner, repo, lenient: true, skipTrigger: true },
-                );
-                setGitHubAppStatus(buildAppStatusFromResult(result));
-            } catch {
-                // Undetermined, not missing — the gate lets this through.
-                setGitHubAppStatus({ isChecking: false, isInstalled: false });
-            }
-        },
-        [],
-    );
-
     const checkGitHubApp = useCallback(async (owner: string, repo: string, lenient = false) => {
         const repoKey = `${owner}/${repo}`;
         if (lastCheckedRepo.current === repoKey && !lenient) return;
@@ -405,8 +387,8 @@ export function RepoSelectionInline({
         if (repoMode !== 'existing' || !selectedRepo) return;
         const [owner, name] = (selectedRepo.fullName ?? '').split('/');
         if (!owner || !name) return;
-        void checkExistingRepoApp(owner, name);
-    }, [repoMode, selectedRepo, checkExistingRepoApp]);
+        void probeExistingRepoApp(owner, name, setGitHubAppStatus);
+    }, [repoMode, selectedRepo]);
 
     // Re-check GitHub App when returning with an already-created repo.
     useEffect(() => {
@@ -480,7 +462,11 @@ export function RepoSelectionInline({
     }, [repoMode, githubAppStatus, selectedRepo, onCodeSyncValidChange]);
 
     const templateAvailable = !!(edsConfig?.templateOwner && edsConfig?.templateRepo);
-    const showNewRepoStatus = repoMode === 'new' && repoCreationState.isCreated;
+    const showAppStatus = shouldShowAppStatus(
+        repoMode,
+        repoCreationState.isCreated,
+        !!selectedRepo,
+    );
 
     // --- `repository` phase: pick/create the repo (no app-install UI) ---------
     if (phase === 'repository') {
@@ -559,13 +545,13 @@ export function RepoSelectionInline({
         );
     }
 
-    // --- `code-sync` phase: AEM Code Sync app install (NEW repos only) --------
-    // The `code-sync` sub-step is omitted entirely for an existing repo (its app gate
-    // is deferred to StorefrontSetup after the fstab.yaml push — see storefrontSectionOrder),
-    // so this phase only renders for a new repo.
+    // --- `code-sync` phase: AEM Code Sync app install -------------------------
+    // Present for BOTH repo modes since 2026-08-06 (see storefrontSectionOrder). The
+    // existing-repo gate used to be deferred to StorefrontSetup, after the pipeline
+    // had written to the repo; it now runs at selection.
     return (
         <div className="w-full relative">
-            {showNewRepoStatus && (
+            {showAppStatus && (
                 <>
                     <Divider size="S" marginTop="size-300" marginBottom="size-200" />
                     <StatusSection
