@@ -1,6 +1,11 @@
 # Plan: Per-integration Adobe API attribution — overview
 
-**Status:** Designed (2026-07-30), decisions locked with PM in-session. **Not started.**
+**Status (2026-08-06):** Steps 01–05 **SHIPPED** on `develop`. Step 06 **WITHDRAWN** — the
+capability it existed for turned out not to exist (see its row). Step 07 is **release-gated**, not
+code-gated: no shipped build reads `componentApiPicks` yet, so retiring the flat write today would
+lose picks for anyone on `v1.0.0-beta.123`.
+
+Designed 2026-07-30, decisions locked with PM in-session.
 **Parent:** D2 Track B of
 [`../appbuilder-deployable-model/overview.md`](../appbuilder-deployable-model/overview.md) — this is the
 API half of "what does *this* integration need". **The env-var half already SHIPPED** (that plan's
@@ -146,10 +151,16 @@ the feature.
 states above. Other integrations' picks appear *only* as locked rows with attribution — never as
 editable ones. Editing here changes this integration's intent alone.
 
-**Project level (off the integrations surface header).** The resulting union with attribution: each
-subscribed API and which integrations require it, plus any code required by nothing (left behind by a
-removed integration — the parent plan's line 316 decision is to *leave APIs subscribed* on removal) with
-an explicit cleanup action. This is the only place a workspace-wide unsubscribe is initiated deliberately.
+**~~Project level (off the integrations surface header)~~ — WITHDRAWN.** Built and deleted
+2026-08-06; see step 06. The claim below is preserved because it is the one that proved false, and
+the next person to have this idea should see why:
+
+> This is the only place a workspace-wide unsubscribe is initiated deliberately.
+
+It never was. A per-card Apply PUTs the union of every pick, so an orphan — in nobody's picks — is
+dropped by the next Apply on any card. The per-integration surface already unsubscribes
+workspace-wide as a side effect, which is either the real bug to fix or the accepted behaviour, but
+either way it is not a reason for a second surface.
 
 ## Store choice: a dedicated `componentApiPicks`, not either existing store
 
@@ -179,13 +190,13 @@ the workspace is the **state**. Both existing per-component stores were evaluate
 | Step | Title | One-line | Key risk |
 |---|---|---|---|
 | 00 | RPTC re-init | Re-invoke the originating command; baseline GREEN | — |
-| 01 | Keyed persistence + migration | `project.componentApiPicks: Record<componentId, string[]>` (see **Store choice** below); `resolveDesiredApis(project)` unions at READ time; one-time migration of flat `additionalConsoleApis` → `{ __existing__: [...] }`. Legacy field still readable. | Silent loss of existing picks on migration; manifest round-trip (`projectConfigWriter.ts:128-132` + `projectFileLoader.ts:128`) |
-| 02 | Wizard persists keyed | `wizardHelpers.ts:731` stops calling `unionConsoleApiPicks`; writes the keyed record through. `__existing__` maps to the unattributed bucket. | Wizard round-trip regression; `RESERVED_EXISTING_KEY` double-counting in the union |
-| 03 | Four-state row resolver | Pure `resolveApiRows(project, componentId)` → rows tagged `mine-required` / `mine-optional` / `other-required` (+ owner names) / `baseline` | Mis-scoped "other" set silently unlocking a shared code — 100% branch coverage required |
-| 04 | Per-integration handlers — BOTH surfaces | `dashboard/handlers/consoleApiHandlers.ts` (`listConsoleApis`/`setConsoleApis`) AND `project-creation/handlers/consoleApiHandlers.ts` (`list-org-console-apis`) take a `componentId`; list returns resolver rows + attribution, set writes that component's `componentApiPicks[id]` entry only | Two handler files drifting on attribution; count-pinned handler-map tests; the wizard picker already passes componentIds — do not regress it |
-| 05 | Per-integration Adobe APIs section | **Reuse the wizard's `api-edit` FlowMode** (`saveEditedPicks`, already writes `selectedConsoleApis[componentId]`) rather than building a second editor; retire `EditIntegrationModal`'s project-scoped picker. **First decide the host** (Open items): Configure's `AppBuilderComponentFieldsSection` vs. the card. Do NOT ship both. | `ApiAccessPicker` `locked` needs a reason slot; a second editing surface competing with Configure AND with `api-edit`; kind-gate regressions (mesh/catalog must stay informational) |
-| 06 | Project-level union view | Subscribed union + per-code attribution + "required by nothing" orphans with explicit cleanup | Cleanup is a real workspace unsubscribe — confirm dialog, no silent reconcile |
-| 07 | Retire the flat write path | Delete `additionalConsoleApis` write side once parity is proven; keep read for legacy manifests | Removing the legacy field before migration is proven on a real project |
+| 01 ✅ | Keyed persistence + migration | `project.componentApiPicks: Record<componentId, string[]>` (see **Store choice** below); `resolveDesiredApis(project)` unions at READ time; one-time migration of flat `additionalConsoleApis` → `{ __existing__: [...] }`. Legacy field still readable. | Silent loss of existing picks on migration; manifest round-trip (`projectConfigWriter.ts:128-132` + `projectFileLoader.ts:128`) |
+| 02 ✅ | Wizard persists keyed | `wizardHelpers.ts:731` stops calling `unionConsoleApiPicks`; writes the keyed record through. `__existing__` maps to the unattributed bucket. | Wizard round-trip regression; `RESERVED_EXISTING_KEY` double-counting in the union |
+| 03 ✅ | Four-state row resolver | Pure `resolveApiRows(project, componentId)` → rows tagged `mine-required` / `mine-optional` / `other-required` (+ owner names) / `baseline` | Mis-scoped "other" set silently unlocking a shared code — 100% branch coverage required |
+| 04 ✅ | Per-integration handlers — BOTH surfaces | `dashboard/handlers/consoleApiHandlers.ts` (`listConsoleApis`/`setConsoleApis`) AND `project-creation/handlers/consoleApiHandlers.ts` (`list-org-console-apis`) take a `componentId`; list returns resolver rows + attribution, set writes that component's `componentApiPicks[id]` entry only | Two handler files drifting on attribution; count-pinned handler-map tests; the wizard picker already passes componentIds — do not regress it |
+| 05 ✅ | Per-integration Adobe APIs section | **Host: `ManageApisModal`, NOT Configure.** The plan recommended Configure and said to retire `EditIntegrationModal`'s project-scoped picker — that component has ZERO git history and never existed. The real picker is `ManageApisModal`, and it was ALREADY per-card (opened via `setManageApisId(model.id)`, naming the integration in its copy) while editing the project-wide union. Choosing Configure would have built a SECOND per-integration surface and left this one project-scoped. Shipped `bd870588`: it takes a `componentId`, and `ApiAccessPicker` gained the reason slot (`Required by ERP Sync`). | — |
+| 06 ❌ | Project-level union view | **WITHDRAWN 2026-08-06** (built in `8f57aafe`, deleted in `4e90d826`). Do not rebuild without reading this. The distinguishing capability was "the only place a workspace-wide unsubscribe is initiated deliberately" — **untrue of the code as built**. A per-card Apply PUTs the union of ALL picks; an orphan is in nobody's picks, so the very next Apply anywhere silently unsubscribes it. Orphans exist only between a removal and the next API edit, and the confirm dialog guarded a door standing open beside it. The "All APIs" header button was also confusing next to each card's "Manage APIs" — two entry points, no label explaining the difference, permanent weight for a rare condition. Project-wide attribution, its remaining value, is already visible from any card. | — |
+| 07 ⛔ | Retire the flat write path | **Release-gated, not code-gated.** Precondition DONE (`ac4892e3`): `tests/core/state/apiPicksParity.test.ts` fails on any surface writing the flat field without the keyed one — it caught `settingsSerializer`, which exported `additionalConsoleApis` alone and would have made every settings export silently lose picks. **The remaining blocker is a release.** `componentApiPicks` is in NO shipped build (latest tag `v1.0.0-beta.123`; its loader has zero references). Delete the write and a beta.123 user opening the same project reads no extras, then any reconcile unsubscribes live APIs from the shared workspace. Sequence: ship a release carrying the keyed reader → let it propagate → then delete. | Removing the legacy field before a keyed-reader build has shipped |
 
 ## Test strategy
 
@@ -216,20 +227,31 @@ the workspace is the **state**. Both existing per-component stores were evaluate
 ## Open items (not blocking)
 
 - **The mesh.** It is a deployable with catalog `requiredApis` (API Mesh / `GraphQLServiceSDK`) and
-  already contributes to the union via `resolveProjectCatalog`. Its card currently has no menu. Decide
-  whether it gains a read-only "APIs in use" view for symmetry — it has no user-editable extras.
-- **Which surface hosts the API section (decide before step 05).** Configure already renders each
-  integration's user inputs via `AppBuilderComponentFieldsSection`. Adding APIs there gives one
-  per-integration "what this needs" surface; putting them in the card's Edit modal gives two places to
-  edit one integration. Recommendation: **Configure**, with the card's Edit reduced to rename (or
-  linking through to Configure). This also resolves what the card kebab's Edit item should do.
+  already contributes to the union via `resolveProjectCatalog`. It now has a kebab, and its
+  Manage APIs entry works like any other integration's — this question is effectively answered by
+  the step-05 host decision.
+- **~~Which surface hosts the API section~~ — RESOLVED 2026-08-05: `ManageApisModal`.** The
+  recommendation here was Configure, on the premise that the card's editor was a separate
+  `EditIntegrationModal` to be retired. That component never existed (zero git history). The card's
+  real editor is `ManageApisModal`, which was already opened per-card and already named the
+  integration — it just edited the project-wide union. Configure would have added a second
+  per-integration API surface while leaving that one wrong.
 - **Catalog coverage.** Only the three meshes declare an `envSchema` today (one var each) and
   `app-builder-shell` declares none, so a per-integration inputs surface is sparse until real
   integration entries land. The API section is the first thing that will reliably have content.
 
-## Interim risk (decide before this plan lands)
+## Interim risk — RESOLVED by step 05 (`bd870588`)
 
-`EditIntegrationModal` (shipped 2026-07-30, uncommitted) presents the **project-scoped**
-`additionalConsoleApis` picker inside a dialog titled after one integration: unchecking a code there
-today unsubscribes it for every integration and the mesh. Either land step 05, or interim-scope the
-modal to rename-only and move the API picker to a project-level surface until this plan executes.
+The risk was real and the diagnosis was right; only the component name was wrong. There is no
+`EditIntegrationModal` and never was — the surface described here is **`ManageApisModal`**, which
+presented the project-scoped `additionalConsoleApis` picker inside a dialog titled after one
+integration, so unchecking a code there unsubscribed it for every integration and the mesh.
+
+Step 05 closed it: the modal takes a `componentId` and writes only that integration's entry, and
+the subscribe still PUTs the union so dropping a shared code cannot unsubscribe it out from under
+another holder. The named regression test is
+`consoleApiHandlers.test.ts` → "SUBSCRIBES THE FULL UNION…".
+
+Worth keeping as a lesson: a plan naming a component that does not exist reads exactly like a plan
+naming one that does. `git log -S '<Name>'` separates them in seconds — zero history means the name
+was illustrative, and the real thing is somewhere else under a different name.
