@@ -340,7 +340,7 @@ export function computeCanProceed(
  * Build GitHubAppStatus from a check result.
  * Extracted to simplify checkGitHubApp callback.
  */
-function buildAppStatusFromResult(result: GitHubAppCheckResult): GitHubAppStatus {
+export function buildAppStatusFromResult(result: GitHubAppCheckResult): GitHubAppStatus {
     return {
         isChecking: false,
         isInstalled: result.success ? result.isInstalled : false,
