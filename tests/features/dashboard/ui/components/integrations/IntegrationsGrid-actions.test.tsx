@@ -379,6 +379,16 @@ describe('IntegrationsGrid actions', () => {
             expect(modal).not.toHaveTextContent('managing: other-app');
         });
 
+        it('opens the PROJECT-level union view with no component id', async () => {
+            // Step 06's entry point. The grid keeps owning the single modal instance;
+            // the screen drives it, so a project-level open must carry no componentId
+            // — that absence is what makes the handler compute the union and orphans.
+            renderGrid({ appBuilderComponents: twoDeployed(), unionViewOpen: true });
+
+            const modal = screen.getByTestId('manage-apis-modal');
+            expect(modal).not.toHaveAttribute('data-component-id');
+        });
+
         it('clears the modal when its onClose fires', async () => {
             const user = setupUser();
             renderGrid({ appBuilderComponents: twoDeployed() });

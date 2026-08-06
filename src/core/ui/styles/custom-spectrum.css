@@ -5709,3 +5709,21 @@ div[class*="spectrum"] input[type="search"] {
     flex: 1 1 auto;
     min-height: 0;
 }
+
+/* Step 06 — the union view's orphan notice. Accent BORDER + text, never a filled
+   banner: the dashboard's attention treatment (see OrgContextNotice), not an alert. */
+.manage-apis-orphans {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+    border-left: 3px solid var(--spectrum-global-color-orange-500);
+    background: var(--vscode-editor-background);
+}
+.manage-apis-orphans > div {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}

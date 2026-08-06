@@ -42,6 +42,53 @@ import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, MessageHandler } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
 
+/**
+ * Codes Adobe still has subscribed that nothing in the project claims.
+ *
+ * These outlive their reason by design: removing an integration drops its
+ * `componentApiPicks` entry but deliberately does NOT reconcile, so the
+ * subscription stays until something PUTs a shorter union. Nothing surfaced them
+ * before this, which is why a workspace accumulates them silently.
+ *
+ * Needs REMOTE truth. The local desired set is precisely what an orphan is missing
+ * from, so it cannot detect one.
+ *
+ * Read-only by construction: `getWorkspaceS2SCredential` returns undefined when the
+ * workspace has none, where `ensureOAuthCredentialId` would CREATE one — provisioning
+ * an Adobe credential as a side effect of opening a modal. Never reach for ensure here.
+ *
+ * Best-effort: this is a secondary probe on a list, so a failure yields no orphans
+ * rather than blanking the surface the user actually opened.
+ */
+async function findOrphanedApis(
+    project: Project,
+    orgId: string,
+    logger: HandlerContext['logger'],
+): Promise<string[]> {
+    try {
+        const authService = ServiceLocator.getAuthenticationService();
+        const target = subscriberTarget(project);
+        const credential = await authService.getWorkspaceS2SCredential(
+            target.orgId,
+            target.projectId,
+            target.workspaceId,
+        );
+        if (!credential?.idIntegration) return [];
+
+        const client = createApiSubscriberClient(authService);
+        const subscribed = await client.getSubscribedServiceCodes(orgId, credential.idIntegration);
+        // Everything the project would send on its next reconcile — baseline and
+        // catalog requirements included, so neither can ever read as unclaimed.
+        const claimed = new Set(
+            computeRequiredApis(resolveProjectCatalog(project), resolveDesiredApis(project)),
+        );
+        return subscribed.filter((code) => !claimed.has(code));
+    } catch (err) {
+        logger.debug(`[Console APIs] Orphan probe skipped: ${toError(err).message}`);
+        return [];
+    }
+}
+
 /** Adobe sdk codes are alphanumeric (e.g. GraphQLServiceSDK); tolerate _ and -. */
 const SDK_CODE_RE = /^[A-Za-z0-9_-]+$/;
 
@@ -95,23 +142,25 @@ export const handleListConsoleApis: MessageHandler<{ componentId?: string }> = a
             new Set([...managed, ...union]),
         );
 
-        // Attribution: which integration is holding each code, and under what claim.
-        // Only meaningful from some integration's point of view, so it is absent
-        // entirely for a project-scoped call rather than faked with a placeholder id.
-        const states = componentId
-            ? resolveApiRowStates({
-                componentId,
-                owners: resolveApiOwners(project),
-                picks: project.componentApiPicks ?? {},
-                baseline: [...managed],
-            })
-            : undefined;
+        // Attribution, in BOTH scopes. Project-wide there is no "mine" — an empty
+        // componentId matches no owner, so every claim resolves to its holder's name,
+        // which is exactly what the union view shows.
+        const states = resolveApiRowStates({
+            componentId: componentId ?? '',
+            owners: resolveApiOwners(project),
+            picks: project.componentApiPicks ?? {},
+            baseline: [...managed],
+        });
+
+        // A project-level fact only: a single integration has no standing to judge a
+        // code another one holds.
+        const orphans = componentId ? undefined : await findOrphanedApis(project, orgId, context.logger);
 
         return {
             success: true,
             data: {
                 apis: rows.map((row) => {
-                    const state = states?.get(row.code);
+                    const state = states.get(row.code);
                     return {
                         ...row,
                         managed: managed.has(row.code),
@@ -121,6 +170,7 @@ export const handleListConsoleApis: MessageHandler<{ componentId?: string }> = a
                     };
                 }),
                 added,
+                ...(orphans ? { orphans } : {}),
             },
         };
     } catch (err) {

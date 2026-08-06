@@ -434,4 +434,92 @@ describe('ManageApisModal', () => {
         });
 
     });
+
+    /**
+     * Step 06 — orphans in the union view.
+     *
+     * A code Adobe still has subscribed that nothing in the project claims. The
+     * cleanup is a REAL workspace unsubscribe (the reconcile PUTs a shorter union),
+     * so it is explicit and confirmed — never a silent side effect of opening the
+     * modal or of pressing Apply.
+     */
+    describe('orphans (step 06)', () => {
+        function withOrphans(orphans: string[]) {
+            getClient().request.mockImplementation((type: string) => {
+                if (type === 'listConsoleApis') {
+                    return Promise.resolve({ success: true, data: { apis: ORG_APIS, orphans } });
+                }
+                return Promise.resolve({ success: true });
+            });
+        }
+
+        it('names the unused codes when the project has some', async () => {
+            withOrphans(['FireflySDK']);
+            renderModal();
+            await flush();
+
+            expect(screen.getByTestId('orphan-notice')).toHaveTextContent('FireflySDK');
+        });
+
+        it('shows nothing when there are none', async () => {
+            withOrphans([]);
+            renderModal();
+            await flush();
+
+            expect(screen.queryByTestId('orphan-notice')).not.toBeInTheDocument();
+        });
+
+        it('shows nothing in the per-integration view', async () => {
+            // Orphans are project-level; the handler does not even compute them here.
+            withOrphans([]);
+            renderModal({ componentId: 'erp-sync' });
+            await flush();
+
+            expect(screen.queryByTestId('orphan-notice')).not.toBeInTheDocument();
+        });
+
+        it('does NOT unsubscribe until the confirm is answered', async () => {
+            withOrphans(['FireflySDK']);
+            renderModal();
+            await flush();
+            fireEvent.click(screen.getByRole('button', { name: /remove unused/i }));
+
+            // The confirm is showing; nothing has been sent.
+            expect(screen.getByTestId('orphan-confirm')).toBeInTheDocument();
+            expect(getClient().request).not.toHaveBeenCalledWith(
+                'setConsoleApis',
+                expect.anything()
+            );
+        });
+
+        it('reconciles only after the confirm, dropping the orphan', async () => {
+            withOrphans(['FireflySDK']);
+            renderModal();
+            await flush();
+            fireEvent.click(screen.getByRole('button', { name: /remove unused/i }));
+            fireEvent.click(screen.getByRole('button', { name: /^remove$/i }));
+            await flush();
+
+            // The reconcile sends the CLAIMED set; the orphan is simply absent from
+            // it, and the PUT's exact-set semantics drop it.
+            const call = getClient().request.mock.calls.find((c) => c[0] === 'setConsoleApis');
+            expect(call).toBeDefined();
+            expect((call![1] as { apis: string[] }).apis).not.toContain('FireflySDK');
+        });
+
+        it('cancelling the confirm sends nothing', async () => {
+            withOrphans(['FireflySDK']);
+            renderModal();
+            await flush();
+            fireEvent.click(screen.getByRole('button', { name: /remove unused/i }));
+            fireEvent.click(screen.getByRole('button', { name: /keep them/i }));
+            await flush();
+
+            expect(screen.queryByTestId('orphan-confirm')).not.toBeInTheDocument();
+            expect(getClient().request).not.toHaveBeenCalledWith(
+                'setConsoleApis',
+                expect.anything()
+            );
+        });
+    });
 });
