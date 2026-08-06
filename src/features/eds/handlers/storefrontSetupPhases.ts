@@ -396,11 +396,8 @@ export async function executeStorefrontSetupPhases(
     }
 
     const repoInfo: RepoInfo = { repoOwner: githubOwner, repoName: edsConfig.repoName };
-    const useExistingRepo =
-        (edsConfig.repoMode ?? 'new') === 'existing' &&
-        !!(edsConfig.selectedRepo || edsConfig.existingRepo);
     const effectiveBlockLibraries = options?.selectedBlockLibraries ?? [];
-    const phaseOptions: BlockLibraryOptions = { ...options, useExistingRepo };
+    const phaseOptions: BlockLibraryOptions = { ...options };
 
     // Shared patch report — canonical-phase results from Phase 1's LKG pin
     // and block-phase + content-patch results from the pipeline both append
