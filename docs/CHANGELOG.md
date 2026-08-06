@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.124] - 2026-08-06
+
+Released from `hotfix/beta.124-storefront-complete-honesty`, branched off `.123` — none
+of the work on `develop` shipped in it. Listed here so this branch's history does not
+skip a published version.
+
+### Fixed
+
+- **Storefront setup no longer reports "Complete" when product detail pages cannot work.**
+  Forward-ported to `develop` in the same change.
+
 ### Added
 
 - **Edits survive closing the editor.** When you edit a project and close the wizard
