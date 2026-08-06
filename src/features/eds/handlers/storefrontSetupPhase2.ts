@@ -1,8 +1,9 @@
 /**
  * Storefront Setup Phase 2: Helix Configuration
  *
- * Handles fstab.yaml generation, block collection installation,
- * feature pack installation, and GitHub App verification.
+ * Handles fstab.yaml generation, block collection installation, and the
+ * smart-404 / Quick Edit script vendoring. The existing-repo GitHub App
+ * check moved to Phase 1 on 2026-08-06 — see `executePhaseExistingRepo`.
  *
  * Phase 1 (GitHub repo) lives in storefrontSetupPhase1.ts.
  * Phase 3 (code sync + config service) lives in storefrontSetupPhase3.ts.
@@ -11,17 +12,26 @@
  * @module features/eds/handlers/storefrontSetupPhase2
  */
 
-import { installBlockCollections, type BlockLibraryEntry } from '../services/blockCollectionHelpers';
+import {
+    installBlockCollections,
+    type BlockLibraryEntry,
+} from '../services/blockCollectionHelpers';
 import { generateFstabContent } from '../services/fstabGenerator';
 import { GitHubFileOperations } from '../services/githubFileOperations';
-import { generateInspectorTreeEntries, installInspectorTagging } from '../services/inspectorHelpers';
+import {
+    generateInspectorTreeEntries,
+    installInspectorTagging,
+} from '../services/inspectorHelpers';
 import { installSmart404Handler } from '../services/pdp404HandlerPublisher';
 import { installQuickEdit } from '../services/quickEditPublisher';
 import { type GitHubTreeInput } from '../services/types';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
-import { checkGitHubAppForExistingRepo } from './storefrontSetupPhaseHelpers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
-import { getBlockLibraryName, getBlockLibrarySource, isBlockLibraryAvailableForPackage } from '@/features/project-creation/services/blockLibraryLoader';
+import {
+    getBlockLibraryName,
+    getBlockLibrarySource,
+    isBlockLibraryAvailableForPackage,
+} from '@/features/project-creation/services/blockLibraryLoader';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -42,12 +52,6 @@ export interface BlockLibraryOptions {
     selectedBlockLibraries?: string[];
     customBlockLibraries?: CustomBlockLibrary[];
     packageId?: string;
-    /**
-     * Whether the user selected an existing repo (vs. creating a new one).
-     * Set by the orchestrator (`executeStorefrontSetupPhases`) from `edsConfig.repoMode`.
-     * Any value provided by external callers is overwritten by the orchestrator.
-     */
-    useExistingRepo?: boolean;
 }
 
 // ==========================================================
@@ -55,7 +59,7 @@ export interface BlockLibraryOptions {
 // ==========================================================
 
 /**
- * Execute Phase 2: Helix configuration (fstab.yaml, block collection, GitHub App check)
+ * Execute Phase 2: Helix configuration (fstab.yaml, block collection)
  */
 export async function executePhaseHelixConfig(
     context: HandlerContext,
@@ -68,23 +72,32 @@ export async function executePhaseHelixConfig(
     const logger = context.logger;
     const { githubFileOps } = services;
     const effectiveBlockLibraries = options?.selectedBlockLibraries ?? [];
-    const useExistingRepo = options?.useExistingRepo ?? false;
 
     if (signal.aborted) {
         throw new Error('Operation cancelled');
     }
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'storefront-code', message: 'Configuring Edge Delivery Services...', progress: 20,
+        phase: 'storefront-code',
+        message: 'Configuring Edge Delivery Services...',
+        progress: 20,
     });
 
     await pushFstabToGitHub(githubFileOps, repoInfo, edsConfig, context, logger);
 
     const allLibraries = collectAllBlockLibraries(
-        effectiveBlockLibraries, options?.customBlockLibraries, options?.packageId ?? '', logger,
+        effectiveBlockLibraries,
+        options?.customBlockLibraries,
+        options?.packageId ?? '',
+        logger,
     );
     const blockCollectionIds = await installBlockCollectionsWithTracking(
-        githubFileOps, repoInfo, allLibraries, context, options?.packageId, logger,
+        githubFileOps,
+        repoInfo,
+        allLibraries,
+        context,
+        options?.packageId,
+        logger,
     );
 
     // Install the smart 404 PDP handler into the storefront's
@@ -107,20 +120,17 @@ export async function executePhaseHelixConfig(
     // storefront's scripts/scripts.js + tools/quick-edit/quick-edit.js.
     // Brand-agnostic, idempotent, non-fatal — inert under Universal Editor,
     // active under Experience Workspace. See installQuickEdit.
-    await installQuickEdit(
-        githubFileOps,
-        repoInfo.repoOwner,
-        repoInfo.repoName,
-        logger,
-    );
+    await installQuickEdit(githubFileOps, repoInfo.repoOwner, repoInfo.repoName, logger);
 
-    if (useExistingRepo) {
-        const earlyReturn = await checkGitHubAppForExistingRepo(context, services, repoInfo);
-        if (earlyReturn) return { blockCollectionIds, earlyReturn };
-    }
+    // The existing-repo AEM Code Sync gate used to run here (progress 28). It moved
+    // to Phase 1 on 2026-08-06, ahead of `resetToTemplate` and every write above —
+    // checking after the repo has been rewritten told the user too late to matter.
+    // Phase 3's own check remains the mid-flight backstop for both repo modes.
 
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'storefront-code', message: 'Helix configured', progress: 35,
+        phase: 'storefront-code',
+        message: 'Helix configured',
+        progress: 35,
     });
 
     return { blockCollectionIds };
@@ -135,13 +145,26 @@ async function pushFstabToGitHub(
     logger: Logger,
 ): Promise<void> {
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'storefront-code', message: 'Pushing fstab.yaml configuration...', progress: 25,
+        phase: 'storefront-code',
+        message: 'Pushing fstab.yaml configuration...',
+        progress: 25,
     });
-    const fstabContent = generateFstabContent({ daLiveOrg: edsConfig.daLiveOrg, daLiveSite: edsConfig.daLiveSite });
-    const existingFstab = await githubFileOps.getFileContent(repoInfo.repoOwner, repoInfo.repoName, 'fstab.yaml');
+    const fstabContent = generateFstabContent({
+        daLiveOrg: edsConfig.daLiveOrg,
+        daLiveSite: edsConfig.daLiveSite,
+    });
+    const existingFstab = await githubFileOps.getFileContent(
+        repoInfo.repoOwner,
+        repoInfo.repoName,
+        'fstab.yaml',
+    );
     await githubFileOps.createOrUpdateFile(
-        repoInfo.repoOwner, repoInfo.repoName, 'fstab.yaml', fstabContent,
-        'chore: configure fstab.yaml for DA.live content source', existingFstab?.sha,
+        repoInfo.repoOwner,
+        repoInfo.repoName,
+        'fstab.yaml',
+        fstabContent,
+        'chore: configure fstab.yaml for DA.live content source',
+        existingFstab?.sha,
     );
     logger.info('[Storefront Setup] fstab.yaml pushed to GitHub');
 }
@@ -157,22 +180,32 @@ function collectAllBlockLibraries(
     if (selectedBlockLibraries && selectedBlockLibraries.length > 0) {
         for (const libraryId of selectedBlockLibraries) {
             if (!isBlockLibraryAvailableForPackage(libraryId, packageId)) {
-                logger.info(`[Storefront Setup] Skipping block library '${libraryId}' — not available for package '${packageId}' (onlyForPackages)`);
+                logger.info(
+                    `[Storefront Setup] Skipping block library '${libraryId}' — not available for package '${packageId}' (onlyForPackages)`,
+                );
                 continue;
             }
             const source = getBlockLibrarySource(libraryId);
             if (source) {
                 allLibraries.push({ source, name: getBlockLibraryName(libraryId) || libraryId });
             } else {
-                logger.warn(`[Storefront Setup] Block library '${libraryId}' selected but no source configured`);
+                logger.warn(
+                    `[Storefront Setup] Block library '${libraryId}' selected but no source configured`,
+                );
             }
         }
     }
     if (customBlockLibraries && customBlockLibraries.length > 0) {
         for (const lib of customBlockLibraries) {
-            if (!lib.source.owner || !lib.source.repo ||
-                !GITHUB_IDENTIFIER.test(lib.source.owner) || !GITHUB_IDENTIFIER.test(lib.source.repo)) {
-                logger.warn(`[Storefront Setup] Skipping custom block library '${lib.name}' — invalid source owner or repo`);
+            if (
+                !lib.source.owner ||
+                !lib.source.repo ||
+                !GITHUB_IDENTIFIER.test(lib.source.owner) ||
+                !GITHUB_IDENTIFIER.test(lib.source.repo)
+            ) {
+                logger.warn(
+                    `[Storefront Setup] Skipping custom block library '${lib.name}' — invalid source owner or repo`,
+                );
                 continue;
             }
             allLibraries.push({ source: lib.source, name: lib.name });
@@ -195,12 +228,18 @@ async function installBlockCollectionsWithTracking(
     logger: Logger,
 ): Promise<string[] | undefined> {
     await context.sendMessage('storefront-setup-progress', {
-        phase: 'storefront-code', message: 'Preparing inspector tagging...', progress: 27,
+        phase: 'storefront-code',
+        message: 'Preparing inspector tagging...',
+        progress: 27,
     });
     let inspectorEntries: GitHubTreeInput[];
     try {
         inspectorEntries = await generateInspectorTreeEntries(
-            githubFileOps, repoInfo.repoOwner, repoInfo.repoName, packageId, logger,
+            githubFileOps,
+            repoInfo.repoOwner,
+            repoInfo.repoName,
+            packageId,
+            logger,
         );
     } catch (error) {
         logger.warn(`[Storefront Setup] Inspector tagging skipped: ${(error as Error).message}`);
@@ -214,22 +253,33 @@ async function installBlockCollectionsWithTracking(
             progress: 28,
         });
         const result = await installBlockCollections(
-            githubFileOps, repoInfo.repoOwner, repoInfo.repoName, allLibraries, logger, inspectorEntries,
+            githubFileOps,
+            repoInfo.repoOwner,
+            repoInfo.repoName,
+            allLibraries,
+            logger,
+            inspectorEntries,
         );
         if (result.success) {
-            const blockMsg = result.blocksCount > 0
-                ? `Installed ${result.blocksCount} unique blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'} (+ inspector tagging)`
-                : `All blocks already present in destination — skipped copy, applied inspector tagging`;
+            const blockMsg =
+                result.blocksCount > 0
+                    ? `Installed ${result.blocksCount} unique blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'} (+ inspector tagging)`
+                    : `All blocks already present in destination — skipped copy, applied inspector tagging`;
             logger.info(`[Storefront Setup] ${blockMsg}`);
             if (result.libraryVersions && result.libraryVersions.length > 0) {
                 const currentProject = await context.stateManager.getCurrentProject();
                 if (currentProject) {
-                    currentProject.installedBlockLibraries = result.libraryVersions.map(lv => ({
-                        name: lv.name, source: lv.source, commitSha: lv.commitSha,
-                        blockIds: lv.blockIds, installedAt: new Date().toISOString(),
+                    currentProject.installedBlockLibraries = result.libraryVersions.map((lv) => ({
+                        name: lv.name,
+                        source: lv.source,
+                        commitSha: lv.commitSha,
+                        blockIds: lv.blockIds,
+                        installedAt: new Date().toISOString(),
                     }));
                     await context.stateManager.saveProject(currentProject);
-                    logger.info(`[Storefront Setup] Saved install tracking for ${result.libraryVersions.length} block libraries`);
+                    logger.info(
+                        `[Storefront Setup] Saved install tracking for ${result.libraryVersions.length} block libraries`,
+                    );
                 }
             }
             return result.blockIds;
@@ -252,11 +302,17 @@ async function applyStandaloneInspectorTagging(
     logger: Logger,
 ): Promise<void> {
     const inspectorResult = await installInspectorTagging(
-        githubFileOps, repoInfo.repoOwner, repoInfo.repoName, packageId, logger,
+        githubFileOps,
+        repoInfo.repoOwner,
+        repoInfo.repoName,
+        packageId,
+        logger,
     );
     if (inspectorResult.success) {
         await context.sendMessage('storefront-setup-progress', {
-            phase: 'storefront-code', message: 'Inspector tagging installed', progress: 28,
+            phase: 'storefront-code',
+            message: 'Inspector tagging installed',
+            progress: 28,
         });
         logger.info('[Storefront Setup] Inspector tagging installed (standalone)');
     } else {
