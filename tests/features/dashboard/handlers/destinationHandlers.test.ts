@@ -11,6 +11,25 @@
  * This handler is the missing writer.
  */
 
+const mockShowWarningMessage = jest.fn();
+jest.mock('vscode', () => ({ window: { showWarningMessage: (...a: unknown[]) => mockShowWarningMessage(...a) } }), { virtual: true });
+
+const mockMove = jest.fn();
+jest.mock('@/features/app-builder/services/appBuilderComponentMigration', () => ({
+    moveAppBuilderComponentsToDestination: (...a: unknown[]) => mockMove(...a),
+}));
+
+const mockRunGuards = jest.fn();
+const mockBuildDefaultRunnerDeps = jest.fn(() => ({ catalog: [] }));
+const mockBuildRunnerDepsContext = jest.fn(async () => ({}));
+jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
+    runGuards: (...a: unknown[]) => mockRunGuards(...a),
+}));
+jest.mock('@/features/app-builder/services/appBuilderComponentRunnerDeps', () => ({
+    buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...a),
+    buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...a),
+}));
+
 import { handleSetProjectDestination } from '@/features/dashboard/handlers/destinationHandlers';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -42,6 +61,13 @@ function makeContext(adobe: Record<string, unknown> | undefined = EXISTING_ADOBE
     } as unknown as HandlerContext;
     return { context, project, saveProject };
 }
+
+beforeEach(() => {
+    jest.clearAllMocks();
+    mockRunGuards.mockResolvedValue(undefined);
+    mockMove.mockResolvedValue({ success: true, moved: [], failed: [] });
+    mockShowWarningMessage.mockResolvedValue('Move integrations');
+});
 
 describe('handleSetProjectDestination', () => {
     it('persists the new project and workspace onto project.adobe', async () => {
@@ -107,5 +133,76 @@ describe('handleSetProjectDestination', () => {
 
         expect(result.success).toBe(false);
         expect(saveProject).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * A project with deployments cannot just re-point: its integrations live in the
+ * OLD Console project's Runtime namespace. Changing the destination moves them
+ * (user decision 2026-08-07).
+ */
+describe('handleSetProjectDestination — moving existing integrations', () => {
+    function withComponents() {
+        const project = {
+            name: 'demo',
+            path: '/p/demo',
+            adobe: { ...EXISTING_ADOBE },
+            appBuilderComponents: { 'erp-sync': { kind: 'integration', status: 'deployed' } },
+        };
+        const saveProject = jest.fn().mockResolvedValue(undefined);
+        const context = {
+            logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+            stateManager: {
+                getCurrentProject: jest.fn().mockResolvedValue(project),
+                saveProject,
+            },
+        } as unknown as HandlerContext;
+        return { context, saveProject };
+    }
+
+    it('moves the integrations, handing the migration the PREVIOUS destination', async () => {
+        const { context } = withComponents();
+
+        await handleSetProjectDestination(context, NEW_DESTINATION);
+
+        expect(mockMove).toHaveBeenCalled();
+        expect(mockMove.mock.calls[0][1]).toMatchObject({
+            projectId: 'old-project-id',
+            workspace: 'old-workspace-id',
+        });
+    });
+
+    it('confirms first — declining writes nothing and moves nothing', async () => {
+        mockShowWarningMessage.mockResolvedValue(undefined);
+        const { context, saveProject } = withComponents();
+
+        const result = await handleSetProjectDestination(context, NEW_DESTINATION);
+
+        expect(saveProject).not.toHaveBeenCalled();
+        expect(mockMove).not.toHaveBeenCalled();
+        expect(result.success).toBe(false);
+    });
+
+    it('does not confirm when there is nothing deployed to move', async () => {
+        const { context } = makeContext();
+
+        await handleSetProjectDestination(context, NEW_DESTINATION);
+
+        expect(mockShowWarningMessage).not.toHaveBeenCalled();
+        expect(mockMove).not.toHaveBeenCalled();
+    });
+
+    it('reports failure when a component did not move', async () => {
+        mockMove.mockResolvedValue({
+            success: false,
+            moved: [],
+            failed: [{ id: 'erp-sync', error: 'boom' }],
+        });
+        const { context } = withComponents();
+
+        const result = await handleSetProjectDestination(context, NEW_DESTINATION);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/erp-sync/);
     });
 });

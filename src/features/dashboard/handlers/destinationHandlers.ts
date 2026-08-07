@@ -15,6 +15,9 @@
  * @module features/dashboard/handlers/destinationHandlers
  */
 
+import * as vscode from 'vscode';
+import { moveAppBuilderComponentsToDestination } from '@/features/app-builder/services/appBuilderComponentMigration';
+import { buildDefaultRunnerDeps, buildRunnerDepsContext } from '@/features/app-builder/services/appBuilderComponentRunnerDeps';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type MessageHandler } from '@/types/handlers';
 
@@ -62,8 +65,16 @@ export const handleSetProjectDestination: MessageHandler<SetProjectDestinationPa
         };
     }
 
+    // Integrations live in the OLD Console project's Runtime namespace, so a
+    // change on a project that has any is a MOVE, not a re-point. Confirm BEFORE
+    // persisting: a decline must leave the project exactly as it was.
+    const movingIds = Object.keys(project.appBuilderComponents ?? {});
+    if (movingIds.length > 0 && !(await confirmMove(movingIds.length, nextProject, nextWorkspace))) {
+        return { success: false, error: 'Destination change cancelled.' };
+    }
+
     // Captured BEFORE the overwrite: once `project.adobe` holds the new ref the
-    // old target is unrecoverable, and step-02 undeploys from it.
+    // old target is unrecoverable, and the migration undeploys from it.
     const previous = project.adobe ? { ...project.adobe } : undefined;
 
     project.adobe = {
@@ -85,8 +96,59 @@ export const handleSetProjectDestination: MessageHandler<SetProjectDestinationPa
             ` · ${project.adobe.workspaceTitle ?? project.adobe.workspaceName}`,
     );
 
-    return { success: true, data: { destination: project.adobe, previous } };
+    if (movingIds.length === 0) {
+        return { success: true, data: { destination: project.adobe, previous } };
+    }
+
+    // `project.adobe` already holds the NEW destination, so every deploy the
+    // migration runs targets it; `previous` is what addresses the old one.
+    const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
+    const move = await moveAppBuilderComponentsToDestination(project, previous, deps);
+    if (!move.success) {
+        // The project IS re-pointed — the components that failed are simply still
+        // serving from the old destination. Name them rather than reporting a
+        // generic failure over a half-moved project.
+        return {
+            success: false,
+            error:
+                `Moved ${move.moved.length}. Still at the old destination: `
+                + move.failed.map((f) => `${f.id} (${f.error})`).join(', '),
+            data: { destination: project.adobe, previous, move },
+        };
+    }
+
+    return { success: true, data: { destination: project.adobe, previous, move } };
 };
+
+/** The confirm button's label — compared by identity, so it lives in one place. */
+const MOVE_CONFIRM = 'Move integrations';
+
+/**
+ * Confirm a move before anything is written.
+ *
+ * Extracted to keep the handler under the complexity limit, and because the copy
+ * is the only warning a user gets that this tears down real Runtime entities.
+ *
+ * @param count - how many components will move
+ * @param nextProject - the destination Adobe project
+ * @param nextWorkspace - the destination workspace
+ * @returns true when the user confirmed
+ */
+async function confirmMove(
+    count: number,
+    nextProject: DestinationRef,
+    nextWorkspace: DestinationRef,
+): Promise<boolean> {
+    const target = `${nextProject.title ?? nextProject.name} · ${nextWorkspace.title ?? nextWorkspace.name}`;
+    const choice = await vscode.window.showWarningMessage(
+        `Move ${count} integration${count === 1 ? '' : 's'} to ${target}?`
+            + ' Each one is deployed to the new destination and then torn down at the old'
+            + ' one. Tearing down removes its Adobe I/O Runtime entities and cannot be undone.',
+        { modal: true },
+        MOVE_CONFIRM,
+    );
+    return choice === MOVE_CONFIRM;
+}
 
 export const destinationHandlers = defineHandlers({
     setProjectDestination: handleSetProjectDestination,
