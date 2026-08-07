@@ -12,6 +12,7 @@
 
 import type { ConfigServiceProbeResult } from '@/features/eds/services/configServiceProbe';
 import type { CredentialProbeResult } from '@/features/eds/services/githubCredentialProbe';
+import type { StorefrontProbeResult } from '@/features/eds/services/storefrontProbe';
 
 // Diagnostic Type Definitions
 export interface SystemInfo {
@@ -133,6 +134,11 @@ export interface DiagnosticsReport {
     githubCredential: CredentialProbeResult;
     /** Absent when no EDS project is open — there is no site config to probe. */
     configService?: ConfigServiceProbeResult;
+    /**
+     * What the storefront is actually SERVING, as opposed to what the creating run
+     * attempted. Absent when no EDS project is open.
+     */
+    storefront?: StorefrontProbeResult;
 }
 
 /** Describe GitHub's write-access answer, or why we don't have one. */
@@ -178,6 +184,37 @@ function credentialLines(cred: CredentialProbeResult): string[] {
  * Prints the invocation ID whenever Adobe returned one — it is the only handle
  * Adobe support can trace a specific refusal by, and it was being discarded.
  */
+/**
+ * Render the storefront delivery legs.
+ *
+ * Says what is SERVING, which the rest of the report cannot: every other EDS
+ * signal here describes the extension's own last run.
+ */
+function storefrontLines(probe: StorefrontProbeResult): string[] {
+    const lines = ['', 'Storefront delivery (what is serving now):', `  URL: ${probe.baseUrl}`];
+    const mark = (leg?: { installed: boolean; status?: number; error?: string }): string => {
+        if (!leg) return 'not checked';
+        if (leg.error) return `unreachable (${leg.error})`;
+        return `${leg.installed ? 'installed' : 'MISSING'} (HTTP ${leg.status})`;
+    };
+
+    if (!probe.site.reachable) {
+        lines.push(`  Site: unreachable${probe.site.status ? ` (HTTP ${probe.site.status})` : ''}`);
+    } else {
+        lines.push('  Site: reachable');
+        lines.push(`  Smart 404 handler (delayed.js): ${mark(probe.smart404Snippet)}`);
+        lines.push(`  Eager redirect (404.html): ${mark(probe.eagerRedirect)}`);
+        if (probe.pdp) {
+            lines.push(
+                `  PDP ${probe.pdp.path}: HTTP ${probe.pdp.status}`
+                    + ` (${probe.pdp.prerendered ? 'prerendered' : 'not prerendered'})`,
+            );
+        }
+    }
+    lines.push(`  \u2192 ${probe.verdict}`);
+    return lines;
+}
+
 function configServiceLines(probe: ConfigServiceProbeResult): string[] {
     const lines = ['', 'Configuration Service (site config):'];
 
@@ -277,6 +314,7 @@ export function buildSummaryLines(report: DiagnosticsReport): string[] {
 
     lines.push(...credentialLines(report.githubCredential));
     if (report.configService) lines.push(...configServiceLines(report.configService));
+    if (report.storefront) lines.push(...storefrontLines(report.storefront));
     lines.push('', 'Use VS Code\'s "Set Log Level..." command to see debug/trace details');
     return lines;
 }

@@ -97,16 +97,35 @@ export async function checkAdobeCLI(): Promise<AdobeCLIInfo> {
     return adobe;
 }
 
-export async function checkAuthenticationStatus(adobe: AdobeCLIInfo): Promise<void> {
-    const authCheck = await checkCommand(
-        'aio config get ims.contexts.aio-cli-plugin-auth',
-    );
-    adobe.authConfigured =
-        authCheck.installed && !!authCheck.output && authCheck.output.length > 0;
+/**
+ * IMS contexts that may hold the CLI's credentials, newest layout first.
+ *
+ * aio 11.x stores auth under `cli`; `aio-cli-plugin-auth` is the older location
+ * and stays in the list so an unmigrated install still reports correctly.
+ */
+const AUTH_CONTEXT_PATHS = ['ims.contexts.cli', 'ims.contexts.aio-cli-plugin-auth'] as const;
 
-    if (adobe.authConfigured && authCheck.output) {
-        parseAuthConfig(adobe, authCheck.output);
+/**
+ * Determine whether the Adobe CLI holds credentials.
+ *
+ * LIVE 2026-08-07: this reported `Authenticated: No` for a user whose token was
+ * valid for another day and whose `aio console org list` returned their org. It
+ * read only `aio-cli-plugin-auth`, which aio 11.x leaves empty — the token was
+ * under `cli`. A diagnostic asserting the opposite of the truth is worse than a
+ * silent one; it sent a verification run chasing a sign-in that had happened.
+ *
+ * @param adobe - the report section to populate
+ */
+export async function checkAuthenticationStatus(adobe: AdobeCLIInfo): Promise<void> {
+    for (const contextPath of AUTH_CONTEXT_PATHS) {
+        const authCheck = await checkCommand(`aio config get ${contextPath}`);
+        if (authCheck.installed && authCheck.output && authCheck.output.length > 0) {
+            adobe.authConfigured = true;
+            parseAuthConfig(adobe, authCheck.output);
+            return;
+        }
     }
+    adobe.authConfigured = false;
 }
 
 export function parseAuthConfig(adobe: AdobeCLIInfo, output: string): void {

@@ -47,6 +47,10 @@ import {
     type CredentialProbeResult,
 } from '@/features/eds/services/githubCredentialProbe';
 import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+import {
+    probeStorefrontDelivery,
+    type StorefrontProbeResult,
+} from '@/features/eds/services/storefrontProbe';
 import { getEdsDaLiveTarget, getEdsGithubRepo } from '@/types/typeGuards';
 
 export { browserProbeCommand, buildSummaryLines } from './diagnosticsReport';
@@ -54,6 +58,15 @@ export type { DiagnosticsReport } from './diagnosticsReport';
 
 /** Actions offered on the completion notification. Copy is first: for a
  *  colleague reporting a problem it is the primary one. */
+/**
+ * The PDP path to probe.
+ *
+ * `/products/default` is the BYOM overlay's own template target, so every
+ * storefront that set the overlay up publishes it. A SKU-specific URL would 404
+ * whenever that SKU simply has no page, which reads like a broken storefront.
+ */
+const PDP_PROBE_PATH = '/products/default';
+
 export const DIAGNOSTICS_ACTIONS = ['Copy Report', 'Show Logs', 'Export Log'] as const;
 
 /**
@@ -142,6 +155,7 @@ export class DiagnosticsCommand {
             this.logger.debug('Probing GitHub and AEM credential access...');
             report.githubCredential = await this.checkGitHubCredential();
             report.configService = await this.checkConfigService();
+            report.storefront = await this.checkStorefront();
 
             // Log the full report
             this.logger.debug('DIAGNOSTIC REPORT', report);
@@ -215,6 +229,25 @@ export class DiagnosticsCommand {
      * Returns undefined without an EDS project: there is no site to address,
      * and an invented one would produce a 404 that reads like a real finding.
      */
+/**
+     * Probe what the storefront is actually SERVING.
+     *
+     * Every other EDS signal in this report describes the extension's own last
+     * run. This one asks the live site, which is the only way to answer "is the
+     * PDP fallback still installed?" without a reset.
+     *
+     * Returns undefined without an EDS project — same reason as the config-service
+     * probe: an invented site 404s in a way that reads like a real finding.
+     */
+    private async checkStorefront(): Promise<StorefrontProbeResult | undefined> {
+        const project = await ServiceLocator.getStateManager()?.getCurrentProject();
+        const githubRepo = getEdsGithubRepo(project);
+        if (!githubRepo) return undefined;
+
+        const [owner, repo] = githubRepo.split('/');
+        return probeStorefrontDelivery(owner, repo, this.logger, PDP_PROBE_PATH);
+    }
+
     private async checkConfigService(): Promise<ConfigServiceProbeResult | undefined> {
         const project = await ServiceLocator.getStateManager()?.getCurrentProject();
         const target = getEdsDaLiveTarget(project);
