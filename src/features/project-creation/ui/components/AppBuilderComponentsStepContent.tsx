@@ -6,7 +6,7 @@
  * locked+checked ("Included with your storefront"); optional rows toggle.
  * A custom-URL door lets the user add an App Builder component from a public GitHub repo,
  * reusing the shared parseGitHubUrl validator/canonicalizer (the same front
- * door the dashboard's AddIntegrationModal picker uses).
+ * door the dashboard's Add Integration flow uses).
  *
  * Modeled on BlockLibrariesStepContent: pure presentational, props are data +
  * callbacks only (no internal fetching).

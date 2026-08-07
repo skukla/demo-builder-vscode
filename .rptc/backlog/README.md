@@ -174,6 +174,17 @@ no canonical patches, then reports `Complete`. Replaces one default-off checkbox
 auto-setup when empty, **refuse** when populated-but-not-a-storefront (the repo that prompted this had
 53 blocks and no `scripts/scripts.js`), prompt only when there is something to lose.
 
+#### Switching a project's Adobe destination moves its integrations ([`2026-08-06-switch-adobe-destination-moves-integrations.md`](2026-08-06-switch-adobe-destination-moves-integrations.md))
+
+Found in a live run: creating a new Console project from inside the Add Integration modal really
+creates it in Adobe, but the choice never leaves the webview. `AddIntegrationFlowAdapter.updateState`
+writes to local `overrides`; the add payload carries no destination; the deploy targets the PERSISTED
+`project.adobe`. So the modal reads "Team Meeting", the header reads "Kukla Mesh", and the integration
+deploys to the old namespace with no error. Persisting alone is not enough — existing deployments (the
+mesh included) would be stranded in the old Console project, so a switch has to MOVE them all, likely
+delete-and-recreate. Until it ships, the Change affordance still shows a destination the add will not
+use.
+
 #### PDP routing silently broken two ways ([`2026-07-29-code-patches-not-rehydrated-in-edit-mode.md`](2026-07-29-code-patches-not-rehydrated-in-edit-mode.md) · [`2026-07-29-pdp404-stale-sha-conflict.md`](2026-07-29-pdp404-stale-sha-conflict.md))
 
 Both found in a live Extension Host run, both present in `v1.0.0-beta.121`, neither a hotfix
