@@ -262,6 +262,27 @@ export const handleAddAppBuilderComponent: MessageHandler<{
         };
     }
 
+    // An id already in the keyed map means this add would REPLACE that component,
+    // not sit beside it: the id is simultaneously the `appBuilderComponents` slot,
+    // the clone folder, and — through `deriveOwPackage` — the OpenWhisk package, so
+    // the second deploy overwrites the first on Runtime too. Neither route into
+    // here mints a fresh id (`resolveAddEntry` returns a catalog entry unchanged,
+    // and a custom source with no instance falls back to `${owner}-${repo}`), so
+    // this is the one place that can catch it. Blank instances never reach it —
+    // they carry a collision-checked id derived from the user's name.
+    //
+    // `status: 'error'` is exempt: the runner persists that when a clone succeeded
+    // but the deploy failed, keeping the folder so the user can retry by adding
+    // again. Refusing there would block the documented recovery path.
+    const existing = project.appBuilderComponents?.[entry.id];
+    if (existing && existing.status !== 'error') {
+        return {
+            success: false,
+            error: `"${entry.name ?? entry.id}" is already added to this project.`,
+            code: ErrorCode.CONFIG_INVALID,
+        };
+    }
+
     // The guards run INSIDE the progress: runGuards does the auth check, whose
     // `aio config get` spawn costs seconds on a cold cache. Running it first left
     // the user clicking Add and staring at nothing until it returned.

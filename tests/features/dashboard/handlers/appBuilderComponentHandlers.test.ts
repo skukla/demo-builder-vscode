@@ -38,6 +38,7 @@ import {
     mockTestDeveloperPermissions,
     resetHandlerMocks,
     setupMocks,
+    mockBuildCustomIntegrationEntry,
 } from './appBuilderComponentHandlers.testUtils';
 
 beforeEach(() => {
@@ -418,3 +419,85 @@ describe('handleRenameAppBuilderComponent (display name only — shell instancin
     });
 });
 
+
+/**
+ * Duplicate-id adds (2026-08-06).
+ *
+ * `resolveAddEntry` returns a catalog entry UNCHANGED for an `{ id }` add, and
+ * falls back to `${owner}-${repo}` for a custom source with no instance. Neither
+ * mints a fresh id, so a second add of the same thing reuses it — and the id is
+ * simultaneously the keyed slot in `appBuilderComponents`, the clone folder, and
+ * (via `deriveOwPackage`) the OpenWhisk package. Letting it through silently
+ * replaces the first integration with the second, in the state file AND on
+ * Runtime, with no error anywhere.
+ *
+ * Blank instances are exempt: they mint a collision-checked id from the user's
+ * name, which is what makes several of them legitimate.
+ */
+describe('handleAddAppBuilderComponent — duplicate ids', () => {
+    it('refuses a catalog entry already present, without calling the runner', async () => {
+        const { mockContext } = setupMocks({
+            appBuilderComponents: {
+                'erp-sync': { kind: 'integration', status: 'deployed' },
+            },
+        } as never);
+        mockTestDeveloperPermissions(true);
+
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/already/i);
+        expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
+    });
+
+    it('refuses a custom source whose derived id is already present', async () => {
+        mockBuildCustomIntegrationEntry.mockReturnValue({
+            id: 'acme-erp-sync',
+            name: 'acme-erp-sync',
+            kind: 'integration',
+            source: { owner: 'acme', repo: 'erp-sync' },
+        });
+        const { mockContext } = setupMocks({
+            appBuilderComponents: {
+                'acme-erp-sync': { kind: 'integration', status: 'deployed' },
+            },
+        } as never);
+        mockTestDeveloperPermissions(true);
+
+        const result = await handleAddAppBuilderComponent(mockContext, {
+            source: { owner: 'acme', repo: 'erp-sync' },
+        });
+
+        expect(result.success).toBe(false);
+        expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
+    });
+
+    it('ALLOWS re-adding an entry left in error — that is the documented retry', async () => {
+        // The runner persists status:'error' when the clone succeeded but the
+        // deploy failed, and keeps the folder. Adding again is how the user
+        // recovers, so the duplicate guard must not stand in the way.
+        const { mockContext } = setupMocks({
+            appBuilderComponents: {
+                'erp-sync': { kind: 'integration', status: 'error' },
+            },
+        } as never);
+        mockTestDeveloperPermissions(true);
+
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(result.success).toBe(true);
+        expect(mockAddAppBuilderComponent).toHaveBeenCalled();
+    });
+
+    it('still allows an add whose id is NOT present', async () => {
+        const { mockContext } = setupMocks({
+            appBuilderComponents: { 'other-thing': { kind: 'integration' } },
+        } as never);
+        mockTestDeveloperPermissions(true);
+
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(result.success).toBe(true);
+        expect(mockAddAppBuilderComponent).toHaveBeenCalled();
+    });
+});
