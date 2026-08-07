@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.126] - 2026-08-07
+
+Released from `hotfix/beta.126-storefront-diagnostics`, branched off `.125` — none of
+the work on `develop` shipped in it. Diagnostics only: nothing about project or
+storefront setup changes.
+
+### Added
+
+- **Diagnostics now reports what your storefront is actually SERVING.** Until now the
+  only evidence was the setup log from the run that CREATED the site, which records
+  what was attempted, not what is live today. The report gains a **Storefront
+  delivery** section: whether the site answers, whether the smart-404 handler and the
+  eager PDP redirect are still installed, and whether a product page resolves. Every
+  check is a read — it cannot alter your storefront. Answering "are PDPs set up
+  correctly?" no longer needs a reset to find out.
+
+### Fixed
+
+- **Diagnostics said you were signed out when you were signed in.** It read the Adobe
+  credential from a location the current CLI no longer uses, so a valid session
+  reported `Authenticated: No`. It now checks both locations.
+
 ## [1.0.0-beta.125] - 2026-08-06
 
 ### Fixed
