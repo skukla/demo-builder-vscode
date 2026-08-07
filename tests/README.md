@@ -267,6 +267,31 @@ describe('Spinner', () => {
 });
 ```
 
+## Control the test, not just the code
+
+**A test that passes against the disabled feature tests nothing.** After writing a
+test for new behaviour, neuter the behaviour — return early, flip the condition,
+swap the order — and confirm the test fails. If it still passes, it is not covering
+what its name claims.
+
+**Assert the observable ACT, not just a result flag.** Flags like `success: false`
+or an empty array are frequently satisfied by the code doing nothing at all. A
+rollback test asserting `rolledBack === true` and `moved === []` passed against a
+rollback that had been deliberately switched off; it only discriminated once it
+asserted the restoring deploy had actually been issued. Where order is the
+guarantee, assert the SEQUENCE — an order-blind test passes against the
+data-losing order.
+
+Two real examples of what this catches:
+
+- `storefrontSetupHandlers-githubAppCheck.test.ts` defines the values it asserts on
+  inside the test (`const shouldCheckGitHubApp = useExistingRepo;`), so it exercises
+  no production code. It has been present since 2026-03-24 and passed unchanged
+  through a change that relocated the behaviour it names.
+- Neutering a guard is how you learn the guard's tests are real. Every guard added
+  on 2026-08-06/07 was control-tested this way, and two of them turned out to need
+  stronger assertions.
+
 ## Mock Derivation Guidelines
 
 ### Prefer injection seams over leaf-module mocks

@@ -152,6 +152,19 @@ let the user choose. Do not file a backlog item for a two-line fix.
 
 The judgement call is whether two things are the same job — not whether to bother.
 
+## Verifying
+
+**A check whose exit code passes through `head`/`tail`/`wc`/`grep` is not a check.**
+Those exit 0 on empty input, so `|| echo "none"` prints "none" whether the command
+found nothing or never ran at all. Capture the count into a variable and assert on
+it instead.
+
+**Pair every "nothing found" verification with a positive control** — the same
+command against something you know is present. Two wrong all-clears on 2026-08-07
+were both caught by the control and neither by reading the output: a zsh glob error
+made `grep` never run while `0 remaining` printed ten times, and a `grep -c … | head`
+reported three skills as lacking coverage they might well have had.
+
 ## Gotchas (verified, load-bearing)
 
 - **Adobe Spectrum Flex constrains width** (450px): use a standard HTML div with flex styles for critical wizard layouts.

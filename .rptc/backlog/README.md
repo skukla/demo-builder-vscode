@@ -9,6 +9,10 @@ This directory is the **single source of truth** for "what's next." If it belong
 - **Shape**: a single file `<topic-slug>.md` for an idea, OR a directory `<topic-slug>/` for an already-structured RPTC plan that's paused (overview + step files).
 - **Filename**: `<topic-slug>` or `YYYY-MM-DD-<topic>` — date prefix when the deferral date matters (e.g., the item was scoped during an audit and you want the snapshot date visible).
 - **Required sections** (for single-file entries): Provenance · Goal/Scope · Execution plan · Constraints · Kickoff prompt.
+- **Before filing, grep `.rptc/plans/` as well as this directory.** An active plan for
+  the same work is the more likely home, and a backlog duplicate splits the record. On
+  2026-08-07 an item was filed here for work `.rptc/plans/integrations-destination-control/`
+  had covered since 2026-08-03, including the very question the session was answering.
 - **Promotion**: when an item becomes active, move it to `.rptc/plans/<topic-slug>/`.
 
 ## Lifecycle
