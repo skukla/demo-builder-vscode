@@ -35,9 +35,36 @@ Placement follows scope: the control belongs on the **page**, not the card.
    exists and renders only the sign-in → project → workspace stages.
 4. The flyout's `Destination` row STAYS read-only. It is information about where this
    integration went, not a control.
-5. Changing the destination does NOT migrate anything: already-deployed integrations remain
-   on the old workspace, and the change only affects future deploys. Say so in the modal;
-   treat migration as separate work.
+5. ~~Changing the destination does NOT migrate anything: already-deployed integrations remain
+   on the old workspace, and the change only affects future deploys.~~
+   **OVERTURNED 2026-08-07 (user decision).** Changing or creating a destination MOVES every
+   integration to it — likely delete-and-recreate, since Adobe I/O has no move primitive and
+   the Runtime namespace is a property of project+workspace. Leaving deployments behind was
+   the open product question `NEXT-SESSION.md` recorded ("copy problem, or stale-state
+   problem?"); it is a migration problem. Migration is therefore IN scope for the control,
+   not separate work, and this plan's step-01 acceptance needs rewriting before it is picked
+   up.
+
+## The control does not persist at all (found 2026-08-07, live)
+
+The premise above — "the change only affects future deploys" — is itself wrong today. The
+destination choice never leaves the webview:
+
+- `AddIntegrationFlowAdapter.updateState` writes to `setOverrides`, React local state, so the
+  new destination renders in the modal and is discarded when it closes.
+- The add payload (`{ source, name, instanceId, apis }`) carries no destination.
+- The deploy targets `buildOrgTargetFromProjectAdobe(project.adobe)` — the persisted binding.
+- No handler anywhere writes `project.adobe`.
+
+Observed live: a user created a Console project ("Team Meeting") from inside the modal. Adobe
+really created it; the modal showed it; the Integrations header still read `Kukla Mesh`; and
+the integration deployed to the OLD namespace (`285361-kuklameshf4e4-stage`) with no error.
+
+So the control needs BOTH halves built — persistence and migration — not just the UI.
+
+**Interim exposure:** until then, `Change` displays a destination the add will not use, and
+using it deploys to the previous project silently. Consider disabling `Change` on a live
+project that already has deployments as a stopgap.
 
 ## Steps
 

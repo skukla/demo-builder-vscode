@@ -6,10 +6,15 @@ The destination now appears in the Integrations action band
 (`IntegrationsScreen.tsx`, `.integrations-destination*`). Acceptance 1's first
 clause — "Integrations page shows the destination" — is met.
 
-What remains is the CONTROL half, and it is still blocked on the same open
-question: after a change, already-deployed integrations keep pointing at the old
-workspace, and nobody has decided whether that is a copy or a stale-state
-problem. Answer that before building `Change`.
+What remains is the CONTROL half. **The blocking question is ANSWERED
+(2026-08-07): a change MOVES every integration to the new destination** —
+delete-and-recreate. See the overview's overturned decision 5.
+
+Two things must be built, not one. A live check that day found the destination
+choice never leaves the webview at all: `updateState` writes to local React
+state, the add payload carries no destination, and the deploy reads the persisted
+`project.adobe`, which nothing writes. So "Change" needs PERSISTENCE first, then
+MIGRATION on top. The acceptance below predates both findings.
 
 Two decisions from the display pass that constrain the rest:
 
@@ -78,7 +83,13 @@ starting an Add Integration flow.
 ## Acceptance
 
 1. Integrations page shows the destination; `Change` opens the project/workspace stages only.
-2. Completing the change updates the page line and every flyout's Destination row.
-3. Cancelling changes nothing.
-4. Flyout has no destination control.
-5. `gate` green.
+2. Completing the change PERSISTS to `project.adobe` and updates the page line and every
+   flyout's Destination row (today it persists nowhere — see the note above).
+3. Completing the change MOVES every existing integration, the mesh included, to the new
+   destination: undeploy from the old target, redeploy to the new one via the keyed runner,
+   re-subscribing APIs against the new workspace (the subscribe PUT is a full union — a
+   missed re-subscribe silently strips them). Per-component outcomes recorded through
+   `recordDeployOutcome`; a half-moved project must not read as finished.
+4. Cancelling changes nothing.
+5. Flyout has no destination control.
+6. `gate` green.
