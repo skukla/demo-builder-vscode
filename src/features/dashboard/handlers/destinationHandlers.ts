@@ -105,14 +105,26 @@ export const handleSetProjectDestination: MessageHandler<SetProjectDestinationPa
     const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
     const move = await moveAppBuilderComponentsToDestination(project, previous, deps);
     if (!move.success) {
-        // The project IS re-pointed — the components that failed are simply still
-        // serving from the old destination. Name them rather than reporting a
-        // generic failure over a half-moved project.
+        const cause = move.failed.map((f) => `${f.id} (${f.error})`).join(', ');
+        if (move.rolledBack) {
+            // Clean abort: everything is back where it started, including the
+            // project's own destination — the migration reverted `project.adobe`.
+            await context.stateManager.saveProject(project);
+            return {
+                success: false,
+                error: `Could not move ${cause}. Nothing was changed — every integration is`
+                    + ' still at the previous destination.',
+                data: { destination: project.adobe, previous, move },
+            };
+        }
+        // The undo itself failed. Do NOT describe this as unchanged: the stranded
+        // components are gone from the old destination and may or may not be at
+        // the new one, and only naming them gives the user somewhere to start.
+        const stranded = (move.stranded ?? []).map((f) => `${f.id} (${f.error})`).join(', ');
         return {
             success: false,
-            error:
-                `Moved ${move.moved.length}. Still at the old destination: `
-                + move.failed.map((f) => `${f.id} (${f.error})`).join(', '),
+            error: `Could not move ${cause}, and rolling back failed for ${stranded}.`
+                + ' Those integrations need attention in the Adobe Developer Console.',
             data: { destination: project.adobe, previous, move },
         };
     }

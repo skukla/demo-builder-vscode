@@ -37,8 +37,15 @@ with nothing.
   1. deploy to the NEW target,
   2. re-subscribe required APIs against the NEW workspace,
   3. undeploy from the OLD target, built from the pre-change `ProjectAdobeRef`.
-- Record every per-component outcome through `recordDeployOutcome`, the one keyed
-  deploy-record writer. A half-moved project must not read as finished.
+- **All-or-nothing (user decision 2026-08-07).** A failed deploy ABORTS the move
+  and undoes whatever already moved: each restored component is deployed back to
+  the old destination and torn down at the new one, and `project.adobe` reverts.
+  A half-moved project is the outcome this exists to prevent, so partial success
+  is not a reportable state.
+- A component whose RESTORE deploy fails is never torn down at the abandoned
+  destination — it is the only copy left, and removing it turns a failed rollback
+  into data loss. Those are reported as `stranded`, and the result must never
+  read as a clean abort while any exist.
 - Remove step-01's `Change` gate once this lands.
 
 ## Watch out for
