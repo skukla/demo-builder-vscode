@@ -7,6 +7,7 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { handleSetProjectDestination } from './destinationHandlers';
 import {
     buildStatusPayload,
     getMeshEndpoint,
@@ -1173,4 +1174,7 @@ export const dashboardHandlers = defineHandlers({
 
     // Project reset handler
     resetProject: handleResetProject,
+
+    // Adobe deploy destination (project-scoped — one target for every integration)
+    setProjectDestination: handleSetProjectDestination,
 });
