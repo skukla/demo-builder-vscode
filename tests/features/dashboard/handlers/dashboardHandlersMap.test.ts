@@ -156,7 +156,7 @@ describe('dashboardHandlers', () => {
             // The 4 singular App Builder actions (addApp, deployApp, redeployApp,
             // removeApp) retired with the dormant AppBuilderCard (D3 Step 08).
             // setAuthoringExperience lives in the Configure webview, not this map.
-            expect(types).toHaveLength(33);
+            expect(types).toHaveLength(34);
         });
 
         it('should have handlers as functions', () => {

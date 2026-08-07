@@ -68,7 +68,10 @@ project that already has deployments as a stopgap.
 
 ## Steps
 
-- `step-01.md` — the page-level destination control (this plan's whole scope)
+- `step-01.md` — persistence + the page-level control. `Change` ships GATED on a
+  project that already has deployments, so no intermediate state can strand them.
+- `step-02.md` — moving the integrations when the destination changes, and removing
+  step-01's gate. Split out 2026-08-07 when decision 5 was overturned.
 
 ## Open question for the implementer
 

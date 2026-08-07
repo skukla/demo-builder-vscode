@@ -299,6 +299,9 @@ export interface AdobeConfig {
     /** Human-readable org name (for display; the token can't resolve it when wrong) */
     organizationName?: string;
     workspace: string;
+    /** Human-readable workspace name — written by the wizard and read back by
+     *  `useWizardState`; the type simply never declared it. */
+    workspaceName?: string;
     /** Human-readable workspace title (preferred for display) */
     workspaceTitle?: string;
     authenticated: boolean;

@@ -4833,17 +4833,22 @@ div[class*="spectrum"] input[type="search"] {
 /* The committed destination as a quiet CONTEXT LINE above the active stage — it
    replaced the `dest-summary` step (a whole step to confirm a destination the user
    never chose). Quiet by design: it is orientation, not the task. */
-.intflow-dest-context {
-    display: flex;
+.dest-context {
+    display: inline-flex;
     align-items: baseline;
     gap: 10px;
+    font-size: 12.5px;
+}
+.dest-context-value {
+    color: var(--spectrum-global-color-gray-700);
+}
+/* The MODAL's variant: a full-width line with a rule under it. The page header
+   uses the inline base above — same fact, two placements. */
+.dest-context--block {
+    display: flex;
     margin: 0 0 14px;
     padding: 0 0 10px;
     border-bottom: 1px solid var(--spectrum-global-color-gray-300);
-    font-size: 12.5px;
-}
-.intflow-dest-context-value {
-    color: var(--spectrum-global-color-gray-700);
 }
 /* A committed choice (project/workspace) collapsed to one compact boxed line. */
 .intflow-chosen {
