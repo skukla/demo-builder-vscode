@@ -17,7 +17,7 @@ import { probeStorefrontDelivery, aemLiveBaseUrl } from '@/features/eds/services
 import {
     SMART_404_MARKER_START,
     SMART_404_HEAD_MARKER_START,
-} from '@/features/eds/services/pdp404Snippet';
+} from '@/features/eds/services/pdp404HandlerPublisher';
 
 const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 

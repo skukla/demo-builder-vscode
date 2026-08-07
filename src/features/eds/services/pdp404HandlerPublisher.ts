@@ -45,7 +45,7 @@ import type { Logger } from '@/types/logger';
  * duplicate the snippet. Stable string — do not edit without bumping
  * every storefront's `delayed.js`.
  */
-const SMART_404_MARKER_START = '// === Smart 404 PDP rebuild (Demo Builder) ===';
+export const SMART_404_MARKER_START = '// === Smart 404 PDP rebuild (Demo Builder) ===';
 const SMART_404_MARKER_END = '// === end Smart 404 PDP rebuild ===';
 
 /**
@@ -55,7 +55,7 @@ const SMART_404_MARKER_END = '// === end Smart 404 PDP rebuild ===';
  * are no-ops. Two distinct markers because the two snippets live in
  * different files and the idempotency check has to be per-file.
  */
-const SMART_404_HEAD_MARKER_START = '<!-- === Smart 404 PDP eager redirect (Demo Builder) === -->';
+export const SMART_404_HEAD_MARKER_START = '<!-- === Smart 404 PDP eager redirect (Demo Builder) === -->';
 const SMART_404_HEAD_MARKER_END = '<!-- === end Smart 404 PDP eager redirect === -->';
 
 /**

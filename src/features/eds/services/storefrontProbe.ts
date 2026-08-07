@@ -26,7 +26,11 @@
  * @module features/eds/services/storefrontProbe
  */
 
-import { SMART_404_HEAD_MARKER_START, SMART_404_MARKER_START } from './pdp404Snippet';
+import { SMART_404_HEAD_MARKER_START, SMART_404_MARKER_START } from './pdp404HandlerPublisher';
+// HOTFIX ADAPTATION (.126, off v1.0.0-beta.125): develop extracted these markers
+// into `pdp404Snippet.ts`; on this lineage they still live in the publisher, where
+// they were module-private until this change. Reconcile at the merge-back —
+// develop's location wins.
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
