@@ -39,7 +39,11 @@ function makeProject(): Project {
             'erp-sync': { kind: 'integration', status: 'deployed' },
         },
         componentInstances: {
-            'eds-accs-mesh': { path: '/p/demo/components/eds-accs-mesh', status: 'deployed' },
+            'eds-accs-mesh': {
+                path: '/p/demo/components/eds-accs-mesh',
+                status: 'deployed',
+                metadata: { meshId: 'mesh-id-at-OLD-ws', meshStatus: 'deployed' },
+            },
             'erp-sync': { path: '/p/demo/components/erp-sync', status: 'ready' },
         },
     } as unknown as Project;
@@ -74,8 +78,16 @@ function deployWritingEndpointsExcept(failingId: string) {
             entry.endpoint = `https://new-ws.adobeio-static.net/${id}`;
             entry.status = 'deployed';
         }
-        const instance = p.componentInstances?.[id];
-        if (instance) instance.status = 'deployed';
+        const instance = p.componentInstances?.[id] as
+            | { status?: string; metadata?: Record<string, unknown> }
+            | undefined;
+        if (instance) {
+            instance.status = 'deployed';
+            // The mesh tail stamps the NEW workspace's mesh id here
+            // (appBuilderComponentRunner.ts). A mesh id belongs to exactly one
+            // workspace, so this is the field most wrong after an abort.
+            instance.metadata = { ...instance.metadata, meshId: `${id}-mesh-id-at-new-ws` };
+        }
         return { success: true };
     });
 }
@@ -353,6 +365,22 @@ describe('moveAppBuilderComponentsToDestination — an abort restores what the d
             (project.componentInstances as Record<string, { status: string }>)['eds-accs-mesh']
                 .status
         ).toBe('ready');
+    });
+
+    it('puts the mesh id back — the field that names a workspace outright', async () => {
+        // `componentInstances[id].metadata.meshId` is what meshVerifier compares
+        // against a live describe. A mesh id exists in exactly ONE workspace, so
+        // leaving the new one behind makes every later verification report a
+        // mismatch against the destination the project actually points at.
+        deployWritingEndpointsExcept('erp-sync');
+        const project = makeProject();
+
+        await moveAppBuilderComponentsToDestination(project, PREVIOUS, makeDeps([]));
+
+        const meta = (
+            project.componentInstances as Record<string, { metadata?: { meshId?: string } }>
+        )['eds-accs-mesh'].metadata;
+        expect(meta?.meshId).toBe('mesh-id-at-OLD-ws');
     });
 
     it('republishes the storefront, which a successful deploy already pointed at the new mesh', async () => {
