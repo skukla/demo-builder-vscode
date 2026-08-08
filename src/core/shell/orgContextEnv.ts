@@ -127,6 +127,32 @@ const orgContextStore = new AsyncLocalStorage<OrgContextTarget>();
  * Run `fn` with `target` as the active org context. Every `aio` command issued
  * (directly or transitively) inside `fn` will be targeted at `target`.
  */
+/**
+ * Commands whose ANSWER depends on the selected Adobe project/workspace.
+ *
+ * Run untargeted, these silently resolve against the aio CLI's process-global
+ * console selection — which this extension never writes, so it is whatever the
+ * user last chose in a terminal. The command succeeds and describes the wrong
+ * workspace, which is worse than failing.
+ *
+ * Deliberately NOT included: `aio console *` (choosing an org is how a target is
+ * obtained, so those legitimately run untargeted), `aio auth *`, and anything
+ * that is not an `aio` command.
+ */
+const ORG_SCOPED_AIO = [/^aio\s+api-mesh:/, /^aio\s+app\s+(deploy|undeploy|get-url)\b/];
+
+/**
+ * Whether a command needs an org target to answer correctly.
+ *
+ * @param command - the command line about to run
+ * @returns true when running it untargeted would silently use the CLI's global
+ *          workspace selection
+ */
+export function needsOrgTargeting(command: string): boolean {
+    const normalized = command.trim();
+    return ORG_SCOPED_AIO.some((pattern) => pattern.test(normalized));
+}
+
 export function withOrgContext<T>(target: OrgContextTarget, fn: () => Promise<T>): Promise<T> {
     return orgContextStore.run(target, fn);
 }
