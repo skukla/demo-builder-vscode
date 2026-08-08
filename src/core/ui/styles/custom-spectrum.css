@@ -5328,11 +5328,19 @@ div[class*="spectrum"] input[type="search"] {
     text-decoration: underline;
 }
 
+/* `min-height` pins the row to a Spectrum ActionButton, because otherwise the
+   row's height is set by a control you cannot see. The kebab is `opacity: 0` at
+   rest but still in flow at ~32px, so IT sizes the head — until a deploying card
+   drops it from the DOM entirely (menuActions is [] while deploying, and
+   IntegrationActionsMenu returns null on an empty list). The head then collapsed
+   to the name's ~20px line box and the whole card shifted up mid-deploy
+   (reported 2026-08-07). Same reason `.footer-grid` pins 32px. */
 .integration-card-head {
     display: flex;
     align-items: center;
     gap: 8px;
     min-width: 0;
+    min-height: 32px;
 }
 .integration-card-head > .integration-card-name {
     flex: 1 1 auto;
