@@ -498,6 +498,15 @@ function entryFromState(
 }
 
 /** Tear down the remote artifact for an App Builder component, by kind, under org-context. */
+/**
+ * Tear down a component's REMOTE artifacts, leaving the local clone and the keyed
+ * state alone.
+ *
+ * Module-private again: it was briefly exported for the destination migration,
+ * which no longer tears anything down — a move deploys to the new destination and
+ * leaves the old one serving, because undeploy is the only irreversible step and
+ * nobody asked for cleanup. `removeAppBuilderComponent` is the only caller.
+ */
 async function teardownRemote(
     project: Project,
     id: string,

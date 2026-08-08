@@ -187,8 +187,12 @@ export type AppBuilderComponentRowStatus =
  * BaseWebviewCommand into handler-only test contexts).
  *
  * `name` refreshes the row's display label on the same channel (rename path).
+ *
+ * Exported for the destination move, which walks every component and must
+ * telegraph each one — the project-scoped progress notification has no owning
+ * card, so without this the whole grid sits at DEPLOYED for the entire move.
  */
-async function postRowStatus(
+export async function postRowStatus(
     id: string,
     status: AppBuilderComponentRowStatus,
     message?: string,
@@ -213,7 +217,45 @@ async function postRowStatus(
  * failure — the entry may have persisted), deploy/redeploy terminal, remove
  * success, rename success. Same lazy import as postRowStatus.
  */
-async function postComponentsSnapshot(context: HandlerContext): Promise<void> {
+/**
+ * Push MESH status on the mesh's own channel.
+ *
+ * The mesh card is keyed `'mesh'` and derives its status from `meshStatusUpdate`;
+ * the row channel is deliberately told to skip the mesh's component id so it does
+ * not synthesize a second card beside it. A row push for a mesh therefore reaches
+ * nothing — which is why a moving mesh sat at DEPLOYED while it deployed.
+ *
+ * @param status - the mesh card's status
+ * @param message - the in-flight line, shown only while transient
+ */
+export async function postMeshStatus(
+    status: 'deploying' | 'deployed' | 'error',
+    message?: string,
+): Promise<void> {
+    const { ProjectDashboardWebviewCommand } = await import(
+        '@/features/dashboard/commands/showDashboard'
+    );
+    await ProjectDashboardWebviewCommand.sendMeshStatusUpdate(status, message);
+}
+
+/**
+ * Push the deploy destination to the header. Same lazy import as the two above,
+ * for the same reason: keep the webview-command class out of this module's static
+ * load graph.
+ *
+ * @param destination - the project/workspace titles the header renders
+ */
+export async function postDestination(destination: {
+    projectTitle?: string;
+    workspaceTitle?: string;
+}): Promise<void> {
+    const { ProjectDashboardWebviewCommand } = await import(
+        '@/features/dashboard/commands/showDashboard'
+    );
+    await ProjectDashboardWebviewCommand.sendProjectDestinationUpdate(destination);
+}
+
+export async function postComponentsSnapshot(context: HandlerContext): Promise<void> {
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
         return;

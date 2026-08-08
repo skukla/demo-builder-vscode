@@ -29,11 +29,13 @@ import {
 import { IntegrationsGrid } from '../components/integrations/IntegrationsGrid';
 import { isMeshBusy, useDashboardStatus } from '../hooks/useDashboardStatus';
 import { useLiveAppBuilderComponents } from '../hooks/useLiveAppBuilderComponents';
+import { useLiveDestination } from '../hooks/useLiveDestination';
 import { useRowStatusOverrides } from '../hooks/useRowStatusOverrides';
 import { AddIntegrationFlowAdapter } from './AddIntegrationFlowAdapter';
 import { LoadingDisplay, StatusDisplay } from '@/core/ui/components/feedback';
 import { PageHeader, PageLayout } from '@/core/ui/components/layout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
+import { DestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import {
@@ -129,7 +131,7 @@ export function IntegrationsScreen({
     hasAdobeContext,
     appBuilderComponents,
     appBuilderComponentCatalog,
-    destination,
+    destination: seededDestination,
     adobeProjectId,
     adobeWorkspaceId,
     adobeOrgId,
@@ -138,9 +140,15 @@ export function IntegrationsScreen({
         hasAdobeContext,
     });
     const components = useLiveAppBuilderComponents(appBuilderComponents);
+    // Live, not the raw prop: the init payload seeds the header once, so without
+    // this a destination change left the crumb naming the OLD target all session.
+    const destination = useLiveDestination(seededDestination);
     const overrides = useRowStatusOverrides();
     const [searchQuery, setSearchQuery] = useState('');
     const [addOpen, setAddOpen] = useState(false);
+    // One modal instance, two journeys — `mode` selects the stage set, so a
+    // second <AddIntegrationFlowAdapter> would just duplicate its state.
+    const [destOpen, setDestOpen] = useState(false);
 
     const destinationLabel = formatDestination(destination);
     const headerSubtitle = formatHeaderSubtitle(projectName, destination);
@@ -198,6 +206,8 @@ export function IntegrationsScreen({
 
     const openAdd = useCallback((): void => setAddOpen(true), []);
     const closeAdd = useCallback((): void => setAddOpen(false), []);
+    const openDestination = useCallback((): void => setDestOpen(true), []);
+    const closeDestination = useCallback((): void => setDestOpen(false), []);
 
     // Status has not resolved yet — the mesh card would otherwise pop in a beat
     // after the integration cards. Same LoadingDisplay as ProjectsDashboard's gate.
@@ -223,9 +233,23 @@ export function IntegrationsScreen({
                     // (DashboardStatusHeader), so this surface's back button lives
                     // in the equivalent band too.
                     title="Integrations"
-                    // Project name AND the shared deploy destination — see
-                    // formatHeaderSubtitle for why the destination lives here.
-                    subtitle={headerSubtitle}
+                    // Project name AND the shared deploy destination, with the
+                    // control that changes it — see formatHeaderSubtitle for why the
+                    // destination lives here rather than in the action band.
+                    subtitle={
+                        destinationLabel ? (
+                            <>
+                                {projectName ? `${projectName} · ` : ''}
+                                <DestinationContext
+                                    project={destination?.projectTitle}
+                                    workspace={destination?.workspaceTitle}
+                                    onChange={openDestination}
+                                />
+                            </>
+                        ) : (
+                            headerSubtitle
+                        )
+                    }
                     constrainWidth
                 />
             }
@@ -296,8 +320,9 @@ export function IntegrationsScreen({
                 {/* Hosted HERE so the header button and the grid's add tile open
                     the same one instance. */}
                 <AddIntegrationFlowAdapter
-                    isOpen={addOpen}
-                    onClose={closeAdd}
+                    isOpen={addOpen || destOpen}
+                    mode={destOpen ? 'destination' : 'add'}
+                    onClose={destOpen ? closeDestination : closeAdd}
                     catalog={catalog}
                     appBuilderComponents={components}
                     adobeProjectId={adobeProjectId}

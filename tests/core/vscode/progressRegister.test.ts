@@ -114,3 +114,48 @@ describe('withProgressRegister', () => {
         expect(result).toEqual({ success: true, id: 'mesh-1' });
     });
 });
+
+/**
+ * Card-less callers (2026-08-07).
+ *
+ * The register's value is "steps reach the notification"; the card half belongs to
+ * the surfaces that HAVE cards. A project-scoped operation — changing the Adobe
+ * deploy destination — has none, and was passing `cardLabel: ''` with a no-op
+ * `pushCardStatus` to satisfy the type. Stubbing required parameters to opt out of
+ * them is a sign the contract is wrong, not the caller.
+ *
+ * The update notifications reach for raw `vscode.window.withProgress` for the same
+ * reason. Making the card half optional lets one helper serve both honestly.
+ */
+describe('withProgressRegister — operations with no card', () => {
+    it('runs and reports steps without any card options', async () => {
+        const vscode = require('vscode');
+        const report = jest.fn();
+        vscode.window.withProgress.mockImplementation(
+            async (_o: unknown, task: (p: unknown) => unknown) => task({ report }),
+        );
+
+        const result = await withProgressRegister({ title: 'Changing destination' }, async (step) => {
+            step('Checking requirements…');
+            return 'done';
+        });
+
+        expect(result).toBe('done');
+        expect(report).toHaveBeenCalledWith({ message: 'Checking requirements…' });
+    });
+
+    it('still pushes the card line when a card IS supplied', async () => {
+        const vscode = require('vscode');
+        vscode.window.withProgress.mockImplementation(
+            async (_o: unknown, task: (p: unknown) => unknown) => task({ report: jest.fn() }),
+        );
+        const pushCardStatus = jest.fn();
+
+        await withProgressRegister(
+            { title: 'Deploying', cardLabel: 'Deploying Mesh…', pushCardStatus },
+            async () => undefined,
+        );
+
+        expect(pushCardStatus).toHaveBeenCalledWith('Deploying Mesh…');
+    });
+});

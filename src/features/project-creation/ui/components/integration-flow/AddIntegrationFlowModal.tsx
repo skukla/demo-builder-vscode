@@ -40,6 +40,7 @@ import {
     type ApiEditTarget,
     type UseIntegrationFlowReturn,
 } from './useIntegrationFlow';
+import { DestinationContext as SharedDestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -232,23 +233,16 @@ function DestinationContext({
     stage: FlowStageId;
     onChange: () => void;
 }): React.ReactElement | null {
+    // The stage gate stays HERE, not in the shared component: hiding the line
+    // while the user is on the picker stages is this modal's concern.
     if (DEST_PICKER_STAGES.has(stage)) return null;
-    const project = state.adobeProject?.title || state.adobeProject?.name || '';
-    const workspace = state.adobeWorkspace?.title || state.adobeWorkspace?.name || '';
-    if (!project || !workspace) return null;
     return (
-        <div className="intflow-dest-context">
-            <span className="intflow-dest-context-value">
-                {project} · {workspace}
-            </span>
-            {/* `.inline-action-link` (custom-spectrum.css), NOT EDS's
-                `.service-action-link` — that class lives in connect-services.css and
-                only reaches the wizard bundle. Stays a <button>: it performs an
-                action, so the role must not become "link". */}
-            <button type="button" className="inline-action-link" onClick={onChange}>
-                Change
-            </button>
-        </div>
+        <SharedDestinationContext
+            project={state.adobeProject?.title || state.adobeProject?.name || ''}
+            workspace={state.adobeWorkspace?.title || state.adobeWorkspace?.name || ''}
+            onChange={onChange}
+            className="dest-context--block"
+        />
     );
 }
 

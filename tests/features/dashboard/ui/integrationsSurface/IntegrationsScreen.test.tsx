@@ -15,7 +15,7 @@
  */
 
 import React from 'react';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AppBuilderComponentState } from '@/types/base';
 import '@testing-library/jest-dom';
@@ -105,8 +105,10 @@ jest.mock('@/features/dashboard/ui/components/integrations/IntegrationsGrid', ()
 // commit callbacks, the mesh rule, reservedIds) is pinned in
 // AddIntegrationFlowAdapter.test.tsx.
 jest.mock('@/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter', () => ({
-    AddIntegrationFlowAdapter: ({ isOpen }: any) =>
-        isOpen ? <div data-testid="add-modal" /> : null,
+    // `mode` is surfaced so the destination-control suite can assert WHICH
+    // journey opened — add vs destination is the whole point of that control.
+    AddIntegrationFlowAdapter: ({ isOpen, mode }: any) =>
+        isOpen ? <div data-testid="add-modal" data-mode={mode ?? 'add'} /> : null,
 }));
 
 // Deliberately below the jest.mock calls: babel-plugin-jest-hoist lifts them
@@ -204,9 +206,9 @@ describe('IntegrationsScreen', () => {
 
             expect(screen.getByTestId('empty-state')).toBeInTheDocument();
             expect(screen.getByText('Integrations')).toBeInTheDocument();
-            expect(
-                screen.getByText('demo-builder-test · Kukla Mesh · Stage')
-            ).toBeInTheDocument();
+            expect(screen.getByTestId('page-subtitle')).toHaveTextContent(
+                'demo-builder-test · Kukla Mesh · Stage'
+            );
             expect(screen.getByRole('button', { name: 'Project Dashboard' })).toBeInTheDocument();
             // Exactly ONE Add integration: the empty state's CTA. The band's copy
             // is withheld while empty rather than doubling it.
@@ -510,5 +512,64 @@ describe('header', () => {
 
             expect(screen.getByTestId('card-a')).toBeInTheDocument();
         });
+    });
+});
+
+/**
+ * The destination CONTROL (2026-08-07).
+ *
+ * The display half shipped 2026-08-03 in the header crumb. The control joins it
+ * there rather than in the action band: splitting a fact from the affordance that
+ * changes it reads worse, and the destination is a property of the PROJECT while
+ * the band is about acting on the list.
+ */
+describe('IntegrationsScreen — destination control', () => {
+    const DEST = { projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' };
+
+    it('offers Change beside the destination in the header', () => {
+        const handlers = captureHandlers();
+        render(
+            <IntegrationsScreen
+                hasAdobeContext
+                appBuilderComponents={{ a: DEPLOYED }}
+                projectName="demo-builder-test"
+                destination={DEST}
+            />,
+        );
+        settleStatus(handlers);
+
+        expect(screen.getByRole('button', { name: 'Change' })).toBeInTheDocument();
+    });
+
+    it('renders no Change when the project has no committed destination', () => {
+        // Half a destination is worse than none — it reads as settled.
+        const handlers = captureHandlers();
+        render(
+            <IntegrationsScreen
+                hasAdobeContext
+                appBuilderComponents={{ a: DEPLOYED }}
+                projectName="demo-builder-test"
+            />,
+        );
+        settleStatus(handlers);
+
+        expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
+    });
+
+    it('opens the flow in destination mode, not the add journey', () => {
+        const handlers = captureHandlers();
+        render(
+            <IntegrationsScreen
+                hasAdobeContext
+                appBuilderComponents={{ a: DEPLOYED }}
+                projectName="demo-builder-test"
+                destination={DEST}
+            />,
+        );
+        settleStatus(handlers);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Change' }));
+
+        expect(screen.getByTestId('add-modal')).toHaveAttribute('data-mode', 'destination');
     });
 });

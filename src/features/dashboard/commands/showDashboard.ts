@@ -335,6 +335,30 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     }
 
     /**
+     * Push the project's deploy destination after `setProjectDestination` writes it.
+     *
+     * The Integrations header's "project · workspace" crumb comes from the init
+     * payload, which is seeded ONCE — so a destination change left the header naming
+     * the OLD target while every card deployed to the new one (reported live
+     * 2026-08-07). Same shape as the sibling pushes above; no-op if neither project
+     * panel is open.
+     *
+     * @param destination - the titles the header renders, post-write
+     */
+    public static async sendProjectDestinationUpdate(destination: {
+        projectTitle?: string;
+        workspaceTitle?: string;
+    }): Promise<void> {
+        const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
+        if (panel) {
+            await panel.webview.postMessage({
+                type: 'projectDestinationUpdate',
+                payload: { destination },
+            });
+        }
+    }
+
+    /**
      * Public method to send mesh status updates (called by deployMesh command)
      */
     public static async sendMeshStatusUpdate(

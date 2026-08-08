@@ -302,3 +302,72 @@ describe('AddIntegrationFlowAdapter', () => {
         });
     });
 });
+
+/**
+ * Committing a destination must PERSIST it (2026-08-07, live).
+ *
+ * The handler, the Change control and the migration all existed and were each
+ * tested alone — and picking a new project and workspace still did nothing,
+ * because nothing connected them. `updateState` wrote the choice to local React
+ * state and the modal closed on it.
+ *
+ * Continue off `dest-workspace` commits `adobeWorkspace`; that is the terminal
+ * signal, and it is where the post belongs.
+ */
+describe('AddIntegrationFlowAdapter — persisting a destination change', () => {
+    function renderInDestinationMode(): void {
+        render(
+            <AddIntegrationFlowAdapter
+                isOpen
+                mode="destination"
+                onClose={jest.fn()}
+                catalog={CATALOG}
+                appBuilderComponents={{}}
+                adobeProjectId="proj-1"
+                adobeWorkspaceId="ws-1"
+                adobeProjectTitle="My Demo Project"
+                adobeWorkspaceTitle="Stage"
+                adobeOrgId="org-1"
+            />,
+        );
+    }
+
+    it('posts setProjectDestination when the workspace commit lands', () => {
+        renderInDestinationMode();
+
+        act(() => {
+            captured.updateState({ adobeProject: { id: 'proj-2', name: 'P2', title: 'Team Meeting' } });
+        });
+        act(() => {
+            captured.updateState({ adobeWorkspace: { id: 'ws-2', name: 'Production', title: 'Production' } });
+        });
+
+        expect(getClient().postMessage).toHaveBeenCalledWith('setProjectDestination', {
+            project: { id: 'proj-2', name: 'P2', title: 'Team Meeting' },
+            workspace: { id: 'ws-2', name: 'Production', title: 'Production' },
+        });
+    });
+
+    it('does NOT post on the project commit alone — the destination is incomplete', () => {
+        renderInDestinationMode();
+
+        act(() => {
+            captured.updateState({ adobeProject: { id: 'proj-2', name: 'P2', title: 'Team Meeting' } });
+        });
+
+        expect(getClient().postMessage).not.toHaveBeenCalled();
+    });
+
+    it('does NOT post in add mode — that journey deploys, it does not re-point', () => {
+        renderAdapter();
+
+        act(() => {
+            captured.updateState({ adobeWorkspace: { id: 'ws-2', name: 'Production', title: 'Production' } });
+        });
+
+        expect(getClient().postMessage).not.toHaveBeenCalledWith(
+            'setProjectDestination',
+            expect.anything(),
+        );
+    });
+});

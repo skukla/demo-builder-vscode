@@ -39,8 +39,15 @@ export interface BackButtonConfig {
 export interface PageHeaderProps {
     /** Main title displayed as H1 (a node allows e.g. an inline-rename field) */
     title: React.ReactNode;
-    /** Optional subtitle displayed as H3 with gray styling (typically step name) */
-    subtitle?: string;
+    /**
+     * Optional subtitle displayed as H3 with gray styling (typically step name).
+     *
+     * `ReactNode`, not `string`: the Integrations header carries the deploy
+     * destination plus its `Change` control, and splitting the control away from
+     * the fact it changes reads worse. Strictly widening — every string caller
+     * still type-checks, and it already renders inside a Spectrum `<Text>`.
+     */
+    subtitle?: React.ReactNode;
     /** Optional description text displayed below subtitle (typically step description) */
     description?: string;
     /** Optional dynamic status text displayed below description (for showing current operation) */

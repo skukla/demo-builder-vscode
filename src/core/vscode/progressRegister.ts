@@ -49,8 +49,16 @@ export function cardInFlightLabel(verb: string, noun: string): string {
 export interface ProgressRegisterOptions {
     /** Notification title: the operation and its object ("Deploying API Mesh"). */
     title: string;
-    /** The card's single in-flight line — build it with {@link cardInFlightLabel}. */
-    cardLabel: string;
+    /**
+     * The card's single in-flight line — build it with {@link cardInFlightLabel}.
+     *
+     * OPTIONAL: project-scoped operations have no card. Changing the Adobe deploy
+     * destination was passing `''` with a no-op push purely to satisfy the type,
+     * and the update notifications reach past this helper to raw
+     * `vscode.window.withProgress` for the same reason. The register's value is
+     * the step→notification half; the card half belongs to surfaces that have one.
+     */
+    cardLabel?: string;
     /**
      * Push the card's in-flight line on whichever channel this surface owns.
      *
@@ -58,7 +66,7 @@ export interface ProgressRegisterOptions {
      * status update, and the mesh status channel. Only the timing and the text
      * are shared, which is precisely what this module exists to fix.
      */
-    pushCardStatus: (label: string) => void;
+    pushCardStatus?: (label: string) => void;
 }
 
 /**
@@ -90,7 +98,7 @@ export async function withProgressRegister<T>(
             cancellable: false,
         },
         async (progress) => {
-            pushCardStatus(cardLabel);
+            if (pushCardStatus) pushCardStatus(cardLabel ?? '');
             result = await run((message) => {
                 progress.report({ message });
             });

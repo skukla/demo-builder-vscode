@@ -38,8 +38,17 @@ export function useRowStatusOverrides(): Record<string, RowStatusOverride> {
 
     useEffect(() => {
         return webviewClient.onMessage('appBuilderComponentsSnapshot', (data: unknown) => {
-            const map = (data ?? {}) as Record<string, unknown>;
-            const live = new Set(Object.keys(map));
+            // `payload.components`, not the payload itself — the sender wraps the
+            // map. Reading it bare made the live id set `['components']`, so every
+            // override was pruned on every snapshot. Invisible while the only
+            // snapshots followed SUCCESSFUL ops (the persisted status the card fell
+            // back to happened to match the override), and fatal on a failure: the
+            // error push was wiped and the card read "Deployed" (live 2026-08-08).
+            const payload = (data ?? {}) as { components?: Record<string, unknown> };
+            if (!payload.components) {
+                return;
+            }
+            const live = new Set(Object.keys(payload.components));
             setOverrides((prev) => {
                 const kept = Object.fromEntries(
                     Object.entries(prev).filter(([id]) => live.has(id)),
