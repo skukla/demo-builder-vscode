@@ -15,6 +15,7 @@
  * SDK's `StdioServerTransport`, which accepts arbitrary duplex streams.
  */
 
+import type { Stats } from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as net from 'net';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -61,9 +62,54 @@ function withToolLogging(server: any, logger: Logger): any {
     };
 }
 
+/** A socket this instance serves, plus the identity of the file it put there. */
+interface BoundSocket {
+    path: string;
+    /** `stat` device + inode at bind time — the file's identity, not its name. */
+    dev: number;
+    ino: number;
+}
+
+/**
+ * Unlink a socket file only while it is still the one we put there.
+ *
+ * Two servers overlap on every window reload and whenever a second window opens
+ * the same workspace, and the shared path can only hold one of them. Deleting it
+ * on the way out removes the SURVIVOR's socket: the listener stays alive, the
+ * directory entry does not, and every client then gets ENOENT with nothing to
+ * recover it but another reload. Observed live 2026-08-08 — `lsof` showed the
+ * extension host still listening on a path that no longer existed.
+ *
+ * This check is only sufficient because `bindSocket` renames into place. libuv
+ * unlinks the pathname it bound, unconditionally and with no inode check
+ * (`uv__pipe_close`, libuv `src/unix/pipe.c`), so while the server bound the
+ * shared name directly, `server.close()` deleted the successor's file no matter
+ * what this function did. Renaming means libuv only ever knows the private name,
+ * which leaves this the sole deleter of the shared one — and it can look.
+ *
+ * Known upstream: nodejs/node#19729 reports this exact race, and the rename
+ * workaround, filed 2018 and closed stale.
+ *
+ * @param bound - the path plus the dev/ino recorded when we put our socket there
+ */
+async function removeIfStillOurs(bound: BoundSocket): Promise<void> {
+    let current: Stats;
+    try {
+        current = await fsPromises.stat(bound.path);
+    } catch {
+        // Already gone — nothing to clean up, and nothing to get wrong.
+        return;
+    }
+    if (current.dev !== bound.dev || current.ino !== bound.ino) {
+        // A later instance owns this name now. Leaving its file alone IS the fix.
+        return;
+    }
+    await fsPromises.rm(bound.path, { force: true });
+}
+
 export class InExtensionMcpServer {
     private netServers: net.Server[] = [];
-    private boundPaths: string[] = [];
+    private bound: BoundSocket[] = [];
     private connCounter = 0;
 
     /**
@@ -108,35 +154,83 @@ export class InExtensionMcpServer {
         // The common single-bind case (workspace = projects root, where primary
         // and secondary collapse to the same path) skips this cleanly.
         if (this.secondarySocketPath && this.secondarySocketPath !== this.socketPath) {
-            await this.bindSocket(this.secondarySocketPath);
+            try {
+                await this.bindSocket(this.secondarySocketPath);
+            } catch (err) {
+                // The caller drops this object on a failed start (extension.ts
+                // logs and leaves the field undefined), so a primary left
+                // listening here can never be disposed — it holds the shared name
+                // for the life of the window with nothing able to release it.
+                this.dispose();
+                throw err;
+            }
         }
     }
 
     /**
-     * Bind a single UDS path. Cleans up stale socket file, creates the listener,
-     * sets owner-only permissions. Connections are routed through the shared
-     * `handleConnection` method regardless of which path accepted them.
+     * Bind a single UDS path, by way of a private name renamed into place.
+     *
+     * Never call this concurrently for the same path within one process: the
+     * private name is derived from the pid, so two concurrent binds of one path
+     * would share it and the second's cleanup would delete the first's socket.
+     * `start()` binds sequentially, which is the only caller.
+     *
+     * Connections route through the shared `handleConnection` regardless of which
+     * path accepted them.
      */
     private async bindSocket(socketPath: string): Promise<void> {
-        // Remove any stale socket left by a previous run or another window
-        // (last-writer-wins for the rare two-windows-same-workspace case).
-        await fsPromises.rm(socketPath, { force: true });
+        // Bind a PRIVATE name, then rename it over the shared one. See
+        // `removeIfStillOurs` for why: libuv unlinks the name it bound, and the
+        // shared name must never be a name libuv knows about.
+        //
+        // Same directory, so the rename cannot cross filesystems, and short —
+        // the hashed basename exists to stay under the ~104-char UDS path limit
+        // and this suffix has to fit inside it too.
+        const privateName = `${socketPath}.${process.pid.toString(36)}`;
+        await fsPromises.rm(privateName, { force: true });
 
         const netServer = net.createServer((socket) => this.handleConnection(socket));
 
         await new Promise<void>((resolve, reject) => {
             netServer.once('error', reject);
-            netServer.listen(socketPath, () => {
+            netServer.listen(privateName, () => {
                 netServer.off('error', reject);
                 resolve();
             });
         });
-        // Owner-only: the socket file permissions are the access control.
-        await fsPromises.chmod(socketPath, 0o600);
-
+        // Attached the moment listen resolves: between here and the end of this
+        // function are three awaits, and a 'error' emitted with no listener is an
+        // uncaught exception in the extension host.
         netServer.on('error', (err) => this.logger.error(`[MCP] server error on ${socketPath}: ${err.message}`));
+
+        let created: Stats;
+        try {
+            // Owner-only: the socket file permissions are the access control.
+            // Set BEFORE the rename — permissions travel with the inode, and the
+            // shared name must never be briefly world-readable.
+            await fsPromises.chmod(privateName, 0o600);
+            // Read the identity off the PRIVATE name, before the rename. Statting
+            // the shared name afterwards would record whatever is there — and a
+            // second host renaming its own socket over it in that window would
+            // make us record ITS identity, so our dispose would then delete the
+            // survivor. That is the original bug, narrowed to one syscall.
+            // rename(2) preserves dev+ino, so this is the same file either way.
+            created = await fsPromises.stat(privateName);
+            // Atomic replace. The old `rm` then `listen` left a window with no
+            // socket at the path at all; rename has no such gap, so a client
+            // connecting mid-reload reaches the outgoing server or the incoming
+            // one, never nothing.
+            await fsPromises.rename(privateName, socketPath);
+        } catch (err) {
+            // Listening on a name no client can find is worse than not starting.
+            // Nothing has been tracked yet, so closing here leaks nothing.
+            netServer.close();
+            await fsPromises.rm(privateName, { force: true }).catch(() => undefined);
+            throw err;
+        }
+
         this.netServers.push(netServer);
-        this.boundPaths.push(socketPath);
+        this.bound.push({ path: socketPath, dev: created.dev, ino: created.ino });
         this.logger.info(`[MCP] in-extension server listening on ${socketPath}`);
     }
 
@@ -184,14 +278,16 @@ export class InExtensionMcpServer {
 
     dispose(): void {
         for (const server of this.netServers) {
+            // libuv unlinks the name IT bound — the private name, which the
+            // rename already moved away. This no longer touches the shared name.
             server.close();
         }
-        for (const path of this.boundPaths) {
-            void fsPromises.rm(path, { force: true }).catch(() => {
+        for (const bound of this.bound) {
+            void removeIfStillOurs(bound).catch(() => {
                 /* best-effort cleanup */
             });
         }
         this.netServers = [];
-        this.boundPaths = [];
+        this.bound = [];
     }
 }

@@ -227,6 +227,102 @@ describe('InExtensionMcpServer', () => {
         ).rejects.toMatchObject({ code: expect.stringMatching(/ENOENT|ECONNREFUSED/) });
     });
 
+    // ─── Socket-file ownership across overlapping instances ──────────────────
+    //
+    // LIVE 2026-08-08: Diagnostics reported the in-extension MCP server
+    // unreachable with `connect ENOENT …/<hash>.sock`, while `lsof -U` showed
+    // the extension host still listening on exactly that path. The listener was
+    // alive; the directory entry that lets anyone reach it was gone.
+    //
+    // Two instances overlap on every window reload and whenever a second window
+    // opens the same workspace. `bindSocket` USED TO rm the shared path and bind
+    // it directly, which meant libuv held that name — and libuv unlinks the name
+    // it bound, unconditionally, when the server closes. The outgoing instance
+    // therefore deleted the incoming one's live socket, and the survivor became
+    // unreachable for the rest of the session. `bindSocket` now binds a private
+    // name and renames it into place, so libuv never learns the shared name.
+    //
+    // Nothing recovers from this state on its own — the listener never notices,
+    // and only another reload re-creates the file.
+
+    it('dispose() leaves a socket file that another instance now owns', async () => {
+        const outgoing = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
+        await outgoing.start();
+
+        // The reload: a second host binds the same path, replacing the file.
+        server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
+        await server.start();
+
+        // The old host shuts down afterwards, as it does on a reload.
+        outgoing.dispose();
+        await new Promise((r) => setTimeout(r, 50));
+
+        expect(fs.existsSync(socketPath)).toBe(true);
+    });
+
+    it('the surviving server is still reachable after the old one disposes', async () => {
+        // The file existing is necessary but not sufficient — what matters is
+        // that a client can still connect and get tools. Asserting reachability
+        // is what makes this test about the bug rather than about a stat call.
+        const outgoing = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
+        await outgoing.start();
+        server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
+        await server.start();
+
+        outgoing.dispose();
+        await new Promise((r) => setTimeout(r, 50));
+
+        const names = await listToolsOverSocket(socketPath);
+        expect(names.length).toBeGreaterThan(0);
+    });
+
+    it('leaves no private file behind after a successful bind', async () => {
+        // The rename is the whole fix; a leftover `<path>.<pid>` would mean it did
+        // not happen and we are back to libuv owning the shared name.
+        server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
+        await server.start();
+
+        const leftovers = fs
+            .readdirSync(path.dirname(socketPath))
+            .filter((n) => n.startsWith(path.basename(socketPath) + '.'));
+        expect(leftovers).toEqual([]);
+    });
+
+    it('does not leave the primary listening when the secondary bind fails', async () => {
+        // start() binds primary then secondary. A secondary failure propagates to
+        // extension.ts, which logs and drops the object — so an un-disposed
+        // primary listener leaks for the life of the window, with nothing able to
+        // reach it. Two new throw sites (rename, stat) make this reachable.
+        const unbindable = path.join(socketPath + '-no-such-dir', 'x.sock');
+        const half = new InExtensionMcpServer(
+            socketPath,
+            projectsDir,
+            makeLogger(),
+            undefined,
+            undefined,
+            unbindable
+        );
+
+        await expect(half.start()).rejects.toThrow();
+        await new Promise((r) => setTimeout(r, 50));
+
+        expect(fs.existsSync(socketPath)).toBe(false);
+    });
+
+    it('still cleans up its OWN socket file on dispose', async () => {
+        // The guard must not turn dispose into a no-op: with no other instance
+        // involved, the file it created is its own and must go.
+        server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
+        await server.start();
+        expect(fs.existsSync(socketPath)).toBe(true);
+
+        server.dispose();
+        server = undefined;
+        await new Promise((r) => setTimeout(r, 50));
+
+        expect(fs.existsSync(socketPath)).toBe(false);
+    });
+
     // ─── Dual-listen (workspace-mode mismatch protection) ────────────────────
     //
     // The decouple-project-from-workspace gap: switching projects via the home
