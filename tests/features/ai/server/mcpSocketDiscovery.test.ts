@@ -123,10 +123,53 @@ describe('mcpSocketDiscovery', () => {
     });
 
     describe('resolveProxyTarget', () => {
-        it('uses the env socket verbatim when set, without touching the filesystem', async () => {
-            const target = await resolveProxyTarget('/explicit/path.sock', '/anywhere', dir);
+        it('uses the env socket when its file exists', async () => {
+            const pinned = path.join(dir, 'pinned.sock');
+            await fsPromises.writeFile(pinned, '');
 
-            expect(target).toEqual({ socketPath: '/explicit/path.sock', via: 'env' });
+            const target = await resolveProxyTarget(pinned, '/anywhere', dir);
+
+            expect(target).toEqual({ socketPath: pinned, via: 'env' });
+        });
+
+        // The pin used to be returned verbatim with no existence check, and every
+        // generated .mcp.json carries one. So a pin whose socket was gone never
+        // reached the branches below it: the proxy spent its full ~23s ENOENT
+        // retry window and exited, while a live server sat one branch away.
+        // Reported alongside the 2026-08-08 socket-unlink fix — that one stops a
+        // dead socket being created, these stop a dead socket being fatal.
+        it('falls through to discovery when the pinned socket is gone', async () => {
+            const live = path.join(dir, 'other-window.sock');
+            cleanups.push(await listen(live));
+
+            await expect(
+                resolveProxyTarget(path.join(dir, 'vanished.sock'), '/anywhere', dir)
+            ).resolves.toEqual({ socketPath: live, via: 'discovery' });
+        });
+
+        it('prefers the cwd-derived socket over discovery when the pin is gone', async () => {
+            // Falling through must enter the normal order, not jump to the end.
+            const cwd = path.join(dir, 'workspace');
+            const derived = resolveMcpSocketPath(cwd, dir);
+            await fsPromises.writeFile(derived, '');
+            cleanups.push(await listen(path.join(dir, 'elsewhere.sock')));
+
+            await expect(
+                resolveProxyTarget(path.join(dir, 'vanished.sock'), cwd, dir)
+            ).resolves.toEqual({ socketPath: derived, via: 'cwd' });
+        });
+
+        it('gives guidance rather than a dead pin when nothing is live', async () => {
+            // The failure that matters: returning the dead pin costs 23s of
+            // retries before failing. Guidance fails immediately and says why.
+            const result = await resolveProxyTarget(
+                path.join(dir, 'vanished.sock'),
+                path.join(dir, 'workspace'),
+                dir
+            );
+
+            expect(result).not.toHaveProperty('socketPath');
+            expect(result).toHaveProperty('guidance');
         });
 
         it('uses the cwd-derived socket when its file exists (even without a listener)', async () => {

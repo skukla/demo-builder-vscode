@@ -8,8 +8,11 @@
  * discovery probes liveness rather than trusting existence.
  *
  * Resolution order (`resolveProxyTarget`):
- *   1. `DEMO_BUILDER_MCP_SOCKET` env — used verbatim (all generated `.mcp.json`
- *      files set it; fully deterministic).
+ *   1. `DEMO_BUILDER_MCP_SOCKET` env whose FILE exists — deterministic targeting
+ *      (all generated `.mcp.json` files set it). The existence check is what
+ *      makes a stale pin recoverable: the path is baked into files on disk and
+ *      cannot heal itself, so a pin returned unconditionally stranded the proxy
+ *      for its whole retry window while a live server sat in step 3.
  *   2. cwd-derived socket whose FILE exists — deterministic targeting of the
  *      window whose workspace is the cwd. Existence (not liveness) is the test:
  *      the proxy's connect-retry window owns activation races on this path.
@@ -122,6 +125,21 @@ export async function discoverLiveSocket(
 }
 
 /**
+ * Whether a path exists, as a plain boolean.
+ *
+ * @param candidate - absolute path to test
+ * @returns true when it exists
+ */
+async function pathExists(candidate: string): Promise<boolean> {
+    try {
+        await fsPromises.access(candidate);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/**
  * Resolve the proxy's target socket (resolution order in the module docs).
  *
  * @param envSocket `process.env.DEMO_BUILDER_MCP_SOCKET`
@@ -133,16 +151,19 @@ export async function resolveProxyTarget(
     cwd: string,
     socketDir: string = mcpSocketDir(),
 ): Promise<ProxyTarget | ProxyTargetFailure> {
-    if (envSocket) {
+    // Existence, not liveness — same test as the cwd branch below, for the same
+    // reason: the connect-retry window owns activation races. What it must NOT
+    // do is return the pin unconditionally. Every generated `.mcp.json` carries
+    // one, so an unconditional return meant a pin whose socket was gone never
+    // reached the branches below: ~23s of ENOENT retries and then failure, with
+    // a live server one branch away.
+    if (envSocket && (await pathExists(envSocket))) {
         return { socketPath: envSocket, via: 'env' };
     }
 
     const derived = resolveMcpSocketPath(cwd, socketDir);
-    try {
-        await fsPromises.access(derived);
+    if (await pathExists(derived)) {
         return { socketPath: derived, via: 'cwd' };
-    } catch {
-        // No socket for this cwd — the agent was launched outside a workspace.
     }
 
     const discovered = await discoverLiveSocket(socketDir);

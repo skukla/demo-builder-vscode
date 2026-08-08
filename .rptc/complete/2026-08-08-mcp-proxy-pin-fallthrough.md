@@ -1,6 +1,6 @@
 # Proxy: fall through to discovery when the pinned socket is gone
 
-**Status:** ready — fix immediately (user direction, 2026-08-08)
+**Status:** SHIPPED 2026-08-08, same day it was filed (user direction).
 
 ## Provenance
 

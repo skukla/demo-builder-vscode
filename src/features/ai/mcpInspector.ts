@@ -27,6 +27,7 @@ import * as path from 'path';
 import type { Readable } from 'stream';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport, getDefaultEnvironment } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { resolveProxyTarget } from './server/mcpSocketDiscovery';
 import { probeInExtensionMcpTools } from './server/mcpToolProbe';
 import {
     createCacheEntry,
@@ -162,7 +163,16 @@ async function inspectOneServer(
     // cold-starting in parallel ("mcp demo-builder: timeout").
     const inExtensionSocket = serverConfig.env?.DEMO_BUILDER_MCP_SOCKET;
     if (inExtensionSocket) {
-        return inspectInExtensionServer(id, inExtensionSocket);
+        // Resolve rather than trust: the pin is baked into a file on disk and
+        // cannot heal itself, so a socket that has since gone would otherwise
+        // report `demo-builder · error` on the AI badge while a live server sat
+        // in the discovery sweep. Delegated to the proxy's own resolver so the
+        // two can never disagree about which socket is current.
+        const target = await resolveProxyTarget(inExtensionSocket, projectPath);
+        if ('guidance' in target) {
+            return { id, status: 'error', tools: [], error: target.guidance };
+        }
+        return inspectInExtensionServer(id, target.socketPath);
     }
 
     // Env: layer the extra credential-free allowlist on top of the SDK default,
