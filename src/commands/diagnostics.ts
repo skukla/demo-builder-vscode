@@ -137,7 +137,7 @@ export class DiagnosticsCommand {
 
             // Adobe CLI status
             this.logger.debug('Checking Adobe CLI...');
-            report.adobe = await checkAdobeCLI();
+            report.adobe = await checkAdobeCLI(report.tools.aio);
 
             // Environment variables
             this.logger.debug('Collecting environment variables...');
@@ -151,11 +151,22 @@ export class DiagnosticsCommand {
             this.logger.debug('Probing in-extension MCP server...');
             report.mcp = await this.checkMcp();
 
-            // GitHub <-> AEM credential triangulation
-            this.logger.debug('Probing GitHub and AEM credential access...');
-            report.githubCredential = await this.checkGitHubCredential();
-            report.configService = await this.checkConfigService();
-            report.storefront = await this.checkStorefront();
+            // The three remote probes run CONCURRENTLY: each is pure HTTP against
+            // a different service (GitHub/AEM, the Config Service, aem.live), they
+            // share no state, and none reads another's result — so serialising
+            // them only added their latencies together.
+            //
+            // The `aio` checks above stay sequential on purpose. The first aio
+            // command in a session triggers `aio config set
+            // aio-cli-telemetry.optOut` — a write to a shared config file guarded
+            // only by in-process flags — so running those concurrently would race
+            // that write for a saving these three already cover.
+            this.logger.debug('Probing GitHub, Config Service and storefront...');
+            [report.githubCredential, report.configService, report.storefront] = await Promise.all([
+                this.checkGitHubCredential(),
+                this.checkConfigService(),
+                this.checkStorefront(),
+            ]);
 
             // Log the full report
             this.logger.debug('DIAGNOSTIC REPORT', report);

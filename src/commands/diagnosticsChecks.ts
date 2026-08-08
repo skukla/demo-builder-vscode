@@ -78,15 +78,19 @@ export async function checkTools(): Promise<ToolsInfo> {
     };
 }
 
-export async function checkAdobeCLI(): Promise<AdobeCLIInfo> {
+export async function checkAdobeCLI(
+    aioTool: { installed: boolean; version?: string },
+): Promise<AdobeCLIInfo> {
     const adobe: AdobeCLIInfo = {
         installed: false,
     };
 
-    // Check if Adobe CLI is installed
-    const aioVersion = await checkCommand('aio --version');
-    adobe.installed = aioVersion.installed;
-    adobe.version = aioVersion.output;
+    // Reuse what `checkTools` already learned instead of running `aio --version`
+    // a second time. The cheapest aio invocation costs ~1.7s of CLI startup
+    // before doing any work (measured darwin 2026-08-08; `node --version` is
+    // 52ms), so the duplicate was pure latency for a value already in hand.
+    adobe.installed = aioTool.installed;
+    adobe.version = aioTool.version;
 
     if (adobe.installed) {
         await checkAuthenticationStatus(adobe);
