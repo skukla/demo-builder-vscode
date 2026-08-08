@@ -321,3 +321,58 @@ describe('TimelineNav', () => {
         });
     });
 });
+
+/**
+ * Collapsed-rail tooltips must look the same on every step.
+ *
+ * Reported 2026-08-08 with screenshots: hovering the CURRENT step showed a
+ * crisp, fully opaque name pill floating over the content; hovering an UPCOMING
+ * step showed a washed-out one that appeared cut off at the content panel's
+ * edge.
+ *
+ * One cause, two symptoms. The name pill is an `::after` on `.timeline-step`,
+ * and `.timeline-step` also carried `opacity-50` for upcoming steps. Opacity
+ * below 1 dims the pseudo-element AND creates a stacking context, which traps
+ * the tooltip's `z-index: 1000` inside the step — so it painted beneath the
+ * content panel instead of above it. It was never clipped; it was behind.
+ *
+ * The dimming belongs on the row inside, which holds the dot and label. The
+ * element that hosts the tooltip has to stay at full opacity, or the tooltip
+ * inherits both problems again.
+ */
+describe('TimelineNav — the tooltip host must not create a stacking context', () => {
+    const stepEl = (id: string) => screen.getByTestId(`timeline-step-${id}`);
+
+    it('keeps the tooltip host at full opacity on an upcoming step', () => {
+        renderWithProvider(
+            <TimelineNav steps={STEPS} currentStepIndex={1} completedStepIndices={[0]} />
+        );
+
+        // 'review' is upcoming. Its step div carries data-step-name, so it is
+        // the tooltip host and must never be the element that gets dimmed.
+        const upcoming = stepEl('review');
+        expect(upcoming).toHaveAttribute('data-step-name', 'Review');
+        expect(upcoming.className).not.toMatch(/\bopacity-50\b/);
+    });
+
+    it('still dims an upcoming step — on the row, not the host', () => {
+        // The fix must not silently drop the dimming: an upcoming step still has
+        // to read as inactive.
+        renderWithProvider(
+            <TimelineNav steps={STEPS} currentStepIndex={1} completedStepIndices={[0]} />
+        );
+
+        const row = stepEl('review').querySelector('.nav-item-row');
+        expect(row?.className).toMatch(/\bopacity-50\b/);
+    });
+
+    it('leaves the current step undimmed on both host and row', () => {
+        renderWithProvider(
+            <TimelineNav steps={STEPS} currentStepIndex={1} completedStepIndices={[0]} />
+        );
+
+        const current = stepEl('build');
+        expect(current.className).not.toMatch(/\bopacity-50\b/);
+        expect(current.querySelector('.nav-item-row')?.className).not.toMatch(/\bopacity-50\b/);
+    });
+});

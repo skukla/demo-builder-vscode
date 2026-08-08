@@ -183,11 +183,16 @@ export function TimelineNav({
                                     // Staggered animation delay for cascade effect
                                     animationDelay: isEntering ? `${displayIndex * 40}ms` : undefined,
                                 }}
+                                // NO opacity here. This element hosts the collapsed-rail
+                                // `::after` name tooltip, and opacity below 1 would both dim
+                                // the tooltip and create a stacking context that traps its
+                                // `z-index: 1000` — so it painted BEHIND the content panel and
+                                // read as clipped (reported 2026-08-08). The dimming lives on
+                                // `.nav-item-row` below, which holds the dot and label and
+                                // hosts nothing that has to escape the rail.
                                 className={cn(
                                     'timeline-step',
                                     isClickable ? 'cursor-pointer' : 'cursor-default',
-                                    status === 'upcoming' ? 'opacity-50' : 'opacity-100',
-                                    'transition-opacity',
                                     isEntering && 'timeline-step-enter',
                                     isExiting && 'timeline-step-exit',
                                 )}
@@ -200,7 +205,11 @@ export function TimelineNav({
                                 }}
                             >
                                 <View
-                                    UNSAFE_className="nav-item-row"
+                                    UNSAFE_className={cn(
+                                        'nav-item-row',
+                                        status === 'upcoming' ? 'opacity-50' : 'opacity-100',
+                                        'transition-opacity',
+                                    )}
                                 >
                                     {/* Step indicator dot — also the positioning ANCHOR for the
                                         connector below it, so the line centers on the dot's own box
