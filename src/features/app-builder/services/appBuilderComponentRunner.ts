@@ -502,18 +502,12 @@ function entryFromState(
  * Tear down a component's REMOTE artifacts, leaving the local clone and the keyed
  * state alone.
  *
- * Exported for the destination migration, which needs exactly this half:
- * `removeAppBuilderComponent` also deletes the folder, the keyed entry and the
- * API picks, all of which a move must keep. The target comes from the passed
- * project's `adobe`, so a caller moves destinations by handing in a clone that
- * carries the OLD ref.
- *
- * @param project - the project whose `adobe` names the target to tear down FROM
- * @param id - the component id
- * @param state - its keyed state (supplies `kind`, which picks the command)
- * @param deps - runner deps
+ * Module-private again: it was briefly exported for the destination migration,
+ * which no longer tears anything down — a move deploys to the new destination and
+ * leaves the old one serving, because undeploy is the only irreversible step and
+ * nobody asked for cleanup. `removeAppBuilderComponent` is the only caller.
  */
-export async function teardownRemote(
+async function teardownRemote(
     project: Project,
     id: string,
     state: AppBuilderComponentState,

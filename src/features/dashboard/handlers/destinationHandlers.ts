@@ -15,11 +15,21 @@
  * @module features/dashboard/handlers/destinationHandlers
  */
 
-import * as vscode from 'vscode';
+import {
+    postComponentsSnapshot,
+    postDestination,
+    postMeshStatus,
+    postRowStatus,
+    runGuards,
+} from './appBuilderComponentHandlers';
+import { withProgressRegister } from '@/core/vscode/progressRegister';
 import { moveAppBuilderComponentsToDestination } from '@/features/app-builder/services/appBuilderComponentMigration';
-import { buildDefaultRunnerDeps, buildRunnerDepsContext } from '@/features/app-builder/services/appBuilderComponentRunnerDeps';
+import {
+    buildDefaultRunnerDeps,
+    buildRunnerDepsContext,
+} from '@/features/app-builder/services/appBuilderComponentRunnerDeps';
 import { ErrorCode } from '@/types/errorCodes';
-import { defineHandlers, type MessageHandler } from '@/types/handlers';
+import { defineHandlers, type HandlerContext, type MessageHandler } from '@/types/handlers';
 
 /** One side of the destination — the flow's `adobeProject` / `adobeWorkspace` shape. */
 interface DestinationRef {
@@ -65,16 +75,76 @@ export const handleSetProjectDestination: MessageHandler<SetProjectDestinationPa
         };
     }
 
-    // Integrations live in the OLD Console project's Runtime namespace, so a
-    // change on a project that has any is a MOVE, not a re-point. Confirm BEFORE
-    // persisting: a decline must leave the project exactly as it was.
-    const movingIds = Object.keys(project.appBuilderComponents ?? {});
-    if (movingIds.length > 0 && !(await confirmMove(movingIds.length, nextProject, nextWorkspace))) {
-        return { success: false, error: 'Destination change cancelled.' };
+    const target = `${nextProject.title ?? nextProject.name} \u00b7 ${nextWorkspace.title ?? nextWorkspace.name}`;
+    return withProgressRegister(
+        {
+            // No card options: the destination is PROJECT-scoped, so no single card
+            // owns it. The per-component cards are telegraphed separately, by the
+            // callback handed to the migration below — this slot has no card to fill,
+            // which is NOT the same as the move having nothing to say.
+            title: `Changing destination to ${target}`,
+        },
+        (report) =>
+            applyDestination(
+                context,
+                project,
+                // Re-stated rather than relying on narrowing: the guard above proves
+                // both ids, but TS does not carry that through the object type.
+                { ...nextProject, id: nextProject.id as string },
+                { ...nextWorkspace, id: nextWorkspace.id as string },
+                target,
+                report,
+            ),
+    );
+};
+
+/**
+ * The destination change itself, inside the notification.
+ *
+ * Split out so the handler stays under the complexity limit and so every slow
+ * step — guards included — runs where the user can see it.
+ */
+async function applyDestination(
+    context: Parameters<typeof handleSetProjectDestination>[0],
+    project: NonNullable<Awaited<ReturnType<HandlerContext['stateManager']['getCurrentProject']>>>,
+    // `id` REQUIRED, not optional: the caller already rejects a half-specified
+    // destination, and stating it here is what lets that guard do its job. The
+    // narrowing does not survive the function boundary on its own.
+    nextProject: DestinationRef & { id: string },
+    nextWorkspace: DestinationRef & { id: string },
+    target: string,
+    report: (message: string) => void,
+): Promise<ReturnType<MessageHandler<SetProjectDestinationPayload>>> {
+    // First line, per the progress-register contract: the auth check is the slow
+    // step and the user must see why they are waiting.
+    // Unchanged destination: no confirmation to show, nothing to persist, nothing
+    // to move. Worth catching HERE as well as in the migration — the migration's
+    // guard prevents the data loss, this one prevents a pointless "move 2
+    // integrations?" prompt for a change that is not one.
+    if (
+        project.adobe?.projectId === nextProject.id &&
+        project.adobe?.workspace === nextWorkspace.id
+    ) {
+        context.logger.info(`[Destination] Already deploying to ${target} — no change.`);
+        return { success: true, data: { destination: project.adobe, unchanged: true } };
     }
 
-    // Captured BEFORE the overwrite: once `project.adobe` holds the new ref the
-    // old target is unrecoverable, and the migration undeploys from it.
+    report('Checking requirements…');
+    const guardError = await runGuards(context, project);
+    if (guardError) {
+        return { success: false, error: guardError.error, code: guardError.code };
+    }
+
+    // NO confirmation. It was a modal in front of an operation that destroys
+    // nothing and is undone by changing the destination back — the prompt cost a
+    // click on every change and bought no safety (user decision 2026-08-07). The
+    // notification and the per-card status say what is happening while it happens,
+    // which is the affordance that actually helps.
+    const movingIds = Object.keys(project.appBuilderComponents ?? {});
+
+    // Captured BEFORE the overwrite: once `project.adobe` holds the new ref the old
+    // target is otherwise unrecoverable, and an aborted move needs it to point the
+    // project back. Nothing undeploys from it — a move only ever deploys.
     const previous = project.adobe ? { ...project.adobe } : undefined;
 
     project.adobe = {
@@ -90,11 +160,17 @@ export const handleSetProjectDestination: MessageHandler<SetProjectDestinationPa
         workspaceTitle: nextWorkspace.title,
     };
 
+    report(`Saving destination ${target}…`);
     await context.stateManager.saveProject(project);
     context.logger.info(
         `[Destination] Now deploying to ${project.adobe.projectTitle ?? project.adobe.projectName}` +
             ` · ${project.adobe.workspaceTitle ?? project.adobe.workspaceName}`,
     );
+
+    // Immediately after the write, not after the move: `project.adobe` already
+    // names the new target, every deploy below goes there, and a header still
+    // showing the old one would be wrong for the whole run.
+    await postDestination(project.adobe);
 
     if (movingIds.length === 0) {
         return { success: true, data: { destination: project.adobe, previous } };
@@ -102,66 +178,84 @@ export const handleSetProjectDestination: MessageHandler<SetProjectDestinationPa
 
     // `project.adobe` already holds the NEW destination, so every deploy the
     // migration runs targets it; `previous` is what addresses the old one.
-    const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
-    const move = await moveAppBuilderComponentsToDestination(project, previous, deps);
+    report(`Moving ${movingIds.length} integration${movingIds.length === 1 ? '' : 's'}…`);
+    const deps = buildDefaultRunnerDeps(
+        await buildRunnerDepsContext(context, project),
+        // The deploy tails narrate their own steps; surface them as sub-messages so
+        // a multi-minute move reads as progress rather than a stalled notification.
+        (message, subMessage) => report(subMessage ? `${message} ${subMessage}` : message),
+    );
+    // The per-card channel. The notification above is project-scoped and owns no
+    // card, so this is what keeps the grid from reading DEPLOYED throughout a move
+    // that may run for minutes.
+    const move = await moveAppBuilderComponentsToDestination(
+        project,
+        previous,
+        deps,
+        (id, status, message) => routeCardStatus(project, id, status, message),
+    );
+    // Seed the grid from the persisted map either way: on success the entries carry
+    // new deploy records, and on an abort the rows that landed must not stay stuck
+    // on a transient status.
+    await postComponentsSnapshot(context);
     if (!move.success) {
+        // The migration pointed the project back; the header must follow, or it
+        // keeps naming a destination the project no longer uses.
+        await postDestination(project.adobe);
         const cause = move.failed.map((f) => `${f.id} (${f.error})`).join(', ');
-        if (move.rolledBack) {
-            // Clean abort: everything is back where it started, including the
-            // project's own destination — the migration reverted `project.adobe`.
-            await context.stateManager.saveProject(project);
-            return {
-                success: false,
-                error: `Could not move ${cause}. Nothing was changed — every integration is`
-                    + ' still at the previous destination.',
-                data: { destination: project.adobe, previous, move },
-            };
-        }
-        // The undo itself failed. Do NOT describe this as unchanged: the stranded
-        // components are gone from the old destination and may or may not be at
-        // the new one, and only naming them gives the user somewhere to start.
-        const stranded = (move.stranded ?? []).map((f) => `${f.id} (${f.error})`).join(', ');
+        // Nothing was destroyed — the move only ever deploys — so the previous
+        // destination is still serving everything and the project points back at
+        // it. The components that DID land at the new destination stay there, and
+        // saying so beats implying the run left no trace.
+        const landed = move.moved.length
+            ? ` ${move.moved.join(', ')} did reach it and were left in place.`
+            : '';
         return {
             success: false,
-            error: `Could not move ${cause}, and rolling back failed for ${stranded}.`
-                + ' Those integrations need attention in the Adobe Developer Console.',
+            error:
+                `Could not move ${cause}. Your integrations are all still running at the` +
+                ` previous destination, which is unchanged.${landed}`,
             data: { destination: project.adobe, previous, move },
         };
     }
 
+    if (move.moved.length > 0 && previous) {
+        context.logger.info(
+            `[Destination] ${move.moved.length} integration(s) now deploy to ${target}. The` +
+                ' previous deployments were left in place — remove them from the Adobe' +
+                ' Developer Console if you no longer need them.',
+        );
+    }
     return { success: true, data: { destination: project.adobe, previous, move } };
-};
-
-/** The confirm button's label — compared by identity, so it lives in one place. */
-const MOVE_CONFIRM = 'Move integrations';
-
-/**
- * Confirm a move before anything is written.
- *
- * Extracted to keep the handler under the complexity limit, and because the copy
- * is the only warning a user gets that this tears down real Runtime entities.
- *
- * @param count - how many components will move
- * @param nextProject - the destination Adobe project
- * @param nextWorkspace - the destination workspace
- * @returns true when the user confirmed
- */
-async function confirmMove(
-    count: number,
-    nextProject: DestinationRef,
-    nextWorkspace: DestinationRef,
-): Promise<boolean> {
-    const target = `${nextProject.title ?? nextProject.name} · ${nextWorkspace.title ?? nextWorkspace.name}`;
-    const choice = await vscode.window.showWarningMessage(
-        `Move ${count} integration${count === 1 ? '' : 's'} to ${target}?`
-            + ' Each one is deployed to the new destination and then torn down at the old'
-            + ' one. Tearing down removes its Adobe I/O Runtime entities and cannot be undone.',
-        { modal: true },
-        MOVE_CONFIRM,
-    );
-    return choice === MOVE_CONFIRM;
 }
+
 
 export const destinationHandlers = defineHandlers({
     setProjectDestination: handleSetProjectDestination,
 });
+
+/**
+ * Send one component's status to the channel ITS card actually reads.
+ *
+ * Two card surfaces, two unrelated channels: integrations take a keyed row push,
+ * the mesh takes the mesh status channel. Picking between them belongs here rather
+ * than in the migration — the same caller-owns-the-channel split that
+ * `progressRegister` documents for the single-component paths.
+ *
+ * @param project - carries the keyed map, which is where `kind` lives
+ * @param id - the component id
+ * @param status - what to show
+ * @param message - the in-flight line
+ */
+async function routeCardStatus(
+    project: { appBuilderComponents?: Record<string, { kind?: string }> },
+    id: string,
+    status: 'deploying' | 'deployed' | 'error',
+    message?: string,
+): Promise<void> {
+    if (project.appBuilderComponents?.[id]?.kind === 'mesh') {
+        await postMeshStatus(status, message);
+        return;
+    }
+    await postRowStatus(id, status, message);
+}

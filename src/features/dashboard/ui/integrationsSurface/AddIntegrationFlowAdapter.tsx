@@ -108,12 +108,35 @@ export function AddIntegrationFlowAdapter({
     // both halves are needed — ordering alone still loses the React batch.)
     const apiPicksRef = useRef<Record<string, string[]>>({});
 
-    const updateState = useCallback((updates: Partial<WizardState>): void => {
-        if (updates.selectedConsoleApis) {
-            apiPicksRef.current = updates.selectedConsoleApis as Record<string, string[]>;
-        }
-        setOverrides((current) => ({ ...current, ...updates }));
-    }, []);
+    // The committed destination, mirrored synchronously. `updateState` receives the
+    // project and the workspace in separate commits, and the post fires on the
+    // second — a setState-backed read would still see the previous render's value.
+    const destinationRef = useRef<{ project?: unknown; workspace?: unknown }>({});
+
+    const updateState = useCallback(
+        (updates: Partial<WizardState>): void => {
+            if (updates.selectedConsoleApis) {
+                apiPicksRef.current = updates.selectedConsoleApis as Record<string, string[]>;
+            }
+            if (updates.adobeProject) destinationRef.current.project = updates.adobeProject;
+            if (updates.adobeWorkspace) destinationRef.current.workspace = updates.adobeWorkspace;
+
+            // Continue off `dest-workspace` commits the workspace, which is the
+            // terminal step of the destination journey — so this is where the choice
+            // stops being local render state and reaches `project.adobe`.
+            //
+            // Without this the whole feature was inert: the handler, the Change
+            // control and the migration each worked in isolation while picking a
+            // destination did nothing at all (found live 2026-08-07).
+            const { project, workspace } = destinationRef.current;
+            if (mode === 'destination' && updates.adobeWorkspace && project && workspace) {
+                webviewClient.postMessage('setProjectDestination', { project, workspace });
+            }
+
+            setOverrides((current) => ({ ...current, ...updates }));
+        },
+        [mode],
+    );
 
     // Memoized: `state` derives from these, and a fresh array each render would
     // give the pickers a new `state` identity on every render — re-subscribing

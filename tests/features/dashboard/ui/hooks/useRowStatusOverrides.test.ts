@@ -31,8 +31,19 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 function pushStatus(payload: Record<string, unknown>): void {
     act(() => handlers.appBuilderComponentStatusUpdate?.(payload));
 }
+/**
+ * Push a snapshot in the shape the EXTENSION actually sends.
+ *
+ * `sendAppBuilderComponentsSnapshot` posts `payload: { components }`, and
+ * `webviewClient` hands the handler that payload — so the map is nested. This
+ * helper used to pass the map bare, which is why the prune shipped reading
+ * `Object.keys(data)` and computing `['components']` as the live id set: EVERY
+ * override was dropped on EVERY snapshot, and the test could not see it because
+ * it fed a shape the wire never produces (found live 2026-08-08, when a failed
+ * deploy's error status vanished and the card fell back to "Deployed").
+ */
 function pushSnapshot(map: Record<string, unknown>): void {
-    act(() => handlers.appBuilderComponentsSnapshot?.(map));
+    act(() => handlers.appBuilderComponentsSnapshot?.({ components: map }));
 }
 
 beforeEach(() => {
@@ -106,13 +117,30 @@ describe('useRowStatusOverrides', () => {
             expect(result.current).toBe(before);
         });
 
-        it('tolerates a snapshot with no payload', () => {
+        it('IGNORES a snapshot carrying no components rather than wiping the grid', () => {
+            // This used to assert the opposite — that a payload-less snapshot
+            // cleared every override — which was the bug written down as a rule.
+            // A malformed push must never blank live status, the same contract
+            // `useLiveAppBuilderComponents` states for the map itself.
             const { result } = renderHook(() => useRowStatusOverrides());
-            pushStatus({ id: 'erp', status: 'deployed' });
+            pushStatus({ id: 'erp', status: 'deploying', message: 'Deploying…' });
 
             pushSnapshot(undefined as unknown as Record<string, unknown>);
 
-            expect(result.current).toEqual({});
+            expect(result.current.erp).toMatchObject({ status: 'deploying' });
+        });
+
+        it('keeps an ERROR override across the snapshot that follows the failure', () => {
+            // The live symptom, pinned end to end: a failed deploy pushes 'error',
+            // the handler then posts a snapshot whose persisted entry still reads
+            // 'deployed' from the last good deploy. Prune the override and the card
+            // silently reports success for a deploy that failed (2026-08-08).
+            const { result } = renderHook(() => useRowStatusOverrides());
+            pushStatus({ id: 'order-sync', status: 'error', message: 'invalid yaml' });
+
+            pushSnapshot({ 'order-sync': { kind: 'integration', status: 'deployed' } });
+
+            expect(result.current['order-sync']).toMatchObject({ status: 'error' });
         });
     });
 });

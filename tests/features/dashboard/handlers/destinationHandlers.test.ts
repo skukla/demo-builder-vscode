@@ -11,8 +11,21 @@
  * This handler is the missing writer.
  */
 
-const mockShowWarningMessage = jest.fn();
-jest.mock('vscode', () => ({ window: { showWarningMessage: (...a: unknown[]) => mockShowWarningMessage(...a) } }), { virtual: true });
+const mockWithProgress = jest.fn(async (_o: unknown, task: (p: unknown) => unknown) =>
+    task({ report: mockProgressReport })
+);
+const mockProgressReport = jest.fn();
+jest.mock(
+    'vscode',
+    () => ({
+        window: {
+            withProgress: (...a: unknown[]) =>
+                (mockWithProgress as never as (...x: unknown[]) => unknown)(...a),
+        },
+        ProgressLocation: { Notification: 15 },
+    }),
+    { virtual: true }
+);
 
 const mockMove = jest.fn();
 jest.mock('@/features/app-builder/services/appBuilderComponentMigration', () => ({
@@ -22,8 +35,16 @@ jest.mock('@/features/app-builder/services/appBuilderComponentMigration', () => 
 const mockRunGuards = jest.fn();
 const mockBuildDefaultRunnerDeps = jest.fn(() => ({ catalog: [] }));
 const mockBuildRunnerDepsContext = jest.fn(async () => ({}));
+const mockPostRowStatus = jest.fn(async () => undefined);
+const mockPostComponentsSnapshot = jest.fn(async () => undefined);
+const mockPostDestination = jest.fn(async () => undefined);
+const mockPostMeshStatus = jest.fn(async () => undefined);
 jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
     runGuards: (...a: unknown[]) => mockRunGuards(...a),
+    postRowStatus: (...a: unknown[]) => mockPostRowStatus(...(a as [])),
+    postComponentsSnapshot: (...a: unknown[]) => mockPostComponentsSnapshot(...(a as [])),
+    postDestination: (...a: unknown[]) => mockPostDestination(...(a as [])),
+    postMeshStatus: (...a: unknown[]) => mockPostMeshStatus(...(a as [])),
 }));
 jest.mock('@/features/app-builder/services/appBuilderComponentRunnerDeps', () => ({
     buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...a),
@@ -66,7 +87,6 @@ beforeEach(() => {
     jest.clearAllMocks();
     mockRunGuards.mockResolvedValue(undefined);
     mockMove.mockResolvedValue({ success: true, moved: [], failed: [] });
-    mockShowWarningMessage.mockResolvedValue('Move integrations');
 });
 
 describe('handleSetProjectDestination', () => {
@@ -100,9 +120,9 @@ describe('handleSetProjectDestination', () => {
     });
 
     it('returns the previous destination so a caller can address the OLD target', async () => {
-        // Step 02 undeploys from the old destination AFTER the new one is
-        // persisted. Once `project.adobe` holds the new ref the old one is
-        // unrecoverable, so the write has to hand it back.
+        // An aborted move points the project back at the old destination. Once
+        // `project.adobe` holds the new ref the old one is unrecoverable, so the
+        // write has to hand it back. (It is NOT undeployed — a move only deploys.)
         const { context } = makeContext();
 
         const result = await handleSetProjectDestination(context, NEW_DESTINATION);
@@ -172,24 +192,118 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
         });
     });
 
-    it('confirms first — declining writes nothing and moves nothing', async () => {
-        mockShowWarningMessage.mockResolvedValue(undefined);
+    it('hands the migration a card channel that reaches the grid', async () => {
+        // Without this the move is invisible: the progress notification is
+        // project-scoped and owns no card, so every row sat at DEPLOYED for the
+        // whole run (found by inspection 2026-08-07). Assert the callback actually
+        // reaches postRowStatus rather than merely being passed — a callback wired
+        // to nothing looks identical at the call site.
+        const { context } = withComponents();
+
+        await handleSetProjectDestination(context, NEW_DESTINATION);
+
+        const onRowStatus = mockMove.mock.calls[0][3] as (
+            id: string,
+            status: string,
+            message?: string
+        ) => void;
+        expect(typeof onRowStatus).toBe('function');
+        onRowStatus('erp-sync', 'deploying', 'Deploying Integration');
+        expect(mockPostRowStatus).toHaveBeenCalledWith(
+            'erp-sync',
+            'deploying',
+            'Deploying Integration'
+        );
+    });
+
+    it('routes the MESH to its own status channel, not the row channel', async () => {
+        // The mesh card is keyed 'mesh' and reads `meshStatusUpdate`; the row
+        // channel is deliberately told to skip the mesh's component id so it does
+        // not synthesize a duplicate card. So a row push for a mesh goes nowhere,
+        // and the card sat at DEPLOYED while its deploy ran (reported live
+        // 2026-08-07). Which channel a surface uses is the CALLER's job — the same
+        // split `progressRegister` documents.
+        const project = {
+            name: 'demo',
+            path: '/p/demo',
+            adobe: { ...EXISTING_ADOBE },
+            appBuilderComponents: { 'eds-accs-mesh': { kind: 'mesh', status: 'deployed' } },
+        };
+        const context = {
+            logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+            stateManager: {
+                getCurrentProject: jest.fn().mockResolvedValue(project),
+                saveProject: jest.fn().mockResolvedValue(undefined),
+            },
+        } as unknown as HandlerContext;
+
+        await handleSetProjectDestination(context, NEW_DESTINATION);
+        const onRowStatus = mockMove.mock.calls[0][3] as (
+            id: string,
+            status: string,
+            message?: string
+        ) => void;
+        onRowStatus('eds-accs-mesh', 'deploying', 'Deploying Mesh');
+
+        expect(mockPostMeshStatus).toHaveBeenCalledWith('deploying', 'Deploying Mesh');
+        expect(mockPostRowStatus).not.toHaveBeenCalled();
+    });
+
+    it('refreshes the grid from the persisted map once the move ends', async () => {
+        const { context } = withComponents();
+
+        await handleSetProjectDestination(context, NEW_DESTINATION);
+
+        expect(mockPostComponentsSnapshot).toHaveBeenCalledWith(context);
+    });
+
+    it('refreshes the grid even when the move FAILED — rows must not stay spinning', async () => {
+        mockMove.mockResolvedValue({
+            success: false,
+            moved: [],
+            failed: [{ id: 'erp-sync', error: 'boom' }],
+            rolledBack: true,
+        });
+        const { context } = withComponents();
+
+        await handleSetProjectDestination(context, NEW_DESTINATION);
+
+        expect(mockPostComponentsSnapshot).toHaveBeenCalledWith(context);
+    });
+
+    it('asks nothing first — a move destroys nothing, so it just runs', async () => {
+        // There WAS a modal here. It guarded an operation that removes nothing and
+        // is undone by changing the destination back, so it cost a click and bought
+        // no safety (user decision 2026-08-07). Pinned as behaviour because
+        // re-adding a prompt is exactly the kind of change that looks like caution.
         const { context, saveProject } = withComponents();
 
         const result = await handleSetProjectDestination(context, NEW_DESTINATION);
 
-        expect(saveProject).not.toHaveBeenCalled();
-        expect(mockMove).not.toHaveBeenCalled();
-        expect(result.success).toBe(false);
+        expect(result.success).toBe(true);
+        expect(saveProject).toHaveBeenCalled();
+        expect(mockMove).toHaveBeenCalled();
     });
 
-    it('does not confirm when there is nothing deployed to move', async () => {
+    it('does not move when there is nothing deployed', async () => {
         const { context } = makeContext();
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
-        expect(mockShowWarningMessage).not.toHaveBeenCalled();
         expect(mockMove).not.toHaveBeenCalled();
+    });
+
+    it('pushes the new destination to the header as soon as it is written', async () => {
+        // Not after the move: `project.adobe` already names the new target and every
+        // deploy goes there, so a header still showing the old one is wrong for the
+        // whole run (reported live 2026-08-07).
+        const { context } = withComponents();
+
+        await handleSetProjectDestination(context, NEW_DESTINATION);
+
+        expect(mockPostDestination).toHaveBeenCalledWith(
+            expect.objectContaining({ projectTitle: 'New Project', workspaceTitle: 'Production' })
+        );
     });
 
     it('reports failure when a component did not move', async () => {
@@ -204,5 +318,66 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
 
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/erp-sync/);
+    });
+});
+
+/**
+ * The standard telegraph (2026-08-07, live).
+ *
+ * Reported after the first working run: "I see no progress notification which is
+ * the standard telegraph mechanism." Every other mutation on this surface narrates
+ * itself through `withProgressRegister` — add, deploy, remove — and a destination
+ * change redeploys every integration in the project, which can run for minutes, so
+ * running it silently is the worst case for the affordance to be missing.
+ *
+ * The guards were missing too, which these tests also pin: the handler mocked
+ * `runGuards` without ever calling it, so the mock made it look wired.
+ */
+describe('handleSetProjectDestination — telegraph and guards', () => {
+    it('narrates through the standard progress notification', async () => {
+        const { context } = makeContext();
+
+        await handleSetProjectDestination(context, NEW_DESTINATION);
+
+        expect(mockWithProgress).toHaveBeenCalled();
+        expect(mockProgressReport).toHaveBeenCalledWith(
+            expect.objectContaining({ message: expect.stringContaining('Checking requirements') })
+        );
+    });
+
+    it('reports the destination it is saving, as a step', async () => {
+        const { context } = makeContext();
+
+        await handleSetProjectDestination(context, NEW_DESTINATION);
+
+        expect(mockProgressReport).toHaveBeenCalledWith(
+            expect.objectContaining({ message: expect.stringContaining('New Project') })
+        );
+    });
+
+    it('runs the guards, and a guard failure writes NOTHING', async () => {
+        mockRunGuards.mockResolvedValue({ error: 'Not signed in', code: 'AUTH' });
+        const { context, saveProject } = makeContext();
+
+        const result = await handleSetProjectDestination(context, NEW_DESTINATION);
+
+        expect(mockRunGuards).toHaveBeenCalled();
+        expect(saveProject).not.toHaveBeenCalled();
+        expect(result.success).toBe(false);
+    });
+});
+
+describe('handleSetProjectDestination — selecting the destination already in use', () => {
+    it('does not persist or move — there is nothing to change', async () => {
+        const { context, saveProject } = makeContext();
+
+        const result = await handleSetProjectDestination(context, {
+            project: { id: 'old-project-id', name: 'OldProject', title: 'Old Project' },
+            workspace: { id: 'old-workspace-id', name: 'Stage', title: 'Stage' },
+        });
+
+        expect(result.success).toBe(true);
+        expect(saveProject).not.toHaveBeenCalled();
+        expect(mockMove).not.toHaveBeenCalled();
     });
 });

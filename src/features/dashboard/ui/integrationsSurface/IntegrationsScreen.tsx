@@ -29,6 +29,7 @@ import {
 import { IntegrationsGrid } from '../components/integrations/IntegrationsGrid';
 import { isMeshBusy, useDashboardStatus } from '../hooks/useDashboardStatus';
 import { useLiveAppBuilderComponents } from '../hooks/useLiveAppBuilderComponents';
+import { useLiveDestination } from '../hooks/useLiveDestination';
 import { useRowStatusOverrides } from '../hooks/useRowStatusOverrides';
 import { AddIntegrationFlowAdapter } from './AddIntegrationFlowAdapter';
 import { LoadingDisplay, StatusDisplay } from '@/core/ui/components/feedback';
@@ -130,7 +131,7 @@ export function IntegrationsScreen({
     hasAdobeContext,
     appBuilderComponents,
     appBuilderComponentCatalog,
-    destination,
+    destination: seededDestination,
     adobeProjectId,
     adobeWorkspaceId,
     adobeOrgId,
@@ -139,6 +140,9 @@ export function IntegrationsScreen({
         hasAdobeContext,
     });
     const components = useLiveAppBuilderComponents(appBuilderComponents);
+    // Live, not the raw prop: the init payload seeds the header once, so without
+    // this a destination change left the crumb naming the OLD target all session.
+    const destination = useLiveDestination(seededDestination);
     const overrides = useRowStatusOverrides();
     const [searchQuery, setSearchQuery] = useState('');
     const [addOpen, setAddOpen] = useState(false);
