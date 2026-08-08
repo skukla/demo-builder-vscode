@@ -78,9 +78,7 @@ export async function checkTools(): Promise<ToolsInfo> {
     };
 }
 
-export async function checkAdobeCLI(
-    aioTool: { installed: boolean; version?: string },
-): Promise<AdobeCLIInfo> {
+export async function checkAdobeCLI(aioTool: CommandCheckResult): Promise<AdobeCLIInfo> {
     const adobe: AdobeCLIInfo = {
         installed: false,
     };
@@ -90,7 +88,11 @@ export async function checkAdobeCLI(
     // before doing any work (measured darwin 2026-08-08; `node --version` is
     // 52ms), so the duplicate was pure latency for a value already in hand.
     adobe.installed = aioTool.installed;
-    adobe.version = aioTool.version;
+    // `.output`, not `.version` — CommandCheckResult carries the raw stdout.
+    // Typing this parameter loosely as `{ version?: string }` let an object that
+    // never had that field type-check, and the report shipped "Version:
+    // undefined" (live 2026-08-08).
+    adobe.version = aioTool.output;
 
     if (adobe.installed) {
         await checkAuthenticationStatus(adobe);

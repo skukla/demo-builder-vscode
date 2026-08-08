@@ -274,6 +274,20 @@ export const TIMEOUTS = {
     /** Slow command warning threshold (3 seconds) */
     SLOW_COMMAND_THRESHOLD: 3000,
 
+    /**
+     * Slow-command threshold for `aio` (12 seconds).
+     *
+     * The aio CLI has a floor no caller can avoid: `aio --version` — no network,
+     * no work — costs ~1.7s of startup (measured darwin 2026-08-08; `node
+     * --version` is 52ms). Real commands run 1.9-2.3s warm and ~3.9s cold. The
+     * generic 3s bar therefore sits INSIDE aio's normal range, and warned about
+     * healthy operations in the user-facing Logs channel.
+     *
+     * 12s is ~3x the observed cold worst case: comfortably quiet for aio being
+     * itself, still loud for an aio command that has actually wedged.
+     */
+    SLOW_COMMAND_THRESHOLD_AIO: 12000,
+
     /** Short operation estimated duration (500ms) */
     PROGRESS_ESTIMATED_DEFAULT_SHORT: 500,
 
@@ -338,3 +352,20 @@ export const CACHE_TTL = {
      */
     ORG_SERVICES: 30 * 60 * 1000,
 } as const;
+
+/**
+ * How long a command may take before it is worth telling anyone about.
+ *
+ * One definition, because "is this slow?" is a DECISION and three call sites
+ * holding their own copy is how they drift apart. `aio` gets its own budget:
+ * it carries a startup floor no caller can avoid, so the generic bar flags
+ * healthy work (see SLOW_COMMAND_THRESHOLD_AIO).
+ *
+ * @param command - the command line that ran
+ * @returns the threshold in ms
+ */
+export function slowCommandThreshold(command: string): number {
+    return command.trimStart().startsWith('aio ')
+        ? TIMEOUTS.SLOW_COMMAND_THRESHOLD_AIO
+        : TIMEOUTS.SLOW_COMMAND_THRESHOLD;
+}

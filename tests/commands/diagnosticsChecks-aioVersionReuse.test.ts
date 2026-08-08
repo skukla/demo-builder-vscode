@@ -30,6 +30,20 @@ jest.mock('@/core/di', () => ({
 }));
 
 import { checkAdobeCLI } from '@/commands/diagnosticsChecks';
+import type { CommandCheckResult } from '@/commands/diagnosticsReport';
+
+/**
+ * Build the tool result in the shape `checkTools` ACTUALLY produces.
+ *
+ * The first version of this test invented `{ installed, version }`. The real
+ * type is `CommandCheckResult`, whose field is `output` — and because the
+ * invented `version` was optional, TypeScript accepted the mismatch and the
+ * report shipped "Version: undefined" (live 2026-08-08). Typing the helper to
+ * the real interface is what stops the test agreeing with a wrong assumption.
+ */
+function aioTool(output?: string): CommandCheckResult {
+    return { installed: output !== undefined, output, duration: 1742 };
+}
 
 /** Every command string the executor was asked to run. */
 const ranCommands = (): string[] => mockExecute.mock.calls.map((c) => String(c[0]));
@@ -41,13 +55,13 @@ beforeEach(() => {
 
 describe('checkAdobeCLI — reusing the version checkTools already fetched', () => {
     it('does not run `aio --version` when handed the tool result', async () => {
-        await checkAdobeCLI({ installed: true, version: '@adobe/aio-cli/11.1.2' });
+        await checkAdobeCLI(aioTool('@adobe/aio-cli/11.1.2'));
 
         expect(ranCommands().filter((c) => c === 'aio --version')).toEqual([]);
     });
 
     it('reports the handed-in version rather than re-deriving it', async () => {
-        const adobe = await checkAdobeCLI({ installed: true, version: '@adobe/aio-cli/11.1.2' });
+        const adobe = await checkAdobeCLI(aioTool('@adobe/aio-cli/11.1.2'));
 
         expect(adobe.installed).toBe(true);
         expect(adobe.version).toBe('@adobe/aio-cli/11.1.2');
@@ -56,7 +70,7 @@ describe('checkAdobeCLI — reusing the version checkTools already fetched', () 
     it('skips the auth and org probes when aio is not installed', async () => {
         // The install check gates three further aio round trips. Handing in a
         // not-installed result has to gate them the same way the local check did.
-        await checkAdobeCLI({ installed: false });
+        await checkAdobeCLI(aioTool(undefined));
 
         expect(ranCommands()).toEqual([]);
     });
@@ -64,7 +78,7 @@ describe('checkAdobeCLI — reusing the version checkTools already fetched', () 
     it('still probes auth and orgs when aio IS installed', async () => {
         // The complement — without this, "runs no commands" would pass against a
         // checkAdobeCLI that had stopped doing anything at all.
-        await checkAdobeCLI({ installed: true, version: 'x' });
+        await checkAdobeCLI(aioTool('x'));
 
         expect(ranCommands().length).toBeGreaterThan(0);
     });
