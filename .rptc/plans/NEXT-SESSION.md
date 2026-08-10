@@ -1,85 +1,144 @@
 # Next session — start here
 
-Written 2026-08-03, end of session two. `develop` has 12+ unpushed commits, all green
-(jest 927 suites / ~11778 tests, tsc, whole-repo eslint, build).
+Written 2026-08-10, end of a very long session. **Everything is committed and pushed; both
+repos clean.** Gate at handoff: 947 suites / 12111 tests, whole-repo eslint, tsc.
 
-**The previous handoff is fully discharged** — its live bug, both host-contract steps, and the
-standing MESH ERROR are closed, and the mesh now deploys green in the running extension.
+The previous NEXT-SESSION (2026-08-03) is discharged and has been replaced by this file.
 
-## Start with this
+---
 
-**`per-integration-api-attribution` steps 04–06** — the feature work, parked for three
-sessions now.
+## There are three independent work streams. Pick one — do not interleave.
 
-Before 04: **step 03 has never been verified against live Adobe.** Confirm `componentApiPicks`
-lands in a real manifest and that a mesh redeploy leaves Developer Console subscriptions
-unchanged. 04 builds on it.
+They live in **different working directories**. Getting that wrong is the most likely way
+to waste the first ten minutes.
 
-## Then
+| # | Stream | Working directory | Branch |
+|---|---|---|---|
+| A | Socket TOCTOU (**shipped defect**) | main checkout | `develop` |
+| B | Configure step rail (**planned, not started**) | worktree `…​.worktrees/feature/configure-step-rail` | `feature/configure-step-rail` |
+| C | Release `.127` | main checkout | `develop` → `master` |
 
-**`integrations-destination-control/step-01`** — the destination CONTROL. Display shipped; the
-control is still blocked on one product question, not on code: after a change, already-deployed
-integrations keep pointing at the OLD workspace — copy problem, or stale-state problem?
+---
 
-## What the last two sessions established (do not re-derive)
+## A. Socket TOCTOU — highest priority, it is live
 
-**An unwrapped `aio` call inherits a stale global; it is not "untargeted."** The extension
-stopped writing `aio console where` under Phase 4a. `deployMeshHeadless` was the one deploy path
-of four that never wrapped in `withOrgContext`, and it deployed into a DELETED project for two
-days while stderr blamed the mesh config. Three siblings always wrapped — check any new `aio`
-path against them.
+A defect **introduced on 2026-08-10 and shipped**. Recovers on reload, so it presents as
+intermittent.
 
-**`aio` puts its diagnosis in stdout and a generic "check your configuration" in stderr.** The
-field that looks like the error is the one that misleads. `debug-log-triage` carries this now.
+`removeIfStillOurs` in `src/features/ai/server/inExtensionMcpServer.ts` stats the socket
+path, compares dev/ino, then unlinks. On a window reload the outgoing server's `dispose()`
+races the incoming server's `bindSocket()`; if the new server's `rename()` lands between
+that stat and that rm, **the old server deletes the new server's socket**. Observed live:
+`lsof` showed the extension host listening while `ls` showed the directory empty.
 
-**Guards can be green and prove nothing — four found so far, each for a different reason:**
-- a SEND regex using `<[^>]*>` that could not match a nested generic
-- assertions against a testid belonging to a mock of a component the screen never renders
-- a drift guard reading a fabricated id that was always truthy
-- three `verifyAppBuilderComponent` tests that pinned the mechanism faithfully and never asked
-  whether the mechanism answered the question on the button
+Full analysis, both candidate fixes, and why neither should be attempted without
+re-reading the discovery contract:
+**`.rptc/plans/pdp-prerender-validation/HANDOFF.md` §1.**
 
-The rule: **run the guard against the broken state before trusting it.**
+Related, separate: a **jest worker alive 4 days** was holding the real per-workspace
+socket path. Some test binds the production path instead of an isolated one.
 
-**Assert what DISPLAYS, not what is sent.** The register split moved deploy steps to
-`message`, which the card face never renders — so integration cards sat on a constant
-"Deploying…" while the steps went to a closed drawer. Every test passed: they asserted the step
-was *sent*. Found by the user asking what the expectation was.
+**Launch:**
+```
+cd /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode
+/rptc:fix MCP socket TOCTOU — on reload the outgoing server's dispose can delete the
+incoming server's socket between its stat and its rm. Read
+.rptc/plans/pdp-prerender-validation/HANDOFF.md §1 first; both candidate fixes and the
+constraint on each are recorded there.
+```
 
-**Agent-driven work must report itself, and "headless" was the wrong goal.** The two deploy
-paths disagreed: `deploy_integration` (keyed runner) raised a notification and animated its
-card, while `deploy_mesh` ran the core with NO callbacks and was silent for 1–3 minutes. Same
-user, same window. Nobody's attention is further from a deploy than when a chat turn started
-it. Both mesh callers now share `deployMeshWithFeedback`. `deployAppHeadless` was retired with
-its last caller: it never earned the second caller its mesh sibling has, because the MCP tools
-were always on the keyed path.
+---
 
-**Notification vs card is a REGISTER split, not a wording fix.** The question was "why do we run
-two notification systems at once, and what is each worth?" — the notification is the only
-feedback for someone not on the page, so it keeps a coarse title + spinner; the card carries the
-steps. Identical wording was the symptom that made it visible, not the reason to change it.
+## B. Configure step rail — planned, ready to implement
 
-## Unverified in the current build
+Refactor the Configure screen to the wizard's UI/UX: horizontal top rail, each configure
+section a tab, one section's fields visible at a time.
 
-- The integration card face counting through its deploy steps (the regression above).
-- The persisted failure reason in a card's drawer — needs a real failure, and the mesh is green.
-- This session's UI pass: source line moved to the flyout, flyout bar → kebab, Redeploy in the
-  kebab, destination in the header crumb, `Integrations…` in the project kebab.
-- An AGENT-triggered `deploy_mesh` raising the notification and animating the mesh card. Ask
-  Claude Code to deploy the mesh and watch the window.
-- The notification's QUIET case: a palette-launched mesh deploy with the Integrations tab
-  closed. Title + spinner for 1–3 minutes is the accepted trade-off; phases still reach the User
-  Logs. If too quiet, give the notification its own 3–4 coarse phases — do NOT restore the mirror.
+**Plan:** `.rptc/plans/configure-step-rail/` (`overview.md` + `step-01..05.md`) — **in the
+worktree, not the main checkout.** Committed as `dbcee1c2`.
 
-## Known trade-off, recorded not forgotten
+Five steps: promote the rail to `core` as `StepRail`; unify three section sources into one
+model; swap the sidebar for the rail; delete what that makes dead; verify in the Dev Host.
+Steps 01 and 02 are independent.
 
-The header crumb reads `Integrations  demo-builder-test · Kukla Mesh · Stage`, which makes the
-local project name and the remote Adobe destination peers in one dot-separated run. Chosen
-deliberately; the labelled alternative is `PageHeader`'s `description` slot, one prop away. See
-`formatHeaderSubtitle`.
+Three decisions already taken (do not re-litigate): switch sections rather than jump-nav;
+mark all sections reachable so the rail component needs no change; move and rename it.
 
-## Housekeeping
+Worth knowing before you start:
 
-Nothing pushed, nothing merged to `master`, no release cut. Three slow suites
-(`stopDemo.process`, `syncStorefront`, `configSyncService`) take ~280s EACH and will time out if
-two jest runs overlap — they pass in isolation. Do not run two full suites at once.
+- **The rail already exists and is already horizontal.** `VerticalStepList` renders
+  `<ol aria-orientation="horizontal">`. Its name and docstring claim the opposite and
+  misled a research agent during planning. Step 01 corrects that.
+- **The substance is the section model, not the rail.** Sections come from three unrelated
+  sources and only one feeds the current sidebar.
+- **`--wizard-content-pad` is scoped to `.wizard-main-content`** — outside the wizard the
+  declaration is dropped, the rail still renders, and no test can see it. Step 05 exists
+  for that.
+
+The worktree is already created and configured per the `worktree-setup` skill: own `dist/`,
+shared `node_modules`, `settings.local.json` copied, hooks and skills present via git.
+
+**Launch:**
+```
+cd /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode.worktrees/feature/configure-step-rail
+/rptc:feat Plan is approved, continue to implementation — configure step rail
+```
+
+The "Plan is approved" phrasing is load-bearing: it makes `/rptc:feat` skip discovery and
+planning and go straight to implementation from the plan file.
+
+---
+
+## C. Release `.127`
+
+**Blocked on the user wanting one more feature in first** (that feature is stream B).
+
+Two traps, both recorded in the PDP handoff §5:
+
+- **It is `.127`, not `.128`.** `package.json` already reads `1.0.0-beta.127` and no
+  `v1.0.0-beta.127` tag or release exists — the bump came from the `.126` hotfix merge-back
+  and was never cut. Do not apply the usual +1.
+- **430 non-merge commits** since `v1.0.0-beta.126`, because `.126` was a hotfix off `.125`
+  and develop diverged. Expect add-then-remove arcs; describe net shipped behaviour. This
+  needs fresh attention, not the tail of a session.
+
+Follow the `cut-release` skill, which also says to offer `codebase-sweep` and `dream` first.
+
+**`dream` has unusually good material.** The 2026-08-10 session produced five instances of
+one disease — *state recording intent rather than reality*: a probe reporting a prerender
+that never happened, a dashboard badge reading a persisted string, published-state
+recording what we meant to publish, a republish reporting success while publishing the
+wrong content, and a verdict asserting a cause it could not distinguish. That is a pattern
+worth naming in a skill or in CLAUDE.md.
+
+**Launch:**
+```
+cd /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode
+/cut-release
+```
+
+---
+
+## Also outstanding, smaller
+
+- **`demo-builder-test` mesh still runs on `base`.** Its `.env` is stale and `deploy_mesh`
+  does **not** regenerate it — only a Configure save does. Order: Configure save → then
+  deploy mesh. A `deploy_mesh` timed out at 10 min in this session; check
+  `appBuilderComponents['eds-accs-mesh']` before re-running.
+- **Missing `get_store_structure` MCP tool** — PDP handoff §3, flagged as the
+  highest-value gap. An agent debugging PDP failures cannot see that a project points at a
+  Commerce website with no products. That cost most of an afternoon.
+- **Duplicated Commerce scope still in existing manifests.** Nothing reads it as
+  authoritative any more (both resolvers now consult `BACKEND_OWNED_SCOPE_KEYS`), but it
+  will drift again. Needs a migration. PDP handoff §2.
+- **`pickSampleSku` reads the project manifest**, not the storefront's served
+  `config.json`. `check-sku-exists` reads the served config, which is the right source.
+  Recorded as intended and never made.
+
+---
+
+## Read before trusting the 2026-08-10 narrative
+
+`.rptc/plans/pdp-prerender-validation/HANDOFF.md` **§3 lists five things stated confidently
+during that session that were wrong**, and §6 lists where to recheck the work. Error rate
+was high; every mistake was caught by a test or a control rather than by reading output.

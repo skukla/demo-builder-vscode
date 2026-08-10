@@ -150,7 +150,12 @@ with its own scope.
 
 ## 5. Release `.127` — NOT yet
 
-User wants one more feature in first. When it is time:
+**Blocked on stream B**: the user wants the Configure step-rail refactor in first. Plan is
+written and committed at `.rptc/plans/configure-step-rail/` on branch
+`feature/configure-step-rail` (worktree `…​.worktrees/feature/configure-step-rail`),
+commit `dbcee1c2`. See `.rptc/plans/NEXT-SESSION.md` for how to launch it.
+
+When it is time:
 
 - **It is `.127`, not `.128`.** `package.json` already says `1.0.0-beta.127` and
   there is no `v1.0.0-beta.127` tag or release — the bump came from the `.126`
