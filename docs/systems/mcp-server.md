@@ -107,6 +107,21 @@ This means:
 - `mcpSocketPath.ts` is deliberately **`vscode`-free** because *both* ends (the
   extension server and the bundled proxy) import it and must agree on the path.
 
+The **directory** holding those sockets comes from `mcpSocketDir()`:
+`$TMPDIR/demo-builder-mcp`, overridable with `DEMO_BUILDER_MCP_SOCKET_DIR`
+(mirroring `DEMO_BUILDER_PROJECTS_DIR`). Server and proxy both read that one
+function, so they cannot disagree.
+
+That override is not a convenience — it is load-bearing for the test suite.
+`tests/extension-context.test.ts` and `tests/extension-activation-navigation.test.ts`
+call the **real** `activate()`, which starts the in-extension MCP server. Its
+socket path derives from the projects dir, and the *default* projects dir hashes
+to the **exact** socket a running Extension Dev Host binds — verified 2026-08-10
+by computing both (`135b859e0a31db31.sock`). So a plain `npx jest` renamed its own
+socket over the live window's and killed the developer's MCP session mid-run, with
+the listener still alive on a path no client could resolve. `tests/setup/node.ts`
+now points every worker at an isolated tree; `globalTeardown.ts` removes it.
+
 ---
 
 ## 4. A note on the retired standalone server
@@ -173,17 +188,28 @@ Wiring lives in `src/extension.ts`:
   calls `startInExtensionMcpServer(context)`. That disposes any previous server,
   resolves the current workspace's socket path, and constructs an
   `InExtensionMcpServer`.
-- The server's `start()` creates the socket directory `0700`, removes any stale
-  socket, opens a `net.Server` on the socket path, then `chmod`s the socket to
-  `0600`. **Those file permissions are the access control** — only the OS user
-  who owns the socket can connect (see [§11 Security](#11-security-model)).
+- The server's `start()` creates the socket directory `0700`, then binds each
+  socket under a **private** name (`<socket>.<pid>`), `chmod`s it to `0600`, and
+  `rename`s it over the shared path. **Those file permissions are the access
+  control** — only the OS user who owns the socket can connect (see
+  [§11 Security](#11-security-model)). Two details are load-bearing: `chmod`
+  precedes the rename so the shared name is never briefly world-readable, and
+  libuv unlinks the pathname it bound, so the shared name must be one libuv never
+  learns — otherwise `server.close()` deletes whichever successor holds it.
 - **Per connection**, the server creates a *fresh* `McpServer` instance from the
   MCP SDK, wraps it in a logging shim (`withToolLogging`, see §11), registers all
   tools onto it, and connects it to the socket via the SDK's
   `StdioServerTransport` — which, despite the name, accepts any duplex stream, so
   we hand it the socket.
 - **On deactivation / workspace change**, `dispose()` closes the server and
-  removes the socket file.
+  **leaves the socket file in place**. Nothing unlinks the shared name: POSIX has
+  no atomic unlink-if-inode, so "delete it only if it is still mine" verifies an
+  inode and then deletes a *name*, and a successor's rename landing between the
+  two gets deleted instead. The leftover file is harmless — the next bind renames
+  over it, and every consumer probes liveness rather than trusting existence.
+  `resolveProxyTarget` is split into liveness-first then existence-as-fallback for
+  exactly this reason (see §3), so a leftover no longer short-circuits the proxy's
+  fast "no window running" failure.
 
 Tool registration on each connection happens in two layers:
 

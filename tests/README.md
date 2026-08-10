@@ -85,6 +85,15 @@ tests/
 
 ## Running Tests
 
+> **Safe to run with an Extension Dev Host open — but only since 2026-08-10.**
+> Two suites call the real `activate()`, which starts the in-extension MCP server.
+> Its socket path derives from the projects dir, and the default projects dir
+> hashes to the *exact* socket a live Dev Host binds, so `npx jest` used to rename
+> its own socket over yours and kill the running MCP session. `tests/setup/node.ts`
+> now points every worker at an isolated socket tree via
+> `DEMO_BUILDER_MCP_SOCKET_DIR`. **Do not remove that** — nothing else keeps a test
+> run off the live socket, and the failure is silent from the test's side.
+
 ### All Tests
 ```bash
 npm test
