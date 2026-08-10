@@ -9,7 +9,10 @@ import {
     writeToComponents,
 } from '@/features/components/services/componentConfigWrites';
 import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
-import { toServiceGroupWithSortedFields, SERVICE_GROUP_DEFINITIONS } from '@/features/components/services/serviceGroupTransforms';
+import {
+    toServiceGroupWithSortedFields,
+    SERVICE_GROUP_DEFINITIONS,
+} from '@/features/components/services/serviceGroupTransforms';
 import { collectStackComponents } from '@/features/components/services/stackComponentCollector';
 import { getStackById } from '@/features/project-creation/ui/hooks/useSelectedStack';
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
@@ -103,8 +106,8 @@ function applyFieldDefaults(
     let hasChanges = false;
     const packageDefaults = packageConfigDefaults || {};
 
-    groups.forEach(group => {
-        group.fields.forEach(field => {
+    groups.forEach((group) => {
+        group.fields.forEach((field) => {
             const packageValue = packageDefaults[field.key];
             const defaultValue = packageValue ?? field.default;
             if (defaultValue === undefined || defaultValue === '') return;
@@ -112,7 +115,7 @@ function applyFieldDefaults(
             // A package default overrides whatever is there; a field default only fills a
             // blank. Applied per component, since they can hold different values.
             const targets = field.componentIds.filter(
-                componentId => packageValue || !newConfigs[componentId]?.[field.key],
+                (componentId) => packageValue || !newConfigs[componentId]?.[field.key],
             );
             if (targets.length === 0) return;
 
@@ -131,7 +134,9 @@ export function useComponentConfig({
     onConfigsChange,
     onValidationChange,
 }: UseComponentConfigProps): UseComponentConfigReturn {
-    const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>(initialConfigs || {});
+    const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>(
+        initialConfigs || {},
+    );
     const [hasInitializedFromState, setHasInitializedFromState] = useState(false);
     const [componentsData, setComponentsData] = useState<ComponentsData>({});
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -151,7 +156,7 @@ export function useComponentConfig({
             log.info('Syncing componentConfigs from props', {
                 configKeys: Object.keys(initialConfigs),
             });
-            setComponentConfigs(prev => {
+            setComponentConfigs((prev) => {
                 // Merge: incoming configs take priority, but preserve any user edits
                 const merged = { ...initialConfigs };
                 // Keep any keys that exist in prev but not in incoming (user edits)
@@ -170,7 +175,11 @@ export function useComponentConfig({
     useEffect(() => {
         const loadData = async () => {
             try {
-                const response = await vscode.request<{ success: boolean; type: string; data: ComponentsData }>('get-components-data');
+                const response = await vscode.request<{
+                    success: boolean;
+                    type: string;
+                    data: ComponentsData;
+                }>('get-components-data');
                 const data = response.data;
                 setComponentsData(data);
                 setIsLoading(false);
@@ -210,7 +219,11 @@ export function useComponentConfig({
                 const envVarDef = envVarDefs[envVarKey];
                 if (envVarDef) {
                     if (!fieldMap.has(envVarKey)) {
-                        fieldMap.set(envVarKey, { ...envVarDef, key: envVarKey, componentIds: [id] });
+                        fieldMap.set(envVarKey, {
+                            ...envVarDef,
+                            key: envVarKey,
+                            componentIds: [id],
+                        });
                     } else {
                         const existing = fieldMap.get(envVarKey);
                         if (existing && !existing.componentIds.includes(id)) {
@@ -232,7 +245,7 @@ export function useComponentConfig({
             // (This logic mirrors resolveComponentEnvVars but uses browser-loaded componentsData)
             if (data.configuration?.requiredServices && stack?.backend) {
                 const backendId = stack.backend;
-                data.configuration.requiredServices.forEach(serviceId => {
+                data.configuration.requiredServices.forEach((serviceId) => {
                     const serviceDef = componentsData.services?.[serviceId];
                     if (serviceDef?.backendSpecific && serviceDef.requiredEnvVarsByBackend) {
                         const backendSpecificVars = serviceDef.requiredEnvVarsByBackend[backendId];
@@ -254,12 +267,11 @@ export function useComponentConfig({
             groups[groupKey].push(field);
         });
 
-        return SERVICE_GROUP_DEFINITIONS
-            .map(def => toServiceGroupWithSortedFields(def, groups))
-            .filter(group => group.fields.length > 0)
+        return SERVICE_GROUP_DEFINITIONS.map((def) => toServiceGroupWithSortedFields(def, groups))
+            .filter((group) => group.fields.length > 0)
             .sort((a, b) => {
-                const aOrder = SERVICE_GROUP_DEFINITIONS.find(d => d.id === a.id)?.order || 99;
-                const bOrder = SERVICE_GROUP_DEFINITIONS.find(d => d.id === b.id)?.order || 99;
+                const aOrder = SERVICE_GROUP_DEFINITIONS.find((d) => d.id === a.id)?.order || 99;
+                const bOrder = SERVICE_GROUP_DEFINITIONS.find((d) => d.id === b.id)?.order || 99;
                 return aOrder - bOrder;
             });
     }, [selectedComponents, componentsData.envVars, componentsData.services, selectedStack]);
@@ -268,7 +280,9 @@ export function useComponentConfig({
     useEffect(() => {
         if (serviceGroups.length === 0) return;
 
-        setComponentConfigs(prevConfigs => applyFieldDefaults(prevConfigs, serviceGroups, packageConfigDefaults));
+        setComponentConfigs((prevConfigs) =>
+            applyFieldDefaults(prevConfigs, serviceGroups, packageConfigDefaults),
+        );
     }, [serviceGroups, packageConfigDefaults]);
 
     // Note: Auto-fill mesh endpoint effect removed - MESH_ENDPOINT is now auto-configured
@@ -281,13 +295,15 @@ export function useComponentConfig({
         let allValid = true;
         const errors: Record<string, string> = {};
 
-        serviceGroups.forEach(group => {
-            group.fields.forEach(field => {
+        serviceGroups.forEach((group) => {
+            group.fields.forEach((field) => {
                 // Note: MESH_ENDPOINT deferred field check removed - field is now filtered out entirely
                 // (auto-configured during project creation)
 
                 if (field.required) {
-                    const hasValue = field.componentIds.some(compId => componentConfigs[compId]?.[field.key]);
+                    const hasValue = field.componentIds.some(
+                        (compId) => componentConfigs[compId]?.[field.key],
+                    );
                     if (!hasValue) {
                         allValid = false;
                         errors[field.key] = `${field.label} is required`;
@@ -296,9 +312,13 @@ export function useComponentConfig({
 
                 // URL validation using core validator
                 if (field.type === 'url') {
-                    const firstComponentWithValue = field.componentIds.find(compId => componentConfigs[compId]?.[field.key]);
+                    const firstComponentWithValue = field.componentIds.find(
+                        (compId) => componentConfigs[compId]?.[field.key],
+                    );
                     if (firstComponentWithValue) {
-                        const value = componentConfigs[firstComponentWithValue][field.key] as string;
+                        const value = componentConfigs[firstComponentWithValue][
+                            field.key
+                        ] as string;
                         const result = urlValidator(value);
                         if (!result.valid && result.error) {
                             allValid = false;
@@ -309,9 +329,13 @@ export function useComponentConfig({
 
                 // Pattern validation using core validator
                 if (field.validation?.pattern) {
-                    const firstComponentWithValue = field.componentIds.find(compId => componentConfigs[compId]?.[field.key]);
+                    const firstComponentWithValue = field.componentIds.find(
+                        (compId) => componentConfigs[compId]?.[field.key],
+                    );
                     if (firstComponentWithValue) {
-                        const value = componentConfigs[firstComponentWithValue][field.key] as string;
+                        const value = componentConfigs[firstComponentWithValue][
+                            field.key
+                        ] as string;
                         const patternValidator = pattern(
                             new RegExp(field.validation.pattern),
                             field.validation.message || 'Invalid format',
@@ -330,55 +354,64 @@ export function useComponentConfig({
         onValidationChangeRef.current(allValid);
     }, [componentConfigs, serviceGroups]);
 
-    const updateField = useCallback((field: UniqueField, value: string | boolean) => {
-        setTouchedFields(prev => new Set(prev).add(field.key));
-        setComponentConfigs(prev => {
-            const writes: Record<string, string | boolean> = { [field.key]: value };
+    const updateField = useCallback(
+        (field: UniqueField, value: string | boolean) => {
+            setTouchedFields((prev) => new Set(prev).add(field.key));
+            setComponentConfigs((prev) => {
+                const writes: Record<string, string | boolean> = { [field.key]: value };
 
-            // Linked field: PAAS_URL → PAAS_GRAPHQL_ENDPOINT
-            // Only auto-derive if GraphQL hasn't been manually touched
-            if (field.key === PAAS_URL && typeof value === 'string') {
-                if (!touchedFields.has(PAAS_GRAPHQL_ENDPOINT)) {
-                    writes[PAAS_GRAPHQL_ENDPOINT] = deriveGraphqlEndpoint(value);
+                // Linked field: PAAS_URL → PAAS_GRAPHQL_ENDPOINT
+                // Only auto-derive if GraphQL hasn't been manually touched
+                if (field.key === PAAS_URL && typeof value === 'string') {
+                    if (!touchedFields.has(PAAS_GRAPHQL_ENDPOINT)) {
+                        writes[PAAS_GRAPHQL_ENDPOINT] = deriveGraphqlEndpoint(value);
+                    }
+                }
+
+                return writeToComponents(prev, field.componentIds, writes);
+            });
+        },
+        [touchedFields],
+    );
+
+    const getFieldValue = useCallback(
+        (field: UniqueField): string | boolean | undefined => {
+            for (const componentId of field.componentIds) {
+                const value = componentConfigs[componentId]?.[field.key];
+                if (value !== undefined && value !== '') {
+                    return typeof value === 'number' ? String(value) : value;
                 }
             }
-
-            return writeToComponents(prev, field.componentIds, writes);
-        });
-    }, [touchedFields]);
-
-    const getFieldValue = useCallback((field: UniqueField): string | boolean | undefined => {
-        for (const componentId of field.componentIds) {
-            const value = componentConfigs[componentId]?.[field.key];
-            if (value !== undefined && value !== '') {
-                return typeof value === 'number' ? String(value) : value;
+            // If user explicitly cleared this field (touched + empty), respect their intent
+            // Don't fall back to default when user deliberately cleared the value
+            if (touchedFields.has(field.key)) {
+                return '';
             }
-        }
-        // If user explicitly cleared this field (touched + empty), respect their intent
-        // Don't fall back to default when user deliberately cleared the value
-        if (touchedFields.has(field.key)) {
+            if (field.default !== undefined && field.default !== '') return field.default;
             return '';
-        }
-        if (field.default !== undefined && field.default !== '') return field.default;
-        return '';
-    }, [componentConfigs, touchedFields]);
+        },
+        [componentConfigs, touchedFields],
+    );
 
     /**
      * Normalize URL field on blur - removes trailing slashes for visual feedback.
      * Called when user leaves a URL field to show normalized value.
      */
-    const normalizeUrlField = useCallback((field: UniqueField) => {
-        if (field.type !== 'url') return;
+    const normalizeUrlField = useCallback(
+        (field: UniqueField) => {
+            if (field.type !== 'url') return;
 
-        const currentValue = findFieldValue(componentConfigs, field);
-        if (typeof currentValue !== 'string' || !currentValue) return;
+            const currentValue = findFieldValue(componentConfigs, field);
+            if (typeof currentValue !== 'string' || !currentValue) return;
 
-        // Normalize and update if changed
-        const normalized = normalizeUrl(currentValue);
-        if (normalized !== currentValue) {
-            setComponentConfigs(prev => writeFieldValue(prev, field, normalized));
-        }
-    }, [componentConfigs]);
+            // Normalize and update if changed
+            const normalized = normalizeUrl(currentValue);
+            if (normalized !== currentValue) {
+                setComponentConfigs((prev) => writeFieldValue(prev, field, normalized));
+            }
+        },
+        [componentConfigs],
+    );
 
     return {
         componentConfigs,
