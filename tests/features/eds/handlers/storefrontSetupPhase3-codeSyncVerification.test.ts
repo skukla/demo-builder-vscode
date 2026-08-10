@@ -24,6 +24,18 @@ import type { Logger } from '@/types/logger';
 
 jest.setTimeout(5000);
 
+// Phase 3 waits for real: a 2s code-sync poll interval and a 2s transient-retry
+// backoff, both via the shared sleep(). The node jest project runs on REAL
+// timers, so two tests here each burned 2003ms of wall clock waiting — 40% of
+// this file's budget, and the only budgeted suite in the repo with meaningful
+// load sensitivity after the 2026-08-10 processCleanup timeout flake.
+//
+// Both sleeps sit inside attempt-bounded loops (CODE_SYNC_MAX_ATTEMPTS,
+// RETRY_DELAYS_MS.length), not deadline-based ones, so removing the delay
+// changes how fast the loops run and not how many times. Nothing here asserts
+// on elapsed time — per sleep.ts, these assert on the SEQUENCE of attempts.
+jest.mock('@/core/utils/sleep');
+
 // Mock the helpers Phase 3 calls AFTER verifyCodeSync. We don't care about
 // their behavior here — we only want verifyCodeSync to be exercised cleanly.
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
@@ -161,7 +173,11 @@ describe('executePhaseCodeSync — code sync verification gate', () => {
             } as unknown as typeof EDS_CONFIG;
 
             await executePhaseCodeSync(
-                context, edsConfig, services, repoInfo, new AbortController().signal,
+                context,
+                edsConfig,
+                services,
+                repoInfo,
+                new AbortController().signal
             );
 
             expect(context.sendMessage).toHaveBeenCalledWith(
@@ -170,7 +186,7 @@ describe('executePhaseCodeSync — code sync verification gate', () => {
                     owner: 'demo-system-stores',
                     isTeamOrg: true,
                     message: expect.stringContaining('admin'),
-                }),
+                })
             );
         });
 
@@ -196,7 +212,11 @@ describe('executePhaseCodeSync — code sync verification gate', () => {
             } as unknown as typeof EDS_CONFIG;
 
             await executePhaseCodeSync(
-                context, edsConfig, services, repoInfo, new AbortController().signal,
+                context,
+                edsConfig,
+                services,
+                repoInfo,
+                new AbortController().signal
             );
 
             expect(context.sendMessage).toHaveBeenCalledWith(
@@ -204,7 +224,7 @@ describe('executePhaseCodeSync — code sync verification gate', () => {
                 expect.objectContaining({
                     owner: 'leahrayard',
                     isTeamOrg: false,
-                }),
+                })
             );
         });
 
