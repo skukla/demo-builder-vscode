@@ -12,7 +12,7 @@ import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ConfigureScreen } from '@/features/dashboard/ui/configure/ConfigureScreen';
 import '@testing-library/jest-dom';
-import { mockProject, mockComponentsData } from './ConfigureScreen.testUtils';
+import { mockProject, mockComponentsData, selectSection } from './ConfigureScreen.testUtils';
 
 // ── Hook mocks (declared first — jest.mock calls are hoisted) ───────────────
 
@@ -71,34 +71,11 @@ jest.mock('@/features/components/ui/components/StoreConfigFieldRow', () => ({
     ),
 }));
 
-// Mock layout components (same shape as other ConfigureScreen tests)
+// Mock layout components. The shell + rail are NOT mocked (direct-path imports), so
+// these tests use the real rail to reach each service group.
 jest.mock('@/core/ui/components/layout', () => ({
-    ContentWithSidebar: ({ children, sidebar }: any) => (
-        <div><div data-testid="left-column">{children}</div><div data-testid="right-column">{sidebar}</div></div>
-    ),
-    TwoColumnLayout: ({ leftContent, rightContent }: { leftContent: React.ReactNode; rightContent: React.ReactNode }) => (
-        <div>
-            <div data-testid="left-column">{leftContent}</div>
-            <div data-testid="right-column">{rightContent}</div>
-        </div>
-    ),
     PageHeader: ({ title }: { title: string }) => <div data-testid="page-header"><h1>{title}</h1></div>,
     PageFooter: () => <div data-testid="page-footer" />,
-}));
-
-jest.mock('@/core/ui/components/layout/TwoColumnLayout', () => ({
-    TwoColumnLayout: ({ leftContent, rightContent }: { leftContent: React.ReactNode; rightContent: React.ReactNode }) => (
-        <div>
-            <div data-testid="left-column">{leftContent}</div>
-            <div data-testid="right-column">{rightContent}</div>
-        </div>
-    ),
-}));
-
-jest.mock('@/core/ui/components/navigation', () => ({
-    NavigationPanel: () => <div data-testid="navigation-panel" />,
-    NavigationSection: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-    NavigationField: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 const renderWithProvider = (component: React.ReactElement) =>
@@ -144,7 +121,7 @@ describe('ConfigureScreen - Store Discovery Integration', () => {
         );
     });
 
-    it('renders StoreConfigFieldRow for every field across all service groups', () => {
+    it('renders StoreConfigFieldRow for every field in the ACTIVE service group', () => {
         renderWithProvider(
             <ConfigureScreen
                 project={mockProject as never}
@@ -152,12 +129,17 @@ describe('ConfigureScreen - Store Discovery Integration', () => {
             />
         );
 
-        // Fields from the test fixture — see ConfigureScreen.testUtils.
-        // All of these should render through StoreConfigFieldRow.
+        // Fields from the test fixture — see ConfigureScreen.testUtils. One section is on
+        // screen at a time, so the rows arrive a group at a time rather than all at once.
+        selectSection('Adobe Commerce');
         expect(screen.getByTestId('store-row-ADOBE_COMMERCE_URL')).toBeInTheDocument();
         expect(screen.getByTestId('store-row-ADOBE_COMMERCE_GRAPHQL_ENDPOINT')).toBeInTheDocument();
         expect(screen.getByTestId('store-row-ADOBE_COMMERCE_ADMIN_USERNAME')).toBeInTheDocument();
+        expect(screen.queryByTestId('store-row-ADOBE_CATALOG_API_KEY')).not.toBeInTheDocument();
+
+        selectSection('Catalog Service');
         expect(screen.getByTestId('store-row-ADOBE_CATALOG_API_KEY')).toBeInTheDocument();
+        expect(screen.queryByTestId('store-row-ADOBE_COMMERCE_URL')).not.toBeInTheDocument();
     });
 
     it('passes the correct service group id to StoreConfigFieldRow so store-group branching works', () => {
@@ -169,10 +151,12 @@ describe('ConfigureScreen - Store Discovery Integration', () => {
         );
 
         // Commerce URL is in the 'adobe-commerce' group (a store group per the mock isStoreGroup)
+        selectSection('Adobe Commerce');
         const commerceUrlRow = screen.getByTestId('store-row-ADOBE_COMMERCE_URL');
         expect(commerceUrlRow.getAttribute('data-group')).toBe('adobe-commerce');
 
         // Catalog API key is in the non-store 'catalog-service' group
+        selectSection('Catalog Service');
         const catalogKeyRow = screen.getByTestId('store-row-ADOBE_CATALOG_API_KEY');
         expect(catalogKeyRow.getAttribute('data-group')).toBe('catalog-service');
     });

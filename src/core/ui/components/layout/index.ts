@@ -36,3 +36,7 @@ export type { ContentWithSidebarProps } from './ContentWithSidebar';
 
 export { ControlPanelLayout } from './ControlPanelLayout';
 export type { ControlPanelLayoutProps } from './ControlPanelLayout';
+
+// StepAreaShell is deliberately NOT re-exported here: its consumers import it by direct
+// path, because several suites mock this whole barrel to stub PageHeader/PageFooter and
+// a barrel import would hand them an undefined shell.

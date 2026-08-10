@@ -31,6 +31,8 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | Copy-to-clipboard value | `ui/CopyableText` | a Button + clipboard call |
 | Numbered how-to steps | `ui/NumberedInstructions` | an `<ol>` |
 | Wizard config summary / step status | `wizard/ConfigurationSummary`, `StatusSection` | a bespoke summary |
+| Horizontal strip of step tabs | `navigation/StepRail` | a bespoke tablist |
+| Area shell: rail strip over a swapping view | `layout/StepAreaShell` | inlining `.step-nav` + `.step-view` |
 
 Auth surfaces have a house treatment too: **signed-out is never a Retry.** It is a
 `StatusDisplay` whose action starts a user-initiated sign-in (`AdobeAuthStep` is the

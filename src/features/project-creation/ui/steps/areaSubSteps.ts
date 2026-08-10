@@ -2,7 +2,7 @@
  * areaSubSteps — a per-area sub-step DRIVER registry.
  *
  * The Build step walks an area's sub-steps one at a time via the footer Continue/
- * Back (the linear driver), with a left VerticalStepList nav. That machinery used
+ * Back (the linear driver), with a left StepRail nav. That machinery used
  * to be Commerce-only; this registry generalizes it so any area can be sub-stepped
  * the SAME way (Commerce and Storefront) — WizardContainer and BuildYourProjectStep
  * drive whatever `areaSubSteps(activeAreaId)` returns. Integrations has NO driver

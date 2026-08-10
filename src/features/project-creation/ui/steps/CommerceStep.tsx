@@ -1,9 +1,9 @@
 /**
- * CommerceStep Component (Project Builder — vertical step list + dedicated view)
+ * CommerceStep Component (Project Builder — step rail + dedicated view)
  *
- * The Commerce area renders just its BODY — a [list | view] row (.commerce-body) with
- * a {@link VerticalStepList} on the left (Backend · [Sign in] · Connection · Business
- * Structure · Catalog) and, to its right, a dedicated view showing the ACTIVE step's
+ * The Commerce area renders just its BODY — a [rail / view] column (.commerce-body) with
+ * a {@link StepRail} strip on top (Backend · [Sign in] · Connection · Business
+ * Structure · Catalog) and, below it, a dedicated view showing the ACTIVE step's
  * body (the single {@link ConnectStoreStepContent} instance for config steps). The
  * surrounding two-column [ area body | unified "Your project" summary ] is owned by
  * {@link BuildYourProjectStep}; this step's summary contribution is computed by
@@ -41,7 +41,6 @@
 
 import React, { useMemo, useCallback, useEffect } from 'react';
 import { ConnectStoreStepContent } from '../components/ConnectStoreStepContent';
-import { VerticalStepList, type StepTab } from '../components/VerticalStepList';
 import {
     commerceSectionStates,
     resolveStackForBackend,
@@ -54,6 +53,8 @@ import {
 import { sectionBody } from './commerceStepBodies';
 import { isCommerceConfigured, isAdobeSignedIn } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
+import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
+import { StepRail, type StepTab } from '@/core/ui/components/navigation/StepRail';
 import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
 import {
     ACCS_STORE_VIEW_CODE,
@@ -250,7 +251,7 @@ export function CommerceStep({
         ],
     );
 
-    // Step models drive the VerticalStepList (status/lock only — the active highlight is
+    // Step models drive the StepRail (status/lock only — the active highlight is
     // the local activeStep, passed separately).
     const tabModels = useMemo<StepTab[]>(
         () =>
@@ -292,24 +293,21 @@ export function CommerceStep({
     // summary ] (see BuildYourProjectStep), so the summary lives there now, fed by
     // commerceSummaryGroup(state) rather than computed here.
     return (
-        <div className="commerce-body">
-            {/* Left nav: a small all-caps area label tells the user which area they
-                configure now that the area sub-nav left the wizard timeline, above the
-                vertical step list. */}
-            <div className="step-nav">
-                <div className="step-nav-area">Commerce</div>
-                <VerticalStepList
+        // The all-caps area label tells the user which area they configure, now that the
+        // area sub-nav left the wizard timeline. `viewKey` remounts the body on every
+        // sub-step change so the view crossfades in.
+        <StepAreaShell
+            areaLabel="Commerce"
+            viewKey={activeStep}
+            rail={
+                <StepRail
                     steps={tabModels}
                     activeId={activeStep}
                     onSelect={(id) => setActiveStep(id as CommerceSectionId)}
                 />
-            </div>
-            <div className="step-view">
-                {/* Keyed on the active sub-step so it remounts → the view crossfades in. */}
-                <div className="step-view-anim" key={activeStep}>
-                    {activeBody}
-                </div>
-            </div>
-        </div>
+            }
+        >
+            {activeBody}
+        </StepAreaShell>
     );
 }

@@ -1,9 +1,9 @@
 /**
- * StorefrontStep Component (v6 — vertical step list + dedicated view, like Commerce)
+ * StorefrontStep Component (v6 — step rail + dedicated view, like Commerce)
  *
- * The Storefront area renders just its BODY — a [list | view] row (.commerce-body)
- * with a {@link VerticalStepList} on the left and the active sub-step's dedicated
- * view on the right (four sub-steps):
+ * The Storefront area renders just its BODY — a [rail / view] column (.commerce-body)
+ * with a {@link StepRail} strip on top and the active sub-step's dedicated
+ * view below (four sub-steps):
  *   1. `accounts`        — connect GitHub + DA.live ({@link GitHubServiceCard} +
  *                          {@link DaLiveServiceCard}; gate: both connected).
  *   2. `repository`      — pick/create the repo ({@link RepoSelectionInline}, repository phase).
@@ -33,10 +33,11 @@ import {
     getNativeBlockLibraries,
 } from '../../services/blockLibraryLoader';
 import { BlockLibrariesStepContent } from '../components/BlockLibrariesStepContent';
-import { VerticalStepList } from '../components/VerticalStepList';
 import { requireAreaSubSteps } from './areaSubSteps';
 import { isStorefrontConfigured } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
+import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
+import { StepRail } from '@/core/ui/components/navigation/StepRail';
 import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { GitHubServiceCard, DaLiveServiceCard } from '@/features/eds/ui/components';
@@ -245,36 +246,34 @@ export function StorefrontStep({
     ) : null;
 
     return (
-        <div className="commerce-body">
-            <div className="step-nav">
-                <div className="step-nav-area">Storefront</div>
-                <VerticalStepList
+        // `viewKey` remounts (crossfades) on sub-step change, but groups repository +
+        // code-sync under one key so the trailing RepoSelectionInline arm — which covers
+        // BOTH at the SAME JSX position — keeps its element instance (and repo-creation /
+        // app-check state) across the phase flip.
+        <StepAreaShell
+            areaLabel="Storefront"
+            viewKey={viewKey}
+            rail={
+                <StepRail
                     steps={subSteps}
                     activeId={activeStep}
                     onSelect={id => updateState(driver.setActive(id))}
                 />
-            </div>
-            <div className="step-view">
-                {/* `key={viewKey}` remounts (crossfades) on sub-step change, but groups
-                    repository + code-sync under one key so the trailing RepoSelectionInline
-                    arm — which covers BOTH at the SAME JSX position — keeps its element
-                    instance (and repo-creation / app-check state) across the phase flip. */}
-                <div className="step-view-anim" key={viewKey}>
-                    {activeStep === 'accounts' ? (
-                        accountsCards
-                    ) : activeStep === 'block-libraries' ? (
-                        blockLibraries
-                    ) : (
-                        <RepoSelectionInline
-                            phase={activeStep}
-                            state={state}
-                            updateState={updateState}
-                            onRepoValidChange={v => updateState({ storefrontRepoValid: v })}
-                            onCodeSyncValidChange={v => updateState({ storefrontCodeSyncValid: v })}
-                        />
-                    )}
-                </div>
-            </div>
-        </div>
+            }
+        >
+            {activeStep === 'accounts' ? (
+                accountsCards
+            ) : activeStep === 'block-libraries' ? (
+                blockLibraries
+            ) : (
+                <RepoSelectionInline
+                    phase={activeStep}
+                    state={state}
+                    updateState={updateState}
+                    onRepoValidChange={v => updateState({ storefrontRepoValid: v })}
+                    onCodeSyncValidChange={v => updateState({ storefrontCodeSyncValid: v })}
+                />
+            )}
+        </StepAreaShell>
     );
 }

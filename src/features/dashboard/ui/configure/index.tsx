@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { ConfigureScreen, ComponentsData } from './ConfigureScreen';
+import { ConfigureScreen } from './ConfigureScreen';
+import type { ComponentsData } from './configureTypes';
 import { WebviewApp, WebviewInitData } from '@/core/ui/components/WebviewApp';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import { AuthoringExperience, Project } from '@/types/base';

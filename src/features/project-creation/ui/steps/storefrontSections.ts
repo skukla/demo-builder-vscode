@@ -7,7 +7,7 @@
  *   3. `code-sync`       — install the AEM Code Sync GitHub App (existing repos pass).
  *   4. `block-libraries` — the optional EDS block-library picker (terminal).
  *
- * Pure logic only (no React) so the footer walk, the gate, and the VerticalStepList
+ * Pure logic only (no React) so the footer walk, the gate, and the StepRail
  * nav can all derive from it. The active sub-step is `state.activeStorefrontStep`.
  * Lock is sequential: the first not-done step is `current`, every step after it is
  * `locked`, and every done step before it stays `done` (no commit-gating, no context).

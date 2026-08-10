@@ -65,7 +65,7 @@ export function TimelineChildren({
                 const isActive = child.id === activeChildId;
                 // Status only tiers the quiet label (done a touch darker than upcoming);
                 // there are no per-child dots or checkmarks now (the active accent bar +
-                // weight carry "where you are", mirroring the in-body VerticalStepList nav).
+                // weight carry "where you are", mirroring the in-body StepRail nav).
                 const status: TimelineStatus = isActive
                     ? 'current'
                     : (childStatusById?.[child.id] ?? 'upcoming');

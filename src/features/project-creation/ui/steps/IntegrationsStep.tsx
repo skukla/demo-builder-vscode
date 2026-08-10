@@ -38,6 +38,7 @@ import {
 } from '../components/integration-flow';
 import { meshComponentForStack } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
+import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -236,44 +237,41 @@ export function IntegrationsStep({
     );
 
     return (
-        <div className="commerce-body">
-            <div className="step-nav">
-                <div className="step-nav-area">Integrations</div>
-            </div>
-            <div className="step-view">
-                <div
-                    className={
-                        rows.length === 0
-                            ? 'step-view-anim int-results int-results--empty'
-                            : 'step-view-anim int-results'
-                    }
-                >
-                    {rows.length === 0 && <EmptyState onAdd={openAdd} />}
-                    {rows.map((row) => (
-                        <IntegrationResultRow
-                            key={row.id}
-                            row={row}
-                            destinationLabel={destinationLabel}
-                            onSetUpDestination={openDestination}
-                            onChangeDestination={openDestination}
-                            onRemove={() => onRemoveRow(row)}
-                            onChangeApis={() => openEditApis(row)}
-                            onRename={
-                                row.renamable
-                                    ? () => setRenameTarget({ id: row.id, name: row.name })
-                                    : undefined
-                            }
-                        />
-                    ))}
-                    {rows.length > 0 && (
-                        <div className="int-results-add">
-                            <Button variant="accent" onPress={openAdd}>
-                                Add Integration
-                            </Button>
-                        </div>
-                    )}
-                </div>
-            </div>
+        // Integrations has no sub-steps, so the shell carries the area label alone — no
+        // rail, no remount key. Both modals are DialogContainer-hosted (they portal), so
+        // living outside the shell rather than inside it changes nothing on screen.
+        <>
+            <StepAreaShell
+                areaLabel="Integrations"
+                viewClassName={
+                    rows.length === 0 ? 'int-results int-results--empty' : 'int-results'
+                }
+            >
+                {rows.length === 0 && <EmptyState onAdd={openAdd} />}
+                {rows.map((row) => (
+                    <IntegrationResultRow
+                        key={row.id}
+                        row={row}
+                        destinationLabel={destinationLabel}
+                        onSetUpDestination={openDestination}
+                        onChangeDestination={openDestination}
+                        onRemove={() => onRemoveRow(row)}
+                        onChangeApis={() => openEditApis(row)}
+                        onRename={
+                            row.renamable
+                                ? () => setRenameTarget({ id: row.id, name: row.name })
+                                : undefined
+                        }
+                    />
+                ))}
+                {rows.length > 0 && (
+                    <div className="int-results-add">
+                        <Button variant="accent" onPress={openAdd}>
+                            Add Integration
+                        </Button>
+                    </div>
+                )}
+            </StepAreaShell>
             <AddIntegrationFlowModal
                 isOpen={modalOpen}
                 onClose={closeModal}
@@ -298,6 +296,6 @@ export function IntegrationsStep({
                 onClose={closeRename}
                 onRename={commitRename}
             />
-        </div>
+        </>
     );
 }

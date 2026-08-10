@@ -987,13 +987,6 @@ button[class*="spectrum-Button"][disabled],
         border-left: none !important;
         border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
     }
-    /* Configure's sidebar is a jump-nav ("Sections"); stacked below the form
-       it's worse than useless — hide it. Scoped: other ContentWithSidebar
-       consumers (dashboard status panel, project picker summary) carry real
-       content and keep their stacked sidebar. */
-    .configure-content-layout .two-column-layout-right {
-        display: none !important;
-    }
 }
 
 
@@ -1932,7 +1925,7 @@ button[class*="spectrum-Button"][disabled],
    active child gets a 2px accent bar + bold gray-900 label; a done child is a touch
    darker than an upcoming one. The whole rail is indented well clear of the parent's
    dotted spine (TimelineChildren CHILD_INDENT) so the accent bar never reads as a
-   second rail next to the dotted line. Mirrors the in-body VerticalStepList nav. */
+   second rail next to the dotted line. Mirrors the in-body StepRail nav. */
 .timeline-child {
     box-sizing: border-box;
     padding: 5px 0 5px 12px;
@@ -3230,31 +3223,6 @@ button[class*="spectrum-Button"][disabled],
 }
 
 /* ===========================================
-   Navigation Panel Styles
-   =========================================== */
-.nav-panel-container {
-    flex: 1 !important;
-    padding: 24px !important;
-    background-color: var(--spectrum-global-color-gray-75) !important;
-    border-left: 1px solid var(--spectrum-global-color-gray-200) !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-}
-
-.nav-panel-scroll {
-    overflow-y: auto !important;
-    flex: 1 !important;
-}
-
-.nav-section-fields {
-    margin-top: 4px !important;
-    margin-left: 12px !important;
-    padding-left: 12px !important;
-    border-left: 2px solid var(--spectrum-global-color-gray-300) !important;
-}
-
-/* ===========================================
    CopyableText Component Styles
    SOP §11: Extracted from inline style objects
    =========================================== */
@@ -3367,56 +3335,6 @@ button[class*="spectrum-Button"][disabled],
 .loading-overlay-text {
     color: var(--db-loading-text) !important;
     font-weight: 500 !important;
-}
-
-/* ===========================================
-   NavigationPanel Component Styles
-   SOP §11: Extracted from inline style objects
-   =========================================== */
-.nav-section-button {
-    width: 100% !important;
-    padding: 12px !important;
-    background: transparent !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    border-radius: 4px !important;
-    cursor: pointer !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 4px !important;
-    transition: all 0.2s ease !important;
-}
-
-.nav-section-button:hover {
-    background: var(--spectrum-global-color-gray-100) !important;
-}
-
-.nav-section-button-active {
-    background: var(--spectrum-global-color-gray-200) !important;
-    border-left: 3px solid var(--spectrum-global-color-blue-500) !important;
-}
-
-.nav-field-button {
-    width: 100% !important;
-    padding: 8px 12px !important;
-    background: transparent !important;
-    border: none !important;
-    cursor: pointer !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    text-align: left !important;
-    transition: all 0.2s !important;
-    border-radius: 4px !important;
-}
-
-.nav-field-button:hover {
-    background: var(--spectrum-global-color-gray-100) !important;
-}
-
-.nav-field-button-active {
-    background: var(--spectrum-global-color-blue-100) !important;
-    border-left: 2px solid var(--spectrum-global-color-blue-500) !important;
 }
 
 /* Status indicator icons (checkmarks, counts) */
@@ -3610,6 +3528,14 @@ button[class*="spectrum-Button"][disabled],
     height: 100vh !important;
     display: flex !important;
     overflow: hidden !important;
+    /* Configure renders the SAME StepAreaShell as the wizard's areas, and .step-nav /
+     * .step-view-anim reference these two tokens in their padding and max-width. They
+     * are declared on .wizard-main-content, which Configure is not inside — so without
+     * this block the whole declaration is invalid and DROPPED: the rail still renders,
+     * every test still passes, and the padding is silently gone. Redeclared here rather
+     * than promoted to :root so the two surfaces stay independently adjustable. */
+    --wizard-content-pad: var(--spectrum-global-dimension-size-300); /* 24px content padding */
+    --commerce-zone-max: var(--content-width); /* same 960 band as every screen */
 }
 
 /* ===========================================
@@ -4140,8 +4066,8 @@ div[class*="spectrum"] input[type="search"] {
 }
 
 /* =========================================================================
- * Project Builder — Commerce: VerticalStepList (.vsteplist*) + [list | view]
- * row (.commerce-body) + dedicated view (.step-view) + BuildYourProjectSummary (.sum*).
+ * Project Builder — Commerce: StepRail (.vsteplist*) + [rail / view]
+ * column (.commerce-body) + dedicated view (.step-view) + BuildYourProjectSummary (.sum*).
  * Adapted to Spectrum design tokens so the surface follows the active
  * (light/dark) theme.
  * ========================================================================= */
@@ -4225,20 +4151,20 @@ div[class*="spectrum"] input[type="search"] {
     margin: 0 !important;
     flex: 0 0 auto !important;
 }
-/* ---- VerticalStepList (.vsteplist*) — a QUIET vertical MENU on the panel's left ----
- * Matched to the right-hand summary column (.sum*) so the panel reads as a balanced
- * pair [ quiet nav | step content | quiet summary ]. NO numbered circles, NO connector
- * rail. Each row is a fixed-width leading mark column (glyph or blank → labels align) +
- * the step label. done → subtle ✓ + muted label; current/active → filled accent marker
- * + left accent bar (3px blue-500) + gray-100 fill + bold gray-900 label (NO border
- * box); upcoming → blank mark + muted label; locked → muted + aria-disabled. Subtle
- * Spectrum tokens (theme-aware), no saturated fills, accessible focus ring. */
+/* ---- StepRail (.vsteplist*) — a QUIET HORIZONTAL tab strip across the top ----
+ * The class prefix is historical (the component used to be called VerticalStepList and
+ * used to render as a left menu); it is a top strip now and the names are kept only to
+ * avoid churning the wizard's visual surface. Matched to the summary column (.sum*) so
+ * the panel reads as one family. NO numbered circles, NO connector rail, NO leading
+ * marks — labels only. active → a 2px blue-500 bottom underline + bold gray-900 label;
+ * upcoming/locked → muted + aria-disabled. Subtle Spectrum tokens (theme-aware), no
+ * saturated fills, accessible focus ring. */
 .vsteplist {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
     /* Takes the strip's remaining width and scrolls horizontally when the tabs
-       overflow (the active tab is scrolled into view by VerticalStepList). */
+       overflow (the active tab is scrolled into view by StepRail). */
     flex: 1 1 auto !important;
     min-width: 0 !important;
     width: auto !important;
@@ -4294,7 +4220,7 @@ div[class*="spectrum"] input[type="search"] {
 /* A newly-revealed tab (e.g. "Sign in" appearing when the ACCS backend is chosen)
  * grows + fades in so the siblings shift smoothly instead of the tab popping in —
  * mirrors the rail's timeline-enter (animate a max dimension + opacity, clip while
- * growing). Applied for one render by VerticalStepList; zeroed under reduced-motion. */
+ * growing). Applied for one render by StepRail; zeroed under reduced-motion. */
 .vsteplist-step--enter {
     overflow: hidden !important;
     animation: vsteplist-step-enter var(--db-motion-slow) var(--db-motion-ease);
@@ -4324,6 +4250,20 @@ div[class*="spectrum"] input[type="search"] {
 .vsteplist-step.active .vsteplist-title {
     font-weight: 700 !important;
     color: var(--spectrum-global-color-gray-900) !important;
+}
+/* Error marker — the ONE per-item glyph on a tab, and only because the errored step's
+ * body is off screen by definition (Configure shows one section at a time), so nothing
+ * else can carry it. A small negative-500 dot after the label, plus a red-600 label so
+ * the signal is not colour-on-a-dot alone. */
+.vsteplist-step.has-error .vsteplist-title {
+    color: var(--spectrum-global-color-red-600) !important;
+}
+.vsteplist-error {
+    flex: 0 0 auto !important;
+    width: var(--spectrum-global-dimension-size-75) !important;
+    height: var(--spectrum-global-dimension-size-75) !important;
+    border-radius: 50% !important;
+    background: var(--spectrum-global-color-red-600) !important;
 }
 /* Visually-hidden lock reason (the mark/title stay visible; SR reads the reason). */
 .vsteplist-sr {

@@ -1,17 +1,14 @@
 /**
- * VerticalStepList tests (Commerce slice — vertical nav)
+ * StepRail tests
  *
- * Presentational, fully-controlled step list (name is historical — it now renders as a
- * HORIZONTAL tab strip via CSS). Renders steps as real <button role="tab">s inside a
- * `role="tablist"` with `aria-orientation="horizontal"`; the active step is
- * `aria-selected`; only REACHED steps (`done` / `current`) call `onSelect(id)` — you may
- * click BACK to a reached step but never AHEAD to an `upcoming` one. `upcoming` and
- * `locked` steps are `aria-disabled` + out of the tab order and do NOT call `onSelect`;
- * `locked` additionally surfaces its reason. Quiet per-status marks (done →
- * subtle ✓ glyph / current → filled accent marker / upcoming + locked → blank, so the
- * labels stay aligned). No numbered circles, no connector rail. No business logic, no
- * internal state — parent owns activeId / onSelect. Same interface as the deleted
- * StepTabs.
+ * Presentational, fully-controlled HORIZONTAL tab strip. Renders steps as real
+ * <button role="tab">s inside a `role="tablist"` with `aria-orientation="horizontal"`;
+ * the active step is `aria-selected`; only REACHED steps (`done` / `current`) call
+ * `onSelect(id)` — you may click BACK to a reached step but never AHEAD to an
+ * `upcoming` one. `upcoming` and `locked` steps are `aria-disabled` + out of the tab
+ * order and do NOT call `onSelect`; `locked` additionally surfaces its reason. Labels
+ * only — NO per-status marks, no numbered circles, no connector rail. No business
+ * logic, no internal state — parent owns activeId / onSelect.
  *
  * @jest-environment jsdom
  */
@@ -21,9 +18,9 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import {
-    VerticalStepList,
+    StepRail,
     type StepTab,
-} from '@/features/project-creation/ui/components/VerticalStepList';
+} from '@/core/ui/components/navigation/StepRail';
 
 const renderWithProvider = (ui: React.ReactElement) =>
     render(<Provider theme={defaultTheme}>{ui}</Provider>);
@@ -47,11 +44,11 @@ function tab(id: string): HTMLButtonElement {
     return el as HTMLButtonElement;
 }
 
-describe('VerticalStepList', () => {
+describe('StepRail', () => {
     describe('rendering and order', () => {
-        it('renders every step as a button in vertical (top-to-bottom) order', () => {
+        it('renders every step as a button in rail (left-to-right) order', () => {
             renderWithProvider(
-                <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
+                <StepRail steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
             );
             const buttons = document.querySelectorAll('.vsteplist-step');
             expect(buttons).toHaveLength(4);
@@ -61,7 +58,7 @@ describe('VerticalStepList', () => {
 
         it('exposes a horizontal tablist orientation (the strip)', () => {
             renderWithProvider(
-                <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
+                <StepRail steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
             );
             const list = screen.getByRole('tablist');
             expect(list).toHaveAttribute('aria-orientation', 'horizontal');
@@ -69,7 +66,7 @@ describe('VerticalStepList', () => {
 
         it('renders each step title text', () => {
             renderWithProvider(
-                <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
+                <StepRail steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
             );
             expect(screen.getByText('Backend')).toBeInTheDocument();
             expect(screen.getByText('Catalog')).toBeInTheDocument();
@@ -79,7 +76,7 @@ describe('VerticalStepList', () => {
     describe('status markers', () => {
         it('exposes the status via data-status on each step', () => {
             renderWithProvider(
-                <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
+                <StepRail steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
             );
             expect(tab('backend')).toHaveAttribute('data-status', 'done');
             expect(tab('connection')).toHaveAttribute('data-status', 'current');
@@ -89,9 +86,9 @@ describe('VerticalStepList', () => {
 
         it('renders NO status glyph on any step — done included (the summary owns the ✓)', () => {
             renderWithProvider(
-                <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
+                <StepRail steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
             );
-            // The left sub-menu is navigation only: status lives in data-status (and the
+            // The rail is navigation only: status lives in data-status (and the
             // adjacent summary column), never a per-item glyph. No svg/icon, no numbers.
             for (const id of ['backend', 'connection', 'business-structure', 'catalog']) {
                 expect(tab(id).querySelector('svg')).not.toBeInTheDocument();
@@ -101,7 +98,7 @@ describe('VerticalStepList', () => {
 
         it('does not render numbered circles on any step', () => {
             renderWithProvider(
-                <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
+                <StepRail steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
             );
             // The current step (Connection, 2nd) no longer shows its index "2".
             expect(tab('connection')).not.toHaveTextContent('2');
@@ -111,7 +108,7 @@ describe('VerticalStepList', () => {
     describe('active state', () => {
         it('flags the active step with aria-selected=true and others false', () => {
             renderWithProvider(
-                <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
+                <StepRail steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
             );
             expect(tab('connection')).toHaveAttribute('aria-selected', 'true');
             expect(tab('backend')).toHaveAttribute('aria-selected', 'false');
@@ -122,7 +119,7 @@ describe('VerticalStepList', () => {
         it('marks a locked step aria-disabled and does not call onSelect when clicked', () => {
             const onSelect = jest.fn();
             renderWithProvider(
-                <VerticalStepList steps={STEPS} activeId="connection" onSelect={onSelect} />,
+                <StepRail steps={STEPS} activeId="connection" onSelect={onSelect} />,
             );
             expect(tab('catalog')).toHaveAttribute('aria-disabled', 'true');
             fireEvent.click(tab('catalog'));
@@ -131,7 +128,7 @@ describe('VerticalStepList', () => {
 
         it('surfaces the lock reason (title + visually-hidden text)', () => {
             renderWithProvider(
-                <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
+                <StepRail steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
             );
             expect(tab('catalog')).toHaveAttribute('title', 'Choose a store view first');
             expect(screen.getByText('Choose a store view first')).toBeInTheDocument();
@@ -141,7 +138,7 @@ describe('VerticalStepList', () => {
     describe('upcoming steps', () => {
         it('marks an upcoming step aria-disabled + out of the tab order', () => {
             renderWithProvider(
-                <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
+                <StepRail steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
             );
             expect(tab('business-structure')).toHaveAttribute('aria-disabled', 'true');
             expect(tab('business-structure')).toHaveAttribute('tabindex', '-1');
@@ -150,7 +147,7 @@ describe('VerticalStepList', () => {
         it('does not call onSelect when an upcoming (ahead) step is clicked', () => {
             const onSelect = jest.fn();
             renderWithProvider(
-                <VerticalStepList steps={STEPS} activeId="connection" onSelect={onSelect} />,
+                <StepRail steps={STEPS} activeId="connection" onSelect={onSelect} />,
             );
             fireEvent.click(tab('business-structure'));
             expect(onSelect).not.toHaveBeenCalled();
@@ -158,7 +155,7 @@ describe('VerticalStepList', () => {
 
         it('does not surface a reason on an upcoming step (it is future, not gated)', () => {
             renderWithProvider(
-                <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
+                <StepRail steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
             );
             expect(tab('business-structure')).not.toHaveAttribute('title');
         });
@@ -168,7 +165,7 @@ describe('VerticalStepList', () => {
         it('calls onSelect with the id when a reached (done/current) step is clicked', () => {
             const onSelect = jest.fn();
             renderWithProvider(
-                <VerticalStepList steps={STEPS} activeId="connection" onSelect={onSelect} />,
+                <StepRail steps={STEPS} activeId="connection" onSelect={onSelect} />,
             );
             // `backend` is `done` — a reached step you can click BACK to.
             fireEvent.click(tab('backend'));
@@ -178,17 +175,59 @@ describe('VerticalStepList', () => {
         it('calls onSelect when the current step is clicked', () => {
             const onSelect = jest.fn();
             renderWithProvider(
-                <VerticalStepList steps={STEPS} activeId="connection" onSelect={onSelect} />,
+                <StepRail steps={STEPS} activeId="connection" onSelect={onSelect} />,
             );
             fireEvent.click(tab('connection'));
             expect(onSelect).toHaveBeenCalledWith('connection');
         });
     });
 
+    describe('error marker', () => {
+        // Configure renders ONE section at a time, so a blocking validation error can sit
+        // in a section that is off screen. Without a marker on the tab, Save is disabled
+        // and the user has no way to find out why.
+        const WITH_ERROR: StepTab[] = [
+            { id: 'backend', title: 'Backend', status: 'done', hasError: true },
+            { id: 'connection', title: 'Connection', status: 'current' },
+        ];
+
+        it('marks a tab carrying an error and leaves the others unmarked', () => {
+            renderWithProvider(
+                <StepRail steps={WITH_ERROR} activeId="connection" onSelect={jest.fn()} />,
+            );
+            expect(tab('backend')).toHaveAttribute('data-has-error', 'true');
+            expect(tab('connection')).not.toHaveAttribute('data-has-error');
+        });
+
+        it('announces the error to screen readers rather than relying on the dot alone', () => {
+            renderWithProvider(
+                <StepRail steps={WITH_ERROR} activeId="connection" onSelect={jest.fn()} />,
+            );
+            expect(tab('backend')).toHaveTextContent('has errors');
+        });
+
+        it('keeps an errored tab clickable — finding the error is the point', () => {
+            const onSelect = jest.fn();
+            renderWithProvider(
+                <StepRail steps={WITH_ERROR} activeId="connection" onSelect={onSelect} />,
+            );
+            fireEvent.click(tab('backend'));
+            expect(onSelect).toHaveBeenCalledWith('backend');
+        });
+
+        it('adds no marker when no step declares an error (the control)', () => {
+            renderWithProvider(
+                <StepRail steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
+            );
+            expect(document.querySelectorAll('[data-has-error]')).toHaveLength(0);
+            expect(screen.queryByText('has errors')).not.toBeInTheDocument();
+        });
+    });
+
     describe('edge cases', () => {
         it('does not crash with an empty step list', () => {
             renderWithProvider(
-                <VerticalStepList steps={[]} activeId="" onSelect={jest.fn()} />,
+                <StepRail steps={[]} activeId="" onSelect={jest.fn()} />,
             );
             expect(document.querySelectorAll('.vsteplist-step')).toHaveLength(0);
         });
@@ -205,7 +244,7 @@ describe('VerticalStepList', () => {
 
         it('marks ONLY a newly-added tab as entering — not existing tabs, not on first render', () => {
             const { rerender } = renderWithProvider(
-                <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
+                <StepRail steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
             );
             // Nothing animates on first render or during the settle window.
             expect(document.querySelectorAll('.vsteplist-step--enter')).toHaveLength(0);
@@ -214,7 +253,7 @@ describe('VerticalStepList', () => {
             // Reveal a new sub-step (e.g. "Sign in" appearing when ACCS is chosen).
             rerender(
                 <Provider theme={defaultTheme}>
-                    <VerticalStepList steps={STEPS_WITH_SIGNIN} activeId="connection" onSelect={jest.fn()} />
+                    <StepRail steps={STEPS_WITH_SIGNIN} activeId="connection" onSelect={jest.fn()} />
                 </Provider>,
             );
             expect(tab('signin').className).toMatch(/vsteplist-step--enter/);
@@ -224,7 +263,7 @@ describe('VerticalStepList', () => {
 
         it('removes a tab INSTANTLY — no lingering exit animation (responsive feedback)', () => {
             const { rerender } = renderWithProvider(
-                <VerticalStepList steps={STEPS_WITH_SIGNIN} activeId="connection" onSelect={jest.fn()} />,
+                <StepRail steps={STEPS_WITH_SIGNIN} activeId="connection" onSelect={jest.fn()} />,
             );
             settle();
             expect(document.querySelector('[data-step="signin"]')).not.toBeNull();
@@ -232,7 +271,7 @@ describe('VerticalStepList', () => {
             // Remove the sub-step (e.g. switching ACCS → PaaS drops "Sign in").
             rerender(
                 <Provider theme={defaultTheme}>
-                    <VerticalStepList steps={STEPS} activeId="connection" onSelect={jest.fn()} />
+                    <StepRail steps={STEPS} activeId="connection" onSelect={jest.fn()} />
                 </Provider>,
             );
             // Gone immediately — not held for an exit animation.

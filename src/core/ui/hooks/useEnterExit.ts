@@ -1,7 +1,7 @@
 /**
  * useEnterExit — track which items just appeared / disappeared so a list can animate
  * them IN and OUT. Extracted verbatim from TimelineNav's inline orchestration so the
- * wizard timeline AND the area sub-step strip (VerticalStepList) share ONE in/out
+ * wizard timeline AND the area sub-step strip (StepRail) share ONE in/out
  * approach instead of each rolling its own.
  *
  * Returns the items to RENDER — the current items, plus any just-removed ones

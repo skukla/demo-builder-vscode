@@ -1,0 +1,207 @@
+/**
+ * ConfigureSectionBody
+ *
+ * Renders the ONE section currently selected on the Configure rail. Which section that
+ * is comes from {@link buildConfigureSections}; this module only knows how to draw each
+ * of the four kinds.
+ *
+ * Split out of ConfigureScreen because the rail turned "render every section stacked"
+ * into "render exactly one", which is a switch — and a switch inside an already
+ * over-length component is where god files come from.
+ *
+ * @module features/dashboard/ui/configure/ConfigureSectionBody
+ */
+
+import { Text, Flex, Link, TextField, RadioGroup, Radio } from '@adobe/react-spectrum';
+import React from 'react';
+import { AppBuilderComponentFieldsSection } from './AppBuilderComponentFieldsSection';
+import type { ConfigureSection } from './configureSections';
+import type { ServiceGroup, UniqueField } from './configureTypes';
+import { ConfigSection } from '@/core/ui/components/forms';
+import { getValidationState } from '@/core/ui/utils/validationState';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { ServiceGroupList } from '@/features/components/ui/components/ServiceGroupList';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import type { AuthoringExperience } from '@/types/base';
+import type { ComponentConfigs } from '@/types/webview';
+
+/** The `appBuilderComponent-` prefix its section ids carry (see configureSections). */
+const APP_BUILDER_SECTION_PREFIX = 'appBuilderComponent-';
+
+export interface ConfigureSectionBodyProps {
+    /** The section to draw. */
+    section: ConfigureSection;
+    /** All service groups (the active one is looked up by id). */
+    serviceGroups: ServiceGroup[];
+    /** Renders one field row — the same callback shape `ServiceGroupList` takes. */
+    renderFieldRow: (field: UniqueField, group: ServiceGroup) => React.ReactNode;
+    /** Project-name field state. */
+    projectName: string;
+    onProjectNameChange: (value: string) => void;
+    projectNameError?: string;
+    projectNameTouched: boolean;
+    /** Catalog entries for the project's selected appBuilderComponents. */
+    appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
+    /** Current componentConfigs (App Builder text values live here). */
+    componentConfigs: ComponentConfigs;
+    /** Resolved provided env values (bucket-2 "connected" sources). */
+    providedEnvVars: Record<string, string>;
+    /** Per-appBuilderComponent "is set" flags for secret vars. */
+    appBuilderComponentSecretFlags: Record<string, Record<string, boolean>>;
+    /** Stage an App Builder value (text and secret share the staging path). */
+    onAppBuilderValueChange: (componentId: string, varName: string, value: string) => void;
+    /** EDS authoring-experience preference. */
+    authoringExperience: AuthoringExperience;
+    onAuthoringExperienceChange: (value: AuthoringExperience) => void;
+}
+
+/**
+ * The Project section: the rename field, plus the "nothing to configure" note when the
+ * project has no service groups at all. That note used to sit where the groups would
+ * have been; with one section per tab there is no such place, and Project is the tab
+ * every user lands on, so it is the one spot where the note is guaranteed to be seen.
+ */
+function ProjectBody({
+    projectName,
+    onProjectNameChange,
+    projectNameError,
+    projectNameTouched,
+    hasServiceGroups,
+}: {
+    projectName: string;
+    onProjectNameChange: (value: string) => void;
+    projectNameError?: string;
+    projectNameTouched: boolean;
+    hasServiceGroups: boolean;
+}): React.ReactElement {
+    return (
+        <ConfigSection id="project-info" label="Project" showDivider={false}>
+            <TextField
+                label="Project Name"
+                value={projectName}
+                onChange={onProjectNameChange}
+                isRequired
+                width="100%"
+                validationState={getValidationState(projectNameError, projectNameTouched)}
+                errorMessage={projectNameError}
+                description="Lowercase letters, numbers, and hyphens only. Must start with a letter."
+            />
+            {hasServiceGroups ? null : (
+                <Text UNSAFE_className="text-gray-600">
+                    No components requiring configuration were found.
+                </Text>
+            )}
+        </ConfigSection>
+    );
+}
+
+/**
+ * EDS-only authoring-experience preference. A setup-time choice (saved via the Configure
+ * footer's Save), not an on-the-fly action — so it lives here rather than on the
+ * dashboard/kebab action surfaces.
+ */
+function AuthoringBody({
+    value,
+    onChange,
+}: {
+    value: AuthoringExperience;
+    onChange: (value: AuthoringExperience) => void;
+}): React.ReactElement {
+    return (
+        <ConfigSection
+            id="authoring-experience"
+            label="Authoring"
+            showDivider={false}
+            footer={
+                <Flex marginTop="size-200">
+                    <Text UNSAFE_className="text-gray-600 text-sm">
+                        DA.live & authoring settings are configured in{' '}
+                        <Link
+                            onPress={() => webviewClient.postMessage('open-eds-settings')}
+                            UNSAFE_className="cursor-pointer"
+                        >
+                            Extension Settings
+                        </Link>
+                    </Text>
+                </Flex>
+            }
+        >
+            {/* aria-label (not label): the "Authoring" section heading already names this,
+                so a visible RadioGroup label would be a redundant subheading. */}
+            <RadioGroup
+                aria-label="Authoring Experience"
+                value={value}
+                onChange={(next) => onChange(next as AuthoringExperience)}
+            >
+                <Radio value="da-live-classic">DA.live Classic</Radio>
+                <Radio value="experience-workspace">Experience Workspace</Radio>
+            </RadioGroup>
+        </ConfigSection>
+    );
+}
+
+/**
+ * Draw the active section.
+ *
+ * @param props - the section plus every source it might need to draw itself
+ * @returns the section body, or null when the section has nothing to draw
+ */
+export function ConfigureSectionBody({
+    section,
+    serviceGroups,
+    renderFieldRow,
+    projectName,
+    onProjectNameChange,
+    projectNameError,
+    projectNameTouched,
+    appBuilderComponentCatalog,
+    componentConfigs,
+    providedEnvVars,
+    appBuilderComponentSecretFlags,
+    onAppBuilderValueChange,
+    authoringExperience,
+    onAuthoringExperienceChange,
+}: ConfigureSectionBodyProps): React.ReactElement | null {
+    if (section.kind === 'project') {
+        return (
+            <ProjectBody
+                projectName={projectName}
+                onProjectNameChange={onProjectNameChange}
+                projectNameError={projectNameError}
+                projectNameTouched={projectNameTouched}
+                hasServiceGroups={serviceGroups.length > 0}
+            />
+        );
+    }
+
+    if (section.kind === 'authoring') {
+        return (
+            <AuthoringBody
+                value={authoringExperience}
+                onChange={onAuthoringExperienceChange}
+            />
+        );
+    }
+
+    if (section.kind === 'appBuilderComponent') {
+        // The section id is the entry id with a prefix; narrowing the catalog to that one
+        // entry makes the (unchanged) group renderer draw exactly one group.
+        const entryId = section.id.slice(APP_BUILDER_SECTION_PREFIX.length);
+        return (
+            <AppBuilderComponentFieldsSection
+                catalog={appBuilderComponentCatalog.filter((entry) => entry.id === entryId)}
+                configs={componentConfigs}
+                provided={providedEnvVars}
+                secretFlags={appBuilderComponentSecretFlags}
+                onTextChange={onAppBuilderValueChange}
+                onSecretChange={onAppBuilderValueChange}
+            />
+        );
+    }
+
+    const group = serviceGroups.find((g) => g.id === section.id);
+    if (!group) return null;
+    // One group in, so `ServiceGroupList` gives it showDivider={false} — right, because
+    // there is nothing above it to divide from.
+    return <ServiceGroupList groups={[group]} renderFieldRow={renderFieldRow} />;
+}

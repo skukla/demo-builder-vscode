@@ -1,6 +1,42 @@
 // Shared test data for ConfigureScreen tests
 // Note: Mocks must be defined in each test file due to Jest hoisting
 
+import { fireEvent, screen } from '@testing-library/react';
+
+/**
+ * The rail tab whose VISIBLE label matches, or throw.
+ *
+ * Matches on `.vsteplist-title` rather than the accessible name: a tab holding a
+ * validation error also carries visually-hidden ", has errors" text, so the accessible
+ * name is not the label.
+ */
+export function railTab(label: string): HTMLElement {
+    const tab = screen
+        .getAllByRole('tab')
+        .find(el => el.querySelector('.vsteplist-title')?.textContent === label);
+    if (!tab) throw new Error(`rail tab "${label}" not found in [${railTabLabels()}]`);
+    return tab;
+}
+
+/**
+ * Switch the visible Configure section by clicking its rail tab.
+ *
+ * ConfigureScreen renders ONE section at a time, so a test that asserts on a service
+ * group's fields has to navigate to it first — landing on the Project tab is the
+ * default. The rail renders real `<button role="tab">`s (StepRail is presentational and
+ * is not mocked), so this is a real click on real markup.
+ */
+export function selectSection(label: string): void {
+    fireEvent.click(railTab(label));
+}
+
+/** The visible labels currently on the rail, in order. */
+export function railTabLabels(): string[] {
+    return screen
+        .getAllByRole('tab')
+        .map(tab => tab.querySelector('.vsteplist-title')?.textContent ?? '');
+}
+
 // Mock project data
 export const mockProject = {
     name: 'Test Project',
