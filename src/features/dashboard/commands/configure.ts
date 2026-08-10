@@ -310,6 +310,15 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                         project.edsStorefrontStatusSummary = 'stale';
                     }
 
+                    // Re-arm the apply prompts for THIS change. Without it, a
+                    // single earlier "Later" muted them for the whole session:
+                    // the handlers below saw `shouldShow === false`, returned
+                    // before prompting, and the save reported success while the
+                    // storefront kept serving the previous config.
+                    if (meshChanges.hasChanges || storefrontChanges.hasChanges) {
+                        await vscode.commands.executeCommand('demoBuilder._internal.configChanged');
+                    }
+
                     // Persist the EDS authoring-experience preference (setup-time choice).
                     // Capture whether it changed so we can re-apply the DA editor.path after save.
                     const authoringChanged = this.applyAuthoringExperienceMetadata(

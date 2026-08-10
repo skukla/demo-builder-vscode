@@ -186,15 +186,35 @@ export function detectStorefrontChanges(
 }
 
 /**
- * Update storefront state after publishing config.json
+ * Record what was ACTUALLY published, so staleness stays detectable.
+ *
+ * ⚠️ Pass the configs the published `config.json` was GENERATED FROM — captured
+ * before the push — never `project.componentConfigs` read at call time.
+ *
+ * Why: this state is the only baseline `detectStorefrontChanges` compares
+ * against. If it records the project's current values rather than the published
+ * ones, the detector compares a value to itself, finds no change, and the
+ * storefront can never be reported stale again — no prompt, no republish, no
+ * badge. It fails silent and permanent.
+ *
+ * That happened on 2026-08-10. `storefrontRepublishService` generated from
+ * `project.componentConfigs` at step 2, spent ~4s pushing to GitHub and the CDN,
+ * then read `project.componentConfigs` AGAIN at step 5 — by which time a
+ * concurrent Configure save had reassigned it (`configure.ts`,
+ * `project.componentConfigs = sanitizedConfigs`). The old Commerce scope went to
+ * the CDN; the new one was recorded as published. The storefront then queried a
+ * website with no products, every PDP rendered an empty block, and nothing in
+ * the UI could detect it.
  *
  * @param project - The project to update
- * @param componentConfigs - The component configs at time of publish
+ * @param publishedComponentConfigs - Snapshot of the configs used to GENERATE
+ *   the config.json that was just published
  */
 export function updateStorefrontState(
     project: Project,
-    componentConfigs: Record<string, unknown>,
+    publishedComponentConfigs: Record<string, unknown>,
 ): void {
+    const componentConfigs = publishedComponentConfigs;
     // Merge all configs for cross-boundary values
     const allConfigs: Record<string, unknown> = {};
     for (const config of Object.values(componentConfigs)) {

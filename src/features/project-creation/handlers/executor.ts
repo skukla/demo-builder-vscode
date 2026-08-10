@@ -1235,6 +1235,11 @@ async function syncEdsConfigToRemote(
     const { updateStorefrontState } = await import(
         '@/features/eds/services/storefrontStalenessDetector'
     );
+    // NOTE: passes the project's CURRENT configs, not a snapshot from when
+    // config.json was generated earlier in this run. Same latent pattern the
+    // republish path hit on 2026-08-10 (see updateStorefrontState) — narrower
+    // window here, but fixing it means threading the snapshot through the
+    // pipeline. Tracked in .rptc/plans/pdp-prerender-validation/.
     updateStorefrontState(project, project.componentConfigs || {});
     project.edsStorefrontStatusSummary = 'published';
     await context.stateManager.saveProject(project);

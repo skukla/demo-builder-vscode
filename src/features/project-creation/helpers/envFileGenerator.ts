@@ -12,6 +12,7 @@ import {
     PAAS_CATALOG_SERVICE_ENDPOINT,
     CATALOG_SERVICE_ENDPOINT,
     ACCS_CATALOG_SERVICE_ENDPOINT,
+    BACKEND_OWNED_SCOPE_KEYS,
 } from '@/features/components/config/envVarKeys';
 import {
     generateConfigJson,
@@ -115,6 +116,43 @@ function groupEnvVarsBySection(vars: EnvVarDefinition[]): Map<string, EnvVarDefi
 }
 
 /**
+ * Resolve one env var from the project's component configs.
+ *
+ * Scope keys come from the BACKEND component first. Every other key keeps the
+ * historical "first component that defines it wins" behaviour.
+ *
+ * Why the special case: mesh (and other) component configs carry a duplicate
+ * copy of website / store / store view, and only the backend's copy is updated
+ * when the user changes them. Iteration order then decides the winner, and on
+ * 2026-08-10 it picked the stale one — the mesh deployed against the previous
+ * Commerce website while the manifest said otherwise, so PDPs rendered empty.
+ * See BACKEND_OWNED_SCOPE_KEYS.
+ *
+ * @param key - env var name
+ * @param context - generation context
+ * @returns the resolved value, or undefined when no component defines it
+ */
+function resolveFromComponentConfigs(
+    key: string,
+    context: EnvGenerationContext,
+): string | undefined {
+    const componentConfigs = context.getComponentConfigs();
+    if (!componentConfigs) return undefined;
+
+    if (BACKEND_OWNED_SCOPE_KEYS.includes(key)) {
+        const backendId = context.getBackendId();
+        const fromBackend = backendId ? componentConfigs[backendId]?.[key] : undefined;
+        if (fromBackend !== undefined) return String(fromBackend);
+    }
+
+    for (const compId in componentConfigs) {
+        const configValue = componentConfigs[compId]?.[key];
+        if (configValue !== undefined) return String(configValue);
+    }
+    return undefined;
+}
+
+/**
  * Resolve the value for a single env var using priority order:
  * 1. Derived/computed values
  * 2. Runtime values (MESH_ENDPOINT)
@@ -137,14 +175,9 @@ function resolveEnvVarValue(
         return context.getMeshEndpoint() || '';
     }
 
-    const componentConfigs = context.getComponentConfigs();
-    if (componentConfigs) {
-        for (const compId in componentConfigs) {
-            const configValue = componentConfigs[compId]?.[key];
-            if (configValue !== undefined) {
-                return String(configValue);
-            }
-        }
+    const fromConfigs = resolveFromComponentConfigs(key, context);
+    if (fromConfigs !== undefined) {
+        return fromConfigs;
     }
 
     if (envVar.default !== undefined) {
@@ -193,18 +226,8 @@ export async function generateComponentEnvFile(
     const allKeys = resolveComponentEnvVars(componentDef, context.registry, context.getBackendId());
 
     // Helper to get value from config
-    const getConfigValue = (key: string): string | undefined => {
-        const componentConfigs = context.getComponentConfigs();
-        if (componentConfigs) {
-            for (const compId in componentConfigs) {
-                const configValue = componentConfigs[compId]?.[key];
-                if (configValue !== undefined) {
-                    return String(configValue);
-                }
-            }
-        }
-        return undefined;
-    };
+    const getConfigValue = (key: string): string | undefined =>
+        resolveFromComponentConfigs(key, context);
 
     // Build EnvVarDefinition objects by looking up from shared dictionary
     const sharedEnvVars = context.getEnvVarDefinitions();

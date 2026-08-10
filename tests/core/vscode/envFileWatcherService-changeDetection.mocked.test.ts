@@ -267,3 +267,78 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
         });
     });
 });
+
+/**
+ * The apply prompts must be muted per CHANGE, not per session.
+ *
+ * The "shown" flags stop one change nagging repeatedly, and were cleared only by
+ * TAKING the action. So a single "Later" muted the prompt for the rest of the
+ * session: every subsequent save found `shouldShow` false, returned before
+ * prompting, and republished nothing — while reporting the save as successful.
+ *
+ * Observed live 2026-08-10. A project was reconfigured onto a different Commerce
+ * website; the manifest updated, the served config.json kept the old
+ * website/store/store-view, and every PDP on that storefront rendered a valid
+ * 200 with an empty product block. No message was shown at any point.
+ */
+describe('apply prompts are re-armed by a new config change', () => {
+    const { commandCallbacks } = require('./envFileWatcherService.testUtils');
+    const shouldShow = (which: 'Mesh' | 'Storefront') =>
+        commandCallbacks[`demoBuilder._internal.shouldShow${which}Notification`]();
+    const markShown = (which: 'Mesh' | 'Storefront') =>
+        commandCallbacks[`demoBuilder._internal.mark${which}NotificationShown`]();
+    const configChanged = () => commandCallbacks['demoBuilder._internal.configChanged']();
+
+    it('starts armed', () => {
+        // Control: without this, "always armed" would pass every case below.
+        expect(shouldShow('Storefront')).toBe(true);
+        expect(shouldShow('Mesh')).toBe(true);
+    });
+
+    it('mutes after the prompt is shown, so one change cannot nag', () => {
+        markShown('Storefront');
+
+        expect(shouldShow('Storefront')).toBe(false);
+    });
+
+    it('re-arms the storefront prompt when a new change is saved', () => {
+        // THE regression. Before the fix nothing but `storefrontActionTaken`
+        // cleared this, so declining once silenced every later save.
+        markShown('Storefront');
+        expect(shouldShow('Storefront')).toBe(false);
+
+        configChanged();
+
+        expect(shouldShow('Storefront')).toBe(true);
+    });
+
+    it('re-arms the mesh prompt too — it had the identical defect', () => {
+        markShown('Mesh');
+        expect(shouldShow('Mesh')).toBe(false);
+
+        configChanged();
+
+        expect(shouldShow('Mesh')).toBe(true);
+    });
+
+    it('still re-arms when the action is taken', () => {
+        // The pre-existing path must keep working.
+        markShown('Storefront');
+        commandCallbacks['demoBuilder._internal.storefrontActionTaken']();
+
+        expect(shouldShow('Storefront')).toBe(true);
+    });
+
+    it('does not touch the restart prompt', () => {
+        // Scoped deliberately: restart is a different concern with its own
+        // trigger, and re-arming it here would reintroduce notification spam.
+        markShown('Storefront');
+        commandCallbacks['demoBuilder._internal.markRestartNotificationShown']();
+
+        configChanged();
+
+        expect(commandCallbacks['demoBuilder._internal.shouldShowRestartNotification']()).toBe(
+            false,
+        );
+    });
+});

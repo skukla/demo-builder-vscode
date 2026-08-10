@@ -21,17 +21,29 @@
 
 import configTemplate from '../config/config-template.json';
 import { isMeshComponentId, COMPONENT_IDS } from '@/core/constants';
-import { getProvidedEnvVars, getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
+import {
+    getProvidedEnvVars,
+    getMeshAppBuilderComponent,
+} from '@/features/app-builder/services/appBuilderComponentState';
 import componentsConfig from '@/features/components/config/components.json';
 import {
-    PAAS_GRAPHQL_ENDPOINT, PAAS_ENVIRONMENT_ID, PAAS_STORE_VIEW_CODE,
-    PAAS_STORE_CODE, PAAS_WEBSITE_CODE, PAAS_CUSTOMER_GROUP,
-    PAAS_CATALOG_SERVICE_ENDPOINT, CATALOG_API_KEY,
-    ACCS_GRAPHQL_ENDPOINT, ACCS_STORE_VIEW_CODE, ACCS_STORE_CODE,
-    ACCS_WEBSITE_CODE, ACCS_CUSTOMER_GROUP,
+    PAAS_GRAPHQL_ENDPOINT,
+    PAAS_ENVIRONMENT_ID,
+    PAAS_STORE_VIEW_CODE,
+    PAAS_STORE_CODE,
+    PAAS_WEBSITE_CODE,
+    PAAS_CUSTOMER_GROUP,
+    PAAS_CATALOG_SERVICE_ENDPOINT,
+    CATALOG_API_KEY,
+    ACCS_GRAPHQL_ENDPOINT,
+    ACCS_STORE_VIEW_CODE,
+    ACCS_STORE_CODE,
+    ACCS_WEBSITE_CODE,
+    ACCS_CUSTOMER_GROUP,
+    BACKEND_OWNED_SCOPE_KEYS,
 } from '@/features/components/config/envVarKeys';
 import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
-import type { Logger , Project } from '@/types';
+import type { Logger, Project } from '@/types';
 
 // Bundled template - single source of truth
 
@@ -238,8 +250,25 @@ export function mergeComponentConfigs(
         Object.assign(target, config);
     }
 
-    // Mesh values override non-mesh (spread order = last wins)
+    // Mesh values override non-mesh (spread order = last wins) — EXCEPT the
+    // Commerce store scope, which the BACKEND component owns.
+    //
+    // The override exists so a deployed mesh endpoint beats a direct backend
+    // URL; that is one key's worth of intent, and it was applied to every key.
+    // Mesh component configs also carry a COPY of the store scope, and only the
+    // backend's copy is updated when the user changes website/store/store view.
+    // So a stale mesh copy silently won and config.json shipped the old scope.
+    //
+    // Live 2026-08-10: a project moved to the `citisignal` website kept
+    // publishing `base`. The storefront queried a website with no products, so
+    // every PDP rendered a valid 200 with an empty product block, and the
+    // republish reported success because it had faithfully published what the
+    // merge told it. Endpoint precedence is handled explicitly below and in
+    // `extractConfigParamsFromConfigs`, so nothing here needs to cover it.
     const merged = { ...nonMesh, ...mesh };
+    for (const key of BACKEND_OWNED_SCOPE_KEYS) {
+        if (key in nonMesh) merged[key] = nonMesh[key];
+    }
 
     // Deployed mesh endpoint overrides everything
     if (meshEndpoint) {
@@ -265,13 +294,21 @@ export function extractConfigParamsFromConfigs(
     return {
         environmentType,
         commerceEndpoint: commerceEndpoint as string | undefined,
-        catalogServiceEndpoint: isAccs ? undefined : config[PAAS_CATALOG_SERVICE_ENDPOINT] as string | undefined,
-        commerceApiKey: isAccs ? undefined : config[CATALOG_API_KEY] as string | undefined,
-        commerceEnvironmentId: isAccs ? undefined : config[PAAS_ENVIRONMENT_ID] as string | undefined,
-        storeViewCode: config[isAccs ? ACCS_STORE_VIEW_CODE : PAAS_STORE_VIEW_CODE] as string | undefined,
+        catalogServiceEndpoint: isAccs
+            ? undefined
+            : (config[PAAS_CATALOG_SERVICE_ENDPOINT] as string | undefined),
+        commerceApiKey: isAccs ? undefined : (config[CATALOG_API_KEY] as string | undefined),
+        commerceEnvironmentId: isAccs
+            ? undefined
+            : (config[PAAS_ENVIRONMENT_ID] as string | undefined),
+        storeViewCode: config[isAccs ? ACCS_STORE_VIEW_CODE : PAAS_STORE_VIEW_CODE] as
+            | string
+            | undefined,
         storeCode: config[isAccs ? ACCS_STORE_CODE : PAAS_STORE_CODE] as string | undefined,
         websiteCode: config[isAccs ? ACCS_WEBSITE_CODE : PAAS_WEBSITE_CODE] as string | undefined,
-        customerGroup: config[isAccs ? ACCS_CUSTOMER_GROUP : PAAS_CUSTOMER_GROUP] as string | undefined,
+        customerGroup: config[isAccs ? ACCS_CUSTOMER_GROUP : PAAS_CUSTOMER_GROUP] as
+            | string
+            | undefined,
         aemAssetsEnabled: config.AEM_ASSETS_ENABLED === 'true',
     };
 }
@@ -296,7 +333,9 @@ export function extractConfigParamsFromConfigs(
  * @returns The deployed endpoint, or undefined when no appBuilderComponent provides one
  */
 function resolveProvidedEndpoint(project: Project): string | undefined {
-    return getProvidedEnvVars(project).MESH_ENDPOINT ?? getMeshAppBuilderComponent(project)?.endpoint;
+    return (
+        getProvidedEnvVars(project).MESH_ENDPOINT ?? getMeshAppBuilderComponent(project)?.endpoint
+    );
 }
 
 /**
@@ -387,9 +426,12 @@ function injectAddonConfigFlags(
     logger: Logger,
 ): void {
     const addonsConfig = (componentsConfig as Record<string, unknown>).addons as
-        Record<string, { configuration?: { configFlags?: Record<string, boolean> } }> | undefined;
+        | Record<string, { configuration?: { configFlags?: Record<string, boolean> } }>
+        | undefined;
 
-    if (!addonsConfig) { return; }
+    if (!addonsConfig) {
+        return;
+    }
 
     for (const addonId of selectedAddons) {
         injectConfigFlags(
@@ -415,7 +457,11 @@ function injectPackageConfigFlags(
     selectedPackage: string,
     logger: Logger,
 ): void {
-    const packages = (demoPackagesConfig as { packages?: Array<{ id: string; configFlags?: Record<string, boolean> }> }).packages;
+    const packages = (
+        demoPackagesConfig as {
+            packages?: Array<{ id: string; configFlags?: Record<string, boolean> }>;
+        }
+    ).packages;
     const pkg = packages?.find((p) => p.id === selectedPackage);
 
     injectConfigFlags(config, pkg?.configFlags, `package: ${selectedPackage}`, logger);
@@ -438,7 +484,9 @@ export function generateConfigJson(
 ): ConfigGeneratorResult {
     try {
         const environmentType = params.environmentType || 'paas';
-        logger.debug(`[ConfigGenerator] Generating config.json from bundled template (env: ${environmentType})`);
+        logger.debug(
+            `[ConfigGenerator] Generating config.json from bundled template (env: ${environmentType})`,
+        );
 
         // Deep clone the template to avoid mutating the imported object
         const config = JSON.parse(JSON.stringify(configTemplate));
@@ -450,9 +498,10 @@ export function generateConfigJson(
         // PaaS has both commerce-core-endpoint (catalog service) and commerce-endpoint (mesh)
         // ACCS/ACO have commerce-endpoint only
         const commerceEndpoint = params.commerceEndpoint || '';
-        const catalogServiceEndpoint = environmentType === 'paas'
-            ? (params.catalogServiceEndpoint || commerceEndpoint)
-            : commerceEndpoint;
+        const catalogServiceEndpoint =
+            environmentType === 'paas'
+                ? params.catalogServiceEndpoint || commerceEndpoint
+                : commerceEndpoint;
 
         // Replace placeholders throughout the config
         // Note: {ORG} and {REPO} are used in analytics.store-url, robots.txt, and sidekick plugin URLs.
@@ -521,14 +570,15 @@ export function generateConfigJson(
         // Serialize with proper formatting
         const configContent = JSON.stringify(finalConfig, null, 2);
 
-        logger.info(`[ConfigGenerator] Successfully generated config.json (env: ${environmentType})`);
+        logger.info(
+            `[ConfigGenerator] Successfully generated config.json (env: ${environmentType})`,
+        );
         logger.debug(`[ConfigGenerator] Config size: ${configContent.length} bytes`);
 
         return {
             success: true,
             content: configContent,
         };
-
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         logger.error(`[ConfigGenerator] Failed to generate config.json: ${message}`);

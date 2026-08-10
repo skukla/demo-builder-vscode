@@ -46,3 +46,33 @@ export const ACCS_CATALOG_SERVICE_ENDPOINT = 'ACCS_CATALOG_SERVICE_ENDPOINT';
 export const CATALOG_API_KEY = 'ADOBE_CATALOG_API_KEY';
 export const CATALOG_SERVICE_ENDPOINT = 'ADOBE_CATALOG_SERVICE_ENDPOINT';
 export const PAAS_CATALOG_SERVICE_ENDPOINT = 'PAAS_CATALOG_SERVICE_ENDPOINT';
+
+/**
+ * Commerce store-scope keys the BACKEND component owns.
+ *
+ * These same keys are duplicated into other components' configs — notably mesh
+ * components — and only the backend's copy is updated when the user changes
+ * website / store / store view. Any resolver that picks a winner by iteration
+ * order, or by a blanket "mesh wins" rule, will silently return the stale copy.
+ *
+ * Two resolvers hit this on 2026-08-10, each with a different arbitrary
+ * tiebreak: `mergeComponentConfigs` (mesh overrode every key) and
+ * `envFileGenerator`'s value lookup (first component in key order won). A
+ * project moved to the `citisignal` website kept publishing and deploying
+ * `base`, so the storefront queried a website with no products — every PDP
+ * returned a valid 200 with an empty product block, and both republish and mesh
+ * deploy reported success.
+ *
+ * Any new resolver over `componentConfigs` must consult the backend first for
+ * these keys.
+ */
+export const BACKEND_OWNED_SCOPE_KEYS: readonly string[] = [
+    ACCS_WEBSITE_CODE,
+    ACCS_STORE_CODE,
+    ACCS_STORE_VIEW_CODE,
+    ACCS_CUSTOMER_GROUP,
+    PAAS_WEBSITE_CODE,
+    PAAS_STORE_CODE,
+    PAAS_STORE_VIEW_CODE,
+    PAAS_CUSTOMER_GROUP,
+];

@@ -10,7 +10,10 @@
  * website (the user's symptom: "I saved the codes and nothing updated").
  */
 
-import { detectStorefrontChanges } from '@/features/eds/services/storefrontStalenessDetector';
+import {
+    detectStorefrontChanges,
+    updateStorefrontState,
+} from '@/features/eds/services/storefrontStalenessDetector';
 import {
     ACCS_WEBSITE_CODE,
     ACCS_STORE_CODE,
@@ -118,5 +121,66 @@ describe('detectStorefrontChanges — ACCS store-config keys', () => {
 
         expect(result.hasChanges).toBe(true);
         expect(result.changedEnvVars).toContain(PAAS_WEBSITE_CODE);
+    });
+});
+
+/**
+ * The recorded "published" state must be what was PUBLISHED, not what the
+ * project says at the moment of recording.
+ *
+ * This state is the sole baseline `detectStorefrontChanges` compares against.
+ * Record the project's current values instead of the published ones and the
+ * detector compares a value to itself forever: no change detected, no prompt,
+ * no republish, no stale badge. Silent and permanent.
+ *
+ * Live failure 2026-08-10: republish generated config.json from the project's
+ * configs, spent ~4s pushing to GitHub and the CDN, then re-read
+ * `project.componentConfigs` to record state — and a concurrent Configure save
+ * had swapped that object in the meantime. The old Commerce scope reached the
+ * CDN; the new one was recorded as published. The storefront queried a website
+ * with no products and every PDP rendered an empty block, undetectably.
+ */
+describe('updateStorefrontState records the published values, not current ones', () => {
+    const PUBLISHED = { accs: { [ACCS_WEBSITE_CODE]: 'base' } };
+    const MUTATED_AFTER = { accs: { [ACCS_WEBSITE_CODE]: 'citisignal' } };
+
+    it('records the snapshot it was given', () => {
+        const project = makeAccsProject({});
+
+        updateStorefrontState(project, PUBLISHED);
+
+        expect(project.edsStorefrontState?.envVars?.[ACCS_WEBSITE_CODE]).toBe('base');
+    });
+
+    it('ignores a project mutated between generation and recording', () => {
+        // THE regression. The push is in flight; a concurrent save reassigns
+        // componentConfigs. Recording must reflect what went out, not what
+        // arrived while it was going.
+        const project = makeAccsProject({});
+        (project as { componentConfigs?: unknown }).componentConfigs = MUTATED_AFTER;
+
+        updateStorefrontState(project, PUBLISHED);
+
+        expect(project.edsStorefrontState?.envVars?.[ACCS_WEBSITE_CODE]).toBe('base');
+    });
+
+    it('leaves the storefront detectably stale after such a publish', () => {
+        // The consequence that matters: with `base` published and the project
+        // now on `citisignal`, a later save MUST still see a change.
+        const project = makeAccsProject({});
+        updateStorefrontState(project, PUBLISHED);
+
+        const changes = detectStorefrontChanges(project, MUTATED_AFTER);
+
+        expect(changes.hasChanges).toBe(true);
+        expect(changes.changedEnvVars).toContain(ACCS_WEBSITE_CODE);
+    });
+
+    it('reports no change when the published values match - the control', () => {
+        // Without this, "always stale" would pass the case above.
+        const project = makeAccsProject({});
+        updateStorefrontState(project, PUBLISHED);
+
+        expect(detectStorefrontChanges(project, PUBLISHED).hasChanges).toBe(false);
     });
 });
