@@ -1,41 +1,39 @@
-# Mesh staleness reads a different source than mesh deploy
+# Mesh staleness is the third scope-key resolver, and it never got the rule
 
-Deploy records what the mesh's `.env` file says. Staleness compares against a flattened
-merge of every component's `componentConfigs`. When those two disagree about a mesh env
-var, the mesh shows a permanent **"Update available"** that redeploying cannot clear.
+`BACKEND_OWNED_SCOPE_KEYS` exists because website / store / store-view codes are
+duplicated across component configs and **only the backend's copy is updated** when the
+user changes them. Its docstring is explicit:
+
+> Any new resolver over `componentConfigs` must consult the backend first for these keys.
+
+Two resolvers were fixed on 2026-08-10 (`4b517cfb`): `envFileGenerator`'s value lookup and
+`configGenerator`. **A third was missed** — the mesh staleness detector, which flattens
+every component's config with `Object.assign` and lets iteration order pick the winner.
 
 ## Provenance
 
-Found 2026-08-10 on the live `demo-builder-test` project. The user asked why their mesh
-read "Update available" and wondered whether it was fallout from the Configure step-rail
-work. It is not — nothing in that work touches mesh `.env` generation, the staleness
-detector, or these values.
+Found 2026-08-10 on live `demo-builder-test`. The user asked why the mesh read
+"Update available". Initial diagnosis was wrong in two ways and both corrections matter:
 
-Reproduced against the real manifest (`~/.demo-builder/projects/demo-builder-test`):
+- First read: "deploy and staleness read different sources, pick one." **Wrong** — the
+  project already decided. `BACKEND_OWNED_SCOPE_KEYS` is the rule; staleness just doesn't
+  follow it.
+- Second: "redeploying cannot clear it." **Wrong** — the keyed deploy runner regenerates
+  the component `.env` *before* deploying (`appBuilderComponentRunner.ts:330`
+  `writeComponentEnv` → `deployMesh` → `captureMeshBaseline`), and that regeneration is
+  backend-first. A redeploy converges all three sources.
 
-| Source | `ACCS_WEBSITE_CODE` | `ACCS_STORE_CODE` | `ACCS_STORE_VIEW_CODE` |
-|---|---|---|---|
-| `components/eds-accs-mesh/.env` — what deploy reads | `base` | `main_website_store` | `default` |
-| deployed snapshot (`appBuilderComponents['eds-accs-mesh'].envVars`) | `base` | `main_website_store` | `default` |
-| `componentConfigs['adobe-commerce-accs']` — wins the flatten | `citisignal` | `citisignal_store` | `citisignal_us` |
+On that project the badge was **correct**: the mesh was deployed against `base` /
+`main_website_store` / `default` while the project is configured for `citisignal` /
+`citisignal_store` / `citisignal_us` — the same misconfiguration class as `4b517cfb`,
+where a mesh querying a website with no products returned valid-but-empty PDPs.
 
-Three vars mismatch → `hasChanges: true` → display status `stale` →
-`statusVocabulary.ts` renders **"Update available"**.
+## The defect
 
-## The two code paths
-
-**Deploy side** — `updateMeshStateImpl` (`src/features/mesh/services/stalenessDetector.ts`),
-whose own comment states the intent:
-
-```ts
-// Read env vars from the mesh component's .env file (not componentConfigs)
-// This is the actual deployed state since .env file is used during mesh deployment
-const envVars = await readMeshEnvVarsFromFile(meshInstance.path);
-```
-
-**Staleness side** — `detectMeshChangesImpl`, same file (~:508):
+`detectMeshChangesImpl` (`src/features/mesh/services/stalenessDetector.ts` ~:506):
 
 ```ts
+// Check env vars changes - merge ALL componentConfigs for cross-boundary values
 const allConfigs: Record<string, unknown> = {};
 for (const config of Object.values(newComponentConfigs)) {
     Object.assign(allConfigs, config as Record<string, unknown>);
@@ -43,100 +41,87 @@ for (const config of Object.values(newComponentConfigs)) {
 const newEnvVars = getMeshEnvVarsImpl(allConfigs);
 ```
 
-Both answer "what env is the mesh running with?" from different places, and nothing keeps
-them in agreement. This is the `architecture-duplication-scan` shape: two paths that must
-agree about one fact while nothing makes them.
+Last component in iteration order wins. For scope keys that must be the **backend**, and
+here it is only by luck: `adobe-commerce-accs` happens to sort after `eds-accs-mesh` in
+the manifest. Nothing pins that order.
 
-## Why it matters
+## Why it matters — the risk is the FALSE NEGATIVE
 
-1. **The badge is unclearable.** Redeploy re-reads the same `.env`, re-records the same
-   snapshot, and staleness keeps comparing the flattened value. The user is told to act
-   and the action does nothing — the worst kind of status.
-2. **It can mask a real misconfiguration.** On `demo-builder-test` the mesh is deployed
-   against store view `default` while the Commerce backend config says `citisignal_us`.
-   If CitiSignal is the intended catalog, the mesh is genuinely pointed at the wrong store
-   view and this badge is the only thing saying so — but it says it in a form that reads
-   as noise.
-3. **The flatten is order-dependent.** `Object.assign` over `Object.values(componentConfigs)`
-   means the last component wins. Here `adobe-commerce-accs` happens to sort after
-   `eds-accs-mesh`; had the order differed, the same disagreement would read as clean.
-   The answer depends on manifest key order, which nothing pins.
+The observed symptom (a correct stale flag) is the benign case. Invert the key order and
+the detector compares the deployed snapshot against the **mesh's own stale duplicate**,
+finds them equal, and reports clean — while the mesh is deployed against the wrong
+website and every PDP renders empty. That is precisely the failure `4b517cfb` was filed
+for, except staleness is the surface whose entire job is to *catch* it.
 
-Not specific to this project: any project where a mesh env var is set on the backend
-component but differs on the mesh component gets the same stuck badge.
+A detector that can silently agree with the stale copy is worse than no detector, because
+it launders a real misconfiguration into a green badge.
 
 ## Goal / scope
 
-One source of truth for "what env is the mesh running with", used by both the deploy
-recorder and the staleness comparison.
+Make the staleness detector consult the backend first for `BACKEND_OWNED_SCOPE_KEYS`,
+per the contract those keys already document. This is not a design decision — it is
+applying an existing rule to the one resolver that missed it.
 
-**Decide first, then implement — this is a decision, not a refactor.** The candidates:
+Preferred shape: extract the backend-first lookup that `envFileGenerator`
+(`resolveFromComponentConfigs`, :135) and `configGenerator` (:269) each implement, and
+have all three call it. Three call sites is past the Rule of Three, and the docstring's
+"any new resolver must…" is a standing invitation for a fourth to get it wrong — a shared
+function is the only version of that instruction the compiler can enforce.
 
-- **`.env` on both sides.** Matches what actually gets deployed (the mesh CLI reads
-  `.env`), and deploy already does this. Staleness would read the same file instead of
-  flattening configs. Risk: config edits that have not yet been written to `.env` would
-  not register as staleness, so the `.env` write must be reliably part of save.
-- **`componentConfigs` on both sides, scoped not flattened.** Read
-  `componentConfigs[meshComponentId]` — the mesh's own entry — and drop the flatten
-  entirely. Risk: the flatten exists for a stated reason (the comment says cross-boundary
-  vars like the PaaS GraphQL endpoint live under the backend, not the mesh), so scoping
-  may under-report for PaaS meshes. **Check that claim against the PaaS path before
-  choosing** — it is the one thing that would rule this option out.
-- **Keep both, reconcile explicitly.** Make the disagreement itself the surfaced state
-  ("config differs between backend and mesh") rather than mislabelling it as an available
-  update. Heavier, but it is the honest reading of what is actually true.
+Keep: `getRelevantMeshEnvVars`' per-mesh-type scoping (ACCS vs PaaS), and the flatten's
+stated purpose of reaching cross-boundary vars that genuinely live on the backend (e.g.
+the PaaS GraphQL endpoint). Only the *tiebreak for scope keys* changes.
 
-Whichever wins, the order-dependence must go: no behaviour should depend on
-`componentConfigs` key order.
-
-Out of scope: fixing the `demo-builder-test` data (a user-level config choice — set the
-store view in Configure → Business Structure and redeploy), and the broader question of
-whether backend and mesh components should ever hold different values for the same key.
+Out of scope: whether backend and mesh component configs should carry duplicate copies of
+these keys at all. Removing the duplication would dissolve the whole bug class, but it is
+a data-model change with a migration; `BACKEND_OWNED_SCOPE_KEYS` is the accepted interim.
 
 ## Constraints
 
 - `updateMeshStateImpl` is the documented writer chokepoint for every mesh deploy path
-  (creation, EDS reset, project reset, dashboard deploy) — ADR-011 D3 Steps 07+09.
-  Changing what it records changes all of them at once. That is the leverage and the risk.
+  (ADR-011 D3 Steps 07+09). It reads the `.env`, which is already backend-first after
+  `4b517cfb` — **do not change the deploy side**. The fix belongs on the read side only.
 - The keyed `appBuilderComponents[id]` map is the single durable model; the legacy
-  singular `meshState` write-side is retired. Do not reintroduce a second store.
-- `getRelevantMeshEnvVars` already scopes the comparison per mesh type (ACCS vs PaaS).
-  Whatever replaces the flatten must keep that scoping — it exists to stop cross-backend
-  vars producing false mismatches.
-- ACCS snapshots carry four vars; `ACCS_MESH_ENV_VARS` lists five (`ACCS_CUSTOMER_GROUP`
-  is absent from the recorded snapshot). Confirm whether that is intended before treating
-  a missing key as a change.
+  singular `meshState` write-side is retired. Do not add a second store.
+- `ACCS_MESH_ENV_VARS` lists five keys but recorded ACCS snapshots carry four
+  (`ACCS_CUSTOMER_GROUP` absent). Confirm whether a missing key should count as a change
+  before treating it as one.
 
 ## Verification
 
-The bug is invisible to the current tests, so a test that fails first is the deliverable:
+The current tests cannot see this, so a failing test is the deliverable:
 
-1. A project fixture where the mesh `.env` and a backend component disagree on one mesh
-   env var. Assert the mesh does NOT read stale. Confirm it fails before the fix.
-2. **Order-independence control**: the same fixture with `componentConfigs` keys in the
-   opposite order must produce the same verdict. Today it does not — that asymmetry is
-   the cleanest proof of the defect.
-3. A genuine change (edit a mesh var, write it through to `.env`) must still read stale —
-   the control that stops the fix from simply disabling staleness.
-4. Live: on a project with the disagreement, confirm the badge clears without a redeploy
-   once the sources agree, and that a real config change still raises it.
+1. **Order-independence** — a fixture where the mesh component and the backend disagree on
+   a scope key, asserted twice with `componentConfigs` keys in both orders. Same verdict
+   both times. Fails today in exactly one of the two orders.
+2. **The false negative, directly** — deployed snapshot matches the *mesh's stale copy*
+   while the backend holds a different value. Must report **stale**. This is the case
+   that silently passes today, and it is the one that matters.
+3. **Control** — backend and mesh agree, snapshot matches: must report clean. Stops the
+   fix degenerating into "always stale".
+4. **Control** — a genuine backend-side change must still report stale.
+5. Live: with the disagreement present, confirm the badge is raised; redeploy; confirm it
+   clears and the mesh `.env` now carries the backend's scope values.
 
 ## Kickoff prompt
 
 ```
-/rptc:fix Mesh staleness and mesh deploy read different sources for the same fact, so a
-mesh can show a permanent "Update available" that redeploying never clears.
+/rptc:fix The mesh staleness detector is the third resolver over componentConfigs and the
+only one that doesn't honour BACKEND_OWNED_SCOPE_KEYS, so its verdict depends on manifest
+key order — and in the wrong order it silently agrees with the mesh's stale duplicate and
+reports clean while the mesh is deployed against the wrong website.
 
 Read .rptc/backlog/2026-08-10-mesh-staleness-reads-a-different-source-than-deploy.md
-first — it has the reproduction, both code paths with line references, and the three
-candidate fixes with the risk that rules each in or out.
+first. The rule is already decided (see the BACKEND_OWNED_SCOPE_KEYS docstring in
+features/components/config/envVarKeys.ts and commit 4b517cfb) — this is applying it, not
+choosing it.
 
-Start by settling which source wins; do not start with code. The deciding question is
-whether the flatten is load-bearing for PaaS meshes (cross-boundary vars stored under the
-backend component) — verify that against the PaaS path before choosing, because it is the
-one thing that rules out the scoped-componentConfigs option.
+Write the false-negative test FIRST: snapshot matching the mesh's stale copy while the
+backend differs must report stale. That is the case that passes today and shouldn't.
+Then the order-independence pair.
 
-Write the order-independence test first: the same disagreement with componentConfigs keys
-in the opposite order currently yields different verdicts, and that failure is the
-clearest statement of the bug.
+Prefer extracting the backend-first lookup shared with envFileGenerator's
+resolveFromComponentConfigs and configGenerator rather than adding a fourth hand-rolled
+copy — the docstring's "any new resolver must consult the backend first" is an
+instruction only a shared function can actually enforce.
 ```

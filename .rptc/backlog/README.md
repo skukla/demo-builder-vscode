@@ -188,16 +188,17 @@ API; PDP404 then reads it via the Contents API and commits with a stale SHA, ski
 install. Together with the Configuration Service 403 (the only one that surfaces a message), a
 storefront can finish with no PDP support by any mechanism and still report `Complete`.
 
-#### Mesh staleness reads a different source than deploy ([`2026-08-10-mesh-staleness-reads-a-different-source-than-deploy.md`](2026-08-10-mesh-staleness-reads-a-different-source-than-deploy.md))
+#### Mesh staleness never got the backend-first scope-key rule ([`2026-08-10-mesh-staleness-reads-a-different-source-than-deploy.md`](2026-08-10-mesh-staleness-reads-a-different-source-than-deploy.md))
 
-`updateMeshStateImpl` records the deployed snapshot from the mesh's **`.env` file** (its comment says
-so explicitly); `detectMeshChangesImpl` compares against a **flattened merge of every component's
-`componentConfigs`**. When the two disagree the mesh shows a permanent "Update available" that
-redeploying cannot clear — deploy re-records the `.env` value, staleness keeps reading the flattened
-one. Reproduced on live `demo-builder-test`: mesh `.env` says store view `default`, the backend config
-says `citisignal_us`. Worse than a bad label — it can be the only signal that a mesh is deployed
-against the wrong store view, delivered in a form that reads as noise. The flatten is also
-**order-dependent** (`Object.assign` over `Object.values`), so the verdict turns on manifest key order.
+`BACKEND_OWNED_SCOPE_KEYS` exists because website/store/store-view codes are duplicated across
+component configs and only the **backend's** copy is updated on change; its docstring says any
+resolver over `componentConfigs` must consult the backend first. `4b517cfb` fixed two resolvers
+(`envFileGenerator`, `configGenerator`) — the mesh staleness detector is a **third** and still
+flattens with `Object.assign`, so the winner is manifest key order. The danger is the inverse of
+what it looks like: in the wrong order the detector compares against the mesh's own **stale**
+duplicate, reports clean, and launders the exact misconfiguration `4b517cfb` was filed for (mesh
+querying a website with no products → valid-but-empty PDPs) into a green badge. Fix is applying the
+existing rule, ideally by extracting the shared backend-first lookup — three call sites now.
 
 #### App Builder attach — Model A seed ([`2026-06-15-integration-service-cleanup-and-discovery-token.md`](2026-06-15-integration-service-cleanup-and-discovery-token.md))
 
