@@ -1,33 +1,51 @@
 # Next session — start here
 
-Rewritten 2026-08-10 (second pass, same day). **Everything is committed and pushed;
-`develop` is clean and level with `origin/develop` at `0309abb8`.**
-Gate at handoff: 948 suites / 12118 tests, whole-repo eslint, tsc.
+Rewritten 2026-08-10 (third pass, same day). **Everything is committed; `develop` is
+clean and one merge AHEAD of `origin/develop` — stream B landed but is NOT pushed.**
+Gate at handoff: 943 suites / 12088 tests, whole-repo eslint, tsc.
 
-This replaces the earlier 2026-08-10 file. **Stream A is discharged** — see below for
-what shipped and the two facts it turned up that were not in any previous handoff.
+**Streams A and B are both discharged.** Only the release remains.
 
 ---
 
-## Two streams remain. Pick one — do not interleave.
-
-They live in **different working directories**. Getting that wrong is the most likely
-way to waste the first ten minutes.
+## One stream remains.
 
 | # | Stream | Working directory | Branch |
 |---|---|---|---|
-| B | Configure step rail (**planned, not started**) | worktree `…​.worktrees/feature/configure-step-rail` | `feature/configure-step-rail` |
 | C | Release `.127` | main checkout | `develop` → `master` |
+
+First action: push `develop`. It carries the configure-step-rail merge and nothing
+else is outstanding behind it.
 
 ---
 
-## B. Configure step rail — planned, ready to implement
+## B. Configure step rail — SHIPPED 2026-08-10, merged to develop
 
-Refactor the Configure screen to the wizard's UI/UX: horizontal top rail, each configure
-section a tab, one section's fields visible at a time.
+Plan moved to `.rptc/complete/configure-step-rail/`. Landed as four commits on develop;
+the worktree has been removed. The Configure screen now renders the wizard's horizontal
+`StepRail` with one section on screen at a time.
 
-**Plan:** `.rptc/plans/configure-step-rail/` (`overview.md` + `step-01..05.md`) — **in the
-worktree, not the main checkout.** Committed as `dbcee1c2`.
+**What it turned up that was not in the plan:**
+
+- **`componentConfigs` writes were mutating the caller's object.** `{ ...prev }` clones
+  one level, and both commerce config surfaces then wrote through into the nested
+  per-component object — which on Configure is the `existingEnvValues` PROP. Three sites
+  in `useComponentConfig`, one in the new Configure hook. Now one shared immutable writer
+  (`features/components/services/componentConfigWrites.ts`). It presented as a test that
+  passed alone and failed in sequence; the shared fixture had been rewritten by an
+  earlier test.
+- **Two of the six deleted Configure hooks were STALE FORKS of live logic**, not merely
+  unused: `useFieldValidation` and `useConfigureFields` had lost the default handling and
+  the shared-component lookup. Re-extract from the live code, never revive an orphan.
+- **`getValidationState` existed three times**, one of them alive only because its own
+  test imported it. Now `core/ui/utils/validationState.ts`.
+
+**Left deliberately undone — a variant, not a duplicate.** `useComponentConfig`'s
+validation and Configure's `validateServiceGroups` look like one job but differ four
+ways: MESH_ENDPOINT deferral, defaults-as-values, declared-components-only lookup, and a
+truthiness check that makes a field set to `false` read as "required but missing" in the
+wizard. That last one may be a real bug. Merging them would change the wizard's Continue
+gate, so it needs a decision, not a refactor.
 
 Five steps: promote the rail to `core` as `StepRail`; unify three section sources into one
 model; swap the sidebar for the rail; delete what that makes dead; verify in the Dev Host.
@@ -58,14 +76,11 @@ cd /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builde
 /rptc:feat Plan is approved, continue to implementation — configure step rail
 ```
 
-The "Plan is approved" phrasing is load-bearing: it makes `/rptc:feat` skip discovery and
-planning and go straight to implementation from the plan file.
-
 ---
 
 ## C. Release `.127`
 
-**Blocked on the user wanting one more feature in first** (that feature is stream B).
+**No longer blocked** — the feature it was waiting on (stream B) has landed.
 
 - **It is `.127`, not `.128`.** `package.json` reads `1.0.0-beta.127` and no
   `v1.0.0-beta.127` tag exists — re-verified 2026-08-10. The bump came from the `.126`
