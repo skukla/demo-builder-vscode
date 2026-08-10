@@ -8,18 +8,29 @@
  * discovery probes liveness rather than trusting existence.
  *
  * Resolution order (`resolveProxyTarget`):
- *   1. `DEMO_BUILDER_MCP_SOCKET` env whose FILE exists — deterministic targeting
- *      (all generated `.mcp.json` files set it). The existence check is what
- *      makes a stale pin recoverable: the path is baked into files on disk and
- *      cannot heal itself, so a pin returned unconditionally stranded the proxy
- *      for its whole retry window while a live server sat in step 3.
- *   2. cwd-derived socket whose FILE exists — deterministic targeting of the
- *      window whose workspace is the cwd. Existence (not liveness) is the test:
- *      the proxy's connect-retry window owns activation races on this path.
- *   3. Discovery: newest-mtime-first sweep of `mcpSocketDir()`, first LIVE
- *      socket wins. Mtime = bind time, so several open windows tiebreak to the
- *      most recently started one.
- *   4. Nothing live — guidance for a fast, friendly failure (no retry window).
+ *   1. `DEMO_BUILDER_MCP_SOCKET` env whose socket is LIVE — deterministic
+ *      targeting (all generated `.mcp.json` files set it).
+ *   2. cwd-derived socket that is LIVE — deterministic targeting of the window
+ *      whose workspace is the cwd.
+ *   3. Nothing deterministic is live AND nothing else is either — guidance for a
+ *      fast, friendly failure (no retry window).
+ *   4. Some window IS live, and a deterministic path merely EXISTS — that path
+ *      wins anyway. It is the right window mid-restart, and the proxy's
+ *      connect-retry window owns that gap. Connecting to a different window
+ *      instead would mean a different projects dir, which is worse than waiting.
+ *   5. Otherwise the discovered live socket: newest-mtime-first sweep of
+ *      `mcpSocketDir()`, first LIVE socket wins. Mtime = bind time, so several
+ *      open windows tiebreak to the most recently started one.
+ *
+ * Steps 1-2 used to test EXISTENCE, which was a fair proxy for liveness only
+ * while the server unlinked its socket on shutdown. It no longer does — there is
+ * no safe way to (see `InExtensionMcpServer.dispose`) — so files outlive their
+ * window and an existence test at step 1 short-circuited step 3 forever. Every
+ * `claude` run with VS Code closed burned the full ~23s retry window and then
+ * printed the message step 3 would have printed instantly. Splitting liveness
+ * (1-2) from existence (4) keeps deterministic targeting exactly where it earns
+ * its keep — whenever any window is live — and restores the fast failure when
+ * none is.
  *
  * IMPORTANT: this module MUST NOT import 'vscode' — the proxy bundles it and
  * runs as a standalone process.
@@ -151,25 +162,35 @@ export async function resolveProxyTarget(
     cwd: string,
     socketDir: string = mcpSocketDir(),
 ): Promise<ProxyTarget | ProxyTargetFailure> {
-    // Existence, not liveness — same test as the cwd branch below, for the same
-    // reason: the connect-retry window owns activation races. What it must NOT
-    // do is return the pin unconditionally. Every generated `.mcp.json` carries
-    // one, so an unconditional return meant a pin whose socket was gone never
-    // reached the branches below: ~23s of ENOENT retries and then failure, with
-    // a live server one branch away.
+    const derived = resolveMcpSocketPath(cwd, socketDir);
+
+    // Liveness on the two deterministic paths first, so the ordinary case costs
+    // exactly one probe and never scans the directory.
+    if (envSocket && (await probeSocket(envSocket))) {
+        return { socketPath: envSocket, via: 'env' };
+    }
+    if (await probeSocket(derived)) {
+        return { socketPath: derived, via: 'cwd' };
+    }
+
+    // Neither deterministic path answered. Is ANY window live?
+    const discovered = await discoverLiveSocket(socketDir);
+    if (!discovered) {
+        // No. A socket file sitting there is a leftover, not a window about to
+        // come back — returning it only delays this same message by ~23s.
+        return { guidance: NO_WINDOW_GUIDANCE };
+    }
+
+    // Something is live, so a deterministic path that merely EXISTS still beats
+    // it: that is the window we were told to reach, most likely mid-restart, and
+    // the proxy's connect-retry window is there to wait it out. The live socket
+    // we found belongs to a different workspace and a different projects dir.
     if (envSocket && (await pathExists(envSocket))) {
         return { socketPath: envSocket, via: 'env' };
     }
-
-    const derived = resolveMcpSocketPath(cwd, socketDir);
     if (await pathExists(derived)) {
         return { socketPath: derived, via: 'cwd' };
     }
 
-    const discovered = await discoverLiveSocket(socketDir);
-    if (discovered) {
-        return { socketPath: discovered, via: 'discovery' };
-    }
-
-    return { guidance: NO_WINDOW_GUIDANCE };
+    return { socketPath: discovered, via: 'discovery' };
 }

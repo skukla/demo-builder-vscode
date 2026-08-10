@@ -123,9 +123,41 @@ describe('mcpSocketDiscovery', () => {
     });
 
     describe('resolveProxyTarget', () => {
-        it('uses the env socket when its file exists', async () => {
+        it('uses the env socket when it is live', async () => {
+            const pinned = path.join(dir, 'pinned.sock');
+            cleanups.push(await listen(pinned));
+
+            const target = await resolveProxyTarget(pinned, '/anywhere', dir);
+
+            expect(target).toEqual({ socketPath: pinned, via: 'env' });
+        });
+
+        // Socket files outlive their window: nothing unlinks the shared name any
+        // more, because no check makes that safe (InExtensionMcpServer.dispose).
+        // So "the file is there" stopped being evidence that a window was recently
+        // there, and an existence check at step 1 short-circuited the step 4 this
+        // module documents — "Nothing live — guidance for a fast, friendly failure
+        // (no retry window)". The proxy burned its full ~23s window on every run
+        // with VS Code closed, then printed the same message step 4 would have
+        // printed instantly.
+        it('gives guidance when the pinned socket exists but nothing is live anywhere', async () => {
             const pinned = path.join(dir, 'pinned.sock');
             await fsPromises.writeFile(pinned, '');
+
+            const result = await resolveProxyTarget(pinned, '/anywhere', dir);
+
+            expect(result).not.toHaveProperty('socketPath');
+            expect(result).toHaveProperty('guidance');
+        });
+
+        it('still prefers an EXISTING pinned socket over a live one elsewhere', async () => {
+            // Deterministic targeting is the rule whenever ANY window is live: a
+            // different window means a different projects dir, so waiting for the
+            // right one to come back beats connecting to the wrong one. Only the
+            // "nothing live at all" case above changed.
+            const pinned = path.join(dir, 'pinned.sock');
+            await fsPromises.writeFile(pinned, '');
+            cleanups.push(await listen(path.join(dir, 'elsewhere.sock')));
 
             const target = await resolveProxyTarget(pinned, '/anywhere', dir);
 
@@ -172,17 +204,31 @@ describe('mcpSocketDiscovery', () => {
             expect(result).toHaveProperty('guidance');
         });
 
-        it('uses the cwd-derived socket when its file exists (even without a listener)', async () => {
-            // File-exists (not liveness) is deliberate: the connect retry window
-            // owns activation races for the deterministic cwd-derived path.
+        it('uses the cwd-derived socket when its file exists and a window is live', async () => {
+            // File-exists (not liveness) is still deliberate for the deterministic
+            // cwd path — the connect-retry window owns activation races, and a
+            // window mid-restart must not be abandoned for someone else's socket.
+            // The precondition is that SOMETHING is live; see the guidance test
+            // below for what happens when nothing is.
             const cwd = path.join(dir, 'workspace');
             const derived = resolveMcpSocketPath(cwd, dir);
             await fsPromises.writeFile(derived, '');
+            cleanups.push(await listen(path.join(dir, 'elsewhere.sock')));
 
             await expect(resolveProxyTarget(undefined, cwd, dir)).resolves.toEqual({
                 socketPath: derived,
                 via: 'cwd',
             });
+        });
+
+        it('gives guidance when the cwd-derived socket exists but nothing is live anywhere', async () => {
+            const cwd = path.join(dir, 'workspace');
+            await fsPromises.writeFile(resolveMcpSocketPath(cwd, dir), '');
+
+            const result = await resolveProxyTarget(undefined, cwd, dir);
+
+            expect(result).not.toHaveProperty('socketPath');
+            expect(result).toHaveProperty('guidance');
         });
 
         it('falls back to discovery when the cwd-derived socket file is missing', async () => {
