@@ -21,7 +21,7 @@ else is outstanding behind it.
 
 ## B. Configure step rail — SHIPPED 2026-08-10, merged to develop
 
-Plan moved to `.rptc/complete/configure-step-rail/`. Landed as four commits on develop;
+Plan moved to `.rptc/complete/configure-step-rail/`. Landed as six commits on develop;
 the worktree has been removed. The Configure screen now renders the wizard's horizontal
 `StepRail` with one section on screen at a time.
 
@@ -40,41 +40,35 @@ the worktree has been removed. The Configure screen now renders the wizard's hor
 - **`getValidationState` existed three times**, one of them alive only because its own
   test imported it. Now `core/ui/utils/validationState.ts`.
 
-**Left deliberately undone — a variant, not a duplicate.** `useComponentConfig`'s
-validation and Configure's `validateServiceGroups` look like one job but differ four
-ways: MESH_ENDPOINT deferral, defaults-as-values, declared-components-only lookup, and a
-truthiness check that makes a field set to `false` read as "required but missing" in the
-wizard. That last one may be a real bug. Merging them would change the wizard's Continue
-gate, so it needs a decision, not a refactor.
+**The two validators stay separate — SETTLED 2026-08-10, do not re-litigate.**
+`useComponentConfig`'s validation and Configure's `validateServiceGroups` look like one
+job. On inspection only ONE of the four apparent divergences was real:
 
-Five steps: promote the rail to `core` as `StepRail`; unify three section sources into one
-model; swap the sidebar for the rail; delete what that makes dead; verify in the Dev Host.
-Steps 01 and 02 are independent.
+| Divergence | Verdict |
+|---|---|
+| MESH_ENDPOINT: wizard filters upstream, Configure defers in the check | Same outcome, different mechanism |
+| Defaults: wizard pre-writes them, Configure accepts them in the check | Same outcome, different mechanism |
+| Configure also sweeps NON-declaring components | Real — Configure needs it (`.env` values can sit under another component id); the wizard does not |
+| Wizard used a bare truthiness check | The only defect — **fixed**, see below |
 
-Three decisions already taken (do not re-litigate): switch sections rather than jump-nav;
-mark all sections reachable so the rail component needs no change; move and rename it.
+So convergence would have meant giving the wizard a lookup it does not need, to erase a
+fork that was one flaw wide. The flaw was fixed on its own instead: the wizard now uses
+the shared `findFieldValue`, so a required field holding `false` or `0` reads as PRESENT
+rather than "required but missing" — an error the user could not clear, because the
+checkbox IS ticked. It was unreachable (no env var declares a boolean) but armed:
+`ConfigFieldRenderer` has a live `case 'boolean'` that writes real booleans. Pinned by
+`useComponentConfig-validation.test.ts`, whose two failing cases each have a passing
+control beside them.
 
-Worth knowing before you start:
+**The one thing that could still be wrong:** the Dev Host pass (step 05) was never
+confirmed by either of us. The build is verified — the rail is in
+`dist/webview/configure-bundle.js`, the old sidebar CSS is gone, and both CSS tokens
+landed on `.container-configure` — but nobody checked the rail's padding, the new 960px
+content cap, or the sub-1180px behaviour on screen. Branch `feature/configure-step-rail`
+is kept for that reason; `git reset --hard ca559eca` on develop reverts the lot.
 
-- **The rail already exists and is already horizontal.** `VerticalStepList` renders
-  `<ol aria-orientation="horizontal">`. Its name and docstring claim the opposite and
-  misled a research agent during planning. Step 01 corrects that.
-- **The substance is the section model, not the rail.** Sections come from three unrelated
-  sources and only one feeds the current sidebar.
-- **`--wizard-content-pad` is scoped to `.wizard-main-content`** — outside the wizard the
-  declaration is dropped, the rail still renders, and no test can see it. Step 05 exists
-  for that.
-
-The worktree is already created and configured per the `worktree-setup` skill: own `dist/`,
-shared `node_modules`, `settings.local.json` copied, hooks and skills present via git.
-Note the main checkout's `dist/` was rebuilt from `develop` at the end of this session, and
-`npm run watch:all` is NOT running anywhere.
-
-**Launch:**
-```
-cd /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode.worktrees/feature/configure-step-rail
-/rptc:feat Plan is approved, continue to implementation — configure step rail
-```
+Also carried over: Configure's content is now capped at the canonical 960px band. Losing
+the 300px sidebar freed that width and it would otherwise all have gone into field width.
 
 ---
 

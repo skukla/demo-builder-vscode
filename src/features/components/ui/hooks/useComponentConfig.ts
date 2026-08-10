@@ -300,51 +300,43 @@ export function useComponentConfig({
                 // Note: MESH_ENDPOINT deferred field check removed - field is now filtered out entirely
                 // (auto-configured during project creation)
 
-                if (field.required) {
-                    const hasValue = field.componentIds.some(
-                        (compId) => componentConfigs[compId]?.[field.key],
-                    );
-                    if (!hasValue) {
-                        allValid = false;
-                        errors[field.key] = `${field.label} is required`;
-                    }
+                // `findFieldValue` treats undefined and '' as absent and everything else
+                // as present. A bare truthiness check used to sit here, which made a
+                // field holding `false` or `0` read as "required but missing" — an error
+                // the user could not clear, because the checkbox IS ticked. No env var
+                // declares a boolean today, but ConfigFieldRenderer's `case 'boolean'`
+                // writes real booleans, so the trap was armed.
+                const value = findFieldValue(componentConfigs, field);
+                const hasValue = value !== undefined;
+
+                if (field.required && !hasValue) {
+                    allValid = false;
+                    errors[field.key] = `${field.label} is required`;
                 }
+
+                // Format checks only apply to a real string — a boolean or a number has
+                // no URL or pattern to fail.
+                if (typeof value !== 'string') return;
 
                 // URL validation using core validator
                 if (field.type === 'url') {
-                    const firstComponentWithValue = field.componentIds.find(
-                        (compId) => componentConfigs[compId]?.[field.key],
-                    );
-                    if (firstComponentWithValue) {
-                        const value = componentConfigs[firstComponentWithValue][
-                            field.key
-                        ] as string;
-                        const result = urlValidator(value);
-                        if (!result.valid && result.error) {
-                            allValid = false;
-                            errors[field.key] = result.error;
-                        }
+                    const result = urlValidator(value);
+                    if (!result.valid && result.error) {
+                        allValid = false;
+                        errors[field.key] = result.error;
                     }
                 }
 
                 // Pattern validation using core validator
                 if (field.validation?.pattern) {
-                    const firstComponentWithValue = field.componentIds.find(
-                        (compId) => componentConfigs[compId]?.[field.key],
+                    const patternValidator = pattern(
+                        new RegExp(field.validation.pattern),
+                        field.validation.message || 'Invalid format',
                     );
-                    if (firstComponentWithValue) {
-                        const value = componentConfigs[firstComponentWithValue][
-                            field.key
-                        ] as string;
-                        const patternValidator = pattern(
-                            new RegExp(field.validation.pattern),
-                            field.validation.message || 'Invalid format',
-                        );
-                        const result = patternValidator(value);
-                        if (!result.valid && result.error) {
-                            allValid = false;
-                            errors[field.key] = result.error;
-                        }
+                    const result = patternValidator(value);
+                    if (!result.valid && result.error) {
+                        allValid = false;
+                        errors[field.key] = result.error;
                     }
                 }
             });
