@@ -262,9 +262,29 @@ describe('probeStorefrontDelivery — real SKU leg', () => {
         );
 
         expect(result.pdp).toMatchObject({ status: 404, served: false });
-        expect(result.verdict).toMatch(/not serving PDPs/i);
         expect(result.verdict).toContain(SKU);
         expect(result.verdict).not.toMatch(/looks correct/i);
+    });
+
+    it('names BOTH causes of a 404 rather than blaming the chain', async () => {
+        // Cold-path recovery is client-side: delayed.js runs in a browser and
+        // calls prepublish-pdp, so a fetch can never trigger it. Any SKU that
+        // pre-warming missed 404s on a perfectly healthy storefront. Asserting
+        // "the chain is broken" there is the same over-claiming that made this
+        // probe report a prerender that never happened — pointed the other way.
+        mockFetch({ ...WITH_TEMPLATE, [PDP_PATH]: { status: 404, body: 'Page Not Found' } });
+
+        const result = await probeStorefrontDelivery(
+            'skukla',
+            'demo-builder-test',
+            logger,
+            '/products/default',
+            target
+        );
+
+        expect(result.verdict).toMatch(/no page has been published/i);
+        expect(result.verdict).toMatch(/prerender chain is not serving/i);
+        expect(result.verdict).toMatch(/browser/i);
     });
 
     it('omits the leg when no SKU could be sampled, without going red', async () => {

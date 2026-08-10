@@ -205,11 +205,26 @@ function verdictFor(result: StorefrontProbeResult): string {
         );
     }
     if (result.pdp && !result.pdp.served) {
-        // Unambiguous, unlike a guessed SKU: the catalog confirmed this product
-        // exists moments ago, so a 404 is the chain failing, not a missing page.
+        // Two causes, and this probe cannot separate them — say both.
+        //
+        // Confirming the SKU exists removes one ambiguity (it is not a typo or a
+        // deleted product) but not the other. Cold-path recovery is CLIENT-side:
+        // `delayed.js` runs in a browser and calls prepublish-pdp. A fetch never
+        // triggers it, so any SKU that pre-warming did not cover and no visitor
+        // has opened returns 404 on a perfectly healthy storefront.
+        //
+        // Observed 2026-08-10 on a storefront whose other legs were all green:
+        // pre-warming had never run (catalog enumeration was failing under a
+        // stale scope), so catalog SKUs were simply unpublished. Naming the
+        // chain as the cause there would be a false alarm — the same
+        // over-claiming, pointed the other way, that made this probe report a
+        // prerender that never happened.
         return (
             `SKU ${result.pdp.sku} exists in the catalog but ${result.pdp.path} returned ` +
-            `${result.pdp.status} — the prerender chain is not serving PDPs.`
+            `${result.pdp.status}. Either no page has been published for it ` +
+            '(pre-warming did not cover it, and this check cannot trigger the ' +
+            'browser-side recovery), or the prerender chain is not serving PDPs. ' +
+            'Open the URL in a browser to tell the two apart.'
         );
     }
     if (result.pdp) {
