@@ -23,6 +23,12 @@ jest.mock('@/core/logging/debugLogger', () => ({
  * window + a 100ms poll chain. Jest's 10s default is under that on a loaded
  * machine, so a correctly-behaving test times out. Raised for headroom, not
  * slack — a healthy run finishes far below it.
+ *
+ * Do NOT add a per-test timeout argument (`it(..., 10000)`). A per-test value
+ * OVERRIDES this one even when it is lower, which is how four 10s/15s caps
+ * survived this line being raised and kept the budget at 10s regardless. The
+ * whole suite then took 9.6s solo — no headroom at all — and under full-suite
+ * load on 2026-08-10 it timed out while passing in isolation.
  */
 jest.setTimeout(30_000);
 
@@ -57,7 +63,7 @@ describe('ProcessCleanup - Timeout Behavior', () => {
                     console.log('SIGTERM received, ignoring...');
                 });
                 setTimeout(() => {}, 60000);
-                `
+                `,
             ]);
 
             const pid = childProcess.pid!;
@@ -78,13 +84,13 @@ describe('ProcessCleanup - Timeout Behavior', () => {
             // Duration should be reasonable (either quick via tree-kill or after timeout)
             expect(duration).toBeGreaterThan(0);
             expect(duration).toBeLessThan(2000);
-        }, 10000); // Increase test timeout to 10s
+        });
 
         it('should kill process that ignores SIGTERM', async () => {
             // Given: Process that ignores SIGTERM
             const childProcess = spawn('node', [
                 '-e',
-                'process.on("SIGTERM", () => {}); setTimeout(() => {}, 60000);'
+                'process.on("SIGTERM", () => {}); setTimeout(() => {}, 60000);',
             ]);
 
             const pid = childProcess.pid!;
@@ -96,7 +102,7 @@ describe('ProcessCleanup - Timeout Behavior', () => {
 
             // Then: Process should be dead
             expect(() => process.kill(pid, 0)).toThrow();
-        }, 10000);
+        });
 
         it('should force kill even stubborn processes', async () => {
             // Given: Process that tries to resist termination
@@ -110,7 +116,7 @@ describe('ProcessCleanup - Timeout Behavior', () => {
                     console.log('Process exiting');
                 });
                 setInterval(() => {}, 1000);
-                `
+                `,
             ]);
 
             const pid = childProcess.pid!;
@@ -121,7 +127,7 @@ describe('ProcessCleanup - Timeout Behavior', () => {
 
             // Then: Process must be dead (SIGKILL is not ignorable)
             expect(() => process.kill(pid, 0)).toThrow();
-        }, 10000);
+        });
     });
 
     describe('Timeout Edge Cases', () => {
@@ -146,7 +152,7 @@ describe('ProcessCleanup - Timeout Behavior', () => {
             // Given: Process that exits quickly
             const childProcess = spawn('node', [
                 '-e',
-                'process.on("SIGTERM", () => process.exit(0)); setTimeout(() => {}, 60000);'
+                'process.on("SIGTERM", () => process.exit(0)); setTimeout(() => {}, 60000);',
             ]);
 
             const pid = childProcess.pid!;
@@ -170,7 +176,7 @@ describe('ProcessCleanup - Timeout Behavior', () => {
             // Given: Process that ignores SIGTERM
             const childProcess = spawn('node', [
                 '-e',
-                'process.on("SIGTERM", () => {}); setTimeout(() => {}, 60000);'
+                'process.on("SIGTERM", () => {}); setTimeout(() => {}, 60000);',
             ]);
 
             const pid = childProcess.pid!;
@@ -181,7 +187,7 @@ describe('ProcessCleanup - Timeout Behavior', () => {
 
             // Then: Process should be dead (tree-kill handles it efficiently)
             expect(() => process.kill(pid, 0)).toThrow();
-        }, 15000);
+        });
     });
 
     describe('Polling Interval', () => {
@@ -194,7 +200,7 @@ describe('ProcessCleanup - Timeout Behavior', () => {
                     setTimeout(() => process.exit(0), 200);
                 });
                 setTimeout(() => {}, 60000);
-                `
+                `,
             ]);
 
             const pid = childProcess.pid!;
