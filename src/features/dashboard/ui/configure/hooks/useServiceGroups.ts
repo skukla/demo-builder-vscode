@@ -9,10 +9,43 @@ import { useMemo } from 'react';
 import type { ComponentsData, UniqueField, ServiceGroup } from '../configureTypes';
 import type { SelectedComponent } from './useSelectedComponents';
 import { toServiceGroupWithSortedFields, SERVICE_GROUP_DEFINITIONS } from '@/features/components/services/serviceGroupTransforms';
+import type { ComponentEnvVar } from '@/types/webview';
 
 interface UseServiceGroupsProps {
     selectedComponents: SelectedComponent[];
     componentsData: ComponentsData;
+}
+
+/**
+ * Record one component's declared env vars into the shared field map.
+ *
+ * A field declared by several components is stored ONCE and accumulates their ids, which
+ * is what lets an edit fan out to every component that needs the value. Required and
+ * optional vars are collected identically — the `required` flag rides on the env-var
+ * definition itself, so there is nothing for the caller to differentiate here.
+ *
+ * @param fieldMap - Accumulator, keyed by env-var name
+ * @param envVarKeys - The env-var names this component declares
+ * @param envVarDefs - All known env-var definitions
+ * @param componentId - The component declaring them
+ */
+function collectFields(
+    fieldMap: Map<string, UniqueField>,
+    envVarKeys: string[] | undefined,
+    envVarDefs: Record<string, ComponentEnvVar>,
+    componentId: string,
+): void {
+    for (const envVarKey of envVarKeys ?? []) {
+        const envVarDef = envVarDefs[envVarKey];
+        if (!envVarDef) continue;
+
+        const existing = fieldMap.get(envVarKey);
+        if (!existing) {
+            fieldMap.set(envVarKey, { ...envVarDef, key: envVarKey, componentIds: [componentId] });
+        } else if (!existing.componentIds.includes(componentId)) {
+            existing.componentIds.push(componentId);
+        }
+    }
 }
 
 /**
@@ -27,41 +60,8 @@ export function useServiceGroups({
         const envVarDefs = componentsData.envVars || {};
 
         selectedComponents.forEach(({ id, data }) => {
-            data.configuration?.requiredEnvVars?.forEach(envVarKey => {
-                const envVarDef = envVarDefs[envVarKey];
-                if (envVarDef) {
-                    if (!fieldMap.has(envVarKey)) {
-                        fieldMap.set(envVarKey, {
-                            ...envVarDef,
-                            key: envVarKey,
-                            componentIds: [id],
-                        });
-                    } else {
-                        const existing = fieldMap.get(envVarKey);
-                        if (existing && !existing.componentIds.includes(id)) {
-                            existing.componentIds.push(id);
-                        }
-                    }
-                }
-            });
-
-            data.configuration?.optionalEnvVars?.forEach(envVarKey => {
-                const envVarDef = envVarDefs[envVarKey];
-                if (envVarDef) {
-                    if (!fieldMap.has(envVarKey)) {
-                        fieldMap.set(envVarKey, {
-                            ...envVarDef,
-                            key: envVarKey,
-                            componentIds: [id],
-                        });
-                    } else {
-                        const existing = fieldMap.get(envVarKey);
-                        if (existing && !existing.componentIds.includes(id)) {
-                            existing.componentIds.push(id);
-                        }
-                    }
-                }
-            });
+            collectFields(fieldMap, data.configuration?.requiredEnvVars, envVarDefs, id);
+            collectFields(fieldMap, data.configuration?.optionalEnvVars, envVarDefs, id);
         });
 
         // MESH_ENDPOINT is auto-populated from the keyed mesh entry — it's never

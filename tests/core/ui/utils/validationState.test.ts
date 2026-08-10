@@ -7,9 +7,9 @@
  * This helper converts error/verified boolean pairs to Spectrum TextField validationState.
  */
 
-import { getValidationState } from '@/features/eds/ui/helpers/validationHelpers';
+import { getValidationState } from '@/core/ui/utils/validationState';
 
-describe('validationHelpers', () => {
+describe('getValidationState', () => {
     describe('getValidationState', () => {
         it('should return "invalid" when error is truthy', () => {
             // Given: An error message exists (error is truthy)
