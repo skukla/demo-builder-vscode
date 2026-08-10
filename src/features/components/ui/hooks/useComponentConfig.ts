@@ -3,6 +3,11 @@ import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
 import { PAAS_URL, PAAS_GRAPHQL_ENDPOINT } from '@/features/components/config/envVarKeys';
+import {
+    findFieldValue,
+    writeFieldValue,
+    writeToComponents,
+} from '@/features/components/services/componentConfigWrites';
 import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
 import { toServiceGroupWithSortedFields, SERVICE_GROUP_DEFINITIONS } from '@/features/components/services/serviceGroupTransforms';
 import { collectStackComponents } from '@/features/components/services/stackComponentCollector';
@@ -83,13 +88,18 @@ interface UseComponentConfigReturn {
 // Note: 'mesh' group exists in shared list for Configure screen; wizard filters MESH_ENDPOINT
 // so the mesh group will be empty and hidden via `.filter(group => group.fields.length > 0)`
 
-/** Apply field defaults and brand-specific package defaults to component configs */
+/**
+ * Apply field defaults and brand-specific package defaults to component configs.
+ *
+ * Writes through `writeToComponents`, so `prevConfigs` and every per-component object
+ * inside it are left untouched — the caller's object is not rewritten in place.
+ */
 function applyFieldDefaults(
     prevConfigs: ComponentConfigs,
     groups: ServiceGroup[],
     packageConfigDefaults: Record<string, string> | undefined,
 ): ComponentConfigs {
-    const newConfigs = { ...prevConfigs };
+    let newConfigs = prevConfigs;
     let hasChanges = false;
     const packageDefaults = packageConfigDefaults || {};
 
@@ -97,15 +107,17 @@ function applyFieldDefaults(
         group.fields.forEach(field => {
             const packageValue = packageDefaults[field.key];
             const defaultValue = packageValue ?? field.default;
-            if (defaultValue !== undefined && defaultValue !== '') {
-                field.componentIds.forEach(componentId => {
-                    if (!newConfigs[componentId]) newConfigs[componentId] = {};
-                    if (!newConfigs[componentId][field.key] || packageValue) {
-                        newConfigs[componentId][field.key] = defaultValue;
-                        hasChanges = true;
-                    }
-                });
-            }
+            if (defaultValue === undefined || defaultValue === '') return;
+
+            // A package default overrides whatever is there; a field default only fills a
+            // blank. Applied per component, since they can hold different values.
+            const targets = field.componentIds.filter(
+                componentId => packageValue || !newConfigs[componentId]?.[field.key],
+            );
+            if (targets.length === 0) return;
+
+            newConfigs = writeToComponents(newConfigs, targets, { [field.key]: defaultValue });
+            hasChanges = true;
         });
     });
 
@@ -321,27 +333,17 @@ export function useComponentConfig({
     const updateField = useCallback((field: UniqueField, value: string | boolean) => {
         setTouchedFields(prev => new Set(prev).add(field.key));
         setComponentConfigs(prev => {
-            const newConfigs = { ...prev };
-            field.componentIds.forEach(componentId => {
-                if (!newConfigs[componentId]) newConfigs[componentId] = {};
-                newConfigs[componentId][field.key] = value;
-            });
+            const writes: Record<string, string | boolean> = { [field.key]: value };
 
             // Linked field: PAAS_URL → PAAS_GRAPHQL_ENDPOINT
             // Only auto-derive if GraphQL hasn't been manually touched
             if (field.key === PAAS_URL && typeof value === 'string') {
-                const graphqlKey = PAAS_GRAPHQL_ENDPOINT;
-                if (!touchedFields.has(graphqlKey)) {
-                    const derivedGraphql = deriveGraphqlEndpoint(value);
-                    field.componentIds.forEach(componentId => {
-                        if (newConfigs[componentId]) {
-                            newConfigs[componentId][graphqlKey] = derivedGraphql;
-                        }
-                    });
+                if (!touchedFields.has(PAAS_GRAPHQL_ENDPOINT)) {
+                    writes[PAAS_GRAPHQL_ENDPOINT] = deriveGraphqlEndpoint(value);
                 }
             }
 
-            return newConfigs;
+            return writeToComponents(prev, field.componentIds, writes);
         });
     }, [touchedFields]);
 
@@ -368,29 +370,13 @@ export function useComponentConfig({
     const normalizeUrlField = useCallback((field: UniqueField) => {
         if (field.type !== 'url') return;
 
-        // Find current value
-        let currentValue: string | undefined;
-        for (const componentId of field.componentIds) {
-            const value = componentConfigs[componentId]?.[field.key];
-            if (value !== undefined && value !== '' && typeof value === 'string') {
-                currentValue = value;
-                break;
-            }
-        }
-
-        if (!currentValue) return;
+        const currentValue = findFieldValue(componentConfigs, field);
+        if (typeof currentValue !== 'string' || !currentValue) return;
 
         // Normalize and update if changed
         const normalized = normalizeUrl(currentValue);
         if (normalized !== currentValue) {
-            setComponentConfigs(prev => {
-                const newConfigs = { ...prev };
-                field.componentIds.forEach(componentId => {
-                    if (!newConfigs[componentId]) newConfigs[componentId] = {};
-                    newConfigs[componentId][field.key] = normalized;
-                });
-                return newConfigs;
-            });
+            setComponentConfigs(prev => writeFieldValue(prev, field, normalized));
         }
     }, [componentConfigs]);
 
