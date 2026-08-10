@@ -1,8 +1,8 @@
 # Next session — start here
 
-Rewritten 2026-08-10 (third pass, same day). **Everything is committed; `develop` is
-clean and one merge AHEAD of `origin/develop` — stream B landed but is NOT pushed.**
-Gate at handoff: 943 suites / 12088 tests, whole-repo eslint, tsc.
+Rewritten 2026-08-10 (third pass, same day). **Everything is committed AND PUSHED —
+`develop` is level with `origin/develop` at `3c8e651f`.**
+Gate at handoff: 945 suites / 12100 tests, whole-repo eslint, tsc.
 
 **Streams A and B are both discharged.** Only the release remains.
 
@@ -14,8 +14,7 @@ Gate at handoff: 943 suites / 12088 tests, whole-repo eslint, tsc.
 |---|---|---|---|
 | C | Release `.127` | main checkout | `develop` → `master` |
 
-First action: push `develop`. It carries the configure-step-rail merge and nothing
-else is outstanding behind it.
+Nothing is outstanding behind it — start whenever.
 
 ---
 
@@ -152,16 +151,28 @@ re-creates the same race. `InExtensionMcpServer.dispose`'s docstring explains wh
 
 ## Also outstanding, smaller
 
-- **`demo-builder-test` mesh still runs on `base`.** Its `.env` is stale and `deploy_mesh`
-  does **not** regenerate it — only a Configure save does. Order: Configure save → then
-  deploy mesh. A `deploy_mesh` timed out at 10 min on 2026-08-10; check
-  `appBuilderComponents['eds-accs-mesh']` before re-running.
+- ~~**`demo-builder-test` mesh still runs on `base`.**~~ **RESOLVED 2026-08-10** — mesh
+  redeployed; `.env`, the recorded snapshot and the flattened configs all read
+  `citisignal_*` and the "Update available" badge cleared.
+  **The note that came with it was wrong and is worth correcting**: it said `deploy_mesh`
+  does not regenerate the `.env`, "only a Configure save does". Both mesh deploy paths DO
+  regenerate it — `appBuilderComponentRunner.ts:330` (`writeComponentEnv`, aborts on
+  failure) and `deployMeshHeadless.ts:162` (best-effort, warns and continues). The
+  best-effort arm is the plausible seed of the original observation: a silent regeneration
+  failure there leaves a stale `.env` and the deploy proceeds anyway.
+  **Still true after the fix:** `componentConfigs['eds-accs-mesh']` STILL holds the stale
+  `base`/`main_website_store`/`default` copy. Nothing authoritative reads it, but it is
+  live ammunition for the staleness order-dependence below.
 - **Missing `get_store_structure` MCP tool** — PDP handoff §3, flagged as the
   highest-value gap. An agent debugging PDP failures cannot see that a project points at a
   Commerce website with no products. That cost most of an afternoon.
-- **Duplicated Commerce scope still in existing manifests.** Nothing reads it as
-  authoritative any more (both resolvers now consult `BACKEND_OWNED_SCOPE_KEYS`), but it
-  will drift again. Needs a migration. PDP handoff §2.
+- **Duplicated Commerce scope still in existing manifests.** Confirmed still present on
+  `demo-builder-test` after the 2026-08-10 mesh fix. TWO resolvers consult
+  `BACKEND_OWNED_SCOPE_KEYS`; a **third** — the mesh staleness detector — does not, and
+  its verdict therefore turns on manifest key order. Filed:
+  [`../backlog/2026-08-10-mesh-staleness-reads-a-different-source-than-deploy.md`](../backlog/2026-08-10-mesh-staleness-reads-a-different-source-than-deploy.md).
+  A migration that drops the duplicate copies would dissolve the whole bug class; the
+  scope-key rule is the interim. PDP handoff §2.
 - **`pickSampleSku` reads the project manifest**, not the storefront's served
   `config.json`. `check-sku-exists` reads the served config, which is the right source.
   Recorded as intended and never made.
