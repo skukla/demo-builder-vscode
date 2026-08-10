@@ -138,7 +138,21 @@ function PanelContent({
 
             <div className="db-drawer-body">
                 <PanelRow label="Status">
-                    <StatusDot variant={model.dotVariant} /> <span>{model.statusLabel}</span>
+                    {/* Same treatment as the card's status line — 6px dot, 6px gap,
+                        11px uppercase label. The flyout is the card's detail view, so
+                        reading the status differently in each was the odd part. Both
+                        share one CSS rule rather than repeating the four declarations. */}
+                    <span className="integration-statusline">
+                        <StatusDot variant={model.dotVariant} size={6} />
+                        <span
+                            className={cn(
+                                'integration-card-status',
+                                model.status === 'error' && 'integration-card-status--error',
+                            )}
+                        >
+                            {model.statusLabel}
+                        </span>
+                    </span>
                     {model.message && (
                         <span className="integration-panel-status-message">{model.message}</span>
                     )}

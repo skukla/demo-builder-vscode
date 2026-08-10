@@ -213,6 +213,34 @@ describe('IntegrationDetailPanel', () => {
             expect(screen.getByText('Deploy step 3 of 5')).toBeInTheDocument();
         });
 
+        // The flyout is the card's detail view, so the status has to read the same in
+        // both. It used to render an 8px dot, a bare JSX space and a sentence-case
+        // label; the card renders a 6px dot, a 6px flex gap and the 11px uppercase
+        // treatment. The label text stays "Deployed" — the caps are text-transform,
+        // which is why asserting the CLASS is the only way to see this from jsdom.
+        it('gives Status the same dot + uppercase treatment as the card', () => {
+            renderPanel(makeModel());
+
+            const label = screen.getByText('Deployed');
+            expect(label).toHaveClass('integration-card-status');
+
+            const statusline = label.closest('.integration-statusline');
+            expect(statusline).not.toBeNull();
+            // Dot and label are the two children of one flex row (6px gap), not two
+            // nodes separated by a bare JSX space. `rounded-full` is what StatusDot
+            // actually emits — there is no `.status-dot` class.
+            const children = Array.from(statusline?.children ?? []);
+            expect(children).toHaveLength(2);
+            expect(children[0]).toHaveClass('rounded-full');
+            expect(children[1]).toBe(label);
+        });
+
+        it('marks a failed Status with the error colour, as the card does', () => {
+            renderPanel(makeModel({ status: 'error', statusLabel: 'Deploy failed' }));
+
+            expect(screen.getByText('Deploy failed')).toHaveClass('integration-card-status--error');
+        });
+
         // Kind and Source were two rows printing the same fact in two registers.
         // Merged into one: the kind is a muted prefix on the identifier.
         it('renders the kind as a prefix on the Source row, with no Kind row', () => {
@@ -521,9 +549,7 @@ describe('IntegrationDetailPanel', () => {
             const value = screen.getByText('Custom · blank starter');
             expect(value.className).not.toContain('mono');
             expect(panel!.querySelector('.integration-panel-row-prefix')).toBeNull();
-            expect(
-                screen.queryByText('Blank starter — build it out')
-            ).not.toBeInTheDocument();
+            expect(screen.queryByText('Blank starter — build it out')).not.toBeInTheDocument();
         });
 
         it('omits Source for the mesh, which has no owner/repo', () => {

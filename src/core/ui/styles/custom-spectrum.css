@@ -5317,7 +5317,12 @@ div[class*="spectrum"] input[type="search"] {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.integration-card-statusline {
+/* `.integration-statusline` is the same row inside the detail flyout — one rule
+ * rather than a third copy of the four declarations. The flyout is the card's
+ * detail view, so the status has to read identically in both; it used to render
+ * an 8px dot, a plain JSX space and a sentence-case label. */
+.integration-card-statusline,
+.integration-statusline {
     display: flex;
     align-items: center;
     gap: 6px;
