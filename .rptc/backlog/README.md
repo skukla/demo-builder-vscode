@@ -188,6 +188,17 @@ API; PDP404 then reads it via the Contents API and commits with a stale SHA, ski
 install. Together with the Configuration Service 403 (the only one that surfaces a message), a
 storefront can finish with no PDP support by any mechanism and still report `Complete`.
 
+#### Mesh staleness reads a different source than deploy ([`2026-08-10-mesh-staleness-reads-a-different-source-than-deploy.md`](2026-08-10-mesh-staleness-reads-a-different-source-than-deploy.md))
+
+`updateMeshStateImpl` records the deployed snapshot from the mesh's **`.env` file** (its comment says
+so explicitly); `detectMeshChangesImpl` compares against a **flattened merge of every component's
+`componentConfigs`**. When the two disagree the mesh shows a permanent "Update available" that
+redeploying cannot clear — deploy re-records the `.env` value, staleness keeps reading the flattened
+one. Reproduced on live `demo-builder-test`: mesh `.env` says store view `default`, the backend config
+says `citisignal_us`. Worse than a bad label — it can be the only signal that a mesh is deployed
+against the wrong store view, delivered in a form that reads as noise. The flatten is also
+**order-dependent** (`Object.assign` over `Object.values`), so the verdict turns on manifest key order.
+
 #### App Builder attach — Model A seed ([`2026-06-15-integration-service-cleanup-and-discovery-token.md`](2026-06-15-integration-service-cleanup-and-discovery-token.md))
 
 Effort 1 (remove the dormant `integration-service` + `appBuilderApps` mechanism) **shipped** on
