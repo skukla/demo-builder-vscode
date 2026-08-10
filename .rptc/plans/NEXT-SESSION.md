@@ -169,8 +169,10 @@ re-creates the same race. `InExtensionMcpServer.dispose`'s docstring explains wh
 - **Duplicated Commerce scope still in existing manifests.** Confirmed still present on
   `demo-builder-test` after the 2026-08-10 mesh fix. TWO resolvers consult
   `BACKEND_OWNED_SCOPE_KEYS`; a **third** — the mesh staleness detector — does not, and
-  its verdict therefore turns on manifest key order. Filed:
-  [`../backlog/2026-08-10-mesh-staleness-reads-a-different-source-than-deploy.md`](../backlog/2026-08-10-mesh-staleness-reads-a-different-source-than-deploy.md).
+  its verdict therefore turns on manifest key order. **Now an ACTIVE plan**:
+  [`mesh-staleness-scope/`](mesh-staleness-scope/) — four steps, promoted 2026-08-10. Step 01
+  (the correctness fix) ships value alone; steps 02–03 add the deployed-vs-configured diff
+  to the mesh flyout, which is why they are folded in rather than filed separately.
   A migration that drops the duplicate copies would dissolve the whole bug class; the
   scope-key rule is the interim. PDP handoff §2.
 - **`pickSampleSku` reads the project manifest**, not the storefront's served
