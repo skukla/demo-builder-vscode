@@ -15,7 +15,6 @@
  * SDK's `StdioServerTransport`, which accepts arbitrary duplex streams.
  */
 
-import type { Stats } from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as net from 'net';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -43,7 +42,8 @@ function withToolLogging(server: any, logger: Logger): any {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             server.registerTool(name, schema, async (args: any) => {
                 const started = Date.now();
-                const argKeys = args && typeof args === 'object' ? Object.keys(args).join(', ') : '';
+                const argKeys =
+                    args && typeof args === 'object' ? Object.keys(args).join(', ') : '';
                 logger.info(`[MCP] tool: ${name}`);
                 logger.debug(`[MCP] ${name} args: { ${argKeys} }`);
                 try {
@@ -62,54 +62,8 @@ function withToolLogging(server: any, logger: Logger): any {
     };
 }
 
-/** A socket this instance serves, plus the identity of the file it put there. */
-interface BoundSocket {
-    path: string;
-    /** `stat` device + inode at bind time — the file's identity, not its name. */
-    dev: number;
-    ino: number;
-}
-
-/**
- * Unlink a socket file only while it is still the one we put there.
- *
- * Two servers overlap on every window reload and whenever a second window opens
- * the same workspace, and the shared path can only hold one of them. Deleting it
- * on the way out removes the SURVIVOR's socket: the listener stays alive, the
- * directory entry does not, and every client then gets ENOENT with nothing to
- * recover it but another reload. Observed live 2026-08-08 — `lsof` showed the
- * extension host still listening on a path that no longer existed.
- *
- * This check is only sufficient because `bindSocket` renames into place. libuv
- * unlinks the pathname it bound, unconditionally and with no inode check
- * (`uv__pipe_close`, libuv `src/unix/pipe.c`), so while the server bound the
- * shared name directly, `server.close()` deleted the successor's file no matter
- * what this function did. Renaming means libuv only ever knows the private name,
- * which leaves this the sole deleter of the shared one — and it can look.
- *
- * Known upstream: nodejs/node#19729 reports this exact race, and the rename
- * workaround, filed 2018 and closed stale.
- *
- * @param bound - the path plus the dev/ino recorded when we put our socket there
- */
-async function removeIfStillOurs(bound: BoundSocket): Promise<void> {
-    let current: Stats;
-    try {
-        current = await fsPromises.stat(bound.path);
-    } catch {
-        // Already gone — nothing to clean up, and nothing to get wrong.
-        return;
-    }
-    if (current.dev !== bound.dev || current.ino !== bound.ino) {
-        // A later instance owns this name now. Leaving its file alone IS the fix.
-        return;
-    }
-    await fsPromises.rm(bound.path, { force: true });
-}
-
 export class InExtensionMcpServer {
     private netServers: net.Server[] = [];
-    private bound: BoundSocket[] = [];
     private connCounter = 0;
 
     /**
@@ -179,9 +133,16 @@ export class InExtensionMcpServer {
      * path accepted them.
      */
     private async bindSocket(socketPath: string): Promise<void> {
-        // Bind a PRIVATE name, then rename it over the shared one. See
-        // `removeIfStillOurs` for why: libuv unlinks the name it bound, and the
-        // shared name must never be a name libuv knows about.
+        // Bind a PRIVATE name, then rename it over the shared one. libuv unlinks
+        // the pathname it bound, unconditionally and with no inode check
+        // (`uv__pipe_close`, libuv `src/unix/pipe.c`), so while the server bound
+        // the shared name directly, `server.close()` deleted whichever successor
+        // had taken that name — the outgoing window silently killed the incoming
+        // one's socket. Renaming means libuv only ever learns the private name,
+        // and the shared name is a name no code here ever unlinks (see dispose).
+        //
+        // Known upstream: nodejs/node#19729 reports this exact race, and the
+        // rename workaround, filed 2018 and closed stale.
         //
         // Same directory, so the rename cannot cross filesystems, and short —
         // the hashed basename exists to stay under the ~104-char UDS path limit
@@ -201,21 +162,15 @@ export class InExtensionMcpServer {
         // Attached the moment listen resolves: between here and the end of this
         // function are three awaits, and a 'error' emitted with no listener is an
         // uncaught exception in the extension host.
-        netServer.on('error', (err) => this.logger.error(`[MCP] server error on ${socketPath}: ${err.message}`));
+        netServer.on('error', (err) =>
+            this.logger.error(`[MCP] server error on ${socketPath}: ${err.message}`),
+        );
 
-        let created: Stats;
         try {
             // Owner-only: the socket file permissions are the access control.
             // Set BEFORE the rename — permissions travel with the inode, and the
             // shared name must never be briefly world-readable.
             await fsPromises.chmod(privateName, 0o600);
-            // Read the identity off the PRIVATE name, before the rename. Statting
-            // the shared name afterwards would record whatever is there — and a
-            // second host renaming its own socket over it in that window would
-            // make us record ITS identity, so our dispose would then delete the
-            // survivor. That is the original bug, narrowed to one syscall.
-            // rename(2) preserves dev+ino, so this is the same file either way.
-            created = await fsPromises.stat(privateName);
             // Atomic replace. The old `rm` then `listen` left a window with no
             // socket at the path at all; rename has no such gap, so a client
             // connecting mid-reload reaches the outgoing server or the incoming
@@ -230,7 +185,6 @@ export class InExtensionMcpServer {
         }
 
         this.netServers.push(netServer);
-        this.bound.push({ path: socketPath, dev: created.dev, ino: created.ino });
         this.logger.info(`[MCP] in-extension server listening on ${socketPath}`);
     }
 
@@ -254,7 +208,8 @@ export class InExtensionMcpServer {
         this.registerExtraTools?.(logged);
 
         const transport = new StdioServerTransport(socket, socket);
-        server.connect(transport)
+        server
+            .connect(transport)
             .then(() => {
                 this.logger.debug(`[MCP] connect resolved (conn=${connId})`);
             })
@@ -276,18 +231,31 @@ export class InExtensionMcpServer {
         });
     }
 
+    /**
+     * Close the listeners. The shared socket FILE is deliberately left behind.
+     *
+     * Nothing here may unlink the shared name, because the check that would make
+     * it safe cannot be written: POSIX has no atomic unlink-if-inode, so `stat`
+     * then `rm` verifies an INODE and then deletes a NAME. A successor's
+     * `rename` landing between the two gets deleted instead. That shipped, and
+     * it left the surviving server listening on a path no client could resolve —
+     * `lsof` showed the extension host bound while `ls` showed the directory
+     * empty, with only another reload to recover it. Two callers race it: an
+     * outgoing extension host's `deactivate()`, and `startInExtensionMcpServer`
+     * (extension.ts), which disposes and rebinds inside a single process.
+     *
+     * The leftover file is harmless. The next bind renames over it, and every
+     * consumer probes liveness rather than trusting existence — `resolveProxyTarget`
+     * was split into liveness-then-existence for exactly this reason, so a
+     * leftover no longer short-circuits the proxy's fast, friendly "no window
+     * running" failure. See that function's docstring.
+     */
     dispose(): void {
         for (const server of this.netServers) {
             // libuv unlinks the name IT bound — the private name, which the
-            // rename already moved away. This no longer touches the shared name.
+            // rename already moved away. This touches no shared name.
             server.close();
         }
-        for (const bound of this.bound) {
-            void removeIfStillOurs(bound).catch(() => {
-                /* best-effort cleanup */
-            });
-        }
         this.netServers = [];
-        this.bound = [];
     }
 }

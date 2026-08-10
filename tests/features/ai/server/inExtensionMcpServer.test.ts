@@ -14,80 +14,12 @@ import * as path from 'path';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
 import type { HandlerContext, HandlerMap } from '@/types/handlers';
-import type { Logger } from '@/types/logger';
-
-function makeLogger(): Logger {
-    return { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() } as unknown as Logger;
-}
-
-/** Minimal newline-delimited JSON-RPC client over a connected socket. */
-class SocketRpc {
-    private buf = '';
-     
-    private readonly pending = new Map<number, (msg: any) => void>();
-
-    constructor(private readonly socket: net.Socket) {
-        socket.setEncoding('utf8');
-        socket.on('data', (chunk: string) => {
-            this.buf += chunk;
-            let idx: number;
-            while ((idx = this.buf.indexOf('\n')) !== -1) {
-                const line = this.buf.slice(0, idx);
-                this.buf = this.buf.slice(idx + 1);
-                if (!line.trim()) continue;
-                const msg = JSON.parse(line);
-                const resolve = msg.id != null ? this.pending.get(msg.id) : undefined;
-                if (resolve) {
-                    this.pending.delete(msg.id);
-                    resolve(msg);
-                }
-            }
-        });
-    }
-
-     
-    request(id: number, method: string, params: unknown): Promise<any> {
-        return new Promise((resolve) => {
-            this.pending.set(id, resolve);
-            this.socket.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');
-        });
-    }
-
-    notify(method: string, params?: unknown): void {
-        this.socket.write(JSON.stringify({ jsonrpc: '2.0', method, params }) + '\n');
-    }
-}
-
-async function connectAndInit(socketPath: string): Promise<{ socket: net.Socket; rpc: SocketRpc }> {
-    const socket = net.connect(socketPath);
-    await new Promise<void>((resolve, reject) => {
-        socket.once('connect', resolve);
-        socket.once('error', reject);
-    });
-    const rpc = new SocketRpc(socket);
-    await rpc.request(1, 'initialize', {
-        protocolVersion: '2024-11-05',
-        capabilities: {},
-        clientInfo: { name: 'test', version: '0.0.0' },
-    });
-    rpc.notify('notifications/initialized');
-    return { socket, rpc };
-}
-
-async function listToolsOverSocket(socketPath: string): Promise<string[]> {
-    const { socket, rpc } = await connectAndInit(socketPath);
-    const res = await rpc.request(2, 'tools/list', {});
-    socket.end();
-     
-    return (res.result?.tools ?? []).map((t: any) => t.name);
-}
-
-async function callToolOverSocket(socketPath: string, name: string, args: unknown): Promise<string> {
-    const { socket, rpc } = await connectAndInit(socketPath);
-    const res = await rpc.request(2, 'tools/call', { name, arguments: args });
-    socket.end();
-    return res.result?.content?.[0]?.text ?? '';
-}
+import {
+    callToolOverSocket,
+    connectAndInit,
+    listToolsOverSocket,
+    makeLogger,
+} from './inExtensionMcpServer.testUtils';
 
 describe('InExtensionMcpServer', () => {
     let socketPath: string;
@@ -103,6 +35,20 @@ describe('InExtensionMcpServer', () => {
     afterEach(() => {
         server?.dispose();
         server = undefined;
+        // dispose() no longer unlinks the socket file — that is the point of
+        // inExtensionMcpServer.socketOwnership.test.ts. Sweep it here so runs
+        // do not litter the temp directory.
+        fs.rmSync(socketPath, { force: true });
+    });
+
+    afterAll(() => {
+        // The dual-listen tests bind a second socket whose path is local to
+        // them; sweep both prefixes so nothing is left in the temp directory.
+        for (const name of fs.readdirSync(os.tmpdir())) {
+            if (name.startsWith('dbmcp-test-') && name.endsWith('.sock')) {
+                fs.rmSync(path.join(os.tmpdir(), name), { force: true });
+            }
+        }
     });
 
     it('serves the nine project tools over the socket', async () => {
@@ -122,17 +68,19 @@ describe('InExtensionMcpServer', () => {
                 'remove_block_from_library',
                 'sync_storefront',
                 'update_project_config',
-            ].sort(),
+            ].sort()
         );
     });
 
     it('registers and dispatches injected descriptor tools (registerExtraTools)', async () => {
-        const extraMap: HandlerMap = { ping: async () => ({ success: true, data: { pong: true } }) };
+        const extraMap: HandlerMap = {
+            ping: async () => ({ success: true, data: { pong: true } }),
+        };
         const registerExtra = (mcpServer: unknown) =>
             registerDescriptorTools(
                 mcpServer,
                 [{ tool: 'ping_tool', description: 'test', map: extraMap, type: 'ping' }],
-                () => ({}) as HandlerContext,
+                () => ({}) as HandlerContext
             );
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), registerExtra);
         await server.start();
@@ -164,11 +112,11 @@ describe('InExtensionMcpServer', () => {
 
         const debug = logger.debug as jest.Mock;
         const connectedCall = debug.mock.calls.find(([msg]) =>
-            /\[MCP\] client connected \(conn=\d+\)/.test(String(msg)),
+            /\[MCP\] client connected \(conn=\d+\)/.test(String(msg))
         );
         expect(connectedCall).toBeDefined();
         const resolvedCall = debug.mock.calls.find(([msg]) =>
-            /\[MCP\] connect resolved \(conn=\d+\)/.test(String(msg)),
+            /\[MCP\] connect resolved \(conn=\d+\)/.test(String(msg))
         );
         expect(resolvedCall).toBeDefined();
 
@@ -181,7 +129,9 @@ describe('InExtensionMcpServer', () => {
         await new Promise((r) => setImmediate(r));
 
         const disconnectedCall = debug.mock.calls.find(([msg]) =>
-            /\[MCP\] client disconnected \(conn=\d+, hadError=(true|false), \d+ms\)/.test(String(msg)),
+            /\[MCP\] client disconnected \(conn=\d+, hadError=(true|false), \d+ms\)/.test(
+                String(msg)
+            )
         );
         expect(disconnectedCall).toBeDefined();
     });
@@ -223,7 +173,7 @@ describe('InExtensionMcpServer', () => {
                     resolve(undefined);
                 });
                 s.once('error', reject);
-            }),
+            })
         ).rejects.toMatchObject({ code: expect.stringMatching(/ENOENT|ECONNREFUSED/) });
     });
 
@@ -292,7 +242,11 @@ describe('InExtensionMcpServer', () => {
         // start() binds primary then secondary. A secondary failure propagates to
         // extension.ts, which logs and drops the object — so an un-disposed
         // primary listener leaks for the life of the window, with nothing able to
-        // reach it. Two new throw sites (rename, stat) make this reachable.
+        // reach it. The rename is the throw site that makes this reachable.
+        //
+        // Asserts the LISTENER is gone, not the file: disposal deliberately
+        // leaves the socket file behind (see inExtensionMcpServer.socketOwnership
+        // .test.ts), so file absence would no longer measure the leak.
         const unbindable = path.join(socketPath + '-no-such-dir', 'x.sock');
         const half = new InExtensionMcpServer(
             socketPath,
@@ -306,21 +260,16 @@ describe('InExtensionMcpServer', () => {
         await expect(half.start()).rejects.toThrow();
         await new Promise((r) => setTimeout(r, 50));
 
-        expect(fs.existsSync(socketPath)).toBe(false);
-    });
-
-    it('still cleans up its OWN socket file on dispose', async () => {
-        // The guard must not turn dispose into a no-op: with no other instance
-        // involved, the file it created is its own and must go.
-        server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
-        await server.start();
-        expect(fs.existsSync(socketPath)).toBe(true);
-
-        server.dispose();
-        server = undefined;
-        await new Promise((r) => setTimeout(r, 50));
-
-        expect(fs.existsSync(socketPath)).toBe(false);
+        await expect(
+            new Promise((resolve, reject) => {
+                const s = net.connect(socketPath);
+                s.once('connect', () => {
+                    s.destroy();
+                    resolve(undefined);
+                });
+                s.once('error', reject);
+            })
+        ).rejects.toMatchObject({ code: expect.stringMatching(/ENOENT|ECONNREFUSED/) });
     });
 
     // ─── Dual-listen (workspace-mode mismatch protection) ────────────────────
@@ -344,7 +293,7 @@ describe('InExtensionMcpServer', () => {
             makeLogger(),
             undefined,
             undefined,
-            secondarySocketPath,
+            secondarySocketPath
         );
         await server.start();
 
@@ -370,14 +319,14 @@ describe('InExtensionMcpServer', () => {
             logger,
             undefined,
             undefined,
-            socketPath, // same path as primary — dedup expected
+            socketPath // same path as primary — dedup expected
         );
         await server.start();
 
         // "in-extension server listening on" log should fire exactly once.
         const info = logger.info as jest.Mock;
         const listenLogs = info.mock.calls.filter(([msg]) =>
-            /\[MCP\] in-extension server listening on/.test(String(msg)),
+            /\[MCP\] in-extension server listening on/.test(String(msg))
         );
         expect(listenLogs).toHaveLength(1);
 
@@ -395,7 +344,7 @@ describe('InExtensionMcpServer', () => {
             makeLogger(),
             undefined,
             undefined,
-            secondarySocketPath,
+            secondarySocketPath
         );
         await server.start();
         server.dispose();
@@ -411,7 +360,7 @@ describe('InExtensionMcpServer', () => {
                         resolve(undefined);
                     });
                     s.once('error', reject);
-                }),
+                })
             ).rejects.toMatchObject({ code: expect.stringMatching(/ENOENT|ECONNREFUSED/) });
         }
     });
