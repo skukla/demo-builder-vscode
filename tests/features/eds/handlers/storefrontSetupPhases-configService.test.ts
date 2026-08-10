@@ -29,8 +29,17 @@ jest.mock('@/features/eds/services/configurationService', () => ({
         updateSiteConfig: mockUpdateSiteConfig,
         deleteSiteConfig: mockDeleteSiteConfig,
     })),
-    buildSiteConfigParams: (owner: string, repo: string, org: string, site: string, overlayUrl?: string) => ({
-        org, site, codeOwner: owner, codeRepo: repo,
+    buildSiteConfigParams: (
+        owner: string,
+        repo: string,
+        org: string,
+        site: string,
+        overlayUrl?: string
+    ) => ({
+        org,
+        site,
+        codeOwner: owner,
+        codeRepo: repo,
         contentSourceUrl: `https://content.da.live/${org}/${site}/`,
         ...(overlayUrl && { contentOverlayUrl: overlayUrl }),
     }),
@@ -44,18 +53,35 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
         getUserEmail: jest.fn().mockResolvedValue('test@example.com'),
     }),
     surfaceOverlayRegistrationFailure: jest.fn(),
+    // Pure, vscode-free helpers — take the REAL ones. A stub would let these
+    // tests pass against caveat text that has drifted from what users see, and
+    // the caveat text IS the behaviour under test here.
+    addPdpCaveat: jest.requireActual('@/features/eds/handlers/edsHelpers').addPdpCaveat,
+    // Phase 2 calls this when the smart-404 install is skipped, which it is here
+    // (real installer, mocked GitHub). Omitting it threw inside phase 2 and the
+    // run never reached phase 3 — the suite failed with "registerSite: 0 calls"
+    // and no error, which is the least helpful shape a failure can take.
+    describeSmart404Skip: jest.requireActual('@/features/eds/handlers/edsHelpers')
+        .describeSmart404Skip,
+    BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE: jest.requireActual(
+        '@/features/eds/handlers/edsHelpers'
+    ).BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE,
 }));
 
 jest.mock('@/features/eds/services/edsPipeline', () => ({
     executeEdsPipeline: jest.fn(),
 }));
 
-jest.mock('vscode', () => ({
-    window: {
-        showWarningMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-    },
-}), { virtual: true });
+jest.mock(
+    'vscode',
+    () => ({
+        window: {
+            showWarningMessage: jest.fn(),
+            showErrorMessage: jest.fn(),
+        },
+    }),
+    { virtual: true }
+);
 
 jest.mock('@/features/eds/services/daLiveAuthService', () => ({
     DaLiveAuthService: jest.fn().mockImplementation(() => ({
@@ -106,7 +132,9 @@ jest.mock('@/features/eds/services/helixService', () => ({
 }));
 
 jest.mock('@/features/eds/services/fstabGenerator', () => ({
-    generateFstabContent: jest.fn().mockReturnValue('mountpoints:\n  /: https://content.da.live/org/site'),
+    generateFstabContent: jest
+        .fn()
+        .mockReturnValue('mountpoints:\n  /: https://content.da.live/org/site'),
 }));
 
 jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
@@ -115,7 +143,9 @@ jest.mock('@/features/project-creation/services/blockLibraryLoader', () => ({
 }));
 
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollections: jest.fn().mockResolvedValue({ success: true, blocksCount: 0, blockIds: [] }),
+    installBlockCollections: jest
+        .fn()
+        .mockResolvedValue({ success: true, blocksCount: 0, blockIds: [] }),
 }));
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
@@ -130,7 +160,10 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
 // =============================================================================
 
 import { executeStorefrontSetupPhases } from '@/features/eds/handlers/storefrontSetupPhases';
-import { ensureDaLiveAuth, surfaceOverlayRegistrationFailure } from '@/features/eds/handlers/edsHelpers';
+import {
+    ensureDaLiveAuth,
+    surfaceOverlayRegistrationFailure,
+} from '@/features/eds/handlers/edsHelpers';
 
 const mockEnsureDaLiveAuth = ensureDaLiveAuth as jest.MockedFunction<typeof ensureDaLiveAuth>;
 const mockSurfaceOverlayFailure = surfaceOverlayRegistrationFailure as jest.MockedFunction<
@@ -217,7 +250,9 @@ describe('registerConfigurationService - error handling', () => {
         mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
 
         await executeStorefrontSetupPhases(
-            context, createEdsConfig(), new AbortController().signal,
+            context,
+            createEdsConfig(),
+            new AbortController().signal
         );
 
         expect(mockEnsureDaLiveAuth).toHaveBeenCalled();
@@ -228,12 +263,14 @@ describe('registerConfigurationService - error handling', () => {
         mockRegisterSite.mockRejectedValue(new Error('Network timeout'));
 
         await executeStorefrontSetupPhases(
-            context, createEdsConfig(), new AbortController().signal,
+            context,
+            createEdsConfig(),
+            new AbortController().signal
         );
 
         const errorCalls = (context.logger.error as jest.Mock).mock.calls;
-        const hasConfigServiceError = errorCalls.some(
-            (call: string[]) => call[0].includes('Configuration Service'),
+        const hasConfigServiceError = errorCalls.some((call: string[]) =>
+            call[0].includes('Configuration Service')
         );
         expect(hasConfigServiceError).toBe(true);
     });
@@ -257,19 +294,23 @@ describe('registerConfigurationService - existing repo 403', () => {
 
     it('sends warning and does not retry for existing repo 403', async () => {
         mockRegisterSite.mockResolvedValue({
-            success: false, statusCode: 403, error: 'Forbidden — no admin access',
+            success: false,
+            statusCode: 403,
+            error: 'Forbidden — no admin access',
         });
 
         await executeStorefrontSetupPhases(
-            context, createExistingRepoEdsConfig(), new AbortController().signal,
+            context,
+            createExistingRepoEdsConfig(),
+            new AbortController().signal
         );
 
         const sendCalls = (context.sendMessage as jest.Mock).mock.calls;
         const warningCall = sendCalls.find(
             ([type, payload]: [string, { phase?: string; message?: string }]) =>
-                type === 'storefront-setup-progress'
-                && payload.phase === 'site-config'
-                && payload.message?.includes('da.live preview'),
+                type === 'storefront-setup-progress' &&
+                payload.phase === 'site-config' &&
+                payload.message?.includes('da.live preview')
         );
         expect(warningCall).toBeDefined();
         // Existing repo means the App was already installed — no propagation retry.
@@ -295,7 +336,9 @@ describe('registerConfigurationService - new repo 403 multi-retry on propagation
             .mockResolvedValueOnce({ success: true });
 
         await executeStorefrontSetupPhases(
-            context, createNewRepoEdsConfig(), new AbortController().signal,
+            context,
+            createNewRepoEdsConfig(),
+            new AbortController().signal
         );
 
         // Initial call + 1 retry that succeeds
@@ -303,7 +346,7 @@ describe('registerConfigurationService - new repo 403 multi-retry on propagation
         const sendCalls = (context.sendMessage as jest.Mock).mock.calls;
         const hasWarning = sendCalls.some(
             ([type, payload]: [string, { message?: string }]) =>
-                type === 'storefront-setup-progress' && payload.message?.includes('da.live preview'),
+                type === 'storefront-setup-progress' && payload.message?.includes('da.live preview')
         );
         expect(hasWarning).toBe(false);
     });
@@ -315,7 +358,9 @@ describe('registerConfigurationService - new repo 403 multi-retry on propagation
         mockUpdateSiteConfig.mockResolvedValue({ success: true });
 
         await executeStorefrontSetupPhases(
-            context, createNewRepoEdsConfig(), new AbortController().signal,
+            context,
+            createNewRepoEdsConfig(),
+            new AbortController().signal
         );
 
         expect(mockRegisterSite).toHaveBeenCalledTimes(2);
@@ -324,11 +369,15 @@ describe('registerConfigurationService - new repo 403 multi-retry on propagation
 
     it('retries 3 times before giving up on continued 403', async () => {
         mockRegisterSite.mockResolvedValue({
-            success: false, statusCode: 403, error: 'Forbidden',
+            success: false,
+            statusCode: 403,
+            error: 'Forbidden',
         });
 
         await executeStorefrontSetupPhases(
-            context, createNewRepoEdsConfig(), new AbortController().signal,
+            context,
+            createNewRepoEdsConfig(),
+            new AbortController().signal
         );
 
         // Initial call + 3 retries (30s/45s/60s backoff) = 4 total
@@ -336,9 +385,9 @@ describe('registerConfigurationService - new repo 403 multi-retry on propagation
         const sendCalls = (context.sendMessage as jest.Mock).mock.calls;
         const warningCall = sendCalls.find(
             ([type, payload]: [string, { phase?: string; message?: string }]) =>
-                type === 'storefront-setup-progress'
-                && payload.phase === 'site-config'
-                && payload.message?.includes('da.live preview'),
+                type === 'storefront-setup-progress' &&
+                payload.phase === 'site-config' &&
+                payload.message?.includes('da.live preview')
         );
         expect(warningCall).toBeDefined();
     });
@@ -350,7 +399,9 @@ describe('registerConfigurationService - new repo 403 multi-retry on propagation
             .mockResolvedValueOnce({ success: false, statusCode: 500, error: 'Server error' });
 
         await executeStorefrontSetupPhases(
-            context, createNewRepoEdsConfig(), new AbortController().signal,
+            context,
+            createNewRepoEdsConfig(),
+            new AbortController().signal
         );
 
         // Initial + 1 retry that returned 500 — should not continue retrying
@@ -366,7 +417,9 @@ describe('registerConfigurationService - new repo 403 multi-retry on propagation
         mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
 
         await executeStorefrontSetupPhases(
-            context, createNewRepoEdsConfig(), new AbortController().signal,
+            context,
+            createNewRepoEdsConfig(),
+            new AbortController().signal
         );
 
         expect(mockEnsureDaLiveAuth).toHaveBeenCalled();
@@ -390,13 +443,15 @@ describe('registerConfigurationService - BYOM overlay threading', () => {
         await executeStorefrontSetupPhases(context, config, new AbortController().signal);
 
         expect(mockRegisterSite).toHaveBeenCalledWith(
-            expect.objectContaining({ contentOverlayUrl: 'https://byom.example.com' }),
+            expect.objectContaining({ contentOverlayUrl: 'https://byom.example.com' })
         );
     });
 
     it('omits contentOverlayUrl when byomOverlayUrl is not in edsConfig', async () => {
         await executeStorefrontSetupPhases(
-            context, createEdsConfig(), new AbortController().signal,
+            context,
+            createEdsConfig(),
+            new AbortController().signal
         );
 
         const callArgs = mockRegisterSite.mock.calls[0][0];
@@ -436,13 +491,21 @@ describe('registerConfigurationService - overlay registration failure is surface
         mockRegisterSite.mockResolvedValue({ success: false, statusCode: 409, error: 'Conflict' });
         mockUpdateSiteConfig.mockResolvedValue({ success: false, error: 'API rejected' });
 
-        await executeStorefrontSetupPhases(context, createEdsConfig(), new AbortController().signal);
+        await executeStorefrontSetupPhases(
+            context,
+            createEdsConfig(),
+            new AbortController().signal
+        );
 
         expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
     });
 
     it('surfaces the overlay failure when 403 retries are exhausted (new repo)', async () => {
-        const config = { ...createEdsConfig(), repoMode: 'new' as const, byomOverlayUrl: 'https://byom.example.com' };
+        const config = {
+            ...createEdsConfig(),
+            repoMode: 'new' as const,
+            byomOverlayUrl: 'https://byom.example.com',
+        };
         // Continuous 403 — admin role never propagates; all retries exhaust → false
         mockRegisterSite.mockResolvedValue({ success: false, statusCode: 403, error: 'Forbidden' });
 

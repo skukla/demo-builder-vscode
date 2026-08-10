@@ -97,6 +97,15 @@ interface StorefrontSetupState {
     subMessage?: string;
     progress: number;
     error?: string;
+    /**
+     * Non-fatal reasons product detail pages will not work.
+     *
+     * The completed screen used to hardcode "Storefront Published" and render
+     * nothing from the completion payload — so a storefront that could not serve
+     * a single PDP looked identical to a healthy one. The extension had been
+     * sending the explanation since 2026-07-28; nothing displayed it.
+     */
+    warnings?: string[];
     githubAppData?: GitHubAppData;
     partialState: StorefrontSetupPartialState;
 }
@@ -244,12 +253,13 @@ export function StorefrontSetupStep({
      * Updates both local state and wizard state to mark setup as complete
      */
     const handleComplete = useCallback(
-        (data: { message: string; githubRepo?: string }) => {
+        (data: { message: string; githubRepo?: string; warnings?: string[] }) => {
             // Update local setup state
             setSetupState((prev) => ({
                 ...prev,
                 phase: 'completed',
                 message: data.message || 'Storefront published successfully!',
+                warnings: data.warnings,
                 progress: PROGRESS_RANGES.complete,
                 partialState: {
                     ...prev.partialState,
@@ -356,8 +366,8 @@ export function StorefrontSetupStep({
             ...prev,
             phase: 'error',
             error:
-                'AEM Code Sync is now installed. Setup stopped before it could use it — '
-                + 'select Retry to run it again.',
+                'AEM Code Sync is now installed. Setup stopped before it could use it — ' +
+                'select Retry to run it again.',
             githubAppData: undefined,
         }));
     }, []);
@@ -424,6 +434,10 @@ export function StorefrontSetupStep({
         const unsubComplete = vscode.onMessage<{
             message: string;
             githubRepo?: string;
+            /** Must match what storefrontSetupHandlers actually sends: a declared
+             *  shape narrower than the wire still type-checks (bivariant params),
+             *  which is how a sent-but-never-rendered field went unnoticed. */
+            warnings?: string[];
         }>('storefront-setup-complete', handleComplete);
 
         // Subscribe to error notifications
@@ -544,11 +558,28 @@ export function StorefrontSetupStep({
                                 alignItems="center"
                                 maxWidth="520px"
                             >
-                                <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
+                                {/* A storefront that cannot serve product pages is
+                                    not the same outcome as one that can, and must
+                                    not wear the same green checkmark. */}
+                                {setupState.warnings?.length ? (
+                                    <AlertCircle size="L" UNSAFE_className="text-orange-600" />
+                                ) : (
+                                    <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
+                                )}
                                 <Flex direction="column" gap="size-100" alignItems="center">
                                     <Text UNSAFE_className="text-xl font-medium">
-                                        Storefront Published
+                                        {setupState.warnings?.length
+                                            ? 'Storefront Published, with warnings'
+                                            : 'Storefront Published'}
                                     </Text>
+                                    {setupState.warnings?.map((warning) => (
+                                        <Text
+                                            key={warning}
+                                            UNSAFE_className="text-sm text-orange-700 text-center"
+                                        >
+                                            {warning}
+                                        </Text>
+                                    ))}
                                     <Text UNSAFE_className="text-sm text-gray-600">
                                         Click Continue to proceed with project creation.
                                     </Text>

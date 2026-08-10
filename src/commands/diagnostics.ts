@@ -36,7 +36,8 @@ import { ServiceLocator } from '@/core/di';
 import { getLogger, type DebugLogger } from '@/core/logging';
 import { mcpSocketBindings } from '@/features/ai/server/mcpSocketPath';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
-import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
+import { getDaLiveAuthService, resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
+import { pickSampleSku } from '@/features/eds/services/catalogPrewarmService';
 import {
     probeConfigService,
     type ConfigServiceProbeResult,
@@ -59,13 +60,16 @@ export type { DiagnosticsReport } from './diagnosticsReport';
 /** Actions offered on the completion notification. Copy is first: for a
  *  colleague reporting a problem it is the primary one. */
 /**
- * The PDP path to probe.
+ * The overlay's SOURCE template path — NOT a PDP.
  *
- * `/products/default` is the BYOM overlay's own template target, so every
- * storefront that set the overlay up publishes it. A SKU-specific URL would 404
- * whenever that SKU simply has no page, which reads like a broken storefront.
+ * `render-pdp` fetches `/products/default` from the live tier and returns it as
+ * the body for real PDP paths, so every storefront with the overlay set up
+ * publishes it and its absence breaks every PDP. What it cannot do is tell you a
+ * PDP rendered: it answers 200 regardless of the overlay, the action, or the
+ * snippet. It was previously probed under the name `prerendered`, which is why a
+ * fully broken storefront reported "delivery looks correct".
  */
-const PDP_PROBE_PATH = '/products/default';
+const AUTHORED_TEMPLATE_PATH = '/products/default';
 
 export const DIAGNOSTICS_ACTIONS = ['Copy Report', 'Show Logs', 'Export Log'] as const;
 
@@ -90,7 +94,6 @@ export async function runDiagnosticsAction(
         await logger.exportDebugLog();
     }
 }
-
 
 export class DiagnosticsCommand {
     private logger = getLogger();
@@ -232,7 +235,6 @@ export class DiagnosticsCommand {
         return probeGitHubCredential(tokenService, repoFullName, this.logger);
     }
 
-
     /**
      * Probe whether the DA.live credential can read this storefront's site
      * config, and whether the same credential is accepted by DA.live itself.
@@ -240,7 +242,7 @@ export class DiagnosticsCommand {
      * Returns undefined without an EDS project: there is no site to address,
      * and an invented one would produce a 404 that reads like a real finding.
      */
-/**
+    /**
      * Probe what the storefront is actually SERVING.
      *
      * Every other EDS signal in this report describes the extension's own last
@@ -256,7 +258,28 @@ export class DiagnosticsCommand {
         if (!githubRepo) return undefined;
 
         const [owner, repo] = githubRepo.split('/');
-        return probeStorefrontDelivery(owner, repo, this.logger, PDP_PROBE_PATH);
+        // Sample one real product so the probe can ask whether a PDP actually
+        // renders, not merely whether the pieces are installed. Returns
+        // undefined on a PaaS backend, without a Commerce endpoint, or when
+        // enumeration fails — all of which must leave the storefront legs
+        // reportable rather than turning a Commerce outage into a red verdict.
+        const pdpTarget = project ? await pickSampleSku(project, this.logger) : undefined;
+        // The CURRENTLY configured overlay URL. Note the limitation: registration
+        // bakes the URL into the site config at create/reset time and nothing
+        // persists it per project, so a storefront registered before the setting
+        // changed is pointing somewhere this does not name. Reporting the build
+        // at the current URL is still the useful answer — that is the action new
+        // and reset storefronts will get — but it is not necessarily the one
+        // serving THIS storefront.
+        const overlayUrl = resolveByomOverlayUrl();
+        return probeStorefrontDelivery(
+            owner,
+            repo,
+            this.logger,
+            AUTHORED_TEMPLATE_PATH,
+            pdpTarget && { path: pdpTarget.path, sku: pdpTarget.sku },
+            overlayUrl,
+        );
     }
 
     private async checkConfigService(): Promise<ConfigServiceProbeResult | undefined> {
@@ -280,5 +303,4 @@ export class DiagnosticsCommand {
         for (const line of lines) this.logger.info(line);
         return lines.join('\n');
     }
-
 }

@@ -9,7 +9,7 @@
  * NEVER throws to the caller. These tests pin that contract.
  */
 
-import { prewarmCatalog } from '@/features/eds/services/catalogPrewarmService';
+import { pickSampleSku, prewarmCatalog } from '@/features/eds/services/catalogPrewarmService';
 import type { Project } from '@/types/base';
 
 const mockLogger = {
@@ -370,5 +370,110 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
         // 2 valid items → 2 attempted, 2 succeeded
         expect(result.attempted).toBe(2);
         expect(result.succeeded).toBe(2);
+    });
+});
+
+/**
+ * `pickSampleSku` — one real product for the diagnostics probe.
+ *
+ * Read-only: enumeration is a Catalog Service GraphQL query. It must never
+ * reach `prewarmOne`, which POSTs to prepublish-pdp and publishes a page.
+ *
+ * Every failure returns undefined. A PaaS backend, a missing endpoint, or a
+ * Catalog outage is not a storefront fault, and the probe must degrade to
+ * "not checked" rather than reporting a broken storefront.
+ */
+describe('pickSampleSku', () => {
+    const catalogPage = (items: Array<{ sku: string; urlKey: string }>) => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+            data: {
+                productSearch: {
+                    items: items.map((i) => ({ productView: i })),
+                    page_info: { total_pages: 1, current_page: 1 },
+                },
+            },
+        }),
+    });
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        global.fetch = jest.fn();
+    });
+
+    it('returns the first product with a path built by the shared encoders', async () => {
+        // The path must be byte-identical to what the storefront's getProductLink
+        // produces, which is the whole point of building it with the same
+        // sanitizeUrlKey / encodeSkuForUrl rather than by hand.
+        (global.fetch as jest.Mock).mockResolvedValue(
+            catalogPage([{ sku: 'VA19-SI-NA', urlKey: 'Cronus Yoga Pant' }]),
+        );
+
+        const sample = await pickSampleSku(makeAccsProject(), mockLogger as never);
+
+        expect(sample).toEqual({
+            sku: 'VA19-SI-NA',
+            urlKey: 'Cronus Yoga Pant',
+            path: '/products/cronus-yoga-pant/va19-si-na',
+        });
+    });
+
+    it('escapes a SKU that needs it, matching the URL the storefront will emit', async () => {
+        // A SKU with a space is exactly the case ADR-007 exists for, and the case
+        // where a drifted encoder copy would produce a different URL.
+        (global.fetch as jest.Mock).mockResolvedValue(
+            catalogPage([{ sku: 'AB 12/CD', urlKey: 'Widget' }]),
+        );
+
+        const sample = await pickSampleSku(makeAccsProject(), mockLogger as never);
+
+        expect(sample?.path).toBe('/products/widget/ab_2012_2fcd');
+    });
+
+    it('issues no POST to prepublish-pdp — this probe must not publish', async () => {
+        // The control on read-only-ness. The GraphQL enumeration IS a POST, so
+        // assert on the destination rather than the verb.
+        (global.fetch as jest.Mock).mockResolvedValue(
+            catalogPage([{ sku: 'S1', urlKey: 'u1' }]),
+        );
+
+        await pickSampleSku(makeAccsProject(), mockLogger as never);
+
+        for (const [url] of (global.fetch as jest.Mock).mock.calls) {
+            expect(String(url)).not.toContain('prepublish-pdp');
+        }
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns undefined for a non-ACCS backend', async () => {
+        const paas = makeAccsProject({
+            componentSelections: { backend: 'adobe-commerce-paas' },
+        } as Partial<Project>);
+
+        expect(await pickSampleSku(paas, mockLogger as never)).toBeUndefined();
+        expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('returns undefined when the catalog is empty', async () => {
+        (global.fetch as jest.Mock).mockResolvedValue(catalogPage([]));
+
+        expect(await pickSampleSku(makeAccsProject(), mockLogger as never)).toBeUndefined();
+    });
+
+    it('returns undefined when Catalog Service is down', async () => {
+        (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 503 });
+
+        expect(await pickSampleSku(makeAccsProject(), mockLogger as never)).toBeUndefined();
+    });
+
+    it('returns undefined on GraphQL errors rather than throwing', async () => {
+        (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({ errors: [{ message: 'boom' }] }),
+        });
+
+        expect(await pickSampleSku(makeAccsProject(), mockLogger as never)).toBeUndefined();
     });
 });

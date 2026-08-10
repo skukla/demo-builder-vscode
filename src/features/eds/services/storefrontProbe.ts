@@ -20,6 +20,16 @@
  * instrumentation. This probe covers the delivery layer — which is the class of
  * failure that has actually cost time.
  *
+ * ## Do not call a leg by what you wish it proved
+ *
+ * The first version reported `/products/default` as `prerendered`. That path is
+ * the overlay's authored SOURCE — `render-pdp` fetches it and returns it as the
+ * body for real PDPs — so it answers 200 whether or not the overlay is
+ * registered, the action is deployed, or the snippet was ever vendored. A
+ * storefront that could not serve a single PDP came back "Storefront delivery
+ * looks correct." Each leg here is named for the request it makes, and the
+ * verdict states what was NOT checked.
+ *
  * Pattern: mirrors `configServiceProbe` — structured legs plus a one-line verdict,
  * so Diagnostics renders rather than reasons.
  *
@@ -29,9 +39,6 @@
 import { SMART_404_HEAD_MARKER_START, SMART_404_MARKER_START } from './pdp404Snippet';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
-
-/** The block the commerce PDP template renders into — present on any served PDP. */
-const PDP_BLOCK_CLASS = 'class="product-details"';
 
 /** One fetched artifact and whether it carries the marker that proves it installed. */
 interface MarkerLeg {
@@ -48,10 +55,83 @@ export interface StorefrontProbeResult {
     smart404Snippet?: MarkerLeg;
     /** `404.html` — the eager redirect that runs before the handler. */
     eagerRedirect?: MarkerLeg;
-    /** Only present when a path was supplied — an invented one 404s like a finding. */
-    pdp?: { path: string; status: number; prerendered: boolean };
+    /**
+     * `/products/default` — the overlay's SOURCE template, not a prerendered page.
+     *
+     * `render-pdp` fetches this authored page and returns it as the body for a
+     * real PDP path, so its absence breaks every PDP. Its presence proves only
+     * that the input exists. Only present when a path was supplied.
+     */
+    authoredTemplate?: { path: string; status: number; published: boolean };
+    /**
+     * A real product's PDP — the only leg that exercises the whole chain.
+     *
+     * Present only when a SKU could be sampled from the catalog. The SKU is
+     * known to exist, which is what removes the ambiguity that kept this probe
+     * pointed at `/products/default`: a 404 here means the chain is broken, not
+     * that the product has no page.
+     */
+    pdp?: { path: string; sku: string; status: number; served: boolean };
+    /**
+     * Which build of the shared overlay action is deployed.
+     *
+     * Reported for the reader to compare against `accs-discovery-service`'s git
+     * log; the extension never asserts on it. Absent when no overlay URL was
+     * supplied.
+     */
+    overlay?: OverlayVersion;
     /** One line naming the most likely cause, for the diagnostics summary. */
     verdict: string;
+}
+
+/** A catalog-confirmed product to probe. Built by `pickSampleSku`. */
+export interface PdpProbeTarget {
+    path: string;
+    sku: string;
+}
+
+/** What the deployed overlay action reports about itself. */
+export interface OverlayVersion {
+    sha?: string;
+    version?: string;
+    /** True when the action answered but predates the `/__version` endpoint. */
+    unknown: boolean;
+}
+
+/**
+ * Ask the deployed overlay action which build it is.
+ *
+ * Reported, never compared. The extension does not know which revision it
+ * wants: the overlay URL is a user setting pointing at an action in another
+ * repo, so any expectation baked in here would go red on every legitimate
+ * deploy of that action. A human compares the sha to the other repo's git log.
+ *
+ * A 404 means the action predates the endpoint, which is the normal state of
+ * every storefront in the field until that action redeploys. That is "unknown",
+ * not a fault.
+ *
+ * @param overlayUrl - the registered overlay URL (query string is discarded)
+ * @returns the reported build, or `{unknown: true}` for anything else
+ */
+export async function probeOverlayVersion(overlayUrl: string): Promise<OverlayVersion> {
+    try {
+        const base = new URL(overlayUrl);
+        base.search = '';
+        const response = await fetch(`${base.toString().replace(/\/$/, '')}/__version`, {
+            method: 'GET',
+            signal: AbortSignal.timeout(TIMEOUTS.QUICK),
+        });
+        if (response.status !== 200) return { unknown: true };
+        const body = (await response.json()) as { sha?: unknown; version?: unknown };
+        const sha = typeof body?.sha === 'string' ? body.sha : undefined;
+        const version = typeof body?.version === 'string' ? body.version : undefined;
+        // A malformed body is as uninformative as a 404 — do not surface a
+        // half-answer that reads like a real version.
+        if (!sha && !version) return { unknown: true };
+        return { sha, version, unknown: false };
+    } catch {
+        return { unknown: true };
+    }
 }
 
 /**
@@ -114,15 +194,37 @@ function verdictFor(result: StorefrontProbeResult): string {
             ' missing. Reset the storefront to reinstall.'
         );
     }
-    if (result.pdp && !result.pdp.prerendered) {
-        // Deliberately not called a failure: a 404 here also means that SKU simply
-        // has no published page, which is not a broken storefront.
+    if (result.authoredTemplate && !result.authoredTemplate.published) {
+        // Not ambiguous the way a real SKU would be: `render-pdp` reads this exact
+        // page and returns it as the body for every PDP, so its absence breaks all
+        // of them.
         return (
-            `PDP fallback installed. ${result.pdp.path} returned ${result.pdp.status} —` +
-            ' either no page is published for that SKU, or publishing did not reach it.'
+            `PDP fallback installed, but the overlay's source template ` +
+            `${result.authoredTemplate.path} returned ${result.authoredTemplate.status}. ` +
+            'Publish it or reset the storefront — every PDP renders from this page.'
         );
     }
-    return 'Storefront delivery looks correct.';
+    if (result.pdp && !result.pdp.served) {
+        // Unambiguous, unlike a guessed SKU: the catalog confirmed this product
+        // exists moments ago, so a 404 is the chain failing, not a missing page.
+        return (
+            `SKU ${result.pdp.sku} exists in the catalog but ${result.pdp.path} returned ` +
+            `${result.pdp.status} — the prerender chain is not serving PDPs.`
+        );
+    }
+    if (result.pdp) {
+        // Says what was proved and stops there: nothing here runs page
+        // JavaScript, so an empty product block still renders as a 200.
+        return (
+            `PDP for SKU ${result.pdp.sku} renders. Page scripts were not executed, ` +
+            'so this does not confirm the product data loaded.'
+        );
+    }
+    // Bounded on purpose. Four GETs establish that the delivery pieces are in
+    // place; they do not establish that any product page renders. Claiming
+    // "delivery looks correct" outright was how a broken storefront came back
+    // clean.
+    return 'Storefront delivery looks correct (fallback installed, template published). No SKU was checked.';
 }
 
 /**
@@ -131,14 +233,20 @@ function verdictFor(result: StorefrontProbeResult): string {
  * @param owner - GitHub owner
  * @param repo - GitHub repository name
  * @param logger - for the one-line verdict
- * @param pdpPath - optional PDP path to test, e.g. `/products/default`
+ * @param templatePath - optional path to the overlay's SOURCE template,
+ *   `/products/default`. Not a PDP: see `authoredTemplate`.
+ * @param pdpTarget - optional catalog-confirmed product to probe. Supplying it
+ *   is what turns this from "the pieces are installed" into "a product page
+ *   actually renders"; resolve it with `pickSampleSku`.
  * @returns the legs plus a verdict
  */
 export async function probeStorefrontDelivery(
     owner: string,
     repo: string,
     logger: Logger,
-    pdpPath?: string,
+    templatePath?: string,
+    pdpTarget?: PdpProbeTarget,
+    overlayUrl?: string,
 ): Promise<StorefrontProbeResult> {
     const baseUrl = aemLiveBaseUrl(owner, repo);
     const root = await get(baseUrl, '/');
@@ -163,14 +271,34 @@ export async function probeStorefrontDelivery(
         );
         result.eagerRedirect = await markerLeg(baseUrl, '/404.html', SMART_404_HEAD_MARKER_START);
 
-        if (pdpPath) {
-            const pdp = await get(baseUrl, pdpPath);
-            result.pdp = {
-                path: pdpPath,
-                status: pdp.status,
-                prerendered: pdp.status === 200 && pdp.body.includes(PDP_BLOCK_CLASS),
+        if (templatePath) {
+            // A 200 is the whole signal. The earlier version also required the
+            // commerce block markup and called the result `prerendered`, which
+            // conflated "this authored page is published" with "a PDP rendered" —
+            // two different claims, and only the first is testable here.
+            const template = await get(baseUrl, templatePath);
+            result.authoredTemplate = {
+                path: templatePath,
+                status: template.status,
+                published: template.status === 200,
             };
         }
+
+        if (pdpTarget) {
+            const pdp = await get(baseUrl, pdpTarget.path);
+            result.pdp = {
+                path: pdpTarget.path,
+                sku: pdpTarget.sku,
+                status: pdp.status,
+                served: pdp.status === 200,
+            };
+        }
+    }
+
+    // Independent of site reachability: which action is deployed is worth
+    // knowing even when the storefront itself is down.
+    if (overlayUrl) {
+        result.overlay = await probeOverlayVersion(overlayUrl);
     }
 
     result.verdict = verdictFor(result);

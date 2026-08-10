@@ -86,7 +86,10 @@ function buildContentSourceUrl(daLiveOrg: string, daLiveSite: string): string {
 
 /** Build site config params from repo and DA.live identifiers */
 export function buildSiteConfigParams(
-    repoOwner: string, repoName: string, daLiveOrg: string, daLiveSite: string,
+    repoOwner: string,
+    repoName: string,
+    daLiveOrg: string,
+    daLiveSite: string,
     overlayUrl?: string,
 ): SiteRegistrationParams {
     // The Config Service lookup key must use the GitHub owner/repo, not the
@@ -108,12 +111,13 @@ export function buildSiteConfigParams(
     // orphan and Helix elects it primary for content operations, 403'ing
     // every write against the new registration. updateSiteConfig uses
     // this hint to DELETE the orphan as part of the next reset/create.
-    const legacyLookupKey = daLiveSite !== repoName
-        ? { org: daLiveOrg, site: daLiveSite }
-        : undefined;
+    const legacyLookupKey =
+        daLiveSite !== repoName ? { org: daLiveOrg, site: daLiveSite } : undefined;
     return {
-        org: repoOwner, site: repoName,
-        codeOwner: repoOwner, codeRepo: repoName,
+        org: repoOwner,
+        site: repoName,
+        codeOwner: repoOwner,
+        codeRepo: repoName,
         contentSourceUrl: buildContentSourceUrl(daLiveOrg, daLiveSite),
         ...(overlayUrl && { contentOverlayUrl: overlayUrl }),
         ...(legacyLookupKey && { legacyLookupKey }),
@@ -166,16 +170,28 @@ export class ConfigurationService {
      * @returns Result with success/error status
      */
     async registerSite(params: SiteRegistrationParams): Promise<ConfigServiceResult> {
-        const { org, site, codeOwner, codeRepo, contentSourceUrl, contentSourceType, contentOverlayUrl } = params;
+        const {
+            org,
+            site,
+            codeOwner,
+            codeRepo,
+            contentSourceUrl,
+            contentSourceType,
+            contentOverlayUrl,
+        } = params;
         const url = `${ADMIN_API_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
 
         this.logger.info(`[ConfigService] Registering site: ${org}/${site}`);
-        this.logger.debug(`[ConfigService] Code: ${codeOwner}/${codeRepo}, Content: ${contentSourceUrl}`);
+        this.logger.debug(
+            `[ConfigService] Code: ${codeOwner}/${codeRepo}, Content: ${contentSourceUrl}`,
+        );
         if (contentOverlayUrl) {
             // Strip query/fragment from the overlay URL before logging — the
             // overlay URL is user-supplied via VS Code settings and may include
             // a secret in its query string (e.g., a paste with a token).
-            this.logger.debug(`[ConfigService] Content overlay: ${stripUrlQueryAndFragment(contentOverlayUrl)}`);
+            this.logger.debug(
+                `[ConfigService] Content overlay: ${stripUrlQueryAndFragment(contentOverlayUrl)}`,
+            );
         }
 
         const source = { url: contentSourceUrl, type: contentSourceType || 'markup' };
@@ -183,20 +199,28 @@ export class ConfigurationService {
             version: 1,
             code: { owner: codeOwner, repo: codeRepo },
             content: contentOverlayUrl
-                // The `suffix: '.html'` matches the canonical
-                // `aem-commerce-prerender` setup wizard's registration shape.
-                // BYOM docs (https://www.aem.live/developer/byom) describe
-                // `suffix` as the field that makes Helix's admin service
-                // append the suffix before fetching from the overlay URL.
-                // Empirical observation (citisignal-b2b 2026-06-10): without
-                // `suffix`, Helix's live tier returns 404 for any unmatched
-                // `/products/*` path EVEN THOUGH our overlay action returns
-                // 200 with the default template body when called directly.
-                // The canonical demo at aemshop.net returns 200 in the same
-                // scenario. The only known registration-shape difference
-                // between the two was the suffix.
-                // See: .rptc/research/eds-pdp-routing-validation/findings.md
-                ? { source, overlay: { url: contentOverlayUrl, type: 'markup', suffix: '.html' } }
+                ? // `suffix` is part of the overlay schema, not a workaround.
+                  // The Admin API defines `content.overlay` as a Markup Content
+                  // Source — `type` (required), `url` (required), `suffix`
+                  // (optional string):
+                  //   https://www.aem.live/docs/admin.html#schema/ContentConfig
+                  // It is the field that makes Helix's admin service append the
+                  // suffix before fetching from the overlay URL. We need it
+                  // because our PDP paths are extensionless
+                  // (`/products/{urlKey}/{sku}`) while the overlay serves `.html`.
+                  //
+                  // Corroborated empirically (citisignal-b2b 2026-06-10): without
+                  // it, Helix's live tier 404s any unmatched `/products/*` path
+                  // even though the overlay action returns 200 when called
+                  // directly. That observation used to be the ONLY justification
+                  // here, which read as a guess worth tidying away; the schema is
+                  // now the reason and the observation merely agrees with it.
+                  //
+                  // NOTE: an overlay is tied to the BASE CONTENT, not the site
+                  // config — two sites sharing a content source cannot have
+                  // different overlays. See docs/architecture/eds-byom-pdp-routing.md.
+                  // See also: .rptc/research/eds-pdp-routing-validation/findings.md
+                  { source, overlay: { url: contentOverlayUrl, type: 'markup', suffix: '.html' } }
                 : { source },
         };
 
@@ -225,11 +249,18 @@ export class ConfigurationService {
 
         const deleteResult = await this.deleteSiteConfig(org, site);
         if (!deleteResult.success && deleteResult.statusCode !== 404) {
-            this.logger.error(`[ConfigService] Failed to clear existing config: ${deleteResult.error}`);
-            return { success: false, error: `Failed to clear existing config: ${deleteResult.error}` };
+            this.logger.error(
+                `[ConfigService] Failed to clear existing config: ${deleteResult.error}`,
+            );
+            return {
+                success: false,
+                error: `Failed to clear existing config: ${deleteResult.error}`,
+            };
         }
         if (deleteResult.statusCode === 404) {
-            this.logger.warn(`[ConfigService] Site config already absent during update (404) — re-registering`);
+            this.logger.warn(
+                `[ConfigService] Site config already absent during update (404) — re-registering`,
+            );
         }
 
         return this.registerSite(params);
@@ -337,7 +368,11 @@ export class ConfigurationService {
     }
 
     /** Handle a non-OK, non-404-DELETE response from the Configuration Service API. */
-    private async handleErrorResponse(method: string, url: string, response: Response): Promise<ConfigServiceResult> {
+    private async handleErrorResponse(
+        method: string,
+        url: string,
+        response: Response,
+    ): Promise<ConfigServiceResult> {
         let errorBody = '';
         try {
             errorBody = await response.text();
@@ -369,8 +404,8 @@ export class ConfigurationService {
         // 409 (conflict) is handled by callers (delete + re-create) — log at info, not error
         const logLevel = response.status === 409 ? 'info' : 'error';
         this.logger[logLevel](
-            `[ConfigService] ${method} ${url} -> ${response.status}: ${errorMessage}`
-                + `${detail ? ` (${detail})` : ''}`,
+            `[ConfigService] ${method} ${url} -> ${response.status}: ${errorMessage}` +
+                `${detail ? ` (${detail})` : ''}`,
         );
         return { success: false, error: errorMessage, statusCode: response.status };
     }

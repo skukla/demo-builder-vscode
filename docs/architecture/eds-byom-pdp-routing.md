@@ -182,6 +182,32 @@ The PDP URL is `/products/{urlKey}/{sku}`, and the drop-in reads the SKU back fr
 
 **If this ever changes** (canonical adopts reversible encoding, or Catalog Service becomes case-sensitive): see ADR-007 — the former retires the patch, the latter is the same silent-rot risk as #2.
 
+### 5. One overlay per base content — and it is bound to the content, not the site
+
+Per the Admin API schema ([`ContentConfig`](https://www.aem.live/docs/admin.html#schema/ContentConfig)),
+`content.overlay` is a *Markup Content Source* (`type` and `url` required, `suffix`
+optional) and carries this constraint verbatim:
+
+> the overlay config is tied to the base content and not to the site config — it is not
+> possible to have multiple sites with different overlays on the same base content.
+
+**Why it matters**: we register one overlay per storefront, each stamped with its own
+`?org=&site=`. That works only because every storefront has its own DA.live content
+source. Two storefronts sharing a content source could not carry different overlays, so
+the second registration would silently take the first one's coordinates — every PDP on
+one of them would render the wrong site's template.
+
+The same page is why `suffix: ".html"` is correct rather than folklore: our PDP paths are
+extensionless while the overlay serves `.html`, and `suffix` is the documented field that
+makes the admin service append it. The `config-service-setup` page never mentions
+`overlay` at all, and the one worked example omits `suffix` because it is optional — which
+is why this looked undocumented until 2026-08-10.
+
+**If this ever changes** (per-site overlays on shared content): nothing breaks; a
+constraint we currently design around disappears.
+
+**Do not** introduce content-source sharing between storefronts without revisiting this.
+
 ---
 
 ## Verifying the live system
