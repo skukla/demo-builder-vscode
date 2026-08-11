@@ -51,6 +51,12 @@ export interface FlipResult {
 export interface AuthoringExperienceFlipDeps {
     context: vscode.ExtensionContext;
     logger: Logger;
+    /**
+     * Persist the project after a config republish clears its stale flag.
+     * Required by `republishStorefrontConfig` — see that param's docblock for
+     * why the save cannot be left to the caller's discretion.
+     */
+    saveProject: (project: Project) => Promise<void>;
 }
 
 /**
@@ -165,13 +171,14 @@ async function ensureQuickEditVendored(
  */
 async function regenerateStorefrontConfig(
     project: Project,
-    { context, logger }: AuthoringExperienceFlipDeps,
+    { context, logger, saveProject }: AuthoringExperienceFlipDeps,
 ): Promise<'ok' | 'warn'> {
     try {
         const result = await republishStorefrontConfig({
             project,
             secrets: context.secrets,
             logger,
+            persist: saveProject,
         });
         if (!result.success) {
             logger.warn(

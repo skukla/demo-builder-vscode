@@ -120,7 +120,12 @@ export function buildDefaultRunnerDeps(
             );
         },
         republishStorefront: ({ project }) =>
-            republishStorefrontConfig({ project, secrets: ctx.secrets, logger: ctx.logger }),
+            republishStorefrontConfig({
+                project,
+                secrets: ctx.secrets,
+                logger: ctx.logger,
+                persist: ctx.saveProject,
+            }),
     };
 }
 

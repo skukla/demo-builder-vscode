@@ -198,4 +198,44 @@ describe('handleRepublishContent', () => {
         expect(result.success).toBe(false);
         expect(result.error).toBe('pipeline failed');
     });
+
+    /**
+     * The amber dot must clear when the republish succeeds.
+     *
+     * `republishStorefrontContent` sets `edsStorefrontStatusSummary = 'published'`
+     * on the project, but this handler returned `{ success: true }` and pushed
+     * nothing — so the open dashboard kept rendering the storefront status it was
+     * given at init, and the Republish tile stayed amber until the dashboard was
+     * reopened.
+     *
+     * Its neighbour `handleRenameProject` gets this right for the same reason
+     * (the title comes from the status payload, so it re-runs status). The
+     * storefront status travels in that same payload —
+     * `buildStatusPayload` carries `edsStorefrontStatus`.
+     */
+    it('pushes a status update so the tile stops showing amber', async () => {
+        const context = createMockContext(createMockEdsProject());
+
+        await handleRepublishContent(context);
+
+        const posted = (context.panel!.webview.postMessage as jest.Mock).mock.calls.map(
+            ([m]) => m?.type
+        );
+        expect(posted).toContain('statusUpdate');
+    });
+
+    it('does NOT push when the republish failed — nothing changed', async () => {
+        mockRepublishStorefrontContent.mockResolvedValue({
+            success: false,
+            error: 'boom',
+        });
+        const context = createMockContext(createMockEdsProject());
+
+        await handleRepublishContent(context);
+
+        const posted = (context.panel!.webview.postMessage as jest.Mock).mock.calls.map(
+            ([m]) => m?.type
+        );
+        expect(posted).not.toContain('statusUpdate');
+    });
 });

@@ -126,7 +126,11 @@ async function handleEwSettingChange(
         for (const project of affected) {
             try {
                 const experience = resolveProjectAuthoringExperience(project);
-                await applyAuthoringExperienceFlip(project, experience, { context, logger });
+                await applyAuthoringExperienceFlip(project, experience, {
+                    context,
+                    logger,
+                    saveProject: (p) => stateManager.saveProject(p),
+                });
                 successCount++;
             } catch (error) {
                 const message = error instanceof Error ? error.message : String(error);

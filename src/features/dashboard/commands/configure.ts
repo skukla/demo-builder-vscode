@@ -454,6 +454,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 await applyAuthoringExperienceFlip(project, experience, {
                     context: this.context,
                     logger: this.logger,
+                    saveProject: (p) => this.stateManager.saveProject(p),
                 });
             },
         );
@@ -587,6 +588,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 },
                 async (progress) => {
                     const result = await republishStorefrontConfig({
+                        persist: (p) => this.stateManager.saveProject(p),
                         project,
                         secrets: this.context.secrets,
                         logger: this.logger,

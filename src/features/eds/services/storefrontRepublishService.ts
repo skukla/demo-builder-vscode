@@ -46,6 +46,19 @@ export interface RepublishParams {
     logger: Logger;
     /** Optional progress callback */
     onProgress?: PhaseProgressCallback;
+    /**
+     * Persist the project after the publish clears its stale flag.
+     *
+     * REQUIRED, not optional. This service used to set
+     * `edsStorefrontStatusSummary = 'published'` in memory and leave saving to
+     * the caller — and neither caller did it, while Configure (which sets the
+     * OPPOSITE value) saves immediately. The manifest could go stale and never
+     * come back: reopening the dashboard re-read `stale` from disk and the
+     * Republish tile was amber again after a successful republish.
+     *
+     * Required so the compiler asks a future caller for it.
+     */
+    persist: (project: Project) => Promise<void>;
 }
 
 /**
@@ -151,7 +164,7 @@ export function extractRepublishParams(project: Project):
  * @returns Republish result
  */
 export async function republishStorefrontConfig(params: RepublishParams): Promise<RepublishResult> {
-    const { project, secrets, logger, onProgress } = params;
+    const { project, secrets, logger, onProgress, persist } = params;
 
     try {
         // Step 1: Extract EDS metadata
@@ -232,6 +245,8 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
         logger.debug('[StorefrontRepublish] Updating storefront state');
         updateStorefrontState(project, publishedConfigs);
         project.edsStorefrontStatusSummary = 'published';
+        // To DISK, not just memory — see `persist` on RepublishParams.
+        await persist(project);
 
         logger.info('[StorefrontRepublish] Storefront config republished successfully');
 
@@ -269,6 +284,8 @@ export function needsStorefrontRepublish(project: Project): boolean {
 /** Parameters for the full storefront content republish pipeline. */
 export interface RepublishContentParams {
     project: Project;
+    /** Forwarded to the config step, which clears and saves the stale flag. */
+    persist: (project: Project) => Promise<void>;
     /** GitHub repo owner. */
     repoOwner: string;
     /** GitHub repo name. */
@@ -319,6 +336,7 @@ export async function republishStorefrontContent(
         logger,
         daLiveAuthService,
         githubTokenService,
+        persist,
     } = params;
     const report = (message: string): void => params.onProgress?.(message);
 
@@ -345,6 +363,7 @@ export async function republishStorefrontContent(
             secrets,
             logger,
             onProgress: report,
+            persist,
         });
         if (!configResult.success) {
             logger.warn(`[Republish] Config regeneration warning: ${configResult.error}`);

@@ -935,6 +935,7 @@ export const handleRepublishContent: MessageHandler = async (context) => {
                 );
                 const contentResult = await republishStorefrontContent({
                     project,
+                    persist: (p) => context.stateManager.saveProject(p),
                     repoOwner,
                     repoName,
                     daLiveOrg: effectiveDaLiveOrg,
@@ -956,6 +957,12 @@ export const handleRepublishContent: MessageHandler = async (context) => {
                 }
 
                 context.logger.info(`[Dashboard] Content republished for ${repoFullName}`);
+                // Push the new storefront status so the Republish tile drops its
+                // amber dot. `buildStatusPayload` carries `edsStorefrontStatus`,
+                // and without this the open dashboard keeps rendering whatever it
+                // was handed at init. `handleRenameProject` refreshes for the same
+                // reason — the title also comes from that payload.
+                await handleRequestStatus(context);
                 return { success: true };
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);

@@ -94,6 +94,7 @@ export function registerStorefrontTools(
                 // targets the selected org via env (no global mutation).
                 const result = await runWithAdobeTarget(() =>
                     republishStorefrontConfig({
+                        persist: (p) => ctx.stateManager.saveProject(p),
                         project,
                         secrets: ctx.context.secrets,
                         logger: ctx.logger,
@@ -161,6 +162,7 @@ export function registerStorefrontTools(
                 const result = await runWithAdobeTarget(() =>
                     republishStorefrontContent({
                         project,
+                        persist: (p) => ctx.stateManager.saveProject(p),
                         repoOwner: targets.repoOwner,
                         repoName: targets.repoName,
                         daLiveOrg: targets.daLiveOrg,
