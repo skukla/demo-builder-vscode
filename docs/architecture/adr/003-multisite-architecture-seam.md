@@ -94,6 +94,55 @@ Multisite needs one mesh per environment, since prod meshes must point at prod C
 
 The robots.txt sitemap URL (B1, commit `d012e7d9`) hardcodes `main--`. EDS branch-preview URLs follow `<branch>--<repo>--<owner>.aem.live`, so multisite via branch-per-locale would need this template to interpolate the branch identifier too.
 
+#### 5. Commerce store scope — one website/store/store-view triple per project
+
+**Added 2026-08-11.** The first four seams are all EDS-side. The Commerce scope is the
+same assumption on the other axis, and it had more surfaces hanging off it than any of
+them.
+
+A project stores **one** website / store / store-view triple, as three scalar env vars per
+backend (`ACCS_*` and `ADOBE_COMMERCE_*` in `components.json`). Multisite needs the same
+scalar → keyed change as seam 1:
+
+```typescript
+// Conceptual shape — NOT today's schema
+{
+    scopes: {
+        main: { websiteCode: "citisignal", storeCode: "citisignal_store", storeViewCode: "citisignal_us" },
+        fr:   { websiteCode: "citisignal", storeCode: "citisignal_store", storeViewCode: "citisignal_fr" },
+    }
+}
+```
+
+Where the singular assumption is encoded:
+
+| File | What assumes one |
+|---|---|
+| `features/components/config/components.json` | three scalar keys per backend |
+| `features/components/config/envVarKeys.ts` | `BACKEND_OWNED_SCOPE_KEYS` — "the backend owns *the* scope", not the scope map |
+| `features/components/ui/components/StoreSelectionRow.tsx` | `getFieldKeys(group.id)` writes exactly three fixed keys |
+| `features/eds/services/configGenerator.ts` | `extractConfigParamsFromConfigs` emits singular `websiteCode` / `storeCode` / `storeViewCode` into `config.json` |
+| `features/mesh/services/stalenessDetector.ts` | compares scalar values against the deployed snapshot |
+| `features/dashboard/ui/components/integrations/integrationCardModel.ts` | `deriveCommerceScope` returns ONE triple for the flyout's Commerce scope row |
+
+**Already the right shape — do not re-model it.** `Project.commerceStoreStructure` is a
+CATALOG of every website, store group and store view on the instance, persisted from
+discovery. It is not a selection, so multisite needs nothing from it; the names for N
+scopes are already there.
+
+**UI consequence.** Configure's Commerce tab renders Connection and Business Structure as
+two sub-sections of one tab (`ConfigureSectionBody`). That is right for a single triple —
+three pickers in one row, with a screen of space beneath. When the scope becomes a LIST
+with add/remove, Business Structure should be promoted to its own tab, so a growing list
+is not stacked under the connection fields. The split logic already exists as
+`filterGroupsForSection`; promotion means `buildConfigureSections` emitting two sections
+for one group, with a synthetic section id while `renderFieldRow` still receives the REAL
+group (the store cascade branches on `group.id`).
+
+**Trigger for the UI change specifically: when the scope stops being one triple.** Not
+before — a whole tab for three pickers reproduces the single-control-tab problem that
+`.rptc/plans/configure-commerce-subsections` removed.
+
 ---
 
 ## Decision
@@ -118,6 +167,7 @@ Implement multisite when ANY of these become true:
 - A demo customer asks for multi-locale demos (one repo, multiple languages, multiple sites).
 - Adobe's CitiSignal template (or whichever template Demo Builder defaults to) starts assuming multisite — e.g., references multiple aem.live sites in its `helix-sitemap.yaml` or expects per-env Config Service entries.
 - An RPTC feature cycle proposes touching `buildSiteConfigParams`, `extractResetParams`, or `deployMeshComponent` in a way that would benefit from the multi-env shape.
+- A demo needs one storefront to serve more than one Commerce website / store view (seam 5) — e.g. a locale switcher backed by different store views.
 
 ### Trade-offs Accepted
 
