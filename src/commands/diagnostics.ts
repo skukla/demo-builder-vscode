@@ -27,6 +27,7 @@ import {
     type DiagnosticsReport,
     type EnvironmentInfo,
     type McpInfo,
+    type StorefrontScopeReport,
     type SystemInfo,
     type TestResults,
     type ToolsInfo,
@@ -165,11 +166,15 @@ export class DiagnosticsCommand {
             // only by in-process flags — so running those concurrently would race
             // that write for a saving these three already cover.
             this.logger.debug('Probing GitHub, Config Service and storefront...');
-            [report.githubCredential, report.configService, report.storefront] = await Promise.all([
+            const [githubCredential, configService, storefront] = await Promise.all([
                 this.checkGitHubCredential(),
                 this.checkConfigService(),
                 this.checkStorefront(),
             ]);
+            report.githubCredential = githubCredential;
+            report.configService = configService;
+            report.storefront = storefront?.probe;
+            report.storefrontScope = storefront?.scope;
 
             // Log the full report
             this.logger.debug('DIAGNOSTIC REPORT', report);
@@ -252,7 +257,9 @@ export class DiagnosticsCommand {
      * Returns undefined without an EDS project — same reason as the config-service
      * probe: an invented site 404s in a way that reads like a real finding.
      */
-    private async checkStorefront(): Promise<StorefrontProbeResult | undefined> {
+    private async checkStorefront(): Promise<
+        { probe: StorefrontProbeResult; scope?: StorefrontScopeReport } | undefined
+    > {
         const project = await ServiceLocator.getStateManager()?.getCurrentProject();
         const githubRepo = getEdsGithubRepo(project);
         if (!githubRepo) return undefined;
@@ -272,7 +279,7 @@ export class DiagnosticsCommand {
         // and reset storefronts will get — but it is not necessarily the one
         // serving THIS storefront.
         const overlayUrl = resolveByomOverlayUrl();
-        return probeStorefrontDelivery(
+        const probe = await probeStorefrontDelivery(
             owner,
             repo,
             this.logger,
@@ -280,6 +287,15 @@ export class DiagnosticsCommand {
             pdpTarget && { path: pdpTarget.path, sku: pdpTarget.sku },
             overlayUrl,
         );
+        return {
+            probe,
+            // Only meaningful when a SKU was actually sampled — without one there
+            // is no scope to report against.
+            scope: pdpTarget && {
+                source: pdpTarget.scopeSource,
+                divergence: pdpTarget.scopeDivergence,
+            },
+        };
     }
 
     private async checkConfigService(): Promise<ConfigServiceProbeResult | undefined> {

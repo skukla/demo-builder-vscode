@@ -11,33 +11,10 @@
 
 import { pickSampleSku, prewarmCatalog } from '@/features/eds/services/catalogPrewarmService';
 import type { Project } from '@/types/base';
+import { catalogPage, makeAccsProject, mockLogger } from './catalogPrewarmService.testUtils';
 
-const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-};
-
-/** Minimal ACCS project shape that satisfies extractConfigParams. */
-function makeAccsProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'test-project',
-        componentSelections: { backend: 'adobe-commerce-accs' },
-        componentConfigs: {
-            'adobe-commerce-accs': {
-                ACCS_GRAPHQL_ENDPOINT: 'https://catalog.example.com/graphql',
-                ACCS_STORE_VIEW_CODE: 'default',
-                ACCS_STORE_CODE: 'main_website_store',
-                ACCS_WEBSITE_CODE: 'base',
-                ACCS_CUSTOMER_GROUP: '',
-            },
-        },
-        ...overrides,
-    } as Project;
-}
-
-const ACCS_OVERLAY = 'https://example.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp?org=skukla&site=citisignal-b2b';
+const ACCS_OVERLAY =
+    'https://example.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp?org=skukla&site=citisignal-b2b';
 const DA_ORG = 'skukla';
 const DA_SITE = 'citisignal-b2b';
 
@@ -49,15 +26,29 @@ describe('prewarmCatalog — gate / skip cases', () => {
 
     it('skips when overlayUrl is undefined (BYOM disabled)', async () => {
         const result = await prewarmCatalog(
-            makeAccsProject(), undefined, DA_ORG, DA_SITE, mockLogger as never,
+            makeAccsProject(),
+            undefined,
+            DA_ORG,
+            DA_SITE,
+            mockLogger as never
         );
-        expect(result).toEqual({ attempted: 0, succeeded: 0, failed: 0, skipped: true, skipReason: 'BYOM disabled' });
+        expect(result).toEqual({
+            attempted: 0,
+            succeeded: 0,
+            failed: 0,
+            skipped: true,
+            skipReason: 'BYOM disabled',
+        });
         expect(global.fetch).not.toHaveBeenCalled();
     });
 
     it('skips when overlay URL fails to parse to a prepublish URL', async () => {
         const result = await prewarmCatalog(
-            makeAccsProject(), 'not-a-url', DA_ORG, DA_SITE, mockLogger as never,
+            makeAccsProject(),
+            'not-a-url',
+            DA_ORG,
+            DA_SITE,
+            mockLogger as never
         );
         expect(result.skipped).toBe(true);
         expect(result.skipReason).toContain('invalid overlay URL');
@@ -70,7 +61,11 @@ describe('prewarmCatalog — gate / skip cases', () => {
         } as Project;
 
         const result = await prewarmCatalog(
-            paasProject, ACCS_OVERLAY, DA_ORG, DA_SITE, mockLogger as never,
+            paasProject,
+            ACCS_OVERLAY,
+            DA_ORG,
+            DA_SITE,
+            mockLogger as never
         );
 
         expect(result.skipped).toBe(true);
@@ -88,7 +83,11 @@ describe('prewarmCatalog — gate / skip cases', () => {
             },
         });
         const result = await prewarmCatalog(
-            noEndpointProject, ACCS_OVERLAY, DA_ORG, DA_SITE, mockLogger as never,
+            noEndpointProject,
+            ACCS_OVERLAY,
+            DA_ORG,
+            DA_SITE,
+            mockLogger as never
         );
         expect(result.skipped).toBe(true);
         expect(result.skipReason).toContain('no commerce endpoint');
@@ -123,7 +122,11 @@ describe('prewarmCatalog — happy path', () => {
             .mockResolvedValue({ ok: true });
 
         const result = await prewarmCatalog(
-            makeAccsProject(), ACCS_OVERLAY, DA_ORG, DA_SITE, mockLogger as never,
+            makeAccsProject(),
+            ACCS_OVERLAY,
+            DA_ORG,
+            DA_SITE,
+            mockLogger as never
         );
 
         expect(result).toEqual({ attempted: 3, succeeded: 3, failed: 0, skipped: false });
@@ -168,7 +171,14 @@ describe('prewarmCatalog — happy path', () => {
                 json: async () => ({
                     data: {
                         productSearch: {
-                            items: [{ productView: { sku: 'Yale UNOplus-Series A', urlKey: 'CMLodestar' } }],
+                            items: [
+                                {
+                                    productView: {
+                                        sku: 'Yale UNOplus-Series A',
+                                        urlKey: 'CMLodestar',
+                                    },
+                                },
+                            ],
                             page_info: { total_pages: 1, current_page: 1 },
                         },
                     },
@@ -219,7 +229,11 @@ describe('prewarmCatalog — happy path', () => {
             .mockResolvedValue({ ok: true });
 
         const result = await prewarmCatalog(
-            makeAccsProject(), ACCS_OVERLAY, DA_ORG, DA_SITE, mockLogger as never,
+            makeAccsProject(),
+            ACCS_OVERLAY,
+            DA_ORG,
+            DA_SITE,
+            mockLogger as never
         );
 
         expect(result.attempted).toBe(4);
@@ -247,11 +261,18 @@ describe('prewarmCatalog — happy path', () => {
             })
             .mockResolvedValue({ ok: true });
 
-        await prewarmCatalog(makeAccsProject(), ACCS_OVERLAY, DA_ORG, DA_SITE, mockLogger as never, onProgress);
+        await prewarmCatalog(
+            makeAccsProject(),
+            ACCS_OVERLAY,
+            DA_ORG,
+            DA_SITE,
+            mockLogger as never,
+            onProgress
+        );
 
         // Per-SKU progress updates with current/total reflecting completion
-        const progressCalls = onProgress.mock.calls.map(c => c[0]);
-        const perSkuUpdates = progressCalls.filter(p => p.current !== undefined);
+        const progressCalls = onProgress.mock.calls.map((c) => c[0]);
+        const perSkuUpdates = progressCalls.filter((p) => p.current !== undefined);
         expect(perSkuUpdates).toHaveLength(2);
         expect(perSkuUpdates[1]).toEqual(expect.objectContaining({ current: 2, total: 2 }));
     });
@@ -270,7 +291,11 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
         });
 
         const result = await prewarmCatalog(
-            makeAccsProject(), ACCS_OVERLAY, DA_ORG, DA_SITE, mockLogger as never,
+            makeAccsProject(),
+            ACCS_OVERLAY,
+            DA_ORG,
+            DA_SITE,
+            mockLogger as never
         );
 
         expect(result.skipped).toBe(true);
@@ -284,7 +309,11 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
         });
 
         const result = await prewarmCatalog(
-            makeAccsProject(), ACCS_OVERLAY, DA_ORG, DA_SITE, mockLogger as never,
+            makeAccsProject(),
+            ACCS_OVERLAY,
+            DA_ORG,
+            DA_SITE,
+            mockLogger as never
         );
 
         expect(result.skipped).toBe(true);
@@ -305,7 +334,11 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
         });
 
         const result = await prewarmCatalog(
-            makeAccsProject(), ACCS_OVERLAY, DA_ORG, DA_SITE, mockLogger as never,
+            makeAccsProject(),
+            ACCS_OVERLAY,
+            DA_ORG,
+            DA_SITE,
+            mockLogger as never
         );
 
         expect(result.skipped).toBe(true);
@@ -330,12 +363,16 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
                     },
                 }),
             })
-            .mockResolvedValueOnce({ ok: true })      // S1
-            .mockResolvedValueOnce({ ok: false, status: 500 })  // S2
+            .mockResolvedValueOnce({ ok: true }) // S1
+            .mockResolvedValueOnce({ ok: false, status: 500 }) // S2
             .mockRejectedValueOnce(new Error('network')); // S3
 
         const result = await prewarmCatalog(
-            makeAccsProject(), ACCS_OVERLAY, DA_ORG, DA_SITE, mockLogger as never,
+            makeAccsProject(),
+            ACCS_OVERLAY,
+            DA_ORG,
+            DA_SITE,
+            mockLogger as never
         );
 
         expect(result).toEqual({ attempted: 3, succeeded: 1, failed: 2, skipped: false });
@@ -353,7 +390,11 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
                             items: [
                                 { productView: { sku: 'S1', urlKey: 'p1' } },
                                 { productView: { sku: 'S2' /* urlKey missing */ } },
-                                { productView: { /* both missing */ } },
+                                {
+                                    productView: {
+                                        /* both missing */
+                                    },
+                                },
                                 { productView: { sku: 'S3', urlKey: 'p3' } },
                             ],
                             page_info: { total_pages: 1, current_page: 1 },
@@ -364,7 +405,11 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
             .mockResolvedValue({ ok: true });
 
         const result = await prewarmCatalog(
-            makeAccsProject(), ACCS_OVERLAY, DA_ORG, DA_SITE, mockLogger as never,
+            makeAccsProject(),
+            ACCS_OVERLAY,
+            DA_ORG,
+            DA_SITE,
+            mockLogger as never
         );
 
         // 2 valid items → 2 attempted, 2 succeeded
@@ -384,19 +429,6 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
  * "not checked" rather than reporting a broken storefront.
  */
 describe('pickSampleSku', () => {
-    const catalogPage = (items: Array<{ sku: string; urlKey: string }>) => ({
-        ok: true,
-        status: 200,
-        json: async () => ({
-            data: {
-                productSearch: {
-                    items: items.map((i) => ({ productView: i })),
-                    page_info: { total_pages: 1, current_page: 1 },
-                },
-            },
-        }),
-    });
-
     beforeEach(() => {
         jest.clearAllMocks();
         global.fetch = jest.fn();
@@ -407,7 +439,7 @@ describe('pickSampleSku', () => {
         // produces, which is the whole point of building it with the same
         // sanitizeUrlKey / encodeSkuForUrl rather than by hand.
         (global.fetch as jest.Mock).mockResolvedValue(
-            catalogPage([{ sku: 'VA19-SI-NA', urlKey: 'Cronus Yoga Pant' }]),
+            catalogPage([{ sku: 'VA19-SI-NA', urlKey: 'Cronus Yoga Pant' }])
         );
 
         const sample = await pickSampleSku(makeAccsProject(), mockLogger as never);
@@ -416,6 +448,9 @@ describe('pickSampleSku', () => {
             sku: 'VA19-SI-NA',
             urlKey: 'Cronus Yoga Pant',
             path: '/products/cronus-yoga-pant/va19-si-na',
+            // No EDS repo on this fixture, so there is no served config to read.
+            scopeSource: 'manifest',
+            scopeDivergence: undefined,
         });
     });
 
@@ -423,7 +458,7 @@ describe('pickSampleSku', () => {
         // A SKU with a space is exactly the case ADR-007 exists for, and the case
         // where a drifted encoder copy would produce a different URL.
         (global.fetch as jest.Mock).mockResolvedValue(
-            catalogPage([{ sku: 'AB 12/CD', urlKey: 'Widget' }]),
+            catalogPage([{ sku: 'AB 12/CD', urlKey: 'Widget' }])
         );
 
         const sample = await pickSampleSku(makeAccsProject(), mockLogger as never);
@@ -434,9 +469,7 @@ describe('pickSampleSku', () => {
     it('issues no POST to prepublish-pdp — this probe must not publish', async () => {
         // The control on read-only-ness. The GraphQL enumeration IS a POST, so
         // assert on the destination rather than the verb.
-        (global.fetch as jest.Mock).mockResolvedValue(
-            catalogPage([{ sku: 'S1', urlKey: 'u1' }]),
-        );
+        (global.fetch as jest.Mock).mockResolvedValue(catalogPage([{ sku: 'S1', urlKey: 'u1' }]));
 
         await pickSampleSku(makeAccsProject(), mockLogger as never);
 
