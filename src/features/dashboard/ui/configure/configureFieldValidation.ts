@@ -20,9 +20,6 @@
 import type { ServiceGroup, UniqueField } from './configureTypes';
 import { url, pattern } from '@/core/validation/Validator';
 
-/** MESH_ENDPOINT is filled in by a deploy, so it is never "required" of the user. */
-const DEFERRED_FIELD_KEYS = new Set(['MESH_ENDPOINT']);
-
 const urlValidator = url('Please enter a valid URL');
 
 /** The resolved value of a field, as the form displays it. */
@@ -40,7 +37,7 @@ function validateField(field: UniqueField, getValue: FieldValueLookup): string |
     const hasValue = value !== undefined && value !== '';
     const hasDefault = field.default !== undefined && field.default !== '';
 
-    if (field.required && !DEFERRED_FIELD_KEYS.has(field.key) && !hasValue && !hasDefault) {
+    if (field.required && !hasValue && !hasDefault) {
         return `${field.label} is required`;
     }
 

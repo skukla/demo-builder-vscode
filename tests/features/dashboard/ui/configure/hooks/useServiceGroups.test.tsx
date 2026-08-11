@@ -127,7 +127,12 @@ describe('useServiceGroups', () => {
         expect(groupIds).toContain('adobe-assets');
     });
 
-    it('includes the API Mesh section when a mesh component is selected', () => {
+    it('omits the API Mesh section even WITH a mesh selected', () => {
+        // The section used to appear whenever a mesh existed, holding one field
+        // that is optional, auto-supplied by the deploy, and display-locked to the
+        // deployed endpoint — so a whole rail tab for a control nobody can use.
+        // The mesh's real controls are the Integrations grid, where it is the
+        // first peer card. The wizard already filters the field out entirely.
         const { result } = renderHook(() =>
             useServiceGroups({
                 selectedComponents: [edsStorefrontNoMesh, accsBackend, accsMesh],
@@ -135,8 +140,21 @@ describe('useServiceGroups', () => {
             }),
         );
 
-        const meshSection = result.current.find(group => group.id === 'mesh');
-        expect(meshSection).toBeDefined();
-        expect(meshSection?.fields.some(f => f.key === 'MESH_ENDPOINT')).toBe(true);
+        expect(result.current.find(group => group.id === 'mesh')).toBeUndefined();
+    });
+
+    it('never surfaces MESH_ENDPOINT in any section, mesh or no mesh', () => {
+        const { result } = renderHook(() =>
+            useServiceGroups({
+                selectedComponents: [edsStorefrontNoMesh, accsBackend, accsMesh],
+                componentsData,
+            }),
+        );
+
+        const everyKey = result.current.flatMap(group => group.fields.map(f => f.key));
+        expect(everyKey).not.toContain('MESH_ENDPOINT');
+        // Control: the other frontend-declared optional var still comes through,
+        // so this is MESH_ENDPOINT being filtered and not the fixture collapsing.
+        expect(everyKey).toContain('AEM_ASSETS_ENABLED');
     });
 });

@@ -64,15 +64,18 @@ export function useServiceGroups({
             collectFields(fieldMap, data.configuration?.optionalEnvVars, envVarDefs, id);
         });
 
-        // MESH_ENDPOINT is auto-populated from the keyed mesh entry — it's never
-        // user-editable and is declared as an optional env var on the EDS/headless
-        // frontends. When the project has no mesh component, rendering the field
-        // creates a spurious "API Mesh" section with a single uneditable empty row.
-        const meshComponentIds = new Set((componentsData.mesh ?? []).map(m => m.id));
-        const hasMeshSelected = selectedComponents.some(c => meshComponentIds.has(c.id));
-        if (!hasMeshSelected) {
-            fieldMap.delete('MESH_ENDPOINT');
-        }
+        // MESH_ENDPOINT never renders. It is optional, auto-populated from the
+        // keyed mesh entry by the deploy, and display-locked to that value — so a
+        // mesh project got a whole rail tab holding one control nobody can use,
+        // and a non-mesh project got the same tab holding an empty row.
+        //
+        // The mesh's real controls are the Integrations grid, where it is the
+        // first peer card (`deriveMeshCard`). The wizard has always filtered this
+        // field out entirely (`useComponentConfig`); Configure now agrees.
+        //
+        // The `mesh` group stays in SERVICE_GROUP_DEFINITIONS — it simply never
+        // populates, and the empty-group filter below drops the tab.
+        fieldMap.delete('MESH_ENDPOINT');
 
         const groups: Record<string, UniqueField[]> = {};
 
@@ -96,5 +99,5 @@ export function useServiceGroups({
             });
 
         return orderedGroups;
-    }, [selectedComponents, componentsData.envVars, componentsData.mesh]);
+    }, [selectedComponents, componentsData.envVars]);
 }

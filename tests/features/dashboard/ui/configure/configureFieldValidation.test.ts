@@ -53,16 +53,12 @@ describe('validateServiceGroups', () => {
             expect(validateServiceGroups(groups, lookup({}))).toEqual({});
         });
 
-        it('never requires MESH_ENDPOINT — a deploy fills it in', () => {
-            const mesh: UniqueField = {
-                key: 'MESH_ENDPOINT',
-                label: 'Mesh Endpoint',
-                type: 'text',
-                required: true,
-                componentIds: ['mesh'],
-            };
-            expect(validateServiceGroups([group('mesh', [mesh])], lookup({}))).toEqual({});
-        });
+        // MESH_ENDPOINT's exemption is gone with the field: it never reaches a
+        // service group now (useServiceGroups deletes it), and the registry
+        // declares it optional anyway. The old test here hand-built it as
+        // `required: true` in a `mesh` group — a state production cannot produce.
+        // Coverage moved to useServiceGroups.test.tsx, which asserts the field
+        // appears in no section at all.
     });
 
     describe('format', () => {

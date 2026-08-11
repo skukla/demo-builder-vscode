@@ -25,11 +25,8 @@ import {
 } from '@/features/components/services/componentConfigWrites';
 import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
 import type { Project } from '@/types/base';
-import { getMeshEndpointUrl, hasEntries } from '@/types/typeGuards';
+import { hasEntries } from '@/types/typeGuards';
 import type { ComponentConfigs } from '@/types/webview';
-
-/** MESH_ENDPOINT is read from the deployed mesh, never from componentConfigs. */
-const MESH_ENDPOINT = 'MESH_ENDPOINT';
 
 export interface UseConfigureFieldValuesProps {
     /** The project (supplies the deployed mesh endpoint and the seed configs). */
@@ -105,13 +102,6 @@ export function useConfigureFieldValues({
 
     const getFieldValue = useCallback(
         (field: UniqueField): string | boolean | undefined => {
-            // MESH_ENDPOINT comes from the keyed mesh entry (authoritative; the accessor
-            // carries the legacy meshState fallback).
-            const deployedMeshEndpoint = getMeshEndpointUrl(project);
-            if (field.key === MESH_ENDPOINT && deployedMeshEndpoint) {
-                return deployedMeshEndpoint;
-            }
-
             // Once the user has touched a field, only its OWN components count — so
             // clearing it stays cleared instead of resurfacing another component's value.
             if (touchedFields.has(field.key)) {
@@ -137,7 +127,7 @@ export function useConfigureFieldValues({
 
             return '';
         },
-        [componentConfigs, getValueFromConfigs, project, touchedFields],
+        [componentConfigs, getValueFromConfigs, touchedFields],
     );
 
     const isFieldComplete = useCallback(
