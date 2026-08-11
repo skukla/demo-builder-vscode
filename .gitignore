@@ -69,6 +69,12 @@ yarn-error.log*
 # and backlog are tracked artifacts per the policy in .rptc/CLAUDE.md.
 .rptc/prompt.md
 
+# Vendor documentation exports — internal Confluence/Word exports pulled in as
+# source material for research. This repo is PUBLIC, so the exports themselves
+# never land in history; the durable finding gets promoted to a tracked file
+# under .rptc/research/ instead (see .rptc/research/data-installer/).
+docs/research/data-installer/
+
 # Analysis artifacts
 report/
 jscpd-output/
