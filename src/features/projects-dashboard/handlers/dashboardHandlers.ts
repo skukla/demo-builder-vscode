@@ -19,17 +19,29 @@ import {
     renameProjectCore,
 } from '../services';
 import { BaseWebviewCommand } from '@/core/base';
-import { COMPONENT_IDS } from '@/core/constants';
 import { executeCommandForProject } from '@/core/handlers';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { sessionUIState } from '@/core/state/sessionUIState';
-import { openInIncognito, TIMEOUTS } from '@/core/utils';
+import { openInIncognito } from '@/core/utils';
 import { validateProjectPath, validateURL } from '@/core/validation';
-import { hasMeshDeploymentRecord, determineMeshStatus } from '@/features/dashboard/handlers/meshStatusHelpers';
-import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
+import {
+    hasMeshDeploymentRecord,
+    determineMeshStatus,
+} from '@/features/dashboard/handlers/meshStatusHelpers';
+import {
+    getEwCanvasBranch,
+    resolveProjectAuthoringExperience,
+} from '@/features/eds/handlers/edsHelpers';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import type { Project } from '@/types/base';
+import { ErrorCode } from '@/types/errorCodes';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
-import { getMeshComponentInstance, getEdsLiveUrl, getEdsDaLiveUrl } from '@/types/typeGuards';
+import {
+    getMeshComponentInstance,
+    getEdsLiveUrl,
+    getEdsDaLiveUrl,
+    getAdminPanelUrl,
+} from '@/types/typeGuards';
 
 /**
  * Get all projects from StateManager
@@ -47,21 +59,12 @@ export const handleGetProjects: MessageHandler = async (
         // Load full project data for each (read-only, don't persist)
         const projects: Project[] = [];
         for (const item of projectList) {
-            const project = await context.stateManager.loadProjectFromPath(
-                item.path,
-                undefined,
-                { persistAfterLoad: false },
-            );
+            const project = await context.stateManager.loadProjectFromPath(item.path, undefined, {
+                persistAfterLoad: false,
+            });
             if (project) {
                 projects.push(project);
             }
-        }
-
-        // Enrich projects with the resolved authoring experience so the card
-        // grid can render the Author label + flip control without importing the
-        // resolver or `vscode` into the webview (presentational UI).
-        for (const project of projects) {
-            project.resolvedAuthoringExperience = resolveProjectAuthoringExperience(project);
         }
 
         // Enrich projects with mesh staleness status (full fidelity check)
@@ -70,10 +73,25 @@ export const handleGetProjects: MessageHandler = async (
             if (meshComponent && project.componentConfigs) {
                 try {
                     if (hasMeshDeploymentRecord(project)) {
-                        const meshChanges = await detectMeshChanges(project, project.componentConfigs);
-                        const status = await determineMeshStatus(meshChanges, meshComponent, project);
-                        project.meshStatusSummary =
-                            status === 'config-changed' ? 'stale' : status;
+                        // Org-targeted PER PROJECT. detectMeshChanges reaches the
+                        // `aio` CLI whenever the staleness baseline is empty, and an
+                        // unwrapped call inherits the CLI's process-global console
+                        // selection — which this extension deliberately stopped
+                        // writing, so it holds whatever an earlier session left
+                        // there. Wrapping the LOOP instead of each iteration would
+                        // be worse than nothing: every project would be queried
+                        // against the first one's org.
+                        // Captured, not asserted: the enclosing `if` narrows
+                        // componentConfigs, but the closure below loses it.
+                        const configs = project.componentConfigs;
+                        const status = await withOrgContext(
+                            buildOrgTargetFromProjectAdobe(project.adobe),
+                            async () => {
+                                const meshChanges = await detectMeshChanges(project, configs);
+                                return determineMeshStatus(meshChanges, meshComponent, project);
+                            },
+                        );
+                        project.meshStatusSummary = status === 'config-changed' ? 'stale' : status;
                     } else {
                         project.meshStatusSummary = 'not-deployed';
                     }
@@ -101,7 +119,7 @@ export const handleGetProjects: MessageHandler = async (
         const projectsViewMode = sessionUIState.viewModeOverride ?? configViewMode;
 
         // Find running project path (if any)
-        const runningProject = projects.find(p => p.status === 'running');
+        const runningProject = projects.find((p) => p.status === 'running');
         const runningProjectPath = runningProject?.path;
 
         return {
@@ -139,9 +157,13 @@ export const handleGetProjects: MessageHandler = async (
  *     activation `shouldReHomeToRoot` check re-homes it back to the projects
  *     root (home-on-launch) — the always-root invariant still holds.
  */
-export const handleSelectProject: MessageHandler<{ projectPath: string; forceNewWindow?: boolean }> = async (
+export const handleSelectProject: MessageHandler<{
+    projectPath: string;
+    forceNewWindow?: boolean;
+    surface?: 'integrations';
+}> = async (
     context: HandlerContext,
-    payload?: { projectPath: string; forceNewWindow?: boolean },
+    payload?: { projectPath: string; forceNewWindow?: boolean; surface?: 'integrations' },
 ): Promise<HandlerResponse> => {
     try {
         if (!payload?.projectPath) {
@@ -205,9 +227,17 @@ export const handleSelectProject: MessageHandler<{ projectPath: string; forceNew
             //
             // Mark a webview transition so the outgoing Projects List's
             // dispose() doesn't fight the dashboard handoff.
+            //
+            // `surface` picks WHICH webview opens. Selection is otherwise
+            // identical — path validation, load, set-current — so the project
+            // kebab's "Integrations…" rides this handler rather than forking it.
             await BaseWebviewCommand.startWebviewTransition();
             try {
-                await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+                await vscode.commands.executeCommand(
+                    payload.surface === 'integrations'
+                        ? 'demoBuilder.showIntegrations'
+                        : 'demoBuilder.showProjectDashboard',
+                );
             } catch (navError) {
                 context.logger.error(
                     'Failed to navigate to dashboard',
@@ -223,7 +253,10 @@ export const handleSelectProject: MessageHandler<{ projectPath: string; forceNew
             data: { project },
         };
     } catch (error) {
-        context.logger.error('Failed to select project', error instanceof Error ? error : undefined);
+        context.logger.error(
+            'Failed to select project',
+            error instanceof Error ? error : undefined,
+        );
         return {
             success: false,
             error: 'Failed to select project',
@@ -244,7 +277,10 @@ export const handleCreateProject: MessageHandler = async (
             success: true,
         };
     } catch (error) {
-        context.logger.error('Failed to start project creation', error instanceof Error ? error : undefined);
+        context.logger.error(
+            'Failed to start project creation',
+            error instanceof Error ? error : undefined,
+        );
         return {
             success: false,
             error: 'Failed to start project creation',
@@ -278,7 +314,10 @@ export const handleOpenSettings: MessageHandler = async (
     context: HandlerContext,
 ): Promise<HandlerResponse> => {
     try {
-        await vscode.commands.executeCommand('workbench.action.openSettings', '@ext:adobe.demo-builder');
+        await vscode.commands.executeCommand(
+            'workbench.action.openSettings',
+            '@ext:adobe.demo-builder',
+        );
         return { success: true };
     } catch (error) {
         context.logger.error('Failed to open settings', error instanceof Error ? error : undefined);
@@ -347,11 +386,9 @@ export const handleExportProject: MessageHandler<{ projectPath: string }> = asyn
         };
     }
 
-    const project = await context.stateManager.loadProjectFromPath(
-        payload.projectPath,
-        undefined,
-        { persistAfterLoad: false },
-    );
+    const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
+        persistAfterLoad: false,
+    });
     if (!project) {
         return {
             success: false,
@@ -415,7 +452,10 @@ export const handleDeleteProject: MessageHandler<{ projectPath: string }> = asyn
 
         return result;
     } catch (error) {
-        context.logger.error('Failed to delete project', error instanceof Error ? error : undefined);
+        context.logger.error(
+            'Failed to delete project',
+            error instanceof Error ? error : undefined,
+        );
         return {
             success: false,
             error: 'Failed to delete project',
@@ -470,8 +510,12 @@ export const handleEditProject: MessageHandler<{ projectPath: string }> = async 
         const settings = extractSettingsFromProject(project, true);
 
         context.logger.info(`Opening edit wizard for project: ${project.name}`);
-        context.logger.debug(`[Edit] Project package/stack: ${project.selectedPackage}/${project.selectedStack}`);
-        context.logger.debug(`[Edit] Settings package/stack: ${settings.selectedPackage}/${settings.selectedStack}`);
+        context.logger.debug(
+            `[Edit] Project package/stack: ${project.selectedPackage}/${project.selectedStack}`,
+        );
+        context.logger.debug(
+            `[Edit] Settings package/stack: ${settings.selectedPackage}/${settings.selectedStack}`,
+        );
 
         // Debug: Log EDS config extraction for troubleshooting
         const edsStorefront = project.componentInstances?.['eds-storefront'];
@@ -480,13 +524,17 @@ export const handleEditProject: MessageHandler<{ projectPath: string }> = async 
             context.logger.debug(`[Edit] EDS storefront has metadata: ${!!edsStorefront.metadata}`);
             if (edsStorefront.metadata) {
                 const metadata = edsStorefront.metadata as Record<string, unknown>;
-                context.logger.debug(`[Edit] EDS metadata keys: [${Object.keys(metadata).join(', ')}]`);
+                context.logger.debug(
+                    `[Edit] EDS metadata keys: [${Object.keys(metadata).join(', ')}]`,
+                );
                 context.logger.debug(`[Edit] EDS metadata.githubRepo: ${metadata.githubRepo}`);
                 context.logger.debug(`[Edit] EDS metadata.daLiveOrg: ${metadata.daLiveOrg}`);
                 context.logger.debug(`[Edit] EDS metadata.daLiveSite: ${metadata.daLiveSite}`);
             }
         }
-        context.logger.debug(`[Edit] Extracted edsConfig: ${settings.edsConfig ? JSON.stringify(settings.edsConfig) : 'undefined'}`);
+        context.logger.debug(
+            `[Edit] Extracted edsConfig: ${settings.edsConfig ? JSON.stringify(settings.edsConfig) : 'undefined'}`,
+        );
         if (settings.edsConfig) {
             context.logger.debug(`[Edit] edsConfig.githubOwner: ${settings.edsConfig.githubOwner}`);
             context.logger.debug(`[Edit] edsConfig.repoName: ${settings.edsConfig.repoName}`);
@@ -546,11 +594,9 @@ export const handleRenameProject: MessageHandler<{ projectPath: string; newName:
     }
 
     // Load project (persist after load since we'll be saving changes)
-    const project = await context.stateManager.loadProjectFromPath(
-        payload.projectPath,
-        undefined,
-        { persistAfterLoad: true },
-    );
+    const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
+        persistAfterLoad: true,
+    });
     if (!project) {
         return {
             success: false,
@@ -620,11 +666,17 @@ export const handleOpenAiForProject: MessageHandler<{ projectPath: string }> = a
         return { success: false, error: 'Project path is required' };
     }
 
-    const project = await context.stateManager.loadProjectFromPath(
-        payload.projectPath,
-        undefined,
-        { persistAfterLoad: false },
-    );
+    // SECURITY: Validate path is within demo-builder projects directory
+    // (this handler persists the loaded project as the current pointer).
+    try {
+        validateProjectPath(payload.projectPath);
+    } catch {
+        return { success: false, error: 'Invalid project path' };
+    }
+
+    const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
+        persistAfterLoad: false,
+    });
     if (!project) {
         return { success: false, error: 'Project not found' };
     }
@@ -651,11 +703,16 @@ export const handleOpenLiveSite: MessageHandler<{ projectPath: string }> = async
         return { success: false, error: 'Project path is required' };
     }
 
-    const project = await context.stateManager.loadProjectFromPath(
-        payload.projectPath,
-        undefined,
-        { persistAfterLoad: false },
-    );
+    // SECURITY: Validate path is within demo-builder projects directory
+    try {
+        validateProjectPath(payload.projectPath);
+    } catch {
+        return { success: false, error: 'Invalid project path' };
+    }
+
+    const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
+        persistAfterLoad: false,
+    });
     if (!project) {
         return { success: false, error: 'Project not found' };
     }
@@ -701,11 +758,16 @@ export const handleOpenDaLive: MessageHandler<{ projectPath: string }> = async (
         return { success: false, error: 'Project path is required' };
     }
 
-    const project = await context.stateManager.loadProjectFromPath(
-        payload.projectPath,
-        undefined,
-        { persistAfterLoad: false },
-    );
+    // SECURITY: Validate path is within demo-builder projects directory
+    try {
+        validateProjectPath(payload.projectPath);
+    } catch {
+        return { success: false, error: 'Invalid project path' };
+    }
+
+    const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
+        persistAfterLoad: false,
+    });
     if (!project) {
         return { success: false, error: 'Project not found' };
     }
@@ -724,148 +786,76 @@ export const handleOpenDaLive: MessageHandler<{ projectPath: string }> = async (
     return { success: true };
 };
 
-// ============================================================================
-// EDS Actions Handler (Republish)
-// ============================================================================
-
 /**
- * Republishes all content from DA.live to CDN for an EDS project.
- * This syncs config.json and all authored content to preview and live CDN.
+ * Open the Adobe Commerce Admin Panel for a project.
  *
- * Useful when:
- * - Configuration changes need to propagate (e.g., config.json folder mappings)
- * - Content gets out of sync between DA.live and CDN
- * - After manual content edits in DA.live
+ * The admin URL resolves via getAdminPanelUrl: an explicit
+ * ADOBE_COMMERCE_ADMIN_URL (PaaS Configure field / override) wins, otherwise
+ * SaaS projects derive it from the ACCS tenant endpoint. When unresolvable,
+ * a notification offers a jump to the Configure screen instead of failing.
  */
-export const handleRepublishContent: MessageHandler<{ projectPath: string }> = async (
+export const handleOpenAdminPanel: MessageHandler<{ projectPath: string }> = async (
     context: HandlerContext,
     payload?: { projectPath: string },
 ): Promise<HandlerResponse> => {
     if (!payload?.projectPath) {
-        vscode.window.showErrorMessage('Project path is required');
         return { success: false, error: 'Project path is required' };
     }
 
+    // SECURITY: Validate path is within demo-builder projects directory
     try {
         validateProjectPath(payload.projectPath);
     } catch {
-        vscode.window.showErrorMessage('Invalid project path');
         return { success: false, error: 'Invalid project path' };
     }
 
-    const project = await context.stateManager.loadProjectFromPath(
-        payload.projectPath,
-        undefined,
-        { persistAfterLoad: false },
-    );
+    const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
+        persistAfterLoad: false,
+    });
     if (!project) {
-        vscode.window.showErrorMessage('Project not found');
         return { success: false, error: 'Project not found' };
     }
 
-    // Get EDS metadata from component instance (project-specific data)
-    const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    const repoFullName = edsInstance?.metadata?.githubRepo as string | undefined;
-    const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
-    const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
+    const url = getAdminPanelUrl(project);
 
-    if (!repoFullName) {
-        vscode.window.showErrorMessage('Repository information not found. Republish is only available for EDS projects.');
-        return { success: false, error: 'Repository information not found. Republish is only available for EDS projects.' };
-    }
-
-    const [repoOwner, repoName] = repoFullName.split('/');
-    if (!repoOwner || !repoName) {
-        vscode.window.showErrorMessage('Invalid repository format');
-        return { success: false, error: 'Invalid repository format' };
-    }
-
-    // Use daLiveOrg/daLiveSite from metadata, fallback to repo owner/name
-    const effectiveDaLiveOrg = daLiveOrg || repoOwner;
-    const effectiveDaLiveSite = daLiveSite || repoName;
-
-    // Set project status to 'republishing' so UI shows transitional state
-    const originalStatus = project.status;
-    project.status = 'republishing';
-    await context.stateManager.saveProject(project);
-
-    try {
-        return await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: `Republishing ${project.name}`,
-                cancellable: false,
-            },
-            async (progress) => {
-            try {
-                context.logger.info(`[ProjectsList] Republishing content for ${repoFullName}`);
-
-                // Check DA.live authentication (inside progress for immediate feedback)
-                progress.report({ message: 'Checking authentication...' });
-                const { ensureDaLiveAuth, getDaLiveAuthService } = await import('@/features/eds/handlers/edsHelpers');
-                const daLiveAuthResult = await ensureDaLiveAuth(context, '[ProjectsList]');
-
-                if (!daLiveAuthResult.authenticated) {
-                    return {
-                        success: false,
-                        error: daLiveAuthResult.error || 'DA.live authentication required',
-                        errorType: 'DALIVE_AUTH_REQUIRED',
-                        cancelled: daLiveAuthResult.cancelled,
-                    };
+    if (!url) {
+        // No URL configured — offer the Configure screen. Fire-and-forget so the
+        // webview response isn't held on the user's notification choice. The
+        // saveProject sets the current-project pointer, which configureProject
+        // resolves from (mirrors handleOpenAiForProject).
+        void vscode.window
+            .showInformationMessage('No Admin Panel URL is set for this project.', 'Open Configure')
+            .then(async (selection) => {
+                if (selection === 'Open Configure') {
+                    await context.stateManager.saveProject(project);
+                    await vscode.commands.executeCommand('demoBuilder.configureProject');
                 }
-
-                const daLiveAuthService = getDaLiveAuthService(context.context);
-                const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
-                const { tokenService: githubTokenService } = getGitHubServices(context);
-
-                // Run the shared content-republish pipeline (single source of truth —
-                // the MCP sync_content tool calls the same service).
-                progress.report({ message: 'Republishing content...' });
-                const { republishStorefrontContent } = await import('@/features/eds/services/storefrontRepublishService');
-                const contentResult = await republishStorefrontContent({
-                    project,
-                    repoOwner,
-                    repoName,
-                    daLiveOrg: effectiveDaLiveOrg,
-                    daLiveSite: effectiveDaLiveSite,
-                    secrets: context.context.secrets,
-                    logger: context.logger,
-                    daLiveAuthService,
-                    githubTokenService,
-                    onProgress: (message) => progress.report({ message }),
-                });
-                if (!contentResult.success) {
-                    return { success: false, error: contentResult.error };
-                }
-                if (!contentResult.cdnVerified) {
-                    context.logger.warn('[ProjectsList] CDN verification timed out - content may still be propagating');
-                }
-
-                context.logger.info(`[ProjectsList] Content republished for ${repoFullName}`);
-
-                // Update storefront status to published (config.json was regenerated)
-                project.edsStorefrontStatusSummary = 'published';
-
-                // Show auto-dismissing success notification (2 seconds)
-                void vscode.window.withProgress(
-                    { location: vscode.ProgressLocation.Notification, title: `Content republished for "${project.name}"` },
-                    async () => new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION)),
+            })
+            .then(undefined, (error) => {
+                context.logger.error(
+                    '[ProjectsList] Failed to open Configure from admin-panel prompt',
+                    error as Error,
                 );
-
-                return { success: true };
-            } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                context.logger.error('[ProjectsList] Republish failed', error as Error);
-                vscode.window.showErrorMessage(`Failed to republish content: ${errorMessage}`);
-                return { success: false, error: errorMessage };
-            }
-        },
-        );
-    } finally {
-        // Reset status back to original (typically 'ready' for EDS projects, shown as "Published")
-        project.status = originalStatus;
-        await context.stateManager.saveProject(project);
+            });
+        return { success: true };
     }
+
+    // Validate URL before opening (defense against injection via stored URLs).
+    // Generic error only — the stored URL may embed credentials, never echo it.
+    // http is allowed alongside https — the Configure field accepts both, and
+    // the localhost/private-IP blocks still apply (mirrors configureHandlers).
+    try {
+        validateURL(url, ['https', 'http']);
+    } catch (validationError) {
+        context.logger.error(
+            '[ProjectsList] Admin Panel URL validation failed',
+            validationError as Error,
+        );
+        return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
+    }
+
+    await vscode.env.openExternal(vscode.Uri.parse(url));
+    return { success: true };
 };
 
 /**
@@ -889,11 +879,9 @@ export const handleResetProject: MessageHandler<{ projectPath: string }> = async
         return { success: false, error: 'Invalid project path' };
     }
 
-    const project = await context.stateManager.loadProjectFromPath(
-        payload.projectPath,
-        undefined,
-        { persistAfterLoad: false },
-    );
+    const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
+        persistAfterLoad: false,
+    });
     if (!project) {
         return { success: false, error: 'Project not found' };
     }
@@ -912,38 +900,14 @@ export const handleResetProject: MessageHandler<{ projectPath: string }> = async
         });
     }
 
-    const { resetProjectWithUI } = await import('@/features/lifecycle/services/projectResetService');
+    const { resetProjectWithUI } = await import(
+        '@/features/lifecycle/services/projectResetService'
+    );
     return resetProjectWithUI({
         project,
         context,
         logPrefix: '[ProjectsList]',
     });
-};
-
-// ============================================================================
-// Project Folder Actions (Copy Path)
-// ============================================================================
-
-/**
- * Copy a project path to the clipboard
- */
-export const handleCopyProjectPath: MessageHandler<{ projectPath: string }> = async (
-    context: HandlerContext,
-    payload?: { projectPath: string },
-): Promise<HandlerResponse> => {
-    if (!payload?.projectPath) {
-        return { success: false, error: 'Project path is required' };
-    }
-
-    try {
-        validateProjectPath(payload.projectPath);
-        await vscode.env.clipboard.writeText(payload.projectPath);
-        vscode.window.showInformationMessage('Project path copied to clipboard');
-        return { success: true };
-    } catch (error) {
-        context.logger.error('Failed to copy project path', error instanceof Error ? error : undefined);
-        return { success: false, error: 'Failed to copy project path' };
-    }
 };
 
 // ============================================================================
@@ -957,7 +921,10 @@ export const handleCopyProjectPath: MessageHandler<{ projectPath: string }> = as
  * within the pinned and unpinned groups). The flag is persisted to the
  * project's `.demo-builder.json` manifest via `stateManager.saveProject`.
  */
-export const handleSetProjectPinned: MessageHandler<{ projectPath: string; pinned: boolean }> = async (
+export const handleSetProjectPinned: MessageHandler<{
+    projectPath: string;
+    pinned: boolean;
+}> = async (
     context: HandlerContext,
     payload?: { projectPath: string; pinned: boolean },
 ): Promise<HandlerResponse> => {
@@ -986,13 +953,16 @@ export const handleSetProjectPinned: MessageHandler<{ projectPath: string; pinne
         await context.stateManager.saveProjectConfigOnly({ ...project, pinned: payload.pinned });
         return { success: true };
     } catch (error) {
-        context.logger.error('Failed to set project pinned state', error instanceof Error ? error : undefined);
+        context.logger.error(
+            'Failed to set project pinned state',
+            error instanceof Error ? error : undefined,
+        );
         return { success: false, error: 'Failed to set project pinned state' };
     }
 };
 
 // The per-project authoring-experience control is a setup-time preference set
 // in the Configure webview (EDS-only radio group with an explicit Save), not an
-// on-the-fly action. The handler that flipped it from this surface was removed;
-// the dynamic "Author in X" label still reflects `resolvedAuthoringExperience`
-// (enriched in handleGetProjects).
+// on-the-fly action. The handler that flipped it from this surface was removed,
+// and menu/tile labels are STATIC ("Author Content") — the resolved experience
+// only decides WHERE the Author action opens (resolved at open time).

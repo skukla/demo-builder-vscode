@@ -11,8 +11,9 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 - **Real-Time Status Display**: Show demo status (ready, starting, running, stopping)
 - **Mesh Status Monitoring**: Async mesh status checking with auth-aware prompts
 - **Adobe Context Display**: Show organization, project, and workspace
-- **Quick Actions**: Start, Stop, Open Browser, Deploy Mesh (shown conditionally when project includes a mesh component), Configure
-- **More Menu (overflow)**: Rename (non-EDS: stopped only), Copy Path, Export, Refresh Block Library (EDS), Republish Content (EDS), Dev Console, Reset
+- **Quick Actions**: Start, Stop, Open Browser, Author Content (EDS only), Manage Commerce (always visible; opens the Commerce admin URL — derived from the ACCS tenant endpoint for SaaS, user-supplied `ADOBE_COMMERCE_ADMIN_URL` for PaaS — or routes to Configure), Configure
+- **Integrations grid** (`IntegrationsBlock` → `integrations/IntegrationsGrid`, gated on `hasAdobeContext`): the App Builder surface. A calm card per integration — name, status dot, one source line, and AT MOST ONE face affordance — with the mesh as the FIRST peer card (accent left border; live status + Deploy/Redeploy routed to the existing `deployMesh` path + a Sign-in remediation on `needs-auth`; since ADR-011 D3 Step 08 the mesh card replaces the masthead "API Mesh" badge and the "Deploy Mesh" tile). All detail and every non-face action (Redeploy, Verify, Manage APIs, Remove, in-place rename) live in the one shared right detail drawer; the add tile is the last grid cell AND the empty state. Cards stay live via two push channels: `appBuilderComponentStatusUpdate` (per-id in-flight status, `useRowStatusOverrides`) and `appBuilderComponentsSnapshot` (the whole fresh persisted map after each terminal op, `useLiveAppBuilderComponents` — this is what lands an added card and drops a removed one without a reload). Every card model comes from the one pure derivation in `integrations/integrationCardModel.ts`
+- **More Menu (overflow)**: Export, Sync Storefront (EDS), Refresh Block Library (EDS), Dev Console, Reset, Delete. Edit and Republish are TILES, not menu items — Edit at the end of the Primary zone (before Republish), Republish in the Storefront zone carrying the drift dot. Rename is inline on the dashboard title.
 - **Focus Retention**: Maintain webview focus for in-place actions (Start/Stop)
 - **Change Detection**: Detect frontend config changes requiring restart
 - **Re-Authentication**: Handle lost Adobe access with browser auth flow
@@ -76,6 +77,26 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 **Operations**:
 1. Execute demoBuilder.deployMesh command
 
+### AppBuilderComponent (integrations list) handlers
+
+**Purpose**: Drive the keyed App Builder model from the dashboard integrations list — one
+id-scoped message per row action. This is the ONE App Builder handler surface: the singular
+id-less `addApp`/`deployApp`/`redeployApp`/`removeApp` delegates (and the dormant
+`AppBuilderCard` that posted them) were deleted in ADR-011 D3 Step 08.
+See `appBuilderComponentHandlers.ts` and `@/features/app-builder` for the underlying runner.
+
+**Operations**:
+- `addAppBuilderComponent` (payload `{ id }` or `{ source: { owner, repo } }`) — guards →
+  bucket-3 env inputs route to Configure first → D1 runner add (clone + install + subscribe +
+  isolated deploy).
+- `deployAppBuilderComponent` / `redeployAppBuilderComponent` (payload `{ id }`) — guards →
+  the isolating keyed deploy tail for THAT component (idempotent, so both are the same path).
+- `removeAppBuilderComponent` (payload `{ id }`) — guards → per-id remote undeploy
+  (best-effort) + local cleanup; siblings untouched. The confirm dialog is UI-side.
+
+Note: the mesh row does NOT use these — its Deploy/Redeploy posts the existing `deployMesh`
+message (the mesh deploy verb is `demoBuilder.deployMesh`, not `aio app deploy`).
+
 ### handleOpenDevConsole
 
 **Purpose**: Open Adobe Developer Console for current project
@@ -116,7 +137,6 @@ These back the dashboard "More" overflow items. All resolve the project via
 - **handleRenameProject** — validates `{newName}`, delegates to the shared
   `renameProjectCore` (folder rename + path updates + recent-projects + save),
   then re-sends `init` so the dashboard title refreshes.
-- **handleCopyPath** — copy the current project's folder path to the clipboard.
 - **handleExportProject** — export project settings to a file (reuses
   `exportProjectSettings`).
 - **handleRepublishContent** — republish DA.live content to the CDN (EDS-only).
@@ -194,8 +214,8 @@ Mesh deployed? → YES → checkMeshStatusAsync()
 ### Dependencies
 - `@/features/authentication` - AuthenticationService for auth checks
 - `@/features/mesh` - detectMeshChanges, detectFrontendChanges, verifyMeshDeployment
-- `@/shared/validation` - validateURL for Dev Console links
-- `@/shared/logging` - Logger for dashboard operations
+- `@/core/validation` - validateURL for Dev Console links
+- `@/core/logging` - Logger for dashboard operations
 - `@/services/serviceLocator` - ServiceLocator for CommandExecutor
 - `vscode` - Commands, window, env APIs
 
@@ -321,11 +341,13 @@ if (meshComponent && meshComponent.status !== 'deploying' && meshComponent.statu
 - `startDemo` - Start demo server
 - `stopDemo` - Stop demo server
 - `openBrowser` - Open demo in browser
+- `openAdminPanel` - Open the Commerce Admin Panel (derived for SaaS, `ADOBE_COMMERCE_ADMIN_URL` field for PaaS; prompts "Open Configure" when unresolvable)
 - `configure` - Open configuration UI
 - `deployMesh` - Deploy API mesh
+- `addApp` / `deployApp` / `redeployApp` / `removeApp` - Manage the project's App Builder app
 - `openDevConsole` - Open Adobe Developer Console
+- `editProject` - Open the wizard in edit mode for the current project (shared `extractSettingsFromProject`)
 - `renameProject` - Rename current project (delegates to shared `renameProjectCore`)
-- `copyPath` - Copy project folder path to clipboard
 - `exportProject` - Export project settings to a file
 - `republishContent` - Republish DA.live content to the CDN (EDS-only)
 - `resetProject` - Reset project state
@@ -337,6 +359,7 @@ if (meshComponent && meshComponent.status !== 'deploying' && meshComponent.statu
 - `init` - Initial dashboard data (theme, project)
 - `statusUpdate` - Complete project status update
 - `meshStatusUpdate` - Mesh-only status update (during async checking)
+- `appStatusUpdate` - App Builder app status update (deploying/deployed/error + URL)
 
 ## Performance Considerations
 
@@ -447,11 +470,12 @@ if (!verification.exists) {
 - [ ] Auth prompt shows when not authenticated
 - [ ] Start/Stop buttons work
 - [ ] Open Browser works
-- [ ] Deploy Mesh button works
+- [ ] Integrations list renders (mesh row first; per-id integration rows)
+- [ ] Mesh row Deploy/Redeploy works (routes to deployMesh)
 - [ ] Configure button works
 - [ ] Developer Console link works
-- [ ] More menu: Rename works (folder renamed, title updates; hidden while a non-EDS demo runs)
-- [ ] More menu: Copy Path copies the project path to the clipboard
+- [ ] Title inline rename works (hover pencil → edit → folder renamed, title refreshes; pencil hidden while running)
+- [ ] More menu: Edit opens the wizard in edit mode
 - [ ] More menu: Export writes project settings to a file
 - [ ] More menu: Republish Content works (EDS projects only)
 - [ ] More menu: Reset works
@@ -481,3 +505,74 @@ if (!verification.exists) {
 
 For overall architecture, see `../../CLAUDE.md`
 For shared infrastructure, see `../shared/CLAUDE.md`
+
+## Page layout: left-anchored content
+
+Content is left-aligned by default. `.page-container` / `.page-container-padded`
+cap the band at `--content-width` and do NOT centre, matching the wizard's
+`.content-column` and the `--content-width` docblock, which always described the
+band as left-aligned. `.page-container-padded` insets by size-400 so body content
+lines up with the page title (`PageHeader` pads its own content by size-400).
+
+There is no opt-out class. A short-lived `.page-left-anchored` (formerly
+`.dashboard-left`) existed only because the default centred; screens that never
+knew to ask for it — the integrations surface, the projects list, the Prompt
+Library — silently centred instead. Fixing the default removed the trap.
+
+Pinned by `tests/core/ui/pageContentAlignment.test.ts`.
+
+## One add affordance per grid
+
+The integrations screen offers exactly one way to add, in every state — the
+sticky header's **Add integration** button, or the empty state's CTA when there
+is nothing to list. This matches the projects list, which has always shown one.
+
+The grid used to end with a dashed "+ Add integration" tile opening the same
+modal instance as the header button. It was removed: two doors to one room, and
+as a grid participant it had to be kept dimensionally in sync with real cards,
+affected wrapping, and drifted to the end of the grid as integrations
+accumulated — least findable exactly when the list was longest.
+
+Removing it exposed a gap it had been accidentally covering: the grid receives
+search-FILTERED cards while the empty-state gate reads the unfiltered list, so a
+no-match search renders an empty grid. That now shows
+`No integrations match "…"`, mirroring the projects list.
+
+## Integrations band
+
+```
+Integrations   demo-builder-test        <- header: the LOCAL project only
+------------------------------------------------------------------
+[Filter integrations...] [refresh]   [Project Dashboard] [Add integration]
+2 integrations           Deploys to Kukla Mesh . Stage  Change
+```
+
+The destination rides the END of SearchHeader's count row via its `countTrailing`
+slot. That row is space-between and its right half is empty width once a search
+field shows — on every consumer — so page-level context costs the band no extra
+line. Two earlier placements were tried and rejected: its own row at the TOP of
+the band (most prominent slot for the least-used fact, and it pushed the primary
+actions down), and its own row BELOW the count (same height for something that
+fits in space already going spare).
+
+The whole row reads at 12px, the count's size, with the three roles separated by
+colour — dim label, darker value, blue action. It first shipped mixing 11px
+uppercase (borrowed from the dashboard's badge rows, where that treatment stands
+alone), 12.5px, and 12px on one line.
+
+Search shows from the first integration (`searchThreshold={0}`), as on the
+projects list. That is not a taste call: `SearchHeader` puts the count beside the
+refresh button when there is NO field and on its own line beneath the field when
+there is, so a high threshold left this screen rendering the no-search fallback
+and the count looking arbitrarily placed.
+
+The destination used to ride in the header subtitle as a third crumb. It moved
+because the band's left side is context, not actions — it holds the count, with
+most of its width empty — and because the old arrangement put the LOCAL project
+name and the REMOTE Adobe project/workspace in one dot-separated run where
+nothing told them apart. Split across header and band, the distinction is
+structural.
+
+No status dot on the row: the destination has no state to report (the row simply
+does not render when there is none), and a dot that is always one colour is
+decoration.

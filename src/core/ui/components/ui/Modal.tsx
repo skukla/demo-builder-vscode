@@ -13,6 +13,20 @@ export interface ModalProps {
     size?: 'S' | 'M' | 'L' | 'fullscreen' | 'fullscreenTakeover';
     actionButtons?: ActionButton[];
     onClose: () => void;
+    /** Label for the built-in close button (default "Close"). */
+    closeLabel?: string;
+    /** Variant for the built-in close button (default "secondary"). */
+    closeVariant?: 'primary' | 'secondary' | 'accent' | 'negative';
+    /**
+     * Let the dialog collapse to its CONTENT's height instead of claiming a fixed
+     * one. Spectrum's modal Dialog takes a height independent of what is inside it
+     * — which is why `.modal-body` has to grow to push the footer down (below). On
+     * a short body that leaves a tall dialog with dead space under the footer.
+     *
+     * Opt-in so existing modals keep their current proportions; the max-height and
+     * the sticky footer still apply, so a LONG body scrolls exactly as before.
+     */
+    fitContent?: boolean;
     children: ReactNode;
 }
 
@@ -72,6 +86,9 @@ export function Modal({
     size = 'M',
     actionButtons = [],
     onClose,
+    closeLabel = 'Close',
+    closeVariant = 'secondary',
+    fitContent = false,
     children,
 }: ModalProps) {
     // Map custom sizes to Dialog-compatible sizes
@@ -79,15 +96,19 @@ export function Modal({
         size === 'fullscreen' || size === 'fullscreenTakeover' ? 'L' : size;
 
     return (
-        <Dialog size={dialogSize}>
+        <Dialog size={dialogSize} UNSAFE_className={fitContent ? 'modal-fit-content' : undefined}>
             <Heading>{title}</Heading>
             <Divider />
-            <Content>
-                {children}
+            <Content UNSAFE_className="modal-content">
+                {/* The body GROWS so the footer is pushed to the dialog's bottom even when
+                    the content is short. `position: sticky` alone only pins against an
+                    OVERFLOWING container, so a short body (a spinner, a two-row list) left
+                    the footer floating mid-dialog with dead space beneath it. */}
+                <div className="modal-body">{children}</div>
                 <div className="modal-footer-actions">
                     {/* Close/Cancel on left, primary actions on right (per Spectrum design guidelines) */}
-                    <FocusableButton variant="secondary" onPress={onClose}>
-                        Close
+                    <FocusableButton variant={closeVariant} onPress={onClose}>
+                        {closeLabel}
                     </FocusableButton>
                     {actionButtons.map((button, index) => (
                         <FocusableButton
@@ -104,4 +125,3 @@ export function Modal({
         </Dialog>
     );
 }
-

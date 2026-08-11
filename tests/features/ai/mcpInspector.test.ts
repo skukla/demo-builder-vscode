@@ -65,15 +65,20 @@ jest.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
 
 // The in-extension server is probed directly over its socket — not spawned as a
 // proxy child. Mock the probe so tests can script its result.
+jest.mock('@/features/ai/server/mcpSocketDiscovery', () => ({
+    resolveProxyTarget: jest.fn(),
+}));
 jest.mock('@/features/ai/server/mcpToolProbe', () => ({
     probeInExtensionMcpTools: jest.fn(),
 }));
 
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
+import { resolveProxyTarget } from '@/features/ai/server/mcpSocketDiscovery';
 import { inspectAllServers, clearMcpCache, MCP_INSPECT_TIMEOUT_MS } from '@/features/ai/mcpInspector';
 
 const readFileMock = fsPromises.readFile as jest.Mock;
 const probeMock = probeInExtensionMcpTools as jest.Mock;
+const resolveTargetMock = resolveProxyTarget as jest.Mock;
 
 const PROJECT_PATH = '/projects/demo';
 const MCP_JSON_PATH = `${PROJECT_PATH}/.claude/mcp.json`;
@@ -93,6 +98,10 @@ beforeEach(() => {
     transportInstances.length = 0;
     pendingStderrQueues.length = 0;
     clearMcpCache();
+    // Default: resolution agrees with the pin. Tests that care override it.
+    resolveTargetMock.mockImplementation(async (pin?: string) =>
+        pin ? { socketPath: pin, via: 'env' } : { guidance: 'none' }
+    );
 });
 
 describe('inspectAllServers', () => {
@@ -155,6 +164,37 @@ describe('inspectAllServers', () => {
                 },
             });
         }
+
+        // The pin lives in a file on disk and cannot heal itself. When the socket
+        // it names is gone, probing it anyway reports `demo-builder · error` on
+        // the AI badge while a live server sits in the discovery sweep. Resolution
+        // is delegated to resolveProxyTarget so this path and the proxy's cannot
+        // disagree about which socket is current.
+        it('probes whatever resolution returns, not the pin, when the pin is stale', async () => {
+            setDemoBuilderMcpJson();
+            resolveTargetMock.mockResolvedValue({
+                socketPath: '/tmp/other-window.sock',
+                via: 'discovery',
+            });
+            probeMock.mockResolvedValue({ ok: true, tools: ['get_projects'] });
+
+            const result = await inspectAllServers(PROJECT_PATH);
+
+            expect(resolveTargetMock).toHaveBeenCalledWith(DB_SOCKET, PROJECT_PATH);
+            expect(probeMock).toHaveBeenCalledWith('/tmp/other-window.sock', MCP_INSPECT_TIMEOUT_MS);
+            expect(result[0]).toMatchObject({ id: 'demo-builder', status: 'ok' });
+        });
+
+        it('reports the guidance instead of probing when nothing is live', async () => {
+            setDemoBuilderMcpJson();
+            resolveTargetMock.mockResolvedValue({ guidance: 'No running Demo Builder window found.' });
+
+            const result = await inspectAllServers(PROJECT_PATH);
+
+            expect(probeMock).not.toHaveBeenCalled();
+            expect(result[0]).toMatchObject({ id: 'demo-builder', status: 'error' });
+            expect((result[0] as { error?: string }).error).toContain('No running Demo Builder window');
+        });
 
         it('probes the socket directly and never spawns the proxy', async () => {
             setDemoBuilderMcpJson();

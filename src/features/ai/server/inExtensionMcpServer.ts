@@ -42,7 +42,8 @@ function withToolLogging(server: any, logger: Logger): any {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             server.registerTool(name, schema, async (args: any) => {
                 const started = Date.now();
-                const argKeys = args && typeof args === 'object' ? Object.keys(args).join(', ') : '';
+                const argKeys =
+                    args && typeof args === 'object' ? Object.keys(args).join(', ') : '';
                 logger.info(`[MCP] tool: ${name}`);
                 logger.debug(`[MCP] ${name} args: { ${argKeys} }`);
                 try {
@@ -63,7 +64,6 @@ function withToolLogging(server: any, logger: Logger): any {
 
 export class InExtensionMcpServer {
     private netServers: net.Server[] = [];
-    private boundPaths: string[] = [];
     private connCounter = 0;
 
     /**
@@ -108,35 +108,83 @@ export class InExtensionMcpServer {
         // The common single-bind case (workspace = projects root, where primary
         // and secondary collapse to the same path) skips this cleanly.
         if (this.secondarySocketPath && this.secondarySocketPath !== this.socketPath) {
-            await this.bindSocket(this.secondarySocketPath);
+            try {
+                await this.bindSocket(this.secondarySocketPath);
+            } catch (err) {
+                // The caller drops this object on a failed start (extension.ts
+                // logs and leaves the field undefined), so a primary left
+                // listening here can never be disposed — it holds the shared name
+                // for the life of the window with nothing able to release it.
+                this.dispose();
+                throw err;
+            }
         }
     }
 
     /**
-     * Bind a single UDS path. Cleans up stale socket file, creates the listener,
-     * sets owner-only permissions. Connections are routed through the shared
-     * `handleConnection` method regardless of which path accepted them.
+     * Bind a single UDS path, by way of a private name renamed into place.
+     *
+     * Never call this concurrently for the same path within one process: the
+     * private name is derived from the pid, so two concurrent binds of one path
+     * would share it and the second's cleanup would delete the first's socket.
+     * `start()` binds sequentially, which is the only caller.
+     *
+     * Connections route through the shared `handleConnection` regardless of which
+     * path accepted them.
      */
     private async bindSocket(socketPath: string): Promise<void> {
-        // Remove any stale socket left by a previous run or another window
-        // (last-writer-wins for the rare two-windows-same-workspace case).
-        await fsPromises.rm(socketPath, { force: true });
+        // Bind a PRIVATE name, then rename it over the shared one. libuv unlinks
+        // the pathname it bound, unconditionally and with no inode check
+        // (`uv__pipe_close`, libuv `src/unix/pipe.c`), so while the server bound
+        // the shared name directly, `server.close()` deleted whichever successor
+        // had taken that name — the outgoing window silently killed the incoming
+        // one's socket. Renaming means libuv only ever learns the private name,
+        // and the shared name is a name no code here ever unlinks (see dispose).
+        //
+        // Known upstream: nodejs/node#19729 reports this exact race, and the
+        // rename workaround, filed 2018 and closed stale.
+        //
+        // Same directory, so the rename cannot cross filesystems, and short —
+        // the hashed basename exists to stay under the ~104-char UDS path limit
+        // and this suffix has to fit inside it too.
+        const privateName = `${socketPath}.${process.pid.toString(36)}`;
+        await fsPromises.rm(privateName, { force: true });
 
         const netServer = net.createServer((socket) => this.handleConnection(socket));
 
         await new Promise<void>((resolve, reject) => {
             netServer.once('error', reject);
-            netServer.listen(socketPath, () => {
+            netServer.listen(privateName, () => {
                 netServer.off('error', reject);
                 resolve();
             });
         });
-        // Owner-only: the socket file permissions are the access control.
-        await fsPromises.chmod(socketPath, 0o600);
+        // Attached the moment listen resolves: between here and the end of this
+        // function are three awaits, and a 'error' emitted with no listener is an
+        // uncaught exception in the extension host.
+        netServer.on('error', (err) =>
+            this.logger.error(`[MCP] server error on ${socketPath}: ${err.message}`),
+        );
 
-        netServer.on('error', (err) => this.logger.error(`[MCP] server error on ${socketPath}: ${err.message}`));
+        try {
+            // Owner-only: the socket file permissions are the access control.
+            // Set BEFORE the rename — permissions travel with the inode, and the
+            // shared name must never be briefly world-readable.
+            await fsPromises.chmod(privateName, 0o600);
+            // Atomic replace. The old `rm` then `listen` left a window with no
+            // socket at the path at all; rename has no such gap, so a client
+            // connecting mid-reload reaches the outgoing server or the incoming
+            // one, never nothing.
+            await fsPromises.rename(privateName, socketPath);
+        } catch (err) {
+            // Listening on a name no client can find is worse than not starting.
+            // Nothing has been tracked yet, so closing here leaks nothing.
+            netServer.close();
+            await fsPromises.rm(privateName, { force: true }).catch(() => undefined);
+            throw err;
+        }
+
         this.netServers.push(netServer);
-        this.boundPaths.push(socketPath);
         this.logger.info(`[MCP] in-extension server listening on ${socketPath}`);
     }
 
@@ -160,7 +208,8 @@ export class InExtensionMcpServer {
         this.registerExtraTools?.(logged);
 
         const transport = new StdioServerTransport(socket, socket);
-        server.connect(transport)
+        server
+            .connect(transport)
             .then(() => {
                 this.logger.debug(`[MCP] connect resolved (conn=${connId})`);
             })
@@ -182,16 +231,31 @@ export class InExtensionMcpServer {
         });
     }
 
+    /**
+     * Close the listeners. The shared socket FILE is deliberately left behind.
+     *
+     * Nothing here may unlink the shared name, because the check that would make
+     * it safe cannot be written: POSIX has no atomic unlink-if-inode, so `stat`
+     * then `rm` verifies an INODE and then deletes a NAME. A successor's
+     * `rename` landing between the two gets deleted instead. That shipped, and
+     * it left the surviving server listening on a path no client could resolve —
+     * `lsof` showed the extension host bound while `ls` showed the directory
+     * empty, with only another reload to recover it. Two callers race it: an
+     * outgoing extension host's `deactivate()`, and `startInExtensionMcpServer`
+     * (extension.ts), which disposes and rebinds inside a single process.
+     *
+     * The leftover file is harmless. The next bind renames over it, and every
+     * consumer probes liveness rather than trusting existence — `resolveProxyTarget`
+     * was split into liveness-then-existence for exactly this reason, so a
+     * leftover no longer short-circuits the proxy's fast, friendly "no window
+     * running" failure. See that function's docstring.
+     */
     dispose(): void {
         for (const server of this.netServers) {
+            // libuv unlinks the name IT bound — the private name, which the
+            // rename already moved away. This touches no shared name.
             server.close();
         }
-        for (const path of this.boundPaths) {
-            void fsPromises.rm(path, { force: true }).catch(() => {
-                /* best-effort cleanup */
-            });
-        }
         this.netServers = [];
-        this.boundPaths = [];
     }
 }

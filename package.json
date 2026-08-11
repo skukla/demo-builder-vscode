@@ -2,7 +2,7 @@
   "name": "adobe-demo-builder",
   "displayName": "Adobe Demo Builder",
   "description": "Create and manage Adobe Commerce demos with ease",
-  "version": "1.0.0-beta.126",
+  "version": "1.0.0-beta.127",
   "publisher": "skukla",
   "engines": {
     "vscode": "^1.84.0"
@@ -55,6 +55,11 @@
       {
         "command": "demoBuilder.diagnostics",
         "title": "Diagnostics",
+        "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.registerGlobalMcp",
+        "title": "Register Global MCP",
         "category": "Demo Builder"
       },
       {
@@ -134,8 +139,8 @@
           },
           "demoBuilder.autoZoom": {
             "type": "boolean",
-            "default": true,
-            "description": "Reset zoom to 100% on extension load for consistent demo experience"
+            "default": false,
+            "description": "Reset zoom to 100% on extension load for consistent demo experience (off by default — zoom changes are user-initiated via the Set Recommended Zoom / Reset Zoom commands)"
           },
           "demoBuilder.updateChannel": {
             "type": "string",
@@ -198,12 +203,10 @@
             "items": {
               "type": "string",
               "enum": [
-                "demo-team-blocks",
-                "isle5"
+                "demo-team-blocks"
               ],
               "enumDescriptions": [
-                "Demo Team Block Collection — general-purpose blocks built by the Demo Team, usable in any EDS storefront",
-                "Isle5 Block Collection — custom EDS blocks: hero, carousel, newsletter, store locator, and more"
+                "Demo Team Block Collection — general-purpose blocks built by the Demo Team, usable in any EDS storefront"
               ]
             },
             "uniqueItems": true,
@@ -237,13 +240,22 @@
         }
       },
       {
+        "title": "App Builder Components",
+        "properties": {
+          "demoBuilder.appBuilderComponents.custom": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "GitHub repository URL (e.g., https://github.com/owner/repo)"
+            },
+            "default": [],
+            "description": "Custom App Builder components (meshes or integrations) to include in the App Builder component catalog. Each entry is a public GitHub repository URL."
+          }
+        }
+      },
+      {
         "title": "DA.live",
         "properties": {
-          "demoBuilder.daLive.defaultOrg": {
-            "type": "string",
-            "default": "",
-            "description": "Default DA.live organization name. Auto-fills the organization field during authentication."
-          },
           "demoBuilder.daLive.aemAuthorUrl": {
             "type": "string",
             "default": "author-p158081-e1683323.adobeaemcloud.com",
@@ -256,8 +268,14 @@
           },
           "demoBuilder.daLive.authoringExperience": {
             "type": "string",
-            "enum": ["da-live-classic", "experience-workspace"],
-            "enumItemLabels": ["DA.live Classic", "Experience Workspace"],
+            "enum": [
+              "da-live-classic",
+              "experience-workspace"
+            ],
+            "enumItemLabels": [
+              "DA.live Classic",
+              "Experience Workspace"
+            ],
             "default": "da-live-classic",
             "description": "Default AEM authoring experience for new EDS projects. DA.live Classic opens the da.live doc editor (with the Universal Editor punch-out for Sidekick Edit); Experience Workspace uses the da.live-native canvas. Override per project from the project's Configure screen."
           },
@@ -424,6 +442,7 @@
     "@types/vscode": "^1.74.0",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.1",
+    "chokidar": "^3.6.0",
     "cloc": "^2.6.0-cloc",
     "concurrently": "^9.2.1",
     "css-loader": "^7.1.2",
@@ -470,8 +489,6 @@
     "sanitize-html": "^2.17.4",
     "semver": "^7.5.4",
     "uuid": "^13.0.0",
-    "xterm": "^5.3.0",
-    "xterm-addon-fit": "^0.8.0",
     "yaml": "^2.3.4",
     "zod": "^3.23.0"
   }

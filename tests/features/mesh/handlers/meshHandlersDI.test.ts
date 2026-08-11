@@ -13,7 +13,6 @@
  */
 
 import { handleCheckApiMesh } from '@/features/mesh/handlers/checkHandler';
-import { handleCreateApiMesh } from '@/features/mesh/handlers/createHandler';
 import { handleDeleteApiMesh } from '@/features/mesh/handlers/deleteHandler';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
@@ -140,38 +139,6 @@ describe('Mesh Handlers - DI Pattern (Step 9)', () => {
                 // Then: Error was logged via context.logger
                 expect(mockLogger.error).toHaveBeenCalled();
                 expect(mockLogger.error.mock.calls[0][0]).toContain('[API Mesh]');
-            });
-        });
-
-        describe('handleCreateApiMesh', () => {
-            it('should use context.logger for logging, not direct instantiation', async () => {
-                // Given: Handler receives context with logger
-                // Mock successful mesh creation with quick deployment
-                mockCommandExecutor.execute.mockResolvedValue({
-                    code: 0,
-                    stdout: '{"meshId":"test-mesh","meshStatus":"success"}',
-                    stderr: '',
-                });
-
-                // When: Handler is called
-                await handleCreateApiMesh(mockContext, {
-                    workspaceId: 'valid-workspace-123',
-                });
-
-                // Then: The injected logger was used
-                expect(mockLogger.debug).toHaveBeenCalled();
-            }, 15000); // Allow extra time for polling
-
-            it('should log validation errors via context.logger', async () => {
-                // Given: Invalid workspaceId
-
-                // When: Handler validates and logs error
-                await handleCreateApiMesh(mockContext, {
-                    workspaceId: 'workspace; rm -rf /',
-                });
-
-                // Then: Error was logged via context.logger
-                expect(mockLogger.error).toHaveBeenCalled();
             });
         });
 

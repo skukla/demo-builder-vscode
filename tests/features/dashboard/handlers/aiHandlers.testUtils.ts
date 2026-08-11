@@ -37,6 +37,8 @@ jest.mock('@/core/base', () => ({
 // Mock validateURL (transitive dependency)
 jest.mock('@/core/validation', () => ({
     validateURL: jest.fn(),
+    // Real redactor — logAiVerification sanitizes the MCP stderr tail through it.
+    sanitizeErrorForLogging: jest.requireActual('@/core/validation').sanitizeErrorForLogging,
 }));
 
 // Mock AI feature barrel
@@ -51,6 +53,11 @@ jest.mock('@/features/project-creation/services', () => ({
     generateAIContextFiles: jest.fn(),
     // Default: success — tests can override per-case via mockResolvedValueOnce.
     installAiDefaultsMcpTools: jest.fn().mockResolvedValue({ success: true }),
+    // Real predicate: pure function over the project record, so the
+    // storefront/headless fixtures keep their production meaning.
+    projectNeedsAppBuilderTooling: jest.requireActual(
+        '@/features/project-creation/services/aiToolingGate'
+    ).projectNeedsAppBuilderTooling,
 }));
 
 // Mock vscode
@@ -101,7 +108,10 @@ export {
 } from '@/features/dashboard/handlers/aiHandlers';
 export { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 export { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
-export { generateAIContextFiles, installAiDefaultsMcpTools } from '@/features/project-creation/services';
+export {
+    generateAIContextFiles,
+    installAiDefaultsMcpTools,
+} from '@/features/project-creation/services';
 export type { HandlerContext } from '@/types/handlers';
 
 import type { HandlerContext } from '@/types/handlers';
@@ -123,7 +133,12 @@ export function createMockContext(overrides?: Partial<HandlerContext>): HandlerC
     return {
         context: {
             extensionPath: '/mock/extension/path',
-            secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
+            secrets: {
+                get: jest.fn(),
+                store: jest.fn(),
+                delete: jest.fn(),
+                onDidChange: jest.fn(),
+            },
             globalState: memento,
             subscriptions: [],
         },
@@ -145,6 +160,7 @@ export function createMockContext(overrides?: Partial<HandlerContext>): HandlerC
                 path: '/projects/test',
                 stack: 'paas',
             }),
+            saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
         },
         sendMessage: jest.fn().mockResolvedValue(undefined),
         panel: {
@@ -166,7 +182,7 @@ function makeStatefulMemento(initial: Record<string, unknown> = {}) {
     const store = new Map<string, unknown>(Object.entries(initial));
     return {
         get: jest.fn((key: string, defaultValue?: unknown) =>
-            store.has(key) ? store.get(key) : defaultValue,
+            store.has(key) ? store.get(key) : defaultValue
         ),
         update: jest.fn((key: string, value: unknown) => {
             if (value === undefined) {
@@ -187,10 +203,12 @@ function makeStatefulMemento(initial: Record<string, unknown> = {}) {
  * handler can observe its own prior writes within a single test (mirrors the
  * real StateManager behavior).
  */
-export function makeScopedContext(opts: {
-    projectPrompts?: unknown[];
-    globalPrompts?: unknown[];
-} = {}) {
+export function makeScopedContext(
+    opts: {
+        projectPrompts?: unknown[];
+        globalPrompts?: unknown[];
+    } = {}
+) {
     const project = {
         name: 'p',
         path: '/projects/p',

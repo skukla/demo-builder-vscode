@@ -22,6 +22,25 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 // but throw on clean machines/CI. Idempotent; out-of-base paths still reject.
 fs.mkdirSync(path.join(os.homedir(), '.demo-builder', 'projects'), { recursive: true });
 
+// Keep test MCP sockets out of the real socket directory.
+//
+// `tests/extension-context.test.ts` and `tests/extension-activation-navigation.test.ts`
+// call the REAL activate(), which starts the in-extension MCP server. Its socket
+// path is derived from the projects dir, and the DEFAULT projects dir hashes to
+// the exact socket a running Extension Dev Host binds — verified 2026-08-10 by
+// computing both. So a plain `npx jest` renamed its own socket over the live
+// window's, and the developer's MCP session died mid-run with a listener alive on
+// a path no client could resolve. A worker leaked from one such run held that
+// path for four days.
+//
+// Per worker, so parallel workers cannot collide either. `globalTeardown.ts`
+// removes the whole tree.
+process.env.DEMO_BUILDER_MCP_SOCKET_DIR = path.join(
+    os.tmpdir(),
+    'demo-builder-mcp-test',
+    `w${process.env.JEST_WORKER_ID ?? '0'}`
+);
+
 afterEach(() => {
     // Reset ServiceLocator to prevent singleton pollution between tests
     ServiceLocator.reset();

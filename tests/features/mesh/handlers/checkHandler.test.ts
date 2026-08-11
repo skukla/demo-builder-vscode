@@ -252,6 +252,99 @@ describe('checkHandler - Security Tests (Step 2)', () => {
         });
     });
 
+    describe('Manual setup-instructions retired (Step 04)', () => {
+        // The config carries setupInstructions in production; the handler must NOT
+        // surface them anymore — absent-API is auto-remediated by the deploy path.
+        beforeEach(() => {
+            (mockContext.sharedState as any).apiServicesConfig = {
+                services: {
+                    apiMesh: {
+                        detection: {
+                            namePatterns: ['API Mesh'],
+                            codes: ['MeshAPI'],
+                            codeNames: ['MeshAPI'],
+                        },
+                        setupInstructions: [
+                            { step: 'Add a service', details: 'Add API Mesh in Console' },
+                        ],
+                    },
+                },
+            };
+        });
+
+        it('Layer 1 absent-API returns no setupInstructions', async () => {
+            // Default readFile mock returns empty services -> Layer 1 absent-API.
+            const result = await handleCheckApiMesh(mockContext, {
+                workspaceId: 'workspace-123',
+            });
+
+            expect(result.apiEnabled).toBe(false);
+            expect(result.setupInstructions).toBeUndefined();
+        });
+
+        it('Layer 2 fallback absent-API returns no setupInstructions', async () => {
+            // Force Layer 1 to fail so the handler falls back to Layer 2.
+            const fs = require('fs');
+            (fs.promises.readFile as jest.Mock).mockRejectedValueOnce(
+                new Error('download failed'),
+            );
+            // Layer 2 `aio api-mesh get --active` -> "unable to get mesh config" = API absent.
+            mockCommandExecutor.execute.mockResolvedValue({
+                code: 0,
+                stdout: 'Unable to get mesh config',
+                stderr: '',
+            });
+
+            const result = await handleCheckApiMesh(mockContext, {
+                workspaceId: 'workspace-123',
+            });
+
+            expect(result.apiEnabled).toBe(false);
+            expect(result.setupInstructions).toBeUndefined();
+        });
+
+        it('present-API reports apiEnabled true (post-automation verification signal)', async () => {
+            const fs = require('fs');
+            (fs.promises.readFile as jest.Mock).mockResolvedValueOnce(
+                '{"project":{"workspace":{"details":{"services":[{"name":"API Mesh","code":"MeshAPI"}]}}}}',
+            );
+            // No mesh exists yet for this workspace.
+            mockCommandExecutor.execute.mockResolvedValue({
+                code: 0,
+                stdout: 'No mesh found',
+                stderr: '',
+            });
+
+            const result = await handleCheckApiMesh(mockContext, {
+                workspaceId: 'workspace-123',
+            });
+
+            expect(result.apiEnabled).toBe(true);
+            expect(result.setupInstructions).toBeUndefined();
+        });
+
+        it('already-enabled project is a no-op (no instructions, no re-subscribe in the check)', async () => {
+            const fs = require('fs');
+            (fs.promises.readFile as jest.Mock).mockResolvedValueOnce(
+                '{"project":{"workspace":{"details":{"services":[{"name":"API Mesh","code":"MeshAPI"}]}}}}',
+            );
+            mockCommandExecutor.execute.mockResolvedValue({
+                code: 0,
+                stdout: 'No mesh found',
+                stderr: '',
+            });
+
+            const result = await handleCheckApiMesh(mockContext, {
+                workspaceId: 'workspace-123',
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.apiEnabled).toBe(true);
+            expect(result.meshExists).toBe(false);
+            expect(result.setupInstructions).toBeUndefined();
+        });
+    });
+
     describe('Org-Context Targeting (Phase 4a)', () => {
         it('should wrap the aio operations in withOrgContext', async () => {
             await handleCheckApiMesh(mockContext, {

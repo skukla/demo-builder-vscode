@@ -41,12 +41,26 @@ jest.mock('@/core/ui/components/layout', () => ({
             {subtitle && <h3>{subtitle}</h3>}
         </div>
     ),
+    ControlPanelLayout: ({ masthead, primary, secondary }: any) => (
+        <div data-testid="control-panel">
+            <div data-testid="control-panel-masthead">{masthead}</div>
+            <div data-testid="control-panel-primary">{primary}</div>
+            {secondary && <div data-testid="control-panel-secondary">{secondary}</div>}
+        </div>
+    ),
 }));
 
 // Mock feedback components
 jest.mock('@/core/ui/components/feedback', () => ({
-    StatusCard: ({ label, status, color }: any) => (
-        <div data-testid={`status-card-${label}`} data-color={color}>{label}: {status}</div>
+    StatusCard: ({ label, status, color, action }: any) => (
+        <div data-testid={`status-card-${label}`} data-color={color}>
+            {label}: {status}
+            {action && (
+                <a data-testid={action.testId} onClick={action.onPress}>
+                    {action.label}
+                </a>
+            )}
+        </div>
     ),
 }));
 
@@ -85,12 +99,23 @@ jest.mock('@adobe/react-spectrum', () => ({
         </div>
     ),
     Item: ({ children }: any) => <>{children}</>,
+    // The ActionGrid's lifecycle and remedy tiles wrap their buttons in a
+    // TooltipTrigger; both render inline so the tooltip text is queryable
+    // without a hover. Added when the runtime status moved off the surface and
+    // into these tooltips.
+    TooltipTrigger: ({ children }: any) => <>{children}</>,
+    Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
     Divider: () => <hr />,
     ProgressCircle: () => <div data-testid="progress-circle" />,
     Link: ({ children, onPress, _isQuiet, ...props }: any) => (
         <a onClick={onPress} data-testid="sign-in-link" {...props}>{children}</a>
     ),
     DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
+    TextField: ({ label, value, onChange, ...props }: any) => (
+        <input aria-label={label} value={value ?? ''} onChange={(e) => onChange?.(e.target.value)} {...props} />
+    ),
+    ProgressCircle: ({ ...props }: any) => <div data-testid="progress-circle" {...props} />,
+    Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
 }));
 
 // Stub the capabilities modal — its real implementation renders the shared
@@ -169,6 +194,11 @@ jest.mock('@spectrum-icons/workflow/More', () => ({
 jest.mock('@spectrum-icons/workflow/Edit', () => ({
     __esModule: true,
     default: () => <span data-testid="edit-icon" />,
+}));
+// Republish tile (Storefront zone remedy).
+jest.mock('@spectrum-icons/workflow/Replay', () => ({
+    __esModule: true,
+    default: () => <span data-testid="replay-icon" />,
 }));
 jest.mock('@spectrum-icons/workflow/PublishCheck', () => ({
     __esModule: true,

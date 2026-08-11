@@ -1,82 +1,53 @@
+<!-- Last verified: 2026-07-03 -->
 # Core Infrastructure
 
 ## Overview
 
-The `core/` directory contains foundational infrastructure code used throughout the extension. This code provides shared capabilities that all features depend on: command execution, logging, state management, communication protocols, and base classes.
+The `core/` directory contains foundational infrastructure code used throughout the extension. This code provides shared capabilities that all features depend on: command execution, logging, state management, communication protocols, validation, and base classes.
 
 **Path Alias**: `@/core/*`
-
-## Core vs Shared
-
-⚠️ **Note**: The codebase currently has BOTH `src/core/` and `src/shared/` directories with overlapping purposes:
-
-- **`src/core/`** (THIS directory) - Primary infrastructure layer with 170+ imports
-- **`src/shared/`** - Contains only `validation/` module with 3 imports
-
-**Current State**: `@/core/*` is the de facto standard infrastructure layer. The `@/shared/*` path alias exists but is minimally used (only for validation).
 
 ## Directory Structure
 
 ```
 core/
-├── auth/               # Authentication guards
-│   └── adobeAuthGuard.ts  # Shared ensureAdobeIOAuth utility
-├── base/                # Base classes & types (→ base/README.md)
-│   ├── BaseCommand.ts
-│   ├── BaseWebviewCommand.ts
-│   └── types.ts
-├── cache/              # Cache utilities
-│   ├── cacheUtils.ts   # Shared cache functions (TTL, jitter, expiry)
-│   └── index.ts
-├── commands/           # Command classes
-│   └── ResetAllCommand.ts
+├── auth/               # Authentication guards (adobeAuthGuard.ts)
+├── base/               # Base classes (→ base/README.md)
+│   ├── baseCommand.ts
+│   ├── baseWebviewCommand.ts
+│   └── webviewPanelManager.ts
+├── cache/              # Cache utilities (cacheUtils.ts)
+├── commands/           # Core-owned commands (ResetAllCommand, ResetAiOnboardingCommand)
 ├── communication/      # Webview messaging (→ communication/README.md)
-│   ├── WebviewCommunicationManager.ts
-│   └── types.ts
-├── config/             # Configuration management
-│   └── configManager.ts
-├── di/                 # Dependency injection
-│   └── serviceLocator.ts
+│   └── webviewCommunicationManager.ts
+├── config/             # Configuration loading & config-file generation
+│   ├── ConfigurationLoader.ts
+│   └── configFileGenerator.ts
+├── di/                 # Dependency injection (serviceLocator.ts)
+├── errors/             # Error infrastructure (formatters are feature-specific; see errors/index.ts)
+├── handlers/           # Handler dispatch utilities
 ├── logging/            # Logging system (→ logging/README.md)
-│   ├── logger.ts
 │   ├── debugLogger.ts
 │   ├── errorLogger.ts
-│   └── stepLogger.ts
+│   ├── stepLogger.ts
+│   └── config/logging.json
 ├── shell/              # Command execution (→ shell/README.md)
-│   ├── commandExecutor.ts
-│   ├── resourceLocker.ts
-│   ├── fileWatcher.ts
-│   └── rateLimiter.ts
+│   ├── commandExecutor.ts, commandQueue.ts, commandSequencer.ts
+│   ├── pollingService.ts, retryStrategyManager.ts, resourceLocker.ts
+│   ├── processCleanup.ts, fileWatcher.ts, rateLimiter.ts
+│   └── orgContextEnv.ts, environmentSetup.ts, portChecker.ts, buildComponent.ts
 ├── state/              # State management (→ state/README.md)
-│   ├── stateManager.ts
-│   ├── projectConfigWriter.ts
-│   ├── projectDirectoryScanner.ts
-│   ├── projectFileLoader.ts
-│   ├── projectStateSync.ts
-│   ├── recentProjectsManager.ts
-│   ├── sessionUIState.ts
-│   └── transientStateManager.ts
-├── ui/                 # UI components & patterns
-│   ├── FormField.tsx
-│   ├── LoadingDisplay.tsx
-│   └── components/
-├── handlers/           # Handler dispatch utilities
-│   ├── dispatchHandler.ts
-│   ├── errorHandling.ts
-│   └── index.ts
-├── utils/              # Core utilities
-│   ├── progressUnifier/
-│   ├── disposableStore.ts
-│   ├── githubUrlParser.ts
-│   ├── loadingHTML.ts
-│   ├── oneTimeTip.ts
-│   └── timeoutConfig.ts
-├── validation/         # Validation barrel (re-exports from @/shared/validation)
-│   └── index.ts
-├── vscode/             # VS Code API wrappers
-│   ├── workspaceWatcherManager.ts
-│   ├── envFileWatcherService.ts
-│   └── index.ts
+│   ├── stateManager.ts, projectStateSync.ts, projectConfigWriter.ts
+│   ├── projectDirectoryScanner.ts, projectFileLoader.ts
+│   └── recentProjectsManager.ts, sessionUIState.ts, transientStateManager.ts
+├── ui/                 # Shared React UI for webviews
+│   ├── components/     # ui/, forms/, feedback/, navigation/, layout/, selection/
+│   ├── hooks/          # Shared hooks (→ ui/hooks/CLAUDE.md)
+│   ├── styles/
+│   └── utils/          # WebviewClient, frontendTimeouts, etc.
+├── utils/              # Core utilities (timeoutConfig, progressUnifier/, disposableStore, ...)
+├── validation/         # Validation module (→ validation/README.md)
+├── vscode/             # VS Code API wrappers (watchers)
 └── constants.ts        # Shared constants
 ```
 
@@ -113,9 +84,9 @@ core/
 - State management integration
 - Progress indicators
 - User prompts
-- Webview lifecycle management
+- Webview lifecycle management (with `webviewPanelManager.ts`)
 
-**Used By**: All command implementations in `src/commands/`
+**Used By**: Command implementations in `src/commands/` and feature `commands/` directories
 
 **Path Alias**: `@/core/base`
 
@@ -136,22 +107,17 @@ core/
 - Security jitter to prevent timing attacks
 - Composable cache utilities (used by feature caches)
 
-**Note:** Replaces the former `AbstractCacheManager` base class with simple, composable utility functions.
-
 **Path Alias**: `@/core/cache`
 
 ---
 
 ### commands/
 
-**Purpose**: VS Code command implementations
+**Purpose**: Core-owned developer commands
 
 **Key Exports:**
 - `ResetAllCommand` - Development command to reset extension state
-
-**Responsibilities:**
-- Extension reset functionality
-- Developer utilities
+- `ResetAiOnboardingCommand` - Reset only AI onboarding state (flags + AI settings)
 
 **Path Alias**: `@/core/commands`
 
@@ -169,9 +135,7 @@ core/
 - Message queuing until both sides ready
 - Request-response pattern with timeouts
 - Automatic retry with exponential backoff
-- Async handler resolution
-
-**Critical Fix**: v1.5.0 fixed async handler resolution (Promises now properly awaited)
+- Async handler resolution (handlers properly awaited)
 
 **Path Alias**: `@/core/communication`
 
@@ -179,15 +143,11 @@ core/
 
 ### config/
 
-**Purpose**: Extension configuration management
+**Purpose**: Configuration loading and config-file generation
 
-**Key Services:**
-- `ConfigManager` - Centralized configuration access
-
-**Responsibilities:**
-- VS Code settings integration
-- Configuration validation
-- Default value management
+**Key Exports:**
+- `ConfigurationLoader<T>` - Generic loader for JSON configuration
+- Config file generation utilities (`configFileGenerator.ts`) - template + placeholder based JSON generation (used by EDS site.json)
 
 **Path Alias**: `@/core/config`
 
@@ -198,14 +158,17 @@ core/
 **Purpose**: Dependency injection and service location
 
 **Key Services:**
-- `ServiceLocator` - Service registry and resolution
-
-**Responsibilities:**
-- Service registration
-- Dependency resolution
-- Singleton management
+- `ServiceLocator` - Service registry and resolution (e.g. `ServiceLocator.getCommandExecutor()`)
 
 **Path Alias**: `@/core/di`
+
+---
+
+### errors/
+
+**Purpose**: Error infrastructure. Generic error formatting was removed in favor of domain-specific formatters (mesh: `@/features/mesh/utils/errorFormatter.ts`; auth: `@/features/authentication/services/authenticationErrorFormatter.ts`). See `docs/patterns/error-handling.md`.
+
+**Path Alias**: `@/core/errors`
 
 ---
 
@@ -216,15 +179,8 @@ core/
 **Key Exports:**
 - `dispatchHandler()` - Dispatch messages to handler maps
 - `hasHandler()` - Check if handler exists for message type
-- `getRegisteredTypes()` - Get all registered message types
 - `createErrorResponse()` - Create standardized error responses
 - `wrapHandler()` - Wrap handlers with error handling
-
-**Responsibilities:**
-- Message dispatch to handler maps
-- Handler existence checking
-- Error response standardization
-- Handler wrapping for consistent error handling
 
 **Usage Pattern:**
 Features define handler maps as simple object literals, then use `dispatchHandler()` to route messages:
@@ -233,14 +189,12 @@ Features define handler maps as simple object literals, then use `dispatchHandle
 // Feature handler map (object literal)
 export const meshHandlers = defineHandlers({
     'check-api-mesh': handleCheckApiMesh,
-    'create-api-mesh': handleCreateApiMesh,
+    'delete-api-mesh': handleDeleteApiMesh,
 });
 
 // Dispatch in command
 const result = await dispatchHandler(meshHandlers, context, messageType, data);
 ```
-
-**Note:** Replaces the former `BaseHandlerRegistry` class-based pattern with simple functional utilities.
 
 **Path Alias**: `@/core/handlers`
 
@@ -251,15 +205,13 @@ const result = await dispatchHandler(meshHandlers, context, messageType, data);
 **Purpose**: Consistent logging across all features
 
 **Key Services:**
-- `Logger` - Basic logging (backward compatible)
-- `DebugLogger` - Dual channel logging (Logs + Debug)
+- `DebugLogger` (via `getLogger()` / `initializeLogger()`) - Dual channel logging (Logs + Debug)
 - `ErrorLogger` - Error tracking with UI integration
-- `StepLogger` - Configuration-driven logging
+- `StepLogger` (via `getStepLogger()`) - Configuration-driven logging
 
 **Responsibilities:**
 - Dual output channels ("Demo Builder: User Logs", "Demo Builder: Debug Logs")
-- Configuration-driven step names (wizard-steps.json)
-- Message templates (logging.json)
+- Message templates (`logging/config/logging.json`)
 - Command execution logging with timing
 - Error tracking and status bar integration
 
@@ -275,8 +227,10 @@ const result = await dispatchHandler(meshHandlers, context, messageType, data);
 - `CommandExecutor` - Command queuing and execution
 - `ProcessCleanup` - Event-driven process termination with tree killing
 - `ResourceLocker` - Mutual exclusion for resources
+- `PollingService` / `RetryStrategyManager` - Smart polling and retry strategies
 - `FileWatcher` - File change detection
 - `RateLimiter` - Rate limiting for external APIs
+- `orgContextEnv` - Per-invocation Adobe org/project/workspace targeting for CLI ops
 
 **Responsibilities:**
 - Command queuing for sequential execution
@@ -285,25 +239,14 @@ const result = await dispatchHandler(meshHandlers, context, messageType, data);
 - Smart polling with exponential backoff
 - Output streaming and capture
 - Timeout handling
-- File system monitoring
 - Process tree termination (cross-platform)
 
 **ProcessCleanup Service:**
 - Event-driven process termination (no polling or grace periods)
 - Kills entire process tree (parent + children)
-- Cross-platform: macOS (pkill -P), Linux (pkill -P), Windows (taskkill /T)
+- Cross-platform: macOS/Linux (pkill -P), Windows (taskkill /T)
 - Graceful shutdown with SIGTERM, fallback to SIGKILL
 - Used by stopDemo and startDemo (port conflict resolution)
-
-```typescript
-import { ProcessCleanup } from '@/core/shell/processCleanup';
-
-// Kill process and all children
-await ProcessCleanup.killProcessTree(pid);
-
-// Kill with custom timeout
-await ProcessCleanup.killProcessTree(pid, { timeoutMs: 10000 });
-```
 
 **Path Alias**: `@/core/shell`
 
@@ -332,17 +275,13 @@ await ProcessCleanup.killProcessTree(pid, { timeoutMs: 10000 });
 
 ### ui/
 
-**Purpose**: Shared UI components and patterns
+**Purpose**: Shared React UI for webviews
 
-**Key Components:**
-- `FormField` - Reusable form field component
-- `LoadingDisplay` - Loading state display
-- Component patterns and utilities
-
-**Responsibilities:**
-- Shared React components
-- UI patterns and utilities
-- Webview styling helpers
+**Key Contents:**
+- `components/` - Shared components organized by kind (`forms/FormField`, `feedback/LoadingDisplay`, `navigation/`, `layout/`, `selection/`, timeline nav)
+- `hooks/` - Shared React hooks (see `ui/hooks/CLAUDE.md`)
+- `utils/` - Webview-side utilities (`WebviewClient`, `frontendTimeouts`)
+- `styles/` - Shared styles
 
 **Path Alias**: `@/core/ui`
 
@@ -353,20 +292,14 @@ await ProcessCleanup.killProcessTree(pid, { timeoutMs: 10000 });
 **Purpose**: Core utility functions
 
 **Key Utilities:**
-- `DisposableStore` - VS Code-style disposable collection with LIFO ordering
-- `ProgressUnifier` - Unified progress tracking
-- `fileSystemUtils` - File operations
+- `timeoutConfig` - Centralized timeout buckets (`TIMEOUTS`)
+- `progressUnifier/` - Unified progress tracking (exact, milestones, synthetic strategies)
+- `disposableStore` - VS Code-style disposable collection with LIFO ordering
 - `githubUrlParser` - GitHub URL parsing (owner/repo/branch extraction)
-- `loadingHTML` - Webview loading states
+- `loadingHTML` / `getWebviewHTMLWithBundles` / `bundleUri` - Webview HTML generation
 - `oneTimeTip` - Show-once tips via VS Code globalState
-- `timeoutConfig` - Centralized timeout configuration
-
-**Responsibilities:**
-- Progress tracking strategies (exact, milestones, synthetic)
-- Safe file operations
-- Webview loading HTML generation
-- Timeout configuration for Adobe CLI
-- Resource lifecycle management (DisposableStore)
+- `quickPickUtils` - Shared QuickPick helpers
+- `browserUtils`, `envParser`, `writeFileAtomic`, `promiseUtils`, `timeFormatting`, `executionLock`
 
 **DisposableStore Pattern:**
 - LIFO disposal ordering (Last In, First Out)
@@ -389,11 +322,17 @@ store.add(eventEmitter.event(handler));
 
 ### validation/
 
-**Purpose**: Barrel file that re-exports from `@/shared/validation`
+**Purpose**: Validation utilities — security validation (backend) and field validation (UI)
 
-**Note**: This is a compatibility layer. The actual validation code lives in `src/shared/validation/`.
+**Key Contents:**
+- `Validator.ts` - Core validation primitives
+- `PathSafetyValidator.ts` - Path traversal protection
+- `URLValidator.ts` - URL validation
+- `SensitiveDataRedactor.ts` - Redaction of secrets in logs/output
+- `fieldValidation.ts` / `normalizers.ts` - UI field validation and normalization
+- `validators/` - Domain validators (AccessToken, AdobeResource, NodeVersion, ProjectName)
 
-**Exports**: All validators from `@/shared/validation` (see `src/shared/validation/README.md`)
+See `validation/README.md` for details.
 
 **Path Alias**: `@/core/validation`
 
@@ -407,28 +346,18 @@ store.add(eventEmitter.event(handler));
 - `WorkspaceWatcherManager` - Workspace-scoped file watcher management
 - `EnvFileWatcherService` - .env file change detection with hash-based validation
 
-**Responsibilities:**
-- VS Code API abstractions
-- UI helper functions
-- Extension context utilities
-- Workspace-scoped resource management
-- File watcher lifecycle management
-
 **WorkspaceWatcherManager:**
 - Creates file watchers scoped to workspace folders
 - Auto-disposes watchers when workspace folders removed
 - Prevents duplicate watchers (same folder + pattern)
-- Uses `registerWatcher()` for pre-configured watchers
 - LIFO disposal via DisposableStore
 
 **EnvFileWatcherService:**
-- Workspace-scoped .env file watchers (replaces global watcher)
+- Workspace-scoped .env file watchers
 - Hash-based change detection (prevents false notifications)
 - Programmatic write suppression (Configure UI coordination)
-- Demo startup grace period (10-second anti-spam)
+- Demo startup grace period (anti-spam)
 - Show-once notification management
-- 10 internal commands for state coordination
-- Defense-in-depth path validation (Security Agent enhancement)
 
 **Path Alias**: `@/core/vscode`
 
@@ -475,7 +404,6 @@ class MyCommand extends BaseCommand {
 
         await this.withProgress('Processing...', async (progress) => {
             await this.doWork(project);
-            this.showSuccessMessage('Operation completed');
         });
     }
 }
@@ -497,25 +425,19 @@ class MyWebviewCommand extends BaseWebviewCommand {
             return await this.handleAction(data);
         });
     }
-
-    protected async getInitialData(): Promise<any> {
-        return { config: await this.loadConfig() };
-    }
 }
 ```
 
 ### Pattern 3: Shell Command Execution
 
 ```typescript
-import { getCommandExecutor } from '@/core/shell';
+import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
-const executor = getCommandExecutor();
+const executor = ServiceLocator.getCommandExecutor();
 
-const result = await executor.execute('aio', ['console:org:select', orgId], {
-    timeout: TIMEOUTS.CONFIG_WRITE,
-    exclusive: 'adobe-cli',
-    shell: true
+const result = await executor.execute('aio api-mesh:get', {
+    timeout: TIMEOUTS.NORMAL,
 });
 ```
 
@@ -526,28 +448,18 @@ import { StateManager } from '@/core/state';
 
 const stateManager = new StateManager(context);
 
-// Get/set state
 await stateManager.setState('key', value);
 const value = await stateManager.getState('key', defaultValue);
-
-// Clear state
-await stateManager.clearState('key');
 ```
 
 ### Pattern 5: Logging
 
 ```typescript
-import { getLogger, ErrorLogger, StepLogger } from '@/core/logging';
+import { getLogger, getStepLogger } from '@/core/logging';
 
 const logger = getLogger();
 logger.info('User-facing message');
 logger.debug('Debug details');
-
-const errorLogger = new ErrorLogger();
-errorLogger.logError('Operation failed', error, { critical: true });
-
-const stepLogger = new StepLogger();
-stepLogger.log('adobe-auth', 'Checking authentication');
 ```
 
 ## Architectural Principles
@@ -557,43 +469,18 @@ stepLogger.log('adobe-auth', 'Checking authentication');
 - **Features**: Business logic and domain-specific functionality
 - **Commands**: Orchestration layer that coordinates features
 
-### 2. Dependency Inversion
-Core modules define interfaces, features implement them:
-
-```typescript
-// Core defines interface
-interface IAuthService {
-    isAuthenticated(): Promise<boolean>;
-}
-
-// Feature implements interface
-class AuthenticationService implements IAuthService {
-    async isAuthenticated(): Promise<boolean> {
-        // Implementation
-    }
-}
-```
-
-### 3. Single Responsibility
+### 2. Single Responsibility
 Each core module has one clear purpose:
 - `logging/` - Only logging
 - `state/` - Only state persistence
 - `shell/` - Only command execution
 
-### 4. Avoid Circular Dependencies
+### 3. Avoid Circular Dependencies
 Core → Features → Commands (one-way dependency flow)
 
 ## Testing Core Modules
 
-Core modules should have comprehensive tests:
-
-```
-core/logging/
-├── logger.ts
-├── logger.test.ts
-├── errorLogger.ts
-└── errorLogger.test.ts
-```
+Core module tests live under `tests/core/`, mirroring the source structure.
 
 **Test Principles:**
 - Test in isolation
@@ -601,50 +488,9 @@ core/logging/
 - Test edge cases
 - High coverage (core code is critical)
 
-## Migration Notes
+## History
 
-### From utils/ to core/
-
-Many utilities were migrated from `utils/` to `core/`:
-
-**Before**:
-```
-utils/
-├── externalCommandManager.ts
-├── webviewCommunicationManager.ts
-├── stateManager.ts
-└── errorLogger.ts
-```
-
-**After**:
-```
-core/
-├── shell/
-│   └── commandExecutor.ts
-├── communication/
-│   └── webviewCommunicationManager.ts
-├── state/
-│   └── stateManager.ts
-└── logging/
-    └── errorLogger.ts
-```
-
-### Planned Migration: core/ → shared/
-
-⚠️ **Note**: Documentation in `src/CLAUDE.md` references `src/shared/` as the infrastructure layer, but the codebase primarily uses `src/core/`. This suggests a planned migration that was never completed.
-
-**Current Reality**:
-- `@/core/*` - 170+ imports (primary infrastructure)
-- `@/shared/*` - 3 imports (only validation module)
-
-**Recommendation**: Either complete the migration to `@/shared/` OR update documentation to reflect `@/core/` as the standard.
-
-## Known Issues
-
-1. **Documentation Inconsistency**: `src/CLAUDE.md` documents `shared/` but codebase uses `core/`
-2. **Duplicate validation/**: Both `src/core/validation/` and `src/shared/validation/` exist
-3. **Mixed naming**: Some modules use `Manager` suffix, others use `Service`
-4. **Path alias confusion**: `@/core/*` and `@/shared/*` both exist with unclear boundaries
+`src/core/` absorbed the former `src/utils/` and `src/shared/` infrastructure (both directories are gone; `src/utils/` retains only `autoUpdater.ts`). `@/core/*` is the single infrastructure layer.
 
 ## Adding New Core Modules
 
@@ -656,18 +502,10 @@ core/
 **How to add:**
 1. Create directory in `core/`
 2. Add services/utilities
-3. Add types.ts for module types
+3. Add index.ts exporting public API
 4. Add README.md with module documentation
-5. Add index.ts exporting public API
-6. Document in this file
-7. Add comprehensive tests
-
-**Example:**
-```typescript
-// core/my-module/index.ts
-export { MyService } from './myService';
-export type { MyServiceConfig, MyServiceResult } from './types';
-```
+5. Document in this file
+6. Add comprehensive tests
 
 ## Performance Considerations
 
@@ -679,7 +517,7 @@ export type { MyServiceConfig, MyServiceResult } from './types';
 
 ## Security Considerations
 
-- Sanitize all user input (use `@/shared/validation`)
+- Sanitize all user input (use `@/core/validation`)
 - Validate paths before file operations
 - Use timeouts for all external commands
 - Never expose internal errors to users
@@ -689,4 +527,4 @@ export type { MyServiceConfig, MyServiceResult } from './types';
 
 For feature architecture, see `../features/CLAUDE.md`
 For overall architecture, see `../CLAUDE.md`
-For validation module, see `../shared/validation/README.md`
+For validation module, see `validation/README.md`

@@ -5,30 +5,35 @@
  * but the user still wants to confirm what's installed. Layout:
  *
  *   Skills · N installed                       ← static summary
- *     ▸ Demo Builder (9)                       ← group row, collapsible
- *     ▸ Adobe AEM (6)                          ← group row, collapsible
+ *   ┌─────────────────────────────┐
+ *   │ DEMO BUILDER · 12           │            ← sticky group header
+ *   │   add-component             │
+ *   │   …                         │            ← every skill visible; the
+ *   │ ADOBE AEM · 13              │              LIST scrolls, the modal
+ *   │   …                         │              never resizes
+ *   └─────────────────────────────┘
  *
- * Source groups are always visible — they answer "what's installed?" at a
- * glance. Clicking a group reveals its alphabetized skill names; clicking
- * again hides them. Groups expand independently. Skill names are the deep
- * detail and stay tucked under their group until asked for.
- *
- * Group toggles use native <button> rather than Spectrum's <Link> on purpose:
- * Spectrum interactive components inside Spectrum <Dialog> Content crash the
- * dialog tree in this codebase (focus manager conflicts with React Aria's
- * usePress). Modal.tsx's FocusableButton applies the same workaround for the
- * modal's action footer.
+ * Flat by design (2026-07-09, replacing the collapsible groups): expanding
+ * accordions resized the modal and made it jump. A fixed-height scroll region
+ * with sticky headers shows everything at rest — no interaction, no jump.
  */
 
 import { Flex, Text } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
+import { Spinner } from '@/core/ui/components/ui/Spinner';
 import type { SkillInventoryEntry, SkillSource } from '@/types/ai';
 
 export interface AiSkillsListProps {
     skills: SkillInventoryEntry[];
     /** True when the skill inspector errored — list is replaced by a warning row. */
     hasError?: boolean;
+    /**
+     * The verify has not produced a result yet. Distinct from an empty list:
+     * without it, \"not asked yet\" rendered as \"none exist\" and told the user to
+     * regenerate files nothing had looked at.
+     */
+    isLoading?: boolean;
 }
 
 /** Display labels for each source, in canonical render order. */
@@ -38,12 +43,7 @@ const SOURCE_GROUPS: ReadonlyArray<{ source: SkillSource; label: string }> = [
     { source: 'unknown', label: 'Custom' },
 ];
 
-/** Resets browser button chrome so the toggle reads as inline text. */
-const BUTTON_RESET = 'bg-transparent border-none p-0 m-0 cursor-pointer text-left';
-
-export function AiSkillsList({ skills, hasError = false }: AiSkillsListProps): React.ReactElement {
-    const [expandedGroups, setExpandedGroups] = useState<ReadonlySet<SkillSource>>(new Set());
-
+export function AiSkillsList({ skills, hasError = false, isLoading = false }: AiSkillsListProps): React.ReactElement {
     const grouped = useMemo(() => {
         const bySource = new Map<SkillSource, SkillInventoryEntry[]>();
         for (const skill of skills) {
@@ -54,9 +54,11 @@ export function AiSkillsList({ skills, hasError = false }: AiSkillsListProps): R
         for (const bucket of bySource.values()) {
             bucket.sort((a, b) => a.name.localeCompare(b.name));
         }
-        return SOURCE_GROUPS
-            .map(({ source, label }) => ({ source, label, items: bySource.get(source) ?? [] }))
-            .filter(group => group.items.length > 0);
+        return SOURCE_GROUPS.map(({ source, label }) => ({
+            source,
+            label,
+            items: bySource.get(source) ?? [],
+        })).filter((group) => group.items.length > 0);
     }, [skills]);
 
     if (hasError) {
@@ -70,6 +72,17 @@ export function AiSkillsList({ skills, hasError = false }: AiSkillsListProps): R
         );
     }
 
+    // Error first: an inspector failure is a settled answer, so "checking" would
+    // be a lie. Loading second: only claim emptiness once something has looked.
+    if (isLoading) {
+        return (
+            <Flex gap="size-100" alignItems="center" data-testid="ai-skills-loading">
+                <Spinner size="S" aria-label="Checking" />
+                <Text UNSAFE_className="text-sm text-gray-700">Checking the project's skills…</Text>
+            </Flex>
+        );
+    }
+
     if (skills.length === 0) {
         return (
             <Text UNSAFE_className="text-sm text-gray-700" data-testid="ai-skills-empty">
@@ -78,51 +91,38 @@ export function AiSkillsList({ skills, hasError = false }: AiSkillsListProps): R
         );
     }
 
-    const toggleGroup = (source: SkillSource) => {
-        setExpandedGroups(prev => {
-            const next = new Set(prev);
-            if (next.has(source)) {
-                next.delete(source);
-            } else {
-                next.add(source);
-            }
-            return next;
-        });
-    };
-
     return (
         <Flex direction="column" gap="size-100" data-testid="ai-skills-list">
-            <Text data-testid="ai-skills-summary" UNSAFE_className="text-sm font-semibold text-gray-800">
+            <Text
+                data-testid="ai-skills-summary"
+                UNSAFE_className="text-sm font-semibold text-gray-800"
+            >
                 Skills · {skills.length} installed
             </Text>
-            {grouped.map(({ source, label, items }) => {
-                const isExpanded = expandedGroups.has(source);
-                return (
-                    <Flex direction="column" gap="size-50" key={source}>
-                        <button
-                            type="button"
+            {/* Fixed-height scroll region — the modal frame never resizes. */}
+            <div className="ai-skills-scroll">
+                {grouped.map(({ source, label, items }) => (
+                    <div key={source}>
+                        <div
+                            className="ai-skills-group-header"
                             data-testid={`ai-skills-group-${source}`}
-                            onClick={() => toggleGroup(source)}
-                            className={`${BUTTON_RESET} text-xs font-semibold text-gray-600`}
                         >
-                            {isExpanded ? '▾' : '▸'} {label} ({items.length})
-                        </button>
-                        {isExpanded && (
-                            <Flex direction="column" gap="size-50" marginStart="size-200">
-                                {items.map(skill => (
-                                    <Text
-                                        key={skill.path}
-                                        data-testid="ai-skill-row"
-                                        UNSAFE_className="text-sm text-gray-800"
-                                    >
-                                        {skill.name}
-                                    </Text>
-                                ))}
-                            </Flex>
-                        )}
-                    </Flex>
-                );
-            })}
+                            {label} · {items.length}
+                        </div>
+                        <Flex direction="column" gap="size-50" marginStart="size-150">
+                            {items.map((skill) => (
+                                <Text
+                                    key={skill.path}
+                                    data-testid="ai-skill-row"
+                                    UNSAFE_className="text-sm text-gray-800"
+                                >
+                                    {skill.name}
+                                </Text>
+                            ))}
+                        </Flex>
+                    </div>
+                ))}
+            </div>
         </Flex>
     );
 }

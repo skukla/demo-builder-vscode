@@ -321,7 +321,7 @@ The service resolver has 24 tests covering:
 - ✅ Edge cases (no config, multiple providers, partial coverage)
 - ✅ Deduplication logic
 - ✅ Logging behavior
-- ✅ Helper functions (`isServiceProvided`, `getServiceProviders`)
+- ✅ Helper functions for provider lookup
 
 ### Running Tests
 

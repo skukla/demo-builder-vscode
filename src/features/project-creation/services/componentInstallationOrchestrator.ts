@@ -10,7 +10,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { ProgressTracker } from '../handlers/shared';
 import { installAiDefaultsMcpTools } from './aiDefaultsInstaller';
-import { COMPONENT_IDS } from '@/core/constants';
+import { projectNeedsAppBuilderTooling } from './aiToolingGate';
 import { ComponentManager } from '@/features/components/services/componentManager';
 import type { Project, TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
@@ -41,10 +41,9 @@ export interface InstallationContext {
  *
  * Downloads source code without running npm install.
  */
-export async function cloneAllComponents(
-    context: InstallationContext,
-): Promise<void> {
-    const { project, componentDefinitions, progressTracker, logger, saveProject, componentsDir } = context;
+export async function cloneAllComponents(context: InstallationContext): Promise<void> {
+    const { project, componentDefinitions, progressTracker, logger, saveProject, componentsDir } =
+        context;
 
     progressTracker('Downloading Components', 25, 'Cloning repositories...');
     logger.debug('[Project Creation] Phase 1: Downloading components...');
@@ -72,7 +71,11 @@ export async function cloneAllComponents(
                 ? { ...installOptions, componentsDir: targetComponentsDir }
                 : installOptions;
 
-            const result = await componentManager.installComponent(project, definition, optionsWithDir);
+            const result = await componentManager.installComponent(
+                project,
+                definition,
+                optionsWithDir,
+            );
 
             if (!result.success || !result.component) {
                 throw new Error(`Failed to clone ${definition.name}: ${result.error}`);
@@ -101,9 +104,7 @@ export async function cloneAllComponents(
 /**
  * Phase 2: Install npm dependencies for all components in parallel
  */
-export async function installAllComponents(
-    context: InstallationContext,
-): Promise<void> {
+export async function installAllComponents(context: InstallationContext): Promise<void> {
     const { project, componentDefinitions, progressTracker, logger } = context;
 
     progressTracker('Installing Components', 40, 'Installing npm packages...');
@@ -119,7 +120,10 @@ export async function installAllComponents(
 
             logger.debug(`[Project Creation] npm install: ${definition.name}`);
 
-            const installResult = await componentManager.installNpmDependencies(componentPath, definition);
+            const installResult = await componentManager.installNpmDependencies(
+                componentPath,
+                definition,
+            );
 
             if (!installResult.success) {
                 throw new Error(`Failed to install ${definition.name}: ${installResult.error}`);
@@ -131,13 +135,14 @@ export async function installAllComponents(
 
     await Promise.all(installPromises);
 
-    // EDS projects get the ai-defaults MCP tools installed into a per-project
-    // isolated dir (`<project>/.demo-builder-mcp/`), decoupled from the
-    // storefront manifest (whose `npm install` can abort on b2b @dropins).
+    // App Builder-adjacent projects (EDS storefront, mesh, or attached App
+    // Builder component) get the ai-defaults MCP tools installed into a
+    // per-project isolated dir (`<project>/.demo-builder-mcp/`), decoupled from
+    // the storefront manifest (whose `npm install` can abort on b2b @dropins).
     // NON-FATAL: MCP tooling is optional — a failure here must never abort
     // project creation, so log a warning and carry on.
-    if (project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path) {
-        const mcpResult = await installAiDefaultsMcpTools(project.path);
+    if (projectNeedsAppBuilderTooling(project)) {
+        const mcpResult = await installAiDefaultsMcpTools(project.path, project);
         if (!mcpResult.success) {
             logger.warn(
                 `[Project Creation] AI MCP tools install failed (non-fatal): ${mcpResult.error ?? 'unknown error'}`,

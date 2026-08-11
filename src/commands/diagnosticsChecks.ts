@@ -78,20 +78,41 @@ export async function checkTools(): Promise<ToolsInfo> {
     };
 }
 
-export async function checkAdobeCLI(): Promise<AdobeCLIInfo> {
+export async function checkAdobeCLI(aioTool: CommandCheckResult): Promise<AdobeCLIInfo> {
     const adobe: AdobeCLIInfo = {
         installed: false,
     };
 
-    // Check if Adobe CLI is installed
-    const aioVersion = await checkCommand('aio --version');
-    adobe.installed = aioVersion.installed;
-    adobe.version = aioVersion.output;
+    // Reuse what `checkTools` already learned instead of running `aio --version`
+    // a second time. The cheapest aio invocation costs ~1.7s of CLI startup
+    // before doing any work (measured darwin 2026-08-08; `node --version` is
+    // 52ms), so the duplicate was pure latency for a value already in hand.
+    adobe.installed = aioTool.installed;
+    // `.output`, not `.version` — CommandCheckResult carries the raw stdout.
+    // Typing this parameter loosely as `{ version?: string }` let an object that
+    // never had that field type-check, and the report shipped "Version:
+    // undefined" (live 2026-08-08).
+    adobe.version = aioTool.output;
 
     if (adobe.installed) {
-        await checkAuthenticationStatus(adobe);
-        await checkCurrentContext(adobe);
-        await checkOrganizations(adobe);
+        // Concurrently, not in sequence. Each aio invocation pays ~1.7s of
+        // Node/oclif startup before it does any work, so run one after another
+        // these three cost 5.9–6.1s; started together they cost 2.3–2.9s
+        // (measured darwin 2026-08-10, warm, live signed-in CLI).
+        //
+        // Safe because they write DISJOINT fields — auth/token flags,
+        // `currentContext`, and `canListOrgs`+`organizationCount` — and because
+        // `checkTools()` has already run `aio --version`, whose invocation
+        // performs and awaits the one-time telemetry opt-out write. That latch
+        // is set before any of these start, so none of them races on it.
+        //
+        // Each probe swallows its own failure inside `checkCommand`, so this
+        // never rejects and one dead probe cannot discard the other two.
+        await Promise.all([
+            checkAuthenticationStatus(adobe),
+            checkCurrentContext(adobe),
+            checkOrganizations(adobe),
+        ]);
     }
 
     return adobe;
@@ -180,9 +201,7 @@ export async function checkCurrentContext(adobe: AdobeCLIInfo): Promise<void> {
 export async function checkOrganizations(adobe: AdobeCLIInfo): Promise<void> {
     const orgCheck = await checkCommand('aio console org list --json');
     adobe.canListOrgs =
-        orgCheck.installed &&
-        orgCheck.output !== undefined &&
-        !orgCheck.output.includes('Error');
+        orgCheck.installed && orgCheck.output !== undefined && !orgCheck.output.includes('Error');
 
     if (adobe.canListOrgs && orgCheck.output) {
         try {

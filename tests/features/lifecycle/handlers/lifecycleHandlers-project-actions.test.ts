@@ -8,7 +8,6 @@
 
 import {
     handleOpenProject,
-    handleBrowseFiles
 } from '@/features/lifecycle/handlers/lifecycleHandlers';
 import { createMockContext } from './lifecycleHandlers.testUtils';
 
@@ -128,31 +127,4 @@ describe('lifecycleHandlers - Project Actions', () => {
         });
     });
 
-    describe('handleBrowseFiles', () => {
-        it('should open project in Explorer successfully', async () => {
-            const vscode = require('vscode');
-            const context = createMockContext();
-
-            const result = await handleBrowseFiles(context as any, {
-                projectPath: '/home/user/.demo-builder/projects/test-project',
-            });
-
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('workbench.view.explorer');
-            expect(result.success).toBe(true);
-        });
-
-        it('should reject invalid project path', async () => {
-            const { validateProjectPath } = require('@/core/validation/PathSafetyValidator');
-            (validateProjectPath as jest.Mock).mockImplementationOnce(() => {
-                throw new Error('Access denied');
-            });
-            const context = createMockContext();
-
-            const result = await handleBrowseFiles(context as any, {
-                projectPath: '/etc/passwd',
-            });
-
-            expect(result.success).toBe(false);
-        });
-    });
 });

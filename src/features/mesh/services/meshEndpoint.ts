@@ -99,7 +99,7 @@ async function fetchEndpointFromDescribe(
  *
  * @param meshId - The mesh ID to get the endpoint for
  * @param cachedEndpoint - Optional cached endpoint for instant return
- * @param commandManager - ExternalCommandManager instance for executing commands
+ * @param commandManager - CommandExecutor instance for executing commands
  * @param logger - Logger instance for debug messages
  * @param debugLogger - Debug logger for detailed logging (accepts any logger type)
  * @returns The mesh endpoint URL

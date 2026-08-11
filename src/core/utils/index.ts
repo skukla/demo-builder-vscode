@@ -20,13 +20,15 @@ export type {
     ExecutionContext,
 } from './progressUnifier';
 
-export { setLoadingState } from './loadingHTML';
+export { setLoadingState, type LoadingHeader } from './loadingHTML';
 
-export { TIMEOUTS } from './timeoutConfig';
+export { TIMEOUTS, CACHE_TTL } from './timeoutConfig';
 
 export { formatDuration, formatMinutes } from './timeFormatting';
 
 export * from './promiseUtils';
+
+export { sleep } from './sleep';
 
 export { ExecutionLock } from './executionLock';
 
@@ -39,3 +41,5 @@ export type { GitHubRepoInfo } from './githubUrlParser';
 export { openInIncognito } from './browserUtils';
 
 export { showOneTimeTip } from './oneTimeTip';
+
+export { SingleFlight } from './singleFlight';

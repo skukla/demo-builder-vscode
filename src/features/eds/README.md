@@ -74,8 +74,7 @@ src/features/eds/
 │   │   ├── useGitHubAuth.ts         # GitHub authentication hook
 │   │   └── useDaLiveAuth.ts         # DA.live authentication hook
 │   ├── steps/
-│   │   ├── ConnectServicesStep.tsx      # GitHub + DA.live auth connection
-│   │   ├── GitHubRepoSelectionStep.tsx  # Repository selection/creation
+│   │   ├── RepoSelectionInline.tsx      # Repo choose/create body (single-column, used by StorefrontStep)
 │   │   ├── GitHubSetupStep.tsx          # GitHub configuration
 │   │   ├── DaLiveSetupStep.tsx          # DA.live site configuration
 │   │   └── StorefrontSetupStep.tsx      # Storefront setup execution

@@ -104,7 +104,7 @@ re-patching every template.*
 - Own the **cleanup-on-SKU-delete** path (extension holds the token).
 
 ## References
-- Deployed `render-pdp` (current default overlay URL): `https://285361-249darkllama-stage.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp`
+- Deployed `render-pdp` (current default overlay URL): `https://<runtime-namespace>.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp`
 - Full auth evidence: `accs-discovery-service/docs/research/helix-admin-auth-findings.md`
 - Cleanup debt created during probing (need an authed DELETE to remove, on citisignal-b2b):
   previews `/products/orchard-2/probe`, `/products/verify-1781012023/probe`,

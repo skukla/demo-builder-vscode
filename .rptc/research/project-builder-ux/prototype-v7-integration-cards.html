@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Integrations — inline-expansion cards + blue-check selection</title>
+<style>
+  :root{
+    --bg:#1e1e1e;--panel:#252526;--panel-2:#2d2d2e;--rail-bg:#1b1b1c;
+    --border:#393939;--border-soft:#303031;
+    --text:#e8e8e8;--text-dim:#9a9a9a;--text-faint:#6c6c6c;
+    --blue:#378ef0;--blue-deep:#2680eb;--blue-ring:rgba(55,142,240,.35);
+    --green:#33ab84;--gray-dot:#4a4a4a;--gray-dot-bd:#6a6a6a;
+    --radius:8px;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  *{box-sizing:border-box} html,body{margin:0;padding:0}
+  body{background:#141414;color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5;padding:24px}
+
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes fadeSlideIn{0%{opacity:0;transform:translateY(-7px)}100%{opacity:1;transform:translateY(0)}}
+  @keyframes fadeSlideUp{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}
+  @keyframes popIn{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
+  @keyframes checkDraw{0%{transform:scale(0) rotate(-25deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+  .toolbar{max-width:1180px;margin:0 auto 12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .toolbar .devlabel{font-size:11px;color:var(--text-faint);background:#2a2a2a;border:1px solid var(--border);padding:2px 8px;border-radius:4px}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:999px;overflow:hidden;background:var(--panel)}
+  .seg button{appearance:none;border:0;background:transparent;color:var(--text-dim);padding:5px 13px;font-family:var(--sans);font-size:12px;cursor:pointer;transition:background .15s,color .15s}
+  .seg button.active{background:var(--blue-deep);color:#fff}
+  .seg button:not(.active):hover{background:var(--panel-2);color:var(--text)}
+  .label{color:var(--text-faint);font-size:11px}
+
+  .frame{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:262px 1fr;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;min-height:560px}
+
+  /* rail */
+  .rail{background:var(--rail-bg);border-right:1px solid var(--border-soft);padding:22px 18px}
+  .rail .kicker{font-size:11px;letter-spacing:.12em;color:var(--text-faint);margin-bottom:18px}
+  .step{display:flex;align-items:flex-start;gap:12px;position:relative;padding-bottom:20px}
+  .step:last-child{padding-bottom:0}
+  .dot{width:22px;height:22px;border-radius:50%;flex:0 0 22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;z-index:1}
+  .dot.done{background:var(--green)} .dot.current{background:var(--blue);box-shadow:0 0 0 4px var(--blue-ring)} .dot.upcoming{background:var(--gray-dot);border:1px solid var(--gray-dot-bd)}
+  .step:not(:last-child)::before{content:"";position:absolute;left:10px;top:24px;bottom:0;width:0;border-left:2px dashed #3a3a3a}
+  .step.done:not(:last-child)::before{border-left-color:#2c5d4b}
+  .step .label{font-size:14px;color:var(--text-dim);padding-top:1px}
+  .step.current>.label{color:var(--blue);font-weight:600}
+  .step.done>.label{color:var(--text)}
+  .children{margin:6px 0 0 34px}
+  .child{display:flex;align-items:center;gap:10px;padding:7px 0}
+  .child .cdot{width:14px;height:14px;border-radius:50%;flex:0 0 14px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff}
+  .cdot.done{background:var(--green)} .cdot.current{background:var(--blue);box-shadow:0 0 0 3px var(--blue-ring)} .cdot.upcoming{background:var(--gray-dot);border:1px solid var(--gray-dot-bd)}
+  .child .clabel{font-size:13px;color:var(--text-dim)}
+  .child.current .clabel{color:var(--text);font-weight:600}
+
+  /* content */
+  .content{padding:26px 36px;display:flex;flex-direction:column;min-height:560px}
+  .pane-split{display:flex;gap:26px;flex:1;align-items:stretch}
+  .pane-main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .pane-summary{flex:0 0 250px;align-self:flex-start;background:var(--rail-bg);border:1px solid var(--border-soft);border-radius:8px;padding:16px}
+  .sum-title{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);margin-bottom:12px}
+  .sum-group-h{font-size:10.5px;color:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin:13px 0 3px}
+  .sum-group-h:first-child{margin-top:0}
+  .sum-row{display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:12.5px}
+  .sum-row+.sum-row{border-top:1px solid #272728}
+  .sum-label{color:var(--text-faint);white-space:nowrap}
+  .sum-row.done .sum-label::before{content:'✓ ';color:var(--green)}
+  .sum-value{color:var(--text);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sum-value.empty{color:var(--text-faint);font-style:italic}
+  .area-title{font-size:20px;font-weight:700;margin:0 0 4px}
+  .area-sub{font-size:13px;color:var(--text-dim);margin:0 0 18px}
+
+  .btn{appearance:none;border:0;border-radius:18px;padding:8px 16px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;transition:transform .1s var(--ease),filter .15s,background .15s}
+  .btn.primary{background:var(--blue-deep);color:#fff;display:inline-flex;gap:7px;align-items:center}
+  .btn.primary:hover:not([disabled]){filter:brightness(1.12)}
+  .btn.ghost{background:var(--panel-2);color:var(--text)}
+  .btn.ghost:hover:not([disabled]){background:#3a3a3b}
+  .btn:active:not([disabled]){transform:scale(.95)}
+  .btn[disabled]{opacity:.4;cursor:not-allowed}
+  .footer{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:16px;border-top:1px solid var(--border-soft)}
+  .footer .right{display:flex;gap:12px}
+
+  /* ---- the integration cards ---- */
+  .cards{display:flex;flex-direction:column;gap:12px;animation:fadeIn .3s var(--ease)}
+  .card{position:relative;border:1px solid var(--border-soft);border-radius:8px;background:var(--panel);padding:16px 18px;transition:border-color .2s var(--ease),background .2s var(--ease),box-shadow .2s var(--ease)}
+  .card:not(.sel):not(.na):hover{border-color:#4a4a4b}
+  /* SELECTED = blue-check language, matching Commerce choice-card[data-selected] */
+  .card.sel{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue);background:rgba(55,142,240,.06)}
+  .card.na{opacity:.7}
+  .card-head{display:flex;align-items:flex-start;gap:11px}
+  .card-check{width:20px;height:20px;border-radius:50%;flex:0 0 20px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:1px}
+  .card-check span{display:inline-block;animation:checkDraw .35s var(--ease)}
+  .card-title{font-weight:600;font-size:14px}
+  .card-desc{font-size:12px;color:var(--text-dim);margin-top:3px;max-width:52ch}
+  .card-actions{margin-left:auto;display:flex;gap:8px;align-items:center;flex:0 0 auto}
+  .na-pill{font-size:11px;padding:3px 10px;border-radius:999px;background:var(--panel-2);color:var(--text-faint);border:1px solid var(--border)}
+
+  /* inline expansion (animated grid-rows slide, same idiom as the prototype accordion) */
+  .card-config{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .3s var(--ease),opacity .24s var(--ease),margin .3s var(--ease);margin-top:0}
+  .card-config.exp{grid-template-rows:1fr;opacity:1;margin-top:14px}
+  .card-config-inner{overflow:hidden;min-height:0}
+  .config-divider{border-top:1px solid var(--border-soft);padding-top:14px}
+  .config-h{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-bottom:10px}
+
+  .field{margin:0 0 12px}
+  .field label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:5px}
+  .field input{width:100%;background:#161617;border:1px solid var(--border);border-radius:5px;color:var(--text);padding:8px 11px;font-size:13px;font-family:var(--sans);transition:border-color .15s,box-shadow .15s}
+  .field input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 1px var(--blue-ring)}
+
+  /* searchable picker = the real SearchableList (ListView + SearchHeader) footprint */
+  .picker{border:1px solid var(--border);border-radius:8px;background:#161617;overflow:hidden;margin-bottom:12px}
+  .picker-head{display:flex;align-items:center;justify-content:space-between;padding:9px 10px 9px 13px;border-bottom:1px solid var(--border-soft)}
+  .picker-label{font-size:12px;color:var(--text-dim);font-weight:600}
+  .picker-search{display:block;width:calc(100% - 20px);margin:10px;background:#0f0f10;border:1px solid var(--border);border-radius:5px;color:var(--text);padding:7px 10px;font-size:13px;font-family:var(--sans)}
+  .picker-search:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 1px var(--blue-ring)}
+  .picker-list{max-height:150px;overflow-y:auto}
+  .li{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;cursor:pointer;border-top:1px solid #232324;transition:background .12s}
+  .li:first-child{border-top:0}
+  .li:hover{background:var(--panel-2)}
+  .li.sel{background:rgba(55,142,240,.12)}
+  .li-name{font-size:13px}
+  .li-check{color:var(--blue);font-weight:700;font-size:12px}
+  .li-empty{padding:14px;color:var(--text-faint);font-size:12px;text-align:center}
+  .picker-hint{font-size:11px;color:var(--text-faint);padding:0 13px 9px}
+
+  /* browse⇄create toggle: the create half (NewAdobeEntityForm — gray-50 panel) */
+  .create-panel{background:var(--panel);border:1px solid var(--border-soft);border-radius:8px;padding:14px;margin-bottom:12px;animation:fadeSlideIn .2s var(--ease)}
+  .create-h{font-weight:600;font-size:13px;margin-bottom:10px}
+  .create-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+  .btn.newbtn{border-radius:6px;padding:5px 11px;background:var(--panel-2);color:var(--text);border:1px solid var(--border);font-size:12px}
+  .btn.newbtn:hover{background:#3a3a3b}
+  .disabled-note{font-size:12px;color:var(--text-faint);margin-bottom:12px;font-style:italic}
+
+  /* commit-and-collapse: a chosen field collapses to one compact line */
+  .chosen{display:flex;align-items:center;gap:10px;padding:10px 13px;border:1px solid var(--border);border-radius:8px;background:#161617;margin-bottom:12px;animation:fadeSlideIn .2s var(--ease)}
+  .chosen-check{width:18px;height:18px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex:0 0 18px}
+  .chosen-label{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em}
+  .chosen-val{font-size:13px;color:var(--text);font-weight:600}
+  .chosen .btn-link{margin-left:auto}
+  .btn-link{background:none;border:0;color:var(--blue);font-size:12px;font-family:var(--sans);cursor:pointer;padding:2px 4px}
+  .btn-link:hover{text-decoration:underline}
+
+  /* inline sign-in gate (no full-screen swap) */
+  .callout{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--blue-ring);background:rgba(55,142,240,.10);border-radius:6px;font-size:13px;animation:fadeSlideIn .28s var(--ease)}
+  .callout .ckey{font-size:18px}
+  .callout .ctext{color:var(--text)} .callout .ctext b{font-weight:600}
+  .callout .btn{margin-left:auto}
+
+  .provision{margin-top:6px;padding:10px 12px;background:#1a1a1b;border:1px solid var(--border-soft);border-radius:6px}
+  .provision-title{font-size:12px;color:var(--text-dim);font-weight:600;margin-bottom:6px}
+  .provision-list{margin:0;padding-left:18px;font-size:12px;color:var(--text-dim)}
+  .provision-list li{margin:2px 0} .provision-list b{color:var(--text)}
+
+  /* dashed "coming soon" slot — kept (per PM: placeholder is fine) */
+  .add-slot{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:18px;min-height:74px;border:1px dashed var(--gray-dot-bd);border-radius:8px;text-align:center}
+  .add-slot .lab{font-size:13px;font-weight:600;color:var(--text-dim)}
+  .add-slot .note{font-size:11px;color:var(--text-faint)}
+
+  .tnote{font-size:12px;color:var(--text-faint);margin-top:14px;border-left:2px solid var(--border);padding-left:10px}
+  .anno{max-width:1180px;margin:14px auto 0;font-size:12px;color:var(--text-faint);border-left:2px solid var(--border);padding-left:12px}
+  .anno b{color:var(--text-dim)}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="devlabel">DEV CONTROLS</span>
+  <span class="label">Architecture:</span>
+  <div class="seg" id="archSeg">
+    <button data-arch="eds-accs" class="active">EDS + ACCS</button>
+    <button data-arch="eds-paas">EDS + PaaS</button>
+    <button data-arch="none">No-mesh stack</button>
+  </div>
+  <span class="label">Adobe session:</span>
+  <div class="seg" id="authSeg">
+    <button data-auth="in" class="active">Signed in</button>
+    <button data-auth="out">Signed out</button>
+  </div>
+</div>
+
+<div class="frame">
+  <div class="rail" id="rail"></div>
+  <div class="content" id="pane"></div>
+</div>
+<div class="anno" id="anno"></div>
+
+<script>
+  // Enough projects to cross the searchThreshold (5) so the search field shows;
+  // workspaces stay under it (no search field) — exactly how SearchableList behaves.
+  const PROJECTS=['Demo Commerce Project','Citisignal Production','Existing Sandbox','Partner Demo Env','Staging Environment','Archived 2023'];
+  const WORKSPACES=['Stage','Production'];
+
+  const s={
+    arch:'eds-accs',        // eds-accs | eds-paas | none
+    adobeSignedIn:true,
+    meshOn:false,
+    projMode:'browse', proj:null, projOpen:true, projQuery:'', projDraft:'Demo Commerce Project',
+    wsMode:'browse',   ws:null,   wsOpen:true,   wsQuery:'',   wsDraft:'Demo Stage',
+    focusSel:null,          // CSS selector to restore focus to after a re-render
+  };
+  const meshAvail=()=>s.arch!=='eds-accs'?s.arch!=='none':true; // true unless "none"
+  const isPaas=()=>s.arch==='eds-paas';
+  // ACCS already signed in at Commerce; PaaS signs in here inside the card.
+  const gateOpen=()=> s.meshOn && !s.adobeSignedIn;
+  const meshConfigured=()=> s.meshOn && s.adobeSignedIn && !!s.proj && !!s.ws;
+
+  function renderRail(){
+    document.getElementById('rail').innerHTML=`
+      <div class="kicker">SETUP PROGRESS</div>
+      <div class="step done"><div class="dot done"><span>✓</span></div><div class="label">Demo Setup</div></div>
+      <div class="step done"><div class="dot done"><span>✓</span></div><div class="label">Prerequisites</div></div>
+      <div class="step current"><div class="dot current">•</div><div style="flex:1">
+        <div class="label">Build Your Project</div>
+        <div class="children">
+          <div class="child"><div class="cdot done"><span>✓</span></div><div class="clabel">Commerce</div></div>
+          <div class="child"><div class="cdot done"><span>✓</span></div><div class="clabel">Storefront</div></div>
+          <div class="child current"><div class="cdot current">•</div><div class="clabel">Integrations</div></div>
+        </div></div></div>
+      <div class="step upcoming"><div class="dot upcoming"></div><div class="label">Final Review</div></div>
+      <div class="step upcoming"><div class="dot upcoming"></div><div class="label">Create Project</div></div>`;
+  }
+
+  function footer(){
+    // Continue gate: mesh N/A or off → fine; mesh on → require project + workspace.
+    const ready = !meshAvail() || !s.meshOn || meshConfigured();
+    return `<div class="footer"><button class="btn ghost">Cancel</button>
+      <div class="right"><button class="btn ghost">Back</button>
+      <button class="btn primary" ${ready?'':'disabled'}>Finish</button></div></div>`;
+  }
+
+  // The searchable picker (SearchableList): header + search-past-threshold + ListView rows + "+ New".
+  function pickerList(label, items, selected, query, pfx){
+    const THRESHOLD=5;
+    const showSearch = items.length > THRESHOLD;
+    const q=(query||'').toLowerCase();
+    const filtered = q ? items.filter(i=>i.toLowerCase().includes(q)) : items;
+    const rows = filtered.length
+      ? filtered.map(i=>`<div class="li ${selected===i?'sel':''}" data-pick="${pfx}" data-val="${i}">
+          <span class="li-name">${i}</span>${selected===i?'<span class="li-check">✓</span>':''}</div>`).join('')
+      : `<div class="li-empty">No matches</div>`;
+    return `<div class="picker">
+      <div class="picker-head"><span class="picker-label">${label}</span>
+        <button class="btn newbtn" data-new="${pfx}">+ New</button></div>
+      ${showSearch?`<input class="picker-search" data-search="${pfx}" placeholder="Type to filter…" value="${query||''}"/>`:''}
+      <div class="picker-list">${rows}</div>
+      ${showSearch?`<div class="picker-hint">${filtered.length} of ${items.length}</div>`:''}
+    </div>`;
+  }
+  // A committed choice collapses to one compact line with a quiet "Change".
+  function chosenRow(label, pfx, val){
+    return `<div class="chosen">
+      <span class="chosen-check">✓</span>
+      <span class="chosen-label">${label}</span>
+      <span class="chosen-val">${val}</span>
+      <button class="btn-link" data-change="${pfx}">Change</button>
+    </div>`;
+  }
+  // The create half (NewAdobeEntityForm) — gray-50 panel + name field + Browse/Create.
+  function createForm(label, pfx, draft){
+    return `<div class="create-panel">
+      <div class="create-h">Create New ${label}</div>
+      <div class="field"><label>${label} name</label><input data-cinput="${pfx}" value="${draft||''}" autofocus/></div>
+      <div class="create-actions">
+        <button class="btn ghost" data-browse="${pfx}">Browse</button>
+        <button class="btn primary" data-create="${pfx}">Create</button></div>
+    </div>`;
+  }
+
+  function meshCard(){
+    if(!meshAvail()){
+      return `<div class="card na"><div class="card-head">
+        <div style="flex:1"><div class="card-title">API Mesh</div>
+          <div class="card-desc">GraphQL bridge between storefront and backend. Deploys to Adobe I/O; provides MESH_ENDPOINT.</div></div>
+        <div class="card-actions"><span class="na-pill">N/A for this architecture</span></div>
+      </div></div>`;
+    }
+    const sel=s.meshOn;
+    const check = sel?`<div class="card-check"><span>✓</span></div>`:'';
+    const btn = sel?`<button class="btn ghost" id="toggleMesh">Remove</button>`
+                   :`<button class="btn primary" id="toggleMesh">+ Add</button>`;
+
+    // --- expansion body ---
+    let cfg='';
+    if(sel && gateOpen()){
+      cfg=`<div class="config-divider">
+        <div class="callout"><span class="ckey">🔑</span>
+          <span class="ctext"><b>Sign in to Adobe</b> to choose where this deploys.</span>
+          <button class="btn primary" id="doSignin">Sign In with Adobe</button></div></div>`;
+    } else if(sel){
+      let projPart;
+      if(s.projMode==='create') projPart = createForm('Project','proj',s.projDraft);
+      else if(s.proj && !s.projOpen) projPart = chosenRow('Project','proj',s.proj);
+      else projPart = pickerList('Project', PROJECTS, s.proj, s.projQuery, 'proj');
+
+      let wsPart='';
+      if(s.proj){
+        if(s.wsMode==='create') wsPart = createForm('Workspace','ws',s.wsDraft);
+        else if(s.ws && !s.wsOpen) wsPart = chosenRow('Workspace','ws',s.ws);
+        else wsPart = pickerList('Workspace', WORKSPACES, s.ws, s.wsQuery, 'ws');
+      }
+      const creating=s.projMode==='create'||s.wsMode==='create';
+      cfg=`<div class="config-divider">
+        <div class="config-h">Destination · Adobe I/O</div>
+        ${projPart}
+        ${wsPart}
+        <div class="provision"><div class="provision-title">${creating?'On create, the extension will:':'On deploy, the extension will:'}</div>
+          <ul class="provision-list">
+            ${s.projMode==='create'?'<li>Create the Adobe I/O project</li>':''}
+            ${s.wsMode==='create'?'<li>Create the workspace</li>':''}
+            <li>Create an OAuth Server-to-Server credential</li>
+            <li>Subscribe required APIs: <b>GraphQL Service SDK</b></li>
+          </ul></div>
+      </div>`;
+    }
+
+    return `<div class="card ${sel?'sel':''}">
+      <div class="card-head">
+        ${check}
+        <div style="flex:1"><div class="card-title">API Mesh</div>
+          <div class="card-desc">GraphQL bridge between storefront and backend. Deploys to Adobe I/O; provides MESH_ENDPOINT.</div></div>
+        <div class="card-actions">${btn}</div>
+      </div>
+      <div class="card-config ${sel?'':''}" id="meshCfg"><div class="card-config-inner">${cfg}</div></div>
+    </div>`;
+  }
+
+  function summary(){
+    const meshV = !meshAvail()?'N/A' : !s.meshOn?null : gateOpen()?'Needs sign-in' : meshConfigured()?'On':'Incomplete';
+    const meshDone = meshConfigured() || !meshAvail();
+    const row=(l,v,done)=>`<div class="sum-row ${done&&v?'done':''}"><span class="sum-label">${l}</span>${v?`<span class="sum-value">${v}</span>`:'<span class="sum-value empty">Not set</span>'}</div>`;
+    return `<div class="sum-title">Your project</div>
+      <div class="sum-group-h">Integrations</div>
+      ${row('API Mesh', meshV, meshDone)}
+      ${s.meshOn&&!gateOpen()?row('Project', s.proj, !!s.proj):''}
+      ${s.meshOn&&!gateOpen()?row('Workspace', s.ws, !!s.ws):''}`;
+  }
+
+  function render(){
+    renderRail();
+    const body=`<div class="area-title">Integrations</div>
+      <p class="area-sub">Add the integrations this demo needs. Each expands to configure where it deploys.</p>
+      <div class="cards">
+        ${meshCard()}
+        <div class="add-slot"><div class="lab">+ Add an integration</div><div class="note">Pre-built integrations coming soon</div></div>
+      </div>
+      <div class="tnote"><b>Note:</b> Adobe Commerce Optimizer lives in <b>Commerce → Catalog</b>, not here.</div>
+      ${footer()}`;
+    document.getElementById('pane').innerHTML=`<div class="pane-split"><div class="pane-main">${body}</div><aside class="pane-summary">${summary()}</aside></div>`;
+    document.getElementById('anno').innerHTML=`<b>Inline cards + searchable pickers + commit-and-collapse.</b> Add API Mesh → the card expands to its Adobe I/O destination. Pick a Project (search shows past 5 items) → the picker <b>collapses to one line</b> and the Workspace picker opens; pick it → it collapses too. At rest the card is compact; <b>Change</b> reopens a picker. Only one list is expanded at a time. Toggle <b>Signed out + EDS + PaaS</b> for the in-card sign-in gate; <b>No-mesh stack</b> for the N/A card.`;
+
+    // sync dev toggles
+    document.querySelectorAll('#authSeg button').forEach(x=>x.classList.toggle('active',x.dataset.auth===(s.adobeSignedIn?'in':'out')));
+    document.querySelectorAll('#archSeg button').forEach(x=>x.classList.toggle('active',x.dataset.arch===s.arch));
+
+    wire();
+    requestAnimationFrame(()=>{const c=document.getElementById('meshCfg');if(c&&s.meshOn)c.classList.add('exp');});
+    // restore focus + caret to a search/create field after the re-render
+    if(s.focusSel){const el=document.querySelector(s.focusSel);
+      if(el){el.focus(); const v=el.value; try{el.setSelectionRange(v.length,v.length);}catch(_){}}
+    }
+  }
+
+  function wire(){
+    const tm=document.getElementById('toggleMesh');
+    if(tm)tm.addEventListener('click',()=>{s.focusSel=null; s.meshOn=!s.meshOn;
+      if(!s.meshOn){s.proj=null;s.ws=null;s.projMode='browse';s.wsMode='browse';s.projOpen=true;s.wsOpen=true;s.projQuery='';s.wsQuery='';} render();});
+    const si=document.getElementById('doSignin');
+    if(si)si.addEventListener('click',()=>{s.focusSel=null;s.adobeSignedIn=true;render();});
+
+    // pick a row → commit + collapse this picker
+    document.querySelectorAll('[data-pick]').forEach(r=>r.addEventListener('click',()=>{
+      const pfx=r.dataset.pick, val=r.dataset.val; s.focusSel=null;
+      if(pfx==='proj'){ s.proj=val; s.projOpen=false; s.ws=null; s.wsMode='browse'; s.wsOpen=true; s.wsQuery=''; }
+      else { s.ws=val; s.wsOpen=false; }
+      render();}));
+    // "Change" → reopen a collapsed picker
+    document.querySelectorAll('[data-change]').forEach(b=>b.addEventListener('click',()=>{
+      const pfx=b.dataset.change; s.focusSel=null;
+      if(pfx==='proj')s.projOpen=true; else s.wsOpen=true; render();}));
+    // "+ New" → create mode
+    document.querySelectorAll('[data-new]').forEach(b=>b.addEventListener('click',()=>{
+      const pfx=b.dataset.new; s.focusSel=`[data-cinput="${pfx}"]`;
+      if(pfx==='proj')s.projMode='create'; else s.wsMode='create'; render();}));
+    // create → Browse (back to list)
+    document.querySelectorAll('[data-browse]').forEach(b=>b.addEventListener('click',()=>{
+      const pfx=b.dataset.browse; s.focusSel=null;
+      if(pfx==='proj')s.projMode='browse'; else s.wsMode='browse'; render();}));
+    // create → Create (commit the new name as the selection + collapse)
+    document.querySelectorAll('[data-create]').forEach(b=>b.addEventListener('click',()=>{
+      const pfx=b.dataset.create; s.focusSel=null;
+      if(pfx==='proj'){ s.proj=s.projDraft; s.projMode='browse'; s.projOpen=false; s.ws=null; s.wsMode='browse'; s.wsOpen=true; }
+      else { s.ws=s.wsDraft; s.wsMode='browse'; s.wsOpen=false; } render();}));
+    // live search filter
+    document.querySelectorAll('[data-search]').forEach(inp=>inp.addEventListener('input',()=>{
+      const pfx=inp.dataset.search; s.focusSel=`[data-search="${pfx}"]`;
+      if(pfx==='proj')s.projQuery=inp.value; else s.wsQuery=inp.value; render();}));
+    // create-name field
+    document.querySelectorAll('[data-cinput]').forEach(inp=>inp.addEventListener('input',()=>{
+      const pfx=inp.dataset.cinput; s.focusSel=`[data-cinput="${pfx}"]`;
+      if(pfx==='proj')s.projDraft=inp.value; else s.wsDraft=inp.value; render();}));
+  }
+
+  document.getElementById('archSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+    s.arch=b.dataset.arch; if(s.arch==='none'){s.meshOn=false;} render();});
+  document.getElementById('authSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+    s.adobeSignedIn=b.dataset.auth==='in'; render();});
+
+  render();
+</script>
+</body>
+</html>

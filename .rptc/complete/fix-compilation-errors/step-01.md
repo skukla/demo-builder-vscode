@@ -16,7 +16,7 @@ This step establishes the foundation for systematic error resolution by:
 
 - [x] TypeScript compiler accessible via `npx tsc`
 - [x] Project tsconfig.json correctly configured (verified in overview)
-- [x] Working directory: `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode`
+- [x] Working directory: `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode`
 
 ---
 
@@ -158,7 +158,7 @@ npx tsc --noEmit 2>&1 | tee .rptc/plans/fix-compilation-errors/errors-raw.txt
 
 ```bash
 # Navigate to project root
-cd /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode
+cd /Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode
 
 # Run TypeScript compiler and save output
 npx tsc --noEmit 2>&1 | tee .rptc/plans/fix-compilation-errors/errors-raw.txt

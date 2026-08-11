@@ -8,6 +8,7 @@
  */
 
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getNodeVersionMapping, getNodeVersionIdMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, getNodeVersionKeys, getPluginNodeVersions } from '@/features/prerequisites/handlers/shared';
 import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
@@ -318,7 +319,7 @@ async function sendPrerequisitesListToUI(
         nodeVersionMapping,
     });
 
-    await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.UPDATE_DELAY));
+    await sleep(TIMEOUTS.UI.UPDATE_DELAY);
 }
 
 /**

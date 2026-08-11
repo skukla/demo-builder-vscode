@@ -291,7 +291,7 @@ describe('StalenessDetector - Edge Cases', () => {
     });
 
     describe('updateMeshState', () => {
-        it('should update mesh state after deployment', async () => {
+        it('should update mesh state after deployment (keyed entry; legacy write retired, Step 07)', async () => {
             const project = createMockProject({
                 componentInstances: {
                     'commerce-mesh': {
@@ -310,12 +310,44 @@ describe('StalenessDetector - Edge Cases', () => {
 
             await updateMeshState(project);
 
-            expect(project.meshState).toBeDefined();
-            expect(project.meshState?.envVars).toEqual({
+            const mesh = project.appBuilderComponents?.['commerce-mesh'];
+            expect(mesh).toBeDefined();
+            expect(mesh?.envVars).toEqual({
                 ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
             });
-            expect(project.meshState?.sourceHash).toBe('abc123');
-            expect(project.meshState?.lastDeployed).toBeDefined();
+            expect(mesh?.sourceHash).toBe('abc123');
+            expect(mesh?.lastDeployed).toBeDefined();
+            // ADR-011 D3 Step 07: the singular meshState write-side is retired.
+            expect(project.meshState).toBeUndefined();
+        });
+
+        it('should clear a stale in-memory legacy meshState after a deploy (Step 07)', async () => {
+            // A legacy-loaded project carries meshState in memory. After a
+            // redeploy, the keyed entry is authoritative — the stale legacy
+            // singleton is cleared so the accessors' legacy synthesis can never
+            // resurrect the pre-deploy record.
+            const project = createMockProject({
+                componentInstances: {
+                    'commerce-mesh': {
+                        id: 'commerce-mesh',
+                        name: 'API Mesh',
+                        subType: 'mesh',
+                        path: '/test/mesh',
+                        status: 'deployed',
+                    },
+                },
+                meshState: {
+                    envVars: { OLD: 'stale' },
+                    sourceHash: 'stale-hash',
+                    lastDeployed: '2026-01-01T00:00:00.000Z',
+                    endpoint: 'https://stale-mesh/graphql',
+                },
+            });
+            setupMockFileSystemWithHash('abc123', 'A=1\n');
+
+            await updateMeshState(project, 'https://fresh-mesh/graphql');
+
+            expect(project.meshState).toBeUndefined();
         });
 
         it('should do nothing when no mesh component', async () => {
@@ -324,6 +356,109 @@ describe('StalenessDetector - Edge Cases', () => {
             await updateMeshState(project);
 
             expect(project.meshState).toBeUndefined();
+        });
+
+        // ADR-011 D3 Steps 07+09: updateMeshState is the single writer chokepoint
+        // shared by the creation-time deploy (meshSetupService), the reset-time
+        // redeploys (edsResetMeshHelper, projectResetService) and deployMeshHeadless.
+        // It must land the deploy outcome on the KEYED mesh appBuilderComponents
+        // entry — the durable model — so every caller is covered at once.
+        describe('keyed appBuilderComponents write (writer chokepoint, D3 Steps 07+09)', () => {
+            const meshInstances = {
+                'commerce-mesh': {
+                    id: 'commerce-mesh',
+                    name: 'API Mesh',
+                    subType: 'mesh' as const,
+                    path: '/test/mesh',
+                    status: 'deployed' as const,
+                },
+            };
+
+            it('should write the full deploy outcome onto the keyed mesh entry', async () => {
+                const project = createMockProject({ componentInstances: meshInstances });
+                const envFileContent = 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql\n';
+                setupMockFileSystemWithHash('abc123', envFileContent);
+
+                await updateMeshState(project, 'https://mesh/graphql');
+
+                const entries = Object.values(project.appBuilderComponents ?? {});
+                const mesh = entries.find((e) => e.kind === 'mesh');
+                expect(mesh).toBeDefined();
+                expect(mesh?.status).toBe('deployed');
+                expect(mesh?.endpoint).toBe('https://mesh/graphql');
+                expect(mesh?.envVars).toEqual({
+                    ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+                });
+                expect(mesh?.sourceHash).toBe('abc123');
+                expect(mesh?.lastDeployed).toBeDefined();
+            });
+
+            it('should land on the migrated "mesh" key instead of creating a twin', async () => {
+                const project = createMockProject({
+                    componentInstances: meshInstances,
+                    appBuilderComponents: {
+                        mesh: {
+                            kind: 'mesh',
+                            status: 'not-deployed',
+                            source: { owner: '', repo: '' },
+                        },
+                    },
+                });
+                setupMockFileSystemWithHash('abc123', 'A=1\n');
+
+                await updateMeshState(project, 'https://mesh/graphql');
+
+                const meshEntries = Object.entries(project.appBuilderComponents ?? {}).filter(
+                    ([, e]) => e.kind === 'mesh',
+                );
+                expect(meshEntries).toHaveLength(1);
+                expect(meshEntries[0][0]).toBe('mesh');
+                expect(meshEntries[0][1].endpoint).toBe('https://mesh/graphql');
+            });
+
+            it('should clear a previous "Later" decline on the keyed entry', async () => {
+                const project = createMockProject({
+                    componentInstances: meshInstances,
+                    appBuilderComponents: {
+                        mesh: {
+                            kind: 'mesh',
+                            status: 'stale',
+                            source: { owner: '', repo: '' },
+                            userDeclinedUpdate: true,
+                            declinedAt: '2026-07-14T00:00:00.000Z',
+                        },
+                    },
+                });
+                setupMockFileSystemWithHash('abc123', 'A=1\n');
+
+                await updateMeshState(project, 'https://mesh/graphql');
+
+                const mesh = project.appBuilderComponents?.mesh;
+                expect(mesh?.userDeclinedUpdate).toBeUndefined();
+                expect(mesh?.declinedAt).toBeUndefined();
+                expect(mesh?.status).toBe('deployed');
+            });
+
+            it('should refresh a provided MESH_ENDPOINT with the fresh endpoint', async () => {
+                const project = createMockProject({
+                    componentInstances: meshInstances,
+                    appBuilderComponents: {
+                        mesh: {
+                            kind: 'mesh',
+                            status: 'deployed',
+                            source: { owner: '', repo: '' },
+                            providesEnvVars: { MESH_ENDPOINT: 'https://old-mesh/graphql' },
+                        },
+                    },
+                });
+                setupMockFileSystemWithHash('abc123', 'A=1\n');
+
+                await updateMeshState(project, 'https://new-mesh/graphql');
+
+                expect(project.appBuilderComponents?.mesh?.providesEnvVars).toEqual({
+                    MESH_ENDPOINT: 'https://new-mesh/graphql',
+                });
+            });
         });
     });
 

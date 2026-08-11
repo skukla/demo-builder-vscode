@@ -1,3 +1,4 @@
+<!-- Last verified: 2026-07-03 -->
 # Documentation Index
 
 Welcome to the Adobe Demo Builder VS Code Extension documentation. This guide will help you navigate the various documentation resources available.
@@ -23,16 +24,27 @@ Detailed documentation about specific subsystems.
 - **[MCP Server](./systems/mcp-server.md)** - How the in-extension Model Context Protocol server exposes the extension's capabilities as tools for AI agents (Claude Code). Start here if you're new to MCP.
 - **[Prerequisites System](./systems/prerequisites-system.md)** - Comprehensive guide to the configuration-driven prerequisites and progress tracking system
 - **[Error Logging](./systems/error-logging.md)** - Error handling, logging strategy, and notification system
+- **[Logging System](./systems/logging-system.md)** - Logging architecture and output channels
+- **[Race Conditions](./systems/race-conditions.md)** - Handshake protocol, command queuing, and polling patterns
+- **[Debugging](./systems/debugging.md)** - Debug channels and the Diagnostics command
 - **[Custom Block Libraries](./systems/custom-block-libraries.md)** - Creating standalone block libraries for use with the Demo Builder
 - **[Webview Loading](./systems/webview-loading.md)** - VS Code webview initialization and loading state management
 
 #### 👨‍💻 Development
 Guides for developers working on the extension.
 
-- **[Development Strategy](./DEVELOPMENT-STRATEGY.md)** - Overall development approach and methodology
+- **[Development Strategy](./CLAUDE.md)** - Overall development approach and methodology
 - **[Build Instructions](./build.md)** - How to build and run the extension from source
 - **[Styling Guide](./development/styling-guide.md)** - CSS architecture and React Spectrum styling patterns
 - **[UI Patterns](./development/ui-patterns.md)** - UI/UX decisions and implementation patterns
+
+#### 🧩 Patterns
+Reusable design patterns extracted from the codebase.
+
+- **[Selection Pattern](./patterns/selection-pattern.md)** - Backend Call on Continue pattern for selection steps
+- **[State Management](./patterns/state-management.md)** - State handling strategies
+- **[Error Handling](./patterns/error-handling.md)** - Error handling patterns
+- **[Resource Disposal](./patterns/resource-disposal.md)** - Cleanup and disposal patterns
 
 ## 🎯 Quick Navigation
 
@@ -60,8 +72,8 @@ Guides for developers working on the extension.
 
 **Error Handling**
 - Error strategy → [Error Logging](./systems/error-logging.md)
-- Logging levels → [Error Logging - Notification Levels](./systems/error-logging.md#error-notification-levels)
-- Debugging → [Error Logging - Implementation](./systems/error-logging.md#implementation)
+- Logging levels → [Error Logging - Levels and Channels](./systems/error-logging.md#logging-levels-and-channels)
+- Debugging → [Debugging](./systems/debugging.md)
 
 **Testing**
 - Test organization → [Test README](../tests/README.md)
@@ -76,7 +88,7 @@ Guides for developers working on the extension.
 2. Check the [Changelog](./CHANGELOG.md) for updates
 
 **New Contributors**
-1. Read [Development Strategy](./DEVELOPMENT-STRATEGY.md)
+1. Read [Development Strategy](./CLAUDE.md)
 2. Review [Architecture Overview](./architecture/overview.md)
 3. Study relevant system docs based on your area of work
 
@@ -95,10 +107,12 @@ Guides for developers working on the extension.
 When contributing documentation:
 
 1. **Location**: Place docs in the appropriate subdirectory
-   - `/architecture/` - System design and architecture
+   - `/architecture/` - System design and architecture (ADRs in `/architecture/adr/`)
    - `/systems/` - Detailed system documentation
-   - `/development/` - Developer guides and patterns
-   - `/reference/` - API references and quick lookups
+   - `/development/` - Developer guides
+   - `/patterns/` - Reusable design patterns
+   - `/troubleshooting/` - Troubleshooting guides
+   - `/research/` - Curated (promoted) research; working research lives in `.rptc/research/`
 
 2. **Naming**: Use descriptive, hyphenated lowercase names
    - Good: `prerequisites-system.md`, `error-logging.md`
@@ -123,13 +137,3 @@ When contributing documentation:
 - Add entries to [CHANGELOG.md](./CHANGELOG.md) for user-facing changes
 - Review and update examples when APIs change
 - Maintain this index when adding/removing documentation
-
-## 📋 Documentation Roadmap
-
-Planned documentation improvements:
-- [ ] API reference documentation
-- [ ] Testing guide
-- [ ] Deployment guide
-- [ ] Security best practices
-- [ ] Performance optimization guide
-- [ ] Troubleshooting compendium

@@ -14,7 +14,7 @@ import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell';
 import { validateWorkspaceId } from '@/core/validation';
-import { ensureAuthenticated, getSetupInstructions, getEndpoint } from '@/features/mesh/handlers/shared';
+import { ensureAuthenticated, getEndpoint } from '@/features/mesh/handlers/shared';
 import { ErrorCode } from '@/types/errorCodes';
 import { parseJSON, toError } from '@/types/typeGuards';
 
@@ -60,7 +60,7 @@ function getWorkspaceServices(config: WorkspaceConfig | null): unknown[] {
  * malicious input like $(rm -rf /) from being executed in the shell.
  *
  * @param context - Handler context with logger and extension context
- * @param payload - Request payload containing workspaceId (validated) and optional selectedComponents
+ * @param payload - Request payload containing workspaceId (validated) and optional projectId
  * @returns Result object with mesh availability status and details
  */
 type MeshCheckResult = {
@@ -72,14 +72,13 @@ type MeshCheckResult = {
     endpoint?: string;
     error?: string;
     code?: ErrorCode;
-    setupInstructions?: { step: string; details: string; important?: boolean }[];
 };
 
 export async function handleCheckApiMesh(
     context: HandlerContext,
-    payload: { workspaceId: string; projectId?: string; selectedComponents?: string[] },
+    payload: { workspaceId: string; projectId?: string },
 ): Promise<MeshCheckResult> {
-    const { workspaceId, projectId, selectedComponents = [] } = payload;
+    const { workspaceId, projectId } = payload;
 
     // SECURITY: Validate workspaceId to prevent command injection
     try {
@@ -137,7 +136,7 @@ export async function handleCheckApiMesh(
     );
 
     return withOrgContext(target, () =>
-        runMeshCheck(context, workspaceId, selectedComponents),
+        runMeshCheck(context, workspaceId),
     );
 }
 
@@ -148,7 +147,6 @@ export async function handleCheckApiMesh(
 async function runMeshCheck(
     context: HandlerContext,
     workspaceId: string,
-    selectedComponents: string[],
 ): Promise<MeshCheckResult> {
     const commandManager = ServiceLocator.getCommandExecutor();
 
@@ -188,11 +186,12 @@ async function runMeshCheck(
             if (!apiEnabled) {
                 context.logger.warn('[API Mesh] API Mesh API not found in workspace services');
                 context.debugLogger.debug('[API Mesh] Available services', { serviceNames: (services as { name?: string; code?: string }[]).map((s) => s.name || s.code) });
+                // API absent: the deploy path auto-subscribes the API Mesh API
+                // (subscribeRequiredApis); no manual Console-UI remediation needed.
                 return {
                     success: true,
                     apiEnabled: false,
                     meshExists: false,
-                    setupInstructions: getSetupInstructions(context, selectedComponents),
                 };
             }
 
@@ -289,7 +288,6 @@ async function runMeshCheck(
                         success: true,
                         apiEnabled: false,
                         meshExists: false,
-                        setupInstructions: getSetupInstructions(context, selectedComponents),
                     };
                 }
 

@@ -28,7 +28,7 @@ After creating a new project with API Mesh deployment, the dashboard incorrectly
     "hasMeshComponent": true,
     "meshStatus": "deployed",
     "meshEndpoint": "https://edge-sandbox-graph.adobe.io/api/.../graphql",
-    "meshPath": "/Users/kukla/.demo-builder/projects/my-commerce-demo/components/commerce-mesh"
+    "meshPath": "/Users/<user>/.demo-builder/projects/my-commerce-demo/components/commerce-mesh"
   }
 ]
 

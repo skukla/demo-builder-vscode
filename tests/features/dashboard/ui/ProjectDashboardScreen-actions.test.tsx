@@ -5,21 +5,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-// Stub the RenameProjectDialog: the real one renders the shared Modal (Spectrum
-// internals not in the minimal mock). Here we only assert the dashboard opens it
-// and wires onRename → renameProject postMessage.
-jest.mock('@/features/projects-dashboard/ui/components/RenameProjectDialog', () => ({
-    RenameProjectDialog: ({ project, onRename, onClose }: any) => (
-        <div data-testid="rename-dialog">
-            <span data-testid="rename-dialog-project">{project?.name}</span>
-            <button data-testid="rename-dialog-confirm" onClick={() => onRename('renamed-project')}>
-                Confirm Rename
-            </button>
-            <button data-testid="rename-dialog-cancel" onClick={onClose}>Cancel</button>
-        </div>
-    ),
-}));
-
 import { setupTestContext, renderDashboard, TestContext } from './ProjectDashboardScreen.testUtils';
 
 describe('ProjectDashboardScreen - Action Buttons', () => {
@@ -123,15 +108,10 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
     });
 
     describe('Common Actions', () => {
-        it('should send deployMesh message when Deploy Mesh clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderDashboard({ hasMesh: true });
-
-            const deployButton = screen.getByText('Deploy Mesh');
-            await user.click(deployButton);
-
-            expect(ctx.mockPostMessage).toHaveBeenCalledWith('deployMesh');
-        });
+        // The mesh has not deployed from an ActionGrid tile since D3 Step 08, and
+        // since the integrations-grid cutover its Redeploy lives in the card's
+        // detail drawer. That routing pin (deployMesh, never the keyed message)
+        // is owned by ProjectDashboardScreen-integrations.test.tsx.
 
         it('should send configure message when Configure clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
@@ -171,13 +151,13 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
             expect(ctx.mockPostMessage).toHaveBeenCalledWith('deleteProject');
         });
 
-        it('should send copyPath message when Copy Path clicked', async () => {
+        it('should send editProject message when Edit clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
-            await user.click(screen.getByText('Copy Path'));
+            await user.click(screen.getByText('Edit'));
 
-            expect(ctx.mockPostMessage).toHaveBeenCalledWith('copyPath');
+            expect(ctx.mockPostMessage).toHaveBeenCalledWith('editProject');
         });
 
         it('should send exportProject message when Export clicked', async () => {
@@ -199,15 +179,16 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
         });
     });
 
-    describe('Rename Dialog', () => {
-        it('should not show the rename dialog initially', () => {
-            renderDashboard();
-
-            expect(screen.queryByTestId('rename-dialog')).not.toBeInTheDocument();
-        });
-
-        it('should open the rename dialog when Rename clicked', async () => {
+    describe('Inline title rename', () => {
+        it('renames in place from the header pencil (renameProject via request)', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const { webviewClient } = require('@/core/ui/utils/WebviewClient');
+            const mockRequest = webviewClient.request as jest.Mock;
+            mockRequest.mockImplementation((type: string) =>
+                type === 'renameProject'
+                    ? Promise.resolve({ success: true })
+                    : new Promise(() => {})
+            );
             renderDashboard();
 
             ctx.triggerMessage('statusUpdate', {
@@ -216,13 +197,18 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
                 status: 'stopped',
             });
 
-            await user.click(screen.getByText('Rename'));
+            await user.click(screen.getByRole('button', { name: 'Rename Test Project' }));
+            const input = screen.getByRole('textbox', { name: 'New project name' });
+            await user.clear(input);
+            await user.type(input, 'renamed-project');
+            await user.keyboard('{Enter}');
 
-            expect(screen.getByTestId('rename-dialog')).toBeInTheDocument();
+            expect(mockRequest).toHaveBeenCalledWith('renameProject', {
+                newName: 'renamed-project',
+            });
         });
 
-        it('should post renameProject with the new name on confirm', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        it('offers no Rename item anywhere (the More menu lost it)', () => {
             renderDashboard();
 
             ctx.triggerMessage('statusUpdate', {
@@ -231,26 +217,7 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
                 status: 'stopped',
             });
 
-            await user.click(screen.getByText('Rename'));
-            await user.click(screen.getByTestId('rename-dialog-confirm'));
-
-            expect(ctx.mockPostMessage).toHaveBeenCalledWith('renameProject', { newName: 'renamed-project' });
-        });
-
-        it('should close the rename dialog on cancel', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderDashboard();
-
-            ctx.triggerMessage('statusUpdate', {
-                name: 'Test Project',
-                path: '/test/path',
-                status: 'stopped',
-            });
-
-            await user.click(screen.getByText('Rename'));
-            await user.click(screen.getByTestId('rename-dialog-cancel'));
-
-            expect(screen.queryByTestId('rename-dialog')).not.toBeInTheDocument();
+            expect(screen.queryByText('Rename')).not.toBeInTheDocument();
         });
     });
 });

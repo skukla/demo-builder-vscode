@@ -12,6 +12,9 @@ import type { WizardState, EDSConfig } from '@/types/webview';
 
 const log = webviewLogger('useGitHubAuth');
 
+/** Stable empty-array reference for the orgs default (re-render-loop guard). */
+const EMPTY_ORGS: string[] = [];
+
 /**
  * GitHub auth status message data
  */
@@ -22,6 +25,8 @@ interface GitHubAuthStatusData {
         avatarUrl?: string;
         email?: string;
     };
+    /** GitHub orgs the user is a member of — populates the wizard's namespace picker */
+    orgs?: string[];
     error?: string;
 }
 
@@ -52,6 +57,8 @@ interface UseGitHubAuthReturn {
     isChecking: boolean;
     /** Authenticated user info */
     user?: { login: string; avatarUrl?: string; email?: string };
+    /** GitHub orgs the user is a member of */
+    orgs: string[];
     /** Error message if auth failed */
     error?: string;
     /** Start OAuth flow */
@@ -71,6 +78,9 @@ export function useGitHubAuth({
 }: UseGitHubAuthProps): UseGitHubAuthReturn {
     // Track whether initial auth check is in progress
     const [isChecking, setIsChecking] = useState(true);
+    // Orgs are session-scoped — never persisted to wizard state because
+    // they're freshly fetched at every OAuth completion.
+    const [orgs, setOrgs] = useState<string[]>(EMPTY_ORGS);
 
     const edsConfig = state.edsConfig;
     const githubAuth = edsConfig?.githubAuth;
@@ -144,6 +154,7 @@ export function useGitHubAuth({
 
             // Initial check complete
             setIsChecking(false);
+            setOrgs(authData.orgs ?? EMPTY_ORGS);
 
             updateGitHubAuthRef.current({
                 isAuthenticated: authData.isAuthenticated,
@@ -160,6 +171,7 @@ export function useGitHubAuth({
 
             // Auth complete
             setIsChecking(false);
+            setOrgs(authData.orgs ?? EMPTY_ORGS);
 
             updateGitHubAuthRef.current({
                 isAuthenticated: authData.isAuthenticated,
@@ -196,6 +208,7 @@ export function useGitHubAuth({
         isAuthenticating: githubAuth?.isAuthenticating || false,
         isChecking,
         user: githubAuth?.user,
+        orgs,
         error: githubAuth?.error,
         startOAuth,
         checkAuthStatus,

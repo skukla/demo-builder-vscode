@@ -17,6 +17,8 @@ export type { UseAsyncOperationOptions, UseAsyncOperationReturn } from './useAsy
 
 // UI Interaction Hooks
 export { useAutoScroll } from './useAutoScroll';
+export { useEnterExit } from './useEnterExit';
+export type { EnterExitItem, UseEnterExitResult } from './useEnterExit';
 export { useSearchFilter } from './useSearchFilter';
 export { useFocusTrap, FOCUSABLE_SELECTOR } from './useFocusTrap';
 export { useFocusOnMount } from './useFocusOnMount';
@@ -50,3 +52,8 @@ export type {
     UseSelectionStepOptions,
     UseSelectionStepResult,
 } from './useSelectionStep';
+
+export { useElapsedStage, ORG_SERVICES_LOADING_STAGES } from './useElapsedStage';
+export type { ElapsedStage } from './useElapsedStage';
+
+export { useActivateOnKey } from './useActivateOnKey';

@@ -10,26 +10,78 @@ import { z } from 'zod';
 import type { ToolDescriptor } from './toolDescriptors';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
+import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 
 export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     {
         tool: 'regenerate_ai_files',
-        description: 'Regenerate the project\'s AI context files (AGENTS.md, .mcp.json, skills)',
+        description: "Regenerate the project's AI context files (AGENTS.md, .mcp.json, skills)",
         map: aiHandlers,
         type: 'regenerate-ai-files',
     },
     {
         tool: 'start_demo',
-        description: 'Start the current project\'s demo server',
+        description: "Start the current project's demo server",
         map: dashboardHandlers,
         type: 'startDemo',
     },
     {
+        tool: 'deploy_integration',
+        description:
+            'Deploy (or redeploy — idempotent) one App Builder integration on the current ' +
+            'project by its id (from get_project). Runs the guard chain and deploys under the ' +
+            "project's Adobe org context. For the API Mesh, use deploy_mesh instead.",
+        map: dashboardHandlers,
+        type: 'deployAppBuilderComponent',
+        inputSchema: {
+            id: z.string().describe('The integration id to deploy (from get_project)'),
+        },
+    },
+    {
+        tool: 'redeploy_integration',
+        description:
+            'Redeploy one App Builder integration by its id (idempotent re-run of its deploy). ' +
+            'Same effect as deploy_integration; named for the "redeploy my integration" ask.',
+        map: dashboardHandlers,
+        type: 'redeployAppBuilderComponent',
+        inputSchema: {
+            id: z.string().describe('The integration id to redeploy (from get_project)'),
+        },
+    },
+    {
+        tool: 'remove_integration',
+        description:
+            'Remove one App Builder integration by its id. DESTRUCTIVE: undeploys it remotely ' +
+            '(aio app undeploy / api-mesh:delete), deletes its local files, and republishes the ' +
+            'storefront without it. Confirm the id with the user first.',
+        map: dashboardHandlers,
+        type: 'removeAppBuilderComponent',
+        confirm: true,
+        inputSchema: {
+            id: z.string().describe('The integration id to remove (from get_project)'),
+        },
+    },
+    {
         tool: 'stop_demo',
-        description: 'Stop the current project\'s running demo server',
+        description: "Stop the current project's running demo server",
         map: dashboardHandlers,
         type: 'stopDemo',
+    },
+    {
+        tool: 'rename_project',
+        description:
+            'Rename the current project — the folder on disk, saved state, and the ' +
+            "project's MCP/AI configs all move together. Rejected while the demo is " +
+            'running. Never rename a project folder with shell commands; always use this.',
+        map: dashboardHandlers,
+        type: 'renameProject',
+        inputSchema: {
+            newName: z
+                .string()
+                .min(1)
+                .describe('New project name (letters, digits, hyphens, underscores only)'),
+        },
     },
     {
         tool: 'save_ai_prompt',
@@ -42,7 +94,10 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
                     id: z.string().describe('Prompt id (reuse to update; new id to create)'),
                     title: z.string(),
                     prompt: z.string(),
-                    pinned: z.boolean().optional().describe('true = global (every project); false = project-local'),
+                    pinned: z
+                        .boolean()
+                        .optional()
+                        .describe('true = global (every project); false = project-local'),
                 })
                 .describe('The prompt to save'),
         },
@@ -56,11 +111,73 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         inputSchema: { promptId: z.string().describe('Id of the prompt to delete') },
     },
     {
+        tool: 'deploy_mesh',
+        description:
+            "Deploy (or redeploy — idempotent) the current project's API Mesh. Runs the guard " +
+            "chain (auth, org, developer permission) and deploys under the project's Adobe org " +
+            'context, then persists the mesh endpoint. Use this rather than deploy_integration ' +
+            'for the mesh.',
+        map: meshHandlers,
+        type: 'deploy-api-mesh',
+    },
+    {
+        tool: 'export_project_settings',
+        description:
+            "Export the current project's settings to a JSON file on disk (folder, saved state, " +
+            'component configs, and — by default — secrets). Secrets are written to the FILE only; ' +
+            'the response returns just { path, includesSecrets }, never the secret values. The ' +
+            'target must be inside the project directory (defaults to ' +
+            '<project>/<name>.demo-builder.json). Pass includeSecrets:false for a secret-free copy.',
+        map: dashboardHandlers,
+        type: 'exportProjectSettings',
+        inputSchema: {
+            path: z
+                .string()
+                .optional()
+                .describe(
+                    'Target file (relative to the project dir, or absolute inside it). ' +
+                        'Omit for <project>/<name>.demo-builder.json.',
+                ),
+            includeSecrets: z
+                .boolean()
+                .optional()
+                .describe('Write secrets to the file (default true — a full local backup).'),
+        },
+    },
+    {
+        tool: 'refresh_block_library',
+        description:
+            "Rebuild the current EDS project's DA.live authoring block library from its " +
+            'component-definition.json (destructive full re-sync — use after hand-editing ' +
+            'component-definition.json outside the promote flow). EDS projects only; returns the ' +
+            'rebuilt library paths.',
+        map: edsHandlers,
+        type: 'refresh-block-library',
+    },
+    {
         tool: 'delete_mesh',
         description: 'Delete the API Mesh for an Adobe I/O workspace',
         map: meshHandlers,
         type: 'delete-api-mesh',
         confirm: true,
-        inputSchema: { workspaceId: z.string().describe('Adobe I/O workspace id whose mesh to delete') },
+        inputSchema: {
+            workspaceId: z.string().describe('Adobe I/O workspace id whose mesh to delete'),
+        },
+    },
+    {
+        tool: 'add_console_apis',
+        description:
+            "Subscribe Adobe APIs (sdk codes from list_console_apis) on this project's Developer " +
+            'Console workspace credential, e.g. to give a custom App Builder app Firefly Services ' +
+            'access. Persisted — survives later component adds/removes. Confirm the codes with the ' +
+            'user first.',
+        map: dashboardHandlers,
+        type: 'addConsoleApis',
+        inputSchema: {
+            apis: z
+                .array(z.string())
+                .min(1)
+                .describe('Adobe sdk codes to subscribe (from list_console_apis)'),
+        },
     },
 ];

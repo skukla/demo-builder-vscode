@@ -52,6 +52,10 @@ export class AuthCacheManager {
     // Token inspection caching (prevents redundant 4s CLI calls)
     private tokenInspectionCache: CacheEntry<{ valid: boolean; expiresIn: number; token?: string }> | undefined;
 
+    // Developer-permission probe caching (prevents redundant multi-second
+    // `aio app list` CLI calls — the result is org-stable for the session)
+    private developerPermissionsCache: CacheEntry<{ hasPermissions: boolean; error?: string }> | undefined;
+
     // Organization validation failure tracking
     private orgClearedDueToValidation = false;
 
@@ -194,6 +198,15 @@ export class AuthCacheManager {
     }
 
     /**
+     * Clear ONLY the cached org list (targeted). Used on a non-forced login so the org is
+     * re-derived from the fresh token: `getOrganizations()` is org-list-cache-first, so a
+     * stale list would otherwise re-supply the previous org for the cache's short TTL.
+     */
+    clearOrgListCache(): void {
+        this.orgListCache = undefined;
+    }
+
+    /**
      * Get cached console.where result
      */
     getCachedConsoleWhere(): AdobeConsoleWhereResponse | undefined {
@@ -268,6 +281,44 @@ export class AuthCacheManager {
     }
 
     /**
+     * Get cached developer-permission probe result
+     * PERFORMANCE: Prevents redundant multi-second `aio app list` CLI calls
+     */
+    getCachedDeveloperPermissions(): { hasPermissions: boolean; error?: string } | undefined {
+        if (!this.developerPermissionsCache) {
+            return undefined;
+        }
+
+        const now = Date.now();
+        if (now >= this.developerPermissionsCache.expiry) {
+            this.developerPermissionsCache = undefined;
+            return undefined;
+        }
+
+        return this.developerPermissionsCache.data;
+    }
+
+    /**
+     * Set cached developer-permission probe result
+     * PERFORMANCE: Cache definitive probe outcomes to prevent redundant CLI calls
+     */
+    setCachedDeveloperPermissions(result: { hasPermissions: boolean; error?: string }): void {
+        const now = Date.now();
+        const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.MEDIUM);
+        this.developerPermissionsCache = {
+            data: result,
+            expiry: now + jitteredTTL,
+        };
+    }
+
+    /**
+     * Clear developer-permission cache
+     */
+    clearDeveloperPermissionsCache(): void {
+        this.developerPermissionsCache = undefined;
+    }
+
+    /**
      * Check if org was cleared due to validation failure
      */
     wasOrgClearedDueToValidation(): boolean {
@@ -300,6 +351,7 @@ export class AuthCacheManager {
         this.orgListCache = undefined;
         this.consoleWhereCache = undefined;
         this.tokenInspectionCache = undefined;
+        this.developerPermissionsCache = undefined;
     }
 
     /**

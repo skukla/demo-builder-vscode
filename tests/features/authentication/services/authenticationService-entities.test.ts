@@ -68,26 +68,39 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             getOrganizations: jest.fn().mockResolvedValue([mockOrg]),
             getProjects: jest.fn().mockResolvedValue([mockProject]),
             getWorkspaces: jest.fn().mockResolvedValue([mockWorkspace]),
+            createProject: jest.fn().mockResolvedValue(mockProject),
+            createWorkspace: jest.fn().mockResolvedValue(mockWorkspace),
+            ensureWorkspaceRuntimeNamespace: jest.fn().mockResolvedValue(undefined),
         };
         mockResolver = {
             getCurrentOrganization: jest.fn().mockResolvedValue(mockOrg),
             getCurrentProject: jest.fn().mockResolvedValue(mockProject),
             getCurrentWorkspace: jest.fn().mockResolvedValue(mockWorkspace),
-            getCurrentContext: jest.fn().mockResolvedValue({ org: mockOrg, project: mockProject, workspace: mockWorkspace }),
+            getCurrentContext: jest.fn().mockResolvedValue({
+                org: mockOrg,
+                project: mockProject,
+                workspace: mockWorkspace,
+            }),
         };
         // Selector retains only non-mutating helpers post org-context refactor;
         // the global-mutating select* wrappers were removed.
         mockSelector = {};
 
         // Mock constructors
-        (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(() => mockSDKClient);
+        (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(
+            () => mockSDKClient
+        );
         (createEntityServices as jest.Mock).mockReturnValue({
             fetcher: mockFetcher,
             resolver: mockResolver,
             selector: mockSelector,
         });
 
-        authService = new AuthenticationService('/mock/extension/path', mockLogger, mockCommandExecutor);
+        authService = new AuthenticationService(
+            '/mock/extension/path',
+            mockLogger,
+            mockCommandExecutor
+        );
     });
 
     describe('entity retrieval methods', () => {
@@ -103,6 +116,30 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
 
             expect(result).toEqual([mockProject]);
             expect(mockFetcher.getProjects).toHaveBeenCalled();
+        });
+
+        it('should create a project (delegates to fetcher.createProject)', async () => {
+            const result = await authService.createProject('My Demo', 'A demo project');
+
+            expect(result).toEqual(mockProject);
+            expect(mockFetcher.createProject).toHaveBeenCalledWith('My Demo', 'A demo project');
+        });
+
+        it('should create a workspace (delegates to fetcher.createWorkspace)', async () => {
+            const result = await authService.createWorkspace('Stage', 'A workspace');
+
+            expect(result).toEqual(mockWorkspace);
+            expect(mockFetcher.createWorkspace).toHaveBeenCalledWith('Stage', 'A workspace');
+        });
+
+        it('ensures a workspace Runtime namespace (delegates to the fetcher)', async () => {
+            await authService.ensureWorkspaceRuntimeNamespace('org-x', 'proj-x', 'ws-x');
+
+            expect(mockFetcher.ensureWorkspaceRuntimeNamespace).toHaveBeenCalledWith(
+                'org-x',
+                'proj-x',
+                'ws-x'
+            );
         });
 
         it('should get workspaces', async () => {
@@ -136,7 +173,11 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
         it('should get current context', async () => {
             const result = await authService.getCurrentContext();
 
-            expect(result).toEqual({ org: mockOrg, project: mockProject, workspace: mockWorkspace });
+            expect(result).toEqual({
+                org: mockOrg,
+                project: mockProject,
+                workspace: mockWorkspace,
+            });
             expect(mockResolver.getCurrentContext).toHaveBeenCalled();
         });
     });
@@ -165,7 +206,10 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
 
         it('should return false when login fails', async () => {
             mockCommandExecutor.execute.mockResolvedValue({
-                code: 1, stdout: '', stderr: 'login failed', duration: 0,
+                code: 1,
+                stdout: '',
+                stderr: 'login failed',
+                duration: 0,
             } as any);
 
             const result = await authService.loginAndRestoreProjectContext({

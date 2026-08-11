@@ -115,9 +115,13 @@ describe('ensureHomeAiContext — settings.json', () => {
 
         const command = hook?.hooks?.[0]?.command ?? '';
         // Tool-input extraction uses a single node -e invocation on the resolved
-        // node binary — no jq/python3/grep cascade.
+        // node binary, reading the payload on STDIN — no jq/python3/grep cascade.
+        // It once read a $CLAUDE_TOOL_INPUT env var Claude Code never sets, so the
+        // hook silently did nothing; see mcpConfigWriter.test.ts for the tests
+        // that EXECUTE the extractor rather than grep it.
         expect(command).toContain(`TOOL_FILE=$("${TEST_NODE_PATH}" -e '`);
-        expect(command).toContain('process.env.CLAUDE_TOOL_INPUT');
+        expect(command).toContain('readFileSync(0');
+        expect(command).not.toContain('CLAUDE_TOOL_INPUT');
         expect(command).not.toContain('jq');
         expect(command).not.toContain('python3');
         // Root-scope guard (subpath only) + origin-remote guard.

@@ -562,11 +562,11 @@ describe('ConfigurationService — failure reporting', () => {
     const logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() };
     const tokenProvider = { getAccessToken: jest.fn().mockResolvedValue('ims-token') };
     const params: SiteRegistrationParams = {
-        org: 'kmanns',
-        site: 'blaines',
-        codeOwner: 'kmanns',
-        codeRepo: 'blaines',
-        contentSourceUrl: 'https://content.da.live/kmanns/blaines/',
+        org: 'acme-corp',
+        site: 'storefront-demo',
+        codeOwner: 'acme-corp',
+        codeRepo: 'storefront-demo',
+        contentSourceUrl: 'https://content.da.live/acme-corp/storefront-demo/',
     };
 
     let service: ConfigurationService;

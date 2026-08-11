@@ -9,10 +9,19 @@
 
 import { getLogger } from '@/core/logging';
 import {
-    PAAS_ENVIRONMENT_ID, PAAS_STORE_VIEW_CODE, PAAS_STORE_CODE,
-    PAAS_WEBSITE_CODE, PAAS_CUSTOMER_GROUP, CATALOG_API_KEY,
-    ACCS_GRAPHQL_ENDPOINT, ACCS_WEBSITE_CODE, ACCS_STORE_CODE,
-    ACCS_STORE_VIEW_CODE, ACCS_CUSTOMER_GROUP,
+    PAAS_GRAPHQL_ENDPOINT,
+    PAAS_CATALOG_SERVICE_ENDPOINT,
+    PAAS_ENVIRONMENT_ID,
+    PAAS_STORE_VIEW_CODE,
+    PAAS_STORE_CODE,
+    PAAS_WEBSITE_CODE,
+    PAAS_CUSTOMER_GROUP,
+    CATALOG_API_KEY,
+    ACCS_GRAPHQL_ENDPOINT,
+    ACCS_WEBSITE_CODE,
+    ACCS_STORE_CODE,
+    ACCS_STORE_VIEW_CODE,
+    ACCS_CUSTOMER_GROUP,
 } from '@/features/components/config/envVarKeys';
 import type { Project } from '@/types';
 import { isEdsProject } from '@/types/typeGuards';
@@ -52,6 +61,16 @@ export interface StorefrontChanges {
  */
 const STOREFRONT_CONFIG_ENV_VARS = [
     // PaaS backend config
+    //
+    // The two endpoints were MISSING here until 2026-08-04 while configGenerator
+    // read both on the PaaS path — so changing either changed what config.json
+    // would contain, the storefront was never marked stale, no republish was
+    // prompted, and the deployed site kept querying the old backend. Nothing
+    // errored. The ACCS arm was complete, which is why the common path hid it.
+    // `storefrontStalenessDetector-generatorCoupling.test.ts` now fails when the
+    // generator reads a key this list does not watch.
+    PAAS_GRAPHQL_ENDPOINT,
+    PAAS_CATALOG_SERVICE_ENDPOINT,
     PAAS_ENVIRONMENT_ID,
     CATALOG_API_KEY,
     PAAS_STORE_VIEW_CODE,
@@ -74,7 +93,9 @@ const STOREFRONT_CONFIG_ENV_VARS = [
 /**
  * Get storefront-related environment variables from component config
  */
-export function getStorefrontEnvVars(componentConfig: Record<string, unknown>): Record<string, string> {
+export function getStorefrontEnvVars(
+    componentConfig: Record<string, unknown>,
+): Record<string, string> {
     const result: Record<string, string> = {};
 
     for (const key of STOREFRONT_CONFIG_ENV_VARS) {
@@ -153,7 +174,10 @@ export function detectStorefrontChanges(
     const hasChanges = changedEnvVars.length > 0;
 
     if (hasChanges) {
-        logger.debug(`[Storefront Staleness] Detected ${changedEnvVars.length} changed env vars:`, changedEnvVars);
+        logger.debug(
+            `[Storefront Staleness] Detected ${changedEnvVars.length} changed env vars:`,
+            changedEnvVars,
+        );
     } else {
         logger.debug('[Storefront Staleness] No storefront-relevant env vars changed');
     }
@@ -162,15 +186,35 @@ export function detectStorefrontChanges(
 }
 
 /**
- * Update storefront state after publishing config.json
+ * Record what was ACTUALLY published, so staleness stays detectable.
+ *
+ * ⚠️ Pass the configs the published `config.json` was GENERATED FROM — captured
+ * before the push — never `project.componentConfigs` read at call time.
+ *
+ * Why: this state is the only baseline `detectStorefrontChanges` compares
+ * against. If it records the project's current values rather than the published
+ * ones, the detector compares a value to itself, finds no change, and the
+ * storefront can never be reported stale again — no prompt, no republish, no
+ * badge. It fails silent and permanent.
+ *
+ * That happened on 2026-08-10. `storefrontRepublishService` generated from
+ * `project.componentConfigs` at step 2, spent ~4s pushing to GitHub and the CDN,
+ * then read `project.componentConfigs` AGAIN at step 5 — by which time a
+ * concurrent Configure save had reassigned it (`configure.ts`,
+ * `project.componentConfigs = sanitizedConfigs`). The old Commerce scope went to
+ * the CDN; the new one was recorded as published. The storefront then queried a
+ * website with no products, every PDP rendered an empty block, and nothing in
+ * the UI could detect it.
  *
  * @param project - The project to update
- * @param componentConfigs - The component configs at time of publish
+ * @param publishedComponentConfigs - Snapshot of the configs used to GENERATE
+ *   the config.json that was just published
  */
 export function updateStorefrontState(
     project: Project,
-    componentConfigs: Record<string, unknown>,
+    publishedComponentConfigs: Record<string, unknown>,
 ): void {
+    const componentConfigs = publishedComponentConfigs;
     // Merge all configs for cross-boundary values
     const allConfigs: Record<string, unknown> = {};
     for (const config of Object.values(componentConfigs)) {

@@ -7,6 +7,10 @@
  *   3. DaLiveAuthError → re-authenticate once, then retry the pipeline
  */
 
+// Real wall-clock retry/UI delays; mock the shared sleep so only orchestration is
+// under test. Assertions pin the SEQUENCE of attempts, never elapsed duration.
+jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
+
 import * as vscode from 'vscode';
 
 // --- Mocks (must precede imports) -------------------------------------------

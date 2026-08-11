@@ -1,11 +1,19 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { findComponentById } from '@/core/ui/utils/componentDataHelpers';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
 import { PAAS_URL, PAAS_GRAPHQL_ENDPOINT } from '@/features/components/config/envVarKeys';
+import {
+    findFieldValue,
+    writeFieldValue,
+    writeToComponents,
+} from '@/features/components/services/componentConfigWrites';
 import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
-import { toServiceGroupWithSortedFields, SERVICE_GROUP_DEFINITIONS } from '@/features/components/services/serviceGroupTransforms';
+import {
+    toServiceGroupWithSortedFields,
+    SERVICE_GROUP_DEFINITIONS,
+} from '@/features/components/services/serviceGroupTransforms';
+import { collectStackComponents } from '@/features/components/services/stackComponentCollector';
 import { getStackById } from '@/features/project-creation/ui/hooks/useSelectedStack';
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
 
@@ -83,29 +91,36 @@ interface UseComponentConfigReturn {
 // Note: 'mesh' group exists in shared list for Configure screen; wizard filters MESH_ENDPOINT
 // so the mesh group will be empty and hidden via `.filter(group => group.fields.length > 0)`
 
-/** Apply field defaults and brand-specific package defaults to component configs */
+/**
+ * Apply field defaults and brand-specific package defaults to component configs.
+ *
+ * Writes through `writeToComponents`, so `prevConfigs` and every per-component object
+ * inside it are left untouched — the caller's object is not rewritten in place.
+ */
 function applyFieldDefaults(
     prevConfigs: ComponentConfigs,
     groups: ServiceGroup[],
     packageConfigDefaults: Record<string, string> | undefined,
 ): ComponentConfigs {
-    const newConfigs = { ...prevConfigs };
+    let newConfigs = prevConfigs;
     let hasChanges = false;
     const packageDefaults = packageConfigDefaults || {};
 
-    groups.forEach(group => {
-        group.fields.forEach(field => {
+    groups.forEach((group) => {
+        group.fields.forEach((field) => {
             const packageValue = packageDefaults[field.key];
             const defaultValue = packageValue ?? field.default;
-            if (defaultValue !== undefined && defaultValue !== '') {
-                field.componentIds.forEach(componentId => {
-                    if (!newConfigs[componentId]) newConfigs[componentId] = {};
-                    if (!newConfigs[componentId][field.key] || packageValue) {
-                        newConfigs[componentId][field.key] = defaultValue;
-                        hasChanges = true;
-                    }
-                });
-            }
+            if (defaultValue === undefined || defaultValue === '') return;
+
+            // A package default overrides whatever is there; a field default only fills a
+            // blank. Applied per component, since they can hold different values.
+            const targets = field.componentIds.filter(
+                (componentId) => packageValue || !newConfigs[componentId]?.[field.key],
+            );
+            if (targets.length === 0) return;
+
+            newConfigs = writeToComponents(newConfigs, targets, { [field.key]: defaultValue });
+            hasChanges = true;
         });
     });
 
@@ -119,7 +134,9 @@ export function useComponentConfig({
     onConfigsChange,
     onValidationChange,
 }: UseComponentConfigProps): UseComponentConfigReturn {
-    const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>(initialConfigs || {});
+    const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>(
+        initialConfigs || {},
+    );
     const [hasInitializedFromState, setHasInitializedFromState] = useState(false);
     const [componentsData, setComponentsData] = useState<ComponentsData>({});
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -139,7 +156,7 @@ export function useComponentConfig({
             log.info('Syncing componentConfigs from props', {
                 configKeys: Object.keys(initialConfigs),
             });
-            setComponentConfigs(prev => {
+            setComponentConfigs((prev) => {
                 // Merge: incoming configs take priority, but preserve any user edits
                 const merged = { ...initialConfigs };
                 // Keep any keys that exist in prev but not in incoming (user edits)
@@ -158,7 +175,11 @@ export function useComponentConfig({
     useEffect(() => {
         const loadData = async () => {
             try {
-                const response = await vscode.request<{ success: boolean; type: string; data: ComponentsData }>('get-components-data');
+                const response = await vscode.request<{
+                    success: boolean;
+                    type: string;
+                    data: ComponentsData;
+                }>('get-components-data');
                 const data = response.data;
                 setComponentsData(data);
                 setIsLoading(false);
@@ -171,74 +192,18 @@ export function useComponentConfig({
         loadData();
     }, []);
 
-    // Build selected components with dependencies
-    // Read directly from stack config - this is the source of truth
-    const selectedComponents = useMemo(() => {
-        const components: Array<{ id: string; data: ComponentData; type: string }> = [];
-
-        // Get stack directly from config - no derivation needed
-        const stack = selectedStack ? getStackById(selectedStack) : undefined;
-        if (!stack) return components;
-
-        const addComponentWithDeps = (comp: ComponentData, type: string) => {
-            components.push({ id: comp.id, data: comp, type });
-
-            comp.dependencies?.required?.forEach(depId => {
-                const dep = findComponentById(componentsData, depId);
-                if (dep && !components.some(c => c.id === depId)) {
-                    const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
-                                       (dep.configuration?.optionalEnvVars?.length || 0) > 0;
-                    if (hasEnvVars) {
-                        components.push({ id: dep.id, data: dep, type: 'Dependency' });
-                    }
-                }
-            });
-
-            comp.dependencies?.optional?.forEach(depId => {
-                const dep = findComponentById(componentsData, depId);
-                if (dep && !components.some(c => c.id === depId)) {
-                    // Check if optional dep is in stack dependencies
-                    const isSelected = stack.dependencies?.includes(depId);
-                    if (isSelected) {
-                        const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
-                                           (dep.configuration?.optionalEnvVars?.length || 0) > 0;
-                        if (hasEnvVars) {
-                            components.push({ id: dep.id, data: dep, type: 'Dependency' });
-                        }
-                    }
-                }
-            });
-        };
-
-        // Use stack.frontend directly
-        if (stack.frontend) {
-            const frontend = componentsData.frontends?.find(f => f.id === stack.frontend);
-            if (frontend) addComponentWithDeps(frontend, 'Frontend');
-        }
-
-        // Use stack.backend directly
-        if (stack.backend) {
-            const backend = componentsData.backends?.find(b => b.id === stack.backend);
-            if (backend) addComponentWithDeps(backend, 'Backend');
-        }
-
-        // Use stack.dependencies — search all component sections (not just dependencies)
-        // so mesh components (eds-accs-mesh, eds-commerce-mesh) are included
-        stack.dependencies?.forEach(depId => {
-            if (!components.some(c => c.id === depId)) {
-                const dep = findComponentById(componentsData, depId);
-                if (dep) {
-                    const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
-                                       (dep.configuration?.optionalEnvVars?.length || 0) > 0;
-                    if (hasEnvVars) {
-                        components.push({ id: dep.id, data: dep, type: 'Dependency' });
-                    }
-                }
-            }
-        });
-
-        return components;
-    }, [selectedStack, componentsData]);
+    // Build selected components with dependencies.
+    // The collection rule (and the three-way dependency walk) lives in
+    // `stackComponentCollector` — it is pure, and inside this hook it was both
+    // written out three times and unreachable by tests.
+    const selectedComponents = useMemo(
+        () =>
+            collectStackComponents<ComponentData>(
+                selectedStack ? getStackById(selectedStack) : undefined,
+                componentsData,
+            ),
+        [selectedStack, componentsData],
+    );
 
     // Build service groups from selected components
     const serviceGroups = useMemo(() => {
@@ -254,7 +219,11 @@ export function useComponentConfig({
                 const envVarDef = envVarDefs[envVarKey];
                 if (envVarDef) {
                     if (!fieldMap.has(envVarKey)) {
-                        fieldMap.set(envVarKey, { ...envVarDef, key: envVarKey, componentIds: [id] });
+                        fieldMap.set(envVarKey, {
+                            ...envVarDef,
+                            key: envVarKey,
+                            componentIds: [id],
+                        });
                     } else {
                         const existing = fieldMap.get(envVarKey);
                         if (existing && !existing.componentIds.includes(id)) {
@@ -276,7 +245,7 @@ export function useComponentConfig({
             // (This logic mirrors resolveComponentEnvVars but uses browser-loaded componentsData)
             if (data.configuration?.requiredServices && stack?.backend) {
                 const backendId = stack.backend;
-                data.configuration.requiredServices.forEach(serviceId => {
+                data.configuration.requiredServices.forEach((serviceId) => {
                     const serviceDef = componentsData.services?.[serviceId];
                     if (serviceDef?.backendSpecific && serviceDef.requiredEnvVarsByBackend) {
                         const backendSpecificVars = serviceDef.requiredEnvVarsByBackend[backendId];
@@ -298,12 +267,11 @@ export function useComponentConfig({
             groups[groupKey].push(field);
         });
 
-        return SERVICE_GROUP_DEFINITIONS
-            .map(def => toServiceGroupWithSortedFields(def, groups))
-            .filter(group => group.fields.length > 0)
+        return SERVICE_GROUP_DEFINITIONS.map((def) => toServiceGroupWithSortedFields(def, groups))
+            .filter((group) => group.fields.length > 0)
             .sort((a, b) => {
-                const aOrder = SERVICE_GROUP_DEFINITIONS.find(d => d.id === a.id)?.order || 99;
-                const bOrder = SERVICE_GROUP_DEFINITIONS.find(d => d.id === b.id)?.order || 99;
+                const aOrder = SERVICE_GROUP_DEFINITIONS.find((d) => d.id === a.id)?.order || 99;
+                const bOrder = SERVICE_GROUP_DEFINITIONS.find((d) => d.id === b.id)?.order || 99;
                 return aOrder - bOrder;
             });
     }, [selectedComponents, componentsData.envVars, componentsData.services, selectedStack]);
@@ -312,7 +280,9 @@ export function useComponentConfig({
     useEffect(() => {
         if (serviceGroups.length === 0) return;
 
-        setComponentConfigs(prevConfigs => applyFieldDefaults(prevConfigs, serviceGroups, packageConfigDefaults));
+        setComponentConfigs((prevConfigs) =>
+            applyFieldDefaults(prevConfigs, serviceGroups, packageConfigDefaults),
+        );
     }, [serviceGroups, packageConfigDefaults]);
 
     // Note: Auto-fill mesh endpoint effect removed - MESH_ENDPOINT is now auto-configured
@@ -325,46 +295,48 @@ export function useComponentConfig({
         let allValid = true;
         const errors: Record<string, string> = {};
 
-        serviceGroups.forEach(group => {
-            group.fields.forEach(field => {
+        serviceGroups.forEach((group) => {
+            group.fields.forEach((field) => {
                 // Note: MESH_ENDPOINT deferred field check removed - field is now filtered out entirely
                 // (auto-configured during project creation)
 
-                if (field.required) {
-                    const hasValue = field.componentIds.some(compId => componentConfigs[compId]?.[field.key]);
-                    if (!hasValue) {
-                        allValid = false;
-                        errors[field.key] = `${field.label} is required`;
-                    }
+                // `findFieldValue` treats undefined and '' as absent and everything else
+                // as present. A bare truthiness check used to sit here, which made a
+                // field holding `false` or `0` read as "required but missing" — an error
+                // the user could not clear, because the checkbox IS ticked. No env var
+                // declares a boolean today, but ConfigFieldRenderer's `case 'boolean'`
+                // writes real booleans, so the trap was armed.
+                const value = findFieldValue(componentConfigs, field);
+                const hasValue = value !== undefined;
+
+                if (field.required && !hasValue) {
+                    allValid = false;
+                    errors[field.key] = `${field.label} is required`;
                 }
+
+                // Format checks only apply to a real string — a boolean or a number has
+                // no URL or pattern to fail.
+                if (typeof value !== 'string') return;
 
                 // URL validation using core validator
                 if (field.type === 'url') {
-                    const firstComponentWithValue = field.componentIds.find(compId => componentConfigs[compId]?.[field.key]);
-                    if (firstComponentWithValue) {
-                        const value = componentConfigs[firstComponentWithValue][field.key] as string;
-                        const result = urlValidator(value);
-                        if (!result.valid && result.error) {
-                            allValid = false;
-                            errors[field.key] = result.error;
-                        }
+                    const result = urlValidator(value);
+                    if (!result.valid && result.error) {
+                        allValid = false;
+                        errors[field.key] = result.error;
                     }
                 }
 
                 // Pattern validation using core validator
                 if (field.validation?.pattern) {
-                    const firstComponentWithValue = field.componentIds.find(compId => componentConfigs[compId]?.[field.key]);
-                    if (firstComponentWithValue) {
-                        const value = componentConfigs[firstComponentWithValue][field.key] as string;
-                        const patternValidator = pattern(
-                            new RegExp(field.validation.pattern),
-                            field.validation.message || 'Invalid format',
-                        );
-                        const result = patternValidator(value);
-                        if (!result.valid && result.error) {
-                            allValid = false;
-                            errors[field.key] = result.error;
-                        }
+                    const patternValidator = pattern(
+                        new RegExp(field.validation.pattern),
+                        field.validation.message || 'Invalid format',
+                    );
+                    const result = patternValidator(value);
+                    if (!result.valid && result.error) {
+                        allValid = false;
+                        errors[field.key] = result.error;
                     }
                 }
             });
@@ -374,81 +346,64 @@ export function useComponentConfig({
         onValidationChangeRef.current(allValid);
     }, [componentConfigs, serviceGroups]);
 
-    const updateField = useCallback((field: UniqueField, value: string | boolean) => {
-        setTouchedFields(prev => new Set(prev).add(field.key));
-        setComponentConfigs(prev => {
-            const newConfigs = { ...prev };
-            field.componentIds.forEach(componentId => {
-                if (!newConfigs[componentId]) newConfigs[componentId] = {};
-                newConfigs[componentId][field.key] = value;
-            });
+    const updateField = useCallback(
+        (field: UniqueField, value: string | boolean) => {
+            setTouchedFields((prev) => new Set(prev).add(field.key));
+            setComponentConfigs((prev) => {
+                const writes: Record<string, string | boolean> = { [field.key]: value };
 
-            // Linked field: PAAS_URL → PAAS_GRAPHQL_ENDPOINT
-            // Only auto-derive if GraphQL hasn't been manually touched
-            if (field.key === PAAS_URL && typeof value === 'string') {
-                const graphqlKey = PAAS_GRAPHQL_ENDPOINT;
-                if (!touchedFields.has(graphqlKey)) {
-                    const derivedGraphql = deriveGraphqlEndpoint(value);
-                    field.componentIds.forEach(componentId => {
-                        if (newConfigs[componentId]) {
-                            newConfigs[componentId][graphqlKey] = derivedGraphql;
-                        }
-                    });
+                // Linked field: PAAS_URL → PAAS_GRAPHQL_ENDPOINT
+                // Only auto-derive if GraphQL hasn't been manually touched
+                if (field.key === PAAS_URL && typeof value === 'string') {
+                    if (!touchedFields.has(PAAS_GRAPHQL_ENDPOINT)) {
+                        writes[PAAS_GRAPHQL_ENDPOINT] = deriveGraphqlEndpoint(value);
+                    }
+                }
+
+                return writeToComponents(prev, field.componentIds, writes);
+            });
+        },
+        [touchedFields],
+    );
+
+    const getFieldValue = useCallback(
+        (field: UniqueField): string | boolean | undefined => {
+            for (const componentId of field.componentIds) {
+                const value = componentConfigs[componentId]?.[field.key];
+                if (value !== undefined && value !== '') {
+                    return typeof value === 'number' ? String(value) : value;
                 }
             }
-
-            return newConfigs;
-        });
-    }, [touchedFields]);
-
-    const getFieldValue = useCallback((field: UniqueField): string | boolean | undefined => {
-        for (const componentId of field.componentIds) {
-            const value = componentConfigs[componentId]?.[field.key];
-            if (value !== undefined && value !== '') {
-                return typeof value === 'number' ? String(value) : value;
+            // If user explicitly cleared this field (touched + empty), respect their intent
+            // Don't fall back to default when user deliberately cleared the value
+            if (touchedFields.has(field.key)) {
+                return '';
             }
-        }
-        // If user explicitly cleared this field (touched + empty), respect their intent
-        // Don't fall back to default when user deliberately cleared the value
-        if (touchedFields.has(field.key)) {
+            if (field.default !== undefined && field.default !== '') return field.default;
             return '';
-        }
-        if (field.default !== undefined && field.default !== '') return field.default;
-        return '';
-    }, [componentConfigs, touchedFields]);
+        },
+        [componentConfigs, touchedFields],
+    );
 
     /**
      * Normalize URL field on blur - removes trailing slashes for visual feedback.
      * Called when user leaves a URL field to show normalized value.
      */
-    const normalizeUrlField = useCallback((field: UniqueField) => {
-        if (field.type !== 'url') return;
+    const normalizeUrlField = useCallback(
+        (field: UniqueField) => {
+            if (field.type !== 'url') return;
 
-        // Find current value
-        let currentValue: string | undefined;
-        for (const componentId of field.componentIds) {
-            const value = componentConfigs[componentId]?.[field.key];
-            if (value !== undefined && value !== '' && typeof value === 'string') {
-                currentValue = value;
-                break;
+            const currentValue = findFieldValue(componentConfigs, field);
+            if (typeof currentValue !== 'string' || !currentValue) return;
+
+            // Normalize and update if changed
+            const normalized = normalizeUrl(currentValue);
+            if (normalized !== currentValue) {
+                setComponentConfigs((prev) => writeFieldValue(prev, field, normalized));
             }
-        }
-
-        if (!currentValue) return;
-
-        // Normalize and update if changed
-        const normalized = normalizeUrl(currentValue);
-        if (normalized !== currentValue) {
-            setComponentConfigs(prev => {
-                const newConfigs = { ...prev };
-                field.componentIds.forEach(componentId => {
-                    if (!newConfigs[componentId]) newConfigs[componentId] = {};
-                    newConfigs[componentId][field.key] = normalized;
-                });
-                return newConfigs;
-            });
-        }
-    }, [componentConfigs]);
+        },
+        [componentConfigs],
+    );
 
     return {
         componentConfigs,

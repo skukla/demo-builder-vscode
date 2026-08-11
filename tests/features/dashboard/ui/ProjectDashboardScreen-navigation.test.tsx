@@ -15,6 +15,12 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 
 // Mock React Spectrum Provider context (required for Spectrum components)
 jest.mock('@adobe/react-spectrum', () => ({
+    // ActionGrid's lifecycle + remedy tiles wrap their buttons in a
+    // TooltipTrigger. A per-suite Spectrum mock only exports what the tree
+    // rendered when it was written, so adding a primitive anywhere in the tree
+    // breaks every suite mocking this module.
+    TooltipTrigger: ({ children }: any) => <>{children}</>,
+    Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
     View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     Flex: ({ children, ...props }: any) => <div style={{ display: 'flex' }} {...props}>{children}</div>,
     Heading: ({ children, level, ...props }: any) => {
@@ -75,6 +81,10 @@ jest.mock('@spectrum-icons/workflow/Settings', () => ({
     default: () => <span data-testid="settings-icon" />,
 }));
 
+jest.mock('@spectrum-icons/workflow/Replay', () => ({
+    __esModule: true,
+    default: () => <span data-testid="replay-icon" />,
+}));
 jest.mock('@spectrum-icons/workflow/Refresh', () => ({
     __esModule: true,
     default: () => <span data-testid="refresh-icon" />,
@@ -139,6 +149,13 @@ jest.mock('@/core/ui/components/layout', () => ({
         <div data-testid="page-header">
             <h1>{title}</h1>
             {subtitle && <h3>{subtitle}</h3>}
+        </div>
+    ),
+    ControlPanelLayout: ({ masthead, primary, secondary }: any) => (
+        <div data-testid="control-panel">
+            <div data-testid="control-panel-masthead">{masthead}</div>
+            <div data-testid="control-panel-primary">{primary}</div>
+            {secondary && <div data-testid="control-panel-secondary">{secondary}</div>}
         </div>
     ),
 }));

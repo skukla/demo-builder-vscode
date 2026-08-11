@@ -49,7 +49,7 @@ The project deletion bug (`ENOTEMPTY: directory not empty, rmdir`) revealed **sy
 
 **Error:**
 ```
-[Delete Project] Deleting project directory: /Users/kukla/.demo-builder/projects/my-commerce-demo
+[Delete Project] Deleting project directory: /Users/<user>/.demo-builder/projects/my-commerce-demo
 ❌ [Delete Project] ❌ Failed to delete project files
   Error: ENOTEMPTY: directory not empty, rmdir '<path>/'
 ```

@@ -65,7 +65,6 @@ describe('authenticationHandlers - handleAuthenticate - Re-authentication', () =
 				isAuthenticated: true,
 				isChecking: false,
 				organization: undefined,
-				project: undefined,
 				message: 'Organization selection required',
 				subMessage: 'Organization no longer accessible or lacks App Builder access',
 				requiresOrgSelection: true,

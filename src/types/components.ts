@@ -86,7 +86,7 @@ export interface RawComponentDefinition {
     id: string;
     name: string;
     type?: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder';
-    subType?: 'mesh' | 'utility' | 'service';
+    subType?: 'mesh' | 'app' | 'utility' | 'service';
     description?: string;
     icon?: string | { light: string; dark: string };
     source?: {
@@ -186,6 +186,8 @@ export interface RawComponentRegistry {
     backends?: Record<string, RawComponentDefinition>;
     /** v3.0.0: Mesh components (e.g., eds-commerce-mesh, headless-commerce-mesh) */
     mesh?: Record<string, RawComponentDefinition>;
+    /** App Builder app components (custom apps deployed to the demo's workspace) */
+    appBuilder?: Record<string, RawComponentDefinition>;
     /** v3.0.0: Dependencies */
     dependencies?: Record<string, RawComponentDefinition>;
     /** v3.0.0: Integrations (e.g., experience-platform) */
@@ -233,6 +235,7 @@ export interface ComponentRegistry {
         backends: TransformedComponentDefinition[];
         dependencies: TransformedComponentDefinition[];
         mesh?: TransformedComponentDefinition[];
+        appBuilder?: TransformedComponentDefinition[];
         integrations?: TransformedComponentDefinition[];
     };
     services?: Record<string, ServiceDefinition>;

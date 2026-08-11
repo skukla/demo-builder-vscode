@@ -16,9 +16,9 @@
  */
 
 import * as fs from 'fs/promises';
-import * as path from 'path';
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
 import type { Project } from '@/types';
+import * as path from 'path';
 
 // Mock fs/promises
 jest.mock('fs/promises');
@@ -119,7 +119,9 @@ describe('Manifest Error Investigation', () => {
 
     describe('ISSUE 2: Race condition - temp file missing before rename', () => {
         it('should detect when temp file disappears after write but before rename', async () => {
-            // Given: A project and temp file that "disappears" between write and verify
+            // Given: writeFile succeeds, but the temp file is gone by the time rename runs.
+            // The atomic helper (writeFileAtomic) surfaces this as an ENOENT from rename(2) —
+            // there is no separate temp-file access check to intercept it.
             const project = createTestProject();
             const tempPath = path.join(project.path, '.demo-builder.json.tmp');
 
@@ -130,7 +132,9 @@ describe('Manifest Error Investigation', () => {
             mockFs.writeFile.mockResolvedValue(undefined);
             mockFs.rename.mockImplementation(async (from) => {
                 if (from === tempPath) {
-                    throw new Error('ENOENT: no such file or directory');
+                    const err = new Error('ENOENT: no such file or directory');
+                    (err as Error & { code: string }).code = 'ENOENT';
+                    throw err;
                 }
                 return undefined;
             });

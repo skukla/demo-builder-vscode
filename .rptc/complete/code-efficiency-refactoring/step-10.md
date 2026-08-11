@@ -23,7 +23,7 @@ No new unit tests - this step focuses on configuration and verification.
 
 ### Part 1: ESLint Configuration Updates
 
-**File:** `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/eslint.config.mjs`
+**File:** `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/eslint.config.mjs`
 
 **Current State Analysis:**
 - `complexity`: Currently set to `['warn', 25]` - lower to `['warn', 15]`

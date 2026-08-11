@@ -24,6 +24,18 @@ import type { Logger } from '@/types/logger';
 
 jest.setTimeout(5000);
 
+// Phase 3 waits for real: a 2s code-sync poll interval and a 2s transient-retry
+// backoff, both via the shared sleep(). The node jest project runs on REAL
+// timers, so two tests here each burned 2003ms of wall clock waiting — 40% of
+// this file's budget, and the only budgeted suite in the repo with meaningful
+// load sensitivity after the 2026-08-10 processCleanup timeout flake.
+//
+// Both sleeps sit inside attempt-bounded loops (CODE_SYNC_MAX_ATTEMPTS,
+// RETRY_DELAYS_MS.length), not deadline-based ones, so removing the delay
+// changes how fast the loops run and not how many times. Nothing here asserts
+// on elapsed time — per sleep.ts, these assert on the SEQUENCE of attempts.
+jest.mock('@/core/utils/sleep');
+
 // Mock the helpers Phase 3 calls AFTER verifyCodeSync. We don't care about
 // their behavior here — we only want verifyCodeSync to be exercised cleanly.
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
@@ -138,6 +150,84 @@ beforeEach(() => {
 
 describe('executePhaseCodeSync — code sync verification gate', () => {
     describe('GitHub App not installed', () => {
+        it('uses team-org messaging when the namespace differs from the authenticated GitHub user', async () => {
+            // Picker scenario: SC authenticated as `leahrayard` but picked the
+            // team org `demo-system-stores` as the demo namespace. Phase 3
+            // surfaces the install prompt but with "ask your team admin"
+            // framing because the SC can't install on the team org themselves.
+            const context = makeContext();
+            const services = makeServices({ isInstalled: false });
+
+            const repoInfo: RepoInfo = {
+                repoOwner: 'demo-system-stores',
+                repoName: 'leah-demo',
+                repoUrl: 'https://github.com/demo-system-stores/leah-demo',
+            };
+            const edsConfig = {
+                ...EDS_CONFIG,
+                daLiveOrg: 'demo-system-stores',
+                githubAuth: {
+                    isAuthenticated: true,
+                    user: { login: 'leahrayard' },
+                },
+            } as unknown as typeof EDS_CONFIG;
+
+            await executePhaseCodeSync(
+                context,
+                edsConfig,
+                services,
+                repoInfo,
+                new AbortController().signal
+            );
+
+            expect(context.sendMessage).toHaveBeenCalledWith(
+                'storefront-setup-github-app-required',
+                expect.objectContaining({
+                    owner: 'demo-system-stores',
+                    isTeamOrg: true,
+                    message: expect.stringContaining('admin'),
+                })
+            );
+        });
+
+        it('uses self-install messaging when the namespace matches the authenticated GitHub user', async () => {
+            // Picker scenario: SC authenticated as `leahrayard` AND picked
+            // their personal account. They can install on their own user,
+            // so the message stays as the existing "must be installed" copy.
+            const context = makeContext();
+            const services = makeServices({ isInstalled: false });
+
+            const repoInfo: RepoInfo = {
+                repoOwner: 'leahrayard',
+                repoName: 'leah-demo',
+                repoUrl: 'https://github.com/leahrayard/leah-demo',
+            };
+            const edsConfig = {
+                ...EDS_CONFIG,
+                daLiveOrg: 'leahrayard',
+                githubAuth: {
+                    isAuthenticated: true,
+                    user: { login: 'leahrayard' },
+                },
+            } as unknown as typeof EDS_CONFIG;
+
+            await executePhaseCodeSync(
+                context,
+                edsConfig,
+                services,
+                repoInfo,
+                new AbortController().signal
+            );
+
+            expect(context.sendMessage).toHaveBeenCalledWith(
+                'storefront-setup-github-app-required',
+                expect.objectContaining({
+                    owner: 'leahrayard',
+                    isTeamOrg: false,
+                })
+            );
+        });
+
         it('surfaces the install dialog and fails even when the code-bus poll would succeed (regression for false-positive verified)', async () => {
             // The bug: scripts/aem.js was on the bus from initial template seed,
             // so polling returned 200 and Demo Builder declared "verified" while

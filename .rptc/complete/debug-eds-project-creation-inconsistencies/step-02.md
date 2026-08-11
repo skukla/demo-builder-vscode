@@ -11,7 +11,7 @@ Enhance logging in `edsDaLiveOrgHandlers.ts` to trace why DA.live sites sometime
 
 ## Implementation Details
 
-**File**: `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/eds/handlers/edsDaLiveOrgHandlers.ts`
+**File**: `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/eds/handlers/edsDaLiveOrgHandlers.ts`
 
 **Logs to Add in `handleGetDaLiveSites`**:
 

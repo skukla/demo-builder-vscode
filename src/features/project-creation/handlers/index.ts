@@ -8,10 +8,10 @@
 export { projectCreationHandlers } from './ProjectCreationHandlerRegistry';
 
 // Export progress callback config
-export { needsProgressCallback } from './progressCallbackConfig';
 
 // Export individual handlers (backward compatibility)
 export * from './validateHandler';
 export * from './createHandler';
 export * from './executor';
 export * from './checkGitHubAppHandler';
+export * from './consoleApiHandlers';

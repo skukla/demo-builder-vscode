@@ -100,7 +100,7 @@
                     "ADOBE_COMMERCE_ENVIRONMENT_ID",
                     "ADOBE_CATALOG_API_KEY"
                 ],
-                "optionalEnvVars": []
+                "optionalEnvVars": ["ADOBE_COMMERCE_ADMIN_URL"]
             }
         },
         "adobe-commerce-accs": {
@@ -220,6 +220,8 @@
             }
         }
     },
+
+    "appBuilder": {},
 
     "brands": {
         "citisignal": {
@@ -400,11 +402,15 @@
             "type": "url",
             "required": true,
             "placeholder": "https://na1-sandbox.api.commerce.adobe.com/{env-id}/graphql",
-            "description": "Full GraphQL endpoint URL for your ACCS instance. Find it at `https://experience.adobe.com/#/@{orgCode}/commerce/cloud-service/instances`.",
-            "group": "accs"
+            "description": "Full GraphQL endpoint URL for your ACCS instance. Find it at `https://experience.adobe.com/#/commerce/cloud-service/instances`",
+            "group": "accs",
+            "validation": {
+                "pattern": "/graphql/?$",
+                "message": "Enter the full GraphQL endpoint URL — it must end in /graphql (store detection needs this)."
+            }
         },
         "ACCS_WEBSITE_CODE": {
-            "label": "Website Code",
+            "label": "Website code",
             "type": "text",
             "required": true,
             "default": "citisignal",
@@ -413,7 +419,7 @@
             "group": "accs"
         },
         "ACCS_STORE_CODE": {
-            "label": "Store Code",
+            "label": "Store code",
             "type": "text",
             "required": true,
             "default": "citisignal_store",
@@ -422,7 +428,7 @@
             "group": "accs"
         },
         "ACCS_STORE_VIEW_CODE": {
-            "label": "Store View Code",
+            "label": "Store view code",
             "type": "text",
             "required": true,
             "default": "citisignal_us",
@@ -579,7 +585,7 @@
             "group": "adobe-commerce"
         },
         "ADOBE_COMMERCE_STORE_CODE": {
-            "label": "Store Code",
+            "label": "Store code",
             "type": "text",
             "required": true,
             "placeholder": "main_website_store",
@@ -587,11 +593,19 @@
             "group": "adobe-commerce"
         },
         "ADOBE_COMMERCE_STORE_VIEW_CODE": {
-            "label": "Store View Code",
+            "label": "Store view code",
             "type": "text",
             "required": true,
             "placeholder": "default",
             "description": "Typically 'default' unless you have a custom store view setup",
+            "group": "adobe-commerce"
+        },
+        "ADOBE_COMMERCE_ADMIN_URL": {
+            "label": "Admin Panel URL",
+            "type": "url",
+            "required": false,
+            "placeholder": "https://your-instance.adobedemo.com/admin",
+            "description": "Link to this project's Commerce Admin Panel (opened from the dashboard)",
             "group": "adobe-commerce"
         },
         "ADOBE_COMMERCE_URL": {
@@ -603,7 +617,7 @@
             "group": "adobe-commerce"
         },
         "ADOBE_COMMERCE_WEBSITE_CODE": {
-            "label": "Website Code",
+            "label": "Website code",
             "type": "text",
             "required": true,
             "placeholder": "base",

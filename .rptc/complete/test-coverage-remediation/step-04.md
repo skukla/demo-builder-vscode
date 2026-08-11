@@ -307,7 +307,7 @@ it('should detect unknown component references in dependencies', () => {
 
 ### Modify: `tests/features/project-creation/ui/helpers/templateLoader.test.ts`
 
-**Location:** `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/tests/features/project-creation/ui/helpers/templateLoader.test.ts`
+**Location:** `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/tests/features/project-creation/ui/helpers/templateLoader.test.ts`
 
 **Changes Required:**
 
@@ -327,7 +327,7 @@ it('should detect unknown component references in dependencies', () => {
 
 ### Modify: `src/features/project-creation/ui/helpers/templateLoader.ts`
 
-**Location:** `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/project-creation/ui/helpers/templateLoader.ts`
+**Location:** `/Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/project-creation/ui/helpers/templateLoader.ts`
 
 **Note:** This file will need to be updated to validate new structure. The implementation changes are minimal - update `validateTemplate` to check for `stack`, `brand`, `source` instead of `defaults`.
 

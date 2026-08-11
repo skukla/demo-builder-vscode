@@ -193,4 +193,78 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
         expect(result).toBeNull();
         expect(mockWithOrgContext).not.toHaveBeenCalled();
     });
+
+    // ADR-011 D3 Step 09: reset preserves ALL keyed deployables. The mesh entry
+    // is refreshed through the updateMeshState writer chokepoint; keyed
+    // integration siblings must survive the reset untouched (reset re-clones
+    // their folders but never discards their deploy records).
+    describe('keyed deployables through reset (D3 Step 09)', () => {
+        function createKeyedProject(): Project {
+            const project = createProject();
+            project.appBuilderComponents = {
+                mesh: {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                    endpoint: 'https://stale-mesh/graphql',
+                },
+                'acme-widget': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'widget' },
+                    url: 'https://acme.adobeio-static.net',
+                },
+                'beta-widget': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'beta', repo: 'widget' },
+                    url: 'https://beta.adobeio-static.net',
+                },
+            };
+            return project;
+        }
+
+        it('refreshes the keyed mesh entry via the updateMeshState chokepoint', async () => {
+            const { updateMeshState } = require('@/features/mesh/services/stalenessDetector');
+            const { recordDeployOutcome } = require('@/features/app-builder/services/appBuilderDeployOutcome');
+            // Mirror the real chokepoint: land the outcome on the keyed entry.
+            (updateMeshState as jest.Mock).mockImplementation(
+                async (p: Project, endpoint?: string) => {
+                    recordDeployOutcome(p, 'mesh', 'commerce-mesh', {
+                        status: 'deployed',
+                        endpoint,
+                        lastDeployed: new Date().toISOString(),
+                    });
+                },
+            );
+
+            const project = createKeyedProject();
+            const result = await handleMeshRedeployment(
+                project, createContext(), '[ProjectReset]', progress, vscode,
+            );
+
+            expect(result).toEqual({ redeployed: true });
+            expect(updateMeshState).toHaveBeenCalledWith(
+                project, 'https://mesh.example.com/graphql',
+            );
+            expect(project.appBuilderComponents?.mesh?.endpoint).toBe(
+                'https://mesh.example.com/graphql',
+            );
+        });
+
+        it('leaves keyed integration siblings untouched by the mesh redeploy', async () => {
+            const project = createKeyedProject();
+
+            await handleMeshRedeployment(
+                project, createContext(), '[ProjectReset]', progress, vscode,
+            );
+
+            expect(project.appBuilderComponents?.['acme-widget']).toEqual(
+                expect.objectContaining({ url: 'https://acme.adobeio-static.net', status: 'deployed' }),
+            );
+            expect(project.appBuilderComponents?.['beta-widget']).toEqual(
+                expect.objectContaining({ url: 'https://beta.adobeio-static.net', status: 'deployed' }),
+            );
+        });
+    });
 });

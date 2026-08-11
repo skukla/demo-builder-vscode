@@ -78,9 +78,10 @@ describe('ensureAdobeIOAuth', () => {
     it('should return authenticated true when sign-in succeeds and post-check passes', async () => {
         // Given: Token expired, user clicks Sign In, login succeeds, post-check passes
         const authManager = createMockAuthManager({
-            isAuthenticated: jest.fn()
-                .mockResolvedValueOnce(false)  // Initial check: expired
-                .mockResolvedValueOnce(true),  // Post-login check: valid
+            isAuthenticated: jest
+                .fn()
+                .mockResolvedValueOnce(false) // Initial check: expired
+                .mockResolvedValueOnce(true), // Post-login check: valid
             loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
         });
         (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Sign In');
@@ -116,8 +117,9 @@ describe('ensureAdobeIOAuth', () => {
     it('should return authenticated false when login succeeds but post-check fails', async () => {
         // Given: Token expired, login returns true, but post-check still fails
         const authManager = createMockAuthManager({
-            isAuthenticated: jest.fn()
-                .mockResolvedValueOnce(false)  // Initial check
+            isAuthenticated: jest
+                .fn()
+                .mockResolvedValueOnce(false) // Initial check
                 .mockResolvedValueOnce(false), // Post-login check fails
             loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
         });
@@ -193,7 +195,7 @@ describe('ensureAdobeIOAuth', () => {
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
             'Custom sign-in message for mesh.',
             'Sign In',
-            'Cancel',
+            'Cancel'
         );
     });
 
@@ -212,17 +214,13 @@ describe('ensureAdobeIOAuth', () => {
         });
 
         // Then: Log messages should contain the custom prefix
-        expect(mockLogger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('[Mesh Deployment]'),
-        );
+        expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('[Mesh Deployment]'));
     });
 
     it('should forward projectContext to loginAndRestoreProjectContext', async () => {
         // Given: Token expired with project context
         const authManager = createMockAuthManager({
-            isAuthenticated: jest.fn()
-                .mockResolvedValueOnce(false)
-                .mockResolvedValueOnce(true),
+            isAuthenticated: jest.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true),
             loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
         });
         (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Sign In');
@@ -250,9 +248,7 @@ describe('ensureAdobeIOAuth', () => {
     it('should use default values for optional parameters', async () => {
         // Given: Token expired, no optional params
         const authManager = createMockAuthManager({
-            isAuthenticated: jest.fn()
-                .mockResolvedValueOnce(false)
-                .mockResolvedValueOnce(true),
+            isAuthenticated: jest.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true),
             loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
         });
         (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Sign In');
@@ -267,14 +263,12 @@ describe('ensureAdobeIOAuth', () => {
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
             'Adobe sign-in required to continue.',
             'Sign In',
-            'Cancel',
+            'Cancel'
         );
         // And default empty projectContext
         expect(authManager.loginAndRestoreProjectContext).toHaveBeenCalledWith({});
         // And default logPrefix [Auth] in the warn call
-        expect(mockLogger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('[Auth]'),
-        );
+        expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('[Auth]'));
     });
 
     // =========================================================================
@@ -296,16 +290,14 @@ describe('ensureAdobeIOAuth', () => {
 
         // Then: logger.warn should be called
         expect(mockLogger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('token expired or missing'),
+            expect.stringContaining('token expired or missing')
         );
     });
 
     it('should call logger.info on successful sign-in', async () => {
         // Given: Token expired, sign-in succeeds
         const authManager = createMockAuthManager({
-            isAuthenticated: jest.fn()
-                .mockResolvedValueOnce(false)
-                .mockResolvedValueOnce(true),
+            isAuthenticated: jest.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true),
             loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
         });
         (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Sign In');
@@ -318,10 +310,84 @@ describe('ensureAdobeIOAuth', () => {
 
         // Then: logger.info should be called for sign-in start and success
         expect(mockLogger.info).toHaveBeenCalledWith(
-            expect.stringContaining('Starting Adobe sign-in'),
+            expect.stringContaining('Starting Adobe sign-in')
         );
-        expect(mockLogger.info).toHaveBeenCalledWith(
-            expect.stringContaining('sign-in successful'),
+        expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('sign-in successful'));
+    });
+
+    // =========================================================================
+    // Concurrent Sign-In Dedupe
+    // =========================================================================
+
+    it('dedupes concurrent sign-in prompts into a single notification', async () => {
+        // Two callers (e.g. a double-fired store discovery) prompt at once. Only ONE
+        // notification may show — a duplicate makes VS Code collapse them and resolve
+        // the first prompt as a phantom cancel, which drops the UI to a premature
+        // "sign-in was cancelled" fallback.
+        const authManager = createMockAuthManager({
+            isAuthenticated: jest.fn().mockResolvedValue(false),
+        });
+        let resolvePrompt!: (v: string | undefined) => void;
+        (vscode.window.showWarningMessage as jest.Mock).mockReturnValue(
+            new Promise<string | undefined>((res) => {
+                resolvePrompt = res;
+            })
         );
+        // The shared vscode mock accumulates calls across the suite; zero it here.
+        (vscode.window.showWarningMessage as jest.Mock).mockClear();
+
+        const p1 = ensureAdobeIOAuth({ authManager, logger: mockLogger });
+        const p2 = ensureAdobeIOAuth({ authManager, logger: mockLogger });
+        // Flush microtasks so both isAuthenticated checks settle and the first
+        // prompt registers before the second caller reaches the guard.
+        for (let i = 0; i < 5; i++) await Promise.resolve();
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+
+        resolvePrompt('Cancel');
+        const [r1, r2] = await Promise.all([p1, p2]);
+        expect(r1).toEqual({ authenticated: false, cancelled: true });
+        expect(r2).toEqual(r1);
+    });
+
+    it('allows a fresh prompt after an in-flight sign-in resolves', async () => {
+        // The in-flight dedupe must clear so a later, non-overlapping call prompts again.
+        const authManager = createMockAuthManager({
+            isAuthenticated: jest.fn().mockResolvedValue(false),
+        });
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Cancel');
+        (vscode.window.showWarningMessage as jest.Mock).mockClear();
+
+        await ensureAdobeIOAuth({ authManager, logger: mockLogger });
+        await ensureAdobeIOAuth({ authManager, logger: mockLogger });
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(2);
+    });
+
+    // =========================================================================
+    // Sign-In Progress Feedback
+    // =========================================================================
+
+    it('shows browser-opening progress while the sign-in runs', async () => {
+        // Clicking "Sign In" opens a browser; surface that so the user is not left
+        // staring at an unchanged screen.
+        const authManager = createMockAuthManager({
+            isAuthenticated: jest.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true),
+            loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
+        });
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Sign In');
+
+        const result = await ensureAdobeIOAuth({ authManager, logger: mockLogger });
+
+        expect(result).toEqual({ authenticated: true });
+        expect(vscode.window.withProgress).toHaveBeenCalledWith(
+            expect.objectContaining({
+                location: vscode.ProgressLocation.Notification,
+                title: expect.stringMatching(/browser|sign in/i),
+            }),
+            expect.any(Function)
+        );
+        // Login still runs (inside the progress task).
+        expect(authManager.loginAndRestoreProjectContext).toHaveBeenCalledWith({});
     });
 });

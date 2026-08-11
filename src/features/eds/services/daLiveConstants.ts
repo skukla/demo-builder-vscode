@@ -2,7 +2,8 @@
  * DA.live Service Constants
  *
  * Shared constants for DA.live service operations.
- * Extracted to allow reuse between DaLiveService modules.
+ * Extracted to allow reuse between the DA.live service modules
+ * (daLiveAuthService, daLiveContentOperations, daLiveOrgOperations).
  */
 
 /** DA.live Admin API base URL */
@@ -18,7 +19,15 @@ export const RETRY_DELAY_BASE = 1000;
 export const RETRYABLE_STATUS_CODES = [502, 503, 504];
 
 /** Calculate exponential backoff delay */
-export const getRetryDelay = (attempt: number): number => RETRY_DELAY_BASE * Math.pow(2, attempt - 1);
+export const getRetryDelay = (attempt: number): number =>
+    RETRY_DELAY_BASE * Math.pow(2, attempt - 1);
 
 /** Normalize path by removing leading slash */
-export const normalizePath = (path: string): string => path.startsWith('/') ? path.slice(1) : path;
+export const normalizePath = (path: string): string =>
+    path.startsWith('/') ? path.slice(1) : path;
+
+/**
+ * Batch size for parallel content copying operations.
+ * Process 5 files concurrently to balance speed vs API rate limits.
+ */
+export const CONTENT_COPY_BATCH_SIZE = 5;

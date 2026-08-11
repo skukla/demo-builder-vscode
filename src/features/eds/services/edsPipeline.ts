@@ -27,7 +27,7 @@ import {
     addCodeResult,
     type PatchReport,
 } from './patchReportHelper';
-import { DaLiveAuthError, DaLiveError } from './types';
+import { DaLiveAuthError, DaLiveError, type EdsPipelineProgressCallback } from './types';
 import type { Project } from '@/types/base';
 import type { ContentPatchSource, CodePatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
@@ -36,15 +36,9 @@ import type { Logger } from '@/types/logger';
 // Types
 // ==========================================================
 
-/** Progress callback — callers map operations to their own phase/step scheme */
-export type EdsPipelineProgressCallback = (info: {
-    operation: string;
-    message: string;
-    subMessage?: string;
-    current?: number;
-    total?: number;
-    percentage?: number;
-}) => void;
+// EdsPipelineProgressCallback now lives in ./types (breaks the edsPipeline ↔
+// catalogPrewarmService import cycle); re-exported here for existing consumers.
+export type { EdsPipelineProgressCallback };
 
 /** Pipeline parameters — encompasses both setup and reset use cases */
 export interface EdsPipelineParams {

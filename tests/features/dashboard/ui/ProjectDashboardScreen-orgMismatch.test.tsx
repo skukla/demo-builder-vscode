@@ -1,11 +1,12 @@
 /**
  * ProjectDashboardScreen - Org Context (badge + banner) Tests
  *
- * Org-context is surfaced two ways, both fed by the async `orgContextResult`
- * message ({ pending } → { pending:false, orgMismatch?, currentOrg }):
+ * Org-context is surfaced two ways, both fed by the on-open orchestrator's
+ * `checkResult` message (checkId `org-context`): a `pending` telegraph then an
+ * `ok` / `warning` (mismatch) / `unknown` outcome.
  *  - the "IMS Org" STATUS BADGE — ambient health: blue "Checking…" → green with
- *    the org name (ok) / red with the (wrong) org name (mismatch). Shown only for
- *    Adobe projects.
+ *    the org name (ok) / red with the (wrong) org name (mismatch) / gray "Not
+ *    checked" + a "Sign in to check" action (unknown). Shown only for Adobe projects.
  *  - the mismatch BANNER — the actionable half: appears only on mismatch with a
  *    forced "Switch IMS Org" recovery (+ a no-loop tab hint after a failed switch).
  */
@@ -26,11 +27,25 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         ctx = setupTestContext();
     });
 
-    /** Emit the async org-check result messages (with the current org name). */
+    /** Emit the on-open org-check outcome (checkResult / checkId `org-context`). */
     const emitOrgMismatch = () =>
-        ctx.triggerMessage('orgContextResult', { pending: false, orgMismatch: ORG_MISMATCH, currentOrg: 'Org B' });
+        ctx.triggerMessage('checkResult', {
+            checkId: 'org-context',
+            status: 'warning',
+            data: { orgMismatch: ORG_MISMATCH, currentOrg: 'Org B' },
+        });
     const emitOrgOk = () =>
-        ctx.triggerMessage('orgContextResult', { pending: false, currentOrg: 'Project Org' });
+        ctx.triggerMessage('checkResult', {
+            checkId: 'org-context',
+            status: 'ok',
+            data: { currentOrg: 'Project Org' },
+        });
+    const emitOrgUnknown = () =>
+        ctx.triggerMessage('checkResult', {
+            checkId: 'org-context',
+            status: 'unknown',
+            message: 'Sign in to check organization',
+        });
 
     /** The "IMS Org" status badge element, if present. */
     const imsOrgBadge = () => screen.queryByTestId('status-card-IMS Org');
@@ -83,6 +98,35 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         });
         expect(imsOrgBadge()).toHaveTextContent(/Project Org/);
         expect(screen.queryByText(/Switch IMS Org/i)).not.toBeInTheDocument();
+    });
+
+    it('resolves to a gray badge with a "Sign in to check" action (no banner) on unknown', async () => {
+        // P1: when the check can't run non-interactively on open (no token / SDK
+        // cold), it degrades to `unknown` — a quiet sign-in affordance, never a
+        // surprise browser or a mismatch banner.
+        renderDashboard({ hasAdobeContext: true });
+
+        emitOrgUnknown();
+        advancePastOrgCheckGate();
+
+        await waitFor(() => {
+            expect(imsOrgBadge()).toHaveAttribute('data-color', 'gray');
+        });
+        expect(screen.getByText('Sign in to check')).toBeInTheDocument();
+        expect(screen.queryByText(/Switch IMS Org/i)).not.toBeInTheDocument();
+    });
+
+    it('requests reAuthenticate when "Sign in to check" is clicked (user-initiated)', async () => {
+        const { webviewClient } = require('@/core/ui/utils/WebviewClient');
+        renderDashboard({ hasAdobeContext: true });
+
+        emitOrgUnknown();
+        advancePastOrgCheckGate();
+
+        const signIn = await screen.findByText('Sign in to check');
+        fireEvent.click(signIn);
+
+        expect(webviewClient.postMessage).toHaveBeenCalledWith('reAuthenticate');
     });
 
     it('shows no IMS Org badge or banner for a project without an Adobe org', async () => {

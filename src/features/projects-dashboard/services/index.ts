@@ -17,7 +17,9 @@ export {
     importSettingsFromFile,
     copySettingsFromProject,
     exportProjectSettings,
+    exportProjectSettingsToFile,
 } from './settingsTransferService';
+export type { ExportSettingsToFileResult } from './settingsTransferService';
 
 export { deleteProject } from './projectDeletionService';
 

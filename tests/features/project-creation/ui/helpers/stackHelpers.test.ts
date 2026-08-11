@@ -8,6 +8,7 @@
 import {
     getStackComponentIds,
     filterComponentConfigsForStackChange,
+    buildStackChangeStateReset,
 } from '@/features/project-creation/ui/helpers/stackHelpers';
 import type { Stack } from '@/types/stacks';
 
@@ -175,7 +176,7 @@ describe('stackHelpers', () => {
                 const result = filterComponentConfigsForStackChange(
                     headlessPaasStack,
                     headlessAccsStack,
-                    currentConfigs,
+                    currentConfigs
                 );
 
                 // Then: Frontend config should be retained
@@ -191,7 +192,7 @@ describe('stackHelpers', () => {
                 const result = filterComponentConfigsForStackChange(
                     headlessPaasStack,
                     headlessAccsStack,
-                    currentConfigs,
+                    currentConfigs
                 );
 
                 // Backend config should be cleared (adobe-commerce-paas → adobe-commerce-accs)
@@ -208,11 +209,14 @@ describe('stackHelpers', () => {
                 const result = filterComponentConfigsForStackChange(
                     headlessPaasStack,
                     headlessAccsStack,
-                    currentConfigs,
+                    currentConfigs
                 );
 
                 // Dependencies are the same between stacks
-                expect(result['commerce-mesh']).toEqual({ MESH_ID: 'mesh-123', MESH_API_KEY: 'key-xyz' });
+                expect(result['commerce-mesh']).toEqual({
+                    MESH_ID: 'mesh-123',
+                    MESH_API_KEY: 'key-xyz',
+                });
                 expect(result['adobe-commerce-aco']).toEqual({ ENABLED: true });
             });
         });
@@ -228,7 +232,7 @@ describe('stackHelpers', () => {
                 const result = filterComponentConfigsForStackChange(
                     headlessPaasStack,
                     edsPaasStack,
-                    currentConfigs,
+                    currentConfigs
                 );
 
                 // Headless config should be cleared
@@ -245,11 +249,14 @@ describe('stackHelpers', () => {
                 const result = filterComponentConfigsForStackChange(
                     headlessPaasStack,
                     edsPaasStack,
-                    currentConfigs,
+                    currentConfigs
                 );
 
                 // Backend config should be retained
-                expect(result['adobe-commerce-paas']).toEqual({ STORE_URL: 'https://store.com', API_KEY: 'secret' });
+                expect(result['adobe-commerce-paas']).toEqual({
+                    STORE_URL: 'https://store.com',
+                    API_KEY: 'secret',
+                });
             });
 
             it('should retain shared dependency configs when switching frontend', () => {
@@ -263,7 +270,7 @@ describe('stackHelpers', () => {
                 const result = filterComponentConfigsForStackChange(
                     headlessPaasStack,
                     edsPaasStack,
-                    currentConfigs,
+                    currentConfigs
                 );
 
                 expect(result['commerce-mesh']).toEqual({ MESH_ID: 'mesh-456' });
@@ -282,7 +289,7 @@ describe('stackHelpers', () => {
                 const result = filterComponentConfigsForStackChange(
                     headlessPaasStack,
                     edsAccsStack,
-                    currentConfigs,
+                    currentConfigs
                 );
 
                 expect(result.headless).toBeUndefined();
@@ -300,7 +307,7 @@ describe('stackHelpers', () => {
                 const result = filterComponentConfigsForStackChange(
                     headlessPaasStack,
                     edsAccsStack,
-                    currentConfigs,
+                    currentConfigs
                 );
 
                 // Shared dependencies are retained
@@ -318,7 +325,7 @@ describe('stackHelpers', () => {
                 const result = filterComponentConfigsForStackChange(
                     undefined,
                     headlessPaasStack,
-                    currentConfigs,
+                    currentConfigs
                 );
 
                 expect(result).toEqual({});
@@ -328,7 +335,7 @@ describe('stackHelpers', () => {
                 const result = filterComponentConfigsForStackChange(
                     headlessPaasStack,
                     headlessAccsStack,
-                    {},
+                    {}
                 );
 
                 expect(result).toEqual({});
@@ -343,7 +350,7 @@ describe('stackHelpers', () => {
                 const result = filterComponentConfigsForStackChange(
                     headlessPaasStack,
                     headlessAccsStack,
-                    currentConfigs,
+                    currentConfigs
                 );
 
                 expect(result).toEqual({});
@@ -361,7 +368,7 @@ describe('stackHelpers', () => {
                 const result = filterComponentConfigsForStackChange(
                     headlessPaasStack,
                     headlessAccsStack,
-                    currentConfigs,
+                    currentConfigs
                 );
 
                 expect(result.headless).toEqual({
@@ -381,7 +388,7 @@ describe('stackHelpers', () => {
                 const result = filterComponentConfigsForStackChange(
                     headlessPaasStack,
                     headlessAccsStack,
-                    currentConfigs,
+                    currentConfigs
                 );
 
                 expect(result['adobe-commerce-aco']).toEqual({ ACO_SETTING: 'enabled' });
@@ -425,7 +432,7 @@ describe('stackHelpers', () => {
                 const result = filterComponentConfigsForStackChange(
                     realEdsPaasStack,
                     realHeadlessPaasStack,
-                    currentConfigs,
+                    currentConfigs
                 );
 
                 // Backend retained (shared between stacks)
@@ -448,7 +455,7 @@ describe('stackHelpers', () => {
                 const result = filterComponentConfigsForStackChange(
                     realEdsPaasStack,
                     realHeadlessPaasStack,
-                    currentConfigs,
+                    currentConfigs
                 );
 
                 // Frontend config migrated to new frontend component
@@ -470,7 +477,7 @@ describe('stackHelpers', () => {
                 const result = filterComponentConfigsForStackChange(
                     stackWithTwoDeps,
                     realHeadlessPaasStack,
-                    currentConfigs,
+                    currentConfigs
                 );
 
                 // No migration when dep arrays have different lengths (ambiguous pairing)
@@ -505,7 +512,7 @@ describe('stackHelpers', () => {
                 const result = filterComponentConfigsForStackChange(
                     headlessPaasStack,
                     headlessAccsStack,
-                    userConfigs,
+                    userConfigs
                 );
 
                 // Frontend work is preserved (user's customizations)
@@ -528,6 +535,27 @@ describe('stackHelpers', () => {
                     LOG_LEVEL: 'debug',
                 });
             });
+        });
+    });
+
+    describe('buildStackChangeStateReset', () => {
+        it('clears architecture-dependent EDS state and caches', () => {
+            const reset = buildStackChangeStateReset();
+            expect(reset.edsConfig).toBeUndefined();
+            expect(reset.githubReposCache).toBeUndefined();
+            expect(reset.daLiveSitesCache).toBeUndefined();
+            expect(reset.githubRepoSearchFilter).toBeUndefined();
+            expect(reset.daLiveSiteSearchFilter).toBeUndefined();
+        });
+
+        it('clears the cached tile-validity verdicts so a stale ✓ cannot survive a stack change', () => {
+            const reset = buildStackChangeStateReset();
+            expect(reset.commerceConnectValid).toBe(false);
+            // The Business Structure verdict must clear too — its store-view config is
+            // dropped on a stack change, so a surviving ✓ would be stale.
+            expect(reset.commerceStoreViewChosen).toBe(false);
+            expect(reset.storefrontRepoValid).toBe(false);
+            expect(reset.storefrontCodeSyncValid).toBe(false);
         });
     });
 });

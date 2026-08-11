@@ -31,7 +31,13 @@ jest.mock('@/features/updates/services/templateSyncService', () => ({
 jest.mock('@/features/updates/services/componentUpdater', () => ({
     ComponentUpdater: jest.fn(() => ({ updateComponent: updateComponentMock })),
 }));
-jest.mock('@/features/project-creation/services', () => ({ generateAIContextFiles: jest.fn() }));
+jest.mock('@/features/project-creation/services', () => ({
+    generateAIContextFiles: jest.fn(),
+    // The MCP packages live in a per-project ISOLATED tools dir, never the
+    // storefront's node_modules — `aiDefaultsInstaller` calls this resolver
+    // "the single source of truth" for that location.
+    resolveMcpToolsDir: (projectPath: string) => `${projectPath}/.demo-builder-mcp`,
+}));
 jest.mock('@/core/di', () => ({ ServiceLocator: { getCommandExecutor: () => ({ execute: executeMock }) } }));
 jest.mock('@/features/updates/commands/updateExecutor', () => ({
     applyBlockLibraryUpdateResolved: jest.fn(),
@@ -160,5 +166,55 @@ describe('applyUpdatesHeadless', () => {
         const res = await applyUpdatesHeadless(sel, ctx);
         expect(res.totalApplied).toBe(2);
         expect(res.totalFailed).toBe(0);
+    });
+});
+
+// The Adobe MCP packages are npm-installed into a per-project ISOLATED tools dir
+// (`resolveMcpToolsDir`), not the storefront's node_modules.
+//
+// REGRESSION (found 2026-08-04 by a parallel-implementation audit): this headless
+// path ran `npm update` in the STOREFRONT path while its sibling
+// `performAdobeMcpUpdates` (updateExecutor.ts) ran it in the tools dir, carrying
+// a comment naming that exact trap. npm updates nothing there and exits 0, so the
+// MCP `apply_updates` tool reported success while changing nothing — and
+// AdobeMcpUpdateChecker, which reads the version FROM the tools dir, kept
+// re-offering the same update forever. A silent no-op on an agent-driven path.
+describe('applyUpdatesHeadless — Adobe MCP update location', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+    });
+
+    function mcpSelection(): UpdateSelections {
+        const sel = emptySelections();
+        sel.adobeMcp = [
+            {
+                project: {
+                    name: 'demo',
+                    path: '/p/demo',
+                    componentInstances: { 'eds-storefront': { path: '/p/demo/components/eds-storefront' } },
+                } as never,
+                packageName: '@adobe-commerce/commerce-extensibility-tools',
+                latestVersion: '2.0.0',
+            },
+        ] as never;
+        return sel;
+    }
+
+    it('runs npm update in the isolated MCP tools dir', async () => {
+        await applyUpdatesHeadless(mcpSelection(), ctx);
+
+        const call = executeMock.mock.calls.find((c: unknown[]) =>
+            String(c[0]).startsWith('npm update'),
+        );
+        expect(call).toBeDefined();
+        expect((call?.[1] as { cwd?: string })?.cwd).toBe('/p/demo/.demo-builder-mcp');
+    });
+
+    it('never runs it in the storefront path', async () => {
+        await applyUpdatesHeadless(mcpSelection(), ctx);
+
+        const cwds = executeMock.mock.calls.map((c: unknown[]) => (c[1] as { cwd?: string })?.cwd);
+        expect(cwds).not.toContain('/p/demo/components/eds-storefront');
     });
 });

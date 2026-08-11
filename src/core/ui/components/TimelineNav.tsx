@@ -6,103 +6,21 @@
  */
 
 import { View, Text } from '@adobe/react-spectrum';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import React, { useRef, useEffect, useState } from 'react';
+import React from 'react';
+import { TimelineChildren } from './TimelineChildren';
+import {
+    getTimelineLabelClasses,
+    getTimelineStepDotClasses,
+    renderStepIndicator,
+    type TimelineStatus,
+    type TimelineStep,
+} from './timelineNav.helpers';
+import { useEnterExit } from '@/core/ui/hooks/useEnterExit';
 import { cn } from '@/core/ui/utils/classNames';
-import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
-/**
- * Timeline step status type
- */
-type TimelineStatus = 'completed' | 'completed-current' | 'current' | 'upcoming' | 'review';
-
-/**
- * Lookup map for timeline step dot status classes
- */
-const TIMELINE_DOT_STATUS_CLASS: Record<TimelineStatus, string> = {
-    'completed': 'timeline-step-dot-completed',
-    'completed-current': 'timeline-step-dot-completed',
-    'current': 'timeline-step-dot-current',
-    'upcoming': 'timeline-step-dot-upcoming',
-    'review': 'timeline-step-dot-review',
-};
-
-/**
- * Build timeline step dot classes based on status
- */
-function getTimelineStepDotClasses(status: TimelineStatus): string {
-    const baseClasses = 'timeline-step-dot';
-    const statusClass = TIMELINE_DOT_STATUS_CLASS[status] ?? 'timeline-step-dot-upcoming';
-    return cn(baseClasses, statusClass);
-}
-
-/**
- * Lookup map for timeline step label color classes
- */
-const TIMELINE_LABEL_COLOR_CLASS: Record<TimelineStatus, string> = {
-    'completed': 'text-gray-800',
-    'completed-current': 'text-blue-700',
-    'current': 'text-blue-700',
-    'upcoming': 'text-gray-600',
-    'review': 'text-gray-800',
-};
-
-/**
- * Build timeline step label classes based on status
- */
-function getTimelineLabelClasses(status: TimelineStatus): string {
-    const isCurrent = status === 'current' || status === 'completed-current';
-    const fontWeight = isCurrent ? 'font-semibold' : 'font-normal';
-    const color = TIMELINE_LABEL_COLOR_CLASS[status];
-    return cn('text-base', fontWeight, color, 'whitespace-nowrap', 'user-select-none');
-}
-
-/**
- * Render the appropriate indicator icon for a timeline step
- */
-function renderStepIndicator(status: TimelineStatus): React.ReactNode {
-    if (status === 'completed' || status === 'completed-current') {
-        return <CheckmarkCircle size="XS" UNSAFE_className={cn('text-white', 'icon-xs')} />;
-    }
-    if (status === 'review') {
-        // Solid white inner dot for edit mode (no checkmark - indicates "can review/edit")
-        return (
-            <View
-                width="size-100"
-                height="size-100"
-                UNSAFE_className="rounded-full"
-                UNSAFE_style={{ backgroundColor: '#ffffff' }}
-            />
-        );
-    }
-    if (status === 'current') {
-        // White inner dot creates contrast against the blue outer ring
-        // Use inline style for true white since bg-white maps to gray-100 in dark theme
-        return (
-            <View
-                width="size-100"
-                height="size-100"
-                UNSAFE_className={cn('rounded-full', 'animate-pulse')}
-                UNSAFE_style={{ backgroundColor: '#ffffff' }}
-            />
-        );
-    }
-    return (
-        <View
-            width="size-100"
-            height="size-100"
-            UNSAFE_className={cn('rounded-full', 'bg-gray-400')}
-        />
-    );
-}
-
-/**
- * Step definition for TimelineNav
- */
-export interface TimelineStep {
-    id: string;
-    name: string;
-}
+// Re-export the shared timeline types so existing importers keep their
+// `from '.../TimelineNav'` path. (Helpers + types live in ./timelineNav.helpers.)
+export type { TimelineStatus, TimelineStep };
 
 export interface TimelineNavProps {
     /** Array of steps to display */
@@ -123,14 +41,20 @@ export interface TimelineNavProps {
     compact?: boolean;
     /** Whether we're in edit mode (reviewing existing project) */
     isEditMode?: boolean;
-}
-
-/** Animation duration in milliseconds - uses semantic constant */
-const ANIMATION_DURATION = FRONTEND_TIMEOUTS.ANIMATION_SETTLE;
-
-/** Exiting step with its original position */
-interface ExitingStep extends TimelineStep {
-    originalIndex: number;
+    /**
+     * Optional sub-steps rendered as a single indented level beneath the
+     * current (active) parent step only. One level — no recursion.
+     */
+    childSteps?: TimelineStep[];
+    /** Status per child id (defaults to `upcoming` when a child id is absent) */
+    childStatusById?: Record<string, TimelineStatus>;
+    /** Which child is active/highlighted (gets the `current` styling) */
+    activeChildId?: string;
+    /**
+     * Click handler for a child. Receives the child id. Does NOT affect parent
+     * navigation (`onStepClick` / `currentStepIndex` are untouched).
+     */
+    onChildClick?: (childId: string) => void;
 }
 
 export function TimelineNav({
@@ -143,99 +67,15 @@ export function TimelineNav({
     headerText = 'Setup Progress',
     compact = false,
     isEditMode: _isEditMode = false,
+    childSteps,
+    childStatusById,
+    activeChildId,
+    onChildClick,
 }: TimelineNavProps) {
-    // Track previous steps for detecting changes
-    const prevStepsRef = useRef<TimelineStep[]>([]);
-    // Delay before enabling animations (lets initial load settle)
-    const [animationsEnabled, setAnimationsEnabled] = useState(false);
-
-    // Animation states
-    const [enteringSteps, setEnteringSteps] = useState<Set<string>>(new Set());
-    const [exitingSteps, setExitingSteps] = useState<ExitingStep[]>([]);
-
-    // Enable animations after initial load settles
-    useEffect(() => {
-        if (steps.length > 0 && !animationsEnabled) {
-            const timer = setTimeout(() => {
-                setAnimationsEnabled(true);
-            }, FRONTEND_TIMEOUTS.INIT_ANIMATION_DELAY);
-            return () => clearTimeout(timer);
-        }
-        return undefined;
-    }, [steps.length, animationsEnabled]);
-
-    // Track step changes and animate
-    useEffect(() => {
-        // Always keep ref updated
-        if (steps.length === 0) {
-            return undefined;
-        }
-
-        // Don't animate until initialization period is over
-        if (!animationsEnabled) {
-            prevStepsRef.current = steps;
-            return undefined;
-        }
-
-        const currentIds = new Set(steps.map(s => s.id));
-        const prevSteps = prevStepsRef.current;
-        const prevIds = new Set(prevSteps.map(s => s.id));
-
-        // Find entering steps (in current but not in previous)
-        const entering = steps.filter(s => !prevIds.has(s.id)).map(s => s.id);
-
-        // Find exiting steps with their original index (in previous but not in current)
-        const exiting: ExitingStep[] = prevSteps
-            .map((s, i) => ({ ...s, originalIndex: i }))
-            .filter(s => !currentIds.has(s.id));
-
-        // Only animate if there are changes
-        if (entering.length > 0 || exiting.length > 0) {
-            // Mark entering steps
-            if (entering.length > 0) {
-                setEnteringSteps(new Set(entering));
-            }
-
-            // Keep exiting steps visible for exit animation (with their positions)
-            if (exiting.length > 0) {
-                setExitingSteps(exiting);
-            }
-
-            // Clear animation states after animation completes
-            const timer = setTimeout(() => {
-                setEnteringSteps(new Set());
-                setExitingSteps([]);
-                // Update ref AFTER animation completes
-                prevStepsRef.current = steps;
-            }, ANIMATION_DURATION);
-
-            return () => clearTimeout(timer);
-        }
-
-        prevStepsRef.current = steps;
-        return undefined;
-    }, [steps, animationsEnabled]);
-
-    // Combine current steps with exiting steps for rendering
-    const displaySteps = React.useMemo(() => {
-        if (exitingSteps.length === 0) {
-            return steps.map(s => ({ ...s, isExiting: false }));
-        }
-
-        // Insert exiting steps at their original positions
-        const result: Array<TimelineStep & { isExiting: boolean }> =
-            steps.map(s => ({ ...s, isExiting: false }));
-
-        // Insert exiting steps at their original indices (adjust for already inserted)
-        let offset = 0;
-        for (const exitingStep of exitingSteps) {
-            const insertIndex = Math.min(exitingStep.originalIndex + offset, result.length);
-            result.splice(insertIndex, 0, { ...exitingStep, isExiting: true });
-            offset++;
-        }
-
-        return result;
-    }, [steps, exitingSteps]);
+    // Enter/exit orchestration (shared with the area sub-step strip): which steps just
+    // appeared (→ timeline-step-enter) and the items to render incl. exiting ones
+    // (re-inserted at their old index, → timeline-step-exit) before they're dropped.
+    const { displayItems: displaySteps, isEntering: isStepEntering } = useEnterExit(steps);
 
     const getStepStatus = (index: number): TimelineStatus => {
         const isCompleted = completedStepIndices.includes(index);
@@ -270,6 +110,23 @@ export function TimelineNav({
     // Add timeline-sidebar class when in compact/sidebar mode
     const containerClass = compact ? 'timeline-container timeline-sidebar' : 'timeline-container';
 
+    // Per-step derived display state — extracted so the render map stays simple (and under
+    // the complexity limit). Exiting steps read as grayed-out 'upcoming' and are inert.
+    const stepDisplayState = (step: (typeof displaySteps)[number]) => {
+        const actualIndex = step.isExiting ? -1 : steps.findIndex((s) => s.id === step.id);
+        const status = step.isExiting ? 'upcoming' : getStepStatus(actualIndex);
+        const isCurrentWithChildren =
+            !step.isExiting && status === 'current' && (childSteps?.length ?? 0) > 0;
+        return {
+            actualIndex,
+            status,
+            isClickable: !step.isExiting && isStepClickable(actualIndex),
+            isEntering: isStepEntering(step.id),
+            isExiting: step.isExiting,
+            isCurrentWithChildren,
+        };
+    };
+
     return (
         <View
             padding={padding}
@@ -287,16 +144,27 @@ export function TimelineNav({
             <View position="relative">
                 {/* Steps */}
                 {displaySteps.map((step, displayIndex) => {
-                    // For exiting steps, use 'upcoming' status (grayed out)
-                    // For normal steps, calculate status based on position in actual steps array
-                    const actualIndex = step.isExiting ? -1 : steps.findIndex(s => s.id === step.id);
-                    const status = step.isExiting ? 'upcoming' : getStepStatus(actualIndex);
-                    const isClickable = !step.isExiting && isStepClickable(actualIndex);
-                    const isEntering = enteringSteps.has(step.id);
-                    const isExiting = step.isExiting;
+                    // When the current step shows children, its bottom spacing moves to
+                    // the children block (small gap above the first child, full step-gap
+                    // below the last) so the rail rhythm stays even.
+                    const {
+                        actualIndex,
+                        status,
+                        isClickable,
+                        isEntering,
+                        isExiting,
+                        isCurrentWithChildren,
+                    } = stepDisplayState(step);
 
                     return (
-                        <View key={step.id} position="relative">
+                        <View
+                            key={step.id}
+                            position="relative"
+                            paddingBottom={isCurrentWithChildren ? 'size-400' : undefined}
+                            // While children show, clip the tall stretch connector at the
+                            // wrapper's bottom so it ends exactly at the next step.
+                            UNSAFE_className={isCurrentWithChildren ? 'timeline-step-wrap-clip' : undefined}
+                        >
                             {/* Step item - role/tabIndex/keyboard conditionally applied when clickable */}
                             {/* The `data-step-name` attribute powers a CSS-only `::after` tooltip in
                                 custom-spectrum.css, scoped to the rail-collapse media query — it shows
@@ -311,15 +179,20 @@ export function TimelineNav({
                                 aria-current={!step.isExiting && actualIndex === currentStepIndex ? 'step' : undefined}
                                 aria-label={step.name}
                                 style={{
-                                    marginBottom: displayIndex < displaySteps.length - 1 ? stepSpacing : undefined,
+                                    marginBottom: displayIndex < displaySteps.length - 1 && !isCurrentWithChildren ? stepSpacing : undefined,
                                     // Staggered animation delay for cascade effect
                                     animationDelay: isEntering ? `${displayIndex * 40}ms` : undefined,
                                 }}
+                                // NO opacity here. This element hosts the collapsed-rail
+                                // `::after` name tooltip, and opacity below 1 would both dim
+                                // the tooltip and create a stacking context that traps its
+                                // `z-index: 1000` — so it painted BEHIND the content panel and
+                                // read as clipped (reported 2026-08-08). The dimming lives on
+                                // `.nav-item-row` below, which holds the dot and label and
+                                // hosts nothing that has to escape the rail.
                                 className={cn(
                                     'timeline-step',
                                     isClickable ? 'cursor-pointer' : 'cursor-default',
-                                    status === 'upcoming' ? 'opacity-50' : 'opacity-100',
-                                    'transition-opacity',
                                     isEntering && 'timeline-step-enter',
                                     isExiting && 'timeline-step-exit',
                                 )}
@@ -332,15 +205,32 @@ export function TimelineNav({
                                 }}
                             >
                                 <View
-                                    UNSAFE_className="nav-item-row"
+                                    UNSAFE_className={cn(
+                                        'nav-item-row',
+                                        status === 'upcoming' ? 'opacity-50' : 'opacity-100',
+                                        'transition-opacity',
+                                    )}
                                 >
-                                    {/* Step indicator dot */}
+                                    {/* Step indicator dot — also the positioning ANCHOR for the
+                                        connector below it, so the line centers on the dot's own box
+                                        (responsive at any scale; no wrapper-offset possible). */}
                                     <View
                                         width="size-300"
                                         height="size-300"
                                         UNSAFE_className={cn(getTimelineStepDotClasses(status), 'shrink-0')}
                                     >
                                         {renderStepIndicator(status)}
+                                        {/* Dotted connector after each step except the last. */}
+                                        {displayIndex < displaySteps.length - 1 && (
+                                            <View
+                                                UNSAFE_className={cn(
+                                                    'timeline-connector',
+                                                    status === 'completed' ? 'timeline-connector-completed' : 'timeline-connector-pending',
+                                                    // Stretch past the indented children to the next dot.
+                                                    isCurrentWithChildren && 'timeline-connector-stretch',
+                                                )}
+                                            />
+                                        )}
                                     </View>
 
                                     {/* Step label */}
@@ -352,15 +242,14 @@ export function TimelineNav({
                                 </View>
                             </div>
 
-                            {/* Dotted line connector after each step except last */}
-                            {displayIndex < displaySteps.length - 1 && (
-                                <View
-                                    position="absolute"
-                                    left="11px"
-                                    UNSAFE_className={cn(
-                                        'timeline-connector',
-                                        status === 'completed' ? 'timeline-connector-completed' : 'timeline-connector-pending',
-                                    )}
+                            {/* Nested sub-steps: one indented level under the current parent only */}
+                            {!step.isExiting && status === 'current' && (
+                                <TimelineChildren
+                                    parentId={step.id}
+                                    childSteps={childSteps ?? []}
+                                    childStatusById={childStatusById}
+                                    activeChildId={activeChildId}
+                                    onChildClick={onChildClick}
                                 />
                             )}
                         </View>

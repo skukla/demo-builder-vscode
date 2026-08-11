@@ -9,6 +9,8 @@ export interface StatusDotProps {
     size?: number;
     /** Optional className */
     className?: string;
+    /** Test hook, and a way to target ONE dot on a surface showing several. */
+    testId?: string;
 }
 
 /**
@@ -27,6 +29,7 @@ export const StatusDot: React.FC<StatusDotProps> = ({
     variant,
     size = 8,
     className,
+    testId,
 }) => {
     // Each variant resolves to a design token WITH a literal fallback. The
     // fallback is load-bearing, not cosmetic: the `--db-*` tokens live in
@@ -58,7 +61,20 @@ export const StatusDot: React.FC<StatusDotProps> = ({
     // would collapse to a zero-size box. Setting it inline makes the dot
     // self-sufficient (box + color) regardless of which stylesheets a webview
     // loaded; the utility classes remain for shape/shrink.
-    const dotClasses = ['inline-block', 'rounded-full', 'shrink-0', className].filter(Boolean).join(' ');
+    // THE STANDARD: `info` means "in progress", and in-progress PULSES — on every
+    // surface, because motion belongs to the status rather than to whichever
+    // component renders it. It used to be a class each caller applied, so the
+    // integration card pulsed while the dashboard tile showed the same blue dot
+    // sitting still (reported 2026-08-04). A caller cannot forget this one.
+    const dotClasses = [
+        'inline-block',
+        'rounded-full',
+        'shrink-0',
+        variant === 'info' && 'status-dot--pulse',
+        className,
+    ]
+        .filter(Boolean)
+        .join(' ');
 
     return (
         <span
@@ -70,6 +86,8 @@ export const StatusDot: React.FC<StatusDotProps> = ({
                 backgroundColor: getColor(),
             }}
             role="presentation"
+            data-variant={variant}
+            data-testid={testId}
         />
     );
 };

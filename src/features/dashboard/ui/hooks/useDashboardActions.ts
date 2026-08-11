@@ -35,6 +35,12 @@ export interface UseDashboardActionsReturn {
     handleStartDemo: () => void;
     /** Stop the demo server */
     handleStopDemo: () => void;
+    /**
+     * Stop and start again — the fix for "Restart needed", a config change that
+     * landed while the demo was running. Delegates the sequencing (and its
+     * settle delay) to the extension rather than firing stop then start here.
+     */
+    handleRestartDemo: () => void;
     /** Deploy API Mesh */
     handleDeployMesh: () => void;
     /** Sync storefront — git push + Helix preview/publish (EDS projects only) */
@@ -47,14 +53,16 @@ export interface UseDashboardActionsReturn {
     handleOpenLiveSite: () => void;
     /** Open DA.live for authoring (EDS projects) */
     handleOpenDaLive: () => void;
+    /** Open the Commerce admin panel (URL resolved backend-side) */
+    handleOpenAdminPanel: () => void;
     /** Open configure screen */
     handleConfigure: () => void;
+    /** Open the wizard in edit mode for the current project */
+    handleEditProject: () => void;
     /** Open Adobe Developer Console */
     handleOpenDevConsole: () => void;
     /** Delete the project */
     handleDeleteProject: () => void;
-    /** Copy the project's folder path to the clipboard */
-    handleCopyPath: () => void;
     /** Export the project's settings to a file */
     handleExportProject: () => void;
     /** Republish DA.live content to CDN (EDS projects only) */
@@ -95,6 +103,11 @@ export function useDashboardActions({
         webviewClient.postMessage('stopDemo');
     }, [setIsTransitioning]);
 
+    const handleRestartDemo = useCallback(() => {
+        setIsTransitioning(true);
+        webviewClient.postMessage('restartDemo');
+    }, [setIsTransitioning]);
+
     const handleDeployMesh = useCallback(() => {
         setIsTransitioning(true);
         webviewClient.postMessage('deployMesh');
@@ -132,8 +145,16 @@ export function useDashboardActions({
         setTimeout(() => setIsOpeningBrowser(false), FRONTEND_TIMEOUTS.DOUBLE_CLICK_PREVENTION);
     }, [isOpeningBrowser, setIsOpeningBrowser, edsDaLiveUrl]);
 
+    const handleOpenAdminPanel = useCallback(() => {
+        webviewClient.postMessage('openAdminPanel');
+    }, []);
+
     const handleConfigure = useCallback(() => {
         webviewClient.postMessage('configure');
+    }, []);
+
+    const handleEditProject = useCallback(() => {
+        webviewClient.postMessage('editProject');
     }, []);
 
     const handleOpenDevConsole = useCallback(() => {
@@ -142,10 +163,6 @@ export function useDashboardActions({
 
     const handleDeleteProject = useCallback(() => {
         webviewClient.postMessage('deleteProject');
-    }, []);
-
-    const handleCopyPath = useCallback(() => {
-        webviewClient.postMessage('copyPath');
     }, []);
 
     const handleExportProject = useCallback(() => {
@@ -179,16 +196,18 @@ export function useDashboardActions({
     return {
         handleStartDemo,
         handleStopDemo,
+        handleRestartDemo,
         handleDeployMesh,
         handleSyncStorefront,
         handleRefreshBlockLibrary,
         handleOpenBrowser,
         handleOpenLiveSite,
         handleOpenDaLive,
+        handleOpenAdminPanel,
         handleConfigure,
+        handleEditProject,
         handleOpenDevConsole,
         handleDeleteProject,
-        handleCopyPath,
         handleExportProject,
         handleRepublishContent,
         handleResetProject,

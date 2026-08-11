@@ -5,7 +5,7 @@ import { CommandResultCache } from './commandResultCache';
 import { CommandSequencer } from './commandSequencer';
 import { EnvironmentSetup } from './environmentSetup';
 import { FileWatcher } from './fileWatcher';
-import { buildAioConsoleEnv, getActiveOrgContext } from './orgContextEnv';
+import { buildAioConsoleEnv, getActiveOrgContext, needsOrgTargeting } from './orgContextEnv';
 import { PollingService } from './pollingService';
 import { isPortAvailable } from './portChecker';
 import { ResourceLocker } from './resourceLocker';
@@ -104,6 +104,18 @@ export class CommandExecutor {
         if (activeOrgContext) {
             const orgEnv = buildAioConsoleEnv(activeOrgContext);
             finalOptions.env = { ...finalOptions.env, ...orgEnv };
+        } else if (needsOrgTargeting(command)) {
+            // Not an error — the command runs, and some call sites legitimately
+            // have no project yet. But it answers about the CLI's process-global
+            // workspace rather than the project's, so the one thing worth doing is
+            // saying so with the command named. The wrapping contract is per-caller
+            // and gets forgotten (four unwrapped mesh readers found 2026-08-08);
+            // this is the seam every one of them passes through.
+            this.logger.warn(
+                `[Command Executor] "${command}" ran without an org target — it will use the`
+                    + " aio CLI's global workspace selection, not the project's."
+                    + ' Wrap the call in withOrgContext(buildOrgTargetFromProjectAdobe(project.adobe), …).',
+            );
         }
 
         if (options.configureTelemetry === undefined) {

@@ -24,8 +24,10 @@ import { getRuntimeSurfaces, type RuntimeSurfaceSource } from './runtimeSurfaceR
 import type { GitHubTreeInput } from './types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
-    getBlockLibrarySource, getBlockLibraryContentSource,
-    getBlockLibraryName, isBlockLibraryAvailableForPackage,
+    getBlockLibrarySource,
+    getBlockLibraryContentSource,
+    getBlockLibraryName,
+    isBlockLibraryAvailableForPackage,
 } from '@/features/project-creation/services/blockLibraryLoader';
 import type { Project } from '@/types/base';
 import type { AddonSource } from '@/types/demoPackages';
@@ -79,21 +81,28 @@ function collectLibrarySources(
     project: Project,
     effectiveBlockLibraries: string[],
     logger: Logger,
-): { allLibraries: Array<{ source: AddonSource; name: string }>; libraryContentSources: Array<{ org: string; site: string }> } {
+): {
+    allLibraries: Array<{ source: AddonSource; name: string }>;
+    libraryContentSources: Array<{ org: string; site: string }>;
+} {
     const allLibraries: Array<{ source: AddonSource; name: string }> = [];
     const libraryContentSources: Array<{ org: string; site: string }> = [];
     const packageId = project.selectedPackage ?? '';
 
     for (const libraryId of effectiveBlockLibraries) {
         if (!isBlockLibraryAvailableForPackage(libraryId, packageId)) {
-            logger.info(`[EdsReset] Skipping block library '${libraryId}' — not available for package '${packageId}' (onlyForPackages)`);
+            logger.info(
+                `[EdsReset] Skipping block library '${libraryId}' — not available for package '${packageId}' (onlyForPackages)`,
+            );
             continue;
         }
         const source = getBlockLibrarySource(libraryId);
         if (source) {
             allLibraries.push({ source, name: getBlockLibraryName(libraryId) || libraryId });
         } else {
-            logger.warn(`[EdsReset] Block library '${libraryId}' selected but no source configured`);
+            logger.warn(
+                `[EdsReset] Block library '${libraryId}' selected but no source configured`,
+            );
         }
         const cs = getBlockLibraryContentSource(libraryId);
         if (cs) libraryContentSources.push(cs);
@@ -103,7 +112,9 @@ function collectLibrarySources(
         allLibraries.push({ source: lib.source, name: lib.name });
     }
 
-    logger.info(`[EdsReset] Installing blocks from: ${allLibraries.map(l => `${l.source.owner}/${l.source.repo}`).join(', ')}`);
+    logger.info(
+        `[EdsReset] Installing blocks from: ${allLibraries.map((l) => `${l.source.owner}/${l.source.repo}`).join(', ')}`,
+    );
     return { allLibraries, libraryContentSources };
 }
 
@@ -117,12 +128,22 @@ async function installWithBlockLibraries(
     inspectorEntries: GitHubTreeInput[],
     report: (step: number, message: string) => void,
 ): Promise<string[]> {
-    report(2, `Re-installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}...`);
+    report(
+        2,
+        `Re-installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}...`,
+    );
     const blockResult = await installBlockCollections(
-        githubFileOps, repoOwner, repoName, allLibraries, logger, inspectorEntries,
+        githubFileOps,
+        repoOwner,
+        repoName,
+        allLibraries,
+        logger,
+        inspectorEntries,
     );
     if (blockResult.success) {
-        logger.info(`[EdsReset] Reinstalled ${blockResult.blocksCount} unique blocks from ${allLibraries.length} libraries (+ inspector tagging)`);
+        logger.info(
+            `[EdsReset] Reinstalled ${blockResult.blocksCount} unique blocks from ${allLibraries.length} libraries (+ inspector tagging)`,
+        );
         return blockResult.blockIds;
     }
     logger.warn(`[EdsReset] Block library reinstall failed: ${blockResult.error}`);
@@ -140,7 +161,11 @@ async function installInspectorOnly(
 ): Promise<void> {
     report(3, 'Installing inspector tagging...');
     const inspectorResult = await installInspectorTagging(
-        githubFileOps, repoOwner, repoName, selectedPackage, logger,
+        githubFileOps,
+        repoOwner,
+        repoName,
+        selectedPackage,
+        logger,
     );
     if (inspectorResult.success) {
         logger.info('[EdsReset] Inspector tagging installed (standalone)');
@@ -164,14 +189,21 @@ async function reinstallBlockLibraries(
     githubFileOps: GitHubFileOperations,
     logger: Logger,
     report: (step: number, message: string) => void,
-): Promise<{ blockCollectionIds?: string[]; libraryContentSources: Array<{ org: string; site: string }> }> {
+): Promise<{
+    blockCollectionIds?: string[];
+    libraryContentSources: Array<{ org: string; site: string }>;
+}> {
     report(2, 'Preparing block libraries...');
 
     // Generate inspector tree entries (always, for consistency with storefront setup)
     let inspectorEntries: GitHubTreeInput[] = [];
     try {
         inspectorEntries = await generateInspectorTreeEntries(
-            githubFileOps, repoOwner, repoName, project.selectedPackage, logger,
+            githubFileOps,
+            repoOwner,
+            repoName,
+            project.selectedPackage,
+            logger,
         );
     } catch (error) {
         logger.warn(`[EdsReset] Inspector tagging skipped: ${(error as Error).message}`);
@@ -179,21 +211,38 @@ async function reinstallBlockLibraries(
 
     logger.info('[EdsReset] Block library config', {
         selectedBlockLibraries: project.selectedBlockLibraries,
-        customBlockLibraries: project.customBlockLibraries?.map(l => `${l.source.owner}/${l.source.repo}`),
+        customBlockLibraries: project.customBlockLibraries?.map(
+            (l) => `${l.source.owner}/${l.source.repo}`,
+        ),
         package: project.selectedPackage,
     });
 
     const { allLibraries, libraryContentSources } = collectLibrarySources(
-        project, project.selectedBlockLibraries ?? [], logger,
+        project,
+        project.selectedBlockLibraries ?? [],
+        logger,
     );
 
     let allBlockIds: string[] = [];
     if (allLibraries.length > 0) {
         allBlockIds = await installWithBlockLibraries(
-            githubFileOps, repoOwner, repoName, allLibraries, logger, inspectorEntries, report,
+            githubFileOps,
+            repoOwner,
+            repoName,
+            allLibraries,
+            logger,
+            inspectorEntries,
+            report,
         );
     } else if (inspectorEntries.length > 0) {
-        await installInspectorOnly(githubFileOps, repoOwner, repoName, project.selectedPackage, logger, report);
+        await installInspectorOnly(
+            githubFileOps,
+            repoOwner,
+            repoName,
+            project.selectedPackage,
+            logger,
+            report,
+        );
     }
 
     return {
@@ -223,9 +272,16 @@ export async function resetRepoToTemplate(
     canonicalCodePatchResults?: CodePatchResult[];
 }> {
     const {
-        repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
-        project, includeBlockLibrary = false,
-        codePatches, codePatchSource,
+        repoOwner,
+        repoName,
+        daLiveOrg,
+        daLiveSite,
+        templateOwner,
+        templateRepo,
+        project,
+        includeBlockLibrary = false,
+        codePatches,
+        codePatchSource,
     } = params;
 
     report(1, 'Resetting repository to template...');
@@ -242,11 +298,19 @@ export async function resetRepoToTemplate(
         fileOverrides.set('demo-config.json', configResult.content);
         context.logger.info('[EdsReset] Generated config.json for reset');
     } else {
-        context.logger.warn(`[EdsReset] Failed to generate demo-config.json: ${configResult.error}`);
+        context.logger.warn(
+            `[EdsReset] Failed to generate demo-config.json: ${configResult.error}`,
+        );
     }
 
     if (includeBlockLibrary) {
-        await fetchPlaceholderFiles(fileOverrides, templateOwner, templateRepo, context.logger, codePatchSource);
+        await fetchPlaceholderFiles(
+            fileOverrides,
+            templateOwner,
+            templateRepo,
+            context.logger,
+            codePatchSource,
+        );
     }
 
     // Determine the template ref to reset against. Thin-layer storefronts
@@ -257,14 +321,22 @@ export async function resetRepoToTemplate(
     let templateRef = 'main';
     if (codePatchSource) {
         const lkg = await readLkgSha(
-            { owner: codePatchSource.owner, repo: codePatchSource.repo, lkgFile: codePatchSource.lkgFile },
+            {
+                owner: codePatchSource.owner,
+                repo: codePatchSource.repo,
+                lkgFile: codePatchSource.lkgFile,
+            },
             context.logger,
         );
         if (lkg) {
             templateRef = lkg;
-            context.logger.info(`[EdsReset] Pinning reset to LKG ${lkg.substring(0, 7)} (from ${codePatchSource.owner}/${codePatchSource.repo})`);
+            context.logger.info(
+                `[EdsReset] Pinning reset to LKG ${lkg.substring(0, 7)} (from ${codePatchSource.owner}/${codePatchSource.repo})`,
+            );
         } else {
-            context.logger.warn(`[EdsReset] LKG unreachable for ${codePatchSource.owner}/${codePatchSource.repo} — falling back to template main HEAD`);
+            context.logger.warn(
+                `[EdsReset] LKG unreachable for ${codePatchSource.owner}/${codePatchSource.repo} — falling back to template main HEAD`,
+            );
         }
     }
 
@@ -277,28 +349,49 @@ export async function resetRepoToTemplate(
     let canonicalCodePatchResults: CodePatchResult[] | undefined;
     if (codePatches && codePatches.length > 0 && codePatchSource) {
         canonicalCodePatchResults = await applyCanonicalCodePatches(
-            fileOverrides, templateOwner, templateRepo, codePatches, codePatchSource, context.logger,
+            fileOverrides,
+            templateOwner,
+            templateRepo,
+            codePatches,
+            codePatchSource,
+            context.logger,
         );
     }
 
     const resetResult = await githubFileOps.resetRepoToTemplate(
-        templateOwner, templateRepo, repoOwner, repoName, fileOverrides, templateRef,
+        templateOwner,
+        templateRepo,
+        repoOwner,
+        repoName,
+        fileOverrides,
+        templateRef,
     );
 
-    context.logger.info(`[EdsReset] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`);
+    context.logger.info(
+        `[EdsReset] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`,
+    );
     report(1, `Reset ${resetResult.fileCount} files`);
 
     const { blockCollectionIds, libraryContentSources } = await reinstallBlockLibraries(
-        project, repoOwner, repoName, githubFileOps, context.logger, report,
+        project,
+        repoOwner,
+        repoName,
+        githubFileOps,
+        context.logger,
+        report,
     );
 
     // Install the smart 404 PDP handler into the storefront's
     // scripts/delayed.js. Same shape as inspector tagging — vendors a
     // small JS snippet into storefront code. The pipeline's subsequent
-    // bulk Helix code preview picks up the committed change. Non-fatal:
-    // skipped silently when BYOM overlay is unset and on every other
-    // failure mode (see installSmart404Handler).
-    await installSmart404Handler(
+    // bulk Helix code preview picks up the committed change.
+    //
+    // Still non-fatal, but no longer silent. Reset is the path a user takes to
+    // REPAIR a broken storefront, so a skip here mattered more than on create
+    // and was the one reported least — the result was discarded entirely.
+    // `report()` is the context-appropriate surface (UI progress or MCP output),
+    // matching how the overlay-registration failure is surfaced on this path.
+    const smart404 = await installSmart404Handler(
         githubFileOps,
         repoOwner,
         repoName,
@@ -307,17 +400,21 @@ export async function resetRepoToTemplate(
         daLiveOrg,
         daLiveSite,
     );
+    if (!smart404.installed && params.byomOverlayUrl) {
+        context.logger.warn(
+            `[EdsReset] Smart-404 handler not installed: ${smart404.reason ?? 'unknown reason'}`,
+        );
+        report(
+            1,
+            '⚠️ Smart-404 handler not installed — product pages may not recover on first visit',
+        );
+    }
 
     // Wire Quick Edit (Experience Workspace WYSIWYG dependency) into the
     // storefront's scripts/scripts.js + tools/quick-edit/quick-edit.js.
     // Brand-agnostic, idempotent, non-fatal. Mirrors the create path so a
     // reset reconciles Quick Edit wiring just like every other vendored file.
-    await installQuickEdit(
-        githubFileOps,
-        repoOwner,
-        repoName,
-        context.logger,
-    );
+    await installQuickEdit(githubFileOps, repoOwner, repoName, context.logger);
 
     return {
         filesReset: resetResult.fileCount,

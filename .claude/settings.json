@@ -1,0 +1,81 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/eslint-changed.sh\"",
+            "statusMessage": "eslint (changed files)"
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/doc-drift.sh\""
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/deletion-scan-router.sh\""
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/component-reuse-check.sh\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/jest-pipe-guard.sh\"",
+            "statusMessage": "jest pipe guard"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/webview-test-skill-router.sh\"",
+            "statusMessage": "webview-test skill router"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/reuse-first-router.sh\"",
+            "statusMessage": "reuse-first router"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__adobe-exl__.*|mcp__fluffyjaws__.*|mcp__helix-mcp-server__aem-docs-search|mcp__MCP_DOCKER__fetch|mcp__MCP_DOCKER__resolve-library-id|mcp__MCP_DOCKER__get-library-docs|mcp__MCP_DOCKER__perplexity_.*|WebFetch|WebSearch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/adobe-docs-skill-router.sh\"",
+            "statusMessage": "adobe-docs skill router"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/format-on-edit.sh\"",
+            "statusMessage": "prettier+eslint --fix (edited file)"
+          }
+        ]
+      }
+    ]
+  }
+}

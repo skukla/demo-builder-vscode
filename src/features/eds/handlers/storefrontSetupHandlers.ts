@@ -15,15 +15,18 @@
 import * as vscode from 'vscode';
 import { CleanupService } from '../services/cleanupService';
 import { ConfigurationService } from '../services/configurationService';
-import { createDaLiveTokenProvider, createDaLiveServiceTokenProvider } from '../services/daLiveContentOperations';
+import {
+    createDaLiveTokenProvider,
+    createDaLiveServiceTokenProvider,
+} from '../services/daLiveContentOperations';
 import { DaLiveOrgOperations } from '../services/daLiveOrgOperations';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
 import { GitHubTokenService } from '../services/githubTokenService';
 import { ToolManager } from '../services/toolManager';
 import type { EdsMetadata, EdsCleanupOptions } from '../services/types';
 import {
-    BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE,
     ensureDaLiveAuth,
+    explainAbsentOverlay,
     getDaLiveAuthService,
     resolveByomOverlayConfig,
 } from './edsHelpers';
@@ -99,6 +102,15 @@ export interface StorefrontSetupStartPayload {
         };
         // Optional BYOM content overlay URL (from demo-packages.json storefronts)
         byomOverlayUrl?: string;
+        /**
+         * Why `byomOverlayUrl` resolved to nothing, as a user-facing sentence.
+         *
+         * Set by this handler at resolution time and read by phase 3, so the
+         * phases never touch VS Code settings. Phase 3 briefly did, inside the
+         * Configuration Service try/catch, where a failed config read surfaced
+         * as a bogus "Config Service incomplete" warning.
+         */
+        byomAbsentReason?: string;
         // Selected existing repository (from searchable list)
         selectedRepo?: {
             name: string;
@@ -115,7 +127,7 @@ export interface StorefrontSetupStartPayload {
         // Whether to reset existing site content (repopulate with demo data)
         // Only applies when selectedSite is set (existing site mode)
         resetSiteContent?: boolean;
-        // Created repository info (set when repo was created in GitHubRepoSelectionStep)
+        // Created repository info (set when the repo was created in RepoSelectionInline)
         // If present, skip repo creation in StorefrontSetupStep
         createdRepo?: {
             owner: string;
@@ -211,7 +223,9 @@ export async function handleCancelStorefrontSetup(
     }
 
     // Abort any running operations
-    const abortController = context.sharedState.storefrontSetupAbortController as AbortController | undefined;
+    const abortController = context.sharedState.storefrontSetupAbortController as
+        | AbortController
+        | undefined;
     if (abortController) {
         context.logger.debug('[Storefront Setup] Aborting running operations');
         abortController.abort();
@@ -236,7 +250,10 @@ export async function handleCancelStorefrontSetup(
             if (cleanupResult.success) {
                 context.logger.info('[Storefront Setup] Cleanup completed successfully');
             } else {
-                context.logger.warn('[Storefront Setup] Cleanup completed with errors:', cleanupResult.error);
+                context.logger.warn(
+                    '[Storefront Setup] Cleanup completed with errors:',
+                    cleanupResult.error,
+                );
             }
         } catch (error) {
             // Log error but don't fail - cleanup is best effort
@@ -350,7 +367,7 @@ export async function handleStartStorefrontSetup(
             message: 'DA.live authentication expired',
             error: daLiveResult.cancelled
                 ? 'DA.live sign-in was cancelled.'
-                : (daLiveResult.error || 'Your DA.live session has expired.'),
+                : daLiveResult.error || 'Your DA.live session has expired.',
         });
         return { success: false, error: 'DA.live authentication required' };
     }
@@ -362,13 +379,20 @@ export async function handleStartStorefrontSetup(
     // which storefront's `/products/default` template to fetch (Helix does not
     // forward `x-forwarded-host` or registration-set auth headers through the
     // overlay path; query string is the only confirmed transport).
+    const resolvedOverlayUrl = resolveByomOverlayConfig(
+        edsConfig.byomOverlayUrl,
+        edsConfig.daLiveOrg,
+        edsConfig.daLiveSite,
+    );
     const effectiveEdsConfig = {
         ...edsConfig,
-        byomOverlayUrl: resolveByomOverlayConfig(
-            edsConfig.byomOverlayUrl,
-            edsConfig.daLiveOrg,
-            edsConfig.daLiveSite,
-        ),
+        byomOverlayUrl: resolvedOverlayUrl,
+        // Decide WHY there is no overlay here, where the settings were already
+        // read, and hand the phases a plain string. Phases must not read VS Code
+        // config: phase 3 does this work inside the Configuration Service
+        // try/catch, so a config read that throws (or a test that mocks only
+        // `vscode.window`) surfaces as a bogus "Config Service failed" warning.
+        ...(resolvedOverlayUrl ? {} : { byomAbsentReason: explainAbsentOverlay() }),
     };
 
     try {
@@ -399,22 +423,23 @@ export async function handleStartStorefrontSetup(
         if (outcome === 'complete') {
             // "Complete" has to mean it. A storefront whose BYOM overlay never
             // registered is built, published and browsable — and cannot serve a
-            // single product detail page. Reported as plain success (2026-07-28,
-            // kmanns/blaines) that cost four minutes of writes and a silent defect
-            // the user found later. The repo URL still ships: everything except
+            // single product detail page. Reported as plain success (2026-07-28)
+            // after four minutes of writes, leaving a silent defect the user
+            // found later. The repo URL still ships: everything except
             // PDPs works, and withholding it would be the opposite lie.
-            const overlayFailed = result.byomOverlayFailed === true;
+            const caveats = result.pdpCaveats ?? [];
+            const hasCaveats = caveats.length > 0;
             context.logger.info(
-                overlayFailed
-                    ? `[Storefront Setup] Finished WITH ERRORS: ${result.repoUrl} — `
-                      + 'BYOM overlay not registered, product detail pages will not load'
+                hasCaveats
+                    ? `[Storefront Setup] Finished WITH ERRORS: ${result.repoUrl} — ` +
+                          caveats.join(' ')
                     : `[Storefront Setup] Complete: ${result.repoUrl}`,
             );
             await context.sendMessage('storefront-setup-complete', {
-                message: overlayFailed
+                message: hasCaveats
                     ? 'Storefront created, but product detail pages will not load.'
                     : 'Storefront setup completed successfully!',
-                ...(overlayFailed && { warning: BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE }),
+                ...(hasCaveats && { warnings: caveats }),
                 githubRepo: result.repoUrl,
                 daLiveSite: `https://da.live/${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`,
                 repoOwner: result.repoOwner,
@@ -438,7 +463,6 @@ export async function handleStartStorefrontSetup(
     }
 }
 
-
 // ==========================================================
 // Helper Functions
 // ==========================================================
@@ -460,9 +484,10 @@ async function cleanupStorefrontSetupResources(
 
     try {
         // Build metadata from partial state
-        const githubRepo = partialState.repoOwner && partialState.repoName
-            ? `${partialState.repoOwner}/${partialState.repoName}`
-            : partialState.repoUrl?.replace('https://github.com/', '');
+        const githubRepo =
+            partialState.repoOwner && partialState.repoName
+                ? `${partialState.repoOwner}/${partialState.repoName}`
+                : partialState.repoUrl?.replace('https://github.com/', '');
 
         const metadata: EdsMetadata = {
             githubRepo,
@@ -536,4 +561,3 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
         configurationService,
     );
 }
-

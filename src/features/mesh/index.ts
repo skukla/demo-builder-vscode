@@ -10,9 +10,9 @@ export { DeployMeshCommand } from './commands/deployMesh';
 
 // Handlers
 export { handleCheckApiMesh } from './handlers/checkHandler';
-export { handleCreateApiMesh } from './handlers/createHandler';
 export { handleDeleteApiMesh } from './handlers/deleteHandler';
-export { getSetupInstructions, getEndpoint as getHandlerEndpoint } from './handlers/shared';
+export { handleEnsureMeshApiSubscribed } from './handlers/subscribeHandler';
+export { getEndpoint as getHandlerEndpoint } from './handlers/shared';
 
 // Services
 export { deployMeshComponent, type MeshDeploymentResult as MeshDeploymentResult_Service } from './services/meshDeployment';

@@ -9,19 +9,17 @@
 import { Flex, Text } from '@adobe/react-spectrum';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import PinOn from '@spectrum-icons/workflow/PinOn';
-import React, { useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
+import { useProjectSelectHandlers } from '../hooks/useProjectSelectHandlers';
 import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
+import { InlineRenameField } from '@/core/ui/components/forms';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
+import { normalizeProjectName } from '@/core/validation/normalizers';
 import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {
-    getStatusText,
-    getStatusVariant,
-    getFrontendPort,
-    getStorefrontStatusText,
-    getStorefrontStatusVariant,
+    getProjectStatusDisplay,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import type { Project } from '@/types/base';
-import { isEdsProject } from '@/types/typeGuards';
 
 export interface ProjectRowProps {
     /** The project to display */
@@ -47,36 +45,9 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
     onSelect,
     actions = {},
 }) => {
-    const handleClick = useCallback(
-        (e: React.MouseEvent) => {
-            if (e.shiftKey || e.metaKey) {
-                onSelect(project, { forceNewWindow: true });
-            } else {
-                onSelect(project);
-            }
-        },
-        [project, onSelect],
-    );
+    const { handleClick, handleKeyDown } = useProjectSelectHandlers(project, onSelect);
 
-    const handleKeyDown = useCallback(
-        (e: React.KeyboardEvent) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                if (e.shiftKey) {
-                    onSelect(project, { forceNewWindow: true });
-                } else {
-                    onSelect(project);
-                }
-            }
-        },
-        [project, onSelect],
-    );
-
-    const isEds = isEdsProject(project);
-    const port = getFrontendPort(project);
-    // EDS projects use storefront status; non-EDS use demo running status
-    const statusText = isEds ? getStorefrontStatusText(project) : getStatusText(project.status, port, false);
-    const statusVariant = isEds ? getStorefrontStatusVariant(project) : getStatusVariant(project.status, false);
+    const { statusText, statusVariant } = getProjectStatusDisplay(project);
     const componentSummary = useMemo(() => getComponentSummary(project), [project]);
 
     const ariaLabel = `${project.name}, ${statusText}${componentSummary ? `, ${componentSummary}` : ''}`;
@@ -107,13 +78,21 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                             <PinOn size="XS" />
                         </span>
                     )}
-                    <Text UNSAFE_className="project-row-name">
-                        {project.name}
-                    </Text>
+                    {/* Rename-in-place, matching the card grid: hover pencil,
+                        hidden while running or when the callback isn't wired. */}
+                    <InlineRenameField
+                        name={project.name}
+                        textClassName="project-row-name"
+                        disabled={isRunning || !actions.onRenameSubmit}
+                        normalize={normalizeProjectName}
+                        onRename={(newName) =>
+                            actions.onRenameSubmit
+                                ? actions.onRenameSubmit(project, newName)
+                                : Promise.resolve(null)
+                        }
+                    />
                     {componentSummary && (
-                        <Text UNSAFE_className="project-row-components">
-                            {componentSummary}
-                        </Text>
+                        <Text UNSAFE_className="project-row-components">{componentSummary}</Text>
                     )}
                 </Flex>
 
@@ -125,9 +104,7 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                         actions={actions}
                         className="project-row-menu-button"
                     />
-                    <Text UNSAFE_className="project-row-status">
-                        {statusText}
-                    </Text>
+                    <Text UNSAFE_className="project-row-status">{statusText}</Text>
                     <ChevronRight size="S" UNSAFE_className="project-row-chevron" />
                 </Flex>
             </Flex>

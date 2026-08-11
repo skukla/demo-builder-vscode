@@ -13,7 +13,7 @@ Related: [ADR-005 BYOM PDP Routing](005-byom-pdp-routing.md), [ADR-006 Thin-Laye
 
 ### The problem
 
-A field report (a partner's `cmco-demo` storefront) surfaced a blank PDP: the page
+A field report (a partner's `acme-demo-site` storefront) surfaced a blank PDP: the page
 shell loads but product data never hydrates. The product detail page lives at
 `/products/{urlKey}/{sku}`. Adobe's canonical commerce boilerplate slugifies the
 SKU into the URL with `sanitizeName()` (lowercase, strip diacritics, collapse

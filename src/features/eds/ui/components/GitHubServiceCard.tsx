@@ -1,7 +1,7 @@
 /**
  * GitHubServiceCard
  *
- * Presentational component for GitHub authentication in ConnectServicesStep.
+ * Presentational component for GitHub authentication, rendered by StorefrontStep.
  * Supports both card and checklist layout variants.
  *
  * @example
@@ -16,10 +16,11 @@
  * />
  */
 
-import { Flex, Text, ProgressCircle } from '@adobe/react-spectrum';
+import { Flex, Text } from '@adobe/react-spectrum';
 import Alert from '@spectrum-icons/workflow/Alert';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
+import { Spinner } from '@/core/ui/components/ui';
 
 /** GitHub user information */
 export interface GitHubUser {
@@ -55,6 +56,35 @@ const GitHubIcon = () => (
     </svg>
 );
 
+/** Authenticated status: a compact "Connected" pill, or the login with a Change action. */
+function renderAuthenticatedStatus(
+    user: GitHubUser,
+    compact: boolean,
+    onChangeAccount?: () => void,
+): React.ReactElement {
+    if (compact) {
+        return (
+            <Flex alignItems="center" gap="size-100">
+                <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
+                <Text UNSAFE_className="status-text">Connected</Text>
+            </Flex>
+        );
+    }
+    return (
+        <Flex alignItems="center" justifyContent="space-between">
+            <Flex alignItems="center" gap="size-100">
+                <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
+                <Text UNSAFE_className="status-text">{user.login}</Text>
+            </Flex>
+            {onChangeAccount && (
+                <button className="service-action-link" onClick={onChangeAccount}>
+                    Change
+                </button>
+            )}
+        </Flex>
+    );
+}
+
 /**
  * GitHubServiceCard Component
  *
@@ -74,48 +104,24 @@ export function GitHubServiceCard({
     const isLoading = isChecking || isAuthenticating;
 
     return (
-        <div
-            className="service-card"
-            data-connected={isAuthenticated ? 'true' : 'false'}
-        >
+        <div className="service-card" data-connected={isAuthenticated ? 'true' : 'false'}>
             <div className="service-card-header">
                 <div className="service-icon github-icon">
                     <GitHubIcon />
                 </div>
                 <div className="service-card-title">GitHub</div>
             </div>
-            <div className="service-card-description">
-                Repository for your project code
-            </div>
+            <div className="service-card-description">Repository for your project code</div>
             <div className="service-card-status">
                 {isLoading ? (
                     <Flex alignItems="center" gap="size-100">
-                        <ProgressCircle size="S" isIndeterminate aria-label="Checking" />
+                        <Spinner size="S" aria-label="Checking" />
                         <Text UNSAFE_className="status-text">
                             {isAuthenticating ? 'Connecting...' : 'Checking...'}
                         </Text>
                     </Flex>
                 ) : isAuthenticated && user ? (
-                    compact ? (
-                        <Flex alignItems="center" gap="size-100">
-                            <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
-                            <Text UNSAFE_className="status-text">Connected</Text>
-                        </Flex>
-                    ) : (
-                        <Flex alignItems="center" justifyContent="space-between">
-                            <Flex alignItems="center" gap="size-100">
-                                <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
-                                <Text UNSAFE_className="status-text">
-                                    {user.login}
-                                </Text>
-                            </Flex>
-                            {onChangeAccount && (
-                                <button className="service-action-link" onClick={onChangeAccount}>
-                                    Change
-                                </button>
-                            )}
-                        </Flex>
-                    )
+                    renderAuthenticatedStatus(user, compact, onChangeAccount)
                 ) : error ? (
                     <Flex direction="column" gap="size-100">
                         <Flex alignItems="center" gap="size-100">

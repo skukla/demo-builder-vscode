@@ -14,11 +14,16 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { COMPONENT_IDS } from '@/core/constants';
-import { clearMcpCache, inspectAllServers, verifyAiSetup, type AiVerificationResult } from '@/features/ai';
+import { sanitizeErrorForLogging } from '@/core/validation';
+import {
+    clearMcpCache,
+    verifyAiSetup,
+    type AiVerificationResult,
+} from '@/features/ai';
 import {
     generateAIContextFiles,
     installAiDefaultsMcpTools,
+    projectNeedsAppBuilderTooling,
 } from '@/features/project-creation/services';
 import type { AiPrompt, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -34,9 +39,7 @@ import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/typ
  * Reads projectPath from stateManager (not the webview payload) to prevent
  * a compromised webview from supplying an arbitrary filesystem path.
  */
-export async function handleVerifyAiSetup(
-    context: HandlerContext,
-): Promise<HandlerResponse> {
+export async function handleVerifyAiSetup(context: HandlerContext): Promise<HandlerResponse> {
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
@@ -60,10 +63,8 @@ export async function handleVerifyAiSetup(
  * the captured proxy stderr tail (`entry.error`), which is the decisive detail
  * when an MCP server fails to spawn.
  */
-function logAiVerification(context: HandlerContext, result: AiVerificationResult): void {
-    const checksSummary = result.checks
-        .map(c => `${c.name}=${c.status}`)
-        .join(', ');
+export function logAiVerification(context: HandlerContext, result: AiVerificationResult): void {
+    const checksSummary = result.checks.map((c) => `${c.name}=${c.status}`).join(', ');
     context.debugLogger.debug(`[AI Verify] checks: ${checksSummary}`);
 
     // verifyAiSetup always populates inventory; guard anyway so this
@@ -82,9 +83,16 @@ function logAiVerification(context: HandlerContext, result: AiVerificationResult
                 `[AI Verify] mcp ${entry.id}: ok (${entry.tools?.length ?? 0} tools)`,
             );
         } else {
-            context.logger.warn(
-                `[AI Verify] mcp ${entry.id}: ${entry.status}\n${entry.error ?? ''}`,
-            );
+            // Redact per line: `warn` bypasses the redactor, and a user-added
+            // third-party server may echo a credential-bearing env to stderr on a
+            // crash. Sanitize line-by-line (not the whole tail) because
+            // sanitizeErrorForLogging keeps only the first line — mapping it over
+            // each line preserves the multi-line socket/connect diagnostic.
+            const safeError = (entry.error ?? '')
+                .split('\n')
+                .map((line) => sanitizeErrorForLogging(line))
+                .join('\n');
+            context.logger.warn(`[AI Verify] mcp ${entry.id}: ${entry.status}\n${safeError}`);
         }
     }
     if (inventory.mcpsError) {
@@ -99,34 +107,6 @@ function logAiVerification(context: HandlerContext, result: AiVerificationResult
     );
 }
 
-/**
- * Handle inspect-mcp — force refresh of MCP inventory by clearing the
- * mcpInspector cache then re-running `inspectAllServers`.
- *
- * Payload `{ serverId? }`:
- *   - When `serverId` is provided, only that entry is cleared and re-fetched.
- *     Other cached entries return immediately (saves spawning every server).
- *   - When omitted, every cached entry is cleared and all servers are
- *     re-inspected.
- *
- * Reads `projectPath` from `stateManager` (server-side) and ignores any
- * webview-supplied paths to prevent path-injection.
- */
-export async function handleInspectMcp(
-    context: HandlerContext,
-    payload?: { serverId?: string },
-): Promise<HandlerResponse> {
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
-    // Treat empty-string serverId as "clear all" — a webview form field that
-    // submits an empty value should not silently degrade to a no-op cache delete.
-    const serverId = payload?.serverId ? payload.serverId : undefined;
-    clearMcpCache(serverId);
-    const mcps = await inspectAllServers(project.path);
-    return { success: true, mcps };
-}
 
 /**
  * Handle openInClaude — dispatch Claude Code with optional prompt pre-fill.
@@ -169,9 +149,7 @@ export async function handleOpenInClaude(
  * Clears the MCP inspector cache on success so the next verify re-spawns and
  * the modal flips from a stale failure to fresh inventory.
  */
-export async function handleRegenerateAiFiles(
-    context: HandlerContext,
-): Promise<HandlerResponse> {
+export async function handleRegenerateAiFiles(context: HandlerContext): Promise<HandlerResponse> {
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
@@ -181,13 +159,13 @@ export async function handleRegenerateAiFiles(
 
     // Reuse the wizard's `creationProgress` channel so the AI Capabilities modal
     // can render per-step LoadingDisplay instead of a static spinner. Steps:
-    //   1. Installing storefront dependencies  (EDS only — the long pole)
+    //   1. Installing AI tooling               (App Builder-adjacent projects — the long pole)
     //   2. Writing AGENTS.md                   ┐
     //   3. Writing MCP configuration           │ emitted from generateAIContextFiles
     //   4. Writing skills                      ┘ via the onProgress tracker below
     //   5. Finalizing                          (clearMcpCache)
-    const storefrontPath = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path;
-    const totalSteps = storefrontPath ? 5 : 4;
+    const needsAiTooling = projectNeedsAppBuilderTooling(project);
+    const totalSteps = needsAiTooling ? 5 : 4;
     let stepNumber = 0;
     const emit = (currentOperation: string, message?: string): void => {
         stepNumber++;
@@ -200,15 +178,15 @@ export async function handleRegenerateAiFiles(
         });
     };
 
-    if (storefrontPath) {
-        emit('Installing storefront dependencies', 'This can take up to a minute');
+    if (needsAiTooling) {
+        emit('Installing AI tooling', 'This can take up to a minute');
         // MCP tools install into the per-project isolated dir (keyed to
         // project.path), decoupled from the storefront manifest.
-        const installResult = await installAiDefaultsMcpTools(project.path);
+        const installResult = await installAiDefaultsMcpTools(project.path, project);
         if (!installResult.success) {
             return {
                 success: false,
-                error: `Failed to install storefront AI dependencies: ${installResult.error ?? 'unknown error'}`,
+                error: `Failed to install AI tooling dependencies: ${installResult.error ?? 'unknown error'}`,
             };
         }
     }
@@ -220,11 +198,22 @@ export async function handleRegenerateAiFiles(
         project.path,
         project,
         context.context.extensionPath,
-        (currentOperation: string, _progress: number, message?: string) => emit(currentOperation, message),
+        (currentOperation: string, _progress: number, message?: string) =>
+            emit(currentOperation, message),
     );
 
     const skills = generated?.skills ?? [];
-    context.logger.info(`[AI Verify] Regenerated ${skills.length} skill files: ${skills.join(', ')}`);
+    context.logger.info(
+        `[AI Verify] Regenerated ${skills.length} skill files: ${skills.join(', ')}`,
+    );
+
+    // Persist the freshness stamp. generateAIContextFiles set
+    // project.aiContextVersion = AI_CONTEXT_VERSION on the passed object; without
+    // this save the manifest keeps the old stamp and the on-open freshness check
+    // re-fires every open (both the dashboard button and the on-open heal use
+    // this path). saveProjectConfigOnly writes the manifest without touching
+    // currentProject or firing change events.
+    await context.stateManager.saveProjectConfigOnly(project);
 
     emit('Finalizing', 'Refreshing AI capability inventory');
     // The .mcp.json may now point at newly-installed binaries (or the same
@@ -259,13 +248,13 @@ async function writeGlobalPrompts(context: HandlerContext, prompts: AiPrompt[]):
 
 /** Replace by id, or append if absent. Preserves array order otherwise. */
 function upsertById(list: AiPrompt[], incoming: AiPrompt): AiPrompt[] {
-    const idx = list.findIndex(p => p.id === incoming.id);
+    const idx = list.findIndex((p) => p.id === incoming.id);
     if (idx < 0) return [...list, incoming];
     return list.map((p, i) => (i === idx ? incoming : p));
 }
 
 function removeById(list: AiPrompt[], id: string): AiPrompt[] {
-    return list.filter(p => p.id !== id);
+    return list.filter((p) => p.id !== id);
 }
 
 /**
@@ -278,9 +267,12 @@ function removeById(list: AiPrompt[], id: string): AiPrompt[] {
  * path must consistently show the new (global) copy until the next save
  * settles the state.
  */
-export function mergePromptsForRead(globalPrompts: AiPrompt[], projectPrompts: AiPrompt[]): AiPrompt[] {
-    const globalIds = new Set(globalPrompts.map(p => p.id));
-    const projectFiltered = projectPrompts.filter(p => !globalIds.has(p.id));
+export function mergePromptsForRead(
+    globalPrompts: AiPrompt[],
+    projectPrompts: AiPrompt[],
+): AiPrompt[] {
+    const globalIds = new Set(globalPrompts.map((p) => p.id));
+    const projectFiltered = projectPrompts.filter((p) => !globalIds.has(p.id));
     return [...globalPrompts, ...projectFiltered];
 }
 
@@ -315,8 +307,8 @@ export async function deleteAiPromptById(
 ): Promise<AiPrompt[]> {
     const projectPrompts = project?.aiPrompts ?? [];
     const globalPrompts = readGlobalPrompts(context);
-    const inProject = projectPrompts.some(p => p.id === promptId);
-    const inGlobal = globalPrompts.some(p => p.id === promptId);
+    const inProject = projectPrompts.some((p) => p.id === promptId);
+    const inGlobal = globalPrompts.some((p) => p.id === promptId);
 
     const nextProject = inProject ? removeById(projectPrompts, promptId) : projectPrompts;
     const nextGlobal = inGlobal ? removeById(globalPrompts, promptId) : globalPrompts;
@@ -339,9 +331,12 @@ function isValidPromptPayload(prompt: unknown): prompt is AiPrompt {
     if (!prompt || typeof prompt !== 'object') return false;
     const p = prompt as Partial<AiPrompt>;
     return (
-        typeof p.id === 'string' && p.id.length > 0 &&
-        typeof p.title === 'string' && p.title.trim().length > 0 &&
-        typeof p.prompt === 'string' && p.prompt.trim().length > 0
+        typeof p.id === 'string' &&
+        p.id.length > 0 &&
+        typeof p.title === 'string' &&
+        p.title.trim().length > 0 &&
+        typeof p.prompt === 'string' &&
+        p.prompt.trim().length > 0
     );
 }
 
@@ -383,8 +378,8 @@ export async function handleSaveAiPrompt(
     const incomingPinned = Boolean(incoming.pinned);
     const projectPrompts = project.aiPrompts ?? [];
     const globalPrompts = readGlobalPrompts(context);
-    const prevInProject = projectPrompts.find(p => p.id === incoming.id);
-    const prevInGlobal = globalPrompts.find(p => p.id === incoming.id);
+    const prevInProject = projectPrompts.find((p) => p.id === incoming.id);
+    const prevInGlobal = globalPrompts.find((p) => p.id === incoming.id);
     const prevPinned = Boolean(prevInGlobal?.pinned ?? prevInProject?.pinned ?? false);
 
     // Target scope rule:
@@ -394,8 +389,7 @@ export async function handleSaveAiPrompt(
     //   - prev in project, pinned (legacy data): stay in project regardless of
     //     incoming.pinned. The user opted out of auto-migration; only an
     //     explicit unpin-then-repin moves legacy data to global.
-    const targetIsGlobal =
-        incomingPinned && (!prevInProject || !prevPinned);
+    const targetIsGlobal = incomingPinned && (!prevInProject || !prevPinned);
 
     let nextGlobal = globalPrompts;
     let nextProject = projectPrompts;
@@ -448,9 +442,7 @@ export async function handleDeleteAiPrompt(
  * Handle list-ai-prompts — return the merged list (globals first, then
  * project-local, deduped by id with global winning on collision).
  */
-export async function handleListAiPrompts(
-    context: HandlerContext,
-): Promise<HandlerResponse> {
+export async function handleListAiPrompts(context: HandlerContext): Promise<HandlerResponse> {
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
@@ -496,11 +488,10 @@ export async function handleCopyAiPrompt(
 
 export const aiHandlers = defineHandlers({
     'verify-ai-setup': handleVerifyAiSetup,
-    'inspect-mcp': handleInspectMcp,
     'regenerate-ai-files': handleRegenerateAiFiles,
-    'openInClaude': handleOpenInClaude,
+    openInClaude: handleOpenInClaude,
     'save-ai-prompt': handleSaveAiPrompt,
     'delete-ai-prompt': handleDeleteAiPrompt,
     'list-ai-prompts': handleListAiPrompts,
-    'copyAiPrompt': handleCopyAiPrompt,
+    copyAiPrompt: handleCopyAiPrompt,
 });

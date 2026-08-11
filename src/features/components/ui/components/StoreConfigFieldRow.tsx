@@ -8,9 +8,9 @@
  * - Store/view code fields: skipped (rendered by StoreSelectionRow)
  * - Other fields: standard renderer
  *
- * Shared by ComponentConfigStep and ConnectStoreStepContent.
+ * Used by ConnectStoreStepContent.
  */
-import { Button, Flex, ProgressCircle, Text } from '@adobe/react-spectrum';
+import { Button, Flex, Text } from '@adobe/react-spectrum';
 import React from 'react';
 import {
     CONNECTION_FIELDS,
@@ -21,7 +21,7 @@ import type { ServiceGroup, UniqueField } from '../hooks/useComponentConfig';
 import type { StoreListItem } from '../hooks/useStoreDiscovery';
 import { ConfigFieldRenderer } from './ConfigFieldRenderer';
 import { StoreSelectionRow } from './StoreSelectionRow';
-import type { DescriptionContext } from '@/core/ui/components/forms/descriptionRenderer';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 
 export interface StoreConfigFieldRowProps {
     field: UniqueField;
@@ -41,8 +41,6 @@ export interface StoreConfigFieldRowProps {
     getStoreViewItems: (storeGroupCode: string) => StoreListItem[];
     /** Called when user clicks the Re-detect button to re-run store discovery */
     onRefresh?: () => void;
-    /** Context for resolving {placeholder} tokens inside field-description URLs (e.g., {orgCode}) */
-    descriptionContext?: DescriptionContext;
 }
 
 export function StoreConfigFieldRow({
@@ -62,7 +60,6 @@ export function StoreConfigFieldRow({
     getStoreGroupItems,
     getStoreViewItems,
     onRefresh,
-    descriptionContext,
 }: StoreConfigFieldRowProps): React.ReactNode {
     const fieldProps = {
         field,
@@ -71,7 +68,6 @@ export function StoreConfigFieldRow({
         isTouched: touchedFields.has(field.key),
         onUpdate: updateField,
         onNormalizeUrl: normalizeUrlField,
-        descriptionContext,
     };
 
     if (CONNECTION_FIELDS.has(field.key)) {
@@ -91,28 +87,34 @@ export function StoreConfigFieldRow({
 
     if (isWebsiteCodeField(field.key)) {
         /*
-         * Store selection. To avoid a layout shift, render the store-selection
-         * fields and the Re-detect slot from the start in a disabled "detecting"
-         * state and populate them in place — never swap a short spinner for the
-         * tall populated layout. The fetchError branch keeps its fallback inputs.
+         * Store selection — one loading treatment, used for the INITIAL detect AND
+         * any Re-detect: a compact spinner+label row anchored directly under the
+         * connection fields (NOT vertically centered in a tall band — centering
+         * put the spinner at the fold and its label below it at short viewports).
+         * On success the populated dropdowns ARE the result (no separate
+         * "detected" confirmation). The fetchError branch keeps its fallback inputs.
          */
         if (fetchError) {
             return (
                 <div>
-                    <Text UNSAFE_className="text-red-700" marginBottom="size-200">{fetchError}</Text>
+                    <Text UNSAFE_className="text-red-700" marginBottom="size-200">
+                        {fetchError}
+                    </Text>
                     <ConfigFieldRenderer {...fieldProps} />
                 </div>
             );
         }
 
+        if (isFetching || !hasStoreData) {
+            return (
+                <Flex marginTop="size-300" marginBottom="size-300" justifyContent="center">
+                    <LoadingDisplay size="M" message="Detecting store structure…" />
+                </Flex>
+            );
+        }
+
         return (
             <div>
-                {isFetching && (
-                    <Flex alignItems="center" gap="size-100" marginBottom="size-100">
-                        <ProgressCircle size="S" isIndeterminate aria-label="Detecting" />
-                        <Text UNSAFE_className="status-text">Detecting store structure...</Text>
-                    </Flex>
-                )}
                 <StoreSelectionRow
                     group={group}
                     getFieldValue={getFieldValue}
@@ -120,14 +122,12 @@ export function StoreConfigFieldRow({
                     getWebsiteItems={getWebsiteItems}
                     getStoreGroupItems={getStoreGroupItems}
                     getStoreViewItems={getStoreViewItems}
-                    isLoading={!hasStoreData}
                 />
                 {onRefresh && (
                     <Flex marginTop="size-100" marginStart="size-50">
                         <Button
                             variant="secondary"
                             onPress={onRefresh}
-                            isDisabled={!hasStoreData}
                             UNSAFE_className="btn-standard text-base"
                         >
                             Re-detect

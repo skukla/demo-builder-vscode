@@ -1,5 +1,10 @@
 # EDS Unified Configuration Generation
 
+> **Note (ADR-011 D3, 2026-07):** the mesh endpoint is now resolved from the keyed
+> `appBuilderComponents` mesh entry via `getMeshEndpointUrl`/`providesEnvVars`; the
+> `meshState` shown below is the legacy read-only form — see
+> `docs/architecture/state-ownership.md`.
+
 ## Overview
 
 This document describes the **unified, registry-based configuration file generation** approach implemented for EDS projects, where **both `.env` and `site.json` files are generated through the component registry** in Phase 4.

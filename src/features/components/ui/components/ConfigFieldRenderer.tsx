@@ -9,10 +9,7 @@ import {
 import React from 'react';
 import { UniqueField } from '../hooks/useComponentConfig';
 import { FieldHelpButton } from '@/core/ui/components/forms';
-import {
-    renderTextWithCopyable,
-    type DescriptionContext,
-} from '@/core/ui/components/forms/descriptionRenderer';
+import { renderTextWithCopyable } from '@/core/ui/components/forms/descriptionRenderer';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 
 interface ConfigFieldRendererProps {
@@ -25,11 +22,9 @@ interface ConfigFieldRendererProps {
     onNormalizeUrl?: (field: UniqueField) => void;
     /** Base URI for resolving help screenshot paths */
     baseUri?: string;
-    /** Context for resolving {placeholder} tokens inside description URLs (e.g., {orgCode}) */
-    descriptionContext?: DescriptionContext;
 }
 
-export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, onNormalizeUrl, baseUri, descriptionContext }: ConfigFieldRendererProps) {
+export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, onNormalizeUrl, baseUri }: ConfigFieldRendererProps) {
     const selectableDefaultProps = useSelectableDefault();
     const showError = error && isTouched;
 
@@ -62,10 +57,9 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, 
     // Determine if field has a default value (not empty and equals the default from config)
     const hasDefault = value && field.default && value === field.default;
 
-    // Render description with backtick-wrapped URLs as clickable links, applying
-    // {placeholder} substitution from descriptionContext (e.g. {orgCode}).
+    // Render description with backtick-wrapped URLs as clickable links.
     const renderedDescription = field.description
-        ? renderTextWithCopyable(field.description, descriptionContext)
+        ? renderTextWithCopyable(field.description)
         : undefined;
 
     switch (field.type) {

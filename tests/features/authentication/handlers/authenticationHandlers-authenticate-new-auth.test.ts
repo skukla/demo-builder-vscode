@@ -185,7 +185,6 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 				isAuthenticated: true,
 				isChecking: false,
 				organization: mockOrg,
-				project: undefined,
 				message: 'All set!',
 				subMessage: `Connected to ${mockOrg.name}`,
 				requiresOrgSelection: false,

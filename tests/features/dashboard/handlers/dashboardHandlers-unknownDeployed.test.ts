@@ -122,6 +122,42 @@ describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () =
         });
     });
 
+    // REGRESSION: this handler read ONLY meshStatusSummary, and the deploy
+    // failure path never moved that field off its last success — so a mesh that
+    // had just failed to deploy was announced as "deployed", rendering as
+    // "Mesh Deployed" with a green dot. sendDemoStatusUpdate had always checked
+    // the component entry first; the two handlers disagreed about the same mesh
+    // depending on which message landed last.
+    describe('a failed mesh component beats the persisted summary', () => {
+        function withFailedMesh(summary: string) {
+            const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+            detectFrontendChanges.mockReturnValue(false);
+            const { mockContext, mockProject } = setupMocks({ meshStatusSummary: summary } as any);
+            mockProject.componentInstances['commerce-mesh'].status = 'error';
+            return mockContext;
+        }
+
+        it('reports "error" even while the summary still says deployed', async () => {
+            const result = await handleRequestStatus(withFailedMesh('deployed'));
+
+            expect(result.success).toBe(true);
+            expect(result.data).toMatchObject({ mesh: { status: 'error' } });
+        });
+
+        it('reports "error" without waiting on auth (matching sendDemoStatusUpdate)', async () => {
+            const mockContext = withFailedMesh('deployed');
+            const { ServiceLocator } = require('@/core/di');
+            ServiceLocator.getAuthenticationService.mockReturnValue({
+                isAuthenticated: jest.fn().mockResolvedValue(false),
+            });
+
+            const result = await handleRequestStatus(mockContext);
+
+            // A known local failure needs no network identity to report.
+            expect(result.data).toMatchObject({ mesh: { status: 'error' } });
+        });
+    });
+
     it('should default to "deployed" when meshStatusSummary is unknown', async () => {
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);

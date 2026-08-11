@@ -19,6 +19,7 @@ import {
 import { COMPONENT_IDS } from '@/core/constants';
 import type { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils';
+import { sleep } from '@/core/utils/sleep';
 import { sanitizeErrorForLogging } from '@/core/validation';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
@@ -83,7 +84,7 @@ async function ensureProjectStopped(
     const currentProject = await ctx.stateManager.getCurrentProject();
     if (currentProject?.path === project.path) {
         await vscode.commands.executeCommand('demoBuilder.stopDemo');
-        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DEMO_STOP_WAIT));
+        await sleep(TIMEOUTS.DEMO_STOP_WAIT);
     }
 
     return true;
@@ -377,6 +378,9 @@ export async function performAdobeMcpUpdates(
                         throw new Error(`npm update failed: ${result.stderr || result.stdout}`);
                     }
                     await generateAIContextFiles(project.path, project, ctx.extensionPath);
+                    // Persist the freshness stamp generateAIContextFiles set on `project`
+                    // (aiContextVersion), else the on-open freshness check re-fires forever.
+                    await ctx.stateManager.saveProjectConfigOnly(project);
                     successCount++;
                     ctx.logger.info(`[Updates] Updated ${packageName} in ${project.name} → ${latestVersion}`);
                 } catch (error) {

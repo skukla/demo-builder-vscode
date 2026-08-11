@@ -12,7 +12,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "package", "version", "command", "args", "description"],
+        "required": ["id", "package", "version", "command", "args", "description", "requires"],
         "properties": {
           "id": {
             "type": "string",
@@ -38,6 +38,11 @@
           "description": {
             "type": "string",
             "description": "Human-readable description shown in the AI Configuration tab."
+          },
+          "requires": {
+            "type": "string",
+            "enum": ["eds-storefront", "app-builder-tooling"],
+            "description": "Which projects this entry applies to: 'eds-storefront' = only projects with an installed EDS storefront; 'app-builder-tooling' = any project doing App Builder-adjacent work (EDS storefront, mesh, or attached App Builder component). Evaluated by aiDefaultsEntryApplies (aiToolingGate.ts)."
           }
         }
       }

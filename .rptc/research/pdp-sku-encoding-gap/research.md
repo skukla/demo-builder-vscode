@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-12
 **Mode:** A (codebase) + external repo verification
-**Trigger:** Field report (friend's store `cmco-demo` / `jenhankib2bbodea`, owner `sayurihanki`). A PDP rendered a blank shell. She root-caused it to non-reversible SKU slugification in `scripts/commerce.js` and fixed it with a reversible encode/decode.
+**Trigger:** Field report from a colleague running a B2B store. A PDP rendered a blank shell. They root-caused it to non-reversible SKU slugification in `scripts/commerce.js` and fixed it with a reversible encode/decode.
 **Status:** Complete — shipped 2026-06-12. Decision of record: [ADR-007](../../../docs/architecture/adr/007-pdp-sku-url-encoding.md); plan: [`.rptc/plans/pdp-sku-reversible-encoding/overview.md`](../../plans/pdp-sku-reversible-encoding/overview.md).
 
 > **Update (2026-06-12):** the Phase 0 gate flipped the encoding choice. This doc's original recommendation (`encodeURIComponent`) was **ruled out** — empirical probes showed aem.live's CDN rejects percent-encoded paths with a bare 404 before the storefront renders. The shipped approach is reversible **underscore hex-escape** over the proven-safe `[a-z0-9_-]` alphabet. urlKey-resolve was also evaluated and ruled out (Lighthouse). Full evidence and rationale in ADR-007.

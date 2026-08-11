@@ -83,7 +83,6 @@ describe('Feature-Specific Handler Map Tests', () => {
             const types = getRegisteredTypes(meshHandlers);
 
             expect(types).toContain('check-api-mesh');
-            expect(types).toContain('create-api-mesh');
             expect(types).toContain('delete-api-mesh');
         });
     });

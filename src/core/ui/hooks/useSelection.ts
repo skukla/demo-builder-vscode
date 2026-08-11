@@ -30,7 +30,8 @@ interface UseSelectionReturn<T> {
  * Hook for managing single-item selection
  *
  * Provides selection state and helper functions for common selection patterns.
- * Extracted from AdobeProjectStep and AdobeWorkspaceStep.
+ * Extracted from the Adobe project/workspace selection flow (now AdobeProjectPicker
+ * and AdobeWorkspacePicker).
  *
  * @param options - Configuration options
  *

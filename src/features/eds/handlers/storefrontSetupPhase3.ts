@@ -15,9 +15,15 @@ import {
 import { CONFIG_SERVICE_PROPAGATION_DELAYS_MS } from '../services/configServiceRetry';
 import { buildSiteConfigParams, ConfigurationService } from '../services/configurationService';
 import { DaLiveAuthError } from '../services/types';
-import { configureDaLivePermissions, surfaceOverlayRegistrationFailure } from './edsHelpers';
+import {
+    addPdpCaveat,
+    BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE,
+    configureDaLivePermissions,
+    surfaceOverlayRegistrationFailure,
+} from './edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -41,7 +47,7 @@ export async function executePhaseCodeSync(
         progress: 40,
     });
 
-    const codeSyncResult = await verifyCodeSync(context, services, repoInfo, signal);
+    const codeSyncResult = await verifyCodeSync(context, services, repoInfo, signal, edsConfig);
     if (codeSyncResult) return codeSyncResult;
 
     await context.sendMessage('storefront-setup-progress', {
@@ -131,6 +137,7 @@ async function verifyCodeSync(
     services: SetupServices,
     repoInfo: RepoInfo,
     signal: AbortSignal,
+    edsConfig: StorefrontSetupStartPayload['edsConfig'],
 ): Promise<StorefrontSetupResult | null> {
     const logger = context.logger;
     const { githubAppService } = services;
@@ -149,7 +156,11 @@ async function verifyCodeSync(
         if (outcome.kind === 'undetermined') {
             return {
                 success: false,
-                error: buildUndeterminedAppCheckError(repoInfo, outcome.httpStatus, outcome.noCredential),
+                error: buildUndeterminedAppCheckError(
+                    repoInfo,
+                    outcome.httpStatus,
+                    outcome.noCredential,
+                ),
                 ...repoInfo,
             };
         }
@@ -160,20 +171,45 @@ async function verifyCodeSync(
         };
 
         if (!initialCheck.isInstalled) {
-            const installUrl = githubAppService.getInstallUrl(repoInfo.repoOwner, repoInfo.repoName);
-            logger.info(`[Storefront Setup] GitHub App not installed. Install URL: ${installUrl}`);
+            const installUrl = githubAppService.getInstallUrl(
+                repoInfo.repoOwner,
+                repoInfo.repoName,
+            );
+
+            // Differentiate the install-prompt message based on whether the
+            // repo lives in the SC's personal namespace or a team org. SCs
+            // can install GitHub Apps on their own accounts (personal case);
+            // they typically cannot install on a team org without admin
+            // rights (team-org case), so the messaging needs to direct them
+            // to ask the org admin rather than implying they can fix it
+            // themselves.
+            const githubUser = edsConfig.githubAuth?.user?.login;
+            const isTeamOrg = !!githubUser && repoInfo.repoOwner !== githubUser;
+
+            const message = isTeamOrg
+                ? `AEM Code Sync is not installed on ${repoInfo.repoOwner}. ` +
+                  `Installing it on a GitHub organization requires admin rights — ask your ` +
+                  `team admin to install it from: ${installUrl}`
+                : 'The AEM Code Sync GitHub App must be installed to continue.';
+
+            logger.info(
+                `[Storefront Setup] GitHub App not installed (isTeamOrg=${isTeamOrg}). Install URL: ${installUrl}`,
+            );
 
             await context.sendMessage('storefront-setup-github-app-required', {
-                owner: repoInfo.repoOwner, repo: repoInfo.repoName, installUrl,
-                message: 'The AEM Code Sync GitHub App must be installed to continue.',
+                owner: repoInfo.repoOwner,
+                repo: repoInfo.repoName,
+                installUrl,
+                isTeamOrg,
+                message,
             });
 
             return {
-            success: false,
-            error: 'GitHub App installation required',
-            awaitingGitHubApp: true,
-            ...repoInfo,
-        };
+                success: false,
+                error: 'GitHub App installation required',
+                awaitingGitHubApp: true,
+                ...repoInfo,
+            };
         }
 
         // 2. App is installed — wait briefly for the bus to start serving the
@@ -199,7 +235,7 @@ async function verifyCodeSync(
 
             if (!syncVerified && attempt < CODE_SYNC_MAX_ATTEMPTS - 1) {
                 // 2s interval (faster than TIMEOUTS.EDS_CODE_SYNC_POLL=5s) — code sync typically settles quickly
-                await new Promise((resolve) => setTimeout(resolve, CODE_SYNC_POLL_INTERVAL_MS));
+                await sleep(CODE_SYNC_POLL_INTERVAL_MS);
             }
         }
 
@@ -258,14 +294,24 @@ async function registerConfigurationService(
             context,
             logger,
         );
-        // When a BYOM overlay was configured but the registration did not land,
-        // the storefront ships with smart-404 client code but no overlay to back
-        // it — every PDP would 404. Surface it so the user knows to reset.
-        if (edsConfig.byomOverlayUrl && !registered) {
+        // Three outcomes, not two. Configured-and-registered is the only one that
+        // is plain success; the other two both end with a storefront that cannot
+        // serve a PDP and must say so.
+        if (!edsConfig.byomOverlayUrl) {
+            // No overlay was even attempted — BYOM turned off, or a URL that
+            // failed validation. This branch did not exist: the check below was
+            // gated on the URL being truthy, so this case fell through to
+            // "Storefront setup completed successfully!"
+            //
+            // The reason arrives already computed (see the handler). Reading the
+            // setting HERE, inside this try, turned any config-read failure into
+            // a spurious "Configuration Service setup incomplete" warning.
+            if (edsConfig.byomAbsentReason) addPdpCaveat(repoInfo, edsConfig.byomAbsentReason);
+        } else if (!registered) {
             // Record it, do not just warn: a toast is dismissible and the run
             // otherwise ends by announcing success for a storefront that cannot
             // serve PDPs.
-            repoInfo.byomOverlayFailed = true;
+            addPdpCaveat(repoInfo, BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE);
             surfaceOverlayRegistrationFailure(logger, vscode.window.showWarningMessage);
         }
     } catch (error) {
@@ -280,7 +326,7 @@ async function registerConfigurationService(
             progress: 49,
         });
         if (edsConfig.byomOverlayUrl) {
-            repoInfo.byomOverlayFailed = true;
+            addPdpCaveat(repoInfo, BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE);
             surfaceOverlayRegistrationFailure(logger, vscode.window.showWarningMessage);
         }
     }
@@ -380,7 +426,7 @@ async function retryRegistrationAfterDelay(
             message: `Waiting for Configuration Service access (${attempt + 1}/${RETRY_DELAYS_MS.length})...`,
             progress: 46,
         });
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        await sleep(delayMs);
 
         const retryResult = await configurationService.registerSite(siteParams);
         if (retryResult.success) {

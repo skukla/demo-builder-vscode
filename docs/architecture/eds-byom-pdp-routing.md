@@ -128,7 +128,7 @@ The cold path runs once per SKU across all visitors to a storefront. Every subse
 | Piece | Where | Behavior |
 |---|---|---|
 | `render-pdp` overlay action | `accs-discovery-service`, deployed (Phase 2 LIVE) | Fetches and returns the storefront's authored `/products/default` for `/products/{urlKey}/{sku}`; generic shell fallback on failure; returns 404 for non-PDP paths |
-| `prepublish-pdp` trigger action | `accs-discovery-service`, deployed | Validates + relays to Helix admin preview/publish |
+| `prepublish-pdp` trigger action | `accs-discovery-service`, deployed | Validates the PDP path, runs a fail-open SKU-existence gate (`check-sku-exists.js` — confirmed-absent SKU → 404, no publish), then relays to Helix admin preview/publish |
 | Configuration Service registration with overlay URL | This repo (`ConfigurationService.registerSite` / `updateSiteConfig` with `byomOverlayUrl`) | Wires the overlay into the site config with `{ url, type: "markup", suffix: ".html" }` — shape matches canonical `aem-commerce-prerender` setup wizard |
 | **Catalog pre-warming at create/reset** | This repo (`catalogPrewarmService.ts` + pipeline step) | Enumerates the Commerce catalog via Catalog Service GraphQL and pre-publishes every SKU's PDP URL via batches of 5 to `prepublish-pdp`. Equivalent to one cycle of the canonical scheduled poller. v1 supports ACCS storefronts; PaaS follow-up tracked separately. |
 | Smart-404 snippet install step | This repo (`pdp404HandlerPublisher.ts` + pipeline step) | Vendors three pieces into the storefront: (1) cold-path action call + spinner UI in `scripts/delayed.js`, (2) eager mixed-case → lowercase redirect in `head.html`, (3) same eager redirect in static `404.html` |
@@ -138,7 +138,7 @@ The cold path runs once per SKU across all visitors to a storefront. Every subse
 ### Out of scope (later workstreams or deliberate non-goals)
 
 - **~~SC template customizations on real product URLs.~~** Resolved — Phase 2 shipped 2026-06-09. The overlay now fetches the storefront's authored `/products/default` and serves it on `/products/{urlKey}/{sku}`. SC customizations inherit automatically.
-- **PDP cleanup after SKU deletion.** When an SC deletes a SKU from Commerce, the URL stays published in content-bus. Backlog item (`.rptc/backlog/2026-06-09-pdp-graceful-empty-state.md`) plans the fix: drop-in detects empty Commerce data and redirects to the storefront's native `/404` page (NOT a custom "Product not available" message — the native 404 is the honest UX). For demos, this case rarely matters during a live demo.
+- **PDP cleanup after SKU deletion — cold case handled, cached case residual.** When a visitor hits a PDP URL for a SKU that no longer exists, there are two sub-cases. (1) **Never-published / cold URL — HANDLED:** `prepublish-pdp` runs a SKU-existence gate (`actions/prepublish-pdp/check-sku-exists.js`) before publishing — it reads the storefront's served `config.json` for the Catalog Service endpoint + headers and runs the case-insensitive `products(skus:)` lookup. A confirmed-absent SKU returns 404 **without publishing** (so no empty page is ever cached), and the smart-404 snippet's failure branch redirects the shopper to the storefront's native `/404` (`buildSmart404Snippet`). The gate **fails open** — config unreachable / query error / unexpected shape all proceed to publish, so a real product is never 404'd by an infra hiccup. (2) **Already-published URL — RESIDUAL:** a SKU deleted *after* its PDP was published (or pre-warmed) still serves the cached 200 template, so `window.isErrorPage` is false, the snippet never fires, and the overlay isn't re-invoked for a served page — the drop-in renders an empty product block. Closing this needs cache invalidation (a Commerce `product.deleted` event → unpublish action, or a reconcile sweep — Adobe's open [issue #262](https://github.com/adobe-rnd/aem-commerce-prerender/issues/262)) or a drop-in-layer settle-check; it's low-frequency after pre-warming. Tracked in `.rptc/backlog/2026-06-09-pdp-graceful-empty-state.md`.
 - **PaaS catalog pre-warming.** v1 of pre-warming covers ACCS only because the PaaS direct `/graphql` auth requirements are unverified for our use case. PaaS storefronts continue to work via the smart-404 fallback for catalog-churn paths; their warm catalog still loads (just less aggressively pre-warmed at setup).
 - **Server-side SSR (Tier 3) — JSON-LD per SKU, og:image per SKU, Merchant Center metadata.** Deliberately omitted. The canonical `aem-commerce-prerender` does this; we don't, because demo audiences are humans on calls, not crawlers. If an SC ever needs production-grade SEO, they can deploy `aem-commerce-prerender` to their own workspace alongside Demo Builder's overlay.
 
@@ -181,6 +181,32 @@ The PDP URL is `/products/{urlKey}/{sku}`, and the drop-in reads the SKU back fr
 **SC guidance**: for the cleanest demo URLs, give products clean alphanumeric SKUs (avoid spaces/special characters); the product *name* is unconstrained. Custom blocks that link to PDPs should build the href with `getProductLink(urlKey, sku)`. Full rationale, alternatives, and the producer audit are in [ADR-007](adr/007-pdp-sku-url-encoding.md).
 
 **If this ever changes** (canonical adopts reversible encoding, or Catalog Service becomes case-sensitive): see ADR-007 — the former retires the patch, the latter is the same silent-rot risk as #2.
+
+### 5. One overlay per base content — and it is bound to the content, not the site
+
+Per the Admin API schema ([`ContentConfig`](https://www.aem.live/docs/admin.html#schema/ContentConfig)),
+`content.overlay` is a *Markup Content Source* (`type` and `url` required, `suffix`
+optional) and carries this constraint verbatim:
+
+> the overlay config is tied to the base content and not to the site config — it is not
+> possible to have multiple sites with different overlays on the same base content.
+
+**Why it matters**: we register one overlay per storefront, each stamped with its own
+`?org=&site=`. That works only because every storefront has its own DA.live content
+source. Two storefronts sharing a content source could not carry different overlays, so
+the second registration would silently take the first one's coordinates — every PDP on
+one of them would render the wrong site's template.
+
+The same page is why `suffix: ".html"` is correct rather than folklore: our PDP paths are
+extensionless while the overlay serves `.html`, and `suffix` is the documented field that
+makes the admin service append it. The `config-service-setup` page never mentions
+`overlay` at all, and the one worked example omits `suffix` because it is optional — which
+is why this looked undocumented until 2026-08-10.
+
+**If this ever changes** (per-site overlays on shared content): nothing breaks; a
+constraint we currently design around disappears.
+
+**Do not** introduce content-source sharing between storefronts without revisiting this.
 
 ---
 

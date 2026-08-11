@@ -144,6 +144,7 @@ jest.mock('vscode', () => ({
         getConfiguration: jest.fn(() => ({
             get: jest.fn().mockReturnValue(false), // Disable auto-update for tests
         })),
+        onDidChangeConfiguration: jest.fn(() => ({ dispose: jest.fn() })),
         workspaceFolders: [],
     },
     window: {
@@ -172,7 +173,7 @@ jest.mock('vscode', () => ({
             };
         }
         fire(data?: any) {
-            this._listeners.forEach(listener => listener(data));
+            this._listeners.forEach((listener) => listener(data));
         }
         dispose() {
             this._listeners = [];
@@ -347,7 +348,7 @@ describe('Extension Activation - Navigation', () => {
             // the prior landOnProjectDashboardForWorkspace behavior). The projects
             // list is always home.
             expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
-                'demoBuilder.showProjectDashboard',
+                'demoBuilder.showProjectDashboard'
             );
         });
     });

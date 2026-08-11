@@ -33,10 +33,14 @@
  * @module features/eds/services/catalogPrewarmService
  */
 
-import { extractConfigParams, generateHeaders, type ConfigGeneratorParams } from './configGenerator';
-import type { EdsPipelineProgressCallback } from './edsPipeline';
+import {
+    extractConfigParams,
+    generateHeaders,
+    type ConfigGeneratorParams,
+} from './configGenerator';
 import { derivePrepublishUrl } from './pdp404HandlerPublisher';
 import { encodeSkuForUrl, sanitizeUrlKey } from './pdpUrlEncoding';
+import type { EdsPipelineProgressCallback } from './types';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Project } from '@/types/base';
@@ -155,7 +159,9 @@ export async function prewarmCatalog(
 
     const params = extractConfigParams(project);
     if (params.environmentType !== 'accs') {
-        logger.info(`[Catalog Prewarm] Skipping for ${params.environmentType ?? 'unknown'} backend (v1 ACCS-only; PaaS in follow-up)`);
+        logger.info(
+            `[Catalog Prewarm] Skipping for ${params.environmentType ?? 'unknown'} backend (v1 ACCS-only; PaaS in follow-up)`,
+        );
         return makeSkipped(`non-ACCS backend (${params.environmentType ?? 'unknown'})`);
     }
 
@@ -168,13 +174,12 @@ export async function prewarmCatalog(
 
     let skuPaths: SkuPath[];
     try {
-        skuPaths = await enumerateAccsCatalog(
-            params as ConfigGeneratorParams & { commerceEndpoint: string },
-            logger,
-        );
+        skuPaths = await enumerateAccsCatalog(params as ConfigGeneratorParams, logger);
     } catch (error) {
         const reason = (error as Error).message;
-        logger.warn(`[Catalog Prewarm] Catalog enumeration failed: ${reason} — falling back to runtime smart-404 only`);
+        logger.warn(
+            `[Catalog Prewarm] Catalog enumeration failed: ${reason} — falling back to runtime smart-404 only`,
+        );
         return makeSkipped(`enumeration failed: ${reason}`);
     }
 
@@ -183,30 +188,30 @@ export async function prewarmCatalog(
         return makeSkipped('empty catalog');
     }
 
-    logger.info(`[Catalog Prewarm] Enumerated ${skuPaths.length} SKUs; pre-warming PDP URLs in batches of ${BATCH_SIZE}`);
+    logger.info(
+        `[Catalog Prewarm] Enumerated ${skuPaths.length} SKUs; pre-warming PDP URLs in batches of ${BATCH_SIZE}`,
+    );
 
     let completed = 0;
-    const results = await runInBatches(
-        skuPaths,
-        BATCH_SIZE,
-        async (skuPath: SkuPath) => {
-            const ok = await prewarmOne(prepublishUrl, daLiveOrg, daLiveSite, skuPath);
-            completed += 1;
-            onProgress?.({
-                operation: 'catalog-prewarm',
-                message: `Pre-warming PDPs: ${completed}/${skuPaths.length}`,
-                current: completed,
-                total: skuPaths.length,
-            });
-            return ok;
-        },
-    );
+    const results = await runInBatches(skuPaths, BATCH_SIZE, async (skuPath: SkuPath) => {
+        const ok = await prewarmOne(prepublishUrl, daLiveOrg, daLiveSite, skuPath);
+        completed += 1;
+        onProgress?.({
+            operation: 'catalog-prewarm',
+            message: `Pre-warming PDPs: ${completed}/${skuPaths.length}`,
+            current: completed,
+            total: skuPaths.length,
+        });
+        return ok;
+    });
 
     const succeeded = results.filter(Boolean).length;
     const failed = skuPaths.length - succeeded;
 
     if (failed > 0) {
-        logger.warn(`[Catalog Prewarm] Complete: ${succeeded}/${skuPaths.length} succeeded, ${failed} failed (failed paths fall back to smart-404 at runtime)`);
+        logger.warn(
+            `[Catalog Prewarm] Complete: ${succeeded}/${skuPaths.length} succeeded, ${failed} failed (failed paths fall back to smart-404 at runtime)`,
+        );
     } else {
         logger.info(`[Catalog Prewarm] Complete: ${succeeded}/${skuPaths.length} succeeded`);
     }
@@ -233,13 +238,9 @@ export async function prewarmCatalog(
  * for that storefront.
  */
 async function enumerateAccsCatalog(
-    // `commerceEndpoint` required, not optional: the caller already guards it and
-    // returns early when absent. Stating that in the signature is what lets the
-    // guard do its job — the previous `ConfigGeneratorParams` widened it back to
-    // optional and the body compensated with a non-null assertion, which asserts
-    // rather than proves.
-    params: ConfigGeneratorParams & { commerceEndpoint: string },
+    params: ConfigGeneratorParams,
     logger: Logger,
+    maxItems: number = MAX_SKUS,
 ): Promise<SkuPath[]> {
     // generateHeaders() returns { all: {...}, cs: {...} }. The catalog
     // GraphQL endpoint expects both groups merged on every request —
@@ -252,12 +253,15 @@ async function enumerateAccsCatalog(
         ...(configHeaders.cs ?? {}),
         'Content-Type': 'application/json',
     };
+    const endpoint = params.commerceEndpoint;
+    if (!endpoint) throw new Error('catalog prewarm requires a commerceEndpoint');
+
     const allPaths: SkuPath[] = [];
     let currentPage = 1;
     let totalPages = 1;
 
     do {
-        const response = await fetch(params.commerceEndpoint, {
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers,
             body: JSON.stringify({
@@ -271,13 +275,18 @@ async function enumerateAccsCatalog(
             throw new Error(`HTTP ${response.status} from ${params.commerceEndpoint}`);
         }
 
-        const data = await response.json() as {
-            data?: { productSearch?: { items?: Array<{ productView?: { sku?: string; urlKey?: string } }>; page_info?: { total_pages?: number; current_page?: number } } };
+        const data = (await response.json()) as {
+            data?: {
+                productSearch?: {
+                    items?: Array<{ productView?: { sku?: string; urlKey?: string } }>;
+                    page_info?: { total_pages?: number; current_page?: number };
+                };
+            };
             errors?: Array<{ message: string }>;
         };
 
         if (data.errors && data.errors.length > 0) {
-            throw new Error(`GraphQL errors: ${data.errors.map(e => e.message).join('; ')}`);
+            throw new Error(`GraphQL errors: ${data.errors.map((e) => e.message).join('; ')}`);
         }
 
         const result = data.data?.productSearch;
@@ -289,8 +298,14 @@ async function enumerateAccsCatalog(
             const view = item.productView;
             if (view?.sku && view?.urlKey) {
                 allPaths.push({ sku: view.sku, urlKey: view.urlKey });
-                if (allPaths.length >= MAX_SKUS) {
-                    logger.warn(`[Catalog Prewarm] Hit max SKU cap (${MAX_SKUS}); remaining pages skipped — smart-404 will warm them at runtime`);
+                if (allPaths.length >= maxItems) {
+                    // Only the real cap is worth warning about. A caller asking
+                    // for a small sample (the diagnostics probe wants one) is
+                    // hitting its own limit, not a catalog that is too big.
+                    if (maxItems !== MAX_SKUS) return allPaths;
+                    logger.warn(
+                        `[Catalog Prewarm] Hit max SKU cap (${MAX_SKUS}); remaining pages skipped — smart-404 will warm them at runtime`,
+                    );
                     return allPaths;
                 }
             }
@@ -337,4 +352,74 @@ async function prewarmOne(
 
 function makeSkipped(reason: string): PrewarmResult {
     return { attempted: 0, succeeded: 0, failed: 0, skipped: true, skipReason: reason };
+}
+
+/** One catalog product, plus the PDP path the storefront will generate for it. */
+export interface SamplePdp {
+    sku: string;
+    urlKey: string;
+    /** Built with the SAME helpers the storefront's `getProductLink` uses. */
+    path: string;
+}
+
+/**
+ * Pick one real product and the PDP path it should resolve at.
+ *
+ * Exists for the diagnostics probe. `/products/default` proves only that the
+ * overlay's SOURCE template is published — it answers 200 whether or not the
+ * overlay is registered or the action is deployed. A path built for a SKU the
+ * catalog just confirmed exists is the only fetch that exercises the whole
+ * chain: overlay registered → `render-pdp` reachable → template fetched → page
+ * written to the content bus.
+ *
+ * It also happens to be the only automated check on the encoder contract.
+ * `encodeSkuForUrl` exists in three hand-written copies — here, the
+ * `product-link-sku-encoding` patch in `eds-demo-patches`, and
+ * `check-sku-exists.js` in `accs-discovery-service` — with no gate comparing
+ * them. This builds the path with OUR copy and asks THEIR code to serve it, so
+ * drift shows up as a 404.
+ *
+ * READ-ONLY. Enumeration is a GraphQL POST to Catalog Service, which is a query;
+ * this must never call `prewarmOne`, which POSTs to prepublish-pdp and publishes.
+ *
+ * Every failure returns undefined — a Commerce outage, a PaaS backend, or an
+ * empty catalog is not a storefront fault and must not colour the verdict.
+ *
+ * @param project - the project whose Commerce config to read
+ * @param logger - for the skip reason
+ * @returns a sample product and its PDP path, or undefined when unavailable
+ */
+export async function pickSampleSku(
+    project: Project,
+    logger: Logger,
+): Promise<SamplePdp | undefined> {
+    const params = extractConfigParams(project);
+    if (params.environmentType !== 'accs') {
+        logger.debug(
+            `[Storefront Probe] No SKU sample for ${params.environmentType ?? 'unknown'} backend (enumeration is ACCS-only)`,
+        );
+        return undefined;
+    }
+    if (!params.commerceEndpoint) {
+        logger.debug('[Storefront Probe] No SKU sample — no Commerce endpoint configured');
+        return undefined;
+    }
+
+    try {
+        const [first] = await enumerateAccsCatalog(params as ConfigGeneratorParams, logger, 1);
+        if (!first) {
+            logger.debug('[Storefront Probe] No SKU sample — catalog returned no products');
+            return undefined;
+        }
+        return {
+            sku: first.sku,
+            urlKey: first.urlKey,
+            path: `/products/${sanitizeUrlKey(first.urlKey)}/${encodeSkuForUrl(first.sku)}`,
+        };
+    } catch (error) {
+        logger.debug(
+            `[Storefront Probe] No SKU sample — catalog enumeration failed: ${(error as Error).message}`,
+        );
+        return undefined;
+    }
 }

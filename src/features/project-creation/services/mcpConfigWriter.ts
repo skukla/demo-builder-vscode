@@ -13,9 +13,11 @@
  * - `.mcp.json` — Claude Code project-scope config at the project root
  * - `.claude/settings.json` — PostToolUse git-sync hook for EDS projects
  *
- * Known Limitations (unverified assumptions — see [Unreleased] in CHANGELOG):
- * - PostToolUse hook env var for the modified file path is $CLAUDE_TOOL_INPUT parsed for file_path.
- *   Not verified against Claude Code hooks docs. If wrong, the hook silently does nothing.
+ * The PostToolUse hook reads the tool-call JSON on STDIN and takes
+ * `tool_input.file_path`, matching every hook in this repo's own
+ * `.claude/hooks/`. It previously read a `$CLAUDE_TOOL_INPUT` env var that
+ * Claude Code never sets, so it silently did nothing; the extractor is now
+ * pinned by tests that EXECUTE it rather than grep the command string.
  */
 
 import * as childProcess from 'child_process';
@@ -24,6 +26,7 @@ import * as path from 'path';
 import { promisify } from 'util';
 import aiDefaultsConfig from '../config/ai-defaults.json';
 import { resolveMcpToolsDir } from './aiDefaultsInstaller';
+import { aiDefaultsEntryApplies } from './aiToolingGate';
 import { COMPONENT_IDS } from '@/core/constants';
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 import type { AiDefaults } from '@/types/aiDefaults';
@@ -92,12 +95,18 @@ export async function writeMcpConfigs(
     await writeJson(path.join(projectPath, '.claude', 'mcp.json'), mcpConfig);
     await writeJson(path.join(projectPath, '.mcp.json'), mcpConfig);
 
-    const claudeSettings = generateClaudeSettings(project, nodePath);
-    await writeJson(path.join(projectPath, '.claude', 'settings.json'), claudeSettings);
+    // Edit-preserving: MERGE our git-sync hook into any existing settings.json
+    // instead of overwriting it, so a regenerate never wipes the user's own
+    // hooks / permissions / env. Our entry is identified by its stable git-sync
+    // signature, so a path change refreshes it (no duplicate) and a non-EDS
+    // project just drops it (keeping the user's content).
+    const settingsPath = path.join(projectPath, '.claude', 'settings.json');
+    const existingSettings = await readExistingSettings(settingsPath);
+    const desiredSettings = generateClaudeSettings(project, nodePath);
+    await writeJson(settingsPath, mergeClaudeSettings(existingSettings, desiredSettings));
 
     await ensureMcpFilesGitignored(projectPath);
 }
-
 
 /**
  * Generate .claude/settings.json with PostToolUse git sync hook.
@@ -130,6 +139,76 @@ export function generateClaudeSettings(project: Project, nodePath: string): Clau
             ],
         },
     };
+}
+
+/**
+ * Stable signature of the Demo-Builder git-sync PostToolUse hook — the commit
+ * message it always emits. Used to find (and refresh, not duplicate) our own
+ * entry among a user's `.claude/settings.json` PostToolUse hooks without a
+ * separate marker field (the Claude Code hook schema has none).
+ */
+const GIT_SYNC_SIGNATURE = 'AI: sync files';
+
+/** True when a PostToolUse entry is the Demo-Builder git-sync hook. */
+function isGitSyncHook(entry: PostToolUseHook | undefined): boolean {
+    // Guard the shape — this parses a user-authored file; a malformed entry must
+    // not throw and abort the whole regenerate.
+    const hooks = Array.isArray(entry?.hooks) ? entry.hooks : [];
+    return hooks.some(
+        (h) => typeof h?.command === 'string' && h.command.includes(GIT_SYNC_SIGNATURE),
+    );
+}
+
+/**
+ * Read + parse an existing `.claude/settings.json`. Returns `{}` when the file
+ * is absent or unparseable — a broken file can't be merged into, and Claude Code
+ * couldn't read it either, so a fresh write is the safe recovery.
+ */
+async function readExistingSettings(filePath: string): Promise<Record<string, unknown>> {
+    try {
+        const parsed = JSON.parse(await fsPromises.readFile(filePath, 'utf-8'));
+        return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {};
+    } catch {
+        return {};
+    }
+}
+
+/**
+ * Merge the Demo-Builder git-sync hook into an existing settings.json,
+ * preserving everything the user owns (permissions, env, other hook types, and
+ * their own PostToolUse hooks). Our git-sync entry is dropped-then-re-added so a
+ * changed storefront path refreshes it rather than duplicating; when `desired`
+ * carries no git-sync hook (non-EDS / unsafe path) ours is simply removed and the
+ * rest of the user's settings survive (vs the old wholesale overwrite with `{}`).
+ */
+export function mergeClaudeSettings(
+    existing: Record<string, unknown>,
+    desired: ClaudeSettings,
+): Record<string, unknown> {
+    const merged: Record<string, unknown> = { ...existing };
+
+    const existingHooks = { ...((existing.hooks as Record<string, unknown>) ?? {}) };
+    const existingPostToolUse = Array.isArray(existingHooks.PostToolUse)
+        ? (existingHooks.PostToolUse as PostToolUseHook[])
+        : [];
+
+    // Keep the user's own PostToolUse hooks; drop any prior git-sync entry.
+    const userPostToolUse = existingPostToolUse.filter((entry) => !isGitSyncHook(entry));
+    const desiredGitSync = (desired.hooks?.PostToolUse ?? []).filter(isGitSyncHook);
+    const nextPostToolUse = [...userPostToolUse, ...desiredGitSync];
+
+    if (nextPostToolUse.length > 0) {
+        existingHooks.PostToolUse = nextPostToolUse;
+    } else {
+        delete existingHooks.PostToolUse;
+    }
+
+    if (Object.keys(existingHooks).length > 0) {
+        merged.hooks = existingHooks;
+    } else {
+        delete merged.hooks;
+    }
+    return merged;
 }
 
 /**
@@ -249,20 +328,17 @@ async function buildMcpConfig(
     // storefront manifest, whose own `npm install` can abort on b2b @dropins.
     // Claude Code spawns each MCP with cwd = wherever it was launched
     // (= project.path, not the tools dir), so relative `node_modules/...` refs
-    // would not resolve; anchor each declared arg to the isolated dir. The EDS
-    // gate stays — headless projects (no storefront) get no MCP tooling, so
-    // skip the entries entirely.
-    const storefrontPath = resolveStorefrontPath(project);
-    if (storefrontPath) {
-        const toolsDir = resolveMcpToolsDir(project.path);
-        for (const entry of aiDefaults.mcpServers) {
-            mcpServers[entry.id] = {
-                command: entry.command,
-                args: entry.args.map(arg =>
-                    path.isAbsolute(arg) ? arg : path.join(toolsDir, arg),
-                ),
-            };
-        }
+    // would not resolve; anchor each declared arg to the isolated dir. Each
+    // entry gates itself via its `requires` field: the Developer Agent tooling
+    // applies to any App Builder-adjacent project (storefront, mesh, or
+    // attached component); Playwright stays storefront-only.
+    const toolsDir = resolveMcpToolsDir(project.path);
+    for (const entry of aiDefaults.mcpServers) {
+        if (!aiDefaultsEntryApplies(entry, project)) continue;
+        mcpServers[entry.id] = {
+            command: entry.command,
+            args: entry.args.map((arg) => (path.isAbsolute(arg) ? arg : path.join(toolsDir, arg))),
+        };
     }
 
     return { mcpServers };
@@ -286,11 +362,20 @@ const SHELL_METACHAR_RE = /["`$;|&<>\n\r\\'*?[\](){}]/;
  * Build the shell snippet that extracts the edited file path from the
  * PostToolUse payload into `$TOOL_FILE`.
  *
- * Parses `$CLAUDE_TOOL_INPUT` with a single `node -e` invocation using the
- * already-resolved Node binary (the same one the MCP proxy depends on) — no
- * `jq`/`python3`/`grep`+`sed` cascade. The Node one-liner:
- *   - reads `process.env.CLAUDE_TOOL_INPUT` directly (defaulting to `"{}"`), so
- *     the shell never expands the env var,
+ * Reads the tool-call JSON from STDIN, which is how Claude Code delivers it.
+ * This previously read `process.env.CLAUDE_TOOL_INPUT` — an env var Claude Code
+ * does not set — so `TOOL_FILE` was always empty, the path guard never matched,
+ * and the hook silently did nothing on every EDS project ever generated. The
+ * original author flagged the assumption as unverified; it was wrong.
+ *
+ * Ground truth is this repo's own `.claude/hooks/`: all nine read stdin and take
+ * `tool_input.file_path`, and `format-on-edit.sh` is the same
+ * PostToolUse/`Edit|Write` pair as this hook.
+ *
+ * Parsed with a single `node -e` invocation using the already-resolved Node
+ * binary (the same one the MCP proxy depends on) — no `jq`/`python3`/`grep`+`sed`
+ * cascade. The Node one-liner:
+ *   - reads fd 0 to end (defaulting to `"{}"` when empty),
  *   - `JSON.parse`s it inside try/catch (parse failure ⇒ prints nothing),
  *   - recursively finds the FIRST string-valued `file_path` at any nesting depth
  *     (parity with the old `.. | .file_path` recursion; Claude passes it at
@@ -304,12 +389,11 @@ const SHELL_METACHAR_RE = /["`$;|&<>\n\r\\'*?[\](){}]/;
  */
 function buildToolFileExtraction(nodePath: string): string {
     // No single quotes anywhere in this script — it is wrapped in single quotes
-    // for the shell. Double quotes only. Reads the env var directly (no shell
-    // expansion of $CLAUDE_TOOL_INPUT), recurses for the first string file_path,
-    // and writes it with no trailing newline.
+    // for the shell. Double quotes only. Reads the payload from stdin, recurses
+    // for the first string file_path, and writes it with no trailing newline.
     const script =
         `try{` +
-        `var o=JSON.parse(process.env.CLAUDE_TOOL_INPUT||"{}");` +
+        `var o=JSON.parse(require("fs").readFileSync(0,"utf8")||"{}");` +
         `var f=function(v){` +
         `if(v&&typeof v==="object"){` +
         `if(typeof v.file_path==="string")return v.file_path;` +
@@ -352,7 +436,7 @@ function buildGitSyncCommand(storefrontPath: string, nodePath: string): string {
         buildToolFileExtraction(nodePath) +
         `if [[ "$TOOL_FILE" == ${quoted}* ]]; then ` +
         `git -C ${quoted} add -A && ` +
-        `git -C ${quoted} commit -m "AI: sync files" && ` +
+        `git -C ${quoted} commit -m "${GIT_SYNC_SIGNATURE}" && ` +
         `git -C ${quoted} push; fi`
     );
 }
@@ -405,7 +489,7 @@ export function buildHomeGitSyncCommand(projectsRoot: string, nodePath: string):
         `case "$TOP" in ${quotedRoot}/*) ;; *) exit 0 ;; esac; ` +
         `git -C "$TOP" remote get-url origin >/dev/null 2>&1 || exit 0; ` +
         `git -C "$TOP" add -A && ` +
-        `git -C "$TOP" commit -m "AI: sync files" && ` +
+        `git -C "$TOP" commit -m "${GIT_SYNC_SIGNATURE}" && ` +
         `git -C "$TOP" push`
     );
 }
@@ -434,14 +518,13 @@ async function ensureMcpFilesGitignored(projectPath: string): Promise<void> {
         // File may not exist yet — start empty
     }
 
-    const toAdd = MCP_GITIGNORE_ENTRIES.filter(entry =>
-        !existing.split('\n').some(line => line.trim() === entry),
+    const toAdd = MCP_GITIGNORE_ENTRIES.filter(
+        (entry) => !existing.split('\n').some((line) => line.trim() === entry),
     );
 
     if (toAdd.length === 0) return;
 
-    const section = '\n# MCP config files (generated by Demo Builder)\n' +
-        toAdd.join('\n') + '\n';
+    const section = '\n# MCP config files (generated by Demo Builder)\n' + toAdd.join('\n') + '\n';
     try {
         await fsPromises.appendFile(gitignorePath, section, 'utf-8');
     } catch (err) {
@@ -449,8 +532,8 @@ async function ensureMcpFilesGitignored(projectPath: string): Promise<void> {
         // MCP config files are not gitignored.
         process.stderr.write(
             `[Demo Builder] WARNING: Could not update .gitignore — MCP config files ` +
-            `(${toAdd.join(', ')}) may be accidentally committed. Error: ` +
-            `${err instanceof Error ? err.message : String(err)}\n`,
+                `(${toAdd.join(', ')}) may be accidentally committed. Error: ` +
+                `${err instanceof Error ? err.message : String(err)}\n`,
         );
     }
 }

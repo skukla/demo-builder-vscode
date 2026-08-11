@@ -560,20 +560,73 @@ button[class*="spectrum-Button"][disabled],
    Replace utility class combinations with meaningful names
    =========================================== */
 
-/* Page container - centers content at 800px max-width */
+/* Page container — caps content at the canonical width, LEFT-ALIGNED.
+   These used to centre (margin: auto), contradicting the --content-width
+   docblock below and the wizard's .content-column, which never centred. Screens
+   coped one at a time: the project dashboard added an opt-out, the integrations
+   surface inherited the centred default when its grid moved out of that
+   dashboard, and the projects list and Prompt Library never opted out at all.
+   Fixing the DEFAULT is the only version that cannot rot — a new screen gets
+   canonical behaviour by doing nothing. */
 .page-container {
-    max-width: 800px !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
+    max-width: var(--content-width) !important;
+}
+
+/* === Dedicated content layouts (ContentColumn / ContentWithSidebar) ===
+ * --content-width is the canonical, LEFT-ALIGNED content width shared across ALL
+ * wizard/app screens (including Commerce's nav + step-view zone) — a single source so
+ * a screen "chooses" a layout instead of re-configuring widths each time.
+ * 960 is the one app-wide content band: it fits Commerce's widest step (the Business
+ * Structure Website/Store/Store View row) so there is no per-step exception — the
+ * footer and every screen share this width. */
+:root {
+    --content-width: 960px;
+
+    /* Dashboard card family — ONE source for the metrics `.project-card-spectrum`
+       and `.integration-card` share. Both rules used to declare these separately
+       and each carried a comment promising it matched the other, which is a
+       convention, not a guarantee.
+
+       The floor is 128px, not 100px, because identical declarations do not make
+       two cards the same size when one has twice the rows. A project card is
+       name(20) + summary(17) + runtime(15) + deployment(15) + 3 gaps(24) +
+       padding(32) ~= 123px; an integration card is name + one status line, ~75px,
+       so it sat on the old 100px floor while the project card cleared it. Only a
+       shared floor above the richer card's content makes them equal. */
+    --card-min-height: 128px;
+    --card-min-width: 200px;
+    --card-padding: 16px;
+    --card-gap: 8px;
+}
+.content-column {
+    width: 100% !important;
+    max-width: var(--content-width) !important;
+    box-sizing: border-box !important;
+    /* Content starts size-400 (32px) below the header; sides/bottom stay size-300 (24px). */
+    padding: var(--spectrum-global-dimension-size-400) var(--spectrum-global-dimension-size-300) var(--spectrum-global-dimension-size-300) !important;
+}
+/* Cap the LEFT column at the canonical width (overrides TwoColumnLayout's inline
+ * leftMaxWidth so it's single-sourced); the right column flex-grows to the screen edge
+ * (TwoColumnLayout default), with the sidebar's inner content capped by the component. */
+.content-with-sidebar .two-column-layout-left {
+    max-width: var(--content-width) !important;
+}
+
+/* ControlPanelLayout single-column fallback (no detail panel): pad the action
+ * column to match the two-column left padding (TwoColumnLayout leftPadding
+ * size-400) so the tiles still align under the masthead content. */
+.control-panel-single {
+    padding: var(--spectrum-global-dimension-size-400);
 }
 
 /* Page container with horizontal padding */
+/* size-400 (32px), NOT 16: PageHeader pads its own content by size-400, so a
+   narrower body inset left every screen's content 16px adrift of its title. The
+   old per-screen opt-out had been silently correcting that too. */
 .page-container-padded {
-    max-width: 800px !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    padding-left: 16px !important;
-    padding-right: 16px !important;
+    max-width: var(--content-width) !important;
+    padding-left: var(--spectrum-global-dimension-size-400) !important;
+    padding-right: var(--spectrum-global-dimension-size-400) !important;
 }
 
 /* Page header section spacing */
@@ -595,7 +648,7 @@ button[class*="spectrum-Button"][disabled],
 
 /* Step container - full width with max constraint */
 .step-content-container {
-    max-width: 800px !important;
+    max-width: var(--content-width) !important;
     width: 100% !important;
     margin: 0 !important;
     padding: 20px !important;
@@ -603,7 +656,7 @@ button[class*="spectrum-Button"][disabled],
 
 /* Footer content container */
 .footer-content-container {
-    max-width: 800px !important;
+    max-width: var(--content-width) !important;
     width: 100% !important;
 }
 
@@ -622,13 +675,93 @@ button[class*="spectrum-Button"][disabled],
 .grid-align-end { justify-self: end !important; }
 
 /* Modal footer - separator with action buttons */
+/* The dialog's scroll region. Its bottom padding would sit BELOW the sticky footer and let
+   scrolling content bleed through that strip, so zero it — the footer owns the bottom gap. */
+.modal-content {
+    padding-bottom: 0 !important;
+    /* Column flex so .modal-body can grow and push the footer to the true bottom on a
+       SHORT modal (sticky only pins against an overflowing container — see below). */
+    display: flex !important;
+    flex-direction: column !important;
+}
+/* The scrollable body. `flex: 1` claims the leftover height so the footer never floats
+   mid-dialog; `min-height: 0` lets it shrink below its content so overflow still engages
+   and the footer's sticky behaviour keeps working on a TALL modal. */
+.modal-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    /* THE scroll container. Without this the body just grows: a long list (the
+       ~90-row Adobe API picker) overflows the dialog, and the sticky footer pins
+       against a container that no longer scrolls — so the buttons land in the
+       MIDDLE of the list with content spilling past them.
+       `min-height: 0` above is the other half of the pattern: a flex child
+       defaults to min-height:auto and refuses to shrink below its content, which
+       would make overflow-y here do nothing. */
+    overflow-y: auto !important;
+}
+/* ONE scroller in the Manage APIs dialog: the API row list.
+ *
+ * `.modal-body` is a scroll container for every modal (long content has to go
+ * somewhere), which meant this dialog had two: a gesture over the search box or
+ * the product pills fell through to the body and scrolled the whole thing, while
+ * the same gesture over the rows scrolled only the list. Two scroll surfaces a few
+ * pixels apart, behaving differently.
+ *
+ * Turning it off here is safe because this dialog's content is height-bounded by
+ * `.manage-apis-body` — there is nothing for the body to scroll that the list is
+ * not already scrolling. Scoped with `:has()` so no other modal loses its scroll
+ * (precedent: the architecture-addons checkbox rule above).
+ *
+ * This also removes the need for `overscroll-behavior` anywhere in this dialog: a
+ * non-scrollable ancestor is nothing to chain INTO, so the list bottoming out has
+ * nowhere to hand the gesture and the header simply stays put. */
+.modal-body:has(.manage-apis-body) {
+    overflow: hidden !important;
+}
+/* Content-aware height — opt-in via Modal's `fitContent`.
+   Spectrum's modal Dialog claims a height independent of its content, which is why
+   .modal-body grows to push the footer to the bottom. For a SHORT body that leaves a
+   tall dialog with dead space below the footer (the Add Integration kind/name/
+   destination stages: ~250px of content in a ~950px dialog). Releasing the height
+   lets the dialog collapse to its content.
+   The sticky footer is unaffected: sticky is a no-op when nothing overflows, and a
+   LONG body still hits the dialog's max-height and scrolls as before. */
+.modal-fit-content {
+    height: auto !important;
+    min-height: 0 !important;
+    /* `height: auto` alone did NOT collapse the dialog (verified 2026-07-31: the
+       footer rose to the content but the panel stayed tall). The height is not on
+       the dialog's own box — Spectrum's modal wrapper is a flex/grid container whose
+       default `align-items: stretch` makes the dialog fill the cross axis whatever
+       its height says. Opting this child out of the stretch is what lets `auto`
+       take effect. */
+    align-self: center !important;
+    flex: 0 0 auto !important;
+}
+.modal-fit-content .modal-content {
+    /* No leftover height to claim, so the body must not stretch. */
+    flex: 0 1 auto !important;
+}
+.modal-fit-content .modal-body {
+    flex: 0 1 auto !important;
+}
+
 .modal-footer-actions {
+    /* Pin to the bottom of the dialog's scroll area so the primary action stays visible while
+       a tall body (e.g. the integration catalog grid) scrolls. With .modal-content's bottom
+       padding removed, the footer pins flush to the true bottom — no bleed-through strip. On a
+       short modal that doesn't overflow, sticky is a no-op and it sits normally. */
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 1 !important;
     margin-top: 24px !important;
     padding-top: 16px !important;
+    padding-bottom: 16px !important;
     display: flex !important;
     justify-content: flex-end !important;
     gap: 8px !important;
     border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
+    background: var(--spectrum-global-color-gray-100) !important;
 }
 
 /* Sidebar action tile — small square tile with icon above label, single
@@ -704,13 +837,22 @@ button[class*="spectrum-Button"][disabled],
     flex: 1 !important;
     height: 100% !important;
     min-width: 0 !important;
+    /* Commerce step tokens. Its left zone (nav + step-view) is capped at the canonical
+     * --content-width (960) — the SAME band as every other screen, not an exception. That
+     * width is what fits Commerce's widest step (the Business Structure Website / Store /
+     * Store View row, ~720 of content) after the 240 sub-nav, which is why 960 is the
+     * app-wide content width. --wizard-content-pad is content padding. */
+    --wizard-content-pad: var(--spectrum-global-dimension-size-300);  /* 24px content padding */
+    --commerce-nav-width: var(--spectrum-global-dimension-size-3000); /* 240px Commerce sub-nav */
+    --commerce-zone-max: var(--content-width);                        /* nav + step-view = app content band */
 }
+
 
 /* --------------------------------------------------------------------------
    Responsive layout: narrow-viewport adjustments for the wizard chrome and
    the shared TwoColumnLayout primitive. On a 13-14" laptop at ideal zoom
    (effective ~1280px logical width), the 280px progress rail leaves the
-   main column too narrow to fit the 800px left content + a 300px summary
+   main column too narrow to fit the 960px left content + a 300px summary
    side-by-side; the summary squeezes and its labels wrap to two and three
    lines. Two breakpoints handle this:
 
@@ -727,7 +869,14 @@ button[class*="spectrum-Button"][disabled],
        the rail collapsed, this viewport is too narrow for side-by-side.
    -------------------------------------------------------------------------- */
 
-@media (max-width: 1280px) {
+/* === Wizard breakpoint registry (single source of truth — keep these in sync) ===
+ *   1280px  rail-collapse      (SETUP PROGRESS rail → 56px dots + tooltips)
+ *   1180px  two-column stack   (TwoColumnLayout row→column; Commerce nav panel→strip + summary hide)
+ *    600px  linear / single-col(Commerce nav hidden; connect-services service cards 2→1)
+ *    220px  card-min           (reflowing card grids: minmax(220px, 1fr))
+ * NOTE: plain CSS (no PostCSS) — @media cannot use var(); these literals are canonical.
+ * Annotate each @media below with its registry purpose. */
+@media (max-width: 1280px) { /* bp: rail-collapse — SETUP PROGRESS rail → 56px dots + tooltips */
     .wizard-timeline-column {
         flex: 0 0 56px !important;
         /* `overflow-y: auto` (the rail's default for vertical scrolling) makes
@@ -748,18 +897,42 @@ button[class*="spectrum-Button"][disabled],
         display: none !important;
     }
 
+    /* Also hide the active step's nested sub-step rail (TimelineChildren) when the rail
+       collapses — its indented text labels (e.g. Commerce / Integrations) would spill past
+       the 56px column. The current area stays visible in the content's sub-nav strip, and
+       area navigation happens via Back/Continue at this width (matching how the collapsed
+       main steps can't be freely jumped either). */
+    .wizard-timeline-column .timeline-children {
+        display: none !important;
+    }
+    /* With the sub-steps hidden, undo the layout that accommodated them on the current
+       step: un-clip the wrapper so the current step's persistent `::after` tooltip (the
+       only "where am I" label in collapsed mode) can escape the rail edge, and revert the
+       connector from its clipped 9999px stretch back to the normal length (there is no
+       longer a children block to stretch past — without this, un-clipping would let the
+       9999px line spill down the rail). */
+    .wizard-timeline-column .timeline-step-wrap-clip {
+        overflow: visible !important;
+    }
+    .wizard-timeline-column .timeline-connector-stretch {
+        height: var(--spectrum-global-dimension-size-500, 40px) !important;
+    }
+
     /* CSS-only step-name tooltip. Anchored to the per-step `<View>` wrapper
        which is `position: relative`, so the `::after` floats to its right.
-       Three trigger conditions in this collapsed-rail mode:
+       HOVER / FOCUS ONLY — deliberately NOT persistent:
 
-         1. `[aria-current="step"]` — the current step's tooltip is ALWAYS
-            visible. Without this, users would have to hover to know which
-            step they're on (the inline label is hidden). Persistent so
-            "where am I" is always answered.
-         2. `:hover` — every step's tooltip shows on pointer hover. Lets
-            users scan ahead/behind without changing steps.
-         3. `:focus-visible` — same trigger for keyboard users tabbing
-            through the rail.
+         - `:hover` — a step's name shows on pointer hover, so users can scan
+            ahead/behind without changing steps.
+         - `:focus-visible` — same trigger, for keyboard users tabbing the rail.
+
+       The current step is intentionally NOT labelled persistently: at
+       `left: 100%` the tooltip floats into the content zone (the rail is only
+       56px wide), so an always-on label sits on top of the section header. And
+       it would be redundant — "where am I" is already answered, more prominently
+       and without overlap, by the content header ("… · Build Your Project") and
+       the sub-nav, while the active (blue) dot shows position. So the tooltip is
+       a transient scan aid, shown only on demand.
 
        100ms delay + 150ms fade-in feels snappy without being jumpy on a
        casual pointer pass. Pointer-events disabled so the tooltip never
@@ -767,7 +940,6 @@ button[class*="spectrum-Button"][disabled],
     .wizard-timeline-column .timeline-step {
         position: relative;
     }
-    .wizard-timeline-column .timeline-step[aria-current="step"]::after,
     .wizard-timeline-column .timeline-step:hover::after,
     .wizard-timeline-column .timeline-step:focus-visible::after {
         content: attr(data-step-name);
@@ -811,7 +983,7 @@ button[class*="spectrum-Button"][disabled],
     to { opacity: 1; transform: translateY(-50%) translateX(0); }
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1180px) { /* bp: two-column stack — TwoColumnLayout row→column */
     /* TwoColumnLayout stack mode: row → column. Each column becomes
        full-width; the left max-width and right min-width are released so
        neither one squeezes the other, and the divider moves from between
@@ -819,9 +991,17 @@ button[class*="spectrum-Button"][disabled],
     .two-column-layout {
         flex-direction: column !important;
         align-items: stretch !important;
+        /* Stacked columns are flex 0-0-auto (content height), which unbounds
+           any inner flex-1 scroll region (e.g. Configure's .container-form) —
+           the container itself must scroll or tall content paints past the
+           page footer with no way to reach it. Inert where the container is
+           height:auto in normal flow (no bounded height → no scrollbar). */
+        overflow-y: auto !important;
     }
     .two-column-layout-left {
         max-width: none !important;
+        flex: 0 0 auto !important;
+        width: 100% !important;
     }
     .two-column-layout-right {
         flex: 0 0 auto !important;
@@ -830,6 +1010,7 @@ button[class*="spectrum-Button"][disabled],
         border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
     }
 }
+
 
 /* Step main content area */
 .step-main-content {
@@ -1039,34 +1220,59 @@ button[class*="spectrum-Button"][disabled],
     line-height: 1.4 !important;
 }
 
+/* Disabled selector card (e.g. a backend not offered by the current package). */
+.selector-card:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+}
+
+/* Muted note inside a (disabled) selector card — matches the description token style. */
+.selector-card-note {
+    display: block !important;
+    font-size: 11px !important;
+    color: var(--spectrum-global-color-gray-500) !important;
+    margin-top: 8px !important;
+}
+
 /* ========================================
  * Expandable Brand Cards
  * ======================================== */
 
-/* Column-based brand card layout — each column is independent so expanding
-   a card only pushes items in its own column down, not the entire row. */
+/* Self-reflowing CSS grid (mirrors .projects-grid / .selector-grid above): the
+   browser fits as many 220px-min columns as the container allows with zero JS.
+   `align-items: start` so an expanded card doesn't stretch its row-mates. */
 .expandable-brand-grid {
-    display: flex !important;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
     gap: 20px !important;
+    align-items: start !important;
     margin-bottom: 24px !important;
 }
 
-.brand-grid-column {
-    flex: 1 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 20px !important;
-    min-width: 0 !important;
+/* Base brand card - expandable variant */
+/* Demo Setup renders BrandGallery in a SingleColumnLayout whose padding is an INLINE
+   style (24px). !important overrides just the top to size-400 (32px) so its content
+   starts at the same inset below the header as every other flow step; sides/bottom keep
+   the layout's default 24px. */
+.brand-gallery-column {
+    padding-top: var(--spectrum-global-dimension-size-400) !important;
 }
 
-/* Base brand card - expandable variant */
 .expandable-brand-card {
+    position: relative !important;
     background: var(--spectrum-global-color-gray-50) !important;
-    border-radius: 12px !important;
+    border-radius: 8px !important;
     padding: 16px !important;
     border: 1px solid var(--spectrum-global-color-gray-300) !important;
     cursor: pointer !important;
     transition: all 0.2s ease-out !important;
+    /* Grid items default to min-width:auto (=min-content); without this a card
+       refuses to shrink into its reflowing-grid track and overflows. */
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    /* Shared card-family height floor so package cards and stack (selector) cards
+       read at a consistent height across steps. */
+    min-height: 100px !important;
 }
 
 .expandable-brand-card:hover {
@@ -1157,10 +1363,7 @@ button[class*="spectrum-Button"][disabled],
     color: var(--spectrum-global-color-gray-900) !important;
 }
 
-.brand-card-check {
-    color: var(--spectrum-global-color-green-600) !important;
-    flex-shrink: 0 !important;
-}
+/* .brand-card-check retired — replaced by the shared .selection-check-corner. */
 
 .brand-card-description {
     display: block !important;
@@ -1169,12 +1372,14 @@ button[class*="spectrum-Button"][disabled],
     line-height: 1.4 !important;
 }
 
-/* Architecture options section (inside expanded card) */
+/* Architecture options section (inside expanded card) slides + fades down on expand.
+ * Its own keyframe (was a second `fadeIn` definition that the later plain `fadeIn`
+ * silently shadowed — so this slide never actually ran; renamed to restore it). */
 .brand-card-architectures {
-    animation: fadeIn 0.2s ease-out !important;
+    animation: fadeInDown var(--db-motion-base) var(--db-motion-ease) !important;
 }
 
-@keyframes fadeIn {
+@keyframes fadeInDown {
     from {
         opacity: 0;
         transform: translateY(-8px);
@@ -1309,11 +1514,19 @@ button[class*="spectrum-Button"][disabled],
 }
 
 /* Compact selection summary in expanded brand card */
+/* A quiet secondary line — no divider / uppercase micro-label — so the package card's
+   architecture summary reads in the same tone as the backend card's description. */
 .brand-card-selection {
-    margin-top: 10px !important;
-    padding-top: 10px !important;
-    border-top: 1px solid var(--spectrum-global-color-gray-300) !important;
+    margin-top: 6px !important;
     animation: fadeIn 0.2s ease-out !important;
+}
+.brand-card-selection-summary {
+    font-size: 12px !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    line-height: 1.4 !important;
+}
+.brand-card-selection-sep {
+    color: var(--spectrum-global-color-gray-400) !important;
 }
 
 @keyframes fadeIn {
@@ -1341,7 +1554,8 @@ button[class*="spectrum-Button"][disabled],
 /* Hover tooltip for block library details */
 .brand-card-detail-trigger {
     position: relative !important;
-    margin-top: 6px !important;
+    /* Inline on the architecture summary line (was a block below it). */
+    white-space: nowrap !important;
 }
 
 .brand-card-detail-link {
@@ -1471,10 +1685,6 @@ button[class*="spectrum-Button"][disabled],
     border-radius: 4px !important;
     text-transform: uppercase !important;
     letter-spacing: 0.3px !important;
-}
-
-.block-libraries-intro {
-    margin-bottom: var(--spectrum-global-dimension-size-200);
 }
 
 .settings-link {
@@ -1697,11 +1907,32 @@ button[class*="spectrum-Button"][disabled],
 
 .timeline-connector {
     position: absolute !important;
-    left: 11px !important;
-    top: 28px !important;
+    /* The connector is a CHILD of the step dot (its positioning anchor), so it centers
+       on the dot by construction: left:50% is the dot's own center and translateX(-50%)
+       centers the line on it. Robust to Spectrum scale, the collapsed 56px rail, and any
+       wrapper offset — none of which a computed left could survive. */
+    left: 50% !important;
+    top: 100% !important; /* start at the dot's bottom edge */
+    transform: translateX(-50%) !important;
     width: 3px !important;
-    height: 28px !important;
+    /* Bridge the gap to the next dot (overlaps slightly behind it — z-index keeps it under). */
+    height: var(--spectrum-global-dimension-size-500, 40px) !important;
     z-index: 0 !important;
+}
+
+/* When the current step shows an indented child rail, the parent line must run
+   continuously down to the next top-level step past the children. A very tall line,
+   clipped by the step wrapper's overflow (.timeline-step-wrap-clip), lands exactly at
+   the wrapper's bottom regardless of how many children show. */
+.timeline-connector-stretch {
+    height: 9999px !important;
+}
+
+/* Applied to a step wrapper ONLY while it shows its child rail: clips the tall
+   stretch connector at the wrapper's bottom (the next-step boundary). Normal step
+   wrappers stay overflow:visible so their connectors reach into the gap below. */
+.timeline-step-wrap-clip {
+    overflow: hidden !important;
 }
 
 .timeline-connector-completed {
@@ -1710,6 +1941,33 @@ button[class*="spectrum-Button"][disabled],
 
 .timeline-connector-pending {
     background: repeating-linear-gradient(to bottom, var(--spectrum-global-color-gray-400) 0px, var(--spectrum-global-color-gray-400) 4px, transparent 4px, transparent 8px) !important;
+}
+
+/* Nested sub-step rail — quiet indented LABELS (no dots / checkmarks / pulse). The
+   active child gets a 2px accent bar + bold gray-900 label; a done child is a touch
+   darker than an upcoming one. The whole rail is indented well clear of the parent's
+   dotted spine (TimelineChildren CHILD_INDENT) so the accent bar never reads as a
+   second rail next to the dotted line. Mirrors the in-body StepRail nav. */
+.timeline-child {
+    box-sizing: border-box;
+    padding: 5px 0 5px 12px;
+    border-left: 2px solid transparent;
+}
+.timeline-child-label {
+    font-size: var(--spectrum-global-dimension-font-size-100);
+    color: var(--spectrum-global-color-gray-500);
+    white-space: nowrap;
+    user-select: none;
+}
+.timeline-child--done .timeline-child-label {
+    color: var(--spectrum-global-color-gray-700);
+}
+.timeline-child--active {
+    border-left-color: var(--spectrum-global-color-blue-500);
+}
+.timeline-child--active .timeline-child-label {
+    color: var(--spectrum-global-color-gray-900);
+    font-weight: 600;
 }
 
 /* Timeline step entrance animation - fade in with expand */
@@ -1811,7 +2069,54 @@ button[class*="spectrum-Button"][disabled],
 .dashboard-status-header {
     background-color: var(--spectrum-global-color-gray-50) !important;
     border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important;
-    margin-bottom: 16px !important;
+    margin-bottom: 12px !important;
+}
+
+/* The band is ambient context, not content — it should not claim the vertical
+   space of a section header. Scoped to this header rather than changed on
+   `.page-header-section`, which the projects dashboard and integrations screen
+   also use for their real titles. */
+.dashboard-status-header .page-header-section {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+}
+
+/* Integrations band, context row: "Deploys to <project> · <workspace>  Change".
+   Rides the END of SearchHeader's count row, which is space-between and has an
+   empty right half once a search field shows. Costs the band no extra line for
+   what is the least-used fact on the screen. The label is what distinguishes
+   the REMOTE Adobe destination from the LOCAL project name in the page header;
+   they used to sit in one dot-separated run in the subtitle, where nothing told
+   them apart. */
+.page-destination-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* One size for the whole row — it sits beside SearchHeader's 12px count, and
+   11px uppercase (borrowed from the dashboard's badge rows, where it stands
+   alone) read as a mismatch rather than a hierarchy. Sentence case, so the row
+   reads as a phrase: "Deploys to Kukla Mesh · Stage". The three roles separate by
+   COLOUR now that size does not: dim label, darker value, blue action. */
+.page-destination-label {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-500);
+}
+
+/* Scoped, not global: `.dest-context` is 12.5px — off the type scale — and the
+   add-integration modal renders the same component. Fixing it there is a
+   separate call on a surface this change never looked at. */
+.page-destination-row .dest-context {
+    font-size: 12px;
+}
+
+/* AI badge + its capabilities link on one line. The link was a standalone row
+   beneath the badges, which cost the band a whole row to say one thing. */
+.dashboard-status-badge-inline {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
 }
 
 /* Match the height of the Projects List search header so content aligns */
@@ -1821,45 +2126,72 @@ button[class*="spectrum-Button"][disabled],
     align-items: center !important;
 }
 
-/* Dashboard action-tile geometry. The content width is DERIVED from the tile
-   size + gap (not a hand-typed magic number), sized to the widest action row
-   (4 tiles: the Build row, and the Primary+Storefront clusters which sum to
-   the same width). The status header uses the same width so its badges
-   left-align with the title and "All Projects" right-aligns with the rightmost
-   tile. Change the tile size/gap and everything re-derives. */
+/* Dashboard action-tile geometry. Only the tile size + inter-cluster gaps are
+   tokens now — the dashboard no longer derives a bespoke content width. Every
+   block (status header, org banner, integrations) shares the standard --content-width
+   band like the rest of the app; the action tiles are intrinsically small and
+   simply sit left within that band (a compact cluster, the way a short wizard
+   form doesn't stretch to fill the column). */
 :root {
     --dashboard-tile-size: 96px;
     --dashboard-tile-gap: 16px;
     /* Extra breathing room between the Primary and Storefront clusters in row 1
        so they read as two distinct groups rather than one row of four. */
-    --dashboard-cluster-gap: 40px;
-    /* Widest action row wins, so the status header right-aligns to the rightmost
-       tile. Candidates: the Build row (4 tiles) and the EDS row-1 clusters
-       (2 + 2 tiles separated by the cluster gap). Derived — no magic number. */
-    --dashboard-content-width: max(
-        calc(4 * var(--dashboard-tile-size) + 3 * var(--dashboard-tile-gap)),
-        calc(2 * (2 * var(--dashboard-tile-size) + var(--dashboard-tile-gap)) + var(--dashboard-cluster-gap))
-    );
 }
 
-/* Status header spans the action-zone width, left-aligned (matches the title's
-   left edge); the inner flex pushes "All Projects" to the right edge. */
+/* Status header spans the standard content band (its padded container), badges
+   left-aligned with the title; the inner flex pushes "All Projects" to the right
+   edge — a header-row pattern (content left, action right). */
 .dashboard-status-content {
-    width: var(--dashboard-content-width);
+    width: 100%;
     margin: 0;
 }
 
-/* Dashboard status grid - align labels and values across rows */
+/* Dashboard status — the badge row plus the "View AI Capabilities" link below it. */
 .dashboard-status-grid {
-    display: grid !important;
-    grid-template-columns: auto auto 1fr !important;
-    align-items: center !important;
-    row-gap: 4px !important;
-    column-gap: 8px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    /* Was 8px to separate the badge stack from the capabilities-link row below
+       it. Both are gone — the link moved onto the AI badge line and the badges
+       onto one row — so this now only ever spaces the single badge line from the
+       org-mismatch notice, which appears on mismatch only. */
+    gap: 4px !important;
 }
 
-.dashboard-status-grid .status-row {
-    display: contents !important;
+/* Badges STACKED one per line (2026-07-09, reversing the earlier inline row):
+   mixed-length statuses read as a scannable column. */
+/* STACKED, deliberately. The column came in on 2026-07-09 so the values line
+   up — "READY" and "ADOBE DEMO SYSTEM" starting at the same x — which is what
+   lets two facts read as a scannable pair rather than a sentence.
+
+   A stale markup comment claimed the opposite ("a single horizontal row…
+   instead of stacking") and briefly got this flattened to a row to match. Wrong
+   direction: the comment predated the column and was the thing out of date.
+   Both say stacked now.
+
+   The height to save here is PADDING, not rows — see the scoped
+   `.page-header-section` override above. Pinned by
+   tests/features/dashboard/ui/components/DashboardStatusHeader-layout.test.ts,
+   which reads this stylesheet because jsdom resolves no layout. */
+.dashboard-status-badges {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    row-gap: 4px !important;
+}
+
+/* Each badge is a self-contained inline unit: dot · label · value (· action). */
+.dashboard-status-badges .status-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+/* Fixed label column so the stacked badges' VALUE texts align vertically.
+   80px clears the widest label (FRONTEND/API MESH/IMS ORG at 11px uppercase);
+   scoped to the masthead stack — other StatusCard uses keep natural widths. */
+.dashboard-status-badges .status-label {
+    min-width: 80px !important;
 }
 
 /* Dashboard status badges - match card grid style */
@@ -1889,8 +2221,8 @@ button[class*="spectrum-Button"][disabled],
 
 /* Org-mismatch banner — a dark, accent-bordered warning card that matches the
    dashboard's bordered-tile attention idiom (cf. the Delete tile's accent
-   border) while calling attention. Aligned to the action-zone column, below the
-   status header. */
+   border) while calling attention. Spans the standard content band (like the
+   status header and integrations), below the status header. */
 /* Fade + slight rise so the notice eases in after the org check resolves,
    instead of popping in. Disabled under prefers-reduced-motion (reset.css). */
 @keyframes org-context-fade-in {
@@ -1900,7 +2232,6 @@ button[class*="spectrum-Button"][disabled],
 
 .dashboard-org-banner {
     width: 100%;
-    max-width: 800px;
     margin: 0 0 16px;
     display: flex;
     align-items: center;
@@ -1950,21 +2281,24 @@ button[class*="spectrum-Button"][disabled],
     margin-right: 6px;
 }
 
-/* Stacked, labeled rows + isolated delete footer. Fixed to the derived content
-   width so the status header (same width) aligns badge-left / button-right. */
+/* Stacked, labeled rows + isolated delete footer. No fixed width — the zones
+   take their intrinsic content width and sit left within the standard band (a
+   compact action cluster); the delete divider spans that cluster, not the band. */
 .dashboard-zones {
     display: flex;
     flex-direction: column;
     gap: 24px;
-    width: var(--dashboard-content-width);
+    width: fit-content;
 }
 
-/* Row 1 lays its two clusters (Primary + Storefront) side by side. Wraps only
-   if the viewport is too narrow. */
+/* The action row lays its groups (Primary + Storefront + Build) side by side.
+   Wraps only if the viewport is too narrow. Inter-group gap EQUALS the tile
+   gap (2026-07-09): with the zone headings gone, the row reads as one even
+   strip — grouping semantics are not communicated visually. */
 .dashboard-zone-row {
     display: flex;
     flex-flow: row wrap;
-    gap: var(--dashboard-cluster-gap);
+    gap: var(--dashboard-tile-gap);
     align-items: flex-start;
 }
 
@@ -1972,15 +2306,6 @@ button[class*="spectrum-Button"][disabled],
     display: flex;
     flex-direction: column;
     gap: 8px;
-}
-
-/* Zone heading — small uppercase label matching status-badge typography */
-.dashboard-zone-label {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--spectrum-global-color-gray-700);
 }
 
 /* Each zone lays its tiles out in a horizontal row, wrapping only if the
@@ -1993,12 +2318,40 @@ button[class*="spectrum-Button"][disabled],
     gap: var(--dashboard-tile-gap);
 }
 
-/* Delete footer — separated from the action zones with a divider + spacing */
-.dashboard-zone-footer {
+/* Destructive overflow-menu entry (Delete lives at the bottom of "More"). */
+.menu-item-destructive {
+    color: var(--spectrum-global-color-red-600) !important;
+}
+
+/* AI Capabilities — ONE scroll region for everything beneath the modal
+   heading (MCP servers + skills together); the modal frame never resizes.
+   Replaces the skills-only inner scroll, which felt like a nested widget. */
+.ai-capabilities-body {
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 8px; /* keep the scrollbar off the text */
+}
+
+/* The flat skills list itself just stacks its groups — the BODY scrolls. */
+.ai-skills-scroll {
     display: flex;
-    margin-top: 8px;
-    padding-top: 16px;
-    border-top: 1px solid var(--spectrum-global-color-gray-300);
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Sticky group headers — deliberately QUIETER than the "Skills · N installed"
+   section heading above them: sentence case (caps read as emphasis regardless
+   of size), small, muted. Hierarchy: section > group > names. They pin to the
+   top of the scroll region while their group's skills scroll under. */
+.ai-skills-group-header {
+    position: sticky;
+    top: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-600);
+    background: var(--spectrum-global-color-gray-100);
+    padding: 4px 0;
+    margin-bottom: 4px;
 }
 
 /* ===========================================
@@ -2029,6 +2382,15 @@ button[class*="spectrum-Button"][disabled],
     cursor: pointer !important;
 }
 
+/* Labels clamp to two lines so a long label can never stretch a tile past its
+   square (the aspect-ratio is the uniform height; content overflow beats it). */
+.dashboard-action-button .icon-label {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
 /* Scale icons proportionally to the smaller tile */
 .dashboard-action-button svg {
     width: 20px !important;
@@ -2037,7 +2399,7 @@ button[class*="spectrum-Button"][disabled],
 
 /* Tile label — smaller to fit the compact tile. Wraps to multiple lines
    instead of truncating with an ellipsis (Spectrum's Text otherwise clips
-   long labels like "Open in Browser" / "Author in DA.live"). */
+   long labels like "Open in Browser" / "Manage Commerce"). */
 .dashboard-action-button .icon-label {
     font-size: 12px !important;
     line-height: 1.2 !important;
@@ -2065,21 +2427,6 @@ button[class*="spectrum-Button"][disabled],
     color: var(--spectrum-global-color-blue-700) !important;
 }
 
-/* Destructive — isolate Delete visually with a negative accent */
-.dashboard-action-button--destructive {
-    border-color: var(--spectrum-global-color-red-400) !important;
-}
-
-.dashboard-action-button--destructive:hover,
-.dashboard-action-button--destructive:focus {
-    background: var(--spectrum-global-color-red-100) !important;
-    border-color: var(--spectrum-global-color-red-500) !important;
-}
-
-.dashboard-action-button--destructive svg,
-.dashboard-action-button--destructive .icon-label {
-    color: var(--spectrum-global-color-red-600) !important;
-}
 
 .dashboard-action-button:hover,
 .dashboard-action-button:focus {
@@ -2101,9 +2448,15 @@ button[class*="spectrum-Button"][disabled],
     outline-offset: 2px !important;
 }
 
-/* Prevent internal Spectrum elements from showing their own hover states */
-.dashboard-action-button:hover *,
-.dashboard-action-button:focus * {
+/* Prevent internal Spectrum elements from showing their own hover states.
+ *
+ * Exempts status indicators: this suppresses Spectrum's own hover fills, but it
+ * matched EVERY descendant, and an indicator whose colour IS its background got
+ * blanked to transparent — so the integrations dot vanished on the one gesture a
+ * user makes right before clicking through to check on it. Any future dot needs
+ * the same exemption, hence the shared `.tile-status-dot` marker. */
+.dashboard-action-button:hover *:not(.tile-status-dot),
+.dashboard-action-button:focus *:not(.tile-status-dot) {
     background: transparent !important;
     background-color: transparent !important;
 }
@@ -2508,10 +2861,14 @@ button[class*="spectrum-Button"][disabled],
    Aligns with wizard component-card patterns
    =========================================== */
 .project-card-spectrum {
-    /* Base - lighter than current (gray-50 vs gray-100) */
     background: var(--spectrum-global-color-gray-50) !important;
     border-radius: 8px !important;
-    padding: 20px !important;
+    /* Metrics come from the shared --card-* tokens (see :root) so this card and
+       .integration-card cannot drift. NOTE: this no longer matches
+       .expandable-brand-card, which keeps the original 100px floor — it lives in
+       the wizard's package picker and was deliberately left out of the dashboard
+       card sizing. */
+    padding: var(--card-padding) !important;
     border: 1px solid var(--spectrum-global-color-gray-300) !important;
     cursor: pointer !important;
 
@@ -2521,11 +2878,10 @@ button[class*="spectrum-Button"][disabled],
     /* Layout for content */
     display: flex !important;
     flex-direction: column !important;
-    gap: 8px !important;
+    gap: var(--card-gap) !important;
 
-    /* Larger, more square cards */
-    min-height: 120px !important;
-    min-width: 200px !important;
+    min-height: var(--card-min-height) !important;
+    min-width: var(--card-min-width) !important;
 }
 
 .project-card-spectrum:hover,
@@ -2550,7 +2906,8 @@ button[class*="spectrum-Button"][disabled],
 
 /* Typography - name stays similar */
 .project-card-spectrum-name {
-    font-size: 14px !important;
+    /* Match .brand-card-name (15px) so the project card title reads at the same scale. */
+    font-size: 15px !important;
     font-weight: 600 !important;
     color: var(--spectrum-global-color-gray-900) !important;
     line-height: 1.3 !important;
@@ -2559,9 +2916,14 @@ button[class*="spectrum-Button"][disabled],
 /* Typography - component summary */
 .project-card-spectrum-components {
     font-size: 12px !important;
-    color: var(--spectrum-global-color-gray-500) !important;
+    /* Match .brand-card-description (gray-600) — the package card's description tone. */
+    color: var(--spectrum-global-color-gray-600) !important;
     line-height: 1.4 !important;
-    flex: 1 !important;
+    /* NO `flex: 1`. The card is a flex COLUMN, so growing this line absorbed all
+       leftover height and pushed every status row to the bottom edge — which made
+       the first status sit lower on a card with one status than on a card with
+       three. The statuses read top-down from directly beneath this line; the
+       card's slack belongs below them. */
 }
 
 /* Typography - status gets wizard label treatment */
@@ -2710,7 +3072,7 @@ button[class*="spectrum-Button"][disabled],
    =========================================== */
 .welcome-step-container {
     padding: 20px !important;
-    max-width: 800px !important;
+    max-width: var(--content-width) !important;
     margin: 0 auto !important;
     width: 100% !important;
 }
@@ -2817,10 +3179,11 @@ button[class*="spectrum-Button"][disabled],
    Container Patterns
    =========================================== */
 .container-wizard {
-    max-width: 800px !important;
+    max-width: var(--content-width) !important;
     width: 100% !important;
     margin: 0 !important;
-    padding: 24px !important;
+    /* Content starts size-400 (32px) below the header (no nav rail on these steps). */
+    padding: var(--spectrum-global-dimension-size-400) 24px 24px !important;
 }
 
 
@@ -2926,31 +3289,6 @@ button[class*="spectrum-Button"][disabled],
 .text-center-max-500 {
     text-align: center !important;
     max-width: 500px !important;
-}
-
-/* ===========================================
-   Navigation Panel Styles
-   =========================================== */
-.nav-panel-container {
-    flex: 1 !important;
-    padding: 24px !important;
-    background-color: var(--spectrum-global-color-gray-75) !important;
-    border-left: 1px solid var(--spectrum-global-color-gray-200) !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-}
-
-.nav-panel-scroll {
-    overflow-y: auto !important;
-    flex: 1 !important;
-}
-
-.nav-section-fields {
-    margin-top: 4px !important;
-    margin-left: 12px !important;
-    padding-left: 12px !important;
-    border-left: 2px solid var(--spectrum-global-color-gray-300) !important;
 }
 
 /* ===========================================
@@ -3066,56 +3404,6 @@ button[class*="spectrum-Button"][disabled],
 .loading-overlay-text {
     color: var(--db-loading-text) !important;
     font-weight: 500 !important;
-}
-
-/* ===========================================
-   NavigationPanel Component Styles
-   SOP §11: Extracted from inline style objects
-   =========================================== */
-.nav-section-button {
-    width: 100% !important;
-    padding: 12px !important;
-    background: transparent !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    border-radius: 4px !important;
-    cursor: pointer !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 4px !important;
-    transition: all 0.2s ease !important;
-}
-
-.nav-section-button:hover {
-    background: var(--spectrum-global-color-gray-100) !important;
-}
-
-.nav-section-button-active {
-    background: var(--spectrum-global-color-gray-200) !important;
-    border-left: 3px solid var(--spectrum-global-color-blue-500) !important;
-}
-
-.nav-field-button {
-    width: 100% !important;
-    padding: 8px 12px !important;
-    background: transparent !important;
-    border: none !important;
-    cursor: pointer !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    text-align: left !important;
-    transition: all 0.2s !important;
-    border-radius: 4px !important;
-}
-
-.nav-field-button:hover {
-    background: var(--spectrum-global-color-gray-100) !important;
-}
-
-.nav-field-button-active {
-    background: var(--spectrum-global-color-blue-100) !important;
-    border-left: 2px solid var(--spectrum-global-color-blue-500) !important;
 }
 
 /* Status indicator icons (checkmarks, counts) */
@@ -3309,6 +3597,14 @@ button[class*="spectrum-Button"][disabled],
     height: 100vh !important;
     display: flex !important;
     overflow: hidden !important;
+    /* Configure renders the SAME StepAreaShell as the wizard's areas, and .step-nav /
+     * .step-view-anim reference these two tokens in their padding and max-width. They
+     * are declared on .wizard-main-content, which Configure is not inside — so without
+     * this block the whole declaration is invalid and DROPPED: the rail still renders,
+     * every test still passes, and the padding is silently gone. Redeclared here rather
+     * than promoted to :root so the two surfaces stay independently adjustable. */
+    --wizard-content-pad: var(--spectrum-global-dimension-size-300); /* 24px content padding */
+    --commerce-zone-max: var(--content-width); /* same 960 band as every screen */
 }
 
 /* ===========================================
@@ -3377,6 +3673,11 @@ button[class*="spectrum-Button"][disabled],
     padding-bottom: 4px !important;
     margin-bottom: 12px !important;
     border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important;
+}
+/* Zero the Spectrum Heading's default top margin so the first group title sits tight
+ * under the tab strip (section dividers/padding handle separation between groups). */
+.config-section-header h3 {
+    margin-top: 0 !important;
 }
 
 /* Config field scroll margin */
@@ -3753,4 +4054,1703 @@ div[class*="spectrum"] input[type="search"] {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
 }
 
+/* =========================================================================
+   Project Builder — component overview
+   A calm, flat list of component rows (icon · role · value · right-side state).
+   Editing a component opens a focused modal (the shared Modal in a
+   DialogContainer). The step uses the wizard footer — no own footer, no card,
+   no sub-progress. All theme values come from Spectrum tokens.
+   ========================================================================= */
+
+/* Overview shell: a single scrollable column (no footer of its own). */
+.builder-overview {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    box-sizing: border-box !important;
+}
+
+/* LEFT-aligned to match the PageHeader (which is full-width with size-400 padding,
+   not constrained/centered) so the rows' left edge lines up under the step title.
+   max-width keeps the rows readable; size-400 padding matches the header. */
+.builder-overview-wrap {
+    width: 100% !important;
+    max-width: var(--content-width) !important;
+    margin: 0 !important;
+    padding: var(--spectrum-global-dimension-size-400) !important;
+    box-sizing: border-box !important;
+}
+
+.builder-overview-intro {
+    display: block !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+    margin-bottom: var(--spectrum-global-dimension-size-300) !important;
+}
+
+/* Separate cards (matches .architecture-modal-options) — NOT one bordered list. */
+.builder-overview-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--spectrum-global-dimension-size-150) !important;
+    box-sizing: border-box !important;
+}
+
+/* One component card — matches the existing .architecture-modal-option treatment. */
+.builder-overview-row {
+    padding: var(--spectrum-global-dimension-size-200) !important;
+    border-radius: var(--spectrum-global-dimension-size-100) !important;
+    background: var(--spectrum-global-color-gray-75) !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    box-sizing: border-box !important;
+}
+
+.builder-overview-role {
+    font-size: var(--spectrum-global-dimension-font-size-50) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+}
+
+.builder-overview-value {
+    font-size: var(--spectrum-global-dimension-font-size-100) !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+}
+
+.builder-overview-desc {
+    font-size: var(--spectrum-global-dimension-font-size-75) !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    line-height: 1.4 !important;
+}
+
+/* Read-only "Included" state. */
+.builder-overview-included {
+    color: var(--spectrum-global-color-green-600) !important;
+}
+
+.builder-overview-included-label {
+    font-size: var(--spectrum-global-dimension-font-size-75) !important;
+    color: var(--spectrum-global-color-green-600) !important;
+}
+
+/* =========================================================================
+ * Project Builder — Commerce: StepRail (.vsteplist*) + [rail / view]
+ * column (.commerce-body) + dedicated view (.step-view) + BuildYourProjectSummary (.sum*).
+ * Adapted to Spectrum design tokens so the surface follows the active
+ * (light/dark) theme.
+ * ========================================================================= */
+
+/* ---- Commerce body (.commerce-body) — the [left nav | active view] row.
+ * The left nav (.step-nav = area label + vertical step list) takes its intrinsic
+ * width (~200-240px); the step-view flexes to fill the rest so the choice-grid cards
+ * read spacious. */
+/* The Build step owns ONE two-column [ active area body | unified summary ] (.build-two-col).
+ * The content band max applies to the CONTENT, not the column: .step-nav is a full-bleed
+ * toolbar whose fill and bottom divider must reach the column's right edge. Capping the
+ * COLUMN clipped that strip short — invisible at 100% zoom (panel narrower than the cap),
+ * visible as a gap at reduced zoom (panel wider than the 960px cap). So the column runs
+ * full width and each content region below carries the cap itself. */
+.build-two-col .two-column-layout-left {
+    min-width: 0 !important;
+}
+/* The capped content regions — Commerce's active view, and the non-nav area bodies. */
+.commerce-body > .step-view,
+.build-two-col .build-area-pad {
+    max-width: var(--commerce-zone-max) !important;
+}
+/* Non-nav area bodies (Storefront / Integrations) supply their own padding since the
+ * Build two-column drops the left padding (so Commerce's nav can bleed to the edge). */
+.build-area-pad {
+    padding: var(--spectrum-global-dimension-size-400);
+    /* Fill the (overflow:hidden) left column and scroll its own content — area bodies
+       without an inner scroll (e.g. Integrations) were otherwise clipped. */
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+.commerce-body {
+    display: flex !important;
+    /* Sub-step nav is a horizontal strip ON TOP, the active view fills below
+       (was a [left rail | view] row). */
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    gap: 0 !important;
+    align-items: stretch !important;
+}
+.commerce-body > .step-view {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    /* Scroll the view when its content exceeds the area (the strip stays fixed above;
+       the two-column-left column is overflow:hidden, so the scroll must live here).
+       min-height:0 lets this flex child shrink below its content so overflow engages. */
+    min-height: 0 !important;
+    overflow-y: auto !important;
+}
+
+/* ---- Sub-step nav (.step-nav) — a horizontal strip across the top of the area
+ * body: the all-caps area label inline at the left, then the sub-step tabs. The
+ * label names the area the user is configuring now that the area sub-nav left the
+ * wizard timeline. (Was a vertical left rail — promoted the small-screen strip to
+ * the default.) */
+.step-nav {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    /* Thinner rail: trim the vertical padding (keep the horizontal content padding so
+       the label + tabs stay aligned with the content band). */
+    padding: var(--spectrum-global-dimension-size-150) var(--wizard-content-pad) !important;
+    gap: var(--spectrum-global-dimension-size-300) !important;
+    /* Matched toolbar — gray-75 fill + a bottom divider (was a right border on the
+     * left rail) so the strip and summary still read as the same panel family. */
+    background: var(--spectrum-global-color-gray-75) !important;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important;
+}
+/* All-caps area label — pinned at the strip's left edge (doesn't scroll with tabs). */
+.step-nav-area {
+    font-size: var(--spectrum-global-dimension-font-size-50) !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    margin: 0 !important;
+    flex: 0 0 auto !important;
+}
+/* ---- StepRail (.vsteplist*) — a QUIET HORIZONTAL tab strip across the top ----
+ * The class prefix is historical (the component used to be called VerticalStepList and
+ * used to render as a left menu); it is a top strip now and the names are kept only to
+ * avoid churning the wizard's visual surface. Matched to the summary column (.sum*) so
+ * the panel reads as one family. NO numbered circles, NO connector rail, NO leading
+ * marks — labels only. active → a 2px blue-500 bottom underline + bold gray-900 label;
+ * upcoming/locked → muted + aria-disabled. Subtle Spectrum tokens (theme-aware), no
+ * saturated fills, accessible focus ring. */
+.vsteplist {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    /* Takes the strip's remaining width and scrolls horizontally when the tabs
+       overflow (the active tab is scrolled into view by StepRail). */
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: auto !important;
+    overflow-x: auto !important;
+    scroll-behavior: smooth !important;
+    gap: var(--spectrum-global-dimension-size-150)
+        var(--spectrum-global-dimension-size-300) !important;
+    list-style: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+.vsteplist-item {
+    display: block !important;
+    flex: 0 0 auto !important;
+}
+/* A quiet menu row. Matches the summary's small type scale (font-size-75) and gray
+ * tokens. NO border / outline anywhere except the :focus-visible ring — the active
+ * state is conveyed by the left accent bar + gray-100 fill + bold label only. */
+.vsteplist-step {
+    display: flex !important;
+    align-items: center !important;
+    gap: var(--spectrum-global-dimension-size-100) !important;
+    /* Inline tab: intrinsic width, never shrinks (overflow scrolls instead), one line. */
+    width: auto !important;
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+    padding: var(--spectrum-global-dimension-size-100)
+        var(--spectrum-global-dimension-size-150) !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    cursor: pointer !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+    font-family: inherit !important;
+    font-size: var(--spectrum-global-dimension-font-size-75) !important;
+    text-align: left !important;
+    transition: background 0.15s ease, color 0.15s ease !important;
+}
+.vsteplist-step:hover:not([aria-disabled='true']) {
+    background: var(--spectrum-global-color-gray-100) !important;
+}
+.vsteplist-step:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-500) !important;
+    outline-offset: 2px !important;
+}
+/* Active tab: a single simple bottom underline (no pill fill, no box) + bold label. */
+.vsteplist-step.active {
+    background: transparent !important;
+    box-shadow: inset 0 -2px 0 var(--spectrum-global-color-blue-500) !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+}
+/* A newly-revealed tab (e.g. "Sign in" appearing when the ACCS backend is chosen)
+ * grows + fades in so the siblings shift smoothly instead of the tab popping in —
+ * mirrors the rail's timeline-enter (animate a max dimension + opacity, clip while
+ * growing). Applied for one render by StepRail; zeroed under reduced-motion. */
+.vsteplist-step--enter {
+    overflow: hidden !important;
+    animation: vsteplist-step-enter var(--db-motion-slow) var(--db-motion-ease);
+}
+@keyframes vsteplist-step-enter {
+    from { opacity: 0; max-width: 0; }
+    to { opacity: 1; max-width: 12rem; }
+}
+.vsteplist-step[aria-disabled='true'] {
+    cursor: default !important;
+    color: var(--spectrum-global-color-gray-500) !important;
+}
+/* No leading status marker: the summary column owns "done" (✓ + value), and the
+ * active highlight + muted upcoming/locked text carry position + reachability. */
+.vsteplist-title {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    font-weight: 500 !important;
+}
+/* upcoming / locked labels read muted (gray-500/600) — matched to .sum-label. */
+.vsteplist-step.upcoming .vsteplist-title,
+.vsteplist-step.locked .vsteplist-title {
+    color: var(--spectrum-global-color-gray-600) !important;
+}
+/* Active row: a bolder gray-900 label (paired with the left accent + gray-100 fill,
+ * NOT a full border) so the active step reads clearly without a boxed outline. */
+.vsteplist-step.active .vsteplist-title {
+    font-weight: 700 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+}
+/* Error marker — the ONE per-item glyph on a tab, and only because the errored step's
+ * body is off screen by definition (Configure shows one section at a time), so nothing
+ * else can carry it. A small negative-500 dot after the label, plus a red-600 label so
+ * the signal is not colour-on-a-dot alone. */
+.vsteplist-step.has-error .vsteplist-title {
+    color: var(--spectrum-global-color-red-600) !important;
+}
+.vsteplist-error {
+    flex: 0 0 auto !important;
+    width: var(--spectrum-global-dimension-size-75) !important;
+    height: var(--spectrum-global-dimension-size-75) !important;
+    border-radius: 50% !important;
+    background: var(--spectrum-global-color-red-600) !important;
+}
+/* Visually-hidden lock reason (the mark/title stay visible; SR reads the reason). */
+.vsteplist-sr {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+    .vsteplist-step {
+        transition: none !important;
+    }
+}
+
+/* =========================================================================
+ * Commerce nav — RESPONSIVE (CSS-only). Reuses the wizard's ESTABLISHED
+ * viewport breakpoints (1180 = TwoColumnLayout stack; 600 = smallest). No
+ * new breakpoints invented. Above 1180px the vertical nav panel is unchanged.
+ * ========================================================================= */
+
+/* ≤1180px — the sub-step strip + stacked layout are now the DEFAULT (see the base
+ * .commerce-body / .step-nav / .vsteplist rules above), so this breakpoint only
+ * still drops the summary: at this width the area body owns the space and the
+ * stacked summary block just adds clutter. Scoped to the Build layout
+ * (.build-two-col) so other TwoColumnLayout consumers keep their stacked summary. */
+@media (max-width: 1180px) { /* bp: two-column stack — Build summary hidden */
+    .build-two-col .two-column-layout-right {
+        display: none !important;
+    }
+}
+
+/* ---- Dedicated view (.step-view) — the active step's roomy full-width body ----
+ * Transparent (no box framing empty space): the content sits in the column over the
+ * column background, with generous top padding for breathing room. */
+.step-view {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    /* Content sits size-400 (32px) below the flush sub-step nav rail — the rail is chrome,
+       this view is the content. Horizontal + bottom stay at --wizard-content-pad (24px). */
+    padding: var(--spectrum-global-dimension-size-400) var(--wizard-content-pad) var(--wizard-content-pad) !important;
+}
+
+/* Sub-step view crossfade: the active view body fades + slides up when the sub-step
+ * (or area) changes. The body is wrapped in a `.step-view-anim` element keyed on the
+ * active sub-step, so React remounts it on each change → this entrance fires. Reuses
+ * the existing `fadeInUp` (opacity + 4px). Zeroed under prefers-reduced-motion. */
+.step-view-anim {
+    animation: fadeInUp var(--db-motion-base) var(--db-motion-ease);
+}
+
+/* ---- Backend "choice cards" (.choice-*) — prominent binary pick, not a dense tile.
+ * Roomy, readable, theme-aware; subtle Spectrum surfaces with a confident selected
+ * state (blue accent ring), no saturated fills. ADDED alongside .selector-card (which
+ * StackSelector/ConfigTile still use) — not a replacement. */
+.choice-grid {
+    display: flex !important;
+    gap: var(--spectrum-global-dimension-size-200) !important;
+    flex-wrap: wrap !important;
+    /* Cap ONLY the card row so the two binary-pick cards stay a comfortable
+     * two-up width now that the step-view flexes to the majority of a wider
+     * left column. Forms/headers in the step-view stay full-width — this caps
+     * the card row, not the overall content. */
+    max-width: 720px !important;
+}
+.choice-card {
+    flex: 1 1 0 !important;
+    min-width: 240px !important;
+    position: relative !important;
+    /* Flex column + top-align so the heading pins to the TOP of the (stretched)
+       card. A <button> vertically-centers its content by default, so with a
+       shared height the card carrying the shorter 1-line description floats its
+       heading down, out of line with the 2-line card. */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    font-family: inherit !important;
+    background: var(--spectrum-global-color-gray-50) !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    border-radius: var(--spectrum-global-dimension-size-100) !important;
+    /* Match the demo-package card family (.expandable-brand-card): 16px padding +
+       a shared 100px height floor so the backend picker reads at the same scale. */
+    padding: var(--spectrum-global-dimension-size-200) !important;
+    min-height: 100px !important;
+    cursor: pointer !important;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease,
+        box-shadow 0.2s ease !important;
+}
+.choice-card:hover:not(:disabled) {
+    background: var(--spectrum-global-color-gray-75) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+}
+.choice-card:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-500) !important;
+    outline-offset: 2px !important;
+}
+.choice-card[data-selected="true"] {
+    border-color: var(--spectrum-global-color-blue-400) !important;
+    outline: 1px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: -1px !important;
+    background: var(--spectrum-global-color-blue-100) !important;
+    transform: none !important;
+}
+.choice-card[data-selected="true"]:hover {
+    background: var(--spectrum-global-color-blue-100) !important;
+    transform: none !important;
+}
+.choice-card:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+}
+.choice-card-name {
+    display: block !important;
+    /* Match .brand-card-name (15px / 600) so the two card families share a title scale. */
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+}
+.choice-card-description {
+    display: block !important;
+    margin-top: var(--spectrum-global-dimension-size-100) !important;
+    font-size: var(--spectrum-global-dimension-font-size-75) !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    line-height: 1.5 !important;
+}
+.choice-card-note {
+    display: block !important;
+    margin-top: var(--spectrum-global-dimension-size-100) !important;
+    font-size: var(--spectrum-global-dimension-font-size-75) !important;
+    color: var(--spectrum-global-color-gray-500) !important;
+}
+/* .choice-card-check retired — replaced by the shared .selection-check(-corner). */
+@media (prefers-reduced-motion: reduce) {
+    .choice-card {
+        transition: none !important;
+    }
+    .choice-card:hover:not(:disabled) {
+        transform: none !important;
+    }
+}
+
+/* The config-step "Save & continue" CTA row, spaced below the form fields. */
+.sec-cta {
+    margin-top: var(--spectrum-global-dimension-size-200) !important;
+}
+
+/* ---- BuildYourProjectSummary (.sum*) — the unified "Your project" column ---- */
+/* The summary column GROWS to fill the remaining width (its gray panel reaches the
+   screen edge), but the CONTENT is capped + left-aligned so label↔value stay tight
+   inside the wide panel instead of flinging apart. */
+.commerce-summary-content {
+    max-width: 280px !important;
+}
+.sum-title {
+    font-size: var(--spectrum-global-dimension-font-size-50) !important;
+    letter-spacing: 0.1em !important;
+    text-transform: uppercase !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    margin-bottom: var(--spectrum-global-dimension-size-150) !important;
+}
+.sum-arch {
+    font-size: var(--spectrum-global-dimension-font-size-100) !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+    padding-bottom: var(--spectrum-global-dimension-size-125) !important;
+    margin-bottom: var(--spectrum-global-dimension-size-75) !important;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important;
+}
+.sum-arch .empty {
+    color: var(--spectrum-global-color-gray-600) !important;
+    font-weight: 400 !important;
+    font-style: italic !important;
+}
+.sum-group-h {
+    font-size: var(--spectrum-global-dimension-font-size-50) !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    margin: var(--spectrum-global-dimension-size-150) 0 var(--spectrum-global-dimension-size-40) !important;
+}
+.sum-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: var(--spectrum-global-dimension-size-125) !important;
+    padding: var(--spectrum-global-dimension-size-50) 0 !important;
+    font-size: var(--spectrum-global-dimension-font-size-75) !important;
+}
+.sum-row + .sum-row {
+    border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
+}
+/* Left group: the shared small CheckmarkCircle (done only) + the row label. */
+.sum-rowlabel {
+    display: flex !important;
+    align-items: center !important;
+    gap: var(--spectrum-global-dimension-size-65) !important;
+    min-width: 0 !important;
+}
+.sum-label {
+    color: var(--spectrum-global-color-gray-600) !important;
+    white-space: nowrap !important;
+}
+.sum-value {
+    color: var(--spectrum-global-color-gray-900) !important;
+    text-align: right !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+.sum-value.empty {
+    color: var(--spectrum-global-color-gray-600) !important;
+    font-style: italic !important;
+}
+/* Completion feedback: the shared ✓ renders only when a row is done, so it mounts
+ * on completion and this pop fires once — a subtle reward as each sub-step lands.
+ * Zeroed under the global prefers-reduced-motion reset. */
+@keyframes sum-check-in {
+    from { opacity: 0; transform: scale(0.6); }
+    to { opacity: 1; transform: scale(1); }
+}
+.sum-check {
+    animation: sum-check-in var(--db-motion-base) var(--db-motion-ease);
+}
+
+/* Canonical page header — one tight single row (title · subtitle crumb … action),
+ * the same reclaimed density on every screen. The page context (a rail, a grid) owns
+ * the wayfinding, so the title stays modest and the header spends little vertical budget. */
+.page-header-title {
+    font-size: var(--spectrum-global-dimension-font-size-300) !important;
+    line-height: 1.2 !important;
+    /* Zero the Spectrum Heading's default block margins so the single-row header
+     * content sits vertically centered in its (now tight) padded band. */
+    margin: 0 !important;
+}
+.page-header-subtitle {
+    font-size: var(--spectrum-global-dimension-font-size-100) !important;
+}
+.page-header-secondary {
+    margin-top: var(--spectrum-global-dimension-size-75) !important;
+}
+
+/* The ONE selection checkmark, shared across every "pick this" card in the wizard
+   (package cards, backend cards, block-library cards, integration cards). */
+.selection-check {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--spectrum-global-color-blue-500);
+}
+/* Pin to the card's top-right (for whole-card selects); the card is position:relative. */
+.selection-check-corner {
+    position: absolute;
+    top: var(--spectrum-global-dimension-size-200);
+    right: var(--spectrum-global-dimension-size-200);
+}
+/* Catalog entries render as square tiles in the wrapping row (not full-width rows). */
+.choice-card--tile {
+    flex: 0 0 auto !important;
+    width: 168px !important;
+    min-width: 168px !important;
+    min-height: 168px !important;
+}
+.choice-card--tile .choice-card-description {
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+}
+/* --------------------------------------------------------------------------
+ * Integrations — results-only center column (.int-results / .int-row-*)
+ * + the one-modal Add Integration journey (.intflow-*).
+ *
+ * Dark-minimal wizard language: plain divs, gray-50 surfaces, quiet gray-300
+ * borders, 8px radius — the wizard card-family language carried into this anatomy.
+ * The Modal's .modal-content owns scrolling and its footer is sticky; the
+ * stage body only reserves height so stage swaps don't jump the footer.
+ * ------------------------------------------------------------------------ */
+
+/* ---- Center column: the result-row list + Add launchpad ---- */
+.int-results {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 720px;
+}
+/* Empty state escapes the row-width cap so it centers in the full view. */
+.int-results--empty {
+    max-width: none;
+}
+/* Empty state: one centered unit (title, copy, Add button) filling the view —
+   a left-anchored fragment in the dark expanse reads as unfinished. */
+.int-results-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: min(420px, 50vh);
+    width: 100%;
+}
+.int-results-empty-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-800);
+}
+.int-results-empty-copy {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-600);
+    max-width: 52ch;
+}
+.int-results-empty-action {
+    margin-top: 20px;
+}
+.int-results-add {
+    margin-top: 4px;
+}
+
+/* ---- One collapsed result row (card family: gray-50, gray-300, radius 8) ---- */
+.int-row {
+    background: var(--spectrum-global-color-gray-50);
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    padding: 14px 18px;
+}
+.int-row-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.int-row-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+    line-height: 1.3;
+}
+.int-row-source {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+    line-height: 1.4;
+    margin-top: 2px;
+}
+/* The destination line: reference text left, the quiet Set up / Change right. */
+.int-row-destination {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--spectrum-global-color-gray-200);
+}
+.int-row-dest-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--spectrum-global-color-gray-800);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* The "APIs in use" section (every kind): a collapsible header (caret + label +
+   count) over a read-only STACKED list of the provisioned API names. The quiet
+   Change sits right on editable custom/import rows only. Expanded by default;
+   collapsing hides the list so a long provisioned set stays compact. */
+.int-row-apis {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+}
+.int-row-apis-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+/* The header IS the collapse toggle (caret + label + count) — a plain button so
+   the whole row is clickable; the Change action stays outside it, on the right. */
+.int-row-apis-toggle {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    appearance: none;
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    color: var(--spectrum-global-color-gray-500);
+}
+.int-row-apis-label {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+.int-row-apis-count {
+    font-size: 11px;
+    line-height: 1.6;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--spectrum-global-color-gray-100);
+    color: var(--spectrum-global-color-gray-600);
+}
+/* The stacked API-name list (one per line), indented under the caret. */
+.int-row-apis-list {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.int-row-api-item {
+    font-size: 12.5px;
+    line-height: 1.35;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+/* ---- Flow modal: stage body + per-stage layouts ---- */
+/* The 360px min-height that used to live here reserved stage height so
+   Back/Continue wouldn't jump between short and tall stages. That was a
+   workaround for the shared Modal's floating footer (sticky is a no-op when the
+   content doesn't overflow). The Modal now grows .modal-body to push the footer
+   to the true bottom, so the reservation is redundant — removed. */
+.intflow-stage-body {
+    display: flex;
+    flex-direction: column;
+}
+.intflow-stage-lead {
+    margin: 0 0 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-700);
+}
+/* Kind picker: the (at most) three kind cards stretch equal-width across the
+   modal row (default .choice-card flex: 1 1 0 / min-width 240px — NOT the
+   catalog gallery's 168px tiles), wrapping only when the modal is narrow. */
+/* Kind picker: a balanced 2-column grid (4 cards → 2×2) rather than a flex row
+   that wraps the 4th card full-width. Equal-height rows via the grid. */
+.intflow-kind-choices {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    align-items: stretch;
+}
+/* Catalog stage: search header over the wrapping tile gallery. */
+.intflow-catalog {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.intflow-choices {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.intflow-empty {
+    padding: 24px 8px;
+    text-align: center;
+    color: var(--spectrum-global-color-gray-600);
+    font-size: 13px;
+}
+/* Custom stage: the lead sentence + URL field. */
+.intflow-custom {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+    max-width: 480px;
+}
+
+/* ---- Destination stages (sign-in / project / workspace / summary) ---- */
+.intflow-destination {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+/* The project/workspace list keeps ONE height whether it shows 726 rows or the 5
+   that match a filter. By default `.list-refresh-container` is `flex: 1` inside an
+   auto-height chain, so the list is sized by its CONTENT — and the modal is
+   `fitContent`, so every keystroke resized the dialog and re-centred it under the
+   cursor. Same remedy as `.repo-selection-inline .list-refresh-container`, but a
+   definite height rather than a cap, because a cap still collapses when filtering.
+   It also moves the scrolling INTO the list (ListView virtualizes) instead of
+   scrolling the whole modal body past the sticky footer.
+   The ListView's `.flex-1` is what lets the "no <noun>s match" line share the box:
+   its `flex-basis: 0` overrides the `height="100%"` prop, so on an empty filter the
+   list yields the line its ~20px instead of pushing it out of view. */
+.intflow-destination .list-refresh-container {
+    flex: 0 0 auto !important;
+    /* The viewport term reserves the modal chrome (title, search, count, context
+       line, footer, dialog margins) so a short window shrinks the list rather than
+       overflowing the dialog. */
+    height: min(420px, calc(100vh - 22rem)) !important;
+}
+/* The committed destination as a quiet CONTEXT LINE above the active stage — it
+   replaced the `dest-summary` step (a whole step to confirm a destination the user
+   never chose). Quiet by design: it is orientation, not the task. */
+.dest-context {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 12.5px;
+}
+.dest-context-value {
+    color: var(--spectrum-global-color-gray-700);
+}
+/* The MODAL's variant: a full-width line with a rule under it. The page header
+   uses the inline base above — same fact, two placements. */
+.dest-context--block {
+    display: flex;
+    margin: 0 0 14px;
+    padding: 0 0 10px;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+}
+/* A committed choice (project/workspace) collapsed to one compact boxed line. */
+.intflow-chosen {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 48px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    background: var(--spectrum-global-color-gray-50);
+}
+.intflow-chosen-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--spectrum-global-color-green-500);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+}
+.intflow-chosen-label {
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+}
+.intflow-chosen-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+}
+
+/* ---- API-access stage: two-column (the builder's center-work/right-summary
+   grammar). Center = the filterable free-API picker; right = the "API Access"
+   summary panel owning the facts (Applied: required/enable state · Selected:
+   the free picks). Wraps to a single column when the modal is narrow. ---- */
+.intflow-api-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.intflow-api-columns {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-start;
+}
+.intflow-api-main {
+    flex: 1 1 380px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.intflow-api-summary {
+    flex: 0 1 260px;
+    min-width: 220px;
+    box-sizing: border-box;
+    padding: 14px 16px;
+    background: var(--spectrum-global-color-gray-50);
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    /* Stay visible while the API list scrolls. The modal's scroll region is
+       .modal-content (its footer pins the same way); align-self keeps the panel
+       its own height so it can pin instead of stretching the whole column. */
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+}
+.intflow-api-summary-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+}
+.intflow-api-summary-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.intflow-api-summary-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--spectrum-global-color-gray-800);
+}
+/* "Added" sub-heading — the user's optional picks below the always-on facts. */
+.intflow-api-summary-subhead {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-500);
+    margin-bottom: 2px;
+}
+/* Inline remove (×) for an added pick — quiet until hover, right-aligned. */
+.intflow-api-summary-remove {
+    flex: 0 0 auto;
+    appearance: none;
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 0 2px;
+    font-size: 16px;
+    line-height: 1;
+    color: var(--spectrum-global-color-gray-500);
+}
+.intflow-api-summary-remove:hover {
+    color: var(--spectrum-global-color-red-600);
+}
+/* The API name takes the rest of the row after the status icon. */
+.intflow-api-summary-name {
+    flex: 1;
+    min-width: 0;
+}
+/* Informational API-access step (deterministic integrations): read-only facts,
+   left-aligned in the content band — no picker, no side panel. */
+.intflow-api-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 520px;
+}
+/* The interactive picker fills the full modal width (filter, chips, and the API
+   list use the room); read-only info/confirmation text keeps the narrow measure. */
+.intflow-api-info--full {
+    max-width: none;
+}
+/* API-access loading/error: fill the reserved stage body and center on both axes
+   (full width — not the left-aligned .intflow-api-info band), so the spinner sits
+   in the middle of the modal rather than a small band near the top. */
+.intflow-api-center {
+    flex: 1 1 auto;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 360px;
+}
+.intflow-api-info-head {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--spectrum-global-color-gray-900);
+}
+.intflow-api-info-sub {
+    margin: 0 0 4px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-700);
+}
+.intflow-api-info-note {
+    margin: 8px 0 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-600);
+}
+/* Mesh enable failure on Add — the modal stays open and Add becomes a retry. */
+.intflow-api-info-error {
+    margin: 12px 0 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-red-600);
+}
+.intflow-api-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+/* The shared SearchHeader ships generous size-200 (16px) margins for full-page
+   lists; inside this modal picker that pushes the actual API list below the fold.
+   Tighten them here (inline Spectrum margins need !important to lose). */
+.intflow-api-picker .search-header > div {
+    margin-bottom: 6px !important;
+}
+/* Kill the HORIZONTAL half of `.search-header`'s `margin: -4px` bleed.
+   That negative margin pairs with `padding: 4px` to give the search field's focus
+   ring room without shifting layout — invisible on a full-page list, but it makes
+   the element's box 4px wider than its container on EACH side. Inside a modal
+   whose body sets `overflow-y: auto` (which computes overflow-x to auto), that
+   overhang is a real horizontal scroll region: the modal scrolled a few px
+   sideways under a two-finger swipe.
+   Only left/right are neutralised — the vertical bleed costs nothing, and the
+   4px padding stays so the focus ring is still unclipped. */
+.intflow-api-picker .search-header {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+/* Left browse-column header + at-a-glance picks count (Selected has no mirror). */
+.intflow-api-browse-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+    margin-bottom: 6px;
+}
+.intflow-api-added {
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 600;
+    color: var(--spectrum-global-color-blue-600);
+}
+.intflow-api-helper {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-600);
+    max-width: 80ch;
+}
+.intflow-api-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+/* Product-family filter chips (the dev-console "Filter by product" row) — one
+   click narrows "All available" to a family. Wrap on a narrow modal. */
+.intflow-api-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 4px;
+}
+/* These are the picker's primary filter control, not metadata — 11.5px/2px read as
+   a caption and were hard to hit. Sized to match the row labels they filter. */
+.intflow-api-chip {
+    appearance: none;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1.3;
+    padding: 5px 13px;
+    border-radius: 999px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    background: var(--spectrum-global-color-gray-50);
+    color: var(--spectrum-global-color-gray-700);
+}
+.intflow-api-chip:hover {
+    border-color: var(--spectrum-global-color-gray-400);
+    background: var(--spectrum-global-color-gray-100);
+}
+.intflow-api-chip[data-active] {
+    border-color: var(--spectrum-global-color-blue-500);
+    background: var(--spectrum-global-color-blue-500);
+    color: var(--spectrum-global-color-static-white, #fff);
+}
+.intflow-api-row {
+    padding: 2px 0;
+}
+/* Profile-bound (unavailable) rows: disabled + dimmed so they read as "exists,
+   but not one-click here" rather than a pickable option. */
+.intflow-api-row[data-unavailable] .intflow-api-name {
+    color: var(--spectrum-global-color-gray-500);
+}
+/* Display name primary, code secondary gray — names first, codes for the curious. */
+.intflow-api-name {
+    font-size: 13px;
+    color: var(--spectrum-global-color-gray-900);
+}
+.intflow-api-code {
+    margin-left: 8px;
+    font-size: 11px;
+    color: var(--spectrum-global-color-gray-600);
+}
+.intflow-api-empty {
+    padding: 24px 8px;
+    text-align: center;
+    color: var(--spectrum-global-color-gray-600);
+    font-size: 13px;
+}
+/* Non-blocking fetch failure: inline error + Retry (Continue never gates on it). */
+.intflow-api-error {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--spectrum-global-color-red-400);
+    border-radius: 8px;
+}
+.intflow-api-error-message {
+    flex: 1 1 auto;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--spectrum-global-color-red-600);
+    overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------------------------
+ * InlineRenameField (core/ui/forms) — rename-in-place for a displayed name.
+ * Shared by the project card name and the dashboard title: the input inherits
+ * the caller's typography (font: inherit) so it sizes to its context, and the
+ * pencil reveals on hover/focus of the wrapper.
+ * ------------------------------------------------------------------------ */
+/* No `gap` here: spacing to the pencil is the SLOT's margin, so it collapses
+ * with the slot. A gap would survive the collapse and leave 6px of hoverable
+ * dead space past the name. */
+.inline-rename {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    max-width: 100%;
+}
+.inline-rename-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* The hidden pencil takes ZERO width, so the wrapper shrink-wraps to the name
+ * itself and the hover target IS the text.
+ *
+ * `opacity: 0` alone left the button's ~32px box in flow: the wrapper stayed
+ * wider than the name, and hovering that blank strip to its right revealed the
+ * pencil — the affordance appeared to belong to empty space. Collapsing the
+ * slot removes the strip rather than trying to make it non-reactive.
+ *
+ * Revealing on the WRAPPER (not on `.inline-rename-text:hover`) is what makes
+ * the pencil reachable: once expanded it lies inside the grown wrapper, so
+ * travelling from the name to the button never crosses a non-hovered gap that
+ * would collapse it mid-journey. */
+.inline-rename-pencil-slot {
+    display: inline-flex;
+    align-items: center;
+    max-width: 0;
+    margin-left: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+        opacity 120ms ease,
+        max-width 120ms ease,
+        margin-left 120ms ease;
+}
+.inline-rename:hover .inline-rename-pencil-slot,
+.inline-rename:focus-within .inline-rename-pencil-slot {
+    max-width: 44px;
+    margin-left: 6px;
+    opacity: 1;
+    pointer-events: auto;
+}
+.inline-rename .inline-rename-pencil {
+    flex: 0 0 auto;
+}
+.inline-rename-input {
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
+    font: inherit;
+    color: inherit;
+    background: var(--spectrum-global-color-gray-50);
+    border: 1px solid var(--spectrum-global-color-blue-500);
+    border-radius: 4px;
+    padding: 1px 6px;
+    outline: none;
+}
+.inline-rename-input:disabled {
+    opacity: 0.6;
+}
+.inline-rename-error {
+    flex: 0 1 auto;
+    font-size: 12px;
+    line-height: 1.3;
+    color: var(--spectrum-global-color-red-600);
+    overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------------------------
+ * Integrations grid + drawer (dashboard)
+ * Card grid + right detail drawer replacing the stacked integration rows.
+ * Grid, cards, scrim, and drawer are PLAIN DIVS (Spectrum Flex caps at
+ * 450px); tokens flip light/dark. Card family: .project-card-spectrum
+ * (gray-50 base, gray-75 hover, lift, radius 8).
+ * ------------------------------------------------------------------------ */
+/* The grid's root. Kept flexible so it fills whatever host it sits in — on the
+ * dedicated surface that is the full page width. */
+.integrations-surface {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* ---- Dedicated integrations surface ----
+ * The page shell is PageLayout + PageHeader and the content band is
+ * `.page-container-padded` (the canonical --content-width band), so this file
+ * carries NO page padding, breadcrumb, or banner rules — those were bespoke
+ * re-implementations of shared primitives and were removed. */
+
+/* Heading · count pill · Add button on one baseline; the Add button trails. */
+.integrations-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px;
+}
+.integrations-header > *:last-child {
+    margin-left: auto;
+}
+.integration-count {
+    font-size: 12px;
+    line-height: 18px;
+    min-width: 18px;
+    padding: 0 6px;
+    border-radius: 9px;
+    text-align: center;
+    background: var(--spectrum-global-color-gray-200);
+    color: var(--spectrum-global-color-gray-700);
+}
+/* Card tracks are CAPPED, not 1fr: with two cards in a wide band, `1fr` inflated
+   them to ~420px and the content read as mostly empty. `justify-content: start`
+   packs them left instead of spreading. Gap matches the extension's card-grid
+   rhythm (.projects-grid, 24px / size-300). */
+/* Mirrors .projects-grid — the same card-grid problem, already solved there.
+   `minmax(268px, 300px)` needed 3*268 + 2*24 = 852px for three columns and the
+   left-anchored content band is ~815px, so it fell to two and wrapped the third
+   tile onto a row of its own. 240px min clears three columns with room to spare;
+   `1fr` fills the row, which is why `justify-content: start` is gone (it only
+   mattered while tracks were capped at 300px).
+
+   `grid-auto-rows: 1fr` equalises rows. Grid equalises heights WITHIN a row, so
+   an add tile alone on the last row kept its own floor while the cards' row was
+   sized by card content — they matched only when they happened to share a row. */
+.integrations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-auto-rows: 1fr;
+    gap: 24px;
+    padding: 8px;
+}
+.integration-card {
+    background: var(--spectrum-global-color-gray-50);
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    /* Shared --card-* tokens (see :root) — the same values .project-card-spectrum
+       reads, so the two families are equal by construction rather than by two
+       comments promising each other they match. The mesh carries no accent
+       border: it is a peer card, identified by its name, not chrome. */
+    padding: var(--card-padding);
+    display: flex;
+    flex-direction: column;
+    gap: var(--card-gap);
+    min-height: var(--card-min-height);
+    min-width: var(--card-min-width);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.integration-card:hover,
+.integration-card:focus {
+    background: var(--spectrum-global-color-gray-75);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-color: var(--spectrum-global-color-gray-400);
+    outline: none;
+}
+.integration-card:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+}
+/* Name on the left, overflow menu pinned right. The name must be free to
+   ellipsize without shoving the kebab off the card. */
+/* A text-styled <button> for a small inline action ("Change", "Reset"). GLOBAL
+   on purpose: the equivalent EDS class (.service-action-link) lives in a
+   feature stylesheet that only some bundles load, so components outside EDS that
+   used it rendered as raw grey boxes wherever that sheet was absent. Stays a
+   button — these perform actions, not navigation. */
+.inline-action-link {
+    background: none;
+    border: none;
+    color: var(--spectrum-global-color-blue-500);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+.inline-action-link:hover {
+    text-decoration: underline;
+}
+
+/* `min-height` pins the row to a Spectrum ActionButton, because otherwise the
+   row's height is set by a control you cannot see. The kebab is `opacity: 0` at
+   rest but still in flow at ~32px, so IT sizes the head — until a deploying card
+   drops it from the DOM entirely (menuActions is [] while deploying, and
+   IntegrationActionsMenu returns null on an empty list). The head then collapsed
+   to the name's ~20px line box and the whole card shifted up mid-deploy
+   (reported 2026-08-07). Same reason `.footer-grid` pins 32px. */
+.integration-card-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: 32px;
+}
+.integration-card-head > .integration-card-name {
+    flex: 1 1 auto;
+}
+.integration-card-head > span {
+    flex: 0 0 auto;
+    margin-right: -6px;
+}
+/* The rename pencil expands INSIDE the name's lane, never into the kebab's.
+   Without this the growing InlineRenameField pushed the kebab out from under the
+   cursor — hovering to reveal it also moved it away (reported 2026-07-31). */
+.integration-card-head > .inline-rename {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+}
+/* Revealed on card hover/focus like the rename pencil — a kebab on every card
+   at rest turns a calm grid into a row of controls. Always available to
+   keyboards via :focus-within. */
+.integration-card-menu-button {
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+.integration-card:hover .integration-card-menu-button,
+.integration-card:focus-within .integration-card-menu-button {
+    opacity: 1;
+}
+.integration-card-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* `.integration-statusline` is the same row inside the detail flyout — one rule
+ * rather than a third copy of the four declarations. The flyout is the card's
+ * detail view, so the status has to read identically in both; it used to render
+ * an 8px dot, a plain JSX space and a sentence-case label. */
+.integration-card-statusline,
+.integration-statusline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+/* The house status treatment, identical to `.project-card-spectrum-status`:
+ * 11px uppercase with letter-spacing, NOT 12px sentence case. Both cards pair
+ * it with a 6px StatusDot, so the two grids read as one family. */
+.integration-card-status {
+    font-size: 11px;
+    color: var(--spectrum-global-color-gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.integration-card-status--error {
+    color: var(--spectrum-global-color-red-600);
+}
+/* Footer pinned to the card bottom; hosts the at-most-one face affordance. */
+/* Only pushed to the bottom when the card HAS a face affordance — an empty foot
+   was reserving a row on every deployed card. */
+.integration-card-foot:not(:empty) {
+    margin-top: auto;
+    padding-top: 8px;
+    display: flex;
+    align-items: center;
+}
+/* The deploying pulse lives in StatusDot now (`status-dot--pulse`, index.css) —
+   it is a property of the `info` status, not of this card. */
+/* ---- Detail FLYOUT (over the grid) ----
+ * Restored from the pre-master/detail build: this surface IS the integrations
+ * grid, so an overlay covers only its own page. The scrim + slide live on the
+ * Drawer primitive's classes; everything below styles the CONTENT, which is
+ * host-independent and survived the host swap unchanged. */
+/* Scrim + panel stay mounted; `.open` drives the slide. */
+.db-drawer-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.42);
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+        opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0.22s;
+}
+.db-drawer-scrim.open {
+    opacity: 1;
+    visibility: visible;
+}
+.db-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 392px;
+    max-width: 92vw;
+    /* Surface matches the panel treatment this flyout inherited its content from
+       (gray-75 over gray-200 dividers) — the restored shell used gray-50/gray-300,
+       which disagreed with the `.integration-panel-row` dividers INSIDE it. */
+    background: var(--spectrum-global-color-gray-75);
+    border-left: 1px solid var(--spectrum-global-color-gray-200);
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
+    z-index: 101;
+    transform: translateX(100%);
+    visibility: hidden;
+    transition:
+        transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0.22s;
+    display: flex;
+    flex-direction: column;
+    outline: none;
+}
+.db-drawer.open {
+    transform: translateX(0);
+    visibility: visible;
+}
+@media (prefers-reduced-motion: reduce) {
+    .db-drawer,
+    .db-drawer-scrim {
+        transition: none;
+    }
+}
+/* The flyout's sections: fixed head, scrolling body, fixed action bar. */
+.db-drawer-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
+}
+.db-drawer-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.db-drawer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    padding: 13px 18px 16px;
+    border-top: 1px solid var(--spectrum-global-color-gray-200);
+}
+.integration-panel-title {
+    font-size: 15px;
+    font-weight: 600;
+    min-width: 0;
+}
+.integration-panel-role {
+    font-size: 11px;
+    color: var(--spectrum-global-color-blue-600);
+}
+.db-drawer-head > *:last-child {
+    margin-left: auto;
+}
+/* Labels center against the FULL height of their value, not its first baseline.
+ * Baseline alignment pinned the label to line 1, so once values grew to several
+ * lines (the wrapped endpoint, one-API-per-line) the label hung at the top of a
+ * tall row and read as misaligned. */
+.integration-panel-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
+}
+.integration-panel-row:last-child {
+    border-bottom: none;
+}
+.integration-panel-row-key {
+    flex: 0 0 88px;
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+.integration-panel-row-value {
+    min-width: 0;
+    color: var(--spectrum-global-color-gray-800);
+    overflow-wrap: anywhere;
+}
+.integration-panel-row-value--mono {
+    font-family: var(--spectrum-font-family-code, monospace);
+    font-size: 12px;
+}
+/* The kind prefix inside a mono Source row ("Pre-built · acme/repo"). It is prose,
+   so it opts back out of the code face its container sets. */
+.integration-panel-row-prefix {
+    font-family: var(--spectrum-font-family-base, sans-serif);
+    color: var(--spectrum-global-color-gray-600);
+}
+/* One API per line — a comma-joined run of long Adobe API names is unreadable
+   in a 352px column. */
+.integration-panel-api {
+    display: block;
+}
+
+/* Commerce scope: three sub-labelled lines inside ONE row's value column.
+   Grid rather than flex so the codes align down a column no matter how the
+   labels differ in width, and so a long code wraps inside its own cell instead
+   of widening the drawer (the value column is only ~264px). */
+.integration-panel-scope {
+    display: grid;
+    grid-template-columns: 68px minmax(0, 1fr);
+    gap: 8px;
+    align-items: baseline;
+    padding: 1px 0;
+}
+.integration-panel-scope-key {
+    font-size: 11px;
+    color: var(--spectrum-global-color-gray-600);
+}
+/* Prose, because the NAME the user picked leads the cell. The code inside opts
+   back into the code face; with no name that span holds the bare code, so the
+   mono face lives there rather than here. */
+.integration-panel-scope-value {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+/* The code itself — always mono, so it reads as a value you could grep for. */
+.integration-panel-scope-code {
+    font-family: var(--spectrum-font-family-code, monospace);
+    font-size: 12px;
+}
+/* Muted only when a NAME precedes it: then the code is the secondary reading.
+   Standing alone it is the whole value and must not look de-emphasised. */
+.integration-panel-scope-code--aside {
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* Heading over a RUN of rows that share a kind (the deployed endpoints), as
+   opposed to `.integration-panel-row-key`, which labels one row's value. Without
+   it a list of N per-action URLs reads as N more metadata rows peered with Status
+   and Kind. Sits outside the row flex so it spans the full width instead of
+   taking the 88px key column. */
+.integration-panel-group-label {
+    /* NO border-top. The row above already draws a border-bottom, so a rule here
+       renders as a double line a few pixels apart. Separation is the margin. */
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* Copyable values inside the flyout must WRAP.
+ * `.copyable-text` is nowrap by design — it is a core component sized for short
+ * inline snippets. A mesh endpoint runs ~70 chars, so in this 352px panel nowrap
+ * pushed the ⧉ affordance clean off the edge: the value looked hoverable but gave
+ * no visible sign it could be copied. Scoped here so the core component's other
+ * consumers keep their single-line treatment. */
+.integration-panel-row-value .copyable-text {
+    display: inline-block;
+    max-width: 100%;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+}
+/* Never let the affordance be the thing that wraps away from its value. */
+.integration-panel-row-value .copyable-icon,
+.integration-panel-row-value .copyable-icon-copied {
+    white-space: nowrap;
+}
+
+/* Live deploy progress / failure detail under the Status row's label. */
+.integration-panel-status-message {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+/* Remove trails the row (the prototype separates it from the safe actions). */
+.integration-panel-danger {
+    margin-left: auto;
+}
+
+/* ---- Dashboard integrations summary tile (build zone) ----
+ * Shaped exactly like its neighbours (Configure / More) — the dot and count are
+ * absolutely positioned overlays, NOT extra inline content, so the tile keeps a
+ * neighbour's footprint and the action row stays on one line. Widening the tile
+ * is what pushed it to wrap onto its own row. */
+.integrations-tile {
+    position: relative;
+}
+/* Status dot rides the tile's top-right corner. */
+/* POSITION only. Colour, size and the in-progress pulse come from StatusDot;
+   this tile used to restate all three from Spectrum globals, which is how it
+   ended up with a blue dot that never pulsed. */
+.integrations-tile-dot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+}
+/* Count rides the bottom-right, out of the label's way. */
 } /* End of second @layer theme block */
+
+/* API picker: the row area as its own element, so a host can make it THE scroll
+   region. Unconstrained (the wizard stage) it just stacks and the page scrolls;
+   constrained by a flex chain (the Manage APIs modal, below) it becomes the only
+   thing in the dialog that moves.
+
+   DO NOT add `overscroll-behavior: contain` here. It pins the header above this
+   region — without it, scrolling past the last row hands the leftover gesture to an
+   ancestor which carries the search box and chips out of view — but it also stops
+   this region scrolling at all.
+
+   That was isolated by experiment (2026-08-05), not inferred: with the region
+   genuinely overflowing (255px of rows in ~258px) the line was re-added alone and
+   the list went unscrollable again; removed alone, it scrolls. The spec says
+   `contain` should only prevent CHAINING, never an element's own scroll, so
+   something in this Spectrum dialog does not behave the way the property is
+   documented. Believe the experiment.
+
+   The fixed header is therefore an open trade, not a solved problem. If it is worth
+   another attempt, put the containment on an ANCESTOR scroll container (.modal-body)
+   so the chain stops above this element instead of on it.
+
+   overflow-x is hidden deliberately: a long API name should wrap or clip, never
+   turn the region into a two-axis scroller. The bottom padding keeps the final row
+   off the clip edge, so a list that ALMOST fits reads as "scroll me" rather than
+   as a rendering fault. */
+.intflow-api-scroll {
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    padding-right: 8px; /* keep the scrollbar off the row labels */
+    padding-bottom: 4px;
+}
+/* The modal body owns its own column layout — a plain div, because Spectrum's
+   Flex caps width at ~450px and clipped the API list inside the L dialog.
+
+   It also makes the API LIST the dialog's only scroll region. The list used to be
+   a fixed 320px inside a `fitContent` dialog, which gave the modal TWO scrollers:
+   once the content outgrew the dialog, .modal-body scrolled as well — and being
+   the outer one it won, so the row list would not move while the whole body did,
+   carrying the search box and chips away with it.
+
+   The fix is a CONSTANT height here, and a flex chain that hands every spare
+   pixel down to the row area: body → picker → rows, each `min-height: 0` so a
+   flex item is actually allowed to shrink below its content (the default `auto`
+   refuses, and the overflow would silently move back up to .modal-body).
+
+   Why an explicit height rather than `height: 100%`: 100% only resolves against a
+   parent with a definite height, which depends on whether Spectrum's modal wrapper
+   stretches the dialog — behaviour this codebase has already been surprised by once
+   (see .modal-fit-content). Setting it here makes the dialog's size independent of
+   that question: `fitContent` collapses the dialog to its content, and its content
+   is this. Filtering to four APIs cannot resize anything; only the row area's
+   scrollback changes.
+
+   Why it is VIEWPORT-CAPPED and not a bare 480px: a flat 480 was taller than a
+   short window could give. The dialog hit its max-height, `.modal-content` shrank
+   (`flex: 0 1 auto`), `.modal-body` ended up shorter than this box — and clipped
+   it. Measured on a ~628px-tall viewport: the row area reported clientHeight ===
+   scrollHeight === 276, i.e. NOT overflowing, while the last row was visibly cut.
+   The cut came from `.modal-body` above, not the list below, and because the list
+   had nothing to scroll while `overscroll-behavior: contain` blocked the gesture
+   reaching the body, nothing moved at all.
+
+   `min()` keeps it stable where it matters: the viewport does not change while you
+   type in the filter, so this is constant across filtering — which is the actual
+   requirement — while still fitting a short window.
+
+   The subtraction is the dialog's own chrome — heading, footer, backdrop margins.
+   A bare `Nvh` ignores it, and the dialog can only absorb the difference while it
+   has room to grow (`max-height: none`, so it is sized BY this box). Zoomed in,
+   the viewport shrinks, the dialog runs out of room, `.modal-body` ends up shorter
+   than this box and starts scrolling — a SECOND scroller, which is what dragged
+   the header away again.
+
+   The tell was that it happened for exactly one pill: every other filter overflows
+   the row list, so the list consumes the gesture and nothing reaches `.modal-body`.
+   The one whose rows FIT let the gesture through to the oversized body underneath. */
+.manage-apis-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: min(560px, calc(100vh - 260px));
+    /* The body no longer scrolls, so overrunning it would CLIP rather than
+       scroll. This yields to the parent whenever the calc guesses high. */
+    max-height: 100%;
+    min-height: 0;
+    min-width: 0; /* a flex child defaults to min-width:auto and refuses to shrink */
+}
+.manage-apis-body .intflow-api-picker,
+.manage-apis-body .intflow-api-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+}

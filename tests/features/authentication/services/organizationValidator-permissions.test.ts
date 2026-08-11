@@ -17,12 +17,14 @@ jest.mock('@/core/logging');
 jest.mock('@/types/typeGuards');
 
 import { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
+import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { CommandExecutor } from '@/core/shell';
 import type { Logger } from '@/core/logging';
 import { getLogger } from '@/core/logging';
 import { parseJSON, toError } from '@/types/typeGuards';
 import {
     createMockCommandExecutor,
+    createMockCacheManager,
     createMockLogger,
     createSuccessResult,
     createErrorResult
@@ -32,6 +34,7 @@ describe('OrganizationValidator - Permissions', () => {
     let validator: OrganizationValidator;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
     let mockLogger: jest.Mocked<Logger>;
+    let mockCacheManager: jest.Mocked<AuthCacheManager>;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -57,10 +60,12 @@ describe('OrganizationValidator - Permissions', () => {
 
         mockCommandExecutor = createMockCommandExecutor();
         mockLogger = createMockLogger();
+        mockCacheManager = createMockCacheManager();
 
         validator = new OrganizationValidator(
             mockCommandExecutor,
-            mockLogger
+            mockLogger,
+            mockCacheManager
         );
     });
 
@@ -198,6 +203,45 @@ describe('OrganizationValidator - Permissions', () => {
 
             expect(result.error).toContain('contact your administrator');
             expect(result.error).toContain('App Builder access');
+        });
+    });
+
+    describe('testDeveloperPermissions() — caching', () => {
+        it('returns the cached result WITHOUT running the CLI on a cache hit', async () => {
+            mockCacheManager.getCachedDeveloperPermissions.mockReturnValue({ hasPermissions: true });
+
+            const result = await validator.testDeveloperPermissions();
+
+            expect(result.hasPermissions).toBe(true);
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+        });
+
+        it('caches a confirmed-allowed result (code 0)', async () => {
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult([{ name: 'My App' }]));
+
+            await validator.testDeveloperPermissions();
+
+            expect(mockCacheManager.setCachedDeveloperPermissions).toHaveBeenCalledWith({
+                hasPermissions: true,
+            });
+        });
+
+        it('caches a confirmed-denied result (permission error)', async () => {
+            mockCommandExecutor.execute.mockResolvedValue(createErrorResult('Permission denied'));
+
+            await validator.testDeveloperPermissions();
+
+            expect(mockCacheManager.setCachedDeveloperPermissions).toHaveBeenCalledWith(
+                expect.objectContaining({ hasPermissions: false }),
+            );
+        });
+
+        it('does NOT cache a transient (non-permission) failure — it should re-probe', async () => {
+            mockCommandExecutor.execute.mockResolvedValue(createErrorResult('Network timeout'));
+
+            await validator.testDeveloperPermissions();
+
+            expect(mockCacheManager.setCachedDeveloperPermissions).not.toHaveBeenCalled();
         });
     });
 });

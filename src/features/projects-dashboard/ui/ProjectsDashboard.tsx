@@ -12,7 +12,6 @@ import {
     Flex,
     Text,
     Button,
-    ProgressCircle,
     MenuTrigger,
     Menu,
     Item,
@@ -27,10 +26,12 @@ import type { ProjectActions } from './components/ProjectActionsMenu';
 import { ProjectRowList } from './components/ProjectRowList';
 import { ProjectsGrid } from './components/ProjectsGrid';
 import { buildMenuItems } from './projectsDashboardHelpers';
+import { LoadingDisplay } from '@/core/ui/components/feedback';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { SearchHeader, type ViewMode } from '@/core/ui/components/navigation/SearchHeader';
 import { useFocusTrap } from '@/core/ui/hooks';
+import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import type { Project } from '@/types/base';
 
 export interface ProjectsDashboardProps {
@@ -114,34 +115,24 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     };
 
     // Filter projects based on search query
-    const filteredProjects = useMemo(() => {
-        if (!searchQuery.trim()) {
-            return projects;
-        }
-        const query = searchQuery.toLowerCase();
-        return projects.filter((project) =>
-            project.name.toLowerCase().includes(query),
-        );
-    }, [projects, searchQuery]);
+    // The shared predicate, not a third hand-rolled lowercase-contains walk
+    // (architecture-duplication scan, 2026-07-31).
+    const filteredProjects = useMemo(
+        () => projects.filter((project) => matchesSearchFields(project, ['name'], searchQuery)),
+        [projects, searchQuery],
+    );
 
     const hasProjects = projects.length > 0;
     const isFiltering = searchQuery.trim().length > 0;
 
-    // Loading state - full screen centered
+    // Loading state — the house LoadingDisplay (same as IntegrationsScreen's gate),
+    // centered by Flex because CenteredFeedbackContainer needs a fixed height.
     if (isLoading) {
         return (
             <div ref={containerRef}>
                 <View height="100vh" backgroundColor="gray-50">
-                    <Flex
-                        justifyContent="center"
-                        alignItems="center"
-                        height="100%"
-                    >
-                        <ProgressCircle
-                            aria-label="Loading projects"
-                            isIndeterminate
-                            size="L"
-                        />
+                    <Flex justifyContent="center" alignItems="center" height="100%">
+                        <LoadingDisplay size="L" message="Loading projects…" />
                     </Flex>
                 </View>
             </div>
@@ -176,7 +167,6 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
             header={
                 <PageHeader
                     title="Your Projects"
-                    subtitle="Select a project to manage or create a new one"
                     constrainWidth
                 />
             }

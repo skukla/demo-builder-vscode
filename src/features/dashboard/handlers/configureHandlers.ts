@@ -9,9 +9,9 @@
  * it depends on private notification/deployment methods. Same mixed pattern
  * as the Wizard (simple handlers in map, complex middleware inline).
  *
- * AI-related handlers (`verify-ai-setup`, `inspect-mcp`,
- * `regenerate-ai-files`, `openInClaude`) now live in `aiHandlers.ts` and are
- * routed by the standalone AI surface.
+ * AI-related handlers (`verify-ai-setup`, `regenerate-ai-files`,
+ * `openInClaude`) now live in `aiHandlers.ts` and are routed by the standalone
+ * AI surface.
  *
  * @module features/dashboard/handlers/configureHandlers
  */
@@ -20,8 +20,8 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { validateURL } from '@/core/validation';
-import { handleCreateWorkspaceCredential } from '@/features/authentication';
 import { handleDiscoverStoreStructure } from '@/features/eds';
+import type { CommerceStoreStructure } from '@/types/commerceStore';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 import { parseJSON } from '@/types/typeGuards';
 
@@ -32,9 +32,7 @@ import { parseJSON } from '@/types/typeGuards';
 /**
  * Handle cancel — dispose the panel
  */
-export async function handleCancelConfigure(
-    context: HandlerContext,
-): Promise<HandlerResponse> {
+export async function handleCancelConfigure(context: HandlerContext): Promise<HandlerResponse> {
     context.panel?.dispose();
     return { success: true };
 }
@@ -42,10 +40,15 @@ export async function handleCancelConfigure(
 /**
  * Handle get-components-data — read and return components.json
  */
-export async function handleGetComponentsData(
-    context: HandlerContext,
-): Promise<HandlerResponse> {
-    const componentsPath = path.join(context.context.extensionPath, 'src', 'features', 'components', 'config', 'components.json');
+export async function handleGetComponentsData(context: HandlerContext): Promise<HandlerResponse> {
+    const componentsPath = path.join(
+        context.context.extensionPath,
+        'src',
+        'features',
+        'components',
+        'config',
+        'components.json',
+    );
     const componentsContent = await fsPromises.readFile(componentsPath, 'utf-8');
     const componentsData = parseJSON<Record<string, unknown>>(componentsContent);
     if (!componentsData) {
@@ -71,11 +74,68 @@ export async function handleOpenExternal(
 /**
  * Handle open-eds-settings — open VS Code settings for DA.live
  */
-export async function handleOpenEdsSettings(
-    _context: HandlerContext,
-): Promise<HandlerResponse> {
+export async function handleOpenEdsSettings(_context: HandlerContext): Promise<HandlerResponse> {
     await vscode.commands.executeCommand('workbench.action.openSettings', 'demoBuilder.daLive');
     return { success: true };
+}
+
+/**
+ * Store discovery, plus: persist the hierarchy it just fetched onto the project.
+ *
+ * The structure is the only place a store CODE can be turned back into the NAME
+ * the user picked it by — `citisignal_store` → "CitiSignal Store". It was fetched
+ * and discarded on every discovery, so the Integrations flyout (a different
+ * webview, which never makes this call) could only ever show codes. Persisting it
+ * once makes naming an offline lookup on every surface, for free and forever.
+ *
+ * Wrapped rather than folded into the shared handler because that handler is also
+ * registered by the WIZARD (`ProjectCreationHandlerRegistry`), where there is no
+ * project yet — `getCurrentProject()` there would return whatever was last open
+ * and write another project's structure onto it. The wizard carries its structure
+ * through `buildProjectConfig` at creation instead. Configure is the only surface
+ * that is, by definition, configuring the current project.
+ *
+ * Best-effort: discovery has already succeeded and been sent to the webview by the
+ * time this runs, so a persistence failure must not turn a working picker into an
+ * error. It just means the flyout keeps showing codes.
+ */
+export async function handleDiscoverStoreStructureAndPersist(
+    context: HandlerContext,
+    payload?: Parameters<typeof handleDiscoverStoreStructure>[1],
+): Promise<HandlerResponse> {
+    let discovered: CommerceStoreStructure | undefined;
+
+    // The handler reports its result by SENDING it, not returning it, so the
+    // structure is intercepted on its way to the webview.
+    const response = await handleDiscoverStoreStructure(
+        {
+            ...context,
+            sendMessage: async (type: string, data?: unknown) => {
+                if (type === 'store-discovery-result') {
+                    const result = data as { success?: boolean; data?: CommerceStoreStructure };
+                    if (result?.success && result.data) discovered = result.data;
+                }
+                return context.sendMessage(type, data);
+            },
+        } as HandlerContext,
+        payload,
+    );
+
+    if (discovered) {
+        try {
+            const project = await context.stateManager.getCurrentProject();
+            if (project) {
+                project.commerceStoreStructure = discovered;
+                await context.stateManager.saveProject(project);
+            }
+        } catch (error) {
+            context.logger.warn(
+                `[Configure] Could not persist the store structure: ${(error as Error).message}`,
+            );
+        }
+    }
+
+    return response;
 }
 
 // ==========================================================
@@ -89,10 +149,9 @@ export async function handleOpenEdsSettings(
  * due to notification/deployment method dependencies).
  */
 export const configureHandlers = defineHandlers({
-    'cancel': handleCancelConfigure,
+    cancel: handleCancelConfigure,
     'get-components-data': handleGetComponentsData,
-    'openExternal': handleOpenExternal,
+    openExternal: handleOpenExternal,
     'open-eds-settings': handleOpenEdsSettings,
-    'discover-store-structure': handleDiscoverStoreStructure,
-    'create-workspace-credential': handleCreateWorkspaceCredential,
+    'discover-store-structure': handleDiscoverStoreStructureAndPersist,
 });

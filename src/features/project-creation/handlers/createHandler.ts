@@ -13,6 +13,7 @@ import { executeProjectCreation } from './executor';
 import { OVERALL_TIMEOUT_MS } from './shared';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateProjectNameSecurity as validateProjectName } from '@/core/validation';
@@ -27,7 +28,11 @@ import { toError } from '@/types/typeGuards';
  *
  * Extracts deep optional chaining into readable helper function.
  */
-function countSelectedComponents(components?: { frontend?: string; backend?: string; dependencies?: string[] }): number {
+function countSelectedComponents(components?: {
+    frontend?: string;
+    backend?: string;
+    dependencies?: string[];
+}): number {
     let count = 0;
     if (components?.frontend) count++;
     if (components?.backend) count++;
@@ -91,7 +96,7 @@ async function validateProjectConfig(
     // In edit mode, allow the original project name (same project being edited)
     const existingProjects = await context.stateManager.getAllProjects();
     const isEditMode = Boolean(config.editProjectPath);
-    const duplicateProject = existingProjects.find(p => {
+    const duplicateProject = existingProjects.find((p) => {
         if (p.name !== config.projectName) return false;
         // In edit mode, allow if it's the same project being edited
         if (isEditMode && p.path === config.editProjectPath) return false;
@@ -99,7 +104,9 @@ async function validateProjectConfig(
     });
 
     if (duplicateProject) {
-        context.logger.warn(`[Project Creation] Project "${config.projectName}" already exists at: ${duplicateProject.path}`);
+        context.logger.warn(
+            `[Project Creation] Project "${config.projectName}" already exists at: ${duplicateProject.path}`,
+        );
         return sendValidationFailure(
             context,
             `Project "${config.projectName}" already exists`,
@@ -110,6 +117,11 @@ async function validateProjectConfig(
     return undefined; // Validation passed
 }
 
+/** The Adobe org/project identity used to target the orphaned-mesh cleanup. */
+type CleanupAdobeRef =
+    | { organization?: string; projectId?: string; workspace?: string }
+    | undefined;
+
 /**
  * Cleanup partial project directory and orphaned mesh on failure.
  */
@@ -117,49 +129,85 @@ async function cleanupOnFailure(
     context: HandlerContext,
     projectPath: string,
     isEditMode: boolean,
+    adobeRef: CleanupAdobeRef,
 ): Promise<void> {
     try {
         if (isEditMode) {
-            context.logger.debug('[Project Edit] Edit failed - preserving existing project (not deleting)');
-            context.logger.info('[Project Edit] Edit operation failed. Your existing project has been preserved.');
+            context.logger.debug(
+                '[Project Edit] Edit failed - preserving existing project (not deleting)',
+            );
+            context.logger.info(
+                '[Project Edit] Edit operation failed. Your existing project has been preserved.',
+            );
         } else if (fs.existsSync(projectPath)) {
-            context.logger.debug(`[Project Creation] Cleaning up partial project at ${projectPath}`);
+            context.logger.debug(
+                `[Project Creation] Cleaning up partial project at ${projectPath}`,
+            );
             await fsPromises.rm(projectPath, { recursive: true, force: true });
             await context.stateManager.clearProject();
             context.logger.debug('[Project Creation] Cleanup complete');
         }
 
-        await cleanupOrphanedMesh(context);
+        await cleanupOrphanedMesh(context, adobeRef);
     } catch (cleanupError) {
-        context.logger.warn('[Project Creation] Failed to cleanup partial project', cleanupError as Error);
+        context.logger.warn(
+            '[Project Creation] Failed to cleanup partial project',
+            cleanupError as Error,
+        );
     }
 }
 
 /**
  * Cleanup API Mesh if it was created during this session and didn't exist before.
+ *
+ * The delete MUST target the org/project/workspace the mesh was created in — via
+ * per-invocation AIO_CONSOLE_* env (`withOrgContext`), NOT the user's stale
+ * ambient `aio` selection. Targeting the ambient selection looks in the wrong
+ * workspace ("No mesh found …") and strands the mesh as an orphan. The workspace
+ * is the exact one the deploy hit (`meshCreatedForWorkspace`); org/project come
+ * from the create config.
  */
-async function cleanupOrphanedMesh(context: HandlerContext): Promise<void> {
-    if (context.sharedState.meshCreatedForWorkspace && !context.sharedState.meshExistedBeforeSession) {
-        context.logger.debug(`[Project Creation] Cleaning up orphaned API Mesh for workspace ${context.sharedState.meshCreatedForWorkspace}`);
+async function cleanupOrphanedMesh(
+    context: HandlerContext,
+    adobeRef: CleanupAdobeRef,
+): Promise<void> {
+    const workspace = context.sharedState.meshCreatedForWorkspace;
+    if (workspace && !context.sharedState.meshExistedBeforeSession) {
+        context.logger.debug(
+            `[Project Creation] Cleaning up orphaned API Mesh for workspace ${workspace}`,
+        );
         try {
             const commandManager = ServiceLocator.getCommandExecutor();
-            const deleteResult = await commandManager.execute('aio api-mesh:delete --autoConfirmAction', {
-                timeout: TIMEOUTS.LONG,
-                configureTelemetry: false,
-                enhancePath: true,
-                useNodeVersion: getMeshNodeVersion(),
-            });
+            const target = buildOrgTargetFromProjectAdobe(
+                { ...adobeRef, workspace },
+                context.authManager?.getCachedOrganization(),
+            );
+            const deleteResult = await withOrgContext(target, () =>
+                commandManager.execute('aio api-mesh:delete --autoConfirmAction', {
+                    timeout: TIMEOUTS.LONG,
+                    configureTelemetry: false,
+                    enhancePath: true,
+                    useNodeVersion: getMeshNodeVersion(),
+                }),
+            );
 
             if (deleteResult.code === 0) {
                 context.logger.debug('[Project Creation] Successfully deleted orphaned mesh');
             } else {
-                context.logger.warn(`[Project Creation] Failed to delete orphaned mesh: ${deleteResult.stderr}`);
+                context.logger.warn(
+                    `[Project Creation] Failed to delete orphaned mesh: ${deleteResult.stderr}`,
+                );
             }
         } catch (meshCleanupError) {
-            context.logger.warn('[Project Creation] Error during mesh cleanup', meshCleanupError as Error);
+            context.logger.warn(
+                '[Project Creation] Error during mesh cleanup',
+                meshCleanupError as Error,
+            );
         }
-    } else if (context.sharedState.meshCreatedForWorkspace && context.sharedState.meshExistedBeforeSession) {
-        context.logger.debug('[Project Creation] Mesh existed before session - preserving it (not deleting on cancel/failure)');
+    } else if (workspace && context.sharedState.meshExistedBeforeSession) {
+        context.logger.debug(
+            '[Project Creation] Mesh existed before session - preserving it (not deleting on cancel/failure)',
+        );
     }
 }
 
@@ -199,7 +247,8 @@ async function reportCreationError(
     // Determine error type using typed errors
     const appError = toAppError(error);
     const errorMessage = appError.userMessage;
-    const isCancelled = appError.code === ErrorCode.CANCELLED ||
+    const isCancelled =
+        appError.code === ErrorCode.CANCELLED ||
         (appError.cause?.message?.includes('cancelled by user') ?? false);
     const isTimeoutError = isTimeout(appError);
 
@@ -263,8 +312,8 @@ export async function handleCreateProject(
             const demoBuilderPath = path.join(os.homedir(), '.demo-builder');
             vscode.window.showInformationMessage(
                 `Add "${demoBuilderPath}" to your Trusted Folders ` +
-                '(Cmd+Shift+P → "Workspaces: Manage Workspace Trust" → Add Folder). ' +
-                'All future projects will be trusted automatically, no more dialogs!',
+                    '(Cmd+Shift+P → "Workspaces: Manage Workspace Trust" → Add Folder). ' +
+                    'All future projects will be trusted automatically, no more dialogs!',
                 'Got it!',
             );
         }
@@ -279,8 +328,13 @@ export async function handleCreateProject(
 
     try {
         // Log summary at debug, full config at trace
-        const typedConfig = config as { projectName?: string; components?: { frontend?: string; backend?: string; dependencies?: string[] } };
-        context.logger.debug(`[Project Creation] Starting: ${typedConfig.projectName} (${countSelectedComponents(typedConfig.components)} components)`);
+        const typedConfig = config as {
+            projectName?: string;
+            components?: { frontend?: string; backend?: string; dependencies?: string[] };
+        };
+        context.logger.debug(
+            `[Project Creation] Starting: ${typedConfig.projectName} (${countSelectedComponents(typedConfig.components)} components)`,
+        );
         context.logger.trace('[Project Creation] Full config:', config);
 
         // Send initial status with progress
@@ -292,20 +346,16 @@ export async function handleCreateProject(
         });
 
         // Execute with timeout and cancellation support
-        await withTimeout(
-            executeProjectCreation(context, config),
-            {
-                timeoutMs: OVERALL_TIMEOUT_MS,
-                timeoutMessage:
-                    'Project creation timed out after 30 minutes. ' +
-                    'This may indicate a network issue or very large components. ' +
-                    'Please check your connection and try again.',
-                signal: context.sharedState.projectCreationAbortController.signal,
-            },
-        );
+        await withTimeout(executeProjectCreation(context, config), {
+            timeoutMs: OVERALL_TIMEOUT_MS,
+            timeoutMessage:
+                'Project creation timed out after 30 minutes. ' +
+                'This may indicate a network issue or very large components. ' +
+                'Please check your connection and try again.',
+            signal: context.sharedState.projectCreationAbortController.signal,
+        });
 
         return { success: true };
-
     } catch (error) {
         const elapsed = Date.now() - startTime;
         const elapsedMin = Math.floor(elapsed / 1000 / 60);
@@ -314,9 +364,11 @@ export async function handleCreateProject(
 
         context.logger.error(`[Project Creation] Failed after ${elapsedStr}`, error as Error);
 
-        // Cleanup partial project directory and orphaned mesh on failure
+        // Cleanup partial project directory and orphaned mesh on failure. The
+        // adobe ref lets the mesh cleanup target the workspace it was created in.
         const isEditMode = Boolean((config as { editProjectPath?: string }).editProjectPath);
-        await cleanupOnFailure(context, projectPath, isEditMode);
+        const adobeRef = (config as { adobe?: CleanupAdobeRef }).adobe;
+        await cleanupOnFailure(context, projectPath, isEditMode, adobeRef);
 
         // Report error to UI
         await reportCreationError(context, error, elapsedStr);

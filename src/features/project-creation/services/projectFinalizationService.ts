@@ -16,9 +16,12 @@ import { writeAgentsMd } from './aiContextWriter';
 import type { ComponentDefinitionEntry } from './componentInstallationOrchestrator';
 import { writeMcpConfigs } from './mcpConfigWriter';
 import { writeSkillFiles } from './skillsWriter';
-import { isMeshComponentId } from '@/core/constants';
+import { AI_CONTEXT_VERSION, isMeshComponentId } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { ProjectSetupContext, generateComponentConfigFiles } from '@/features/project-creation/helpers';
+import {
+    ProjectSetupContext,
+    generateComponentConfigFiles,
+} from '@/features/project-creation/helpers';
 import type { Project } from '@/types/base';
 import type { Stack } from '@/types/stacks';
 import { getComponentIds, getEntryCount } from '@/types/typeGuards';
@@ -36,9 +39,7 @@ export interface FinalizationContext {
 /**
  * Phase 4: Generate environment files for all non-mesh components
  */
-export async function generateEnvironmentFiles(
-    context: FinalizationContext,
-): Promise<void> {
+export async function generateEnvironmentFiles(context: FinalizationContext): Promise<void> {
     const { setupContext, componentDefinitions, progressTracker } = context;
     const { project, logger } = setupContext;
 
@@ -57,12 +58,7 @@ export async function generateEnvironmentFiles(
         // Generate all config files for this component
         // If component has explicit configFiles, generates those.
         // Otherwise defaults to .env (or .env.local for Next.js)
-        await generateComponentConfigFiles(
-            componentPath,
-            compId,
-            definition,
-            setupContext,
-        );
+        await generateComponentConfigFiles(componentPath, compId, definition, setupContext);
     }
 
     logger.debug('[Project Creation] Phase 4 complete: Environment configured');
@@ -74,15 +70,15 @@ export async function generateEnvironmentFiles(
  * Note: Manifest is written by StateManager.saveProject() via ProjectConfigWriter.
  * This ensures a single authoritative manifest writer.
  */
-export async function finalizeProject(
-    context: FinalizationContext,
-): Promise<void> {
+export async function finalizeProject(context: FinalizationContext): Promise<void> {
     const { setupContext, progressTracker, saveProject } = context;
     const { project, logger } = setupContext;
 
     progressTracker('Finalizing Project', 95, 'Saving project state...');
 
-    logger.debug(`[Project Creation] Saving project: ${project.name} (${getEntryCount(project.componentInstances)} components)`);
+    logger.debug(
+        `[Project Creation] Saving project: ${project.name} (${getEntryCount(project.componentInstances)} components)`,
+    );
 
     try {
         project.status = 'ready';
@@ -109,7 +105,10 @@ export async function finalizeProject(
         await saveProject();
         logger.debug('[Project Creation] Project state saved successfully');
     } catch (saveError) {
-        logger.error('[Project Creation] Failed to save project', saveError instanceof Error ? saveError : undefined);
+        logger.error(
+            '[Project Creation] Failed to save project',
+            saveError instanceof Error ? saveError : undefined,
+        );
         throw saveError;
     }
 
@@ -120,9 +119,7 @@ export async function finalizeProject(
 /**
  * Send completion message and set up auto-close timeout
  */
-export async function sendCompletionAndCleanup(
-    context: FinalizationContext,
-): Promise<void> {
+export async function sendCompletionAndCleanup(context: FinalizationContext): Promise<void> {
     const { projectPath, sendMessage, panel, setupContext } = context;
     const { logger } = setupContext;
 
@@ -135,12 +132,15 @@ export async function sendCompletionAndCleanup(
         });
         logger.debug('[Project Creation] Completion message sent');
     } catch (messageError) {
-        logger.error('[Project Creation] Failed to send completion message', messageError instanceof Error ? messageError : undefined);
+        logger.error(
+            '[Project Creation] Failed to send completion message',
+            messageError instanceof Error ? messageError : undefined,
+        );
     }
 
     // Auto-close the webview panel after timeout as a fallback
     if (panel) {
-        setTimeout(() => {
+        const autoClose = setTimeout(() => {
             try {
                 if (panel.visible) {
                     panel.dispose();
@@ -150,6 +150,12 @@ export async function sendCompletionAndCleanup(
                 // Panel was already disposed by user action - expected
             }
         }, TIMEOUTS.WEBVIEW_AUTO_CLOSE);
+        // A two-minute fallback must not be a reason for a process to stay alive.
+        // It still fires normally in the extension host, which has plenty of other
+        // live work; what it stops doing is holding a jest worker open long after
+        // the test that created it finished — six of these were the largest
+        // remaining source of "worker process has failed to exit gracefully".
+        (autoClose as unknown as { unref?: () => void }).unref?.();
     }
 
     logger.debug('[Project Creation] ===== PROJECT CREATION WORKFLOW COMPLETE =====');
@@ -177,9 +183,22 @@ export async function generateAIContextFiles(
 ): Promise<{ skills: string[] }> {
     const distPath = path.join(extensionPath, 'dist');
     let skills: string[] = [];
+
+    // Stamp the AI-context bundle version onto the project (single point shared by
+    // all callers — creation finalization and the dashboard Regenerate/heal). The
+    // caller persists the manifest; the dashboard's on-open freshness check reads
+    // this stamp to decide whether the project is stale.
+    project.aiContextVersion = AI_CONTEXT_VERSION;
+
     const steps: Array<{ label: string; run: () => Promise<void> }> = [
-        { label: 'Writing AGENTS.md', run: () => writeAgentsMd(projectPath, project, stacksConfig.stacks as Stack[]) },
-        { label: 'Writing MCP configuration', run: () => writeMcpConfigs(projectPath, project, distPath) },
+        {
+            label: 'Writing AGENTS.md',
+            run: () => writeAgentsMd(projectPath, project, stacksConfig.stacks as Stack[]),
+        },
+        {
+            label: 'Writing MCP configuration',
+            run: () => writeMcpConfigs(projectPath, project, distPath),
+        },
         {
             label: 'Writing skills',
             run: async () => {

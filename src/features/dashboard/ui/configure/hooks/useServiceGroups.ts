@@ -9,10 +9,43 @@ import { useMemo } from 'react';
 import type { ComponentsData, UniqueField, ServiceGroup } from '../configureTypes';
 import type { SelectedComponent } from './useSelectedComponents';
 import { toServiceGroupWithSortedFields, SERVICE_GROUP_DEFINITIONS } from '@/features/components/services/serviceGroupTransforms';
+import type { ComponentEnvVar } from '@/types/webview';
 
 interface UseServiceGroupsProps {
     selectedComponents: SelectedComponent[];
     componentsData: ComponentsData;
+}
+
+/**
+ * Record one component's declared env vars into the shared field map.
+ *
+ * A field declared by several components is stored ONCE and accumulates their ids, which
+ * is what lets an edit fan out to every component that needs the value. Required and
+ * optional vars are collected identically — the `required` flag rides on the env-var
+ * definition itself, so there is nothing for the caller to differentiate here.
+ *
+ * @param fieldMap - Accumulator, keyed by env-var name
+ * @param envVarKeys - The env-var names this component declares
+ * @param envVarDefs - All known env-var definitions
+ * @param componentId - The component declaring them
+ */
+function collectFields(
+    fieldMap: Map<string, UniqueField>,
+    envVarKeys: string[] | undefined,
+    envVarDefs: Record<string, ComponentEnvVar>,
+    componentId: string,
+): void {
+    for (const envVarKey of envVarKeys ?? []) {
+        const envVarDef = envVarDefs[envVarKey];
+        if (!envVarDef) continue;
+
+        const existing = fieldMap.get(envVarKey);
+        if (!existing) {
+            fieldMap.set(envVarKey, { ...envVarDef, key: envVarKey, componentIds: [componentId] });
+        } else if (!existing.componentIds.includes(componentId)) {
+            existing.componentIds.push(componentId);
+        }
+    }
 }
 
 /**
@@ -27,51 +60,35 @@ export function useServiceGroups({
         const envVarDefs = componentsData.envVars || {};
 
         selectedComponents.forEach(({ id, data }) => {
-            data.configuration?.requiredEnvVars?.forEach(envVarKey => {
-                const envVarDef = envVarDefs[envVarKey];
-                if (envVarDef) {
-                    if (!fieldMap.has(envVarKey)) {
-                        fieldMap.set(envVarKey, {
-                            ...envVarDef,
-                            key: envVarKey,
-                            componentIds: [id],
-                        });
-                    } else {
-                        const existing = fieldMap.get(envVarKey);
-                        if (existing && !existing.componentIds.includes(id)) {
-                            existing.componentIds.push(id);
-                        }
-                    }
-                }
-            });
-
-            data.configuration?.optionalEnvVars?.forEach(envVarKey => {
-                const envVarDef = envVarDefs[envVarKey];
-                if (envVarDef) {
-                    if (!fieldMap.has(envVarKey)) {
-                        fieldMap.set(envVarKey, {
-                            ...envVarDef,
-                            key: envVarKey,
-                            componentIds: [id],
-                        });
-                    } else {
-                        const existing = fieldMap.get(envVarKey);
-                        if (existing && !existing.componentIds.includes(id)) {
-                            existing.componentIds.push(id);
-                        }
-                    }
-                }
-            });
+            collectFields(fieldMap, data.configuration?.requiredEnvVars, envVarDefs, id);
+            collectFields(fieldMap, data.configuration?.optionalEnvVars, envVarDefs, id);
         });
 
-        // MESH_ENDPOINT is auto-populated from project.meshState.endpoint — it's never
-        // user-editable and is declared as an optional env var on the EDS/headless
-        // frontends. When the project has no mesh component, rendering the field
-        // creates a spurious "API Mesh" section with a single uneditable empty row.
-        const meshComponentIds = new Set((componentsData.mesh ?? []).map(m => m.id));
-        const hasMeshSelected = selectedComponents.some(c => meshComponentIds.has(c.id));
-        if (!hasMeshSelected) {
-            fieldMap.delete('MESH_ENDPOINT');
+        // MESH_ENDPOINT never renders. It is optional, auto-populated from the
+        // keyed mesh entry by the deploy, and display-locked to that value — so a
+        // mesh project got a whole rail tab holding one control nobody can use,
+        // and a non-mesh project got the same tab holding an empty row.
+        //
+        // The mesh's real controls are the Integrations grid, where it is the
+        // first peer card (`deriveMeshCard`). The wizard has always filtered this
+        // field out entirely (`useComponentConfig`); Configure now agrees.
+        //
+        // The `mesh` group stays in SERVICE_GROUP_DEFINITIONS — it simply never
+        // populates, and the empty-group filter below drops the tab.
+        fieldMap.delete('MESH_ENDPOINT');
+
+        // A DERIVED var is computed by the generator, never typed. Rendering one
+        // invites a value that `envFileGenerator` will overwrite — and in the
+        // Catalog tab it did worse: `ADOBE_CATALOG_SERVICE_ENDPOINT` is optional
+        // and blank and sorted ABOVE the required field it derives from, so the
+        // field a user reached for first was the computed one.
+        //
+        // Same treatment the App Builder field model already gives its derivedFrom
+        // bucket (appBuilderComponentFieldModel.ts) — dropped, not rendered.
+        for (const [key, field] of fieldMap) {
+            if ((field as { derivedFrom?: string[] }).derivedFrom?.length) {
+                fieldMap.delete(key);
+            }
         }
 
         const groups: Record<string, UniqueField[]> = {};
@@ -96,5 +113,5 @@ export function useServiceGroups({
             });
 
         return orderedGroups;
-    }, [selectedComponents, componentsData.envVars, componentsData.mesh]);
+    }, [selectedComponents, componentsData.envVars]);
 }

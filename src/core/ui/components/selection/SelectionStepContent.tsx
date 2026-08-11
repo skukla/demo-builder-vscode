@@ -7,7 +7,7 @@
  * - Empty state with message
  * - List view with search/filter (delegates to SearchableList)
  *
- * Used by AdobeProjectStep and AdobeWorkspaceStep to reduce duplication.
+ * Used by AdobeProjectPicker and AdobeWorkspacePicker to reduce duplication.
  */
 import {
     Flex,
@@ -15,12 +15,14 @@ import {
     Item,
     Text,
 } from '@adobe/react-spectrum';
+import Login from '@spectrum-icons/workflow/Login';
 import React from 'react';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SearchableList } from '@/core/ui/components/navigation/SearchableList';
+import { ErrorCode } from '@/types/errorCodes';
 
 /**
  * Props for a selectable item (must have id and display text)
@@ -76,6 +78,13 @@ export interface SelectionStepContentProps<T extends SelectableItem> {
     hasLoadedOnce: boolean;
     /** Error message if loading failed */
     error: string | null;
+    /** Typed failure code — ORG_MISMATCH swaps Try Again for the org recovery. */
+    errorCode?: ErrorCode | null;
+    /**
+     * Start a FORCED sign-in to land in a different IMS org. Supplied only where the
+     * host can perform it; without it an org mismatch falls back to Try Again.
+     */
+    onSwitchOrg?: () => void;
     /** Current search query */
     searchQuery: string;
     /** Callback to update search query */
@@ -122,6 +131,8 @@ export function SelectionStepContent<T extends SelectableItem>({
     searchQuery,
     onSearchChange,
     onLoad,
+    errorCode,
+    onSwitchOrg,
     onRefresh,
     selectedId,
     onSelect,
@@ -149,7 +160,7 @@ export function SelectionStepContent<T extends SelectableItem>({
                         size="L"
                         message={labels.loadingMessage}
                         subMessage={labels.loadingSubMessage}
-                        helperText="This could take up to 30 seconds"
+                        helperText="Adobe can be slow to respond — this may take a minute"
                     />
                 </CenteredFeedbackContainer>
             </>
@@ -158,6 +169,11 @@ export function SelectionStepContent<T extends SelectableItem>({
 
     // State 2: Error
     if (error && !isLoading) {
+        // An org mismatch is NOT retryable: the token reaches exactly one org, so
+        // re-running the same call fails identically. The canonical recovery is a
+        // FORCED sign-in ("Switch IMS Org") — see the adobe-org-context model. Try
+        // Again stays as the secondary, for the genuinely transient case.
+        const isOrgMismatch = errorCode === ErrorCode.ORG_MISMATCH && onSwitchOrg;
         return (
             <>
                 {header}
@@ -165,7 +181,19 @@ export function SelectionStepContent<T extends SelectableItem>({
                     variant="error"
                     title={labels.errorTitle}
                     message={error}
-                    actions={[{ label: 'Try Again', onPress: onLoad, variant: 'accent' }]}
+                    actions={
+                        isOrgMismatch
+                            ? [
+                                  {
+                                      label: 'Switch IMS Org',
+                                      icon: <Login size="S" />,
+                                      onPress: onSwitchOrg,
+                                      variant: 'accent' as const,
+                                  },
+                                  { label: 'Try Again', onPress: onLoad, variant: 'secondary' as const },
+                              ]
+                            : [{ label: 'Try Again', onPress: onLoad, variant: 'accent' as const }]
+                    }
                 />
             </>
         );

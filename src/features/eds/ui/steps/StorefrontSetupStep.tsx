@@ -39,14 +39,14 @@ import type { WizardState } from '@/types/webview';
  * Progress ranges for each setup phase
  */
 const PROGRESS_RANGES = {
-    'repository': { start: 0, end: 15 },
+    repository: { start: 0, end: 15 },
     'storefront-code': { start: 15, end: 35 },
     'code-sync': { start: 35, end: 42 },
     'site-config': { start: 42, end: 49 },
-    'content': { start: 49, end: 58 },
+    content: { start: 49, end: 58 },
     'block-library': { start: 58, end: 65 },
-    'publish': { start: 65, end: 95 },
-    'complete': 100,
+    publish: { start: 65, end: 95 },
+    complete: 100,
 } as const;
 
 /**
@@ -97,6 +97,15 @@ interface StorefrontSetupState {
     subMessage?: string;
     progress: number;
     error?: string;
+    /**
+     * Non-fatal reasons product detail pages will not work.
+     *
+     * The completed screen used to hardcode "Storefront Published" and render
+     * nothing from the completion payload — so a storefront that could not serve
+     * a single PDP looked identical to a healthy one. The extension had been
+     * sending the explanation since 2026-07-28; nothing displayed it.
+     */
+    warnings?: string[];
     githubAppData?: GitHubAppData;
     partialState: StorefrontSetupPartialState;
 }
@@ -112,8 +121,6 @@ interface StorefrontSetupStepProps {
     onNext?: () => void;
     setCanProceed: (canProceed: boolean) => void;
 }
-
-
 
 /**
  * Get helper text for loading display based on phase
@@ -144,7 +151,17 @@ function getHelperText(phase: StorefrontSetupPhase): string | undefined {
  * Check if a phase is actively processing
  */
 function isActivePhase(phase: StorefrontSetupPhase): boolean {
-    return ['idle', 'repository', 'storefront-code', 'code-sync', 'site-config', 'content', 'block-library', 'publish', 'cancelling'].includes(phase);
+    return [
+        'idle',
+        'repository',
+        'storefront-code',
+        'code-sync',
+        'site-config',
+        'content',
+        'block-library',
+        'publish',
+        'cancelling',
+    ].includes(phase);
 }
 
 /**
@@ -182,43 +199,48 @@ export function StorefrontSetupStep({
     /**
      * Handle progress updates from the extension
      */
-    const handleProgress = useCallback((data: {
-        phase: StorefrontSetupPhase;
-        message: string;
-        subMessage?: string;
-        progress: number;
-        repoUrl?: string;
-        repoOwner?: string;
-        repoName?: string;
-    }) => {
-        setSetupState(prev => {
-            // Update partial state based on phase transitions
-            const newPartialState = { ...prev.partialState, phase: data.phase };
+    const handleProgress = useCallback(
+        (data: {
+            phase: StorefrontSetupPhase;
+            message: string;
+            subMessage?: string;
+            progress: number;
+            repoUrl?: string;
+            repoOwner?: string;
+            repoName?: string;
+        }) => {
+            setSetupState((prev) => {
+                // Update partial state based on phase transitions
+                const newPartialState = { ...prev.partialState, phase: data.phase };
 
-            // Mark repo as created when moving past repository phase
-            if (data.phase !== 'idle' && data.phase !== 'repository' && data.repoUrl) {
-                newPartialState.repoCreated = true;
-                newPartialState.repoUrl = data.repoUrl;
-                newPartialState.repoOwner = data.repoOwner;
-                newPartialState.repoName = data.repoName;
-            }
+                // Mark repo as created when moving past repository phase
+                if (data.phase !== 'idle' && data.phase !== 'repository' && data.repoUrl) {
+                    newPartialState.repoCreated = true;
+                    newPartialState.repoUrl = data.repoUrl;
+                    newPartialState.repoOwner = data.repoOwner;
+                    newPartialState.repoName = data.repoName;
+                }
 
-            // Mark content as copied when completing content phase
-            if (data.phase === 'completed' ||
-                (prev.partialState.phase === 'content' && data.phase !== 'content')) {
-                newPartialState.contentCopied = true;
-            }
+                // Mark content as copied when completing content phase
+                if (
+                    data.phase === 'completed' ||
+                    (prev.partialState.phase === 'content' && data.phase !== 'content')
+                ) {
+                    newPartialState.contentCopied = true;
+                }
 
-            return {
-                ...prev,
-                phase: data.phase,
-                message: data.message,
-                subMessage: data.subMessage,
-                progress: data.progress,
-                partialState: newPartialState,
-            };
-        });
-    }, []);
+                return {
+                    ...prev,
+                    phase: data.phase,
+                    message: data.message,
+                    subMessage: data.subMessage,
+                    progress: data.progress,
+                    partialState: newPartialState,
+                };
+            });
+        },
+        [],
+    );
 
     // Ref to track latest edsConfig for callbacks (avoids stale closure)
     const edsConfigRef = useRef(state.edsConfig);
@@ -230,56 +252,56 @@ export function StorefrontSetupStep({
      * Handle completion notification from the extension
      * Updates both local state and wizard state to mark setup as complete
      */
-    const handleComplete = useCallback((data: {
-        message: string;
-        githubRepo?: string;
-    }) => {
-        // Update local setup state
-        setSetupState(prev => ({
-            ...prev,
-            phase: 'completed',
-            message: data.message || 'Storefront published successfully!',
-            progress: PROGRESS_RANGES.complete,
-            partialState: {
-                ...prev.partialState,
-                repoCreated: true,
-                contentCopied: true,
+    const handleComplete = useCallback(
+        (data: { message: string; githubRepo?: string; warnings?: string[] }) => {
+            // Update local setup state
+            setSetupState((prev) => ({
+                ...prev,
                 phase: 'completed',
-            },
-        }));
+                message: data.message || 'Storefront published successfully!',
+                warnings: data.warnings,
+                progress: PROGRESS_RANGES.complete,
+                partialState: {
+                    ...prev.partialState,
+                    repoCreated: true,
+                    contentCopied: true,
+                    phase: 'completed',
+                },
+            }));
 
-        // Update wizard state with repo URL
-        // Note: previewUrl/liveUrl are derived from githubRepo by typeGuards, not stored
-        updateState({
-            edsConfig: {
-                ...edsConfigRef.current,
-                repoUrl: data.githubRepo,
-                preflightComplete: true,
-            },
-        });
-    }, [updateState]);
+            // Update wizard state with repo URL
+            // Note: previewUrl/liveUrl are derived from githubRepo by typeGuards, not stored
+            updateState({
+                edsConfig: {
+                    ...edsConfigRef.current,
+                    repoUrl: data.githubRepo,
+                    preflightComplete: true,
+                },
+            });
+        },
+        [updateState],
+    );
 
     /**
      * Handle error notification from the extension
      */
-    const handleError = useCallback((data: {
-        message: string;
-        error: string;
-        phase?: StorefrontSetupPhase;
-    }) => {
-        setSetupState(prev => ({
-            ...prev,
-            phase: 'error',
-            message: data.message || 'An error occurred',
-            error: data.error,
-        }));
-    }, []);
+    const handleError = useCallback(
+        (data: { message: string; error: string; phase?: StorefrontSetupPhase }) => {
+            setSetupState((prev) => ({
+                ...prev,
+                phase: 'error',
+                message: data.message || 'An error occurred',
+                error: data.error,
+            }));
+        },
+        [],
+    );
 
     /**
      * Handle GitHub App installation required notification
      */
     const handleGitHubAppRequired = useCallback((data: GitHubAppData) => {
-        setSetupState(prev => ({
+        setSetupState((prev) => ({
             ...prev,
             phase: 'github-app',
             message: 'GitHub App installation required',
@@ -306,29 +328,46 @@ export function StorefrontSetupStep({
             edsConfig: state.edsConfig,
             componentConfigs: state.componentConfigs,
             backendComponentId: state.components?.backend,
-            dependencies: [...(state.components?.dependencies || []), ...(state.selectedOptionalDependencies || [])],
+            dependencies: [
+                ...new Set([
+                    ...(state.components?.dependencies || []),
+                    ...(state.selectedOptionalDependencies || []),
+                ]),
+            ],
             selectedAddons: state.selectedAddons,
             selectedBlockLibraries: state.selectedBlockLibraries,
             customBlockLibraries: state.customBlockLibraries,
             selectedPackage: state.selectedPackage,
             selectedStack: state.selectedStack,
         });
-    }, [state.projectName, state.edsConfig, state.componentConfigs, state.components?.backend, state.components?.dependencies, state.selectedOptionalDependencies, state.selectedAddons, state.selectedBlockLibraries, state.customBlockLibraries, state.selectedPackage, state.selectedStack]);
+    }, [
+        state.projectName,
+        state.edsConfig,
+        state.componentConfigs,
+        state.components?.backend,
+        state.components?.dependencies,
+        state.selectedOptionalDependencies,
+        state.selectedAddons,
+        state.selectedBlockLibraries,
+        state.customBlockLibraries,
+        state.selectedPackage,
+        state.selectedStack,
+    ]);
 
     /**
      * Handle GitHub App installation detected
      */
     const handleInstallDetected = useCallback(() => {
-        // Setup cannot continue from where it stopped — there is no resume, and this
-        // used to advance the wizard to 'code-sync' before discovering that, so the
-        // user watched it appear to continue and was then told to start over. Land on
-        // the state that is true, where Retry re-runs setup for real.
-        setSetupState(prev => ({
+        // Setup cannot continue from where it stopped — there is no resume, and
+        // this used to advance the wizard to 'code-sync' before discovering that,
+        // so the user watched it appear to continue and was then told to start
+        // over. Land on the state that is true, where Retry re-runs setup for real.
+        setSetupState((prev) => ({
             ...prev,
             phase: 'error',
             error:
-                'AEM Code Sync is now installed. Setup stopped before it could use it — '
-                + 'select Retry to run it again.',
+                'AEM Code Sync is now installed. Setup stopped before it could use it — ' +
+                'select Retry to run it again.',
             githubAppData: undefined,
         }));
     }, []);
@@ -345,7 +384,10 @@ export function StorefrontSetupStep({
         edsConfig: state.edsConfig,
         componentConfigs: state.componentConfigs,
         backendComponentId: state.components?.backend,
-        dependencies: [...(state.components?.dependencies || []), ...(state.selectedOptionalDependencies || [])],
+        dependencies: [
+            ...(state.components?.dependencies || []),
+            ...(state.selectedOptionalDependencies || []),
+        ],
         selectedAddons: state.selectedAddons,
         selectedBlockLibraries: state.selectedBlockLibraries,
         customBlockLibraries: state.customBlockLibraries,
@@ -392,6 +434,10 @@ export function StorefrontSetupStep({
         const unsubComplete = vscode.onMessage<{
             message: string;
             githubRepo?: string;
+            /** Must match what storefrontSetupHandlers actually sends: a declared
+             *  shape narrower than the wire still type-checks (bivariant params),
+             *  which is how a sent-but-never-rendered field went unnoticed. */
+            warnings?: string[];
         }>('storefront-setup-complete', handleComplete);
 
         // Subscribe to error notifications
@@ -474,14 +520,21 @@ export function StorefrontSetupStep({
                     {/* Error state - show error message with recovery options */}
                     {setupState.phase === 'error' && (
                         <CenteredFeedbackContainer>
-                            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
+                            <Flex
+                                direction="column"
+                                gap="size-200"
+                                alignItems="center"
+                                maxWidth="520px"
+                            >
                                 <AlertCircle size="L" UNSAFE_className="text-red-600" />
                                 <Flex direction="column" gap="size-100" alignItems="center">
                                     <Text UNSAFE_className="text-xl font-medium">
                                         Storefront Setup Failed
                                     </Text>
                                     <Text UNSAFE_className="text-sm text-gray-600 text-center">
-                                        {setupState.error || setupState.message || 'An error occurred during setup.'}
+                                        {setupState.error ||
+                                            setupState.message ||
+                                            'An error occurred during setup.'}
                                     </Text>
                                 </Flex>
                                 <Flex gap="size-150" marginTop="size-300">
@@ -499,12 +552,34 @@ export function StorefrontSetupStep({
                     {/* Success state - show completion message */}
                     {setupState.phase === 'completed' && (
                         <CenteredFeedbackContainer>
-                            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
-                                <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
+                            <Flex
+                                direction="column"
+                                gap="size-200"
+                                alignItems="center"
+                                maxWidth="520px"
+                            >
+                                {/* A storefront that cannot serve product pages is
+                                    not the same outcome as one that can, and must
+                                    not wear the same green checkmark. */}
+                                {setupState.warnings?.length ? (
+                                    <AlertCircle size="L" UNSAFE_className="text-orange-600" />
+                                ) : (
+                                    <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
+                                )}
                                 <Flex direction="column" gap="size-100" alignItems="center">
                                     <Text UNSAFE_className="text-xl font-medium">
-                                        Storefront Published
+                                        {setupState.warnings?.length
+                                            ? 'Storefront Published, with warnings'
+                                            : 'Storefront Published'}
                                     </Text>
+                                    {setupState.warnings?.map((warning) => (
+                                        <Text
+                                            key={warning}
+                                            UNSAFE_className="text-sm text-orange-700 text-center"
+                                        >
+                                            {warning}
+                                        </Text>
+                                    ))}
                                     <Text UNSAFE_className="text-sm text-gray-600">
                                         Click Continue to proceed with project creation.
                                     </Text>

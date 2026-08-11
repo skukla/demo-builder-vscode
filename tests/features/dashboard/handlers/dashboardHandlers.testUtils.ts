@@ -11,6 +11,7 @@ jest.mock('@/features/authentication');
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
+        getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
     },
 }));
 jest.mock('@/core/validation', () => ({
@@ -23,7 +24,14 @@ jest.mock('vscode', () => ({
     window: {
         activeColorTheme: { kind: 1 }, // Light theme
         showWarningMessage: jest.fn().mockResolvedValue('Cancel'), // Default: user cancels
+        // Slow per-integration ops (add/remove/deploy) run inside a progress
+        // notification — the mock must INVOKE the task or the handler's result
+        // never materializes and every one of them reads as a failure.
+        withProgress: jest.fn(async (_options: unknown, task: (p: unknown) => unknown) =>
+            task({ report: jest.fn() }),
+        ),
     },
+    ProgressLocation: { Notification: 15, Window: 10, SourceControl: 1 },
     ColorThemeKind: { Dark: 2, Light: 1 },
     commands: {
         executeCommand: jest.fn(),
@@ -108,6 +116,10 @@ export function setupMocks(projectOverrides?: Partial<Project>): TestMocks {
     ServiceLocator.getAuthenticationService.mockReturnValue({
         isAuthenticated: jest.fn().mockResolvedValue(true),
         getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 60 }),
+        getCachedOrganization: jest.fn().mockReturnValue(undefined),
+        // On-open org-context check uses the SDK-only read (never the CLI fallback).
+        // Default to [] → the check resolves to 'unknown' without a browser/stall.
+        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]),
     });
 
     const mockContext = {
@@ -115,6 +127,11 @@ export function setupMocks(projectOverrides?: Partial<Project>): TestMocks {
             webview: {
                 postMessage: jest.fn(),
             },
+        } as any,
+        // The VS Code ExtensionContext seam (secrets used by the appBuilderComponent runner deps).
+        context: {
+            extensionPath: '/ext',
+            secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn() },
         } as any,
         stateManager: {
             getCurrentProject: jest.fn().mockResolvedValue(mockProject),

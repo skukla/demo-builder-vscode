@@ -8,6 +8,11 @@
  */
 
 import { handleGetProjects } from '@/features/authentication/handlers/projectHandlers';
+import {
+    makeJwt,
+    TEST_OTHER_USER_ID as OTHER_USER_ID,
+    TEST_USER_ID as USER_ID,
+} from '../imsTestTokens';
 import { createMockContext, mockProjects, mockOrganization } from './projectHandlers.testUtils';
 
 // Mock dependencies
@@ -26,6 +31,10 @@ jest.mock('@/core/utils/promiseUtils', () => ({
     withTimeout: jest.fn((promise) => promise)
 }));
 
+/** The default harness has no token manager → every project stamps deletable:false. */
+const stampedFalse = (projects: Array<Record<string, unknown>>) =>
+    projects.map((p) => ({ ...p, deletable: false }));
+
 describe('projectHandlers - Fetch', () => {
     let mockContext: ReturnType<typeof createMockContext>;
 
@@ -42,8 +51,52 @@ describe('projectHandlers - Fetch', () => {
             const result = await handleGetProjects(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.data).toEqual(mockProjects);
-            expect(mockContext.sendMessage).toHaveBeenCalledWith('get-projects', mockProjects);
+            expect(result.data).toEqual(stampedFalse(mockProjects));
+            expect(mockContext.sendMessage).toHaveBeenCalledWith(
+                'get-projects', stampedFalse(mockProjects),
+            );
+        });
+
+        it('stamps deletable=true on projects the token user created', async () => {
+            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            mockContext.authManager.getProjects.mockResolvedValue([
+                { id: 'mine', name: 'Mine', title: 'Mine', who_created: USER_ID },
+                { id: 'theirs', name: 'Theirs', title: 'Theirs', who_created: OTHER_USER_ID },
+                { id: 'unknown', name: 'Unknown', title: 'Unknown' },
+            ]);
+            mockContext.authManager.getTokenManager = jest.fn().mockReturnValue({
+                inspectToken: jest.fn().mockResolvedValue({
+                    valid: true,
+                    expiresIn: 60,
+                    token: makeJwt({ user_id: USER_ID }),
+                }),
+            });
+
+            const result = await handleGetProjects(mockContext);
+
+            expect(result.success).toBe(true);
+            const stamped = result.data as Array<{ id: string; deletable?: boolean }>;
+            expect(stamped.map((p) => [p.id, p.deletable])).toEqual([
+                ['mine', true],
+                ['theirs', false],
+                ['unknown', false],
+            ]);
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('get-projects', stamped);
+        });
+
+        it('stamps deletable=false on ALL projects when the token is invalid', async () => {
+            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            mockContext.authManager.getProjects.mockResolvedValue([
+                { id: 'mine', name: 'Mine', title: 'Mine', who_created: USER_ID },
+            ]);
+            mockContext.authManager.getTokenManager = jest.fn().mockReturnValue({
+                inspectToken: jest.fn().mockResolvedValue({ valid: false, expiresIn: 0 }),
+            });
+
+            const result = await handleGetProjects(mockContext);
+
+            expect(result.success).toBe(true);
+            expect((result.data as Array<{ deletable?: boolean }>)[0].deletable).toBe(false);
         });
 
         it('should show loading status before fetching', async () => {
@@ -99,6 +152,19 @@ describe('projectHandlers - Fetch', () => {
                 'Failed to get projects:',
                 error
             );
+        });
+
+        it('stamps deletable=false on ALL projects when no token manager is available', async () => {
+            // The harness authManager exposes no getTokenManager — fail closed.
+            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            mockContext.authManager.getProjects.mockResolvedValue([
+                { id: 'mine', name: 'Mine', title: 'Mine', who_created: USER_ID },
+            ]);
+
+            const result = await handleGetProjects(mockContext);
+
+            expect(result.success).toBe(true);
+            expect((result.data as Array<{ deletable?: boolean }>)[0].deletable).toBe(false);
         });
 
         it('should handle payload with orgId', async () => {

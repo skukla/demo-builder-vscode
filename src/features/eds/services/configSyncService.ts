@@ -17,6 +17,7 @@ import { GitHubFileOperations } from './githubFileOperations';
 import { GitHubTokenService } from './githubTokenService';
 import { HelixService } from './helixService';
 import type { PhaseProgressCallback } from './types';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { Logger } from '@/types';
@@ -81,7 +82,15 @@ export interface ConfigSyncResult {
  * @returns Sync result with status for each operation
  */
 export async function syncConfigToRemote(params: ConfigSyncParams): Promise<ConfigSyncResult> {
-    const { componentPath, repoOwner, repoName, logger, secrets, authManager: _authManager, onProgress } = params;
+    const {
+        componentPath,
+        repoOwner,
+        repoName,
+        logger,
+        secrets,
+        authManager: _authManager,
+        onProgress,
+    } = params;
 
     const result: ConfigSyncResult = {
         success: false,
@@ -120,7 +129,9 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
             logger.debug(`[ConfigSync] Existing file SHA: ${existingFile?.sha || 'not found'}`);
 
             // Push config.json to GitHub
-            logger.debug(`[ConfigSync] Pushing config.json to GitHub (${repoOwner}/${repoName})...`);
+            logger.debug(
+                `[ConfigSync] Pushing config.json to GitHub (${repoOwner}/${repoName})...`,
+            );
             await githubFileOperations.createOrUpdateFile(
                 repoOwner,
                 repoName,
@@ -147,16 +158,9 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
 
             // HelixService needs GitHub token for admin API auth
             // Note: Code preview/publish only requires GitHub auth (no DA.live token)
-            const helixService = new HelixService(
-                logger,
-                githubTokenService,
-            );
+            const helixService = new HelixService(logger, githubTokenService);
 
-            await helixService.previewCode(
-                repoOwner,
-                repoName,
-                '/config.json',
-            );
+            await helixService.previewCode(repoOwner, repoName, '/config.json');
 
             result.cdnPublished = true;
             logger.info(`[ConfigSync] config.json published to Helix CDN`);
@@ -164,16 +168,14 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
             // Step 4: Verify CDN accessibility for config.json
             onProgress?.('Waiting for configuration to reach CDN edge...');
 
-            const verification = await verifyCdnResources(
-                repoOwner,
-                repoName,
-                logger,
-            );
+            const verification = await verifyCdnResources(repoOwner, repoName, logger);
 
             result.cdnVerified = verification.configVerified;
 
             if (!result.cdnVerified) {
-                logger.warn(`[ConfigSync] config.json published but CDN verification timed out - may need a few more seconds to propagate`);
+                logger.warn(
+                    `[ConfigSync] config.json published but CDN verification timed out - may need a few more seconds to propagate`,
+                );
             }
         } catch (error) {
             // CDN publish failure is not fatal - GitHub push succeeded
@@ -186,7 +188,6 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
         // Success if GitHub push succeeded (CDN publish is optional)
         result.success = result.githubPushed;
         return result;
-
     } catch (error) {
         const message = `Config sync failed: ${(error as Error).message}`;
         logger.error(`[ConfigSync] ${message}`);
@@ -240,24 +241,34 @@ export async function verifyConfigOnCdn(
                 if (json.public?.default?.['commerce-endpoint']) {
                     // After first success, wait a bit more for edge propagation
                     if (attempt < 3) {
-                        logger.debug(`[ConfigSync] CDN returned valid config, waiting for edge propagation...`);
-                        await new Promise(resolve => setTimeout(resolve, CDN_VERIFY_INTERVAL * 2));
+                        logger.debug(
+                            `[ConfigSync] CDN returned valid config, waiting for edge propagation...`,
+                        );
+                        await sleep(CDN_VERIFY_INTERVAL * 2);
                     }
-                    logger.info(`[ConfigSync] CDN verification successful (attempt ${attempt}/${CDN_VERIFY_ATTEMPTS})`);
+                    logger.info(
+                        `[ConfigSync] CDN verification successful (attempt ${attempt}/${CDN_VERIFY_ATTEMPTS})`,
+                    );
                     return true;
                 }
 
-                logger.debug(`[ConfigSync] CDN returned config but missing commerce-endpoint, retrying...`);
+                logger.debug(
+                    `[ConfigSync] CDN returned config but missing commerce-endpoint, retrying...`,
+                );
             } else {
-                logger.debug(`[ConfigSync] CDN returned ${response.status}, retrying (${attempt}/${CDN_VERIFY_ATTEMPTS})...`);
+                logger.debug(
+                    `[ConfigSync] CDN returned ${response.status}, retrying (${attempt}/${CDN_VERIFY_ATTEMPTS})...`,
+                );
             }
         } catch (error) {
-            logger.debug(`[ConfigSync] CDN verification attempt ${attempt}/${CDN_VERIFY_ATTEMPTS} failed: ${(error as Error).message}`);
+            logger.debug(
+                `[ConfigSync] CDN verification attempt ${attempt}/${CDN_VERIFY_ATTEMPTS} failed: ${(error as Error).message}`,
+            );
         }
 
         // Wait before next attempt (skip delay on last attempt)
         if (attempt < CDN_VERIFY_ATTEMPTS) {
-            await new Promise(resolve => setTimeout(resolve, CDN_VERIFY_INTERVAL));
+            await sleep(CDN_VERIFY_INTERVAL);
         }
     }
 

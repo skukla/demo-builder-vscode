@@ -5,14 +5,13 @@
  * Renders the main dashboard with project cards.
  */
 
-import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { ProjectActions } from './components/ProjectActionsMenu';
-import { RenameProjectDialog } from './components/RenameProjectDialog';
 import { ProjectsDashboard } from './ProjectsDashboard';
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { sleep } from '@/core/utils/sleep';
 import type { Project } from '@/types/base';
 
 // Import global styles
@@ -33,7 +32,6 @@ const ProjectsDashboardApp: React.FC = () => {
     const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
     const [initialViewMode, setInitialViewMode] = useState<'cards' | 'rows'>('cards');
     const [runningProjectPath, setRunningProjectPath] = useState<string | undefined>(undefined);
-    const [projectToRename, setProjectToRename] = useState<Project | null>(null);
     // Track whether initial fetch was triggered (prevent StrictMode double-fetch)
     const initialFetchTriggeredRef = useRef(false);
 
@@ -187,47 +185,56 @@ const ProjectsDashboardApp: React.FC = () => {
     }, []);
 
     // Handle delete project
-    const handleDeleteProject = useCallback(async (project: Project) => {
-        try {
-            const response = await webviewClient.request<{
-                success: boolean;
-                data?: { success: boolean; error?: string };
-            }>('deleteProject', {
-                projectPath: project.path,
-            });
+    const handleDeleteProject = useCallback(
+        async (project: Project) => {
+            try {
+                const response = await webviewClient.request<{
+                    success: boolean;
+                    data?: { success: boolean; error?: string };
+                }>('deleteProject', {
+                    projectPath: project.path,
+                });
 
-            // Refresh projects list if deletion was successful
-            if (response?.success && response.data?.success) {
-                fetchProjects(true);
+                // Refresh projects list if deletion was successful
+                if (response?.success && response.data?.success) {
+                    fetchProjects(true);
+                }
+            } catch (error) {
+                console.error('Failed to delete project:', error);
             }
-        } catch (error) {
-            console.error('Failed to delete project:', error);
-        }
-    }, [fetchProjects]);
+        },
+        [fetchProjects],
+    );
 
     // Handle start demo
-    const handleStartDemo = useCallback(async (project: Project) => {
-        try {
-            await webviewClient.request('startDemo', { projectPath: project.path });
-            // Allow project manifest to be written to disk before refreshing
-            await new Promise(resolve => setTimeout(resolve, PROJECT_STATE_PERSIST_DELAY));
-            fetchProjects(true);
-        } catch (error) {
-            console.error('Failed to start demo:', error);
-        }
-    }, [fetchProjects]);
+    const handleStartDemo = useCallback(
+        async (project: Project) => {
+            try {
+                await webviewClient.request('startDemo', { projectPath: project.path });
+                // Allow project manifest to be written to disk before refreshing
+                await sleep(PROJECT_STATE_PERSIST_DELAY);
+                fetchProjects(true);
+            } catch (error) {
+                console.error('Failed to start demo:', error);
+            }
+        },
+        [fetchProjects],
+    );
 
     // Handle stop demo
-    const handleStopDemo = useCallback(async (project: Project) => {
-        try {
-            await webviewClient.request('stopDemo', { projectPath: project.path });
-            // Allow project manifest to be written to disk before refreshing
-            await new Promise(resolve => setTimeout(resolve, PROJECT_STATE_PERSIST_DELAY));
-            fetchProjects(true);
-        } catch (error) {
-            console.error('Failed to stop demo:', error);
-        }
-    }, [fetchProjects]);
+    const handleStopDemo = useCallback(
+        async (project: Project) => {
+            try {
+                await webviewClient.request('stopDemo', { projectPath: project.path });
+                // Allow project manifest to be written to disk before refreshing
+                await sleep(PROJECT_STATE_PERSIST_DELAY);
+                fetchProjects(true);
+            } catch (error) {
+                console.error('Failed to stop demo:', error);
+            }
+        },
+        [fetchProjects],
+    );
 
     // Handle open browser
     const handleOpenBrowser = useCallback(async (project: Project) => {
@@ -262,40 +269,55 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
-    // Handle reset project (all project types)
-    const handleResetProject = useCallback(async (project: Project) => {
+    // Handle open Commerce Admin Panel (all project types)
+    const handleOpenAdminPanel = useCallback(async (project: Project) => {
         try {
-            const response = await webviewClient.request<{
-                success: boolean;
-                cancelled?: boolean;
-            }>('resetProject', {
+            await webviewClient.postMessage('openAdminPanel', {
                 projectPath: project.path,
             });
-
-            // Refresh projects list if reset was successful
-            if (response?.success) {
-                fetchProjects(true);
-            }
         } catch (error) {
-            console.error('Failed to reset project:', error);
+            console.error('Failed to open admin panel:', error);
         }
-    }, [fetchProjects]);
+    }, []);
 
-    // Handle republish content (EDS projects)
-    const handleRepublishContent = useCallback(async (project: Project) => {
+    // Handle reset project (all project types)
+    const handleResetProject = useCallback(
+        async (project: Project) => {
+            try {
+                const response = await webviewClient.request<{
+                    success: boolean;
+                    cancelled?: boolean;
+                }>('resetProject', {
+                    projectPath: project.path,
+                });
+
+                // Refresh projects list if reset was successful
+                if (response?.success) {
+                    fetchProjects(true);
+                }
+            } catch (error) {
+                console.error('Failed to reset project:', error);
+            }
+        },
+        [fetchProjects],
+    );
+
+    // Handle per-integration redeploy (one kebab item per redeployable keyed
+    // integration; the id targets that integration only — ADR-011 D3 Step 04).
+    // ONE route to the surface that owns integrations, replacing the
+    // per-integration redeploys that used to live in the project kebab. Reuses
+    // `selectProject` (path validation, load, set-current) and only changes which
+    // surface it opens — a second selection path would be a fork of that logic.
+    const handleOpenIntegrations = useCallback(async (project: Project) => {
         try {
-            const response = await webviewClient.request<{
-                success: boolean;
-            }>('republishContent', { projectPath: project.path });
-
-            // Refresh projects list if republish was successful
-            if (response?.success) {
-                fetchProjects(true);
-            }
+            await webviewClient.postMessage('selectProject', {
+                projectPath: project.path,
+                surface: 'integrations',
+            });
         } catch (error) {
-            console.error('Failed to republish content:', error);
+            console.error('Failed to open integrations:', error);
         }
-    }, [fetchProjects]);
+    }, []);
 
     // Handle edit project
     const handleEditProject = useCallback(async (project: Project) => {
@@ -309,50 +331,31 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
-    // Handle rename project - opens dialog
-    const handleRenameProject = useCallback((project: Project) => {
-        setProjectToRename(project);
-    }, []);
-
-    // Handle rename dialog confirmation
-    const handleRenameConfirm = useCallback(async (newName: string) => {
-        if (!projectToRename) return;
-
-        try {
-            const response = await webviewClient.request<{
-                success: boolean;
-                data?: { success: boolean; newName: string };
-            }>('renameProject', {
-                projectPath: projectToRename.path,
-                newName,
-            });
-
-            // Refresh projects list if rename was successful
-            if (response?.success && response.data?.success) {
-                fetchProjects(true);
+    // Inline rename commit (the card's InlineRenameField): post the rename,
+    // refresh the list on success, or hand the error back for inline display.
+    const handleRenameSubmit = useCallback(
+        async (project: Project, newName: string): Promise<string | null> => {
+            try {
+                const response = await webviewClient.request<{
+                    success: boolean;
+                    error?: string;
+                    data?: { success: boolean; newName: string };
+                }>('renameProject', {
+                    projectPath: project.path,
+                    newName,
+                });
+                if (response?.success && response.data?.success) {
+                    fetchProjects(true);
+                    return null;
+                }
+                return response?.error ?? 'Rename failed';
+            } catch (error) {
+                console.error('Failed to rename project:', error);
+                return error instanceof Error ? error.message : 'Rename failed';
             }
-        } catch (error) {
-            console.error('Failed to rename project:', error);
-        } finally {
-            setProjectToRename(null);
-        }
-    }, [projectToRename, fetchProjects]);
-
-    // Handle rename dialog close
-    const handleRenameClose = useCallback(() => {
-        setProjectToRename(null);
-    }, []);
-
-    // Handle copy project path
-    const handleCopyPath = useCallback(async (project: Project) => {
-        try {
-            await webviewClient.postMessage('copy-project-path', {
-                projectPath: project.path,
-            });
-        } catch (error) {
-            console.error('Failed to copy project path:', error);
-        }
-    }, []);
+        },
+        [fetchProjects],
+    );
 
     // Handle Open AI - dispatches to the `demoBuilder.openAi` command
     // via the dashboard handler bridge.
@@ -368,20 +371,26 @@ const ProjectsDashboardApp: React.FC = () => {
 
     // Toggle pinned on a project; the backend persists it to .demo-builder.json
     // and the next render picks up the new sort order.
-    const handlePinToggle = useCallback(async (project: Project) => {
-        try {
-            const response = await webviewClient.request<{ success: boolean }>('setProjectPinned', {
-                projectPath: project.path,
-                pinned: !project.pinned,
-            });
-            if (response?.success) {
-                // Re-fetch so the sort order + pin indicator update.
-                await fetchProjects(true);
+    const handlePinToggle = useCallback(
+        async (project: Project) => {
+            try {
+                const response = await webviewClient.request<{ success: boolean }>(
+                    'setProjectPinned',
+                    {
+                        projectPath: project.path,
+                        pinned: !project.pinned,
+                    },
+                );
+                if (response?.success) {
+                    // Re-fetch so the sort order + pin indicator update.
+                    await fetchProjects(true);
+                }
+            } catch (error) {
+                console.error('Failed to toggle project pinned state:', error);
             }
-        } catch (error) {
-            console.error('Failed to toggle project pinned state:', error);
-        }
-    }, [fetchProjects]);
+        },
+        [fetchProjects],
+    );
 
     // Handle view mode override - saves to backend for session persistence
     const handleViewModeOverride = useCallback((mode: 'cards' | 'rows') => {
@@ -391,58 +400,57 @@ const ProjectsDashboardApp: React.FC = () => {
     }, []);
 
     // Bundle all project action callbacks into a single object
-    const projectActions: ProjectActions = useMemo(() => ({
-        onStartDemo: handleStartDemo,
-        onStopDemo: handleStopDemo,
-        onOpenBrowser: handleOpenBrowser,
-        onOpenLiveSite: handleOpenLiveSite,
-        onOpenDaLive: handleOpenDaLive,
-        onResetProject: handleResetProject,
-        onRepublishContent: handleRepublishContent,
-        onEdit: handleEditProject,
-        onRename: handleRenameProject,
-        onCopyPath: handleCopyPath,
-        onExport: handleExportProject,
-        onOpenAi: handleOpenAiForProject,
-        onPinToggle: handlePinToggle,
-        onDelete: handleDeleteProject,
-    }), [
-        handleStartDemo, handleStopDemo, handleOpenBrowser, handleOpenLiveSite,
-        handleOpenDaLive, handleResetProject, handleRepublishContent,
-        handleEditProject, handleRenameProject, handleCopyPath, handleExportProject,
-        handleOpenAiForProject, handlePinToggle, handleDeleteProject,
-    ]);
+    const projectActions: ProjectActions = useMemo(
+        () => ({
+            onStartDemo: handleStartDemo,
+            onStopDemo: handleStopDemo,
+            onOpenBrowser: handleOpenBrowser,
+            onOpenLiveSite: handleOpenLiveSite,
+            onOpenDaLive: handleOpenDaLive,
+            onOpenAdminPanel: handleOpenAdminPanel,
+            onResetProject: handleResetProject,
+            onOpenIntegrations: handleOpenIntegrations,
+            onEdit: handleEditProject,
+            onRenameSubmit: handleRenameSubmit,
+            onExport: handleExportProject,
+            onOpenAi: handleOpenAiForProject,
+            onPinToggle: handlePinToggle,
+            onDelete: handleDeleteProject,
+        }),
+        [
+            handleStartDemo,
+            handleStopDemo,
+            handleOpenBrowser,
+            handleOpenLiveSite,
+            handleOpenDaLive,
+            handleOpenAdminPanel,
+            handleResetProject,
+            handleOpenIntegrations,
+            handleEditProject,
+            handleRenameSubmit,
+            handleExportProject,
+            handleOpenAiForProject,
+            handlePinToggle,
+            handleDeleteProject,
+        ],
+    );
 
     return (
-        <>
-            <ProjectsDashboard
-                projects={projects}
-                runningProjectPath={runningProjectPath}
-                onSelectProject={handleSelectProject}
-                onCreateProject={handleCreateProject}
-                onCopyFromExisting={handleCopyFromExisting}
-                onImportFromFile={handleImportFromFile}
-                actions={projectActions}
-                isLoading={isLoading}
-                isRefreshing={isRefreshing}
-                onRefresh={handleRefresh}
-                hasLoadedOnce={hasLoadedOnce}
-                initialViewMode={initialViewMode}
-                onViewModeOverride={handleViewModeOverride}
-            />
-
-            {/* Rename Project Dialog */}
-            <DialogContainer onDismiss={handleRenameClose}>
-                {projectToRename && (
-                    <RenameProjectDialog
-                        project={projectToRename}
-                        existingProjectNames={projects.map(p => p.name)}
-                        onRename={handleRenameConfirm}
-                        onClose={handleRenameClose}
-                    />
-                )}
-            </DialogContainer>
-        </>
+        <ProjectsDashboard
+            projects={projects}
+            runningProjectPath={runningProjectPath}
+            onSelectProject={handleSelectProject}
+            onCreateProject={handleCreateProject}
+            onCopyFromExisting={handleCopyFromExisting}
+            onImportFromFile={handleImportFromFile}
+            actions={projectActions}
+            isLoading={isLoading}
+            isRefreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            hasLoadedOnce={hasLoadedOnce}
+            initialViewMode={initialViewMode}
+            onViewModeOverride={handleViewModeOverride}
+        />
     );
 };
 

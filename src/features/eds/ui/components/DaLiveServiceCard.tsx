@@ -1,7 +1,7 @@
 /**
  * DaLiveServiceCard
  *
- * Presentational component for DA.live authentication in ConnectServicesStep.
+ * Presentational component for DA.live authentication, rendered by StorefrontStep.
  * Supports both card and checklist layout variants.
  *
  * @example
@@ -19,10 +19,14 @@
  * />
  */
 
-import { Flex, Text, ProgressCircle } from '@adobe/react-spectrum';
+import { Flex, Text, Picker, Item } from '@adobe/react-spectrum';
 import Alert from '@spectrum-icons/workflow/Alert';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Spinner } from '@/core/ui/components/ui';
+
+/** Stable empty-array reference for the availableOrgs default (re-render guard). */
+const EMPTY_ORGS: readonly string[] = [];
 
 /** Props for DaLiveServiceCard component */
 export interface DaLiveServiceCardProps {
@@ -54,8 +58,37 @@ export interface DaLiveServiceCardProps {
     onOpenBookmarkletSetup?: () => void;
     /** Show compact view (minimal details when another card is active) */
     compact?: boolean;
-    /** Default org name from config setting (for pre-filling) */
-    defaultOrg?: string;
+    /** GitHub username (from OAuth) — shown as the "Personal account" option */
+    githubUser?: string;
+    /** GitHub orgs the user is a member of — shown as additional picker options */
+    availableOrgs?: readonly string[];
+}
+
+/** Authenticated view: a compact "Connected" pill, or the verified org with a Change action. */
+function renderAuthenticatedView(
+    compact: boolean,
+    verifiedOrg: string | undefined,
+    onReset: () => void,
+): React.ReactElement {
+    if (compact) {
+        return (
+            <Flex alignItems="center" gap="size-100">
+                <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
+                <Text UNSAFE_className="status-text">Connected</Text>
+            </Flex>
+        );
+    }
+    return (
+        <Flex alignItems="center" justifyContent="space-between">
+            <Flex alignItems="center" gap="size-100">
+                <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
+                <Text UNSAFE_className="status-text">{verifiedOrg || 'Connected'}</Text>
+            </Flex>
+            <button className="service-action-link" onClick={onReset}>
+                Change
+            </button>
+        </Flex>
+    );
 }
 
 /**
@@ -79,63 +112,86 @@ export function DaLiveServiceCard({
     onOpenDaLive,
     onOpenBookmarkletSetup,
     compact = false,
-    defaultOrg,
+    githubUser,
+    availableOrgs = EMPTY_ORGS,
 }: DaLiveServiceCardProps): React.ReactElement {
-    const [orgValue, setOrgValue] = useState(defaultOrg || '');
+    // Picker options: personal account always first, then orgs alphabetically.
+    // The picker's `key` is the namespace slug — that's what gets passed to
+    // onSubmit, used for repo creation and DA.live writes.
+    const namespaceOptions = useMemo(() => {
+        const options: { key: string; label: string }[] = [];
+        if (githubUser) {
+            options.push({ key: githubUser, label: `${githubUser} (Personal account)` });
+        }
+        const sortedOrgs = [...availableOrgs].sort((a, b) => a.localeCompare(b));
+        for (const org of sortedOrgs) {
+            options.push({ key: org, label: org });
+        }
+        return options;
+    }, [githubUser, availableOrgs]);
+
+    // Default selection is always the personal GitHub account (the namespace
+    // should always be linked to the GitHub user). Falls back to the first
+    // option defensively for the edge case where githubUser is undefined.
+    const [selectedNamespace, setSelectedNamespace] = useState<string>(
+        githubUser || namespaceOptions[0]?.key || '',
+    );
+
+    // githubUser arrives async — OAuth typically completes while this card is
+    // already mounted (you connect GitHub on the same Accounts step). Once it
+    // lands and the current selection isn't a valid option (i.e. it was empty
+    // at mount), default to the personal account. An explicit user pick is
+    // always a valid option, so this never clobbers it.
+    useEffect(() => {
+        if (githubUser && !namespaceOptions.some((o) => o.key === selectedNamespace)) {
+            setSelectedNamespace(githubUser);
+        }
+    }, [githubUser, namespaceOptions, selectedNamespace]);
     const [tokenValue, setTokenValue] = useState('');
 
-    // Sync defaultOrg prop into local state when it arrives async and field is empty
-    useEffect(() => {
-        if (defaultOrg && !orgValue) {
-            setOrgValue(defaultOrg);
-        }
-    }, [defaultOrg]); // eslint-disable-line react-hooks/exhaustive-deps
-
     const isLoading = isChecking || (isAuthenticating && !showInput);
-    const canSubmit = orgValue.trim() !== '' && tokenValue.trim() !== '';
+    const canSubmit = selectedNamespace.trim() !== '' && tokenValue.trim() !== '';
 
     const handleSubmit = () => {
         if (canSubmit) {
-            onSubmit(orgValue.trim(), tokenValue.trim());
+            onSubmit(selectedNamespace.trim(), tokenValue.trim());
             setTokenValue('');
         }
     };
 
     const handleCancel = () => {
-        setOrgValue('');
         setTokenValue('');
         onCancelInput();
     };
 
     return (
-        <div
-            className="service-card"
-            data-connected={isAuthenticated ? 'true' : 'false'}
-        >
+        <div className="service-card" data-connected={isAuthenticated ? 'true' : 'false'}>
             <div className="service-card-header">
                 <div className="service-icon dalive-icon">DA</div>
                 <div className="service-card-title">DA.live</div>
             </div>
-            <div className="service-card-description">
-                Content authoring and management
-            </div>
+            <div className="service-card-description">Content authoring and management</div>
             <div className="service-card-status">
                 {isLoading ? (
                     <Flex alignItems="center" gap="size-100">
-                        <ProgressCircle size="S" isIndeterminate aria-label="Checking" />
+                        <Spinner size="S" aria-label="Checking" />
                         <Text UNSAFE_className="status-text">
                             {isAuthenticating ? 'Verifying...' : 'Checking...'}
                         </Text>
                     </Flex>
                 ) : showInput ? (
                     <div className="dalive-input-form">
-                        <input
-                            type="text"
-                            placeholder="Organization"
-                            value={orgValue}
-                            onChange={(e) => setOrgValue(e.target.value)}
-                            className="service-input"
-                        />
+                        <Picker
+                            label="GitHub namespace for this demo"
+                            selectedKey={selectedNamespace}
+                            onSelectionChange={(key) => setSelectedNamespace(String(key))}
+                            items={namespaceOptions}
+                            width="100%"
+                            isDisabled={namespaceOptions.length === 0}
+                            UNSAFE_className="dalive-namespace-picker"
+                        >
+                            {(item) => <Item key={item.key}>{item.label}</Item>}
+                        </Picker>
                         <input
                             type="password"
                             placeholder="Token"
@@ -143,9 +199,7 @@ export function DaLiveServiceCard({
                             onChange={(e) => setTokenValue(e.target.value)}
                             className="service-input"
                         />
-                        {error && (
-                            <Text UNSAFE_className="status-text-error">{error}</Text>
-                        )}
+                        {error && <Text UNSAFE_className="status-text-error">{error}</Text>}
                         <Flex justifyContent="space-between" alignItems="center">
                             <Flex gap="size-100">
                                 <button
@@ -155,10 +209,7 @@ export function DaLiveServiceCard({
                                 >
                                     Verify
                                 </button>
-                                <button
-                                    className="service-action-link"
-                                    onClick={handleCancel}
-                                >
+                                <button className="service-action-link" onClick={handleCancel}>
                                     Cancel
                                 </button>
                             </Flex>
@@ -185,24 +236,7 @@ export function DaLiveServiceCard({
                         </Flex>
                     </div>
                 ) : isAuthenticated ? (
-                    compact ? (
-                        <Flex alignItems="center" gap="size-100">
-                            <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
-                            <Text UNSAFE_className="status-text">Connected</Text>
-                        </Flex>
-                    ) : (
-                        <Flex alignItems="center" justifyContent="space-between">
-                            <Flex alignItems="center" gap="size-100">
-                                <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
-                                <Text UNSAFE_className="status-text">
-                                    {verifiedOrg || 'Connected'}
-                                </Text>
-                            </Flex>
-                            <button className="service-action-link" onClick={onReset}>
-                                Change
-                            </button>
-                        </Flex>
-                    )
+                    renderAuthenticatedView(compact, verifiedOrg, onReset)
                 ) : error ? (
                     <Flex direction="column" gap="size-100">
                         <Flex alignItems="center" gap="size-100">

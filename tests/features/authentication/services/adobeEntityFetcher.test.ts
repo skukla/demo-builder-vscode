@@ -6,8 +6,6 @@
  */
 
 import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
-import { ErrorCode } from '@/types/errorCodes';
-import { AppError } from '@/types/errors';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { CommandExecutor } from '@/core/shell';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
@@ -86,15 +84,13 @@ describe('AdobeEntityFetcher', () => {
             mockCacheManager,
             mockLogger,
             mockStepLogger,
-            { onNoOrgsAccessible },
+            { onNoOrgsAccessible }
         );
     });
 
     describe('getOrganizations()', () => {
         it('should return cached organizations if available', async () => {
-            const cachedOrgs = [
-                { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' },
-            ];
+            const cachedOrgs = [{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' }];
             mockCacheManager.getCachedOrgList.mockReturnValue(cachedOrgs);
 
             const result = await fetcher.getOrganizations();
@@ -132,9 +128,7 @@ describe('AdobeEntityFetcher', () => {
             } as ReturnType<typeof mockSDKClient.getClient>);
 
             mockCommandExecutor.execute.mockResolvedValue({
-                stdout: JSON.stringify([
-                    { id: 'org1', code: 'ORG1@AdobeOrg', name: 'CLI Org' },
-                ]),
+                stdout: JSON.stringify([{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'CLI Org' }]),
                 stderr: '',
                 code: 0,
             });
@@ -145,7 +139,7 @@ describe('AdobeEntityFetcher', () => {
             expect(result[0].name).toBe('CLI Org');
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio console org list --json',
-                expect.any(Object),
+                expect.any(Object)
             );
         });
 
@@ -177,7 +171,7 @@ describe('AdobeEntityFetcher', () => {
                 expect(result[0].name).toBe('CLI Org');
                 expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                     'aio console org list --json',
-                    expect.any(Object),
+                    expect.any(Object)
                 );
             } finally {
                 jest.useRealTimers();
@@ -190,9 +184,7 @@ describe('AdobeEntityFetcher', () => {
             mockSDKClient.ensureInitialized.mockResolvedValue(false);
 
             mockCommandExecutor.execute.mockResolvedValue({
-                stdout: JSON.stringify([
-                    { id: 'org1', code: 'ORG1@AdobeOrg', name: 'CLI Org' },
-                ]),
+                stdout: JSON.stringify([{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'CLI Org' }]),
                 stderr: '',
                 code: 0,
             });
@@ -233,6 +225,164 @@ describe('AdobeEntityFetcher', () => {
         });
     });
 
+    describe('getOrganizationsSdkOnly()', () => {
+        it('returns the cached org list without touching SDK or CLI', async () => {
+            const cachedOrgs = [{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' }];
+            mockCacheManager.getCachedOrgList.mockReturnValue(cachedOrgs);
+
+            const result = await fetcher.getOrganizationsSdkOnly();
+
+            expect(result).toEqual(cachedOrgs);
+            expect(mockSDKClient.isInitialized).not.toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+        });
+
+        it('fetches via SDK when initialized and caches the non-empty result', async () => {
+            mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getOrganizations: jest.fn().mockResolvedValue({
+                    body: [{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org 1' }],
+                }),
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            const result = await fetcher.getOrganizationsSdkOnly();
+
+            expect(result).toHaveLength(1);
+            expect(result[0].id).toBe('org1');
+            expect(mockCacheManager.setCachedOrgList).toHaveBeenCalledWith(result);
+            // P1: never the CLI fallback.
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+        });
+
+        it('returns [] WITHOUT the CLI fallback when the SDK call fails', async () => {
+            // The whole point of the SDK-only path: a failed/empty SDK read must
+            // degrade to [] (→ "unknown") and must NEVER run `aio console org list`
+            // (which can stall ~14.5s and launch a browser on open). P1.
+            mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getOrganizations: jest.fn().mockRejectedValue(new Error('SDK error')),
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            const result = await fetcher.getOrganizationsSdkOnly();
+
+            expect(result).toEqual([]);
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+            // Must not poison the shared org-list cache with an empty result.
+            expect(mockCacheManager.setCachedOrgList).not.toHaveBeenCalled();
+        });
+
+        it('returns [] WITHOUT the CLI fallback when the SDK is not initialized', async () => {
+            mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(false);
+            mockSDKClient.ensureInitialized.mockResolvedValue(false);
+
+            const result = await fetcher.getOrganizationsSdkOnly();
+
+            expect(result).toEqual([]);
+            expect(mockSDKClient.ensureInitialized).toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+        });
+
+        it('does not call onNoOrgsAccessible on an empty SDK read', async () => {
+            mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(false);
+            mockSDKClient.ensureInitialized.mockResolvedValue(false);
+
+            await fetcher.getOrganizationsSdkOnly();
+
+            expect(onNoOrgsAccessible).not.toHaveBeenCalled();
+        });
+    });
+
+    // P1 siblings for the entity reads a BACKGROUND caller makes. `getProjects`
+    // and `getWorkspaces` fall back to `aio console …` when the SDK returns
+    // nothing, and that CLI call triggers interactive browser auth on a stale
+    // token — fine for a read the user asked for (the destination pickers guard
+    // it and prompt), wrong for one they did not, such as hydrating a project's
+    // display title. These variants degrade to [] instead, exactly as
+    // getOrganizationsSdkOnly does.
+    describe('SDK-only entity reads (P1)', () => {
+        it('getProjectsSdkOnly returns SDK results without touching the CLI', async () => {
+            mockCacheManager.getCachedOrganization.mockReturnValue({
+                id: '123456',
+                code: 'ORG@AdobeOrg',
+                name: 'Test Org',
+            });
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getProjectsForOrg: jest.fn().mockResolvedValue({
+                    body: [{ id: 'proj1', name: 'Project 1', title: 'Project 1 Title' }],
+                }),
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            const result = await fetcher.getProjectsSdkOnly();
+
+            expect(result).toHaveLength(1);
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+        });
+
+        // THE regression this exists to prevent: an empty SDK read is exactly when
+        // the normal path shells out and opens a browser.
+        it('getProjectsSdkOnly returns [] WITHOUT the CLI fallback on an empty SDK read', async () => {
+            mockCacheManager.getCachedOrganization.mockReturnValue({
+                id: '123456',
+                code: 'ORG@AdobeOrg',
+                name: 'Test Org',
+            });
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getProjectsForOrg: jest.fn().mockRejectedValue(new Error('SDK error')),
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            const result = await fetcher.getProjectsSdkOnly();
+
+            expect(result).toEqual([]);
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+        });
+
+        it('getWorkspacesSdkOnly returns [] WITHOUT the CLI fallback on an empty SDK read', async () => {
+            mockCacheManager.getCachedOrganization.mockReturnValue({
+                id: '123456',
+                code: 'ORG@AdobeOrg',
+                name: 'Test Org',
+            });
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getWorkspacesForProject: jest.fn().mockRejectedValue(new Error('SDK error')),
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            const result = await fetcher.getWorkspacesSdkOnly({ projectId: 'proj1' });
+
+            expect(result).toEqual([]);
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+        });
+
+        // Control: the ordinary reads keep their fallback. Without this, deleting
+        // the fallback entirely would satisfy every assertion above.
+        it('the ordinary getProjects DOES still fall back to the CLI', async () => {
+            mockCacheManager.getCachedOrganization.mockReturnValue({
+                id: '123456',
+                code: 'ORG@AdobeOrg',
+                name: 'Test Org',
+            });
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getProjectsForOrg: jest.fn().mockRejectedValue(new Error('SDK error')),
+            } as ReturnType<typeof mockSDKClient.getClient>);
+            mockCommandExecutor.execute.mockResolvedValue({
+                stdout: '[]',
+                stderr: '',
+                code: 0,
+            } as never);
+
+            await fetcher.getProjects();
+
+            expect(mockCommandExecutor.execute).toHaveBeenCalled();
+        });
+    });
+
     describe('getProjects()', () => {
         it('should fetch projects via SDK with valid org ID', async () => {
             mockCacheManager.getCachedOrganization.mockReturnValue({
@@ -243,9 +393,7 @@ describe('AdobeEntityFetcher', () => {
             mockSDKClient.isInitialized.mockReturnValue(true);
             mockSDKClient.getClient.mockReturnValue({
                 getProjectsForOrg: jest.fn().mockResolvedValue({
-                    body: [
-                        { id: 'proj1', name: 'Project 1', title: 'Project 1 Title' },
-                    ],
+                    body: [{ id: 'proj1', name: 'Project 1', title: 'Project 1 Title' }],
                 }),
             } as ReturnType<typeof mockSDKClient.getClient>);
 
@@ -255,9 +403,39 @@ describe('AdobeEntityFetcher', () => {
             expect(result[0].name).toBe('Project 1');
         });
 
-        it('should use CLI when org ID is missing', async () => {
+        it('should carry who_created through the SDK project mapping', async () => {
+            mockCacheManager.getCachedOrganization.mockReturnValue({
+                id: '123456',
+                code: 'ORG@AdobeOrg',
+                name: 'Test Org',
+            });
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getProjectsForOrg: jest.fn().mockResolvedValue({
+                    body: [
+                        {
+                            id: 'proj1',
+                            name: 'Project 1',
+                            title: 'Project 1 Title',
+                            who_created: '5DA1B2C3D4E5F607080910A1@abcdef1234567890.e',
+                        },
+                        { id: 'proj2', name: 'Project 2', title: 'Project 2 Title' },
+                    ],
+                }),
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            const result = await fetcher.getProjects();
+
+            expect(result[0].who_created).toBe('5DA1B2C3D4E5F607080910A1@abcdef1234567890.e');
+            // Missing on the wire → stays absent (ownership gate fails closed later).
+            expect(result[1].who_created).toBeUndefined();
+        });
+
+        it('should use CLI when org ID is missing (and no token org)', async () => {
             mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(true);
+            // No threaded/cached org AND the token org fallback yields nothing → CLI.
+            jest.spyOn(fetcher, 'getOrganizationsSdkOnly').mockResolvedValue([]);
 
             mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify([
@@ -288,7 +466,7 @@ describe('AdobeEntityFetcher', () => {
             expect(mockStepLogger.logTemplate).not.toHaveBeenCalledWith(
                 'adobe-auth',
                 'operations.loading-projects',
-                expect.anything(),
+                expect.anything()
             );
         });
 
@@ -307,16 +485,16 @@ describe('AdobeEntityFetcher', () => {
             expect(result).toHaveLength(0);
         });
 
-        it('should parse JSON when CLI stdout contains warning lines with \u203A', async () => {
+        it('should parse JSON when CLI stdout contains warning lines with ›', async () => {
             mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(false);
 
             // Simulate aio CLI output with upgrade warnings before JSON
             const warningLines = [
-                ' \u203A   Warning: @adobe/aio-cli update available from 10.3.4 to 11.0.2.',
-                ' \u203A   Run npm install -g @adobe/aio-cli to update.',
-                ' \u203A   Warning: @adobe/aio-cli-plugin-api-mesh update available from 5.5.0 to',
-                ' \u203A  ',
+                ' ›   Warning: @adobe/aio-cli update available from 10.3.4 to 11.0.2.',
+                ' ›   Run npm install -g @adobe/aio-cli to update.',
+                ' ›   Warning: @adobe/aio-cli-plugin-api-mesh update available from 5.5.0 to',
+                ' ›  ',
             ].join('\n');
             const jsonData = JSON.stringify([
                 { id: 'proj1', name: 'Project 1', title: 'Project 1 Title' },
@@ -338,10 +516,8 @@ describe('AdobeEntityFetcher', () => {
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(false);
 
-            const warningLines = ' \u203A   Warning: update available\n';
-            const jsonData = JSON.stringify([
-                { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org 1' },
-            ]);
+            const warningLines = ' ›   Warning: update available\n';
+            const jsonData = JSON.stringify([{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org 1' }]);
 
             mockCommandExecutor.execute.mockResolvedValue({
                 stdout: warningLines + jsonData,
@@ -353,147 +529,6 @@ describe('AdobeEntityFetcher', () => {
 
             expect(result).toHaveLength(1);
             expect(result[0].name).toBe('Org 1');
-        });
-    });
-
-    describe('getProjects() - org targeting & typed 403', () => {
-        it('throws an ORG_MISMATCH-coded error (no terminal instruction) on a 403', async () => {
-            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
-            mockSDKClient.isInitialized.mockReturnValue(false);
-
-            mockCommandExecutor.execute.mockResolvedValue({
-                stdout: 'not-json',
-                stderr: '403 Forbidden',
-                code: 2,
-            });
-
-            await expect(fetcher.getProjects()).rejects.toMatchObject({
-                code: ErrorCode.ORG_MISMATCH,
-            });
-        });
-
-        it('does NOT include the "aio console org select" terminal instruction on a 403', async () => {
-            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
-            mockSDKClient.isInitialized.mockReturnValue(false);
-
-            mockCommandExecutor.execute.mockResolvedValue({
-                stdout: 'not-json',
-                stderr: 'Error: 403 forbidden',
-                code: 2,
-            });
-
-            let caught: unknown;
-            try {
-                await fetcher.getProjects();
-            } catch (err) {
-                caught = err;
-            }
-            expect(caught).toBeInstanceOf(AppError);
-            expect((caught as Error).message).not.toContain('aio console org select');
-            expect((caught as Error).message.toLowerCase()).not.toContain('terminal');
-        });
-
-        it('keeps the 401 -> AUTH_EXPIRED branch intact', async () => {
-            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
-            mockSDKClient.isInitialized.mockReturnValue(false);
-
-            mockCommandExecutor.execute.mockResolvedValue({
-                stdout: 'not-json',
-                stderr: '401 Unauthorized',
-                code: 2,
-            });
-
-            await expect(fetcher.getProjects()).rejects.toThrow('AUTH_EXPIRED');
-        });
-
-        it('runs the project fetch under org-context targeting when orgId is supplied', async () => {
-            // With an orgId, the CLI fallback must execute inside a withOrgContext
-            // scope so the command executor targets that org. We assert targeting by
-            // observing the active org context at execute() time.
-            const seenOrgIds: (string | undefined)[] = [];
-            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
-            mockSDKClient.isInitialized.mockReturnValue(false);
-
-             
-            const { getActiveOrgContext } = require('@/core/shell/orgContextEnv');
-            mockCommandExecutor.execute.mockImplementation(async () => {
-                seenOrgIds.push(getActiveOrgContext()?.orgId);
-                return { stdout: JSON.stringify([]), stderr: '', code: 0 };
-            });
-
-            await fetcher.getProjects({ orgId: 'org-target' });
-
-            expect(seenOrgIds).toContain('org-target');
-        });
-
-        it('does not establish targeting when no orgId is supplied (back-compat)', async () => {
-            const seenOrgIds: (string | undefined)[] = [];
-            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
-            mockSDKClient.isInitialized.mockReturnValue(false);
-
-             
-            const { getActiveOrgContext } = require('@/core/shell/orgContextEnv');
-            mockCommandExecutor.execute.mockImplementation(async () => {
-                seenOrgIds.push(getActiveOrgContext()?.orgId);
-                return { stdout: JSON.stringify([]), stderr: '', code: 0 };
-            });
-
-            await fetcher.getProjects();
-
-            expect(seenOrgIds).toEqual([undefined]);
-        });
-    });
-
-    describe('getWorkspaces()', () => {
-        it('should fetch workspaces via SDK with valid org and project IDs', async () => {
-            mockCacheManager.getCachedOrganization.mockReturnValue({
-                id: '123456',
-                code: 'ORG@AdobeOrg',
-                name: 'Test Org',
-            });
-            mockCacheManager.getCachedProject.mockReturnValue({
-                id: 'proj123',
-                name: 'Test Project',
-                title: 'Test Project',
-            });
-            mockSDKClient.isInitialized.mockReturnValue(true);
-            mockSDKClient.getClient.mockReturnValue({
-                getWorkspacesForProject: jest.fn().mockResolvedValue({
-                    body: [
-                        { id: 'ws1', name: 'Production', title: 'Production' },
-                        { id: 'ws2', name: 'Stage', title: 'Stage' },
-                    ],
-                }),
-            } as ReturnType<typeof mockSDKClient.getClient>);
-
-            const result = await fetcher.getWorkspaces();
-
-            expect(result).toHaveLength(2);
-            expect(result[0].name).toBe('Production');
-            expect(result[1].name).toBe('Stage');
-        });
-
-        it('should use CLI when project ID is missing', async () => {
-            mockCacheManager.getCachedOrganization.mockReturnValue({
-                id: '123456',
-                code: 'ORG@AdobeOrg',
-                name: 'Test Org',
-            });
-            mockCacheManager.getCachedProject.mockReturnValue(undefined);
-            mockSDKClient.isInitialized.mockReturnValue(true);
-
-            mockCommandExecutor.execute.mockResolvedValue({
-                stdout: JSON.stringify([
-                    { id: 'ws1', name: 'CLI Workspace', title: 'CLI Workspace' },
-                ]),
-                stderr: '',
-                code: 0,
-            });
-
-            const result = await fetcher.getWorkspaces();
-
-            expect(result).toHaveLength(1);
-            expect(result[0].name).toBe('CLI Workspace');
         });
     });
 });

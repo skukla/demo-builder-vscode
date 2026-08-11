@@ -18,6 +18,7 @@
 
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
+import { asText } from './mcpToolResult';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import {
@@ -27,11 +28,6 @@ import {
 import type { Project } from '@/types';
 import type { HandlerContext } from '@/types/handlers';
 import { isEdsProject } from '@/types/typeGuards';
-
-/** Wrap a JSON-serializable value as an MCP text result. */
-function asText(value: unknown): { content: Array<{ type: 'text'; text: string }> } {
-    return { content: [{ type: 'text' as const, text: JSON.stringify(value) }] };
-}
 
 /** Pull the GitHub repo + DA.live target from an EDS project's storefront metadata. */
 function edsTargets(
@@ -98,6 +94,7 @@ export function registerStorefrontTools(
                 // targets the selected org via env (no global mutation).
                 const result = await runWithAdobeTarget(() =>
                     republishStorefrontConfig({
+                        persist: (p) => ctx.stateManager.saveProject(p),
                         project,
                         secrets: ctx.context.secrets,
                         logger: ctx.logger,
@@ -165,6 +162,7 @@ export function registerStorefrontTools(
                 const result = await runWithAdobeTarget(() =>
                     republishStorefrontContent({
                         project,
+                        persist: (p) => ctx.stateManager.saveProject(p),
                         repoOwner: targets.repoOwner,
                         repoName: targets.repoName,
                         daLiveOrg: targets.daLiveOrg,

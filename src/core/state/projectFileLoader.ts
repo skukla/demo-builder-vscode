@@ -8,6 +8,9 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { migrateLegacyToAppBuilderComponents } from './appBuilderComponentMigration';
+import { migrateApiPicks } from './componentApiPicks';
+import { reconcileComponentSelections } from './componentSelectionReconcile';
 import type { Project, ComponentInstance } from '@/types';
 import type { AiPrompt } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
@@ -46,8 +49,13 @@ export interface ProjectManifest {
     componentInstances?: Project['componentInstances'];
     componentSelections?: Project['componentSelections'];
     componentConfigs?: Project['componentConfigs'];
+    commerceStoreStructure?: Project['commerceStoreStructure'];
     componentVersions?: Project['componentVersions'];
     meshState?: Project['meshState'];
+    appState?: Project['appState'];
+    appBuilderComponents?: Project['appBuilderComponents'];
+    additionalConsoleApis?: string[];
+    componentApiPicks?: Record<string, string[]>;
     edsStorefrontState?: Project['edsStorefrontState'];
     edsStorefrontStatusSummary?: Project['edsStorefrontStatusSummary'];
     selectedPackage?: string;
@@ -56,6 +64,7 @@ export interface ProjectManifest {
     selectedBlockLibraries?: string[];
     customBlockLibraries?: CustomBlockLibrary[];
     aiPrompts?: AiPrompt[];
+    aiContextVersion?: number;
     pinned?: boolean;
 }
 
@@ -108,8 +117,10 @@ export class ProjectFileLoader {
                 componentInstances,
                 componentSelections: manifest.componentSelections,
                 componentConfigs: manifest.componentConfigs,
+                commerceStoreStructure: manifest.commerceStoreStructure,
                 componentVersions,
                 meshState: manifest.meshState,
+                appState: manifest.appState,
                 edsStorefrontState: manifest.edsStorefrontState,
                 edsStorefrontStatusSummary: manifest.edsStorefrontStatusSummary,
                 selectedPackage: normalizePackageId(manifest.selectedPackage),
@@ -118,8 +129,35 @@ export class ProjectFileLoader {
                 selectedBlockLibraries: manifest.selectedBlockLibraries,
                 customBlockLibraries: manifest.customBlockLibraries,
                 aiPrompts: manifest.aiPrompts,
+                // Absent on legacy manifests (pre-§E) — loads as undefined.
+                // LEGACY-READ-ONLY once componentApiPicks exists: migrateApiPicks
+                // below moves it under the unattributed key.
+                additionalConsoleApis: manifest.additionalConsoleApis,
+                componentApiPicks: manifest.componentApiPicks,
+                aiContextVersion: manifest.aiContextVersion,
                 pinned: manifest.pinned,
             };
+
+            // Keyed appBuilderComponents (ADR-011 D3 Step 01): prefer the persisted
+            // map — it is the durable model, written by ProjectConfigWriter. The
+            // read-side migration of legacy meshState/appState is the FALLBACK for
+            // old manifests that carry no keyed map (never dropped — projects of
+            // arbitrary age must keep loading).
+            project.appBuilderComponents =
+                manifest.appBuilderComponents ?? migrateLegacyToAppBuilderComponents(manifest);
+
+            // Selections vs reality: the dashboard add path records the keyed
+            // entry and the component instance but never wrote the selection
+            // lists, so a mesh or integration added there is invisible to
+            // Configure's rail and — worse — dropped by project reset, which
+            // rebuilds its component list from those lists. Additive only.
+            reconcileComponentSelections(project);
+
+            // Per-integration API attribution (step 01): a pre-attribution manifest
+            // carries only the flat `additionalConsoleApis`; move it under the
+            // unattributed key so every reader can go through resolveDesiredApis.
+            // Read-side only — the on-disk manifest is untouched until next write.
+            project.componentApiPicks = migrateApiPicks(project).componentApiPicks;
 
             // Detect if demo is actually running
             this.detectDemoStatus(project, terminalProvider);
@@ -127,15 +165,22 @@ export class ProjectFileLoader {
             return project;
         } catch (error) {
             // Check if this is an expected "not found" error (e.g., project was deleted)
-            const isNotFound = error instanceof Error &&
-                (error.message.includes('ENOENT') || (error as NodeJS.ErrnoException).code === 'ENOENT');
+            const isNotFound =
+                error instanceof Error &&
+                (error.message.includes('ENOENT') ||
+                    (error as NodeJS.ErrnoException).code === 'ENOENT');
 
             if (isNotFound) {
                 // Project directory doesn't exist - expected after deletion, log at debug
-                this.logger.debug(`[ProjectFileLoader] Project not found at ${projectPath} (deleted or moved)`);
+                this.logger.debug(
+                    `[ProjectFileLoader] Project not found at ${projectPath} (deleted or moved)`,
+                );
             } else {
                 // Unexpected error - log at error level
-                this.logger.error(`Failed to load project from ${projectPath}`, error instanceof Error ? error : undefined);
+                this.logger.error(
+                    `Failed to load project from ${projectPath}`,
+                    error instanceof Error ? error : undefined,
+                );
             }
             return null;
         }
@@ -193,7 +238,10 @@ export class ProjectFileLoader {
 
         // For each discovered component not in manifest, ensure it has a path
         for (const componentId of Object.keys(discoveredComponents)) {
-            if (mergedComponentInstances[componentId] && !mergedComponentInstances[componentId].path) {
+            if (
+                mergedComponentInstances[componentId] &&
+                !mergedComponentInstances[componentId].path
+            ) {
                 mergedComponentInstances[componentId].path = discoveredComponents[componentId].path;
             }
         }
@@ -204,14 +252,17 @@ export class ProjectFileLoader {
         for (const componentId of Object.keys(discoveredComponents)) {
             // Check if the merged componentInstance has version data (from recent installation)
             const instanceVersion = mergedComponentInstances[componentId]?.version;
-            
+
             if (!mergedComponentVersions[componentId]) {
                 // Component exists on disk but has no version tracking in project file
                 mergedComponentVersions[componentId] = {
                     version: instanceVersion || 'unknown',
                     lastUpdated: new Date().toISOString(),
                 };
-            } else if (instanceVersion && instanceVersion !== mergedComponentVersions[componentId].version) {
+            } else if (
+                instanceVersion &&
+                instanceVersion !== mergedComponentVersions[componentId].version
+            ) {
                 // Component version was updated (e.g., during project edit) - prefer the fresh instance version
                 mergedComponentVersions[componentId] = {
                     version: instanceVersion,
@@ -239,7 +290,7 @@ export class ProjectFileLoader {
             try {
                 const projectTerminalName = `${project.name} - Frontend`;
                 const terminals = terminalProvider();
-                const hasProjectTerminal = terminals.some(t => t.name === projectTerminalName);
+                const hasProjectTerminal = terminals.some((t) => t.name === projectTerminalName);
 
                 if (hasProjectTerminal) {
                     // This project's demo is running, update status
@@ -251,7 +302,10 @@ export class ProjectFileLoader {
                     frontendComponent.status = 'ready';
                 }
             } catch (error) {
-                this.logger.error('Error detecting demo status', error instanceof Error ? error : undefined);
+                this.logger.error(
+                    'Error detecting demo status',
+                    error instanceof Error ? error : undefined,
+                );
             }
         }
     }

@@ -143,6 +143,52 @@ describe('helixApiClient', () => {
             expect((previewCall[1] as RequestInit).method).toBe('DELETE');
         });
 
+        // DELETE takes a DIFFERENT credential from publish, and this is the one
+        // Helix behaviour the project has pinned as definitive (ADR-002): the
+        // Admin API refuses `DELETE /live` while the source still exists in
+        // fstab.yaml, and the tested matrix was GitHub token -> 403, API key ->
+        // 403, DA.live IMS Bearer -> 204. Only the Bearer bypasses it.
+        //
+        // REGRESSION (found 2026-08-04 by a parallel-implementation audit): this
+        // client reused `buildHeaders` — the PUBLISH credential — for DELETE, so
+        // it sent x-auth-token + x-content-source-authorization and NO
+        // Authorization header, while its docstring claimed it "Mirrors
+        // helixService.deleteResource semantics". Semantics, yes; credentials,
+        // no. The 403 is swallowed as a non-fatal 'partial', so the failure never
+        // surfaced.
+        it('sends the DA.live Bearer as Authorization — the only credential that bypasses the 403', async () => {
+            await unpublishPage('myorg', 'mysite', '/p', 'main', TOKENS);
+
+            for (const call of mockFetch.mock.calls) {
+                const headers = (call[1] as RequestInit).headers as Record<string, string>;
+                expect(headers.Authorization).toBe('Bearer dalive-ims-xyz');
+            }
+        });
+
+        // The publish credential must not ride along: the matrix says the GitHub
+        // token 403s, and sending both leaves it ambiguous which one Helix honours.
+        it('does not send the publish credential on a DELETE', async () => {
+            await unpublishPage('myorg', 'mysite', '/p', 'main', TOKENS);
+
+            for (const call of mockFetch.mock.calls) {
+                const headers = (call[1] as RequestInit).headers as Record<string, string>;
+                expect(headers['x-auth-token']).toBeUndefined();
+            }
+        });
+
+        // Control: PUBLISH keeps its own credential. Without this, deleting the
+        // publish headers outright would satisfy both assertions above.
+        it('PUBLISH still uses x-auth-token, not Authorization', async () => {
+            await publishPage('myorg', 'mysite', '/p', 'main', TOKENS);
+
+            const headers = (mockFetch.mock.calls[0][1] as RequestInit).headers as Record<
+                string,
+                string
+            >;
+            expect(headers['x-auth-token']).toBe('gh-token-abc');
+            expect(headers.Authorization).toBeUndefined();
+        });
+
         it('treats 404 (already absent) as success on both partitions', async () => {
             mockFetch.mockResolvedValue({ ok: false, status: 404, statusText: 'Not Found' });
 

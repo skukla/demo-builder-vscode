@@ -135,6 +135,16 @@ export const TIMEOUTS = {
      *  with no false bailouts, while capping worst case at ~10s + CLI instead of ~60s. */
     SDK_ENTITY_FETCH: 10000,
 
+    /** Per-call deadline for the ORG SERVICES catalog (`getServicesForOrg`).
+     *  Deliberately far above SDK_ENTITY_FETCH: that budget is sized for the small
+     *  entity reads ("healthy fetches return in ~0.5–2.5s"), while this pulls the
+     *  org's entire entitled-services catalog (~90 rows) and was observed
+     *  exceeding 10s on a real org. Bounding it at 10s turned a slow SUCCESS into
+     *  a fast failure — worse for the user than the unbounded call it replaced.
+     *  Generous enough that a slow-but-working endpoint still lands, while still
+     *  capping a genuine hang (the picker surfaces failures with a Retry). */
+    ORG_SERVICES_FETCH: 60000,
+
     /** Initial wait before first mesh verification poll (20 seconds) */
     MESH_VERIFY_INITIAL_WAIT: 20000,
 
@@ -264,6 +274,20 @@ export const TIMEOUTS = {
     /** Slow command warning threshold (3 seconds) */
     SLOW_COMMAND_THRESHOLD: 3000,
 
+    /**
+     * Slow-command threshold for `aio` (12 seconds).
+     *
+     * The aio CLI has a floor no caller can avoid: `aio --version` — no network,
+     * no work — costs ~1.7s of startup (measured darwin 2026-08-08; `node
+     * --version` is 52ms). Real commands run 1.9-2.3s warm and ~3.9s cold. The
+     * generic 3s bar therefore sits INSIDE aio's normal range, and warned about
+     * healthy operations in the user-facing Logs channel.
+     *
+     * 12s is ~3x the observed cold worst case: comfortably quiet for aio being
+     * itself, still loud for an aio command that has actually wedged.
+     */
+    SLOW_COMMAND_THRESHOLD_AIO: 12000,
+
     /** Short operation estimated duration (500ms) */
     PROGRESS_ESTIMATED_DEFAULT_SHORT: 500,
 
@@ -284,6 +308,18 @@ export const TIMEOUTS = {
 
     /** Mesh deployment total timeout (3 minutes) */
     MESH_DEPLOY_TOTAL: 180000,
+
+    /** Adobe Console project teardown request window (15 minutes).
+     *  The `delete-adobe-project` webview request spans the ENTIRE flow, so the
+     *  budget must cover:
+     *  - user think-time on the native confirm modal (minutes; user-paced),
+     *  - worst-case subscribe-on-403 recovery: 2 × LONG = 6 min (the spike saw
+     *    the subscribe call hang >2 min once before succeeding on retry),
+     *  - propagation retries: 2s + 5s + 10s = 17s, potentially per workspace,
+     *  - per-entity registration/provider deletes + the project delete itself.
+     *  VERY_LONG (5 min) was observed too tight: the webview showed a timeout
+     *  error while the teardown kept running extension-side. */
+    PROJECT_TEARDOWN: 900_000,
 } as const;
 
 /**
@@ -307,4 +343,29 @@ export const CACHE_TTL = {
 
     /** Long-lived cache: rarely changing data (1 hour) */
     LONG: 3600000,
+
+    /**
+     * Org entitled-services catalog (`getServicesForOrg`) — 30 minutes.
+     * The catalog is identical for every workspace in an org and changes rarely.
+     * The Add Integration modal prefetches (warms) this cache on open, so a longer
+     * TTL keeps the picker's later fetch fast across a whole add session.
+     */
+    ORG_SERVICES: 30 * 60 * 1000,
 } as const;
+
+/**
+ * How long a command may take before it is worth telling anyone about.
+ *
+ * One definition, because "is this slow?" is a DECISION and three call sites
+ * holding their own copy is how they drift apart. `aio` gets its own budget:
+ * it carries a startup floor no caller can avoid, so the generic bar flags
+ * healthy work (see SLOW_COMMAND_THRESHOLD_AIO).
+ *
+ * @param command - the command line that ran
+ * @returns the threshold in ms
+ */
+export function slowCommandThreshold(command: string): number {
+    return command.trimStart().startsWith('aio ')
+        ? TIMEOUTS.SLOW_COMMAND_THRESHOLD_AIO
+        : TIMEOUTS.SLOW_COMMAND_THRESHOLD;
+}

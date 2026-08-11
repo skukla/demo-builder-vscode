@@ -116,7 +116,7 @@ After both steps ship:
 
 1. A first-time DA.live SC (e.g., Maddie or any future colleague who hasn't created a project before) creates a CitiSignal demo through the wizard. The wizard completes normally.
 2. They open `https://da.live` and navigate to their site's content. The Library sidebar shows both **Blocks** and **AEM Assets** entries — matching what Steve sees today after reset.
-3. Their `https://admin.da.live/config/<their-namespace>/` endpoint, after the create, returns 200 with a JSON body that includes a row `{ key: "aem.repositoryId", value: "author-p158081-e1683323.adobeaemcloud.com" }`.
+3. Their `https://admin.da.live/config/<their-namespace>/` endpoint, after the create, returns 200 with a JSON body that includes a row `{ key: "aem.repositoryId", value: "<aem-author-host>" }`.
 4. Steve's existing reset and republish flows still work (no regression).
 5. An SC who attempts to create against an org they don't own gets `[EDS Config] Failed to apply settings: Cannot read or write to org config (401): verify DA.live ownership of "<org>".` in the debug log, and their storefront still creates (binding write is non-fatal, per current behavior).
 

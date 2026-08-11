@@ -56,7 +56,7 @@ describe('useDashboardActions', () => {
 
     const renderActionsHook = (
         isOpeningBrowser = false,
-        extra: { edsLiveUrl?: string; edsDaLiveUrl?: string } = {},
+        extra: { edsLiveUrl?: string; edsDaLiveUrl?: string } = {}
     ) => {
         return renderHook(() =>
             useDashboardActions({
@@ -81,7 +81,7 @@ describe('useDashboardActions', () => {
             expect(result.current.handleDeleteProject).toBeDefined();
             expect(result.current.handleNavigateBack).toBeDefined();
             expect(result.current.handleReAuthenticate).toBeDefined();
-            expect(result.current.handleCopyPath).toBeDefined();
+            expect(result.current.handleEditProject).toBeDefined();
             expect(result.current.handleExportProject).toBeDefined();
             expect(result.current.handleRepublishContent).toBeDefined();
             expect(result.current.handleResetProject).toBeDefined();
@@ -241,14 +241,24 @@ describe('useDashboardActions', () => {
             expect(mockRequest).toHaveBeenCalledWith('switchOrg');
         });
 
-        it('should send copyPath message', () => {
+        it('should send openAdminPanel message', () => {
             const { result } = renderActionsHook();
 
             act(() => {
-                result.current.handleCopyPath();
+                result.current.handleOpenAdminPanel();
             });
 
-            expect(mockPostMessage).toHaveBeenCalledWith('copyPath');
+            expect(mockPostMessage).toHaveBeenCalledWith('openAdminPanel');
+        });
+
+        it('should send editProject message', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleEditProject();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('editProject');
         });
 
         it('should send exportProject message', () => {
@@ -290,7 +300,7 @@ describe('useDashboardActions', () => {
             const { result } = renderActionsHook();
 
             expect(
-                (result.current as Record<string, unknown>).handleSetAuthoringExperience,
+                (result.current as Record<string, unknown>).handleSetAuthoringExperience
             ).toBeUndefined();
         });
     });

@@ -14,7 +14,10 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { ComponentInstallOptions, ComponentInstallResult } from '@/features/components/services/types';
+import type {
+    ComponentInstallOptions,
+    ComponentInstallResult,
+} from '@/features/components/services/types';
 import { ComponentInstance, TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
 import { DEFAULT_SHELL } from '@/types/shell';
@@ -48,7 +51,9 @@ export class ComponentInstallation {
         // Clean up any existing component directory (from previous failed attempts)
         try {
             await fs.access(componentPath);
-            this.logger.debug(`[ComponentManager] Removing existing component directory: ${componentPath}`);
+            this.logger.debug(
+                `[ComponentManager] Removing existing component directory: ${componentPath}`,
+            );
             await fs.rm(componentPath, { recursive: true, force: true });
         } catch {
             // Directory doesn't exist, no cleanup needed
@@ -60,7 +65,9 @@ export class ComponentInstallation {
         componentInstance.branch = options.branch || componentDef.source.branch || 'main';
         componentInstance.path = componentPath;
 
-        this.logger.debug(`[ComponentManager] Cloning ${componentDef.name} from ${componentDef.source.url}`);
+        this.logger.debug(
+            `[ComponentManager] Cloning ${componentDef.name} from ${componentDef.source.url}`,
+        );
 
         // Clone repository
         const commandManager = ServiceLocator.getCommandExecutor();
@@ -82,15 +89,34 @@ export class ComponentInstallation {
                 this.logger.debug(`[ComponentManager] Using latest release tag: ${latestTag}`);
             } else {
                 cloneTag = fallbackTag;
-                this.logger.debug(`[ComponentManager] Using fallback tag from config: ${fallbackTag}`);
+                this.logger.debug(
+                    `[ComponentManager] Using fallback tag from config: ${fallbackTag}`,
+                );
             }
         }
 
-        // Branch or tag
+        // SECURITY: refs and the URL are interpolated into a shell-executed
+        // command; double quotes do NOT stop $() expansion, so anything outside
+        // the safe charsets is rejected before interpolation. Sources can come
+        // from user-supplied custom integrations and imported settings files.
+        // SAFE_GIT_REF permits a leading '-': safe ONLY because refs are always
+        // passed as the VALUE of --branch/-b, never as a bare positional arg.
+        const SAFE_GIT_REF = /^[A-Za-z0-9._/-]+$/;
+        const SAFE_GIT_URL = /^[A-Za-z0-9._:/@-]+$/;
+        const assertSafe = (value: string, pattern: RegExp, label: string): void => {
+            if (!pattern.test(value) || value.includes('..')) {
+                throw new Error(`Invalid git ${label}: "${value}"`);
+            }
+        };
+        assertSafe(componentDef.source.url, SAFE_GIT_URL, 'URL');
+
+        // Branch or tag (quoted for whitespace; charset-validated above quoting)
         if (cloneTag) {
-            cloneFlags.push(`--branch ${cloneTag}`);
+            assertSafe(cloneTag, SAFE_GIT_REF, 'tag');
+            cloneFlags.push(`--branch "${cloneTag}"`);
         } else if (componentInstance.branch) {
-            cloneFlags.push(`-b ${componentInstance.branch}`);
+            assertSafe(componentInstance.branch, SAFE_GIT_REF, 'branch');
+            cloneFlags.push(`-b "${componentInstance.branch}"`);
         }
 
         // Shallow clone (faster, smaller)
@@ -98,7 +124,8 @@ export class ComponentInstallation {
             cloneFlags.push('--depth=1');
         }
 
-        const cloneCommand = `git clone ${cloneFlags.join(' ')} "${componentDef.source.url}" "${componentPath}"`.trim();
+        const cloneCommand =
+            `git clone ${cloneFlags.join(' ')} "${componentDef.source.url}" "${componentPath}"`.trim();
 
         this.logger.trace(`[ComponentManager] Executing: ${cloneCommand}`);
 
@@ -115,21 +142,29 @@ export class ComponentInstallation {
 
         if (result.code !== 0) {
             this.logger.error(`[ComponentManager] Git clone failed for ${componentDef.name}`);
-            this.logger.debug(`[ComponentManager] Clone failed: code=${result.code}, duration=${cloneDuration}ms`);
+            this.logger.debug(
+                `[ComponentManager] Clone failed: code=${result.code}, duration=${cloneDuration}ms`,
+            );
             this.logger.trace(`[ComponentManager] Clone stderr: ${result.stderr}`);
             this.logger.trace(`[ComponentManager] Clone stdout: ${result.stdout}`);
             throw new Error(`Git clone failed: ${result.stderr}`);
         }
 
-        this.logger.debug(`[ComponentManager] Clone completed for ${componentDef.name} in ${cloneDuration}ms`);
+        this.logger.debug(
+            `[ComponentManager] Clone completed for ${componentDef.name} in ${cloneDuration}ms`,
+        );
 
         // Detect component version
         const detectedVersion = await this.detectVersion(componentDef, componentPath);
         if (detectedVersion) {
             componentInstance.version = detectedVersion;
-            this.logger.debug(`[ComponentManager] ${componentDef.name} version: ${detectedVersion}`);
+            this.logger.debug(
+                `[ComponentManager] ${componentDef.name} version: ${detectedVersion}`,
+            );
         } else {
-            this.logger.warn(`[ComponentManager] Could not detect version for ${componentDef.name}`);
+            this.logger.warn(
+                `[ComponentManager] Could not detect version for ${componentDef.name}`,
+            );
         }
 
         // Store Node version in metadata for runtime use
@@ -163,19 +198,18 @@ export class ComponentInstallation {
         let detectedVersion: string | null = null;
 
         // Strategy 1: Try git describe for tagged commits
-        const tagResult = await commandManager.execute(
-            'git describe --tags --exact-match HEAD',
-            {
-                cwd: componentPath,
-                enhancePath: true,
-                shell: DEFAULT_SHELL,
-            },
-        );
+        const tagResult = await commandManager.execute('git describe --tags --exact-match HEAD', {
+            cwd: componentPath,
+            enhancePath: true,
+            shell: DEFAULT_SHELL,
+        });
 
         if (tagResult.code === 0 && tagResult.stdout.trim()) {
             // On a tagged commit (e.g., "v1.0.0" or "1.0.0")
             detectedVersion = tagResult.stdout.trim().replace(/^v/, ''); // Remove 'v' prefix
-            this.logger.debug(`[ComponentManager] Detected version from git tag: ${detectedVersion}`);
+            this.logger.debug(
+                `[ComponentManager] Detected version from git tag: ${detectedVersion}`,
+            );
             return detectedVersion;
         }
 
@@ -191,27 +225,30 @@ export class ComponentInstallation {
 
             if (packageJson.version) {
                 detectedVersion = packageJson.version;
-                this.logger.debug(`[ComponentManager] Detected version from package.json: ${detectedVersion}`);
+                this.logger.debug(
+                    `[ComponentManager] Detected version from package.json: ${detectedVersion}`,
+                );
                 return detectedVersion;
             }
         } catch {
             // package.json not readable, will try commit hash
-            this.logger.debug(`[ComponentManager] Could not read package.json version, falling back to commit hash`);
+            this.logger.debug(
+                `[ComponentManager] Could not read package.json version, falling back to commit hash`,
+            );
         }
 
         // Strategy 3: Final fallback to commit hash
-        const commitResult = await commandManager.execute(
-            'git rev-parse HEAD',
-            {
-                cwd: componentPath,
-                enhancePath: true,
-                shell: DEFAULT_SHELL,
-            },
-        );
+        const commitResult = await commandManager.execute('git rev-parse HEAD', {
+            cwd: componentPath,
+            enhancePath: true,
+            shell: DEFAULT_SHELL,
+        });
 
         if (commitResult.code === 0) {
             detectedVersion = commitResult.stdout.trim().substring(0, 8); // Short hash
-            this.logger.debug(`[ComponentManager] Using commit hash as version: ${detectedVersion}`);
+            this.logger.debug(
+                `[ComponentManager] Using commit hash as version: ${detectedVersion}`,
+            );
         }
 
         return detectedVersion;
@@ -257,14 +294,17 @@ export class ComponentInstallation {
         }
 
         const [, owner, repo] = match;
-        const channel = vscode.workspace.getConfiguration('demoBuilder').get<string>('updateChannel', 'beta');
+        const channel = vscode.workspace
+            .getConfiguration('demoBuilder')
+            .get<string>('updateChannel', 'beta');
 
         try {
             // For stable: use /releases/latest (non-prereleases only)
             // For beta: use /releases?per_page=10 (includes prereleases)
-            const apiUrl = channel === 'stable'
-                ? `https://api.github.com/repos/${owner}/${repo}/releases/latest`
-                : `https://api.github.com/repos/${owner}/${repo}/releases?per_page=10`;
+            const apiUrl =
+                channel === 'stable'
+                    ? `https://api.github.com/repos/${owner}/${repo}/releases/latest`
+                    : `https://api.github.com/repos/${owner}/${repo}/releases?per_page=10`;
 
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), TIMEOUTS.QUICK);
@@ -274,7 +314,9 @@ export class ComponentInstallation {
                 clearTimeout(timeout);
 
                 if (!response.ok) {
-                    this.logger.debug(`[ComponentManager] GitHub API returned ${response.status} for ${owner}/${repo}`);
+                    this.logger.debug(
+                        `[ComponentManager] GitHub API returned ${response.status} for ${owner}/${repo}`,
+                    );
                     return null;
                 }
 
@@ -296,7 +338,9 @@ export class ComponentInstallation {
             }
         } catch (error) {
             // Network error, timeout, or other failure - fall back to config tag
-            this.logger.debug(`[ComponentManager] Failed to fetch latest release for ${owner}/${repo}: ${(error as Error).message}`);
+            this.logger.debug(
+                `[ComponentManager] Failed to fetch latest release for ${owner}/${repo}: ${(error as Error).message}`,
+            );
             return null;
         }
     }

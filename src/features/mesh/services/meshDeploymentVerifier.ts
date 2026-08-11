@@ -5,6 +5,7 @@
 
 import { getMeshNodeVersion } from './meshConfig';
 import { ServiceLocator } from '@/core/di';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateMeshId } from '@/core/validation';
 import type { Logger } from '@/types/logger';
@@ -126,7 +127,7 @@ export async function waitForMeshDeployment(
 
     // Initial wait - mesh won't be ready immediately after update command
     logger?.info(`[Mesh Verification] Waiting ${initialWait / 1000}s for mesh provisioning...`);
-    await new Promise(resolve => setTimeout(resolve, initialWait));
+    await sleep(initialWait);
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         const elapsed = initialWait + (attempt - 1) * pollInterval;
@@ -135,7 +136,7 @@ export async function waitForMeshDeployment(
         onProgress?.(attempt, maxRetries, elapsedSeconds);
 
         if (attempt > 1) {
-            await new Promise(resolve => setTimeout(resolve, pollInterval));
+            await sleep(pollInterval);
         }
 
         logger?.info(`[Mesh Verification] Attempt ${attempt}/${maxRetries} (${elapsedSeconds}s elapsed)`);

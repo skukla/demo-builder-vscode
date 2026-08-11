@@ -5,28 +5,74 @@
  * These handlers orchestrate dashboard operations by delegating to appropriate services.
  */
 
+import * as path from 'path';
 import * as vscode from 'vscode';
+import { handleSetProjectDestination } from './destinationHandlers';
 import {
     buildStatusPayload,
+    getMeshEndpoint,
     hasMeshDeploymentRecord,
     hasAdobeWorkspaceContext,
     hasAdobeProjectContext,
     sendDemoStatusUpdate,
-    verifyMeshDeployment,
 } from './meshStatusHelpers';
+import { withBrowserSignInNotice } from '@/core/auth/browserSignInNotice';
 import { BaseWebviewCommand } from '@/core/base';
-import { COMPONENT_IDS } from '@/core/constants';
+import { AI_CONTEXT_VERSION, COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { openInIncognito } from '@/core/utils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { validateURL } from '@/core/validation';
-import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
+import {
+    validateURL,
+    validateOrgId,
+    validateProjectId,
+    validateWorkspaceId,
+} from '@/core/validation';
+import { verifyAiSetup } from '@/features/ai';
+import { detectMcpDrift } from '@/features/ai/mcpDriftDetector';
+import { handleForcedOrgSwitch } from '@/features/authentication';
+import {
+    handleRegenerateAiFiles,
+    logAiVerification,
+} from '@/features/dashboard/handlers/aiHandlers';
+import {
+    handleAddAppBuilderComponent,
+    handleDeployAppBuilderComponent,
+    handleRedeployAppBuilderComponent,
+    handleRemoveAppBuilderComponent,
+    handleRenameAppBuilderComponent,
+} from '@/features/dashboard/handlers/appBuilderComponentHandlers';
+import {
+    handleAddConsoleApis,
+    handleListConsoleApis,
+    handleSetConsoleApis,
+} from '@/features/dashboard/handlers/consoleApiHandlers';
+import {
+    runOnOpenChecks,
+    orgContextCheck,
+    createMcpHealthCheck,
+    createMeshVerifyCheck,
+    createAiVerifyCheck,
+    createAiContextFreshnessCheck,
+} from '@/features/dashboard/services/onOpenChecks';
+import {
+    getEwCanvasBranch,
+    resolveProjectAuthoringExperience,
+} from '@/features/eds/handlers/edsHelpers';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 import type { Project } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
-import { MessageHandler , defineHandlers, HandlerContext } from '@/types/handlers';
-import { getMeshComponentInstance, getProjectFrontendPort } from '@/types/typeGuards';
+import { MessageHandler, defineHandlers, HandlerContext } from '@/types/handlers';
+import {
+    getAdminPanelUrl,
+    getEdsDaLiveUrl,
+    getEdsLiveUrl,
+    getMeshComponentInstance,
+    getProjectFrontendPort,
+    isEdsProject,
+} from '@/types/typeGuards';
 
 /**
  * Handle 'requestStatus' message - Send current project status
@@ -50,16 +96,27 @@ export const handleRequestStatus: MessageHandler = async (context) => {
     }
 
     const meshComponent = getMeshComponentInstance(project);
-    const frontendConfigChanged = project.status === 'running' ? detectFrontendChanges(project) : false;
+    const frontendConfigChanged =
+        project.status === 'running' ? detectFrontendChanges(project) : false;
 
     context.logger.debug(`[Dashboard] Status request: mesh=${meshComponent?.status || 'none'}`);
 
     // Determine mesh status from persisted state (no redundant re-checking)
     let meshStatus: string = 'not-deployed';
+    // Set when a deployed mesh should be background-verified on open (auth'd +
+    // has a deployment record). The verify runs as the mesh-verify OnOpenCheck.
+    let shouldVerifyMesh = false;
 
     if (meshComponent) {
         if (meshComponent.status === 'deploying') {
             meshStatus = 'deploying';
+        } else if (meshComponent.status === 'error') {
+            // A failed deploy, reported WITHOUT consulting meshStatusSummary and
+            // without waiting on auth — mirrors sendDemoStatusUpdate, which has
+            // always checked this first. While only the summary was read here the
+            // two handlers could describe the same mesh differently depending on
+            // which message landed last, which is worse than either being wrong.
+            meshStatus = 'error';
         } else {
             // Auth check — prompt for inline sign-in if not authenticated
             const authManager = ServiceLocator.getAuthenticationService();
@@ -93,10 +150,10 @@ export const handleRequestStatus: MessageHandler = async (context) => {
                         meshStatus = summary;
                     }
 
-                    // Lightweight background verification (is the mesh still there?)
-                    verifyMeshDeployment(context, project).catch(err => {
-                        context.logger.debug('[Dashboard] Background mesh verification failed', err);
-                    });
+                    // Background verification (is the mesh still there?) runs as the
+                    // mesh-verify OnOpenCheck below — it ALWAYS posts a typed outcome
+                    // (ok / warning-gone / unknown-transient), never a silent flip.
+                    shouldVerifyMesh = true;
                 } else {
                     meshStatus = 'not-deployed';
                 }
@@ -105,7 +162,9 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         }
     }
 
-    const meshEndpoint = project.meshState?.endpoint;
+    // Keyed-first (ADR-011 D3 Steps 07+09): the endpoint lives on the keyed
+    // mesh appBuilderComponents entry (legacy meshState fallback inside).
+    const meshEndpoint = getMeshEndpoint(project);
     const statusData = buildStatusPayload(
         project,
         frontendConfigChanged,
@@ -117,80 +176,71 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         payload: statusData,
     });
 
-    // Org-context check runs SEPARATELY (async) so the slow getOrganizations call
-    // never blocks the status above. It telegraphs "checking" then delivers the
-    // result via the `orgContextResult` message — see runOrgContextCheck.
-    void runOrgContextCheck(context, project);
+    // On-open checks run through the orchestrator (fire-and-forget): each posts a
+    // typed outcome on the single `checkResult` channel.
+    //   - org-context: non-interactive (P1) — never a browser/stall on open; the
+    //     slow/CLI path stays behind user actions (Switch IMS Org / Sign in).
+    //   - mcp-health (EDS only): detects stale .mcp.json paths and VISIBLY auto-heals
+    //     (P2) via the regenerate pipeline, replacing the silent MODULE_NOT_FOUND.
+    //   - mesh-verify (only when a deployed mesh is auth-reachable): always posts a
+    //     typed outcome (ok / warning-gone / unknown-transient), never a silent flip.
+    //   - ai-verify: the single on-open AI verification (the hook no longer pulls it),
+    //     surfacing which MCP/skill failed and why (P2). Spawns servers once.
+    const checks = [
+        orgContextCheck,
+        createMcpHealthCheck({
+            detectDrift: detectMcpDrift,
+            heal: () => handleRegenerateAiFiles(context),
+        }),
+        // ai-context-freshness (all projects): stamp-vs-constant staleness. Detect-only
+        // per the OnOpenCheck P1 contract — a stale project flips the AI badge to
+        // "AI files out of date", surfacing the existing "Regenerate AI files" action
+        // (the user's explicit click is the remediation; no on-open prompt or heal).
+        createAiContextFreshnessCheck({ currentVersion: AI_CONTEXT_VERSION }),
+        createAiVerifyCheck({
+            verify: async (p) => {
+                // dist path resolved lazily (inside the check) — server-side only.
+                const extensionDistPath = path.join(context.context.extensionPath, 'dist');
+                const result = await verifyAiSetup(p, extensionDistPath);
+                logAiVerification(context, result); // preserve the on-open observability
+                return result;
+            },
+        }),
+    ];
+    if (shouldVerifyMesh) {
+        // Single lazy import (resolved once) shared by both injected fns.
+        const meshVerifier = await import('@/features/mesh/services/meshVerifier');
+        checks.push(
+            createMeshVerifyCheck({
+                // Org-targeted: verifyMeshDeployment issues `aio api-mesh:describe`
+                // (directly, and again via its mesh-id recovery). Unwrapped it
+                // inherits the CLI's process-global console selection, and the
+                // same describe that succeeds inside the deploy's wrapper returns
+                // code=2 here — observed minutes apart against one mesh on
+                // 2026-08-04, surfacing as "Verification failed" on every status
+                // request.
+                verify: (p) =>
+                    withOrgContext(buildOrgTargetFromProjectAdobe(p.adobe), () =>
+                        meshVerifier.verifyMeshDeployment(p),
+                    ),
+                syncMeshStatus: (p, r) => meshVerifier.syncMeshStatus(p, r),
+                markDirty: (key) => context.stateManager.markDirty(key),
+            }),
+        );
+    }
+
+    void runOnOpenChecks(
+        {
+            project,
+            logger: context.logger,
+            isEds: isEdsProject(project),
+            postMessage: (type, payload) => context.panel?.webview.postMessage({ type, payload }),
+        },
+        checks,
+    );
 
     return { success: true, data: statusData };
 };
-
-/**
- * Run the proactive Adobe org-context check and deliver its result to the
- * dashboard via the async `orgContextResult` message — decoupled from the main
- * status so the (potentially slow) getOrganizations call never blocks it.
- *
- * Sends `{ pending: true }` first (UI telegraphs "Checking Adobe organization…"),
- * then `{ pending: false, orgMismatch }` once resolved (banner fades in on
- * mismatch, or clears). No-op for projects without an Adobe org.
- *
- * Exported (not in the handler map) so callers — handleRequestStatus and the
- * forced-switch recovery — can trigger a (re)check.
- */
-export async function runOrgContextCheck(context: HandlerContext, project: Project): Promise<void> {
-    if (!context.panel || !project.adobe?.organization) {
-        return;
-    }
-    const post = (payload: { pending: boolean; orgMismatch?: OrgMismatchInfo; currentOrg?: string }) =>
-        context.panel?.webview.postMessage({ type: 'orgContextResult', payload });
-
-    post({ pending: true });
-
-    const authManager = ServiceLocator.getAuthenticationService();
-    const { detectProjectOrgMismatch } = await import('@/features/authentication/services/detectProjectOrgMismatch');
-    const result = await detectProjectOrgMismatch(authManager, project, context.logger);
-
-    // Self-heal the project's org data when reachable (we can only resolve the
-    // canonical id/name for an org the token can reach): persist the org NAME (so
-    // a later mismatch banner can name it) and migrate a legacy name-stored
-    // `organization` to the canonical id (so detection matches by id next time).
-    // One-time, manifest-only write.
-    if (result?.reachable && project.adobe) {
-        let healed = false;
-        if (result.currentOrg && project.adobe.organizationName !== result.currentOrg) {
-            project.adobe.organizationName = result.currentOrg;
-            healed = true;
-        }
-        if (result.currentOrgId && project.adobe.organization !== result.currentOrgId) {
-            project.adobe.organization = result.currentOrgId;
-            healed = true;
-        }
-        if (healed) {
-            try {
-                await context.stateManager.saveProjectConfigOnly(project);
-            } catch (error) {
-                context.logger.debug('[Dashboard] Could not self-heal org data (non-fatal)', error);
-            }
-        }
-    }
-
-    // currentOrg (the token's actual org) drives the "IMS Org" badge in both
-    // states; orgMismatch (the UI shape) is set only when unreachable, for the
-    // banner — including the project's expected org name when known.
-    const orgMismatch: OrgMismatchInfo | undefined = result && !result.reachable
-        ? {
-            expectedOrg: result.expectedOrg,
-            // Prefer the persisted name; else fall back to the stored org field
-            // when it's already a human name (legacy projects stored the org name
-            // rather than the id — a name has whitespace; an id/code never does).
-            expectedOrgName: project.adobe?.organizationName
-                ?? (/\s/.test(result.expectedOrg) ? result.expectedOrg : undefined),
-            currentOrg: result.currentOrg,
-        }
-        : undefined;
-
-    post({ pending: false, orgMismatch, currentOrg: result?.currentOrg });
-}
 
 /**
  * Handle 'startDemo' message - Start demo server
@@ -208,6 +258,24 @@ export const handleStartDemo: MessageHandler = async (context) => {
 export const handleStopDemo: MessageHandler = async (context) => {
     await vscode.commands.executeCommand('demoBuilder.stopDemo');
     // Update demo status only (don't re-check mesh)
+    setTimeout(() => sendDemoStatusUpdate(context), TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
+    return { success: true };
+};
+
+/**
+ * Handle 'restartDemo' message - stop, settle, start.
+ *
+ * Exists because the dashboard could report "Restart needed" (a config change
+ * while running) and offer nothing to act on it — the user had to press Stop and
+ * then Start themselves.
+ *
+ * Delegates to `demoBuilder.restartDemo` rather than issuing the two commands
+ * here: that command owns the settle delay between them, and re-implementing the
+ * sequence would drop it and race the stop.
+ */
+export const handleRestartDemo: MessageHandler = async (context) => {
+    await vscode.commands.executeCommand('demoBuilder.restartDemo');
+    // Update demo status only (don't re-check mesh) — same as start/stop.
     setTimeout(() => sendDemoStatusUpdate(context), TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
     return { success: true };
 };
@@ -247,7 +315,10 @@ export const handleOpenLiveSite: MessageHandler = async (context, data) => {
     try {
         validateURL(url);
     } catch (validationError) {
-        context.logger.error('[Dashboard] Live site URL validation failed', validationError as Error);
+        context.logger.error(
+            '[Dashboard] Live site URL validation failed',
+            validationError as Error,
+        );
         return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
     }
 
@@ -263,7 +334,9 @@ export const handleOpenLiveSite: MessageHandler = async (context, data) => {
             // Open in incognito mode for clean demo experience (no cached content/cookies)
             // Falls back to normal browser if incognito mode is not available
             const openedIncognito = await openInIncognito(url);
-            context.logger.debug(`[Dashboard] Opening live site: ${url} (incognito: ${openedIncognito})`);
+            context.logger.debug(
+                `[Dashboard] Opening live site: ${url} (incognito: ${openedIncognito})`,
+            );
         },
     );
 
@@ -296,10 +369,91 @@ export const handleOpenDaLive: MessageHandler = async (context, data) => {
 };
 
 /**
+ * Handle 'openAdminPanel' message - Open the Commerce admin panel in the browser
+ *
+ * The admin URL resolves via getAdminPanelUrl: an explicit
+ * ADOBE_COMMERCE_ADMIN_URL (PaaS Configure field / override) wins, otherwise
+ * SaaS projects derive it from the ACCS tenant endpoint. When unresolvable,
+ * a notification offers a jump to Configure instead of failing.
+ */
+export const handleOpenAdminPanel: MessageHandler = async (context) => {
+    const project = await context.stateManager.getCurrentProject();
+    const url = getAdminPanelUrl(project);
+
+    if (!url) {
+        // Fire-and-forget — the notification must not block the handler response.
+        void vscode.window
+            .showInformationMessage('No Admin Panel URL is set for this project.', 'Open Configure')
+            .then((selection) => {
+                if (selection === 'Open Configure') {
+                    // Returned (not voided) so a rejection reaches the handler below.
+                    return vscode.commands.executeCommand('demoBuilder.configureProject');
+                }
+                return undefined;
+            })
+            .then(undefined, (error) => {
+                context.logger.error(
+                    '[Dashboard] Failed to open Configure from admin-panel prompt',
+                    error as Error,
+                );
+            });
+        return { success: true };
+    }
+
+    // Validate URL before opening (security: prevents malicious URL injection).
+    // http is allowed alongside https — the Configure field accepts both, and the
+    // localhost/private-IP blocks still apply (mirrors configureHandlers).
+    try {
+        validateURL(url, ['https', 'http']);
+    } catch (validationError) {
+        context.logger.error(
+            '[Dashboard] Admin panel URL validation failed',
+            validationError as Error,
+        );
+        return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
+    }
+
+    // No URL in the log — the stored value is user-supplied and may embed credentials.
+    context.logger.debug('[Dashboard] Opening admin panel');
+    await vscode.env.openExternal(vscode.Uri.parse(url));
+
+    return { success: true };
+};
+
+/**
  * Handle 'configure' message - Open configuration UI
  */
 export const handleConfigure: MessageHandler = async () => {
     await vscode.commands.executeCommand('demoBuilder.configureProject');
+    return { success: true };
+};
+
+/**
+ * Handle 'editProject' message - Open the wizard in edit mode for the current project
+ *
+ * Mirrors the projects-home kebab's Edit action, resolved via getCurrentProject()
+ * (the dashboard always operates on the current project). Reuses the shared
+ * extractSettingsFromProject so both entry points feed the wizard identically.
+ */
+export const handleEditProject: MessageHandler = async (context) => {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    const { extractSettingsFromProject } = await import('@/features/projects-dashboard/services');
+    // Include secrets — this is a local edit of the user's own project.
+    const settings = extractSettingsFromProject(project, true);
+
+    context.logger.info(`Opening edit wizard for project: ${project.name}`);
+    await vscode.commands.executeCommand('demoBuilder.createProject', {
+        editProject: {
+            projectPath: project.path,
+            projectName: project.name,
+            settings,
+        },
+    });
+
     return { success: true };
 };
 
@@ -361,13 +515,22 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
     if (hasAdobeWorkspaceContext(project)) {
         // Validate Adobe IDs before URL construction (security: prevents URL injection)
         try {
-            const { validateOrgId, validateProjectId, validateWorkspaceId } = await import('@/core/validation');
+            const { validateOrgId, validateProjectId, validateWorkspaceId } = await import(
+                '@/core/validation'
+            );
             validateOrgId(project.adobe.organization);
             validateProjectId(project.adobe.projectId);
             validateWorkspaceId(project.adobe.workspace);
         } catch (validationError) {
-            context.logger.error('[Dev Console] Adobe ID validation failed', validationError as Error);
-            return { success: false, error: 'Invalid Adobe resource ID', code: ErrorCode.CONFIG_INVALID };
+            context.logger.error(
+                '[Dev Console] Adobe ID validation failed',
+                validationError as Error,
+            );
+            return {
+                success: false,
+                error: 'Invalid Adobe resource ID',
+                code: ErrorCode.CONFIG_INVALID,
+            };
         }
 
         // Direct link to workspace
@@ -380,8 +543,15 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
             validateOrgId(project.adobe.organization);
             validateProjectId(project.adobe.projectId);
         } catch (validationError) {
-            context.logger.error('[Dev Console] Adobe ID validation failed', validationError as Error);
-            return { success: false, error: 'Invalid Adobe resource ID', code: ErrorCode.CONFIG_INVALID };
+            context.logger.error(
+                '[Dev Console] Adobe ID validation failed',
+                validationError as Error,
+            );
+            return {
+                success: false,
+                error: 'Invalid Adobe resource ID',
+                code: ErrorCode.CONFIG_INVALID,
+            };
         }
 
         // Fallback: project overview
@@ -401,6 +571,78 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
 
     await vscode.env.openExternal(vscode.Uri.parse(consoleUrl));
     return { success: true };
+};
+
+/**
+ * Build the Developer Console deep link for a project (workspace → project →
+ * generic). Mirrors {@link handleOpenDevConsole}'s branching but, being a READ,
+ * falls back to the generic console URL on a malformed id instead of erroring.
+ */
+function resolveDevConsoleUrl(
+    project: Project | undefined | null,
+    context: HandlerContext,
+): string {
+    const generic = 'https://developer.adobe.com/console';
+    try {
+        if (hasAdobeWorkspaceContext(project)) {
+            validateOrgId(project.adobe.organization);
+            validateProjectId(project.adobe.projectId);
+            validateWorkspaceId(project.adobe.workspace);
+            return `https://developer.adobe.com/console/projects/${project.adobe.organization}/${project.adobe.projectId}/workspaces/${project.adobe.workspace}/details`;
+        }
+        if (hasAdobeProjectContext(project)) {
+            validateOrgId(project.adobe.organization);
+            validateProjectId(project.adobe.projectId);
+            return `https://developer.adobe.com/console/projects/${project.adobe.organization}/${project.adobe.projectId}/overview`;
+        }
+    } catch {
+        context.logger.warn(
+            '[Get URLs] Dev Console id validation failed; using the generic console URL',
+        );
+    }
+    return generic;
+}
+
+/**
+ * Handle 'getProjectUrls' message - Return the project's useful URLs as DATA.
+ *
+ * The read behind the get_project_urls MCP tool. Computes each URL from the
+ * SAME getters the open-in-browser handlers use, so an agent gets what a click
+ * would open without the browser side effect. Absent URLs are omitted (the
+ * getters return undefined). Deliberately pure: it never opens a browser and
+ * never runs the admin-panel "Open Configure" prompt — an unresolvable admin
+ * URL is simply omitted.
+ */
+export const handleGetProjectUrls: MessageHandler = async (context) => {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    const urls: Record<string, string> = {};
+
+    // Local dev storefront — present only while the demo is running (port assigned).
+    const frontendPort = getProjectFrontendPort(project);
+    if (frontendPort) urls.storefront = `http://localhost:${frontendPort}`;
+
+    // EDS live site + DA.live authoring (undefined for non-EDS projects).
+    const liveSite = getEdsLiveUrl(project);
+    if (liveSite) urls.liveSite = liveSite;
+    const daLive = getEdsDaLiveUrl(
+        project,
+        resolveProjectAuthoringExperience(project),
+        getEwCanvasBranch(),
+    );
+    if (daLive) urls.daLive = daLive;
+
+    // Commerce admin — the pure getter (explicit field or derived ACCS URL); no prompt.
+    const commerceAdmin = getAdminPanelUrl(project);
+    if (commerceAdmin) urls.commerceAdmin = commerceAdmin;
+
+    // Developer Console — always resolvable (deep link or generic fallback).
+    urls.devConsole = resolveDevConsoleUrl(project, context);
+
+    return { success: true, data: { urls } };
 };
 
 /**
@@ -436,7 +678,9 @@ export const handleNavigateBack: MessageHandler = async (context) => {
         try {
             // Dispose Dashboard panel before opening Projects List
             // This prevents the blank webview issue during transition
-            const dashboardPanel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
+            const dashboardPanel = BaseWebviewCommand.getActivePanel(
+                'demoBuilder.projectDashboard',
+            );
             if (dashboardPanel) {
                 try {
                     dashboardPanel.dispose();
@@ -457,6 +701,131 @@ export const handleNavigateBack: MessageHandler = async (context) => {
         return {
             success: false,
             error: 'Failed to navigate back to projects list',
+        };
+    }
+};
+
+/**
+ * Handle 'openIntegrations' message - open the dedicated integrations surface
+ *
+ * The dashboard's integrations summary tile opens the full-width integrations
+ * screen. Tab replacement, exactly like navigateBack: dispose the dashboard
+ * panel inside a webview transition (so the disposal callback doesn't re-open
+ * the projects list), then dispatch the command. The current project pointer is
+ * NOT cleared — the surface is scoped to the project we came from.
+ */
+/**
+ * Warm the org's Adobe API catalog in the background.
+ *
+ * `getServicesForOrg` is a single SDK call, but a highly variable one — 348ms
+ * against a warm endpoint and 42s against a cold one, measured minutes apart on
+ * the same 96-service org. Nothing warmed it, so the first consumer was always a
+ * surface that BLOCKS on it: the Manage APIs modal and the Add flow's API stage
+ * both fetch on open and show a spinner until it lands.
+ *
+ * Opening the integrations surface is the last cheap moment before either is
+ * reachable, so the wait overlaps with the user reading the grid. The fetcher
+ * caches per-org for 30 minutes and single-flights, so this can never cause a
+ * second fetch — a later opener either joins this one or reads its result.
+ *
+ * Three things this must not do, in order of how badly they would bite:
+ * - trigger interactive Adobe auth. `getTokenStatus` reads the token file
+ *   directly (no CLI call, no browser), so both the guard and the skip are silent.
+ * - block the surface. Fire-and-forget; the caller never awaits it.
+ * - surface an error. A cosmetic warm-up has nothing to report.
+ *
+ * Org-targeted like every other `aio`-backed read: an unwrapped call inherits the
+ * CLI's process-global console selection and would warm the WRONG org's catalog —
+ * worse than a cold cache, because the modal would then show it.
+ */
+async function warmOrgServicesCatalog(context: HandlerContext): Promise<void> {
+    try {
+        const project = await context.stateManager.getCurrentProject();
+        const orgId = project?.adobe?.organization;
+        if (!project || !orgId) return;
+
+        const authManager = ServiceLocator.getAuthenticationService();
+        const { isAuthenticated } = await authManager.getTokenStatus();
+        if (!isAuthenticated) return;
+
+        await withOrgContext(buildOrgTargetFromProjectAdobe(project.adobe), () =>
+            authManager.getServicesForOrg(orgId),
+        );
+        context.logger.debug('[Integrations] API catalog prefetched');
+    } catch {
+        // Best-effort: the consumer that actually needs it will fetch and report.
+    }
+}
+
+export const handleOpenIntegrations: MessageHandler = async (context) => {
+    try {
+        context.logger.info('Opening integrations surface');
+
+        // Deliberately not awaited — see warmOrgServicesCatalog.
+        void warmOrgServicesCatalog(context);
+
+        await BaseWebviewCommand.startWebviewTransition();
+        try {
+            const dashboardPanel = BaseWebviewCommand.getActivePanel(
+                'demoBuilder.projectDashboard',
+            );
+            if (dashboardPanel) {
+                try {
+                    dashboardPanel.dispose();
+                } catch {
+                    // Panel may already be disposed - this is OK
+                }
+            }
+
+            await vscode.commands.executeCommand('demoBuilder.showIntegrations');
+        } finally {
+            BaseWebviewCommand.endWebviewTransition();
+        }
+
+        return { success: true };
+    } catch (error) {
+        context.logger.error('Failed to open integrations surface', error as Error);
+        return {
+            success: false,
+            error: 'Failed to open the integrations surface',
+        };
+    }
+};
+
+/**
+ * Handle 'showProjectDashboard' message - return to the project dashboard
+ *
+ * The integrations surface's way back. The MIRROR of handleOpenIntegrations:
+ * dispose the sibling panel inside a webview transition, then dispatch the
+ * command. Deliberately NOT navigateBack — that clears the current project and
+ * lands on the projects LIST; this keeps the project and swaps to its dashboard.
+ */
+export const handleShowProjectDashboard: MessageHandler = async (context) => {
+    try {
+        context.logger.info('Returning to the project dashboard');
+
+        await BaseWebviewCommand.startWebviewTransition();
+        try {
+            const integrationsPanel = BaseWebviewCommand.getActivePanel('demoBuilder.integrations');
+            if (integrationsPanel) {
+                try {
+                    integrationsPanel.dispose();
+                } catch {
+                    // Panel may already be disposed - this is OK
+                }
+            }
+
+            await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+        } finally {
+            BaseWebviewCommand.endWebviewTransition();
+        }
+
+        return { success: true };
+    } catch (error) {
+        context.logger.error('Failed to return to the project dashboard', error as Error);
+        return {
+            success: false,
+            error: 'Failed to return to the project dashboard',
         };
     }
 };
@@ -487,31 +856,14 @@ export const handleResetProject: MessageHandler = async (context) => {
         });
     }
 
-    const { resetProjectWithUI } = await import('@/features/lifecycle/services/projectResetService');
+    const { resetProjectWithUI } = await import(
+        '@/features/lifecycle/services/projectResetService'
+    );
     return resetProjectWithUI({
         project,
         context,
         logPrefix: '[Dashboard]',
     });
-};
-
-/**
- * Handle 'copyPath' message - Copy the current project's folder path to clipboard
- */
-export const handleCopyPath: MessageHandler = async (context) => {
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
-
-    try {
-        await vscode.env.clipboard.writeText(project.path);
-        vscode.window.showInformationMessage('Project path copied to clipboard');
-        return { success: true };
-    } catch (error) {
-        context.logger.error('[Dashboard] Failed to copy project path', error as Error);
-        return { success: false, error: 'Failed to copy project path' };
-    }
 };
 
 /**
@@ -549,8 +901,13 @@ export const handleRepublishContent: MessageHandler = async (context) => {
     const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
 
     if (!repoFullName) {
-        vscode.window.showErrorMessage('Repository information not found. Republish is only available for EDS projects.');
-        return { success: false, error: 'Repository information not found. Republish is only available for EDS projects.' };
+        vscode.window.showErrorMessage(
+            'Repository information not found. Republish is only available for EDS projects.',
+        );
+        return {
+            success: false,
+            error: 'Repository information not found. Republish is only available for EDS projects.',
+        };
     }
 
     const [repoOwner, repoName] = repoFullName.split('/');
@@ -573,8 +930,9 @@ export const handleRepublishContent: MessageHandler = async (context) => {
                 context.logger.info(`[Dashboard] Republishing content for ${repoFullName}`);
 
                 progress.report({ message: 'Checking authentication...' });
-                const { ensureDaLiveAuth, getDaLiveAuthService, getGitHubServices } =
-                    await import('@/features/eds/handlers/edsHelpers');
+                const { ensureDaLiveAuth, getDaLiveAuthService, getGitHubServices } = await import(
+                    '@/features/eds/handlers/edsHelpers'
+                );
                 const daLiveAuthResult = await ensureDaLiveAuth(context, '[Dashboard]');
 
                 if (!daLiveAuthResult.authenticated) {
@@ -590,9 +948,12 @@ export const handleRepublishContent: MessageHandler = async (context) => {
                 const { tokenService: githubTokenService } = getGitHubServices(context);
 
                 progress.report({ message: 'Republishing content...' });
-                const { republishStorefrontContent } = await import('@/features/eds/services/storefrontRepublishService');
+                const { republishStorefrontContent } = await import(
+                    '@/features/eds/services/storefrontRepublishService'
+                );
                 const contentResult = await republishStorefrontContent({
                     project,
+                    persist: (p) => context.stateManager.saveProject(p),
                     repoOwner,
                     repoName,
                     daLiveOrg: effectiveDaLiveOrg,
@@ -608,10 +969,18 @@ export const handleRepublishContent: MessageHandler = async (context) => {
                     return { success: false, error: contentResult.error };
                 }
                 if (!contentResult.cdnVerified) {
-                    context.logger.warn('[Dashboard] CDN verification timed out - content may still be propagating');
+                    context.logger.warn(
+                        '[Dashboard] CDN verification timed out - content may still be propagating',
+                    );
                 }
 
                 context.logger.info(`[Dashboard] Content republished for ${repoFullName}`);
+                // Push the new storefront status so the Republish tile drops its
+                // amber dot. `buildStatusPayload` carries `edsStorefrontStatus`,
+                // and without this the open dashboard keeps rendering whatever it
+                // was handed at init. `handleRenameProject` refreshes for the same
+                // reason — the title also comes from that payload.
+                await handleRequestStatus(context);
                 return { success: true };
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
@@ -655,6 +1024,41 @@ export const handleRenameProject: MessageHandler<{ newName: string }> = async (c
 };
 
 /**
+ * Handle 'exportProjectSettings' message — write the current project's settings
+ * to a JSON file on disk (the headless entry behind the export_project_settings
+ * MCP tool). Secrets go to the FILE only; the response carries just the path and
+ * the includes-secrets flag, never the secret values. The target must resolve
+ * inside the project directory. `includeSecrets` defaults to true (a local backup).
+ */
+export const handleExportProjectSettings: MessageHandler<{
+    path?: string;
+    includeSecrets?: boolean;
+}> = async (context, data) => {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    const { exportProjectSettingsToFile } = await import('@/features/projects-dashboard/services');
+    try {
+        const result = await exportProjectSettingsToFile(project, {
+            path: data?.path,
+            includeSecrets: data?.includeSecrets,
+        });
+        return { success: true, data: result };
+    } catch (error) {
+        context.logger.error(
+            '[Dashboard] Failed to export project settings',
+            error instanceof Error ? error : undefined,
+        );
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to export project settings',
+        };
+    }
+};
+
+/**
  * Handle 'reAuthenticate' message - Re-authenticate with Adobe
  *
  * Called when user clicks "Sign in" link after session expired (needs-auth status).
@@ -672,11 +1076,16 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
     const authManager = ServiceLocator.getAuthenticationService();
 
     context.logger.info('[Dashboard] Starting Adobe sign-in from re-authenticate link');
-    const loginSuccess = await authManager.loginAndRestoreProjectContext({
-        organization: project.adobe?.organization,
-        projectId: project.adobe?.projectId,
-        workspace: project.adobe?.workspace,
-    });
+    // The browser opens on the other side of this call — telegraph it, exactly as
+    // ensureAdobeIOAuth does. Without it the click looks inert until a browser
+    // window appears unannounced.
+    const loginSuccess = await withBrowserSignInNotice(() =>
+        authManager.loginAndRestoreProjectContext({
+            organization: project.adobe?.organization,
+            projectId: project.adobe?.projectId,
+            workspace: project.adobe?.workspace,
+        }),
+    );
 
     if (!loginSuccess) {
         context.logger.warn('[Dashboard] Sign-in failed or cancelled');
@@ -690,18 +1099,18 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
 };
 
 /**
- * Handle 'switchOrg' message - Forced Adobe account/org switch recovery.
+ * Handle 'switchOrg' message — the DASHBOARD's org-switch: forced sign-in, then
+ * verify where the token actually landed.
  *
- * Called when the dashboard detects an org mismatch (the project's Adobe org is
- * not reachable by the current token). Unlike the session-expiry re-auth path,
- * this performs a FORCED sign-in (`aio auth login -f`) so the browser presents
- * the IMS account/org chooser — a non-forced login would silently reuse the
- * browser's existing SSO session and could loop back to the wrong org.
+ * The sign-in itself belongs to authentication ({@link handleForcedOrgSwitch}) —
+ * three panels need it. What is dashboard-specific is the second half: re-running
+ * the status check re-runs the proactive org-mismatch detection, so if the user is
+ * still in the wrong org (another browser tab reasserted it, say) the banner
+ * persists with a no-loop hint instead of silently failing.
  *
- * After the forced sign-in it re-runs the status check (verify): the refreshed
- * payload re-runs the proactive org-mismatch detection, so if the user is still
- * in the wrong org (e.g. another browser tab reasserted it) the banner persists
- * with a no-loop hint instead of silently failing.
+ * The project guard stays here too. A dashboard org-switch without a project is
+ * meaningless, whereas the wizard legitimately switches org before any project
+ * exists — which the shared handler allows and this one does not.
  */
 export const handleSwitchOrg: MessageHandler = async (context) => {
     context.logger.debug('[Dashboard] handleSwitchOrg called');
@@ -711,26 +1120,11 @@ export const handleSwitchOrg: MessageHandler = async (context) => {
         return { success: false, error: 'No project available', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const authManager = ServiceLocator.getAuthenticationService();
-
-    context.logger.info('[Dashboard] Starting FORCED Adobe sign-in to switch organization');
-    const loginSuccess = await authManager.loginAndRestoreProjectContext(
-        {
-            organization: project.adobe?.organization,
-            projectId: project.adobe?.projectId,
-            workspace: project.adobe?.workspace,
-        },
-        true, // force — present the browser org chooser; never silently reuse the SSO tab
-    );
-
-    if (!loginSuccess) {
-        context.logger.warn('[Dashboard] Forced sign-in failed or cancelled');
-        return { success: false, error: 'Sign-in failed or cancelled' };
+    const result = await handleForcedOrgSwitch(context);
+    if (!result.success) {
+        return result;
     }
 
-    // Verify the landed org by re-running the status check. If the token still
-    // can't reach the project's org, handleRequestStatus re-surfaces orgMismatch
-    // and the banner persists — no silent loop.
     context.logger.info('[Dashboard] Forced sign-in complete, verifying organization');
     return handleRequestStatus(context);
 };
@@ -738,7 +1132,6 @@ export const handleSwitchOrg: MessageHandler = async (context) => {
 // ============================================================================
 // Handler Map Export (Step 3: Handler Registry Simplification)
 // ============================================================================
-
 
 /**
  * Dashboard feature handler map
@@ -749,42 +1142,65 @@ export const handleSwitchOrg: MessageHandler = async (context) => {
 export const dashboardHandlers = defineHandlers({
     // Initialization handlers (init is delivered by BaseWebviewCommand on handshake;
     // no 'ready' handler — see note on handleRequestStatus)
-    'requestStatus': handleRequestStatus,
+    requestStatus: handleRequestStatus,
 
     // Demo lifecycle handlers
-    'startDemo': handleStartDemo,
-    'stopDemo': handleStopDemo,
+    startDemo: handleStartDemo,
+    stopDemo: handleStopDemo,
+    restartDemo: handleRestartDemo,
 
     // Navigation handlers
-    'openBrowser': handleOpenBrowser,
-    'openLiveSite': handleOpenLiveSite,
-    'openDaLive': handleOpenDaLive,
-    'configure': handleConfigure,
-    'openDevConsole': handleOpenDevConsole,
-    'navigateBack': handleNavigateBack,
+    openBrowser: handleOpenBrowser,
+    openLiveSite: handleOpenLiveSite,
+    openDaLive: handleOpenDaLive,
+    openAdminPanel: handleOpenAdminPanel,
+    configure: handleConfigure,
+    openDevConsole: handleOpenDevConsole,
+    getProjectUrls: handleGetProjectUrls,
+    navigateBack: handleNavigateBack,
+    openIntegrations: handleOpenIntegrations,
+    showProjectDashboard: handleShowProjectDashboard,
 
     // Mesh handlers
-    'deployMesh': handleDeployMesh,
+    deployMesh: handleDeployMesh,
+
+    // AppBuilderComponent (integrations list) handlers — live D1 runner wiring.
+    // The singular id-less addApp/deployApp/redeployApp/removeApp delegates
+    // retired with the dormant AppBuilderCard (ADR-011 D3 Step 08).
+    addAppBuilderComponent: handleAddAppBuilderComponent,
+    deployAppBuilderComponent: handleDeployAppBuilderComponent,
+    redeployAppBuilderComponent: handleRedeployAppBuilderComponent,
+    removeAppBuilderComponent: handleRemoveAppBuilderComponent,
+    renameAppBuilderComponent: handleRenameAppBuilderComponent,
+
+    // Console API access (runtime API subscription — list_console_apis / add_console_apis)
+    listConsoleApis: handleListConsoleApis,
+    addConsoleApis: handleAddConsoleApis,
+    setConsoleApis: handleSetConsoleApis,
 
     // EDS storefront sync
-    'syncStorefront': handleSyncStorefront,
+    syncStorefront: handleSyncStorefront,
 
     // EDS block library refresh (re-sync DA.live library from component-definition.json)
-    'refreshBlockLibrary': handleRefreshBlockLibrary,
+    refreshBlockLibrary: handleRefreshBlockLibrary,
 
     // Authentication handlers
-    'reAuthenticate': handleReAuthenticate,
-    'switchOrg': handleSwitchOrg,
+    reAuthenticate: handleReAuthenticate,
+    switchOrg: handleSwitchOrg,
 
     // Project management handlers
-    'deleteProject': handleDeleteProject,
-    'renameProject': handleRenameProject,
-    'copyPath': handleCopyPath,
-    'exportProject': handleExportProject,
+    deleteProject: handleDeleteProject,
+    editProject: handleEditProject,
+    renameProject: handleRenameProject,
+    exportProjectSettings: handleExportProjectSettings,
+    exportProject: handleExportProject,
 
     // EDS content republish (re-push DA.live content to CDN)
-    'republishContent': handleRepublishContent,
+    republishContent: handleRepublishContent,
 
     // Project reset handler
-    'resetProject': handleResetProject,
+    resetProject: handleResetProject,
+
+    // Adobe deploy destination (project-scoped — one target for every integration)
+    setProjectDestination: handleSetProjectDestination,
 });

@@ -95,6 +95,8 @@ export enum ErrorCode {
     PROJECT_EXISTS = 'PROJECT_EXISTS',
     /** Project validation failed */
     PROJECT_INVALID = 'PROJECT_INVALID',
+    /** Current user did not create the Adobe project (delete is creator-only) */
+    NOT_PROJECT_OWNER = 'NOT_PROJECT_OWNER',
     /** Project start failed */
     PROJECT_START_FAILED = 'PROJECT_START_FAILED',
     /** Project stop failed */
@@ -128,6 +130,7 @@ export type ErrorCategory =
  */
 export function getErrorCategory(code: ErrorCode): ErrorCategory {
     if (code === ErrorCode.ORG_MISMATCH) return 'auth';
+    if (code === ErrorCode.NOT_PROJECT_OWNER) return 'project';
     if (code.startsWith('AUTH_')) return 'auth';
     if (code.startsWith('PREREQ_')) return 'prereq';
     if (code.startsWith('MESH_')) return 'mesh';
@@ -203,6 +206,7 @@ export function getErrorTitle(code: ErrorCode): string {
         [ErrorCode.PROJECT_CREATE_FAILED]: 'Project creation failed',
         [ErrorCode.PROJECT_EXISTS]: 'Project already exists',
         [ErrorCode.PROJECT_INVALID]: 'Invalid project',
+        [ErrorCode.NOT_PROJECT_OWNER]: 'Not your project',
         [ErrorCode.PROJECT_START_FAILED]: 'Failed to start project',
         [ErrorCode.PROJECT_STOP_FAILED]: 'Failed to stop project',
 

@@ -13,10 +13,7 @@ export type MessageType =
     | 'ready'
     | 'cancel'
     | 'cancel-project-creation'
-    | 'cancel-mesh-creation'
-    | 'cancel-auth-polling'
     | 'openProject'
-    | 'browseFiles'
     | 'log'
 
     // Prerequisites messages
@@ -36,6 +33,7 @@ export type MessageType =
     | 'get-projects'
     | 'select-project'
     | 'check-project-apis'
+    | 'delete-adobe-project'
     | 'project-selected' // UI-only selection
 
     // Workspace messages
@@ -55,8 +53,8 @@ export type MessageType =
 
     // API Mesh messages
     | 'check-api-mesh'
-    | 'create-api-mesh'
     | 'delete-api-mesh'
+    | 'ensure-mesh-api-subscribed'
     | 'check-mesh-status-async'
 
     // Project creation messages
@@ -64,8 +62,15 @@ export type MessageType =
     | 'validate'
 
     // Dashboard messages
+    // Stop + settle + start, for a config change that landed while running.
+    | 'restartDemo'
     | 'toggle-logs'
     | 'open-component-file'
+    // Rename a deployed integration's display name (shell instancing Step 10;
+    // extension-side showInputBox owns the input surface)
+    | 'renameAppBuilderComponent'
+    // Unified on-open check result channel (org-context, mesh-verify, mcp-health, ai-verify)
+    | 'checkResult'
 
     // Generic
     | 'continue-step'
@@ -193,6 +198,26 @@ export interface DashboardPayload {
  * GenericPayload - Generic payload for unknown messages
  */
 export type GenericPayload = Record<string, unknown>;
+
+/**
+ * The webview message type carrying a unified on-open {@link CheckOutcome}.
+ * One channel for every automatic on-open check; the webview routes by `checkId`.
+ */
+export const CHECK_RESULT_MESSAGE = 'checkResult';
+
+/**
+ * Stable ids for the automatic on-open checks (the `checkResult` routing keys).
+ * One typed place — no ad-hoc message-type strings scattered across features.
+ */
+export const CHECK_IDS = {
+    ORG_CONTEXT: 'org-context',
+    MESH_VERIFY: 'mesh-verify',
+    MCP_HEALTH: 'mcp-health',
+    AI_VERIFY: 'ai-verify',
+    AI_CONTEXT_FRESHNESS: 'ai-context-freshness',
+} as const;
+
+export type CheckId = (typeof CHECK_IDS)[keyof typeof CHECK_IDS];
 
 /**
  * Message - Complete message structure with ID and metadata

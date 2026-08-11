@@ -37,10 +37,17 @@ export interface BackButtonConfig {
 }
 
 export interface PageHeaderProps {
-    /** Main title displayed as H1 */
-    title: string;
-    /** Optional subtitle displayed as H3 with gray styling (typically step name) */
-    subtitle?: string;
+    /** Main title displayed as H1 (a node allows e.g. an inline-rename field) */
+    title: React.ReactNode;
+    /**
+     * Optional subtitle displayed as H3 with gray styling (typically step name).
+     *
+     * `ReactNode`, not `string`: the Integrations header carries the deploy
+     * destination plus its `Change` control, and splitting the control away from
+     * the fact it changes reads worse. Strictly widening — every string caller
+     * still type-checks, and it already renders inside a Spectrum `<Text>`.
+     */
+    subtitle?: React.ReactNode;
     /** Optional description text displayed below subtitle (typically step description) */
     description?: string;
     /** Optional dynamic status text displayed below description (for showing current operation) */
@@ -74,57 +81,53 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     constrainWidth = false,
     className,
 }) => {
+    // One tight single row: [back?] title · subtitle crumb … [action]. A description or
+    // status renders as an optional secondary line only when supplied. This reclaimed
+    // density is the canonical header for every screen — the page context (a left rail
+    // on the wizard, the grid on a dashboard) carries the wayfinding, so the header
+    // stays short rather than restating it.
     const headerContent = (
-        <Flex justifyContent="space-between" alignItems="start">
-            <View>
+        <div className="page-header-inner">
+            <Flex alignItems="center" gap="size-200" wrap>
                 {backButton && (
-                    <Button
-                        variant="secondary"
-                        onPress={backButton.onPress}
-                        marginBottom="size-100"
-                    >
+                    <Button variant="secondary" isQuiet onPress={backButton.onPress}>
                         {backButton.label}
                     </Button>
                 )}
-                <Heading level={1} marginBottom={subtitle ? 'size-100' : undefined}>
-                    {title}
-                </Heading>
-                {subtitle && (
-                    <Heading level={3} marginBottom="size-0" UNSAFE_className={cn('font-normal', 'text-gray-600')}>
-                        {subtitle}
+                <Flex alignItems="baseline" gap="size-150" wrap>
+                    <Heading level={1} margin={0} UNSAFE_className="page-header-title">
+                        {title}
                     </Heading>
-                )}
-                {description && (
-                    <div>
-                        <Text UNSAFE_className={cn('text-gray-500', 'text-sm')}>
-                            {description}
+                    {subtitle && (
+                        <Text UNSAFE_className={cn('text-gray-600', 'page-header-subtitle')}>
+                            {subtitle}
                         </Text>
-                    </div>
-                )}
-                {statusText && (
-                    <div className="mt-1">
-                        <Text UNSAFE_className={cn('text-gray-600', 'text-sm', 'font-medium')}>
-                            {statusText}
-                        </Text>
-                    </div>
-                )}
-            </View>
-            {action}
-        </Flex>
+                    )}
+                </Flex>
+                {action ? <View marginStart="auto">{action}</View> : null}
+            </Flex>
+            {description && (
+                <div className="page-header-secondary">
+                    <Text UNSAFE_className={cn('text-gray-500', 'text-sm')}>{description}</Text>
+                </div>
+            )}
+            {statusText && (
+                <div className="page-header-secondary">
+                    <Text UNSAFE_className={cn('text-gray-600', 'text-sm', 'font-medium')}>
+                        {statusText}
+                    </Text>
+                </div>
+            )}
+        </div>
     );
 
     return (
         <View
-            padding="size-400"
-            UNSAFE_className={cn('border-b', 'bg-gray-75', className)}
+            paddingX="size-400"
+            paddingY="size-200"
+            UNSAFE_className={cn('border-b', 'bg-gray-75', 'page-header', className)}
         >
-            {constrainWidth ? (
-                <div className="page-container">
-                    {headerContent}
-                </div>
-            ) : (
-                headerContent
-            )}
+            {constrainWidth ? <div className="page-container">{headerContent}</div> : headerContent}
         </View>
     );
 };

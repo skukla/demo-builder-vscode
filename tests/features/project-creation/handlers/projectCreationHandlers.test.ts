@@ -5,7 +5,9 @@
  * Verifies all required handlers are registered and accessible.
  */
 
-import { projectCreationHandlers, needsProgressCallback } from '@/features/project-creation/handlers';
+import {
+    projectCreationHandlers,
+} from '@/features/project-creation/handlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers';
 
 describe('projectCreationHandlers', () => {
@@ -40,6 +42,11 @@ describe('projectCreationHandlers', () => {
             expect(hasHandler(projectCreationHandlers, 'authenticate')).toBe(true);
         });
 
+        it('should register Adobe project management handlers', () => {
+            expect(hasHandler(projectCreationHandlers, 'create-adobe-project')).toBe(true);
+            expect(hasHandler(projectCreationHandlers, 'delete-adobe-project')).toBe(true);
+        });
+
         it('should register project creation handlers', () => {
             expect(hasHandler(projectCreationHandlers, 'validate')).toBe(true);
             expect(hasHandler(projectCreationHandlers, 'create-project')).toBe(true);
@@ -47,24 +54,25 @@ describe('projectCreationHandlers', () => {
 
         it('should register mesh handlers', () => {
             expect(hasHandler(projectCreationHandlers, 'check-api-mesh')).toBe(true);
-            expect(hasHandler(projectCreationHandlers, 'create-api-mesh')).toBe(true);
         });
 
         it('should register EDS handlers', () => {
             expect(hasHandler(projectCreationHandlers, 'check-github-auth')).toBe(true);
             expect(hasHandler(projectCreationHandlers, 'check-dalive-auth')).toBe(true);
         });
-    });
 
-    describe('needsProgressCallback', () => {
-        it('should return true for create-api-mesh', () => {
-            expect(needsProgressCallback('create-api-mesh')).toBe(true);
+        it('should register the console API handler', () => {
+            expect(hasHandler(projectCreationHandlers, 'list-org-console-apis')).toBe(true);
         });
 
-        it('should return false for other message types', () => {
-            expect(needsProgressCallback('check-auth')).toBe(false);
-            expect(needsProgressCallback('validate')).toBe(false);
-            expect(needsProgressCallback('ready')).toBe(false);
+        it('should export the console API handler from the barrel', async () => {
+            const barrel = await import('@/features/project-creation/handlers');
+            const exported = (barrel as Record<string, unknown>).handleListOrgConsoleApis;
+            expect(typeof exported).toBe('function');
+            expect(
+                (projectCreationHandlers as Record<string, unknown>)['list-org-console-apis']
+            ).toBe(exported);
         });
     });
+
 });

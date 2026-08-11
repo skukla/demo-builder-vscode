@@ -10,10 +10,22 @@
 import { useState, useEffect, useMemo, useRef, useCallback, Dispatch, SetStateAction } from 'react';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
+import {
+    getStorefrontStatusDisplay,
+    isUpdatePending,
+    severityToColor,
+} from '@/core/ui/utils/statusVocabulary';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
+import type {
+    CheckOutcome,
+    CheckStatus,
+    OrgContextCheckData,
+    MeshVerifyCheckData,
+} from '@/features/dashboard/services/onOpenChecks';
 import type { AiRegenerateProgress } from '@/features/dashboard/ui/components/AiCapabilitiesModal';
 import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
+import { CHECK_RESULT_MESSAGE, CHECK_IDS } from '@/types/messages';
 
 /**
  * Mesh deployment status values
@@ -35,7 +47,15 @@ export type MeshStatus =
 export interface ProjectStatus {
     name: string;
     path: string;
-    status: 'created' | 'configuring' | 'ready' | 'starting' | 'running' | 'stopping' | 'stopped' | 'error';
+    status:
+        | 'created'
+        | 'configuring'
+        | 'ready'
+        | 'starting'
+        | 'running'
+        | 'stopping'
+        | 'stopped'
+        | 'error';
     port?: number;
     adobeOrg?: string;
     adobeProject?: string;
@@ -54,11 +74,21 @@ export interface ProjectStatus {
 export type StatusColor = 'blue' | 'green' | 'yellow' | 'orange' | 'red' | 'gray';
 
 /**
- * Status display object
+ * The fix a bad status needs, decided where the status is named rather than by
+ * whichever component happens to render it.
+ *
+ * The Frontend badge used to report "Republish needed" and "Restart needed" and
+ * offer neither: the republish sat in the ActionGrid's More overflow, and no
+ * restart affordance existed at all. Naming the remedy beside the state is what
+ * stops those drifting apart again.
  */
+export type StatusRemedy = 'republish' | 'restart';
+
 export interface StatusDisplay {
     color: StatusColor;
     text: string;
+    /** Present only when this state has an inline fix to offer. */
+    remedy?: StatusRemedy;
 }
 
 /**
@@ -71,12 +101,23 @@ export interface StatusDisplay {
 export interface AiReadyState {
     label: 'AI';
     color: 'blue' | 'gray' | 'green' | 'yellow' | 'red';
-    text: 'Verifying' | 'Ready' | 'Setup incomplete' | 'Broken';
+    text:
+        | 'Verifying'
+        | 'Ready'
+        | 'Setup incomplete'
+        | 'Broken'
+        | 'Updating AI configuration…'
+        | 'Regenerating AI files…'
+        | 'AI files out of date';
 }
 
-/** Shape we read from the verify-ai-setup handler response. */
+/**
+ * Shape we read from the AI verification — delivered on open via the
+ * `checkResult{ai-verify}` push (`data`) and on demand via the `verify-ai-setup`
+ * request (after Regenerate). `success` only appears on the request response.
+ */
 interface VerifyAiSetupResponse {
-    success: boolean;
+    success?: boolean;
     checks?: Array<{ name: string; status: 'ok' | 'warning' | 'error' }>;
     inventory?: {
         /** Task-framed capability list surfaced by the "View AI Capabilities" link. */
@@ -114,30 +155,35 @@ export interface UseDashboardStatusProps {
 /**
  * Org-context check lifecycle for the dashboard notice:
  * - `checking`: the proactive check is expected to run but hasn't resolved yet.
- * - `mismatch`: the token reaches a different org than the project.
+ * - `mismatch`: the token reaches a different org than the project (warning).
+ * - `unknown`: the check couldn't run non-interactively (no token / SDK cold) —
+ *   surfaces a quiet "Sign in to check" affordance instead of launching a browser.
  * - `ok`: resolved and the org is reachable (drives a transient success banner).
  * - `none`: no check applies (project has no Adobe org).
  */
-export type OrgCheckState = 'checking' | 'mismatch' | 'ok' | 'none';
+export type OrgCheckState = 'checking' | 'mismatch' | 'unknown' | 'ok' | 'none';
 
 /**
  * Derive the org-check lifecycle (avoids a nested ternary in the hook body).
  *
  * Telegraphs "checking" while the proactive check is expected (the project has
  * an Adobe org) and not yet *perceptibly* resolved — i.e. until the async
- * `orgContextResult` has arrived (orgChecked) AND a minimum display time has
- * elapsed, so a fast (warm-cache) check doesn't flash the indicator and make
- * the banner appear out of nowhere.
+ * `checkResult` has arrived (orgChecked) AND a minimum display time has elapsed,
+ * so a fast (warm-cache) check doesn't flash the indicator and make the banner
+ * appear out of nowhere. Once resolved, the typed outcome status drives the rest.
  */
 function deriveOrgCheckState(
-    hasMismatch: boolean,
+    orgStatus: CheckStatus | undefined,
     orgChecked: boolean,
     hasAdobeContext: boolean,
     minDisplayElapsed: boolean,
 ): OrgCheckState {
     if (!hasAdobeContext) return 'none';
     if (!orgChecked || !minDisplayElapsed) return 'checking';
-    return hasMismatch ? 'mismatch' : 'ok';
+    if (orgStatus === 'warning') return 'mismatch';
+    // unknown OR an unexpected error both degrade to the quiet "sign in" affordance.
+    if (orgStatus === 'unknown' || orgStatus === 'error') return 'unknown';
+    return 'ok';
 }
 
 /**
@@ -178,6 +224,8 @@ export interface UseDashboardStatusReturn {
     aiMcps: McpInventoryEntry[];
     /** True when the MCP inspector errored (list shows a warning row) */
     aiMcpsError: boolean;
+    /** The AI verify has not produced a result yet (nor failed) — inventory is unknown, not empty. */
+    aiInventoryLoading: boolean;
     /** True while an AI verify/regenerate operation is in flight */
     aiBusy: boolean;
     /**
@@ -195,8 +243,7 @@ const EMPTY_SKILLS: SkillInventoryEntry[] = [];
 const EMPTY_MCPS: McpInventoryEntry[] = [];
 
 /** Mesh statuses that indicate a user-initiated operation is in progress (preserve during updates) */
-const isMeshDeploying = (status: MeshStatus | undefined): boolean =>
-    status === 'deploying';
+const isMeshDeploying = (status: MeshStatus | undefined): boolean => status === 'deploying';
 
 /** Mesh statuses that indicate any operation is in progress (disable UI actions) */
 export const isMeshBusy = (status: MeshStatus | undefined): boolean =>
@@ -211,7 +258,10 @@ export const isMeshBusy = (status: MeshStatus | undefined): boolean =>
  * @param props - Hook configuration
  * @returns Object containing status state and computed displays
  */
-export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = false): UseDashboardStatusReturn {
+export function useDashboardStatus(
+    props: UseDashboardStatusProps = {},
+    isEds = false,
+): UseDashboardStatusReturn {
     const { hasMesh, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext } = props;
 
     const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(null);
@@ -220,19 +270,35 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     const [verifyResult, setVerifyResult] = useState<VerifyAiSetupResponse | null>(null);
     const [verifyFailed, setVerifyFailed] = useState(false);
     const [aiBusy, setAiBusy] = useState(false);
+    // True only while a REGENERATE is in flight (aiBusy also covers verifies).
+    // Drives the badge's "Regenerating AI files…" telegraph — without it the
+    // click on "Regenerate AI files" is invisible for the whole (up to ~1 min)
+    // run and reads as a dead link.
+    const [aiRegenerating, setAiRegenerating] = useState(false);
     const [aiRegenProgress, setAiRegenProgress] = useState<AiRegenerateProgress | null>(null);
     // Gate the "Checking Adobe organization…" indicator to a minimum visible
     // duration so a fast check is still perceived before the banner shows.
     const [orgCheckMinElapsed, setOrgCheckMinElapsed] = useState(false);
     // Org-context check result, delivered asynchronously (decoupled from status)
-    // via the `orgContextResult` message. orgChecked flips true once resolved.
+    // via the on-open orchestrator's `checkResult` message (checkId `org-context`).
+    // orgChecked flips true once resolved; orgStatus carries the typed outcome so
+    // the badge can distinguish ok / mismatch / unknown ("sign in to check").
     const [orgMismatch, setOrgMismatch] = useState<OrgMismatchInfo | undefined>(undefined);
     const [orgChecked, setOrgChecked] = useState(false);
+    const [orgStatus, setOrgStatus] = useState<CheckStatus | undefined>(undefined);
     // Name of the org the token currently reaches — shown in the "IMS Org" badge.
     const [orgCurrentName, setOrgCurrentName] = useState<string | undefined>(undefined);
+    // True while the mcp-health check is visibly auto-healing stale MCP paths
+    // (checkResult{mcp-health, warning} → true; ok/error → false). Drives the AI
+    // badge's "Updating AI configuration…" telegraph (replaces the silent failure).
+    const [mcpHealing, setMcpHealing] = useState(false);
+    // True when the ai-context-freshness check reports the project's AI bundle is
+    // older than the extension (checkResult{ai-context-freshness, warning} → true;
+    // ok → false). Detect-only: it flips the AI badge to "AI files out of date",
+    // which surfaces the existing "Regenerate AI files" action (the remediation).
+    const [aiContextStale, setAiContextStale] = useState(false);
     // Track whether status was requested (prevent StrictMode double-request)
     const statusRequestedRef = useRef(false);
-    const verifyRequestedRef = useRef(false);
 
     useEffect(() => {
         // Guard against StrictMode double-request (only send message once)
@@ -247,7 +313,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
             // AND only if the new status is a transient 'checking' state.
             // This prevents update checks from resetting mesh button state mid-deployment
             // but allows completion statuses (deployed, error, etc.) to come through.
-            setProjectStatus(prev => {
+            setProjectStatus((prev) => {
                 const shouldPreserveMeshStatus =
                     isMeshDeploying(prev?.mesh?.status) && projectData.mesh?.status === 'checking';
                 return {
@@ -257,41 +323,111 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
             });
             setIsRunning(projectData.status === 'running');
             // Clear transitioning state when we receive a definitive status
-            if (projectData.status === 'running' || projectData.status === 'ready' || projectData.status === 'stopped') {
+            if (
+                projectData.status === 'running' ||
+                projectData.status === 'ready' ||
+                projectData.status === 'stopped'
+            ) {
                 setIsTransitioning(false);
             }
         });
 
         const unsubscribeMesh = webviewClient.onMessage('meshStatusUpdate', (data: unknown) => {
             const meshData = data as { status: MeshStatus; message?: string; endpoint?: string };
-            setProjectStatus(prev => prev ? {
-                ...prev,
-                mesh: {
-                    status: meshData.status,
-                    message: meshData.message,
-                    endpoint: meshData.endpoint,
-                },
-            } : prev);
+            setProjectStatus((prev) =>
+                prev
+                    ? {
+                          ...prev,
+                          mesh: {
+                              status: meshData.status,
+                              message: meshData.message,
+                              endpoint: meshData.endpoint,
+                          },
+                      }
+                    : prev,
+            );
             // Clear transitioning state when mesh operation completes
             if (!isMeshBusy(meshData.status)) {
                 setIsTransitioning(false);
             }
         });
 
-        // Org-context check result (decoupled from statusUpdate so the slow
-        // getOrganizations call never blocks the dashboard). `pending: true`
-        // telegraphs the check; the resolved message carries the mismatch (or
-        // none). Re-checks (after a forced switch) emit pending → resolved again.
-        const unsubscribeOrg = webviewClient.onMessage('orgContextResult', (data: unknown) => {
-            const payload = data as { pending?: boolean; orgMismatch?: OrgMismatchInfo; currentOrg?: string };
-            if (payload.pending) {
-                setOrgChecked(false);
-                setOrgMismatch(undefined);
-                setOrgCurrentName(undefined);
-            } else {
+        // On-open check results (decoupled from statusUpdate), routed by checkId:
+        //   - org-context: `pending` telegraph → ok / warning (mismatch) / unknown
+        //     ("sign in to check"). Re-checks (after a switch / re-auth) repeat.
+        //   - mcp-health: `warning` telegraphs a visible self-heal of stale MCP
+        //     paths; ok/error ends it. (mesh-verify / ai-verify join in later steps.)
+        const unsubscribeChecks = webviewClient.onMessage(CHECK_RESULT_MESSAGE, (data: unknown) => {
+            const outcome = data as CheckOutcome<OrgContextCheckData>;
+
+            if (outcome.checkId === CHECK_IDS.ORG_CONTEXT) {
+                if (outcome.status === 'pending') {
+                    setOrgChecked(false);
+                    setOrgStatus('pending');
+                    setOrgMismatch(undefined);
+                    setOrgCurrentName(undefined);
+                    return;
+                }
                 setOrgChecked(true);
-                setOrgMismatch(payload.orgMismatch);
-                setOrgCurrentName(payload.currentOrg);
+                setOrgStatus(outcome.status);
+                setOrgMismatch(outcome.data?.orgMismatch);
+                setOrgCurrentName(outcome.data?.currentOrg);
+                return;
+            }
+
+            if (outcome.checkId === CHECK_IDS.MCP_HEALTH) {
+                // `warning` = heal in flight; `ok`/`error` end it. The AI badge
+                // reflects the in-flight state; a failed heal falls back to the
+                // verify-driven badge (whose "Regenerate AI files" is the retry).
+                setMcpHealing(outcome.status === 'warning');
+                return;
+            }
+
+            if (outcome.checkId === CHECK_IDS.AI_CONTEXT_FRESHNESS) {
+                // Detect-only: `warning` = the project's AI bundle is stale (older
+                // than the extension) → flip the badge to "AI files out of date";
+                // `ok` = current. The check is reRunnable, so a Regenerate (which
+                // persists a fresh stamp) clears this on the next status refresh.
+                setAiContextStale(outcome.status === 'warning');
+                return;
+            }
+
+            if (outcome.checkId === CHECK_IDS.MESH_VERIFY) {
+                // The deployed mesh was background-verified. `warning` = it's gone
+                // → flip the badge to not-deployed (now VISIBLE, not a silent state
+                // mutation). `unknown` = transient verify error → leave the badge as
+                // persisted (don't scare). `ok` = still there → keep current badge.
+                const meshOutcome = outcome as CheckOutcome<MeshVerifyCheckData>;
+                if (meshOutcome.status === 'warning') {
+                    setProjectStatus((prev) =>
+                        prev
+                            ? {
+                                  ...prev,
+                                  mesh: {
+                                      status: 'not-deployed',
+                                      message: meshOutcome.message,
+                                      endpoint: prev.mesh?.endpoint,
+                                  },
+                              }
+                            : prev,
+                    );
+                }
+                return;
+            }
+
+            if (outcome.checkId === CHECK_IDS.AI_VERIFY) {
+                // The single on-open AI verification (the hook no longer pulls it).
+                // `data` carries {checks, inventory} → drives the AI badge + skills/
+                // MCP modal. A thrown verify arrives as an error outcome with no data
+                // → mark verify failed so the badge leaves 'Verifying'.
+                const aiData = (outcome as CheckOutcome<VerifyAiSetupResponse>).data;
+                if (aiData) {
+                    setVerifyResult(aiData);
+                    setVerifyFailed(false);
+                } else {
+                    setVerifyFailed(true);
+                }
+                setAiBusy(false);
             }
         });
 
@@ -301,7 +437,11 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         // modal renders this live via LoadingDisplay; no cross-talk with the
         // wizard because the wizard is a separate webview.
         const unsubscribeProgress = webviewClient.onMessage('creationProgress', (data: unknown) => {
-            const payload = data as { currentOperation?: string; progress?: number; message?: string };
+            const payload = data as {
+                currentOperation?: string;
+                progress?: number;
+                message?: string;
+            };
             if (!payload?.currentOperation) return;
             setAiRegenProgress({
                 currentOperation: payload.currentOperation,
@@ -313,7 +453,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         return () => {
             unsubscribeStatus();
             unsubscribeMesh();
-            unsubscribeOrg();
+            unsubscribeChecks();
             unsubscribeProgress();
         };
     }, []);
@@ -329,11 +469,16 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         return () => clearTimeout(timer);
     }, [hasAdobeContext]);
 
-    // Run the AI setup verification. Reused on mount and after Regenerate to
-    // refresh both the badge and the skills list.
+    // Run the AI setup verification on demand (after Regenerate). The ON-OPEN
+    // verification is delivered by the orchestrator's ai-verify check via
+    // `checkResult{ai-verify}` (see the listener above) — the hook no longer
+    // pulls it on mount, so the MCP servers spawn once on open, not twice.
     const runVerify = useCallback(async (): Promise<void> => {
         try {
-            const result = await webviewClient.request<VerifyAiSetupResponse>('verify-ai-setup', {});
+            const result = await webviewClient.request<VerifyAiSetupResponse>(
+                'verify-ai-setup',
+                {},
+            );
             setVerifyResult(result);
             setVerifyFailed(false);
         } catch {
@@ -349,23 +494,27 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     const regenerateAiFiles = useCallback(async (): Promise<void> => {
         setAiRegenProgress(null);
         setAiBusy(true);
+        setAiRegenerating(true);
         try {
-            await webviewClient.request('regenerate-ai-files', {});
+            const result = await webviewClient.request<{ success?: boolean }>(
+                'regenerate-ai-files',
+                {},
+            );
+            if (result?.success !== false) {
+                // The handler persisted a fresh aiContextVersion stamp, but
+                // `aiContextStale` is fed by the ON-OPEN freshness check, which
+                // does not re-run here — without this clear, a successful
+                // regenerate leaves the badge stuck on "AI files out of date"
+                // until the dashboard reopens. The reRunnable check re-confirms
+                // on next open.
+                setAiContextStale(false);
+            }
             await runVerify();
         } finally {
             setAiBusy(false);
+            setAiRegenerating(false);
             setAiRegenProgress(null);
         }
-    }, [runVerify]);
-
-    // Fetch the AI setup verification once on mount. Guards against StrictMode
-    // double-fetch using a ref. The badge stays in 'Verifying' (blue) until
-    // this resolves.
-    useEffect(() => {
-        if (verifyRequestedRef.current) return;
-        verifyRequestedRef.current = true;
-        setAiBusy(true);
-        void runVerify().finally(() => setAiBusy(false));
     }, [runVerify]);
 
     // Derived values
@@ -375,7 +524,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     const meshStatus = projectStatus?.mesh?.status;
     const meshMessage = projectStatus?.mesh?.message;
     const orgCheckState = deriveOrgCheckState(
-        Boolean(orgMismatch),
+        orgStatus,
         orgChecked,
         Boolean(hasAdobeContext),
         orgCheckMinElapsed,
@@ -394,6 +543,10 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
                 return { color: 'green', text: orgCurrentName || 'Connected' };
             case 'mismatch':
                 return { color: 'red', text: orgCurrentName || 'Wrong org' };
+            case 'unknown':
+                // Couldn't check non-interactively — neutral badge; the "Sign in to
+                // check" action (rendered on the badge) is the recovery affordance.
+                return { color: 'gray', text: 'Not checked' };
             default:
                 return null;
         }
@@ -404,19 +557,20 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         // EDS projects show dynamic status based on storefront config state
         // Use updated value from projectStatus (via statusUpdate) or fall back to initial prop
         if (isEds) {
-            const storefrontStatus = projectStatus?.edsStorefrontStatus || initialEdsStorefrontStatus || 'published';
-            switch (storefrontStatus) {
-                case 'published':
-                    return { color: 'green', text: 'Published' };
-                case 'stale':
-                    return { color: 'yellow', text: 'Republish Needed' };
-                case 'update-declined':
-                    return { color: 'orange', text: 'Republish Needed' };
-                case 'not-published':
-                    return { color: 'gray', text: 'Not Published' };
-                default:
-                    return { color: 'green', text: 'Published' };
-            }
+            // One shared table, so this cannot drift from how the project card
+            // renders the same state — which is exactly what happened while both
+            // surfaces owned a switch statement (they disagreed on the casing of
+            // "Not published").
+            const storefrontStatus =
+                projectStatus?.edsStorefrontStatus || initialEdsStorefrontStatus;
+            const display = getStorefrontStatusDisplay(storefrontStatus);
+            return {
+                color: severityToColor(display.severity),
+                text: display.label,
+                // Only DRIFT offers a republish. `not-published` is a storefront
+                // that has never shipped, and its verb is Sync Storefront.
+                remedy: isUpdatePending(storefrontStatus) ? 'republish' : undefined,
+            };
         }
 
         switch (status) {
@@ -424,7 +578,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
                 return { color: 'blue', text: 'Starting...' };
             case 'running':
                 if (frontendConfigChanged) {
-                    return { color: 'yellow', text: 'Restart needed' };
+                    return { color: 'yellow', text: 'Restart needed', remedy: 'restart' };
                 }
                 return { color: 'green', text: `Running on port ${port}` };
             case 'stopping':
@@ -439,13 +593,23 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
             default:
                 return { color: 'gray', text: 'Ready' };
         }
-    }, [isEds, status, frontendConfigChanged, port, initialEdsStorefrontStatus, projectStatus?.edsStorefrontStatus]);
+    }, [
+        isEds,
+        status,
+        frontendConfigChanged,
+        port,
+        initialEdsStorefrontStatus,
+        projectStatus?.edsStorefrontStatus,
+    ]);
 
     const meshStatusDisplay = useMemo((): StatusDisplay | null => {
         // Use initialMeshStatus from init payload to avoid loading flash
         // Translate persisted values: 'stale' → 'config-changed' (dashboard terminology)
-        const effectiveMeshStatus = meshStatus
-            || (initialMeshStatus === 'stale' ? 'config-changed' : initialMeshStatus as MeshStatus | undefined);
+        const effectiveMeshStatus =
+            meshStatus ||
+            (initialMeshStatus === 'stale'
+                ? 'config-changed'
+                : (initialMeshStatus as MeshStatus | undefined));
 
         if (!effectiveMeshStatus) {
             // If we know hasMesh, use it
@@ -466,10 +630,11 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
                 return { color: 'blue', text: meshMessage || 'Deploying...' };
         }
 
-        // Persisted statuses — use shared display mapping
-        // Dashboard uses 'config-changed' for what's stored as 'stale'
-        const lookupKey = effectiveMeshStatus === 'config-changed' ? 'stale' : effectiveMeshStatus;
-        const display = getMeshStatusDisplay(lookupKey);
+        // Persisted statuses — the shared vocabulary. The 'config-changed' →
+        // 'stale' translation used to happen here AND in the grid's
+        // toMeshCardStatus; it now happens once, in normalizeDisplayStatus, so
+        // the alias cannot mean one thing on this badge and another on the card.
+        const display = getMeshStatusDisplay(effectiveMeshStatus);
         if (display) {
             return { color: display.color, text: display.text };
         }
@@ -488,8 +653,22 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
     // Global MCP registration (~/.claude.json) is an optional convenience for
     // cross-directory discovery, not a readiness requirement — the per-project
     // .mcp.json is written at creation and is sufficient. So it does NOT gate
-    // this badge; the AI Configuration tab surfaces a Register button separately.
+    // this badge; the "Demo Builder: Register Global MCP" command is the
+    // explicit opt-in.
     const aiReady = useMemo<AiReadyState>(() => {
+        // A user-initiated regenerate is in flight (up to ~1 min with the tooling
+        // install) — telegraph it, or the "Regenerate AI files" click reads as a
+        // dead link. Highest precedence: it IS the current activity.
+        if (aiRegenerating) {
+            return { label: 'AI', color: 'blue', text: 'Regenerating AI files…' };
+        }
+        // The mcp-health check is visibly self-healing stale MCP paths — telegraph
+        // it on the badge (P2) so the work isn't silent. Overrides the verify state
+        // until the heal resolves (ok → verify-driven badge; error → falls back to
+        // the verify badge whose "Regenerate AI files" action is the retry).
+        if (mcpHealing) {
+            return { label: 'AI', color: 'blue', text: 'Updating AI configuration…' };
+        }
         if (!verifyResult) {
             // Verify failed — surface as 'Setup incomplete' rather than leaving
             // the badge stuck on gray indefinitely.
@@ -500,7 +679,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         }
 
         const checks = verifyResult.checks ?? [];
-        const anyCheckFailed = checks.some(c => c.status !== 'ok');
+        const anyCheckFailed = checks.some((c) => c.status !== 'ok');
         if (anyCheckFailed) {
             return { label: 'AI', color: 'red', text: 'Broken' };
         }
@@ -511,15 +690,29 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
             return { label: 'AI', color: 'yellow', text: 'Setup incomplete' };
         }
 
+        // Files verify healthy, but the project's AI bundle predates the current
+        // extension (a new skill/template shipped since it was generated). Yellow
+        // surfaces the "Regenerate AI files" action; the reRunnable check clears it
+        // once the user regenerates.
+        if (aiContextStale) {
+            return { label: 'AI', color: 'yellow', text: 'AI files out of date' };
+        }
+
         return { label: 'AI', color: 'green', text: 'Ready' };
-    }, [verifyResult, verifyFailed]);
+    }, [verifyResult, verifyFailed, mcpHealing, aiContextStale, aiRegenerating]);
 
     // Capability lists for the "View AI Capabilities" surface.
     const inventory = verifyResult?.inventory;
     const aiSkills = inventory?.skills ?? EMPTY_SKILLS;
-    const aiSkillsError = Boolean(inventory?.skillsError);
     const aiMcps = inventory?.mcps ?? EMPTY_MCPS;
-    const aiMcpsError = Boolean(inventory?.mcpsError);
+    // No result and no failure = still in flight. Without this the modal collapsed
+    // "not asked yet" into "none exist" and told the user to regenerate healthy files.
+    const aiInventoryLoading = !verifyResult && !verifyFailed;
+    // A failed verify is an inspector error as far as these lists are concerned: we
+    // could not read them, which is what the error row already says. Claiming zero
+    // would be a different lie from the one just fixed.
+    const aiSkillsError = Boolean(inventory?.skillsError) || verifyFailed;
+    const aiMcpsError = Boolean(inventory?.mcpsError) || verifyFailed;
 
     return {
         projectStatus,
@@ -539,6 +732,7 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}, isEds = 
         aiSkillsError,
         aiMcps,
         aiMcpsError,
+        aiInventoryLoading,
         aiBusy,
         aiRegenProgress,
         regenerateAiFiles,

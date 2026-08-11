@@ -62,14 +62,17 @@ export function formatAdobeCliError(error: Error | string): string {
         }
     }
 
-    return errorMessage.replace(/\s*›\s*/g, '\n');
+    // Trim so a message that STARTS with an arrow (aio api-mesh stderr does)
+    // never yields a leading newline — single-line renderers (the error log,
+    // toasts) would otherwise display a blank first line as an empty error.
+    return errorMessage.replace(/\s*›\s*/g, '\n').trim();
 }
 
 /**
  * Format mesh deployment errors with context
- * 
+ *
  * Wraps mesh deployment errors with a clear header and formats the details.
- * 
+ *
  * @param error - The error from mesh deployment
  * @returns Formatted error message ready for display
  */
@@ -93,6 +96,30 @@ export function formatAdobeError(error: Error | string, context?: string): strin
     }
 
     return formatted;
+}
+
+/**
+ * Condense a verbose SDK/HTTP error into one short line for inline UI display.
+ *
+ * The Console SDK surfaces failures as `[CoreConsoleAPISDK:CODE] 500 - Internal Server
+ * Error ({…large nested JSON…})`; rendered verbatim that floods a status row. Map a
+ * recognizable HTTP status to a short, actionable line, and hard-cap anything else so an
+ * unrecognized blob can never overwhelm the UI.
+ *
+ * @param error - the raw error (Error or string)
+ * @param maxLen - fallback truncation length for unrecognized messages
+ * @returns a single readable line
+ */
+export function formatApiAccessError(error: Error | string, maxLen = 200): string {
+    const raw = formatAdobeCliError(error);
+    const status = (/\b([45]\d\d)\s*-\s/.exec(raw) ?? /"status":\s*([45]\d\d)/.exec(raw))?.[1];
+    if (status) {
+        return status.startsWith('5')
+            ? `Adobe returned a temporary server error (${status}) while enabling API access. Please retry.`
+            : `Couldn't enable API access (error ${status}). Please retry, or check your Adobe permissions.`;
+    }
+    const firstLine = raw.split('\n')[0].trim();
+    return firstLine.length > maxLen ? `${firstLine.slice(0, maxLen - 1)}…` : firstLine;
 }
 
 /**
@@ -138,13 +165,17 @@ export function extractMeshErrorSummary(error: string): string {
     }
 
     // Try to extract connection errors
-    const connectionMatch = /(?:ECONNREFUSED|ENOTFOUND|ETIMEDOUT|connect ECONNREFUSED) ([^\s]+)/i.exec(error);
+    const connectionMatch =
+        /(?:ECONNREFUSED|ENOTFOUND|ETIMEDOUT|connect ECONNREFUSED) ([^\s]+)/i.exec(error);
     if (connectionMatch) {
         return `Could not connect to: ${connectionMatch[1]}\nCheck that the server is running and the URL is correct.`;
     }
 
     // mesh.json schema validation errors
-    const schemaMatch = /must NOT have additional properties|missing required property|should be (string|array|object|number|boolean)/i.exec(error);
+    const schemaMatch =
+        /must NOT have additional properties|missing required property|should be (string|array|object|number|boolean)/i.exec(
+            error,
+        );
     if (schemaMatch) {
         return `Invalid mesh.json configuration: ${schemaMatch[0]}\nCheck your mesh.json file for syntax errors.`;
     }
@@ -161,12 +192,17 @@ export function extractMeshErrorSummary(error: string): string {
 
     // Truncated "Building Mesh with config" error - Adobe returned incomplete error
     // This happens when mesh build fails but Adobe doesn't return the actual error details
-    if (/Building Mesh with config:.*\/$/.test(error) || /^Building Mesh with config:/.test(error)) {
-        return 'Mesh build failed. This is usually caused by:\n' +
+    if (
+        /Building Mesh with config:.*\/$/.test(error) ||
+        /^Building Mesh with config:/.test(error)
+    ) {
+        return (
+            'Mesh build failed. This is usually caused by:\n' +
             '• Invalid Commerce GraphQL endpoint URL\n' +
             '• Commerce instance not reachable from Adobe I/O\n' +
             '• Missing or invalid API credentials\n\n' +
-            'Check the Debug logs for more details.';
+            'Check the Debug logs for more details.'
+        );
     }
 
     // Try to extract the 💥 error line (the actual failure)

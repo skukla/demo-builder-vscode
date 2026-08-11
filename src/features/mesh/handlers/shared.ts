@@ -7,10 +7,7 @@
 import * as vscode from 'vscode';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
-import {
-    getSetupInstructions as getSetupInstructionsHelper,
-    getEndpoint as getEndpointHelper,
-} from '@/features/project-creation/helpers';
+import { getEndpoint as getEndpointHelper } from '@/features/project-creation/helpers';
 import { ErrorCode } from '@/types/errorCodes';
 import { Logger } from '@/types/logger';
 
@@ -80,22 +77,6 @@ export async function ensureAuthenticated(
         error: 'Adobe authentication required. Please sign in via the Project Dashboard.',
         code: ErrorCode.AUTH_REQUIRED,
     };
-}
-
-/**
- * Get setup instructions for API Mesh
- *
- * Returns step-by-step instructions for enabling API Mesh if not available.
- */
-export function getSetupInstructions(
-    context: HandlerContext,
-    selectedComponents: string[] = [],
-): { step: string; details: string; important?: boolean }[] | undefined {
-    return getSetupInstructionsHelper(
-        context.sharedState.apiServicesConfig,
-        selectedComponents,
-        context.sharedState.componentsData as import('../../../types/components').ComponentRegistry | undefined,
-    );
 }
 
 /**

@@ -243,4 +243,19 @@ describe('AuthCacheManager - Read/Write Operations', () => {
             expect(result).toBeUndefined();
         });
     });
+
+    describe('developer-permissions caching', () => {
+        it('should cache the developer-permission probe result', () => {
+            cacheManager.setCachedDeveloperPermissions({ hasPermissions: true });
+            const result = cacheManager.getCachedDeveloperPermissions();
+
+            expect(result).toEqual({ hasPermissions: true });
+        });
+
+        it('should return undefined when no developer-permission result cached', () => {
+            const result = cacheManager.getCachedDeveloperPermissions();
+
+            expect(result).toBeUndefined();
+        });
+    });
 });

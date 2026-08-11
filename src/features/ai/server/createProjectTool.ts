@@ -31,6 +31,7 @@ import * as path from 'path';
 import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
+import { asText } from './mcpToolResult';
 import {
     lastCompleteData,
     toPhaseTimeline,
@@ -53,9 +54,6 @@ import type { DemoPackage, Storefront } from '@/types/demoPackages';
 import type { HandlerContext } from '@/types/handlers';
 import type { WizardState } from '@/types/webview';
 
-function asText(value: unknown) {
-    return { content: [{ type: 'text' as const, text: JSON.stringify(value) }] };
-}
 
 /** Project a possibly-undefined org down to the lean `{ id, name }` surfaced on a mismatch. */
 function leanOrg(org: WizardState['adobeOrg'] | undefined): { id: string; name?: string } | undefined {

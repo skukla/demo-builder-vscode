@@ -25,11 +25,57 @@
  * "secondary socket" workaround the normal case rather than a mismatch patch.
  */
 
-import { mcpSocketBindings, resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
+import * as os from 'os';
+import * as path from 'path';
+import {
+    mcpSocketBindings,
+    mcpSocketDir,
+    resolveMcpSocketPath,
+} from '@/features/ai/server/mcpSocketPath';
 
 const PROJECTS_DIR = '/Users/dev/.demo-builder/projects';
 const PROJECT_DIR = '/Users/dev/.demo-builder/projects/my-demo';
 const SOCKET_DIR = '/tmp/test-sockets';
+
+describe('mcpSocketDir', () => {
+    // A test run must never bind the socket a live Extension Dev Host holds.
+    // The default projects dir hashes to the EXACT socket that window binds
+    // (verified 2026-08-10), and two suites call the real activate(), so the
+    // only thing keeping them apart is this override — set per worker in
+    // tests/setup/node.ts. If it stops being honoured, `npx jest` starts
+    // killing the developer's live MCP session again, silently.
+    const original = process.env.DEMO_BUILDER_MCP_SOCKET_DIR;
+
+    afterEach(() => {
+        if (original === undefined) {
+            delete process.env.DEMO_BUILDER_MCP_SOCKET_DIR;
+        } else {
+            process.env.DEMO_BUILDER_MCP_SOCKET_DIR = original;
+        }
+    });
+
+    it('honours DEMO_BUILDER_MCP_SOCKET_DIR', () => {
+        process.env.DEMO_BUILDER_MCP_SOCKET_DIR = '/tmp/somewhere-else';
+
+        expect(mcpSocketDir()).toBe('/tmp/somewhere-else');
+    });
+
+    it('falls back to the real temp-dir location when unset', () => {
+        // The positive control for the test above: without it, a mcpSocketDir()
+        // hard-wired to the override would pass the first assertion and hide
+        // that the production default had been lost.
+        delete process.env.DEMO_BUILDER_MCP_SOCKET_DIR;
+
+        expect(mcpSocketDir()).toBe(path.join(os.tmpdir(), 'demo-builder-mcp'));
+    });
+
+    it('is already overridden for this test run', () => {
+        // Proves the setup file actually took effect — the assertion that would
+        // have caught the live-socket collision before it ever happened.
+        expect(original).toBeDefined();
+        expect(original).not.toBe(path.join(os.tmpdir(), 'demo-builder-mcp'));
+    });
+});
 
 describe('mcpSocketBindings', () => {
     it('binds the projects-root socket when no workspace is open', () => {

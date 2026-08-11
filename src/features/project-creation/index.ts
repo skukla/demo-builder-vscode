@@ -19,7 +19,7 @@
 export { CreateProjectWebviewCommand } from './commands/createProject';
 
 // Handler map (use with dispatchHandler from @/core/handlers)
-export { projectCreationHandlers, needsProgressCallback } from './handlers';
+export { projectCreationHandlers } from './handlers';
 
 // Helpers - Public API for cross-feature use
 export { formatGroupName, generateComponentEnvFile } from './helpers';

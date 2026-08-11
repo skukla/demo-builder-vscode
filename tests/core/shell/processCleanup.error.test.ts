@@ -19,6 +19,18 @@ jest.mock('@/core/logging/debugLogger', () => ({
     }),
 }));
 
+/**
+ * These suites drive REAL child processes, and `killProcessTree` observes exits
+ * by POLLING on a 100ms (TIMEOUTS.POLL.PROCESS_CHECK) `setTimeout` chain. Node
+ * timers fire at *least* after their delay, so under the full suite's worker
+ * contention a loop that resolves in one or two ticks when idle can stretch far
+ * longer. Jest's default 10s cap then trips on tests that are behaving correctly.
+ *
+ * Hence the raised timeout — it buys scheduler headroom, it does NOT slow a
+ * healthy run (these finish in ~100-200ms in band).
+ */
+jest.setTimeout(30_000);
+
 describe('ProcessCleanup - Error Handling', () => {
     let processCleanup: ProcessCleanup;
     let originalKill: typeof process.kill;

@@ -34,8 +34,8 @@ describe('WizardContainer - Navigation', () => {
                 />
             );
 
-            // Initially on adobe-auth step (welcome removed in Step 3)
-            expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
+            // Initially on welcome step (welcome removed in Step 3)
+            expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
 
             // Click Continue button
             const continueButton = screen.getByRole('button', { name: /continue/i });
@@ -43,7 +43,7 @@ describe('WizardContainer - Navigation', () => {
 
             // Wait for transition (300ms delay in navigateToStep)
             await waitFor(() => {
-                expect(screen.getByTestId('adobe-project-step')).toBeInTheDocument();
+                expect(screen.getByTestId('storefront-setup-step')).toBeInTheDocument();
             }, { timeout: 500 });
         });
 
@@ -56,12 +56,12 @@ describe('WizardContainer - Navigation', () => {
                 />
             );
 
-            // Navigate forward to adobe-project step
+            // Navigate forward to welcome step
             const continueButton = screen.getByRole('button', { name: /continue/i });
             await user.click(continueButton);
 
             await waitFor(() => {
-                expect(screen.getByTestId('adobe-project-step')).toBeInTheDocument();
+                expect(screen.getByTestId('storefront-setup-step')).toBeInTheDocument();
             }, { timeout: 500 });
 
             // Navigate back
@@ -69,7 +69,7 @@ describe('WizardContainer - Navigation', () => {
             await user.click(backButton);
 
             await waitFor(() => {
-                expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
+                expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
             }, { timeout: 500 });
         });
 
@@ -82,20 +82,20 @@ describe('WizardContainer - Navigation', () => {
                 />
             );
 
-            // Navigate forward twice (adobe-auth → adobe-project → adobe-workspace)
+            // Navigate forward twice (welcome → welcome → prerequisites)
             const continueButton = screen.getByRole('button', { name: /continue/i });
 
             await user.click(continueButton);
             await waitFor(() => {
-                expect(screen.getByTestId('adobe-project-step')).toBeInTheDocument();
+                expect(screen.getByTestId('storefront-setup-step')).toBeInTheDocument();
             }, { timeout: 500 });
 
             await user.click(continueButton);
             await waitFor(() => {
-                expect(screen.getByTestId('adobe-workspace-step')).toBeInTheDocument();
+                expect(screen.getByTestId('prerequisites-step')).toBeInTheDocument();
             }, { timeout: 500 });
 
-            // Timeline should show adobe-auth and adobe-project as completed
+            // Timeline should show welcome and welcome as completed
             // (Verified through TimelineNav completedSteps prop)
         });
     });
@@ -113,12 +113,12 @@ describe('WizardContainer - Navigation', () => {
                 />
             );
 
-            // Navigate forward to adobe-project (2nd step)
+            // Navigate forward to welcome (2nd step)
             const continueButton = screen.getByRole('button', { name: /continue/i });
             await user.click(continueButton);
 
             await waitFor(() => {
-                expect(screen.getByTestId('adobe-project-step')).toBeInTheDocument();
+                expect(screen.getByTestId('storefront-setup-step')).toBeInTheDocument();
             }, { timeout: 500 });
 
             // Simulate sidebar sending navigation message (go back to step 0)
@@ -128,7 +128,7 @@ describe('WizardContainer - Navigation', () => {
             await user.click(backButton);
 
             await waitFor(() => {
-                expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
+                expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
             }, { timeout: 500 });
         });
 
@@ -141,8 +141,8 @@ describe('WizardContainer - Navigation', () => {
                 />
             );
 
-            // Currently on adobe-auth step (first step)
-            expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
+            // Currently on welcome step (first step)
+            expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
 
             // Continue button should be enabled/disabled based on step validation
             // Cannot skip ahead without completing current step
@@ -161,24 +161,22 @@ describe('WizardContainer - Navigation', () => {
                 />
             );
 
-            // Navigate to adobe-project step (2nd step, no welcome)
+            // Navigate to welcome step (2nd step)
             const continueButton = screen.getByRole('button', { name: /continue/i });
 
-            // Adobe Auth -> Adobe Project
+            // Adobe Auth -> Welcome
             await user.click(continueButton);
-            await waitFor(() => screen.getByTestId('adobe-project-step'), { timeout: 500 });
+            await waitFor(() => screen.getByTestId('storefront-setup-step'), { timeout: 500 });
 
-            // Manually update wizard state to simulate project selection
-            // (In real implementation, this would be done by AdobeProjectStep)
-            // For this test, we'll just verify the Continue button triggers the backend call
+            // For this test, we just verify the Continue button drives navigation
+            // (and any backend call it triggers) onward to the next step.
 
-            // Click Continue (should trigger select-project backend call)
+            // Click Continue (should trigger the backend call on continue)
             await user.click(continueButton);
 
-            // Verify backend was called (mock implementation would need state update)
-            // For now, just verify navigation proceeds
+            // Verify navigation proceeds to the next step
             await waitFor(() => {
-                expect(screen.getByTestId('adobe-workspace-step')).toBeInTheDocument();
+                expect(screen.getByTestId('prerequisites-step')).toBeInTheDocument();
             }, { timeout: 500 });
         });
     });
@@ -193,35 +191,23 @@ describe('WizardContainer - Navigation', () => {
                 />
             );
 
-            // Navigate through all steps explicitly (no welcome step, no api-mesh step)
-            // Note: api-mesh step is now disabled - mesh deployment happens in project-creation
+            // Navigate through all render-able mock steps. Retired steps
+            // (adobe-project / adobe-workspace) were removed from the wizard; the
+            // mock flow now uses welcome + prerequisites as navigable intermediates.
             const getButton = () => screen.getByRole('button', { name: /continue|^create$/i });
 
-            // Start at adobe-auth (first step after welcome removal)
-            expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
+            // Start at welcome (first step in the mock flow)
+            expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
 
-            // adobe-auth → adobe-project
+            // welcome → welcome
             await user.click(getButton());
-            await screen.findByTestId('adobe-project-step', {}, { timeout: 1000 });
+            await screen.findByTestId('storefront-setup-step', {}, { timeout: 1000 });
 
-            // adobe-project → adobe-workspace
-            await user.click(getButton());
-            await screen.findByTestId('adobe-workspace-step', {}, { timeout: 1000 });
-
-            // adobe-workspace → component-selection
-            await user.click(getButton());
-            await screen.findByTestId('component-selection-step', {}, { timeout: 1000 });
-
-            // component-selection → prerequisites
+            // welcome → prerequisites
             await user.click(getButton());
             await screen.findByTestId('prerequisites-step', {}, { timeout: 1000 });
 
-            // prerequisites → settings (connect-store)
-            // Note: api-mesh step is disabled, so we skip directly to settings
-            await user.click(getButton());
-            await screen.findByTestId('connect-store-step', {}, { timeout: 1000 });
-
-            // settings → review
+            // prerequisites → review
             await user.click(getButton());
             await screen.findByTestId('review-step', {}, { timeout: 1000 });
 

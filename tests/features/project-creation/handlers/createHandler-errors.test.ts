@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 import * as _fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
+import { getActiveOrgContext } from '@/core/shell';
 import {
     createMockContext,
     setupDefaultMocks,
@@ -62,10 +63,10 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
 
             await handleCreateProject(mockContext, mockConfig);
 
-            expect(fsPromises.rm).toHaveBeenCalledWith(
-                expect.stringContaining('test-project'),
-                { recursive: true, force: true }
-            );
+            expect(fsPromises.rm).toHaveBeenCalledWith(expect.stringContaining('test-project'), {
+                recursive: true,
+                force: true,
+            });
         });
 
         it('should log timeout with elapsed time', async () => {
@@ -171,6 +172,31 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
             );
         });
 
+        it('targets the delete at the mesh-created workspace via withOrgContext', async () => {
+            mockExecutionFailure('Failed');
+            setupMeshCleanupScenario(mockContext, false); // meshCreatedForWorkspace = 'workspace-123'
+
+            let capturedTarget: ReturnType<typeof getActiveOrgContext>;
+            (mockCommandExecutor.execute as jest.Mock).mockImplementation(async (cmd: string) => {
+                if (cmd.includes('api-mesh:delete')) capturedTarget = getActiveOrgContext();
+                return { code: 0, stdout: 'Deleted', stderr: '' };
+            });
+
+            await handleCreateProject(mockContext, {
+                ...mockConfig,
+                adobe: { organization: 'org-x', projectId: 'proj-x', workspace: 'ws-committed' },
+            });
+
+            // The delete runs targeted at the CREATED workspace (meshCreatedForWorkspace
+            // wins over the config's committed workspace), org/project from the config —
+            // never the ambient CLI selection.
+            expect(capturedTarget).toMatchObject({
+                orgId: 'org-x',
+                projectId: 'proj-x',
+                workspaceId: 'workspace-123',
+            });
+        });
+
         it('should successfully delete mesh with exit code 0', async () => {
             mockExecutionFailure('Failed');
             setupMeshCleanupScenario(mockContext, false);
@@ -199,8 +225,7 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
             await handleCreateProject(mockContext, mockConfig);
 
             expect(mockContext.logger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('Failed to delete orphaned mesh'),
-
+                expect.stringContaining('Failed to delete orphaned mesh')
             );
         });
     });
@@ -239,7 +264,11 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
 
         it('should send structured error with installation details for UI', async () => {
             const installUrl = 'https://github.com/apps/aem-code-sync/installations/select_target';
-            const gitHubAppError = new GitHubAppNotInstalledError('test-owner', 'test-repo', installUrl);
+            const gitHubAppError = new GitHubAppNotInstalledError(
+                'test-owner',
+                'test-repo',
+                installUrl
+            );
             (executor.executeProjectCreation as jest.Mock).mockRejectedValue(gitHubAppError);
 
             await handleCreateProject(mockContext, mockConfig);
@@ -282,7 +311,11 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
 
         it('should log GitHub App error details', async () => {
             const installUrl = 'https://github.com/apps/aem-code-sync/installations/select_target';
-            const gitHubAppError = new GitHubAppNotInstalledError('test-owner', 'test-repo', installUrl);
+            const gitHubAppError = new GitHubAppNotInstalledError(
+                'test-owner',
+                'test-repo',
+                installUrl
+            );
             (executor.executeProjectCreation as jest.Mock).mockRejectedValue(gitHubAppError);
 
             await handleCreateProject(mockContext, mockConfig);

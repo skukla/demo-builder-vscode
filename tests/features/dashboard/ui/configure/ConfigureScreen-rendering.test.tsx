@@ -3,7 +3,13 @@ import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ConfigureScreen } from '@/features/dashboard/ui/configure/ConfigureScreen';
 import '@testing-library/jest-dom';
-import { mockProject, mockComponentsData } from './ConfigureScreen.testUtils';
+import {
+    mockProject,
+    mockComponentsData,
+    selectSection,
+    railTab,
+    railTabLabels,
+} from './ConfigureScreen.testUtils';
 
 // Mock hooks
 jest.mock('@/core/ui/hooks', () => ({
@@ -24,14 +30,11 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
     },
 }));
 
-// Mock layout components
+// Mock layout components. NOTE: the shell (`layout/StepAreaShell`) and the rail
+// (`navigation/StepRail`) are deliberately NOT mocked — ConfigureScreen imports them by
+// direct path and they are plain presentational markup, so these tests exercise the real
+// rail the user clicks.
 jest.mock('@/core/ui/components/layout', () => ({
-    TwoColumnLayout: ({ leftContent, rightContent }: any) => (
-        <div>
-            <div data-testid="left-column">{leftContent}</div>
-            <div data-testid="right-column">{rightContent}</div>
-        </div>
-    ),
     PageHeader: ({ title, subtitle }: any) => (
         <div data-testid="page-header" className="border-b bg-gray-75">
             <h1>{title}</h1>
@@ -42,16 +45,6 @@ jest.mock('@/core/ui/components/layout', () => ({
         <div data-testid="page-footer" className="border-t bg-gray-75 max-w-800">
             <div data-testid="footer-left">{leftContent}</div>
             <div data-testid="footer-right">{rightContent}</div>
-        </div>
-    ),
-}));
-
-// Also mock the TwoColumnLayout separately for backward compatibility
-jest.mock('@/core/ui/components/layout/TwoColumnLayout', () => ({
-    TwoColumnLayout: ({ leftContent, rightContent }: any) => (
-        <div>
-            <div data-testid="left-column">{leftContent}</div>
-            <div data-testid="right-column">{rightContent}</div>
         </div>
     ),
 }));
@@ -93,19 +86,6 @@ jest.mock('@/features/components/ui/components/StoreConfigFieldRow', () => ({
             </div>
         );
     },
-}));
-
-// Mock NavigationPanel
-jest.mock('@/core/ui/components/navigation', () => ({
-    NavigationPanel: ({ sections }: any) => (
-        <div data-testid="navigation-panel">
-            {sections?.map((section: any) => (
-                <div key={section.id}>{section.label}</div>
-            ))}
-        </div>
-    ),
-    NavigationSection: ({ children }: any) => <div>{children}</div>,
-    NavigationField: ({ children }: any) => <div>{children}</div>,
 }));
 
 // Helper to wrap component in Provider
@@ -151,7 +131,7 @@ describe('ConfigureScreen - Rendering', () => {
     });
 
     describe('Configuration Fields', () => {
-        it('should render fields for selected components', () => {
+        it('should render the active section\'s fields for selected components', () => {
             renderWithProvider(
                 <ConfigureScreen
                     project={mockProject as any}
@@ -159,11 +139,18 @@ describe('ConfigureScreen - Rendering', () => {
                 />
             );
 
-            // Should show fields from envVars
+            selectSection('Adobe Commerce');
             expect(screen.getByText('Commerce URL', { exact: false })).toBeInTheDocument();
             expect(screen.getByText('GraphQL Endpoint', { exact: false })).toBeInTheDocument();
             expect(screen.getByText('Admin Username', { exact: false })).toBeInTheDocument();
+
+            // Catalog API Key belongs to the OTHER group, so it is not on screen yet —
+            // one section at a time is the whole point of the rail.
+            expect(screen.queryByText('Catalog API Key', { exact: false })).not.toBeInTheDocument();
+
+            selectSection('Catalog Service');
             expect(screen.getByText('Catalog API Key', { exact: false })).toBeInTheDocument();
+            expect(screen.queryByText('Commerce URL', { exact: false })).not.toBeInTheDocument();
         });
 
         it('should display existing values from project config', () => {
@@ -174,26 +161,14 @@ describe('ConfigureScreen - Rendering', () => {
                 />
             );
 
+            selectSection('Adobe Commerce');
             const urlField = document.getElementById('field-ADOBE_COMMERCE_URL')?.querySelector('input');
             expect(urlField).toHaveValue('https://example.com');
         });
-
-        it('should group fields by service', () => {
-            renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
-            );
-
-            // Should render section headings (may appear multiple times - in form and nav)
-            expect(screen.getAllByText('Adobe Commerce').length).toBeGreaterThan(0);
-            expect(screen.getAllByText('Catalog Service').length).toBeGreaterThan(0);
-        });
     });
 
-    describe('Navigation Panel', () => {
-        it('should render navigation panel with sections', () => {
+    describe('Section rail', () => {
+        it('renders one tab per configurable section, Project first', () => {
             renderWithProvider(
                 <ConfigureScreen
                     project={mockProject as any}
@@ -201,12 +176,46 @@ describe('ConfigureScreen - Rendering', () => {
                 />
             );
 
-            const navPanel = screen.getByTestId('navigation-panel');
-            expect(navPanel).toBeInTheDocument();
+            expect(railTabLabels()).toEqual(['Project', 'Adobe Commerce', 'Catalog Service']);
+        });
 
-            // Should show section labels in navigation
-            expect(screen.getAllByText('Adobe Commerce').length).toBeGreaterThan(0);
-            expect(screen.getAllByText('Catalog Service').length).toBeGreaterThan(0);
+        it('starts on Project and marks the clicked tab selected', () => {
+            renderWithProvider(
+                <ConfigureScreen
+                    project={mockProject as any}
+                    componentsData={mockComponentsData}
+                />
+            );
+
+            expect(railTab('Project')).toHaveAttribute('aria-selected', 'true');
+
+            selectSection('Catalog Service');
+            expect(railTab('Catalog Service')).toHaveAttribute('aria-selected', 'true');
+            expect(railTab('Project')).toHaveAttribute('aria-selected', 'false');
+        });
+
+        it('leaves every tab reachable — Configure is not a linear wizard', () => {
+            renderWithProvider(
+                <ConfigureScreen
+                    project={mockProject as any}
+                    componentsData={mockComponentsData}
+                />
+            );
+
+            for (const tab of screen.getAllByRole('tab')) {
+                expect(tab).not.toHaveAttribute('aria-disabled');
+            }
+        });
+
+        it('no longer renders the Sections sidebar it replaced', () => {
+            renderWithProvider(
+                <ConfigureScreen
+                    project={mockProject as any}
+                    componentsData={mockComponentsData}
+                />
+            );
+
+            expect(screen.queryByTestId('navigation-panel')).not.toBeInTheDocument();
         });
     });
 
@@ -331,6 +340,7 @@ describe('ConfigureScreen - Rendering', () => {
                 />
             );
 
+            selectSection('Adobe Commerce');
             const urlField = document.getElementById('field-ADOBE_COMMERCE_URL')?.querySelector('input');
             expect(urlField).toHaveValue(longValue);
         });

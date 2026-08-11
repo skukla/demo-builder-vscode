@@ -1,3 +1,11 @@
+/**
+ * settingsSerializer — core parse/validate/extract/export slice.
+ *
+ * The App Builder integration derivation tests (§E: appBuilderComponentSources
+ * derived from the keyed map + additionalConsoleApis) live in the sibling
+ * settingsSerializer-integrations.test.ts.
+ */
+
 import {
     parseSettingsFile,
     isValidSettingsFile,
@@ -277,7 +285,11 @@ describe('settingsSerializer', () => {
             const customLibs: CustomBlockLibrary[] = [
                 {
                     name: 'partner-blocks',
-                    source: { type: 'git', url: 'https://github.com/partner/blocks', branch: 'develop' },
+                    source: {
+                        type: 'git',
+                        url: 'https://github.com/partner/blocks',
+                        branch: 'develop',
+                    },
                 },
                 {
                     name: 'internal-blocks',
@@ -449,7 +461,9 @@ describe('settingsSerializer', () => {
         });
 
         it('should collapse multiple hyphens', () => {
-            expect(getSuggestedFilename('my--project---name')).toBe('my-project-name.demo-builder.json');
+            expect(getSuggestedFilename('my--project---name')).toBe(
+                'my-project-name.demo-builder.json'
+            );
         });
 
         it('should trim leading and trailing hyphens', () => {

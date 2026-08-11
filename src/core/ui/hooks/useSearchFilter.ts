@@ -28,7 +28,8 @@ interface UseSearchFilterReturn<T> {
  * Hook for searching and filtering arrays of items
  *
  * Provides search query state and memoized filtered results.
- * Extracted from AdobeProjectStep and AdobeWorkspaceStep.
+ * Extracted from the Adobe project/workspace selection flow (now AdobeProjectPicker
+ * and AdobeWorkspacePicker).
  *
  * @param items - Array of items to filter
  * @param options - Configuration options
@@ -48,6 +49,37 @@ interface UseSearchFilterReturn<T> {
  * );
  * ```
  */
+/**
+ * Whether an item matches a query across the given fields.
+ *
+ * The single lowercase-contains walk behind both {@link useSearchFilter} and the
+ * callers that own their own query state. Extracted when an
+ * architecture-duplication scan (2026-07-31) found THREE implementations of this
+ * one job — this hook, ProjectsDashboard, and the integrations surface — with the
+ * shared hook itself imported by nobody.
+ *
+ * @param item - the record to test
+ * @param fields - the keys to search
+ * @param query - the raw query; blank matches everything
+ * @param caseSensitive - defaults to false
+ * @returns true when any field contains the query
+ */
+export function matchesSearchFields<T>(
+    item: T,
+    fields: ReadonlyArray<keyof T>,
+    query: string,
+    caseSensitive = false,
+): boolean {
+    const needle = caseSensitive ? query.trim() : query.trim().toLowerCase();
+    if (!needle) return true;
+    return fields.some((field) => {
+        const value = item[field];
+        if (value === null || value === undefined) return false;
+        const text = caseSensitive ? String(value) : String(value).toLowerCase();
+        return text.includes(needle);
+    });
+}
+
 export function useSearchFilter<T extends Record<string, unknown>>(
   items: T[],
   options: UseSearchFilterOptions<T>,

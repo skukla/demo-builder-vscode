@@ -5,10 +5,18 @@
  * ProjectRow.
  *
  * Actions are grouped into labeled sections rather than a flat list:
- * - USE: open/run the demo (Start/Stop or Open in Browser, Author in DA.live, Open AI).
- * - MANAGE: project-entry actions (Edit, Rename, Pin/Unpin, Reset).
- * - More…: a submenu for low-frequency actions (Copy Path, Export, and — for
- *   EDS — Republish Content).
+ * - USE: open/run the demo (Start/Stop or Open in Browser, Author Content,
+ *   Manage Commerce, Open AI).
+ * - MANAGE: project-entry actions (Edit, Integrations…, Pin/Unpin, Reset, Export).
+ *   There is NO Rename item: renaming happens in place on the card name /
+ *   dashboard title (InlineRenameField).
+ *
+ *   There is no More… submenu. It held Copy Path and Export plus the
+ *   deploy-state-gated Republish Content / Redeploy Mesh. The deploy items moved
+ *   to the surfaces that own them, Copy Path was dropped (a developer affordance
+ *   on a grid used to PICK a demo, and the path is one click away on the
+ *   dashboard), and a submenu wrapping the last survivor charged two clicks for
+ *   one action.
  * - Delete sits alone in a trailing un-headed section, isolated from the rest.
  *
  * Empty groups render nothing (no orphaned heading). Gating is unchanged from
@@ -21,33 +29,15 @@
  * - Edit is always available (no need to stop first)
  */
 
-import { Text, ActionButton, MenuTrigger, Menu, Section, SubmenuTrigger, Item } from '@adobe/react-spectrum';
-import Copy from '@spectrum-icons/workflow/Copy';
-import Delete from '@spectrum-icons/workflow/Delete';
-import Edit from '@spectrum-icons/workflow/Edit';
-import Export from '@spectrum-icons/workflow/Export';
-import Globe from '@spectrum-icons/workflow/Globe';
-import MagicWand from '@spectrum-icons/workflow/MagicWand';
-import More from '@spectrum-icons/workflow/More';
-import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
-import PinOff from '@spectrum-icons/workflow/PinOff';
-import PinOn from '@spectrum-icons/workflow/PinOn';
-import Play from '@spectrum-icons/workflow/Play';
-import Rename from '@spectrum-icons/workflow/Rename';
-import Revert from '@spectrum-icons/workflow/Revert';
-import Stop from '@spectrum-icons/workflow/Stop';
+import { Text, Section, Item } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo } from 'react';
-import type { AuthoringExperience, Project } from '@/types/base';
+import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
+import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
+import {
+    hasIntegrations,
+} from '@/features/projects-dashboard/utils/projectStatusUtils';
+import type { Project } from '@/types/base';
 import { isEdsProject } from '@/types/typeGuards';
-
-/** Default authoring experience when the backend view model omits it. */
-const DEFAULT_AUTHORING_EXPERIENCE: AuthoringExperience = 'da-live-classic';
-
-/** Human-readable label per authoring experience (for the Author item). */
-const EXPERIENCE_LABEL: Record<AuthoringExperience, string> = {
-    'da-live-classic': 'DA.live Classic',
-    'experience-workspace': 'Experience Workspace',
-};
 
 /** Menu item configuration */
 interface MenuItem {
@@ -57,10 +47,14 @@ interface MenuItem {
 }
 
 /** The grouped items that make up the menu, built from project state. */
+/**
+ * Two sections, not three. The "More…" submenu is gone: it held Copy Path and
+ * Export, Copy Path was removed, and a submenu wrapping one item charges two
+ * clicks for one action.
+ */
 interface MenuGroups {
     use: MenuItem[];
     manage: MenuItem[];
-    more: MenuItem[];
 }
 
 /**
@@ -79,11 +73,20 @@ export interface ProjectActions {
     onOpenBrowser?: (project: Project) => void;
     onOpenLiveSite?: (project: Project) => void;
     onOpenDaLive?: (project: Project) => void;
+    onOpenAdminPanel?: (project: Project) => void;
     onResetProject?: (project: Project) => void;
-    onRepublishContent?: (project: Project) => void;
+    /**
+     * Open the Integrations page for this project. Replaced the per-integration
+     * redeploy callbacks — that surface owns those actions now.
+     */
+    onOpenIntegrations?: (project: Project) => void;
     onEdit?: (project: Project) => void;
-    onRename?: (project: Project) => void;
-    onCopyPath?: (project: Project) => void;
+    /**
+     * Commit an inline rename (consumed by the CARD's InlineRenameField, not
+     * by this menu): resolve null on success or an error message to show
+     * inline. There is deliberately no menu Rename item.
+     */
+    onRenameSubmit?: (project: Project, newName: string) => Promise<string | null>;
     onExport?: (project: Project) => void;
     onOpenAi?: (project: Project) => void;
     /**
@@ -95,27 +98,6 @@ export interface ProjectActions {
 }
 
 /** Icon lookup - maps menu item icon keys to Spectrum icon components */
-const ICON_MAP: Record<string, React.ReactElement> = {
-    play: <Play size="S" />,
-    stop: <Stop size="S" />,
-    globe: <Globe size="S" />,
-    dalive: <Edit size="S" />,
-    edit: <Edit size="S" />,
-    rename: <Rename size="S" />,
-    copy: <Copy size="S" />,
-    reset: <Revert size="S" />,
-    republish: <Globe size="S" />,
-    export: <Export size="S" />,
-    ai: <MagicWand size="S" />,
-    more: <More size="S" />,
-    pinOn: <PinOn size="S" />,
-    pinOff: <PinOff size="S" />,
-    delete: <Delete size="S" />,
-};
-
-function renderMenuIcon(iconKey: string): React.ReactElement | null {
-    return ICON_MAP[iconKey] ?? null;
-}
 
 export interface ProjectActionsMenuProps {
     /** The project to perform actions on */
@@ -146,11 +128,10 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         onOpenBrowser,
         onOpenLiveSite,
         onOpenDaLive,
+        onOpenAdminPanel,
         onResetProject,
-        onRepublishContent,
+        onOpenIntegrations,
         onEdit,
-        onRename,
-        onCopyPath,
         onExport,
         onOpenAi,
         onPinToggle,
@@ -159,46 +140,56 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
 
     const isEds = isEdsProject(project);
 
-    // Resolved authoring experience rides in the view model (computed backend-side).
-    // Drives the dynamic "Author in X" label only — the flip control was relocated
-    // to the Configure webview (setup-time preference with an explicit Save).
-    const experience = project.resolvedAuthoringExperience ?? DEFAULT_AUTHORING_EXPERIENCE;
-
     // Action dispatch map - avoids a large switch statement. Each key maps to
     // the callback that handles it. The "more" submenu trigger has no entry
     // (it only opens the submenu), so dispatching it is a harmless no-op.
-    const actionMap = useMemo<Record<string, ((p: Project) => void) | undefined>>(() => ({
-        start: onStartDemo,
-        stop: onStopDemo,
-        open: onOpenBrowser,
-        openLive: onOpenLiveSite,
-        openDaLive: onOpenDaLive,
-        resetProject: onResetProject,
-        republishContent: onRepublishContent,
-        edit: onEdit,
-        rename: onRename,
-        copyPath: onCopyPath,
-        export: onExport,
-        openAi: onOpenAi,
-        pinToggle: onPinToggle,
-        delete: onDelete,
-    }), [onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onCopyPath, onExport, onOpenAi, onPinToggle, onDelete]);
+    const actionMap = useMemo<Record<string, ((p: Project) => void) | undefined>>(
+        () => ({
+            start: onStartDemo,
+            stop: onStopDemo,
+            open: onOpenBrowser,
+            openLive: onOpenLiveSite,
+            openDaLive: onOpenDaLive,
+            openAdminPanel: onOpenAdminPanel,
+            resetProject: onResetProject,
+            openIntegrations: onOpenIntegrations,
+            edit: onEdit,
+            export: onExport,
+            openAi: onOpenAi,
+            pinToggle: onPinToggle,
+            delete: onDelete,
+        }),
+        [
+            onStartDemo,
+            onStopDemo,
+            onOpenBrowser,
+            onOpenLiveSite,
+            onOpenDaLive,
+            onOpenAdminPanel,
+            onResetProject,
+            onOpenIntegrations,
+            onEdit,
+                onExport,
+            onOpenAi,
+            onPinToggle,
+            onDelete,
+        ],
+    );
 
-    const handleMenuAction = useCallback((key: React.Key) => {
-        actionMap[String(key)]?.(project);
-    }, [project, actionMap]);
+    const handleMenuAction = useCallback(
+        (key: React.Key) => {
+            const actionKey = String(key);
+            actionMap[actionKey]?.(project);
+        },
+        [project, actionMap],
+    );
 
     // Stop click propagation to prevent triggering parent selection
-    const handleMenuClick = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-    }, []);
-
     // Build the grouped items from project state and type. Each item still
     // checks its callback, so callers disable actions by omitting callbacks.
     const groups = useMemo<MenuGroups>(() => {
         const use: MenuItem[] = [];
         const manage: MenuItem[] = [];
-        const more: MenuItem[] = [];
 
         // USE — open / run the demo
         if (isEds) {
@@ -206,11 +197,9 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 use.push({ key: 'openLive', label: 'Open in Browser', icon: 'globe' });
             }
             if (onOpenDaLive) {
-                use.push({
-                    key: 'openDaLive',
-                    label: `Author in ${EXPERIENCE_LABEL[experience]}`,
-                    icon: 'dalive',
-                });
+                // Static label — the resolved authoring experience still decides
+                // WHERE the action opens (backend-side), not the menu text.
+                use.push({ key: 'openDaLive', label: 'Author Content', icon: 'dalive' });
             }
         } else {
             if (isRunning && onStopDemo) {
@@ -223,17 +212,26 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 use.push({ key: 'open', label: 'Open in Browser', icon: 'globe' });
             }
         }
+        // Manage Commerce's admin-URL resolution is backend-side, so it applies to every project type.
+        if (onOpenAdminPanel) {
+            use.push({ key: 'openAdminPanel', label: 'Manage Commerce', icon: 'admin' });
+        }
         if (onOpenAi) {
             use.push({ key: 'openAi', label: 'Open AI', icon: 'ai' });
         }
 
         // MANAGE — project-entry actions
         // Edit needs the demo stopped for non-EDS; EDS has no running state.
-        if (isEds ? onEdit : (!isRunning && onEdit)) {
+        if (isEds ? onEdit : !isRunning && onEdit) {
             manage.push({ key: 'edit', label: 'Edit', icon: 'edit' });
         }
-        if (onRename) {
-            manage.push({ key: 'rename', label: 'Rename', icon: 'rename' });
+        // ONE entry to the surface that owns integrations, replacing the
+        // per-integration "Redeploy <name>" items that used to sit in More… and
+        // grew with N. Those predate the dedicated Integrations page; now that it
+        // exists, per-integration actions belong there and this is the route —
+        // the projects list otherwise has none (project → dashboard → Integrations).
+        if (onOpenIntegrations && hasIntegrations(project)) {
+            manage.push({ key: 'openIntegrations', label: 'Integrations…', icon: 'apiAccess' });
         }
         if (onPinToggle) {
             manage.push({
@@ -245,23 +243,41 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         if (onResetProject) {
             manage.push({ key: 'resetProject', label: 'Reset', icon: 'reset' });
         }
-
-        // More… — low-frequency actions, tucked into a submenu
-        if (onCopyPath) {
-            more.push({ key: 'copyPath', label: 'Copy Path', icon: 'copy' });
-        }
+        // Export sits directly in the menu. It was behind a "More…" submenu
+        // alongside Copy Path; Copy Path is gone (a developer affordance on a
+        // grid used to PICK a demo, and the path is one click away on the
+        // dashboard), which left a submenu holding one item — two clicks charged
+        // for one action, on a hover target that can be missed.
         if (onExport) {
-            more.push({ key: 'export', label: 'Export', icon: 'export' });
-        }
-        if (isEds && onRepublishContent) {
-            more.push({ key: 'republishContent', label: 'Republish Content', icon: 'republish' });
+            manage.push({ key: 'export', label: 'Export', icon: 'export' });
         }
 
-        return { use, manage, more };
-    }, [isEds, isRunning, project.pinned, experience, onStartDemo, onStopDemo, onOpenBrowser, onOpenLiveSite, onOpenDaLive, onResetProject, onRepublishContent, onEdit, onRename, onCopyPath, onExport, onOpenAi, onPinToggle]);
+        // More… — low-frequency + deploy-state-gated actions, tucked into a submenu.
+        return { use, manage };
+    }, [
+        isEds,
+        isRunning,
+        project,
+        onStartDemo,
+        onStopDemo,
+        onOpenBrowser,
+        onOpenLiveSite,
+        onOpenDaLive,
+        onOpenAdminPanel,
+        onResetProject,
+        onOpenIntegrations,
+        onEdit,
+        onExport,
+        onOpenAi,
+        onPinToggle,
+    ]);
 
     // Nothing to show — render no trigger at all.
-    if (groups.use.length === 0 && groups.manage.length === 0 && groups.more.length === 0 && !onDelete) {
+    if (
+        groups.use.length === 0 &&
+        groups.manage.length === 0 &&
+        !onDelete
+    ) {
         return null;
     }
 
@@ -277,51 +293,27 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     // Spectrum's Section accepts only Item children, so the "More…" submenu is a
     // top-level sibling of the sections (not nested inside one).
     return (
-        // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- click handled by child MenuTrigger/ActionButton which provides keyboard support
-        <div onClick={handleMenuClick}>
-            <MenuTrigger>
-                <ActionButton
-                    isQuiet
-                    aria-label="More actions"
-                    UNSAFE_className={className}
-                >
-                    <MoreSmallListVert size="S" />
-                </ActionButton>
-                <Menu onAction={handleMenuAction}>
-                    {groups.use.length > 0 ? (
-                        <Section key="use" title="Use">
-                            {groups.use.map(renderItem)}
-                        </Section>
-                    ) : null}
+        <CardActionsMenu ariaLabel="More actions" className={className} onAction={handleMenuAction}>
+            {groups.use.length > 0 ? (
+                <Section key="use" title="Use">
+                    {groups.use.map(renderItem)}
+                </Section>
+            ) : null}
 
-                    {groups.manage.length > 0 ? (
-                        <Section key="manage" title="Manage">
-                            {groups.manage.map(renderItem)}
-                        </Section>
-                    ) : null}
+            {groups.manage.length > 0 ? (
+                <Section key="manage" title="Manage">
+                    {groups.manage.map(renderItem)}
+                </Section>
+            ) : null}
 
-                    {groups.more.length > 0 ? (
-                        <SubmenuTrigger>
-                            <Item key="more" textValue="More">
-                                <More size="S" />
-                                <Text>More</Text>
-                            </Item>
-                            <Menu onAction={handleMenuAction}>
-                                {groups.more.map(renderItem)}
-                            </Menu>
-                        </SubmenuTrigger>
-                    ) : null}
-
-                    {onDelete ? (
-                        <Section key="delete">
-                            <Item key="delete" textValue="Delete">
-                                {renderMenuIcon('delete')}
-                                <Text>Delete</Text>
-                            </Item>
-                        </Section>
-                    ) : null}
-                </Menu>
-            </MenuTrigger>
-        </div>
+            {onDelete ? (
+                <Section key="delete">
+                    <Item key="delete" textValue="Delete">
+                        {renderMenuIcon('delete')}
+                        <Text>Delete</Text>
+                    </Item>
+                </Section>
+            ) : null}
+        </CardActionsMenu>
     );
 };

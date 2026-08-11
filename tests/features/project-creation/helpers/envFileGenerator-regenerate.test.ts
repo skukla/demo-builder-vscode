@@ -115,4 +115,30 @@ describe('regenerateProjectEnvFiles', () => {
         expect(fsPromises.writeFile).toHaveBeenCalledTimes(1);
         expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('unknown-comp'));
     });
+
+    // ADR-011 D3 Steps 07+09: MESH_ENDPOINT must resolve from the keyed mesh
+    // entry — a keyed-only project (post-Step-07, no meshState) regenerates the
+    // same .env content.
+    it('resolves MESH_ENDPOINT from the keyed mesh entry (keyed-only project)', async () => {
+        const registry = buildRegistry();
+        (registry.components.frontends[0] as unknown as {
+            configuration: { requiredEnvVars: string[] };
+        }).configuration.requiredEnvVars = ['API_URL', 'MESH_ENDPOINT'];
+
+        const project = buildProject({
+            appBuilderComponents: {
+                mesh: {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                    endpoint: 'https://keyed-mesh.adobe.io/graphql',
+                },
+            },
+        } as Partial<Project>);
+
+        await regenerateProjectEnvFiles(project, registry, createMockLogger());
+
+        const [, content] = (fsPromises.writeFile as jest.Mock).mock.calls[0];
+        expect(content).toContain('MESH_ENDPOINT=https://keyed-mesh.adobe.io/graphql');
+    });
 });

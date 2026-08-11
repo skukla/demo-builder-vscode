@@ -5,6 +5,8 @@
  * Supports importing from files, copying from existing projects, and exporting.
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import {
     parseSettingsFile,
@@ -14,7 +16,10 @@ import {
     getSuggestedFilename,
 } from './settingsSerializer';
 import { showWebviewQuickPick } from '@/core/utils';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
+import { assertPathInsideSync } from '@/core/validation';
 import { SETTINGS_FILE_VERSION } from '@/features/projects-dashboard/types/settingsFile';
 import { getProjectDescription } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import type { Project } from '@/types/base';
@@ -26,9 +31,7 @@ import type { HandlerContext, HandlerResponse } from '@/types/handlers';
  * Opens a file picker dialog and parses the selected settings file.
  * Returns the parsed settings to be passed to the wizard.
  */
-export async function importSettingsFromFile(
-    context: HandlerContext,
-): Promise<HandlerResponse> {
+export async function importSettingsFromFile(context: HandlerContext): Promise<HandlerResponse> {
     try {
         context.logger.info('Opening file picker for settings import');
 
@@ -94,7 +97,10 @@ export async function importSettingsFromFile(
             },
         };
     } catch (error) {
-        context.logger.error('Failed to import settings from file', error instanceof Error ? error : undefined);
+        context.logger.error(
+            'Failed to import settings from file',
+            error instanceof Error ? error : undefined,
+        );
         return {
             success: false,
             error: 'Failed to import settings file',
@@ -107,9 +113,7 @@ export async function importSettingsFromFile(
  *
  * Shows a QuickPick of available projects and extracts settings from the selected one.
  */
-export async function copySettingsFromProject(
-    context: HandlerContext,
-): Promise<HandlerResponse> {
+export async function copySettingsFromProject(context: HandlerContext): Promise<HandlerResponse> {
     try {
         context.logger.info('Opening project picker for settings copy');
 
@@ -118,11 +122,9 @@ export async function copySettingsFromProject(
         const projects: Project[] = [];
 
         for (const item of projectList) {
-            const project = await context.stateManager.loadProjectFromPath(
-                item.path,
-                undefined,
-                { persistAfterLoad: false },
-            );
+            const project = await context.stateManager.loadProjectFromPath(item.path, undefined, {
+                persistAfterLoad: false,
+            });
             if (project) {
                 projects.push(project);
             }
@@ -188,7 +190,10 @@ export async function copySettingsFromProject(
             },
         };
     } catch (error) {
-        context.logger.error('Failed to copy settings from project', error instanceof Error ? error : undefined);
+        context.logger.error(
+            'Failed to copy settings from project',
+            error instanceof Error ? error : undefined,
+        );
         return {
             success: false,
             error: 'Failed to copy settings from project',
@@ -246,7 +251,7 @@ export async function exportProjectSettings(
                 cancellable: false,
             },
             async () => {
-                await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.NOTIFICATION));
+                await sleep(TIMEOUTS.UI.NOTIFICATION);
             },
         );
 
@@ -258,10 +263,82 @@ export async function exportProjectSettings(
             },
         };
     } catch (error) {
-        context.logger.error('Failed to export project settings', error instanceof Error ? error : undefined);
+        context.logger.error(
+            'Failed to export project settings',
+            error instanceof Error ? error : undefined,
+        );
         return {
             success: false,
             error: 'Failed to export project settings',
         };
     }
+}
+
+/**
+ * Result of a headless settings export. Secrets, when included, are written to
+ * the FILE only — this object carries just the path and the flag, never the
+ * secret values themselves.
+ */
+export interface ExportSettingsToFileResult {
+    /** Absolute path the settings JSON was written to. */
+    path: string;
+    /** Whether the written file includes secrets. */
+    includesSecrets: boolean;
+}
+
+/**
+ * Export a project's settings to a JSON file on disk, headlessly (no save dialog).
+ *
+ * Backs the `export_project_settings` MCP tool. Secrets go to the FILE only, so an
+ * agent never receives API keys/tokens in its context — the return value is just
+ * `{ path, includesSecrets }`. `includeSecrets` defaults to `true` (a local backup,
+ * matching the webview export).
+ *
+ * The target must resolve INSIDE the project directory; traversal or writes to an
+ * arbitrary location are rejected by {@link assertPathInsideSync}. Default target:
+ * `<project>/<name>.demo-builder.json`.
+ */
+export async function exportProjectSettingsToFile(
+    project: Project,
+    opts: { path?: string; includeSecrets?: boolean } = {},
+): Promise<ExportSettingsToFileResult> {
+    const includeSecrets = opts.includeSecrets ?? true;
+    const extension = vscode.extensions.getExtension('AdobeDemoSystem.adobe-demo-builder');
+    const extensionVersion = extension?.packageJSON?.version || 'unknown';
+    const settings = createExportSettings(project, extensionVersion, includeSecrets);
+
+    const target = resolveExportTarget(project, opts.path);
+    await writeFileAtomic(target, JSON.stringify(settings, null, 2));
+
+    return { path: target, includesSecrets: settings.includesSecrets };
+}
+
+/**
+ * Resolve and containment-check the export target. A relative path resolves
+ * against the project dir; an absolute one must already be inside it. An existing
+ * directory target gets the default filename appended.
+ */
+function resolveExportTarget(project: Project, providedPath?: string): string {
+    const projectDir = project.path;
+    const defaultName = getSuggestedFilename(project.name);
+
+    let candidate: string;
+    if (!providedPath) {
+        candidate = path.join(projectDir, defaultName);
+    } else if (path.isAbsolute(providedPath)) {
+        candidate = providedPath;
+    } else {
+        candidate = path.join(projectDir, providedPath);
+    }
+
+    try {
+        if (fs.statSync(candidate).isDirectory()) {
+            candidate = path.join(candidate, defaultName);
+        }
+    } catch {
+        // Target doesn't exist yet — treat it as a file path.
+    }
+
+    // Reject traversal / writes outside the project directory.
+    return assertPathInsideSync(candidate, projectDir);
 }

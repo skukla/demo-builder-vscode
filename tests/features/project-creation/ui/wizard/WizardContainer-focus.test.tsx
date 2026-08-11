@@ -30,7 +30,7 @@ describe('WizardContainer - Focus Management', () => {
     });
 
     describe('Self-Managed Steps - Skip Auto-Focus', () => {
-        it('should skip auto-focus for component-selection step', async () => {
+        it('should skip auto-focus for the prerequisites step', async () => {
             // Configure userEvent to work with fake timers
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const focusSpy = jest.spyOn(HTMLElement.prototype, 'focus');
@@ -42,32 +42,26 @@ describe('WizardContainer - Focus Management', () => {
                 />
             );
 
-            // Initially on adobe-auth step (welcome removed in Step 3)
-            expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
+            // Initially on welcome step (welcome removed from this mock flow)
+            expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
 
             // Navigate through steps inline (same as WizardContainer-navigation.test.tsx)
             const continueButton = screen.getByRole('button', { name: /continue/i });
 
-            // adobe-auth → adobe-project
+            // welcome → welcome
             await user.click(continueButton);
             await waitFor(() => {
-                expect(screen.getByTestId('adobe-project-step')).toBeInTheDocument();
+                expect(screen.getByTestId('storefront-setup-step')).toBeInTheDocument();
             }, { timeout: 500 });
 
-            // adobe-project → adobe-workspace
+            // welcome → prerequisites
             await user.click(continueButton);
             await waitFor(() => {
-                expect(screen.getByTestId('adobe-workspace-step')).toBeInTheDocument();
+                expect(screen.getByTestId('prerequisites-step')).toBeInTheDocument();
             }, { timeout: 500 });
 
-            // adobe-workspace → component-selection
-            await user.click(continueButton);
-            await waitFor(() => {
-                expect(screen.getByTestId('component-selection-step')).toBeInTheDocument();
-            }, { timeout: 500 });
-
-            // Now on component-selection step
-            expect(screen.getByTestId('component-selection-step')).toBeInTheDocument();
+            // Now on prerequisites step (self-managed focus)
+            expect(screen.getByTestId('prerequisites-step')).toBeInTheDocument();
 
             // Clear any focus calls from previous steps
             focusSpy.mockClear();
@@ -75,23 +69,18 @@ describe('WizardContainer - Focus Management', () => {
             // Advance past potential auto-focus delay (300ms + buffer)
             jest.advanceTimersByTime(400);
 
-            // WizardContainer should NOT have called focus() because component-selection is self-managed
+            // WizardContainer should NOT have called focus() because prerequisites is self-managed
             expect(focusSpy).not.toHaveBeenCalled();
 
             focusSpy.mockRestore();
         });
 
-        // NOTE: Removed "should skip auto-focus for component-config step" test
-        // The test was invalid - it changed step.id from 'settings' to 'component-config'
-        // but WizardContainer maps step IDs to components, so this breaks the mapping.
-        // The component-selection test already validates self-managed focus behavior.
+        // NOTE: Removed "Auto-Managed Steps - Apply Auto-Focus" tests
+        // These tests were testing implementation details (whether .focus() is called internally)
+        // rather than user-facing behavior. The mock step components are too simple (just <div>
+        // with test-id) and have no focusable elements, making the spy tests fail.
+        //
+        // The "should skip auto-focus for the prerequisites step" test above already validates
+        // that self-managed steps skip auto-focus, which is the critical behavior for accessibility.
     });
-
-    // NOTE: Removed "Auto-Managed Steps - Apply Auto-Focus" tests
-    // These tests were testing implementation details (whether .focus() is called internally)
-    // rather than user-facing behavior. The mock step components are too simple (just <div>
-    // with test-id) and have no focusable elements, making the spy tests fail.
-    //
-    // The "should skip auto-focus for component-selection step" test above already validates
-    // that self-managed steps skip auto-focus, which is the critical behavior for accessibility.
 });

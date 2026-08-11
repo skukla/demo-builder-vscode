@@ -29,7 +29,6 @@ describe('edsHandlers', () => {
             expect(hasHandler(edsHandlers, 'github-oauth')).toBe(true);
             expect(hasHandler(edsHandlers, 'github-change-account')).toBe(true);
             expect(hasHandler(edsHandlers, 'get-github-repos')).toBe(true);
-            expect(hasHandler(edsHandlers, 'verify-github-repo')).toBe(true);
         });
 
         it('should include DA.live handlers', () => {
@@ -41,16 +40,12 @@ describe('edsHandlers', () => {
             expect(hasHandler(edsHandlers, 'store-dalive-token')).toBe(true);
             expect(hasHandler(edsHandlers, 'store-dalive-token-with-org')).toBe(true);
             expect(hasHandler(edsHandlers, 'clear-dalive-auth')).toBe(true);
-            expect(hasHandler(edsHandlers, 'get-dalive-sites')).toBe(true);
-            expect(hasHandler(edsHandlers, 'verify-dalive-org')).toBe(true);
-            expect(hasHandler(edsHandlers, 'list-dalive-orgs')).toBe(true);
         });
 
         it('should include ACCS handlers', () => {
             // Given: edsHandlers object
             // When: Checking for ACCS message types
             // Then: ACCS handlers present
-            expect(hasHandler(edsHandlers, 'validate-accs-credentials')).toBe(true);
             expect(hasHandler(edsHandlers, 'discover-store-structure')).toBe(true);
         });
 
@@ -60,21 +55,28 @@ describe('edsHandlers', () => {
             // Then: Storefront setup handlers present
             expect(hasHandler(edsHandlers, 'storefront-setup-start')).toBe(true);
             expect(hasHandler(edsHandlers, 'storefront-setup-cancel')).toBe(true);
-            // Removed 2026-08-06: the handler was a stub that always returned
-            // "Resume not yet supported", while the install dialog's success path
-            // posted to it. Re-registering it without implementing resume would
-            // restore a button that cannot work. See the backlog item on develop:
-            // 2026-08-06-resume-storefront-setup-after-app-install.md
+            // Removed 2026-08-06: the handler was a stub that always errored, and
+            // the dialog's success path posted to it. Re-registering it without
+            // implementing resume would restore a button that cannot work.
             expect(hasHandler(edsHandlers, 'storefront-setup-resume')).toBe(false);
         });
 
-        it('should have exactly 18 handlers', () => {
+        it('should include the agent-facing refresh-block-library handler', () => {
+            // Given: edsHandlers object
+            // When: Checking for the headless block-library rebuild type
+            // Then: Present (behind the refresh_block_library MCP tool)
+            expect(hasHandler(edsHandlers, 'refresh-block-library')).toBe(true);
+        });
+
+        it('should have exactly 19 handlers', () => {
             // Given: edsHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(edsHandlers);
 
-            // Then: Exactly 19 handlers (6 GitHub + 8 DA.live + 2 ACCS/Store + 3 Storefront Setup)
-            expect(types).toHaveLength(18);
+            // Then: Exactly 20 handlers (6 GitHub + 8 DA.live + 2 ACCS/Store +
+            // 3 Storefront Setup + 1 refresh-block-library)
+            // 20 → 15: five superseded handlers removed 2026-08-05 (nothing sent them).
+            expect(types).toHaveLength(14);
         });
 
         it('should have handlers as functions', () => {

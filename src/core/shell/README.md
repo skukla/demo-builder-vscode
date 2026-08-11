@@ -31,7 +31,7 @@ Do NOT use when:
 
 **Usage**:
 ```typescript
-import { CommandExecutor } from '@/shared/command-execution';
+import { CommandExecutor } from '@/core/shell';
 
 const executor = new CommandExecutor();
 
@@ -66,7 +66,7 @@ const result = await executor.execute('aio console:org:select 12345', {
 
 **Example**:
 ```typescript
-import { CommandExecutor } from '@/shared/command-execution';
+import { CommandExecutor } from '@/core/shell';
 
 const executor = new CommandExecutor();
 
@@ -228,6 +228,34 @@ const commands: CommandConfig[] = [
 const results = await executor.executeSequence(commands, true);
 ```
 
+### buildComponent
+
+**Purpose**: Shared "npm install (+ optional `npm run build`)" step for an App Builder
+component directory. Extracted so the API Mesh and App Builder deploy paths share one
+byte-identical build step instead of duplicating it (Rule of Three — two callers today;
+no generalized "App Builder component framework" until a third component kind appears).
+
+**Signature**:
+```typescript
+buildComponent(
+    componentPath: string,
+    commandManager: CommandExecutor,
+    options: BuildComponentOptions,   // { nodeVersion: string | 'auto', logPrefix: string }
+    logger: Logger,
+    onProgress?: (message: string, subMessage?: string) => void,
+): Promise<void>
+```
+
+**Behavior**: runs `npm install` then, only if the component's `package.json` declares a
+`build` script, `npm run build` — both under the requested Node version (`'auto'` resolves
+to the Adobe CLI's Node version), with `enhancePath` and streaming. Throws on a non-zero
+exit so the caller's deploy tail can surface the failure.
+
+**Callers**:
+- `mesh/services/meshDeployment.ts` → `buildMeshComponent` (thin wrapper; its existing
+  tests are the regression gate for the extraction).
+- `app-builder/services/appDeployment.ts` → `deployAppComponent`.
+
 ## Types
 
 ### CommandResult
@@ -272,6 +300,17 @@ interface RetryStrategy {
     maxDelay: number;
     backoffFactor: number;
     shouldRetry?: (error: Error, attempt: number) => boolean;
+}
+```
+
+### BuildComponentOptions
+
+```typescript
+interface BuildComponentOptions {
+    /** Node version for install/build; 'auto' resolves to the Adobe CLI's version. */
+    nodeVersion: string | 'auto';
+    /** Log prefix, e.g. '[App Builder]' or '[Mesh]'. */
+    logPrefix: string;
 }
 ```
 
@@ -419,9 +458,9 @@ const parallelResults = await executor.executeParallel(parallelCommands);
 
 ### Dependencies
 - Node.js `child_process` - spawn for command execution
-- `@/shared/logging` - Command logging
+- `@/core/logging` - Command logging
 - `@/utils/timeoutConfig` - Timeout configuration
-- `@/shared/validation` - Command name validation
+- `@/core/validation` - Command name validation
 
 ## Best Practices
 
@@ -520,7 +559,7 @@ if (result.code !== 0) {
 ## Security Considerations
 
 - **Shell Injection**: Default `shell: false` prevents injection attacks
-- **Input Validation**: Use `@/shared/validation` before executing with user input
+- **Input Validation**: Use `@/core/validation` before executing with user input
 - **Command Whitelist**: `commandExists()` validates command names
 - **Timeout Protection**: Prevents DoS via long-running commands
 - **Resource Locking**: Prevents race conditions in critical sections
@@ -530,7 +569,7 @@ if (result.code !== 0) {
 Enable command logging for debugging:
 
 ```typescript
-import { getLogger } from '@/shared/logging';
+import { getLogger } from '@/core/logging';
 
 const logger = getLogger();
 
@@ -566,8 +605,8 @@ When you find command execution patterns duplicated:
 ## See Also
 
 - **Related Shared Modules**:
-  - `@/shared/logging` - Command execution logging
-  - `@/shared/validation` - Input validation before execution
+  - `@/core/logging` - Command execution logging
+  - `@/core/validation` - Input validation before execution
   - `@/utils/timeoutConfig` - Timeout configuration
 
 - **Related Documentation**:

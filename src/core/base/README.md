@@ -29,7 +29,7 @@ Do NOT use when:
 
 **Usage**:
 ```typescript
-import { BaseCommand } from '@/shared/base';
+import { BaseCommand } from '@/core/base';
 
 class MyCommand extends BaseCommand {
     async execute(): Promise<void> {
@@ -120,8 +120,8 @@ class InstallComponentCommand extends BaseCommand {
 
 **Usage**:
 ```typescript
-import { BaseWebviewCommand } from '@/shared/base';
-import { WebviewCommunicationManager } from '@/shared/communication';
+import { BaseWebviewCommand } from '@/core/base';
+import { WebviewCommunicationManager } from '@/core/communication';
 
 class MyWebviewCommand extends BaseWebviewCommand {
     protected getWebviewId(): string {
@@ -210,8 +210,8 @@ class MyWebviewCommand extends BaseWebviewCommand {
 
 **Example**:
 ```typescript
-import { BaseWebviewCommand } from '@/shared/base';
-import { WebviewCommunicationManager } from '@/shared/communication';
+import { BaseWebviewCommand } from '@/core/base';
+import { WebviewCommunicationManager } from '@/core/communication';
 
 class ProjectDashboardCommand extends BaseWebviewCommand {
     protected getWebviewId(): string {
@@ -312,7 +312,7 @@ BaseCommand
 ### Pattern 1: Standard Command
 
 ```typescript
-import { BaseCommand } from '@/shared/base';
+import { BaseCommand } from '@/core/base';
 
 class ResetProjectCommand extends BaseCommand {
     async execute(): Promise<void> {
@@ -337,7 +337,7 @@ class ResetProjectCommand extends BaseCommand {
 ### Pattern 2: Command with User Input
 
 ```typescript
-import { BaseCommand } from '@/shared/base';
+import { BaseCommand } from '@/core/base';
 
 class RenameProjectCommand extends BaseCommand {
     async execute(): Promise<void> {
@@ -373,8 +373,8 @@ class RenameProjectCommand extends BaseCommand {
 ### Pattern 3: Webview Command with Communication
 
 ```typescript
-import { BaseWebviewCommand } from '@/shared/base';
-import { WebviewCommunicationManager } from '@/shared/communication';
+import { BaseWebviewCommand } from '@/core/base';
+import { WebviewCommunicationManager } from '@/core/communication';
 
 class SettingsWebviewCommand extends BaseWebviewCommand {
     protected getWebviewId(): string {
@@ -438,10 +438,10 @@ async execute(): Promise<void> {
 
 ### Used By
 - **Commands**: All command implementations
-  - `createProjectWebview`
-  - `projectDashboardWebview`
-  - `configureProjectWebview`
-  - `welcomeWebview`
+  - `CreateProjectWebviewCommand`
+  - `ShowDashboardCommand`
+  - `ConfigureProjectWebviewCommand`
+  - `ShowProjectsListCommand`
   - `startDemo`
   - `stopDemo`
   - `deployMesh`
@@ -449,9 +449,9 @@ async execute(): Promise<void> {
 
 ### Dependencies
 - VS Code API (`vscode`) - Command infrastructure
-- `@/shared/state` - StateManager
-- `@/shared/logging` - Logger
-- `@/shared/communication` - WebviewCommunicationManager
+- `@/core/state` - StateManager
+- `@/core/logging` - Logger
+- `@/core/communication` - WebviewCommunicationManager
 - `@/utils/loadingHTML` - Webview loading states
 
 ## Best Practices
@@ -623,9 +623,9 @@ class MyCommand extends BaseCommand {
 ## See Also
 
 - **Related Shared Modules**:
-  - `@/shared/state` - Used by BaseCommand
-  - `@/shared/logging` - Used by both base classes
-  - `@/shared/communication` - Used by BaseWebviewCommand
+  - `@/core/state` - Used by BaseCommand
+  - `@/core/logging` - Used by both base classes
+  - `@/core/communication` - Used by BaseWebviewCommand
 
 - **Related Documentation**:
   - Main architecture: `../../CLAUDE.md`
@@ -635,7 +635,7 @@ class MyCommand extends BaseCommand {
 
 - **Usage Examples**:
   - `src/commands/createProjectWebview.ts`
-  - `src/commands/projectDashboardWebview.ts`
+  - `src/features/dashboard/commands/showDashboard.ts`
   - `src/features/lifecycle/commands/startDemo.ts`
   - `src/features/mesh/commands/deployMesh.ts`
 

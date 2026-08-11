@@ -66,10 +66,7 @@ describe('ProjectConfigWriter atomic writes', () => {
             const tempPath = `${manifestPath}.tmp`;
 
             // Verify temp file write was called
-            expect(mockFs.writeFile).toHaveBeenCalledWith(
-                tempPath,
-                expect.any(String),
-            );
+            expect(mockFs.writeFile).toHaveBeenCalledWith(tempPath, expect.any(String));
 
             // Verify rename was called to atomically move temp to final
             expect(mockFs.rename).toHaveBeenCalledWith(tempPath, manifestPath);
@@ -87,7 +84,9 @@ describe('ProjectConfigWriter atomic writes', () => {
             mockFs.writeFile.mockRejectedValue(writeError);
 
             // When: Saving project config
-            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('Disk full');
+            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow(
+                'Disk full'
+            );
 
             // Then: Should attempt to clean up temp file
             const manifestPath = path.join(project.path, '.demo-builder.json');
@@ -102,7 +101,9 @@ describe('ProjectConfigWriter atomic writes', () => {
             mockFs.rename.mockRejectedValue(renameError);
 
             // When: Saving project config
-            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('Cross-device link');
+            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow(
+                'Cross-device link'
+            );
 
             // Then: Should attempt to clean up temp file
             const manifestPath = path.join(project.path, '.demo-builder.json');
@@ -119,7 +120,9 @@ describe('ProjectConfigWriter atomic writes', () => {
 
             // When: Saving project config
             // Then: Should throw the ORIGINAL error, not the cleanup error
-            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('Original write error');
+            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow(
+                'Original write error'
+            );
 
             // Verify cleanup was attempted (even though it failed)
             expect(mockFs.unlink).toHaveBeenCalled();
@@ -127,7 +130,7 @@ describe('ProjectConfigWriter atomic writes', () => {
             // Verify error was logged
             expect(mockLogger.error).toHaveBeenCalledWith(
                 'Failed to update project manifest',
-                originalError,
+                originalError
             );
         });
 
@@ -144,8 +147,8 @@ describe('ProjectConfigWriter atomic writes', () => {
             await writer.saveProjectConfig(project, project.path);
 
             // Then: Written content should be valid JSON with expected structure
-            const writeCall = mockFs.writeFile.mock.calls.find(
-                (call) => call[0].toString().endsWith('.tmp'),
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
             );
             expect(writeCall).toBeDefined();
 
@@ -170,8 +173,8 @@ describe('ProjectConfigWriter atomic writes', () => {
             await writer.saveProjectConfig(project, project.path);
 
             // Then: Written content should include selectedAddons
-            const writeCall = mockFs.writeFile.mock.calls.find(
-                (call) => call[0].toString().endsWith('.tmp'),
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
             );
             expect(writeCall).toBeDefined();
 
@@ -190,7 +193,11 @@ describe('ProjectConfigWriter atomic writes', () => {
                 customBlockLibraries: [
                     {
                         name: 'my-blocks',
-                        source: { type: 'git', url: 'https://github.com/user/blocks', branch: 'main' },
+                        source: {
+                            type: 'git',
+                            url: 'https://github.com/user/blocks',
+                            branch: 'main',
+                        },
                     },
                 ],
             });
@@ -199,8 +206,8 @@ describe('ProjectConfigWriter atomic writes', () => {
             await writer.saveProjectConfig(project, project.path);
 
             // Then: Written content should include customBlockLibraries
-            const writeCall = mockFs.writeFile.mock.calls.find(
-                (call) => call[0].toString().endsWith('.tmp'),
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
             );
             expect(writeCall).toBeDefined();
 
@@ -230,8 +237,8 @@ describe('ProjectConfigWriter atomic writes', () => {
 
             await writer.saveProjectConfig(project, project.path);
 
-            const writeCall = mockFs.writeFile.mock.calls.find(
-                (call) => call[0].toString().endsWith('.tmp'),
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
             );
             expect(writeCall).toBeDefined();
             const parsed = JSON.parse(writeCall![1] as string);
@@ -245,8 +252,8 @@ describe('ProjectConfigWriter atomic writes', () => {
             const project = createTestProject({ name: 'no-prompts' });
             await writer.saveProjectConfig(project, project.path);
 
-            const writeCall = mockFs.writeFile.mock.calls.find(
-                (call) => call[0].toString().endsWith('.tmp'),
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
             );
             const parsed = JSON.parse(writeCall![1] as string);
             expect(parsed.aiPrompts).toBeUndefined();
@@ -256,11 +263,146 @@ describe('ProjectConfigWriter atomic writes', () => {
             const project = createTestProject({ name: 'empty-prompts', aiPrompts: [] });
             await writer.saveProjectConfig(project, project.path);
 
-            const writeCall = mockFs.writeFile.mock.calls.find(
-                (call) => call[0].toString().endsWith('.tmp'),
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
             );
             const parsed = JSON.parse(writeCall![1] as string);
             expect(parsed.aiPrompts).toBeUndefined();
+        });
+
+        // AI-context freshness stamp: the version of the AI bundle that was last
+        // generated into this project. Persisted so the on-open freshness check
+        // can compare it against the current AI_CONTEXT_VERSION constant.
+        it('should include aiContextVersion in manifest when set', async () => {
+            const project = createTestProject({ name: 'stamped', aiContextVersion: 3 });
+            await writer.saveProjectConfig(project, project.path);
+
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
+            );
+            const parsed = JSON.parse(writeCall![1] as string);
+            expect(parsed.aiContextVersion).toBe(3);
+        });
+
+        // ADR-011 D3 Step 07: the singular meshState/appState write-side is
+        // retired — the keyed appBuilderComponents map is the single persisted
+        // authority. Legacy manifests stay READABLE (loader + migration), but
+        // the writer never emits the singular fields again, even when the
+        // in-memory legacy singletons are still populated.
+        it('should NOT write meshState/appState even when the in-memory legacy singletons exist (Step 07)', async () => {
+            const project = createTestProject({
+                name: 'deployed-integration',
+                meshState: {
+                    envVars: { A: '1' },
+                    sourceHash: 'abc',
+                    lastDeployed: '2026-07-15T00:00:00.000Z',
+                    endpoint: 'https://mesh/graphql',
+                },
+                appState: {
+                    appId: 'acme-widget',
+                    url: 'https://acme.adobeio-static.net',
+                    status: 'deployed',
+                    deployedUrls: { main: 'https://acme.adobeio-static.net' },
+                    lastDeployed: '2026-07-15T00:00:00.000Z',
+                    sourceHash: null,
+                },
+            });
+
+            await writer.saveProjectConfig(project, project.path);
+
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
+            );
+            const parsed = JSON.parse(writeCall![1] as string);
+            expect(parsed.meshState).toBeUndefined();
+            expect(parsed.appState).toBeUndefined();
+        });
+
+        it('should omit appState from manifest when the integration is not deployed', async () => {
+            const project = createTestProject({ name: 'no-app' });
+            await writer.saveProjectConfig(project, project.path);
+
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
+            );
+            const parsed = JSON.parse(writeCall![1] as string);
+            expect(parsed.appState).toBeUndefined();
+        });
+
+        // ADR-011 D3 Step 01: the keyed appBuilderComponents map is the durable
+        // model. Without serializing it, N-integration state evaporates on reload
+        // (the loader could only rebuild 1 mesh + 1 integration from the legacy
+        // singletons). Omit-when-empty mirrors the aiPrompts convention.
+        describe('appBuilderComponents persistence (ADR-011 D3 Step 01)', () => {
+            const keyedEntries = {
+                'commerce-eds-mesh': {
+                    kind: 'mesh' as const,
+                    status: 'deployed' as const,
+                    source: { owner: 'skukla', repo: 'commerce-eds-mesh', branch: 'main' },
+                    endpoint: 'https://mesh.example/graphql',
+                    sourceHash: null,
+                    lastDeployed: '2026-07-15T00:00:00.000Z',
+                    providesEnvVars: { MESH_ENDPOINT: 'https://mesh.example/graphql' },
+                },
+                'acme-widget': {
+                    kind: 'integration' as const,
+                    status: 'deployed' as const,
+                    name: 'ACME Widget',
+                    source: { owner: 'acme', repo: 'widget', branch: 'main' },
+                    url: 'https://acme.adobeio-static.net',
+                    deployedUrls: { main: 'https://acme.adobeio-static.net' },
+                    lastDeployed: '2026-07-15T00:00:00.000Z',
+                },
+            };
+
+            function parsedManifest(): Record<string, unknown> {
+                const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                    call[0].toString().endsWith('.tmp')
+                );
+                expect(writeCall).toBeDefined();
+                return JSON.parse(writeCall![1] as string);
+            }
+
+            it('should serialize all keyed appBuilderComponents entries verbatim', async () => {
+                const project = createTestProject({
+                    name: 'two-integrations',
+                    appBuilderComponents: keyedEntries,
+                });
+
+                await writer.saveProjectConfig(project, project.path);
+
+                expect(parsedManifest().appBuilderComponents).toEqual(keyedEntries);
+            });
+
+            it('should persist the integration display name', async () => {
+                const project = createTestProject({
+                    name: 'named-integration',
+                    appBuilderComponents: { 'acme-widget': keyedEntries['acme-widget'] },
+                });
+
+                await writer.saveProjectConfig(project, project.path);
+
+                const parsed = parsedManifest();
+                const map = parsed.appBuilderComponents as Record<string, { name?: string }>;
+                expect(map['acme-widget'].name).toBe('ACME Widget');
+            });
+
+            it('should omit appBuilderComponents from manifest when undefined', async () => {
+                const project = createTestProject({ name: 'no-keyed-map' });
+                await writer.saveProjectConfig(project, project.path);
+
+                expect(parsedManifest().appBuilderComponents).toBeUndefined();
+            });
+
+            it('should omit appBuilderComponents from manifest when empty', async () => {
+                const project = createTestProject({
+                    name: 'empty-keyed-map',
+                    appBuilderComponents: {},
+                });
+                await writer.saveProjectConfig(project, project.path);
+
+                expect(parsedManifest().appBuilderComponents).toBeUndefined();
+            });
         });
     });
 });

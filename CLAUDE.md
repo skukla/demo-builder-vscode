@@ -1,355 +1,185 @@
+<!-- Last verified: 2026-07-03 -->
 ## IMPORTANT: RPTC Workflow
 
 This project uses the RPTC (Research → Plan → TDD → Commit) workflow.
 
-**See `.rptc/CLAUDE.md` for complete RPTC workflow instructions and commands.**
-
-All development must follow the RPTC process defined in that file.
+**See `.rptc/CLAUDE.md` for the project-specific RPTC configuration.**
 
 ### Where research, plans, and completed work live
 
-`.rptc/` is **fully tracked in git** (only `.rptc/prompt.md` is gitignored). Read `.gitignore` lines 54-57 if in doubt. Both Claude Code and Claude Desktop should write working RPTC artifacts to these locations rather than ad-hoc paths.
+`.rptc/` is **fully tracked in git** (only `.rptc/prompt.md` is gitignored). Both Claude Code and Claude Desktop should write working RPTC artifacts to these locations rather than ad-hoc paths.
 
 | Stage | Location | What goes there |
 |---|---|---|
 | Working research | `.rptc/research/<topic-slug>/research.md` | Exploratory, in-flight research generated during `/rptc:research` or equivalent |
 | Working plans | `.rptc/plans/<feature-slug>/overview.md` + `step-NN.md` | Active implementation plans being executed via TDD |
 | Completed work | `.rptc/complete/<feature-slug>/` | Plans whose implementation has shipped (move from `.rptc/plans/` when done) |
-| Curated research | `docs/research/<date>-<topic>.md` | **Promoted only.** Landmark research cited by ADRs / CHANGELOG. Don't write here directly during a session; promote from `.rptc/research/` once durable. See `docs/research/README.md` for the two-tier convention. |
-| Backlog items | `.rptc/backlog/<slug>.md` or `.rptc/backlog/<feature>/` | Designed/proposed work that isn't active |
+| Curated research | `docs/research/<date>-<topic>.md` | **Promoted only.** Landmark research cited by ADRs / CHANGELOG. Don't write here directly; promote from `.rptc/research/` once durable. |
+| Backlog items | `.rptc/backlog/<slug>.md` or `.rptc/backlog/<feature>/` | Designed/proposed work that isn't active (index: `.rptc/backlog/README.md`) |
 
-**For Claude Desktop sessions:** Desktop can't run RPTC slash commands (no plugin install), but it can — and should — write to `.rptc/research/`, `.rptc/plans/`, `.rptc/complete/`, and `.rptc/backlog/` directly. None of those paths are gitignored. Don't write research/plan files to ad-hoc locations like `docs/research/` (curated tier — promote-only) or the repo root.
+**For Claude Desktop sessions:** Desktop can't run RPTC slash commands (no plugin install), but it can — and should — write to the `.rptc/` locations above directly. Don't write research/plan files to ad-hoc locations like `docs/research/` (curated tier — promote-only) or the repo root.
 
 ---
 
 # Adobe Demo Builder VS Code Extension
 
-## Project Overview
+The Adobe Demo Builder is a VS Code extension that streamlines the creation of Adobe Commerce demo projects. It provides a wizard-based interface for setting up complex e-commerce demonstrations with various Adobe technologies integrated (Adobe Commerce / ACO, Edge Delivery Services storefronts, API Mesh, App Builder).
 
-The Adobe Demo Builder is a VS Code extension that streamlines the creation of Adobe Commerce demo projects. It provides a wizard-based interface for setting up complex e-commerce demonstrations with various Adobe technologies integrated.
+## Technology Stack
 
-## High-Level Architecture
+- **Extension**: TypeScript, VS Code Extension API
+- **UI**: React, Adobe Spectrum
+- **Build**: esbuild (`esbuild.config.js`) — NOT webpack
+- **Testing**: Jest with ts-jest, @testing-library/react (~574 suites; see `tests/README.md`)
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                   VS Code Extension Host                  │
-├─────────────────────────────────────────────────────────┤
-│  Extension Activation (extension.ts)                     │
-│  ├── Command Registration                                │
-│  ├── State Management                                    │
-│  └── Provider Registration                               │
-├─────────────────────────────────────────────────────────┤
-│              Core Systems                                │
-│  ├── Prerequisites System (JSON-driven)                  │
-│  ├── Component Registry (features/components/config/)    │
-│  ├── Progress Tracking (ProgressUnifier)                 │
-│  ├── Error Logging System                                │
-│  ├── StepLogger (Configuration-driven logging)           │
-│  ├── ExternalCommandManager (Race-safe commands)         │
-│  ├── StateCoordinator (Adobe CLI state sync)             │
-│  └── Auth Guards (Shared re-auth prompts)                │
-├─────────────────────────────────────────────────────────┤
-│          Communication & Messaging Layer                 │
-│  ├── WebviewCommunicationManager (Handshake protocol)    │
-│  ├── BaseWebviewCommand (Standardized patterns)          │
-│  └── Message queuing & retry logic                       │
-├─────────────────────────────────────────────────────────┤
-│              Webview Layer (React)                       │
-│  ├── Wizard UI (Adobe Spectrum)                          │
-│  ├── Message Protocol (vscode.postMessage)              │
-│  └── Step Components                                     │
-└─────────────────────────────────────────────────────────┘
-```
+## Development Workflow
+
+1. Install dependencies: `npm install`
+2. Watch mode (extension + webviews): `npm run watch:all` — run it in the background while iterating; the user then only reloads the Extension Dev Host window (Cmd+R). F5 is only needed for extension-host restarts.
+3. Full build: `npm run compile`
+4. Package: `npm run package` (vsce)
+5. Quality gate before pushing: the `gate` skill (scoped jest + `tsc --noEmit` + eslint). CI lints the whole repo — a scoped local lint can pass while CI fails.
 
 ## Directory Structure
 
 ```
 demo-builder-vscode/
-├── src/                    # Source code (→ see src/CLAUDE.md)
-│   ├── commands/          # VS Code commands (→ see src/commands/CLAUDE.md)
-│   ├── features/          # Feature modules (→ see src/features/CLAUDE.md)
-│   │   ├── ai/               # AI context verification & MCP server
-│   │   ├── authentication/   # Adobe authentication
-│   │   ├── components/       # Component management
-│   │   ├── dashboard/        # Project dashboard
-│   │   ├── eds/              # Edge Delivery Services (→ see src/features/eds/README.md)
-│   │   ├── lifecycle/        # Project lifecycle
-│   │   ├── mesh/             # API Mesh deployment
-│   │   ├── prerequisites/    # Prerequisites system
-│   │   ├── project-creation/ # Project creation
-│   │   ├── projects-dashboard/ # Projects home screen (card grid)
-│   │   ├── sidebar/          # Sidebar navigation (WebviewViewProvider)
-│   │   └── updates/          # Auto-update system
-│   ├── shared/            # Shared infrastructure (→ see src/shared/CLAUDE.md)
-│   │   ├── base/             # Base types & utilities
-│   │   ├── command-execution/# Command execution
-│   │   ├── communication/    # Webview communication
-│   │   ├── logging/          # Logging system
-│   │   ├── state/            # State management
-│   │   ├── utils/            # Common utilities
-│   │   └── validation/       # Validation utilities
-│   ├── webviews/          # React UI components (→ see src/webviews/CLAUDE.md)
-│   ├── utils/             # Legacy utilities (→ see src/utils/CLAUDE.md)
-│   ├── providers/         # VS Code providers
-│   └── types/             # TypeScript definitions
-├── config files in src/features/*/config/  # Configuration per feature
-├── docs/                  # Documentation
-│   └── CLAUDE.md         # Development strategy & guidelines
-├── dist/                  # Compiled output
+├── src/                    # Source code (→ src/CLAUDE.md: import rules, path aliases)
+│   ├── extension.ts       # Entry point and command registration
+│   ├── commands/          # VS Code commands (→ src/commands/CLAUDE.md)
+│   ├── core/              # Shared infrastructure (→ src/core/CLAUDE.md)
+│   │   # command-execution, communication, logging, state, ui (components/hooks/styles), utils, validation
+│   ├── features/          # Feature modules (→ src/features/CLAUDE.md)
+│   │   # ai, app-builder, authentication, components, dashboard, eds, lifecycle,
+│   │   # mesh, prerequisites, project-creation, projects-dashboard, sidebar, updates
+│   ├── mcp-server.ts      # MCP server exposed to Claude (→ docs/systems/mcp-server.md)
+│   ├── types/             # TypeScript definitions
+│   └── utils/             # Legacy location; only autoUpdater.ts remains
+├── docs/                  # Documentation (→ docs/README.md index; ADRs in docs/architecture/adr/)
+├── tests/                 # Jest suites mirroring src/ (→ tests/README.md)
+├── dist/                  # Compiled output (never edit)
 └── media/                 # Static assets
 ```
 
-## Key Components
+Feature config lives per-feature in `src/features/*/config/*.json`.
 
-### 1. **Wizard System**
-- Multi-step project creation wizard
-- React-based UI using Adobe Spectrum
-- Maintains state across steps
-- Width constraint solution: Replace Spectrum Flex with div for layouts
+## Key Files
 
-### 2. **Prerequisites System**
-- JSON-driven prerequisite definitions
-- Automatic tool installation
-- Progress tracking with multiple strategies
-- Supports Node.js multi-version management
-
-### 3. **Component Registry**
-- Defines available project components
-- Manages dependencies between components
-- Dynamic configuration based on selections
-
-### 4. **Webview Communication**
-- Bidirectional message passing with handshake protocol
-- Type-safe message protocol with request-response pattern
-- State synchronization between extension and UI
-- Message queuing until both sides ready
-- Automatic retry with exponential backoff
-
-### 5. **Logging System**
-- Configuration-driven logging via StepLogger
-- Template-based messages from logging.json
-- Smart context switching for operational logs
-- Consistent formatting across all components
-
-### 6. **Race Condition Management**
-- ExternalCommandManager for command queuing
-- Mutual exclusion for resource access
-- Smart polling with exponential backoff
-- StateCoordinator for Adobe CLI consistency
-
-### 7. **Auto-Update System**
-- GitHub Releases integration for version checking
-- Snapshot-based rollback for component updates
-- Smart .env merging preserves user configuration
-- Stable and beta update channels
-- Programmatic write suppression prevents false notifications
-- Pre-flight checks (demo running, concurrent updates)
-
-## Critical Design Decisions
-
-### Adobe Spectrum Integration
-- **Issue**: Flex component constrains width to 450px
-- **Solution**: Use standard HTML div with flex styles for critical layouts
-- **Details**: See `src/webviews/CLAUDE.md`
-
-### Spectrum Design Token Support (v1.7.0)
-- **Feature**: Layout components support type-safe Spectrum design tokens
-- **Components**: `GridLayout`, `TwoColumnLayout` accept `DimensionValue` props
-- **Example**: `gap="size-300"` compiles to `"24px"` with TypeScript validation
-- **Backward Compatible**: Pixel strings and numbers still work
-- **Details**: See `docs/development/ui-patterns.md` and `docs/development/styling-guide.md`
-
-### Adobe Setup Redesign (Two-Column Layout)
-- **Unified Experience**: Single step replaces separate auth/org/project steps
-- **Two-Column Design**: Active content (60%) + persistent summary (40%)
-- **Progressive Disclosure**: Auth → Projects → Workspaces flow
-- **Fast Feedback**: 1-second polling (3x faster than before)
-- **Always-Visible Controls**: Edit buttons shown at all times for transparency
-- **Details**: See `docs/architecture/adobe-setup.md`
-
-### Prerequisites UI
-- **Scrollable Container**: Fixed height (360px) with internal scrolling
-- **Auto-scroll**: Intelligent scrolling during prerequisite checking
-- **Visual Consistency**: Standardized status indicators with icons
-- **Details**: See `docs/systems/prerequisites-system.md`
-
-### State Management
-- Extension state persisted via StateManager
-- Webview state managed with React hooks
-- Message passing for state synchronization
-- Clear dependent state when parent selection changes
-
-## Key Files to Understand
-
-1. **extension.ts** - Entry point and command registration
-2. **src/commands/createProjectWebview.ts** - Main wizard orchestration
-3. **src/features/project-creation/ui/wizard/WizardContainer.tsx** - Wizard UI container
-4. **src/utils/adobeAuthManager.ts** - Adobe authentication and SDK integration
-5. **src/utils/updateManager.ts** - GitHub Releases integration and update checking
-6. **src/utils/componentUpdater.ts** - Safe component updates with snapshot/rollback
-7. **src/utils/stateManager.ts** - Project state persistence and management
-8. **src/features/prerequisites/config/prerequisites.json** - Prerequisite definitions
-9. **src/features/components/config/components.json** - Component registry
-10. **src/features/project-creation/config/demo-packages.json** - Demo package definitions (storefront configs, addons, content sources)
-11. **src/features/project-creation/config/stacks.json** - Stack definitions (frontend+backend combos, global addon definitions with source repos)
-12. **src/features/project-creation/config/block-libraries.json** - Block library definitions (EDS block collections, sources, package associations)
+1. `src/extension.ts` — entry point, command registration
+2. `src/features/project-creation/ui/wizard/WizardContainer.tsx` — wizard UI container
+3. `src/features/authentication/services/authenticationService.ts` (+ `adobeEntityFetcher.ts`, `ensureOrgContext.ts`) — Adobe auth, Console SDK, org-context handling
+4. `src/core/state/stateManager.ts` — project state persistence
+5. `src/features/updates/services/updateManager.ts` (+ `componentUpdater.ts`) — GitHub Releases updates with snapshot/rollback
+6. `src/features/prerequisites/config/prerequisites.json` — prerequisite definitions
+7. `src/features/components/config/components.json` — component registry
+8. `src/features/project-creation/config/wizard-steps.json` — canonical wizard step order
+9. `src/features/project-creation/config/demo-packages.json` — demo packages (storefront configs, addons, content sources)
+10. `src/features/project-creation/config/stacks.json` — stacks (frontend+backend combos, global addon definitions)
+11. `src/features/project-creation/config/block-libraries.json` — EDS block library definitions
 
 ## Common Tasks
 
-### Adding a New Prerequisite
-→ See `src/features/prerequisites/config/prerequisites.json` and `docs/systems/prerequisites-system.md`
-
 ### Modifying Wizard Steps
--> See wizard steps in respective feature directories:
+→ See wizard steps in respective feature directories:
   - `src/features/authentication/ui/steps/` - Adobe auth steps
   - `src/features/components/ui/steps/` - Component selection steps
   - `src/features/prerequisites/ui/steps/` - Prerequisites step
   - `src/features/mesh/ui/steps/` - API Mesh step
-  - `src/features/project-creation/ui/steps/` - WelcomeStep (with template selection), ReviewStep, ProjectCreationStep
-  - `src/features/project-creation/ui/components/ArchitectureModal.tsx` - Multi-step modal for architecture + block library selection (extracted from BrandGallery)
-  - `src/features/project-creation/ui/components/ConnectStoreStepContent.tsx` - Connect Commerce step (step ID: `'settings'`) — Commerce connection fields + store discovery with progressive disclosure
--> Note: WelcomeStep includes demo package selection. Architecture and block library selection happens via ArchitectureModal (multi-step modal in BrandGallery). Custom block libraries are configured in VS Code settings and selected via checkboxes. (see `src/features/project-creation/config/demo-packages.json`, `src/features/project-creation/config/block-libraries.json`, and `src/types/blockLibraries.ts`)
--> See feature documentation for wizard orchestration details
+  - `src/features/project-creation/ui/steps/` - WelcomeStep (demo package selection); `BuildYourProjectStep` (step id `'build-your-project'`) — the nested builder shell that renders a sub-step rail of **area bodies**: `CommerceStep` (area id `'commerce'`: a restyled `StepTabs` step strip (Backend · [Sign in] · Connection · Business Structure · Catalog) over a dedicated full-width view of the active step's body (one `ConnectStoreStepContent` for config steps), plus a persistent `CommerceSummary`; step/lock logic in `commerceSections.ts`), `StorefrontStep` (area id `'storefront'`, EDS-only: GitHub/DA.live + repo + block libraries), `IntegrationsStep` (area id `'integrations'`); ReviewStep, ProjectCreationStep; plus `buildYourProjectAreas.ts` (visible areas + order/status, reusing `filterStepsForStack`) and `useProjectBuilder.ts` (selection hub holding the mesh dual-flow mirror-write)
+  - `src/features/eds/ui/steps/RepoSelectionInline.tsx` - single-column repo choose/create body used by `StorefrontStep`
+→ Note: WelcomeStep's brand card selects a demo package; backend/stack + connect, integrations, and storefront (GitHub/DA.live + block libraries) are all configured **within the single `'build-your-project'` step** via its nested Commerce/Storefront/Integrations area rail. The canonical step order lives in `wizard-steps.json` (a single `build-your-project` entry); the area order/visibility lives in `buildYourProjectAreas.ts`. Custom block libraries are configured in VS Code settings and selected via checkboxes (see `demo-packages.json`, `block-libraries.json`, and `src/types/blockLibraries.ts`).
 
-### Debugging Width Issues
-→ See `docs/troubleshooting.md` and use WidthDebugger component
+### Adding a New Prerequisite
+→ `src/features/prerequisites/config/prerequisites.json` and `docs/systems/prerequisites-system.md`
 
 ### Adding New Commands
-→ See `src/commands/CLAUDE.md`
+→ `src/commands/CLAUDE.md`
 
 ### Debugging Issues
 → Run "Demo Builder: Diagnostics" command
 → Check "Demo Builder: Debug Logs" output channel
-→ See `docs/systems/debugging.md`
+→ `docs/systems/debugging.md`
 
-## Technology Stack
+## Project Skills (`.claude/skills/` — tracked; bodies load on invocation)
 
-- **Extension**: TypeScript, VS Code Extension API
-- **UI**: React, Adobe Spectrum, Webpack
-- **Build**: TypeScript compiler, Webpack
-- **Testing**: Jest with ts-jest, @testing-library/react, structure-aligned test organization (see tests/README.md)
+**Skills are invoked, not transcribed.** A backticked skill name in a plan, doc, or step (e.g. "run `gate`") is an instruction to INVOKE that skill — not a shell command to reproduce from memory. Reproducing the steps by hand silently skips the rules in the skill's body; the 2026-07-30 dream run found a whole feature delivered this way, hand-running a scoped lint and missing `gate` §6's whole-repo lint that CI enforces.
 
-## Development Workflow
+- `gate` — inner-loop quality gate (scoped jest + tsc + eslint) · `cut-release` — VSIX beta release
+- `worktree-setup` — create/relocate a worktree correctly + copy the one still-ignored .claude file (settings.local.json — permissions; hooks/skills/settings.json now travel via git) + start the preview loop
+- `adobe-org-context` — canonical IMS org/auth model; use for ANY org guard or org-mismatch work
+- `eds-publish-and-config` — Helix/DA.live/Config Service auth+scoping traps · `eds-dropin-vendoring` — dropin delivery / import map / B2B template rules
+- `webview-command-handler` — add an extension↔webview message end-to-end · `wizard-step-authoring` — add/modify wizard steps and Build-Your-Project areas
+- `appbuilder-component-authoring` — App Builder catalog entries + the deploy/subscribe spine (axis-filter semantics, full-union subscription PUT, guard chain, moving test pins)
+- `ai-context-authoring` — change the generated AI bundle (skills/AGENTS.md/.mcp.json/ai-defaults) without stranding existing projects: the four gate seams + the AI_CONTEXT_VERSION bump discipline
+- `mcp-tool-authoring` — add an in-extension MCP tool (headless-safe handler + descriptor row, no writes-hiding-in-reads, count-pinned tests, mcp-server.md sync)
+- `spectrum-webview-ui` — load-bearing Spectrum/webview UI gotchas (dimension-token scale, Menu sections/submenus, Flex-450px, box-sizing, dashboard notices)
+- `webview-test-authoring` — write/fix a React/Spectrum webview test: mock preamble, `advanceTimers` contract, hoist-safe `.testUtils` extraction, div-role card queries, mocked-vs-bundled-JSON trap (test-side counterpart to `spectrum-webview-ui`)
+- `dream` — out-of-band curation pass over memory/skills/CLAUDE.md: mine transcripts for recurring failures + staleness, propose evidence-backed changes (runs at release cuts; proposes, never applies)
+- `codebase-sweep` — dream's sibling for the CODE: runs the four scans together, triages against measured baselines, proposes cleanups (runs at release cuts; proposes, never applies). Duplication is the one defect class with no automatic hook, because deciding whether two things SHOULD be one needs judgment — this is where that judgment gets scheduled.
+- `debug-log-triage` — parse a pasted Debug Logs dump: the structured stdout/stderr block above a blank error carries the truth; benign-noise catalog; channel→feature map
+- `adobe-docs-lookup` — route an Adobe docs question to the source that has it (App Builder concepts live on developer.adobe.com, which NO doc MCP indexes) + recover from `-32002` / 401 MCP session failures
+- `component-extraction-scan` — find UI markup duplicated across ≥3 sites that should be one component (inverse of the SOP God-file scan)
+- `code-duplication-scan` — find copy-paste LOGIC duplication (jscpd) that should be one shared function (logic counterpart to component-extraction-scan)
+- `dead-code-scan` — find unused exports (ts-prune) + abandonment markers; serves "no soft deprecation"
+- `circular-dependency-scan` — find import cycles (madge) and how to break them
+- `architecture-duplication-scan` — guided review for competing/parallel implementations (same job solved twice); resolve by deleting one
+- `decompose-god-file` — split an oversized multi-responsibility file into single-responsibility units without breaking its public API (the fix to the scan skills' find)
 
-1. Install dependencies: `npm install`
-2. Build: `npm run build`
-3. Watch mode: `npm run watch`
-4. Run extension: F5 in VS Code
-5. Package: `npm run package`
+## Verified duplication gets FIXED, not reported
 
-## Recent Improvements
+When a scan or hook surfaces duplication, the default is to fix it in the same turn —
+not to file it, not to ask. Reporting it back is what made the user the detection
+layer for months.
 
-### v1.6.0 (2025-01-XX) - Auto-Updates & Performance Optimizations
-- **Auto-Update System**: Extension and component updates via GitHub Releases
-  - Snapshot/rollback safety for component updates
-  - Smart .env merging preserves user configuration
-  - Stable and beta update channels
-  - Programmatic write suppression prevents false notifications
-  - Concurrent update lock prevents double-click accidents
-  - Post-update verification ensures component integrity
-- **Authentication Performance**: Adobe Console SDK integration for 30x faster operations
-  - Quick auth checks (< 1s vs 9+ seconds for full validation)
-  - Pre-flight authentication for Adobe I/O operations prevents unexpected browser launches
-  - Cached organization/project data with TTL (reduces API calls)
-  - Async SDK initialization (non-blocking, 5-second timeout)
-- **Prerequisite Performance**: Adobe AIO CLI prerequisite optimization
-  - In-memory caching with 5-minute TTL reduces checks from 3-6s to <1s (95% faster)
-  - Parallel execution for per-Node-version checks (3x faster for multi-version scenarios)
-  - Optimized npm flags (`--no-fund`) reduce installation noise; `--prefer-offline` removed from global installs (caused ETARGET on stale caches)
-  - Smart cache invalidation on configuration changes and manual rechecks
-  - Cache security features: size limits (100 entries), LRU eviction, TTL jitter (±10%)
-  - Enhanced progress visibility with elapsed time tracking for long operations
-  - Reduced prerequisite check timeout from 60s to 10s for faster failure detection
-- **Mesh Deployment Enhancements**: Improved configuration detection and error handling
-  - Fetches deployed mesh config from Adobe I/O for accurate comparison
-  - Better staleness detection (compares local vs deployed state)
-  - Consolidated logging to single "Demo Builder: User Logs" channel
-  - Pre-flight authentication check before deployment
-  - User-friendly error formatting for network/timeout/HTTP failures
-- **Dashboard Improvements**: Enhanced project control panel
-  - Smart Logs toggle remembers last active channel (Logs/Debug)
-  - Asynchronous mesh status checking doesn't block UI
-  - Focus retention for in-place actions (Logs toggle, Start/Stop)
-  - Component browser with .env file hiding
-  - Focus trap for keyboard navigation
-- **File Watcher Improvements**: Hash-based change detection with notification management
-  - Programmatic write suppression (Configure UI and updates don't trigger false alerts)
-  - Show-once-per-session notifications (no notification spam)
-  - 10-second startup grace period
-  - Separate tracking for restart vs mesh redeploy notifications
+**Two conditions, both required:**
 
-### v1.5.0 (2025-01-16) - Backend Call on Continue & Critical Fixes
-- **Backend Call on Continue Pattern**: Major UX improvement for selection steps
-  - UI updates immediate, backend calls deferred to Continue button
-  - Eliminates loading delays during exploration
-  - Clear error handling at commitment points
-  - Consistent pattern across project/workspace selection
-- **Critical Async Handler Fix**: Resolved "Error Loading Projects" issue
-  - WebviewCommunicationManager now properly awaits async handlers
-  - Fixed Promise objects being sent to UI instead of resolved values
-  - Eliminates UI errors despite successful backend operations
-- **Adobe CLI Timeout Solutions**: Addressed frequent timeout failures
-  - Increased CONFIG_WRITE timeout from 5000ms to 10000ms
-  - Added success detection in timeout scenarios via stdout parsing
-  - Commands now succeed reliably despite Adobe CLI slowness
-- **UI/UX Standardization**: Consistent layout and interaction patterns
-  - Standardized 800px content width across selection steps
-  - Simple spinner overlays replace verbose loading text
-  - Disabled buttons during loading operations
-  - Eliminated blank screens during transitions
+1. **Verified** — you opened BOTH implementations and confirmed they do the same job.
+   A name match, a shared class, or a scan hit is NOT verification. The 2026-08-05
+   run scored 3 real of 6 on names alone; reading the files was what separated them.
+   If they turn out to be variants (different props, different behaviour, one has an
+   affordance the other must not), say so and move on — that is a finding too.
+2. **In reach** — the duplication is in code this turn already touches, or one import
+   away from it. Duplication discovered elsewhere gets mentioned, not chased; that is
+   scope creep wearing a tidy hat.
 
-### v1.4.0 (2025-01-11)
-- **Race Condition Solutions**: Comprehensive 4-phase implementation
-  - WebviewCommunicationManager with handshake protocol
-  - ExternalCommandManager for command queuing and mutual exclusion
-  - StateCoordinator for Adobe CLI state consistency
-  - BaseWebviewCommand for standardized patterns
-- **Configuration-Driven Logging**: StepLogger with templates
-  - Step names from wizard-steps.json
-  - Message templates from logging.json
-  - Smart context switching for operations
-- **Improved Reliability**: Eliminated brittle setTimeout delays
-  - Smart polling with exponential backoff
-  - Condition-based waiting
-  - Automatic retry logic
+**When both hold, just do it**: use the existing component, run the consumer's tests
+unchanged (a behaviour-preserving refactor proves itself by not moving them), and say
+what you did. `ServiceGroupList` → `ConfigSection` is the reference — 78 tests, zero
+edits to any of them.
 
-### v1.3.0 (2025-01-10)
-- **Enhanced Debugging System**: Dual output channels ("Demo Builder: User Logs" and "Demo Builder: Debug Logs")
-- **Diagnostics Command**: Comprehensive system analysis for troubleshooting
-- **Unified Logging**: Consolidated from 4 channels to 2 clean channels
-- **Adobe Setup UX**: Consistent auto-advance, proper success display, eliminated double-loader
-- **Command Execution Logging**: Full stdout/stderr/timing capture for debugging
+**When only the first holds**, state the finding with file:line and the verdict, and
+let the user choose. Do not file a backlog item for a two-line fix.
 
-### Previous Updates
-- Fixed wizard width inconsistencies (450px → 800px)
-- Improved prerequisites UI with scrollable container
-- Standardized status message displays
-- Enhanced error message parsing for Adobe I/O CLI
-- Comprehensive documentation updates
+The judgement call is whether two things are the same job — not whether to bother.
 
-## New Documentation (v1.5.0)
+## Verifying
 
-### Design Patterns
-- **[Backend Call on Continue Pattern](docs/patterns/selection-pattern.md)**: Complete guide to the new selection UX pattern
-- **[State Management Patterns](docs/patterns/state-management.md)**: Comprehensive state handling strategies
-- **[Adobe CLI Timeout Troubleshooting](docs/troubleshooting/adobe-cli-timeouts.md)**: Debugging and fixing timeout issues
+**A check whose exit code passes through `head`/`tail`/`wc`/`grep` is not a check.**
+Those exit 0 on empty input, so `|| echo "none"` prints "none" whether the command
+found nothing or never ran at all. Capture the count into a variable and assert on
+it instead.
 
-### Key Implementation Files
-- **[WebView Integration](src/webviews/CLAUDE.md)**: Updated with Backend Call on Continue documentation
-- **[Utilities](src/utils/CLAUDE.md)**: Added async handler resolution and timeout configuration docs
-- **[Commands](src/commands/CLAUDE.md)**: Updated message handling patterns and timeout strategies
+**Pair every "nothing found" verification with a positive control** — the same
+command against something you know is present. Two wrong all-clears on 2026-08-07
+were both caught by the control and neither by reading the output: a zsh glob error
+made `grep` never run while `0 remaining` printed ten times, and a `grep -c … | head`
+reported three skills as lacking coverage they might well have had.
 
-## Future Enhancements
+**Quote glob arguments in zsh.** `--include=*.css` is expanded by the shell before
+`grep` ever sees it, and the command dies with "no matches found" — printing a zero
+that reads exactly like a result. Write `--include='*.css'`. This is the specific
+error behind both of the 2026-08-07 all-clears, and it recurred twice on 2026-08-11.
 
-- Automated testing framework
-- Performance monitoring
-- Enhanced error reporting
-- Accessibility improvements
-- Windows/Linux platform support
+## Gotchas (verified, load-bearing)
+
+- **Adobe Spectrum Flex constrains width** (450px): use a standard HTML div with flex styles for critical wizard layouts.
+- **Layout components accept Spectrum design tokens**: `GridLayout`/`TwoColumnLayout` take `DimensionValue` props (`gap="size-300"`). See `docs/development/ui-patterns.md` and `docs/development/styling-guide.md`.
+- **Never pipe jest through `tail`/`head`/`grep`** — output buffering makes it look hung. Redirect to a file instead (enforced by a PreToolUse hook; details in `tests/README.md`).
+- **Webview communication** uses a handshake protocol with message queuing (`src/core/communication/`); async handlers must be awaited or the UI receives Promise objects.
 
 ---
 
-For detailed information about specific areas, navigate to the CLAUDE.md file in the relevant directory.
+For detailed information about specific areas, navigate to the CLAUDE.md file in the relevant directory (they load on demand when you work there).
 
 ## RPTC Verification Configuration
 verification-agent-mode: automatic

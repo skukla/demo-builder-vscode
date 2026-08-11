@@ -13,8 +13,12 @@
 import { Flex } from '@adobe/react-spectrum';
 import React from 'react';
 import {
-    PAAS_WEBSITE_CODE, PAAS_STORE_CODE, PAAS_STORE_VIEW_CODE,
-    ACCS_WEBSITE_CODE, ACCS_STORE_CODE, ACCS_STORE_VIEW_CODE,
+    PAAS_WEBSITE_CODE,
+    PAAS_STORE_CODE,
+    PAAS_STORE_VIEW_CODE,
+    ACCS_WEBSITE_CODE,
+    ACCS_STORE_CODE,
+    ACCS_STORE_VIEW_CODE,
 } from '../../config/envVarKeys';
 import { STORE_GROUP_IDS } from '../../config/storeFieldHelpers';
 import type { UniqueField, ServiceGroup } from '../hooks/useComponentConfig';
@@ -69,7 +73,7 @@ export function StoreSelectionRow({
     const keys = getFieldKeys(group.id);
 
     const findField = (key: string): UniqueField | undefined =>
-        group.fields.find(f => f.key === key);
+        group.fields.find((f) => f.key === key);
 
     const websiteField = findField(keys.website);
     const storeField = findField(keys.store);
@@ -128,7 +132,7 @@ export function StoreSelectionRow({
             )}
             {storeViewField && (
                 <StoreStructureSelector
-                    label="Store View"
+                    label="Store view"
                     items={getStoreViewItems(selectedStore)}
                     selectedCode={String(getFieldValue(storeViewField) || '')}
                     onSelect={(code) => updateField(storeViewField, code)}

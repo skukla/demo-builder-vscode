@@ -107,6 +107,21 @@ This means:
 - `mcpSocketPath.ts` is deliberately **`vscode`-free** because *both* ends (the
   extension server and the bundled proxy) import it and must agree on the path.
 
+The **directory** holding those sockets comes from `mcpSocketDir()`:
+`$TMPDIR/demo-builder-mcp`, overridable with `DEMO_BUILDER_MCP_SOCKET_DIR`
+(mirroring `DEMO_BUILDER_PROJECTS_DIR`). Server and proxy both read that one
+function, so they cannot disagree.
+
+That override is not a convenience — it is load-bearing for the test suite.
+`tests/extension-context.test.ts` and `tests/extension-activation-navigation.test.ts`
+call the **real** `activate()`, which starts the in-extension MCP server. Its
+socket path derives from the projects dir, and the *default* projects dir hashes
+to the **exact** socket a running Extension Dev Host binds — verified 2026-08-10
+by computing both (`135b859e0a31db31.sock`). So a plain `npx jest` renamed its own
+socket over the live window's and killed the developer's MCP session mid-run, with
+the listener still alive on a path no client could resolve. `tests/setup/node.ts`
+now points every worker at an isolated tree; `globalTeardown.ts` removes it.
+
 ---
 
 ## 4. A note on the retired standalone server
@@ -148,9 +163,20 @@ When Claude Code starts a session in a Demo Builder project:
 4. The in-extension server `accept`s that connection and serves the full tool
    catalog over it.
 
-If VS Code isn't running (no server listening), the proxy simply can't connect —
-the agent sees the `demo-builder` server as unavailable, which is the correct
-behavior (the tools genuinely need the live extension).
+When the entry carries **no** `DEMO_BUILDER_MCP_SOCKET` — the global
+`~/.claude.json` entry written by the **Demo Builder: Register Global MCP**
+command — the proxy resolves its own target
+(`src/features/ai/server/mcpSocketDiscovery.ts`): the cwd-derived socket if its
+file exists, else a newest-mtime-first liveness sweep of the socket directory
+that connects to a running extension window (several open windows tiebreak to
+the most recently started one). This is what makes genuinely global ops
+(`create_project`, `list_projects`) reachable from an arbitrary cwd.
+
+If VS Code isn't running (no server listening), a socket-pinned proxy simply
+can't connect — the agent sees the `demo-builder` server as unavailable, which
+is the correct behavior (the tools genuinely need the live extension). In
+discovery mode the proxy instead fails fast with guidance ("open Demo Builder in
+VS Code first") rather than spending the retry window.
 
 ---
 
@@ -162,17 +188,28 @@ Wiring lives in `src/extension.ts`:
   calls `startInExtensionMcpServer(context)`. That disposes any previous server,
   resolves the current workspace's socket path, and constructs an
   `InExtensionMcpServer`.
-- The server's `start()` creates the socket directory `0700`, removes any stale
-  socket, opens a `net.Server` on the socket path, then `chmod`s the socket to
-  `0600`. **Those file permissions are the access control** — only the OS user
-  who owns the socket can connect (see [§11 Security](#11-security-model)).
+- The server's `start()` creates the socket directory `0700`, then binds each
+  socket under a **private** name (`<socket>.<pid>`), `chmod`s it to `0600`, and
+  `rename`s it over the shared path. **Those file permissions are the access
+  control** — only the OS user who owns the socket can connect (see
+  [§11 Security](#11-security-model)). Two details are load-bearing: `chmod`
+  precedes the rename so the shared name is never briefly world-readable, and
+  libuv unlinks the pathname it bound, so the shared name must be one libuv never
+  learns — otherwise `server.close()` deletes whichever successor holds it.
 - **Per connection**, the server creates a *fresh* `McpServer` instance from the
   MCP SDK, wraps it in a logging shim (`withToolLogging`, see §11), registers all
   tools onto it, and connects it to the socket via the SDK's
   `StdioServerTransport` — which, despite the name, accepts any duplex stream, so
   we hand it the socket.
 - **On deactivation / workspace change**, `dispose()` closes the server and
-  removes the socket file.
+  **leaves the socket file in place**. Nothing unlinks the shared name: POSIX has
+  no atomic unlink-if-inode, so "delete it only if it is still mine" verifies an
+  inode and then deletes a *name*, and a successor's rename landing between the
+  two gets deleted instead. The leftover file is harmless — the next bind renames
+  over it, and every consumer probes liveness rather than trusting existence.
+  `resolveProxyTarget` is split into liveness-first then existence-as-fallback for
+  exactly this reason (see §3), so a leftover no longer short-circuits the proxy's
+  fast "no window running" failure.
 
 Tool registration on each connection happens in two layers:
 
@@ -256,11 +293,45 @@ used while assembling a `create_project` call.
 `select_project`, `list_workspaces`, `select_workspace`. These back the
 [auth handoff](#auth-handoff) other tools rely on.
 
+`list_adobe_projects` returns `who_created` when the Console reports one. That
+field alone decides whether a project offers a delete affordance — the ownership
+gate compares it to the token's `user_id` claim and fails closed — so exposing it
+is what makes "why can I not delete this project?" answerable. The comparison
+stays extension-side; only the field travels.
+
 ### Descriptor-driven tools — `readDescriptors.ts` / `actionDescriptors.ts` (via `toolDescriptors.ts`)
 Thin tools declared as data and dispatched to existing handler maps:
-- Reads: `verify_ai_setup`, `list_ai_prompts`, `check_mesh`.
-- Actions: `regenerate_ai_files`, `start_demo`, `stop_demo`, `save_ai_prompt`,
-  `delete_ai_prompt`, `delete_mesh`.
+- Reads: `verify_ai_setup`, `list_ai_prompts`, `check_mesh`, `list_console_apis`
+  (the org's subscribable Adobe services, flagging ones the reconcile union
+  already manages), `get_project_urls` (the project's useful URLs as data — local
+  storefront, EDS live site + DA.live authoring, Commerce admin, Developer Console
+  deep link — computed from the same getters the open-in-browser handlers use, but
+  WITHOUT opening a browser or running the admin-panel "Open Configure" prompt;
+  absent URLs are omitted).
+- Actions: `regenerate_ai_files`, `start_demo`, `stop_demo`, `rename_project`
+  (current-project rename via the shared `renameProjectCore` — folder, saved
+  state, and the project's baked MCP/AI configs move together; agents must use
+  this instead of shell `mv`, which strands the extension's paths),
+  `deploy_integration` / `redeploy_integration` (deploy one App Builder integration
+  by id — idempotent, guard-chained, org-context-targeted; the API Mesh has its own
+  `deploy_mesh` / `check_mesh` / `delete_mesh`), `remove_integration` (confirm-gated — remote
+  undeploy + local cleanup + storefront republish), `deploy_mesh` (deploy or redeploy
+  the current project's API Mesh — same guard chain and org targeting as the dashboard
+  Deploy button, sharing the UI-free `deployMeshHeadless` core; persists the mesh
+  endpoint), `refresh_block_library` (EDS-only — destructive rebuild of the DA.live
+  authoring block library from the project's `component-definition.json`, sharing the
+  UI-free `refreshBlockLibraryHeadless` core with the dashboard kebab; returns the
+  rebuilt library paths), `export_project_settings` (write the project's settings
+  JSON to a path-validated file inside the project dir via
+  `exportProjectSettingsToFile` — the dialog-free sibling of the UI `exportProject`
+  save-dialog action; **secrets go to the FILE only**, the response returns just
+  `{ path, includesSecrets }`, never secret values; `includeSecrets` defaults to
+  true), `save_ai_prompt`, `delete_ai_prompt`,
+  `delete_mesh`, `add_console_apis` (runtime API
+  subscription on the demo workspace credential — reuses `apiSubscriber` under
+  the auth → org-mismatch → developer-role guard chain; added codes persist in
+  `Project.additionalConsoleApis` and ride every later reconcile union, since
+  the Console subscribe PUTs the full list).
 
 ### Project lifecycle
 | Tool | File | Notes |
@@ -368,15 +439,29 @@ config when a project is created (and on "Regenerate AI files"):
   ```
   The `node` path is resolved robustly (`which node` → `realpath`, handling
   fnm/nvm shims) because VS Code's `process.execPath` is the Electron binary, not
-  a usable Node. The ai-defaults MCPs (Adobe App Builder + Playwright) are appended
-  for EDS storefront projects, anchored to the per-project isolated MCP tools dir
+  a usable Node. The ai-defaults MCPs are appended per each entry's `requires`
+  gate (aiToolingGate.ts): the Commerce Extensibility Developer Agent for any
+  App Builder-adjacent project (EDS storefront, mesh, or attached App Builder
+  component), Playwright for EDS storefronts only. Anchored to the per-project
+  isolated MCP tools dir
   (`<project>/.demo-builder-mcp/node_modules/`) — decoupled from the storefront's
   own `node_modules` so they install even when the storefront's `npm install` can't.
 - **`.claude/settings.json`** — a `PostToolUse` git-sync hook for EDS projects
   (commit/push storefront edits the agent makes). Skipped if the path contains
-  shell metacharacters.
+  shell metacharacters. The extractor reads the tool-call JSON on **stdin** and
+  takes `tool_input.file_path`; it once read a `$CLAUDE_TOOL_INPUT` env var Claude
+  Code never sets, so the hook silently did nothing from beta.109 until the
+  AI_CONTEXT_VERSION 6 fix. It commits and pushes only — publishing is
+  `sync_content` / `sync_storefront`.
 - All three are added to the project's **`.gitignore`** — they contain
   machine-specific absolute paths and must not be committed.
+
+Additionally, the **Demo Builder: Register Global MCP** palette command
+(`src/features/project-creation/services/globalMcpRegistration.ts`) upserts a
+`demo-builder` entry into the user-scope `~/.claude.json` — same command/args
+but **no** socket env, so the proxy discovers a running window at launch (see
+§5). Explicit opt-in only; it merge-preserves everything else in the file and
+refuses to overwrite a malformed one.
 
 Cursor and Codex read `.mcp.json` natively, so no per-tool config files are
 written.

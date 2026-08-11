@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import type { CommandResult } from '@/core/shell/types';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { slowCommandThreshold } from '@/core/utils/timeoutConfig';
 import { sanitizeErrorForLogging } from '@/core/validation';
 
 /**
@@ -205,8 +205,12 @@ export class DebugLogger {
         if (result.duration) {
             this.debugChannel.info(`[debug] Duration: ${result.duration}ms`);
 
-            // Warn about slow commands - goes to Logs channel for visibility
-            if (result.duration > TIMEOUTS.SLOW_COMMAND_THRESHOLD) {
+            // Warn about slow commands - goes to Logs channel for visibility.
+            // The threshold is per-tool: `aio` carries a ~1.7s startup floor that
+            // no caller can avoid, so the generic 3s bar flagged healthy aio work
+            // and taught the reader to ignore the warning (live 2026-08-08:
+            // "aio config get ims.contexts.cli took 3927ms" on a cold start).
+            if (result.duration > slowCommandThreshold(command)) {
                 this.logsChannel.warn(`Slow command detected - ${command} took ${result.duration}ms`);
             }
         }

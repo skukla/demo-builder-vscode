@@ -4,9 +4,13 @@
  * Tests for:
  * 1a. copySingleFile 401 detection (throws DaLiveAuthError)
  * 1b. Per-batch token re-fetch in copyContentFromSource
- * 1c. Per-batch token re-fetch in copyMediaFromContent
  */
 
+// Real wall-clock retry/UI delays; mock the shared sleep so only orchestration is
+// under test. Assertions pin the SEQUENCE of attempts, never elapsed duration.
+jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
+
+import type { DaLiveContentDiscovery } from '@/features/eds/services/daLiveContentDiscovery';
 import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
@@ -30,6 +34,7 @@ global.fetch = mockFetch;
 
 describe('DaLiveContentOperations - 401 Token Expiration', () => {
     let service: DaLiveContentOperations;
+    let discovery: DaLiveContentDiscovery;
     let mockTokenProvider: TokenProvider;
     let mockLogger: Logger;
 
@@ -48,6 +53,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
         } as unknown as Logger;
 
         service = new DaLiveContentOperations(mockTokenProvider, mockLogger);
+        discovery = (service as unknown as { discoveryOps: DaLiveContentDiscovery }).discoveryOps;
     });
 
     /**
@@ -268,7 +274,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
         beforeEach(() => {
             // These tests focus on per-batch token behavior, not content enumeration.
             // Force fallback to CDN index so existing fetch mocks work unchanged.
-            jest.spyOn(service, 'getContentPathsFromDaLive').mockRejectedValue(new Error('Skipped'));
+            jest.spyOn(discovery, 'getContentPathsFromDaLive').mockRejectedValue(new Error('Skipped'));
         });
 
         /**
@@ -309,7 +315,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
             // 7 paths = 2 batches (5 + 2) with CONTENT_COPY_BATCH_SIZE = 5
             const paths = ['/p1', '/p2', '/p3', '/p4', '/p5', '/p6', '/p7'];
             // Use DA.live list directly to bypass CDN fallback (avoids auth page probing/stub creation)
-            jest.spyOn(service, 'getContentPathsFromDaLive').mockResolvedValue(paths);
+            jest.spyOn(discovery, 'getContentPathsFromDaLive').mockResolvedValue(paths);
             setupContentSourceMock(paths);
 
             await service.copyContentFromSource(source, destOrg, destSite);
@@ -327,7 +333,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
             // 6 paths = 2 batches (5 + 1)
             const paths = ['/p1', '/p2', '/p3', '/p4', '/p5', '/p6'];
             // Use DA.live list directly to bypass CDN fallback
-            jest.spyOn(service, 'getContentPathsFromDaLive').mockResolvedValue(paths);
+            jest.spyOn(discovery, 'getContentPathsFromDaLive').mockResolvedValue(paths);
             setupContentSourceMock(paths);
 
             await service.copyContentFromSource(source, destOrg, destSite);
@@ -364,125 +370,12 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
             // 3 paths = 1 batch
             const paths = ['/p1', '/p2', '/p3'];
             // Use DA.live list directly to bypass CDN fallback
-            jest.spyOn(service, 'getContentPathsFromDaLive').mockResolvedValue(paths);
+            jest.spyOn(discovery, 'getContentPathsFromDaLive').mockResolvedValue(paths);
             setupContentSourceMock(paths);
 
             await service.copyContentFromSource(source, destOrg, destSite);
 
             // Should be called exactly 1 time (one batch)
-            expect(mockTokenProvider.getAccessToken).toHaveBeenCalledTimes(1);
-        });
-    });
-
-    // =========================================================================
-    // 1c. Per-batch token re-fetch in copyMediaFromContent
-    // =========================================================================
-
-    describe('per-batch token re-fetch in copyMediaFromContent', () => {
-        const sourceOrg = 'src-org';
-        const sourceSite = 'src-site';
-        const destOrg = 'dest-org';
-        const destSite = 'dest-site';
-
-        /**
-         * Create fetch mock for copyMediaFromContent tests.
-         * contentPaths are scanned for media references; mediaFiles control
-         * the DA.live POST behavior.
-         */
-        function setupMediaMock(
-            contentPages: Record<string, string>,
-            destPostStatus = 200,
-        ): void {
-            mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
-                // Content page scans (GET to aem.live for media extraction)
-                for (const [pagePath, html] of Object.entries(contentPages)) {
-                    if (url.includes(`aem.live${pagePath}`) && (!options?.method || options?.method === 'GET')) {
-                        return {
-                            ok: true,
-                            status: 200,
-                            headers: { get: () => 'text/html' },
-                            text: async () => html,
-                        } as unknown as Response;
-                    }
-                }
-
-                // isSpreadsheetPath HEAD check
-                if (options?.method === 'HEAD' && url.endsWith('.json')) {
-                    return mockFetchResponse(404);
-                }
-
-                // Source media GET (aem.live)
-                if (url.includes('aem.live') && url.includes('media_') && (!options?.method || options?.method === 'GET')) {
-                    return mockFetchResponse(200, undefined, 'image/png');
-                }
-
-                // DA.live POST (destination upload)
-                if (url.includes('admin.da.live') && options?.method === 'POST') {
-                    return mockFetchResponse(destPostStatus);
-                }
-
-                return mockFetchResponse(404);
-            });
-        }
-
-        it('should call getAccessToken once per batch for media copy', async () => {
-            // Create content with 7 unique media refs = 2 batches
-            const html = [
-                '<img src="./media_a1.png">',
-                '<img src="./media_a2.png">',
-                '<img src="./media_a3.png">',
-                '<img src="./media_a4.png">',
-                '<img src="./media_a5.png">',
-                '<img src="./media_a6.png">',
-                '<img src="./media_a7.png">',
-            ].join('');
-
-            setupMediaMock({ '/page1': `<html>${html}</html>` });
-
-            await service.copyMediaFromContent(
-                { org: sourceOrg, site: sourceSite },
-                destOrg,
-                destSite,
-                ['/page1'],
-            );
-
-            // 7 media files = 2 batches (5 + 2), so 2 calls to getAccessToken
-            expect(mockTokenProvider.getAccessToken).toHaveBeenCalledTimes(2);
-        });
-
-        it('should propagate DaLiveAuthError from copyMediaFromContent', async () => {
-            setupMediaMock(
-                { '/page1': '<html><img src="./media_a1.png"></html>' },
-                401,
-            );
-
-            await expect(
-                service.copyMediaFromContent(
-                    { org: sourceOrg, site: sourceSite },
-                    destOrg,
-                    destSite,
-                    ['/page1'],
-                ),
-            ).rejects.toThrow(DaLiveAuthError);
-        });
-
-        it('should call getAccessToken for a single media batch', async () => {
-            // 3 media files = 1 batch
-            const html = [
-                '<img src="./media_b1.png">',
-                '<img src="./media_b2.png">',
-                '<img src="./media_b3.png">',
-            ].join('');
-
-            setupMediaMock({ '/page1': `<html>${html}</html>` });
-
-            await service.copyMediaFromContent(
-                { org: sourceOrg, site: sourceSite },
-                destOrg,
-                destSite,
-                ['/page1'],
-            );
-
             expect(mockTokenProvider.getAccessToken).toHaveBeenCalledTimes(1);
         });
     });

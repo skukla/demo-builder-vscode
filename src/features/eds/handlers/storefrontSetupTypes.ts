@@ -32,8 +32,8 @@ export interface StorefrontSetupResult {
     repoUrl?: string;
     repoOwner?: string;
     repoName?: string;
-    /** See {@link RepoInfo.byomOverlayFailed} — spread in from the threaded repoInfo. */
-    byomOverlayFailed?: boolean;
+    /** See {@link RepoInfo.pdpCaveats} — spread in from the threaded repoInfo. */
+    pdpCaveats?: string[];
     // Note: previewUrl/liveUrl not included - derived from githubRepo by typeGuards
 }
 
@@ -59,12 +59,18 @@ export interface RepoInfo {
     repoOwner: string;
     repoName: string;
     /**
-     * The BYOM overlay was configured but its Configuration Service registration
-     * did not land, so the storefront cannot serve product detail pages.
+     * User-facing reasons product detail pages will not work, collected as the
+     * phases run and spread into {@link StorefrontSetupResult}.
      *
-     * Set in phase 3 and spread into {@link StorefrontSetupResult}, because the
-     * pipeline otherwise finishes and reports "Complete" for a storefront missing
-     * the one thing the overlay exists for.
+     * One channel rather than a flag per cause, because the pipeline otherwise
+     * finishes and reports "Complete" for a storefront missing the one thing the
+     * overlay exists for. Three causes feed it today: the overlay was configured
+     * and failed to register (phase 3), no overlay was configured at all — BYOM
+     * off or an invalid URL (phase 3), and the smart-404 handler was skipped
+     * (phase 2). The last two were entirely silent before 2026-08-10.
+     *
+     * Empty or absent means no caveat. Anything in here changes what the
+     * completion message says.
      */
-    byomOverlayFailed?: boolean;
+    pdpCaveats?: string[];
 }

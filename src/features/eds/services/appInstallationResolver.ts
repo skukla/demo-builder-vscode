@@ -14,6 +14,7 @@
 
 import type { RepoInfo } from '../handlers/storefrontSetupTypes';
 import type { GitHubAppService } from './githubAppService';
+import { sleep } from '@/core/utils/sleep';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -86,7 +87,7 @@ export async function resolveAppInstallation(
             `[Storefront Setup] AEM Code Sync check inconclusive ` +
                 `(${formatAdminDiagnostics(check)}) — retrying once`,
         );
-        await new Promise((resolve) => setTimeout(resolve, APP_CHECK_RETRY_DELAY_MS));
+        await sleep(APP_CHECK_RETRY_DELAY_MS);
         check = await githubAppService.isAppInstalled(repoOwner, repoName);
     }
 

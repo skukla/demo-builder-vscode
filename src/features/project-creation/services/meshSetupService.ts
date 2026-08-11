@@ -196,6 +196,21 @@ export async function deployNewMesh(
     );
     logger.debug('[Project Creation] Mesh .env generated');
 
+    // Bounded pre-deploy subscribe: ensure the API Mesh API (+ baseline) is
+    // subscribed on the shared App Builder project BEFORE the first mesh deploy
+    // of this brand-new project. Runs once (idempotent), before the retry loop.
+    // Surfaced to the user: this is where the mesh's API access is provisioned
+    // now that the Add-Integration modal defers all subscription to the build.
+    progressTracker('Configuring API Mesh', 72, 'Enabling API access...');
+    const { ensureMeshApiSubscribed } = await import(
+        '@/features/app-builder/services/ensureMeshApiSubscribed'
+    );
+    await ensureMeshApiSubscribed({
+        project,
+        authService: ServiceLocator.getAuthenticationService(),
+        logger,
+    });
+
     // Helper to update mesh phase state
     const updateMeshPhase = (state: Partial<MeshPhaseState> & { status: MeshPhaseState['status'] }) => {
         if (onMeshPhaseUpdate) {
@@ -207,6 +222,14 @@ export async function deployNewMesh(
             });
         }
     };
+
+    // Self-detect an existing mesh so a redeploy uses the update strategy.
+    // The Create Project pre-flight no longer supplies meshId, so describe the
+    // workspace mesh here (deployNewMesh already runs inside withOrgContext, so
+    // describe is org-targeted). Without this, a workspace that already has a
+    // mesh would wrongly `create` and fail.
+    const { meshId: describedMeshId } = await fetchMeshInfoFromDescribe(logger);
+    const existingMeshId = apiMeshConfig?.meshId ?? describedMeshId;
 
     // Retry loop for mesh deployment
     let attempt = 0;
@@ -243,7 +266,7 @@ export async function deployNewMesh(
                         message: subMessage || message,
                     });
                 },
-                apiMeshConfig?.meshId,
+                existingMeshId,
             );
 
             if (meshDeployResult.success) {

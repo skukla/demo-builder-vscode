@@ -1,21 +1,20 @@
 /**
  * BrandGallery Component
  *
- * Hybrid approach: Modal for architecture selection + detail panel for confirmation.
- * 1. Click brand -> Modal opens with architecture options (room for descriptions)
- * 2. Select architecture -> Modal closes
- * 3. Detail panel below grid shows the confirmed selection (no layout shift)
+ * Package-select only (mark-and-Continue): clicking a card selects the demo
+ * package and the wizard advances to the Project Builder step, where the
+ * architecture, App Builder components, and block libraries are chosen. The
+ * ArchitectureModal was retired in Slice 2 (Project Builder step).
  */
 
-import { Text, DialogContainer } from '@adobe/react-spectrum';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { Text } from '@adobe/react-spectrum';
+import React, { useState, useMemo, useCallback } from 'react';
 import { getBlockLibraryName } from '../../services/blockLibraryLoader';
-import { useModalState } from '../hooks/useModalState';
-import { ArchitectureModal } from './ArchitectureModal';
 import { sortPackages, filterPackagesBySearchQuery } from './brandGalleryHelpers';
+import { SelectionCheck } from './SelectionCheck';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
+import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { cn } from '@/core/ui/utils/classNames';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import { DemoPackage } from '@/types/demoPackages';
@@ -27,25 +26,13 @@ export interface BrandGalleryProps {
     packages: DemoPackage[];
     stacks: Stack[];
     selectedPackage?: string;
+    /** Selected stack id — for the card summary display (chosen on the next step). */
     selectedStack?: string;
-    selectedAddons?: string[];
     onPackageSelect: (packageId: string) => void;
-    onStackSelect: (stackId: string) => void;
-    onAddonsChange?: (addons: string[]) => void;
+    /** Selected block library IDs — for the card summary display. */
     selectedBlockLibraries?: string[];
-    onBlockLibrariesChange?: (libraries: string[]) => void;
-    /** User's saved block library default preferences (from settings) */
-    blockLibraryDefaults?: string[];
-    /** Custom block libraries added by URL */
+    /** Custom block libraries added by URL — for the card summary display. */
     customBlockLibraries?: CustomBlockLibrary[];
-    /** Callback when custom block libraries change */
-    onCustomBlockLibrariesChange?: (libs: CustomBlockLibrary[]) => void;
-    /** Custom block library defaults from VS Code settings */
-    customBlockLibraryDefaults?: CustomBlockLibrary[];
-    /** Selected optional dependency IDs (e.g., mesh components from stack.optionalDependencies) */
-    selectedOptionalDependencies?: string[];
-    /** Callback when optional dependencies change */
-    onOptionalDependenciesChange?: (deps: string[]) => void;
     /** Optional content to render above the gallery (e.g., project name field) */
     headerContent?: React.ReactNode;
 }
@@ -82,15 +69,7 @@ const PackageCard: React.FC<PackageCardProps> = ({
         }
     }, [onCardClick, isComingSoon]);
 
-    const handleCardKeyDown = useCallback(
-        (e: React.KeyboardEvent) => {
-            if (!isComingSoon && (e.key === 'Enter' || e.key === ' ')) {
-                e.preventDefault();
-                onCardClick();
-            }
-        },
-        [onCardClick, isComingSoon],
-    );
+    const handleCardKeyDown = useActivateOnKey(onCardClick, { disabled: isComingSoon });
 
     const libraryCount = selectedBlockLibraries.length + (customBlockLibraries?.length ?? 0);
 
@@ -120,31 +99,28 @@ const PackageCard: React.FC<PackageCardProps> = ({
             {isComingSoon && (
                 <span className="architecture-badge">Coming Soon</span>
             )}
+            {isSelected && <SelectionCheck corner />}
             <div className="brand-card-header">
                 <div className="brand-card-title-row">
                     <Text UNSAFE_className="brand-card-name">
                         {pkg.name}
                     </Text>
-                    {isComplete && (
-                        <CheckmarkCircle size="S" UNSAFE_className="brand-card-check" />
-                    )}
                 </div>
                 <Text UNSAFE_className="brand-card-description">
                     {pkg.description}
                 </Text>
             </div>
 
-            {/* Compact selection: architecture name + hover tooltip for libraries */}
+            {/* Compact selection: a quiet secondary line (matching the backend card's
+                tone) — architecture + an optional block-libraries hover trigger. */}
             {isComplete && selectedStack && (
                 <div className="brand-card-selection">
-                    <Text UNSAFE_className="brand-card-selection-label">
-                        Architecture
-                    </Text>
-                    <Text UNSAFE_className="brand-card-selection-value">
-                        {selectedStack.name}
+                    <Text UNSAFE_className="brand-card-selection-summary">
+                        {`Architecture: ${selectedStack.name}`}
                     </Text>
                     {libraryCount > 0 && (
-                        <div className="brand-card-detail-trigger">
+                        <span className="brand-card-detail-trigger">
+                            <span className="brand-card-selection-sep"> · </span>
                             <Text UNSAFE_className="brand-card-detail-link">
                                 {libraryCount} block {libraryCount === 1 ? 'library' : 'libraries'}
                             </Text>
@@ -163,7 +139,7 @@ const PackageCard: React.FC<PackageCardProps> = ({
                                     </Text>
                                 ))}
                             </div>
-                        </div>
+                        </span>
                     )}
                 </div>
             )}
@@ -176,83 +152,17 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     stacks,
     selectedPackage,
     selectedStack,
-    selectedAddons = [],
     onPackageSelect,
-    onStackSelect,
-    onAddonsChange,
     selectedBlockLibraries = [],
-    onBlockLibrariesChange,
-    blockLibraryDefaults,
     customBlockLibraries = [],
-    onCustomBlockLibrariesChange,
-    customBlockLibraryDefaults,
-    selectedOptionalDependencies = [],
-    onOptionalDependenciesChange,
     headerContent,
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
-
-    const {
-        modalPackage,
-        modalAddons,
-        modalBlockLibraries,
-        modalCustomBlockLibraries,
-        modalOptionalDeps,
-        handleCardClick,
-        handleStackSelect,
-        handleModalAddonsChange,
-        handleModalBlockLibrariesChange,
-        handleModalCustomBlockLibrariesChange,
-        handleModalOptionalDepsChange,
-        handleModalDone,
-        handleModalClose,
-    } = useModalState({
-        packages,
-        stacks,
-        selectedStack,
-        selectedAddons,
-        selectedBlockLibraries,
-        customBlockLibraries,
-        customBlockLibraryDefaults: customBlockLibraryDefaults ?? [],
-        blockLibraryDefaults,
-        selectedOptionalDependencies,
-        onPackageSelect,
-        onStackSelect,
-        onAddonsChange,
-        onBlockLibrariesChange,
-        onCustomBlockLibrariesChange,
-        onOptionalDependenciesChange,
-    });
 
     const filteredPackages = useMemo(
         () => sortPackages(filterPackagesBySearchQuery(packages, searchQuery)),
         [packages, searchQuery],
     );
-
-    // Responsive column count based on container width (matches old grid minmax(220px, 1fr))
-    const gridRef = useRef<HTMLDivElement>(null);
-    const [columnCount, setColumnCount] = useState(3);
-    useEffect(() => {
-        const el = gridRef.current;
-        if (!el) return;
-        const observer = new ResizeObserver(entries => {
-            const width = entries[0].contentRect.width;
-            const minCardWidth = 220;
-            const gap = 20;
-            setColumnCount(Math.max(1, Math.floor((width + gap) / (minCardWidth + gap))));
-        });
-        observer.observe(el);
-        return () => observer.disconnect();
-    }, []);
-
-    // Distribute packages into columns (left-to-right, then wrap to next row)
-    const columns = useMemo(() => {
-        const cols: DemoPackage[][] = Array.from({ length: columnCount }, () => []);
-        filteredPackages.forEach((pkg, i) => {
-            cols[i % columnCount].push(pkg);
-        });
-        return cols;
-    }, [filteredPackages, columnCount]);
 
     // Get the selected stack object
     const selectedStackObj = useMemo(() => {
@@ -271,7 +181,7 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     }
 
     return (
-        <SingleColumnLayout>
+        <SingleColumnLayout className="brand-gallery-column">
             {/* Optional header content (e.g., project name field) */}
             {headerContent}
 
@@ -286,28 +196,24 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
                 hasLoadedOnce={true}
             />
 
-            <div ref={gridRef} className="expandable-brand-grid">
-                {columns.map((colItems, colIndex) => (
-                    <div key={colIndex} className="brand-grid-column">
-                        {colItems.map(pkg => {
-                            const isSelected = selectedPackage === pkg.id;
-                            const isDimmed = selectedPackage !== undefined && !isSelected;
-                            return (
-                                <PackageCard
-                                    key={pkg.id}
-                                    pkg={pkg}
-                                    selectedStack={isSelected ? selectedStackObj : undefined}
-                                    selectedBlockLibraries={isSelected ? selectedBlockLibraries : undefined}
-                                    customBlockLibraries={isSelected ? customBlockLibraries : undefined}
-                                    isSelected={isSelected}
-                                    isComplete={isSelected && !!selectedStackObj}
-                                    isDimmed={isDimmed}
-                                    onCardClick={() => handleCardClick(pkg)}
-                                />
-                            );
-                        })}
-                    </div>
-                ))}
+            <div className="expandable-brand-grid">
+                {filteredPackages.map(pkg => {
+                    const isSelected = selectedPackage === pkg.id;
+                    const isDimmed = selectedPackage !== undefined && !isSelected;
+                    return (
+                        <PackageCard
+                            key={pkg.id}
+                            pkg={pkg}
+                            selectedStack={isSelected ? selectedStackObj : undefined}
+                            selectedBlockLibraries={isSelected ? selectedBlockLibraries : undefined}
+                            customBlockLibraries={isSelected ? customBlockLibraries : undefined}
+                            isSelected={isSelected}
+                            isComplete={isSelected && !!selectedStackObj}
+                            isDimmed={isDimmed}
+                            onCardClick={() => onPackageSelect(pkg.id)}
+                        />
+                    );
+                })}
             </div>
 
             {searchQuery && filteredPackages.length === 0 && (
@@ -315,29 +221,6 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
                     No packages match "{searchQuery}"
                 </Text>
             )}
-
-            {/* Architecture selection modal */}
-            <DialogContainer onDismiss={handleModalClose}>
-                {modalPackage && (
-                    <ArchitectureModal
-                        pkg={modalPackage}
-                        stacks={stacks}
-                        selectedStackId={selectedPackage === modalPackage.id ? selectedStack : undefined}
-                        selectedAddons={modalAddons}
-                        selectedBlockLibraries={modalBlockLibraries}
-                        customBlockLibraries={modalCustomBlockLibraries}
-                        customBlockLibraryDefaults={customBlockLibraryDefaults}
-                        onStackSelect={handleStackSelect}
-                        onAddonsChange={handleModalAddonsChange}
-                        onBlockLibrariesChange={handleModalBlockLibrariesChange}
-                        onCustomBlockLibrariesChange={handleModalCustomBlockLibrariesChange}
-                        selectedOptionalDependencies={modalOptionalDeps}
-                        onOptionalDependenciesChange={handleModalOptionalDepsChange}
-                        onDone={handleModalDone}
-                        onClose={handleModalClose}
-                    />
-                )}
-            </DialogContainer>
         </SingleColumnLayout>
     );
 };

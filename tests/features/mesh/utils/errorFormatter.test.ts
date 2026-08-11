@@ -1,10 +1,45 @@
 import {
     formatAdobeCliError,
     formatMeshDeploymentError,
-    formatAdobeError
+    formatAdobeError,
+    formatApiAccessError,
 } from '@/features/mesh/utils/errorFormatter';
 
 describe('ErrorFormatter', () => {
+    describe('formatApiAccessError', () => {
+        it('condenses a verbose 5xx SDK error to a short retry message', () => {
+            const raw =
+                '[CoreConsoleAPISDK:ERROR_GET_SERVICES_FOR_ORG] 500 - Internal Server Error ' +
+                '({"id":"abc","messages":[{"template":"ERR_MSG_RETRY_ON_INTERNAL_ERROR",' +
+                '"message":"a very long nested json blob that would flood the row"}]})';
+
+            const result = formatApiAccessError(raw);
+
+            expect(result).toContain('500');
+            expect(result.toLowerCase()).toContain('retry');
+            expect(result).not.toContain('CoreConsoleAPISDK');
+            expect(result.length).toBeLessThan(120);
+        });
+
+        it('reports a 4xx as a permission-oriented message', () => {
+            const result = formatApiAccessError('Request failed: 403 - Forbidden');
+
+            expect(result).toContain('403');
+            expect(result.length).toBeLessThan(120);
+        });
+
+        it('passes a short message through unchanged', () => {
+            expect(formatApiAccessError('subscribe boom')).toBe('subscribe boom');
+        });
+
+        it('caps a long status-less blob with an ellipsis', () => {
+            const result = formatApiAccessError('x'.repeat(500));
+
+            expect(result.length).toBeLessThanOrEqual(201);
+            expect(result.endsWith('…')).toBe(true);
+        });
+    });
+
     describe('formatAdobeCliError', () => {
         it('should replace arrows with newlines in error messages', () => {
             const input = 'Error: Issue in .env file › missing keys › ADOBE_CATALOG_ENDPOINT';
@@ -68,12 +103,30 @@ describe('ErrorFormatter', () => {
 
             expect(result).toBe(expected);
         });
+
+        // Regression: aio api-mesh stderr STARTS with an arrow (" ›   Error: ...").
+        // The arrow→newline replacement turned that leading arrow into a LEADING
+        // NEWLINE, so the first line of the formatted message was empty and
+        // single-line renderers (the error log, toasts) displayed a blank error.
+        it('puts content on the FIRST line when the CLI message starts with an arrow', () => {
+            const liveStderr =
+                ' ›   Error: Unable to create a mesh. Check the mesh configuration file and try \n' +
+                ' ›   again. If the error persists please contact support. RequestId: \n' +
+                ' ›   551a7566-51c5-4f1b-b6c1-b66aff0223da\n';
+
+            const result = formatAdobeCliError(liveStderr);
+
+            const firstLine = result.split('\n')[0];
+            expect(firstLine).toContain('Error: Unable to create a mesh');
+            expect(result).toBe(result.trim());
+        });
     });
 
     describe('formatMeshDeploymentError', () => {
         it('should add mesh deployment context to error', () => {
             const input = 'Config error › invalid schema › missing field';
-            const expected = 'Failed to deploy Adobe Commerce API Mesh:\nConfig error\ninvalid schema\nmissing field';
+            const expected =
+                'Failed to deploy Adobe Commerce API Mesh:\nConfig error\ninvalid schema\nmissing field';
 
             const result = formatMeshDeploymentError(input);
 
@@ -82,7 +135,8 @@ describe('ErrorFormatter', () => {
 
         it('should handle Error objects', () => {
             const error = new Error('Deploy failed › connection timeout');
-            const expected = 'Failed to deploy Adobe Commerce API Mesh:\nDeploy failed\nconnection timeout';
+            const expected =
+                'Failed to deploy Adobe Commerce API Mesh:\nDeploy failed\nconnection timeout';
 
             const result = formatMeshDeploymentError(error);
 
@@ -130,9 +184,11 @@ describe('ErrorFormatter', () => {
         });
 
         it('should handle complex error chains', () => {
-            const input = 'Failed › Config validation › Schema error › Missing required field › apiEndpoint';
+            const input =
+                'Failed › Config validation › Schema error › Missing required field › apiEndpoint';
             const context = 'Configuration';
-            const expected = 'Configuration Error:\nFailed\nConfig validation\nSchema error\nMissing required field\napiEndpoint';
+            const expected =
+                'Configuration Error:\nFailed\nConfig validation\nSchema error\nMissing required field\napiEndpoint';
 
             const result = formatAdobeError(input, context);
 
@@ -169,8 +225,10 @@ describe('ErrorFormatter', () => {
         });
 
         it('should handle API mesh deployment errors', () => {
-            const error = 'Mesh deployment failed › validation error › schema invalid › graphql-config.json';
-            const expected = 'Failed to deploy Adobe Commerce API Mesh:\nMesh deployment failed\nvalidation error\nschema invalid\ngraphql-config.json';
+            const error =
+                'Mesh deployment failed › validation error › schema invalid › graphql-config.json';
+            const expected =
+                'Failed to deploy Adobe Commerce API Mesh:\nMesh deployment failed\nvalidation error\nschema invalid\ngraphql-config.json';
 
             const result = formatMeshDeploymentError(error);
 
@@ -180,7 +238,8 @@ describe('ErrorFormatter', () => {
         it('should handle organization access errors', () => {
             const error = 'Organization access denied › 403 Forbidden › insufficient permissions';
             const context = 'Console API';
-            const expected = 'Console API Error:\nOrganization access denied\n403 Forbidden\ninsufficient permissions';
+            const expected =
+                'Console API Error:\nOrganization access denied\n403 Forbidden\ninsufficient permissions';
 
             const result = formatAdobeError(error, context);
 

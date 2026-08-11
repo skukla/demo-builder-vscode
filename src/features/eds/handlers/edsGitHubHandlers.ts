@@ -8,7 +8,6 @@
  * - `handleGitHubOAuth`: Initiate OAuth flow via VS Code authentication
  * - `handleGitHubChangeAccount`: Switch to a different GitHub account
  * - `handleGetGitHubRepos`: List repositories user has write access to
- * - `handleVerifyGitHubRepo`: Check user has write access to existing repository
  *
  * @module features/eds/handlers/edsGitHubHandlers
  */
@@ -22,13 +21,6 @@ import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 // ==========================================================
 // Payload Types
 // ==========================================================
-
-/**
- * Payload for handleVerifyGitHubRepo
- */
-interface VerifyGitHubRepoPayload {
-    repoFullName: string;
-}
 
 // ==========================================================
 // Handlers
@@ -59,9 +51,11 @@ export async function handleCheckGitHubAuth(
 
             if (validation.valid && validation.user) {
                 context.logger.debug('[EDS] GitHub auth valid for user:', validation.user.login);
+                const orgs = await tokenService.getUserOrgs();
                 await context.sendMessage('github-auth-status', {
                     isAuthenticated: true,
                     user: validation.user,
+                    orgs,
                 });
                 return { success: true };
             }
@@ -91,9 +85,12 @@ export async function handleCheckGitHubAuth(
             // Get full user info by validating the new token
             const validation = await tokenService.validateToken();
 
+            const orgs = await tokenService.getUserOrgs();
+
             await context.sendMessage('github-auth-status', {
                 isAuthenticated: true,
                 user: validation.user,
+                orgs,
             });
             return { success: true };
         }
@@ -190,10 +187,19 @@ export async function handleGitHubOAuth(
             avatarUrl: null,
         };
 
-        context.logger.debug('[EDS] GitHub OAuth completed for user:', user.login);
+        // Fetch the user's GitHub org memberships for the wizard's namespace
+        // picker. read:org is already in GITHUB_SCOPES, so no extra auth
+        // prompt fires. Failures degrade to "personal account only" — see
+        // githubTokenService.getUserOrgs for the contract.
+        const orgs = await tokenService.getUserOrgs();
+        context.logger.debug(
+            `[EDS] GitHub OAuth completed for user: ${user.login}, orgs: ${orgs.join(', ') || '(none)'}`,
+        );
+
         await context.sendMessage('github-auth-complete', {
             isAuthenticated: true,
             user,
+            orgs,
         });
 
         return { success: true };
@@ -339,69 +345,6 @@ export async function handleGetGitHubRepos(
     }
 }
 
-/**
- * Verify GitHub repository access
- *
- * Checks if user has write access to an existing repository.
- *
- * @param context - Handler context with logging and messaging
- * @param payload - Contains repository name to verify
- * @returns Success with verification status
- */
-export async function handleVerifyGitHubRepo(
-    context: HandlerContext,
-    payload?: VerifyGitHubRepoPayload,
-): Promise<HandlerResponse> {
-    const { repoFullName } = payload || {};
-
-    if (!repoFullName) {
-        context.logger.error('[EDS] handleVerifyGitHubRepo missing repoFullName');
-        await context.sendMessage('github-repo-verified', {
-            verified: false,
-            repoFullName: '',
-            error: 'Repository name required',
-        });
-        return { success: false, error: 'Repository name required' };
-    }
-
-    // Parse owner/repo format
-    const parts = repoFullName.split('/');
-    if (parts.length !== 2) {
-        context.logger.error('[EDS] Invalid repository format:', repoFullName);
-        await context.sendMessage('github-repo-verified', {
-            verified: false,
-            repoFullName,
-            error: 'Invalid format. Use owner/repository',
-        });
-        return { success: false, error: 'Invalid format. Use owner/repository' };
-    }
-
-    const [owner, repo] = parts;
-
-    try {
-        context.logger.debug('[EDS] Verifying GitHub repo access:', repoFullName);
-        const { repoOperations } = getGitHubServices(context);
-
-        const result = await repoOperations.checkRepositoryAccess(owner, repo);
-
-        context.logger.debug('[EDS] GitHub repo verification result:', result);
-        await context.sendMessage('github-repo-verified', {
-            verified: result.hasAccess,
-            repoFullName,
-            error: result.error,
-        });
-
-        return { success: true };
-    } catch (error) {
-        context.logger.error('[EDS] Error verifying GitHub repo:', error as Error);
-        await context.sendMessage('github-repo-verified', {
-            verified: false,
-            repoFullName,
-            error: (error as Error).message,
-        });
-        return { success: false, error: (error as Error).message };
-    }
-}
 
 // ==========================================================
 // GitHub Repository Creation Handler
@@ -421,7 +364,7 @@ interface CreateGitHubRepoPayload {
  * Create a GitHub repository from a template
  *
  * Creates the repository and waits for template content to be populated.
- * This is called from GitHubRepoSelectionStep when creating a new repository,
+ * This is called from RepoSelectionInline when creating a new repository,
  * allowing the repo to exist before proceeding to code sync verification.
  *
  * @param context - Handler context with logging and messaging

@@ -1,5 +1,23 @@
+import { Link } from '@adobe/react-spectrum';
 import React, { ReactNode } from 'react';
 import { StatusDot } from '../ui/StatusDot';
+
+/**
+ * Contextual remediation CTA rendered beside a status badge (a quiet Link).
+ *
+ * This is the ONE place dashboard statuses surface a per-status action: an
+ * `unknown` or lightweight `warning` outcome renders its fix here (mesh
+ * "Sign in", AI "Regenerate", org "Sign in to check") instead of inventing a
+ * bespoke placement. Blocking problems use the full-width banner instead.
+ */
+export interface StatusCardAction {
+    /** Link text (the verb shown to the user). */
+    label: string;
+    /** Invoked on press. */
+    onPress: () => void;
+    /** Optional `data-testid` for the rendered Link. */
+    testId?: string;
+}
 
 export interface StatusCardProps {
     /** Status text or element */
@@ -12,6 +30,8 @@ export interface StatusCardProps {
     size?: 'S' | 'M' | 'L';
     /** Additional CSS class */
     className?: string;
+    /** Optional contextual CTA rendered as a quiet Link after the status text. */
+    action?: StatusCardAction;
 }
 
 /**
@@ -35,6 +55,7 @@ export const StatusCard = React.memo<StatusCardProps>(({
     label,
     size = 'M',
     className,
+    action,
 }) => {
     // Map color to StatusDot variant
     const getVariant = (): 'success' | 'error' | 'warning' | 'info' | 'neutral' => {
@@ -75,6 +96,16 @@ export const StatusCard = React.memo<StatusCardProps>(({
             <span className="status-text">
                 {status}
             </span>
+            {action && (
+                <Link
+                    isQuiet
+                    onPress={action.onPress}
+                    data-testid={action.testId}
+                    UNSAFE_className="text-sm cursor-pointer"
+                >
+                    {action.label}
+                </Link>
+            )}
         </div>
     );
 });

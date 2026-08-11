@@ -25,6 +25,7 @@ import {
 import { installSmart404Handler } from '../services/pdp404HandlerPublisher';
 import { installQuickEdit } from '../services/quickEditPublisher';
 import { type GitHubTreeInput } from '../services/types';
+import { addPdpCaveat, describeSmart404Skip } from './edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import {
@@ -103,10 +104,13 @@ export async function executePhaseHelixConfig(
     // Install the smart 404 PDP handler into the storefront's
     // scripts/delayed.js. Same shape as inspector tagging — vendors a
     // small JS snippet into storefront code. The surrounding pipeline's
-    // bulk Helix code preview picks up the committed change. Non-fatal:
-    // skipped silently when BYOM overlay is unset and on every other
-    // failure mode (see installSmart404Handler).
-    await installSmart404Handler(
+    // bulk Helix code preview picks up the committed change.
+    //
+    // Still non-fatal — that is deliberate. What changed on 2026-08-10 is that
+    // the result is no longer DISCARDED: a skip (no delayed.js, unparseable
+    // overlay URL, failed commit) used to reach the debug log and nowhere else
+    // while the run reported Complete.
+    const smart404 = await installSmart404Handler(
         githubFileOps,
         repoInfo.repoOwner,
         repoInfo.repoName,
@@ -115,6 +119,12 @@ export async function executePhaseHelixConfig(
         edsConfig.daLiveOrg,
         edsConfig.daLiveSite,
     );
+    if (!smart404.installed && edsConfig.byomOverlayUrl) {
+        // Only when an overlay was configured. Without one the skip is expected,
+        // and phase 3 already raises the absent-overlay caveat — two sentences
+        // for one cause would be noise.
+        addPdpCaveat(repoInfo, describeSmart404Skip(smart404.reason));
+    }
 
     // Wire Quick Edit (Experience Workspace WYSIWYG dependency) into the
     // storefront's scripts/scripts.js + tools/quick-edit/quick-edit.js.

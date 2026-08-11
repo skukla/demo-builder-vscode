@@ -150,7 +150,9 @@ export class EnvFileWatcherService implements vscode.Disposable {
 
             // Check programmatic write
             if (this.programmaticWrites.has(filePath)) {
-                this.logger.debug('[Env Watcher] Ignoring programmatic write (Configure screen handles notification)');
+                this.logger.debug(
+                    '[Env Watcher] Ignoring programmatic write (Configure screen handles notification)',
+                );
                 this.programmaticWrites.delete(filePath);
                 return;
             }
@@ -166,7 +168,9 @@ export class EnvFileWatcherService implements vscode.Disposable {
             if (previousHash === undefined) {
                 // First time seeing file - initialize hash without notification
                 this.fileContentHashes.set(filePath, currentHash);
-                this.logger.debug(`[Env Watcher] First time tracking file, initialized hash: ${currentHash.substring(0, 8)}...`);
+                this.logger.debug(
+                    `[Env Watcher] First time tracking file, initialized hash: ${currentHash.substring(0, 8)}...`,
+                );
                 return;
             }
 
@@ -178,29 +182,35 @@ export class EnvFileWatcherService implements vscode.Disposable {
             // Content changed
             this.fileContentHashes.set(filePath, currentHash);
             this.logger.debug(`[Env Watcher] Content actually changed: ${filePath}`);
-            this.logger.debug(`[Env Watcher] Hash changed from ${previousHash.substring(0, 8)}... to ${currentHash.substring(0, 8)}...`);
+            this.logger.debug(
+                `[Env Watcher] Hash changed from ${previousHash.substring(0, 8)}... to ${currentHash.substring(0, 8)}...`,
+            );
 
             // Show notification if demo running
             const currentProject = await this.stateManager.getCurrentProject();
             if (currentProject && currentProject.status === 'running') {
                 if (this.restartNotificationShown) {
-                    this.logger.debug('[Env Watcher] Restart notification already shown this session, suppressing');
+                    this.logger.debug(
+                        '[Env Watcher] Restart notification already shown this session, suppressing',
+                    );
                     return;
                 }
 
                 this.logger.debug('[Env Watcher] Demo is running, suggesting restart');
                 this.restartNotificationShown = true;
 
-                vscode.window.showInformationMessage(
-                    'Environment configuration changed. Restart the demo to apply changes.',
-                    'Restart Demo',
-                ).then(selection => {
-                    if (selection === 'Restart Demo') {
-                        vscode.commands.executeCommand('demoBuilder.stopDemo').then(() => {
-                            vscode.commands.executeCommand('demoBuilder.startDemo');
-                        });
-                    }
-                });
+                vscode.window
+                    .showInformationMessage(
+                        'Environment configuration changed. Restart the demo to apply changes.',
+                        'Restart Demo',
+                    )
+                    .then((selection) => {
+                        if (selection === 'Restart Demo') {
+                            vscode.commands.executeCommand('demoBuilder.stopDemo').then(() => {
+                                vscode.commands.executeCommand('demoBuilder.startDemo');
+                            });
+                        }
+                    });
             } else {
                 this.logger.debug('[Env Watcher] No running demo, skipping restart notification');
             }
@@ -243,15 +253,15 @@ export class EnvFileWatcherService implements vscode.Disposable {
         }
 
         // Normalize workspace paths to prevent path traversal attacks
-        const workspacePaths = workspaceFolders.map(folder =>
-            path.normalize(folder.uri.fsPath) + path.sep,
+        const workspacePaths = workspaceFolders.map(
+            (folder) => path.normalize(folder.uri.fsPath) + path.sep,
         );
 
-        return filePaths.filter(filePath => {
+        return filePaths.filter((filePath) => {
             // Normalize input path and add separator to ensure exact prefix match
             // This prevents "/workspace1-fake/.env" from matching "/workspace1"
             const normalizedPath = path.normalize(filePath);
-            const isValid = workspacePaths.some(wsPath => normalizedPath.startsWith(wsPath));
+            const isValid = workspacePaths.some((wsPath) => normalizedPath.startsWith(wsPath));
             if (!isValid) {
                 this.logger.warn(`[Env Watcher] Rejected path outside workspace: ${filePath}`);
             }
@@ -262,7 +272,7 @@ export class EnvFileWatcherService implements vscode.Disposable {
     /**
      * Register internal commands for state coordination
      *
-     * Registers 13 internal commands:
+     * Registers 14 internal commands:
      * 1. demoBuilder._internal.demoStarted - Set grace period and reset restart flag
      * 2. demoBuilder._internal.demoStopped - Clear grace period and hashes
      * 3. demoBuilder._internal.registerProgrammaticWrites - Register programmatic writes
@@ -276,6 +286,7 @@ export class EnvFileWatcherService implements vscode.Disposable {
      * 11. demoBuilder._internal.markRestartNotificationShown - Mark restart notification shown
      * 12. demoBuilder._internal.markMeshNotificationShown - Mark mesh notification shown
      * 13. demoBuilder._internal.markStorefrontNotificationShown - Mark storefront notification shown
+     * 14. demoBuilder._internal.configChanged - Re-arm mesh + storefront apply prompts
      *
      * @private
      */
@@ -304,14 +315,16 @@ export class EnvFileWatcherService implements vscode.Disposable {
                     // Validate paths are within workspace folders
                     const validatedPaths = this.validateWorkspacePaths(filePaths);
 
-                    validatedPaths.forEach(fp => this.programmaticWrites.add(fp));
+                    validatedPaths.forEach((fp) => this.programmaticWrites.add(fp));
                     if (validatedPaths.length > 0) {
-                        this.logger.debug(`[Env Watcher] Registered ${validatedPaths.length} programmatic writes to ignore`);
+                        this.logger.debug(
+                            `[Env Watcher] Registered ${validatedPaths.length} programmatic writes to ignore`,
+                        );
                     }
 
                     // Auto-cleanup in case watcher events are delayed
                     const timeoutId = setTimeout(() => {
-                        validatedPaths.forEach(fp => this.programmaticWrites.delete(fp));
+                        validatedPaths.forEach((fp) => this.programmaticWrites.delete(fp));
                         this.activeTimeouts.delete(timeoutId);
                     }, TIMEOUTS.PROGRAMMATIC_WRITE_CLEANUP);
                     this.activeTimeouts.add(timeoutId);
@@ -358,42 +371,83 @@ export class EnvFileWatcherService implements vscode.Disposable {
             }),
         );
 
+        /**
+         * A NEW change was saved — un-mute the apply prompts.
+         *
+         * The "shown" flags exist to stop one change nagging repeatedly. They
+         * were only ever cleared by *taking* the action, so declining once with
+         * "Later" muted the prompt for the rest of the session: every later save
+         * found `shouldShow` false, returned before prompting, and republished
+         * nothing. The save reported success and the served config stayed stale,
+         * with no message at all. Observed live 2026-08-10 — a project
+         * reconfigured to a different Commerce website kept serving the old
+         * scope, so every PDP rendered an empty product block.
+         *
+         * Scoping the suppression to the CHANGE rather than the session keeps the
+         * anti-spam intent (one prompt per change) without silently dropping one.
+         */
+        this.disposables.add(
+            vscode.commands.registerCommand('demoBuilder._internal.configChanged', () => {
+                this.meshNotificationShown = false;
+                this.storefrontNotificationShown = false;
+                this.logger.debug('[Notification] New config change saved, apply prompts re-armed');
+            }),
+        );
+
         // Query notification state (for Configure UI)
         this.disposables.add(
-            vscode.commands.registerCommand('demoBuilder._internal.shouldShowRestartNotification', () => {
-                return !this.restartNotificationShown;
-            }),
+            vscode.commands.registerCommand(
+                'demoBuilder._internal.shouldShowRestartNotification',
+                () => {
+                    return !this.restartNotificationShown;
+                },
+            ),
         );
 
         this.disposables.add(
-            vscode.commands.registerCommand('demoBuilder._internal.shouldShowMeshNotification', () => {
-                return !this.meshNotificationShown;
-            }),
+            vscode.commands.registerCommand(
+                'demoBuilder._internal.shouldShowMeshNotification',
+                () => {
+                    return !this.meshNotificationShown;
+                },
+            ),
         );
 
         this.disposables.add(
-            vscode.commands.registerCommand('demoBuilder._internal.shouldShowStorefrontNotification', () => {
-                return !this.storefrontNotificationShown;
-            }),
+            vscode.commands.registerCommand(
+                'demoBuilder._internal.shouldShowStorefrontNotification',
+                () => {
+                    return !this.storefrontNotificationShown;
+                },
+            ),
         );
 
         // Mark notifications shown (for Configure UI)
         this.disposables.add(
-            vscode.commands.registerCommand('demoBuilder._internal.markRestartNotificationShown', () => {
-                this.restartNotificationShown = true;
-            }),
+            vscode.commands.registerCommand(
+                'demoBuilder._internal.markRestartNotificationShown',
+                () => {
+                    this.restartNotificationShown = true;
+                },
+            ),
         );
 
         this.disposables.add(
-            vscode.commands.registerCommand('demoBuilder._internal.markMeshNotificationShown', () => {
-                this.meshNotificationShown = true;
-            }),
+            vscode.commands.registerCommand(
+                'demoBuilder._internal.markMeshNotificationShown',
+                () => {
+                    this.meshNotificationShown = true;
+                },
+            ),
         );
 
         this.disposables.add(
-            vscode.commands.registerCommand('demoBuilder._internal.markStorefrontNotificationShown', () => {
-                this.storefrontNotificationShown = true;
-            }),
+            vscode.commands.registerCommand(
+                'demoBuilder._internal.markStorefrontNotificationShown',
+                () => {
+                    this.storefrontNotificationShown = true;
+                },
+            ),
         );
     }
 
@@ -408,7 +462,7 @@ export class EnvFileWatcherService implements vscode.Disposable {
      */
     public dispose(): void {
         // Clear all active timeouts before disposal
-        this.activeTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+        this.activeTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
         this.activeTimeouts.clear();
 
         this.disposables.dispose();

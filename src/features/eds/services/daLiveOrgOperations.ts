@@ -18,6 +18,7 @@ import {
     type DaLiveEntry,
     type DaLiveOrgAccess,
 } from './types';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -256,7 +257,7 @@ export class DaLiveOrgOperations {
 
                 if (RETRYABLE_STATUS_CODES.includes(response.status) && attempt < MAX_RETRY_ATTEMPTS) {
                     this.logger.debug(`[DA.live] Retrying after ${response.status}, attempt ${attempt}`);
-                    await new Promise(resolve => setTimeout(resolve, getRetryDelay(attempt)));
+                    await sleep(getRetryDelay(attempt));
                     continue;
                 }
 
@@ -267,7 +268,7 @@ export class DaLiveOrgOperations {
                 const errorMessage = (error as Error).message || 'Unknown error';
                 if (attempt < MAX_RETRY_ATTEMPTS && !errorMessage.includes('abort')) {
                     this.logger.debug(`[DA.live] Network error, retrying: ${errorMessage}`);
-                    await new Promise(resolve => setTimeout(resolve, getRetryDelay(attempt)));
+                    await sleep(getRetryDelay(attempt));
                     continue;
                 }
 
@@ -316,8 +317,8 @@ export class DaLiveOrgOperations {
  * already have the IMS token in hand at the call site — passing it
  * explicitly is simpler than re-fetching via `tokenProvider`. Used by
  * the list-orgs handler (to flag each org's writability) and by
- * `applyOrgConfig`'s 401-handling branch (to verify ownership before
- * creating a fresh config sheet).
+ * `DaLiveConfigOperations.writeMergedDataConfig`'s 401-handling
+ * branch (to verify ownership before creating a fresh config sheet).
  *
  * @returns `true` if the header contains "write", `false` otherwise
  *          (including network failures and non-2xx responses).

@@ -25,9 +25,11 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import aiDefaultsConfig from '../config/ai-defaults.json';
+import { aiDefaultsEntryApplies } from './aiToolingGate';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AiDefaults } from '@/types/aiDefaults';
+import type { Project } from '@/types/base';
 import { DEFAULT_SHELL } from '@/types/shell';
 
 const aiDefaults: AiDefaults = aiDefaultsConfig as AiDefaults;
@@ -69,10 +71,16 @@ export function resolveMcpToolsDir(projectPath: string): string {
  * the `regenerate-ai-files` handler) can surface a clean message rather than
  * letting an exception bubble out.
  *
+ * Only the entries that apply to THIS project (per each entry's `requires`
+ * field — see aiToolingGate.ts) are installed, so an app-builder-only project
+ * gets the Developer Agent tooling without pulling Playwright.
+ *
  * @param projectPath - absolute path to the project root
+ * @param project - the project record, used to resolve which entries apply
  */
 export async function installAiDefaultsMcpTools(
     projectPath: string,
+    project: Project,
 ): Promise<InstallAiDefaultsResult> {
     const toolsDir = resolveMcpToolsDir(projectPath);
 
@@ -81,7 +89,12 @@ export async function installAiDefaultsMcpTools(
 
         const dependencies: Record<string, string> = {};
         for (const entry of aiDefaults.mcpServers) {
+            if (!aiDefaultsEntryApplies(entry, project)) continue;
             dependencies[entry.package] = entry.version;
+        }
+        if (Object.keys(dependencies).length === 0) {
+            // Nothing applies to this project — skip the npm run entirely.
+            return { success: true };
         }
         const pkg = {
             name: 'demo-builder-mcp-tools',

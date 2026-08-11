@@ -120,6 +120,48 @@ describe('DeployMeshCommand - Unification (delegates to deployMeshComponent)', (
         mockFetchInfo.mockResolvedValue({ meshId: 'existing-789', endpoint: 'https://old.adobe.io/graphql' });
     });
 
+    // The notification and the mesh CARD each get one job, and the assignment
+    // was REVERSED on 2026-08-04: steps had gone to the card, where a two-part
+    // step wrapped across two shouting lines inside a ~450px tile while the
+    // notification sat static. Now the notification carries the steps under its
+    // static title, and the card names the operation once.
+    it('sends step detail to the notification, not the card', async () => {
+        const report = jest.fn();
+        (vscode.window.withProgress as jest.Mock).mockImplementation(
+            async (_o: unknown, task: (p: unknown) => Promise<void>) => {
+                await task({ report });
+            },
+        );
+        // Drive a progress tick through the core's onProgress callback.
+        mockDeploy.mockImplementation(async (_p, _e, _l, onProgress) => {
+            (onProgress as (m: string, s?: string) => void)('Building component…');
+            return { success: true, data: { meshId: 'mesh-xyz', endpoint: 'https://m/graphql' } };
+        });
+
+        await new DeployMeshCommand(mockContext, mockStateManager, mockLogger).execute();
+
+        expect(report).toHaveBeenCalledWith(
+            expect.objectContaining({ message: 'Building component…' }),
+        );
+        // Every in-flight push carries the same stable operation name — the core
+        // sends step-ish text through onStatus too, and that must not land on the
+        // card either. Stability is the contract, not the number of pushes.
+        const deploying = mockSendMeshStatusUpdate.mock.calls.filter(
+            (c: unknown[]) => c[0] === 'deploying',
+        );
+        expect(deploying.length).toBeGreaterThan(0);
+        expect(deploying.every((c: unknown[]) => c[1] === 'Deploying Mesh')).toBe(true);
+    });
+
+    it('still names the operation in the notification title', async () => {
+        await new DeployMeshCommand(mockContext, mockStateManager, mockLogger).execute();
+
+        expect(vscode.window.withProgress).toHaveBeenCalledWith(
+            expect.objectContaining({ title: 'Deploying API Mesh' }),
+            expect.any(Function),
+        );
+    });
+
     it('delegates to deployMeshComponent with the mesh path, executor, an onProgress fn, and the existing mesh id', async () => {
         await new DeployMeshCommand(mockContext, mockStateManager, mockLogger).execute();
 

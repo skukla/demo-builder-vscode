@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Option A — Composite dashboard page</title>
+<style>
+  :root {
+    --bg: #1a1b1e; --surface: #212327; --card: #26282c; --card-hover: #2c2f34;
+    --border: #34373d; --border-strong: #43474e; --ink: #e7e9ed; --ink-soft: #c3c7cf;
+    --muted: #969ba5; --faint: #6d727c; --accent: #4b9bff; --accent-hover: #6aabff;
+    --accent-soft: #16273c; --good: #43b98c; --warn: #e0a92e; --bad: #ec5b62;
+    --busy: #4b9bff; --idle: #6d727c; --idle-soft: #24262b;
+    --shadow: 0 1px 2px rgba(0,0,0,.35); --shadow-lift: 0 8px 24px rgba(0,0,0,.55);
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#111; color:var(--ink); font-family:var(--sans); font-size:13.5px; }
+  .note { max-width:1240px; margin:0 auto 10px; padding:14px 18px 0; color:var(--muted); font-size:12.5px; line-height:1.55; }
+  .note b { color:var(--ink-soft); }
+  .frame { max-width:1240px; margin:0 auto 26px; background:var(--bg); border:1px solid var(--border);
+           border-radius:10px; overflow:hidden; position:relative; }
+  .fl { display:flex; align-items:center; gap:8px; padding:8px 14px; border-bottom:1px solid var(--border);
+        background:var(--surface); font-size:12px; color:var(--faint); }
+  .fl .tab { background:var(--bg); border:1px solid var(--border); border-bottom-color:transparent;
+             padding:5px 12px; border-radius:6px 6px 0 0; color:var(--ink-soft); margin-bottom:-9px; }
+  .page { padding:22px 26px 30px; }
+
+  /* masthead */
+  .mast { display:flex; align-items:baseline; gap:14px; margin-bottom:4px; }
+  .mast h1 { font-size:20px; margin:0; letter-spacing:-.01em; }
+  .mast .stack { color:var(--muted); font-size:13px; }
+  .divider { height:1px; background:var(--border); margin:16px 0 0; }
+
+  /* status strip — condensed to ONE row (was 3 stacked rows + a link) */
+  .status { display:flex; align-items:center; gap:22px; padding:14px 0 16px; flex-wrap:wrap; }
+  .st { display:flex; align-items:center; gap:7px; font-size:12.5px; }
+  .st .d { width:7px; height:7px; border-radius:50%; flex:none; }
+  .st .k { color:var(--faint); text-transform:uppercase; letter-spacing:.05em; font-size:11px; font-weight:700; }
+  .st .v { color:var(--ink-soft); }
+  .status .sp { flex:1; }
+  .lnk { color:var(--accent); text-decoration:none; font-size:12.5px; }
+  .lnk:hover { text-decoration:underline; }
+
+  /* actions — ONE emphasis rule: primary = filled, rest = quiet. No arbitrary borders. */
+  .acts { display:flex; gap:8px; flex-wrap:wrap; padding:4px 0 22px; }
+  .act { display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--border);
+         color:var(--ink-soft); padding:9px 14px; border-radius:8px; font-size:13px; cursor:pointer;
+         font-family:inherit; white-space:nowrap; }
+  .act:hover { background:var(--card-hover); border-color:var(--border-strong); }
+  .act.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+  .act.primary:hover { background:var(--accent-hover); }
+  .act .g { opacity:.75; }
+
+  /* destination */
+  .dest { display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--border);
+          border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:12.5px; }
+  .dest .k { color:var(--faint); text-transform:uppercase; letter-spacing:.05em; font-size:10.5px; font-weight:700; }
+  .dest code { font-family:var(--mono); color:var(--ink-soft); }
+  .dest .sp { flex:1; }
+
+  /* integrations */
+  .ihead { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .ihead h2 { font-size:15px; margin:0; }
+  .cnt { background:var(--idle-soft); color:var(--muted); border-radius:9px; padding:1px 8px; font-size:11.5px; }
+  .ihead .sp { flex:1; }
+  .btn { background:var(--accent); border:none; color:#fff; padding:7px 13px; border-radius:7px; font-size:12.5px;
+         font-weight:600; cursor:pointer; font-family:inherit; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(268px,1fr)); gap:14px; }
+  .c { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:15px; min-height:126px;
+       display:flex; flex-direction:column; gap:6px; cursor:pointer; }
+  .c:hover { background:var(--card-hover); border-color:var(--border-strong); transform:translateY(-2px);
+             box-shadow:var(--shadow-lift); }
+  .c.mesh { border-left:3px solid var(--accent); }
+  .c .n { font-size:14.5px; font-weight:600; }
+  .c .s { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--muted); }
+  .c .s .d { width:7px; height:7px; border-radius:50%; flex:none; }
+  .c .src { font-family:var(--mono); font-size:11.5px; color:var(--faint); }
+  .c .foot { margin-top:auto; }
+  .c .foot a { color:var(--accent); text-decoration:none; font-size:12.5px; }
+  .mini { background:var(--accent); border:none; color:#fff; padding:5px 12px; border-radius:6px; font-size:12px;
+          font-weight:600; cursor:pointer; font-family:inherit; }
+  .add { border:1.5px dashed var(--border-strong); background:none; border-radius:8px; min-height:126px; color:var(--muted);
+         display:flex; align-items:center; justify-content:center; flex-direction:column; gap:6px; cursor:pointer;
+         font-family:inherit; font-size:13px; }
+  .add:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* INLINE detail — the key difference from the prototype's viewport drawer */
+  .det { grid-column:1/-1; background:var(--surface); border:1px solid var(--accent); border-radius:8px;
+         padding:16px 18px; display:flex; gap:26px; }
+  .det .rows { flex:1; min-width:0; }
+  .row { display:flex; gap:14px; padding:5px 0; font-size:12.5px; border-bottom:1px solid var(--border); }
+  .row:last-child { border-bottom:none; }
+  .row .k { color:var(--faint); width:96px; flex:none; }
+  .row .v { color:var(--ink-soft); min-width:0; }
+  .row .v.m { font-family:var(--mono); font-size:11.5px; }
+  .det .side { width:190px; flex:none; display:flex; flex-direction:column; gap:7px; }
+  .det .side .btn2 { background:var(--card); border:1px solid var(--border-strong); color:var(--ink-soft);
+                     padding:7px; border-radius:7px; font-size:12.5px; cursor:pointer; font-family:inherit; }
+  .det .side .btn2:hover { background:var(--card-hover); }
+  .det .side .btn2.danger { color:var(--bad); border-color:#5a2f33; }
+  .det .close { position:absolute; }
+  .dhead { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .dhead .t { font-size:14.5px; font-weight:600; }
+  .x { margin-left:auto; background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; }
+</style></head>
+<body>
+
+<div class="note">
+  <b>OPTION A — Composite dashboard page.</b> The grid stays in the dashboard, but the whole page is designed as one
+  thing. Three changes make it fit: the status block condenses from 3 stacked rows to <b>one row</b>; the action tiles
+  lose their arbitrary blue borders for <b>one emphasis rule</b> (primary filled, rest quiet) and become compact
+  horizontal buttons instead of 6 large squares; and card detail opens <b>inline in the grid</b> rather than as a
+  viewport-height drawer, so it never covers the page. Everything above integrations shrank to buy the grid its room.
+  <br><br>No new webview surface, no new command, no extra click. Does not solve unbounded growth — at ~20 integrations
+  this page gets long.
+</div>
+
+<div class="frame">
+  <div class="fl"><span class="tab">Project Dashboard</span></div>
+  <div class="page">
+
+    <div class="mast">
+      <h1>my-commerce-demo</h1><span class="stack">Edge Delivery + ACCS</span>
+    </div>
+
+    <div class="status">
+      <span class="st"><span class="d" style="background:var(--good)"></span><span class="k">Frontend</span><span class="v">Published</span></span>
+      <span class="st"><span class="d" style="background:var(--good)"></span><span class="k">AI</span><span class="v">Ready</span></span>
+      <span class="st"><span class="d" style="background:var(--good)"></span><span class="k">IMS Org</span><span class="v">Adobe Demo System</span></span>
+      <span class="sp"></span>
+      <a class="lnk" href="#">View AI capabilities</a>
+      <a class="lnk" href="#">All projects</a>
+    </div>
+
+    <div class="acts">
+      <button class="act primary"><span class="g">◐</span> Open in Browser</button>
+      <button class="act"><span class="g">✎</span> Author Content</button>
+      <button class="act"><span class="g">◈</span> Manage Commerce</button>
+      <button class="act"><span class="g">⟳</span> Sync Storefront</button>
+      <button class="act"><span class="g">⚙</span> Configure</button>
+      <button class="act"><span class="g">···</span></button>
+    </div>
+
+    <div class="divider" style="margin-bottom:18px"></div>
+
+    <div class="dest">
+      <span class="k">Destination</span>
+      <span>All integrations deploy to <code>Kukla Mesh · Stage</code></span>
+      <span class="sp"></span>
+      <span style="color:var(--faint)">one shared Adobe I/O workspace</span>
+    </div>
+
+    <div class="ihead">
+      <h2>Integrations</h2><span class="cnt">5</span>
+      <span class="sp"></span>
+      <button class="btn">+ Add integration</button>
+    </div>
+
+    <div class="grid">
+      <div class="c mesh">
+        <div class="n">API Mesh</div>
+        <div class="s"><span class="d" style="background:var(--good)"></span>Deployed</div>
+        <div class="src">GraphQL bridge · Adobe I/O</div>
+        <div class="foot"></div>
+      </div>
+
+      <!-- selected card + its INLINE detail directly beneath -->
+      <div class="c" style="border-color:var(--accent)">
+        <div class="n">Order Sync</div>
+        <div class="s"><span class="d" style="background:var(--good)"></span>Deployed</div>
+        <div class="src">acme/erp-order-sync</div>
+        <div class="foot"><a href="#">Open ↗</a></div>
+      </div>
+
+      <div class="c">
+        <div class="n">Salesforce CRM</div>
+        <div class="s"><span class="d" style="background:var(--warn)"></span>Update available</div>
+        <div class="src">acme/sfdc-connector</div>
+        <div class="foot"><button class="mini">Update</button></div>
+      </div>
+
+      <div class="det">
+        <div class="rows">
+          <div class="dhead"><span class="t">Order Sync</span><span style="color:var(--faint);font-size:12px">Imported repo</span>
+            <button class="x">✕</button></div>
+          <div class="row"><span class="k">Status</span><span class="v">● Deployed</span></div>
+          <div class="row"><span class="k">Source</span><span class="v m">acme/erp-order-sync</span></div>
+          <div class="row"><span class="k">App URL</span><span class="v m" style="color:var(--accent)">https://245bce.adobeio-static.net</span></div>
+          <div class="row"><span class="k">APIs in use</span><span class="v">I/O Management API · Adobe Commerce · FireflyServicesSDK</span></div>
+          <div class="row"><span class="k">Last deploy</span><span class="v">Jul 15, 1:47 PM</span></div>
+        </div>
+        <div class="side">
+          <button class="btn2">Redeploy</button>
+          <button class="btn2">Verify</button>
+          <button class="btn2">Manage APIs</button>
+          <button class="btn2 danger">Remove</button>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="n">Firefly Image Gen</div>
+        <div class="s"><span class="d" style="background:var(--idle)"></span>Not deployed</div>
+        <div class="src" style="font-family:var(--sans);font-style:italic">Built with AI</div>
+        <div class="foot"><button class="mini">Deploy</button></div>
+      </div>
+
+      <div class="c">
+        <div class="n">Inventory Feed</div>
+        <div class="s"><span class="d" style="background:var(--bad)"></span><span style="color:var(--bad)">Deploy failed</span></div>
+        <div class="src">acme/inv-feed</div>
+        <div class="foot"><button class="mini">Retry</button></div>
+      </div>
+
+      <button class="add"><span style="font-size:17px">+</span> Add integration</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="note" style="padding-bottom:30px">
+  <b>Trade-offs.</b> Integrations stay one glance away and there is no new surface to build — the cheapest option by
+  far. But the grid still shares the page: at ~20 integrations it dominates, and the inline detail pushes cards around
+  as it opens. The condensed status row and compact action buttons are required, not optional — without them there is
+  no room.
+</div>
+
+</body></html>

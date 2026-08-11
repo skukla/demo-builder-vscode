@@ -194,7 +194,6 @@ return {
 
 **Handlers using this format:**
 - `handleCheckApiMesh`
-- `handleCreateApiMesh`
 
 ---
 
@@ -454,13 +453,11 @@ if (response.code === ErrorCode.AUTH_NO_APP_BUILDER) {
 
 **Hooks (extract code from responses):**
 - `src/features/authentication/ui/hooks/useAuthStatus.ts`
-- `src/features/mesh/ui/hooks/useMeshOperations.ts`
 
 **Components (accept code prop):**
 - `src/features/authentication/ui/steps/AdobeAuthStep.tsx`
 - `src/features/authentication/ui/steps/components/AuthErrorState.tsx`
 - `src/features/authentication/ui/components/SelectionStepContent.tsx`
-- `src/features/mesh/ui/steps/components/MeshErrorDialog.tsx`
 
 **String checks to replace:**
 - `authData.error === 'timeout'` → `response.code === ErrorCode.TIMEOUT`
@@ -497,13 +494,11 @@ if (response.code === ErrorCode.AUTH_NO_APP_BUILDER) {
 
 **Mesh handlers:**
 - `handleCheckApiMesh` - `code: ErrorCode.MESH_CONFIG_INVALID | ErrorCode.AUTH_REQUIRED | ErrorCode.UNKNOWN`
-- `handleCreateApiMesh` - `code: ErrorCode.MESH_CONFIG_INVALID | ErrorCode.AUTH_REQUIRED | ErrorCode.UNKNOWN`
 - `handleDeleteApiMesh` - `code: ErrorCode.UNKNOWN`
 
 **Dashboard handlers:**
 - `handleRequestStatus` - `code: ErrorCode.PROJECT_NOT_FOUND`
 - `handleReAuthenticate` - `code: ErrorCode.PROJECT_NOT_FOUND | ErrorCode.AUTH_REQUIRED`
-- `handleOpenAdobeConsole` - `code: ErrorCode.CONFIG_INVALID`
 
 **Lifecycle handlers:**
 - `handleDeleteProject` - `code: ErrorCode.PROJECT_NOT_FOUND | ErrorCode.CONFIG_INVALID | ErrorCode.UNKNOWN`
@@ -511,8 +506,6 @@ if (response.code === ErrorCode.AUTH_NO_APP_BUILDER) {
 
 **Prerequisites handlers:**
 - `handleCheckPrerequisites` - `code: ErrorCode.PREREQ_CHECK_FAILED | ErrorCode.UNKNOWN`
-- `handleContinue` - `code: ErrorCode.UNKNOWN`
-- `handleInstall` - `code: ErrorCode.UNKNOWN`
 
 **Component handlers:**
 - `handleLoadComponents` - `code: ErrorCode`

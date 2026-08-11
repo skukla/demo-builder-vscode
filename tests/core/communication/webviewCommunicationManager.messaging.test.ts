@@ -9,6 +9,7 @@
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import * as vscode from 'vscode';
 import { Message } from '@/types/messages';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 // Mock VS Code API
 jest.mock('vscode');
@@ -409,6 +410,29 @@ describe('WebviewCommunicationManager - Messaging', () => {
             expect(timeoutHintCall).toBeDefined();
         });
 
+        it('sends the LONG (180s) timeout hint for list-org-console-apis (slow org catalog fetch)', async () => {
+            // The org-services catalog fetch (getServicesForOrg) can run well past the 30s
+            // default on large orgs — the same slow call the mesh subscribe path budgets for.
+            const handler = jest.fn().mockResolvedValue({ success: true });
+            manager.on('list-org-console-apis', handler);
+
+            messageListener({
+                id: 'msg-loca',
+                type: 'list-org-console-apis',
+                payload: { componentIds: [] },
+                timestamp: Date.now(),
+                expectsResponse: true,
+            });
+
+            await Promise.resolve();
+
+            const timeoutHintCall = (mockWebview.postMessage as jest.Mock).mock.calls.find(
+                call => call[0].type === '__timeout_hint__'
+            );
+            expect(timeoutHintCall).toBeDefined();
+            expect(timeoutHintCall![0].payload.timeout).toBe(TIMEOUTS.LONG);
+        });
+
         it('should not crash if timeout hint fails to send', async () => {
             const handler = jest.fn().mockResolvedValue({ result: 'test' });
             manager.on('authenticate', handler);
@@ -432,6 +456,35 @@ describe('WebviewCommunicationManager - Messaging', () => {
 
             // Handler should still execute
             expect(handler).toHaveBeenCalled();
+        });
+    });
+
+    /**
+     * An unregistered type used to fall through in SILENCE — the single mechanism
+     * behind a whole class of bug: the request never resolves, the UI spins, and the
+     * log names nothing. It shipped four times in one day on the integrations panel
+     * (2026-07-31). Guards catch holes we already know about; this makes the next
+     * unknown one announce itself.
+     */
+    describe('unregistered message types', () => {
+        it('rejects the request instead of leaving it unresolved', async () => {
+            (mockWebview.postMessage as jest.Mock).mockClear();
+
+            await messageListener({
+                id: 'req-unhandled',
+                type: 'nobody-handles-this',
+                payload: {},
+                timestamp: Date.now(),
+                expectsResponse: true,
+            } as Message);
+            await Promise.resolve();
+
+            const response = (mockWebview.postMessage as jest.Mock).mock.calls
+                .map((call) => call[0])
+                .find((m) => m?.isResponse && m?.responseToId === 'req-unhandled');
+
+            expect(response).toBeDefined();
+            expect(response.error).toMatch(/no handler registered/i);
         });
     });
 });

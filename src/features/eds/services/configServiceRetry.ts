@@ -15,6 +15,7 @@
  */
 
 import type { ConfigServiceResult } from './configurationService';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
@@ -45,7 +46,7 @@ export async function retryConfigWriteOnPropagation(
     const total = CONFIG_SERVICE_PROPAGATION_DELAYS_MS.length;
     for (let i = 0; i < total && result.statusCode === 403; i++) {
         await onRetry?.(i + 1, total);
-        await new Promise(resolve => setTimeout(resolve, CONFIG_SERVICE_PROPAGATION_DELAYS_MS[i]));
+        await sleep(CONFIG_SERVICE_PROPAGATION_DELAYS_MS[i]);
         result = await write();
     }
     return result;

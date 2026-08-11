@@ -8,10 +8,8 @@
 
 import {
     handleLog,
-    handleOpenAdobeConsole
 } from '@/features/lifecycle/handlers/lifecycleHandlers';
 import { HandlerContext as _HandlerContext } from '@/commands/handlers/HandlerContext';
-import * as securityValidation from '@/core/validation';
 import { createMockContext } from './lifecycleHandlers.testUtils';
 
 // Mock vscode inline to avoid hoisting issues
@@ -35,12 +33,6 @@ jest.mock('vscode', () => ({
         openExternal: jest.fn()
     }
 }), { virtual: true });
-jest.mock('@/core/validation');
-
-// Import the mocked vscode module
-import * as vscode from 'vscode';
-const mockVSCode = vscode as any;
-
 describe('lifecycleHandlers - Utilities', () => {
     let mockContext: any;
 
@@ -101,107 +93,4 @@ describe('lifecycleHandlers - Utilities', () => {
         });
     });
 
-    describe('handleOpenAdobeConsole', () => {
-        beforeEach(() => {
-            (securityValidation.validateURL as jest.Mock).mockImplementation(() => {
-                // Valid by default
-            });
-        });
-
-        it('should open generic Adobe Console URL', async () => {
-            mockVSCode.env.openExternal.mockResolvedValue(true);
-
-            const result = await handleOpenAdobeConsole(mockContext);
-
-            expect(result.success).toBe(true);
-            expect(securityValidation.validateURL).toHaveBeenCalledWith(
-                'https://developer.adobe.com/console'
-            );
-            // Just verify it was called with something
-            expect(mockVSCode.env.openExternal).toHaveBeenCalled();
-        });
-
-        it('should open workspace-specific URL', async () => {
-            const payload = {
-                orgId: 'org-123',
-                projectId: 'proj-456',
-                workspaceId: 'ws-789'
-            };
-
-            const result = await handleOpenAdobeConsole(mockContext, payload);
-
-            expect(result.success).toBe(true);
-            expect(securityValidation.validateURL).toHaveBeenCalledWith(
-                'https://developer.adobe.com/console/projects/org-123/proj-456/workspaces/ws-789/details'
-            );
-        });
-
-        it('should open project-specific URL', async () => {
-            const payload = {
-                orgId: 'org-123',
-                projectId: 'proj-456'
-            };
-
-            const result = await handleOpenAdobeConsole(mockContext, payload);
-
-            expect(result.success).toBe(true);
-            expect(securityValidation.validateURL).toHaveBeenCalledWith(
-                'https://developer.adobe.com/console/projects/org-123/proj-456/overview'
-            );
-        });
-
-        it('should log URL construction details', async () => {
-            const payload = {
-                orgId: 'org-123',
-                projectId: 'proj-456',
-                workspaceId: 'ws-789'
-            };
-
-            await handleOpenAdobeConsole(mockContext, payload);
-
-            expect(mockContext.logger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('[Adobe Console] Opening workspace-specific URL')
-            );
-        });
-
-        it('should reject invalid URLs', async () => {
-            const validationError = new Error('Invalid URL');
-            (securityValidation.validateURL as jest.Mock).mockImplementation(() => {
-                throw validationError;
-            });
-
-            const result = await handleOpenAdobeConsole(mockContext);
-
-            expect(result.success).toBe(false);
-            expect(mockVSCode.env.openExternal).not.toHaveBeenCalled();
-            expect(mockContext.logger.error).toHaveBeenCalledWith(
-                '[Adobe Console] URL validation failed',
-                validationError
-            );
-        });
-
-        it('should handle browser open error', async () => {
-            mockVSCode.env.openExternal.mockRejectedValue(new Error('Browser failed'));
-
-            const result = await handleOpenAdobeConsole(mockContext);
-
-            expect(result.success).toBe(false);
-            expect(mockContext.logger.error).toHaveBeenCalledWith(
-                '[Adobe Console] Failed to open URL',
-                expect.any(Error)
-            );
-        });
-
-        it('should handle partial payload (only orgId)', async () => {
-            const payload = {
-                orgId: 'org-123'
-            };
-
-            await handleOpenAdobeConsole(mockContext, payload);
-
-            expect(mockContext.logger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('[Adobe Console] Opening generic console URL')
-            );
-        });
-    });
 });

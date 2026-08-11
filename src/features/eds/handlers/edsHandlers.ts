@@ -17,9 +17,6 @@
 import * as vscode from 'vscode';
 import { discoverStoreStructure } from '../services/commerceStoreDiscovery';
 import {
-    handleVerifyDaLiveOrg,
-    handleGetDaLiveSites,
-    handleListDaLiveOrgs,
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
     handleStoreDaLiveToken,
@@ -31,15 +28,14 @@ import {
     handleGitHubOAuth,
     handleGitHubChangeAccount,
     handleGetGitHubRepos,
-    handleVerifyGitHubRepo,
     handleCreateGitHubRepo,
 } from './edsGitHubHandlers';
+import { handleRefreshBlockLibraryHeadless } from './refreshBlockLibraryHandler';
 import {
     handleStartStorefrontSetup,
     handleCancelStorefrontSetup,
 } from './storefrontSetupHandlers';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
 import type { StoreDiscoveryParams } from '@/types/commerceStore';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
@@ -51,104 +47,10 @@ export { clearServiceCache } from './edsHelpers';
 // Payload Types
 // ==========================================================
 
-/**
- * Payload for handleValidateAccsCredentials
- */
-interface ValidateAccsCredentialsPayload {
-    accsHost: string;
-    storeViewCode: string;
-}
-
 // ==========================================================
 // ACCS Handler
 // ==========================================================
 
-/**
- * Validate ACCS credentials
- *
- * Tests connection to ACCS endpoint with provided credentials.
- *
- * @param context - Handler context with logging and messaging
- * @param payload - Contains ACCS credentials
- * @returns Success with validation result
- */
-export async function handleValidateAccsCredentials(
-    context: HandlerContext,
-    payload?: ValidateAccsCredentialsPayload,
-): Promise<HandlerResponse> {
-    const { accsHost, storeViewCode } = payload || {};
-
-    if (!accsHost || !storeViewCode) {
-        context.logger.error('[EDS] handleValidateAccsCredentials missing required parameters');
-        await context.sendMessage('accs-validation-result', {
-            valid: false,
-            error: 'Missing required ACCS credentials',
-        });
-        return { success: false, error: 'Missing required ACCS credentials' };
-    }
-
-    // Validate storeViewCode format to prevent HTTP header injection
-    if (!/^[a-zA-Z0-9_-]{1,64}$/.test(storeViewCode)) {
-        await context.sendMessage('accs-validation-result', {
-            valid: false,
-            error: 'Store view code must contain only letters, numbers, hyphens, or underscores (max 64 characters).',
-        });
-        return { success: false, error: 'Invalid store view code format' };
-    }
-
-    try {
-        context.logger.debug('[EDS] Validating ACCS credentials:', accsHost);
-
-        // Validate ACCS host URL (ACCS is always HTTPS)
-        validateURL(accsHost, ['https']);
-
-        // Build test URL — use URL constructor to prevent path injection from accsHost
-        const testUrl = new URL('/graphql', accsHost).href;
-
-        // Test connection with a simple request
-        const response = await fetch(testUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Store': storeViewCode,
-            },
-            body: JSON.stringify({
-                query: '{ __typename }',
-            }),
-            signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK),
-        });
-
-        const isValid = response.ok || response.status === 400; // 400 is acceptable (query might fail but endpoint works)
-
-        if (isValid) {
-            context.logger.debug('[EDS] ACCS validation successful');
-            await context.sendMessage('accs-validation-result', {
-                valid: true,
-            });
-            return { success: true };
-        } else {
-            const errorMessage = `Connection failed (HTTP ${response.status}). Check the Commerce URL and try again.`;
-            context.logger.warn('[EDS] ACCS validation failed:', errorMessage);
-            await context.sendMessage('accs-validation-result', {
-                valid: false,
-                error: errorMessage,
-            });
-            return { success: true }; // Handler succeeded, validation failed
-        }
-    } catch (error) {
-        const msg = (error as Error).message;
-        const errorMessage = msg.includes('abort') || msg.includes('timeout')
-            ? 'Connection timed out. Check the Commerce URL and try again.'
-            : 'Connection failed. Check the Commerce URL and try again.';
-
-        context.logger.error('[EDS] ACCS validation error:', error as Error);
-        await context.sendMessage('accs-validation-result', {
-            valid: false,
-            error: errorMessage,
-        });
-        return { success: true }; // Handler succeeded, validation failed
-    }
-}
 
 // ==========================================================
 // Store Discovery Helpers
@@ -163,7 +65,8 @@ interface AccsDiscoveryService {
 
 /** Get all configured discovery services from VS Code settings */
 function getDiscoveryServices(): AccsDiscoveryService[] {
-    return vscode.workspace.getConfiguration('demoBuilder.accsDiscovery')
+    return vscode.workspace
+        .getConfiguration('demoBuilder.accsDiscovery')
         .get<AccsDiscoveryService[]>('services', []);
 }
 
@@ -213,7 +116,9 @@ export async function handleDiscoverStoreStructure(
         return { success: false, error: 'Missing required parameters' };
     }
 
-    context.logger.info(`[EDS] Discovering store structure (${payload.backendType}): ${payload.baseUrl}`);
+    context.logger.info(
+        `[EDS] Discovering store structure (${payload.backendType}): ${payload.baseUrl}`,
+    );
 
     try {
         validateURL(payload.baseUrl, ['https']);
@@ -252,7 +157,7 @@ export async function handleDiscoverStoreStructure(
         if (result.success) {
             context.logger.info(
                 `[EDS] Store discovery successful: ${result.data.websites.length} websites, ` +
-                `${result.data.storeGroups.length} store groups, ${result.data.storeViews.length} store views`,
+                    `${result.data.storeGroups.length} store groups, ${result.data.storeViews.length} store views`,
             );
         } else {
             context.logger.warn(`[EDS] Store discovery failed: ${result.error}`);
@@ -322,7 +227,7 @@ async function buildAccsDiscoveryParams(
     // Observability only — never log the token value itself.
     context.logger.info(
         `[Store Discovery] IMS token: valid=${inspection.valid}, ` +
-        `expiresIn=${inspection.expiresIn}min, present=${!!imsToken}`,
+            `expiresIn=${inspection.expiresIn}min, present=${!!imsToken}`,
     );
     if (!imsToken) {
         await context.sendMessage('store-discovery-result', {
@@ -334,7 +239,7 @@ async function buildAccsDiscoveryParams(
 
     params.imsToken = imsToken;
     const service = payload.orgId
-        ? (services.find(s => s.orgId === payload.orgId) ?? services[0])
+        ? (services.find((s) => s.orgId === payload.orgId) ?? services[0])
         : services[0];
     try {
         validateURL(service.serviceUrl, ['https']);
@@ -379,7 +284,6 @@ export const edsHandlers = defineHandlers({
     'github-oauth': handleGitHubOAuth,
     'github-change-account': handleGitHubChangeAccount,
     'get-github-repos': handleGetGitHubRepos,
-    'verify-github-repo': handleVerifyGitHubRepo,
     'create-github-repo': handleCreateGitHubRepo,
 
     // DA.live handlers
@@ -388,12 +292,8 @@ export const edsHandlers = defineHandlers({
     'store-dalive-token': handleStoreDaLiveToken,
     'store-dalive-token-with-org': handleStoreDaLiveTokenWithOrg,
     'clear-dalive-auth': handleClearDaLiveAuth,
-    'get-dalive-sites': handleGetDaLiveSites,
-    'verify-dalive-org': handleVerifyDaLiveOrg,
-    'list-dalive-orgs': handleListDaLiveOrgs,
 
     // ACCS handlers
-    'validate-accs-credentials': handleValidateAccsCredentials,
 
     // Store discovery
     'discover-store-structure': handleDiscoverStoreStructure,
@@ -401,4 +301,7 @@ export const edsHandlers = defineHandlers({
     // Storefront setup handlers (renamed from eds-preflight-*)
     'storefront-setup-start': handleStartStorefrontSetup,
     'storefront-setup-cancel': handleCancelStorefrontSetup,
+
+    // Agent-facing: headless block-library rebuild behind the refresh_block_library MCP tool
+    'refresh-block-library': handleRefreshBlockLibraryHeadless,
 });

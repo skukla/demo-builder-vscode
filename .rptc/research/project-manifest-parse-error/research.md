@@ -16,7 +16,7 @@ The error "Failed to parse project manifest" is caused by a **corrupted `.demo-b
 
 ### 1. Corrupted Manifest File
 
-The project manifest at `/Users/kukla/.demo-builder/projects/my-commerce-demo/.demo-builder.json` has corrupted data at the end:
+The project manifest at `/Users/<user>/.demo-builder/projects/my-commerce-demo/.demo-builder.json` has corrupted data at the end:
 
 ```json
   "selectedStack": "eds-paas"

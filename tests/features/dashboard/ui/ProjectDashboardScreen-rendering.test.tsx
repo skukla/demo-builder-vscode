@@ -29,12 +29,25 @@ describe('ProjectDashboardScreen - Rendering and Status', () => {
             expect(ctx.mockPostMessage).toHaveBeenCalledWith('requestStatus');
         });
 
-        it('should render Demo status card', () => {
+        it('reports the demo through its zone TILE, with no masthead badge', () => {
+            // The masthead badge is gone and so is the status row that briefly
+            // replaced it — the runtime state is now carried by the Start/Stop
+            // tile itself, dotted only for the states it cannot express.
             renderDashboard();
-            expect(screen.getByTestId('status-card-Frontend')).toBeInTheDocument();
+
+            expect(screen.getByText('Start')).toBeInTheDocument();
+            expect(screen.queryByTestId('status-card-Frontend')).not.toBeInTheDocument();
+            expect(screen.queryByTestId('status-card-Demo')).not.toBeInTheDocument();
         });
     });
 
+    /**
+     * The runtime wording lives in the lifecycle tile's TOOLTIP now, not on the
+     * surface. These mocks render tooltips inline, so `getByText` still finds
+     * the words — it cannot tell "visible" from "on hover". What that buys is
+     * still real: the states are reachable and correctly worded. Whether the
+     * tooltip is discoverable enough needs eyes on the running dashboard.
+     */
     describe('Server Status Display', () => {
         it('should display "Stopped" status when ready', () => {
             renderDashboard();
@@ -77,7 +90,9 @@ describe('ProjectDashboardScreen - Rendering and Status', () => {
             });
         });
 
-        it('should display "Restart needed" when running with config changes', async () => {
+        it('offers a dotted Restart tile when running with config changes', async () => {
+            // This state used to be words in the masthead with no way to act on
+            // it. It is now the fix itself, wearing the amber dot.
             renderDashboard();
 
             ctx.triggerMessage('statusUpdate', {
@@ -89,8 +104,12 @@ describe('ProjectDashboardScreen - Rendering and Status', () => {
             });
 
             await waitFor(() => {
-                expect(screen.getByText(/Restart needed/i)).toBeInTheDocument();
+                expect(screen.getByTestId('restart-tile-dot')).toHaveAttribute(
+                    'data-variant',
+                    'warning'
+                );
             });
+            expect(screen.getByText('Restart')).toBeInTheDocument();
         });
 
         it('should display "Error" status on error', async () => {
@@ -114,21 +133,13 @@ describe('ProjectDashboardScreen - Rendering and Status', () => {
             expect(screen.getByText('Demo Project')).toBeInTheDocument();
         });
 
-        it('should hide mesh status after status update confirms no mesh', async () => {
-            renderDashboard();
-
-            expect(screen.getByText(/Loading status/i)).toBeInTheDocument();
-
-            ctx.triggerMessage('statusUpdate', {
-                name: 'Test Project',
-                path: '/test/path',
-                status: 'ready',
-            });
-
-            await waitFor(() => {
-                expect(screen.queryByText(/API Mesh/i)).not.toBeInTheDocument();
-            });
-        });
+        // The dashboard no longer renders mesh status text at all — the mesh card
+        // left with the grid for the dedicated integrations surface, and the
+        // dashboard keeps only the summary tile's dot. The equivalent coverage:
+        //   - useDashboardStatus-statusDisplay.test.ts — meshStatusDisplay resolves
+        //     to null once a status update confirms no mesh
+        //   - IntegrationsSummaryTile.test.tsx — "ignores mesh status entirely when
+        //     the project has no mesh"
 
         it('should cleanup subscriptions on unmount', () => {
             const unsubscribeStatus = jest.fn();

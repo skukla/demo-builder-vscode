@@ -62,6 +62,16 @@ export interface SearchHeaderProps {
 
     /** Optional action element to show inline (e.g., "+ New" button) */
     action?: React.ReactNode;
+
+    /**
+     * Content for the END of the count row.
+     *
+     * That row is space-between: count left, action buttons right when there is
+     * no search field. With a field showing the right half is empty width on
+     * every consumer, which is the space this fills — page-level context that
+     * belongs near the list without spending a row of its own.
+     */
+    countTrailing?: React.ReactNode;
 }
 
 /** Render refresh button */
@@ -195,7 +205,7 @@ function computeDisplayValues(props: SearchHeaderProps) {
 export const SearchHeader: React.FC<SearchHeaderProps> = (props) => {
     const {
         searchQuery, onSearchQueryChange, totalCount, filteredCount,
-        onRefresh, viewMode, onViewModeChange, action,
+        onRefresh, viewMode, onViewModeChange, action, countTrailing,
     } = props;
     const searchPlaceholder = props.searchPlaceholder ?? 'Type to filter...';
     const isRefreshing = props.isRefreshing ?? false;
@@ -234,6 +244,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = (props) => {
                         {buildCountText(isFiltering, filteredCount, totalCount, displayNoun)}
                     </Text>
                     {!showSearch && ActionButtons}
+                    {countTrailing}
                 </Flex>
             )}
         </div>

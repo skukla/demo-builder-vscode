@@ -8,17 +8,14 @@
 
 import type { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { formatDuration, formatMinutes } from '@/core/utils';
-import type { AdobeOrg, AdobeProject } from '@/features/authentication/services/types';
+import type { AdobeOrg } from '@/features/authentication/services/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult } from '@/types/results';
 
 /**
  * Generate user-friendly sub-message for authentication status
  */
-function getAuthSubMessage(
-    orgLacksAccess: boolean,
-    currentOrg: AdobeOrg | undefined,
-): string {
+function getAuthSubMessage(orgLacksAccess: boolean, currentOrg: AdobeOrg | undefined): string {
     if (orgLacksAccess) {
         return 'Organization no longer accessible or lacks App Builder access';
     }
@@ -43,7 +40,9 @@ async function checkTokenExpiry(context: HandlerContext): Promise<boolean> {
             return false;
         }
 
-        context.logger.debug(`[Auth] Token valid, expires in ${formatMinutes(tokenInspection?.expiresIn || 0)}`);
+        context.logger.debug(
+            `[Auth] Token valid, expires in ${formatMinutes(tokenInspection?.expiresIn || 0)}`,
+        );
         return true;
     } catch (error) {
         // Token inspection failed - log warning but continue (graceful degradation)
@@ -69,7 +68,9 @@ async function getTokenExpiryInfo(
         const tokenExpiringSoon = tokenExpiresIn < 5;
 
         if (tokenExpiringSoon) {
-            context.logger.warn(`[Auth] Token expires in ${formatMinutes(tokenExpiresIn)} - user should re-authenticate`);
+            context.logger.warn(
+                `[Auth] Token expires in ${formatMinutes(tokenExpiresIn)} - user should re-authenticate`,
+            );
         }
 
         return { tokenExpiresIn, tokenExpiringSoon };
@@ -92,29 +93,39 @@ function isCachedOrgInvalid(context: HandlerContext, org: AdobeOrg): boolean {
 }
 
 /**
- * Get current org/project context from cache or CLI
+ * Get the current organization from cache or the token.
+ *
+ * ORG ONLY. `auth-status` used to carry a `project` alongside it, but nothing ever
+ * read it: `useAuthStatus` writes `adobeAuth` and `adobeOrg` and its own
+ * `AuthStatusData` type never declared the field. The project the user is working
+ * with lives in webview state and is threaded per-op.
  */
-async function getAuthContext(
-    context: HandlerContext,
-): Promise<{ currentOrg?: AdobeOrg; currentProject?: AdobeProject }> {
+async function getAuthContext(context: HandlerContext): Promise<{ currentOrg?: AdobeOrg }> {
     // Check cache first (fast - no API calls)
     const cachedOrg = context.authManager?.getCachedOrganization();
-    const cachedProject = context.authManager?.getCachedProject();
 
-    // If cache is empty, read from Adobe CLI (persists across extension restarts)
+    // Cache miss: resolve the org from the TOKEN — `getOrganizations()[0]`, the org
+    // the current IMS token actually reaches (the same source autoSelectSingleOrg and
+    // detectProjectOrgMismatch use). We deliberately do NOT use getCurrentOrganization()
+    // here: that reads the Adobe CLI's persisted console selection, which is
+    // token-independent and goes stale after an org switch. Cache the token org so this
+    // stays a one-time (cache-first) resolve and the quick-auth check remains fast.
     if (!cachedOrg) {
-        const currentOrg = await context.authManager?.getCurrentOrganization();
-        const currentProject = await context.authManager?.getCurrentProject();
-        return { currentOrg, currentProject };
+        const orgs = await context.authManager?.getOrganizations();
+        const currentOrg = orgs?.[0];
+        if (currentOrg) {
+            context.authManager?.setCachedOrganization(currentOrg);
+        }
+        return { currentOrg };
     }
 
     // Don't show cached org if validation failed
     if (isCachedOrgInvalid(context, cachedOrg)) {
-        return { currentOrg: undefined, currentProject: undefined };
+        return { currentOrg: undefined };
     }
 
     context.logger.debug(`[Auth] Using cached organization: ${cachedOrg.name}`);
-    return { currentOrg: cachedOrg, currentProject: cachedProject };
+    return { currentOrg: cachedOrg };
 }
 
 /**
@@ -146,12 +157,14 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
             ? await getTokenExpiryInfo(context)
             : { tokenExpiresIn: undefined, tokenExpiringSoon: false };
 
-        context.logger.debug(`[Auth] Check complete in ${formatDuration(checkDuration)}: authenticated=${isAuthenticated}${tokenExpiresIn ? `, expires in ${formatMinutes(tokenExpiresIn)}` : ''}`);
+        context.logger.debug(
+            `[Auth] Check complete in ${formatDuration(checkDuration)}: authenticated=${isAuthenticated}${tokenExpiresIn ? `, expires in ${formatMinutes(tokenExpiresIn)}` : ''}`,
+        );
 
-        // Get org/project context (check cache first, then Adobe CLI if cache miss)
-        const { currentOrg, currentProject } = isAuthenticated
+        // Get org context (check cache first, then the token if cache miss)
+        const { currentOrg } = isAuthenticated
             ? await getAuthContext(context)
-            : { currentOrg: undefined, currentProject: undefined };
+            : { currentOrg: undefined };
 
         // Determine final status with user-friendly messaging
         let message: string;
@@ -181,7 +194,6 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
             isAuthenticated: isAuthenticated,
             isChecking: false,
             organization: currentOrg,
-            project: currentProject,
             message,
             subMessage,
             requiresOrgSelection,
@@ -193,7 +205,10 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
         return { success: true };
     } catch (error) {
         const checkDuration = Date.now() - checkStartTime;
-        context.logger.error(`[Auth] Failed to check auth after ${formatDuration(checkDuration)}:`, error as Error);
+        context.logger.error(
+            `[Auth] Failed to check auth after ${formatDuration(checkDuration)}:`,
+            error as Error,
+        );
 
         await context.sendMessage('auth-status', {
             authenticated: false,
@@ -202,7 +217,7 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
             error: true,
             code: ErrorCode.NETWORK,
             message: 'Connection problem',
-            subMessage: 'Can\'t reach Adobe services. Check your internet connection and try again.',
+            subMessage: "Can't reach Adobe services. Check your internet connection and try again.",
         });
 
         return { success: false, code: ErrorCode.NETWORK };
@@ -214,7 +229,6 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
  */
 interface PostLoginOrgResult {
     currentOrg?: AdobeOrg;
-    currentProject?: AdobeProject;
     requiresOrgSelection: boolean;
     orgLacksAccess: boolean;
 }
@@ -285,27 +299,39 @@ async function sendPostLoginStatus(
 ): Promise<void> {
     if (result.orgLacksAccess) {
         await context.sendMessage('auth-status', {
-            authenticated: true, isAuthenticated: true, isChecking: false,
-            organization: undefined, project: undefined,
+            authenticated: true,
+            isAuthenticated: true,
+            isChecking: false,
+            organization: undefined,
             message: 'No organizations found',
-            subMessage: 'Your Adobe account doesn\'t have access to any organizations with App Builder',
-            requiresOrgSelection: true, orgLacksAccess: true,
+            subMessage:
+                "Your Adobe account doesn't have access to any organizations with App Builder",
+            requiresOrgSelection: true,
+            orgLacksAccess: true,
         });
     } else if (result.requiresOrgSelection) {
         await context.sendMessage('auth-status', {
-            authenticated: true, isAuthenticated: true, isChecking: false,
-            organization: undefined, project: undefined,
+            authenticated: true,
+            isAuthenticated: true,
+            isChecking: false,
+            organization: undefined,
             message: 'Sign-in complete',
             subMessage: 'Choose your organization to continue',
-            requiresOrgSelection: true, orgLacksAccess: false,
+            requiresOrgSelection: true,
+            orgLacksAccess: false,
         });
     } else {
         await context.sendMessage('auth-status', {
-            authenticated: true, isAuthenticated: true, isChecking: false,
-            organization: result.currentOrg, project: result.currentProject,
+            authenticated: true,
+            isAuthenticated: true,
+            isChecking: false,
+            organization: result.currentOrg,
             message: 'All set!',
-            subMessage: result.currentOrg ? `Connected to ${result.currentOrg.name}` : 'Authentication verified',
-            requiresOrgSelection: false, orgLacksAccess: false,
+            subMessage: result.currentOrg
+                ? `Connected to ${result.currentOrg.name}`
+                : 'Authentication verified',
+            requiresOrgSelection: false,
+            orgLacksAccess: false,
         });
     }
 }
@@ -325,7 +351,9 @@ async function handleLoginSuccess(
     context: HandlerContext,
     loginDuration: number,
 ): Promise<SimpleResult> {
-    context.logger.info(`[Auth] Authentication completed successfully after ${formatDuration(loginDuration)}`);
+    context.logger.info(
+        `[Auth] Authentication completed successfully after ${formatDuration(loginDuration)}`,
+    );
 
     const setupStart = Date.now();
     let orgResult: PostLoginOrgResult = { requiresOrgSelection: true, orgLacksAccess: false };
@@ -335,11 +363,14 @@ async function handleLoginSuccess(
         if (!resolved) {
             context.sharedState.isAuthenticating = false;
             await context.sendMessage('auth-status', {
-                authenticated: false, isAuthenticated: false, isChecking: false,
+                authenticated: false,
+                isAuthenticated: false,
+                isChecking: false,
                 code: ErrorCode.AUTH_REQUIRED,
                 message: 'Session expired',
                 subMessage: 'Please sign in again to continue',
-                requiresOrgSelection: true, orgLacksAccess: false,
+                requiresOrgSelection: true,
+                orgLacksAccess: false,
             });
             return { success: false, code: ErrorCode.AUTH_REQUIRED };
         }
@@ -371,17 +402,21 @@ async function handleAlreadyAuthenticated(context: HandlerContext): Promise<Simp
     await context.authManager?.ensureSDKInitialized();
 
     const currentOrg = await context.authManager?.getCurrentOrganization();
-    const currentProject = await context.authManager?.getCurrentProject();
     context.sharedState.isAuthenticating = false;
 
-    const orgLacksAccess = !currentOrg ? context.authManager?.wasOrgClearedDueToValidation() : false;
+    const orgLacksAccess = !currentOrg
+        ? context.authManager?.wasOrgClearedDueToValidation()
+        : false;
 
     await context.sendMessage('auth-status', {
-        authenticated: true, isAuthenticated: true, isChecking: false,
-        organization: currentOrg, project: currentProject,
+        authenticated: true,
+        isAuthenticated: true,
+        isChecking: false,
+        organization: currentOrg,
         message: orgLacksAccess ? 'Organization selection required' : 'Already signed in',
         subMessage: getAuthSubMessage(!!orgLacksAccess, currentOrg),
-        requiresOrgSelection: !currentOrg, orgLacksAccess,
+        requiresOrgSelection: !currentOrg,
+        orgLacksAccess,
     });
     return { success: true };
 }
@@ -411,7 +446,9 @@ async function executeBrowserLogin(
     force: boolean,
     authStartTime: number,
 ): Promise<SimpleResult> {
-    context.logger.debug(`[Auth] Starting Adobe authentication process${force ? ' (forced)' : ''} - opening browser...`);
+    context.logger.debug(
+        `[Auth] Starting Adobe authentication process${force ? ' (forced)' : ''} - opening browser...`,
+    );
     context.logger.debug(`[Auth] Initiating browser-based login${force ? ' with force flag' : ''}`);
 
     await context.sendMessage('auth-status', {
@@ -426,10 +463,15 @@ async function executeBrowserLogin(
     context.sharedState.isAuthenticating = false;
 
     if (!loginSuccess) {
-        context.logger.warn(`[Auth] Authentication timed out after ${formatDuration(loginDuration)}`);
+        context.logger.warn(
+            `[Auth] Authentication timed out after ${formatDuration(loginDuration)}`,
+        );
         await context.sendMessage('auth-status', {
-            authenticated: false, isAuthenticated: false, isChecking: false,
-            error: 'timeout', code: ErrorCode.TIMEOUT,
+            authenticated: false,
+            isAuthenticated: false,
+            isChecking: false,
+            error: 'timeout',
+            code: ErrorCode.TIMEOUT,
             message: 'Sign-in timed out',
             subMessage: 'The browser window may have been closed. Please try again.',
         });
@@ -446,7 +488,9 @@ export async function handleAuthenticate(
     const force = payload?.force || false;
 
     if (context.sharedState.isAuthenticating) {
-        context.logger.warn('[Auth] Authentication already in progress, ignoring duplicate request');
+        context.logger.warn(
+            '[Auth] Authentication already in progress, ignoring duplicate request',
+        );
         return { success: false, code: ErrorCode.CANCELLED };
     }
 
@@ -463,7 +507,10 @@ export async function handleAuthenticate(
         const failDuration = Date.now() - authStartTime;
         context.sharedState.isAuthenticating = false;
 
-        context.logger.error(`[Auth] Failed to start authentication after ${formatDuration(failDuration)}:`, error as Error);
+        context.logger.error(
+            `[Auth] Failed to start authentication after ${formatDuration(failDuration)}:`,
+            error as Error,
+        );
 
         // SECURITY: Never expose internal state details to UI - use generic message
         await context.sendMessage('authError', {

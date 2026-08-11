@@ -123,8 +123,8 @@ The feature is driven by `config/prerequisites.json`:
 ## Integration Points
 
 ### Dependencies
-- `@/shared/logging` - Logger for prerequisite checking
-- `@/shared/command-execution` - ExternalCommandManager for executing checks and installs
+- `@/core/logging` - Logger for prerequisite checking
+- `@/core/shell` - CommandExecutor for executing checks and installs
 - `@/types/typeGuards` - parseJSON for safe JSON parsing
 - `@/utils/timeoutConfig` - TIMEOUTS.PREREQUISITE_CHECK constant
 - `@/services/serviceLocator` - ServiceLocator for CommandExecutor access

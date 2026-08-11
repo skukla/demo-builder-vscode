@@ -6,6 +6,33 @@
  */
 
 import type { Stack } from '@/types/stacks';
+import type { WizardState } from '@/types/webview';
+
+/**
+ * The wizard-state fields to clear when the selected stack/backend changes.
+ *
+ * Architecture-dependent state (EDS config + GitHub/DA.live caches) and the
+ * cached config-tile validity verdicts (`commerceConnectValid`/`storefrontRepoValid`)
+ * must reset on a stack change — otherwise a tile could keep a stale ✓ badge and
+ * enable Continue with config that the stack change dropped, without the modal ever
+ * re-opening to re-derive the verdict. The single choke point for stack changes is
+ * WizardContainer.handleArchitectureChange.
+ *
+ * @returns Partial wizard state with the cleared/false fields to spread into setState
+ */
+export function buildStackChangeStateReset(): Partial<WizardState> {
+    return {
+        edsConfig: undefined,
+        githubReposCache: undefined,
+        daLiveSitesCache: undefined,
+        githubRepoSearchFilter: undefined,
+        daLiveSiteSearchFilter: undefined,
+        commerceConnectValid: false,
+        commerceStoreViewChosen: false,
+        storefrontRepoValid: false,
+        storefrontCodeSyncValid: false,
+    };
+}
 
 /**
  * Get all component IDs from a stack definition
@@ -20,7 +47,7 @@ export function getStackComponentIds(stack: Stack): string[] {
         stack.frontend,
         stack.backend,
         ...stack.dependencies,
-        ...(stack.optionalAddons || []).map(addon => addon.id),
+        ...(stack.optionalAddons || []).map((addon) => addon.id),
     ];
 }
 
@@ -58,7 +85,7 @@ export function filterComponentConfigsForStackChange<T extends Record<string, un
     const newComponentIds = new Set(getStackComponentIds(newStack));
 
     // Find components that exist in BOTH stacks
-    const retainedComponentIds = [...oldComponentIds].filter(id => newComponentIds.has(id));
+    const retainedComponentIds = [...oldComponentIds].filter((id) => newComponentIds.has(id));
 
     // Filter configs to only keep retained components
     const filteredConfigs: Record<string, unknown> = {};

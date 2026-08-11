@@ -28,21 +28,39 @@ import {
     type ComponentDefinitionEntry,
     type MeshApiConfig,
 } from '../services';
+import {
+    getAppBuilderComponentEntry,
+    buildCustomIntegrationEntry,
+} from '../services/appBuilderComponentCatalogLoader';
 import { ProgressTracker } from './shared';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { COMPONENT_IDS } from '@/core/constants';
-import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell';
+import {
+    buildOrgTargetFromProjectAdobe,
+    withOrgContext,
+    type OrgContextTarget,
+} from '@/core/shell';
 import { parseGitHubUrl } from '@/core/utils';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
 import { TransformedComponentDefinition } from '@/types';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import { AdobeConfig } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
+import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { Logger } from '@/types/logger';
 import type { Stack } from '@/types/stacks';
-import { getProjectFrontendPort, getComponentConfigPort, isEdsStackId, getMeshComponentInstance, getMeshComponentId } from '@/types/typeGuards';
+import {
+    getProjectFrontendPort,
+    getComponentConfigPort,
+    isEdsStackId,
+    getMeshComponentInstance,
+    getMeshComponentId,
+    getMeshEndpointUrl,
+} from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
 
 // EDS config.json sync to remote (Phase 5)
@@ -54,12 +72,25 @@ import type { MeshPhaseState } from '@/types/webview';
  * This is the source of truth for frontend/backend/dependencies - no derivation needed
  */
 function getStackById(stackId: string): Stack | undefined {
-    return (stacksConfig.stacks as Stack[]).find(s => s.id === stackId);
+    return (stacksConfig.stacks as Stack[]).find((s) => s.id === stackId);
 }
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+/** Keys of a project's component instances (empty when none set). */
+function getComponentInstanceKeys(project: import('@/types').Project): string[] {
+    return Object.keys(project.componentInstances || {});
+}
+
+/**
+ * A project's deployed mesh endpoint, if any — keyed-first via the shared
+ * accessor (legacy meshState fallback inside, ADR-011 D3 Steps 07+09).
+ */
+function getMeshEndpoint(project?: import('@/types').Project): string | undefined {
+    return getMeshEndpointUrl(project);
+}
 
 /**
  * Pre-flight authentication check before mesh CLI operations.
@@ -89,7 +120,9 @@ export async function ensureMeshPreflightAuth(
     }
 
     // Token expired — attempt re-login with context restoration
-    logger.warn('[Mesh Setup] Adobe auth token expired before mesh deployment — attempting re-login');
+    logger.warn(
+        '[Mesh Setup] Adobe auth token expired before mesh deployment — attempting re-login',
+    );
     const loginSuccess = await authManager.loginAndRestoreProjectContext({
         organization: adobeConfig.organization,
         projectId: adobeConfig.projectId,
@@ -138,6 +171,8 @@ interface ProjectCreationConfig {
         appBuilder?: string[];
     };
     componentConfigs?: Record<string, Record<string, unknown>>;
+    /** The discovered Commerce store hierarchy (names for the chosen codes). */
+    commerceStoreStructure?: CommerceStoreStructure;
     apiMesh?: {
         meshId?: string;
         endpoint?: string;
@@ -150,6 +185,18 @@ interface ProjectCreationConfig {
     // Package/Stack selections
     selectedPackage?: string;
     selectedStack?: string;
+    // Selected App Builder integration ids (Model B deploy) + custom GitHub sources
+    selectedAppBuilderComponents?: string[];
+    appBuilderComponentSources?: Record<
+        string,
+        { owner: string; repo: string; branch?: string; name?: string }
+    >;
+    // Free Console API picks (union across integrations) — persisted on the Project
+    // so Phase 3b's subscribe union covers them. LEGACY: derived from the keyed
+    // record below, which is the durable, attributed form.
+    additionalConsoleApis?: string[];
+    // The same picks keyed by integration id — what resolveDesiredApis unions.
+    componentApiPicks?: Record<string, string[]>;
     // Selected optional addons (e.g., ['adobe-commerce-aco'])
     selectedAddons?: string[];
     // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
@@ -223,6 +270,92 @@ interface ProjectCreationConfig {
 /**
  * Actual project creation logic (extracted for testability)
  */
+/** A defined array only when it has at least one item (else undefined, so the manifest omits it). */
+function nonEmptyArray<T>(items: T[] | undefined): T[] | undefined {
+    return items && items.length > 0 ? items : undefined;
+}
+
+/**
+ * Selected App Builder integration ids for `componentSelections.appBuilder`.
+ *
+ * Excludes mesh-kind ids (they dual-flow through `components.dependencies` and
+ * are installed by the mesh phase) plus anything literally riding dependencies,
+ * so reset/edit flows never see the same component under two categories.
+ *
+ * Exclusion keys on the catalog KIND rather than on membership in dependencies.
+ * That mattered when the two id namespaces differed and it still does: mesh
+ * catalog entries are derived from the registry now, so the ids always match and
+ * the dependencies check would silently cover for a broken kind check.
+ *
+ * Falls back to the legacy `components.appBuilder` list when no Model B
+ * selection is present.
+ */
+function selectedAppBuilderIds(typedConfig: ProjectCreationConfig): string[] {
+    const dependencies = typedConfig.components?.dependencies ?? [];
+    const ids = typedConfig.selectedAppBuilderComponents?.length
+        ? typedConfig.selectedAppBuilderComponents
+        : (typedConfig.components?.appBuilder ?? []);
+    return ids.filter(
+        (id) => !dependencies.includes(id) && getAppBuilderComponentEntry(id)?.kind !== 'mesh',
+    );
+}
+
+/**
+ * Assemble the initial Project persisted through creation. Runs BEFORE Phase 3b
+ * (`executeAppBuilderIntegrationsPhase`), so everything Phase 3b reads off the
+ * Project — notably `additionalConsoleApis` for the subscribe union — must be
+ * written here. `componentSelections.appBuilder` persists the selected ids;
+ * custom/instance SOURCES are NOT persisted (§E) — edit mode derives them from
+ * the keyed `appBuilderComponents` map via `extractSettingsFromProject`.
+ */
+export function buildInitialProject(
+    typedConfig: ProjectCreationConfig,
+    projectPath: string,
+    existingProject?: import('@/types').Project,
+): import('@/types').Project {
+    return {
+        name: typedConfig.projectName,
+        created: existingProject?.created || new Date(), // Preserve original creation date in edit mode
+        lastModified: new Date(),
+        path: projectPath,
+        status: 'created',
+        adobe: typedConfig.adobe,
+        componentInstances: {},
+        componentSelections: {
+            frontend: typedConfig.components?.frontend,
+            backend: typedConfig.components?.backend,
+            dependencies: typedConfig.components?.dependencies || [],
+            integrations: typedConfig.components?.integrations || [],
+            appBuilder: selectedAppBuilderIds(typedConfig),
+        },
+        componentConfigs: (typedConfig.componentConfigs || {}) as Record<
+            string,
+            Record<string, string | number | boolean | undefined>
+        >,
+        // The discovered store hierarchy — a CATALOG that names the scope codes
+        // on every later surface, kept out of componentConfigs so no `.env`
+        // generator can walk it.
+        //
+        // Falls back to the EXISTING structure, like `created` above: this
+        // rebuilds the whole Project, and an edit session that never reached the
+        // Commerce step carries no structure. Overwriting a good one with
+        // undefined would silently drop every store name the project had.
+        commerceStoreStructure:
+            typedConfig.commerceStoreStructure ?? existingProject?.commerceStoreStructure,
+        selectedPackage: typedConfig.selectedPackage,
+        selectedStack: typedConfig.selectedStack,
+        selectedAddons: typedConfig.selectedAddons,
+        selectedBlockLibraries: typedConfig.selectedBlockLibraries,
+        customBlockLibraries: typedConfig.customBlockLibraries,
+        additionalConsoleApis: nonEmptyArray(typedConfig.additionalConsoleApis),
+        componentApiPicks: typedConfig.componentApiPicks,
+        // Note: componentVersions, meshState, etc. are NOT preserved during edit
+        // - componentVersions: Regenerated from fresh component installation
+        // - meshState: Must be clean slate - old sourceHash won't match fresh files
+        // - frontendEnvState: Only valid if demo is running (cleared during edit)
+    };
+}
+
 export async function executeProjectCreation(
     context: HandlerContext,
     config: Record<string, unknown>,
@@ -230,13 +363,19 @@ export async function executeProjectCreation(
     const typedConfig = config as unknown as ProjectCreationConfig;
 
     // Debug: trace incoming config values for selectedPackage/selectedStack
-    context.logger.debug(`[Project Creation] Received config: selectedPackage=${typedConfig.selectedPackage}, selectedStack=${typedConfig.selectedStack}`);
+    context.logger.debug(
+        `[Project Creation] Received config: selectedPackage=${typedConfig.selectedPackage}, selectedStack=${typedConfig.selectedStack}`,
+    );
 
     // Track current mesh phase for progress messages
     let currentMeshPhase: MeshPhaseState | undefined;
 
     // Create progress tracker (includes mesh phase state when present)
-    const progressTracker: ProgressTracker = (currentOperation: string, progress: number, message?: string) => {
+    const progressTracker: ProgressTracker = (
+        currentOperation: string,
+        progress: number,
+        message?: string,
+    ) => {
         context.sendMessage('creationProgress', {
             currentOperation,
             progress,
@@ -255,9 +394,10 @@ export async function executeProjectCreation(
 
     // Determine project path based on edit mode (editProjectPath presence signals edit)
     const isEditMode = Boolean(typedConfig.editProjectPath);
-    const projectPath = isEditMode && typedConfig.editProjectPath
-        ? typedConfig.editProjectPath
-        : path.join(os.homedir(), '.demo-builder', 'projects', typedConfig.projectName);
+    const projectPath =
+        isEditMode && typedConfig.editProjectPath
+            ? typedConfig.editProjectPath
+            : path.join(os.homedir(), '.demo-builder', 'projects', typedConfig.projectName);
 
     // Load existing project state if in edit mode (to preserve creation date);
     // otherwise clean up any orphaned/invalid directory (new project only).
@@ -282,34 +422,15 @@ export async function executeProjectCreation(
 
     progressTracker('Setting Up Project', 15, 'Initializing project configuration...');
 
-    const project: import('@/types').Project = {
-        name: typedConfig.projectName,
-        created: existingProject?.created || new Date(), // Preserve original creation date in edit mode
-        lastModified: new Date(),
-        path: projectPath,
-        status: 'created',
-        adobe: typedConfig.adobe,
-        componentInstances: {},
-        componentSelections: {
-            frontend: typedConfig.components?.frontend,
-            backend: typedConfig.components?.backend,
-            dependencies: typedConfig.components?.dependencies || [],
-            integrations: typedConfig.components?.integrations || [],
-            appBuilder: typedConfig.components?.appBuilder || [],
-        },
-        componentConfigs: (typedConfig.componentConfigs || {}) as Record<string, Record<string, string | number | boolean | undefined>>,
-        selectedPackage: typedConfig.selectedPackage,
-        selectedStack: typedConfig.selectedStack,
-        selectedAddons: typedConfig.selectedAddons,
-        selectedBlockLibraries: typedConfig.selectedBlockLibraries,
-        customBlockLibraries: typedConfig.customBlockLibraries,
-        // Note: componentVersions, meshState, etc. are NOT preserved during edit
-        // - componentVersions: Regenerated from fresh component installation
-        // - meshState: Must be clean slate - old sourceHash won't match fresh files
-        // - frontendEnvState: Only valid if demo is running (cleared during edit)
-    };
+    const project: import('@/types').Project = buildInitialProject(
+        typedConfig,
+        projectPath,
+        existingProject,
+    );
 
-    context.logger.debug('[Project Creation] Deferring project state save until after installation');
+    context.logger.debug(
+        '[Project Creation] Deferring project state save until after installation',
+    );
 
     // ========================================================================
     // STACK TYPE DETECTION
@@ -327,16 +448,33 @@ export async function executeProjectCreation(
 
     progressTracker('Loading Components', 20, 'Preparing component definitions...');
 
-    const { ComponentRegistryManager } = await import('@/features/components/services/ComponentRegistryManager');
+    const { ComponentRegistryManager } = await import(
+        '@/features/components/services/ComponentRegistryManager'
+    );
     const registryManager = new ComponentRegistryManager(context.context.extensionPath);
     const registry = await registryManager.loadRegistry();
 
     // Create unified setup context (eliminates parameter threading)
     // Composes HandlerContext to avoid duplicating logger and other common dependencies
-    const { ProjectSetupContext } = await import('@/features/project-creation/services/ProjectSetupContext');
+    const { ProjectSetupContext } = await import(
+        '@/features/project-creation/services/ProjectSetupContext'
+    );
     const setupContext = new ProjectSetupContext(context, registry, project, config);
 
-    const componentDefinitions = await loadComponentDefinitions(typedConfig, registryManager, context, isEdsStack);
+    const componentDefinitions = await loadComponentDefinitions(
+        typedConfig,
+        registryManager,
+        context,
+        isEdsStack,
+    );
+
+    // ========================================================================
+    // RUNTIME READINESS (first Adobe step — provision a Runtime namespace on the
+    // deploy workspace if it lacks one, BEFORE any deploy, so a selected/imported
+    // Runtime-less workspace is healed rather than orphaning a mesh at app-deploy)
+    // ========================================================================
+
+    await ensureWorkspaceRuntimeReady(context, typedConfig);
 
     // ========================================================================
     // EDIT MODE: PREPARE ATOMIC COMPONENT SWAP
@@ -367,8 +505,10 @@ export async function executeProjectCreation(
     // When switching stacks (e.g., EDS→Headless), old component entries must be removed
     // Otherwise getMeshComponentInstance may return stale entries with invalid paths
     if (isEditMode) {
-        const oldComponents = Object.keys(project.componentInstances || {});
-        context.logger.debug(`[Project Edit] Clearing old component instances: [${oldComponents.join(', ')}]`);
+        const oldComponents = getComponentInstanceKeys(project);
+        context.logger.debug(
+            `[Project Edit] Clearing old component instances: [${oldComponents.join(', ')}]`,
+        );
         project.componentInstances = {};
     }
 
@@ -380,9 +520,7 @@ export async function executeProjectCreation(
     // ========================================================================
 
     if (isEditMode && tempComponentsDir) {
-        await performAtomicComponentSwap(
-            context, project, projectPath, progressTracker,
-        );
+        await performAtomicComponentSwap(context, project, projectPath, progressTracker);
     }
 
     // ========================================================================
@@ -396,10 +534,21 @@ export async function executeProjectCreation(
     // ========================================================================
 
     await executeMeshPhase(
-        context, setupContext, project, typedConfig,
-        componentDefinitions, progressTracker,
-        isEditMode, existingProject,
+        context,
+        setupContext,
+        project,
+        typedConfig,
+        componentDefinitions,
+        progressTracker,
+        isEditMode,
+        existingProject,
     );
+
+    // ========================================================================
+    // PHASE 3b: APP BUILDER INTEGRATIONS
+    // ========================================================================
+
+    await executeAppBuilderIntegrationsPhase(context, project, typedConfig, progressTracker);
 
     // ========================================================================
     // PHASE 4-5: FINALIZATION
@@ -415,7 +564,8 @@ export async function executeProjectCreation(
         componentDefinitions,
         progressTracker,
         saveProject: () => context.stateManager.saveProject(project),
-        sendMessage: (type: string, data: Record<string, unknown>) => context.sendMessage(type, data),
+        sendMessage: (type: string, data: Record<string, unknown>) =>
+            context.sendMessage(type, data),
         panel: context.panel,
     };
 
@@ -429,7 +579,12 @@ export async function executeProjectCreation(
     // ========================================================================
 
     await syncEdsConfigToRemote(
-        context, project, typedConfig, isEdsStack, edsComponentPath, progressTracker,
+        context,
+        project,
+        typedConfig,
+        isEdsStack,
+        edsComponentPath,
+        progressTracker,
     );
 
     await setupEdsContent(context, typedConfig, isEdsStack, progressTracker);
@@ -440,8 +595,14 @@ export async function executeProjectCreation(
     // Phase 6: Generate AI context files (non-blocking — failure does not abort project creation)
     try {
         await generateAIContextFiles(projectPath, project, context.context.extensionPath);
+        // Persist the freshness stamp generateAIContextFiles set on `project`
+        // (aiContextVersion), else the on-open freshness check re-fires forever.
+        await context.stateManager.saveProjectConfigOnly(project);
     } catch (err) {
-        context.logger.warn('[Project Creation] Failed to generate AI context files', err instanceof Error ? err : undefined);
+        context.logger.warn(
+            '[Project Creation] Failed to generate AI context files',
+            err instanceof Error ? err : undefined,
+        );
     }
 
     // The per-project .mcp.json written in Phase 6 lets AI agents discover this
@@ -458,6 +619,125 @@ export async function executeProjectCreation(
     // single-home-Chat model, so it is intentionally omitted.
 }
 
+/**
+ * The selected App Builder components that resolve to a DEPLOYABLE integration app
+ * (`kind: 'integration'`) — catalog entries or custom-URL entries. Mesh-kind
+ * selections are excluded (they dual-flow through the mesh phase). This is the set
+ * that will `aio app deploy`, so it also gates the Runtime pre-flight.
+ */
+function deployableAppIntegrationEntries(
+    typedConfig: ProjectCreationConfig,
+): AppBuilderComponentCatalogEntry[] {
+    const sources = typedConfig.appBuilderComponentSources ?? {};
+    return (typedConfig.selectedAppBuilderComponents ?? [])
+        .map(
+            (id) =>
+                getAppBuilderComponentEntry(id) ??
+                // The sources-map key IS the instance id (shell instancing: N
+                // named instances may share one template repo).
+                (sources[id] ? buildCustomIntegrationEntry(sources[id], id) : undefined),
+        )
+        .filter((entry): entry is AppBuilderComponentCatalogEntry => entry?.kind === 'integration');
+}
+
+/**
+ * Ensure the deploy workspace has an Adobe I/O Runtime namespace, PROVISIONING one
+ * when it lacks it — the first Adobe step, before any deploy.
+ *
+ * `aio app deploy` (an App Builder app) needs a Runtime namespace; a mesh does not.
+ * A workspace WE create ships one (createProject/createWorkspace), but a pre-existing
+ * or imported workspace the user SELECTS may not — so provision it here rather than
+ * failing the deploy. Running before the mesh phase keeps the no-orphan guarantee:
+ * if provisioning genuinely can't complete, the flow stops before any mesh exists.
+ * No-op for mesh-only projects (no deployable app) or when the org/project/workspace
+ * ids are absent. Best-effort provisioning + verification (see `ensureWorkspaceRuntime`).
+ */
+async function ensureWorkspaceRuntimeReady(
+    context: HandlerContext,
+    typedConfig: ProjectCreationConfig,
+): Promise<void> {
+    if (deployableAppIntegrationEntries(typedConfig).length === 0) {
+        return;
+    }
+    const adobe = typedConfig.adobe;
+    if (!adobe?.organization || !adobe?.projectId || !adobe?.workspace) {
+        return;
+    }
+    const { ServiceLocator } = await import('@/core/di');
+    const { ensureWorkspaceRuntime } = await import(
+        '@/features/app-builder/services/runtimeCredentials'
+    );
+    const commandManager = ServiceLocator.getCommandExecutor();
+    const authService = ServiceLocator.getAuthenticationService();
+    const target = buildDeployOrgTarget(context, typedConfig);
+    context.logger.debug('[Runtime] Ensuring the workspace has an Adobe I/O Runtime namespace');
+    // The namespace check runs via CLI (needs withOrgContext targeting); the SDK
+    // `createRuntimeNamespace` provision takes explicit ids (targeting-agnostic).
+    await withOrgContext(target, () =>
+        ensureWorkspaceRuntime(commandManager, context.logger, 'auto', () =>
+            authService.ensureWorkspaceRuntimeNamespace(
+                adobe.organization as string,
+                adobe.projectId as string,
+                adobe.workspace as string,
+            ),
+        ),
+    );
+}
+
+/**
+ * PHASE 3b — deploy each selected App Builder "integration" via the SHARED Model B
+ * runner ({@link addAppBuilderComponent}). Mesh-kind selections dual-flow through
+ * {@link executeMeshPhase} and are excluded here.
+ *
+ * Resolves each id to a catalog entry, else to a custom-URL entry from
+ * `appBuilderComponentSources`. When nothing resolves to `kind: 'integration'` the
+ * phase is a no-op (no permission check). Otherwise it gates on the Developer /
+ * System Admin role once, builds the runner deps once, then deploys sequentially;
+ * a failed gate or deploy throws (fails the creation flow).
+ */
+export async function executeAppBuilderIntegrationsPhase(
+    context: HandlerContext,
+    project: import('@/types').Project,
+    typedConfig: ProjectCreationConfig,
+    progressTracker: ProgressTracker,
+): Promise<void> {
+    const entries = deployableAppIntegrationEntries(typedConfig);
+
+    if (entries.length === 0) {
+        return;
+    }
+
+    const { ServiceLocator } = await import('@/core/di');
+    const permission = await ServiceLocator.getAuthenticationService().testDeveloperPermissions();
+    if (!permission.hasPermissions) {
+        throw new Error(
+            permission.error ||
+                'Your account lacks the Developer or System Admin role required to deploy ' +
+                    'App Builder integrations. Select a different organization or contact your administrator.',
+        );
+    }
+
+    const { buildDefaultRunnerDeps, buildRunnerDepsContext } = await import(
+        '@/features/app-builder/services/appBuilderComponentRunnerDeps'
+    );
+    const { addAppBuilderComponent } = await import(
+        '@/features/app-builder/services/appBuilderComponentRunner'
+    );
+    const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project));
+
+    // The runner's first step per integration is the union API subscribe — surface
+    // it once up front so the user sees API access being provisioned at build time
+    // (the Add-Integration modal no longer subscribes anything itself).
+    progressTracker('Deploying Integrations', 69, 'Enabling API access…');
+    for (const entry of entries) {
+        progressTracker('Deploying Integrations', 70, `Deploying ${entry.name}…`);
+        const result = await addAppBuilderComponent(project, entry, deps);
+        if (!result.success) {
+            throw new Error(result.error || 'App Builder integration deployment failed');
+        }
+    }
+}
+
 // ============================================================================
 // Private Helper Functions
 // ============================================================================
@@ -472,13 +752,18 @@ async function loadExistingProjectForEdit(
 ): Promise<import('@/types').Project | undefined> {
     context.logger.info(`[Project Edit] Editing existing project at: ${projectPath}`);
     try {
-        const existingProject = await context.stateManager.loadProjectFromPath(projectPath) ?? undefined;
+        const existingProject =
+            (await context.stateManager.loadProjectFromPath(projectPath)) ?? undefined;
         if (existingProject) {
-            context.logger.debug('[Project Edit] Loaded existing project state for creation date preservation');
+            context.logger.debug(
+                '[Project Edit] Loaded existing project state for creation date preservation',
+            );
         }
         return existingProject;
     } catch (error) {
-        context.logger.warn(`[Project Edit] Could not load existing project state: ${(error as Error).message}`);
+        context.logger.warn(
+            `[Project Edit] Could not load existing project state: ${(error as Error).message}`,
+        );
         return undefined;
     }
 }
@@ -499,13 +784,18 @@ async function prepareEditModeTempDir(
     const tempComponentsDir = path.join(projectPath, 'components.tmp');
 
     // Clean up any stale temp directory from previous failed attempts
-    const tempDirExists = await fsPromises.access(tempComponentsDir).then(() => true).catch(() => false);
+    const tempDirExists = await fsPromises
+        .access(tempComponentsDir)
+        .then(() => true)
+        .catch(() => false);
     if (tempDirExists) {
         context.logger.info('[Project Edit] Cleaning up stale temporary components directory');
         await fsPromises.rm(tempComponentsDir, { recursive: true, force: true });
     }
 
-    context.logger.info('[Project Edit] Will install components to temporary directory for atomic swap');
+    context.logger.info(
+        '[Project Edit] Will install components to temporary directory for atomic swap',
+    );
     return tempComponentsDir;
 }
 
@@ -518,27 +808,37 @@ async function populateEdsMetadata(
     typedConfig: ProjectCreationConfig,
     isEdsStack: boolean,
 ): Promise<void> {
-    const instanceKeys = Object.keys(project.componentInstances || {});
-    context.logger.debug(`[Project Creation] Component instances after clone: [${instanceKeys.join(', ')}]`);
-    context.logger.debug(`[Project Creation] EDS metadata check: isEdsStack=${isEdsStack}, hasEdsConfig=${!!typedConfig.edsConfig}`);
+    const instanceKeys = getComponentInstanceKeys(project);
+    context.logger.debug(
+        `[Project Creation] Component instances after clone: [${instanceKeys.join(', ')}]`,
+    );
+    context.logger.debug(
+        `[Project Creation] EDS metadata check: isEdsStack=${isEdsStack}, hasEdsConfig=${!!typedConfig.edsConfig}`,
+    );
 
     if (!isEdsStack || !typedConfig.edsConfig) return;
 
-    context.logger.debug(`[Project Creation] EDS config values: repoUrl=${typedConfig.edsConfig.repoUrl}, githubOwner=${typedConfig.edsConfig.githubOwner}, repoName=${typedConfig.edsConfig.repoName}`);
+    context.logger.debug(
+        `[Project Creation] EDS config values: repoUrl=${typedConfig.edsConfig.repoUrl}, githubOwner=${typedConfig.edsConfig.githubOwner}, repoName=${typedConfig.edsConfig.repoName}`,
+    );
 
     const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     if (!edsInstance) {
-        context.logger.warn(`[Project Creation] EDS instance NOT found for key "${COMPONENT_IDS.EDS_STOREFRONT}" - metadata NOT populated`);
+        context.logger.warn(
+            `[Project Creation] EDS instance NOT found for key "${COMPONENT_IDS.EDS_STOREFRONT}" - metadata NOT populated`,
+        );
         return;
     }
 
     // Derive githubRepo from repoUrl or explicit owner/name
-    const repoInfo = typedConfig.edsConfig.repoUrl ? parseGitHubUrl(typedConfig.edsConfig.repoUrl) : null;
+    const repoInfo = typedConfig.edsConfig.repoUrl
+        ? parseGitHubUrl(typedConfig.edsConfig.repoUrl)
+        : null;
     const githubRepo = repoInfo
         ? `${repoInfo.owner}/${repoInfo.repo}`
-        : (typedConfig.edsConfig.githubOwner && typedConfig.edsConfig.repoName
-            ? `${typedConfig.edsConfig.githubOwner}/${typedConfig.edsConfig.repoName}`
-            : undefined);
+        : typedConfig.edsConfig.githubOwner && typedConfig.edsConfig.repoName
+          ? `${typedConfig.edsConfig.githubOwner}/${typedConfig.edsConfig.repoName}`
+          : undefined;
 
     // Fetch template commit SHA for future update detection. For thin-layer
     // packages this reads the patches-repo LKG; for legacy/forked packages
@@ -551,14 +851,14 @@ async function populateEdsMetadata(
     const templateRepo = typedConfig.edsConfig.templateRepo;
     const lkgSource = typedConfig.edsConfig.codePatchSource
         ? {
-            owner: typedConfig.edsConfig.codePatchSource.owner,
-            repo: typedConfig.edsConfig.codePatchSource.repo,
-            // Carry lkgFile when present (b2b case) so update checks against
-            // multi-canonical patches repos read the right per-ledger file.
-            ...(typedConfig.edsConfig.codePatchSource.lkgFile
-                ? { lkgFile: typedConfig.edsConfig.codePatchSource.lkgFile }
-                : {}),
-        }
+              owner: typedConfig.edsConfig.codePatchSource.owner,
+              repo: typedConfig.edsConfig.codePatchSource.repo,
+              // Carry lkgFile when present (b2b case) so update checks against
+              // multi-canonical patches repos read the right per-ledger file.
+              ...(typedConfig.edsConfig.codePatchSource.lkgFile
+                  ? { lkgFile: typedConfig.edsConfig.codePatchSource.lkgFile }
+                  : {}),
+          }
         : undefined;
 
     edsInstance.metadata = {
@@ -573,7 +873,9 @@ async function populateEdsMetadata(
         ...(lkgSource ? { lkgSource } : {}),
     };
     await context.stateManager.saveProject(project);
-    context.logger.debug(`[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}`);
+    context.logger.debug(
+        `[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}`,
+    );
 }
 
 /**
@@ -601,26 +903,42 @@ async function fetchTemplateCommitSha(
     if (codePatchSource) {
         const { readLkgSha } = await import('@/features/eds/services/lkgReader');
         const lkg = await readLkgSha(
-            { owner: codePatchSource.owner, repo: codePatchSource.repo, lkgFile: codePatchSource.lkgFile },
+            {
+                owner: codePatchSource.owner,
+                repo: codePatchSource.repo,
+                lkgFile: codePatchSource.lkgFile,
+            },
             context.logger,
         );
         if (lkg) {
-            context.logger.debug(`[Project Creation] Recorded LKG SHA: ${lkg.substring(0, 7)} (from ${codePatchSource.owner}/${codePatchSource.repo})`);
+            context.logger.debug(
+                `[Project Creation] Recorded LKG SHA: ${lkg.substring(0, 7)} (from ${codePatchSource.owner}/${codePatchSource.repo})`,
+            );
             return lkg;
         }
-        context.logger.warn(`[Project Creation] LKG unreachable for ${codePatchSource.owner}/${codePatchSource.repo} — falling back to template HEAD`);
+        context.logger.warn(
+            `[Project Creation] LKG unreachable for ${codePatchSource.owner}/${codePatchSource.repo} — falling back to template HEAD`,
+        );
     }
 
     try {
         const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
-        const { GitHubFileOperations } = await import('@/features/eds/services/githubFileOperations');
+        const { GitHubFileOperations } = await import(
+            '@/features/eds/services/githubFileOperations'
+        );
         const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
         const githubFileOps = new GitHubFileOperations(githubTokenService, context.logger);
-        const sha = await githubFileOps.getLatestCommitSha(templateOwner, templateRepo, 'main') ?? undefined;
-        context.logger.debug(`[Project Creation] Fetched template commit SHA: ${sha?.substring(0, 7)}`);
+        const sha =
+            (await githubFileOps.getLatestCommitSha(templateOwner, templateRepo, 'main')) ??
+            undefined;
+        context.logger.debug(
+            `[Project Creation] Fetched template commit SHA: ${sha?.substring(0, 7)}`,
+        );
         return sha;
     } catch (error) {
-        context.logger.warn(`[Project Creation] Could not fetch template commit SHA: ${(error as Error).message}`);
+        context.logger.warn(
+            `[Project Creation] Could not fetch template commit SHA: ${(error as Error).message}`,
+        );
         return undefined;
     }
 }
@@ -653,10 +971,11 @@ async function executeMeshPhase(
         const authService = ServiceLocator.getAuthenticationService();
         const permissionCheck = await authService.testDeveloperPermissions();
         if (!permissionCheck.hasPermissions) {
-            const errorMessage = permissionCheck.error
-                || 'Your account lacks Developer or System Admin role for this organization. '
-                + 'API Mesh deployment requires App Builder access. '
-                + 'Please select a different organization or contact your administrator.';
+            const errorMessage =
+                permissionCheck.error ||
+                'Your account lacks Developer or System Admin role for this organization. ' +
+                    'API Mesh deployment requires App Builder access. ' +
+                    'Please select a different organization or contact your administrator.';
             context.logger.error(`[Mesh Setup] Developer permission gate failed: ${errorMessage}`);
             throw new Error(errorMessage);
         }
@@ -676,15 +995,27 @@ async function executeMeshPhase(
         },
     };
 
-    logMeshDecisionContext(context, typedConfig, project, meshComponent, meshId, meshDefinition, isEditMode, existingProject);
+    logMeshDecisionContext(
+        context,
+        typedConfig,
+        project,
+        meshComponent,
+        meshId,
+        meshDefinition,
+        isEditMode,
+        existingProject,
+    );
 
     // Check for same-workspace import FIRST
-    const isSameWorkspaceImport = typedConfig.importedWorkspaceId &&
-                                   typedConfig.importedMeshEndpoint &&
-                                   typedConfig.importedWorkspaceId === typedConfig.adobe?.workspace;
+    const isSameWorkspaceImport =
+        typedConfig.importedWorkspaceId &&
+        typedConfig.importedMeshEndpoint &&
+        typedConfig.importedWorkspaceId === typedConfig.adobe?.workspace;
 
     if (isSameWorkspaceImport) {
-        context.logger.info(`[Mesh Setup] Skipping deployment - reusing mesh from imported settings`);
+        context.logger.info(
+            `[Mesh Setup] Skipping deployment - reusing mesh from imported settings`,
+        );
         const importedApiMesh = {
             endpoint: typedConfig.importedMeshEndpoint,
             meshId: '',
@@ -692,12 +1023,12 @@ async function executeMeshPhase(
             workspace: typedConfig.adobe?.workspace,
         };
         await linkExistingMesh(meshContext, importedApiMesh);
-    } else if (shouldConfigureExistingMesh(typedConfig.apiMesh, project.meshState?.endpoint)) {
+    } else if (shouldConfigureExistingMesh(typedConfig.apiMesh, getMeshEndpoint(project))) {
         await linkExistingMesh(meshContext, typedConfig.apiMesh as MeshApiConfig);
-    } else if (isEditMode && existingProject?.meshState?.endpoint) {
+    } else if (isEditMode && getMeshEndpoint(existingProject)) {
         context.logger.info('[Mesh Setup] Edit mode - reusing existing mesh from project');
         const existingMesh = {
-            endpoint: existingProject.meshState.endpoint,
+            endpoint: getMeshEndpoint(existingProject) as string,
             meshId: (getMeshComponentInstance(existingProject)?.metadata?.meshId as string) || '',
             meshStatus: 'deployed' as const,
             workspace: typedConfig.adobe?.workspace,
@@ -723,12 +1054,14 @@ function logMeshDecisionContext(
 ): void {
     context.logger.debug(`[Mesh Setup] Decision context:`);
     context.logger.debug(`  - isEditMode: ${isEditMode}`);
-    context.logger.debug(`  - existingProject?.meshState?.endpoint: ${existingProject?.meshState?.endpoint}`);
+    context.logger.debug(`  - existing project mesh endpoint: ${getMeshEndpoint(existingProject)}`);
     context.logger.debug(`  - typedConfig.apiMesh: ${JSON.stringify(typedConfig.apiMesh)}`);
     context.logger.debug(`  - meshComponent?.path: ${meshComponent?.path}`);
     context.logger.debug(`  - meshId: ${meshId}`);
     context.logger.debug(`  - meshDefinition: ${meshDefinition ? 'found' : 'NOT FOUND'}`);
-    context.logger.debug(`  - shouldConfigureExistingMesh result: ${shouldConfigureExistingMesh(typedConfig.apiMesh, project.meshState?.endpoint)}`);
+    context.logger.debug(
+        `  - shouldConfigureExistingMesh result: ${shouldConfigureExistingMesh(typedConfig.apiMesh, getMeshEndpoint(project))}`,
+    );
 }
 
 /**
@@ -758,21 +1091,24 @@ export async function deployFreshMesh(
     typedConfig: ProjectCreationConfig,
     meshContext: import('../services').MeshSetupContext,
 ): Promise<void> {
-    if (typedConfig.importedWorkspaceId && typedConfig.importedWorkspaceId !== typedConfig.adobe?.workspace) {
-        context.logger.debug(`[Mesh Setup] Imported workspace differs from selected - deploying new mesh`);
+    if (
+        typedConfig.importedWorkspaceId &&
+        typedConfig.importedWorkspaceId !== typedConfig.adobe?.workspace
+    ) {
+        context.logger.debug(
+            `[Mesh Setup] Imported workspace differs from selected - deploying new mesh`,
+        );
     }
 
-    const authOk = await ensureMeshPreflightAuth(
-        context.authManager,
-        context.logger,
-        {
-            organization: typedConfig.adobe?.organization,
-            projectId: typedConfig.adobe?.projectId,
-            workspace: typedConfig.adobe?.workspace,
-        },
-    );
+    const authOk = await ensureMeshPreflightAuth(context.authManager, context.logger, {
+        organization: typedConfig.adobe?.organization,
+        projectId: typedConfig.adobe?.projectId,
+        workspace: typedConfig.adobe?.workspace,
+    });
     if (!authOk) {
-        throw new Error('Adobe authentication expired and re-login failed. Please sign in again and retry.');
+        throw new Error(
+            'Adobe authentication expired and re-login failed. Please sign in again and retry.',
+        );
     }
 
     const target = buildDeployOrgTarget(context, typedConfig);
@@ -807,7 +1143,9 @@ async function performAtomicComponentSwap(
                 const relativePath = path.relative(tempComponentsPath, instance.path);
                 const oldPath = instance.path;
                 instance.path = path.join(productionComponentsPath, relativePath);
-                context.logger.debug(`[Project Edit] Updated path for ${compId}: ${oldPath} → ${instance.path}`);
+                context.logger.debug(
+                    `[Project Edit] Updated path for ${compId}: ${oldPath} → ${instance.path}`,
+                );
             }
         }
 
@@ -817,7 +1155,7 @@ async function performAtomicComponentSwap(
         context.logger.error('[Project Edit] Failed to swap components', error as Error);
         throw new Error(
             `Failed to apply component changes: ${(error as Error).message}. ` +
-            `The project's original components have been preserved.`,
+                `The project's original components have been preserved.`,
         );
     }
 }
@@ -835,12 +1173,15 @@ async function populateMeshComponentConfigs(
 
     const { readMeshEnvVarsFromFile } = await import('@/features/mesh/services/stalenessDetector');
     const meshEnvVars = await readMeshEnvVarsFromFile(meshInstance.path);
-    if (meshEnvVars && Object.keys(meshEnvVars).length > 0) {
+    const envVarCount = meshEnvVars ? Object.keys(meshEnvVars).length : 0;
+    if (meshEnvVars && envVarCount > 0) {
         if (!project.componentConfigs) {
             project.componentConfigs = {};
         }
         project.componentConfigs[meshId] = meshEnvVars;
-        context.logger.debug(`[Project Creation] Populated componentConfigs[${meshId}] with ${Object.keys(meshEnvVars).length} env vars`);
+        context.logger.debug(
+            `[Project Creation] Populated componentConfigs[${meshId}] with ${envVarCount} env vars`,
+        );
     }
 }
 
@@ -894,17 +1235,24 @@ async function syncEdsConfigToRemote(
     if (!syncResult.success) {
         throw new Error(
             `Commerce configuration failed: Could not sync config.json to GitHub. ` +
-            `The storefront is live but Commerce features will not work. ` +
-            `Error: ${syncResult.error}`,
+                `The storefront is live but Commerce features will not work. ` +
+                `Error: ${syncResult.error}`,
         );
     }
 
     context.logger.info(
         `[Phase 5] Config synced: GitHub=${syncResult.githubPushed}, CDN=${syncResult.cdnPublished}, ` +
-        `BlockLibrary=${syncResult.blockLibraryVerified ?? 'n/a'}`,
+            `BlockLibrary=${syncResult.blockLibraryVerified ?? 'n/a'}`,
     );
 
-    const { updateStorefrontState } = await import('@/features/eds/services/storefrontStalenessDetector');
+    const { updateStorefrontState } = await import(
+        '@/features/eds/services/storefrontStalenessDetector'
+    );
+    // NOTE: passes the project's CURRENT configs, not a snapshot from when
+    // config.json was generated earlier in this run. Same latent pattern the
+    // republish path hit on 2026-08-10 (see updateStorefrontState) — narrower
+    // window here, but fixing it means threading the snapshot through the
+    // pipeline. Tracked in .rptc/plans/pdp-prerender-validation/.
     updateStorefrontState(project, project.componentConfigs || {});
     project.edsStorefrontStatusSummary = 'published';
     await context.stateManager.saveProject(project);
@@ -935,7 +1283,7 @@ function validateConfigJson(edsComponentPath: string): void {
     if (!fs.existsSync(configJsonPath)) {
         throw new Error(
             `Commerce configuration failed: config.json not found at ${configJsonPath}. ` +
-            `Config generation may have failed in Phase 4.`,
+                `Config generation may have failed in Phase 4.`,
         );
     }
 
@@ -945,7 +1293,7 @@ function validateConfigJson(edsComponentPath: string): void {
     } catch (parseError) {
         throw new Error(
             `Commerce configuration failed: config.json is invalid JSON. ` +
-            `Error: ${(parseError as Error).message}`,
+                `Error: ${(parseError as Error).message}`,
         );
     }
 }
@@ -973,14 +1321,17 @@ async function setupEdsContent(
         // as a project config setting; don't re-derive it. meshEndpoint omitted so
         // we probe the raw Commerce GraphQL the backend exposes.
         const { commerceEndpoint } = extractConfigParamsFromConfigs(
-            typedConfig.componentConfigs as Record<string, Record<string, string | number | boolean | undefined>> | undefined,
+            typedConfig.componentConfigs as
+                | Record<string, Record<string, string | number | boolean | undefined>>
+                | undefined,
             undefined,
             typedConfig.components?.backend,
         );
         if (commerceEndpoint && (await detectB2bReadiness(commerceEndpoint)) === 'disabled') {
-            const msg = 'This B2B storefront is connected to a Commerce backend that does not have B2B enabled. '
-                + 'The B2B account features (company, quotes, purchase orders, requisition lists) will not appear until '
-                + 'B2B is enabled on the backend (Admin → Stores → Configuration → General → B2B Features → Enable Company).';
+            const msg =
+                'This B2B storefront is connected to a Commerce backend that does not have B2B enabled. ' +
+                'The B2B account features (company, quotes, purchase orders, requisition lists) will not appear until ' +
+                'B2B is enabled on the backend (Admin → Stores → Configuration → General → B2B Features → Enable Company).';
             context.logger.warn(`[Phase 5b] ${msg}`);
             void vscode.window.showWarningMessage(msg);
         }
@@ -1004,7 +1355,8 @@ async function setupEdsContent(
                 secrets: context.context.secrets,
                 extensionContext: context.context,
             },
-            (message, subMessage) => progressTracker('Setting Up Content', 95, subMessage || message),
+            (message, subMessage) =>
+                progressTracker('Setting Up Content', 95, subMessage || message),
         );
 
         if (contentCopied) {
@@ -1024,9 +1376,13 @@ async function handlePortConflicts(
     const existingProject = await context.stateManager.getCurrentProject();
     if (existingProject && existingProject.status === 'running') {
         const runningPort = getProjectFrontendPort(existingProject);
-        const defaultPort = vscode.workspace.getConfiguration('demoBuilder').get<number>('defaultPort', 3000);
+        const defaultPort = vscode.workspace
+            .getConfiguration('demoBuilder')
+            .get<number>('defaultPort', 3000);
         const frontendId = typedConfig.components?.frontend;
-        const targetPort = (frontendId && getComponentConfigPort(typedConfig.componentConfigs, frontendId)) || defaultPort;
+        const targetPort =
+            (frontendId && getComponentConfigPort(typedConfig.componentConfigs, frontendId)) ||
+            defaultPort;
 
         if (runningPort === targetPort) {
             context.logger.debug(`[Project Creation] Stopping running demo on port ${runningPort}`);
@@ -1037,7 +1393,7 @@ async function handlePortConflicts(
             );
 
             await vscode.commands.executeCommand('demoBuilder.stopDemo');
-            await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DEMO_STOP_WAIT));
+            await sleep(TIMEOUTS.DEMO_STOP_WAIT);
         }
     }
 }
@@ -1048,12 +1404,19 @@ async function cleanupOrphanedDirectory(
     progressTracker: ProgressTracker,
     fs: typeof import('fs/promises'),
 ): Promise<void> {
-    if (await fs.access(projectPath).then(() => true).catch(() => false)) {
+    if (
+        await fs
+            .access(projectPath)
+            .then(() => true)
+            .catch(() => false)
+    ) {
         context.logger.warn(`[Project Creation] Directory already exists: ${projectPath}`);
 
         const existingFiles = await fs.readdir(projectPath);
         if (existingFiles.length > 0) {
-            context.logger.debug(`[Project Creation] Found ${existingFiles.length} files, cleaning up...`);
+            context.logger.debug(
+                `[Project Creation] Found ${existingFiles.length} files, cleaning up...`,
+            );
             progressTracker('Preparing Project', 5, 'Removing existing project data...');
             await fs.rm(projectPath, { recursive: true, force: true });
         } else {
@@ -1078,11 +1441,20 @@ async function lookupComponentDef(
     } else if (compType === 'dependency') {
         const deps = await registryManager.getDependencies();
         componentDef = deps.find((d: { id: string }) => d.id === compId);
+    } else if (compType === 'app-builder') {
+        const apps = await registryManager.getAppBuilder();
+        componentDef = apps.find((a: { id: string }) => a.id === compId);
     }
 
     // Fallback: search all sections (e.g., mesh components in "mesh" section)
     if (!componentDef) {
         componentDef = await registryManager.getComponentById(compId);
+    }
+
+    // Tag app components so installed instances are distinguishable by
+    // getAppBuilderInstance (subType: 'app').
+    if (componentDef && compType === 'app-builder') {
+        componentDef = { ...componentDef, subType: 'app' };
     }
 
     return componentDef;
@@ -1098,7 +1470,9 @@ function resolveFrontendSource(
     logger: Logger,
 ): TransformedComponentDefinition {
     if (isEdsStack && typedConfig.edsConfig?.repoUrl) {
-        logger.debug(`[Project Creation] Using EDS repo source for ${componentDef.name}: ${typedConfig.edsConfig.repoUrl}`);
+        logger.debug(
+            `[Project Creation] Using EDS repo source for ${componentDef.name}: ${typedConfig.edsConfig.repoUrl}`,
+        );
         return {
             ...componentDef,
             source: { type: 'git' as const, url: typedConfig.edsConfig.repoUrl, branch: 'main' },
@@ -1106,7 +1480,9 @@ function resolveFrontendSource(
     }
 
     if (typedConfig.frontendSource) {
-        logger.debug(`[Project Creation] Using template source for ${componentDef.name}: ${typedConfig.frontendSource.url}`);
+        logger.debug(
+            `[Project Creation] Using template source for ${componentDef.name}: ${typedConfig.frontendSource.url}`,
+        );
         return {
             ...componentDef,
             source: {
@@ -1130,18 +1506,24 @@ async function loadComponentDefinitions(
     const stack = typedConfig.selectedStack ? getStackById(typedConfig.selectedStack) : undefined;
 
     if (!stack) {
-        context.logger.error(`[Project Creation] Stack "${typedConfig.selectedStack}" not found in stacks.json`);
-        throw new Error(`Stack "${typedConfig.selectedStack}" not found. Please check stacks.json configuration.`);
+        context.logger.error(
+            `[Project Creation] Stack "${typedConfig.selectedStack}" not found in stacks.json`,
+        );
+        throw new Error(
+            `Stack "${typedConfig.selectedStack}" not found. Please check stacks.json configuration.`,
+        );
     }
 
     const frontend = stack.frontend;
     // Use config dependencies (includes user-selected optional deps like mesh) or fall back to stack defaults
     const dependencies = typedConfig.components?.dependencies ?? stack.dependencies ?? [];
-    const appBuilder = typedConfig.selectedAddons?.filter(addon =>
-        !stack.optionalAddons?.some(opt => opt.id === addon),
-    ) || [];
+    // App Builder components come from the explicit user selection, NOT from
+    // selectedAddons (addons feed the ADDONS path, not app components).
+    const appBuilder = typedConfig.components?.appBuilder ?? [];
 
-    context.logger.info(`[Project Creation] Stack "${stack.id}" components: frontend=${frontend}, dependencies=[${dependencies.join(', ')}]`);
+    context.logger.info(
+        `[Project Creation] Stack "${stack.id}" components: frontend=${frontend}, dependencies=[${dependencies.join(', ')}]`,
+    );
 
     const allComponents = [
         ...(frontend ? [{ id: frontend, type: 'frontend' }] : []),
@@ -1161,24 +1543,37 @@ async function loadComponentDefinitions(
 
         // Resolve frontend source based on stack type
         if (comp.type === 'frontend') {
-            componentDef = resolveFrontendSource(componentDef, typedConfig, isEdsStack, context.logger);
+            componentDef = resolveFrontendSource(
+                componentDef,
+                typedConfig,
+                isEdsStack,
+                context.logger,
+            );
         }
 
         // Validate source is defined for installable components
         if (!componentDef.source) {
-            const errorMsg = comp.type === 'frontend'
-                ? `No storefront found for stack "${typedConfig.selectedStack}" and package "${typedConfig.selectedPackage}". ` +
-                  `Please ensure a matching storefront exists in demo-packages.json.`
-                : `Component "${componentDef.name}" (${comp.id}) has no installation source defined. ` +
-                  `This is a configuration error in components.json - installable components must have a "source" property.`;
+            const errorMsg =
+                comp.type === 'frontend'
+                    ? `No storefront found for stack "${typedConfig.selectedStack}" and package "${typedConfig.selectedPackage}". ` +
+                      `Please ensure a matching storefront exists in demo-packages.json.`
+                    : `Component "${componentDef.name}" (${comp.id}) has no installation source defined. ` +
+                      `This is a configuration error in components.json - installable components must have a "source" property.`;
             context.logger.error(`[Project Creation] ${errorMsg}`);
             throw new Error(errorMsg);
         }
 
         const installOptions: { skipDependencies?: boolean } = { skipDependencies: true };
 
-        componentDef = { ...componentDef, type: comp.type as TransformedComponentDefinition['type'] };
-        componentDefinitions.set(comp.id, { definition: componentDef, type: comp.type, installOptions });
+        componentDef = {
+            ...componentDef,
+            type: comp.type as TransformedComponentDefinition['type'],
+        };
+        componentDefinitions.set(comp.id, {
+            definition: componentDef,
+            type: comp.type,
+            installOptions,
+        });
     }
 
     return componentDefinitions;
@@ -1206,7 +1601,10 @@ async function swapComponentsDirectory(
     logger.debug('[Project Edit] Starting atomic component swap');
 
     // Pre-flight: Clean up stale backup directory from previous failed attempts
-    const staleBackupExists = await fsPromises.access(backupDir).then(() => true).catch(() => false);
+    const staleBackupExists = await fsPromises
+        .access(backupDir)
+        .then(() => true)
+        .catch(() => false);
     if (staleBackupExists) {
         logger.warn('[Project Edit] Found stale backup directory from previous attempt, removing');
         await fsPromises.rm(backupDir, { recursive: true, force: true });
@@ -1214,7 +1612,10 @@ async function swapComponentsDirectory(
 
     try {
         // Step 1: Backup existing components (if they exist)
-        const componentsExist = await fsPromises.access(componentsDir).then(() => true).catch(() => false);
+        const componentsExist = await fsPromises
+            .access(componentsDir)
+            .then(() => true)
+            .catch(() => false);
         if (componentsExist) {
             logger.debug('[Project Edit] Backing up existing components');
             await fsPromises.rename(componentsDir, backupDir);
@@ -1235,8 +1636,14 @@ async function swapComponentsDirectory(
         // Rollback: If rename failed and backup exists, restore it
         logger.error('[Project Edit] Component swap failed, attempting rollback', error as Error);
 
-        const backupExists = await fsPromises.access(backupDir).then(() => true).catch(() => false);
-        const componentsExists = await fsPromises.access(componentsDir).then(() => true).catch(() => false);
+        const backupExists = await fsPromises
+            .access(backupDir)
+            .then(() => true)
+            .catch(() => false);
+        const componentsExists = await fsPromises
+            .access(componentsDir)
+            .then(() => true)
+            .catch(() => false);
 
         // If backup exists and components doesn't, restore backup
         if (backupExists && !componentsExists) {
@@ -1247,20 +1654,26 @@ async function swapComponentsDirectory(
                 logger.error('[Project Edit] Failed to restore backup', restoreError as Error);
                 throw new Error(
                     `Component swap failed and rollback failed. ` +
-                    `Original components may be at: ${backupDir}. ` +
-                    `Error: ${(error as Error).message}`,
+                        `Original components may be at: ${backupDir}. ` +
+                        `Error: ${(error as Error).message}`,
                 );
             }
         }
 
         // Clean up temp dir if it still exists
-        const tempExists = await fsPromises.access(tempDir).then(() => true).catch(() => false);
+        const tempExists = await fsPromises
+            .access(tempDir)
+            .then(() => true)
+            .catch(() => false);
         if (tempExists) {
             try {
                 await fsPromises.rm(tempDir, { recursive: true, force: true });
                 logger.debug('[Project Edit] Cleaned up temporary directory');
             } catch (cleanupError) {
-                logger.warn('[Project Edit] Failed to clean up temporary directory', cleanupError as Error);
+                logger.warn(
+                    '[Project Edit] Failed to clean up temporary directory',
+                    cleanupError as Error,
+                );
                 // Non-fatal - continue with the original error
             }
         }

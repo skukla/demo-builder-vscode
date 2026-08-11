@@ -7,11 +7,8 @@
 import type {
     ComponentsData,
     ComponentData,
-    UniqueField,
-    ServiceGroup,
     ComponentInstance,
 } from './configureTypes';
-import { NavigationSection } from '@/core/ui/components/navigation';
 
 /**
  * Get all component definitions from componentsData
@@ -34,36 +31,6 @@ export function getAllComponentDefinitions(data: ComponentsData): ComponentData[
 }
 
 /**
- * Transform a ServiceGroup to a NavigationSection
- *
- * SOP §6: Extracted callback body complexity to named helper
- *
- * @param group - Service group to transform
- * @param isFieldComplete - Callback to check if a field is complete
- * @returns NavigationSection for NavigationPanel
- */
-export function toNavigationSection(
-    group: ServiceGroup,
-    isFieldComplete: (field: UniqueField) => boolean,
-): NavigationSection {
-    const requiredFields = group.fields.filter(f => f.required);
-    const completedFields = requiredFields.filter(f => isFieldComplete(f));
-
-    return {
-        id: group.id,
-        label: group.label,
-        fields: group.fields.map(f => ({
-            key: f.key,
-            label: f.label,
-            isComplete: isFieldComplete(f),
-        })),
-        isComplete: requiredFields.length === 0 || completedFields.length === requiredFields.length,
-        completedCount: completedFields.length,
-        totalCount: requiredFields.length,
-    };
-}
-
-/**
  * Check if a component has environment variables configured.
  *
  * SOP Compliance: Reduces optional chaining depth from 3 levels to 1.
@@ -81,17 +48,13 @@ export function hasComponentEnvVars(componentDef: ComponentData | undefined): bo
     return required > 0 || optional > 0;
 }
 
-/**
- * Capitalize the first letter of a string
- */
-export function capitalizeFirst(str: string): string {
+/** Capitalize the first letter of a string. Local — only the helper below uses it. */
+function capitalizeFirst(str: string): string {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-/**
- * Get component type display name from instance
- */
-export function getComponentTypeDisplay(instance: ComponentInstance): string {
+/** Get a component's display type from its instance. Local to this module. */
+function getComponentTypeDisplay(instance: ComponentInstance): string {
     const instanceType = instance?.type;
     return instanceType ? capitalizeFirst(instanceType) : 'Component';
 }

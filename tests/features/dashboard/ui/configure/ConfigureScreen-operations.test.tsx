@@ -4,7 +4,7 @@ import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ConfigureScreen } from '@/features/dashboard/ui/configure/ConfigureScreen';
 import '@testing-library/jest-dom';
-import { mockProject, mockComponentsData } from './ConfigureScreen.testUtils';
+import { mockProject, mockComponentsData, selectSection } from './ConfigureScreen.testUtils';
 
 // Mock hooks
 jest.mock('@/core/ui/hooks', () => ({
@@ -26,13 +26,9 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 }));
 
 // Mock layout components
+// The shell + rail are NOT mocked (direct-path imports), so these tests drive the
+// real rail when they need to reach a section other than Project.
 jest.mock('@/core/ui/components/layout', () => ({
-    TwoColumnLayout: ({ leftContent, rightContent }: any) => (
-        <div>
-            <div data-testid="left-column">{leftContent}</div>
-            <div data-testid="right-column">{rightContent}</div>
-        </div>
-    ),
     PageHeader: ({ title, subtitle }: any) => (
         <div data-testid="page-header" className="border-b bg-gray-75">
             <h1>{title}</h1>
@@ -43,16 +39,6 @@ jest.mock('@/core/ui/components/layout', () => ({
         <div data-testid="page-footer" className="border-t bg-gray-75 max-w-800">
             <div data-testid="footer-left">{leftContent}</div>
             <div data-testid="footer-right">{rightContent}</div>
-        </div>
-    ),
-}));
-
-// Also mock the TwoColumnLayout separately for backward compatibility
-jest.mock('@/core/ui/components/layout/TwoColumnLayout', () => ({
-    TwoColumnLayout: ({ leftContent, rightContent }: any) => (
-        <div>
-            <div data-testid="left-column">{leftContent}</div>
-            <div data-testid="right-column">{rightContent}</div>
         </div>
     ),
 }));
@@ -104,19 +90,6 @@ jest.mock('@/features/components/ui/components/StoreConfigFieldRow', () => ({
             </div>
         );
     },
-}));
-
-// Mock NavigationPanel
-jest.mock('@/core/ui/components/navigation', () => ({
-    NavigationPanel: ({ sections }: any) => (
-        <div data-testid="navigation-panel">
-            {sections?.map((section: any) => (
-                <div key={section.id}>{section.label}</div>
-            ))}
-        </div>
-    ),
-    NavigationSection: ({ children }: any) => <div>{children}</div>,
-    NavigationField: ({ children }: any) => <div>{children}</div>,
 }));
 
 // Mock scrollIntoView for JSDOM
@@ -305,7 +278,8 @@ describe('ConfigureScreen - Operations', () => {
                 />
             );
 
-            // When: User clears the optional field
+            // When: User navigates to the group that owns it and clears the optional field
+            selectSection('Adobe Commerce');
             const optionalField = await screen.findByLabelText(/Optional Field with Default/i);
             expect(optionalField).toHaveValue('user-entered-value');
 
@@ -341,7 +315,8 @@ describe('ConfigureScreen - Operations', () => {
                 />
             );
 
-            // When: User clears and types new value
+            // When: User navigates to the group, then clears and types a new value
+            selectSection('Adobe Commerce');
             const urlField = await screen.findByLabelText(/Commerce URL/i);
             expect(urlField).toHaveValue('https://old-url.com');
 
@@ -351,6 +326,66 @@ describe('ConfigureScreen - Operations', () => {
             // Then: The field should have the new value
             await waitFor(() => {
                 expect(urlField).toHaveValue('https://new-url.com');
+            });
+        });
+    });
+
+    describe('Cross-section save', () => {
+        // The invariant a one-section-at-a-time layout most easily breaks: only the
+        // active section is mounted, so an edit made in a section the user has since
+        // navigated away from must still reach the save payload. `componentConfigs`
+        // stays lifted in ConfigureScreen for exactly this reason.
+        it('saves an edit made in section A after switching to section B', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            mockRequest.mockResolvedValue({ success: true });
+
+            const validConfig = {
+                headless: {
+                    ADOBE_COMMERCE_URL: 'https://example.com',
+                    ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+                },
+                'adobe-commerce-paas': {
+                    ADOBE_COMMERCE_ADMIN_USERNAME: 'admin',
+                },
+                'catalog-service': {
+                    ADOBE_CATALOG_API_KEY: 'test-key-123',
+                },
+            };
+
+            renderWithProvider(
+                <ConfigureScreen
+                    project={mockProject as any}
+                    componentsData={mockComponentsData}
+                    existingEnvValues={validConfig}
+                />
+            );
+
+            // Edit in section A…
+            selectSection('Adobe Commerce');
+            const urlField = await screen.findByLabelText(/Commerce URL/i);
+            await user.clear(urlField);
+            await user.type(urlField, 'https://edited.example.com');
+
+            // …then walk away to section B, which unmounts A's fields entirely.
+            selectSection('Catalog Service');
+            expect(screen.queryByLabelText(/Commerce URL/i)).not.toBeInTheDocument();
+
+            await waitFor(() => {
+                expect(screen.getByText('Save Changes')).not.toBeDisabled();
+            });
+            await user.click(screen.getByText('Save Changes'));
+
+            await waitFor(() => {
+                expect(mockRequest).toHaveBeenCalledWith(
+                    'save-configuration',
+                    expect.objectContaining({
+                        componentConfigs: expect.objectContaining({
+                            headless: expect.objectContaining({
+                                ADOBE_COMMERCE_URL: 'https://edited.example.com',
+                            }),
+                        }),
+                    }),
+                );
             });
         });
     });

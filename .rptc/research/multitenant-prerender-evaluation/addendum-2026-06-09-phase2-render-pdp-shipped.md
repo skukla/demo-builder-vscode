@@ -9,7 +9,7 @@ deployed, and verified.
 generic template, falling back to the generic template on any failure. Shipped on
 `accs-discovery-service` `main @ 565ef8b`, deployed to Stage.
 
-- Action URL (unchanged): `https://285361-249darkllama-stage.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp`
+- Action URL (unchanged): `https://<runtime-namespace>.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp`
 - It fetches `https://main--{site}--{org}.aem.live/products/default` with a desktop Chrome
   User-Agent, caches per `(org, site)` for 5 min (per warm container), and returns the HTML
   verbatim. No HTML parsing / no server-side data injection — the drop-in does all product-data

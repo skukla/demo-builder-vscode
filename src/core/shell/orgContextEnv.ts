@@ -110,8 +110,16 @@ export function buildOrgTargetFromProjectAdobe(
 /**
  * AsyncLocalStorage holding the active org-context target for the current async
  * flow. The command executor reads this to inject AIO_CONSOLE_* env onto `aio`
- * commands. Call paths that aren't wrapped simply get no targeting (today's
- * behavior) — which is safe.
+ * commands.
+ *
+ * An unwrapped call path is NOT safe, whatever this comment used to claim. It
+ * does not mean "no targeting" — it means the CLI falls back to its process-global
+ * `aio console where` selection, which the extension deliberately stopped writing
+ * (Phase 4a), so it holds whatever some earlier session or another tool left
+ * there. `deployMeshHeadless` ran unwrapped and deployed into a DELETED project
+ * for two days, reporting "Unable to create a mesh. Check the mesh configuration
+ * file" while the config was fine (2026-08-03). Any `aio` invocation that should
+ * hit a specific org/project/workspace must be wrapped.
  */
 const orgContextStore = new AsyncLocalStorage<OrgContextTarget>();
 
@@ -119,6 +127,32 @@ const orgContextStore = new AsyncLocalStorage<OrgContextTarget>();
  * Run `fn` with `target` as the active org context. Every `aio` command issued
  * (directly or transitively) inside `fn` will be targeted at `target`.
  */
+/**
+ * Commands whose ANSWER depends on the selected Adobe project/workspace.
+ *
+ * Run untargeted, these silently resolve against the aio CLI's process-global
+ * console selection — which this extension never writes, so it is whatever the
+ * user last chose in a terminal. The command succeeds and describes the wrong
+ * workspace, which is worse than failing.
+ *
+ * Deliberately NOT included: `aio console *` (choosing an org is how a target is
+ * obtained, so those legitimately run untargeted), `aio auth *`, and anything
+ * that is not an `aio` command.
+ */
+const ORG_SCOPED_AIO = [/^aio\s+api-mesh:/, /^aio\s+app\s+(deploy|undeploy|get-url)\b/];
+
+/**
+ * Whether a command needs an org target to answer correctly.
+ *
+ * @param command - the command line about to run
+ * @returns true when running it untargeted would silently use the CLI's global
+ *          workspace selection
+ */
+export function needsOrgTargeting(command: string): boolean {
+    const normalized = command.trim();
+    return ORG_SCOPED_AIO.some((pattern) => pattern.test(normalized));
+}
+
 export function withOrgContext<T>(target: OrgContextTarget, fn: () => Promise<T>): Promise<T> {
     return orgContextStore.run(target, fn);
 }

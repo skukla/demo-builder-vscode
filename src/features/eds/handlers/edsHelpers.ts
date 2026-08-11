@@ -16,7 +16,7 @@ import * as vscode from 'vscode';
 import { DaLiveAuthService, parseJwtPayload } from '../services/daLiveAuthService';
 import { DaLiveConfigService } from '../services/daLiveConfigService';
 import { DaLiveContentOperations } from '../services/daLiveContentOperations';
-import { hasWriteAccess, type TokenProvider } from '../services/daLiveOrgOperations';
+import { type TokenProvider } from '../services/daLiveOrgOperations';
 import { GitHubFileOperations } from '../services/githubFileOperations';
 import { GitHubOAuthService } from '../services/githubOAuthService';
 import { GitHubRepoOperations } from '../services/githubRepoOperations';
@@ -24,7 +24,6 @@ import { GitHubTokenService } from '../services/githubTokenService';
 import { HelixService } from '../services/helixService';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getLogger } from '@/core/logging';
-import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthoringExperience, Project } from '@/types';
 import type { HandlerContext } from '@/types/handlers';
@@ -196,50 +195,6 @@ export function validateDaLiveToken(token: string): DaLiveTokenValidationResult 
 }
 
 // ==========================================================
-// DA.live Default Org Tip
-// ==========================================================
-
-/**
- * Show a one-time tip offering to save the org name as a default setting.
- *
- * Only shown when:
- * - The config setting is not already set
- * - The tip has not been shown before (tracked via globalState)
- *
- * Non-blocking: uses fire-and-forget `.then()` so it never delays the caller.
- *
- * @param context - Handler context for globalState access
- * @param orgName - The verified org name to offer saving
- */
-export function offerSaveDefaultOrg(
-    context: HandlerContext,
-    orgName: string,
-): void {
-    const config = vscode.workspace.getConfiguration('demoBuilder');
-
-    // Already configured — nothing to do
-    if (config.get<string>('daLive.defaultOrg', '')) {
-        return;
-    }
-
-    showOneTimeTip(context.context.globalState, {
-        stateKey: 'daLive.defaultOrgTipShown',
-        message: `Tip: Save "${orgName}" as your default DA.live org so it auto-fills next time.`,
-        actions: [`Save "${orgName}"`, 'Open Settings'],
-        onAction: (selection) => {
-            if (selection === `Save "${orgName}"`) {
-                config.update('daLive.defaultOrg', orgName, vscode.ConfigurationTarget.Global);
-            } else if (selection === 'Open Settings') {
-                vscode.commands.executeCommand(
-                    'workbench.action.openSettings',
-                    'demoBuilder.daLive.defaultOrg',
-                );
-            }
-        },
-    });
-}
-
-// ==========================================================
 // BYOM Overlay URL resolution
 // ==========================================================
 
@@ -265,9 +220,7 @@ const BYOM_LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
  * @returns The resolved URL, or undefined when none resolves
  */
 export function resolveByomOverlayUrl(fromConfig?: string): string | undefined {
-    const raw = vscode.workspace
-        .getConfiguration('demoBuilder.byom')
-        .get<string>('overlayUrl', '');
+    const raw = vscode.workspace.getConfiguration('demoBuilder.byom').get<string>('overlayUrl', '');
     // VS Code's typed `get<string>` returns the default on type mismatch, but
     // be defensive about non-string values (corrupted user settings.json).
     const trimmed = typeof raw === 'string' ? raw.trim() : '';
@@ -305,7 +258,7 @@ export function resolveByomOverlayUrl(fromConfig?: string): string | undefined {
 export function appendOverlayParams(url: string, org: string, site: string): string {
     if (!org) throw new Error('appendOverlayParams: org is required');
     if (!site) throw new Error('appendOverlayParams: site is required');
-    const parsed = new URL(url);  // throws on malformed input
+    const parsed = new URL(url); // throws on malformed input
     parsed.searchParams.set('org', org);
     parsed.searchParams.set('site', site);
     return parsed.toString();
@@ -351,8 +304,76 @@ export function resolveByomOverlayConfig(
  * remedy is a storefront reset, which re-registers the overlay.
  */
 export const BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE =
-    'Product detail pages will not load: the storefront\'s BYOM overlay was not '
-    + 'registered with the Configuration Service. Reset the storefront to register it.';
+    "Product detail pages will not load: the storefront's BYOM overlay was not " +
+    'registered with the Configuration Service. Reset the storefront to register it.';
+
+/**
+ * Why no overlay was registered when none was even attempted.
+ *
+ * Distinct from {@link BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE}, which says
+ * "was not registered" — wrong here, because there was nothing to register. The
+ * two causes need different words: one may be deliberate, the other is a
+ * misconfiguration the user can fix.
+ */
+export const BYOM_DISABLED_MESSAGE =
+    'Product detail pages will not load: BYOM overlay registration is turned off ' +
+    '(demoBuilder.byom.enabled). Turn it on and reset the storefront if this ' +
+    'storefront needs product pages.';
+
+export const BYOM_OVERLAY_URL_MISSING_MESSAGE =
+    'Product detail pages will not load: no BYOM overlay URL is configured ' +
+    '(demoBuilder.byom.overlayUrl), or the configured value was rejected. Set a ' +
+    'valid https:// URL and reset the storefront.';
+
+/**
+ * Explain why no overlay URL resolved, for the caveat channel.
+ *
+ * Call only when the resolved overlay URL is absent. Setup previously reported
+ * plain success in this case: the "not registered" check was gated on the URL
+ * being truthy, so turning BYOM off or supplying an invalid URL skipped the
+ * check entirely and the run ended on "Storefront setup completed
+ * successfully!" for a storefront that can never serve a PDP.
+ *
+ * @returns the caveat sentence matching the cause
+ */
+export function explainAbsentOverlay(): string {
+    const enabled = vscode.workspace
+        .getConfiguration('demoBuilder.byom')
+        .get<boolean>('enabled', true);
+    return enabled ? BYOM_OVERLAY_URL_MISSING_MESSAGE : BYOM_DISABLED_MESSAGE;
+}
+
+/**
+ * Append a PDP caveat, skipping duplicates.
+ *
+ * Structurally typed rather than taking `RepoInfo`, so this module stays free of
+ * the setup types and the phases can call it without an import cycle. Dedupes
+ * because phase 3's catch path and its success path can both fire for one run.
+ *
+ * @param target - the repoInfo (or any caveat carrier) being threaded
+ * @param caveat - a user-facing sentence
+ */
+export function addPdpCaveat(target: { pdpCaveats?: string[] }, caveat: string): void {
+    target.pdpCaveats ??= [];
+    if (!target.pdpCaveats.includes(caveat)) target.pdpCaveats.push(caveat);
+}
+
+/**
+ * Explain a skipped smart-404 install.
+ *
+ * `installSmart404Handler` is non-fatal by design and returns `{installed,
+ * reason}`. Both call sites discarded that value, so a storefront could ship
+ * without the client-side PDP recovery and still report Complete.
+ *
+ * @param reason - the publisher's own reason string, when it gave one
+ */
+export function describeSmart404Skip(reason?: string): string {
+    return (
+        'Product detail pages may not recover on first visit: the smart-404 handler ' +
+        `was not installed${reason ? ` (${reason})` : ''}. Reset the storefront to ` +
+        'reinstall it.'
+    );
+}
 
 /**
  * Surface a failed BYOM overlay registration. Logs at error level always;
@@ -392,9 +413,7 @@ const AUTHORING_EXPERIENCES: ReadonlySet<string> = new Set<AuthoringExperience>(
  * @param metadataValue - The per-project `authoringExperience` metadata value
  * @returns The resolved authoring experience
  */
-export function resolveAuthoringExperience(
-    metadataValue: string | undefined,
-): AuthoringExperience {
+export function resolveAuthoringExperience(metadataValue: string | undefined): AuthoringExperience {
     if (metadataValue && AUTHORING_EXPERIENCES.has(metadataValue)) {
         return metadataValue as AuthoringExperience;
     }
@@ -622,13 +641,15 @@ export async function showDaLiveAuthQuickPick(
         return { success: false, cancelled: true };
     }
 
-    // Step 3: Ask for org name
-    const defaultOrg = vscode.workspace.getConfiguration('demoBuilder').get<string>('daLive.defaultOrg', '');
+    // Step 3: Ask for org name. The wizard uses a Spectrum picker populated
+    // from GitHub org memberships (see DaLiveServiceCard); this auth flow is
+    // a fallback for command-palette and MCP entry points where the React
+    // webview isn't available. Free-text input remains here; converting to a
+    // VS Code QuickPick populated from /user/orgs is a separate follow-up.
     const orgName = await vscode.window.showInputBox({
         title: 'Sign in to DA.live (Step 2/2)',
-        prompt: 'Enter your DA.live organization name',
-        placeHolder: 'e.g. my-org',
-        value: defaultOrg,
+        prompt: 'Enter your DA.live organization name (your GitHub username or a team org you belong to)',
+        placeHolder: 'e.g. leahrayard or demo-system-stores',
         ignoreFocusOut: true,
         validateInput: (value) => {
             if (!value?.trim()) {
@@ -659,46 +680,23 @@ export async function showDaLiveAuthQuickPick(
                 // Validate token format
                 const validation = validateDaLiveToken(trimmedToken);
                 if (!validation.valid) {
-                    context.logger.warn(`[DA.live Auth] Token validation failed: ${validation.error}`);
-                    await vscode.window.showErrorMessage(validation.error ?? 'Token validation failed');
+                    context.logger.warn(
+                        `[DA.live Auth] Token validation failed: ${validation.error}`,
+                    );
+                    await vscode.window.showErrorMessage(
+                        validation.error ?? 'Token validation failed',
+                    );
                     return { success: false, error: validation.error };
                 }
 
-                // Verify org access
-                context.logger.debug(`[DA.live Auth] Verifying org access: ${trimmedOrg}`);
-                const orgResponse = await fetch(`https://admin.da.live/list/${trimmedOrg}/`, {
-                    method: 'GET',
-                    headers: { 'Authorization': `Bearer ${trimmedToken}` },
-                });
+                // Pre-auth verification gate removed (namespace-picker plan).
+                // It was blocking first-time DA.live users whose AEM Code Sync
+                // app hadn't been installed yet; first-time setup is handled by
+                // Phase 3 of the create pipeline. Genuine write failures surface
+                // at the actual write site with contextual error messaging.
 
-                if (orgResponse.status === 403) {
-                    const error = `Access denied to organization "${trimmedOrg}". Please check the name or your permissions.`;
-                    await vscode.window.showErrorMessage(error);
-                    return { success: false, error };
-                }
-
-                if (orgResponse.status === 404) {
-                    const error = `Organization "${trimmedOrg}" not found. Please check the name.`;
-                    await vscode.window.showErrorMessage(error);
-                    return { success: false, error };
-                }
-
-                if (!orgResponse.ok) {
-                    const error = `Failed to verify organization: ${orgResponse.status}`;
-                    await vscode.window.showErrorMessage(error);
-                    return { success: false, error };
-                }
-
-                // Verify write access
-                const writable = await hasWriteAccess(trimmedOrg, trimmedToken);
-                if (!writable) {
-                    const error = `You have read-only access to "${trimmedOrg}". Please enter an organization you own.`;
-                    await vscode.window.showErrorMessage(error);
-                    return { success: false, error };
-                }
-
-                // Store token with verified org
-                const tokenExpiry = validation.expiresAt || (Date.now() + 24 * 60 * 60 * 1000);
+                // Store token with the entered org
+                const tokenExpiry = validation.expiresAt || Date.now() + 24 * 60 * 60 * 1000;
                 const authService = getDaLiveAuthService(context.context);
                 await authService.storeToken(trimmedToken, {
                     expiresAt: tokenExpiry,
@@ -706,11 +704,13 @@ export async function showDaLiveAuthQuickPick(
                     orgName: trimmedOrg,
                 });
 
-                context.logger.info(`[DA.live Auth] Successfully authenticated to org: ${trimmedOrg}`);
-                vscode.window.setStatusBarMessage(`✅ Connected to DA.live (${trimmedOrg})`, TIMEOUTS.STATUS_BAR_INFO);
-
-                // Offer to save org as default (one-time, non-blocking)
-                offerSaveDefaultOrg(context, trimmedOrg);
+                context.logger.info(
+                    `[DA.live Auth] Token stored, namespace pinned to: ${trimmedOrg}`,
+                );
+                vscode.window.setStatusBarMessage(
+                    `✅ Connected to DA.live (${trimmedOrg})`,
+                    TIMEOUTS.STATUS_BAR_INFO,
+                );
 
                 return {
                     success: true,
@@ -790,8 +790,10 @@ function buildEditorPathValue(
         return `https://da.live/canvas${nxParam}#`;
     }
     if (imsOrgId) {
-        return `https://experience.adobe.com/#/@${imsOrgId}`
-            + `/aem/editor/canvas/main--${daLiveSite}--${daLiveOrg}.ue.da.live`;
+        return (
+            `https://experience.adobe.com/#/@${imsOrgId}` +
+            `/aem/editor/canvas/main--${daLiveSite}--${daLiveOrg}.ue.da.live`
+        );
     }
     return undefined;
 }
@@ -836,7 +838,13 @@ export async function applyDaLiveOrgConfigSettings(
             updates['aem.repositoryId'] = aemAuthorUrl;
         }
         const ewCanvasBranch = getEwCanvasBranch();
-        const editorValue = buildEditorPathValue(experience, imsOrgId, daLiveOrg, daLiveSite, ewCanvasBranch);
+        const editorValue = buildEditorPathValue(
+            experience,
+            imsOrgId,
+            daLiveOrg,
+            daLiveSite,
+            ewCanvasBranch,
+        );
         if (editorValue) {
             updates['editor.path'] = `/${daLiveOrg}/${daLiveSite}=${editorValue}`;
         } else {
@@ -850,17 +858,22 @@ export async function applyDaLiveOrgConfigSettings(
         const appliedKeys = Object.keys(updates);
         if (appliedKeys.length === 0 && removeKeys.length === 0) {
             // Truly nothing to do. Logged (not silent) so a no-op flip is diagnosable.
-            logger.debug(
-                '[EDS Config] No DA.live config to apply or clear; skipping.',
-            );
+            logger.debug('[EDS Config] No DA.live config to apply or clear; skipping.');
             return;
         }
 
-        const result = await daLiveContentOps.applySiteConfig(daLiveOrg, daLiveSite, updates, removeKeys);
+        const result = await daLiveContentOps.applySiteConfig(
+            daLiveOrg,
+            daLiveSite,
+            updates,
+            removeKeys,
+        );
         const summary = [
             appliedKeys.length ? `Applied: ${appliedKeys.join(', ')}` : '',
             removeKeys.length ? `Cleared: ${removeKeys.join(', ')}` : '',
-        ].filter(Boolean).join('; ');
+        ]
+            .filter(Boolean)
+            .join('; ');
         if (result.success) {
             logger.info(`[EDS Config] ${summary}`);
         } else {
@@ -896,11 +909,7 @@ export async function configureDaLivePermissions(
 ): Promise<{ success: boolean; error?: string }> {
     try {
         const daLiveConfigService = new DaLiveConfigService(tokenProvider, logger);
-        const result = await daLiveConfigService.grantUserAccess(
-            daLiveOrg,
-            daLiveSite,
-            userEmail,
-        );
+        const result = await daLiveConfigService.grantUserAccess(daLiveOrg, daLiveSite, userEmail);
         if (result.success) {
             logger.info(`[DaLivePermissions] Configured for ${userEmail}`);
         } else {

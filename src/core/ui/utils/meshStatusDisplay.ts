@@ -1,17 +1,28 @@
 /**
  * Mesh Status Display
  *
- * Shared display text and color mappings for mesh status.
- * Used by both the card grid (projects-dashboard) and the project dashboard.
+ * The persisted-mesh-vocabulary view of {@link statusVocabulary}, which is the
+ * one table. This module no longer holds a table of its own — it adapts the
+ * shared entry into the `{ text, color, variant }` shape its two callers want:
+ * the projects-list card (`projectStatusUtils`) and the dashboard header badge
+ * (`useDashboardStatus`).
  *
- * The status key is the persisted `meshStatusSummary` value.
- * The dashboard translates its own status values before lookup
- * (e.g., 'config-changed' → 'stale').
+ * Aliases collapse in `normalizeDisplayStatus`, not here: `config-changed` was a
+ * runtime-only spelling of `stale` that round-tripped back to `stale`, and
+ * `update-declined` reads identically to `stale` now that the labels are shared.
  */
 
-export type MeshStatusColor = 'green' | 'yellow' | 'orange' | 'red' | 'gray';
+import {
+    getStatusDisplay,
+    severityToColor,
+    severityToVariant,
+    type StatusColor,
+    type StatusVariant,
+} from './statusVocabulary';
 
-export type MeshStatusVariant = 'success' | 'warning' | 'error' | 'neutral';
+export type MeshStatusColor = StatusColor;
+
+export type MeshStatusVariant = StatusVariant;
 
 export interface MeshStatusDisplay {
     text: string;
@@ -20,25 +31,16 @@ export interface MeshStatusDisplay {
 }
 
 /**
- * Display mapping for persisted meshStatusSummary values.
- *
- * Transient dashboard-only states (checking, needs-auth, authenticating,
- * deploying) are handled separately in useDashboardStatus.
- */
-const MESH_STATUS_DISPLAY: Record<string, MeshStatusDisplay> = {
-    deployed:            { text: 'Mesh Deployed',   color: 'green',  variant: 'success' },
-    stale:               { text: 'Redeploy Mesh',   color: 'yellow', variant: 'warning' },
-    'config-incomplete': { text: 'Mesh Incomplete',  color: 'orange', variant: 'warning' },
-    'update-declined':   { text: 'Redeploy Mesh',   color: 'orange', variant: 'warning' },
-    error:               { text: 'Mesh Error',       color: 'red',    variant: 'error' },
-    'not-deployed':      { text: 'Not Deployed',     color: 'gray',   variant: 'neutral' },
-};
-
-/**
  * Get mesh status display for a given status key.
  * Returns null for unknown/undefined statuses (mesh section should be hidden).
  */
 export function getMeshStatusDisplay(status: string | undefined): MeshStatusDisplay | null {
-    if (!status) return null;
-    return MESH_STATUS_DISPLAY[status] ?? null;
+    const entry = getStatusDisplay(status);
+    if (!entry) return null;
+
+    return {
+        text: entry.label,
+        color: severityToColor(entry.severity),
+        variant: severityToVariant(entry.severity),
+    };
 }

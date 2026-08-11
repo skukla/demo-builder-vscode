@@ -15,6 +15,37 @@ export const LAST_UPDATE_CHECK_VERSION = 'lastUpdateCheckVersion';
 export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 
 /**
+ * Current version of the AI context bundle (skills, AGENTS.md/CLAUDE.md, MCP
+ * config, settings) the extension generates into each project.
+ *
+ * Hand-bump this integer whenever any AI-context template/skill changes — see
+ * skillsWriter / aiContextWriter / mcpConfigWriter. It is stamped into the
+ * project manifest (`Project.aiContextVersion`) each time the bundle is
+ * generated; the dashboard's on-open freshness check flags a project stale when
+ * its stamp is older than this constant and offers to regenerate.
+ */
+// v2: Developer Agent tooling (commerce-extensibility MCP + integration-starter-kit
+// skills) un-gated from EDS-only to all App Builder-adjacent projects — existing
+// mesh/headless projects need a regenerate to receive it.
+// v3: extend-app-builder-app skill + AGENTS.md "Adding Adobe API Access" section
+// (the list_console_apis / add_console_apis loop) for App Builder-adjacent projects.
+// v4: per-integration addressing (shell instancing) — a project can hold N AI-built
+// integrations, each under components/<id>/ with its own app.config.yaml + isolated
+// OpenWhisk package; extend-app-builder-app rewritten + AGENTS.md "App Builder
+// Integrations" section added (confirm WHICH integration before editing).
+// v5: AGENTS.md "Finding Adobe Documentation" section — routes agents to Adobe's
+// own Wayfinder doc router (adobe-commerce/wayfinder), pinned to a commit rather
+// than @main so upstream cannot alter a generated project's instructions without
+// our review. Re-pinning the SHA is itself a bundle change: bump this again.
+// v6: the generated PostToolUse git-sync hook actually FIRES. It read a
+// `$CLAUDE_TOOL_INPUT` env var Claude Code never sets, so `TOOL_FILE` was always
+// empty and the hook silently did nothing on every EDS project ever generated —
+// while sync-changes.md told the agent the hook handled commit+push, so it
+// skipped sync_storefront and AI-authored block edits never reached the live
+// site. Existing projects MUST regenerate to get a hook that works.
+export const AI_CONTEXT_VERSION = 6;
+
+/**
  * Component IDs for standardized component instance access
  *
  * These IDs match the component definitions in templates/components.json

@@ -33,9 +33,10 @@ interface CheckGitHubAppRequest {
      * Report what Helix says right now and stop — do NOT trigger a code sync.
      *
      * A genuine 404 means Helix has never indexed the repo, and the default path
-     * answers that by triggering a sync and polling for up to three minutes. Right
-     * mid-pipeline, unusable behind a step's Continue button, so the selection-time
-     * check sets this. Default false: the mid-pipeline gate keeps triggering.
+     * answers that by triggering a sync and polling for up to three minutes. That is
+     * right mid-pipeline and unusable behind a step's Continue button, so the
+     * selection-time check sets this. Default false: the mid-pipeline gate keeps
+     * triggering, because that is where the latency is affordable.
      */
     skipTrigger?: boolean;
 }
@@ -240,10 +241,10 @@ export async function checkGitHubApp(
             response.installUrl = githubAppService.getInstallUrl(request.owner, request.repo);
         }
 
-        // INFO, not debug: this verdict now gates the selection step's Continue, and
-        // the Debug Logs channel is what users paste when they are stuck. Logging the
-        // question at info and the answer at debug is why a colleague's log showed two
-        // "Checking kmanns/blaines" lines and no outcome at all (2026-07-28).
+        // INFO, not debug: this verdict gates the selection step, and the Debug Logs
+        // channel is what users paste when stuck. Logging the question at info and the
+        // answer at debug is why a colleague's log showed two "Checking <repo>" lines
+        // and no outcome at all (2026-07-28).
         context.logger.info(
             `[GitHub App Check] ${request.owner}/${request.repo}: installed=${result.isInstalled}, codeStatus=${result.codeStatus ?? 'none'}, codeSyncTriggered=${codeSyncTriggered}`,
         );

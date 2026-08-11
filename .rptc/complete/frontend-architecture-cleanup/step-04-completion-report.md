@@ -174,7 +174,7 @@ Other (3 files):
 
 ```
 commit b6c3486b427d17cdc9ae068b854b3ed0abd502b7
-Author: Steve Kukla <kukla@adobe.com>
+Author: Steve Kukla <<email>>
 Date:   Wed Oct 29 15:32:54 2025 -0400
 
     refactor: remove atomic design directories and duplicate src/core/ui/

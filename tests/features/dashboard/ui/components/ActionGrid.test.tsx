@@ -1,130 +1,21 @@
 /**
  * ActionGrid Component Tests
  *
- * Tests for the zone-based dashboard action grid component.
- * Verifies zone membership, gating, overflow menu contents, Delete isolation,
- * and interactions.
+ * Zone membership, gating and interactions. Two siblings hold the rest:
+ * ActionGrid-overflow.test.tsx (More menu contents, gating, Delete isolation)
+ * and ActionGrid-zoneStatus.test.tsx (the per-zone status lines).
+ *
+ * Mocks, fixtures and the SUT import live in ActionGrid.testUtils — importing
+ * ActionGrid here directly would bind it to real Spectrum (see that file).
  */
 
 import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ActionGrid } from '@/features/dashboard/ui/components/ActionGrid';
 import '@testing-library/jest-dom';
-
-// Mock Adobe React Spectrum components.
-// MenuTrigger/Menu/Item are mocked so overflow items render as clickable buttons:
-// each Item becomes a <button> that fires the Menu's onAction with the Item's key,
-// preserving the existing getByText(...).closest('button') click-assertion pattern.
-jest.mock('@adobe/react-spectrum', () => ({
-    ActionButton: ({ children, onPress, isDisabled, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} {...props}>
-            {children}
-        </button>
-    ),
-    Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
-    MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
-    Menu: ({ children, onAction }: any) => (
-        <div role="menu">
-            {React.Children.map(children, (child: any) => {
-                if (!child) return null;
-                const key = child.key ?? child.props?.['data-key'];
-                return (
-                    <button
-                        key={key}
-                        role="menuitem"
-                        onClick={() => onAction?.(key)}
-                    >
-                        {child.props?.children}
-                    </button>
-                );
-            })}
-        </div>
-    ),
-    Item: ({ children }: any) => <>{children}</>,
-}));
-
-// Mock Spectrum icons
-jest.mock('@spectrum-icons/workflow/PlayCircle', () => ({
-    __esModule: true,
-    default: () => <span data-testid="play-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/StopCircle', () => ({
-    __esModule: true,
-    default: () => <span data-testid="stop-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/Globe', () => ({
-    __esModule: true,
-    default: () => <span data-testid="globe-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/ViewList', () => ({
-    __esModule: true,
-    default: () => <span data-testid="viewlist-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/Refresh', () => ({
-    __esModule: true,
-    default: () => <span data-testid="refresh-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/Settings', () => ({
-    __esModule: true,
-    default: () => <span data-testid="settings-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/Delete', () => ({
-    __esModule: true,
-    default: () => <span data-testid="delete-icon" />,
-}));
-
-// Mock EDS-specific icons
-jest.mock('@spectrum-icons/workflow/PublishCheck', () => ({
-    __esModule: true,
-    default: () => <span data-testid="publish-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/More', () => ({
-    __esModule: true,
-    default: () => <span data-testid="more-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/Edit', () => ({
-    __esModule: true,
-    default: () => <span data-testid="edit-icon" />,
-}));
+import { ActionGrid, defaultProps, edsProps, getZone } from './ActionGrid.testUtils';
 
 describe('ActionGrid', () => {
-    const defaultProps = {
-        isRunning: false,
-        isStartDisabled: false,
-        isStopDisabled: false,
-        hasMesh: true,
-        isMeshActionDisabled: false,
-        isOpeningBrowser: false,
-        handleStartDemo: jest.fn(),
-        handleStopDemo: jest.fn(),
-        handleOpenBrowser: jest.fn(),
-        handleDeployMesh: jest.fn(),
-        handleConfigure: jest.fn(),
-        handleOpenDevConsole: jest.fn(),
-        handleDeleteProject: jest.fn(),
-        handleRename: jest.fn(),
-        handleCopyPath: jest.fn(),
-        handleExportProject: jest.fn(),
-        handleResetProject: jest.fn(),
-    };
-
-    const edsProps = {
-        ...defaultProps,
-        isEds: true,
-        authoringExperience: 'da-live-classic' as const,
-        handleOpenLiveSite: jest.fn(),
-        handleOpenDaLive: jest.fn(),
-        handleSyncStorefront: jest.fn(),
-        handleRepublishContent: jest.fn(),
-    };
-
-    /** Resolve the zone container element for a given data-zone value. */
-    const getZone = (container: HTMLElement, zone: string): HTMLElement => {
-        const el = container.querySelector(`[data-zone="${zone}"]`);
-        return el as HTMLElement;
-    };
-
     beforeEach(() => {
         jest.clearAllMocks();
     });
@@ -150,11 +41,12 @@ describe('ActionGrid', () => {
     });
 
     describe('Primary Cluster', () => {
-        it('should label the primary cluster "Primary"', () => {
+        it('renders NO visible zone heading (grouping is structural, via spacing)', () => {
             const { container } = render(<ActionGrid {...defaultProps} />);
 
             const primary = getZone(container, 'primary');
-            expect(within(primary).getByText('Primary')).toBeInTheDocument();
+            expect(primary).toBeInTheDocument();
+            expect(within(primary).queryByText('Primary')).not.toBeInTheDocument();
         });
 
         it('should place Start in the primary cluster when not running (non-EDS)', () => {
@@ -185,21 +77,22 @@ describe('ActionGrid', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
             const primary = getZone(container, 'primary');
-            expect(within(primary).getByText('Author in DA.live Classic')).toBeInTheDocument();
+            expect(within(primary).getByText('Author Content')).toBeInTheDocument();
         });
 
-        it('should label the Author button from the resolved experience (EW)', () => {
+        it('labels the Author button "Author Content" regardless of the resolved experience', () => {
             render(<ActionGrid {...edsProps} authoringExperience="experience-workspace" />);
 
-            expect(screen.getByText('Author in Experience Workspace')).toBeInTheDocument();
-            expect(screen.queryByText('Author in DA.live Classic')).not.toBeInTheDocument();
+            // Static label — the resolved experience still decides WHERE the
+            // action opens (backend-side), not the tile text.
+            expect(screen.getByRole('button', { name: 'Author Content' })).toBeInTheDocument();
+            expect(screen.queryByText(/Author in/)).not.toBeInTheDocument();
         });
 
         it('should not render an Author button for non-EDS projects', () => {
             render(<ActionGrid {...defaultProps} />);
 
-            expect(screen.queryByText('Author in DA.live Classic')).not.toBeInTheDocument();
-            expect(screen.queryByText('Author in Experience Workspace')).not.toBeInTheDocument();
+            expect(screen.queryByText('Author Content')).not.toBeInTheDocument();
         });
 
         it('should mark primary tiles with the hero accent modifier class', () => {
@@ -207,14 +100,18 @@ describe('ActionGrid', () => {
 
             const openButton = screen.getByText('Open in Browser').closest('button');
             // Mock renders UNSAFE_className as a lowercase attribute
-            expect(openButton?.getAttribute('unsafe_classname')).toContain('dashboard-action-button--hero');
+            expect(openButton?.getAttribute('unsafe_classname')).toContain(
+                'dashboard-action-button--hero'
+            );
         });
 
         it('should mark the Author button with the hero accent modifier class', () => {
             render(<ActionGrid {...edsProps} />);
 
-            const authorButton = screen.getByText('Author in DA.live Classic').closest('button');
-            expect(authorButton?.getAttribute('unsafe_classname')).toContain('dashboard-action-button--hero');
+            const authorButton = screen.getByText('Author Content').closest('button');
+            expect(authorButton?.getAttribute('unsafe_classname')).toContain(
+                'dashboard-action-button--hero'
+            );
         });
 
         it('should not render Start/Stop in the primary cluster for EDS projects', () => {
@@ -223,6 +120,46 @@ describe('ActionGrid', () => {
             const primary = getZone(container, 'primary');
             expect(within(primary).queryByText('Start')).not.toBeInTheDocument();
             expect(within(primary).queryByText('Stop')).not.toBeInTheDocument();
+        });
+    });
+
+    describe('Manage Commerce Tile', () => {
+        it('should place Manage Commerce in the primary cluster (non-EDS)', () => {
+            const { container } = render(<ActionGrid {...defaultProps} />);
+
+            const primary = getZone(container, 'primary');
+            expect(within(primary).getByText('Manage Commerce')).toBeInTheDocument();
+        });
+
+        it('should place Manage Commerce in the primary cluster for EDS projects', () => {
+            const { container } = render(<ActionGrid {...edsProps} />);
+
+            const primary = getZone(container, 'primary');
+            expect(within(primary).getByText('Manage Commerce')).toBeInTheDocument();
+        });
+
+        it('should mark the Manage Commerce tile with the hero accent modifier class', () => {
+            render(<ActionGrid {...defaultProps} />);
+
+            const adminButton = screen.getByText('Manage Commerce').closest('button');
+            expect(adminButton?.getAttribute('unsafe_classname')).toContain(
+                'dashboard-action-button--hero'
+            );
+        });
+
+        it('should not disable Manage Commerce while isOpeningBrowser (resolves backend-side)', () => {
+            render(<ActionGrid {...defaultProps} isOpeningBrowser={true} />);
+
+            expect(screen.getByText('Manage Commerce').closest('button')).not.toBeDisabled();
+        });
+
+        it('should call handleOpenAdminPanel when Manage Commerce clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            render(<ActionGrid {...defaultProps} />);
+
+            await user.click(screen.getByText('Manage Commerce'));
+
+            expect(defaultProps.handleOpenAdminPanel).toHaveBeenCalled();
         });
     });
 
@@ -239,25 +176,25 @@ describe('ActionGrid', () => {
             expect(getZone(container, 'storefront')).toBeInTheDocument();
         });
 
-        it('should label the storefront zone "Storefront"', () => {
+        it('renders NO visible zone heading (tile labels carry the meaning)', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
             const storefront = getZone(container, 'storefront');
-            expect(within(storefront).getByText('Storefront')).toBeInTheDocument();
+            expect(within(storefront).queryByText('Storefront')).not.toBeInTheDocument();
         });
 
-        it('should place Sync Storefront in the storefront zone', () => {
+        it('no longer holds Sync Storefront — that moved to the More menu', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
             const storefront = getZone(container, 'storefront');
-            expect(within(storefront).getByText('Sync Storefront')).toBeInTheDocument();
+            expect(within(storefront).queryByText('Sync Storefront')).not.toBeInTheDocument();
         });
 
         it('should not place the Author button in the storefront zone', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
             const storefront = getZone(container, 'storefront');
-            expect(within(storefront).queryByText('Author in DA.live Classic')).not.toBeInTheDocument();
+            expect(within(storefront).queryByText('Author Content')).not.toBeInTheDocument();
         });
 
         it('should not render Sync Storefront for non-EDS projects', () => {
@@ -266,21 +203,21 @@ describe('ActionGrid', () => {
             expect(screen.queryByText('Sync Storefront')).not.toBeInTheDocument();
         });
 
-        it('should not render the storefront zone when handleSyncStorefront is absent', () => {
+        it('survives without handleSyncStorefront — Republish is what the zone is for now', () => {
             const { handleSyncStorefront: _handleSyncStorefront, ...edsNoSync } = edsProps;
             const { container } = render(<ActionGrid {...edsNoSync} />);
 
-            expect(getZone(container, 'storefront')).not.toBeInTheDocument();
+            expect(getZone(container, 'storefront')).toBeInTheDocument();
             expect(screen.queryByText('Sync Storefront')).not.toBeInTheDocument();
         });
     });
 
     describe('Build Zone', () => {
-        it('should label the build zone "Build"', () => {
+        it('renders NO visible zone heading (grouping is structural, via spacing)', () => {
             const { container } = render(<ActionGrid {...defaultProps} />);
 
             const build = getZone(container, 'build');
-            expect(within(build).getByText('Build')).toBeInTheDocument();
+            expect(within(build).queryByText('Build')).not.toBeInTheDocument();
         });
 
         it('should place Configure in the build zone', () => {
@@ -290,196 +227,10 @@ describe('ActionGrid', () => {
             expect(within(build).getByText('Configure')).toBeInTheDocument();
         });
 
-        it('should place Deploy Mesh in the build zone when hasMesh', () => {
-            const { container } = render(<ActionGrid {...defaultProps} hasMesh={true} />);
-
-            const build = getZone(container, 'build');
-            expect(within(build).getByText('Deploy Mesh')).toBeInTheDocument();
-        });
-
-        it('should not render Deploy Mesh when hasMesh is false', () => {
-            render(<ActionGrid {...defaultProps} hasMesh={false} />);
+        it('never renders a Deploy Mesh tile (mesh lives in the integrations list, D3 Step 08)', () => {
+            render(<ActionGrid {...defaultProps} />);
 
             expect(screen.queryByText('Deploy Mesh')).not.toBeInTheDocument();
-        });
-    });
-
-    describe('Overflow Menu', () => {
-        it('should render a More overflow trigger with an accessible label', () => {
-            render(<ActionGrid {...defaultProps} />);
-
-            expect(screen.getByLabelText('More actions')).toBeInTheDocument();
-        });
-
-        it('should expose Dev Console inside the overflow menu', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Dev Console')).toBeInTheDocument();
-        });
-
-        it('should call handleOpenDevConsole when Dev Console menu item clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Dev Console'));
-
-            expect(defaultProps.handleOpenDevConsole).toHaveBeenCalled();
-        });
-
-        it('should expose Copy Path in the overflow menu', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Copy Path')).toBeInTheDocument();
-        });
-
-        it('should expose Export in the overflow menu', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Export')).toBeInTheDocument();
-        });
-
-        it('should expose Reset as the last overflow item', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            const items = within(menu).getAllByRole('menuitem');
-            expect(items[items.length - 1]).toHaveTextContent('Reset');
-        });
-
-        it('should call handleCopyPath when Copy Path clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Copy Path'));
-
-            expect(defaultProps.handleCopyPath).toHaveBeenCalled();
-        });
-
-        it('should call handleExportProject when Export clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Export'));
-
-            expect(defaultProps.handleExportProject).toHaveBeenCalled();
-        });
-
-        it('should call handleResetProject when Reset clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Reset'));
-
-            expect(defaultProps.handleResetProject).toHaveBeenCalled();
-        });
-    });
-
-    describe('Overflow Menu - Rename Gating', () => {
-        it('should show Rename for a stopped non-EDS project', () => {
-            const { container } = render(<ActionGrid {...defaultProps} isRunning={false} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Rename')).toBeInTheDocument();
-        });
-
-        it('should hide Rename for a running non-EDS project', () => {
-            const { container } = render(<ActionGrid {...defaultProps} isRunning={true} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).queryByText('Rename')).not.toBeInTheDocument();
-        });
-
-        it('should show Rename for an EDS project even when running', () => {
-            const { container } = render(<ActionGrid {...edsProps} isRunning={true} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Rename')).toBeInTheDocument();
-        });
-
-        it('should hide Rename when no handleRename is provided', () => {
-            const { handleRename: _handleRename, ...noRename } = defaultProps;
-            const { container } = render(<ActionGrid {...noRename} isRunning={false} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).queryByText('Rename')).not.toBeInTheDocument();
-        });
-
-        it('should call handleRename when Rename clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} isRunning={false} />);
-
-            await user.click(screen.getByText('Rename'));
-
-            expect(defaultProps.handleRename).toHaveBeenCalled();
-        });
-    });
-
-    describe('Overflow Menu - Republish Content Gating (EDS)', () => {
-        it('should show Republish Content for EDS projects', () => {
-            const { container } = render(<ActionGrid {...edsProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Republish Content')).toBeInTheDocument();
-        });
-
-        it('should hide Republish Content for non-EDS projects', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).queryByText('Republish Content')).not.toBeInTheDocument();
-        });
-
-        it('should hide Republish Content when handleRepublishContent is absent (EDS)', () => {
-            const { handleRepublishContent: _rc, ...edsNoRepublish } = edsProps;
-            const { container } = render(<ActionGrid {...edsNoRepublish} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).queryByText('Republish Content')).not.toBeInTheDocument();
-        });
-
-        it('should call handleRepublishContent when Republish Content clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...edsProps} />);
-
-            await user.click(screen.getByText('Republish Content'));
-
-            expect(edsProps.handleRepublishContent).toHaveBeenCalled();
-        });
-    });
-
-    describe('Delete Footer (isolated)', () => {
-        it('should render Delete outside all action zones', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const deleteFooter = getZone(container, 'delete');
-            expect(deleteFooter).toBeInTheDocument();
-            expect(within(deleteFooter).getByText('Delete')).toBeInTheDocument();
-        });
-
-        it('should not place Delete inside the build zone', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const build = getZone(container, 'build');
-            expect(within(build).queryByText('Delete')).not.toBeInTheDocument();
-        });
-
-        it('should mark Delete with the destructive modifier class', () => {
-            render(<ActionGrid {...defaultProps} />);
-
-            const deleteButton = screen.getByText('Delete').closest('button');
-            expect(deleteButton?.getAttribute('unsafe_classname')).toContain('dashboard-action-button--destructive');
-        });
-
-        it('should call handleDeleteProject when Delete clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Delete'));
-
-            expect(defaultProps.handleDeleteProject).toHaveBeenCalled();
         });
     });
 
@@ -531,13 +282,6 @@ describe('ActionGrid', () => {
     });
 
     describe('Mesh Action Disabled State', () => {
-        it('should disable Deploy Mesh when isMeshActionDisabled is true', () => {
-            render(<ActionGrid {...defaultProps} isMeshActionDisabled={true} />);
-
-            const deployButton = screen.getByText('Deploy Mesh').closest('button');
-            expect(deployButton).toBeDisabled();
-        });
-
         it('should disable Configure when isMeshActionDisabled is true', () => {
             render(<ActionGrid {...defaultProps} isMeshActionDisabled={true} />);
 
@@ -574,15 +318,6 @@ describe('ActionGrid', () => {
             expect(defaultProps.handleOpenBrowser).toHaveBeenCalled();
         });
 
-        it('should call handleDeployMesh when Deploy Mesh clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Deploy Mesh'));
-
-            expect(defaultProps.handleDeployMesh).toHaveBeenCalled();
-        });
-
         it('should call handleConfigure when Configure clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} />);
@@ -594,10 +329,6 @@ describe('ActionGrid', () => {
     });
 
     describe('EDS-Specific Interactions', () => {
-        beforeEach(() => {
-            jest.clearAllMocks();
-        });
-
         it('should call handleOpenLiveSite when Open in Browser clicked (EDS)', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...edsProps} />);
@@ -611,15 +342,17 @@ describe('ActionGrid', () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...edsProps} />);
 
-            await user.click(screen.getByText('Author in DA.live Classic'));
+            await user.click(screen.getByText('Author Content'));
 
             expect(edsProps.handleOpenDaLive).toHaveBeenCalled();
         });
 
-        it('labels the Author button for the resolved experience (EW)', () => {
+        it('keeps the static "Author Content" label for the EW experience too', () => {
             render(<ActionGrid {...edsProps} authoringExperience="experience-workspace" />);
 
-            expect(screen.getByText('Author in Experience Workspace')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Author Content' })).toHaveTextContent(
+                'Author Content'
+            );
         });
 
         it('renders no authoring-experience flip/switch control (relocated to Configure)', () => {

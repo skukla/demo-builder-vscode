@@ -86,7 +86,7 @@ describe('SingleColumnLayout', () => {
       const contentColumn = container.firstChild as HTMLDivElement;
 
       expect(contentColumn.style.padding).toBe('24px');
-      expect(contentColumn.style.maxWidth).toBe('800px');
+      expect(contentColumn.style.maxWidth).toBe('960px');
       expect(contentColumn.style.margin).toBe('0px');
     });
   });
@@ -116,7 +116,7 @@ describe('SingleColumnLayout', () => {
       );
       const contentColumn = container.firstChild as HTMLDivElement;
 
-      expect(contentColumn.style.maxWidth).toBe('800px');
+      expect(contentColumn.style.maxWidth).toBe('960px');
       expect(contentColumn.style.width).toBe('100%');
       expect(contentColumn.style.margin).toBe('0px');
       expect(contentColumn.style.padding).toBe('24px');

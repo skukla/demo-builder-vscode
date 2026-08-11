@@ -14,6 +14,7 @@ export const workspace = {
     getConfiguration: jest.fn().mockReturnValue({
         get: jest.fn().mockReturnValue(3000),
     }),
+    onDidChangeConfiguration: jest.fn(() => ({ dispose: jest.fn() })),
     workspaceFolders: [],
 };
 
@@ -33,19 +34,19 @@ export const Uri = {
     file: jest.fn((path: string) => ({
         fsPath: path,
         path,
-        toString: () => path
+        toString: () => path,
     })),
     parse: jest.fn((uri: string) => ({
         fsPath: uri,
         path: uri,
-        toString: () => uri
+        toString: () => uri,
     })),
     joinPath: jest.fn((base: any, ...paths: string[]) => {
         const joinedPath = [base.fsPath || base.path, ...paths].join('/');
         return {
             fsPath: joinedPath,
             path: joinedPath,
-            toString: () => joinedPath
+            toString: () => joinedPath,
         };
     }),
 };
@@ -189,14 +190,14 @@ export class EventEmitter {
                     if (index > -1) {
                         this._listeners.splice(index, 1);
                     }
-                }
+                },
             };
         };
     }
 
     fire(data?: any) {
         this._fireMethod(data);
-        this._listeners.forEach(listener => listener(data));
+        this._listeners.forEach((listener) => listener(data));
     }
 
     dispose() {

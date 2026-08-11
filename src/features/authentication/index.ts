@@ -29,16 +29,19 @@ export { withTiming } from './services/performanceTracker';
 // Handlers - Explicit named exports (no wildcards)
 export { handleCheckAuth, handleAuthenticate } from './handlers/authenticationHandlers';
 export { handleReDetectContext } from './handlers/organizationHandlers';
+export { handleForcedOrgSwitch } from './handlers/orgSwitchHandler';
 export {
     handleEnsureOrgSelected,
     handleGetProjects,
     handleSelectProject,
     handleCheckProjectApis,
+    handleCreateAdobeProject,
 } from './handlers/projectHandlers';
+export { handleDeleteAdobeProject } from './handlers/deleteAdobeProjectHandler';
 export {
     handleGetWorkspaces,
     handleSelectWorkspace,
-    handleCreateWorkspaceCredential,
+    handleCreateAdobeWorkspace,
 } from './handlers/workspaceHandlers';
 
 // Types

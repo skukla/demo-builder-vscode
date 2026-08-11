@@ -2,7 +2,8 @@ import type { AuthCacheManager } from './authCacheManager';
 import { AuthenticationErrorFormatter } from './authenticationErrorFormatter';
 import { getLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
-import { TIMEOUTS, formatMinutes } from '@/core/utils';
+import { SingleFlight, TIMEOUTS, formatMinutes } from '@/core/utils';
+import { sleep } from '@/core/utils/sleep';
 import { toAppError, isTimeout } from '@/types/errors';
 import type { Logger } from '@/types/logger';
 import { toError } from '@/types/typeGuards';
@@ -21,6 +22,16 @@ export class TokenManager {
      * @param cacheManager - Optional cache manager for token caching
      * @param logger - Optional logger for dependency injection (defaults to getLogger())
      */
+    /**
+     * Shared in-flight token inspection. Distinct from the inspection CACHE, which
+     * can only help callers arriving after a fetch has completed.
+     */
+    private readonly inspectionFlight = new SingleFlight<{
+        valid: boolean;
+        expiresIn: number;
+        token?: string;
+    }>();
+
     constructor(
         private commandManager: CommandExecutor,
         cacheManager?: AuthCacheManager,
@@ -77,7 +88,21 @@ export class TokenManager {
             }
         }
 
-        // Cache miss or expired, fetch fresh
+        // The fetch below spawns the whole `aio` Node CLI (~3.7s of process start +
+        // module load) to read one config value. The cache only helps callers
+        // arriving AFTER it completes; concurrent cold-cache callers would each spawn
+        // their own CLI, and there are 8 isAuthenticated() call sites in the
+        // dashboard/creation handlers. Preventive — the sibling org-list path was
+        // observed stampeding (2026-07-31) while this one happened to serialise.
+        return this.inspectionFlight.run(() => this.fetchTokenInspection());
+    }
+
+    /** The uncached, retrying CLI read behind {@link inspectToken}'s single-flight. */
+    private async fetchTokenInspection(): Promise<{
+        valid: boolean;
+        expiresIn: number;
+        token?: string;
+    }> {
         const maxRetries = 3;
 
         // Retry loop with exponential backoff
@@ -161,7 +186,7 @@ export class TokenManager {
                     // Exponential backoff: 500ms, 1000ms, 2000ms
                     const backoffMs = TIMEOUTS.TOKEN_RETRY_BASE * Math.pow(2, attempt - 1);
                     this.logger.warn(`[Token] Timeout on attempt ${attempt}/${maxRetries}, retrying in ${backoffMs}ms...`);
-                    await new Promise(resolve => setTimeout(resolve, backoffMs));
+                    await sleep(backoffMs);
                     continue; // Retry
                 }
 

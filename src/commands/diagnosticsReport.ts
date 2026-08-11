@@ -166,17 +166,22 @@ function describeAdminApi(admin: NonNullable<CredentialProbeResult['adminApi']>)
  * makes the summary safe to paste into a ticket.
  */
 function credentialLines(cred: CredentialProbeResult): string[] {
-    const lines = ['', 'GitHub / AEM credential:', `  Signed in as: ${cred.github?.login ?? 'not signed in'}`];
+    const lines = [
+        '',
+        'GitHub / AEM credential:',
+        `  Signed in as: ${cred.github?.login ?? 'not signed in'}`,
+    ];
 
     if (cred.github?.tokenType) lines.push(`  Credential type: ${cred.github.tokenType}`);
-    if (cred.github?.grantedScopes) lines.push(`  Granted scopes: ${cred.github.grantedScopes.join(', ')}`);
-    if (cred.repo) lines.push(`  Write access to ${cred.repo.fullName}: ${describeWriteAccess(cred.repo)}`);
+    if (cred.github?.grantedScopes)
+        lines.push(`  Granted scopes: ${cred.github.grantedScopes.join(', ')}`);
+    if (cred.repo)
+        lines.push(`  Write access to ${cred.repo.fullName}: ${describeWriteAccess(cred.repo)}`);
     if (cred.adminApi) lines.push(`  AEM admin API: ${describeAdminApi(cred.adminApi)}`);
 
     lines.push(`  → ${cred.verdict}`);
     return lines;
 }
-
 
 /**
  * Render the Configuration Service probe.
@@ -205,11 +210,35 @@ function storefrontLines(probe: StorefrontProbeResult): string[] {
         lines.push(`  Smart 404 handler (delayed.js): ${mark(probe.smart404Snippet)}`);
         lines.push(`  Eager redirect (404.html): ${mark(probe.eagerRedirect)}`);
         if (probe.pdp) {
+            // The SKU is printed so the reader can repeat the request by hand —
+            // the first thing anyone wants after seeing this line go red.
             lines.push(
-                `  PDP ${probe.pdp.path}: HTTP ${probe.pdp.status}`
-                    + ` (${probe.pdp.prerendered ? 'prerendered' : 'not prerendered'})`,
+                `  PDP ${probe.pdp.path} (SKU ${probe.pdp.sku}): ` +
+                    `HTTP ${probe.pdp.status} (${probe.pdp.served ? 'served' : 'NOT SERVED'})`,
+            );
+        } else {
+            lines.push('  PDP: not checked (no catalog SKU available)');
+        }
+        if (probe.authoredTemplate) {
+            // Labelled as the overlay's source, not as a PDP. Calling this line
+            // "PDP … (prerendered)" is what let a broken storefront read clean.
+            lines.push(
+                `  Overlay source template ${probe.authoredTemplate.path}: ` +
+                    `HTTP ${probe.authoredTemplate.status}` +
+                    ` (${probe.authoredTemplate.published ? 'published' : 'NOT PUBLISHED'})`,
             );
         }
+    }
+    if (probe.overlay) {
+        // Reported, not judged. The reader compares this sha to
+        // accs-discovery-service's git log; the extension has no expectation to
+        // assert against, and inventing one would go red on every legitimate
+        // deploy of that action.
+        lines.push(
+            probe.overlay.unknown
+                ? '  Overlay action build: unknown (deployed action predates /__version)'
+                : `  Overlay action build: ${probe.overlay.sha ?? '?'} (v${probe.overlay.version ?? '?'})`,
+        );
     }
     lines.push(`  \u2192 ${probe.verdict}`);
     return lines;

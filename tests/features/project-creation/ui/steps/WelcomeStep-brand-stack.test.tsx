@@ -33,10 +33,15 @@ describe('WelcomeStep - Package + Stack Selection', () => {
             icon: 'default',
             configDefaults: {},
             storefronts: {
-                'headless': {
+                headless: {
                     name: 'Default Headless',
                     description: 'Default NextJS storefront',
-                    source: { type: 'git', url: 'https://github.com/test/default', branch: 'main', gitOptions: { shallow: true } },
+                    source: {
+                        type: 'git',
+                        url: 'https://github.com/test/default',
+                        branch: 'main',
+                        gitOptions: { shallow: true },
+                    },
                 },
             },
         },
@@ -52,10 +57,15 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                 ADOBE_COMMERCE_STORE_VIEW_CODE: 'citisignal_us',
             },
             storefronts: {
-                'headless': {
+                headless: {
                     name: 'CitiSignal Headless',
                     description: 'CitiSignal NextJS storefront',
-                    source: { type: 'git', url: 'https://github.com/test/citisignal', branch: 'main', gitOptions: { shallow: true } },
+                    source: {
+                        type: 'git',
+                        url: 'https://github.com/test/citisignal',
+                        branch: 'main',
+                        gitOptions: { shallow: true },
+                    },
                 },
             },
         },
@@ -108,9 +118,9 @@ describe('WelcomeStep - Package + Stack Selection', () => {
         jest.clearAllMocks();
     });
 
-    describe('Proceed Validation - Package and Stack Required', () => {
-        it('should disable Continue until both package AND stack are selected', () => {
-            // Given: A WelcomeStep with packages and stacks but neither selected
+    describe('Proceed Validation - Package Required (stack chosen on Project Builder step)', () => {
+        it('should disable Continue until a package is selected', () => {
+            // Given: A WelcomeStep with packages but none selected
             const stateWithNoSelection = {
                 ...baseState,
                 projectName: 'valid-project',
@@ -134,8 +144,8 @@ describe('WelcomeStep - Package + Stack Selection', () => {
             expect(mockSetCanProceed).toHaveBeenCalledWith(false);
         });
 
-        it('should disable Continue when only package is selected', () => {
-            // Given: A package is selected but no stack
+        it('should enable Continue when a package is selected (stack NOT required here)', () => {
+            // Given: A package is selected, no stack (stack is chosen on the next step)
             const stateWithPackageOnly = {
                 ...baseState,
                 projectName: 'valid-project',
@@ -155,12 +165,12 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                 />
             );
 
-            // Then: setCanProceed should be called with false
-            expect(mockSetCanProceed).toHaveBeenCalledWith(false);
+            // Then: setCanProceed should be called with true (package gate only)
+            expect(mockSetCanProceed).toHaveBeenCalledWith(true);
         });
 
-        it('should disable Continue when only stack is selected', () => {
-            // Given: A stack is selected but no package
+        it('should still disable Continue when no package is selected even if a stack is set', () => {
+            // Given: A stack is set but no package
             const stateWithStackOnly = {
                 ...baseState,
                 projectName: 'valid-project',
@@ -184,38 +194,13 @@ describe('WelcomeStep - Package + Stack Selection', () => {
             expect(mockSetCanProceed).toHaveBeenCalledWith(false);
         });
 
-        it('should enable Continue when both package AND stack are selected with valid project name', () => {
-            // Given: Both package and stack are selected
-            const stateWithBothSelected = {
-                ...baseState,
-                projectName: 'valid-project',
-                selectedPackage: 'citisignal',
-                selectedStack: 'headless',
-            };
-
-            renderWithProvider(
-                <WelcomeStep
-                    state={stateWithBothSelected as WizardState}
-                    updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
-                    setCanProceed={mockSetCanProceed}
-                    packages={mockPackages}
-                    stacks={mockStacks}
-                />
-            );
-
-            // Then: setCanProceed should be called with true
-            expect(mockSetCanProceed).toHaveBeenCalledWith(true);
-        });
-
-        it('should disable Continue even with package AND stack selected if project name is invalid', () => {
-            // Given: Both package and stack are selected but project name is invalid
+        it('should disable Continue with a package selected if project name is invalid', () => {
+            // Given: A package is selected but project name is invalid
             const stateWithInvalidName = {
                 ...baseState,
                 projectName: 'AB', // Too short
                 selectedPackage: 'citisignal',
-                selectedStack: 'headless',
+                selectedStack: undefined,
             };
 
             renderWithProvider(
@@ -259,7 +244,7 @@ describe('WelcomeStep - Package + Stack Selection', () => {
 
             // When: Package cards are rendered and a package is clicked
             const packageCards = screen.getAllByTestId('package-card');
-            const citisignalCard = packageCards.find(card =>
+            const citisignalCard = packageCards.find((card) =>
                 card.textContent?.includes('CitiSignal')
             );
             citisignalCard?.click();
@@ -270,19 +255,20 @@ describe('WelcomeStep - Package + Stack Selection', () => {
             );
         });
 
-        it('should update wizardState with selectedStack when stack is selected via modal', async () => {
-            // Given: A WelcomeStep with stacks - uses BrandGallery with modal pattern
-            // Stack selection happens in a modal after clicking a package card
-            const stateWithPackageSelected = {
+        it('should clear integration selections AND their API picks on a package change', () => {
+            // Given: a different package is already selected with integrations + picks
+            const stateWithSelections = {
                 ...baseState,
                 projectName: 'valid-project',
-                selectedPackage: 'citisignal',
-                selectedStack: undefined,
+                selectedPackage: 'other-brand',
+                selectedStack: 'headless-paas',
+                selectedAppBuilderComponents: ['erp-sync'],
+                selectedConsoleApis: { 'erp-sync': ['AnalyticsSDK'] },
             };
 
             renderWithProvider(
                 <WelcomeStep
-                    state={stateWithPackageSelected as WizardState}
+                    state={stateWithSelections as WizardState}
                     updateState={mockUpdateState}
                     onNext={mockOnNext}
                     onBack={mockOnBack}
@@ -292,9 +278,105 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                 />
             );
 
-            // Note: Stack selection requires opening modal by clicking package card
-            // This is a simplified test - full modal interaction would require more setup
-            expect(screen.getAllByTestId('package-card')).toHaveLength(2);
+            const packageCards = screen.getAllByTestId('package-card');
+            const citisignalCard = packageCards.find((card) =>
+                card.textContent?.includes('CitiSignal')
+            );
+            citisignalCard?.click();
+
+            // Then: orphaned API picks never survive a package change (they would
+            // otherwise silently serialize into the new project's subscribe union)
+            expect(mockUpdateState).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    selectedPackage: 'citisignal',
+                    selectedAppBuilderComponents: [],
+                    selectedConsoleApis: undefined,
+                })
+            );
+        });
+
+        it('clears the backend, block libraries, and commerce verdicts on a package change', () => {
+            // Regression: a package change must reset ALL architecture-derived state —
+            // including selectedBackend. Leaving it set left the Commerce Backend
+            // sub-step "committed", so onStackSelect never re-fired and the stack +
+            // mesh deps + block libraries were never re-seeded (no API Mesh option, no
+            // block-library selection) after switching packages away and back.
+            const stateWithSelections = {
+                ...baseState,
+                projectName: 'valid-project',
+                selectedPackage: 'other-brand',
+                selectedStack: 'edge-delivery',
+                selectedBackend: 'adobe-commerce-accs',
+                selectedOptionalDependencies: ['commerce-mesh'],
+                selectedBlockLibraries: ['isle5'],
+                commerceConnectValid: true,
+                commerceStoreViewChosen: true,
+                committedCommerceSteps: ['backend'],
+            };
+
+            renderWithProvider(
+                <WelcomeStep
+                    state={stateWithSelections as WizardState}
+                    updateState={mockUpdateState}
+                    onNext={mockOnNext}
+                    onBack={mockOnBack}
+                    setCanProceed={mockSetCanProceed}
+                    packages={mockPackages}
+                    stacks={mockStacks}
+                />
+            );
+
+            const packageCards = screen.getAllByTestId('package-card');
+            const citisignalCard = packageCards.find((card) =>
+                card.textContent?.includes('CitiSignal')
+            );
+            citisignalCard?.click();
+
+            expect(mockUpdateState).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    selectedPackage: 'citisignal',
+                    selectedStack: undefined,
+                    selectedBackend: undefined,
+                    selectedOptionalDependencies: [],
+                    selectedBlockLibraries: undefined,
+                    commerceConnectValid: false,
+                    commerceStoreViewChosen: false,
+                    committedCommerceSteps: [],
+                })
+            );
+        });
+
+        it('should NOT open a modal when a package card is clicked (mark-and-Continue)', () => {
+            // Given: A WelcomeStep — clicking a package selects it; no architecture modal
+            const stateWithNoSelection = {
+                ...baseState,
+                projectName: 'valid-project',
+                selectedPackage: undefined,
+                selectedStack: undefined,
+            };
+
+            renderWithProvider(
+                <WelcomeStep
+                    state={stateWithNoSelection as WizardState}
+                    updateState={mockUpdateState}
+                    onNext={mockOnNext}
+                    onBack={mockOnBack}
+                    setCanProceed={mockSetCanProceed}
+                    packages={mockPackages}
+                    stacks={mockStacks}
+                />
+            );
+
+            // When: A package card is clicked
+            const packageCards = screen.getAllByTestId('package-card');
+            packageCards[0].click();
+
+            // Then: No dialog/modal is rendered (stack selection moved to next step)
+            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+            // And: The package was selected
+            expect(mockUpdateState).toHaveBeenCalledWith(
+                expect.objectContaining({ selectedPackage: expect.any(String) })
+            );
         });
     });
 

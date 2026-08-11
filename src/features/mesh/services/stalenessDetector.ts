@@ -15,17 +15,33 @@ import * as path from 'path';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getLogger } from '@/core/logging';
 import { getFrontendEnvVars } from '@/core/state';
+import { getKeyedMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
+import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
+import { applyBackendOwnedScope } from '@/features/components/config/backendOwnedScope';
 import {
-    PAAS_URL, PAAS_GRAPHQL_ENDPOINT, PAAS_ENVIRONMENT_ID,
-    PAAS_WEBSITE_CODE, PAAS_STORE_VIEW_CODE, PAAS_STORE_CODE,
-    CATALOG_SERVICE_ENDPOINT, CATALOG_API_KEY,
-    ACCS_GRAPHQL_ENDPOINT, ACCS_WEBSITE_CODE, ACCS_STORE_CODE,
-    ACCS_STORE_VIEW_CODE, ACCS_CUSTOMER_GROUP,
+    PAAS_URL,
+    PAAS_GRAPHQL_ENDPOINT,
+    PAAS_ENVIRONMENT_ID,
+    PAAS_WEBSITE_CODE,
+    PAAS_STORE_VIEW_CODE,
+    PAAS_STORE_CODE,
+    CATALOG_SERVICE_ENDPOINT,
+    CATALOG_API_KEY,
+    ACCS_GRAPHQL_ENDPOINT,
+    ACCS_WEBSITE_CODE,
+    ACCS_STORE_CODE,
+    ACCS_STORE_VIEW_CODE,
+    ACCS_CUSTOMER_GROUP,
 } from '@/features/components/config/envVarKeys';
 import type { MeshState, MeshChanges } from '@/features/mesh/services/types';
 import { Project } from '@/types';
 import type { Logger } from '@/types/logger';
-import { getMeshComponentInstance, parseJSON, hasEntries, getComponentInstancesByType } from '@/types/typeGuards';
+import {
+    getMeshComponentInstance,
+    parseJSON,
+    hasEntries,
+    getComponentInstancesByType,
+} from '@/types/typeGuards';
 
 export type { MeshState, MeshChanges };
 
@@ -191,7 +207,9 @@ export function getMeshEnvVars(componentConfig: Record<string, unknown>): Record
  * @param meshComponentPath - Path to the mesh component directory
  * @returns Record of mesh env var key-value pairs (empty object if file doesn't exist)
  */
-export async function readMeshEnvVarsFromFile(meshComponentPath: string): Promise<Record<string, string>> {
+export async function readMeshEnvVarsFromFile(
+    meshComponentPath: string,
+): Promise<Record<string, string>> {
     const result: Record<string, string> = {};
 
     try {
@@ -217,8 +235,10 @@ export async function readMeshEnvVarsFromFile(meshComponentPath: string): Promis
             let value = trimmedLine.substring(equalsIndex + 1).trim();
 
             // Remove surrounding quotes if present
-            if ((value.startsWith('"') && value.endsWith('"')) ||
-                (value.startsWith("'") && value.endsWith("'"))) {
+            if (
+                (value.startsWith('"') && value.endsWith('"')) ||
+                (value.startsWith("'") && value.endsWith("'"))
+            ) {
                 value = value.slice(1, -1);
             }
 
@@ -269,7 +289,16 @@ async function fetchDeployedMeshConfigImpl(logger: Logger): Promise<Record<strin
         });
 
         // Parse the JSON response
-        const meshData = parseJSON<{ meshConfig?: { sources?: { name?: string; handler?: { graphql?: { endpoint?: string; operationHeaders?: Record<string, string> } } }[] } }>(result.stdout);
+        const meshData = parseJSON<{
+            meshConfig?: {
+                sources?: {
+                    name?: string;
+                    handler?: {
+                        graphql?: { endpoint?: string; operationHeaders?: Record<string, string> };
+                    };
+                }[];
+            };
+        }>(result.stdout);
         if (!meshData) {
             logger.debug('[Mesh Staleness] Failed to parse mesh data');
             return null;
@@ -283,12 +312,14 @@ async function fetchDeployedMeshConfigImpl(logger: Logger): Promise<Record<strin
             for (const source of meshData.meshConfig.sources) {
                 // Commerce GraphQL endpoint (source name: 'magento')
                 if (source.name === 'magento' && source.handler?.graphql?.endpoint) {
-                    deployedEnvVars.ADOBE_COMMERCE_GRAPHQL_ENDPOINT = source.handler.graphql.endpoint;
+                    deployedEnvVars.ADOBE_COMMERCE_GRAPHQL_ENDPOINT =
+                        source.handler.graphql.endpoint;
                 }
 
                 // Catalog Service endpoint (source name: 'catalog')
                 if (source.name === 'catalog' && source.handler?.graphql?.endpoint) {
-                    deployedEnvVars.ADOBE_CATALOG_SERVICE_ENDPOINT = source.handler.graphql.endpoint;
+                    deployedEnvVars.ADOBE_CATALOG_SERVICE_ENDPOINT =
+                        source.handler.graphql.endpoint;
                 }
 
                 // Extract API key from catalog source headers
@@ -308,7 +339,6 @@ async function fetchDeployedMeshConfigImpl(logger: Logger): Promise<Record<strin
         });
 
         return deployedEnvVars;
-
     } catch (error) {
         logger.trace('[Mesh Staleness] Failed to fetch deployed mesh config:', error);
         return null;
@@ -325,7 +355,10 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
 /**
  * Implementation: Calculate hash of mesh source files
  */
-async function calculateMeshSourceHashImpl(meshComponentPath: string, logger: Logger): Promise<string | null> {
+async function calculateMeshSourceHashImpl(
+    meshComponentPath: string,
+    logger: Logger,
+): Promise<string | null> {
     try {
         const resolversDir = path.join(meshComponentPath, 'build', 'resolvers');
         const schemasDir = path.join(meshComponentPath, 'schema');
@@ -344,7 +377,7 @@ async function calculateMeshSourceHashImpl(meshComponentPath: string, logger: Lo
         // Include all resolver files
         try {
             const resolverFiles = (await fsPromises.readdir(resolversDir))
-                .filter(f => f.endsWith('.js'))
+                .filter((f) => f.endsWith('.js'))
                 .sort(); // Sort for consistent hash
 
             for (const file of resolverFiles) {
@@ -359,7 +392,7 @@ async function calculateMeshSourceHashImpl(meshComponentPath: string, logger: Lo
         // Include all schema files
         try {
             const schemaFiles = (await fsPromises.readdir(schemasDir))
-                .filter(f => f.endsWith('.graphql'))
+                .filter((f) => f.endsWith('.graphql'))
                 .sort();
 
             for (const file of schemaFiles) {
@@ -393,16 +426,30 @@ export async function calculateMeshSourceHash(meshComponentPath: string): Promis
  * Implementation: Get current mesh state from project
  */
 function getCurrentMeshStateImpl(project: Project): MeshState | null {
-    // Return the stored mesh state (from last deployment)
-    // This represents the DEPLOYED configuration, not the current config
-    if (!project.meshState) {
+    // Return the stored mesh state (from last deployment) — the DEPLOYED
+    // configuration, not the current config. Keyed-first (ADR-011 D3 Step 06):
+    // the keyed mesh appBuilderComponents entry carries the baseline; fall back
+    // per-field to the legacy meshState for entries written before the keyed
+    // model carried these fields (retired write-side in Step 07).
+    const keyed = getKeyedMeshAppBuilderComponent(project);
+    const legacy = project.meshState;
+
+    const envVars = keyed?.envVars ?? legacy?.envVars;
+    const sourceHash = keyed?.sourceHash ?? legacy?.sourceHash;
+    const lastDeployed = keyed?.lastDeployed ?? legacy?.lastDeployed;
+
+    // No legacy state and no deployment evidence on the keyed entry (e.g. an
+    // undeployed entry with no runtime fields) → null, preserving the
+    // "fresh deployment needed" path. Any legacy meshState keeps returning a
+    // state exactly as before.
+    if (!legacy && envVars === undefined && sourceHash == null && !lastDeployed) {
         return null;
     }
 
     return {
-        envVars: project.meshState.envVars || {},
-        sourceHash: project.meshState.sourceHash || null,
-        lastDeployed: project.meshState.lastDeployed ? new Date(project.meshState.lastDeployed) : null,
+        envVars: envVars || {},
+        sourceHash: sourceHash || null,
+        lastDeployed: lastDeployed ? new Date(lastDeployed) : null,
     };
 }
 
@@ -411,6 +458,29 @@ function getCurrentMeshStateImpl(project: Project): MeshState | null {
  */
 export function getCurrentMeshState(project: Project): MeshState | null {
     return getCurrentMeshStateImpl(project);
+}
+
+/**
+ * Flatten every component's config into one record, FIRST definition winning.
+ *
+ * Mirrors `envFileGenerator.resolveFromComponentConfigs`, which walks
+ * `componentConfigs` and returns the first component that defines a key. The
+ * detector must agree with it: whatever that generator writes into the mesh
+ * `.env` is what the next deploy ships, so any other tiebreak here means
+ * comparing the deployed baseline against a value that will never be written.
+ *
+ * @param componentConfigs - the project's component configs
+ * @returns one flat record, first-definition-wins
+ */
+function flattenFirstWins(componentConfigs: Record<string, unknown>): Record<string, unknown> {
+    const flat: Record<string, unknown> = {};
+    for (const config of Object.values(componentConfigs)) {
+        if (!config || typeof config !== 'object') continue;
+        for (const [key, value] of Object.entries(config as Record<string, unknown>)) {
+            if (!(key in flat)) flat[key] = value;
+        }
+    }
+    return flat;
 }
 
 /**
@@ -453,16 +523,24 @@ async function detectMeshChangesImpl(
     let didPopulateFromDeployedConfig = false;
 
     if (!envVarsExist) {
-        logger.debug('[Mesh Staleness] meshState.envVars is empty, attempting to fetch deployed config from Adobe I/O');
+        logger.debug(
+            '[Mesh Staleness] meshState.envVars is empty, attempting to fetch deployed config from Adobe I/O',
+        );
 
         const deployedConfig = await fetchDeployedMeshConfigImpl(logger);
 
         if (deployedConfig) {
             // Successfully fetched deployed config - use it as baseline
-            logger.debug('[Mesh Staleness] Successfully fetched deployed config, populating meshState.envVars');
+            logger.debug(
+                '[Mesh Staleness] Successfully fetched deployed config, populating the keyed baseline',
+            );
 
-            if (project.meshState) {
-                project.meshState.envVars = deployedConfig;
+            // The fetched baseline lands on the keyed mesh entry — the single
+            // durable model (ADR-011 D3 Step 07; the legacy meshState write-side
+            // is retired, readers are keyed-first).
+            const keyedMesh = getKeyedMeshAppBuilderComponent(project);
+            if (keyedMesh) {
+                keyedMesh.envVars = deployedConfig;
             }
             didPopulateFromDeployedConfig = true;
 
@@ -472,10 +550,12 @@ async function detectMeshChangesImpl(
         } else {
             // Failed to fetch - can't verify deployed state
             // Conservative approach: Don't force redeployment, flag as unknown
-            logger.warn('[Mesh Staleness] Failed to fetch deployed config, unable to verify deployment status');
+            logger.warn(
+                '[Mesh Staleness] Failed to fetch deployed config, unable to verify deployment status',
+            );
             return {
-                hasChanges: false,        // Don't force redeployment
-                envVarsChanged: false,    // No changes detected
+                hasChanges: false, // Don't force redeployment
+                envVarsChanged: false, // No changes detected
                 sourceFilesChanged: false,
                 changedEnvVars: [],
                 unknownDeployedState: true, // Flag as unknown
@@ -483,21 +563,37 @@ async function detectMeshChangesImpl(
         }
     }
 
-    // Check env vars changes - merge ALL componentConfigs for cross-boundary values
-    // Mesh env vars like ADOBE_COMMERCE_GRAPHQL_ENDPOINT are stored under backend component,
-    // not the mesh component, so we need to look across all configs
-    const allConfigs: Record<string, unknown> = {};
-    for (const config of Object.values(newComponentConfigs)) {
-        if (config && typeof config === 'object') {
-            Object.assign(allConfigs, config as Record<string, unknown>);
-        }
-    }
+    // What the mesh `.env` WOULD hold if regenerated right now.
+    //
+    // The baseline this is compared against was read FROM that `.env`, so the
+    // only correct question is "would the generator write something different?".
+    // That makes `envFileGenerator.resolveFromComponentConfigs` the spec, and
+    // this must resolve values exactly as it does:
+    //
+    //   1. flatten across ALL components, FIRST definition wins — cross-boundary
+    //      vars the mesh needs (the Commerce endpoint) live on the backend, and
+    //      the generator takes the first component that defines a key;
+    //   2. then the BACKEND's copy for the store scope, which every other
+    //      component only carries as a duplicate.
+    //
+    // It used to flatten LAST-wins — the opposite of the generator — so for the
+    // six duplicated non-scope keys the detector could compare against a value
+    // the generator would never write. 12 of the 13 watched keys are declared by
+    // more than one component, so this is most of the watch list.
+    const allConfigs = flattenFirstWins(newComponentConfigs);
+
+    const backendId = project.componentSelections?.backend;
+    const backendConfig = backendId
+        ? (newComponentConfigs[backendId] as Record<string, unknown> | undefined)
+        : undefined;
+    applyBackendOwnedScope(allConfigs, backendConfig);
+
     const newEnvVars = getMeshEnvVarsImpl(allConfigs);
 
     // Compare only the env vars relevant to this mesh type (PaaS or ACCS)
     // This prevents false mismatches from cross-backend vars in componentConfigs
     const changedEnvVars: string[] = [];
-    relevantEnvVars.forEach(key => {
+    relevantEnvVars.forEach((key) => {
         // Normalize: treat missing keys as empty strings for robust comparison
         const oldValue = currentState.envVars[key] || '';
         const newValue = newEnvVars[key] || '';
@@ -511,7 +607,10 @@ async function detectMeshChangesImpl(
     const envVarsChanged = changedEnvVars.length > 0;
 
     if (envVarsChanged) {
-        logger.debug(`[Mesh Staleness] Detected ${changedEnvVars.length} changed env vars:`, changedEnvVars);
+        logger.debug(
+            `[Mesh Staleness] Detected ${changedEnvVars.length} changed env vars:`,
+            changedEnvVars,
+        );
     }
 
     // Check source files changes
@@ -527,7 +626,9 @@ async function detectMeshChangesImpl(
     }
 
     if (sourceFilesChanged) {
-        logger.debug(`[Mesh Staleness] Source hash changed: "${currentState.sourceHash}" -> "${newSourceHash}"`);
+        logger.debug(
+            `[Mesh Staleness] Source hash changed: "${currentState.sourceHash}" -> "${newSourceHash}"`,
+        );
     }
 
     logger.debug('[Mesh Staleness] Result:', {
@@ -541,7 +642,7 @@ async function detectMeshChangesImpl(
         envVarsChanged,
         sourceFilesChanged,
         changedEnvVars,
-        shouldSaveProject: didPopulateFromDeployedConfig,  // Save if we fetched and populated config
+        shouldSaveProject: didPopulateFromDeployedConfig, // Save if we fetched and populated config
     };
 }
 
@@ -565,7 +666,11 @@ export async function detectMeshChanges(
  * @param endpoint - The deployed mesh endpoint URL (authoritative)
  * @param logger - Logger instance
  */
-async function updateMeshStateImpl(project: Project, endpoint: string | undefined, logger: Logger): Promise<void> {
+async function updateMeshStateImpl(
+    project: Project,
+    endpoint: string | undefined,
+    logger: Logger,
+): Promise<void> {
     const meshInstance = getMeshComponentInstance(project);
     if (!meshInstance?.path) {
         logger.debug('[Mesh State] No mesh component path, skipping state update');
@@ -576,16 +681,29 @@ async function updateMeshStateImpl(project: Project, endpoint: string | undefine
     // This is the actual deployed state since .env file is used during mesh deployment
     const envVars = await readMeshEnvVarsFromFile(meshInstance.path);
     const sourceHash = await calculateMeshSourceHashImpl(meshInstance.path, logger);
+    const lastDeployed = new Date().toISOString();
 
-    project.meshState = {
+    // Writer chokepoint (ADR-011 D3 Steps 07+09): every mesh deploy path
+    // (creation, EDS reset, project reset, headless deploy) persists its state
+    // through this function — landing the outcome on the KEYED mesh entry here
+    // covers all of them at once. The keyed entry is the single durable model;
+    // the singular meshState write-side is retired (Step 07).
+    recordDeployOutcome(project, 'mesh', meshInstance.id, {
+        status: 'deployed',
+        endpoint,
         envVars,
         sourceHash,
-        lastDeployed: new Date().toISOString(),
-        endpoint, // AUTHORITATIVE location for mesh endpoint
-        // Clear any previous decline state since mesh is now deployed
+        lastDeployed,
+        // Clear any previous "Later" decline — the mesh is now deployed.
         userDeclinedUpdate: undefined,
         declinedAt: undefined,
-    };
+    });
+
+    // Clear the in-memory legacy singleton (a legacy-loaded project still
+    // carries it): the keyed entry above is authoritative, and a stale
+    // meshState left behind could resurface through the accessors' legacy
+    // fallbacks. Legacy manifests remain READABLE via the loader + migration.
+    project.meshState = undefined;
 }
 
 /**
@@ -632,4 +750,3 @@ function detectFrontendChangesImpl(project: Project): boolean {
 export function detectFrontendChanges(project: Project): boolean {
     return detectFrontendChangesImpl(project);
 }
-

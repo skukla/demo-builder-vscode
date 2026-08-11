@@ -103,7 +103,7 @@ Adobe's API rejects this with **400 Bad Request** because authentication is inco
 
 ```typescript
 // PERFORMANCE FIX: SDK requires org code with @AdobeOrg suffix
-// (e.g., "E94E1E3766FBA7DC0A495FFA@AdobeOrg")
+// (e.g., "<ims-org-code>")
 const hasValidOrgCode = cachedOrg?.code && cachedOrg.code.includes('@');
 
 if (!hasValidOrgCode) {
@@ -112,7 +112,7 @@ if (!hasValidOrgCode) {
 
 // Pass correctly formatted org code
 const sdkResult = await client.getProjectsForOrg(cachedOrg.code);
-// Example: "E94E1E3766FBA7DC0A495FFA@AdobeOrg" ✅ Correct format
+// Example: "<ims-org-code>" ✅ Correct format
 ```
 
 The org ID format is **correct**. The 400 error is NOT due to org ID format issues.
@@ -177,7 +177,7 @@ x-api-key: <valid_api_key>           ❌ You're passing 'aio-cli-console-auth'
 
 **Your Current Request:**
 ```http
-GET https://developers.adobe.io/console/organizations/E94E1E3766FBA7DC0A495FFA@AdobeOrg/projects
+GET https://developers.adobe.io/console/organizations/<ims-org-code>/projects
 Authorization: Bearer eyJhbGciOiJSUzI1NiIsI...  (valid)
 x-api-key: aio-cli-console-auth                 (invalid)
 ```

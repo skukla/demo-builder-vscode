@@ -4,7 +4,12 @@ import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ConfigureScreen } from '@/features/dashboard/ui/configure/ConfigureScreen';
 import '@testing-library/jest-dom';
-import { mockProject, mockComponentsData } from './ConfigureScreen.testUtils';
+import {
+    mockProject,
+    mockComponentsData,
+    selectSection,
+    railTabLabels,
+} from './ConfigureScreen.testUtils';
 
 // Mock hooks
 jest.mock('@/core/ui/hooks', () => ({
@@ -25,14 +30,9 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
     },
 }));
 
-// Mock layout components
+// Mock layout components. The shell + rail are NOT mocked (direct-path imports) so the
+// Authoring tab these tests click is the real one.
 jest.mock('@/core/ui/components/layout', () => ({
-    TwoColumnLayout: ({ leftContent, rightContent }: any) => (
-        <div>
-            <div data-testid="left-column">{leftContent}</div>
-            <div data-testid="right-column">{rightContent}</div>
-        </div>
-    ),
     PageHeader: ({ title, subtitle }: any) => (
         <div data-testid="page-header">
             <h1>{title}</h1>
@@ -43,15 +43,6 @@ jest.mock('@/core/ui/components/layout', () => ({
         <div data-testid="page-footer">
             <div data-testid="footer-left">{leftContent}</div>
             <div data-testid="footer-right">{rightContent}</div>
-        </div>
-    ),
-}));
-
-jest.mock('@/core/ui/components/layout/TwoColumnLayout', () => ({
-    TwoColumnLayout: ({ leftContent, rightContent }: any) => (
-        <div>
-            <div data-testid="left-column">{leftContent}</div>
-            <div data-testid="right-column">{rightContent}</div>
         </div>
     ),
 }));
@@ -100,18 +91,6 @@ jest.mock('@/features/components/ui/components/StoreConfigFieldRow', () => ({
     },
 }));
 
-jest.mock('@/core/ui/components/navigation', () => ({
-    NavigationPanel: ({ sections }: any) => (
-        <div data-testid="navigation-panel">
-            {sections?.map((section: any) => (
-                <div key={section.id}>{section.label}</div>
-            ))}
-        </div>
-    ),
-    NavigationSection: ({ children }: any) => <div>{children}</div>,
-    NavigationField: ({ children }: any) => <div>{children}</div>,
-}));
-
 Element.prototype.scrollIntoView = jest.fn();
 
 const renderWithProvider = (component: React.ReactElement) => {
@@ -156,12 +135,13 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
             />
         );
 
+        selectSection('Authoring');
         expect(screen.getByRole('radiogroup', { name: 'Authoring Experience' })).toBeInTheDocument();
         expect(screen.getByText('DA.live Classic')).toBeInTheDocument();
         expect(screen.getByText('Experience Workspace')).toBeInTheDocument();
     });
 
-    it('adds a corresponding "Authoring" section to the right-column navigation for EDS', () => {
+    it('adds an "Authoring" tab to the rail for EDS, last', () => {
         renderWithProvider(
             <ConfigureScreen
                 project={mockProject as any}
@@ -171,8 +151,23 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
             />
         );
 
-        const rightColumn = screen.getByTestId('right-column');
-        expect(within(rightColumn).getByText('Authoring')).toBeInTheDocument();
+        expect(railTabLabels()).toEqual([
+            'Project',
+            'Adobe Commerce',
+            'Catalog Service',
+            'Authoring',
+        ]);
+    });
+
+    it('adds NO "Authoring" tab for a non-EDS project (the control)', () => {
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject as any}
+                componentsData={mockComponentsData}
+            />
+        );
+
+        expect(railTabLabels()).not.toContain('Authoring');
     });
 
     it('defaults the selection to the initial authoringExperience value', () => {
@@ -185,6 +180,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
             />
         );
 
+        selectSection('Authoring');
         const radios = screen.getAllByRole('radio') as HTMLInputElement[];
         const ew = radios.find((r) => r.value === 'experience-workspace');
         const ue = radios.find((r) => r.value === 'da-live-classic');
@@ -219,6 +215,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         );
 
         // Flip to Experience Workspace
+        selectSection('Authoring');
         const radios = screen.getAllByRole('radio') as HTMLInputElement[];
         const ew = radios.find((r) => r.value === 'experience-workspace')!;
         await user.click(ew);
@@ -246,6 +243,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
             />
         );
 
+        selectSection('Authoring');
         const authoringSection = screen.getByRole('radiogroup', { name: 'Authoring Experience' })
             .closest('#section-authoring-experience') as HTMLElement;
         expect(authoringSection).toBeInTheDocument();
@@ -268,6 +266,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
             />
         );
 
+        selectSection('Authoring');
         await user.click(screen.getByText('Extension Settings'));
 
         expect(webviewClient.postMessage).toHaveBeenCalledWith('open-eds-settings');
@@ -283,6 +282,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
             />
         );
 
+        selectSection('Authoring');
         expect(screen.queryByText(/Universal Editor settings are configured in/i)).not.toBeInTheDocument();
     });
 

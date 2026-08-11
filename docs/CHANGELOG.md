@@ -7,6 +7,155 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.127] - 2026-08-11
+
+The largest release so far — 484 commits. `.126` was a diagnostics hotfix cut from `.125`,
+so everything built on `develop` since early July arrives here at once.
+
+**Two things to know before you upgrade.**
+
+1. **Every existing project will flag its AI files as out of date and offer to regenerate.**
+   That is expected, and you should accept it. This release adds an AI-context freshness
+   check, and the regenerate is the only thing that replaces the broken git-sync hook
+   described under Fixed. Skipping it leaves the dead hook in place.
+2. **If you use Claude to edit a storefront, those edits have not been reaching GitHub.**
+   Details under Fixed. Regenerating the AI files repairs it.
+
+---
+
+### Added
+
+- **"Build Your Project" — the wizard is now one guided step.** Backend, storefront and
+  integrations are configured inside a single step with three areas (Commerce, Storefront,
+  Integrations), each with its own sub-step rail and a running summary of what you have
+  chosen. Continue advances an area only once it is genuinely complete. This replaces the
+  architecture modal and the long flat step list; the brand card on the welcome screen now
+  only picks a demo package.
+
+- **A project can hold many App Builder integrations, each with a name you choose.**
+  Previously a project had at most one custom app. Add pre-built catalog entries or an
+  AI-built blank shell, name each one, and deploy, redeploy, rename or remove them
+  independently. The API Mesh is now one integration among them rather than a special case.
+
+- **A dedicated Integrations surface.** A card grid with a detail flyout, per-card actions,
+  live endpoint links, deploy state, and the list of Adobe APIs each integration uses.
+
+- **Create Adobe I/O projects and workspaces without leaving the extension.** The wizard can
+  provision a Console project and a Stage workspace inline, using the same browse-or-create
+  interaction as GitHub repo selection.
+
+- **Delete Adobe I/O Console projects from the picker** — restricted to projects you created,
+  and it says what blocked the delete when something does.
+
+- **Change where a project deploys.** Pick a different Adobe project or workspace and the
+  existing integrations move with it. The move is all-or-nothing, so a partial failure
+  cannot leave integrations split across two workspaces.
+
+- **Per-integration Adobe API attribution.** The extension now records which integration asked
+  for which Console API, so Manage APIs edits one integration at a time, and a project-level
+  union view cleans up orphaned picks.
+
+- **One coordinated set of checks when a project opens.** Org context, mesh verification, AI
+  verification and MCP health now run through a single orchestrator and report on one channel.
+  Two rules it enforces: no surprise side effects (nothing launches a browser on its own — a
+  signed-out check degrades to "sign in to check"), and no silent failures.
+
+- **New agent tools (MCP).** `rename_project`, `get_project_urls`, `deploy_integration`,
+  `redeploy_integration`, `remove_integration`, `deploy_mesh`, `refresh_block_library`,
+  `export_project_settings` (settings to a file, secrets never on the wire), plus
+  `list_console_apis` / `add_console_apis` so an agent can request the Adobe APIs it needs.
+  A global entry point with socket discovery means these work from any directory.
+
+- **Storefront repos are checked before they are used.** The extension classifies whether a
+  repository is ready to become a storefront, gates selection on what the repo actually
+  contains, and verifies AEM Code Sync is installed *before* the first write rather than
+  half-way through the pipeline.
+
+- **DA.live organization is now a picker driven by your GitHub namespaces** — your personal
+  login plus any GitHub organizations you belong to. The free-text field, the default-org
+  setting and the pre-authentication gate are gone.
+
+- **Rename a project in place** on the project card or the dashboard title, with live name
+  normalization.
+
+- **Open the Commerce Admin Panel** from the dashboard and from project cards.
+
+- **Commerce configuration is split into Connection and Business Structure**, which also
+  fixes a PaaS deadlock where required Catalog fields sat inside a step locked by a verdict
+  that included those same fields.
+
+- **Diagnostics** gains a probe for whether your credential can actually reach the site
+  configuration service.
+
+### Changed
+
+- **Project cards answer two questions, one line each:** is the demo running, and is what is
+  deployed current. The per-component mesh line and integration count are gone; that detail
+  lives on the Integrations surface.
+
+- **Status is placed by what it is about.** Environment health (AI Ready, IMS Org) sits in the
+  dashboard header band; the state of a specific artifact appears on the button that fixes it,
+  wearing an amber dot and a tooltip explaining why.
+
+- **Page content is left-aligned by default** on a unified 960px content width, and the
+  Integrations dashboard now matches the project dashboard exactly — same grid, same card
+  metrics, same filter behaviour.
+
+- **"App Builder app" is called an "integration"** throughout the interface.
+
+- **Adobe API Mesh access is enabled for you.** Where the extension previously showed
+  hand-written Console instructions when the API Mesh API was missing, it now subscribes the
+  API as a visible step during creation and deploy.
+
+### Fixed
+
+- **The AI git-sync hook now actually runs — and AI-authored storefront edits now reach
+  GitHub.** Every EDS project generated since beta.109 shipped a `PostToolUse` hook meant to
+  commit and push storefront edits automatically. It read the edited file path from a
+  `$CLAUDE_TOOL_INPUT` environment variable that Claude Code never sets — it delivers the
+  tool call on stdin — so the path was always empty and the hook did nothing. Worse, the
+  generated `sync-changes` skill told agents the hook handled commit and push, so agents
+  skipped `sync_storefront` too. Block changes stayed on disk, never reached GitHub, and
+  never published, with nothing reporting it at either end. **Existing projects must
+  regenerate their AI files to get a working hook.**
+
+- **Republishing a storefront now clears its "Republish needed" state.** The flag was updated
+  in memory and never written to disk, so reopening the dashboard showed amber again after a
+  successful republish.
+
+- **A saved Commerce scope change now reaches the storefront**, and a PaaS storefront no
+  longer silently keeps serving the old backend.
+
+- **Adobe operations run against the right organization.** A broad correctness pass through
+  the org-context handling: entity lookups, workspace listing, developer-permission probes and
+  mesh reads no longer fall back to a stale CLI selection, and an org mismatch offers "Switch
+  IMS Org" instead of failing opaquely. Background reads are SDK-only, so a cosmetic fetch can
+  never pop a browser window.
+
+- **Deploy state is honest.** A failed deploy is persisted with the reason, so the dashboard
+  stops reporting "Mesh Deployed" for something that failed; a stale deployment says it needs
+  an update rather than appearing current; and a mesh deploy retries create-as-update (and
+  update-as-create) when the workspace and the remote disagree.
+
+- **A 404 on a product page names both possible causes** instead of only the alarming one, and
+  diagnostics no longer reports a PDP prerender that never happened.
+
+- **Long Adobe operations tell you what they are doing.** Progress notifications open before
+  the guards run rather than after, name the thing being fetched, and stop claiming causes the
+  extension cannot actually determine.
+
+- Dozens of interface fixes across the wizard, modals and dashboard: content clipping at
+  narrow and zoomed viewports, the integrations grid collapsing to one column, API lists
+  reordering while you select from them, modals resizing as you type, and loading states
+  landing in the wrong place.
+
+### Removed
+
+- The architecture modal and the project rename dialogs, both replaced by in-place interaction.
+- The manual API Mesh setup instructions and their error dialog — the extension subscribes the
+  API itself.
+- The `demoBuilder.daLive.defaultOrg` setting, superseded by the GitHub-namespace picker.
+
 ## [1.0.0-beta.126] - 2026-08-07
 
 Released from `hotfix/beta.126-storefront-diagnostics`, branched off `.125` — none of
@@ -43,6 +192,12 @@ storefront setup changes.
   the code-sync step and then reported that setup could not resume. It now says what
   happened and offers Retry, which re-runs setup for real (about 24 seconds).
 
+- **Setup stops before touching your repository when the App is missing.** The
+  pipeline's own Code Sync check ran after it had already reset the repository to the
+  template and pushed fstab, block libraries, and the smart-404 and Quick Edit
+  scripts. It now runs before the first write, so a blocked run leaves your
+  repository exactly as it was.
+
 ### Removed
 
 - The unimplemented storefront-setup resume handler. It always answered "Resume not yet
@@ -50,20 +205,53 @@ storefront setup changes.
 
 ## [1.0.0-beta.124] - 2026-08-06
 
+Released from `hotfix/beta.124-storefront-complete-honesty`, branched off `.123` — none
+of the work on `develop` shipped in it. Listed here so this branch's history does not
+skip a published version.
+
 ### Fixed
 
-- **Storefront setup no longer reports "Complete" when product detail pages cannot
-  work.** When the AEM Configuration Service refuses the site registration, the BYOM
-  overlay never lands and PDPs will not load — but setup still announced success,
-  so the problem surfaced later as "product pages are broken". The final message now
-  names the consequence and the remedy, while still handing back the repository:
-  everything except PDPs works.
+- **Storefront setup no longer reports "Complete" when product detail pages cannot work.**
+  Forward-ported to `develop` in the same change.
+
+### Added
+
+- **Edits survive closing the editor.** When you edit a project and close the wizard
+  before finishing the rebuild, your in-progress changes (selections across
+  integrations, storefront, and components) are now saved as a reversible per-project
+  draft and restored the next time you open the editor, with an "unsaved changes
+  restored" indicator and a **Discard** action that reverts to the project's
+  last-saved state. The draft clears automatically once a rebuild succeeds; closing,
+  canceling, or a failed rebuild all keep it. Edit mode only. Secrets (component
+  passwords, API keys) are never written to the draft — those fields re-seed from the
+  saved project.
+- **More agent tools (MCP).** `get_project_urls` returns the project's useful URLs
+  as data — local storefront, EDS live site + DA.live authoring, Commerce admin, and
+  the Developer Console deep link — so an agent can answer "what's the URL" without a
+  browser opening. `deploy_integration` / `redeploy_integration` / `remove_integration`
+  let an agent deploy, redeploy, or remove one App Builder integration by id
+  (remove is confirm-gated — it undeploys remotely). `deploy_mesh` deploys or
+  redeploys the current project's API Mesh, and `refresh_block_library` rebuilds an
+  EDS project's DA.live authoring block library from its component definition — each
+  running the same core as its dashboard button, so the agent gets the real result.
+  `export_project_settings` writes a project's settings (with secrets, by default) to
+  a file inside the project — the secrets land on disk, never in the agent's reply,
+  which returns only the path.
+- **Rebuilt wizard Integrations area.** The center column now shows only your configured integrations — one summary row each — plus an **Add Integration** button. Adding is one guided modal journey: pick the kind (API Mesh · Pre-built integration · Build custom · Import a repo), sign in and choose the shared Adobe project/workspace the first time anything needs it (later adds just show "Deploys to …" with Change), and add. API Mesh and pre-built integrations finish right there — their APIs are fixed, shown on the row, and enabled on your workspace when the project builds. Adding your own GitHub repo adds one more step: an **API Access** picker of your org's Adobe APIs (required ones granted automatically) to choose any extra APIs the app needs. Rows show setup state, destination, and the APIs in use by name; the project summary column now lists every integration. Editing an existing project seeds the rows from the project, including custom integrations and previously added APIs, which formerly vanished on edit.
+- **Build as many custom integrations as you need — each with a name.** **Build custom** now starts by asking for the integration's name; each one becomes its own instance, cloned from the `app-builder-shell` template into `components/<id>/` with its own OpenWhisk package, so a project can carry several AI-built integrations side by side (an ERP connector and a Firefly integration, say). The id derives from the name, is checked for collisions, and never changes; the display name can be renamed later from the integration's row in the wizard or on the dashboard. Editing a project now preserves custom and AI-built integrations — and the extra Adobe APIs you picked — across a reload (previously the picked APIs were silently unsubscribed on the next redeploy). The project's AI context regenerates so agents can address each integration individually (`AI_CONTEXT_VERSION` 4 — existing projects will see a one-time Regenerate prompt).
+- **Manage APIs from the dashboard.** Deployed App Builder integrations gain a "Manage APIs" action that lists your org's Adobe APIs — always-on ones (the baseline + the integration's required APIs) locked, the ones you've added checked and removable. Check to add, uncheck to remove; Apply reconciles the workspace credential's subscriptions to match (the subscribe PUT drops anything you unchecked, and the always-on set is always re-included so it can't be removed).
+- **Manage Commerce.** A new dashboard tile and a project-card menu item open the project's Commerce Admin Panel. SaaS (ACCS) projects derive the URL automatically from the tenant endpoint; PaaS projects supply it via the new optional **Admin Panel URL** field on the Configure screen (`ADOBE_COMMERCE_ADMIN_URL`, which also overrides the derived URL when set). Clicking without a resolvable URL prompts with an "Open Configure" shortcut.
 
 ### Changed
 
-- Cleared the four pre-existing lint warnings (a non-null assertion whose guard lives
-  in the caller, an import order, and two oversized test files split on real seams).
+- **Rename projects in place.** Hover a project's name — on its card (or row) in the projects list, or in the project dashboard title — and a pencil appears; click it, type, press Enter. The name is normalized as you type (spaces become hyphens, lowercased), matching how project creation names projects. Errors (name taken, invalid characters, demo running) show inline next to the field. The Rename menu items and their dialogs are gone: one rename affordance, where the name lives.
+- **Simpler action names.** The authoring action is now **Author Content** everywhere (previously "Author in DA.live Classic" / "Author in Experience Workspace" — your configured authoring experience still decides where it opens), and the Commerce admin action is **Manage Commerce** (previously "Admin Panel" / "Open Admin Panel").
+- **Clearer API Access step when adding an integration.** The step no longer enables APIs while you're still choosing them — it just lets you *select*. The **Included** panel lists everything always-on for the integration — its required APIs, the baseline I/O Management API, and a project's existing API Mesh — as facts, rendered instantly so a slow or timed-out API list can't blank the screen; APIs you pick appear there too under **Added**, each with an × to remove before you commit. The browsable list on the left holds the optional APIs you can add, cleaned up to match the Adobe Developer Console: **product-family filter chips** ("Filter by product") narrow a de-duplicated list to Experience Cloud, Adobe Experience Platform, and so on, with deprecated/duplicate/unusable entries removed and machine-only codes hidden. Gating is accurate and delineated — APIs that need a **product profile** and APIs that **require Adobe review** are shown disabled under their own headings instead of appearing pickable and then failing. Required APIs use short, stable names (no raw SDK code flashing to a long name mid-load). Everything included or added is subscribed when the integration deploys, not mid-selection. The org-API list also gets a much longer timeout so large orgs finish loading.
 
+### Fixed
+
+- **Business Structure no longer goes blank for a mistyped ACCS endpoint.** Store detection keys on the ACCS GraphQL endpoint's path, so an endpoint without the `/graphql` suffix (e.g. the bare instance URL) silently disabled detection and left the Business Structure step empty with no explanation. The endpoint field on the Connection step now validates that it ends in `/graphql` and blocks Continue with a guiding message, so you're told up front instead of landing on a blank screen.
+- **Deleted-product pages show the real 404 instead of an empty product page.** When a shopper opens a product URL whose SKU no longer exists in Commerce, the storefront now lands on its own **native /404** rather than a blank product-details block. Two layers cooperate: the shared `prepublish-pdp` action checks Commerce before publishing and refuses to publish a page for a missing SKU (so no empty page gets cached), and the storefront's smart-404 snippet redirects to `/404` when publishing is refused. The existence check fails open — an infra hiccup never turns a real product into a 404. Existing storefronts pick up the updated snippet on their next reset (the installer now re-vendors the snippet in place instead of skipping when an older copy is present). Note: a product deleted *after* its page was already published/pre-warmed still serves the cached page until unpublished — tracked separately.
 ## [1.0.0-beta.123] - 2026-07-29
 
 ### Added
@@ -370,7 +558,7 @@ storefront setup changes.
 ### Known Limitations
 
 - **MCP config files contain machine-specific paths.** `.claude/mcp.json` and `.mcp.json` hold absolute paths to the Demo Builder MCP server binary. These files are automatically added to `.gitignore`. No credentials are written to these files — only machine paths.
-- **PostToolUse hook env var unverified.** The generated git-sync hook reads `$CLAUDE_TOOL_INPUT` for the modified file path. This variable name has not been confirmed end-to-end with Claude Code hooks. If wrong, the hook silently does nothing.
+- ~~**PostToolUse hook env var unverified.**~~ Confirmed wrong and fixed in [Unreleased] — the variable is never set, so the hook silently did nothing from this release until then.
 
 ## [1.0.0-beta.110] - 2026-04-14
 

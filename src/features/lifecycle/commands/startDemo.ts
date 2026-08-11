@@ -6,6 +6,7 @@ import { ServiceLocator } from '@/core/di';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { updateFrontendState } from '@/core/state';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
+import { sleep } from '@/core/utils/sleep';
 import { validateNodeVersion } from '@/core/validation';
 import { DEFAULT_SHELL } from '@/types/shell';
 import { getComponentIds, getComponentInstancesByType, getComponentInstanceValues } from '@/types/typeGuards';
@@ -66,7 +67,7 @@ export class StartDemoCommand extends BaseCommand {
                 this.logger.debug(`[Start Demo] Demo started on port ${port} after ${Date.now() - startTime}ms`);
                 return true;
             }
-            await new Promise(resolve => setTimeout(resolve, this.PORT_CHECK_INTERVAL));
+            await sleep(this.PORT_CHECK_INTERVAL);
         }
 
         // Timeout - port never became in use
@@ -137,7 +138,7 @@ export class StartDemoCommand extends BaseCommand {
                 this.logger.debug(`[Start Demo] Port ${port} is now free`);
                 return true;
             }
-            await new Promise(resolve => setTimeout(resolve, checkInterval));
+            await sleep(checkInterval);
         }
 
         // Port still not free after waiting
@@ -364,7 +365,7 @@ export class StartDemoCommand extends BaseCommand {
 
                 // Update notification in place and pause briefly so user can see success
                 progress.report({ message: `✓ Started at http://localhost:${port}` });
-                await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI.MIN_LOADING));
+                await sleep(TIMEOUTS.UI.MIN_LOADING);
             });
 
             // Reset restart notification flag (user has restarted)

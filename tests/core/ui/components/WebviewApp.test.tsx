@@ -105,9 +105,9 @@ describe('WebviewApp', () => {
 
         // Note: theme-changed subscription removed in unified theme system (always dark)
 
-        it('sends ready message after handshake', async () => {
+        it('sends the ready message after the handshake when the host asks for it', async () => {
             render(
-                <WebviewApp>
+                <WebviewApp notifyReady>
                     <div>Content</div>
                 </WebviewApp>
             );
@@ -119,6 +119,26 @@ describe('WebviewApp', () => {
             await waitFor(() => {
                 expect(mockPostMessage).toHaveBeenCalledWith('ready');
             });
+        });
+
+        // REGRESSION: `ready` used to go out from EVERY panel, but only the wizard
+        // registers a handler for it (its handler loads the component definitions).
+        // Once unhandled types began failing loudly, all five other panels logged
+        // "No handler registered for 'ready'" on every single open (2026-08-03).
+        // `ready` is NOT the handshake — that is `__webview_ready__`, which the
+        // client sends itself — so withholding it costs those panels nothing.
+        it('does NOT send ready by default — no other panel answers it', async () => {
+            render(
+                <WebviewApp>
+                    <div>Content</div>
+                </WebviewApp>
+            );
+
+            await waitFor(() => {
+                expect(mockOnMessage).toHaveBeenCalledWith('init', expect.any(Function));
+            });
+
+            expect(mockPostMessage).not.toHaveBeenCalledWith('ready');
         });
     });
 
@@ -176,9 +196,7 @@ describe('WebviewApp', () => {
     describe('render props pattern', () => {
         it('supports function children (render props)', async () => {
             render(
-                <WebviewApp>
-                    {(data) => <div>Data: {data?.customProp || 'none'}</div>}
-                </WebviewApp>
+                <WebviewApp>{(data) => <div>Data: {data?.customProp || 'none'}</div>}</WebviewApp>
             );
 
             triggerMessage('init', { customProp: 'test-value' });
@@ -205,17 +223,15 @@ describe('WebviewApp', () => {
         it('passes init data to render function after init', async () => {
             const renderFn = jest.fn((_data) => <div>Rendered</div>);
 
-            render(
-                <WebviewApp>
-                    {renderFn}
-                </WebviewApp>
-            );
+            render(<WebviewApp>{renderFn}</WebviewApp>);
 
             // Trigger init
             triggerMessage('init', { project: 'test-project' });
 
             await waitFor(() => {
-                expect(renderFn).toHaveBeenCalledWith(expect.objectContaining({ project: 'test-project' }));
+                expect(renderFn).toHaveBeenCalledWith(
+                    expect.objectContaining({ project: 'test-project' })
+                );
             });
         });
     });

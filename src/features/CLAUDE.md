@@ -1,3 +1,4 @@
+<!-- Last verified: 2026-07-16 -->
 # Features Architecture
 
 ## Overview
@@ -19,6 +20,7 @@ The `features/` directory contains self-contained feature modules organized by b
 ```
 features/
 ├── ai/                  # AI context verification + in-extension MCP server
+├── app-builder/         # App Builder app attach/deploy (→ README.md)
 ├── authentication/       # Adobe authentication & SDK
 │   ├── index.ts         # Public API exports
 │   ├── services/        # Authentication services
@@ -86,10 +88,69 @@ features/my-feature/
 
 **Responsibilities:**
 - Verifying project AI context files — feeds the Project Dashboard's "AI Ready" health badge (via `useDashboardStatus`)
-- Providing the skills inventory rendered by the dashboard's "View Skills" capability surface (`AiSkillsModal`), plus the project-MCP / session-MCP inventory used by health diagnostics
-- In-extension MCP server for AI agent tool access via Claude Code (CLI), reached through the per-project `.mcp.json` (which points at the `dist/mcp-proxy.js` stdio↔socket forwarder); the former standalone process and global `~/.claude.json` registration are retired
+- Providing the skills inventory rendered by the dashboard's "View Skills" capability surface (`AiCapabilitiesModal`), plus the project-MCP / session-MCP inventory used by health diagnostics
+- In-extension MCP server for AI agent tool access via Claude Code (CLI), reached through the per-project `.mcp.json` (which points at the `dist/mcp-proxy.js` stdio↔socket forwarder); the former standalone process is retired. Global `~/.claude.json` registration is an explicit opt-in ("Demo Builder: Register Global MCP") whose entry has no pinned socket — the proxy discovers a running extension window at launch (`server/mcpSocketDiscovery.ts`, newest live socket wins), enabling global ops from any cwd
 
 **Path Alias**: `@/features/ai`
+
+---
+
+### app-builder
+
+**Purpose**: Attach, deploy, and remove **N custom Adobe App Builder integrations** on a demo
+project, dashboard-first. Sibling of the mesh deploy path (not a fork) — and since ADR-011 D3
+they share ONE state model: the keyed `project.appBuilderComponents` map
+(`kind: 'mesh' | 'integration'`) is the single persisted authority. The mesh is one component
+kind in that map; the legacy singular `meshState`/`appState` fields are legacy-read-only
+(manifests migrate on load, forward-migrate on first save).
+
+**Key Services:**
+- `deployAppComponent(path, cmdMgr, logger, onProgress?)` (`services/appDeployment.ts`) -
+  org-agnostic deploy helper: shared `buildComponent` → `aio app deploy` (idempotent, issued
+  once) → defensive parse of `aio app get-url --json` into `{ url, deployedUrls }`. Callers
+  wrap it in `withOrgContext`, exactly like `deployMeshComponent`.
+- `addAppBuilderComponent` / `removeAppBuilderComponent`
+  (`services/appBuilderComponentRunner.ts`) - additive add / per-id remove on a LIVE project
+  (N integrations coexist — ADR-011 D3 Step 05). Add clones+installs via
+  `componentManager.installComponent` (leaving siblings untouched), attaches the component
+  instance, keys the entry in `appBuilderComponents[id]`, and reconciles the SELECTION lists
+  (`reconcileComponentSelections`). Remove undeploys remotely (`aio app undeploy`,
+  best-effort, org-context targeted) then cleans up ONLY that integration's files + keyed
+  state. A parallel `appComponentManager` used to own add/remove under the singular model;
+  it went callerless when the runner took over and was deleted 2026-08-10 — while it lived,
+  it was the only code maintaining `componentSelections`, so dashboard-added components went
+  unselected and project RESET dropped them.
+- `appBuilderComponentState.ts` - the keyed-map accessors (`getMeshAppBuilderComponent`,
+  `getIntegrationAppBuilderComponents`, `listAppBuilderComponents`, `getProvidedEnvVars`);
+  legacy synthesis only for pre-migration in-memory projects. `appBuilderDeployOutcome.ts` -
+  `recordDeployOutcome`, the one keyed deploy-record writer every deploy path lands on.
+- Every per-integration deploy — UI and AI alike — goes through the keyed runner
+  (`appBuilderComponentRunner.ts`) behind the per-id handlers. There is no singular
+  headless variant: `deployAppHeadless` was retired 2026-08-04 once its only caller
+  (the projects-list `redeployApp` kebab item) was replaced by a route to the
+  Integrations page. It never earned the second caller its mesh sibling has, because
+  the MCP tools were already on the keyed path — and being UI-free turned out to be
+  the wrong goal for an agent-triggered deploy, which is precisely when the user
+  needs telling.
+
+**Responsibilities:**
+- First-class `appBuilder` registry category + `componentSelections.appBuilder` round-trip
+- Per-id integration deploy/redeploy/remove/rename (rename is display name only —
+  `renameAppBuilderComponent` updates `appBuilderComponents[id].name`; the id/folder/ow.package
+  are immutable; pre-built catalog entries keep their catalog names) from the dashboard
+  integrations card grid (`IntegrationsBlock` → `integrations/IntegrationsGrid`, mesh as the
+  first peer card via `deriveMeshCard`; detail + actions live in the card's detail drawer)
+- Reuses (no fork): `withOrgContext` + `buildOrgTargetFromProjectAdobe`, `CommandExecutor`,
+  `componentManager.installComponent`/`removeComponent`, `ensureAdobeIOAuth`,
+  `detectProjectOrgMismatch`, the dashboard status channel. Only new abstraction is the shared
+  `buildComponent` step (two callers, byte-identical).
+
+**History:** slice 1 (2026-06) shipped a singular model (one app, `project.appState`, dashboard
+`AppBuilderCard`, `DeployAppCommand`); ADR-011 D1–D3 replaced it with the keyed model and
+deleted the singular surfaces. Deferred: package-binding, scaffolding, app-only projects,
+multi-workspace.
+
+**Path Alias**: `@/features/app-builder`
 
 ---
 
@@ -102,6 +163,7 @@ features/my-feature/
 - `createEntityServices` / `EntityServices` - Factory for org/project/workspace operations
 - `AuthCacheManager` - Token and org/project caching with TTL
 - `TokenManager` - Token validation and refresh
+- `teardownConsoleProject` (`consoleProjectTeardown.ts` + `ioEventsClient.ts`) - Console-project delete: removes event registrations/3rd-party providers first (pre-empts the opaque 409), collect-don't-throw, org-gated
 
 **Responsibilities:**
 - Adobe I/O CLI authentication (browser-based login)
@@ -135,15 +197,25 @@ features/my-feature/
 **Key Services:**
 - `dashboardHandlers` - Handler map for project dashboard messages
 - `configureHandlers` - Handler map for Configure screen messages (cancel, components data, store discovery)
-- `aiHandlers` - Handler map for the standalone AI surface, 8 handlers: verify-ai-setup (returns inventory), inspect-mcp, regenerate-ai-files, save-ai-prompt / delete-ai-prompt / list-ai-prompts (scope-routed by `pinned`: `pinned: true` prompts persist in globalState under `demoBuilder.ai.globalPrompts` and appear in every project; unpinned prompts persist in the current project's `.demo-builder.json` manifest; a pin toggle is a cross-scope move, and list returns the merged deduped list), openInClaude, copyAiPrompt (clipboard write for the kebab Copy prompt action)
-- `AiSkillsModal` / `AiSkillsList` - The dashboard's "View Skills" capability catalog (task-framed name + description) carrying the Regenerate AI files action; opened from a link beside the "AI Ready" health badge (NOT the badge itself)
+- `aiHandlers` - Handler map for the standalone AI surface, 7 handlers: verify-ai-setup (returns inventory), regenerate-ai-files, save-ai-prompt / delete-ai-prompt / list-ai-prompts (scope-routed by `pinned`: `pinned: true` prompts persist in globalState under `demoBuilder.ai.globalPrompts` and appear in every project; unpinned prompts persist in the current project's `.demo-builder.json` manifest; a pin toggle is a cross-scope move, and list returns the merged deduped list), openInClaude, copyAiPrompt (clipboard write for the kebab Copy prompt action)
+- `AiCapabilitiesModal` / `AiSkillsList` - The dashboard's "View Skills" capability catalog (task-framed name + description) carrying the Regenerate AI files action; opened from a link beside the "AI Ready" health badge (NOT the badge itself)
 - Dashboard state management
 - Mesh status display
 
 **Responsibilities:**
 - Project control panel UI
 - Start/Stop demo controls
-- Mesh deployment status
+- **Status placement rule** (documented in full at the top of `ui/components/ActionGrid.tsx`):
+  environment health → the masthead band (`DashboardStatusHeader`: AI Ready, IMS Org);
+  artifact state → the ActionGrid zone that owns the part, as a **remedy tile** (the button that
+  fixes it, wearing an amber dot when due, tooltip explaining why): `Restart` in Primary,
+  `Republish` in Storefront, plus the Integrations summary tile. The rule exists because the
+  Frontend badge broke it — it sat in the band while its remedies sat in the grid, so it was the
+  only status that named a problem and offered nothing. Note which tile takes the dot: Republish,
+  not Sync Storefront, because Sync pushes storefront *code* and never clears
+  `edsStorefrontStatusSummary`. **Every dotted tile goes through `DashboardTile`**, whose
+  `status` prop carries the dot and its tooltip as one value — a dot with no explanation is
+  not expressible. The integrations tile shipped one for months before that was enforced.
 - Project configuration editing (Configure screen)
 - AI health + capability (separate concerns): the passive "AI Ready" badge reflects AI-setup health (from `verify-ai-setup`); a distinct "View Skills" link opens the capability catalog (skills) and carries Regenerate AI files. A conditional Regenerate link appears beside the badge when health needs attention. MCP/session-MCP plumbing stays in the "Demo Builder: Diagnostics" command.
 
@@ -241,9 +313,9 @@ features/my-feature/
 **Key Services:**
 - Demo package loading, storefront resolution, and mesh requirement resolution (`services/demoPackageLoader.ts`)
 - Custom block library URL parsing and validation (`services/customBlockLibraryUtils.ts`)
-- `aiContextWriter.ts` - Generates `AGENTS.md` at the project root with project-specific AI agent context; writes `CLAUDE.md` (root) and `.claude/CLAUDE.md` as one-line `see @AGENTS.md` pointers
+- `aiContextWriter.ts` - Generates `AGENTS.md` at the project root with project-specific AI agent context; writes `CLAUDE.md` (root) and `.claude/CLAUDE.md` as one-line `see @AGENTS.md` pointers. Includes a "Finding Adobe Documentation" section routing agents to Adobe's Wayfinder doc router, PINNED to a commit (`WAYFINDER_ROUTER_URL`) — never `@main`, since that line becomes part of the agent's instructions in a user's repo. Re-pinning is a bundle change: bump `AI_CONTEXT_VERSION`.
 - `mcpConfigWriter.ts` - Generates `.claude/mcp.json`, `.mcp.json`, and `.claude/settings.json` (Cursor and Codex read `.mcp.json` natively — no per-tool config files)
-- `skillsWriter.ts` - Writes eleven Demo-Builder skills to `.claude/skills/`: four lifecycle (add-component, sync-changes, update-credentials, create-eds-project) plus six EDS site-scraping skills (scrape-reference-site, connect-authenticated-site, commerce-block-mapper, demo-data-injector, header-nav-footer, refine-visual-match) plus one block-library registration skill (register-custom-block); additionally copies Adobe AEM skills from `@adobe-commerce/commerce-extensibility-tools` when the EDS Storefront component is installed
+- `skillsWriter.ts` - Writes twelve always-on Demo-Builder skills to `.claude/skills/`: four lifecycle (add-component, sync-changes, update-credentials, create-eds-project) plus six EDS site-scraping skills (scrape-reference-site, connect-authenticated-site, commerce-block-mapper, demo-data-injector, header-nav-footer, refine-visual-match) plus two block-library registration skills (register-custom-block, remove-custom-block); App Builder-adjacent projects (per `aiToolingGate`) also get extend-app-builder-app (the list_console_apis → add_console_apis loop) and the `commerce-extensibility-tools` integration-starter-kit bundle (`appbuilder-*` prefix, from the isolated tools dir); EDS projects additionally copy the AEM skill bundle declared via `aiSkillBundle`
 - `generateAIContextFiles` (in `projectFinalizationService.ts`) - Orchestrates all three AI writers as project finalization phase 6
 - Project template application
 - Environment file generation
@@ -394,5 +466,5 @@ Each feature should have a README.md documenting:
 
 ---
 
-For shared infrastructure, see `../shared/CLAUDE.md`
+For core infrastructure, see `../core/CLAUDE.md`
 For overall architecture, see `../CLAUDE.md`

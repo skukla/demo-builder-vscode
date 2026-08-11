@@ -8,13 +8,13 @@ jest.mock('vscode', () => ({
         Light: 1,
         Dark: 2,
         HighContrast: 3,
-        HighContrastLight: 4
+        HighContrastLight: 4,
     },
     window: {
         activeColorTheme: {
-            kind: 2 // Dark
-        }
-    }
+            kind: 2, // Dark
+        },
+    },
 }));
 
 describe('loadingHTML', () => {
@@ -27,13 +27,13 @@ describe('loadingHTML', () => {
 
         mockPanel = {
             webview: {
-                html: ''
-            }
+                html: '',
+            },
         } as any;
 
         mockLogger = {
             info: jest.fn(),
-            debug: jest.fn()
+            debug: jest.fn(),
         };
     });
 
@@ -128,7 +128,7 @@ describe('loadingHTML', () => {
             // Simulate slow content load that takes longer than MIN_DISPLAY_TIME
             const getContent = jest.fn().mockImplementation(async () => {
                 // Simulate 2 second network delay
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                await new Promise((resolve) => setTimeout(resolve, 2000));
                 return slowContent;
             });
 
@@ -172,9 +172,9 @@ describe('loadingHTML', () => {
 
             const getContent = jest.fn().mockRejectedValue(new Error('Content load failed'));
 
-            await expect(
-                setLoadingState(mockPanel, getContent)
-            ).rejects.toThrow('Content load failed');
+            await expect(setLoadingState(mockPanel, getContent)).rejects.toThrow(
+                'Content load failed'
+            );
 
             // Restore fake timers
             jest.useFakeTimers();
@@ -202,7 +202,7 @@ describe('loadingHTML', () => {
 
         it('should use dark theme by default', async () => {
             (vscode.window as any).activeColorTheme = {
-                kind: vscode.ColorThemeKind.Dark
+                kind: vscode.ColorThemeKind.Dark,
             };
 
             const getContent = jest.fn().mockResolvedValue('<div>Content</div>');
@@ -222,7 +222,7 @@ describe('loadingHTML', () => {
 
         it('should use light theme when active', async () => {
             (vscode.window as any).activeColorTheme = {
-                kind: vscode.ColorThemeKind.Light
+                kind: vscode.ColorThemeKind.Light,
             };
 
             const getContent = jest.fn().mockResolvedValue('<div>Content</div>');
@@ -309,11 +309,82 @@ describe('loadingHTML', () => {
         });
     });
 
+    describe('page header identity', () => {
+        it('should render a header title above the spinner when provided', async () => {
+            const getContent = jest.fn().mockResolvedValue('<div>Content</div>');
+
+            const promise = setLoadingState(mockPanel, getContent, 'Loading...', mockLogger, {
+                title: 'Configure Project',
+            });
+
+            await advanceTime(100);
+
+            const loadingHTML = mockPanel.webview.html;
+            expect(loadingHTML).toContain('loading-header');
+            expect(loadingHTML).toContain('Configure Project');
+
+            await advanceTime(1500);
+            await promise;
+        });
+
+        it('should render the subtitle next to the title when provided', async () => {
+            const getContent = jest.fn().mockResolvedValue('<div>Content</div>');
+
+            const promise = setLoadingState(mockPanel, getContent, 'Loading...', mockLogger, {
+                title: 'Configure Project',
+                subtitle: 'b2b-tester',
+            });
+
+            await advanceTime(100);
+
+            expect(mockPanel.webview.html).toContain('b2b-tester');
+
+            await advanceTime(1500);
+            await promise;
+        });
+
+        it('should render no header block when the header is omitted', async () => {
+            const getContent = jest.fn().mockResolvedValue('<div>Content</div>');
+
+            const promise = setLoadingState(mockPanel, getContent);
+
+            await advanceTime(100);
+
+            expect(mockPanel.webview.html).not.toContain('<div class="loading-header">');
+
+            await advanceTime(1500);
+            await promise;
+        });
+
+        it('should escape HTML in header title, subtitle, and message', async () => {
+            const getContent = jest.fn().mockResolvedValue('<div>Content</div>');
+
+            const promise = setLoadingState(
+                mockPanel,
+                getContent,
+                '<script>alert(1)</script>',
+                mockLogger,
+                { title: '<b>Title</b>', subtitle: '<i>sub</i>' }
+            );
+
+            await advanceTime(100);
+
+            const loadingHTML = mockPanel.webview.html;
+            expect(loadingHTML).not.toContain('<script>alert(1)</script>');
+            expect(loadingHTML).not.toContain('<b>Title</b>');
+            expect(loadingHTML).not.toContain('<i>sub</i>');
+            expect(loadingHTML).toContain('&lt;b&gt;Title&lt;/b&gt;');
+
+            await advanceTime(1500);
+            await promise;
+        });
+    });
+
     describe('Real-world scenarios', () => {
         it('should handle wizard initialization', async () => {
             const getWizardContent = jest.fn().mockImplementation(async () => {
                 // Simulate slow initialization
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise((resolve) => setTimeout(resolve, 500));
                 return '<div id="wizard">Wizard Content</div>';
             });
 
@@ -336,15 +407,11 @@ describe('loadingHTML', () => {
         });
 
         it('should handle dashboard loading', async () => {
-            const getDashboardContent = jest.fn().mockResolvedValue(
-                '<div id="dashboard">Dashboard Content</div>'
-            );
+            const getDashboardContent = jest
+                .fn()
+                .mockResolvedValue('<div id="dashboard">Dashboard Content</div>');
 
-            const promise = setLoadingState(
-                mockPanel,
-                getDashboardContent,
-                'Loading dashboard...'
-            );
+            const promise = setLoadingState(mockPanel, getDashboardContent, 'Loading dashboard...');
 
             await advanceTime(1700);
             await promise;
@@ -353,9 +420,9 @@ describe('loadingHTML', () => {
         });
 
         it('should handle configuration UI', async () => {
-            const getConfigContent = jest.fn().mockResolvedValue(
-                '<div id="config">Configuration</div>'
-            );
+            const getConfigContent = jest
+                .fn()
+                .mockResolvedValue('<div id="config">Configuration</div>');
 
             const promise = setLoadingState(
                 mockPanel,
@@ -395,7 +462,7 @@ describe('loadingHTML', () => {
 
         it('should not delay unnecessarily for slow loads', async () => {
             const slowGetContent = jest.fn().mockImplementation(async () => {
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                await new Promise((resolve) => setTimeout(resolve, 2000));
                 return '<div>Slow</div>';
             });
 

@@ -31,6 +31,23 @@
         margin-bottom: var(--spectrum-global-dimension-size-200);
     }
 
+    /* Fill the available step height: the Prerequisites root becomes a flex column so the
+       scroll list GROWS to fill and the Recheck button sits at the bottom (the container's
+       bottom padding is the breathing room before the footer), instead of a fixed 360px box
+       leaving dead space. On short windows the list shrinks and scrolls internally, keeping
+       Recheck in view — so nothing drops below the fold. */
+    .prereq-fill {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        box-sizing: border-box;
+    }
+    .prereq-fill .prerequisites-container {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: none;
+    }
+
     /* Prerequisite item - grid layout with icon spanning full height */
     .prerequisite-item-grid {
         display: grid;

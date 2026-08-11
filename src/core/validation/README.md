@@ -32,7 +32,7 @@ Do NOT use when:
 
 **Usage**:
 ```typescript
-import { validateAdobeResourceId } from '@/shared/validation';
+import { validateAdobeResourceId } from '@/core/validation';
 
 validateAdobeResourceId(orgId, 'organization ID');
 // Throws if invalid, safe to use in shell commands
@@ -66,7 +66,7 @@ validateAdobeResourceId('', 'project ID'); // Throws
 
 **Usage**:
 ```typescript
-import { validateProjectNameSecurity } from '@/shared/validation';
+import { validateProjectNameSecurity } from '@/core/validation';
 
 validateProjectNameSecurity(projectName);
 // Safe to create directory
@@ -101,7 +101,7 @@ validateProjectNameSecurity('con'); // Throws - reserved name
 
 **Usage**:
 ```typescript
-import { validateProjectPath } from '@/shared/validation';
+import { validateProjectPath } from '@/core/validation';
 
 validateProjectPath(providedPath);
 // Safe to access file
@@ -134,7 +134,7 @@ import {
     validateProjectId,
     validateWorkspaceId,
     validateMeshId,
-} from '@/shared/validation';
+} from '@/core/validation';
 
 // All wrap validateAdobeResourceId with appropriate type name
 validateOrgId(orgId);
@@ -149,7 +149,7 @@ validateMeshId(meshId);
 
 **Usage**:
 ```typescript
-import { validateAccessToken } from '@/shared/validation';
+import { validateAccessToken } from '@/core/validation';
 
 validateAccessToken(token);
 // Safe to use in shell commands
@@ -177,7 +177,7 @@ validateAccessToken('invalid-token'); // Throws - doesn't start with eyJ
 
 **Usage**:
 ```typescript
-import { validateNodeVersion } from '@/shared/validation';
+import { validateNodeVersion } from '@/core/validation';
 
 validateNodeVersion(nodeVersion);
 // Safe to use in shell commands with fnm/nvm
@@ -218,7 +218,7 @@ validateNodeVersion('20 && echo');   // Throws - shell metacharacters
 
 **Usage**:
 ```typescript
-import { validateURL } from '@/shared/validation';
+import { validateURL } from '@/core/validation';
 
 validateURL(url);
 // Safe to make HTTP request
@@ -252,7 +252,7 @@ validateURL('https://169.254.169.254'); // Throws - metadata endpoint
 
 **Usage**:
 ```typescript
-import { sanitizeErrorForLogging } from '@/shared/validation';
+import { sanitizeErrorForLogging } from '@/core/validation';
 
 try {
     await riskyOperation();
@@ -284,7 +284,7 @@ sanitizeErrorForLogging(error);
 
 **Usage**:
 ```typescript
-import { validateProjectNameUI } from '@/shared/validation';
+import { validateProjectNameUI } from '@/core/validation';
 
 const result = validateProjectNameUI(value);
 if (!result.isValid) {
@@ -321,7 +321,7 @@ validateProjectNameUI('a'.repeat(60));
 
 **Usage**:
 ```typescript
-import { validateCommerceUrlUI } from '@/shared/validation';
+import { validateCommerceUrlUI } from '@/core/validation';
 
 const result = validateCommerceUrlUI(value);
 if (!result.isValid) {
@@ -350,7 +350,7 @@ validateCommerceUrlUI('ftp://example.com');
 
 **Usage**:
 ```typescript
-import { validateFieldUI } from '@/shared/validation';
+import { validateFieldUI } from '@/core/validation';
 
 const result = validateFieldUI('projectName', value);
 const result = validateFieldUI('commerceUrl', value);
@@ -406,7 +406,7 @@ import {
     validateOrgId,
     validateProjectId,
     validateProjectNameSecurity,
-} from '@/shared/validation';
+} from '@/core/validation';
 
 // ALWAYS validate before shell commands
 async function selectProject(projectId: string) {
@@ -430,7 +430,7 @@ async function createProject(name: string) {
 ### Pattern 2: UI Field Validation
 
 ```typescript
-import { validateFieldUI } from '@/shared/validation';
+import { validateFieldUI } from '@/core/validation';
 
 function handleInputChange(field: string, value: string) {
     const result = validateFieldUI(field, value);
@@ -446,7 +446,7 @@ function handleInputChange(field: string, value: string) {
 ### Pattern 3: Error Sanitization
 
 ```typescript
-import { sanitizeErrorForLogging } from '@/shared/validation';
+import { sanitizeErrorForLogging } from '@/core/validation';
 
 try {
     await deployMesh(meshId, config);
@@ -471,7 +471,7 @@ import {
     validateProjectId,
     validateWorkspaceId,
     validateProjectPath,
-} from '@/shared/validation';
+} from '@/core/validation';
 
 async function setupProject(input: ProjectInput) {
     // Validate all inputs
@@ -652,8 +652,8 @@ When you find validation logic duplicated:
 ## See Also
 
 - **Related Shared Modules**:
-  - `@/shared/command-execution` - Uses validation for security
-  - `@/shared/logging` - Uses sanitization for error logging
+  - `@/core/shell` - Uses validation for security
+  - `@/core/logging` - Uses sanitization for error logging
 
 - **Related Documentation**:
   - Main architecture: `../../CLAUDE.md`

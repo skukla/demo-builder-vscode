@@ -2,22 +2,37 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
+import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import { dashboardHandlers } from '@/features/dashboard/handlers';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
-import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
+import type { AppBuilderComponentRowStatus } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
+import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks';
+import {
+    getEwCanvasBranch,
+    resolveProjectAuthoringExperience,
+} from '@/features/eds/handlers/edsHelpers';
+import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import { loadDemoPackages } from '@/features/project-creation/services/demoPackageLoader';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
-import { AuthoringExperience, Project, ComponentInstance } from '@/types';
+import { Project, ComponentInstance } from '@/types';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import type { AppBuilderComponentState } from '@/types/base';
 import type { DemoPackage } from '@/types/demoPackages';
-import { HandlerContext, SharedState } from '@/types/handlers';
+import { HandlerContext } from '@/types/handlers';
 import type { Stack, StacksConfig } from '@/types/stacks';
-import { getComponentInstanceValues, isEdsProject, getEdsLiveUrl, getEdsDaLiveUrl } from '@/types/typeGuards';
+import {
+    getComponentInstanceValues,
+    isEdsProject,
+    getEdsLiveUrl,
+    getEdsDaLiveUrl,
+} from '@/types/typeGuards';
 
 /** Absolute path to the Demo Builder projects directory (`~/.demo-builder/projects`). */
 const DEMO_BUILDER_PROJECTS_BASE = path.join(os.homedir(), '.demo-builder', 'projects');
@@ -124,18 +139,21 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         isEds: boolean;
         edsLiveUrl?: string;
         edsDaLiveUrl?: string;
-        authoringExperience?: AuthoringExperience;
         initialEdsStorefrontStatus?: string;
         hasAdobeContext: boolean;
+        appBuilderComponents?: Record<string, AppBuilderComponentState>;
+        appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
     }> {
         const project = await this.stateManager.getCurrentProject();
         const themeKind = vscode.window.activeColorTheme.kind;
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
-        // Check if project has mesh: deployed instance, mesh state, or selected dependency
+        // Check if project has mesh: deployed instance, mesh state, or selected dependency.
+        // Keyed-first (ADR-011 D3 Steps 07+09): the mesh deployment record lives on
+        // the keyed appBuilderComponents entry (legacy meshState synthesis inside).
         const hasMeshInstance = Object.values(project?.componentInstances || {}).some(
             (instance) => instance.subType === 'mesh',
         );
-        const hasMeshState = !!project?.meshState;
+        const hasMeshState = !!(project && getMeshAppBuilderComponent(project));
         const hasMeshDependency = (project?.componentSelections?.dependencies || []).some(
             (dep: string) => dep.includes('mesh'),
         );
@@ -158,22 +176,41 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         // "Checking Adobe organization…" state before the result arrives.
         const hasAdobeContext = Boolean(project?.adobe?.organization);
 
+        // Integrations grid seed: the keyed appBuilderComponents map + the
+        // stack-filtered catalog for the add-integration picker (the mesh
+        // renders as the grid's first peer card, derived from the live mesh
+        // status channels, so no separate seed is needed here).
+        const appBuilderComponentCatalog = this.resolveAppBuilderComponentCatalog(project ?? null);
+
         return {
             theme,
-            project: project ? {
-                name: project.name,
-                path: project.path,
-            } : null,
+            project: project
+                ? {
+                      name: project.name,
+                      path: project.path,
+                  }
+                : null,
             hasMesh,
             packageName,
             stackName,
             isEds,
             edsLiveUrl,
             edsDaLiveUrl,
-            authoringExperience,
             initialEdsStorefrontStatus,
             hasAdobeContext,
+            appBuilderComponents: project?.appBuilderComponents,
+            appBuilderComponentCatalog,
         };
+    }
+
+    /** Stack-filtered appBuilderComponent catalog for the integrations add-a-appBuilderComponent picker. */
+    private resolveAppBuilderComponentCatalog(
+        project: Project | null,
+    ): AppBuilderComponentCatalogEntry[] {
+        return getAvailableAppBuilderComponents(
+            project?.componentSelections?.backend ?? '',
+            project?.componentSelections?.frontend ?? '',
+        );
     }
 
     /**
@@ -202,10 +239,19 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
 
             // Resolve stack name
             if (project.selectedStack) {
-                const stacksPath = path.join(this.context.extensionPath, 'src', 'features', 'project-creation', 'config', 'stacks.json');
+                const stacksPath = path.join(
+                    this.context.extensionPath,
+                    'src',
+                    'features',
+                    'project-creation',
+                    'config',
+                    'stacks.json',
+                );
                 const stacksLoader = new ConfigurationLoader<StacksConfig>(stacksPath);
                 const stacksConfig = await stacksLoader.load();
-                const stack = stacksConfig.stacks.find((s: Stack) => s.id === project.selectedStack);
+                const stack = stacksConfig.stacks.find(
+                    (s: Stack) => s.id === project.selectedStack,
+                );
                 if (stack) {
                     result.stackName = stack.name;
                 }
@@ -272,6 +318,47 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     }
 
     /**
+     * Resolve whichever project-scoped panel is live for the live push channels.
+     *
+     * These pushes used to address the Project Dashboard alone. Opening the
+     * dedicated integrations surface is a tab REPLACEMENT — the dashboard panel
+     * is disposed — so a dashboard-only lookup would silently reach nobody and
+     * the grid would never flip status or land an added card.
+     *
+     * Dashboard wins when both are somehow live, so a push renders once.
+     */
+    private static getLiveProjectPanel(): vscode.WebviewPanel | undefined {
+        return (
+            BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard') ??
+            BaseWebviewCommand.getActivePanel('demoBuilder.integrations')
+        );
+    }
+
+    /**
+     * Push the project's deploy destination after `setProjectDestination` writes it.
+     *
+     * The Integrations header's "project · workspace" crumb comes from the init
+     * payload, which is seeded ONCE — so a destination change left the header naming
+     * the OLD target while every card deployed to the new one (reported live
+     * 2026-08-07). Same shape as the sibling pushes above; no-op if neither project
+     * panel is open.
+     *
+     * @param destination - the titles the header renders, post-write
+     */
+    public static async sendProjectDestinationUpdate(destination: {
+        projectTitle?: string;
+        workspaceTitle?: string;
+    }): Promise<void> {
+        const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
+        if (panel) {
+            await panel.webview.postMessage({
+                type: 'projectDestinationUpdate',
+                payload: { destination },
+            });
+        }
+    }
+
+    /**
      * Public method to send mesh status updates (called by deployMesh command)
      */
     public static async sendMeshStatusUpdate(
@@ -279,7 +366,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         message?: string,
         endpoint?: string,
     ): Promise<void> {
-        const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
+        const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
         if (panel) {
             await panel.webview.postMessage({
                 type: 'meshStatusUpdate',
@@ -293,21 +380,69 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     }
 
     /**
-     * Public method to push a live authoring-experience update (called by the
-     * Configure save handler). Updates an already-open dashboard's Author tile
-     * label + DA URL instantly — no reopen required. No-op if no dashboard is
-     * open. Modeled on sendMeshStatusUpdate.
+     * Public method to push a per-appBuilderComponent row status update (called by the
+     * appBuilderComponent handlers). Modeled on sendMeshStatusUpdate but keyed by the
+     * appBuilderComponent `id` so the integrations list flips ONLY that row. No-op if no
+     * dashboard is open.
+     *
+     * `name` (optional) refreshes the row's display label on the same channel —
+     * the rename handler pushes the entry's CURRENT status (incl. the persisted
+     * 'stale') plus the new name, since the init-seeded map never re-delivers.
      */
-    public static async sendAuthoringExperienceUpdate(
-        authoringExperience: AuthoringExperience,
-        edsDaLiveUrl?: string,
+    public static async sendAppBuilderComponentStatusUpdate(
+        id: string,
+        status: AppBuilderComponentRowStatus,
+        message?: string,
+        name?: string,
     ): Promise<void> {
+        const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
+        if (panel) {
+            await panel.webview.postMessage({
+                type: 'appBuilderComponentStatusUpdate',
+                payload: {
+                    id,
+                    status,
+                    message,
+                    name,
+                },
+            });
+        }
+    }
+
+    /**
+     * Public method to push the FULL fresh persisted `appBuilderComponents`
+     * map (called by the appBuilderComponent handlers after terminal ops:
+     * add/deploy terminal, remove success, rename success). The webview's map
+     * is seeded once at init, so without this snapshot an added card never
+     * appears and a removed card lingers. Modeled on
+     * sendAppBuilderComponentStatusUpdate; no-op if neither project panel is open.
+     */
+    public static async sendAppBuilderComponentsSnapshot(
+        components: Record<string, AppBuilderComponentState>,
+    ): Promise<void> {
+        const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
+        if (panel) {
+            await panel.webview.postMessage({
+                type: 'appBuilderComponentsSnapshot',
+                payload: {
+                    components,
+                },
+            });
+        }
+    }
+
+    /**
+     * Public method to push the live DA URL after an authoring-experience flip
+     * (called by the Configure save handler) — no reopen required. The Author
+     * tile label is STATIC ("Author Content"), so only the URL rides on the
+     * message. No-op if no dashboard is open. Modeled on sendMeshStatusUpdate.
+     */
+    public static async sendAuthoringExperienceUpdate(edsDaLiveUrl?: string): Promise<void> {
         const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
         if (panel) {
             await panel.webview.postMessage({
                 type: 'authoringExperienceUpdate',
                 payload: {
-                    authoringExperience,
                     edsDaLiveUrl,
                 },
             });
@@ -350,6 +485,18 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         // Store active instance for static refreshStatus calls
         ProjectDashboardWebviewCommand.activeInstance = this;
 
+        // Re-arm this project's on-open checks BEFORE the panel exists.
+        //
+        // The orchestrator's guard runs each check at most once per project per
+        // session, which is right for a re-`requestStatus` within one mount and wrong
+        // across mounts: leaving a project and coming back remounts the webview and
+        // resets the state those checks feed. Returning to a project therefore skipped
+        // `ai-verify`, leaving the AI badge on "Verifying" forever and the AI
+        // Capabilities modal reporting no skills and no MCP servers for a healthy
+        // project. Ordering matters — the panel triggers the first requestStatus, so
+        // arming after it would leave that request guarded.
+        armOnOpenChecks(project.path);
+
         // Create or reveal panel and initialize communication
         await this.createOrRevealPanel();
 
@@ -369,31 +516,15 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
      * Create handler context with all dependencies
      */
     private createHandlerContext(): HandlerContext {
-        return {
-            // Managers (dashboard doesn't use all managers, but context requires them)
-            // Using type assertion since dashboard handlers don't actually use these managers
-            prereqManager: undefined as unknown as HandlerContext['prereqManager'],
-            authManager: undefined as unknown as HandlerContext['authManager'],
-            errorLogger: undefined as unknown as HandlerContext['errorLogger'],
-            progressUnifier: undefined as unknown as HandlerContext['progressUnifier'],
-            stepLogger: undefined as unknown as HandlerContext['stepLogger'],
-
-            // Loggers
-            logger: this.logger,
-            debugLogger: this.logger,
-
-            // VS Code integration
+        // ONE complete context from the shared factory — no per-panel guessing about
+        // which managers its (possibly reused) handlers will reach for.
+        return createPanelHandlerContext({
             context: this.context,
             panel: this.panel,
             stateManager: this.stateManager,
             communicationManager: this.communicationManager,
             sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
-
-            // Shared state (dashboard doesn't use shared state)
-            sharedState: {
-                isAuthenticating: false,
-            } as SharedState,
-        };
+        });
     }
 
     /**
@@ -430,7 +561,10 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         }
 
         if (envFiles.length > 0) {
-            await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', envFiles);
+            await vscode.commands.executeCommand(
+                'demoBuilder._internal.initializeFileHashes',
+                envFiles,
+            );
         }
     }
 }

@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Project Builder — group-paced steps prototype</title>
+<style>
+  :root{
+    --bg:#1e1e1e;--rail:#181818;--line:#333;--line-soft:#2a2a2a;
+    --gray50:#212121;--gray75:#262626;--gray100:#2c2c2c;--gray300:#3d3d3d;--gray400:#4a4a4a;
+    --gray500:#8c8c8c;--gray600:#a8a8a8;--gray700:#c4c4c4;--gray900:#efefef;
+    --blue:#2680eb;--blue-soft:rgba(38,128,235,.14);--green:#39b54a;--amber:#e6a817;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--gray900);height:100vh;overflow:hidden;}
+  .app{display:grid;grid-template-columns:240px 1fr;height:100vh;}
+  .rail{background:var(--rail);border-right:1px solid var(--line);padding:22px 18px;}
+  .rail h4{font-size:11px;letter-spacing:.08em;color:#6c6c6c;text-transform:uppercase;margin:0 0 16px;}
+  .step{display:flex;align-items:center;gap:11px;padding:8px 0;color:var(--gray600);font-size:13.5px;cursor:default;}
+  .step .dot{width:16px;height:16px;border-radius:50%;border:2px solid #3a3a3a;flex:none;display:grid;place-items:center;}
+  .step.done .dot{background:var(--green);border-color:var(--green);}
+  .step.done .dot::after{content:"✓";font-size:9px;color:#08260f;font-weight:700;}
+  .step.active{color:var(--gray900);font-weight:600;}
+  .step.active .dot{border-color:var(--blue);}
+  .step.active .dot::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--blue);}
+  .step.sub{padding-left:6px;font-size:12.5px;color:#6f6f6f;}
+  .step.sub .dot{width:13px;height:13px;}
+
+  .main{display:flex;flex-direction:column;min-width:0;}
+  .header{padding:32px 48px 6px;}
+  .header h1{font-size:25px;margin:0 0 8px;font-weight:700;}
+  .header .stepname{font-size:17px;font-weight:600;}
+  .header .stepdesc{font-size:13.5px;color:var(--gray600);margin-top:3px;}
+  .content{flex:1;overflow:auto;padding:24px 48px;}
+
+  .group-label{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:#6c6c6c;margin:0 0 14px;display:flex;gap:8px;}
+  .group-label .meta{color:var(--gray500);text-transform:none;letter-spacing:0;}
+  .tiles{display:flex;flex-wrap:wrap;gap:16px;}
+  .abctx{background:var(--gray50);border:1px solid var(--line);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:var(--gray600);}
+  .tile{width:280px;background:var(--gray50);border:1px solid var(--gray300);border-radius:12px;padding:16px;cursor:pointer;transition:transform .15s,box-shadow .15s,background .15s,border-color .15s;position:relative;}
+  .tile:hover{background:var(--gray75);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.28);}
+  .tile .top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;}
+  .tile .ico{width:34px;height:34px;border-radius:9px;background:var(--gray100);display:grid;place-items:center;font-size:18px;}
+  .badge{font-size:11px;display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-weight:600;}
+  .badge.warn{color:var(--amber);background:rgba(230,168,23,.12);}
+  .badge.ok{color:var(--green);background:rgba(57,181,74,.13);}
+  .badge.lock{color:var(--gray500);background:#2a2a2a;}
+  .tile .name{font-size:14px;font-weight:600;color:var(--gray900);}
+  .tile .val{font-size:12px;color:var(--gray500);margin-top:3px;line-height:1.4;}
+  .tile.next{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-soft);}
+  .tile.locked{opacity:.5;cursor:not-allowed;}
+  .tile.locked:hover{transform:none;box-shadow:none;background:var(--gray50);}
+  .tile.add{display:flex;align-items:center;justify-content:center;color:var(--gray500);border-style:dashed;background:transparent;}
+  .tile.add:hover{color:var(--gray700);border-color:var(--gray400);transform:none;box-shadow:none;}
+
+  .plain{max-width:560px;}
+  .brand{display:flex;gap:14px;margin-top:14px;}
+  .bcard{width:150px;border:1.5px solid var(--gray300);border-radius:10px;padding:16px;text-align:center;cursor:pointer;}
+  .bcard.sel{border-color:var(--blue);background:var(--blue-soft);}
+  .field{margin-bottom:14px;max-width:420px;}
+  .field label{display:block;font-size:12px;color:var(--gray600);margin-bottom:6px;}
+  .field input{width:100%;background:#1c1c1c;border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--gray900);font:inherit;font-size:13px;}
+  .check{display:flex;gap:10px;align-items:center;padding:8px 0;color:var(--gray700);font-size:13.5px;}
+  .check .ok{color:var(--green);}
+  .summary{border:1px solid var(--line);border-radius:12px;overflow:hidden;max-width:560px;}
+  .srow{display:flex;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--line-soft);font-size:13.5px;}
+  .srow:last-child{border-bottom:0;} .srow .k{color:var(--gray500);}
+
+  .footer{border-top:1px solid var(--line);padding:16px 48px;display:flex;justify-content:space-between;align-items:center;}
+  .grp{display:flex;gap:10px;}
+  .btn{font:inherit;font-size:13px;cursor:pointer;border-radius:16px;padding:7px 16px;border:1px solid var(--line);background:transparent;color:var(--gray900);}
+  .btn:hover{background:#2e2e2e;}
+  .btn.accent{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .btn.accent:hover{background:#1f6fd0;}
+  .btn.accent[disabled]{opacity:.4;cursor:default;}
+  .btn.quiet{border-color:transparent;color:var(--gray600);}
+  .btn.quiet:hover{color:var(--gray900);background:#2a2a2a;}
+
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,0);pointer-events:none;transition:background .18s;display:grid;place-items:center;z-index:10;}
+  .scrim.open{background:rgba(0,0,0,.55);pointer-events:auto;}
+  .dialog{width:560px;max-width:calc(100vw - 48px);background:#242424;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 48px rgba(0,0,0,.5);padding:26px;opacity:0;transform:translateY(10px) scale(.985);transition:opacity .18s,transform .18s;}
+  .scrim.open .dialog{opacity:1;transform:none;}
+  .dialog h3{margin:0 0 4px;font-size:18px;} .dialog .dsub{margin:0 0 18px;color:var(--gray600);font-size:13.5px;}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+  .opt-stack{display:flex;flex-direction:column;gap:10px;margin-bottom:8px;}
+  .opt-stack .opt:hover{border-color:var(--gray400);background:var(--gray75);}
+  .opt{border:1.5px solid var(--line);border-radius:9px;padding:14px;cursor:pointer;} .opt.sel{border-color:var(--blue);background:var(--blue-soft);}
+  .opt .ot{font-weight:600;font-size:14px;} .opt .od{color:var(--gray500);font-size:12px;margin-top:3px;}
+  .seq{display:flex;gap:8px;margin-bottom:18px;} .seq .s{flex:1;text-align:center;font-size:12px;color:var(--gray500);padding:8px;border-radius:8px;background:#1f1f1f;} .seq .s.active{color:var(--gray900);background:#2a2a2a;}
+  .dactions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;}
+  .hint{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);color:#6c6c6c;font-size:12px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail"><h4>Setup Progress</h4><div id="timeline"></div></aside>
+  <div class="main">
+    <div class="header">
+      <h1>Create Demo Project</h1>
+      <div class="stepname" id="h-name"></div>
+      <div class="stepdesc" id="h-desc"></div>
+    </div>
+    <div class="content" id="content"></div>
+    <div class="footer">
+      <button class="btn quiet">Cancel</button>
+      <div class="grp">
+        <button class="btn quiet" id="backBtn" onclick="back()">Back</button>
+        <button class="btn accent" id="nextBtn" onclick="next()">Continue</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- modals -->
+<div class="scrim" id="m-backend" onclick="bg(event,'m-backend')"><div class="dialog">
+  <h3>Configure Backend</h3><p class="dsub">Choose your backend and connect to it.</p>
+  <div class="opts"><div class="opt sel"><div class="ot">Commerce PaaS</div><div class="od">Adobe Commerce on PaaS</div></div><div class="opt"><div class="ot">Commerce ACCS</div><div class="od">Commerce as a Cloud Service</div></div></div>
+  <div class="field"><label>Endpoint</label><input placeholder="https://commerce.example.com/graphql"/></div>
+  <div class="field"><label>API key</label><input placeholder="••••••••"/></div>
+  <button class="btn">Discover stores</button>
+  <div class="dactions"><button class="btn quiet" onclick="close_('m-backend')">Cancel</button><button class="btn accent" onclick="done('backend','Commerce PaaS · store view us')">Save</button></div>
+</div></div>
+<div class="scrim" id="m-ab" onclick="bg(event,'m-ab')"><div class="dialog">
+  <h3>Adobe Project + Workspace</h3><p class="dsub">The shared cloud home for your integrations.</p>
+  <div class="seq"><div class="s active">1 · Sign in</div><div class="s">2 · Project</div><div class="s">3 · Workspace</div></div>
+  <button class="btn accent">Sign in to Adobe</button>
+  <div class="dactions"><button class="btn quiet" onclick="close_('m-ab')">Cancel</button><button class="btn accent" onclick="done('ab','Acme Org · Stage')">Done</button></div>
+</div></div>
+<div class="scrim" id="m-erp" onclick="bg(event,'m-erp')"><div class="dialog">
+  <h3>Set up ERP Integration</h3><p class="dsub">App Builder is provisioned here (first integration), then the inputs this integration needs.</p>
+  <div class="group-label" style="margin:0 0 8px">App Builder workspace</div>
+  <div class="seq"><div class="s active">1 · Sign in</div><div class="s">2 · Project</div><div class="s">3 · Workspace</div></div>
+  <div class="group-label" style="margin:16px 0 8px">Configuration</div>
+  <div class="field"><label>ERP_API_KEY (secret)</label><input type="password" placeholder="••••••••"/></div>
+  <div class="field"><label>ERP_BASE_URL</label><input placeholder="https://erp.example.com"/></div>
+  <div class="dactions"><button class="btn quiet" onclick="close_('m-erp')">Cancel</button><button class="btn accent" onclick="done('erp')">Save</button></div>
+</div></div>
+<div class="scrim" id="m-add" onclick="bg(event,'m-add')"><div class="dialog">
+  <h3>Add an integration</h3><p class="dsub" id="add-sub">What are you adding?</p>
+  <div id="add-types" class="opt-stack">
+    <div class="opt" onclick="pickType('mesh')"><div class="ot">◧&nbsp; Mesh</div><div class="od">An API Mesh that unifies your Commerce APIs and feeds the storefront.</div></div>
+    <div class="opt" onclick="pickType('app')"><div class="ot">☁&nbsp; App Builder App</div><div class="od">A pre-built App Builder capability from the catalog.</div></div>
+    <div class="opt" onclick="pickType('custom')"><div class="ot">＋&nbsp; Custom</div><div class="od">Bring your own — a public GitHub repository.</div></div>
+  </div>
+  <div id="add-detail" style="display:none">
+    <div id="add-detail-body"></div>
+    <div class="dactions"><button class="btn quiet" onclick="addBack()">← Back</button><button class="btn accent" onclick="close_('m-add')">Add</button></div>
+  </div>
+  <div class="dactions" id="add-cancel"><button class="btn quiet" onclick="close_('m-add')">Cancel</button></div>
+</div></div>
+<div class="scrim" id="m-storefront" onclick="bg(event,'m-storefront')"><div class="dialog">
+  <h3>Configure Storefront</h3><p class="dsub">Connect Edge Delivery services and set the repo.</p>
+  <div class="field"><label>GitHub</label><input placeholder="Connect GitHub…"/></div>
+  <div class="field"><label>DA.live</label><input placeholder="Connect DA.live…"/></div>
+  <div class="field"><label>Repository</label><input placeholder="owner/citisignal"/></div>
+  <div class="dactions"><button class="btn quiet" onclick="close_('m-storefront')">Cancel</button><button class="btn accent" onclick="done('storefront','CitiSignal · repo set')">Save</button></div>
+</div></div>
+<div class="scrim" id="m-blocks" onclick="bg(event,'m-blocks')"><div class="dialog">
+  <h3>Block Libraries</h3><p class="dsub">Extra blocks for your storefront.</p>
+  <div class="field"><label><input type="checkbox" checked disabled style="width:auto"> Demo Team Block Collection (native)</label></div>
+  <div class="field"><label><input type="checkbox" style="width:auto"> Adobe Block Collection</label></div>
+  <div class="dactions"><button class="btn quiet" onclick="close_('m-blocks')">Cancel</button><button class="btn accent" onclick="close_('m-blocks')">Save</button></div>
+</div></div>
+
+<div class="hint">Group-paced steps — one component group per screen; the timeline is the guide. Configure the group's tiles, then Continue.</div>
+
+<script>
+  const STEPS=[
+    {id:'demo',name:'Demo Setup',desc:'Choose a demo to start from.'},
+    {id:'prereq',name:'Prerequisites',desc:'Verify the tools your components need.'},
+    {id:'commerce',name:'Commerce',desc:'Connect the backend that powers your demo.'},
+    {id:'integrations',name:'Integrations',desc:'Set up App Builder, then add integrations.'},
+    {id:'storefront',name:'Storefront',desc:'Connect Edge Delivery and choose blocks.'},
+    {id:'review',name:'Final Review',desc:'Review your project before creating it.'},
+    {id:'create',name:'Create Project',desc:'Install and deploy your components.'},
+  ];
+  let cur=2;                         // start on Commerce so the tiles are visible
+  const dn=new Set();               // configured tile keys
+  const locked=()=>({});             // App Builder workspace folds into the integration's own setup (no separate tile)
+
+  function tile(key,ico,name,val,badgeWarn){
+    const lk=locked()[key], done=dn.has(key);
+    const badge = done?'<span class="badge ok">✓ Done</span>'
+                : lk?'<span class="badge lock">🔒 App Builder first</span>'
+                : '<span class="badge warn">⚠ '+badgeWarn+'</span>';
+    return `<div class="tile ${done?'done':''} ${lk&&!done?'locked':''}" onclick="tap('${key}')">
+      <div class="top"><div class="ico">${ico}</div>${badge}</div>
+      <div class="name">${name}</div><div class="val">${val}</div></div>`;
+  }
+  function panel(id){
+    if(id==='demo')return `<div class="plain"><div class="field"><label>Project name</label><input value="citisignal-launch"/></div>
+      <div class="group-label">Start from a demo</div><div class="brand">
+      <div class="bcard sel">🏢<br>CitiSignal</div><div class="bcard">⛰<br>Adventure Works</div><div class="bcard">＋<br>Build your own</div></div></div>`;
+    if(id==='prereq')return `<div class="plain"><div class="check"><span class="ok">✓</span> Adobe I/O CLN (aio)</div>
+      <div class="check"><span class="ok">✓</span> Node.js 22</div><div class="check"><span class="ok">✓</span> Git</div></div>`;
+    if(id==='commerce')return `<div class="plain">
+      <div class="group-label">Backend <span class="meta">· Commerce</span></div>
+      <div class="opts"><div class="opt sel"><div class="ot">Commerce PaaS</div><div class="od">Adobe Commerce on PaaS</div></div><div class="opt"><div class="ot">Commerce ACCS</div><div class="od">Commerce as a Cloud Service</div></div></div>
+      <div class="field"><label>Endpoint</label><input placeholder="https://commerce.example.com/graphql"/></div>
+      <div class="field"><label>API key</label><input placeholder="••••••••"/></div>
+      <button class="btn ${dn.has('backend')?'':'accent'}" onclick="done('backend')">${dn.has('backend')?'✓ Connected · store view us':'Connect & discover stores'}</button>
+    </div>`;
+    if(id==='integrations')return `<div class="group-label">Integrations <span class="meta">· App Builder</span></div>
+      <div class="abctx">${dn.has('erp')?'☁️&nbsp; App Builder · Acme Org · Stage workspace':'☁️&nbsp; App Builder is set up automatically when you add your first integration.'}</div>
+      <div class="tiles">
+      ${tile('erp','🔌','ERP Integration','dana/erp-integration · main','Set up')}
+      <div class="tile add" onclick="openAdd()"><div>＋ Add integration</div></div></div>`;
+    if(id==='storefront')return `<div class="plain">
+      <div class="group-label">Storefront <span class="meta">· Edge Delivery</span></div>
+      <div class="field"><label>GitHub</label><input placeholder="Connect GitHub…"/></div>
+      <div class="field"><label>DA.live</label><input placeholder="Connect DA.live…"/></div>
+      <div class="field"><label>Repository</label><input placeholder="owner/citisignal"/></div>
+      <div class="group-label" style="margin-top:20px">Block libraries</div>
+      <div class="check"><input type="checkbox" checked disabled style="width:auto">&nbsp; Demo Team Block Collection <span style="color:var(--gray500)">&nbsp;· native</span></div>
+      <div class="check"><input type="checkbox" style="width:auto">&nbsp; Adobe Block Collection</div>
+      <button class="btn ${dn.has('storefront')?'':'accent'}" style="margin-top:14px" onclick="done('storefront')">${dn.has('storefront')?'✓ Saved':'Save storefront setup'}</button>
+    </div>`;
+    if(id==='review')return `<div class="summary">
+      <div class="srow"><span class="k">Storefront</span><span>CitiSignal · Edge Delivery</span></div>
+      <div class="srow"><span class="k">Backend</span><span>${dn.has('backend')?'Commerce PaaS · us':'—'}</span></div>
+      <div class="srow"><span class="k">App Builder</span><span>${dn.has('ab')?'Acme Org · Stage':'—'}</span></div>
+      <div class="srow"><span class="k">Integration</span><span>ERP Integration${dn.has('erp')?' · configured':''}</span></div>
+      <div class="srow"><span class="k">Block libraries</span><span>Demo Team Collection</span></div></div>`;
+    if(id==='create')return `<div class="plain"><div class="check">Ready to install + deploy your components…</div></div>`;
+    return '';
+  }
+  // values for the backend tile (kept dynamic)
+  function backendVal(){return dn.has('backend')?'Commerce PaaS · store view us':'Commerce PaaS · not connected';}
+
+  function canContinue(){
+    const id=STEPS[cur].id;
+    if(id==='commerce')return dn.has('backend');
+    if(id==='integrations')return dn.has('erp');
+    if(id==='storefront')return dn.has('storefront');
+    return true;
+  }
+  function render(){
+    // timeline
+    document.getElementById('timeline').innerHTML=STEPS.map((s,i)=>{
+      const cls=i<cur?'done':i===cur?'active':'';
+      return `<div class="step ${cls}"><span class="dot"></span> ${s.name}</div>`;
+    }).join('');
+    document.getElementById('h-name').textContent=STEPS[cur].name;
+    document.getElementById('h-desc').textContent=STEPS[cur].desc;
+    document.getElementById('content').innerHTML=panel(STEPS[cur].id);
+    document.getElementById('backBtn').style.visibility=cur>0?'visible':'hidden';
+    const nb=document.getElementById('nextBtn');
+    nb.textContent=cur===STEPS.length-1?'Create':(cur===STEPS.length-2?'Create':'Continue');
+    if(canContinue())nb.removeAttribute('disabled');else nb.setAttribute('disabled','');
+  }
+  function next(){if(!canContinue())return; if(cur<STEPS.length-1){cur++;render();}}
+  function back(){if(cur>0){cur--;render();}}
+  function open_(id){document.getElementById(id).classList.add('open');}
+  function close_(id){document.getElementById(id).classList.remove('open');}
+  function bg(e,id){if(e.target.id===id)close_(id);}
+  function tap(key){if(locked()[key])return;open_('m-'+key);}
+  function done(key){dn.add(key);close_('m-'+key);render();}
+
+  // "Add integration" → choose a TYPE (Mesh / App Builder App / Custom) → details
+  function resetAdd(){
+    document.getElementById('add-types').style.display='';
+    document.getElementById('add-detail').style.display='none';
+    document.getElementById('add-cancel').style.display='';
+    document.getElementById('add-sub').textContent='What are you adding?';
+  }
+  function openAdd(){resetAdd();open_('m-add');}
+  function pickType(t){
+    document.getElementById('add-types').style.display='none';
+    document.getElementById('add-cancel').style.display='none';
+    document.getElementById('add-detail').style.display='';
+    const sub=document.getElementById('add-sub'), body=document.getElementById('add-detail-body');
+    if(t==='mesh'){
+      sub.textContent='Add a Mesh';
+      body.innerHTML='<div class="field"><label>Mesh</label><input value="Commerce PaaS API Mesh"/></div>'
+        +'<div class="val" style="color:var(--gray500);font-size:12px">Filtered to your backend · provides MESH_ENDPOINT to the storefront.</div>';
+    } else if(t==='app'){
+      sub.textContent='Add an App Builder App';
+      body.innerHTML='<div class="val" style="color:var(--gray500)">No pre-built apps available for this stack yet.</div>';
+    } else {
+      sub.textContent='Add a Custom integration';
+      body.innerHTML='<div class="field"><label>Repository URL</label><input placeholder="github.com/owner/repo"/></div>'
+        +'<div class="field"><label>Name</label><input placeholder="ERP Integration"/></div>';
+    }
+  }
+  function addBack(){resetAdd();}
+  render();
+</script>
+</body>
+</html>

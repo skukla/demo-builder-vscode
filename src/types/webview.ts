@@ -8,55 +8,106 @@ export type ThemeMode = 'light' | 'dark';
 
 export type WizardStep =
     | 'welcome'
-    | 'component-selection'
     | 'prerequisites'
-    | 'adobe-auth'  // Adobe authentication step
-    | 'adobe-project'  // Adobe project selection step
-    | 'adobe-workspace'  // Adobe workspace selection step
-    | 'eds-connect-services'  // EDS: Combined GitHub + DA.live authentication (conditional: requiresGitHub OR requiresDaLive stack)
-    | 'eds-repository-config'  // EDS: Repository configuration. DA.live site name is derived from the repo name (see backlog 2026-06-08-unify-da-site-and-repo-name).
-    | 'storefront-setup'  // EDS: Storefront setup (GitHub repo, DA.live content, Helix config)
-    | 'settings'  // Component-specific settings collection
+    | 'adobe-auth' // Adobe authentication step
+    | 'adobe-project' // Adobe project selection step
+    | 'adobe-workspace' // Adobe workspace selection step
+    | 'build-your-project' // Collapsed builder step: commerce + integrations + storefront areas (BuildYourProjectStep shell)
+    | 'storefront-setup' // EDS: Storefront setup/publish (GitHub repo, DA.live content, Helix config)
     | 'review'
     | 'create-project';
+
+/**
+ * Build areas within the collapsed `build-your-project` wizard step.
+ * Distinct concept from the retired standalone wizard-step ids — these identify
+ * the area the nested builder is currently focused on.
+ */
+export type BuildAreaId = 'commerce' | 'storefront' | 'integrations';
+
+/**
+ * The ordered Commerce sub-step ids within the `build-your-project` step's
+ * Commerce area (sign-in is conditional — ACCS gate only). Defined here (rather
+ * than in the UI layer) so `WizardState.activeCommerceStep` can reference it
+ * without `types/` depending on `ui/`. The pure section logic in
+ * `ui/steps/commerceSections.ts` re-exports this type.
+ */
+export type CommerceSectionId =
+    | 'backend'
+    | 'signin'
+    | 'connection'
+    | 'business-structure'
+    | 'catalog';
+
+/**
+ * The ordered Storefront sub-step ids within the build step's Storefront area:
+ * connect accounts (GitHub + DA.live), pick/create the repository, install the AEM
+ * Code Sync app, then the optional block-libraries picker. Defined here so
+ * `WizardState.activeStorefrontStep` can reference it; the pure section logic
+ * lives in `ui/steps/storefrontSections.ts`.
+ */
+export type StorefrontSectionId = 'accounts' | 'repository' | 'code-sync' | 'block-libraries';
 
 export interface WizardState {
     currentStep: WizardStep;
     projectName: string;
-    selectedPackage?: string;  // Selected package ID (e.g., 'citisignal', 'buildright')
-    selectedStack?: string;  // Selected stack ID (e.g., 'headless-paas', 'eds-paas')
-    selectedAddons?: string[];  // Selected addon IDs (e.g., ['adobe-commerce-aco'])
-    selectedBlockLibraries?: string[];  // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
-    selectedOptionalDependencies?: string[];  // Selected optional dependency IDs (e.g., mesh component IDs from stack.optionalDependencies)
-    customBlockLibraries?: CustomBlockLibrary[];  // Custom block libraries added by URL
-    packageConfigDefaults?: Record<string, string>;  // Package-specific config defaults (e.g., store codes)
+    selectedPackage?: string; // Selected package ID (e.g., 'citisignal', 'buildright')
+    selectedBackend?: string; // Persisted Commerce backend id (e.g., 'adobe-commerce-paas'); source of truth for the backend choice + the "frontend pending" display. selectedStack stays the downstream key.
+    selectedStack?: string; // Selected stack ID (e.g., 'headless-paas', 'eds-paas')
+    selectedAddons?: string[]; // Selected addon IDs (e.g., ['adobe-commerce-aco'])
+    selectedBlockLibraries?: string[]; // Selected block library IDs (e.g., ['isle5', 'demo-team-blocks'])
+    selectedOptionalDependencies?: string[]; // Selected optional dependency IDs (e.g., mesh component IDs from stack.optionalDependencies)
+    selectedAppBuilderComponents?: string[]; // Selected catalog appBuilderComponent IDs (D2; intent the dashboard reads). Mesh dual-flows through selectedOptionalDependencies for step-filtering — see appBuilderComponentSelectionState.ts
+    appBuilderComponentSources?: Record<
+        string,
+        { owner: string; repo: string; branch?: string; name?: string }
+    >; // Maps a selected integration id → its custom GitHub source (for custom-URL entries; catalog entries resolve from config and need no source here). `name` = user-facing display name for shell instances.
+    selectedConsoleApis?: Record<string, string[]>; // Free Console API picks (sdk codes) per integration id. Locked/required codes are derived at render time, never stored. Reserved key '__existing__' carries a project's pre-existing additionalConsoleApis in edit mode (joins the serialization union, never shown per-row).
+    customBlockLibraries?: CustomBlockLibrary[]; // Custom block libraries added by URL
+    packageConfigDefaults?: Record<string, string>; // Package-specific config defaults (e.g., store codes)
     components?: ComponentSelection;
-    componentConfigs?: ComponentConfigs;  // Component-specific environment configurations
+    componentConfigs?: ComponentConfigs; // Component-specific environment configurations
+    // Cached validity verdicts from the group-step config-tile modal bodies. The
+    // authoritative validity is hook-computed (ConnectStoreStepContent /
+    // RepoSelectionInline); persisting the verdict keeps each tile's status badge
+    // and the step's Continue gate correct when the modal is closed and across
+    // back/forward navigation. See ui/steps/tileStatus.ts.
+    commerceConnectValid?: boolean; // Connection sub-step's OWN fields are valid (ConnectStoreStepContent)
+    commerceCatalogValid?: boolean; // Catalog sub-step's OWN fields are valid. Separate from the
+    // above because one whole-form verdict gating both deadlocked PaaS: Catalog's required fields
+    // kept Connection incomplete, and Catalog is locked until Connection completes.
+    commerceStoreViewChosen?: boolean; // Persisted verdict: the Business Structure store-view selection was made — drives the Catalog tab's gate/status
+    commerceStoreLoading?: boolean; // Transient: store discovery is fetching the structure — blocks the Business Structure Continue gate while true
+    storefrontRepoValid?: boolean; // Storefront repo selection reported valid (RepoSelectionInline repository phase)
+    storefrontCodeSyncValid?: boolean; // Storefront AEM Code Sync app install reported valid (RepoSelectionInline code-sync phase)
+    activeBuildArea?: BuildAreaId; // Area currently focused within the build-your-project step
+    activeCommerceStep?: CommerceSectionId; // Active Commerce sub-step within the build step (footer Continue/Back walks sub-steps → areas → wizard steps)
+    committedCommerceSteps?: CommerceSectionId[]; // Commerce sub-steps the user has pressed Continue past — gates the summary ✓ (a valid form alone does NOT mark a row done)
+    activeStorefrontStep?: StorefrontSectionId; // Active Storefront sub-step within the build step (same footer-driven walk as Commerce)
     adobeAuth: AdobeAuthState;
-    adobeOrg?: Organization;  // Renamed for consistency
-    adobeProject?: AdobeProject;  // Renamed for consistency
-    adobeWorkspace?: Workspace;  // New field for workspace
-    commerceConfig?: WizardCommerceConfig;  // Wizard-specific commerce config (simplified)
+    adobeOrg?: Organization; // Renamed for consistency
+    adobeProject?: AdobeProject; // Renamed for consistency
+    adobeWorkspace?: Workspace; // New field for workspace
+    commerceConfig?: WizardCommerceConfig; // Wizard-specific commerce config (simplified)
     creationProgress?: CreationProgress;
-    projectSearchFilter?: string;  // Filter persistence for project selection
-    edsConfig?: EDSConfig;  // EDS (Edge Delivery Services) configuration
+    projectSearchFilter?: string; // Filter persistence for project selection
+    edsConfig?: EDSConfig; // EDS (Edge Delivery Services) configuration
 
     // Persistent caches to prevent re-fetching on backward navigation
-    storeDiscoveryData?: CommerceStoreStructure;  // Store structure from discovery (avoids re-fetch on back navigation)
+    storeDiscoveryData?: CommerceStoreStructure; // Store structure from discovery (avoids re-fetch on back navigation)
     projectsCache?: AdobeProject[];
     workspacesCache?: Workspace[];
-    githubReposCache?: GitHubRepoItem[];  // GitHub repos with write access
-    githubRepoSearchFilter?: string;  // Search filter for repo selection
-    daLiveSitesCache?: DaLiveSiteItem[];  // DA.live sites in current org
-    daLiveSiteSearchFilter?: string;  // Search filter for site selection
-    
+    githubReposCache?: GitHubRepoItem[]; // GitHub repos with write access
+    githubRepoSearchFilter?: string; // Search filter for repo selection
+    daLiveSitesCache?: DaLiveSiteItem[]; // DA.live sites in current org
+    daLiveSiteSearchFilter?: string; // Search filter for site selection
+
     apiVerification?: {
         isChecking: boolean;
         message?: string;
         subMessage?: string;
         hasMesh?: boolean;
         error?: string;
-        code?: ErrorCode;  // Typed error code for programmatic handling
+        code?: ErrorCode; // Typed error code for programmatic handling
     };
     apiMesh?: {
         isChecking: boolean;
@@ -68,16 +119,15 @@ export interface WizardState {
         meshStatus?: 'deployed' | 'not-deployed' | 'pending' | 'error';
         endpoint?: string;
         error?: string;
-        code?: ErrorCode;  // Typed error code for programmatic handling
-        setupInstructions?: Array<{ step: string; details: string; important?: boolean }>;
+        code?: ErrorCode; // Typed error code for programmatic handling
     };
 
     // Wizard mode - determines flow behavior and UI labels
     wizardMode?: WizardMode;
 
     // Edit-target data (populated when wizardMode === 'edit')
-    editProjectPath?: string;  // Path to existing project being edited
-    editOriginalName?: string;  // Original project name (for duplicate validation)
+    editProjectPath?: string; // Path to existing project being edited
+    editOriginalName?: string; // Original project name (for duplicate validation)
 }
 
 /**
@@ -93,11 +143,11 @@ export interface AdobeAuthState {
     isChecking: boolean;
     email?: string;
     error?: string;
-    code?: ErrorCode;  // Typed error code for programmatic handling
+    code?: ErrorCode; // Typed error code for programmatic handling
     requiresOrgSelection?: boolean;
-    orgLacksAccess?: boolean;  // Selected organization doesn't have App Builder access
-    tokenExpiresIn?: number;  // Minutes until token expires
-    tokenExpiringSoon?: boolean;  // True if < 5 minutes remaining
+    orgLacksAccess?: boolean; // Selected organization doesn't have App Builder access
+    tokenExpiresIn?: number; // Minutes until token expires
+    tokenExpiringSoon?: boolean; // True if < 5 minutes remaining
 }
 
 export interface Organization {
@@ -111,7 +161,11 @@ export interface AdobeProject {
     name: string;
     title?: string;
     description?: string;
-    org_id?: string;  // Organization ID from Adobe Console API
+    org_id?: string; // Organization ID from Adobe Console API
+    /** Creator's IMS user id (`<GUID>@<authsrc>.e`) from the Console API; absent when unknown */
+    who_created?: string;
+    /** True only when the current token user created this project (extension-stamped; fail closed) */
+    deletable?: boolean;
 }
 
 // Note: Import shared types from @/types directly where needed (removed circular re-export)
@@ -430,7 +484,7 @@ export interface EDSConfig {
         path: string;
     };
 
-    // Repository creation state (set by GitHubRepoSelectionStep when creating new repo)
+    // Repository creation state (set by RepoSelectionInline when creating a new repo)
     /** Created repository info - set when repo is created in selection step, before proceeding */
     createdRepo?: {
         owner: string;

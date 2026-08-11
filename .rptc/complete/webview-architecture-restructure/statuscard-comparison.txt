@@ -1,14 +1,14 @@
 === StatusCard.tsx Comparison ===
 
 Location 1: src/core/ui/components/StatusCard.tsx
--rw-r--r--  1 kukla  staff   2.6K Oct 28 18:53 /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/StatusCard.tsx
+-rw-r--r--  1 kukla  staff   2.6K Oct 28 18:53 /Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/StatusCard.tsx
 
 Location 2: src/webviews/components/molecules/StatusCard.tsx
--rw-r--r--  1 kukla  staff   1.8K Oct 28 18:53 /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews/components/molecules/StatusCard.tsx
+-rw-r--r--  1 kukla  staff   1.8K Oct 28 18:53 /Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews/components/molecules/StatusCard.tsx
 
 --- Diff ---
---- /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/StatusCard.tsx	2025-10-28 18:53:53
-+++ /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews/components/molecules/StatusCard.tsx	2025-10-28 18:53:55
+--- /Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/StatusCard.tsx	2025-10-28 18:53:53
++++ /Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews/components/molecules/StatusCard.tsx	2025-10-28 18:53:55
 @@ -1,5 +1,5 @@
  import React from 'react';
 -import { StatusDot } from '@/design-system/atoms/StatusDot';

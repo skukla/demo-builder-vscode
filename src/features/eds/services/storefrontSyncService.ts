@@ -29,14 +29,21 @@ import { previewAndPublishPage } from './helixApiClient';
 const execFile = promisify(childProcess.execFile);
 
 export class PushRejectedError extends Error {
-    constructor(message: string, readonly stderr?: string) {
+    constructor(
+        message: string,
+        readonly stderr?: string,
+    ) {
         super(message);
         this.name = 'PushRejectedError';
     }
 }
 
 export class GitOperationError extends Error {
-    constructor(message: string, readonly operation: string, readonly stderr?: string) {
+    constructor(
+        message: string,
+        readonly operation: string,
+        readonly stderr?: string,
+    ) {
         super(message);
         this.name = 'GitOperationError';
     }
@@ -73,6 +80,18 @@ export interface SyncAndPublishResult {
     summary: string;
 }
 
+/** A sync input that carries everything the Helix preview/publish step needs. */
+type HelixPublishableInput = SyncAndPublishInput & {
+    githubRepo: NonNullable<SyncAndPublishInput['githubRepo']>;
+    githubToken: string;
+    daLiveToken: string;
+};
+
+/** True when the input has a repo, both tokens, and Helix isn't being skipped. */
+function isHelixPublishableInput(input: SyncAndPublishInput): input is HelixPublishableInput {
+    return Boolean(input.githubRepo && !input.skipHelix && input.githubToken && input.daLiveToken);
+}
+
 /**
  * Commit, push, and (optionally) publish a storefront in one operation.
  *
@@ -83,7 +102,12 @@ export interface SyncAndPublishResult {
  */
 export async function syncAndPublish(input: SyncAndPublishInput): Promise<SyncAndPublishResult> {
     const safeMessage = input.commitMessage.replace(/[\n\r]/g, ' ').trim() || 'AI: sync files';
-    const result: SyncAndPublishResult = { committed: false, pushed: false, helixPublished: false, summary: '' };
+    const result: SyncAndPublishResult = {
+        committed: false,
+        pushed: false,
+        helixPublished: false,
+        summary: '',
+    };
 
     if (!input.skipCommit) {
         await fetchAndFastForward(input.storefrontPath, input.githubToken);
@@ -104,7 +128,7 @@ export async function syncAndPublish(input: SyncAndPublishInput): Promise<SyncAn
     await push(input.storefrontPath, input.githubToken);
     result.pushed = true;
 
-    if (input.githubRepo && !input.skipHelix && input.githubToken && input.daLiveToken) {
+    if (isHelixPublishableInput(input)) {
         await previewAndPublishPage(
             input.githubRepo.owner,
             input.githubRepo.site,
@@ -139,9 +163,22 @@ export async function syncAndPublish(input: SyncAndPublishInput): Promise<SyncAn
 async function fetchAndFastForward(storefrontPath: string, githubToken?: string): Promise<void> {
     try {
         if (githubToken) {
-            const { stdout: remoteRaw } = await execFile('git', ['-C', storefrontPath, 'remote', 'get-url', 'origin']);
+            const { stdout: remoteRaw } = await execFile('git', [
+                '-C',
+                storefrontPath,
+                'remote',
+                'get-url',
+                'origin',
+            ]);
             const tokenizedUrl = injectTokenIntoUrl(remoteRaw.trim(), githubToken);
-            await execFile('git', ['-C', storefrontPath, 'pull', '--ff-only', tokenizedUrl, 'HEAD']);
+            await execFile('git', [
+                '-C',
+                storefrontPath,
+                'pull',
+                '--ff-only',
+                tokenizedUrl,
+                'HEAD',
+            ]);
         } else {
             await execFile('git', ['-C', storefrontPath, 'pull', '--ff-only']);
         }
@@ -177,7 +214,13 @@ async function commit(storefrontPath: string, message: string): Promise<CommitOu
 async function push(storefrontPath: string, githubToken?: string): Promise<void> {
     try {
         if (githubToken) {
-            const { stdout: remoteRaw } = await execFile('git', ['-C', storefrontPath, 'remote', 'get-url', 'origin']);
+            const { stdout: remoteRaw } = await execFile('git', [
+                '-C',
+                storefrontPath,
+                'remote',
+                'get-url',
+                'origin',
+            ]);
             const tokenizedUrl = injectTokenIntoUrl(remoteRaw.trim(), githubToken);
             await execFile('git', ['-C', storefrontPath, 'push', tokenizedUrl, 'HEAD']);
         } else {

@@ -10,8 +10,9 @@ import {
     EditProjectConfig,
     WizardStepConfigWithRequirements,
 } from '../wizardHelpers';
-import { hasMeshInDependencies } from '@/core/constants';
+import { isMeshComponentId } from '@/core/constants';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
+import { RESERVED_EXISTING_KEY } from '@/features/project-creation/ui/components/integration-flow';
 import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 import type { Stack } from '@/types/stacks';
 import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
@@ -68,7 +69,9 @@ interface UseWizardStateReturn {
     /** Full component data with envVars from backend */
     componentsData: { success: boolean; type: string; data: ComponentsData } | null;
     /** Set components data */
-    setComponentsData: React.Dispatch<React.SetStateAction<{ success: boolean; type: string; data: ComponentsData } | null>>;
+    setComponentsData: React.Dispatch<
+        React.SetStateAction<{ success: boolean; type: string; data: ComponentsData } | null>
+    >;
 }
 
 /**
@@ -91,27 +94,35 @@ function buildEditModeEdsConfig(
         repoName: repo,
         daLiveOrg: edsConfig.daLiveOrg || '',
         daLiveSite: site,
-        githubAuth: hasGithub ? {
-            isAuthenticated: false,
-            isChecking: true,
-            user: { login: owner },
-        } : undefined,
-        daLiveAuth: hasDaLive ? {
-            isAuthenticated: false,
-            isChecking: true,
-        } : undefined,
+        githubAuth: hasGithub
+            ? {
+                  isAuthenticated: false,
+                  isChecking: true,
+                  user: { login: owner },
+              }
+            : undefined,
+        daLiveAuth: hasDaLive
+            ? {
+                  isAuthenticated: false,
+                  isChecking: true,
+              }
+            : undefined,
         repoUrl: edsConfig.repoUrl,
         repoMode: hasGithub ? 'existing' : undefined,
-        selectedRepo: hasGithub ? {
-            id: `${owner}/${repo}`,
-            name: repo,
-            fullName: `${owner}/${repo}`,
-            htmlUrl: `https://github.com/${owner}/${repo}`,
-        } : undefined,
-        selectedSite: site ? {
-            id: site,
-            name: site,
-        } : undefined,
+        selectedRepo: hasGithub
+            ? {
+                  id: `${owner}/${repo}`,
+                  name: repo,
+                  fullName: `${owner}/${repo}`,
+                  htmlUrl: `https://github.com/${owner}/${repo}`,
+              }
+            : undefined,
+        selectedSite: site
+            ? {
+                  id: site,
+                  name: site,
+              }
+            : undefined,
     };
 }
 
@@ -135,26 +146,34 @@ function buildImportModeEdsConfig(
         repoName: repo,
         daLiveOrg: edsConfig.daLiveOrg || '',
         daLiveSite: site,
-        githubAuth: hasGithub ? {
-            isAuthenticated: true,
-            user: { login: owner },
-        } : undefined,
-        daLiveAuth: hasDaLive ? {
-            isAuthenticated: true,
-            org: edsConfig.daLiveOrg,
-        } : undefined,
+        githubAuth: hasGithub
+            ? {
+                  isAuthenticated: true,
+                  user: { login: owner },
+              }
+            : undefined,
+        daLiveAuth: hasDaLive
+            ? {
+                  isAuthenticated: true,
+                  org: edsConfig.daLiveOrg,
+              }
+            : undefined,
         repoUrl: edsConfig.repoUrl,
         repoMode: hasGithub ? 'existing' : undefined,
-        selectedRepo: hasGithub ? {
-            id: `${owner}/${repo}`,
-            name: repo,
-            fullName: `${owner}/${repo}`,
-            htmlUrl: `https://github.com/${owner}/${repo}`,
-        } : undefined,
-        selectedSite: site ? {
-            id: site,
-            name: site,
-        } : undefined,
+        selectedRepo: hasGithub
+            ? {
+                  id: `${owner}/${repo}`,
+                  name: repo,
+                  fullName: `${owner}/${repo}`,
+                  htmlUrl: `https://github.com/${owner}/${repo}`,
+              }
+            : undefined,
+        selectedSite: site
+            ? {
+                  id: site,
+                  name: site,
+              }
+            : undefined,
     };
 }
 
@@ -162,13 +181,61 @@ function buildImportModeEdsConfig(
 function buildEditModeAdobeContext(adobe: ImportedSettings['adobe']) {
     return {
         org: adobe?.orgId ? { id: adobe.orgId, code: '', name: adobe.orgName || '' } : undefined,
-        project: adobe?.projectId ? { id: adobe.projectId, name: adobe.projectName || '', title: adobe.projectTitle } : undefined,
-        workspace: adobe?.workspaceId ? { id: adobe.workspaceId, name: adobe.workspaceName || '', title: adobe.workspaceTitle } : undefined,
+        project: adobe?.projectId
+            ? { id: adobe.projectId, name: adobe.projectName || '', title: adobe.projectTitle }
+            : undefined,
+        workspace: adobe?.workspaceId
+            ? {
+                  id: adobe.workspaceId,
+                  name: adobe.workspaceName || '',
+                  title: adobe.workspaceTitle,
+              }
+            : undefined,
+    };
+}
+
+/**
+ * Seed the wizard's App Builder integration state from a project's extracted
+ * settings so integration rows survive an edit rebuild:
+ * - `selections.appBuilder` → `selectedAppBuilderComponents` (the row ids)
+ * - `selections.dependencies` (mesh ids ONLY) → `selectedOptionalDependencies`
+ *   — the mesh dual-flow: the executor deliberately excludes mesh-kind from
+ *   `appBuilder` and persists the mesh as a legacy dep id, so `isMeshSelected`
+ *   (which reads selectedAppBuilderComponents OR selectedOptionalDependencies)
+ *   needs this seed or the mesh row vanishes in edit mode AND an edit Finish
+ *   (which rebuilds dependencies from stack deps + selectedOptionalDependencies)
+ *   silently drops the mesh. Non-mesh base deps are filtered — seeding them
+ *   would falsely trip anyDeployableSelected and force the destination gate.
+ * - `appBuilderComponentSources` → custom-URL sources (else custom rows vanish)
+ * - `componentApiPicks` → `selectedConsoleApis` per integration, PREFERRED: it is
+ *   the attributed form, and the only one that survives step 07. Seeding from the
+ *   flat field instead collapsed every pick into one anonymous bucket, so reopening
+ *   a project forgot which integration wanted what.
+ * - flat `additionalConsoleApis` → `selectedConsoleApis['__existing__']`, the
+ *   fallback for a settings file written before the keyed form existed
+ *   (reserved key: joins the serialization union, never shown per-row)
+ */
+function buildEditModeIntegrationState(editSettings: ImportedSettings): Partial<WizardState> {
+    const keyedPicks = editSettings.componentApiPicks;
+    const hasKeyedPicks = keyedPicks && Object.keys(keyedPicks).length > 0;
+    const existingApis = editSettings.additionalConsoleApis;
+    const meshDeps = editSettings.selections?.dependencies?.filter(isMeshComponentId);
+    return {
+        selectedAppBuilderComponents: editSettings.selections?.appBuilder,
+        selectedOptionalDependencies: meshDeps?.length ? meshDeps : undefined,
+        appBuilderComponentSources: editSettings.appBuilderComponentSources,
+        selectedConsoleApis: hasKeyedPicks
+            ? keyedPicks
+            : existingApis?.length
+              ? { [RESERVED_EXISTING_KEY]: existingApis }
+              : undefined,
     };
 }
 
 /** Build component selection from edit settings */
-function buildEditModeComponents(selections: ImportedSettings['selections']): ComponentSelection | undefined {
+function buildEditModeComponents(
+    selections: ImportedSettings['selections'],
+): ComponentSelection | undefined {
     if (!selections) return undefined;
     return {
         frontend: selections.frontend,
@@ -180,10 +247,7 @@ function buildEditModeComponents(selections: ImportedSettings['selections']): Co
 }
 
 /** Initialize wizard state for edit mode */
-function buildEditModeState(
-    firstStep: WizardStep,
-    editProject: EditProjectConfig,
-): WizardState {
+function buildEditModeState(firstStep: WizardStep, editProject: EditProjectConfig): WizardState {
     const editSettings = editProject.settings;
     log.info('Initializing wizard in edit mode', {
         projectName: editProject.projectName,
@@ -221,9 +285,15 @@ function buildEditModeState(
         adobeWorkspace: adobeContext.workspace,
         selectedPackage: editSettings.selectedPackage,
         selectedStack: editSettings.selectedStack,
+        // Restore the backend selection so the Commerce → Backend cards show the
+        // project's backend pre-selected on edit (the cards read `selectedBackend`,
+        // e.g. 'adobe-commerce-accs' for a SaaS project). Without this the step
+        // opens with neither card highlighted.
+        selectedBackend: editSettings.selections?.backend,
         selectedAddons: editSettings.selectedAddons,
         selectedBlockLibraries: editSettings.selectedBlockLibraries,
         customBlockLibraries: editSettings.customBlockLibraries,
+        ...buildEditModeIntegrationState(editSettings),
         edsConfig: editSettings.edsConfig
             ? buildEditModeEdsConfig(editSettings.edsConfig)
             : undefined,
@@ -303,7 +373,13 @@ export function useWizardState({
 }: UseWizardStateProps): UseWizardStateReturn {
     // Main wizard state (declared before WIZARD_STEPS so we can use selectedStack)
     const [state, setState] = useState<WizardState>(() =>
-        computeInitialState(wizardSteps, editProject, importedSettings, componentDefaults, existingProjectNames || []),
+        computeInitialState(
+            wizardSteps,
+            editProject,
+            importedSettings,
+            componentDefaults,
+            existingProjectNames || [],
+        ),
     );
 
     // Filter steps based on enabled flag AND stack conditions
@@ -315,13 +391,13 @@ export function useWizardState({
 
         // Step 2: Look up the selected Stack object from the stacks array
         const selectedStack = state.selectedStack
-            ? stacks?.find(s => s.id === state.selectedStack)
+            ? stacks?.find((s) => s.id === state.selectedStack)
             : undefined;
 
         // Step 3: Convert to format expected by filterStepsForStack
-        const stepsWithConditions: WizardStepWithCondition[] = enabledSteps.map(step => {
+        const stepsWithConditions: WizardStepWithCondition[] = enabledSteps.map((step) => {
             // Find the original step config to get the condition
-            const originalStep = wizardSteps?.find(ws => ws.id === step.id);
+            const originalStep = wizardSteps?.find((ws) => ws.id === step.id);
             return {
                 id: step.id,
                 name: step.name,
@@ -330,29 +406,20 @@ export function useWizardState({
             };
         });
 
-        // Step 4: Determine if Adobe I/O credentials are needed
-        // Adobe I/O project/workspace required when mesh is included
-        // Adobe auth (sign-in only) required when mesh OR ACCS backend
-        const effectiveDeps = [
-            ...(selectedStack?.dependencies || []),
-            ...(state.selectedOptionalDependencies || []),
-        ];
-        const meshIncluded = hasMeshInDependencies(effectiveDeps);
-        const isAccsBackend = selectedStack?.backend === 'adobe-commerce-accs';
-
-        // Step 5: Apply stack-based, mode-based, and Adobe I/O-based filtering
+        // Step 4: Apply stack-based and mode-based filtering. Adobe sign-in is no
+        // longer a standalone step — it's subsumed into the Build step (Commerce's
+        // Sign-in sub-step + the Integrations Deployment-target sub-step), so no
+        // mesh/App-Builder gate inserts an "Adobe Authentication" step here.
         const filteredSteps = filterStepsForStack(stepsWithConditions, selectedStack, {
             isEditMode: !!editProject,
-            hasAdobeIO: meshIncluded,
-            hasAdobeAuth: meshIncluded || isAccsBackend,
         });
 
-        return filteredSteps.map(step => ({
+        return filteredSteps.map((step) => ({
             id: step.id as WizardStep,
             name: step.name,
             description: step.description,
         }));
-    }, [wizardSteps, stacks, state.selectedStack, state.selectedOptionalDependencies, editProject]);
+    }, [wizardSteps, stacks, state.selectedStack, editProject]);
 
     // Step completion tracking
     // Neither import mode nor edit mode pre-marks steps as completed
@@ -379,7 +446,8 @@ export function useWizardState({
         // Only act if:
         // 1. We've seen an org before (not first-time setting)
         // 2. The org actually changed to a DIFFERENT value
-        const orgActuallyChanged = hasSeenOrgRef.current &&
+        const orgActuallyChanged =
+            hasSeenOrgRef.current &&
             prevOrgId !== undefined &&
             currentOrgId !== undefined &&
             prevOrgId !== currentOrgId;
@@ -387,22 +455,20 @@ export function useWizardState({
         if (orgActuallyChanged) {
             const isReviewMode = state.wizardMode && state.wizardMode !== 'create';
             if (isReviewMode) {
-                // Reset all org-dependent steps (project → workspace → mesh → settings)
-                // These form a cascade: org owns projects, projects own workspaces,
-                // workspaces own meshes, and settings may reference org credentials
-                // Remove org-dependent steps - user must re-traverse them
-                const orgDependentSteps: WizardStep[] = [
-                    'adobe-project',
-                    'adobe-workspace',
-                    'settings',
-                ];
-                setCompletedSteps(prev =>
-                    prev.filter(stepId => !orgDependentSteps.includes(stepId)),
+                // Reset the org-dependent build step. The Adobe I/O project +
+                // workspace pickers now live INSIDE build-your-project's Integrations
+                // (Mesh) tile, so resetting that step forces the user to re-traverse
+                // project/workspace selection (and any org-credentialed commerce area).
+                const orgDependentSteps: WizardStep[] = ['build-your-project'];
+                setCompletedSteps((prev) =>
+                    prev.filter((stepId) => !orgDependentSteps.includes(stepId)),
                 );
-                setConfirmedSteps(prev =>
-                    prev.filter(stepId => !orgDependentSteps.includes(stepId)),
+                setConfirmedSteps((prev) =>
+                    prev.filter((stepId) => !orgDependentSteps.includes(stepId)),
                 );
-                log.info(`Org changed (${prevOrgId} → ${currentOrgId}), updated org-dependent steps`);
+                log.info(
+                    `Org changed (${prevOrgId} → ${currentOrgId}), updated org-dependent steps`,
+                );
             }
         }
 
@@ -412,7 +478,13 @@ export function useWizardState({
         }
         // Update ref for next comparison
         prevOrgIdRef.current = currentOrgId;
-    }, [state.adobeOrg?.id, state.wizardMode, state.adobeProject?.id, state.adobeWorkspace?.id, WIZARD_STEPS]);
+    }, [
+        state.adobeOrg?.id,
+        state.wizardMode,
+        state.adobeProject?.id,
+        state.adobeWorkspace?.id,
+        WIZARD_STEPS,
+    ]);
 
     // Transition/animation state
     const [animationDirection, setAnimationDirection] = useState<'forward' | 'backward'>('forward');
@@ -433,7 +505,7 @@ export function useWizardState({
     // IMPORTANT: Must be memoized to prevent infinite loops in child components
     // that depend on updateState in their useEffect dependency arrays
     const updateState = useCallback((updates: Partial<WizardState>) => {
-        setState(prev => ({ ...prev, ...updates }));
+        setState((prev) => ({ ...prev, ...updates }));
     }, []);
 
     return {

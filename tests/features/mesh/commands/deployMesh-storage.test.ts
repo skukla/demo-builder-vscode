@@ -2,11 +2,12 @@
  * DeployMeshCommand Storage Tests
  *
  * Tests verifying mesh endpoint storage behavior:
- * - Mesh endpoint stored ONLY in meshState.endpoint (single source of truth)
+ * - Mesh endpoint stored ONLY on the keyed appBuilderComponents entry
  * - Mesh endpoint NOT persisted to componentConfigs
  *
- * The mesh endpoint is stored in project.meshState.endpoint as the
- * authoritative location. See docs/architecture/state-ownership.md for details.
+ * The keyed `appBuilderComponents[id]` entry is the authoritative location
+ * (ADR-011 D3 Steps 07+09); the legacy `meshState` singleton is cleared on write
+ * and read-only for pre-migration manifests. See docs/architecture/state-ownership.md.
  *
  * Target Coverage: 85%+
  */
@@ -53,15 +54,33 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
         sendMeshStatusUpdate: jest.fn().mockResolvedValue(undefined),
     },
 }));
+// A FAITHFUL double. The previous one simulated behaviour production had already
+// retired — it wrote the legacy `meshState` singleton and nothing else — and the
+// gap was invisible only because deployMeshHeadless also set the instance status
+// by hand. Removing that redundant second writer (2026-08-04) exposed it: the
+// suite asserted an instance status that, in production, comes from
+// recordDeployOutcome inside updateMeshState. The real thing is mocked because it
+// reads the mesh .env and hashes the source tree; what it WRITES is reproduced.
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     updateMeshState: jest.fn().mockImplementation(async (project, endpoint) => {
-        // Simulate the actual behavior: set meshState.endpoint
-        project.meshState = {
+        const { recordDeployOutcome } = jest.requireActual(
+            '@/features/app-builder/services/appBuilderDeployOutcome'
+        );
+        const meshInstance = Object.values(
+            (project.componentInstances ?? {}) as Record<string, { id: string; subType?: string }>
+        ).find((instance) => instance.subType === 'mesh');
+
+        recordDeployOutcome(project, 'mesh', meshInstance?.id ?? 'mesh', {
+            status: 'deployed',
+            endpoint,
             envVars: {},
             sourceHash: null,
             lastDeployed: new Date().toISOString(),
-            endpoint,
-        };
+        });
+        // updateMeshStateImpl clears the retired singleton; the keyed entry is
+        // authoritative and a leftover meshState resurfaces through the legacy
+        // read fallbacks.
+        project.meshState = undefined;
     }),
 }));
 jest.mock('@/features/mesh/services/meshDeploymentVerifier', () => ({
@@ -168,9 +187,9 @@ describe('DeployMeshCommand - Storage Behavior', () => {
         // org, so the canonical detectProjectOrgMismatch check passes.
         mockAuthManager = {
             isAuthenticated: jest.fn().mockResolvedValue(true),
-            getOrganizations: jest.fn().mockResolvedValue([
-                { id: 'org-123', code: 'ORG123@AdobeOrg', name: 'Org 123' },
-            ]),
+            getOrganizations: jest
+                .fn()
+                .mockResolvedValue([{ id: 'org-123', code: 'ORG123@AdobeOrg', name: 'Org 123' }]),
             getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org-123', name: 'Org 123' }),
         };
 
@@ -201,9 +220,11 @@ describe('DeployMeshCommand - Storage Behavior', () => {
 
         // Setup fs mocks
         (fs.access as jest.Mock).mockResolvedValue(undefined); // mesh.json exists
-        (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify({
-            meshConfig: { sources: [] },
-        }));
+        (fs.readFile as jest.Mock).mockResolvedValue(
+            JSON.stringify({
+                meshConfig: { sources: [] },
+            })
+        );
     });
 
     describe('Mesh endpoint storage after successful deployment', () => {
@@ -213,11 +234,7 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             mockStateManager.getCurrentProject.mockResolvedValue(testProject);
 
             // When: Mesh deployment completes successfully
-            const command = new DeployMeshCommand(
-                mockContext,
-                mockStateManager,
-                mockLogger
-            );
+            const command = new DeployMeshCommand(mockContext, mockStateManager, mockLogger);
             await command.execute();
 
             // Then: componentConfigs should NOT contain MESH_ENDPOINT for frontend
@@ -234,26 +251,28 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             }
         });
 
-        it('should store mesh endpoint in meshState.endpoint (single source of truth)', async () => {
+        it('should store the mesh endpoint on the KEYED entry (single source of truth)', async () => {
             // Given: A project with mesh component
             const testProject = createTestProject();
             mockStateManager.getCurrentProject.mockResolvedValue(testProject);
 
             // When: Mesh deployment completes with endpoint
-            const command = new DeployMeshCommand(
-                mockContext,
-                mockStateManager,
-                mockLogger
-            );
+            const command = new DeployMeshCommand(mockContext, mockStateManager, mockLogger);
             await command.execute();
 
-            // Then: Endpoint should be stored in meshState.endpoint (authoritative location)
-            // See docs/architecture/state-ownership.md
+            // Then: the endpoint lands on the keyed appBuilderComponents entry.
+            //
+            // This used to assert `meshState.endpoint`. That WAS the authoritative
+            // location; ADR-011 D3 Steps 07+09 made the keyed map authoritative and
+            // updateMeshStateImpl now CLEARS the legacy singleton. The assertion
+            // survived the migration only because this suite's mock kept writing
+            // the retired field. See docs/architecture/state-ownership.md.
             expect(capturedProject).not.toBeNull();
-            expect(capturedProject!.meshState).toBeDefined();
-            expect(capturedProject!.meshState!.endpoint).toBe(
+            expect(capturedProject!.appBuilderComponents!['commerce-mesh'].endpoint).toBe(
                 'https://test-mesh.adobe.io/graphql'
             );
+            // And the retired singleton is gone, not merely unread.
+            expect(capturedProject!.meshState).toBeUndefined();
         });
 
         it('should update mesh component status to deployed', async () => {
@@ -262,11 +281,7 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             mockStateManager.getCurrentProject.mockResolvedValue(testProject);
 
             // When: Mesh deployment completes
-            const command = new DeployMeshCommand(
-                mockContext,
-                mockStateManager,
-                mockLogger
-            );
+            const command = new DeployMeshCommand(mockContext, mockStateManager, mockLogger);
             await command.execute();
 
             // Then: Mesh component status should be 'deployed'
@@ -280,11 +295,7 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             mockStateManager.getCurrentProject.mockResolvedValue(testProject);
 
             // When: Mesh deployment completes
-            const command = new DeployMeshCommand(
-                mockContext,
-                mockStateManager,
-                mockLogger
-            );
+            const command = new DeployMeshCommand(mockContext, mockStateManager, mockLogger);
             await command.execute();
 
             // Then: meshId should be stored in component metadata
@@ -304,16 +315,12 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             mockStateManager.getCurrentProject.mockResolvedValue(testProject);
 
             // When: Mesh deployment completes
-            const command = new DeployMeshCommand(
-                mockContext,
-                mockStateManager,
-                mockLogger
-            );
+            const command = new DeployMeshCommand(mockContext, mockStateManager, mockLogger);
             await command.execute();
 
-            // Then: Deployment should succeed and endpoint stored in meshState (single source of truth)
+            // Then: deployment succeeds and the endpoint lands on the keyed entry
             expect(capturedProject).not.toBeNull();
-            expect(capturedProject!.meshState!.endpoint).toBe(
+            expect(capturedProject!.appBuilderComponents!['commerce-mesh'].endpoint).toBe(
                 'https://test-mesh.adobe.io/graphql'
             );
             // And: componentConfigs should not have any MESH_ENDPOINT entries
@@ -328,18 +335,14 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             const testProject = createTestProject();
             testProject.componentConfigs = {
                 'frontend-headless': {
-                    'COMMERCE_URL': 'https://commerce.example.com',
-                    'SOME_OTHER_VAR': 'value',
+                    COMMERCE_URL: 'https://commerce.example.com',
+                    SOME_OTHER_VAR: 'value',
                 },
             };
             mockStateManager.getCurrentProject.mockResolvedValue(testProject);
 
             // When: Mesh deployment completes
-            const command = new DeployMeshCommand(
-                mockContext,
-                mockStateManager,
-                mockLogger
-            );
+            const command = new DeployMeshCommand(mockContext, mockStateManager, mockLogger);
             await command.execute();
 
             // Then: componentConfigs should preserve existing values

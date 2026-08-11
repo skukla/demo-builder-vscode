@@ -13,6 +13,7 @@ The feature leverages the Adobe Console SDK to achieve 30x faster operations com
 - **Adobe Console SDK Integration**: High-performance API operations with automatic fallback to CLI
 - **Organization Targeting**: Listing organizations and targeting one per invocation via env-scoped context (no global `aio console` mutation)
 - **Project Management**: Fetching Adobe Developer Console projects
+- **Project Deletion**: Console-project teardown (event registrations and 3rd-party providers removed first to pre-empt the opaque 409), org-gated with native confirmation
 - **Workspace Management**: Fetching workspaces
 - **Caching Strategy**: Multi-layer caching with TTL and security jitter for optimal performance
 - **Pre-flight Checks**: Authentication verification before expensive Adobe I/O operations
@@ -290,6 +291,7 @@ features/authentication/
 │   └── types.ts                   # Type definitions
 ├── handlers/
 │   ├── authenticationHandlers.ts  # Auth message handlers
+│   ├── deleteAdobeProjectHandler.ts # Console-project delete (confirm modal + teardown)
 │   ├── projectHandlers.ts         # Project selection handlers
 │   └── workspaceHandlers.ts       # Workspace selection handlers
 └── README.md                      # This file

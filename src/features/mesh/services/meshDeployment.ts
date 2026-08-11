@@ -4,7 +4,8 @@
 
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
-import { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell';
+import { buildComponent } from '@/core/shell/buildComponent';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
@@ -22,6 +23,10 @@ export type { MeshDeploymentResult };
  * - Generates the final mesh.json from mesh.config.js
  *
  * Without this step, mesh.json references files in build/ that don't exist.
+ *
+ * Thin wrapper over the shared {@link buildComponent} step. The '-- --force'
+ * buildArgs makes this issue the BYTE-IDENTICAL `npm run build -- --force`
+ * command it has always used.
  */
 async function buildMeshComponent(
     componentPath: string,
@@ -29,58 +34,18 @@ async function buildMeshComponent(
     logger: Logger,
     onProgress?: (message: string, subMessage?: string) => void,
 ): Promise<void> {
-    const packageJsonPath = path.join(componentPath, 'package.json');
-
-    try {
-        await fsPromises.access(packageJsonPath);
-    } catch {
-        return; // No package.json — nothing to build
-    }
-
-    const packageJson = parseJSON<{ scripts?: Record<string, string> }>(
-        await fsPromises.readFile(packageJsonPath, 'utf-8'),
-    );
-    if (!packageJson?.scripts?.build) {
-        return; // No build script defined
-    }
-
-    logger.debug('[Mesh Deployment] Building mesh component...');
-    onProgress?.('Building mesh configuration...', 'Installing dependencies');
-
-    const installResult = await commandManager.execute(
-        'npm install --production --no-fund --ignore-scripts',
+    await buildComponent(
+        componentPath,
+        commandManager,
         {
-            cwd: componentPath,
-            timeout: TIMEOUTS.LONG,
-            shell: true,
-            useNodeVersion: getMeshNodeVersion(),
-            enhancePath: true,
+            nodeVersion: getMeshNodeVersion(),
+            kind: 'mesh',
+            buildArgs: '-- --force',
+            logPrefix: '[Mesh Deployment]',
         },
+        logger,
+        onProgress,
     );
-
-    if (installResult.code !== 0) {
-        logger.warn('[Mesh Deployment] npm install had warnings:', installResult.stderr?.substring(0, 300));
-    }
-
-    onProgress?.('Building mesh configuration...', 'Generating mesh.json');
-
-    const buildResult = await commandManager.execute(
-        'npm run build -- --force',
-        {
-            cwd: componentPath,
-            timeout: TIMEOUTS.LONG,
-            shell: true,
-            useNodeVersion: getMeshNodeVersion(),
-            enhancePath: true,
-        },
-    );
-
-    if (buildResult.code !== 0) {
-        const errorMsg = buildResult.stderr?.trim() || buildResult.stdout?.trim() || 'Build failed';
-        throw new Error(`Mesh build failed: ${errorMsg}`);
-    }
-
-    logger.debug('[Mesh Deployment] Mesh component built successfully');
 }
 
 /**
@@ -109,6 +74,25 @@ async function validateMeshConfig(
 /**
  * Handle a failed deploy command by formatting and throwing a meaningful error
  */
+/**
+ * Whether a failed deploy's output says the workspace already holds a mesh —
+ * the signature `aio api-mesh:create` emits (on stdout) when the selected
+ * org/project/workspace has one. Drives the one-shot create→update fallback.
+ */
+function meshAlreadyExists(deployResult: { stdout?: string; stderr?: string }): boolean {
+    return /already has a mesh/i.test(`${deployResult.stdout ?? ''}${deployResult.stderr ?? ''}`);
+}
+
+/**
+ * Whether a failed deploy's output says the remote mesh no longer exists —
+ * the signature `aio api-mesh:update` emits ("Unable to update. No mesh found
+ * for Org(...)") when a stored meshId points at a mesh deleted out-of-band.
+ * Drives the one-shot update→create fallback (signature verified live 2026-07-16).
+ */
+function meshNotFound(deployResult: { stdout?: string; stderr?: string }): boolean {
+    return /no mesh found/i.test(`${deployResult.stdout ?? ''}${deployResult.stderr ?? ''}`);
+}
+
 async function handleDeployFailure(
     deployResult: { code: number | null; stdout?: string; stderr?: string },
     logger: Logger,
@@ -121,7 +105,9 @@ async function handleDeployFailure(
         stderr: deployResult.stderr?.substring(0, 500),
     });
 
-    const errorMsg = deployResult.stderr?.trim() || deployResult.stdout?.trim() ||
+    const errorMsg =
+        deployResult.stderr?.trim() ||
+        deployResult.stdout?.trim() ||
         `Mesh deployment command failed with exit code ${deployResult.code}`;
     const { formatAdobeCliError } = await import('@/features/mesh/utils/errorFormatter');
     const formattedError = formatAdobeCliError(errorMsg);
@@ -133,7 +119,7 @@ async function handleDeployFailure(
  * Builds mesh.json (if needed), then deploys it to Adobe I/O
  *
  * @param componentPath - Path to the component directory containing mesh.json
- * @param commandManager - ExternalCommandManager instance for executing commands
+ * @param commandManager - CommandExecutor instance for executing commands
  * @param logger - Logger instance for info/error messages
  * @param onProgress - Optional callback for progress updates
  * @returns Deployment result with success status, meshId, endpoint, or error
@@ -153,10 +139,12 @@ export async function deployMeshComponent(
         const meshConfigPath = await validateMeshConfig(componentPath, logger, onProgress);
 
         // Determine deployment strategy based on whether mesh already exists
-        const meshCommand: 'create' | 'update' = existingMeshId ? 'update' : 'create';
+        let meshCommand: 'create' | 'update' = existingMeshId ? 'update' : 'create';
 
         if (existingMeshId) {
-            logger.debug(`[Mesh Deployment] Existing mesh detected (${existingMeshId}), using update strategy`);
+            logger.debug(
+                `[Mesh Deployment] Existing mesh detected (${existingMeshId}), using update strategy`,
+            );
         } else {
             logger.debug('[Mesh Deployment] No existing mesh, using create strategy');
         }
@@ -166,30 +154,63 @@ export async function deployMeshComponent(
             existingMeshId ? 'Updating existing mesh' : 'Creating mesh',
         );
 
-        const deployResult = await commandManager.execute(
-            `aio api-mesh:${meshCommand} "${meshConfigPath}" --autoConfirmAction`,
-            {
-                cwd: componentPath,
-                streaming: true,
-                shell: true,
-                timeout: TIMEOUTS.LONG,
-                onOutput: (data: string) => {
-                    const output = data.toLowerCase();
-                    if (output.includes('validating')) {
-                        onProgress?.('Deploying...', 'Validating configuration');
-                    } else if (output.includes('updating') || output.includes('creating')) {
-                        onProgress?.('Deploying...', 'Creating mesh infrastructure');
-                    } else if (output.includes('deploying')) {
-                        onProgress?.('Deploying...', 'Deploying mesh');
-                    } else if (output.includes('success')) {
-                        onProgress?.('Deploying...', 'Mesh created successfully');
-                    }
+        const runMeshCommand = (command: 'create' | 'update') =>
+            commandManager.execute(
+                `aio api-mesh:${command} "${meshConfigPath}" --autoConfirmAction`,
+                {
+                    cwd: componentPath,
+                    streaming: true,
+                    shell: true,
+                    timeout: TIMEOUTS.LONG,
+                    onOutput: (data: string) => {
+                        const output = data.toLowerCase();
+                        const verb = command === 'update' ? 'updated' : 'created';
+                        if (output.includes('validating')) {
+                            onProgress?.('Deploying...', 'Validating configuration');
+                        } else if (output.includes('updating') || output.includes('creating')) {
+                            onProgress?.(
+                                'Deploying...',
+                                `${command === 'update' ? 'Updating' : 'Creating'} mesh infrastructure`,
+                            );
+                        } else if (output.includes('deploying')) {
+                            onProgress?.('Deploying...', 'Deploying mesh');
+                        } else if (output.includes('success')) {
+                            onProgress?.('Deploying...', `Mesh ${verb} successfully`);
+                        }
+                    },
+                    configureTelemetry: false,
+                    useNodeVersion: getMeshNodeVersion(),
+                    enhancePath: true,
                 },
-                configureTelemetry: false,
-                useNodeVersion: getMeshNodeVersion(),
-                enhancePath: true,
-            },
-        );
+            );
+
+        let deployResult = await runMeshCommand(meshCommand);
+
+        // Local state is only a proxy for remote truth, in BOTH directions:
+        // a NEW project pointed at a reused workspace runs `create` against a
+        // mesh that exists (Adobe allows ONE per workspace), and a stored
+        // meshId can point at a mesh deleted out-of-band so `update` finds
+        // nothing. Fall back ONCE, inside this same call (same withOrgContext
+        // targeting) — the if/else-if shape makes chaining impossible.
+        if (
+            deployResult.code !== 0 &&
+            meshCommand === 'create' &&
+            meshAlreadyExists(deployResult)
+        ) {
+            logger.info('[Mesh Deployment] Workspace already has a mesh — retrying as update');
+            onProgress?.('Deploying API Mesh...', 'Existing mesh found — updating instead');
+            meshCommand = 'update';
+            deployResult = await runMeshCommand('update');
+        } else if (
+            deployResult.code !== 0 &&
+            meshCommand === 'update' &&
+            meshNotFound(deployResult)
+        ) {
+            logger.info('[Mesh Deployment] Remote mesh no longer exists — retrying as create');
+            onProgress?.('Deploying API Mesh...', 'Mesh not found — creating instead');
+            meshCommand = 'create';
+            deployResult = await runMeshCommand('create');
+        }
 
         if (deployResult.code !== 0) {
             await handleDeployFailure(deployResult, logger);
@@ -212,7 +233,9 @@ export async function deployMeshComponent(
         }
 
         logger.info('[Mesh Deployment] ✅ Mesh verified and deployed successfully');
-        logger.debug(`[Mesh Deployment] Verification result: meshId=${verificationResult.meshId}, endpoint=${verificationResult.endpoint}`);
+        logger.debug(
+            `[Mesh Deployment] Verification result: meshId=${verificationResult.meshId}, endpoint=${verificationResult.endpoint}`,
+        );
         onProgress?.('✓ Deployment Complete', 'Mesh deployed successfully');
 
         return {
@@ -222,7 +245,6 @@ export async function deployMeshComponent(
                 endpoint: verificationResult.endpoint || '',
             },
         };
-
     } catch (error) {
         logger.error('[Mesh Deployment] Deployment failed', error as Error);
         return {

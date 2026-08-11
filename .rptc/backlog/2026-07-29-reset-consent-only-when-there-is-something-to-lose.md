@@ -3,6 +3,7 @@
 **Filed:** 2026-07-29
 **Origin:** Design question during the beta.122 test pass — why must the user tick
 "Reset to template" for a repo that is empty, when there is nothing to preserve?
+**Status:** In progress — classifier landed on `develop`; UI wiring outstanding.
 **Severity:** Medium — the default path produces a storefront that cannot work, and
 says `Complete`.
 **Present in:** `v1.0.0-beta.121`. Not a hotfix regression.
@@ -43,6 +44,23 @@ does not exist, while the cost of declining is a storefront missing its template
 its LKG pin, and its canonical patches.
 
 Consent should be requested exactly when the answer could destroy something.
+
+## Path corrections (2026-07-29)
+
+Written against the beta.122 line. On `develop` the repo-selection UI has moved:
+`GitHubRepoSelectionStep.tsx` is now `RepoSelectionInline.tsx` (504 lines) plus
+`repoSelectionInline.helpers.tsx` (409). The `resetToTemplate` mechanism is
+unchanged — `RepoSelectionInline.tsx:224` still flips it from one checkbox.
+
+## Progress
+
+`repoStorefrontReadiness.ts` implements the classification: empty / storefront /
+not-a-storefront / **undetermined**, plus `shouldAskBeforeReset`. The fourth
+state is load-bearing — an unreachable GitHub read as `empty` would authorize a
+destructive reset on a repo we could not see.
+
+Remaining: wire it into `RepoSelectionInline`, replacing the single checkbox
+with the three states, and add the backend handler that runs the classifier.
 
 ## Goal / scope
 

@@ -26,6 +26,8 @@ describe('SOP: Inline Styles', () => {
         'TwoColumnLayout.tsx': 'Dynamic gap/ratio from props via translateSpectrumToken()',
         'PageLayout.tsx': 'Dynamic backgroundColor from props',
         'SingleColumnLayout.tsx': 'Dynamic gap from props via translateSpectrumToken()',
+        'ContentWithSidebar.tsx': 'Dynamic sidebar inner-content max-width from props',
+        'ControlPanelLayout.tsx': 'Dynamic secondary-panel inner-content max-width from props',
         // Components with conditional styles
         'StatusDot.tsx': 'Dynamic color/size based on props',
         'FadeTransition.tsx': 'Animation styles that must be inline for transitions',
@@ -34,21 +36,23 @@ describe('SOP: Inline Styles', () => {
         // Spectrum UNSAFE_style (required for Spectrum overrides)
         'SearchHeader.tsx': 'Spectrum UNSAFE_style for theme integration',
         'TimelineNav.tsx': 'Spectrum UNSAFE_style for background colors',
+        'timelineNav.helpers.tsx': 'Spectrum UNSAFE_style for true-white inner dot',
         'VerifiedField.tsx': 'Spectrum UNSAFE_style for semantic colors',
         'Sidebar.tsx': 'Spectrum UNSAFE_style for top padding offset',
 
         // Grid layouts (CSS Grid properties for complex layouts)
         'ReviewStep.tsx': 'CSS Grid layout for two-column review summary',
 
-        // Dashboard link positioning
-        'ProjectDashboardScreen.tsx': 'Spectrum UNSAFE_style for auth link margin',
-
-        // Modal/dialog layout stability
-        'GitHubRepoSelectionStep.tsx': 'Fixed height container prevents modal resize during status recheck',
+        // Modal/dialog layout stability (GitHubAppInstallModal, extracted from the
+        // former GitHubRepoSelectionStep into the RepoSelectionInline helpers)
+        'repoSelectionInline.helpers.tsx': 'Fixed height container prevents modal resize during status recheck',
 
         // Pin indicators for projects (single-property style for inline icon color)
         'ProjectCard.tsx': 'Inline color/flex style for the inline pin indicator next to project name',
         'ProjectRow.tsx': 'Inline color/flex style for the inline pin indicator next to project name',
+
+        // AppBuilderComponent secret input (dashboard UI convention: box-sizing on width:100% input)
+        'SecretFieldRow.tsx': 'box-sizing:border-box on a width:100% masked input (dashboard UI convention)',
 
         // Store structure listbox container
     };

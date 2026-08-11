@@ -24,6 +24,7 @@ import {
     CATALOG_SERVICE_ENDPOINT, CATALOG_API_KEY,
     ACCS_GRAPHQL_ENDPOINT, ACCS_WEBSITE_CODE, ACCS_STORE_CODE, ACCS_STORE_VIEW_CODE,
 } from '@/features/components/config/envVarKeys';
+import { isMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { Project, ComponentInstance } from '@/types';
 import { HandlerContext } from '@/types/handlers';
@@ -198,7 +199,7 @@ export async function determineMeshStatus(
     if (meshChanges.hasChanges) {
         // User previously declined update → 'update-declined' (orange badge)
         // Otherwise → 'config-changed' (yellow badge)
-        return project.meshState?.userDeclinedUpdate ? 'update-declined' : 'config-changed';
+        return isMeshUpdateDeclined(project) ? 'update-declined' : 'config-changed';
     }
     // No config changes: show error if previous deployment failed, otherwise deployed
     return meshComponent.status === 'error' ? 'error' : 'deployed';
@@ -226,7 +227,7 @@ export async function sendDemoStatusUpdate(context: HandlerContext): Promise<voi
         } else if (hasMeshDeploymentRecord(project)) {
             // Read persisted status instead of re-detecting changes
             // Only 'stale' needs translation — dashboard UI uses 'config-changed'
-            const endpoint = project.meshState?.endpoint;
+            const endpoint = getMeshEndpoint(project);
             const summary = project.meshStatusSummary;
             const status = summary === 'stale' ? 'config-changed'
                 : (summary === 'unknown' || !summary) ? 'deployed'
@@ -241,49 +242,4 @@ export async function sendDemoStatusUpdate(context: HandlerContext): Promise<voi
         type: 'statusUpdate',
         payload: buildStatusPayload(project, frontendConfigChanged, meshStatus),
     });
-}
-
-/**
- * Verify mesh deployment with Adobe I/O
- */
-export async function verifyMeshDeployment(context: HandlerContext, project: Project): Promise<void> {
-    const { verifyMeshDeployment: verify, syncMeshStatus } = await import('@/features/mesh/services/meshVerifier');
-
-    const verificationResult = await verify(project);
-
-    if (!verificationResult.success || !verificationResult.data?.exists) {
-        // Distinguish between verification errors and actual "mesh not found"
-        const isVerificationError = !verificationResult.success;
-        const errorMessage = verificationResult.error || '';
-
-        if (isVerificationError) {
-            context.logger.warn('[Dashboard] Cannot verify mesh - verification failed', {
-                error: errorMessage,
-            });
-        } else {
-            context.logger.warn('[Dashboard] Mesh not found in Adobe I/O - may have been deleted externally');
-        }
-
-        await syncMeshStatus(project, verificationResult);
-        context.stateManager.markDirty('meshState');
-
-        // Note: Do NOT call handleRequestStatus() here - it would create an infinite loop
-        // since handleRequestStatus() triggers verifyMeshDeployment() in the background.
-        // The UI is updated via meshStatusUpdate message below.
-
-        if (context.panel) {
-            await context.panel.webview.postMessage({
-                type: 'meshStatusUpdate',
-                payload: {
-                    status: 'not-deployed',
-                    message: isVerificationError
-                        ? 'Cannot verify mesh status'
-                        : 'Mesh not found in Adobe I/O - may have been deleted externally',
-                },
-            });
-        }
-    } else {
-        await syncMeshStatus(project, verificationResult);
-        context.stateManager.markDirty('meshState');
-    }
 }

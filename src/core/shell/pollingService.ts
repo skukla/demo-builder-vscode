@@ -1,6 +1,7 @@
 import { RateLimiter } from './rateLimiter';
 import type { PollOptions } from './types';
 import { getLogger } from '@/core/logging';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
@@ -61,7 +62,7 @@ export class PollingService {
             }
 
             // Wait before next attempt
-            await this.delay(delay);
+            await sleep(delay);
 
             // Calculate next delay with exponential backoff
             delay = Math.min(delay * backoffFactor, maxDelay);
@@ -70,10 +71,4 @@ export class PollingService {
         throw new Error(`Maximum polling attempts reached for: ${name}`);
     }
 
-    /**
-     * Delay for specified milliseconds
-     */
-    private delay(ms: number): Promise<void> {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
 }

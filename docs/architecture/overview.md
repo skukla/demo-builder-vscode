@@ -125,11 +125,27 @@ Multi-step React-based wizard for guided project setup:
       "lastUpdated": "2025-01-15T10:30:00Z"
     }
   },
-  "meshState": {
-    "envVars": {...},
-    "sourceHash": "abc123",
-    "lastDeployed": "2025-01-15T10:35:00Z"
-  }
+  "appBuilderComponents": {
+    "mesh": {
+      "kind": "mesh",
+      "status": "deployed",
+      "source": { "owner": "skukla", "repo": "commerce-mesh" },
+      "endpoint": "https://edge-graph.adobe.io/api/.../graphql",
+      "envVars": {...},
+      "sourceHash": "abc123",
+      "lastDeployed": "2025-01-15T10:35:00Z",
+      "providesEnvVars": { "MESH_ENDPOINT": "https://edge-graph.adobe.io/api/.../graphql" }
+    },
+    "firefly-image-gen": {
+      "kind": "integration",
+      "name": "Firefly Image Gen",
+      "status": "deployed",
+      "source": { "owner": "skukla", "repo": "app-builder-shell" },
+      "url": "https://....adobeio-static.net",
+      "lastDeployed": "2025-01-15T10:40:00Z"
+    }
+  },
+  "additionalConsoleApis": ["FireflyAPISDK"]
 }
 ```
 
@@ -250,7 +266,8 @@ getCurrentOrganization() // SDK-powered, 1-minute cache
 **Comparison Strategy**:
 ```typescript
 // Compare:
-meshState.envVars    // Last deployed state
+// Last deployed state — the keyed mesh entry's envVars, read via the accessor
+getMeshAppBuilderComponent(project)?.envVars
 componentConfigs     // Current local configuration
 
 // If empty, fetch deployed config from Adobe I/O

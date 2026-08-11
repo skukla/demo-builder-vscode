@@ -22,6 +22,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { promisify } from 'util';
 import * as vscode from 'vscode';
+import { isManagedStorefrontFile } from './managedStorefrontFiles';
 import { BaseCommand } from '@/core/base';
 import { COMPONENT_IDS } from '@/core/constants';
 import { PollingService } from '@/core/shell/pollingService';
@@ -82,11 +83,10 @@ export class SyncStorefrontCommand extends BaseCommand {
         const daLiveToken = await this.readDaLiveToken();
         const githubRepo = this.resolveGithubRepo(project);
 
-        await this.withProgress('Syncing storefront', async (progress) => {
-            let result: SyncAndPublishResult;
+        const result = await this.withProgress('Syncing storefront', async (progress) => {
             try {
                 progress.report({ message: 'Committing changes…' });
-                result = await syncAndPublish({
+                return await syncAndPublish({
                     storefrontPath,
                     commitMessage,
                     githubRepo,
@@ -102,13 +102,19 @@ export class SyncStorefrontCommand extends BaseCommand {
                         daLiveToken,
                         githubRepo,
                     });
-                    return;
+                    return null; // the rebase path reports its own outcome
                 }
                 throw err;
             }
-
-            await this.reportSyncResult(result, project);
         });
+
+        // Report the plain-sync outcome AFTER the progress notification closes.
+        // `reportSyncResult` awaits a confirmation dialog ("…nothing to commit" /
+        // "…synced", each with an OK/Open button); showing it inside `withProgress`
+        // held the "Committing changes…" spinner open until the user dismissed it.
+        if (result) {
+            await this.reportSyncResult(result, project);
+        }
     }
 
     /**
@@ -132,15 +138,45 @@ export class SyncStorefrontCommand extends BaseCommand {
 
         const rebaseOutcome = await this.attemptRebase(storefrontPath);
         if (rebaseOutcome === 'clean') {
-            await this.completePushAfterRebase({ storefrontPath, progress, githubToken, daLiveToken, githubRepo });
+            await this.completePushAfterRebase({
+                storefrontPath,
+                progress,
+                githubToken,
+                daLiveToken,
+                githubRepo,
+            });
+            return;
+        }
+
+        // Classify the conflict set before prompting. When EVERY conflicted
+        // file is one the EDS pipeline authoritatively owns (config.json,
+        // fstab.yaml), silently take the remote copy — the user can't
+        // meaningfully judge a machine-generated config merge, so don't ask.
+        const conflictedRel = await this.listConflictedFilesRel(storefrontPath).catch(() => []);
+        if (conflictedRel.length > 0 && conflictedRel.every(isManagedStorefrontFile)) {
+            const ok = await this.autoResolveManagedConflicts(storefrontPath, conflictedRel);
+            if (ok) {
+                await this.completePushAfterRebase({
+                    storefrontPath,
+                    progress,
+                    githubToken,
+                    daLiveToken,
+                    githubRepo,
+                    autoResolvedManaged: true,
+                });
+                return;
+            }
+            await this.showError(
+                'Could not automatically resolve the configuration update. Your local changes are intact.',
+            );
             return;
         }
 
         // Conflict path — open Source Control, poll until clear, decide based on user action.
         const action = await vscode.window.showWarningMessage(
             'Demo Builder pulled the latest changes and found conflicts that need your input. ' +
-            'Resolve each conflict in the Source Control panel (Accept Current / Incoming / Both buttons), ' +
-            'then click Continue. Cancel undoes the pull and leaves your storefront exactly as it was.',
+                'Resolve each conflict in the Source Control panel (Accept Current / Incoming / Both buttons), ' +
+                'then click Continue. Cancel undoes the pull and leaves your storefront exactly as it was.',
             { modal: true },
             'Continue',
             'Cancel and Reset',
@@ -157,15 +193,12 @@ export class SyncStorefrontCommand extends BaseCommand {
 
         try {
             const polling = new PollingService();
-            await polling.pollUntilCondition(
-                () => this.areAllConflictsResolved(storefrontPath),
-                {
-                    timeout: TIMEOUTS.VERY_LONG,
-                    name: 'storefront-conflict-resolution',
-                    initialDelay: TIMEOUTS.POLL.INITIAL,
-                    maxDelay: TIMEOUTS.POLL.MAX,
-                },
-            );
+            await polling.pollUntilCondition(() => this.areAllConflictsResolved(storefrontPath), {
+                timeout: TIMEOUTS.VERY_LONG,
+                name: 'storefront-conflict-resolution',
+                initialDelay: TIMEOUTS.POLL.INITIAL,
+                maxDelay: TIMEOUTS.POLL.MAX,
+            });
         } catch (err) {
             await this.safeAbortRebase(storefrontPath);
             await this.showError(
@@ -187,7 +220,81 @@ export class SyncStorefrontCommand extends BaseCommand {
             return;
         }
 
-        await this.completePushAfterRebase({ storefrontPath, progress, githubToken, daLiveToken, githubRepo });
+        await this.completePushAfterRebase({
+            storefrontPath,
+            progress,
+            githubToken,
+            daLiveToken,
+            githubRepo,
+        });
+    }
+
+    /**
+     * Silently resolve a rebase whose ONLY conflicts are managed files by taking
+     * the authoritative REMOTE copy of each and continuing the rebase.
+     *
+     * ⚠️ `git pull --rebase` replays your LOCAL commits ONTO upstream, so during
+     * the rebase `--ours` is the upstream/REMOTE copy and `--theirs` is your
+     * local change. "Take the remote copy" is therefore `checkout --ours` — NOT
+     * `--theirs`. This is the single highest-risk line in the feature.
+     *
+     * Returns true on success. On any failure the rebase is aborted (leaving the
+     * user's local branch exactly as it was) and false is returned.
+     */
+    private async autoResolveManagedConflicts(
+        storefrontPath: string,
+        relFiles: string[],
+    ): Promise<boolean> {
+        try {
+            for (const rel of relFiles) {
+                await execFile('git', ['-C', storefrontPath, 'checkout', '--ours', '--', rel]);
+                await execFile('git', ['-C', storefrontPath, 'add', '--', rel]);
+            }
+
+            // Advance the rebase. Taking --ours can empty the replayed commit
+            // (local change === remote), which makes `rebase --continue` refuse
+            // with a "no changes / did you forget to use git add?" message; in
+            // that case the correct move is to skip the now-empty commit. Pass
+            // `core.editor=true` so git never opens an interactive editor.
+            try {
+                await execFile('git', [
+                    '-C',
+                    storefrontPath,
+                    '-c',
+                    'core.editor=true',
+                    'rebase',
+                    '--continue',
+                ]);
+            } catch (err) {
+                const stderr = (err as NodeJS.ErrnoException & { stderr?: string }).stderr ?? '';
+                const stdout = (err as NodeJS.ErrnoException & { stdout?: string }).stdout ?? '';
+                if (/no changes|nothing to commit|did you forget/i.test(stderr + stdout)) {
+                    await execFile('git', [
+                        '-C',
+                        storefrontPath,
+                        '-c',
+                        'core.editor=true',
+                        'rebase',
+                        '--skip',
+                    ]);
+                } else {
+                    throw err;
+                }
+            }
+
+            this.logger.debug(
+                '[SyncStorefront] Auto-resolved managed conflicts (took remote copy): ' +
+                    relFiles.join(', '),
+            );
+            return true;
+        } catch (err) {
+            await this.safeAbortRebase(storefrontPath);
+            this.logger.warn(
+                '[SyncStorefront] Managed-conflict auto-resolve failed; aborted rebase',
+                err instanceof Error ? err : undefined,
+            );
+            return false;
+        }
     }
 
     private async completePushAfterRebase(args: {
@@ -196,8 +303,16 @@ export class SyncStorefrontCommand extends BaseCommand {
         githubToken?: string;
         daLiveToken?: string;
         githubRepo?: { owner: string; site: string; branch?: string };
+        autoResolvedManaged?: boolean;
     }): Promise<void> {
-        const { storefrontPath, progress, githubToken, daLiveToken, githubRepo } = args;
+        const {
+            storefrontPath,
+            progress,
+            githubToken,
+            daLiveToken,
+            githubRepo,
+            autoResolvedManaged,
+        } = args;
 
         // Re-enter syncAndPublish with skipCommit:true so the rebase-resolved
         // commits push through the same code path as a fresh sync — token
@@ -209,7 +324,7 @@ export class SyncStorefrontCommand extends BaseCommand {
         try {
             result = await syncAndPublish({
                 storefrontPath,
-                commitMessage: '',           // unused when skipCommit:true
+                commitMessage: '', // unused when skipCommit:true
                 githubToken,
                 daLiveToken,
                 githubRepo,
@@ -234,11 +349,19 @@ export class SyncStorefrontCommand extends BaseCommand {
         }
 
         if (result.helixPublished) {
-            await this.showSuccessMessage('Storefront synced. Preview + live updated.');
+            await this.showSuccessMessage(
+                autoResolvedManaged
+                    ? 'Storefront synced. Preview + live updated. Resolved a configuration update automatically.'
+                    : 'Storefront synced. Preview + live updated.',
+            );
             return;
         }
         // Pushed; Helix step was deliberately skipped (tokens or repo coordinates absent).
-        await this.showSuccessMessage('Storefront synced.');
+        await this.showSuccessMessage(
+            autoResolvedManaged
+                ? 'Storefront synced. Resolved a configuration update automatically.'
+                : 'Storefront synced.',
+        );
     }
 
     private async attemptRebase(storefrontPath: string): Promise<'clean' | 'conflicts'> {
@@ -253,7 +376,10 @@ export class SyncStorefrontCommand extends BaseCommand {
             }
             // Some other rebase failure — surface as conflicts to give the user
             // the Cancel-and-Reset escape hatch.
-            this.logger.warn('[SyncStorefront] git pull --rebase failed with non-conflict error; treating as conflict for user control', err instanceof Error ? err : undefined);
+            this.logger.warn(
+                '[SyncStorefront] git pull --rebase failed with non-conflict error; treating as conflict for user control',
+                err instanceof Error ? err : undefined,
+            );
             return 'conflicts';
         }
     }
@@ -302,12 +428,28 @@ export class SyncStorefrontCommand extends BaseCommand {
      * on git failure so callers can decide how to interpret the error.
      */
     private async listConflictedFiles(storefrontPath: string): Promise<string[]> {
-        const { stdout } = await execFile('git', ['-C', storefrontPath, 'diff', '--name-only', '--diff-filter=U']);
+        const rel = await this.listConflictedFilesRel(storefrontPath);
+        return rel.map((r) => path.resolve(storefrontPath, r));
+    }
+
+    /**
+     * Raw REL paths of files with unresolved merge conflicts (as git reports
+     * them, relative to the storefront root). Kept separate from
+     * `listConflictedFiles` so managed-file classification can match on the
+     * repo-relative path before it is resolved to an absolute path.
+     */
+    private async listConflictedFilesRel(storefrontPath: string): Promise<string[]> {
+        const { stdout } = await execFile('git', [
+            '-C',
+            storefrontPath,
+            'diff',
+            '--name-only',
+            '--diff-filter=U',
+        ]);
         return stdout
             .split('\n')
-            .map(s => s.trim())
-            .filter(Boolean)
-            .map(rel => path.resolve(storefrontPath, rel));
+            .map((s) => s.trim())
+            .filter(Boolean);
     }
 
     private async areAllConflictsResolved(storefrontPath: string): Promise<boolean> {
@@ -343,7 +485,9 @@ export class SyncStorefrontCommand extends BaseCommand {
         }
     }
 
-    private resolveGithubRepo(project: Project): { owner: string; site: string; branch?: string } | undefined {
+    private resolveGithubRepo(
+        project: Project,
+    ): { owner: string; site: string; branch?: string } | undefined {
         const meta = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
         const githubRepo = typeof meta?.githubRepo === 'string' ? meta.githubRepo : undefined;
         if (!githubRepo || !githubRepo.includes('/')) return undefined;

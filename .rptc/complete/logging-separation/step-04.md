@@ -57,7 +57,7 @@ logger.info('Please complete authentication in browser');
 
 // CHANGE to debug() - technical detail
 logger.debug('[Adobe Setup] Selecting organization...');
-logger.debug('[Adobe Setup] Organization selected: 3397333');
+logger.debug('[Adobe Setup] Organization selected: <org-id>');
 logger.debug('[Auth] Token-only check completed in 2519ms: false');
 ```
 

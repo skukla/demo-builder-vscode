@@ -25,6 +25,10 @@ jest.mock('@/features/project-creation/helpers', () => ({
     generateComponentEnvFile: jest.fn(),
     deployMeshComponent: jest.fn(),
 }));
+const mockEnsureSubscribed = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/app-builder/services/ensureMeshApiSubscribed', () => ({
+    ensureMeshApiSubscribed: (...args: unknown[]) => mockEnsureSubscribed(...args),
+}));
 
 // Import mocked functions
 import * as helpers from '@/features/project-creation/helpers';
@@ -114,6 +118,10 @@ describe('meshSetupService', () => {
         };
 
         (ServiceLocator.getCommandExecutor as jest.Mock) = jest.fn().mockReturnValue(mockCommandExecutor);
+        (ServiceLocator.getAuthenticationService as jest.Mock) = jest.fn().mockReturnValue({
+            getCachedOrganization: jest.fn().mockReturnValue(undefined),
+        });
+        mockEnsureSubscribed.mockResolvedValue(undefined);
     });
 
     describe('shouldConfigureExistingMesh', () => {
@@ -162,6 +170,27 @@ describe('meshSetupService', () => {
                 mockMeshDefinition,
                 mockSetupContext,
             );
+        });
+
+        it('should call ensureMeshApiSubscribed BEFORE deployMeshComponent (create-time)', async () => {
+            const order: string[] = [];
+            mockEnsureSubscribed.mockImplementation(async () => { order.push('subscribe'); });
+            (helpers.deployMeshComponent as jest.Mock).mockImplementation(async () => {
+                order.push('deploy');
+                return { success: true, data: { meshId: 'm', endpoint: 'e' } };
+            });
+
+            const context: MeshSetupContext = {
+                setupContext: mockSetupContext,
+                meshDefinition: mockMeshDefinition,
+                progressTracker: mockProgressTracker,
+            };
+
+            await deployNewMesh(context, undefined);
+
+            expect(mockEnsureSubscribed).toHaveBeenCalled();
+            expect(helpers.deployMeshComponent).toHaveBeenCalled();
+            expect(order).toEqual(['subscribe', 'deploy']);
         });
 
         it('should not generate env if mesh component path is missing', async () => {
@@ -221,6 +250,12 @@ describe('meshSetupService', () => {
                 70,
                 'Generating mesh configuration...',
             );
+            // The pre-deploy API subscribe must be communicated to the user.
+            expect(mockProgressTracker).toHaveBeenCalledWith(
+                'Configuring API Mesh',
+                72,
+                'Enabling API access...',
+            );
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Deploying API Mesh',
                 75,
@@ -242,6 +277,55 @@ describe('meshSetupService', () => {
             expect(mockSetupContext.logger.debug).toHaveBeenCalledWith(
                 '[Project Creation] Mesh .env generated',
             );
+        });
+
+        describe('self-detects existing mesh for update-vs-create', () => {
+            const context = (): MeshSetupContext => ({
+                setupContext: mockSetupContext,
+                meshDefinition: mockMeshDefinition,
+                progressTracker: mockProgressTracker,
+            });
+
+            const getExistingMeshIdArg = (): unknown => {
+                const call = (helpers.deployMeshComponent as jest.Mock).mock.calls[0];
+                return call[4];
+            };
+
+            it('should pass describe-derived mesh id when apiMeshConfig.meshId is undefined', async () => {
+                mockCommandExecutor.execute.mockResolvedValue({
+                    code: 0,
+                    stdout: JSON.stringify({
+                        meshId: 'described-mesh-id',
+                        endpoint: 'https://described.adobe.io/graphql',
+                    }),
+                });
+
+                await deployNewMesh(context(), undefined);
+
+                expect(getExistingMeshIdArg()).toBe('described-mesh-id');
+            });
+
+            it('should pass undefined when neither apiMeshConfig nor describe report a mesh', async () => {
+                mockCommandExecutor.execute.mockResolvedValue({
+                    code: 0,
+                    stdout: '{}',
+                });
+
+                await deployNewMesh(context(), undefined);
+
+                expect(getExistingMeshIdArg()).toBeUndefined();
+            });
+
+            it('should prefer apiMeshConfig.meshId over describe-derived id when present', async () => {
+                mockCommandExecutor.execute.mockResolvedValue({
+                    code: 0,
+                    stdout: JSON.stringify({ meshId: 'described-mesh-id' }),
+                });
+
+                await deployNewMesh(context(), { meshId: 'wizard-mesh-id' });
+
+                expect(getExistingMeshIdArg()).toBe('wizard-mesh-id');
+            });
         });
     });
 

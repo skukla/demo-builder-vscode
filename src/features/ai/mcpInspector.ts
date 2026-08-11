@@ -15,8 +15,8 @@
  * timeouts and errors are retried on the next call.
  *
  * The cache key is the server id (the key in `mcpServers`). Config changes
- * (command, args, env) require an explicit `clearMcpCache(id)` from the
- * `inspect-mcp` handler — there is no automatic config-change invalidation;
+ * (command, args, env) require an explicit `clearMcpCache(id)` from a caller —
+ * there is no automatic config-change invalidation;
  * the 5-minute TTL keeps the staleness window short.
  *
  * Pure stdlib + SDK + cache utils — no VS Code coupling.
@@ -27,6 +27,7 @@ import * as path from 'path';
 import type { Readable } from 'stream';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport, getDefaultEnvironment } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { resolveProxyTarget } from './server/mcpSocketDiscovery';
 import { probeInExtensionMcpTools } from './server/mcpToolProbe';
 import {
     createCacheEntry,
@@ -90,8 +91,8 @@ const cache: Map<string, CacheEntry<McpInventoryEntry>> = new Map();
 
 /**
  * Clear cached inspection results. With no argument, clears every entry.
- * With a `serverId`, clears that single entry — useful when the `inspect-mcp`
- * handler wants to force a refresh for one server without disturbing others.
+ * With a `serverId`, clears that single entry — a caller can force a refresh for
+ * one server without disturbing the others.
  */
 export function clearMcpCache(serverId?: string): void {
     if (serverId === undefined) {
@@ -162,7 +163,16 @@ async function inspectOneServer(
     // cold-starting in parallel ("mcp demo-builder: timeout").
     const inExtensionSocket = serverConfig.env?.DEMO_BUILDER_MCP_SOCKET;
     if (inExtensionSocket) {
-        return inspectInExtensionServer(id, inExtensionSocket);
+        // Resolve rather than trust: the pin is baked into a file on disk and
+        // cannot heal itself, so a socket that has since gone would otherwise
+        // report `demo-builder · error` on the AI badge while a live server sat
+        // in the discovery sweep. Delegated to the proxy's own resolver so the
+        // two can never disagree about which socket is current.
+        const target = await resolveProxyTarget(inExtensionSocket, projectPath);
+        if ('guidance' in target) {
+            return { id, status: 'error', tools: [], error: target.guidance };
+        }
+        return inspectInExtensionServer(id, target.socketPath);
     }
 
     // Env: layer the extra credential-free allowlist on top of the SDK default,

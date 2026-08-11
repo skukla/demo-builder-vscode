@@ -103,6 +103,34 @@ export interface SettingsFile {
     installedBlockLibraries?: InstalledBlockLibrary[];
     /** EDS configuration (for Edge Delivery Services stacks) */
     edsConfig?: SettingsEdsConfig;
+    /**
+     * Custom GitHub sources for selected App Builder integrations, keyed by
+     * integration id (custom-URL entries only). Carried so edit mode can
+     * round-trip custom integrations. `name` carries the user-facing display
+     * name for shell instances.
+     */
+    appBuilderComponentSources?: Record<
+        string,
+        { owner: string; repo: string; branch?: string; name?: string }
+    >;
+    /**
+     * Adobe Console API sdk codes subscribed beyond catalog `requiredApis`
+     * (wizard free picks + runtime `add_console_apis` additions). Seeds the
+     * wizard's reserved `selectedConsoleApis['__existing__']` key in edit mode
+     * so existing picks survive a rebuild.
+     */
+    additionalConsoleApis?: string[];
+    /**
+     * The ATTRIBUTED form of the same picks — which integration wanted each code.
+     *
+     * Carried alongside the flat field, not instead of it: a settings file written
+     * now must still import on a build that only knows the flat form. It is the form
+     * that survives step 07, which is why export cannot rely on the flat field alone.
+     *
+     * On import it seeds `selectedConsoleApis` per integration; the flat field is the
+     * fallback and lands everything under the unattributed key.
+     */
+    componentApiPicks?: Record<string, string[]>;
 }
 
 /** Current schema version */

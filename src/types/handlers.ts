@@ -104,15 +104,6 @@ export interface ApiServicesConfig {
             };
             enabled?: boolean;
             endpoint?: string;
-            setupInstructions?: {
-                step: string;
-                details: string;
-                important?: boolean;
-                dynamicValues?: {
-                    ALLOWED_DOMAINS?: boolean;
-                    [key: string]: unknown;
-                };
-            }[];
             [key: string]: unknown;
         };
         [serviceId: string]: {

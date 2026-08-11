@@ -58,16 +58,19 @@ export class AdobeContextResolver {
 
         if (!context) {
             this.debugLogger.debug('[Context Resolver] Fetching context from Adobe CLI');
-            const result = await this.commandManager.execute(
-                'aio console where --json',
-                { encoding: 'utf8', timeout: TIMEOUTS.NORMAL, useNodeVersion: getMeshNodeVersion() },
-            );
+            const result = await this.commandManager.execute('aio console where --json', {
+                encoding: 'utf8',
+                timeout: TIMEOUTS.NORMAL,
+                useNodeVersion: getMeshNodeVersion(),
+            });
 
             if (result.code === 0 && result.stdout) {
                 // SECURITY: Use parseJSON for type-safe parsing
                 const parsedContext = parseJSON<AdobeConsoleWhereResponse>(result.stdout);
                 if (!parsedContext) {
-                    this.debugLogger.warn('[Context Resolver] Failed to parse console.where response');
+                    this.debugLogger.warn(
+                        '[Context Resolver] Failed to parse console.where response',
+                    );
                     return undefined;
                 }
                 context = parsedContext;
@@ -92,21 +95,23 @@ export class AdobeContextResolver {
      */
     private async resolveOrgFromString(orgString: string): Promise<AdobeOrg> {
         const cachedOrgList = this.cacheManager.getCachedOrgList();
-        const orgList = (cachedOrgList && cachedOrgList.length > 0)
-            ? cachedOrgList
-            : await this.fetchOrgListSafely();
+        const orgList =
+            cachedOrgList && cachedOrgList.length > 0
+                ? cachedOrgList
+                : await this.fetchOrgListSafely();
 
         const needle = orgString.trim().toLowerCase();
-        const matchedOrg = orgList.find(o =>
-            o.name.trim().toLowerCase() === needle
-            || o.code.trim().toLowerCase() === needle
-            || o.id.trim().toLowerCase() === needle,
+        const matchedOrg = orgList.find(
+            (o) =>
+                o.name.trim().toLowerCase() === needle ||
+                o.code.trim().toLowerCase() === needle ||
+                o.id.trim().toLowerCase() === needle,
         );
         if (matchedOrg) return matchedOrg;
 
         this.debugLogger.warn(
-            `[Context Resolver] Could not find org "${orgString}" in list `
-            + `[${orgList.map(o => `"${o.name}" (${o.id})`).join(', ')}], using name as fallback`,
+            `[Context Resolver] Could not find org "${orgString}" in list ` +
+                `[${orgList.map((o) => `"${o.name}" (${o.id})`).join(', ')}], using name as fallback`,
         );
         return this.createFallbackOrg(orgString);
     }
@@ -118,7 +123,10 @@ export class AdobeContextResolver {
         try {
             return await this.fetcher.getOrganizations();
         } catch (error) {
-            this.debugLogger.trace('[Context Resolver] Failed to fetch org list for ID resolution:', error);
+            this.debugLogger.trace(
+                '[Context Resolver] Failed to fetch org list for ID resolution:',
+                error,
+            );
             return [];
         }
     }
@@ -177,20 +185,50 @@ export class AdobeContextResolver {
     }
 
     /**
-     * Resolve project string to full project object
+     * Resolve a project NAME (all `aio console where` gives us in the string form)
+     * to the real project, or `undefined` when it cannot be resolved.
+     *
+     * Undefined rather than a name-shaped stand-in, deliberately. This used to
+     * return `{ id: name, name, title }` on a miss — an AdobeProject whose ID is a
+     * name. A miss is NORMAL here: `aio console where` reports a selection the
+     * extension no longer writes (Phase 4a targets org/project per-invocation via
+     * `withOrgContext` instead of mutating the shared `aio` global), so it goes
+     * stale by design — a deleted project, or one under an org this token cannot
+     * reach, lands here on every resolve.
+     *
+     * A fabricated ID is worse than an absent one on both counts: it satisfies
+     * `.id` presence checks that exist precisely to catch this, and it would target
+     * nothing at all if it ever reached `AIO_CONSOLE_PROJECT_ID`. Fail closed and
+     * let callers treat "no current project" as the ordinary condition it is.
      */
-    private async resolveProjectFromString(projectString: string): Promise<AdobeProject> {
-        const fallback: AdobeProject = { id: projectString, name: projectString, title: projectString };
+    private async resolveProjectFromString(
+        projectString: string,
+    ): Promise<AdobeProject | undefined> {
         try {
+            // getProjects resolves the org itself: threaded → cached → TOKEN org via the
+            // SDK (see AdobeEntityFetcher.resolveEffectiveOrgId). That systemic fallback
+            // keeps this best-effort project-ID lookup on the SDK path — no need to thread
+            // the token org here — while avoiding the stale-console CLI 403 -> ORG_MISMATCH.
             const projects = await this.fetcher.getProjects({ silent: true });
-            const matched = projects.find(p => p.name === projectString || p.title === projectString);
+            const matched = projects.find(
+                (p) => p.name === projectString || p.title === projectString,
+            );
             if (matched) return matched;
 
-            this.debugLogger.warn(`[Context Resolver] Could not find numeric ID for project "${projectString}", using name as fallback`);
-            return fallback;
+            // Debug, not warn: an unreachable CLI selection is expected, not a fault
+            // the user can act on.
+            this.debugLogger.debug(
+                `[Context Resolver] The CLI's persisted project "${projectString}" is not in ` +
+                    "this token's project list (deleted, or under another org) — treating it as " +
+                    'no current project.',
+            );
+            return undefined;
         } catch (error) {
-            this.debugLogger.debug('[Context Resolver] Failed to fetch project list for ID lookup:', error);
-            return fallback;
+            this.debugLogger.debug(
+                '[Context Resolver] Failed to fetch project list for ID lookup:',
+                error,
+            );
+            return undefined;
         }
     }
 
@@ -198,7 +236,9 @@ export class AdobeContextResolver {
      * Parse project data from console context value
      */
     private async parseProjectFromContext(
-        projectValue: string | { id: string; name: string; title?: string; description?: string; org_id?: string },
+        projectValue:
+            | string
+            | { id: string; name: string; title?: string; description?: string; org_id?: string },
     ): Promise<AdobeProject | undefined> {
         if (typeof projectValue === 'string') {
             return this.resolveProjectFromString(projectValue);
@@ -264,7 +304,9 @@ export class AdobeContextResolver {
             if (context.workspace) {
                 // Type guard - workspace can be string or object
                 if (typeof context.workspace === 'object') {
-                    this.debugLogger.debug(`[Context Resolver] Current workspace: ${context.workspace.name}`);
+                    this.debugLogger.debug(
+                        `[Context Resolver] Current workspace: ${context.workspace.name}`,
+                    );
                     const result = {
                         id: context.workspace.id,
                         name: context.workspace.name,
@@ -275,7 +317,9 @@ export class AdobeContextResolver {
                     this.cacheManager.setCachedWorkspace(result);
                     return result;
                 } else {
-                    this.debugLogger.debug('[Context Resolver] Workspace is string format (not supported)');
+                    this.debugLogger.debug(
+                        '[Context Resolver] Workspace is string format (not supported)',
+                    );
                 }
             }
 

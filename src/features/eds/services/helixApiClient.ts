@@ -39,11 +39,33 @@ function normalizeWebPath(p: string): string {
     return p.startsWith('/') ? p : `/${p}`;
 }
 
+/** PUBLISH/PREVIEW credential: the GitHub token, plus the content-source token. */
 function buildHeaders(tokens: HelixTokens): Record<string, string> {
     return {
         'x-auth-token': tokens.githubToken,
         'x-content-source-authorization': `Bearer ${tokens.daLiveToken}`,
     };
+}
+
+/**
+ * DELETE credential — DIFFERENT from publish, and load-bearing.
+ *
+ * The Admin API refuses `DELETE /live` while the source still exists in
+ * fstab.yaml. Only the DA.live IMS Bearer bypasses it; the tested matrix (ADR-002)
+ * was GitHub token -> 403, API key -> 403, DA.live Bearer -> 204.
+ *
+ * This client reused {@link buildHeaders} for DELETE until 2026-08-04 — sending
+ * the PUBLISH credential and no `Authorization` at all — while its docstring
+ * claimed to mirror `helixService.deleteResource`. It mirrored the semantics
+ * (204/404 ok, 401/403 non-fatal) and not the credential, and because 403 is
+ * deliberately non-fatal the failure surfaced as a silent 'partial'.
+ *
+ * Matches `helixService.getDeleteAuthHeaders` exactly: the Bearer ALONE. The
+ * publish token is withheld rather than sent alongside — the matrix says it 403s,
+ * and sending both would leave it ambiguous which credential Helix honoured.
+ */
+function buildDeleteHeaders(tokens: HelixTokens): Record<string, string> {
+    return { Authorization: `Bearer ${tokens.daLiveToken}` };
 }
 
 async function callHelix(
@@ -121,7 +143,9 @@ export async function previewAndPublishPage(
 /**
  * Issue a DELETE against one Helix partition (live or preview).
  *
- * Mirrors `helixService.deleteResource` semantics but vscode-free:
+ * Mirrors `helixService.deleteResource` — semantics AND credential (see
+ * {@link buildDeleteHeaders}; the credential half was missing until 2026-08-04) —
+ * but vscode-free:
  *   - 204 / 404 → success (404 = already absent)
  *   - 401 / 403 → non-fatal failure (returns false; caller decides)
  *   - 429 / 5xx / other non-OK → throw `HelixApiError`
@@ -138,7 +162,7 @@ async function deleteHelixPartition(
     const url = `${HELIX_ADMIN_URL}/${partition}/${org}/${site}/${branch}${normalizeWebPath(path)}`;
     const response = await fetch(url, {
         method: 'DELETE',
-        headers: buildHeaders(tokens),
+        headers: buildDeleteHeaders(tokens),
         signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
     });
 

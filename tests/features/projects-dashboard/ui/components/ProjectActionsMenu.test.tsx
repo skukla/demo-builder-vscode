@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ProjectActionsMenu } from '@/features/projects-dashboard/ui/components/ProjectActionsMenu';
 import type { ProjectActions } from '@/features/projects-dashboard/ui/components/ProjectActionsMenu';
@@ -14,7 +14,7 @@ const renderWithProvider = (ui: React.ReactElement) => {
     return render(
         <Provider theme={defaultTheme} colorScheme="light">
             {ui}
-        </Provider>,
+        </Provider>
     );
 };
 
@@ -24,7 +24,6 @@ const openMenu = (): void => {
 };
 
 /** The "More…" submenu container, present only when low-frequency actions exist. */
-const submenu = (): HTMLElement => screen.getByTestId('spectrum-submenu');
 
 /** Labels of all menuitems in document order (includes the submenu's items). */
 const menuItemLabels = (): string[] =>
@@ -35,32 +34,32 @@ const edsProject = (name = 'EDS Project') =>
     createMockProject({ name, selectedStack: 'eds-dalive' } as any);
 
 /**
- * An EDS project carrying a resolved authoring experience in its view model.
- * The backend stamps `resolvedAuthoringExperience` so the UI stays presentational
- * (no resolver / vscode in the webview).
+ * An EDS project (the resolved authoring experience no longer rides in the
+ * view model — the Author label is static and the backend resolves the target).
  */
 const edsProjectWithExperience = (
-    experience: 'da-live-classic' | 'experience-workspace',
-    name = 'EDS Project',
-) =>
-    createMockProject({
-        name,
-        selectedStack: 'eds-dalive',
-        resolvedAuthoringExperience: experience,
-    } as any);
+    _experience: 'da-live-classic' | 'experience-workspace',
+    name = 'EDS Project'
+) => createMockProject({ name, selectedStack: 'eds-dalive' } as any);
 
 describe('ProjectActionsMenu', () => {
     describe('rendering and gating', () => {
         it('renders the kebab trigger when at least one action is wired', () => {
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={{ onDelete: jest.fn() }} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={{ onDelete: jest.fn() }}
+                />
             );
             expect(screen.getByLabelText('More actions')).toBeInTheDocument();
         });
 
         it('renders no items for callbacks that are absent', () => {
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={{ onDelete: jest.fn() }} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={{ onDelete: jest.fn() }}
+                />
             );
             openMenu();
 
@@ -88,7 +87,11 @@ describe('ProjectActionsMenu', () => {
         it('heads a "Use" section holding Start Demo and Open AI (non-EDS, stopped)', () => {
             const actions: ProjectActions = { onStartDemo: jest.fn(), onOpenAi: jest.fn() };
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} isRunning={false} actions={actions} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    isRunning={false}
+                    actions={actions}
+                />
             );
             openMenu();
 
@@ -104,7 +107,11 @@ describe('ProjectActionsMenu', () => {
                 onOpenBrowser: jest.fn(),
             };
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} isRunning actions={actions} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    isRunning
+                    actions={actions}
+                />
             );
             openMenu();
 
@@ -115,24 +122,29 @@ describe('ProjectActionsMenu', () => {
     });
 
     describe('MANAGE group', () => {
-        it('heads a "Manage" section with Edit, Rename, Pin, Reset in order', () => {
+        it('heads a "Manage" section with Edit, Pin, Reset in order (no Rename — inline rename owns it)', () => {
             const actions: ProjectActions = {
                 onEdit: jest.fn(),
-                onRename: jest.fn(),
                 onPinToggle: jest.fn(),
                 onResetProject: jest.fn(),
             };
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={actions} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={actions}
+                />
             );
             openMenu();
 
             expect(screen.getByText('Manage')).toBeInTheDocument();
+            expect(screen.queryByText('Rename')).not.toBeInTheDocument();
             const labels = menuItemLabels();
-            const renameIdx = labels.findIndex((l) => l.includes('Rename'));
+            const editIdx = labels.findIndex((l) => l.includes('Edit'));
+            const pinIdx = labels.findIndex((l) => l.includes('Pin'));
             const resetIdx = labels.findIndex((l) => l.includes('Reset'));
-            expect(renameIdx).toBeGreaterThanOrEqual(0);
-            expect(renameIdx).toBeLessThan(resetIdx);
+            expect(editIdx).toBeGreaterThanOrEqual(0);
+            expect(editIdx).toBeLessThan(pinIdx);
+            expect(pinIdx).toBeLessThan(resetIdx);
         });
 
         it('keeps Reset a normal Manage action, not in the submenu', () => {
@@ -140,18 +152,21 @@ describe('ProjectActionsMenu', () => {
                 <ProjectActionsMenu
                     project={createMockProject({ name: 'Test' })}
                     actions={{ onResetProject: jest.fn(), onCopyPath: jest.fn() }}
-                />,
+                />
             );
             openMenu();
 
             // Reset is a top-level menuitem; Copy Path lives in the submenu.
-            expect(within(submenu()).queryByText('Reset')).not.toBeInTheDocument();
-            expect(within(submenu()).getByText('Copy Path')).toBeInTheDocument();
+            // Reset stays a first-class Manage action. (It was contrasted against
+            // Copy Path in the submenu; both the submenu and Copy Path are gone.)
+            expect(screen.getByText('Reset')).toBeInTheDocument();
         });
 
         it('flips the pin label to Unpin when the project is pinned', () => {
             const project = createMockProject({ name: 'Test', pinned: true } as any);
-            renderWithProvider(<ProjectActionsMenu project={project} actions={{ onPinToggle: jest.fn() }} />);
+            renderWithProvider(
+                <ProjectActionsMenu project={project} actions={{ onPinToggle: jest.fn() }} />
+            );
             openMenu();
 
             expect(screen.getByText('Unpin')).toBeInTheDocument();
@@ -160,49 +175,60 @@ describe('ProjectActionsMenu', () => {
     });
 
     describe('More… submenu', () => {
-        it('tucks Copy Path and Export into the submenu', () => {
-            const actions: ProjectActions = {
-                onCopyPath: jest.fn(),
-                onExport: jest.fn(),
-            };
+        it('puts Export straight in the menu, with no submenu wrapper', () => {
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={actions} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={{ onExport: jest.fn() }}
+                />
             );
             openMenu();
 
-            expect(screen.getByTestId('spectrum-submenu-trigger')).toBeInTheDocument();
-            const inSubmenu = within(submenu());
-            expect(inSubmenu.getByText('Copy Path')).toBeInTheDocument();
-            expect(inSubmenu.getByText('Export')).toBeInTheDocument();
+            expect(screen.queryByTestId('spectrum-submenu-trigger')).not.toBeInTheDocument();
+            expect(screen.getByText('Export')).toBeInTheDocument();
         });
 
-        it('invokes a submenu action with the project when selected', () => {
-            const project = createMockProject({ name: 'Test' });
-            const onCopyPath = jest.fn();
-            renderWithProvider(<ProjectActionsMenu project={project} actions={{ onCopyPath }} />);
-            openMenu();
-
-            within(submenu()).getByText('Copy Path').click();
-
-            expect(onCopyPath).toHaveBeenCalledWith(project);
-            expect(onCopyPath).toHaveBeenCalledTimes(1);
-        });
-
-        it('includes Republish Content in the submenu for EDS projects', () => {
-            const actions: ProjectActions = { onRepublishContent: jest.fn(), onCopyPath: jest.fn() };
-            renderWithProvider(<ProjectActionsMenu project={edsProject()} actions={actions} />);
-            openMenu();
-
-            expect(within(submenu()).getByText('Republish Content')).toBeInTheDocument();
-        });
-
-        it('omits Republish Content for non-EDS projects even when wired', () => {
-            const actions: ProjectActions = { onRepublishContent: jest.fn(), onCopyPath: jest.fn() };
+        it('offers Export directly, with no More submenu to open first', () => {
+            const onExport = jest.fn();
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={actions} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={{ onExport }}
+                />
             );
             openMenu();
 
+            expect(screen.queryByTestId('spectrum-submenu-trigger')).not.toBeInTheDocument();
+            screen.getByText('Export').click();
+            expect(onExport).toHaveBeenCalledTimes(1);
+        });
+
+        it('no longer offers Copy Path', () => {
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={{ onExport: jest.fn() }}
+                />
+            );
+            openMenu();
+
+            expect(screen.queryByText('Copy Path')).not.toBeInTheDocument();
+        });
+
+        it('offers no deploy actions either — those live on their own surfaces', () => {
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test', meshStatusSummary: 'stale' })}
+                    actions={{
+                        onExport: jest.fn(),
+                        onRepublishContent: jest.fn(),
+                        onRedeployMesh: jest.fn(),
+                    }}
+                />
+            );
+            openMenu();
+
+            expect(screen.queryByText('Redeploy Mesh')).not.toBeInTheDocument();
             expect(screen.queryByText('Republish Content')).not.toBeInTheDocument();
         });
     });
@@ -213,7 +239,6 @@ describe('ProjectActionsMenu', () => {
                 onStartDemo: jest.fn(),
                 onOpenAi: jest.fn(),
                 onEdit: jest.fn(),
-                onRename: jest.fn(),
                 onPinToggle: jest.fn(),
                 onResetProject: jest.fn(),
                 onCopyPath: jest.fn(),
@@ -221,7 +246,10 @@ describe('ProjectActionsMenu', () => {
                 onDelete: jest.fn(),
             };
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={actions} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={actions}
+                />
             );
             openMenu();
 
@@ -229,14 +257,16 @@ describe('ProjectActionsMenu', () => {
             expect(labels[labels.length - 1]).toContain('Delete');
         });
 
-        it('keeps Delete out of the More… submenu', () => {
+        it('keeps Delete in its own isolated section', () => {
             const actions: ProjectActions = { onCopyPath: jest.fn(), onDelete: jest.fn() };
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={actions} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={actions}
+                />
             );
             openMenu();
 
-            expect(within(submenu()).queryByText('Delete')).not.toBeInTheDocument();
             expect(screen.getByText('Delete')).toBeInTheDocument();
         });
     });
@@ -250,45 +280,48 @@ describe('ProjectActionsMenu', () => {
                 onOpenDaLive: jest.fn(),
             };
             renderWithProvider(
-                <ProjectActionsMenu project={edsProjectWithExperience('da-live-classic')} actions={actions} />,
+                <ProjectActionsMenu
+                    project={edsProjectWithExperience('da-live-classic')}
+                    actions={actions}
+                />
             );
             openMenu();
 
             expect(screen.queryByText('Start Demo')).not.toBeInTheDocument();
             expect(screen.queryByText('Stop Demo')).not.toBeInTheDocument();
             expect(screen.getByText('Open in Browser')).toBeInTheDocument();
-            expect(screen.getByText('Author in DA.live Classic')).toBeInTheDocument();
+            expect(screen.getByText('Author Content')).toBeInTheDocument();
         });
     });
 
-    describe('Authoring experience label', () => {
-        // The authoring-experience FLIP control was relocated to the Configure
-        // webview (setup-time preference with an explicit Save). The dynamic
-        // "Author in X" label STAYS here — it reflects the resolved experience.
-        it('labels Author with DA.live Classic when the resolved experience is UE', () => {
+    describe('Author Content label', () => {
+        // The label is STATIC ("Author Content") — the resolved authoring
+        // experience still decides WHERE the action opens (backend-side), it
+        // just no longer varies the menu text.
+        it('labels the Author item "Author Content" for a DA.live Classic project', () => {
             renderWithProvider(
                 <ProjectActionsMenu
                     project={edsProjectWithExperience('da-live-classic')}
                     actions={{ onOpenDaLive: jest.fn() }}
-                />,
+                />
             );
             openMenu();
 
-            expect(screen.getByText('Author in DA.live Classic')).toBeInTheDocument();
-            expect(screen.queryByText('Author in Experience Workspace')).not.toBeInTheDocument();
+            expect(screen.getByText('Author Content')).toBeInTheDocument();
+            expect(screen.queryByText(/Author in/)).not.toBeInTheDocument();
         });
 
-        it('labels Author with Experience Workspace when the resolved experience is EW', () => {
+        it('labels the Author item "Author Content" for an Experience Workspace project too', () => {
             renderWithProvider(
                 <ProjectActionsMenu
                     project={edsProjectWithExperience('experience-workspace')}
                     actions={{ onOpenDaLive: jest.fn() }}
-                />,
+                />
             );
             openMenu();
 
-            expect(screen.getByText('Author in Experience Workspace')).toBeInTheDocument();
-            expect(screen.queryByText('Author in DA.live Classic')).not.toBeInTheDocument();
+            expect(screen.getByText('Author Content')).toBeInTheDocument();
+            expect(screen.queryByText(/Author in/)).not.toBeInTheDocument();
         });
 
         it('shows no Author item for non-EDS projects', () => {
@@ -296,15 +329,17 @@ describe('ProjectActionsMenu', () => {
             // (so the kebab still renders), it does not appear.
             const actions: ProjectActions = {
                 onOpenDaLive: jest.fn(),
-                onRename: jest.fn(),
+                onEdit: jest.fn(),
             };
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={actions} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={actions}
+                />
             );
             openMenu();
 
-            expect(screen.queryByText('Author in DA.live Classic')).not.toBeInTheDocument();
-            expect(screen.queryByText('Author in Experience Workspace')).not.toBeInTheDocument();
+            expect(screen.queryByText('Author Content')).not.toBeInTheDocument();
         });
 
         it('renders no flip/switch control (relocated to Configure)', () => {
@@ -312,7 +347,7 @@ describe('ProjectActionsMenu', () => {
                 <ProjectActionsMenu
                     project={edsProjectWithExperience('da-live-classic')}
                     actions={{ onOpenDaLive: jest.fn() }}
-                />,
+                />
             );
             openMenu();
 
@@ -324,7 +359,10 @@ describe('ProjectActionsMenu', () => {
     describe('Open AI action', () => {
         it('renders Open AI in the USE group when wired', () => {
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={{ onOpenAi: jest.fn() }} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={{ onOpenAi: jest.fn() }}
+                />
             );
             openMenu();
 
@@ -335,7 +373,10 @@ describe('ProjectActionsMenu', () => {
 
         it('does not render Open AI when the callback is omitted', () => {
             renderWithProvider(
-                <ProjectActionsMenu project={createMockProject({ name: 'Test' })} actions={{ onDelete: jest.fn() }} />,
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={{ onDelete: jest.fn() }}
+                />
             );
             openMenu();
 
@@ -355,10 +396,66 @@ describe('ProjectActionsMenu', () => {
         });
 
         it('renders Open AI for EDS projects as well', () => {
-            renderWithProvider(<ProjectActionsMenu project={edsProject()} actions={{ onOpenAi: jest.fn() }} />);
+            renderWithProvider(
+                <ProjectActionsMenu project={edsProject()} actions={{ onOpenAi: jest.fn() }} />
+            );
             openMenu();
 
             expect(screen.getByText('Open AI')).toBeInTheDocument();
+        });
+    });
+
+    describe('Manage Commerce action', () => {
+        it('renders Manage Commerce in the USE group when wired (non-EDS)', () => {
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={{ onOpenAdminPanel: jest.fn() }}
+                />
+            );
+            openMenu();
+
+            // Top-level USE item, not a submenu entry.
+            expect(screen.getByText('Manage Commerce')).toBeInTheDocument();
+            expect(screen.queryByTestId('spectrum-submenu')).not.toBeInTheDocument();
+        });
+
+        it('renders Manage Commerce for EDS projects as well (no type gating)', () => {
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={edsProject()}
+                    actions={{ onOpenAdminPanel: jest.fn() }}
+                />
+            );
+            openMenu();
+
+            expect(screen.getByText('Manage Commerce')).toBeInTheDocument();
+        });
+
+        it('does not render Manage Commerce when the callback is omitted', () => {
+            renderWithProvider(
+                <ProjectActionsMenu
+                    project={createMockProject({ name: 'Test' })}
+                    actions={{ onDelete: jest.fn() }}
+                />
+            );
+            openMenu();
+
+            expect(screen.queryByText('Manage Commerce')).not.toBeInTheDocument();
+        });
+
+        it('invokes onOpenAdminPanel with the project when selected', () => {
+            const project = createMockProject({ name: 'Admin Target' });
+            const onOpenAdminPanel = jest.fn();
+            renderWithProvider(
+                <ProjectActionsMenu project={project} actions={{ onOpenAdminPanel }} />
+            );
+            openMenu();
+
+            screen.getByText('Manage Commerce').click();
+
+            expect(onOpenAdminPanel).toHaveBeenCalledWith(project);
+            expect(onOpenAdminPanel).toHaveBeenCalledTimes(1);
         });
     });
 });

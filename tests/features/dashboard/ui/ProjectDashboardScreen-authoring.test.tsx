@@ -1,15 +1,16 @@
 /**
- * ProjectDashboardScreen - Live Authoring Experience Tests
+ * ProjectDashboardScreen - Authoring Tile Tests
  *
- * After a Configure save flips the authoring experience, the backend pushes an
- * `authoringExperienceUpdate` message. An already-open dashboard must update the
- * Author tile label (and the DA URL it opens) live — without a reopen.
+ * The Author tile label is STATIC ("Author Content") — the resolved authoring
+ * experience decides WHERE the action opens (backend-side), never the tile
+ * text. A Configure save still pushes `authoringExperienceUpdate` (the live
+ * DA URL rides on it); the tile must not react to it.
  */
 
-import { screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { setupTestContext, renderDashboard, TestContext } from './ProjectDashboardScreen.testUtils';
 
-describe('ProjectDashboardScreen - Live Authoring Experience', () => {
+describe('ProjectDashboardScreen - Authoring tile', () => {
     let ctx: TestContext;
 
     beforeEach(() => {
@@ -17,36 +18,21 @@ describe('ProjectDashboardScreen - Live Authoring Experience', () => {
         ctx = setupTestContext();
     });
 
-    it('renders the initial Author label from the authoringExperience prop', () => {
-        renderDashboard({ isEds: true, authoringExperience: 'da-live-classic' });
-        expect(screen.getByText(/Author in DA\.live Classic/i)).toBeInTheDocument();
+    it('renders the static "Author Content" tile for EDS projects', () => {
+        renderDashboard({ isEds: true });
+        expect(screen.getByText('Author Content')).toBeInTheDocument();
+        expect(screen.queryByText(/Author in/)).not.toBeInTheDocument();
     });
 
-    it('updates the Author tile live when an authoringExperienceUpdate arrives', async () => {
-        renderDashboard({ isEds: true, authoringExperience: 'da-live-classic' });
-
-        expect(screen.getByText(/Author in DA\.live Classic/i)).toBeInTheDocument();
+    it('keeps the static label when an authoringExperienceUpdate arrives', () => {
+        renderDashboard({ isEds: true });
 
         ctx.triggerMessage('authoringExperienceUpdate', {
             authoringExperience: 'experience-workspace',
             edsDaLiveUrl: 'https://da.live/canvas#/my-org/my-site/index',
         });
 
-        await waitFor(() => {
-            expect(screen.getByText(/Author in Experience Workspace/i)).toBeInTheDocument();
-        });
-        expect(screen.queryByText(/Author in DA\.live Classic/i)).not.toBeInTheDocument();
-    });
-
-    it('keeps the existing label when the update omits the authoringExperience', async () => {
-        renderDashboard({ isEds: true, authoringExperience: 'experience-workspace' });
-
-        ctx.triggerMessage('authoringExperienceUpdate', {
-            edsDaLiveUrl: 'https://da.live/canvas#/my-org/my-site/index',
-        });
-
-        await waitFor(() => {
-            expect(screen.getByText(/Author in Experience Workspace/i)).toBeInTheDocument();
-        });
+        expect(screen.getByText('Author Content')).toBeInTheDocument();
+        expect(screen.queryByText(/Author in/)).not.toBeInTheDocument();
     });
 });

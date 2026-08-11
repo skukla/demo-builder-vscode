@@ -31,10 +31,10 @@ From user-provided logs, these technical details appear in BOTH channels (should
 [info] [API Mesh] Layer 2: Checking for existing mesh
 [info] [Mesh Verification] Attempt 1/10 (20s elapsed)
 [info] [Mesh Verification] Status: building
-[info] [Project Creation] Created directory: /Users/kukla/.demo-builder/projects/...
+[info] [Project Creation] Created directory: /Users/<user>/.demo-builder/projects/...
 [info] [ComponentManager] Headless CitiSignal version: 0.1.0
 [info] [Adobe Setup] Selecting organization...
-[info] [Adobe Setup] Organization selected: 3397333
+[info] [Adobe Setup] Organization selected: <org-id>
 ```
 
 These should use `logger.debug()` not `logger.info()`.

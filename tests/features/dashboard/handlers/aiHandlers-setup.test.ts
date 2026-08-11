@@ -1,14 +1,13 @@
 /**
  * aiHandlers Tests — Setup & verification
  *
- * Handler registration, handleVerifyAiSetup, handleInspectMcp, and
+ * Handler registration, handleVerifyAiSetup, and
  * handleRegenerateAiFiles. Shared setup lives in aiHandlers.testUtils.ts.
  */
 
 import {
     aiHandlers,
     handleVerifyAiSetup,
-    handleInspectMcp,
     handleRegenerateAiFiles,
     handleOpenInClaude,
     handleSaveAiPrompt,
@@ -18,7 +17,6 @@ import {
     hasHandler,
     getRegisteredTypes,
     clearMcpCache,
-    inspectAllServers,
     verifyAiSetup,
     generateAIContextFiles,
     installAiDefaultsMcpTools,
@@ -56,16 +54,16 @@ describe('aiHandlers — setup & verification', () => {
 
         it('should have exactly 8 handlers', () => {
             const types = getRegisteredTypes(aiHandlers);
-            expect(types).toHaveLength(8);
+            // 8 → 7: inspect-mcp removed 2026-08-05. The AI surface's documented
+            // "Refresh" action that supposedly sent it does not exist in
+            // AiOverviewScreen; the README claiming otherwise was stale.
+            expect(types).toHaveLength(7);
         });
 
         it('should include verify-ai-setup', () => {
             expect(hasHandler(aiHandlers, 'verify-ai-setup')).toBe(true);
         });
 
-        it('should include inspect-mcp', () => {
-            expect(hasHandler(aiHandlers, 'inspect-mcp')).toBe(true);
-        });
 
         it('should include regenerate-ai-files', () => {
             expect(hasHandler(aiHandlers, 'regenerate-ai-files')).toBe(true);
@@ -100,7 +98,6 @@ describe('aiHandlers — setup & verification', () => {
 
         it('map references the exported handler functions', () => {
             expect(aiHandlers['verify-ai-setup']).toBe(handleVerifyAiSetup);
-            expect(aiHandlers['inspect-mcp']).toBe(handleInspectMcp);
             expect(aiHandlers['regenerate-ai-files']).toBe(handleRegenerateAiFiles);
             expect(aiHandlers['openInClaude']).toBe(handleOpenInClaude);
             expect(aiHandlers['save-ai-prompt']).toBe(handleSaveAiPrompt);
@@ -120,7 +117,7 @@ describe('aiHandlers — setup & verification', () => {
 
             expect(verifyAiSetup).toHaveBeenCalledWith(
                 '/projects/test',
-                expect.stringContaining('mock/extension/path'),
+                expect.stringContaining('mock/extension/path')
             );
             expect(result).toMatchObject({
                 success: true,
@@ -156,8 +153,17 @@ describe('aiHandlers — setup & verification', () => {
                 { name: 'mcp-config', status: 'ok' },
             ],
             inventory: {
-                skills: [{ name: 'add-component', description: null, path: '/p', source: 'demo-builder' }],
-                mcps: [{ id: 'demo-builder', status: 'ok', tools: [{ name: 't', description: 'd' }] }],
+                skills: [
+                    {
+                        name: 'add-component',
+                        description: null,
+                        path: '/p',
+                        source: 'demo-builder',
+                    },
+                ],
+                mcps: [
+                    { id: 'demo-builder', status: 'ok', tools: [{ name: 't', description: 'd' }] },
+                ],
                 sessionMcps: [],
             },
             ...overrides,
@@ -170,7 +176,7 @@ describe('aiHandlers — setup & verification', () => {
             await handleVerifyAiSetup(context);
 
             expect(context.logger.info).toHaveBeenCalledWith(
-                expect.stringContaining('[AI Verify] Verifying AI setup: /projects/test'),
+                expect.stringContaining('[AI Verify] Verifying AI setup: /projects/test')
             );
         });
 
@@ -181,7 +187,7 @@ describe('aiHandlers — setup & verification', () => {
             await handleVerifyAiSetup(context);
 
             expect(context.logger.info).toHaveBeenCalledWith(
-                expect.stringContaining('[AI Verify] skills: 1 found'),
+                expect.stringContaining('[AI Verify] skills: 1 found')
             );
         });
 
@@ -194,19 +200,20 @@ describe('aiHandlers — setup & verification', () => {
                         mcps: [],
                         sessionMcps: [],
                     },
-                }),
+                })
             );
 
             const context = createMockContext();
             await handleVerifyAiSetup(context);
 
             expect(context.logger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('EACCES reading skills dir'),
+                expect.stringContaining('EACCES reading skills dir')
             );
         });
 
-        it('warns with the captured stderr tail for a non-ok mcp entry (timeout)', async () => {
-            const STDERR_TAIL = 'Demo Builder MCP proxy target socket: /tmp/x.sock\nError: connect ENOENT';
+        it('warns with the redacted stderr tail for a non-ok mcp entry (timeout)', async () => {
+            const STDERR_TAIL =
+                'Demo Builder MCP proxy target socket: /tmp/x.sock\nError: connect ENOENT';
             (verifyAiSetup as jest.Mock).mockResolvedValue(
                 makeResult({
                     inventory: {
@@ -214,7 +221,7 @@ describe('aiHandlers — setup & verification', () => {
                         mcps: [{ id: 'demo-builder', status: 'timeout', error: STDERR_TAIL }],
                         sessionMcps: [],
                     },
-                }),
+                })
             );
 
             const context = createMockContext();
@@ -222,7 +229,10 @@ describe('aiHandlers — setup & verification', () => {
 
             const warnArgs = (context.logger.warn as jest.Mock).mock.calls.flat().join('\n');
             expect(warnArgs).toContain('[AI Verify] mcp demo-builder: timeout');
-            expect(warnArgs).toContain(STDERR_TAIL);
+            // The connect-error diagnostic survives redaction (multi-line preserved)...
+            expect(warnArgs).toContain('connect ENOENT');
+            // ...but the machine socket path is redacted (CWE-200 file-path pattern).
+            expect(warnArgs).not.toContain('/tmp/x.sock');
         });
 
         it('warns when inventory.mcpsError is present', async () => {
@@ -234,14 +244,14 @@ describe('aiHandlers — setup & verification', () => {
                         mcpsError: 'inspection rejected: spawn failed',
                         sessionMcps: [],
                     },
-                }),
+                })
             );
 
             const context = createMockContext();
             await handleVerifyAiSetup(context);
 
             expect(context.logger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('inspection rejected: spawn failed'),
+                expect.stringContaining('inspection rejected: spawn failed')
             );
         });
 
@@ -256,86 +266,6 @@ describe('aiHandlers — setup & verification', () => {
         });
     });
 
-    describe('handleInspectMcp', () => {
-        beforeEach(() => {
-            (clearMcpCache as jest.Mock).mockClear();
-            (inspectAllServers as jest.Mock).mockClear().mockResolvedValue([]);
-        });
-
-        it('clears the full cache and re-inspects when no serverId is provided', async () => {
-            (inspectAllServers as jest.Mock).mockResolvedValueOnce([
-                { id: 'demo-builder', status: 'ok', tools: [{ name: 't', description: 'd' }] },
-            ]);
-            const mockProject = { name: 'p', path: '/projects/p', stack: 'paas' };
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(mockProject),
-                } as unknown as HandlerContext['stateManager'],
-            });
-
-            const result = await handleInspectMcp(context);
-
-            expect(clearMcpCache).toHaveBeenCalledWith(undefined);
-            expect(inspectAllServers).toHaveBeenCalledWith('/projects/p');
-            expect(result).toMatchObject({
-                success: true,
-                mcps: [{ id: 'demo-builder', status: 'ok' }],
-            });
-        });
-
-        it('treats an empty-string serverId as "clear all"', async () => {
-            const mockProject = { name: 'p', path: '/projects/p', stack: 'paas' };
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(mockProject),
-                } as unknown as HandlerContext['stateManager'],
-            });
-
-            await handleInspectMcp(context, { serverId: '' });
-
-            expect(clearMcpCache).toHaveBeenCalledWith(undefined);
-        });
-
-        it('clears a single serverId when provided in the payload', async () => {
-            const mockProject = { name: 'p', path: '/projects/p', stack: 'paas' };
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(mockProject),
-                } as unknown as HandlerContext['stateManager'],
-            });
-
-            await handleInspectMcp(context, { serverId: 'demo-builder' });
-
-            expect(clearMcpCache).toHaveBeenCalledWith('demo-builder');
-        });
-
-        it('uses server-side project.path (ignores any path the webview might supply)', async () => {
-            const mockProject = { name: 'p', path: '/safe/path', stack: 'paas' };
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(mockProject),
-                } as unknown as HandlerContext['stateManager'],
-            });
-
-            await handleInspectMcp(context);
-
-            expect(inspectAllServers).toHaveBeenCalledWith('/safe/path');
-        });
-
-        it('returns project-not-found error when no current project is loaded', async () => {
-            const context = createMockContext({
-                stateManager: {
-                    getCurrentProject: jest.fn().mockResolvedValue(null),
-                } as unknown as HandlerContext['stateManager'],
-            });
-
-            const result = await handleInspectMcp(context);
-
-            expect(clearMcpCache).not.toHaveBeenCalled();
-            expect(inspectAllServers).not.toHaveBeenCalled();
-            expect(result).toMatchObject({ success: false });
-        });
-    });
 
     describe('handleRegenerateAiFiles', () => {
         it('calls generateAIContextFiles using server-side project.path (ignores payload)', async () => {
@@ -344,6 +274,7 @@ describe('aiHandlers — setup & verification', () => {
             const context = createMockContext({
                 stateManager: {
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                    saveProjectConfigOnly: jest.fn(),
                 } as unknown as HandlerContext['stateManager'],
             });
 
@@ -357,8 +288,32 @@ describe('aiHandlers — setup & verification', () => {
                 '/projects/test',
                 PROJECT_HEADLESS,
                 '/mock/extension/path',
-                expect.any(Function),
+                expect.any(Function)
             );
+            expect(result).toEqual({ success: true });
+        });
+
+        it('persists the (stamped) project via saveProjectConfigOnly after regenerating', async () => {
+            (generateAIContextFiles as jest.Mock).mockResolvedValue({ skills: [] });
+
+            const saveProjectConfigOnly = jest.fn().mockResolvedValue(undefined);
+            const context = createMockContext({
+                stateManager: {
+                    getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                    saveProjectConfigOnly,
+                } as unknown as HandlerContext['stateManager'],
+            });
+
+            const result = await handleRegenerateAiFiles(context);
+
+            // The generate stamps AI_CONTEXT_VERSION onto the SAME project object;
+            // the handler then persists it so the on-open freshness check clears.
+            expect(saveProjectConfigOnly).toHaveBeenCalledTimes(1);
+            expect(saveProjectConfigOnly).toHaveBeenCalledWith(PROJECT_HEADLESS);
+            // Order: persist must run AFTER the writers (so the stamp is set first).
+            const generateOrder = (generateAIContextFiles as jest.Mock).mock.invocationCallOrder[0];
+            const saveOrder = saveProjectConfigOnly.mock.invocationCallOrder[0];
+            expect(generateOrder).toBeLessThan(saveOrder);
             expect(result).toEqual({ success: true });
         });
 
@@ -382,28 +337,36 @@ describe('aiHandlers — setup & verification', () => {
             const context = createMockContext({
                 stateManager: {
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
+                    saveProjectConfigOnly: jest.fn(),
                 } as unknown as HandlerContext['stateManager'],
             });
 
             const result = await handleRegenerateAiFiles(context);
 
             // MCP tools install into the per-project isolated dir, keyed to
-            // project.path — decoupled from the storefront manifest.
-            expect(installAiDefaultsMcpTools).toHaveBeenCalledWith(PROJECT_WITH_STOREFRONT.path);
+            // project.path — decoupled from the storefront manifest. The project
+            // record rides along so the installer can filter entries by `requires`.
+            expect(installAiDefaultsMcpTools).toHaveBeenCalledWith(
+                PROJECT_WITH_STOREFRONT.path,
+                PROJECT_WITH_STOREFRONT
+            );
             // Order matters: the install must complete before context files are written
             // (so .mcp.json's isolated-dir-anchored paths resolve to real files).
-            const installCallOrder = (installAiDefaultsMcpTools as jest.Mock).mock.invocationCallOrder[0];
-            const generateCallOrder = (generateAIContextFiles as jest.Mock).mock.invocationCallOrder[0];
+            const installCallOrder = (installAiDefaultsMcpTools as jest.Mock).mock
+                .invocationCallOrder[0];
+            const generateCallOrder = (generateAIContextFiles as jest.Mock).mock
+                .invocationCallOrder[0];
             expect(installCallOrder).toBeLessThan(generateCallOrder);
             expect(result).toEqual({ success: true });
         });
 
-        it('does NOT run the storefront install for headless projects (no EDS Storefront)', async () => {
+        it('does NOT run the tooling install for bare projects (no storefront, mesh, or app-builder component)', async () => {
             (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
 
             const context = createMockContext({
                 stateManager: {
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                    saveProjectConfigOnly: jest.fn(),
                 } as unknown as HandlerContext['stateManager'],
             });
 
@@ -412,6 +375,9 @@ describe('aiHandlers — setup & verification', () => {
             expect(installAiDefaultsMcpTools).not.toHaveBeenCalled();
             expect(generateAIContextFiles).toHaveBeenCalled();
         });
+
+        // The mesh-project (no storefront) tooling-install case lives in
+        // aiHandlers-toolingGate.test.ts.
 
         it('returns the installer error and skips generateAIContextFiles when the storefront install fails', async () => {
             (installAiDefaultsMcpTools as jest.Mock).mockResolvedValue({
@@ -422,6 +388,7 @@ describe('aiHandlers — setup & verification', () => {
             const context = createMockContext({
                 stateManager: {
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
+                    saveProjectConfigOnly: jest.fn(),
                 } as unknown as HandlerContext['stateManager'],
             });
 
@@ -441,6 +408,7 @@ describe('aiHandlers — setup & verification', () => {
             const context = createMockContext({
                 stateManager: {
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
+                    saveProjectConfigOnly: jest.fn(),
                 } as unknown as HandlerContext['stateManager'],
             });
 
@@ -455,24 +423,25 @@ describe('aiHandlers — setup & verification', () => {
         // finalize step directly; the three writer steps are emitted from inside
         // generateAIContextFiles via an `onProgress` tracker the handler supplies.
         describe('progress reporting', () => {
-            it('emits an install-deps creationProgress message before installing the storefront (EDS)', async () => {
+            it('emits an install-tooling creationProgress message before installing (EDS)', async () => {
                 (installAiDefaultsMcpTools as jest.Mock).mockResolvedValue({ success: true });
                 (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
 
                 const context = createMockContext({
                     stateManager: {
                         getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
+                        saveProjectConfigOnly: jest.fn(),
                     } as unknown as HandlerContext['stateManager'],
                 });
 
                 await handleRegenerateAiFiles(context);
 
                 const installCalls = (context.sendMessage as jest.Mock).mock.calls.filter(
-                    ([type]) => type === 'creationProgress',
+                    ([type]) => type === 'creationProgress'
                 );
                 expect(installCalls.length).toBeGreaterThan(0);
                 expect(installCalls[0][1]).toMatchObject({
-                    currentOperation: 'Installing storefront dependencies',
+                    currentOperation: 'Installing AI tooling',
                 });
             });
 
@@ -483,6 +452,7 @@ describe('aiHandlers — setup & verification', () => {
                 const context = createMockContext({
                     stateManager: {
                         getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
+                        saveProjectConfigOnly: jest.fn(),
                     } as unknown as HandlerContext['stateManager'],
                 });
 
@@ -500,6 +470,7 @@ describe('aiHandlers — setup & verification', () => {
                 const context = createMockContext({
                     stateManager: {
                         getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                        saveProjectConfigOnly: jest.fn(),
                     } as unknown as HandlerContext['stateManager'],
                 });
 
@@ -519,6 +490,7 @@ describe('aiHandlers — setup & verification', () => {
                 const context = createMockContext({
                     stateManager: {
                         getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
+                        saveProjectConfigOnly: jest.fn(),
                     } as unknown as HandlerContext['stateManager'],
                 });
 
@@ -528,7 +500,7 @@ describe('aiHandlers — setup & verification', () => {
                     '/projects/test',
                     PROJECT_WITH_STOREFRONT,
                     '/mock/extension/path',
-                    expect.any(Function),
+                    expect.any(Function)
                 );
             });
         });
@@ -540,13 +512,14 @@ describe('aiHandlers — setup & verification', () => {
                 const context = createMockContext({
                     stateManager: {
                         getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                        saveProjectConfigOnly: jest.fn(),
                     } as unknown as HandlerContext['stateManager'],
                 });
 
                 await handleRegenerateAiFiles(context);
 
                 expect(context.logger.info).toHaveBeenCalledWith(
-                    expect.stringContaining('[AI Verify] Regenerating AI files'),
+                    expect.stringContaining('[AI Verify] Regenerating AI files')
                 );
             });
 
@@ -558,6 +531,7 @@ describe('aiHandlers — setup & verification', () => {
                 const context = createMockContext({
                     stateManager: {
                         getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                        saveProjectConfigOnly: jest.fn(),
                     } as unknown as HandlerContext['stateManager'],
                 });
 
@@ -570,5 +544,4 @@ describe('aiHandlers — setup & verification', () => {
             });
         });
     });
-
 });

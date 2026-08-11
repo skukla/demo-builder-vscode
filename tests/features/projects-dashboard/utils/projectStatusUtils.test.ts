@@ -15,8 +15,8 @@ import {
     getStatusText,
     getStatusVariant,
     getFrontendPort,
-    getMeshStatusText,
-    getMeshStatusVariant,
+    getDeploymentSummary,
+    hasIntegrations,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import { createMockProject, createRunningProject } from '../testUtils';
 
@@ -257,93 +257,6 @@ describe('projectStatusUtils', () => {
         });
     });
 
-    describe('getMeshStatusText', () => {
-        it('should return null when no meshStatusSummary', () => {
-            const project = createMockProject();
-            expect(getMeshStatusText(project)).toBeNull();
-        });
-
-        it('should return "Redeploy Mesh" when stale', () => {
-            const project = createMockProject({ meshStatusSummary: 'stale' });
-            expect(getMeshStatusText(project)).toBe('Redeploy Mesh');
-        });
-
-        it('should return "Mesh Deployed" when deployed', () => {
-            const project = createMockProject({ meshStatusSummary: 'deployed' });
-            expect(getMeshStatusText(project)).toBe('Mesh Deployed');
-        });
-
-        it('should return null when unknown', () => {
-            const project = createMockProject({ meshStatusSummary: 'unknown' });
-            expect(getMeshStatusText(project)).toBeNull();
-        });
-
-        it('should return "Mesh Incomplete" when config-incomplete', () => {
-            const project = createMockProject({ meshStatusSummary: 'config-incomplete' });
-            expect(getMeshStatusText(project)).toBe('Mesh Incomplete');
-        });
-
-        it('should return "Redeploy Mesh" when update-declined', () => {
-            const project = createMockProject({ meshStatusSummary: 'update-declined' });
-            expect(getMeshStatusText(project)).toBe('Redeploy Mesh');
-        });
-
-        it('should return "Not Deployed" when not-deployed', () => {
-            const project = createMockProject({ meshStatusSummary: 'not-deployed' });
-            expect(getMeshStatusText(project)).toBe('Not Deployed');
-        });
-
-        it('should return "Mesh Error" when error', () => {
-            const project = createMockProject({ meshStatusSummary: 'error' });
-            expect(getMeshStatusText(project)).toBe('Mesh Error');
-        });
-    });
-
-    describe('getMeshStatusVariant', () => {
-        it('should return null when no meshStatusSummary', () => {
-            const project = createMockProject();
-            expect(getMeshStatusVariant(project)).toBeNull();
-        });
-
-        it('should return "warning" when stale', () => {
-            const project = createMockProject({ meshStatusSummary: 'stale' });
-            expect(getMeshStatusVariant(project)).toBe('warning');
-        });
-
-        it('should return "success" when deployed', () => {
-            const project = createMockProject({ meshStatusSummary: 'deployed' });
-            expect(getMeshStatusVariant(project)).toBe('success');
-        });
-
-        it('should return "warning" when config-incomplete', () => {
-            const project = createMockProject({ meshStatusSummary: 'config-incomplete' });
-            expect(getMeshStatusVariant(project)).toBe('warning');
-        });
-
-        it('should return "warning" when update-declined', () => {
-            const project = createMockProject({ meshStatusSummary: 'update-declined' });
-            expect(getMeshStatusVariant(project)).toBe('warning');
-        });
-
-        it('should return "error" when error', () => {
-            const project = createMockProject({ meshStatusSummary: 'error' });
-            expect(getMeshStatusVariant(project)).toBe('error');
-        });
-
-        it('should return "neutral" when not-deployed', () => {
-            const project = createMockProject({ meshStatusSummary: 'not-deployed' });
-            expect(getMeshStatusVariant(project)).toBe('neutral');
-        });
-
-        it('should return null when unknown', () => {
-            const project = createMockProject({ meshStatusSummary: 'unknown' });
-            expect(getMeshStatusVariant(project)).toBeNull();
-        });
-    });
-
-    // Note: isEdsProject, getEdsLiveUrl, getEdsPreviewUrl tests moved to
-    // tests/types/typeGuards-project-accessors.test.ts (canonical source)
-
     describe('getStatusText with isEds', () => {
         it('should return "Published" for EDS projects regardless of status', () => {
             expect(getStatusText('running', 3000, true)).toBe('Published');
@@ -371,4 +284,185 @@ describe('projectStatusUtils', () => {
             expect(getStatusVariant('error', false)).toBe('error');
         });
     });
+
+    // Which mesh state the card reads is unchanged by the consolidation — only
+    // where it lands. It comes from the DURABLE keyed map, not the
+    // deploy-time-only `meshStatusSummary`, because a reloaded project carries
+    // only the keyed entries. The summary still WINS when present: it expresses
+    // states the entry cannot (update-declined, config-incomplete).
+    //
+    // A mesh is optional and contributes nothing when absent, so a project with
+    // no mesh and nothing else deployable gets no line at all.
+    describe('the mesh feeds the deployment summary — only when there IS one', () => {
+        const meshEntry = (status: 'deployed' | 'error' | 'stale' | 'not-deployed') => ({
+            kind: 'mesh' as const,
+            status,
+            source: { owner: 'adobe', repo: 'commerce-mesh' },
+        });
+
+        it('contributes nothing when there is neither a component nor a summary', () => {
+            const project = createMockProject({
+                meshStatusSummary: undefined,
+                appBuilderComponents: {},
+            });
+
+            expect(getDeploymentSummary(project)).toBeNull();
+        });
+
+        // A mesh DEPENDENCY in the stack is not a mesh. Selecting one during
+        // creation says the project may have a mesh, not that it does — driving
+        // the line off that is what put a placeholder on cards with no mesh.
+        it('is still nothing for a stack that merely selected a mesh dependency', () => {
+            const project = createMockProject({
+                componentSelections: {
+                    frontend: 'eds-storefront',
+                    backend: 'adobe-commerce-accs',
+                    dependencies: ['eds-accs-mesh'],
+                    integrations: [],
+                    appBuilder: [],
+                } as never,
+                meshStatusSummary: undefined,
+                appBuilderComponents: {},
+            });
+
+            expect(getDeploymentSummary(project)).toBeNull();
+        });
+
+        it('reads the keyed entry when no summary survived the reload', () => {
+            const project = createMockProject({
+                meshStatusSummary: undefined,
+                appBuilderComponents: { 'eds-accs-mesh': meshEntry('deployed') },
+            });
+
+            expect(getDeploymentSummary(project)).toEqual({
+                text: 'Deployed',
+                variant: 'success',
+            });
+        });
+
+        it.each([
+            ['error', 'error'],
+            ['stale', 'warning'],
+        ] as const)('a keyed %s mesh needs attention, with the %s dot', (status, variant) => {
+            const project = createMockProject({
+                meshStatusSummary: undefined,
+                appBuilderComponents: { 'eds-accs-mesh': meshEntry(status) },
+            });
+
+            expect(getDeploymentSummary(project)).toEqual({
+                text: 'Attention needed',
+                variant,
+            });
+        });
+
+        it('a keyed not-deployed mesh is not a problem, just not shipped', () => {
+            const project = createMockProject({
+                meshStatusSummary: undefined,
+                appBuilderComponents: { 'eds-accs-mesh': meshEntry('not-deployed') },
+            });
+
+            expect(getDeploymentSummary(project)?.text).toBe('Not deployed');
+        });
+
+        it('PREFERS the live summary — it knows states the keyed entry cannot express', () => {
+            // 'update-declined' has no keyed equivalent; reading the entry alone
+            // would report a healthy mesh the user has already been warned about.
+            const project = createMockProject({
+                meshStatusSummary: 'update-declined',
+                appBuilderComponents: { 'eds-accs-mesh': meshEntry('deployed') },
+            });
+
+            expect(getDeploymentSummary(project)?.text).toBe('Attention needed');
+        });
+    });
+
+    describe('hasIntegrations', () => {
+        it('is true for any keyed App Builder component', () => {
+            const project = createMockProject({
+                appBuilderComponents: {
+                    'erp-sync': {
+                        kind: 'integration',
+                        status: 'deployed',
+                        source: { owner: 'acme', repo: 'erp-sync' },
+                    },
+                },
+            });
+
+            expect(hasIntegrations(project)).toBe(true);
+        });
+
+        // Deliberately unfiltered by status: a not-deployed or failed integration
+        // is exactly when you want to go and look at it.
+        it.each(['not-deployed', 'error', 'stale'] as const)(
+            'is true for a %s integration too',
+            (status) => {
+                const project = createMockProject({
+                    appBuilderComponents: {
+                        'erp-sync': {
+                            kind: 'integration',
+                            status,
+                            source: { owner: 'acme', repo: 'erp-sync' },
+                        },
+                    },
+                });
+
+                expect(hasIntegrations(project)).toBe(true);
+            }
+        );
+
+        it('counts the mesh — it is a card on that page too', () => {
+            const project = createMockProject({
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: 'skukla', repo: 'commerce-mesh' },
+                    },
+                },
+            });
+
+            expect(hasIntegrations(project)).toBe(true);
+        });
+
+        it('is false when the keyed map is absent or empty', () => {
+            expect(hasIntegrations(createMockProject({}))).toBe(false);
+            expect(hasIntegrations(createMockProject({ appBuilderComponents: {} }))).toBe(false);
+        });
+    });
 });
+
+// The mesh a project's STATUS LINE describes must be the mesh its card ACTS on.
+//
+// Found 2026-08-04 by a chokepoint audit. `getIdentifiedMeshAppBuilderComponent`
+// owns a two-step resolution — the canonical `mesh` key first, then first-by-kind
+// — and this reader re-derived only the fallback half. That is the exact shape of
+// the same-day defect where a card showed one mesh while Remove tore down another;
+// it escaped that fix because the canonical docblock scopes itself to code that
+// ACTS on the mesh, and this is a read.
+describe('mesh status resolution matches the canonical resolver', () => {
+    it('prefers the canonical `mesh` key over another mesh entry', () => {
+        const project = {
+            appBuilderComponents: {
+                // Insertion order deliberately puts the non-canonical one FIRST,
+                // which is what a bare find() would return.
+                'eds-accs-mesh': { kind: 'mesh', status: 'error' },
+                mesh: { kind: 'mesh', status: 'deployed' },
+            },
+        } as never;
+
+        // The two entries disagree, so the verdict names which one was read: the
+        // canonical 'deployed' gives "Deployed", the stray 'error' would not.
+        expect(getDeploymentSummary(project)?.text).toBe('Deployed');
+    });
+
+    it('still falls back to the only mesh when there is no canonical key', () => {
+        const project = {
+            appBuilderComponents: { 'eds-accs-mesh': { kind: 'mesh', status: 'deployed' } },
+        } as never;
+
+        // The two entries disagree, so the verdict names which one was read: the
+        // canonical 'deployed' gives "Deployed", the stray 'error' would not.
+        expect(getDeploymentSummary(project)?.text).toBe('Deployed');
+    });
+});
+

@@ -10,8 +10,9 @@
  * - Extracting mesh endpoint from configurations
  */
 
+import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import { Project } from '@/types';
-import { hasEntries, getProjectFrontendPort } from '@/types/typeGuards';
+import { hasEntries, getProjectFrontendPort, getMeshEndpointUrl } from '@/types/typeGuards';
 
 /**
  * Mesh status info for UI updates
@@ -46,8 +47,8 @@ export interface StatusPayload {
  * @returns Status payload for UI
  *
  * Note: org-context mismatch is NOT part of this payload — it's delivered
- * separately via the async `orgContextResult` message so the (slow) org check
- * never blocks the rest of the dashboard status.
+ * separately via the on-open check orchestrator's `checkResult` message
+ * (checkId `org-context`) so the org check never blocks the dashboard status.
  */
 export function buildStatusPayload(
     project: Project,
@@ -68,17 +69,38 @@ export function buildStatusPayload(
 }
 
 /**
- * Check if mesh has been deployed (has env vars recorded from previous deployment)
+ * Has this mesh ever been deployed?
+ *
+ * Keyed-first (ADR-011 D3 Steps 07+09): the deployment record lives on the keyed
+ * mesh `appBuilderComponents` entry; the accessor synthesizes from the legacy
+ * `meshState` for pre-migration projects.
+ *
+ * Answered from the DEPLOY RECORD — an endpoint or a `lastDeployed` timestamp.
+ *
+ * REGRESSION (2026-08-04, live): this tested `envVars` alone, which is the mesh
+ * STALENESS BASELINE (ADR-011 D3 Step 06), written by `updateMeshState` on the
+ * `deployMeshHeadless` path and NOT by the keyed runner's add. A mesh added from
+ * the dashboard therefore verified successfully, persisted `status: 'deployed'`
+ * with an endpoint and a timestamp — and the grid still read "Not Deployed",
+ * while the SAME mesh redeployed read "Deployed". A staleness baseline is not
+ * evidence of deployment; it is evidence of one particular writer having run.
+ *
+ * `envVars` stays in the disjunction: a pre-migration `meshState` can carry the
+ * baseline without the newer fields, and dropping it would regress those projects
+ * the other way.
  *
  * @param project - The project to check
  * @returns True if project has mesh deployment record
  */
 export function hasMeshDeploymentRecord(project: Project): boolean {
-    return Boolean(project.meshState && hasEntries(project.meshState.envVars));
+    const mesh = getMeshAppBuilderComponent(project);
+    if (!mesh) return false;
+    return Boolean(mesh.endpoint) || Boolean(mesh.lastDeployed) || hasEntries(mesh.envVars);
 }
 
 /**
- * Get mesh endpoint from meshState (single source of truth)
+ * Get the deployed mesh endpoint (keyed-first via getMeshEndpointUrl,
+ * ADR-011 D3 Step 06; legacy meshState fallback preserved).
  *
  * See docs/architecture/state-ownership.md for details.
  *
@@ -86,7 +108,7 @@ export function hasMeshDeploymentRecord(project: Project): boolean {
  * @returns The mesh endpoint value if found, undefined otherwise
  */
 export function getMeshEndpoint(project: Project): string | undefined {
-    const endpoint = project.meshState?.endpoint;
+    const endpoint = getMeshEndpointUrl(project);
     if (endpoint && typeof endpoint === 'string' && endpoint.trim() !== '') {
         return endpoint;
     }

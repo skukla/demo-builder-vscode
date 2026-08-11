@@ -1,37 +1,42 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import {
+    loadAppBuilderComponentSecretFlags,
+    persistAppBuilderComponentSecrets,
+    splitAppBuilderComponentSecrets,
+} from '../handlers/appBuilderComponentSecrets';
 import { configureHandlers } from '../handlers/configureHandlers';
 import { mergeEnvValuesFromSources } from './configureEnvLoader';
 import { ProjectDashboardWebviewCommand } from './showDashboard';
+import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { parseEnvFile } from '@/core/utils/envParser';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
+import { getProvidedEnvVars } from '@/features/app-builder/services/appBuilderComponentState';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { detectStorefrontChanges, isEdsProject, republishStorefrontConfig } from '@/features/eds';
 import {
-    applyDaLiveOrgConfigSettings,
-    getDaLiveAuthService,
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
-import { DaLiveContentOperations, createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
-import { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
-import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
-import { HelixService } from '@/features/eds/services/helixService';
-import { installQuickEdit } from '@/features/eds/services/quickEditPublisher';
+import { applyAuthoringExperienceFlip } from '@/features/eds/services/authoringExperienceFlip';
+import { markMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers';
+import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { Project } from '@/types';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AuthoringExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
-import type { HandlerContext, SharedState } from '@/types/handlers';
+import type { HandlerContext } from '@/types/handlers';
 import { getComponentInstanceEntries, getEdsDaLiveUrl } from '@/types/typeGuards';
 
 const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<AuthoringExperience>([
@@ -61,6 +66,12 @@ interface ConfigureInitialData {
     isEds: boolean;
     /** Resolved authoring experience seeding the radio (EDS only). */
     authoringExperience: AuthoringExperience;
+    /** Catalog entries for the project's selected appBuilderComponents (bucket-3 inputs). */
+    appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
+    /** Resolved provided env values (bucket-2 "connected" sources). */
+    providedEnvVars: Record<string, string>;
+    /** Per-appBuilderComponent "is set" flags for secret vars (booleans only, no values). */
+    appBuilderComponentSecretFlags: Record<string, Record<string, boolean>>;
 }
 
 export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
@@ -91,6 +102,13 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         return 'Loading project configuration...';
     }
 
+    /** Project name captured in execute() so the loading screen can show it. */
+    private loadingProjectName?: string;
+
+    protected getLoadingHeader(): { title: string; subtitle?: string } {
+        return { title: this.getWebviewTitle(), subtitle: this.loadingProjectName };
+    }
+
     public async execute(): Promise<void> {
         try {
             // Get current project
@@ -99,6 +117,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 await this.showWarning('No project found to configure.');
                 return;
             }
+            this.loadingProjectName = project.name;
 
             // Create or reveal the webview panel
             await this.createOrRevealPanel();
@@ -164,10 +183,25 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
         // Get existing project names for rename validation
         const allProjects = await this.stateManager.getAllProjects();
-        const existingProjectNames = allProjects.map(p => p.name);
+        const existingProjectNames = allProjects.map((p) => p.name);
 
         // Get current theme
-        const theme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
+        const theme =
+            vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
+
+        // AppBuilderComponent bucket-3/bucket-2 surface: the catalog for the project's
+        // selection, the provided ("connected") values, and the "is set" flags
+        // for secrets (booleans only — secret VALUES never travel to the webview).
+        const appBuilderComponentCatalog = getAvailableAppBuilderComponents(
+            project.componentSelections?.backend ?? '',
+            project.componentSelections?.frontend ?? '',
+        );
+        const providedEnvVars = getProvidedEnvVars(project);
+        const appBuilderComponentSecretFlags = await loadAppBuilderComponentSecretFlags(
+            appBuilderComponentCatalog,
+            project.path,
+            this.context.secrets,
+        );
 
         return {
             theme,
@@ -177,6 +211,9 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             existingProjectNames,
             isEds: isEdsProject(project),
             authoringExperience: resolveProjectAuthoringExperience(project),
+            appBuilderComponentCatalog,
+            providedEnvVars,
+            appBuilderComponentSecretFlags,
         };
     }
 
@@ -193,111 +230,174 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
         // save-configuration stays inline — depends on private notification/deployment
         // methods that need `this` binding (same mixed pattern as Wizard)
-        comm.onStreaming('save-configuration', async (data: {
-            componentConfigs: ComponentConfigs;
-            newProjectName?: string;
-            authoringExperience?: AuthoringExperience;
-        }) => {
-            try {
-                let project = await this.stateManager.getCurrentProject();
-                if (!project) {
-                    throw new Error('No project found');
-                }
-
-                // Handle project rename if name changed
-                if (data.newProjectName && data.newProjectName !== project.name) {
-                    const renameResult = await handleRenameProject(this.createHandlerContext(), {
-                        projectPath: project.path,
-                        newName: data.newProjectName,
-                    });
-
-                    if (!renameResult.success) {
-                        throw new Error(renameResult.error || 'Failed to rename project');
-                    }
-
-                    // Reload project after rename (path may have changed)
-                    project = await this.stateManager.getCurrentProject();
+        comm.onStreaming(
+            'save-configuration',
+            async (data: {
+                componentConfigs: ComponentConfigs;
+                newProjectName?: string;
+                authoringExperience?: AuthoringExperience;
+            }) => {
+                try {
+                    let project = await this.stateManager.getCurrentProject();
                     if (!project) {
-                        throw new Error('Project not found after rename');
+                        throw new Error('No project found');
                     }
-                }
 
-                // Detect if mesh configuration changed BEFORE saving
-                const meshChanges = await detectMeshChanges(project, data.componentConfigs);
-
-                // Detect if storefront configuration changed (EDS projects only)
-                const storefrontChanges = detectStorefrontChanges(project, data.componentConfigs);
-
-                // Update project state
-                project.componentConfigs = data.componentConfigs;
-                if (meshChanges.hasChanges) {
-                    project.meshStatusSummary = 'stale';
-                }
-                if (storefrontChanges.hasChanges) {
-                    project.edsStorefrontStatusSummary = 'stale';
-                }
-
-                // Persist the EDS authoring-experience preference (setup-time choice).
-                // Capture whether it changed so we can re-apply the DA editor.path after save.
-                const authoringChanged = this.applyAuthoringExperienceMetadata(project, data.authoringExperience);
-
-                await this.stateManager.saveProject(project);
-
-                // Push the new Author label + DA URL to an already-open dashboard
-                // immediately (a fast, local postMessage — NOT a network call, so
-                // it stays in the synchronous save path; the deferred DA side-
-                // effects below are the slow network work). Non-fatal: a missing
-                // dashboard or a postMessage failure must never block the save.
-                if (authoringChanged && data.authoringExperience) {
-                    try {
-                        const edsDaLiveUrl = getEdsDaLiveUrl(project, data.authoringExperience, getEwCanvasBranch());
-                        await ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate(
-                            data.authoringExperience,
-                            edsDaLiveUrl,
+                    // Handle project rename if name changed
+                    if (data.newProjectName && data.newProjectName !== project.name) {
+                        const renameResult = await handleRenameProject(
+                            this.createHandlerContext(),
+                            {
+                                projectPath: project.path,
+                                newName: data.newProjectName,
+                            },
                         );
-                    } catch (error) {
-                        this.logger.warn(
-                            `[Configure] Failed to push authoring-experience update to dashboard: ${(error as Error).message}`,
-                        );
+
+                        if (!renameResult.success) {
+                            throw new Error(renameResult.error || 'Failed to rename project');
+                        }
+
+                        // Reload project after rename (path may have changed)
+                        project = await this.stateManager.getCurrentProject();
+                        if (!project) {
+                            throw new Error('Project not found after rename');
+                        }
                     }
-                }
 
-                // Register programmatic writes BEFORE writing files
-                await this.registerProgrammaticWrites(project, data.componentConfigs);
+                    // SECRET SAFETY (repo is PUBLIC): split appBuilderComponent `type:'secret'`
+                    // values out of componentConfigs → VS Code SecretStorage BEFORE any
+                    // detection/persistence/.env work. The sanitized configs (no secrets)
+                    // are what every downstream path sees; secrets never reach the
+                    // manifest, the .env file, or the change-detectors.
+                    const appBuilderComponentCatalog = getAvailableAppBuilderComponents(
+                        project.componentSelections?.backend ?? '',
+                        project.componentSelections?.frontend ?? '',
+                    );
+                    const split = splitAppBuilderComponentSecrets(
+                        data.componentConfigs,
+                        appBuilderComponentCatalog,
+                    );
+                    // Values are all strings here (the Configure payload is text/secret
+                    // strings); the split only deletes secret keys, so the narrow local
+                    // ComponentConfigs shape is preserved.
+                    const sanitizedConfigs = split.sanitizedConfigs as ComponentConfigs;
+                    await persistAppBuilderComponentSecrets(
+                        split.secrets,
+                        project.path,
+                        this.context.secrets,
+                        this.logger,
+                    );
 
-                // Regenerate .env files
-                await this.regenerateEnvFiles(project);
+                    // Detect if mesh configuration changed BEFORE saving.
+                    // Org-targeted: with an empty staleness baseline this fetches
+                    // the deployed config over the `aio` CLI, and an unwrapped call
+                    // queries whatever org the CLI's process-global selection
+                    // happens to hold.
+                    const meshChanges = await withOrgContext(
+                        buildOrgTargetFromProjectAdobe(project.adobe),
+                        () => detectMeshChanges(project, sanitizedConfigs),
+                    );
 
-                // Return success immediately so the Save button resets. The
-                // authoring-experience side-effects below are network-bound (DA
-                // editor.path, Quick Edit vendoring, Helix code preview), so they
-                // run AFTER the response behind a progress toast — the button never
-                // appears to hang. All side-effects are individually non-fatal.
-                const result = { success: true };
+                    // Detect if storefront configuration changed (EDS projects only)
+                    const storefrontChanges = detectStorefrontChanges(project, sanitizedConfigs);
 
-                if (authoringChanged && data.authoringExperience) {
-                    const experience = data.authoringExperience;
-                    const flippedProject = project;
+                    // Update project state
+                    project.componentConfigs = sanitizedConfigs;
+                    if (meshChanges.hasChanges) {
+                        project.meshStatusSummary = 'stale';
+                    }
+                    if (storefrontChanges.hasChanges) {
+                        project.edsStorefrontStatusSummary = 'stale';
+                    }
+
+                    // Re-arm the apply prompts for THIS change. Without it, a
+                    // single earlier "Later" muted them for the whole session:
+                    // the handlers below saw `shouldShow === false`, returned
+                    // before prompting, and the save reported success while the
+                    // storefront kept serving the previous config.
+                    if (meshChanges.hasChanges || storefrontChanges.hasChanges) {
+                        await vscode.commands.executeCommand('demoBuilder._internal.configChanged');
+                    }
+
+                    // Persist the EDS authoring-experience preference (setup-time choice).
+                    // Capture whether it changed so we can re-apply the DA editor.path after save.
+                    const authoringChanged = this.applyAuthoringExperienceMetadata(
+                        project,
+                        data.authoringExperience,
+                    );
+
+                    await this.stateManager.saveProject(project);
+
+                    // Push the new Author label + DA URL to an already-open dashboard
+                    // immediately (a fast, local postMessage — NOT a network call, so
+                    // it stays in the synchronous save path; the deferred DA side-
+                    // effects below are the slow network work). Non-fatal: a missing
+                    // dashboard or a postMessage failure must never block the save.
+                    if (authoringChanged && data.authoringExperience) {
+                        try {
+                            const edsDaLiveUrl = getEdsDaLiveUrl(
+                                project,
+                                data.authoringExperience,
+                                getEwCanvasBranch(),
+                            );
+                            await ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate(
+                                edsDaLiveUrl,
+                            );
+                        } catch (error) {
+                            this.logger.warn(
+                                `[Configure] Failed to push authoring-experience update to dashboard: ${(error as Error).message}`,
+                            );
+                        }
+                    }
+
+                    // Register programmatic writes BEFORE writing files
+                    await this.registerProgrammaticWrites(project, sanitizedConfigs);
+
+                    // Regenerate .env files
+                    await this.regenerateEnvFiles(project);
+
+                    // Return success immediately so the Save button resets. The
+                    // authoring-experience side-effects below are network-bound (DA
+                    // editor.path, Quick Edit vendoring, Helix code preview), so they
+                    // run AFTER the response behind a progress toast — the button never
+                    // appears to hang. All side-effects are individually non-fatal.
+                    const result = { success: true };
+
+                    if (authoringChanged && data.authoringExperience) {
+                        const experience = data.authoringExperience;
+                        const flippedProject = project;
+                        setImmediate(() => {
+                            void this.applyAuthoringSideEffects(flippedProject, experience);
+                        });
+                    }
+
+                    // Show success notification after returning (non-blocking). When the
+                    // authoring experience changed, its own progress toast is the
+                    // confirmation, so suppress the generic "saved" toast to avoid a
+                    // double notification.
                     setImmediate(() => {
-                        void this.applyAuthoringSideEffects(flippedProject, experience);
+                        this.showPostSaveNotifications(
+                            project,
+                            meshChanges,
+                            storefrontChanges,
+                            authoringChanged,
+                        );
                     });
+
+                    return result;
+                } catch (error) {
+                    this.logger.error('[Configure] Failed to save configuration:', error as Error);
+                    await vscode.window.showErrorMessage(
+                        `Failed to save configuration: ${(error as Error).message}`,
+                    );
+                    return {
+                        success: false,
+                        error: (error as Error).message,
+                        code: ErrorCode.CONFIG_INVALID,
+                    };
                 }
-
-                // Show success notification after returning (non-blocking). When the
-                // authoring experience changed, its own progress toast is the
-                // confirmation, so suppress the generic "saved" toast to avoid a
-                // double notification.
-                setImmediate(() => {
-                    this.showPostSaveNotifications(project, meshChanges, storefrontChanges, authoringChanged);
-                });
-
-                return result;
-            } catch (error) {
-                this.logger.error('[Configure] Failed to save configuration:', error as Error);
-                await vscode.window.showErrorMessage(`Failed to save configuration: ${(error as Error).message}`);
-                return { success: false, error: (error as Error).message, code: ErrorCode.CONFIG_INVALID };
-            }
-        });
+            },
+        );
     }
 
     /**
@@ -317,7 +417,9 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         if (!edsInstance) {
             return false;
         }
-        const previous = edsInstance.metadata?.authoringExperience as AuthoringExperience | undefined;
+        const previous = edsInstance.metadata?.authoringExperience as
+            | AuthoringExperience
+            | undefined;
         if (previous === experience) {
             return false;
         }
@@ -342,132 +444,29 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 cancellable: false,
             },
             async (progress) => {
+                // Narrate the steps the shared flip runs (editor.path always;
+                // Quick Edit + config.json regen are Experience-Workspace-only).
+                // The shared service performs the ordering internally.
                 progress.report({ message: 'Updating the DA.live editor link…' });
-                await this.reapplyEditorPath(project, experience);
                 if (experience === 'experience-workspace') {
                     progress.report({ message: 'Wiring Quick Edit into the storefront…' });
-                    await this.ensureQuickEditVendored(project);
-                    progress.report({ message: 'Updating storefront config…' });
-                    await this.regenerateStorefrontConfig(project);
                 }
+                await applyAuthoringExperienceFlip(project, experience, {
+                    context: this.context,
+                    logger: this.logger,
+                    saveProject: (p) => this.stateManager.saveProject(p),
+                });
             },
         );
-    }
-
-    /**
-     * Re-apply the site-scoped DA.live editor.path so the punch-out matches the
-     * new authoring experience. Moved here from the projects-list flip handler.
-     * Non-fatal: logs a warning on failure and never throws (the metadata write
-     * already stands).
-     */
-    private async reapplyEditorPath(
-        project: Project,
-        experience: AuthoringExperience,
-    ): Promise<void> {
-        const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-        const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
-        const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
-        if (!daLiveOrg || !daLiveSite) {
-            return;
-        }
-
-        try {
-            const daLiveAuthService = getDaLiveAuthService(this.context);
-            const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
-            const daLiveContentOps = new DaLiveContentOperations(tokenProvider, this.logger);
-            await applyDaLiveOrgConfigSettings(daLiveContentOps, daLiveOrg, daLiveSite, this.logger, experience);
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            this.logger.warn(`[Configure] editor.path re-apply failed (authoring experience still saved): ${message}`);
-        }
-    }
-
-    /**
-     * Vendor the Quick Edit wiring into the storefront repo so the Experience
-     * Workspace Layout/WYSIWYG view has its repo-side dependency. Mirrors the
-     * create/reset path's installQuickEdit call; idempotent (installQuickEdit
-     * no-ops without a commit when the anchors are already transformed).
-     *
-     * Scope: only the VENDORED FILES (scripts.js wiring + tools/quick-edit/) are
-     * handled here. The Sidekick `quick-edit` plugin (Config Service) is still
-     * delivered at create/reset via config-template.json — out of scope for the
-     * flip.
-     *
-     * Non-fatal: any failure is logged and swallowed. The save (and the
-     * authoring-experience metadata write) must never fail because of this.
-     */
-    private async ensureQuickEditVendored(project: Project): Promise<void> {
-        try {
-            const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-            const githubRepo = edsInstance?.metadata?.githubRepo as string | undefined;
-            if (!githubRepo) {
-                return;
-            }
-
-            // githubRepo is already "owner/repo" — a simple split is sufficient.
-            const [repoOwner, repoName] = githubRepo.split('/');
-            if (!repoOwner || !repoName) {
-                return;
-            }
-
-            const githubTokenService = new GitHubTokenService(this.context.secrets, this.logger);
-            const githubFileOps = new GitHubFileOperations(githubTokenService, this.logger);
-            await installQuickEdit(githubFileOps, repoOwner, repoName, this.logger);
-
-            // Push the committed Quick Edit code live so the Experience Workspace
-            // Layout (WYSIWYG) view works immediately, without a full reset. The
-            // create/reset/republish paths previewCode('/*') after vendoring via
-            // the surrounding pipeline; the flip has no such pipeline, so it
-            // previews here. Non-fatal — covered by the outer catch.
-            const daLiveTokenProvider = createDaLiveServiceTokenProvider(getDaLiveAuthService(this.context));
-            const helixService = new HelixService(this.logger, githubTokenService, daLiveTokenProvider);
-            await helixService.previewCode(repoOwner, repoName, '/*');
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            this.logger.warn(`[Configure] Quick Edit vendoring failed (authoring experience still saved): ${message}`);
-        }
-    }
-
-    /**
-     * Regenerate the storefront's config.json so it includes the `quick-edit`
-     * Sidekick plugin.
-     *
-     * The Experience Workspace canvas reads its plugins from the repo's
-     * config.json (NOT the Config Service site registration) — and it's the
-     * `quick-edit` plugin that dispatches the `custom:quick-edit` event the
-     * storefront listener handles. A project created before this feature has a
-     * config.json without that plugin, so the EW flip regenerates + syncs it.
-     * config.json is generated from config-template.json, which now carries the
-     * plugin, so a plain regenerate adds it.
-     *
-     * Non-fatal: logs a warning on failure and never throws (the metadata save
-     * already stands).
-     */
-    private async regenerateStorefrontConfig(project: Project): Promise<void> {
-        try {
-            const result = await republishStorefrontConfig({
-                project,
-                secrets: this.context.secrets,
-                logger: this.logger,
-            });
-            if (!result.success) {
-                this.logger.warn(
-                    `[Configure] config.json regeneration warning (authoring experience still saved): ${result.error}`,
-                );
-            }
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            this.logger.warn(
-                `[Configure] config.json regeneration failed (authoring experience still saved): ${message}`,
-            );
-        }
     }
 
     /**
      * Load existing environment variable values from component .env files
      * and project root .env (for values from non-installed components like backends)
      */
-    private async loadExistingEnvValues(project: Project): Promise<Record<string, Record<string, string>>> {
+    private async loadExistingEnvValues(
+        project: Project,
+    ): Promise<Record<string, Record<string, string>>> {
         const envValues: Record<string, Record<string, string>> = {};
 
         // Read each component's .env file
@@ -489,7 +488,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                     const envContent = await fs.readFile(envPath, 'utf-8');
                     envValues[componentId] = parseEnvFile(envContent);
                     loaded = true;
-                    break;  // Found it, stop looking
+                    break; // Found it, stop looking
                 } catch {
                     // File doesn't exist, try next one
                 }
@@ -516,13 +515,15 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         return mergeEnvValuesFromSources(envValues, rootEnvValues, project.componentConfigs ?? {});
     }
 
-
     /**
      * Register programmatic writes to suppress file watcher notifications
      */
-    private async registerProgrammaticWrites(project: Project, componentConfigs: ComponentConfigs): Promise<void> {
+    private async registerProgrammaticWrites(
+        project: Project,
+        componentConfigs: ComponentConfigs,
+    ): Promise<void> {
         const filePaths: string[] = [];
-        
+
         // Project root .env
         filePaths.push(path.join(project.path, '.env'));
 
@@ -534,9 +535,12 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 filePaths.push(path.join(instance.path, envFileName));
             }
         }
-        
+
         // Register all paths with file watcher (silent - internal coordination)
-        await vscode.commands.executeCommand('demoBuilder._internal.registerProgrammaticWrites', filePaths);
+        await vscode.commands.executeCommand(
+            'demoBuilder._internal.registerProgrammaticWrites',
+            filePaths,
+        );
     }
 
     /**
@@ -564,7 +568,9 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         try {
             return await operation();
         } finally {
-            await this.communicationManager?.sendMessage('deployment-status', { isDeploying: false });
+            await this.communicationManager?.sendMessage('deployment-status', {
+                isDeploying: false,
+            });
         }
     }
 
@@ -582,6 +588,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 },
                 async (progress) => {
                     const result = await republishStorefrontConfig({
+                        persist: (p) => this.stateManager.saveProject(p),
                         project,
                         secrets: this.context.secrets,
                         logger: this.logger,
@@ -601,16 +608,24 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                         // latched after the first republish and later changes (e.g.
                         // switching store views back) silently show "Configuration saved"
                         // while the live storefront stays stale.
-                        await vscode.commands.executeCommand('demoBuilder._internal.storefrontActionTaken');
-                        this.showSuccessMessage('Storefront configuration republished successfully');
+                        await vscode.commands.executeCommand(
+                            'demoBuilder._internal.storefrontActionTaken',
+                        );
+                        this.showSuccessMessage(
+                            'Storefront configuration republished successfully',
+                        );
                     } else {
-                        vscode.window.showErrorMessage(`Failed to republish storefront: ${result.error}`);
+                        vscode.window.showErrorMessage(
+                            `Failed to republish storefront: ${result.error}`,
+                        );
                     }
                 },
             );
         } catch (error) {
             this.logger.error('[Configure] Failed to republish storefront:', error as Error);
-            vscode.window.showErrorMessage(`Failed to republish storefront: ${(error as Error).message}`);
+            vscode.window.showErrorMessage(
+                `Failed to republish storefront: ${(error as Error).message}`,
+            );
         }
     }
 
@@ -630,7 +645,8 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         const isEds = isEdsProject(project);
 
         if (meshChanges.hasChanges && storefrontChanges.hasChanges && isEds) {
-            contextualNotificationShown = await this.handleCombinedMeshStorefrontNotification(project);
+            contextualNotificationShown =
+                await this.handleCombinedMeshStorefrontNotification(project);
         } else if (storefrontChanges.hasChanges && isEds) {
             contextualNotificationShown = await this.handleStorefrontOnlyNotification(project);
         } else if (meshChanges.hasChanges) {
@@ -648,16 +664,24 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
     /** Handle notification when both mesh and storefront changed */
     private async handleCombinedMeshStorefrontNotification(project: Project): Promise<boolean> {
-        const shouldShowMesh = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowMeshNotification');
-        const shouldShowStorefront = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowStorefrontNotification');
+        const shouldShowMesh = await vscode.commands.executeCommand(
+            'demoBuilder._internal.shouldShowMeshNotification',
+        );
+        const shouldShowStorefront = await vscode.commands.executeCommand(
+            'demoBuilder._internal.shouldShowStorefrontNotification',
+        );
 
         if (!shouldShowMesh && !shouldShowStorefront) {
-            this.logger.debug('[Configure] Combined notification already shown this session, suppressing');
+            this.logger.debug(
+                '[Configure] Combined notification already shown this session, suppressing',
+            );
             return false;
         }
 
         await vscode.commands.executeCommand('demoBuilder._internal.markMeshNotificationShown');
-        await vscode.commands.executeCommand('demoBuilder._internal.markStorefrontNotificationShown');
+        await vscode.commands.executeCommand(
+            'demoBuilder._internal.markStorefrontNotificationShown',
+        );
 
         const selection = await vscode.window.showWarningMessage(
             'Configuration saved. Apply changes to mesh and storefront?',
@@ -667,20 +691,19 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
         if (selection === 'Apply Changes') {
             await this.ensureAuthAndApply(
-                () => this.withDeploymentStatus(async () => {
-                    await vscode.commands.executeCommand('demoBuilder.deployMesh');
-                    const freshProject = await this.stateManager.getCurrentProject();
-                    if (freshProject) {
-                        await this.republishStorefront(freshProject);
-                    }
-                }),
+                () =>
+                    this.withDeploymentStatus(async () => {
+                        await vscode.commands.executeCommand('demoBuilder.deployMesh');
+                        const freshProject = await this.stateManager.getCurrentProject();
+                        if (freshProject) {
+                            await this.republishStorefront(freshProject);
+                        }
+                    }),
                 'apply changes to mesh and storefront',
             );
         } else if (selection === 'Later') {
-            if (project.meshState) {
-                project.meshState.userDeclinedUpdate = true;
-                project.meshState.declinedAt = new Date().toISOString();
-            }
+            // Keyed-only write (ADR-011 D3 Step 07): the decline lands on the keyed mesh entry.
+            markMeshUpdateDeclined(project);
             if (project.edsStorefrontState) {
                 project.edsStorefrontState.userDeclinedUpdate = true;
                 project.edsStorefrontState.declinedAt = new Date().toISOString();
@@ -695,13 +718,19 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
     /** Handle notification when only storefront changed */
     private async handleStorefrontOnlyNotification(project: Project): Promise<boolean> {
-        const shouldShow = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowStorefrontNotification');
+        const shouldShow = await vscode.commands.executeCommand(
+            'demoBuilder._internal.shouldShowStorefrontNotification',
+        );
         if (!shouldShow) {
-            this.logger.debug('[Configure] Storefront notification already shown this session, suppressing');
+            this.logger.debug(
+                '[Configure] Storefront notification already shown this session, suppressing',
+            );
             return false;
         }
 
-        await vscode.commands.executeCommand('demoBuilder._internal.markStorefrontNotificationShown');
+        await vscode.commands.executeCommand(
+            'demoBuilder._internal.markStorefrontNotificationShown',
+        );
 
         const selection = await vscode.window.showInformationMessage(
             'Configuration saved. Republish storefront to apply changes.',
@@ -726,9 +755,13 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
     /** Handle notification when mesh changed (with or without running demo) */
     private async handleMeshOnlyNotification(project: Project): Promise<boolean> {
-        const shouldShow = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowMeshNotification');
+        const shouldShow = await vscode.commands.executeCommand(
+            'demoBuilder._internal.shouldShowMeshNotification',
+        );
         if (!shouldShow) {
-            this.logger.debug('[Configure] Mesh notification already shown this session, suppressing');
+            this.logger.debug(
+                '[Configure] Mesh notification already shown this session, suppressing',
+            );
             return false;
         }
 
@@ -745,13 +778,15 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
         if (selection === 'Redeploy Mesh') {
             await this.ensureAuthAndApply(
-                () => this.withDeploymentStatus(async () => { await vscode.commands.executeCommand('demoBuilder.deployMesh'); }),
+                () =>
+                    this.withDeploymentStatus(async () => {
+                        await vscode.commands.executeCommand('demoBuilder.deployMesh');
+                    }),
                 'redeploy mesh',
             );
         } else if (selection === 'Later') {
-            if (project.meshState) {
-                project.meshState.userDeclinedUpdate = true;
-                project.meshState.declinedAt = new Date().toISOString();
+            // Keyed-only write (ADR-011 D3 Step 07): the decline lands on the keyed mesh entry.
+            if (markMeshUpdateDeclined(project)) {
                 await this.stateManager.saveProject(project);
                 await ProjectDashboardWebviewCommand.refreshStatus();
             }
@@ -762,9 +797,13 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
     /** Handle notification when only non-mesh configs changed and demo is running */
     private async handleRestartNotification(): Promise<boolean> {
-        const shouldShow = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowRestartNotification');
+        const shouldShow = await vscode.commands.executeCommand(
+            'demoBuilder._internal.shouldShowRestartNotification',
+        );
         if (!shouldShow) {
-            this.logger.debug('[Configure] Restart notification already shown this session, suppressing');
+            this.logger.debug(
+                '[Configure] Restart notification already shown this session, suppressing',
+            );
             return false;
         }
 
@@ -791,30 +830,15 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
      * Create handler context for message handlers
      */
     private createHandlerContext(): HandlerContext {
-        return {
-            // Managers (Configure doesn't use all managers, but context requires them)
-            prereqManager: undefined as unknown as HandlerContext['prereqManager'],
-            authManager: ServiceLocator.getAuthenticationService(),
-            errorLogger: undefined as unknown as HandlerContext['errorLogger'],
-            progressUnifier: undefined as unknown as HandlerContext['progressUnifier'],
-            stepLogger: undefined as unknown as HandlerContext['stepLogger'],
-
-            // Loggers
-            logger: this.logger,
-            debugLogger: this.logger,
-
-            // VS Code integration
+        // ONE complete context from the shared factory — no per-panel guessing about
+        // which managers its (possibly reused) handlers will reach for.
+        return createPanelHandlerContext({
             context: this.context,
             panel: this.panel,
             stateManager: this.stateManager,
             communicationManager: this.communicationManager,
             sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
-
-            // Shared state (Configure doesn't use shared state)
-            sharedState: {
-                isAuthenticating: false,
-            } as SharedState,
-        };
+        });
     }
 
     /**
@@ -848,7 +872,9 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
         if (!authResult.authenticated) {
             if (!authResult.cancelled) {
-                vscode.window.showErrorMessage('Sign-in failed or was cancelled. Please try again.');
+                vscode.window.showErrorMessage(
+                    'Sign-in failed or was cancelled. Please try again.',
+                );
             }
             return false;
         }

@@ -20,7 +20,7 @@ const STACK_FIELDS = new Set([
 
 const COMPONENTS_ROOT_FIELDS = new Set([
     '$schema', 'version', 'infrastructure', 'frontends', 'backends', 'mesh',
-    'brands', 'stacks', 'dependencies', 'integrations',
+    'appBuilder', 'brands', 'stacks', 'dependencies', 'integrations',
     'addons', 'tools', 'services', 'envVars', 'selectionGroups',
 ]);
 
@@ -163,6 +163,7 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
             ['frontends', 'Frontend component'],
             ['backends', 'Backend component'],
             ['mesh', 'Mesh component'],
+            ['appBuilder', 'App Builder component'],
             ['dependencies', 'Dependency component'],
             ['integrations', 'Integration'],
             ['addons', 'Addon'],

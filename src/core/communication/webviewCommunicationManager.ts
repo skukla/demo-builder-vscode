@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import * as vscode from 'vscode';
 import { getLogger } from '@/core/logging';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     Message,
@@ -37,10 +38,28 @@ interface CommunicationConfig {
 const REQUEST_TIMEOUTS: Record<string, number> = {
     // Authentication
     'authenticate': TIMEOUTS.AUTH.BROWSER,           // 60s - browser-based auth flow
+    // Awaits the SAME browser sign-in as 'authenticate', then restores project context
+    // and refreshes status — so it needs at least the same budget. Callers await it to
+    // know when sign-in finished (the API picker re-fetches on success).
+    'reAuthenticate': TIMEOUTS.AUTH.BROWSER,         // 60s - browser sign-in + context restore
 
     // Data loading (wizard UI)
-    'get-projects': TIMEOUTS.NORMAL,                 // 30s - fetch project list from Adobe
-    'get-workspaces': TIMEOUTS.NORMAL,               // 30s - fetch workspace list from Adobe
+    // 30s was NOT enough and timed out on work that would have finished: each of
+    // these bounds the SDK attempt at SDK_ENTITY_FETCH (10s) and then falls back to
+    // the `aio` CLI, so a slow Adobe endpoint spends the SDK budget BEFORE the
+    // fallback even starts. Budget for the sum, not the fast path.
+    'get-projects': TIMEOUTS.LONG,                   // 180s - SDK attempt + CLI fallback
+    'get-workspaces': TIMEOUTS.LONG,                 // 180s - SDK attempt + CLI fallback
+    'list-org-console-apis': TIMEOUTS.LONG,          // 180s - full org services catalog (getServicesForOrg); same slow call the mesh subscribe path budgets for
+
+    // Console APIs on a LIVE project (dashboard twins of the wizard messages
+    // above). They hit the SAME getServicesForOrg / subscribe calls, so they need
+    // the same budgets — without them the frontend's 30s default applied, and a
+    // 35.2s catalog fetch reported "Request timeout: listConsoleApis" in the UI
+    // while the extension logged a successful 96-service result (2026-07-31).
+    'listConsoleApis': TIMEOUTS.LONG,                // 180s - same catalog fetch as list-org-console-apis
+    'addConsoleApis': TIMEOUTS.LONG,                 // 180s - catalog fetch + union subscribe PUT
+    'setConsoleApis': TIMEOUTS.LONG,                 // 180s - catalog fetch + reconcile subscribe PUT
 
     // Project/workspace selection (validate reachability + ack; no global aio mutation)
     'select-project': TIMEOUTS.NORMAL,               // 30s - validate project reachable, then ack
@@ -48,11 +67,15 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
 
     // API Mesh operations
     'check-api-mesh': TIMEOUTS.AUTH.BROWSER,         // 60s - workspace download + mesh describe
-    'create-api-mesh': TIMEOUTS.LONG,                // 180s - create and deploy mesh
     'update-api-mesh': TIMEOUTS.LONG,                // 180s - update and deploy mesh
+    'ensure-mesh-api-subscribed': TIMEOUTS.LONG,     // 180s - subscribe required APIs (getCredentials + create + subscribe; multiple Adobe calls)
 
     // Project deletion (EDS cleanup involves multiple external APIs)
     'deleteProject': TIMEOUTS.LONG,                  // 180s - DA.live + GitHub + local cleanup
+
+    // Adobe Console project teardown (modal think-time + registrations +
+    // providers + project delete; see PROJECT_TEARDOWN's budget math)
+    'delete-adobe-project': TIMEOUTS.PROJECT_TEARDOWN, // 900s
 };
 
 /**
@@ -369,6 +392,32 @@ export class WebviewCommunicationManager {
                     });
                 }
             }
+        } else {
+            // NO HANDLER. Previously this fell through in silence, which is the single
+            // mechanism behind an entire class of bug: the webview's request never
+            // resolves and the user watches a spinner until it times out — with
+            // nothing in the logs naming the cause. It shipped four times in one day
+            // on the integrations panel alone (2026-07-31).
+            //
+            // Fail loudly instead. A named error in the UI and the log points at the
+            // real fault (an unregistered type on THIS panel) in seconds, where a
+            // hang points nowhere.
+            this.logger.error(
+                `[WebviewComm] No handler registered for '${message.type}' on this panel. ` +
+                    'The webview sent it but nothing answers it — register it in the ' +
+                    "panel command's handler map.",
+            );
+            if (message.id && message.expectsResponse) {
+                this.sendRawMessage({
+                    id: uuidv4(),
+                    type: '__response__',
+                    payload: undefined,
+                    timestamp: Date.now(),
+                    isResponse: true,
+                    responseToId: message.id,
+                    error: `No handler registered for '${message.type}' on this panel.`,
+                });
+            }
         }
 
         // Send acknowledgment for non-response messages
@@ -394,7 +443,7 @@ export class WebviewCommunicationManager {
                     this.logger.debug(`[WebviewComm] Retrying message ${message.type} (attempt ${retryCount + 1})`);
                 }
                 
-                await new Promise(resolve => setTimeout(resolve, this.config.retryDelay));
+                await sleep(this.config.retryDelay);
                 await this.sendWithRetry(message, retryCount + 1);
             } else {
                 throw error;

@@ -1,6 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { useConfigValidation } from '@/features/components/ui/steps/hooks/useConfigValidation';
-import { ServiceGroup, ComponentConfigs } from '@/features/components/ui/steps/ComponentConfigStep';
+import { ServiceGroup } from '@/features/components/ui/hooks/useComponentConfig';
+import { ComponentConfigs } from '@/types/webview';
 
 describe('useConfigValidation', () => {
     const sampleServiceGroups: ServiceGroup[] = [
@@ -77,7 +78,9 @@ describe('useConfigValidation', () => {
 
             expect(result.current.isValid).toBe(false);
             expect(result.current.errors).toHaveProperty('ADOBE_COMMERCE_ADMIN_USERNAME');
-            expect(result.current.errors['ADOBE_COMMERCE_ADMIN_USERNAME']).toBe('Admin Username is required');
+            expect(result.current.errors['ADOBE_COMMERCE_ADMIN_USERNAME']).toBe(
+                'Admin Username is required'
+            );
         });
 
         it('skips MESH_ENDPOINT validation (deferred field)', () => {
@@ -393,9 +396,7 @@ describe('useConfigValidation', () => {
                 frontend: {},
             };
 
-            const { result } = renderHook(() =>
-                useConfigValidation([], componentConfigs)
-            );
+            const { result } = renderHook(() => useConfigValidation([], componentConfigs));
 
             expect(result.current.isValid).toBe(true);
             expect(result.current.errors).toEqual({});

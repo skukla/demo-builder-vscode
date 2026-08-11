@@ -107,9 +107,9 @@ features/lifecycle/
 ## Integration Points
 
 ### Dependencies
-- `@/shared/base` - BaseCommand for command infrastructure
-- `@/shared/state` - updateFrontendState for env var capture
-- `@/shared/command-execution` - CommandExecutor for port checking and process management
+- `@/core/base` - BaseCommand for command infrastructure
+- `@/core/state` - updateFrontendState for env var capture
+- `@/core/shell` - CommandExecutor for port checking and process management
 - `@/services/serviceLocator` - ServiceLocator for CommandExecutor access
 - `vscode` - Terminal, window, commands APIs
 
@@ -154,7 +154,7 @@ if (project.status === 'ready') {
 
 ### Example 3: Restart Demo After Configuration Change
 ```typescript
-import { updateFrontendState } from '@/shared/state';
+import { updateFrontendState } from '@/core/state';
 
 // User changed configuration in Configure UI
 const project = await stateManager.getCurrentProject();

@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Project Builder — nested-timeline prototype (v2)</title>
+<style>
+  :root {
+    --bg:#1b1b1b; --bg-panel:#232323; --bg-elev:#2a2a2a; --bg-input:#1f1f1f;
+    --border:#3a3a3a; --border-strong:#4d4d4d;
+    --text:#e8e8e8; --text-2:#b4b4b4; --text-3:#8a8a8a;
+    --blue:#2680eb; --blue-bright:#5aa0f2; --blue-bg:rgba(38,128,235,.14);
+    --green:#34b27b; --amber:#e6921e; --red:#e34850;
+    --radius:8px; --radius-sm:6px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:var(--font); font-size:13px; line-height:1.5; }
+
+  .frame { max-width:1280px; margin:24px auto; border:1px solid var(--border); border-radius:10px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.45); background:var(--bg); }
+  .titlebar { display:flex; align-items:center; gap:8px; height:34px; padding:0 12px; background:#141414; border-bottom:1px solid var(--border); color:var(--text-3); font-size:12px; }
+  .titlebar .dot { width:11px; height:11px; border-radius:50%; }
+  .tab { margin-left:14px; padding:3px 10px; background:var(--bg-panel); border:1px solid var(--border); border-bottom:none; border-radius:6px 6px 0 0; color:var(--text-2); font-size:12px; }
+
+  .wizard { display:grid; grid-template-columns:264px 1fr; min-height:600px; }
+
+  .rail { background:var(--bg-panel); border-right:1px solid var(--border); padding:22px 16px; }
+  .rail h4 { margin:0 0 18px; font-size:11px; letter-spacing:.09em; color:var(--text-3); text-transform:uppercase; font-weight:700; }
+  .steps { list-style:none; margin:0; padding:0; position:relative; }
+  .step { display:flex; align-items:flex-start; gap:10px; padding:7px 0; position:relative; }
+  .step .marker { flex:0 0 auto; width:18px; height:18px; border-radius:50%; display:grid; place-items:center; font-size:11px; margin-top:1px; z-index:1; }
+  .m-done { background:var(--green); color:#08231a; }
+  .m-active { background:var(--blue); color:#fff; box-shadow:0 0 0 4px var(--blue-bg); }
+  .m-pending { background:transparent; border:1.5px solid var(--border-strong); color:transparent; }
+  .m-warn { background:transparent; border:1.5px solid var(--amber); color:var(--amber); }
+  .step .label { font-size:13px; color:var(--text-2); }
+  .step.is-active > .label { color:var(--text); font-weight:600; }
+  .step.parent > .label { color:var(--text); font-weight:600; }
+  .steps::before { content:""; position:absolute; left:8.5px; top:14px; bottom:14px; width:1.5px; background:var(--border); }
+
+  .substeps { list-style:none; margin:4px 0 4px 0; padding:0 0 0 28px; position:relative; }
+  .substeps::before { content:""; position:absolute; left:8.5px; top:6px; bottom:10px; width:1.5px; background:var(--border); }
+  .substep { display:flex; align-items:center; gap:9px; padding:6px 0; cursor:pointer; position:relative; }
+  .substep .marker { width:15px; height:15px; font-size:9px; }
+  .substep .label { font-size:12.5px; }
+  .substep:hover .label { color:var(--text); }
+  .substep.is-active .label { color:var(--blue-bright); font-weight:600; }
+  .tag { font-size:10px; color:var(--text-3); border:1px solid var(--border); border-radius:10px; padding:0 6px; margin-left:6px; }
+
+  .content { display:flex; flex-direction:column; }
+  .pane { flex:1; padding:26px 32px; overflow:auto; }
+  .crumb { font-size:12px; color:var(--text-3); margin-bottom:2px; }
+  .crumb b { color:var(--text-2); font-weight:600; }
+  .pane h1 { font-size:20px; margin:0 0 4px; }
+  .pane .sub { color:var(--text-2); margin:0 0 20px; font-size:13px; }
+
+  .opt { display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-input); cursor:pointer; margin-bottom:10px; transition:.12s; }
+  .opt:hover { transform:translateY(-1px); border-color:var(--border-strong); }
+  .opt.sel { border-color:var(--blue); background:var(--blue-bg); }
+  .opt .radio { width:16px; height:16px; border-radius:50%; border:1.5px solid var(--border-strong); margin-top:2px; flex:0 0 auto; display:grid; place-items:center; }
+  .opt.sel .radio { border-color:var(--blue); }
+  .opt.sel .radio::after { content:""; width:8px; height:8px; border-radius:50%; background:var(--blue); }
+  .opt .name { font-size:13.5px; font-weight:600; }
+  .opt .desc { font-size:11.5px; color:var(--text-3); margin-top:2px; }
+  .section-label { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); font-weight:700; margin:22px 0 10px; }
+
+  .tabs { display:flex; gap:2px; border-bottom:1px solid var(--border); margin-bottom:20px; flex-wrap:wrap; }
+  .tabbtn { padding:9px 16px; font-size:12.5px; color:var(--text-2); background:none; border:none; border-bottom:2px solid transparent; cursor:pointer; }
+  .tabbtn:hover { color:var(--text); }
+  .tabbtn.active { color:var(--text); border-bottom-color:var(--blue); font-weight:600; }
+  .tabbtn .mini { font-size:10px; margin-left:6px; }
+  .tabbtn[disabled] { color:#5a5a5a; cursor:not-allowed; }
+  .tabpane { display:none; }
+  .tabpane.show { display:block; }
+
+  /* sequenced tabs */
+  .seqtabs { display:flex; align-items:center; gap:4px; border-bottom:1px solid var(--border); margin-bottom:20px; flex-wrap:wrap; }
+  .seqtab { display:flex; align-items:center; gap:8px; padding:9px 12px; background:none; border:none; border-bottom:2px solid transparent; color:var(--text-3); cursor:pointer; font-size:12.5px; font-family:var(--font); }
+  .seqtab .seqnum { width:18px; height:18px; border-radius:50%; border:1.5px solid var(--border-strong); display:grid; place-items:center; font-size:10px; color:var(--text-3); }
+  .seqtab.todo:hover, .seqtab.done:hover { color:var(--text); }
+  .seqtab.cur { color:var(--text); font-weight:600; border-bottom-color:var(--blue); }
+  .seqtab.cur .seqnum { background:var(--blue); border-color:var(--blue); color:#fff; }
+  .seqtab.done { color:var(--text-2); }
+  .seqtab.done .seqnum { background:var(--green); border-color:var(--green); color:#08231a; }
+  .seqtab.upcoming { color:#5a5a5a; cursor:default; }
+  .seqtab.upcoming .seqnum { opacity:.55; }
+  .seqsep { color:var(--border-strong); font-size:12px; }
+
+  /* architecture header summary */
+  .archhead { display:flex; align-items:center; gap:12px; padding:12px 14px; margin-bottom:18px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg-elev); }
+  .archhead .archlabel { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); font-weight:700; margin-right:6px; }
+  .archhead b { font-size:13.5px; }
+  .archhead .spacer { flex:1; }
+
+  .field { margin-bottom:16px; }
+  .field label { display:block; font-size:12px; color:var(--text-2); margin-bottom:5px; }
+  .field label .req { color:var(--red); }
+  .field input, .field select { width:100%; padding:8px 10px; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-size:13px; font-family:var(--font); }
+  .field input::placeholder { color:#666; }
+  .field .hint { font-size:11px; color:var(--text-3); margin-top:4px; }
+  .gatehint { padding:14px; border:1px dashed var(--border-strong); border-radius:var(--radius-sm); color:var(--text-3); font-size:12.5px; text-align:center; }
+
+  .tilegrid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .tile { border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-input); padding:14px; }
+  .tile.add { border-style:dashed; display:grid; place-items:center; color:var(--text-2); cursor:pointer; min-height:84px; font-size:13px; text-align:center; }
+  .tile.add:hover { border-color:var(--blue); color:var(--blue-bright); }
+  .tile .th { display:flex; align-items:center; justify-content:space-between; }
+  .tile .tn { font-weight:600; font-size:13px; }
+  .badge { font-size:11px; display:inline-flex; align-items:center; gap:5px; }
+  .badge.ok { color:var(--green); }
+  .badge.warn { color:var(--amber); }
+  .tile .td { font-size:11.5px; color:var(--text-3); margin-top:4px; }
+
+  .chk { display:flex; align-items:center; gap:9px; padding:9px 0; border-bottom:1px solid var(--border); font-size:13px; cursor:pointer; }
+  .chk:last-child { border-bottom:none; }
+  .chk .box { width:15px; height:15px; border-radius:3px; border:1.5px solid var(--border-strong); display:grid; place-items:center; font-size:10px; }
+  .chk.on .box { background:var(--blue); border-color:var(--blue); color:#fff; }
+  .chk.locked .box { background:var(--green); border-color:var(--green); color:#08231a; }
+  .chk.locked { color:var(--text-2); cursor:default; }
+  .chk .meta { font-size:11px; color:var(--text-3); margin-left:auto; }
+
+  .signpanel { display:flex; align-items:center; gap:14px; padding:20px; border:1px solid var(--border); border-left:3px solid var(--blue); border-radius:var(--radius); background:var(--bg-elev); }
+  .signpanel.signed { border-left-color:var(--green); }
+  .signpanel .ico { font-size:22px; color:var(--blue-bright); }
+  .signpanel.signed .ico { color:var(--green); }
+  .signpanel .spacer { flex:1; }
+
+  .btn { padding:7px 16px; border-radius:var(--radius-sm); border:1px solid var(--border-strong); background:var(--bg-elev); color:var(--text); font-size:12.5px; cursor:pointer; font-family:var(--font); }
+  .btn:hover { border-color:#666; }
+  .btn.accent { background:var(--blue); border-color:var(--blue); color:#fff; }
+  .btn.accent:hover { background:#3a8ef0; }
+  .btn.small { padding:5px 12px; font-size:12px; }
+  .seg { display:inline-flex; border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden; margin-bottom:16px; }
+  .seg button { padding:6px 16px; background:var(--bg-input); color:var(--text-2); border:none; cursor:pointer; font-size:12.5px; }
+  .seg button.on { background:var(--blue-bg); color:var(--blue-bright); }
+
+  .footer { display:flex; align-items:center; padding:14px 24px; border-top:1px solid var(--border); background:var(--bg-panel); }
+  .footer .spacer { flex:1; }
+  .footer .btn { margin-left:10px; }
+  .btn[disabled] { opacity:.45; cursor:not-allowed; }
+
+  .note { max-width:1280px; margin:0 auto 20px; color:var(--text-3); font-size:12px; padding:0 8px; }
+  .note b { color:var(--text-2); }
+</style>
+</head>
+<body>
+
+<p class="note" style="margin-top:24px;"><b>Prototype v2 — nested timeline.</b> Four top-level steps: Demo Setup → <b>Build Your Project</b> → Final Review → Create Project. <b>Prerequisites is folded into Create Project</b> (verify-then-run), so nothing interrupts pick→build→review→run. "Build Your Project" nests its areas in the same rail; deep areas use <b>sequenced tabs</b> (numbered, ✓ on completion, auto-advance, "upcoming" styling for gated ones). <b>Architecture collapses to a header summary</b> once picked (with Change); <b>Commerce Optimizer lives under Commerce → Catalog</b>; <b>Adobe sign-in is contextual, not a rail item</b> — it's Commerce's first tab when you pick ACCS, and inline in Integrations when you add an App Builder component (one shared session). Try: Commerce → pick <b>Edge Delivery + ACCS</b> → it collapses to the header and a <b>Sign in</b> tab leads the sequence → sign in → Connection unlocks → Business Structure → Discover (auto-advances to Catalog). Then add an integration in Integrations.</p>
+
+<div class="frame">
+  <div class="titlebar">
+    <span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span>
+    <span class="tab">⬢ Create Demo Project</span>
+  </div>
+
+  <div class="wizard">
+    <nav class="rail">
+      <h4>Setup Progress</h4>
+      <ul class="steps">
+        <li class="step"><span class="marker m-done">✓</span><span class="label">Demo Setup</span></li>
+        <li class="step parent is-active">
+          <span class="marker m-active">●</span><span class="label">Build Your Project</span>
+        </li>
+        <ul class="substeps" id="substeps"></ul>
+        <li class="step"><span class="marker m-pending">○</span><span class="label">Final Review</span></li>
+        <li class="step"><span class="marker m-pending">○</span><span class="label">Create Project</span><span class="tag">prereqs · publish · deploy</span></li>
+      </ul>
+    </nav>
+
+    <div class="content">
+      <div class="pane">
+        <div class="crumb">Build Your Project › <b id="crumb">Commerce</b></div>
+        <h1 id="paneTitle">Commerce</h1>
+        <p class="sub" id="paneSub"></p>
+        <div id="body"></div>
+      </div>
+
+      <div class="footer">
+        <button class="btn">Cancel</button>
+        <span class="spacer"></span>
+        <button class="btn">Back</button>
+        <button class="btn accent" id="continue" disabled>Continue</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const S = {
+  active:'commerce',
+  arch:null,                 // 'eds-paas' | 'eds-accs' | 'headless-paas'
+  archEditing:false,
+  commerceTab:'connection',
+  storeViewChosen:false,
+  storefrontTab:'services',
+  sf:{github:false,dalive:false,repo:false},
+  integrations:[],           // {name,kind,configured}
+  signedIn:false,
+};
+
+const isEds   = () => S.arch==='eds-paas' || S.arch==='eds-accs';
+const isAccs  = () => S.arch==='eds-accs';
+const needsAdobe = () => isAccs() || S.integrations.length>0;
+
+const status = {
+  commerce:     () => !S.arch ? 'warn' : (S.storeViewChosen ? 'done' : 'warn'),
+  storefront:   () => (S.sf.github && S.sf.dalive && S.sf.repo) ? 'done' : 'warn',
+  integrations: () => S.integrations.length===0 ? 'optional'
+                      : (S.integrations.every(i=>i.configured)?'done':'warn'),
+};
+
+const SUBSTEPS = [
+  {id:'commerce',     label:'Commerce'},
+  {id:'storefront',   label:'Storefront', cond:isEds, tag:'EDS'},
+  {id:'integrations', label:'Integrations', tag:'optional'},
+];
+
+function marker(st){
+  if(st==='done')     return '<span class="marker m-done">✓</span>';
+  if(st==='active')   return '<span class="marker m-active">●</span>';
+  if(st==='warn')     return '<span class="marker m-warn">!</span>';
+  return '<span class="marker m-pending">○</span>';
+}
+
+function renderRail(){
+  const el = document.getElementById('substeps');
+  el.innerHTML = SUBSTEPS.map(s=>{
+    if(s.cond && !s.cond()) return '';
+    let st = status[s.id]();
+    if(S.active===s.id && st!=='done') st='active';
+    const tag = s.tag ? `<span class="tag">${s.tag}</span>`:'';
+    return `<li class="substep ${S.active===s.id?'is-active':''}" onclick="go('${s.id}')">
+      ${marker(st)}<span class="label">${s.label}</span>${tag}</li>`;
+  }).join('');
+  const ok = status.commerce()==='done'
+    && (!isEds() || status.storefront()==='done')
+    && status.integrations()!=='warn'
+    && (!needsAdobe() || S.signedIn);
+  document.getElementById('continue').disabled = !ok;
+}
+
+function go(id){ S.active=id; render(); }
+function toggleSign(){ S.signedIn=!S.signedIn; render(); }
+
+// sequenced-tab strip: items=[{id,label,state:'done'|'todo'|'upcoming'}], current id, onclick fn name
+function seqtabs(items,current,onclick){
+  return `<div class="seqtabs">` + items.map((t,i)=>{
+    const sep = i>0 ? '<span class="seqsep">─</span>' : '';
+    const cur = current===t.id ? ' cur' : '';
+    const num = t.state==='done' ? '✓' : (i+1);
+    const click = t.state==='upcoming' ? '' : `onclick="${onclick}('${t.id}')"`;
+    return `${sep}<button class="seqtab ${t.state}${cur}" ${click}>
+      <span class="seqnum">${num}</span><span>${t.label}</span></button>`;
+  }).join('') + `</div>`;
+}
+
+// ---- bodies ----
+function signinPanel(){
+  return `
+    <div class="signpanel ${S.signedIn?'signed':''}">
+      <span class="ico">◆</span>
+      <div>
+        <div style="font-weight:600">${S.signedIn?'Signed in to Adobe':'Adobe sign-in required'}</div>
+        <div class="sub" style="margin:2px 0 0">${S.signedIn
+          ? 'steve@adobe.com · Org: Adobe Demo'
+          : 'Sign in once — the session is shared by Commerce (ACCS) and any App Builder integration.'}</div>
+      </div>
+      <span class="spacer"></span>
+      <button class="btn ${S.signedIn?'':'accent'} small" onclick="signInAdobe()">${S.signedIn?'Switch org':'Sign in to Adobe'}</button>
+    </div>`;
+}
+function signInAdobe(){
+  if(!S.signedIn){ S.signedIn=true; if(S.active==='commerce' && S.commerceTab==='signin') S.commerceTab='connection'; }
+  render();
+}
+
+function bodyCommerce(){
+  const tab=(id,label,opts={})=>`<button class="tabbtn ${S.commerceTab===id?'active':''}" ${opts.disabled?'disabled':''}
+     onclick="setCT('${id}')">${label}${opts.mini?`<span class="mini">${opts.mini}</span>`:''}</button>`;
+  const f=(label,ph,req=true)=>`<div class="field"><label>${label} ${req?'<span class="req">*</span>':''}</label><input placeholder="${ph}"></div>`;
+
+  const opt=(id,name,desc)=>`<div class="opt ${S.arch===id?'sel':''}" onclick="pickArch('${id}')">
+    <span class="radio"></span><div><div class="name">${name}</div><div class="desc">${desc}</div></div></div>`;
+  const architecture = `
+    <div class="section-label">How should it be built?</div>
+    ${opt('eds-paas','Edge Delivery + PaaS','EDS storefront with Commerce drop-ins and Commerce PaaS')}
+    ${opt('eds-accs','Edge Delivery + ACCS','EDS storefront with Commerce drop-ins and Commerce Cloud Service')}
+    ${opt('headless-paas','Headless + PaaS','Next.js storefront with API Mesh and Commerce PaaS')}
+    <div class="hint" style="margin-top:8px">This picks your Commerce backend and your storefront delivery together.</div>`;
+
+  const connection = !S.arch
+    ? `<div class="gatehint">Choose an architecture first — the connection fields depend on the backend.</div>`
+    : (isAccs()
+        ? (!S.signedIn
+            ? `<div class="gatehint">Sign in to Adobe (the <b>Sign in</b> tab) to connect ACCS.</div>`
+            : f('ACCS GraphQL Endpoint','https://na1-sandbox.api.commerce.adobe.com/{env-id}/graphql')
+              + `<div class="hint" style="margin-top:-8px">ACCS store discovery uses your Adobe sign-in — no admin credentials.</div>`)
+        : f('Adobe Commerce URL','https://your-instance.adobedemo.com')
+          + f('Commerce GraphQL Endpoint','https://your-instance.adobedemo.com/graphql')
+          + f('Admin Username','admin') + f('Admin Password','••••••••'));
+
+  const store = !S.arch
+    ? `<div class="gatehint">Choose an architecture first.</div>`
+    : (S.storeViewChosen
+      ? `<div class="field"><label>Website</label><select><option>Main Website (base)</option></select></div>
+         <div class="field"><label>Store</label><select><option>Main Store</option></select></div>
+         <div class="field"><label>Store View</label><select><option>Default View (default)</option></select></div>
+         <div class="badge ok">✓ Business structure selected — Catalog unlocked</div>`
+      : `<p class="sub">Connect first, then discover your store structure.</p>
+         <button class="btn accent small" onclick="discoverStore()">Discover store</button>
+         <div class="hint" style="margin-top:10px">Picks cascade: Website → Store → Store View.</div>`);
+
+  const catalog = `
+    <div class="section-label">Commerce Optimizer (add-on)</div>
+    <div class="chk ${isEds()?'':'locked'}" ${isEds()?'onclick="this.classList.toggle(\'on\')"':''} style="opacity:${isEds()?1:.5}">
+      <span class="box"></span> Adobe Commerce Optimizer <span class="meta">${isEds()?'optional · adds catalog optimization':'not available for this stack'}</span></div>
+    ${!S.storeViewChosen
+      ? `<div class="gatehint" style="margin-top:16px">Select a Store View on the <b>Business Structure</b> tab to configure catalog services.</div>`
+      : (isAccs()
+          ? `<div class="section-label">Adobe Assets</div>${f('Product Images from AEM Assets','',false)}`
+          : `<div class="section-label">Catalog Service</div>${f('PaaS Catalog Service Endpoint','https://catalog-service-sandbox.adobe.io/graphql')}${f('Environment ID','')}${f('Sandbox Catalog API Key','')}
+             <div class="section-label">Adobe Assets</div>${f('Product Images from AEM Assets','',false)}`)}`;
+
+  // Before a choice (or while editing) → show the architecture radio, no tabs.
+  if(!S.arch || S.archEditing) return architecture;
+
+  const archName = {'eds-paas':'Edge Delivery + PaaS','eds-accs':'Edge Delivery + ACCS','headless-paas':'Headless + PaaS'}[S.arch];
+  const items = [];
+  if(isAccs()) items.push({id:'signin', label:'Sign in', state: S.signedIn?'done':'todo'});
+  items.push({id:'connection', label:'Connection',
+    state: S.storeViewChosen?'done':(isAccs()&&!S.signedIn?'upcoming':'todo')});
+  items.push({id:'store',   label:'Business Structure', state: S.storeViewChosen?'done':'todo'});
+  items.push({id:'catalog', label:'Catalog',            state: S.storeViewChosen?'todo':'upcoming'});
+  const pane = {signin:signinPanel(), connection, store, catalog}[S.commerceTab] || connection;
+  return `
+    <div class="archhead">
+      <span class="archlabel">Architecture</span><b>${archName}</b>
+      <span class="spacer"></span>
+      <button class="btn small" onclick="changeArch()">Change</button>
+    </div>
+    ${seqtabs(items, S.commerceTab, 'setCT')}
+    <div>${pane}</div>`;
+}
+function setCT(id){ S.commerceTab=id; render(); }
+function pickArch(id){ S.arch=id; S.archEditing=false; S.commerceTab = id==='eds-accs' ? 'signin' : 'connection'; render(); }
+function changeArch(){ S.archEditing=true; render(); }
+function discoverStore(){ S.storeViewChosen=true; S.commerceTab='catalog'; render(); }
+
+function bodyStorefront(){
+  const tab=(id,label,st)=>`<button class="tabbtn ${S.storefrontTab===id?'active':''}" onclick="setST('${id}')">${label}${st?` <span class="mini">${st}</span>`:''}</button>`;
+  const services = `
+    <div class="tile" style="margin-bottom:12px"><div class="th"><span class="tn">GitHub</span>
+      <span class="badge ${S.sf.github?'ok':'warn'}">${S.sf.github?'✓ Connected':'! Not connected'}</span></div>
+      <div class="td">Repository hosting for your storefront code.</div>
+      <div style="margin-top:10px">${S.sf.github?'<span class="td">Signed in as steve-kukla</span>':'<button class="btn accent small" onclick="sf(\'github\')">Sign in with GitHub</button>'}</div></div>
+    <div class="tile"><div class="th"><span class="tn">DA.live</span>
+      <span class="badge ${S.sf.dalive?'ok':'warn'}">${S.sf.dalive?'✓ Connected':'! Not connected'}</span></div>
+      <div class="td">Document Authoring for content.</div>
+      ${S.sf.dalive?'<div class="td" style="margin-top:10px">Org: adobe-demo</div>':
+        `<div class="field" style="margin-top:10px"><label>Organization</label><input placeholder="your-org"></div>
+         <div class="field"><label>Token</label><input placeholder="••••••"></div>
+         <button class="btn accent small" onclick="sf('dalive')">Verify</button>`}`;
+  const repo = !S.sf.github ? `<div class="gatehint">Connect GitHub (Services tab) before choosing a repository.</div>` : `
+    <div class="seg"><button class="on">New repository</button><button>Existing repository</button></div>
+    <div class="field"><label>Repository Name <span class="req">*</span></label><input placeholder="my-demo-storefront"></div>
+    <button class="btn accent small" onclick="sf('repo')">Create repository</button>
+    <div class="hint" style="margin-top:10px">New repos require installing the AEM Code Sync GitHub App (gated).</div>
+    ${S.sf.repo?'<div class="badge ok" style="margin-top:10px">✓ Repository ready · App installed</div>':''}`;
+  const libs = `
+    <div class="chk locked"><span class="box">✓</span> CitiSignal blocks <span class="meta">Included with your storefront</span></div>
+    <div class="chk on" onclick="this.classList.toggle('on')"><span class="box">✓</span> Commerce blocks <span class="meta">available</span></div>
+    <div class="chk" onclick="this.classList.toggle('on')"><span class="box"></span> Demo Team blocks <span class="meta">available</span></div>
+    <div class="hint" style="margin-top:12px">Custom libraries are configured in VS Code Settings.</div>`;
+  const items = [
+    {id:'services',   label:'Services',        state: (S.sf.github&&S.sf.dalive)?'done':'todo'},
+    {id:'repository', label:'Repository',      state: S.sf.repo?'done':(S.sf.github?'todo':'upcoming')},
+    {id:'blocklibs',  label:'Block Libraries', state: 'todo'},
+  ];
+  const pane = {services, repository:repo, blocklibs:libs}[S.storefrontTab] || services;
+  return `${seqtabs(items, S.storefrontTab, 'setST')}<div>${pane}</div>`;
+}
+function setST(id){ S.storefrontTab=id; render(); }
+function sf(k){
+  S.sf[k]=true;
+  if((k==='github'||k==='dalive') && S.sf.github && S.sf.dalive && S.storefrontTab==='services') S.storefrontTab='repository';
+  if(k==='repo') S.storefrontTab='blocklibs';
+  render();
+}
+
+function bodyIntegrations(){
+  const tiles = S.integrations.map((i,idx)=>`
+    <div class="tile"><div class="th"><span class="tn">${i.name}</span>
+      <span class="badge ${i.configured?'ok':'warn'}">${i.configured?'✓ Configured':'! Needs setup'}</span></div>
+      <div class="td">${i.kind}</div>
+      ${i.configured?'':`<button class="btn small" style="margin-top:10px" onclick="cfgInt(${idx})">Configure</button>`}</div>`).join('');
+  const signinNote = (needsAdobe() && !S.signedIn)
+    ? `<div class="signpanel" style="margin-bottom:16px"><span class="ico">◆</span>
+        <div><div style="font-weight:600">Adobe sign-in required</div>
+        <div class="sub" style="margin:2px 0 0">App Builder integrations deploy to your Adobe project &amp; workspace.</div></div>
+        <span class="spacer"></span><button class="btn accent small" onclick="signInAdobe()">Sign in to Adobe</button></div>`
+    : (S.signedIn ? `<div class="badge ok" style="margin-bottom:14px">✓ Signed in to Adobe · steve@adobe.com</div>` : '');
+  return `
+    ${signinNote}
+    <p class="sub">Integrations deployed with your project. Optional unless your template requires one.</p>
+    <div class="tilegrid">
+      ${tiles}
+      <div class="tile add" onclick="addInt()">＋ Add integration<br><span class="td">Mesh · App Builder App · Custom URL</span></div>
+    </div>`;
+}
+let intSeq=0;
+function addInt(){
+  const kinds=[['API Mesh','Mesh · provisions project + workspace'],['Inventory App','App Builder App'],['Custom action','Custom URL']];
+  const k=kinds[intSeq++ % kinds.length];
+  S.integrations.push({name:k[0],kind:k[1],configured:false});
+  render();
+}
+function cfgInt(i){ S.integrations[i].configured=true; render(); }
+
+const TITLES = {
+  commerce:['Commerce','Choose your architecture, connect your backend, and configure the catalog.'],
+  storefront:['Storefront','Connect Edge Delivery services, choose a repository, and pick block libraries.'],
+  integrations:['Integrations','Add the integrations deployed with your project.'],
+};
+function render(){
+  if(S.active==='storefront' && !isEds()) S.active='commerce';
+  document.getElementById('crumb').textContent = TITLES[S.active][0];
+  document.getElementById('paneTitle').textContent = TITLES[S.active][0];
+  document.getElementById('paneSub').textContent = TITLES[S.active][1];
+  const b={commerce:bodyCommerce,storefront:bodyStorefront,integrations:bodyIntegrations}[S.active];
+  document.getElementById('body').innerHTML = b();
+  renderRail();
+}
+render();
+</script>
+</body>
+</html>

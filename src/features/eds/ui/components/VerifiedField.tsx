@@ -22,6 +22,7 @@ import { TextField, Flex, Text, ProgressCircle } from '@adobe/react-spectrum';
 import Alert from '@spectrum-icons/workflow/Alert';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
+import { getValidationState } from '@/core/ui/utils/validationState';
 
 /** Props for VerifiedField component */
 export interface VerifiedFieldProps {
@@ -78,13 +79,6 @@ export function VerifiedField({
     isRequired,
     width = '100%',
 }: VerifiedFieldProps): React.ReactElement {
-    // Determine validation state
-    const getValidationState = (): 'invalid' | 'valid' | undefined => {
-        if (error) return 'invalid';
-        if (isVerified) return 'valid';
-        return undefined;
-    };
-
     return (
         <Flex direction="column" gap="size-100" width={width}>
             <Flex alignItems="end" gap="size-200">
@@ -97,7 +91,7 @@ export function VerifiedField({
                     description={description}
                     isRequired={isRequired}
                     width="100%"
-                    validationState={getValidationState()}
+                    validationState={getValidationState(error, isVerified)}
                 />
 
                 {isVerifying && (
@@ -112,7 +106,7 @@ export function VerifiedField({
                     <Flex alignItems="center" gap="size-100">
                         <CheckmarkCircle
                             size="S"
-                            UNSAFE_className="text-green-500"
+                            UNSAFE_className="text-green-600"
                         />
                         <Text UNSAFE_style={{ color: 'var(--spectrum-semantic-positive-color-text-small)' }}>
                             Verified

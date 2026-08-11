@@ -15,3 +15,6 @@ export type { ConfigSectionProps } from './ConfigSection';
 
 export { FieldHelpButton } from './FieldHelpButton';
 export type { FieldHelpButtonProps, FieldHelpContent } from './FieldHelpButton';
+
+export { InlineRenameField } from './InlineRenameField';
+export type { InlineRenameFieldProps } from './InlineRenameField';

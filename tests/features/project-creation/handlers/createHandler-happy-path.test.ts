@@ -6,11 +6,7 @@ import { ServiceLocator as _ServiceLocator } from '@/core/di';
 import * as vscode from 'vscode';
 import * as _fs from 'fs';
 import { promises as _fsPromises } from 'fs';
-import {
-    createMockContext,
-    setupDefaultMocks,
-    mockConfig,
-} from './createHandler.testUtils';
+import { createMockContext, setupDefaultMocks, mockConfig } from './createHandler.testUtils';
 
 // Mock all dependencies
 jest.mock('@/core/validation');

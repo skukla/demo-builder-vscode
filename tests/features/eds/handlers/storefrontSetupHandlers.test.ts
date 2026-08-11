@@ -28,7 +28,11 @@ describe('Storefront Setup Handlers - Rename Validation', () => {
         });
 
         it('has NO storefront-setup-resume handler (removed 2026-08-06)', () => {
-            // Was a stub that always errored while the dialog posted to it.
+            // It was a stub: it always returned "Resume not yet supported", while the
+            // install dialog's success path posted to it and the wizard optimistically
+            // advanced first — so the user watched setup appear to continue and was
+            // then told to start over. Implementing resume is a backlog item; until
+            // then the honest path is the existing Retry, which re-runs setup.
             expect(edsHandlers['storefront-setup-resume']).toBeUndefined();
         });
 
@@ -68,7 +72,10 @@ describe('Storefront Setup Handlers - Rename Validation', () => {
         });
 
         it('no longer exports handleResumeStorefrontSetup (removed 2026-08-06)', async () => {
-            // After rename: handleResumeEdsPreflight → handleResumeStorefrontSetup
+            // It was a stub that always returned "Resume not yet supported" while the
+            // install dialog posted to it. Deleted rather than kept: an unbuilt path
+            // that cannot work is not made acceptable by failing politely. Resume is
+            // a backlog item; the honest remedy today is the existing Retry.
             const mod = await import('@/features/eds/handlers/storefrontSetupHandlers');
             expect((mod as Record<string, unknown>).handleResumeStorefrontSetup).toBeUndefined();
         });

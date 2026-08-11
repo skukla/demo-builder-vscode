@@ -3,7 +3,9 @@
  */
 
 import { getStackById } from '../hooks/useSelectedStack';
+import type { StepCondition } from './stepFiltering';
 import { hasMeshInDependencies } from '@/core/constants';
+import { clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
 import type { SettingsEdsConfig } from '@/features/projects-dashboard/types/settingsFile';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
@@ -24,10 +26,8 @@ export function filterRemovedCustomLibraries(
     if (!selected?.length) return [];
     if (!defaults) return selected;
 
-    const validKeys = new Set(
-        defaults.map(d => `${d.source.owner}/${d.source.repo}`),
-    );
-    return selected.filter(lib => validKeys.has(`${lib.source.owner}/${lib.source.repo}`));
+    const validKeys = new Set(defaults.map((d) => `${d.source.owner}/${d.source.repo}`));
+    return selected.filter((lib) => validKeys.has(`${lib.source.owner}/${lib.source.repo}`));
 }
 
 /**
@@ -52,13 +52,13 @@ export interface WizardStepConfigWithRequirements {
     requiredComponents?: string[];
     /** Optional: Component IDs where ANY selection makes this step appear (OR logic) */
     requiredAny?: string[];
-    /** Optional: Condition for stack-based filtering */
-    condition?: {
-        /** Stack property that must be truthy for this step to be shown */
-        stackRequires?: 'requiresGitHub' | 'requiresDaLive';
-        /** If true, this step is only shown when NO predefined stack is selected */
-        showWhenNoStack?: boolean;
-    };
+    /**
+     * Optional: Condition for stack/auth-based filtering.
+     * Reuses the canonical StepCondition from stepFiltering.ts (DRY) so all
+     * condition keys (stackRequires, stackRequiresAny, requiresAdobeAuth,
+     * showWhenNoStack, createModeOnly) type-check here.
+     */
+    condition?: StepCondition;
 }
 
 // ============================================================================
@@ -108,20 +108,20 @@ export function filterStepsByComponents(
     selectedComponents: ComponentSelection | undefined,
 ): Array<{ id: WizardStep; name: string; description?: string }> {
     return allSteps
-        .filter(step => {
+        .filter((step) => {
             // Disabled steps never shown
             if (!step.enabled) return false;
 
             // requiredComponents: ALL must be selected (AND logic)
             if (step.requiredComponents && step.requiredComponents.length > 0) {
-                return step.requiredComponents.every(componentId =>
+                return step.requiredComponents.every((componentId) =>
                     isComponentSelected(componentId, selectedComponents),
                 );
             }
 
             // requiredAny: ANY must be selected (OR logic)
             if (step.requiredAny && step.requiredAny.length > 0) {
-                return step.requiredAny.some(componentId =>
+                return step.requiredAny.some((componentId) =>
                     isComponentSelected(componentId, selectedComponents),
                 );
             }
@@ -129,7 +129,7 @@ export function filterStepsByComponents(
             // No requirements = always shown (backward compatible)
             return true;
         })
-        .map(step => ({
+        .map((step) => ({
             id: step.id as WizardStep,
             name: step.name,
             description: step.description,
@@ -169,54 +169,48 @@ export function filterCompletedStepsForBackwardNav(
     targetIndex: number,
     wizardSteps: WizardStepConfig[],
 ): WizardStep[] {
-    // Special case: first step clears everything
-    if (targetIndex === 0) {
-        return [];
-    }
-
-    return completedSteps.filter(completedStep => {
-        // Always remove the target step
-        if (completedStep === targetStep) {
-            return false;
-        }
-
-        // Keep only steps that come before the target
-        const stepIndex = wizardSteps.findIndex(ws => ws.id === completedStep);
-        return stepIndex < targetIndex;
-    });
+    // Shared with the Commerce sub-steps — same drop-target-and-after semantics.
+    return clearCompletedFrom(
+        completedSteps,
+        wizardSteps.map((ws) => ws.id),
+        targetStep,
+        targetIndex,
+    );
 }
 
 /**
- * Find step indices for Adobe selection steps.
+ * Index of the step that owns Adobe I/O project + workspace selection.
  *
- * Used to determine which state needs to be cleared during backward navigation.
+ * The Adobe project + workspace pickers now live INSIDE the `build-your-project`
+ * step's Integrations (Mesh) tile, so backward-nav clearing keys off that step's
+ * index: navigating before it clears the (now co-located) project AND workspace.
  */
 export interface AdobeStepIndices {
-    workspaceIndex: number;
-    projectIndex: number;
+    /** Index of `build-your-project` (the picker host), or -1 when absent. */
+    buildStepIndex: number;
 }
 
 /**
- * Get indices of Adobe selection steps in the wizard.
+ * Get the index of the step that hosts the Adobe project/workspace pickers.
  */
 export function getAdobeStepIndices(wizardSteps: WizardStepConfig[]): AdobeStepIndices {
     return {
-        workspaceIndex: wizardSteps.findIndex(s => s.id === 'adobe-workspace'),
-        projectIndex: wizardSteps.findIndex(s => s.id === 'adobe-project'),
+        buildStepIndex: wizardSteps.findIndex((s) => s.id === 'build-your-project'),
     };
 }
 
 /**
  * Compute state updates needed when navigating backward.
  *
- * Clears Adobe selections and caches when navigating before their respective steps.
- * This maintains state consistency - if user goes back before project selection,
- * both project AND workspace selections should be cleared.
+ * Clears the Adobe project + workspace selections (and their caches) when
+ * navigating BEFORE the `build-your-project` step that now hosts their pickers.
+ * Project and workspace are co-located there, so both clear together — keeping
+ * state consistent on re-traversal (the pickers re-load + re-auto-select).
  *
- * @param currentState - Current wizard state
+ * @param _currentState - Current wizard state (unused; signature kept for callers)
  * @param targetStep - Step we're navigating to
  * @param targetIndex - Index of target step
- * @param indices - Adobe step indices
+ * @param indices - Picker-host step index
  * @returns Partial state updates to apply
  */
 export function computeStateUpdatesForBackwardNav(
@@ -229,21 +223,13 @@ export function computeStateUpdatesForBackwardNav(
         currentStep: targetStep,
     };
 
-    // Clear workspace and its cache when going before workspace step
-    if (indices.workspaceIndex !== -1 && targetIndex < indices.workspaceIndex) {
-        updates.adobeWorkspace = undefined;
-        updates.workspacesCache = undefined;
-    }
-
-    // Clear project and its cache (plus dependent caches) when going before project step
-    if (indices.projectIndex !== -1 && targetIndex < indices.projectIndex) {
+    // Clear project + workspace (and caches) when going before the picker host.
+    if (indices.buildStepIndex !== -1 && targetIndex < indices.buildStepIndex) {
         updates.adobeProject = undefined;
         updates.projectsCache = undefined;
-        // Also clear workspace since workspaces are project-specific
         updates.adobeWorkspace = undefined;
         updates.workspacesCache = undefined;
     }
-
 
     return updates;
 }
@@ -289,6 +275,15 @@ export interface ImportedSettings {
     customBlockLibraries?: CustomBlockLibrary[];
     /** EDS configuration (for Edge Delivery Services stacks) */
     edsConfig?: SettingsEdsConfig;
+    /** Custom GitHub sources for App Builder integrations, keyed by integration id (`name` = shell-instance display name) */
+    appBuilderComponentSources?: Record<
+        string,
+        { owner: string; repo: string; branch?: string; name?: string }
+    >;
+    /** Console API sdk codes subscribed beyond catalog requiredApis (seeds `selectedConsoleApis['__existing__']` in edit mode) */
+    additionalConsoleApis?: string[];
+    /** The same picks, ATTRIBUTED per integration id — the durable form. */
+    componentApiPicks?: Record<string, string[]>;
 }
 
 /**
@@ -378,10 +373,7 @@ export function initializeAdobeContextFromImport(
  * @param existingNames - List of existing project names
  * @returns Unique project name
  */
-export function generateUniqueProjectName(
-    baseName: string,
-    existingNames: string[],
-): string {
+export function generateUniqueProjectName(baseName: string, existingNames: string[]): string {
     if (!existingNames.includes(baseName)) {
         return baseName;
     }
@@ -412,10 +404,7 @@ export function initializeProjectName(
     existingNames: string[],
 ): string {
     if (importedSettings?.source?.project) {
-        return generateUniqueProjectName(
-            importedSettings.source.project,
-            existingNames,
-        );
+        return generateUniqueProjectName(importedSettings.source.project, existingNames);
     }
     return '';
 }
@@ -424,13 +413,13 @@ export function initializeProjectName(
  * Get the first enabled step from wizard configuration.
  *
  * @param wizardSteps - Wizard step configuration
- * @returns First enabled step ID or 'adobe-auth' as fallback
+ * @returns First enabled step ID or 'welcome' as fallback
  */
 export function getFirstEnabledStep(
     wizardSteps: Array<{ id: string; enabled: boolean }> | undefined,
 ): WizardStep {
-    const enabledSteps = wizardSteps?.filter(step => step.enabled) || [];
-    return (enabledSteps.length > 0 ? enabledSteps[0].id : 'adobe-auth') as WizardStep;
+    const enabledSteps = wizardSteps?.filter((step) => step.enabled) || [];
+    return (enabledSteps.length > 0 ? enabledSteps[0].id : 'welcome') as WizardStep;
 }
 
 // ============================================================================
@@ -441,17 +430,17 @@ export function getFirstEnabledStep(
  * Determine whether to show wizard footer (SOP §10 compliance)
  *
  * Extracts long validation chain to named helper for readability.
- * Footer is hidden on final step and mesh-deployment (has own buttons).
+ * Footer is hidden on the final step and on steps that render their own footer
+ * (mesh-deployment). The group-paced steps use the shared wizard footer.
  *
  * @param isLastStep - Whether current step is the final step
  * @param currentStep - Current step ID
  * @returns true if footer should be shown
  */
-export function shouldShowWizardFooter(
-    isLastStep: boolean,
-    currentStep: string,
-): boolean {
-    return !isLastStep && currentStep !== 'mesh-deployment';
+const STEPS_WITH_OWN_FOOTER = new Set(['mesh-deployment']);
+
+export function shouldShowWizardFooter(isLastStep: boolean, currentStep: string): boolean {
+    return !isLastStep && !STEPS_WITH_OWN_FOOTER.has(currentStep);
 }
 
 /**
@@ -463,9 +452,12 @@ export function shouldShowWizardFooter(
  */
 export function getWizardTitle(wizardMode?: WizardMode): string {
     switch (wizardMode) {
-        case 'edit': return 'Edit Project';
-        case 'import': return 'Import Project';
-        default: return 'Create Demo Project';
+        case 'edit':
+            return 'Edit Project';
+        case 'import':
+            return 'Import Project';
+        default:
+            return 'Create Demo Project';
     }
 }
 
@@ -480,6 +472,10 @@ export function getWizardTitle(wizardMode?: WizardMode): string {
  * project-creation. The storefront-setup step shows "Continue" because it's
  * an intermediate creation step, not the final one.
  *
+ * The label follows the step ID, not its index: storefront-setup sits between
+ * review and create-project, so review is no longer second-to-last. Keying on the
+ * id keeps the label correct regardless of how many steps the active stack shows.
+ *
  * - Edit mode on review: "Save Changes"
  * - Create/import mode on review: "Create"
  * - All other steps: "Continue"
@@ -492,8 +488,8 @@ export function getNextButtonText(
     currentStepId?: string,
 ): string {
     if (isConfirmingSelection) return 'Continue';
-    // Only show "Create"/"Save Changes" on Final Review step
-    if (currentStepIndex === totalSteps - 2 && currentStepId === 'review') {
+    // Only show "Create"/"Save Changes" on the Final Review step (id-driven).
+    if (currentStepId === 'review') {
         return wizardMode === 'edit' ? 'Save Changes' : 'Create';
     }
     return 'Continue';
@@ -519,7 +515,7 @@ export function getCompletedStepIndices(
     completedSteps: WizardStep[],
     wizardSteps: Array<{ id: WizardStep; name: string }>,
 ): number[] {
-    return completedSteps.map(stepId => wizardSteps.findIndex(ws => ws.id === stepId));
+    return completedSteps.map((stepId) => wizardSteps.findIndex((ws) => ws.id === stepId));
 }
 
 /**
@@ -529,14 +525,20 @@ export function getCompletedStepIndices(
  * `wizardSteps.filter(step => step.enabled).map(step => ({ id: step.id as WizardStep, name: step.name }))`
  */
 export function getEnabledWizardSteps(
-    wizardSteps: Array<{ id: string; name: string; description?: string; enabled: boolean }> | undefined,
+    wizardSteps:
+        | Array<{ id: string; name: string; description?: string; enabled: boolean }>
+        | undefined,
 ): Array<{ id: WizardStep; name: string; description?: string }> {
     if (!wizardSteps || wizardSteps.length === 0) {
         return [];
     }
     return wizardSteps
-        .filter(step => step.enabled)
-        .map(step => ({ id: step.id as WizardStep, name: step.name, description: step.description }));
+        .filter((step) => step.enabled)
+        .map((step) => ({
+            id: step.id as WizardStep,
+            name: step.name,
+            description: step.description,
+        }));
 }
 
 // ============================================================================
@@ -564,15 +566,18 @@ function validateStackPackageConfig(
     if (wizardState.selectedStack && !wizardState.selectedPackage) {
         console.warn(
             '[Demo Builder] Incomplete configuration: architecture is selected but brand/package is missing. ' +
-            'This may result in missing storefront data.',
+                'This may result in missing storefront data.',
         );
         // eslint-disable-next-line no-console
-        console.log('[buildProjectConfig] Validation warning - selectedStack without selectedPackage:', {
-            selectedPackage: wizardState.selectedPackage,
-            selectedStack: wizardState.selectedStack,
-            hasPackages: !!packages,
-            packagesCount: packages?.length || 0,
-        });
+        console.log(
+            '[buildProjectConfig] Validation warning - selectedStack without selectedPackage:',
+            {
+                selectedPackage: wizardState.selectedPackage,
+                selectedStack: wizardState.selectedStack,
+                hasPackages: !!packages,
+                packagesCount: packages?.length || 0,
+            },
+        );
     }
 }
 
@@ -584,7 +589,7 @@ function resolveFrontendSourceFromPackage(
     if (!packages || !wizardState.selectedStack || !wizardState.selectedPackage) {
         return undefined;
     }
-    const pkg = packages.find(p => p.id === wizardState.selectedPackage);
+    const pkg = packages.find((p) => p.id === wizardState.selectedPackage);
     return pkg?.storefronts?.[wizardState.selectedStack]?.source;
 }
 
@@ -596,7 +601,7 @@ function validateStackLookup(
     if (wizardState.selectedStack && !stack) {
         console.warn(
             `[Demo Builder] Configuration warning: selected architecture '${wizardState.selectedStack}' not found. ` +
-            'Components may be missing from project.',
+                'Components may be missing from project.',
         );
         // eslint-disable-next-line no-console
         console.log('[buildProjectConfig] Validation warning - stack lookup failed:', {
@@ -640,6 +645,54 @@ function buildProjectEdsConfig(wizardState: WizardState) {
 }
 
 /**
+ * SDK-code charset — boundary parity with the dashboard's addConsoleApis
+ * handler; codes outside it never reach the manifest or the subscribe union.
+ */
+const SDK_CODE_RE = /^[A-Za-z0-9_-]+$/;
+
+/**
+ * The per-integration picks, charset-filtered per key, with keys left empty
+ * dropped. This is what PERSISTS — {@link unionConsoleApiPicks} below derives
+ * the legacy flat field from it for readers that predate attribution.
+ *
+ * `__existing__` stays its own key: those picks have an unrecoverable owner,
+ * which is not the same as having none.
+ *
+ * @param selectedConsoleApis - wizard picks, keyed by integration id
+ * @returns the sanitized record, or undefined when nothing valid is picked
+ */
+function sanitizeConsoleApiPicks(
+    selectedConsoleApis: Record<string, string[]> | undefined,
+): Record<string, string[]> | undefined {
+    const entries = Object.entries(selectedConsoleApis ?? {})
+        .map(([id, codes]): [string, string[]] => [
+            id,
+            [...new Set(codes.filter((c) => SDK_CODE_RE.test(c)))],
+        ])
+        .filter(([, codes]) => codes.length > 0);
+    return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
+/**
+ * Sorted, deduped union of all per-integration free Console API picks
+ * (including the reserved `__existing__` edit-mode key). Codes outside the
+ * SDK charset are dropped at this boundary. Returns undefined when nothing
+ * valid is picked so the serialized config omits the field.
+ */
+function unionConsoleApiPicks(
+    selectedConsoleApis: Record<string, string[]> | undefined,
+): string[] | undefined {
+    const union = [
+        ...new Set(
+            Object.values(selectedConsoleApis ?? {})
+                .flat()
+                .filter((code) => SDK_CODE_RE.test(code)),
+        ),
+    ].sort();
+    return union.length > 0 ? union : undefined;
+}
+
+/**
  * Build project configuration from wizard state for project creation
  *
  * @param wizardState - Current wizard state
@@ -680,22 +733,34 @@ export function buildProjectConfig(
             workspaceName: wizardState.adobeWorkspace?.name,
             workspaceTitle: wizardState.adobeWorkspace?.title,
         },
-        components: stack ? {
-            frontend: stack.frontend,
-            backend: stack.backend,
-            dependencies: [
-                ...(stack.dependencies || []),
-                ...(wizardState.selectedOptionalDependencies || []),
-            ],
-            integrations: [],
-            appBuilder: [],
-        } : undefined,
+        components: stack
+            ? {
+                  frontend: stack.frontend,
+                  backend: stack.backend,
+                  dependencies: [
+                      ...(stack.dependencies || []),
+                      ...(wizardState.selectedOptionalDependencies || []),
+                  ],
+                  integrations: [],
+                  appBuilder: [],
+              }
+            : undefined,
         apiMesh: wizardState.apiMesh,
         componentConfigs: wizardState.componentConfigs,
+        // The discovered store hierarchy, which the wizard fetched and would
+        // otherwise throw away. Persisting it is what lets any later surface
+        // name a scope CODE without a second Commerce call.
+        commerceStoreStructure: wizardState.storeDiscoveryData,
         importedWorkspaceId: importedSettings?.adobe?.workspaceId,
         importedMeshEndpoint,
         selectedPackage: wizardState.selectedPackage,
         selectedStack: wizardState.selectedStack,
+        selectedAppBuilderComponents: wizardState.selectedAppBuilderComponents ?? [],
+        appBuilderComponentSources: wizardState.appBuilderComponentSources ?? {},
+        // Legacy flat field, DERIVED from the keyed record below so both forms
+        // always describe the same set (step 07 retires it).
+        additionalConsoleApis: unionConsoleApiPicks(wizardState.selectedConsoleApis),
+        componentApiPicks: sanitizeConsoleApiPicks(wizardState.selectedConsoleApis),
         selectedAddons: wizardState.selectedAddons || [],
         selectedBlockLibraries: wizardState.selectedBlockLibraries || [],
         customBlockLibraries: wizardState.customBlockLibraries || [],

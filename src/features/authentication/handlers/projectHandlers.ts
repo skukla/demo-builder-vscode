@@ -16,11 +16,12 @@ import {
     ensureOrgContext,
     type EnsureOrgContextResult,
 } from '@/features/authentication/services/ensureOrgContext';
+import { stampProjectsDeletable } from '@/features/authentication/services/projectOwnership';
 import type { AdobeProject } from '@/features/authentication/services/types';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { ErrorCode } from '@/types/errorCodes';
 import { toAppError, isTimeout } from '@/types/errors';
-import { HandlerContext } from '@/types/handlers';
+import { HandlerContext, HandlerResponse } from '@/types/handlers';
 import { DataResult, SimpleResult } from '@/types/results';
 import { parseJSON, toError } from '@/types/typeGuards';
 
@@ -29,15 +30,27 @@ import { parseJSON, toError } from '@/types/typeGuards';
  * authenticated org list as the selectable source. Returns the typed result so
  * handlers can branch (ok vs org_mismatch/needs_relogin/access_revoked) WITHOUT
  * ever running the store-mutating `aio console * select`.
+ *
+ * Exported for sibling handlers (e.g. deleteAdobeProjectHandler) that need the
+ * same org gate.
  */
-async function resolveOrgContext(
+export async function resolveOrgContext(
     context: HandlerContext,
     orgId: string,
 ): Promise<EnsureOrgContextResult> {
     return ensureOrgContext(orgId, {
         listSelectableOrgs: async () => {
-            const orgs = await context.authManager?.getOrganizations() ?? [];
-            return orgs.map(org => ({ id: org.id, code: org.code, name: org.name }));
+            // Throw rather than `?? []` on a missing auth service. An empty list is
+            // indistinguishable from "this account cannot see that org", so the old
+            // fallback turned a wiring bug into a confident, wrong org-mismatch
+            // message — see showIntegrations' handler context (2026-07-31).
+            if (!context.authManager) {
+                throw new Error(
+                    'No authentication service on this handler context — cannot list orgs.',
+                );
+            }
+            const orgs = await context.authManager.getOrganizations();
+            return orgs.map((org) => ({ id: org.id, code: org.code, name: org.name }));
         },
     });
 }
@@ -58,8 +71,10 @@ function orgMismatchMessage(status: EnsureOrgContextResult['status']): string {
 /**
  * Send a structured ORG_MISMATCH message and return a failed DataResult.
  * Carries the ErrorCode + targetOrg so the UI can offer an in-app remedy.
+ *
+ * Exported for sibling handlers that reuse the org gate (see resolveOrgContext).
  */
-async function sendOrgMismatch<T>(
+export async function sendOrgMismatch<T>(
     context: HandlerContext,
     channel: string,
     ctxResult: EnsureOrgContextResult,
@@ -104,9 +119,14 @@ export async function handleEnsureOrgSelected(context: HandlerContext): Promise<
  */
 export async function handleGetProjects(
     context: HandlerContext,
-    payload?: { orgId?: string },
+    payload?: { orgId?: string; quiet?: boolean },
 ): Promise<DataResult<AdobeProject[]>> {
     const orgId = payload?.orgId;
+    // `quiet` = a read the user did not ask for (background hydration). It takes
+    // the SDK-only fetch, which degrades to [] instead of falling back to `aio
+    // console project list --json` — a CLI call that opens a browser on a stale
+    // token. P1: nothing the user did not initiate may launch a browser.
+    const quiet = payload?.quiet === true;
 
     // When the caller names a target org, establish targeting through the
     // canonical helper before fetching. A mismatch yields a structured,
@@ -132,9 +152,11 @@ export async function handleGetProjects(
 
         // Wrap getProjects with timeout (30 seconds). Thread orgId so the fetch
         // runs under org-context targeting (AIO_CONSOLE_* env, no global mutation).
-        const projectsPromise = orgId
-            ? context.authManager?.getProjects({ orgId })
-            : context.authManager?.getProjects();
+        const projectsPromise = quiet
+            ? context.authManager?.getProjectsSdkOnly(orgId ? { orgId } : undefined)
+            : orgId
+              ? context.authManager?.getProjects({ orgId })
+              : context.authManager?.getProjects();
         if (!projectsPromise) {
             throw new Error('Auth manager not available');
         }
@@ -145,8 +167,11 @@ export async function handleGetProjects(
                 timeoutMessage: 'Request timed out. Please check your connection and try again.',
             },
         );
-        await context.sendMessage('get-projects', projects);
-        return { success: true, data: projects };
+        // Stamp ownership (deletable) so the webview only offers delete on
+        // projects the current token user created (fail closed on unknowns).
+        const stamped = await stampProjectsDeletable(context.authManager, projects);
+        await context.sendMessage('get-projects', stamped);
+        return { success: true, data: stamped };
     } catch (error) {
         const appError = toAppError(error);
         const originalMessage = (error instanceof Error) ? error.message : '';
@@ -333,5 +358,70 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
     } catch (error) {
         context.logger.error('[Adobe Setup] Failed to check project APIs', error as Error);
         throw error;
+    }
+}
+
+/**
+ * create-adobe-project — create a new Adobe I/O App Builder project in-app.
+ *
+ * The "New" affordance is always offered; permission is validated HERE. Checks developer
+ * permission and, when absent, returns an `AUTH_FORBIDDEN`-coded error the UI surfaces
+ * inline (telegraph-on-attempt, no pre-flight probe). On success, refreshes the project
+ * list and acks the new selection (mirrors `handleSelectProject`). Never throws.
+ */
+export async function handleCreateAdobeProject(
+    context: HandlerContext,
+    payload: { name: string; description?: string },
+): Promise<HandlerResponse> {
+    if (!context.authManager) {
+        return { success: false, error: 'Authentication not available' };
+    }
+
+    const name = (payload?.name ?? '').trim();
+    const description = payload?.description ?? '';
+
+    try {
+        // Defensive permission re-check (guards a stale probe) → UI drops to Flow B.
+        const { hasPermissions, error: permError } = await context.authManager.testDeveloperPermissions();
+        if (!hasPermissions) {
+            return {
+                success: false,
+                code: ErrorCode.AUTH_FORBIDDEN,
+                error: permError
+                    || 'You do not have permission to create projects in this organization. Select an existing project instead.',
+            };
+        }
+
+        if (!name) {
+            return { success: false, error: 'Project name is required.' };
+        }
+
+        const project = await context.authManager.createProject(name, description);
+        if (!project) {
+            return {
+                success: false,
+                error: "Could not create the project. You may have hit your organization's project quota — "
+                    + 'select an existing project instead.',
+            };
+        }
+
+        // Refresh the project list and ack the new selection (best-effort).
+        // The push goes through the SAME deletable stamping as get-projects.
+        try {
+            const projects = await context.authManager.getProjects();
+            await context.sendMessage(
+                'get-projects',
+                await stampProjectsDeletable(context.authManager, projects),
+            );
+            await context.sendMessage('projectSelected', { projectId: project.id });
+        } catch (refreshError) {
+            context.debugLogger.debug('[Project] Post-create refresh failed:', refreshError);
+        }
+
+        context.logger.info(`[Project] Created App Builder project: ${project.name}`);
+        return { success: true, data: project };
+    } catch (error) {
+        context.logger.error('[Project] Failed to create project:', error as Error);
+        return { success: false, error: `Failed to create project: ${toError(error).message}` };
     }
 }

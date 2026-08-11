@@ -83,17 +83,17 @@ When you run `npm run dev`, look for:
 
 ```bash
 # Check if the actual file exists
-ls -la /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/citisignal-nextjs/src/demo-inspector/index.ts
+ls -la /Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/citisignal-nextjs/src/demo-inspector/index.ts
 
 # Check submodule status
-cd /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/citisignal-nextjs
+cd /Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/citisignal-nextjs
 git submodule status
 ```
 
 ### Option 3: Force Submodule Reinitialization
 
 ```bash
-cd /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/citisignal-nextjs
+cd /Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/citisignal-nextjs
 git submodule update --init --recursive
 ```
 

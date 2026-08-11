@@ -5,15 +5,19 @@
  * (endpoint URLs, credentials) and selecting website/store/view
  * via store discovery with progressive disclosure.
  *
- * Reuses the same hooks and rendering pattern as ComponentConfigStep
+ * Reuses the same hooks and rendering pattern as the Configure screen
  * but without navigation panel or two-column layout.
  */
 
+import { Text, Form } from '@adobe/react-spectrum';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
-    Text,
-    Form,
-} from '@adobe/react-spectrum';
-import React, { useMemo } from 'react';
+    computeCommerceSectionValidity,
+    isConnectionGroup,
+    filterGroupsForSection,
+    type CommerceSectionValidity,
+    type ConnectStoreSection,
+} from './commerceSectionValidity';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
@@ -30,9 +34,6 @@ import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscov
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { ComponentConfigs } from '@/types/webview';
 
-/** Groups that contain connection + store fields (shown immediately with progressive disclosure) */
-const CONNECTION_GROUPS = new Set(['accs', 'adobe-commerce']);
-
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
@@ -43,16 +44,27 @@ export interface ConnectStoreStepContentProps {
     packageConfigDefaults?: Record<string, string>;
     adobeOrg?: { id: string; code?: string };
     onComponentConfigsChange: (configs: ComponentConfigs) => void;
-    onValidationChange: (allValid: boolean) => void;
+    /** Per-sub-step verdicts — each section answers for the fields IT renders. */
+    onValidationChange: (validity: CommerceSectionValidity) => void;
     /** Persisted store structure — skips auto-detect on step re-entry */
     storeDiscoveryData?: CommerceStoreStructure;
     /** Called when store structure changes — persist to wizard state */
     onStoreDiscoveryDataChange?: (data: CommerceStoreStructure | null) => void;
+    /** Called when store discovery starts/stops fetching — gates the Business Structure Continue. */
+    onStoreLoadingChange?: (loading: boolean) => void;
+    /**
+     * Render only one slice of the commerce config (for the Commerce tabs).
+     * Absent = render all sections (legacy single-step callers unchanged).
+     */
+    section?: ConnectStoreSection;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
+
+/** The hook still needs a callback; its whole-form verdict is not the gate. */
+const noopValidation = (): void => {};
 
 export function ConnectStoreStepContent({
     selectedStackId,
@@ -63,6 +75,8 @@ export function ConnectStoreStepContent({
     onValidationChange,
     storeDiscoveryData,
     onStoreDiscoveryDataChange,
+    onStoreLoadingChange,
+    section,
 }: ConnectStoreStepContentProps) {
     const {
         componentConfigs: liveConfigs,
@@ -79,7 +93,10 @@ export function ConnectStoreStepContent({
         componentConfigs,
         packageConfigDefaults,
         onConfigsChange: onComponentConfigsChange,
-        onValidationChange,
+        // The hook's whole-form verdict is deliberately discarded: using it as a
+        // per-sub-step gate is what deadlocked PaaS. Per-section verdicts are
+        // reported below, sliced from the same error map.
+        onValidationChange: noopValidation,
     });
 
     const {
@@ -109,6 +126,25 @@ export function ConnectStoreStepContent({
         hasStoreData,
         isFetching,
     });
+
+    // Report each sub-step's own verdict. Whole-form validity was the deadlock:
+    // Catalog's required fields kept Connection from ever completing, and Catalog
+    // is locked until Connection completes.
+    const sectionValidity = useMemo(
+        () => computeCommerceSectionValidity(serviceGroups, validationErrors),
+        [serviceGroups, validationErrors],
+    );
+    const onValidationChangeRef = useRef(onValidationChange);
+    onValidationChangeRef.current = onValidationChange;
+    useEffect(() => {
+        onValidationChangeRef.current(sectionValidity);
+    }, [sectionValidity]);
+
+    // Surface the store-discovery fetch state so the Business Structure Continue gate
+    // can block while the structure is still loading.
+    useEffect(() => {
+        onStoreLoadingChange?.(isFetching);
+    }, [isFetching, onStoreLoadingChange]);
 
     // Whether store view code is filled (gate for showing dependent groups like AEM Assets)
     const storeSelectionComplete = useMemo(() => {
@@ -148,17 +184,43 @@ export function ConnectStoreStepContent({
 
     // Filter groups: non-connection groups (e.g., AEM Assets, Catalog Service)
     // are hidden until store selection is complete
-    const visibleGroups = serviceGroups.filter(
-        group => CONNECTION_GROUPS.has(group.id) || storeSelectionComplete,
+    const disclosedGroups = serviceGroups.filter(
+        (group) => isConnectionGroup(group.id) || storeSelectionComplete,
     );
 
-    // Context for resolving {placeholder} tokens in field-description URLs
-    // (e.g., the ACCS GraphQL Endpoint description includes a link to the
-    // Experience Cloud Commerce instances page for the selected org).
-    const descriptionContext = { orgCode: adobeOrg?.code };
+    // When a section is requested (Commerce tabs), render only that slice.
+    // Hooks stay mounted; only rendering is filtered so state persists across tabs.
+    const visibleGroups = section
+        ? filterGroupsForSection(disclosedGroups, section)
+        : disclosedGroups;
+
+    // Catalog section gate: catalog/assets groups stay hidden until a store view
+    // is chosen. Show a hint rather than a confusing empty pane.
+    if (section === 'catalog' && !storeSelectionComplete) {
+        return (
+            <Text UNSAFE_className="text-gray-600">
+                Choose a store view in Business Structure to configure catalog services.
+            </Text>
+        );
+    }
+
+    // Business Structure's store detection is the whole step's wait, so give it the
+    // SAME step-level loading treatment as the auth step (size L, centered) rather
+    // than StoreConfigFieldRow's inline row spinner — the wizard's loading states
+    // should look identical. (The dashboard Configure screen keeps the inline row
+    // loader, where detection is one field among several.)
+    if (section === 'business-structure' && !fetchError && (isFetching || !hasStoreData)) {
+        return (
+            <CenteredFeedbackContainer>
+                <LoadingDisplay size="L" message="Detecting store structure…" />
+            </CenteredFeedbackContainer>
+        );
+    }
 
     return (
-        <SingleColumnLayout>
+        // padding 0: the surrounding .step-view already supplies the content padding —
+        // a second 24px here pushed the first group heading well below the tab strip.
+        <SingleColumnLayout padding="0px">
             <Form UNSAFE_className="container-form">
                 <ServiceGroupList
                     groups={visibleGroups}
@@ -180,7 +242,6 @@ export function ConnectStoreStepContent({
                             getStoreGroupItems={getStoreGroupItems}
                             getStoreViewItems={getStoreViewItems}
                             onRefresh={forceFetch}
-                            descriptionContext={descriptionContext}
                         />
                     )}
                 />

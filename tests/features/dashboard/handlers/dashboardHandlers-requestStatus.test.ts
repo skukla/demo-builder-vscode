@@ -9,6 +9,11 @@
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
+        // The on-open org-context check self-heals via the state manager on the
+        // reachable path; default to a no-op writer.
+        getStateManager: jest.fn(() => ({
+            saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
+        })),
     },
 }));
 jest.mock('@/features/mesh/services/stalenessDetector');
@@ -23,16 +28,25 @@ jest.mock('@/core/validation', () => ({
     validateWorkspaceId: jest.fn(),
     validateURL: jest.fn(),
 }));
-jest.mock('vscode', () => ({
-    window: {
-        activeColorTheme: { kind: 1 },
-        showWarningMessage: jest.fn().mockResolvedValue('Cancel'), // Default: user cancels
-    },
-    ColorThemeKind: { Dark: 2, Light: 1 },
-    commands: { executeCommand: jest.fn() },
-    env: { openExternal: jest.fn() },
-    Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-}), { virtual: true });
+jest.mock(
+    'vscode',
+    () => ({
+        window: {
+            activeColorTheme: { kind: 1 },
+            showWarningMessage: jest.fn().mockResolvedValue('Cancel'), // Default: user cancels
+            // ensureAdobeIOAuth wraps the browser login in withProgress; run the task.
+            withProgress: jest.fn((_opts: unknown, task: (p: unknown) => unknown) =>
+                task({ report: jest.fn() })
+            ),
+        },
+        ColorThemeKind: { Dark: 2, Light: 1 },
+        ProgressLocation: { Notification: 15, Window: 10, SourceControl: 1 },
+        commands: { executeCommand: jest.fn() },
+        env: { openExternal: jest.fn() },
+        Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
+    }),
+    { virtual: true }
+);
 
 import { handleRequestStatus } from '@/features/dashboard/handlers/dashboardHandlers';
 import { setupMocks } from './dashboardHandlers.testUtils';
@@ -90,10 +104,41 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         });
     });
 
+    // ADR-011 D3 Steps 07+09: a keyed-only project (no meshState — the post-Step-07
+    // shape) must report the same deployed status + endpoint from the keyed entry.
+    it('should report deployed status + endpoint for a keyed-only project (Steps 07+09)', async () => {
+        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        detectFrontendChanges.mockReturnValue(false);
+
+        const { mockContext } = setupMocks({
+            meshStatusSummary: 'deployed',
+            meshState: undefined,
+            appBuilderComponents: {
+                mesh: {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                    endpoint: 'https://keyed-mesh.adobe.io/graphql',
+                    envVars: { MESH_ID: 'mesh123' },
+                },
+            },
+        } as any);
+
+        const result = await handleRequestStatus(mockContext);
+
+        expect(result.success).toBe(true);
+        expect(result.data).toMatchObject({
+            mesh: {
+                status: 'deployed',
+                endpoint: 'https://keyed-mesh.adobe.io/graphql',
+            },
+        });
+    });
+
     it('should return mesh status as "not-deployed" when no mesh configured', async () => {
         const { mockContext } = setupMocks({
             componentInstances: {
-                'headless': {
+                headless: {
                     id: 'headless',
                     name: 'CitiSignal Next.js',
                     status: 'ready',
@@ -196,13 +241,13 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
             'Adobe sign-in required to check mesh status.',
             'Sign In',
-            'Cancel',
+            'Cancel'
         );
     });
 
     it('should NOT carry orgMismatch in the status payload (delivered separately)', async () => {
-        // The org check is decoupled — it's posted via the async `orgContextResult`
-        // message, never bundled into the status payload (which must stay fast).
+        // The org check is decoupled — it's posted via the on-open orchestrator's
+        // `checkResult` message, never bundled into the status payload (kept fast).
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
@@ -210,9 +255,10 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         const { ServiceLocator } = require('@/core/di');
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(true),
-            getOrganizations: jest.fn().mockResolvedValue([
-                { id: 'org999', code: 'OTHER@AdobeOrg', name: 'Other Org' },
-            ]),
+            // SDK-only read (the non-interactive on-open probe), never the CLI fallback.
+            getOrganizationsSdkOnly: jest
+                .fn()
+                .mockResolvedValue([{ id: 'org999', code: 'OTHER@AdobeOrg', name: 'Other Org' }]),
         });
 
         const result = await handleRequestStatus(mockContext);
@@ -230,9 +276,10 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         // Auth returns false initially, then true after login
         const { ServiceLocator } = require('@/core/di');
         const mockAuthManager = {
-            isAuthenticated: jest.fn()
-                .mockResolvedValueOnce(false)  // Initial check
-                .mockResolvedValueOnce(true),  // After login
+            isAuthenticated: jest
+                .fn()
+                .mockResolvedValueOnce(false) // Initial check
+                .mockResolvedValueOnce(true), // After login
             loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
         };
         ServiceLocator.getAuthenticationService.mockReturnValue(mockAuthManager);

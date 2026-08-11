@@ -1,14 +1,14 @@
 === FormField.tsx Comparison ===
 
 Location 1: src/core/ui/components/FormField.tsx
--rw-r--r--  1 kukla  staff   4.8K Oct 28 18:53 /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/FormField.tsx
+-rw-r--r--  1 kukla  staff   4.8K Oct 28 18:53 /Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/FormField.tsx
 
 Location 2: src/webviews/components/molecules/FormField.tsx
--rw-r--r--  1 kukla  staff   4.7K Oct 28 18:53 /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews/components/molecules/FormField.tsx
+-rw-r--r--  1 kukla  staff   4.7K Oct 28 18:53 /Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews/components/molecules/FormField.tsx
 
 --- Diff ---
---- /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/FormField.tsx	2025-10-28 18:53:53
-+++ /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews/components/molecules/FormField.tsx	2025-10-28 18:53:55
+--- /Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/FormField.tsx	2025-10-28 18:53:53
++++ /Users/<user>/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews/components/molecules/FormField.tsx	2025-10-28 18:53:55
 @@ -17,11 +17,11 @@
      /** Field label */
      label: string;

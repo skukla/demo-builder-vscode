@@ -300,6 +300,15 @@ describe('Timeout Configuration', () => {
                 expect(TIMEOUTS.LONG).toBeLessThan(TIMEOUTS.VERY_LONG);
                 expect(TIMEOUTS.VERY_LONG).toBeLessThan(TIMEOUTS.EXTENDED);
             });
+
+            it('should size PROJECT_TEARDOWN (15min) above the worst-case teardown budget', () => {
+                expect(TIMEOUTS.PROJECT_TEARDOWN).toBe(900000);
+                // Budget floor: 2 × LONG subscribe recovery + 17s propagation
+                // retries + modal think-time — must exceed VERY_LONG (the old,
+                // too-tight budget for delete-adobe-project).
+                expect(TIMEOUTS.PROJECT_TEARDOWN).toBeGreaterThan(TIMEOUTS.VERY_LONG);
+                expect(TIMEOUTS.PROJECT_TEARDOWN).toBeGreaterThan(2 * TIMEOUTS.LONG + 17000);
+            });
         });
 
         describe('UI timing sub-object', () => {
@@ -477,6 +486,12 @@ describe('Timeout Configuration', () => {
             it('should have TTLs in ascending order', () => {
                 expect(CACHE_TTL.SHORT).toBeLessThan(CACHE_TTL.MEDIUM);
                 expect(CACHE_TTL.MEDIUM).toBeLessThan(CACHE_TTL.LONG);
+            });
+
+            it('should cache the org services catalog for 30 minutes', () => {
+                // Bumped from 5m: the picker prefetch warms this cache on modal open, so a
+                // longer TTL keeps the later picker fetch fast across a whole add session.
+                expect(CACHE_TTL.ORG_SERVICES).toBe(30 * 60 * 1000);
             });
         });
     });

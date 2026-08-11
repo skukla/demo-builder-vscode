@@ -6,6 +6,7 @@
  */
 
 import type { CustomBlockLibrary, InstalledBlockLibrary } from './blockLibraries';
+import type { CommerceStoreStructure } from './commerceStore';
 import type { ServiceDefinition } from './components';
 
 /**
@@ -53,14 +54,31 @@ export interface Project {
     componentInstances?: Record<string, ComponentInstance>;
     // Component selections (which components were chosen)
     componentSelections?: {
-        frontend?: string;  // Component ID
-        backend?: string;   // Component ID
+        frontend?: string; // Component ID
+        backend?: string; // Component ID
         dependencies?: string[]; // Component IDs
         integrations?: string[]; // Component IDs
         appBuilder?: string[]; // Component IDs
     };
     // Component configurations (environment variables and settings)
     componentConfigs?: Record<string, Record<string, string | boolean | number | undefined>>;
+    /**
+     * The discovered Commerce store hierarchy — websites, store groups and store
+     * views, each with its `code` AND its human `name`.
+     *
+     * The pickers show the user "CitiSignal Store"; only `citisignal_store` was
+     * ever kept, so every later surface made them translate. The structure is
+     * the one thing that holds both, and it was fetched and thrown away on every
+     * discovery. Persisting it turns a name into an offline lookup BY CODE on any
+     * surface — which is also why nothing has to pair a name with a code
+     * defensively: the code IS the lookup key, so a name can never land on the
+     * wrong one.
+     *
+     * A CATALOG, not a selection: refreshed wholesale whenever discovery runs.
+     * Absent until it has run once (every project predating this) — consumers
+     * then show the bare code, which is a correct rendering, not a degraded one.
+     */
+    commerceStoreStructure?: CommerceStoreStructure;
     // Package/Stack/Addons selections (vertical + architecture)
     /** Package ID selected during project creation (e.g., 'citisignal', 'buildright') */
     selectedPackage?: string;
@@ -82,16 +100,42 @@ export interface Project {
         installedAt: string;
     };
     // Mesh staleness summary for card grid display
-    meshStatusSummary?: 'deployed' | 'stale' | 'config-incomplete' | 'update-declined' | 'not-deployed' | 'error' | 'unknown';
-    // API Mesh deployment state (tracks changes that require redeployment)
-    // AUTHORITATIVE location for mesh endpoint - see docs/architecture/state-ownership.md
+    meshStatusSummary?:
+        | 'deployed'
+        | 'stale'
+        | 'config-incomplete'
+        | 'update-declined'
+        | 'not-deployed'
+        | 'error'
+        | 'unknown';
+    // LEGACY-READ-ONLY mesh deployment state (ADR-011 D3 Step 07). The
+    // authoritative home for the mesh endpoint + staleness baseline is the
+    // keyed mesh `appBuilderComponents` entry; this singleton is never written
+    // or persisted anymore. It exists so legacy manifests (of arbitrary age)
+    // keep loading: the loader reads it and the read-migration folds it into
+    // the keyed map. See docs/architecture/state-ownership.md.
     meshState?: {
         envVars: Record<string, string>;
         sourceHash: string | null;
         lastDeployed: string; // ISO date string
-        endpoint?: string; // AUTHORITATIVE mesh GraphQL endpoint URL
+        endpoint?: string; // mesh GraphQL endpoint URL (legacy manifests only)
         userDeclinedUpdate?: boolean; // User clicked "Later" on redeploy prompt
         declinedAt?: string; // ISO date string when user declined
+    };
+    // App Builder app status summary for card grid display
+    appStatusSummary?: 'deployed' | 'stale' | 'not-deployed' | 'error' | 'unknown';
+    // LEGACY-READ-ONLY App Builder app deployment state (ADR-011 D3 Step 07).
+    // The authoritative home for integration deploy state is the keyed
+    // `appBuilderComponents` entry per integration; this singleton is never
+    // written or persisted anymore — kept only so legacy manifests load and
+    // migrate. See docs/architecture/state-ownership.md.
+    appState?: {
+        appId?: string;
+        url?: string; // Primary deployed app URL
+        status: 'deployed' | 'error' | 'not-deployed';
+        deployedUrls?: Record<string, string>; // Per-action/runtime URLs
+        lastDeployed?: string; // ISO date string
+        sourceHash?: string | null;
     };
     // EDS Storefront config.json state (tracks changes that require republishing)
     edsStorefrontState?: {
@@ -102,26 +146,54 @@ export interface Project {
     };
     // EDS Storefront status summary for card grid display
     edsStorefrontStatusSummary?: 'published' | 'stale' | 'update-declined' | 'not-published';
-    /**
-     * Resolved AEM authoring experience for the projects-list card grid.
-     *
-     * UI-only enrichment computed backend-side (via resolveProjectAuthoringExperience)
-     * so the webview stays presentational — it never imports the resolver or
-     * `vscode`. Drives the "Author in …" label and the kebab flip control.
-     */
-    resolvedAuthoringExperience?: AuthoringExperience;
     // Frontend config state (tracks changes since demo started)
     frontendEnvState?: {
         envVars: Record<string, string>;
         capturedAt: string; // ISO date string
     };
     // Component version tracking (for updates)
-    componentVersions?: Record<string, {
+    componentVersions?: Record<
+        string,
+        {
             version: string;
             lastUpdated: string; // ISO date string
-        }>;
+        }
+    >;
+    /**
+     * Keyed appBuilderComponent state — THE single source of truth for mesh +
+     * integration deploy state (Model B; the plan/ADR call this concept a
+     * "deployable" — `appBuilderComponent` is the shipped name). Persisted in
+     * the manifest (D3 Step 01) and, since D3 Step 07 retired the singular
+     * write-side, the only written model; the legacy singletons above are
+     * read-only migration inputs. See
+     * docs/architecture/adr/011-app-builder-deployables.md.
+     */
+    appBuilderComponents?: Record<string, AppBuilderComponentState>;
+    /**
+     * Adobe API sdk codes added at runtime (the `add_console_apis` MCP tool),
+     * beyond any catalog entry's `requiredApis`. Persisted so every subsequent
+     * subscription reconcile includes them in the union — the Console
+     * subscribe PUTs the full list, so an unpersisted ad-hoc API would be
+     * silently dropped on the next component add/remove.
+     */
+    additionalConsoleApis?: string[];
+    /**
+     * Ad-hoc Console API picks, ATTRIBUTED to the integration that wanted them.
+     * Supersedes the flat `additionalConsoleApis` above, which lost attribution
+     * at the persist boundary. The subscribe union is derived at read time via
+     * `resolveDesiredApis`; `__existing__` carries pre-attribution picks whose
+     * owner is unrecoverable. See `app-builder/services/componentApiPicks.ts`.
+     */
+    componentApiPicks?: Record<string, string[]>;
     /** User-saved AI prompts */
     aiPrompts?: AiPrompt[];
+    /**
+     * Version of the AI context bundle last generated into this project (stamped
+     * from the `AI_CONTEXT_VERSION` constant on generate). The dashboard's
+     * on-open freshness check flags the project stale when this is older than
+     * the current constant (or absent, catching pre-feature projects).
+     */
+    aiContextVersion?: number;
     /**
      * Pinned projects sort first on the projects dashboard (alphabetical
      * within the pinned and unpinned groups). Set per-project via the
@@ -133,9 +205,52 @@ export interface Project {
     updatedAt?: Date;
 }
 
+/** An App Builder component's kind: a mesh artifact or a custom App Builder integration. */
+export type AppBuilderComponentKind = 'mesh' | 'integration';
+
+/**
+ * Keyed appBuilderComponent state (Model B). One concept replaces the singular
+ * `meshState` + `appState`. The mesh's endpoint + staleness fields and an
+ * integration's URL(s) live here.
+ */
+export interface AppBuilderComponentState {
+    kind: AppBuilderComponentKind;
+    status: 'deployed' | 'stale' | 'error' | 'not-deployed';
+    /** Display name for the integration (durable home for the user-facing name). */
+    name?: string;
+    source: { owner: string; repo: string; branch?: string };
+    endpoint?: string; // mesh GraphQL endpoint
+    url?: string; // integration primary URL
+    deployedUrls?: Record<string, string>;
+    sourceHash?: string | null;
+    lastDeployed?: string; // ISO date string
+    /**
+     * Why the last deploy failed — set with `status: 'error'`, cleared by the next
+     * non-error outcome (see `recordDeployOutcome`).
+     *
+     * Without it a failed component persisted the fact of failure and none of the
+     * reason, so the card read "Deploy failed" / MESH ERROR and the only way to
+     * learn more was to run the deploy again and watch the logs. Redacted and
+     * first-line-only via `sanitizeErrorForLogging` before it lands here: this is
+     * persisted to the project manifest on disk, so raw CLI output must not be.
+     */
+    error?: string;
+    /** Resolved provided values another appBuilderComponent consumes (e.g. { MESH_ENDPOINT }). */
+    providesEnvVars?: Record<string, string>;
+    // Mesh-kind runtime fields (ADR-011 D3 Step 06). These previously lived
+    // only on the singular `meshState` (same values, so no new data exposure);
+    // the keyed entry is their durable home so Step 07 can retire `meshState`.
+    /** Env vars at last deploy — the staleness baseline (mesh kind). */
+    envVars?: Record<string, string>;
+    /** User clicked "Later" on the redeploy prompt (mesh kind). */
+    userDeclinedUpdate?: boolean;
+    /** ISO date string when the user declined (mesh kind). */
+    declinedAt?: string;
+}
+
 export interface CustomIconPaths {
-    light: string;           // Path to icon for light theme
-    dark: string;            // Path to icon for dark theme
+    light: string; // Path to icon for light theme
+    dark: string; // Path to icon for dark theme
 }
 
 /**
@@ -149,18 +264,18 @@ export interface CustomIconPaths {
 export type AuthoringExperience = 'da-live-classic' | 'experience-workspace';
 
 export interface ComponentInstance {
-    id: string;              // Component ID (e.g., "headless")
-    name: string;            // Human-readable name
+    id: string; // Component ID (e.g., "headless")
+    name: string; // Human-readable name
     type?: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder'; // Legacy field, not used with selectionGroups
-    subType?: 'mesh' | 'utility' | 'service';
-    icon?: string | CustomIconPaths;  // VSCode ThemeIcon name OR custom icon paths
-    path?: string;           // Full path to cloned repo (if applicable)
-    repoUrl?: string;        // Git repository URL
-    branch?: string;         // Current branch
-    version?: string;        // Version/commit hash
+    subType?: 'mesh' | 'app' | 'utility' | 'service';
+    icon?: string | CustomIconPaths; // VSCode ThemeIcon name OR custom icon paths
+    path?: string; // Full path to cloned repo (if applicable)
+    repoUrl?: string; // Git repository URL
+    branch?: string; // Current branch
+    version?: string; // Version/commit hash
     status: ComponentStatus;
-    port?: number;           // For components that run locally
-    pid?: number;            // Process ID if running
+    port?: number; // For components that run locally
+    pid?: number; // Process ID if running
     lastUpdated?: Date;
     metadata?: Record<string, unknown>; // Additional component-specific data
 }
@@ -179,22 +294,18 @@ export type ComponentStatus =
     | 'updating'
     | 'error';
 
-export type ProjectTemplate =
-    | 'commerce-paas'
-    | 'commerce-saas'
-    | 'aem-commerce'
-    | 'custom';
+export type ProjectTemplate = 'commerce-paas' | 'commerce-saas' | 'aem-commerce' | 'custom';
 
 export type ProjectStatus =
     | 'created'
     | 'configuring'
     | 'ready'
-    | 'starting'      // Transitional: demo is starting up
+    | 'starting' // Transitional: demo is starting up
     | 'running'
-    | 'stopping'      // Transitional: demo is shutting down
+    | 'stopping' // Transitional: demo is shutting down
     | 'stopped'
-    | 'resetting'     // Transitional: EDS project is being reset
-    | 'republishing'  // Transitional: EDS project content is being republished
+    | 'resetting' // Transitional: EDS project is being reset
+    | 'republishing' // Transitional: EDS project content is being republished
     | 'error';
 
 export interface AdobeConfig {
@@ -206,6 +317,9 @@ export interface AdobeConfig {
     /** Human-readable org name (for display; the token can't resolve it when wrong) */
     organizationName?: string;
     workspace: string;
+    /** Human-readable workspace name — written by the wizard and read back by
+     *  `useWizardState`; the type simply never declared it. */
+    workspaceName?: string;
     /** Human-readable workspace title (preferred for display) */
     workspaceTitle?: string;
     authenticated: boolean;
@@ -234,8 +348,8 @@ export interface ComponentDefinition {
     id: string;
     name: string;
     type?: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder'; // Legacy field, not used with selectionGroups
-    subType?: 'mesh' | 'utility' | 'service';
-    icon?: string | CustomIconPaths;  // VSCode ThemeIcon name OR custom icon paths
+    subType?: 'mesh' | 'app' | 'utility' | 'service';
+    icon?: string | CustomIconPaths; // VSCode ThemeIcon name OR custom icon paths
     description?: string;
     source?: ComponentSource;
     dependencies?: ComponentDependencies;
@@ -256,15 +370,15 @@ export interface ComponentSource {
 
     // Git-specific options
     gitOptions?: {
-        shallow?: boolean;           // Use --depth=1 for faster clones
-        tag?: string;                 // Clone specific tag
-        commit?: string;              // Clone specific commit hash
+        shallow?: boolean; // Use --depth=1 for faster clones
+        tag?: string; // Clone specific tag
+        commit?: string; // Clone specific commit hash
     };
 
     // Timeout configuration (milliseconds)
     timeouts?: {
-        clone?: number;               // Override default clone timeout
-        install?: number;             // Override default install timeout
+        clone?: number; // Override default clone timeout
+        install?: number; // Override default install timeout
     };
 }
 
@@ -285,8 +399,8 @@ export interface ComponentConfiguration {
     envVars?: string[];
     port?: number;
     nodeVersion?: string;
-    buildScript?: string;  // npm script to run after install (e.g., "build")
-    skipNpmInstall?: boolean;  // Skip npm install after update (e.g., EDS storefronts)
+    buildScript?: string; // npm script to run after install (e.g., "build")
+    skipNpmInstall?: boolean; // Skip npm install after update (e.g., EDS storefronts)
     required?: Record<string, ConfigField>;
     services?: ServiceDefinition[];
     meshIntegration?: {

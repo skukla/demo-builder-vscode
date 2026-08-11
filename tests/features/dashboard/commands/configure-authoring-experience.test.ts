@@ -21,7 +21,10 @@ jest.mock('@/features/components/services/ComponentRegistryManager');
 jest.mock('@/core/logging', () => ({
     getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
     Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
     })),
 }));
 
@@ -37,6 +40,13 @@ const mockRepublishStorefrontConfig = jest.fn().mockResolvedValue({ success: tru
 jest.mock('@/features/eds', () => ({
     isEdsProject: jest.fn(() => true),
     detectStorefrontChanges: jest.fn(() => ({ hasChanges: false })),
+    republishStorefrontConfig: (...args: unknown[]) => mockRepublishStorefrontConfig(...args),
+}));
+
+// The config.json regen now runs through the shared authoringExperienceFlip
+// service, which imports republishStorefrontConfig directly from its module
+// (not the feature index). Mock that path so the same spy observes the call.
+jest.mock('@/features/eds/services/storefrontRepublishService', () => ({
     republishStorefrontConfig: (...args: unknown[]) => mockRepublishStorefrontConfig(...args),
 }));
 
@@ -75,19 +85,23 @@ jest.mock('@/features/eds/services/helixService', () => ({
 // so the file ops object is never actually used.
 const mockGitHubFileOperations = jest.fn().mockImplementation(() => ({}));
 jest.mock('@/features/eds/services/githubFileOperations', () => ({
-    GitHubFileOperations: jest.fn().mockImplementation((...args) => mockGitHubFileOperations(...args)),
+    GitHubFileOperations: jest
+        .fn()
+        .mockImplementation((...args) => mockGitHubFileOperations(...args)),
 }));
 const mockGitHubTokenService = jest.fn().mockImplementation(() => ({}));
 jest.mock('@/features/eds/services/githubTokenService', () => ({
     GitHubTokenService: jest.fn().mockImplementation((...args) => mockGitHubTokenService(...args)),
 }));
 
-// Dashboard live-update push — the save handler posts the new authoring label +
-// DA URL to an already-open dashboard immediately after the metadata save.
+// Dashboard live-update push — the save handler posts the new DA URL to an
+// already-open dashboard immediately after the metadata save (the tile label
+// is static; only the URL is live).
 const mockSendAuthoringExperienceUpdate = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
-        sendAuthoringExperienceUpdate: (...args: unknown[]) => mockSendAuthoringExperienceUpdate(...args),
+        sendAuthoringExperienceUpdate: (...args: unknown[]) =>
+            mockSendAuthoringExperienceUpdate(...args),
         refreshStatus: jest.fn().mockResolvedValue(undefined),
     },
 }));
@@ -95,7 +109,10 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
 const NO_REPO = Symbol('no-repo');
 
 /** Build an EDS project with a given stored authoring experience + DA coords. */
-function makeEdsProject(stored?: string, githubRepo: string | typeof NO_REPO = 'acme-org/acme-storefront'): Project {
+function makeEdsProject(
+    stored?: string,
+    githubRepo: string | typeof NO_REPO = 'acme-org/acme-storefront'
+): Project {
     const repo = githubRepo === NO_REPO ? undefined : githubRepo;
     return {
         name: 'Test Project',
@@ -117,14 +134,18 @@ function makeEdsProject(stored?: string, githubRepo: string | typeof NO_REPO = '
 }
 
 /** Capture the save-configuration streaming handler registered by the command. */
-function captureSaveHandler(command: ConfigureProjectWebviewCommand): (data: unknown) => Promise<unknown> {
+function captureSaveHandler(
+    command: ConfigureProjectWebviewCommand
+): (data: unknown) => Promise<unknown> {
     const handlers = new Map<string, (data: unknown) => Promise<unknown>>();
     const fakeComm = {
         onStreaming: (type: string, fn: (data: unknown) => Promise<unknown>) => {
             handlers.set(type, fn);
         },
     };
-    (command as unknown as { initializeMessageHandlers: (c: unknown) => void }).initializeMessageHandlers(fakeComm);
+    (
+        command as unknown as { initializeMessageHandlers: (c: unknown) => void }
+    ).initializeMessageHandlers(fakeComm);
     const handler = handlers.get('save-configuration');
     if (!handler) throw new Error('save-configuration handler not registered');
     // The handler returns success immediately and defers the authoring DA
@@ -161,7 +182,10 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
         } as unknown as vscode.ExtensionContext;
 
         mockLogger = {
-            debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
         } as unknown as Logger;
 
         mockStateManager = {
@@ -175,7 +199,7 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
         command = new ConfigureProjectWebviewCommand(
             mockContext,
             mockStateManager as unknown as StateManager,
-            mockLogger,
+            mockLogger
         );
 
         // Stub side-effecting private methods so the save path doesn't touch disk.
@@ -210,12 +234,14 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
             'my-org',
             'my-site',
             expect.anything(),
-            'experience-workspace',
+            'experience-workspace'
         );
     });
 
     it('does NOT re-apply editor.path when the experience is unchanged', async () => {
-        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('experience-workspace'));
+        mockStateManager.getCurrentProject.mockResolvedValue(
+            makeEdsProject('experience-workspace')
+        );
         const save = captureSaveHandler(command);
 
         await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
@@ -235,13 +261,14 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
 
         expect(mockSendAuthoringExperienceUpdate).toHaveBeenCalledTimes(1);
         expect(mockSendAuthoringExperienceUpdate).toHaveBeenCalledWith(
-            'experience-workspace',
-            'https://da.live/canvas#/my-org/my-site/index',
+            'https://da.live/canvas#/my-org/my-site/index'
         );
     });
 
     it('does NOT push a dashboard update when the experience is unchanged', async () => {
-        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('experience-workspace'));
+        mockStateManager.getCurrentProject.mockResolvedValue(
+            makeEdsProject('experience-workspace')
+        );
         const save = captureSaveHandler(command);
 
         await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
@@ -301,7 +328,9 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
     });
 
     it('does NOT vendor Quick Edit when flipping TO da-live-classic', async () => {
-        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('experience-workspace'));
+        mockStateManager.getCurrentProject.mockResolvedValue(
+            makeEdsProject('experience-workspace')
+        );
         const save = captureSaveHandler(command);
 
         await save({ componentConfigs: {}, authoringExperience: 'da-live-classic' });
@@ -310,7 +339,9 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
     });
 
     it('skips Quick Edit vendoring when no githubRepo metadata is present', async () => {
-        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('da-live-classic', NO_REPO));
+        mockStateManager.getCurrentProject.mockResolvedValue(
+            makeEdsProject('da-live-classic', NO_REPO)
+        );
         const save = captureSaveHandler(command);
 
         await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });
@@ -338,7 +369,10 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
         // Use the real showPostSaveNotifications (beforeEach stubs it out).
         delete (command as unknown as Record<string, unknown>).showPostSaveNotifications;
         const successSpy = jest
-            .spyOn(command as unknown as { showSuccessMessage: (m: string) => void }, 'showSuccessMessage')
+            .spyOn(
+                command as unknown as { showSuccessMessage: (m: string) => void },
+                'showSuccessMessage'
+            )
             .mockImplementation(() => {});
         mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('da-live-classic'));
         const save = captureSaveHandler(command);
@@ -362,12 +396,14 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
 
         expect(mockRepublishStorefrontConfig).toHaveBeenCalledTimes(1);
         expect(mockRepublishStorefrontConfig).toHaveBeenCalledWith(
-            expect.objectContaining({ project: expect.anything() }),
+            expect.objectContaining({ project: expect.anything() })
         );
     });
 
     it('does NOT regenerate config.json when flipping TO da-live-classic', async () => {
-        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('experience-workspace'));
+        mockStateManager.getCurrentProject.mockResolvedValue(
+            makeEdsProject('experience-workspace')
+        );
         const save = captureSaveHandler(command);
 
         await save({ componentConfigs: {}, authoringExperience: 'da-live-classic' });
@@ -393,9 +429,14 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
     it('shows the generic "saved" toast for a save with no authoring change', async () => {
         delete (command as unknown as Record<string, unknown>).showPostSaveNotifications;
         const successSpy = jest
-            .spyOn(command as unknown as { showSuccessMessage: (m: string) => void }, 'showSuccessMessage')
+            .spyOn(
+                command as unknown as { showSuccessMessage: (m: string) => void },
+                'showSuccessMessage'
+            )
             .mockImplementation(() => {});
-        mockStateManager.getCurrentProject.mockResolvedValue(makeEdsProject('experience-workspace'));
+        mockStateManager.getCurrentProject.mockResolvedValue(
+            makeEdsProject('experience-workspace')
+        );
         const save = captureSaveHandler(command);
 
         await save({ componentConfigs: {}, authoringExperience: 'experience-workspace' });

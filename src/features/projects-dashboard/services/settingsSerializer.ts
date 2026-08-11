@@ -5,7 +5,12 @@
  * Used for import/export functionality to share settings between projects.
  */
 
-import { SETTINGS_FILE_VERSION, type SettingsFile, type SettingsEdsConfig } from '@/features/projects-dashboard/types/settingsFile';
+import { getAppBuilderComponentEntry } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+import {
+    SETTINGS_FILE_VERSION,
+    type SettingsFile,
+    type SettingsEdsConfig,
+} from '@/features/projects-dashboard/types/settingsFile';
 import type { Project } from '@/types/base';
 
 /**
@@ -86,6 +91,31 @@ export function isNewerVersion(settings: SettingsFile): boolean {
 }
 
 /**
+ * Derive the wizard's custom-source map from the keyed `appBuilderComponents`
+ * map (§E, shell instancing Step 8). The keyed map is the durable model —
+ * deriving (instead of persisting a parallel copy) means removed integrations
+ * can never resurrect in edit mode. Qualifying entries are custom-URL imports
+ * and AI-built instances: `kind === 'integration'` AND not a catalog id
+ * (catalog + mesh entries round-trip via their selection ids, keeping their
+ * edit-mode row kinds stable). The persisted display `name` rides along.
+ *
+ * @param project - Source project (keyed map may be absent on legacy projects)
+ * @returns The derived source map, or undefined when nothing qualifies
+ */
+function deriveAppBuilderComponentSources(
+    project: Project,
+): SettingsFile['appBuilderComponentSources'] {
+    const derived: NonNullable<SettingsFile['appBuilderComponentSources']> = {};
+    for (const [id, state] of Object.entries(project.appBuilderComponents ?? {})) {
+        if (state.kind !== 'integration') continue;
+        if (getAppBuilderComponentEntry(id) !== undefined) continue;
+        if (!state.source) continue; // defensive: malformed persisted entry
+        derived[id] = state.name ? { ...state.source, name: state.name } : { ...state.source };
+    }
+    return Object.keys(derived).length ? derived : undefined;
+}
+
+/**
  * Extract settings from an existing project
  *
  * Creates a SettingsFile from a project's current state.
@@ -95,10 +125,7 @@ export function isNewerVersion(settings: SettingsFile): boolean {
  * @param includeSecrets - Whether to include secret values (default: true for local copy)
  * @returns SettingsFile with extracted settings
  */
-export function extractSettingsFromProject(
-    project: Project,
-    includeSecrets = true,
-): SettingsFile {
+export function extractSettingsFromProject(project: Project, includeSecrets = true): SettingsFile {
     // Extract EDS config from eds-storefront component metadata (if present)
     let edsConfig: SettingsEdsConfig | undefined;
     const edsStorefront = project.componentInstances?.['eds-storefront'];
@@ -149,6 +176,16 @@ export function extractSettingsFromProject(
         installedBlockLibraries: project.installedBlockLibraries,
         // EDS configuration (for Edge Delivery Services stacks)
         edsConfig,
+        // App Builder integration round-trip: custom/instance sources are
+        // DERIVED from the keyed appBuilderComponents map (§E); the Console API
+        // picks beyond requiredApis persist on the project (manifest field)
+        appBuilderComponentSources: deriveAppBuilderComponentSources(project),
+        // BOTH forms. The keyed map is the one that survives step 07 — exporting the
+        // flat field alone meant a settings file would carry nothing once the flat
+        // write is retired, and an edit round-trip collapsed every pick into the
+        // unattributed bucket even before then.
+        additionalConsoleApis: project.additionalConsoleApis,
+        componentApiPicks: project.componentApiPicks,
     };
 }
 

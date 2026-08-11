@@ -84,31 +84,10 @@ jest.mock('@/features/authentication/ui/steps/AdobeAuthStep', () => ({
     },
 }));
 
-jest.mock('@/features/authentication/ui/steps/AdobeProjectStep', () => ({
-    AdobeProjectStep: ({ setCanProceed }: any) => {
-        React.useEffect(() => setCanProceed(true), [setCanProceed]);
-        return <div data-testid="adobe-project-step">Adobe Project Step</div>;
-    },
-}));
-
-jest.mock('@/features/authentication/ui/steps/AdobeWorkspaceStep', () => ({
-    AdobeWorkspaceStep: ({ setCanProceed }: any) => {
-        React.useEffect(() => setCanProceed(true), [setCanProceed]);
-        return <div data-testid="adobe-workspace-step">Adobe Workspace Step</div>;
-    },
-}));
-
 jest.mock('@/features/components/ui/steps/ComponentSelectionStep', () => ({
     ComponentSelectionStep: ({ setCanProceed }: any) => {
         React.useEffect(() => setCanProceed(true), [setCanProceed]);
         return <div data-testid="component-selection-step">Component Selection Step</div>;
-    },
-}));
-
-jest.mock('@/features/components/ui/steps/ComponentConfigStep', () => ({
-    ComponentConfigStep: ({ setCanProceed }: any) => {
-        React.useEffect(() => setCanProceed(true), [setCanProceed]);
-        return <div data-testid="component-config-step">Component Config Step</div>;
     },
 }));
 
@@ -123,6 +102,17 @@ jest.mock('@/features/prerequisites/ui/steps/PrerequisitesStep', () => ({
     PrerequisitesStep: ({ setCanProceed }: any) => {
         React.useEffect(() => setCanProceed(true), [setCanProceed]);
         return <div data-testid="prerequisites-step">Prerequisites Step</div>;
+    },
+}));
+
+// StorefrontSetupStep is mocked as a simple div so it can serve as a navigable
+// intermediate step in the mock wizard flow (replacing the retired adobe-project /
+// adobe-workspace steps). Unlike build-your-project, storefront-setup has no
+// sub-step footer driver, so plain Continue/Back navigation works as expected.
+jest.mock('@/features/eds/ui/steps/StorefrontSetupStep', () => ({
+    StorefrontSetupStep: ({ setCanProceed }: any) => {
+        React.useEffect(() => setCanProceed(true), [setCanProceed]);
+        return <div data-testid="storefront-setup-step">Storefront Setup Step</div>;
     },
 }));
 

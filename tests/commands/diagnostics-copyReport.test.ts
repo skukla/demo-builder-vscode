@@ -186,3 +186,56 @@ describe('browserProbeCommand', () => {
         expect(browserProbeCommand('win32').probe).toBe('start /?');
     });
 });
+
+/**
+ * The storefront delivery section had NO render coverage at all — `makeReport`
+ * never set `storefront`, so `storefrontLines` was unreachable from any test
+ * while it printed "PDP /products/default: HTTP 200 (prerendered)" for
+ * storefronts that could not serve a PDP.
+ *
+ * These pin the labels, because the label IS the bug: the request was always
+ * fine, the word attached to it was not.
+ */
+describe('storefront delivery section', () => {
+    const healthyProbe = {
+        baseUrl: 'https://main--demo-builder-test--skukla.aem.live',
+        site: { reachable: true, status: 200 },
+        smart404Snippet: { installed: true, status: 200 },
+        eagerRedirect: { installed: true, status: 200 },
+        authoredTemplate: { path: '/products/default', status: 200, published: true },
+        verdict: 'Storefront delivery looks correct (fallback installed, template published). No SKU was checked.',
+    };
+
+    const linesFor = (storefront: unknown): string =>
+        buildSummaryLines(makeReport({ storefront } as Partial<DiagnosticsReport>)).join('\n');
+
+    it('labels the template as the overlay source, not as a PDP', () => {
+        const out = linesFor(healthyProbe);
+
+        expect(out).toContain('Overlay source template /products/default');
+        expect(out).toContain('published');
+    });
+
+    it('never renders the word "prerendered"', () => {
+        // The control. This section claimed a prerender had happened on the
+        // strength of a request that cannot show one.
+        expect(linesFor(healthyProbe)).not.toMatch(/prerender/i);
+    });
+
+    it('shouts when the source template is missing', () => {
+        const out = linesFor({
+            ...healthyProbe,
+            authoredTemplate: { path: '/products/default', status: 404, published: false },
+            verdict: "PDP fallback installed, but the overlay's source template /products/default returned 404. Publish it or reset the storefront — every PDP renders from this page.",
+        });
+
+        expect(out).toContain('NOT PUBLISHED');
+        expect(out).toContain('every PDP renders from this page');
+    });
+
+    it('omits the section entirely when there is no storefront probe', () => {
+        // Control for the three above: without this, a renderer that always
+        // printed the section would pass them all.
+        expect(buildSummaryLines(makeReport()).join('\n')).not.toContain('Storefront delivery');
+    });
+});

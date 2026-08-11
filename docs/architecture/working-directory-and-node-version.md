@@ -86,7 +86,7 @@ Node versions are specified in `components.json`:
 }
 ```
 
-The `ExternalCommandManager` supports three modes:
+The `CommandExecutor` supports three modes:
 
 1. **Explicit Version**: `useNodeVersion: "20"`
 2. **Auto-detect (Adobe CLI)**: `useNodeVersion: "auto"`

@@ -15,8 +15,18 @@ import type { SkillInventoryEntry, McpInventoryEntry } from '@/types/ai';
 import '@testing-library/jest-dom';
 
 const SKILLS: SkillInventoryEntry[] = [
-    { name: 'Add a component', description: 'Adds a component to your project', path: '/p/.claude/skills/add-component.md', source: 'demo-builder' },
-    { name: 'Sync changes', description: null, path: '/p/.claude/skills/sync-changes.md', source: 'demo-builder' },
+    {
+        name: 'Add a component',
+        description: 'Adds a component to your project',
+        path: '/p/.claude/skills/add-component.md',
+        source: 'demo-builder',
+    },
+    {
+        name: 'Sync changes',
+        description: null,
+        path: '/p/.claude/skills/sync-changes.md',
+        source: 'demo-builder',
+    },
 ];
 
 const MCPS: McpInventoryEntry[] = [
@@ -54,7 +64,7 @@ function renderModal(props: Partial<React.ComponentProps<typeof AiCapabilitiesMo
                 isBusy={props.isBusy}
                 progress={props.progress}
             />
-        </Provider>,
+        </Provider>
     );
     return { onClose, onRegenerate };
 }
@@ -71,15 +81,19 @@ describe('AiCapabilitiesModal', () => {
         expect(screen.getByTestId('ai-skills-summary')).toHaveTextContent(/2 installed/);
     });
 
-    it('does not surface skill names by default (skills are collapsed)', () => {
+    it('surfaces every skill name at rest (flat list — no accordions to jump the modal)', () => {
         renderModal({ skills: SKILLS, mcps: MCPS });
-        expect(screen.queryByText('Add a component')).not.toBeInTheDocument();
-        expect(screen.queryByText('Sync changes')).not.toBeInTheDocument();
+        expect(screen.getByText('Add a component')).toBeInTheDocument();
+        expect(screen.getByText('Sync changes')).toBeInTheDocument();
     });
 
-    it('frames the surface as capability discovery, not a health check', () => {
+    it('frames the surface via its section anchors alone (no subtitle line)', () => {
         renderModal({ skills: SKILLS, mcps: MCPS });
-        expect(screen.getByText(/what the ai can do/i)).toBeInTheDocument();
+        // The "What the AI can do…" subtitle was removed (2026-07-09) — the
+        // title + section headings carry the framing.
+        expect(screen.queryByText(/what the ai can do/i)).not.toBeInTheDocument();
+        expect(screen.getByText('MCP servers')).toBeInTheDocument();
+        expect(screen.getByTestId('ai-skills-summary')).toBeInTheDocument();
     });
 
     it('shows a plain-language empty state for skills when none are installed', () => {
@@ -124,7 +138,9 @@ describe('AiCapabilitiesModal', () => {
     });
 
     it('flags MCP servers that errored during inspection', () => {
-        const broken: McpInventoryEntry[] = [{ id: 'broken-server', status: 'error', error: 'boom' }];
+        const broken: McpInventoryEntry[] = [
+            { id: 'broken-server', status: 'error', error: 'boom' },
+        ];
         renderModal({ skills: SKILLS, mcps: broken });
         expect(screen.getByTestId('ai-mcp-broken-server')).toHaveTextContent(/error|failed/i);
     });
@@ -141,13 +157,17 @@ describe('AiCapabilitiesModal', () => {
         renderModal({ skills: SKILLS, mcps: MCPS, isBusy: true });
         // The shared Modal renders actions as accessible div-buttons (aria-disabled),
         // not native <button disabled>.
-        expect(screen.getByRole('button', { name: /regenerating/i }))
-            .toHaveAttribute('aria-disabled', 'true');
+        expect(screen.getByRole('button', { name: /regenerating/i })).toHaveAttribute(
+            'aria-disabled',
+            'true'
+        );
     });
 
     it('changes the action label to "Regenerating…" while busy so the disabled state has visible cause', () => {
         renderModal({ skills: SKILLS, mcps: MCPS, isBusy: true });
-        expect(screen.queryByRole('button', { name: /^regenerate ai files$/i })).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole('button', { name: /^regenerate ai files$/i })
+        ).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: /regenerating/i })).toBeInTheDocument();
     });
 

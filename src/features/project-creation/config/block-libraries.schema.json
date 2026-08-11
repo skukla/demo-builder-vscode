@@ -72,6 +72,13 @@
           },
           "description": "If set, this library is only available for these package IDs (pinned/exclusive)"
         },
+        "defaultForPackages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Package IDs for which this library is pre-selected by DEFAULT: seeded checked on stack select but deselectable (stays in the selectable list — unlike nativeForPackages' locked inclusion)"
+        },
         "default": {
           "type": "boolean",
           "description": "Whether this library should be pre-selected by default for non-native packages"

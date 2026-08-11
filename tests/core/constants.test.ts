@@ -5,7 +5,21 @@
  * type-safe access to component identifiers matching templates/components.json.
  */
 
-import { COMPONENT_IDS, ComponentId } from '@/core/constants';
+import { AI_CONTEXT_VERSION, COMPONENT_IDS, ComponentId } from '@/core/constants';
+
+describe('AI_CONTEXT_VERSION', () => {
+    // Pin the current bundle version. Bump this pin ONLY together with a real
+    // generated-content change (see the ai-context-authoring discipline): the
+    // constant re-gates every existing project for a bundle refresh.
+    // v6: the PostToolUse git-sync hook actually fires. It read a
+    // `$CLAUDE_TOOL_INPUT` env var Claude Code never sets, so it silently did
+    // nothing on every EDS project ever generated — and sync-changes.md told the
+    // agent the hook covered commit+push, so it skipped sync_storefront too.
+    // Existing projects need the regenerate this bump triggers.
+    it('is 6 (working PostToolUse git-sync hook)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(6);
+    });
+});
 
 describe('COMPONENT_IDS', () => {
     describe('export', () => {

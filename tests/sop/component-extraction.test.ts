@@ -40,7 +40,7 @@ describe('SOP: Component Extraction', () => {
      */
     const LEGITIMATE_GENERICS = [
         'SearchableList', // 264 lines, reusable list pattern
-        'SelectionStepContent', // 227 lines, 3+ usages (AdobeProjectStep, AdobeWorkspaceStep, GitHubRepoSelectionStep)
+        'SelectionStepContent', // 227 lines, 3+ usages (AdobeProjectPicker, AdobeWorkspacePicker, RepoSelectionInline)
     ];
 
     /**
@@ -236,7 +236,11 @@ describe('SOP: Component Extraction', () => {
          */
         const SHARED_COMPONENTS_VERIFIED = [
             { name: 'EmptyState', minUsages: 1 }, // 1 usage (SelectionStepContent)
-            { name: 'FadeTransition', minUsages: 2 }, // 3 usages
+            // 1 usage (StatusDisplay). Was 3; the other consumers lived in the dead
+            // mesh/ui tree deleted 2026-07-31. Kept separate rather than inlined —
+            // the transition is a real, separable concern and StatusDisplay is
+            // already large.
+            { name: 'FadeTransition', minUsages: 1 },
             { name: 'CopyableText', minUsages: 2 }, // 3 usages
             { name: 'StatusDot', minUsages: 2 }, // 6 usages
         ];
@@ -275,7 +279,7 @@ describe('SOP: Component Extraction', () => {
             /**
              * These components have 1 usage but are kept as acceptable technical debt:
              * - LoadingOverlay: 64 lines, used by WizardContainer
-             * - NumberedInstructions: 72 lines, used by MeshErrorDialog
+             * - NumberedInstructions: 72 lines, used by GitHubAppInstallDialog
              *
              * Rationale: Small components that may gain future usage.
              * Inlining would cause code churn for minimal benefit.

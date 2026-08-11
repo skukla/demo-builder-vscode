@@ -1,3 +1,4 @@
+import { sleep } from '@/core/utils/sleep';
 /**
  * Mesh Helpers
  *
@@ -168,7 +169,7 @@ export async function pollForMeshDeployment(config: PollConfig): Promise<PollRes
 
         // Wait before next attempt (unless this was the last attempt)
         if (attempt < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, intervalMs));
+            await sleep(intervalMs);
         }
     }
 

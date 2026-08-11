@@ -60,9 +60,12 @@ Displays a single project as a clickable card.
 
 **Displays:**
 - Project name (title)
-- Status indicator (● Running / ○ Stopped)
-- Port number (if running)
-- Component list (stacked)
+- Brand + stack summary
+- **Two status lines, one per axis** — and no more:
+  - **Runtime** (`getRuntimeSummary`) — the LOCAL dev server: `Running on port 3000` / `Stopped`. EDS projects have no running state, so they get this line only while an operation is in flight (`Republishing...`, `Resetting...`).
+  - **Deployment** (`getDeploymentSummary`) — the CLOUD side, worst-of across mesh + storefront + integrations: `Deployed` / `Attention needed` / `Deploying…` / `Not deployed`. Absent when the project has nothing deployable.
+
+The card deliberately does NOT name individual components. It used to render `Mesh · Update needed` plus an integrations count while saying nothing about the storefront, which drifts identically. Per-component detail belongs to the integrations dashboard one click away; the card answers "is what is deployed current?". `getProjectStatusDisplay` still serves `ProjectRow`, which shows exactly one line and therefore keeps the storefront in it.
 
 ### ProjectsGrid
 
@@ -120,7 +123,7 @@ Object literal handler map for the Projects List view, used with `dispatchHandle
 
 **File:** `handlers/projectsListHandlers.ts`
 
-**Registered Handlers:**
+**Registered Handlers** (core three; the full map — 23 keys covering lifecycle, open-in-browser/DA.live/admin-panel, rename/export/delete, pinning, and utilities — lives in `handlers/projectsListHandlers.ts`):
 - `getProjects` - Load all projects
 - `selectProject` - Select a project. Sets the persisted current-project pointer and surfaces the project dashboard webview in-place — **no workspace anchoring, no reload** (always-root home model). `forceNewWindow=true` opens a new window, which home-on-launch (`shouldReHomeToRoot`) re-homes back to the projects root.
 - `createProject` - Trigger project creation wizard
@@ -166,12 +169,15 @@ const result = await handleCreateProject(context);
 
 ## Message Types
 
+Core messages (non-exhaustive — the handler map in `handlers/projectsListHandlers.ts` is the source of truth; most kebab actions take `{ projectPath }`):
+
 | Message | Direction | Payload | Response |
 |---------|-----------|---------|----------|
 | `getProjects` | UI → Extension | - | `{ success, data: { projects } }` |
-| `selectProject` | UI → Extension | `{ projectPath }` | `{ success, data: { project } }` |
+| `selectProject` | UI → Extension | `{ projectPath, forceNewWindow?, surface? }` | `{ success, data: { project } }` — `surface: 'integrations'` opens the Integrations page instead of the dashboard (the kebab's `Integrations…`), reusing this handler's validation/load/set-current rather than forking it |
 | `createProject` | UI → Extension | - | `{ success }` |
-| `openDocs` | UI → Extension | - | `{ success }` |
+| `openAdminPanel` | UI → Extension | `{ projectPath }` | `{ success }` (opens the admin URL — derived for SaaS, `ADOBE_COMMERCE_ADMIN_URL` field for PaaS — or prompts "Open Configure") |
+| `redeployMesh` | UI → Extension | `{ projectPath }` | `{ success }` (kebab More item, shown when the mesh is in a "Redeploy Mesh" state; runs `deployMeshHeadless` under a progress notification) |
 | `openHelp` | UI → Extension | - | `{ success }` |
 | `openSettings` | UI → Extension | - | `{ success }` |
 | `projectsUpdated` | Extension → UI | `{ projects }` | - |
@@ -229,5 +235,5 @@ See [ADR-004](../../../docs/architecture/adr/004-claude-code-harness.md#amendmen
 ## Related Features
 
 - **sidebar** - Provides navigation context (utility bar only in project contexts; no back link — see sidebar/CLAUDE.md)
-- **dashboard** - Project detail view shown when project card is clicked. Shares `renameProjectCore` (`services/projectRenameService.ts` — folder rename + path updates + recent-projects + save) with the project dashboard's Rename action; both the projects-list kebab and the dashboard "More" menu delegate to it.
+- **dashboard** - Project detail view shown when project card is clicked. Shares `renameProjectCore` (`services/projectRenameService.ts` — folder rename + path updates + recent-projects + save) with the project dashboard; both surfaces rename IN PLACE via the shared `InlineRenameField` (`@/core/ui/components/forms`) — the card name's hover pencil here, the dashboard title's pencil there. No menu Rename items, no dialogs.
 - **project-creation** - Wizard triggered by "+ New" button

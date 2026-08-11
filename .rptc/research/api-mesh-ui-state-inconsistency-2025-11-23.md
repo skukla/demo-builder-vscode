@@ -32,7 +32,7 @@ This creates user confusion about whether the operation succeeded. The root caus
 [2025-11-23T19:37:57.814Z] Mesh status check: {
   "rawMeshStatus": "success",
   "statusCategory": "deployed",
-  "meshId": "f625cd2c-a812-459b-bdb9-dd7f9deeeb2e"
+  "meshId": "<mesh-id>"
 }
 ```
 

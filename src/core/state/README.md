@@ -29,7 +29,7 @@ Do NOT use when:
 
 **Usage**:
 ```typescript
-import { StateManager } from '@/shared/state';
+import { StateManager } from '@/core/state';
 
 const stateManager = new StateManager(context);
 await stateManager.initialize();
@@ -67,7 +67,7 @@ const project = await stateManager.getCurrentProject();
 
 **Example**:
 ```typescript
-import { StateManager } from '@/shared/state';
+import { StateManager } from '@/core/state';
 
 const stateManager = new StateManager(context);
 await stateManager.initialize();
@@ -110,7 +110,7 @@ await stateManager.removeProcess('frontend');
 
 **Usage**:
 ```typescript
-import { updateFrontendState } from '@/shared/state';
+import { updateFrontendState } from '@/core/state';
 
 await updateFrontendState(project, logger);
 ```
@@ -122,8 +122,9 @@ await updateFrontendState(project, logger);
 **Example**:
 ```typescript
 // After mesh deployment, update frontend .env
+// (gate on the keyed mesh entry via the accessor — ADR-011 D3)
 const project = await stateManager.getCurrentProject();
-if (project && project.meshState?.meshId) {
+if (project && getMeshEndpointUrl(project)) {
     await updateFrontendState(project, logger);
     // Frontend .env now has MESH_ID and MESH_ENDPOINT
 }
@@ -135,7 +136,7 @@ if (project && project.meshState?.meshId) {
 
 **Usage**:
 ```typescript
-import { getFrontendEnvVars } from '@/shared/state';
+import { getFrontendEnvVars } from '@/core/state';
 
 const envVars = getFrontendEnvVars(project);
 // Returns: { MESH_ID: '...', MESH_ENDPOINT: '...' }
@@ -302,8 +303,6 @@ if (quickPick) {
   - `dashboard` - Current project display
   - `mesh` - Mesh state tracking
   - `components` - Component instance state
-- **Providers**:
-  - `ProjectTreeProvider` - Project explorer
 
 ### Dependencies
 - VS Code API (`vscode`) - ExtensionContext, EventEmitter
@@ -423,8 +422,8 @@ This module was migrated from `src/utils/stateManager.ts` as part of the shared 
 ## See Also
 
 - **Related Shared Modules**:
-  - `@/shared/logging` - Used for logging state operations
-  - `@/shared/base` - BaseCommand uses StateManager
+  - `@/core/logging` - Used for logging state operations
+  - `@/core/base` - BaseCommand uses StateManager
 
 - **Related Documentation**:
   - Main architecture: `../../CLAUDE.md`
