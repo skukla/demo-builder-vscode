@@ -45,14 +45,18 @@ bash .claude/skills/dead-code-scan/scan.sh src                         # orphans
 bash .claude/skills/architecture-duplication-scan/signals.sh src       # competing impls
 ```
 
-### Baselines measured 2026-08-05 — a number at baseline is not news
+### Baselines measured 2026-08-11 — a number at baseline is not news
 
 | Scan | Baseline | What movement means |
 |---|---|---|
-| component-extraction | 9 groups | a NEW group, or one growing past 3 files |
-| code-duplication (jscpd) | 61 clones, 0.65% lines | a jump, or any clone crossing a feature boundary |
-| circular-dependency | 13 cycles | any new cycle; most existing ones are type-only |
+| component-extraction | 4 groups | a NEW group, or one growing past 3 files |
+| code-duplication (jscpd) | 64 clones, 0.70% lines | a jump, or any clone crossing a feature boundary |
+| circular-dependency | 13 cycles | any new cycle; most existing ones are same-feature handler/phase pairs |
 | dead-code doc-drift | 0 | any hit is real — it is confirmed against `git log` |
+
+Prior: 2026-08-05 — 9 groups · 61 clones/0.65% · 13 cycles · 0 drift. The component-extraction
+drop from 9 to 4 is the `step-view`/`step-nav` shell finally being extracted, not the scan
+weakening.
 
 Re-measure and update this table whenever the sweep runs; a stale baseline turns
 every finding into noise.
