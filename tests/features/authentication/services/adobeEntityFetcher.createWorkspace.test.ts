@@ -103,9 +103,10 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
             expect.objectContaining({
                 title: 'My Stage',
                 name: expect.stringMatching(/^MyStage[A-Za-z0-9]+$/),
-                who_created: 'Demo Builder',
             })
         );
+        // See createProject.test.ts: Adobe owns this field; sending a literal is misleading.
+        expect(createWorkspace.mock.calls[0][2]).not.toHaveProperty('who_created');
     });
 
     it('provisions a Runtime namespace on the new workspace', async () => {
