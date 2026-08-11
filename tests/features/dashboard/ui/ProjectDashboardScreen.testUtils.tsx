@@ -99,6 +99,12 @@ jest.mock('@adobe/react-spectrum', () => ({
         </div>
     ),
     Item: ({ children }: any) => <>{children}</>,
+    // The ActionGrid's lifecycle and remedy tiles wrap their buttons in a
+    // TooltipTrigger; both render inline so the tooltip text is queryable
+    // without a hover. Added when the runtime status moved off the surface and
+    // into these tooltips.
+    TooltipTrigger: ({ children }: any) => <>{children}</>,
+    Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
     Divider: () => <hr />,
     ProgressCircle: () => <div data-testid="progress-circle" />,
     Link: ({ children, onPress, _isQuiet, ...props }: any) => (
@@ -188,6 +194,11 @@ jest.mock('@spectrum-icons/workflow/More', () => ({
 jest.mock('@spectrum-icons/workflow/Edit', () => ({
     __esModule: true,
     default: () => <span data-testid="edit-icon" />,
+}));
+// Republish tile (Storefront zone remedy).
+jest.mock('@spectrum-icons/workflow/Replay', () => ({
+    __esModule: true,
+    default: () => <span data-testid="replay-icon" />,
 }));
 jest.mock('@spectrum-icons/workflow/PublishCheck', () => ({
     __esModule: true,

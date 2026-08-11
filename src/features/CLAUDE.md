@@ -205,7 +205,17 @@ multi-workspace.
 **Responsibilities:**
 - Project control panel UI
 - Start/Stop demo controls
-- Mesh deployment status
+- **Status placement rule** (documented in full at the top of `ui/components/ActionGrid.tsx`):
+  environment health → the masthead band (`DashboardStatusHeader`: AI Ready, IMS Org);
+  artifact state → the ActionGrid zone that owns the part, as a **remedy tile** (the button that
+  fixes it, wearing an amber dot when due, tooltip explaining why): `Restart` in Primary,
+  `Republish` in Storefront, plus the Integrations summary tile. The rule exists because the
+  Frontend badge broke it — it sat in the band while its remedies sat in the grid, so it was the
+  only status that named a problem and offered nothing. Note which tile takes the dot: Republish,
+  not Sync Storefront, because Sync pushes storefront *code* and never clears
+  `edsStorefrontStatusSummary`. **Every dotted tile goes through `DashboardTile`**, whose
+  `status` prop carries the dot and its tooltip as one value — a dot with no explanation is
+  not expressible. The integrations tile shipped one for months before that was enforced.
 - Project configuration editing (Configure screen)
 - AI health + capability (separate concerns): the passive "AI Ready" badge reflects AI-setup health (from `verify-ai-setup`); a distinct "View Skills" link opens the capability catalog (skills) and carries Regenerate AI files. A conditional Regenerate link appears beside the badge when health needs attention. MCP/session-MCP plumbing stays in the "Demo Builder: Diagnostics" command.
 

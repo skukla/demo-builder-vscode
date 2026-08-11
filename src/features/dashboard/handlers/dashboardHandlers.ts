@@ -263,6 +263,24 @@ export const handleStopDemo: MessageHandler = async (context) => {
 };
 
 /**
+ * Handle 'restartDemo' message - stop, settle, start.
+ *
+ * Exists because the dashboard could report "Restart needed" (a config change
+ * while running) and offer nothing to act on it — the user had to press Stop and
+ * then Start themselves.
+ *
+ * Delegates to `demoBuilder.restartDemo` rather than issuing the two commands
+ * here: that command owns the settle delay between them, and re-implementing the
+ * sequence would drop it and race the stop.
+ */
+export const handleRestartDemo: MessageHandler = async (context) => {
+    await vscode.commands.executeCommand('demoBuilder.restartDemo');
+    // Update demo status only (don't re-check mesh) — same as start/stop.
+    setTimeout(() => sendDemoStatusUpdate(context), TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
+    return { success: true };
+};
+
+/**
  * Handle 'openBrowser' message - Open demo in browser (non-EDS projects)
  */
 export const handleOpenBrowser: MessageHandler = async (context) => {
@@ -1129,6 +1147,7 @@ export const dashboardHandlers = defineHandlers({
     // Demo lifecycle handlers
     startDemo: handleStartDemo,
     stopDemo: handleStopDemo,
+    restartDemo: handleRestartDemo,
 
     // Navigation handlers
     openBrowser: handleOpenBrowser,

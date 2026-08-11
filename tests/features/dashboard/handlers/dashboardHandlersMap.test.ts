@@ -130,33 +130,50 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 34 handlers', () => {
+        it('should have exactly 35 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers);
 
-            // Then: Exactly 34 handlers
-            // 1 init (requestStatus only; no 'ready') + 2 lifecycle + 9 navigation
-            // (openBrowser, openLiveSite, openDaLive, openAdminPanel, configure,
-            // openDevConsole, getProjectUrls, navigateBack, openIntegrations +
-            // showProjectDashboard — the summary tile's route to the dedicated
-            // surface and the surface's route back) + 1 mesh + 1
-            // syncStorefront + 1 refreshBlockLibrary + 2 auth (reAuthenticate +
-            // switchOrg) + 1 project + 1 reset = 18, plus the 4 More-menu actions
-            // (editProject, exportProject, republishContent, renameProject) = 22
-            // (copyPath removed — Copy Path lives on the project-card kebab),
-            // plus the 5 appBuilderComponent (integrations list) actions
-            // (addAppBuilderComponent, deployAppBuilderComponent,
-            // redeployAppBuilderComponent, removeAppBuilderComponent,
-            // renameAppBuilderComponent — shell instancing Step 10) = 27,
-            // plus the 3 console-API actions
-            // (listConsoleApis, addConsoleApis, setConsoleApis) = 30, plus the
-            // headless exportProjectSettings (export_project_settings MCP tool) = 33.
-            // verifyAppBuilderComponent retired 2026-08-03 (see above).
-            // The 4 singular App Builder actions (addApp, deployApp, redeployApp,
-            // removeApp) retired with the dormant AppBuilderCard (D3 Step 08).
-            // setAuthoringExperience lives in the Configure webview, not this map.
-            expect(types).toHaveLength(34);
+            // Then: exactly 35, derived in the map's own declaration order so a
+            // reader can check it against the source top to bottom.
+            //
+            // NOTE: the previous derivation did not add up — it said "9
+            // navigation" while listing ten, and its running subtotals were off
+            // by one from the first group onward. Rewritten rather than nudged.
+            //
+            //   1  init            requestStatus (no 'ready')
+            //   3  lifecycle       startDemo, stopDemo, restartDemo
+            //  10  navigation      openBrowser, openLiveSite, openDaLive,
+            //                      openAdminPanel, configure, openDevConsole,
+            //                      getProjectUrls, navigateBack,
+            //                      openIntegrations, showProjectDashboard
+            //   1  mesh            deployMesh
+            //   5  integrations    add/deploy/redeploy/remove/rename
+            //                      AppBuilderComponent
+            //   3  console APIs    listConsoleApis, addConsoleApis, setConsoleApis
+            //   2  storefront      syncStorefront, refreshBlockLibrary
+            //   2  auth            reAuthenticate, switchOrg
+            //   1  delete          deleteProject
+            //   5  project actions editProject, renameProject, exportProject,
+            //                      exportProjectSettings (headless twin, for the
+            //                      export_project_settings MCP tool),
+            //                      republishContent
+            //   1  reset           resetProject
+            //   1  destination     setProjectDestination
+            //  ==
+            //  35
+            //
+            // Retired, so they are absent by design: verifyAppBuilderComponent
+            // (2026-08-03); the 4 singular App Builder actions (addApp,
+            // deployApp, redeployApp, removeApp) with the dormant
+            // AppBuilderCard (D3 Step 08); copyPath, which lives on the
+            // project-card kebab. setAuthoringExperience belongs to the
+            // Configure webview, not this map.
+            //
+            // restartDemo is the newest: the dashboard reported "Restart needed"
+            // for a config change and offered no way to act on it.
+            expect(types).toHaveLength(35);
         });
 
         it('should have handlers as functions', () => {

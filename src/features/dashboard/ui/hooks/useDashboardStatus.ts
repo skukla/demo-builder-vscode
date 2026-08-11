@@ -10,6 +10,11 @@
 import { useState, useEffect, useMemo, useRef, useCallback, Dispatch, SetStateAction } from 'react';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
+import {
+    getStorefrontStatusDisplay,
+    isUpdatePending,
+    severityToColor,
+} from '@/core/ui/utils/statusVocabulary';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
 import type {
@@ -69,11 +74,21 @@ export interface ProjectStatus {
 export type StatusColor = 'blue' | 'green' | 'yellow' | 'orange' | 'red' | 'gray';
 
 /**
- * Status display object
+ * The fix a bad status needs, decided where the status is named rather than by
+ * whichever component happens to render it.
+ *
+ * The Frontend badge used to report "Republish needed" and "Restart needed" and
+ * offer neither: the republish sat in the ActionGrid's More overflow, and no
+ * restart affordance existed at all. Naming the remedy beside the state is what
+ * stops those drifting apart again.
  */
+export type StatusRemedy = 'republish' | 'restart';
+
 export interface StatusDisplay {
     color: StatusColor;
     text: string;
+    /** Present only when this state has an inline fix to offer. */
+    remedy?: StatusRemedy;
 }
 
 /**
@@ -542,20 +557,20 @@ export function useDashboardStatus(
         // EDS projects show dynamic status based on storefront config state
         // Use updated value from projectStatus (via statusUpdate) or fall back to initial prop
         if (isEds) {
+            // One shared table, so this cannot drift from how the project card
+            // renders the same state — which is exactly what happened while both
+            // surfaces owned a switch statement (they disagreed on the casing of
+            // "Not published").
             const storefrontStatus =
-                projectStatus?.edsStorefrontStatus || initialEdsStorefrontStatus || 'published';
-            switch (storefrontStatus) {
-                case 'published':
-                    return { color: 'green', text: 'Published' };
-                case 'stale':
-                    return { color: 'yellow', text: 'Republish needed' };
-                case 'update-declined':
-                    return { color: 'orange', text: 'Republish needed' };
-                case 'not-published':
-                    return { color: 'gray', text: 'Not Published' };
-                default:
-                    return { color: 'green', text: 'Published' };
-            }
+                projectStatus?.edsStorefrontStatus || initialEdsStorefrontStatus;
+            const display = getStorefrontStatusDisplay(storefrontStatus);
+            return {
+                color: severityToColor(display.severity),
+                text: display.label,
+                // Only DRIFT offers a republish. `not-published` is a storefront
+                // that has never shipped, and its verb is Sync Storefront.
+                remedy: isUpdatePending(storefrontStatus) ? 'republish' : undefined,
+            };
         }
 
         switch (status) {
@@ -563,7 +578,7 @@ export function useDashboardStatus(
                 return { color: 'blue', text: 'Starting...' };
             case 'running':
                 if (frontendConfigChanged) {
-                    return { color: 'yellow', text: 'Restart needed' };
+                    return { color: 'yellow', text: 'Restart needed', remedy: 'restart' };
                 }
                 return { color: 'green', text: `Running on port ${port}` };
             case 'stopping':

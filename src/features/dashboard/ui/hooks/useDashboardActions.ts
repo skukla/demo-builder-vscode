@@ -35,6 +35,12 @@ export interface UseDashboardActionsReturn {
     handleStartDemo: () => void;
     /** Stop the demo server */
     handleStopDemo: () => void;
+    /**
+     * Stop and start again — the fix for "Restart needed", a config change that
+     * landed while the demo was running. Delegates the sequencing (and its
+     * settle delay) to the extension rather than firing stop then start here.
+     */
+    handleRestartDemo: () => void;
     /** Deploy API Mesh */
     handleDeployMesh: () => void;
     /** Sync storefront — git push + Helix preview/publish (EDS projects only) */
@@ -95,6 +101,11 @@ export function useDashboardActions({
     const handleStopDemo = useCallback(() => {
         setIsTransitioning(true);
         webviewClient.postMessage('stopDemo');
+    }, [setIsTransitioning]);
+
+    const handleRestartDemo = useCallback(() => {
+        setIsTransitioning(true);
+        webviewClient.postMessage('restartDemo');
     }, [setIsTransitioning]);
 
     const handleDeployMesh = useCallback(() => {
@@ -185,6 +196,7 @@ export function useDashboardActions({
     return {
         handleStartDemo,
         handleStopDemo,
+        handleRestartDemo,
         handleDeployMesh,
         handleSyncStorefront,
         handleRefreshBlockLibrary,

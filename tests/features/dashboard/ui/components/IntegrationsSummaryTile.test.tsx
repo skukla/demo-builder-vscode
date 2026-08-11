@@ -25,6 +25,10 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 }));
 
 jest.mock('@adobe/react-spectrum', () => ({
+    // The tile now routes through DashboardTile, which wraps it in a
+    // TooltipTrigger so the dot has words. Rendered inline for queryability.
+    TooltipTrigger: ({ children }: any) => <>{children}</>,
+    Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
     ActionButton: ({
         children,
         onPress,
@@ -277,5 +281,71 @@ describe('IntegrationsSummaryTile', () => {
         );
 
         expect(screen.getByTestId('integrations-tile-dot')).not.toHaveClass('status-dot--pulse');
+    });
+});
+
+/**
+ * The dot needs words. It shipped without any.
+ *
+ * This tile carried a coloured dot — amber for drift, red for a failed deploy —
+ * with nothing to hover and no text anywhere on the dashboard saying what it
+ * meant. You had to open the integrations surface to find out whether the colour
+ * was worth caring about, which is the opposite of what a summary is for.
+ *
+ * The wording comes from the shared status vocabulary, so the tooltip cannot
+ * disagree with the card the surface shows for the same state.
+ */
+describe('IntegrationsSummaryTile — the dot explains itself', () => {
+    const integration = (status: string) => ({
+        kind: 'integration' as const,
+        status,
+        source: { owner: 'acme', repo: 'widget' },
+    });
+
+    it.each([
+        ['error', 'Deploy failed'],
+        ['stale', 'Update needed'],
+        ['not-deployed', 'Not deployed'],
+        ['deployed', 'Deployed'],
+    ])('says what a %s dot means', (status, label) => {
+        render(
+            <IntegrationsSummaryTile
+                hasAdobeContext
+                appBuilderComponents={{ a: integration(status) } as never}
+            />
+        );
+
+        expect(screen.getByRole('tooltip')).toHaveTextContent(label);
+    });
+
+    it('describes the WORST state, matching the dot', () => {
+        // One failure behind three healthy integrations is the case the dot
+        // exists for; the words must agree with the colour.
+        render(
+            <IntegrationsSummaryTile
+                hasAdobeContext
+                appBuilderComponents={
+                    {
+                        a: integration('deployed'),
+                        b: integration('error'),
+                        c: integration('deployed'),
+                    } as never
+                }
+            />
+        );
+
+        expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute(
+            'data-variant',
+            'error'
+        );
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Deploy failed');
+    });
+
+    it('still explains the tile when there is no dot to explain', () => {
+        // Nothing deployed yet: no dot, but the tile is the way IN, so it says so.
+        render(<IntegrationsSummaryTile hasAdobeContext appBuilderComponents={{}} />);
+
+        expect(screen.queryByTestId('integrations-tile-dot')).not.toBeInTheDocument();
+        expect(screen.getByRole('tooltip')).toHaveTextContent(/integrations/i);
     });
 });

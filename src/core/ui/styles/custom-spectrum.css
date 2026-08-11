@@ -2047,7 +2047,24 @@ button[class*="spectrum-Button"][disabled],
 .dashboard-status-header {
     background-color: var(--spectrum-global-color-gray-50) !important;
     border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important;
-    margin-bottom: 16px !important;
+    margin-bottom: 12px !important;
+}
+
+/* The band is ambient context, not content — it should not claim the vertical
+   space of a section header. Scoped to this header rather than changed on
+   `.page-header-section`, which the projects dashboard and integrations screen
+   also use for their real titles. */
+.dashboard-status-header .page-header-section {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+}
+
+/* AI badge + its capabilities link on one line. The link was a standalone row
+   beneath the badges, which cost the band a whole row to say one thing. */
+.dashboard-status-badge-inline {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
 }
 
 /* Project dashboard: left-anchored single column.
@@ -2102,16 +2119,33 @@ button[class*="spectrum-Button"][disabled],
 .dashboard-status-grid {
     display: flex !important;
     flex-direction: column !important;
-    gap: 8px !important;
+    /* Was 8px to separate the badge stack from the capabilities-link row below
+       it. Both are gone — the link moved onto the AI badge line and the badges
+       onto one row — so this now only ever spaces the single badge line from the
+       org-mismatch notice, which appears on mismatch only. */
+    gap: 4px !important;
 }
 
 /* Badges STACKED one per line (2026-07-09, reversing the earlier inline row):
    mixed-length statuses read as a scannable column. */
+/* STACKED, deliberately. The column came in on 2026-07-09 so the values line
+   up — "READY" and "ADOBE DEMO SYSTEM" starting at the same x — which is what
+   lets two facts read as a scannable pair rather than a sentence.
+
+   A stale markup comment claimed the opposite ("a single horizontal row…
+   instead of stacking") and briefly got this flattened to a row to match. Wrong
+   direction: the comment predated the column and was the thing out of date.
+   Both say stacked now.
+
+   The height to save here is PADDING, not rows — see the scoped
+   `.page-header-section` override above. Pinned by
+   tests/features/dashboard/ui/components/DashboardStatusHeader-layout.test.ts,
+   which reads this stylesheet because jsdom resolves no layout. */
 .dashboard-status-badges {
     display: flex !important;
     flex-direction: column !important;
     align-items: flex-start !important;
-    row-gap: 8px !important;
+    row-gap: 4px !important;
 }
 
 /* Each badge is a self-contained inline unit: dot · label · value (· action). */

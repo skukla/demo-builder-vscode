@@ -153,6 +153,7 @@ export function ProjectDashboardScreen({
         handleDeleteProject,
         handleExportProject,
         handleRepublishContent,
+        handleRestartDemo,
         handleResetProject,
         handleNavigateBack,
         handleReAuthenticate,
@@ -234,7 +235,6 @@ export function ProjectDashboardScreen({
                     masthead={
                         <>
                             <DashboardStatusHeader
-                                demoStatusDisplay={demoStatusDisplay}
                                 aiReady={aiReady}
                                 imsOrgDisplay={imsOrgDisplay}
                                 orgCheckState={orgCheckState}
@@ -268,6 +268,8 @@ export function ProjectDashboardScreen({
                                     isStopDisabled={isStopDisabled}
                                     isMeshActionDisabled={isMeshActionDisabled}
                                     isOpeningBrowser={isOpeningBrowser}
+                                    demoStatus={demoStatusDisplay}
+                                    handleRestartDemo={handleRestartDemo}
                                     hasAdobeContext={hasAdobeContext}
                                     appBuilderComponents={appBuilderComponents}
                                     hasMesh={hasMesh}

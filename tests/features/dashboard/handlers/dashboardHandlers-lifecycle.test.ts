@@ -4,10 +4,12 @@
  * Tests for demo lifecycle handlers:
  * - handleStartDemo: starts the demo server
  * - handleStopDemo: stops the demo server
+ * - handleRestartDemo: stop + start, for a config change that needs a reload
  */
 
 import * as vscode from 'vscode';
 import {
+    handleRestartDemo,
     handleStartDemo,
     handleStopDemo,
 } from '@/features/dashboard/handlers/dashboardHandlers';
@@ -105,6 +107,38 @@ describe('Dashboard Lifecycle Handlers', () => {
 
             expect(result).toEqual({ success: true });
             expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.stopDemo');
+        });
+    });
+
+    /**
+     * Restart exists because the dashboard could SAY "Restart needed" and offer
+     * nothing: the status came from `frontendConfigChanged`, and the only way to
+     * act on it was to press Stop and then Start.
+     *
+     * It delegates to `demoBuilder.restartDemo`, which already sequences the two
+     * with a settle delay between them. Doing that sequencing in the webview
+     * instead would race the stop.
+     */
+    describe('handleRestartDemo', () => {
+        it('delegates to the restart command rather than sequencing stop/start itself', async () => {
+            const { mockContext } = setupMocks({ status: 'running' });
+
+            const result = await handleRestartDemo(mockContext);
+
+            expect(result).toEqual({ success: true });
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.restartDemo');
+            expect(mockExecuteCommand).toHaveBeenCalledTimes(1);
+        });
+
+        it('does NOT issue a bare stop or start', async () => {
+            // The sequencing (and its settle delay) belongs to the command. A
+            // handler that issued both would drop the delay and race the stop.
+            const { mockContext } = setupMocks({ status: 'running' });
+
+            await handleRestartDemo(mockContext);
+
+            expect(mockExecuteCommand).not.toHaveBeenCalledWith('demoBuilder.stopDemo');
+            expect(mockExecuteCommand).not.toHaveBeenCalledWith('demoBuilder.startDemo');
         });
     });
 });

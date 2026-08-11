@@ -16,12 +16,13 @@
  * @module features/dashboard/ui/components/IntegrationsSummaryTile
  */
 
-import { ActionButton, Text } from '@adobe/react-spectrum';
 import Data from '@spectrum-icons/workflow/Data';
 import React from 'react';
 import type { MeshStatus } from '../hooks/useDashboardStatus';
+import { DashboardTile } from './DashboardTile';
 import { toMeshCardStatus } from './integrations/integrationCardModel';
-import { StatusDot, type StatusDotVariant } from '@/core/ui/components/ui/StatusDot';
+import { type StatusDotVariant } from '@/core/ui/components/ui/StatusDot';
+import { getStatusDisplay } from '@/core/ui/utils/statusVocabulary';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { AppBuilderComponentState } from '@/types/base';
 
@@ -58,6 +59,17 @@ export function worstStatusVariant(statuses: string[]): StatusDotVariant {
     return match?.variant ?? 'success';
 }
 
+/**
+ * The most alarming status itself, so the tooltip can NAME what the dot colours.
+ *
+ * The dot shipped without any words: amber or red with nothing to hover, so the
+ * only way to learn whether the colour mattered was to open the surface — the
+ * opposite of what a summary tile is for.
+ */
+function worstStatus(statuses: string[]): string | undefined {
+    return SEVERITY.find((entry) => statuses.includes(entry.status))?.status;
+}
+
 export function IntegrationsSummaryTile({
     hasAdobeContext,
     appBuilderComponents,
@@ -91,31 +103,25 @@ export function IntegrationsSummaryTile({
     // Shaped like its build-zone neighbours (icon above label) so the row reads
     // as one bar; the dot rides the icon as a small overlay rather than widening
     // the tile, which is what made it wrap onto its own line before.
+    //
+    // Wording comes from the SHARED vocabulary, so the tooltip cannot disagree
+    // with the card the integrations surface shows for the same state.
+    const worst = variant ? worstStatus(reportable) : undefined;
+    const worstLabel = getStatusDisplay(worst)?.label;
+
     return (
-        <ActionButton
-            isQuiet
-            UNSAFE_className="dashboard-action-button integrations-tile"
-            data-action="integrations"
+        <DashboardTile
+            label="Integrations"
+            icon={<Data size="L" />}
             onPress={() => webviewClient.postMessage('openIntegrations')}
-        >
-            <Data size="L" />
-            <Text UNSAFE_className="icon-label">Integrations</Text>
-            {variant && (
-                // The SHARED dot, not a hand-rolled span. Rolling its own is what
-                // cost this tile the in-progress pulse: the card used StatusDot and
-                // got it, the tile reimplemented colour from Spectrum globals and
-                // got a permanently still blue dot (reported 2026-08-04).
-                // `integrations-tile-dot` supplies only POSITION now; colour, size
-                // and motion come from the component. `tile-status-dot` is the
-                // marker exempting it from the tile's blanket "no descendant
-                // backgrounds on hover" rule, which would otherwise blank the dot
-                // exactly when the pointer is on it.
-                <StatusDot
-                    variant={variant}
-                    className="integrations-tile-dot tile-status-dot"
-                    testId="integrations-tile-dot"
-                />
-            )}
-        </ActionButton>
+            action="integrations"
+            className="integrations-tile"
+            tooltip="View and manage this project's integrations"
+            status={
+                variant && worstLabel
+                    ? { variant, tooltip: worstLabel, testId: 'integrations-tile-dot' }
+                    : undefined
+            }
+        />
     );
 }

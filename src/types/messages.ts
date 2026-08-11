@@ -62,6 +62,8 @@ export type MessageType =
     | 'validate'
 
     // Dashboard messages
+    // Stop + settle + start, for a config change that landed while running.
+    | 'restartDemo'
     | 'toggle-logs'
     | 'open-component-file'
     // Rename a deployed integration's display name (shell instancing Step 10;

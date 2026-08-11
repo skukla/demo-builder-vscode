@@ -1,122 +1,21 @@
 /**
  * ActionGrid Component Tests
  *
- * Tests for the zone-based dashboard action grid component.
- * Verifies zone membership, gating, overflow menu contents, Delete isolation,
- * and interactions.
+ * Zone membership, gating and interactions. Two siblings hold the rest:
+ * ActionGrid-overflow.test.tsx (More menu contents, gating, Delete isolation)
+ * and ActionGrid-zoneStatus.test.tsx (the per-zone status lines).
+ *
+ * Mocks, fixtures and the SUT import live in ActionGrid.testUtils — importing
+ * ActionGrid here directly would bind it to real Spectrum (see that file).
  */
 
 import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ActionGrid } from '@/features/dashboard/ui/components/ActionGrid';
 import '@testing-library/jest-dom';
-
-// Mock Adobe React Spectrum components.
-// MenuTrigger/Menu/Item are mocked so overflow items render as clickable buttons:
-// each Item becomes a <button> that fires the Menu's onAction with the Item's key,
-// preserving the existing getByText(...).closest('button') click-assertion pattern.
-jest.mock('@adobe/react-spectrum', () => ({
-    ActionButton: ({ children, onPress, isDisabled, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} {...props}>
-            {children}
-        </button>
-    ),
-    Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
-    MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
-    Menu: ({ children, onAction }: any) => (
-        <div role="menu">
-            {React.Children.map(children, (child: any) => {
-                if (!child) return null;
-                const key = child.key ?? child.props?.['data-key'];
-                return (
-                    <button key={key} role="menuitem" onClick={() => onAction?.(key)}>
-                        {child.props?.children}
-                    </button>
-                );
-            })}
-        </div>
-    ),
-    Item: ({ children }: any) => <>{children}</>,
-}));
-
-// Mock Spectrum icons
-jest.mock('@spectrum-icons/workflow/PlayCircle', () => ({
-    __esModule: true,
-    default: () => <span data-testid="play-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/StopCircle', () => ({
-    __esModule: true,
-    default: () => <span data-testid="stop-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/Globe', () => ({
-    __esModule: true,
-    default: () => <span data-testid="globe-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/ViewList', () => ({
-    __esModule: true,
-    default: () => <span data-testid="viewlist-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/Refresh', () => ({
-    __esModule: true,
-    default: () => <span data-testid="refresh-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/Settings', () => ({
-    __esModule: true,
-    default: () => <span data-testid="settings-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/Delete', () => ({
-    __esModule: true,
-    default: () => <span data-testid="delete-icon" />,
-}));
-
-// Mock EDS-specific icons
-jest.mock('@spectrum-icons/workflow/PublishCheck', () => ({
-    __esModule: true,
-    default: () => <span data-testid="publish-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/More', () => ({
-    __esModule: true,
-    default: () => <span data-testid="more-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/Edit', () => ({
-    __esModule: true,
-    default: () => <span data-testid="edit-icon" />,
-}));
+import { ActionGrid, defaultProps, edsProps, getZone } from './ActionGrid.testUtils';
 
 describe('ActionGrid', () => {
-    const defaultProps = {
-        isRunning: false,
-        isStartDisabled: false,
-        isStopDisabled: false,
-        isMeshActionDisabled: false,
-        isOpeningBrowser: false,
-        handleStartDemo: jest.fn(),
-        handleStopDemo: jest.fn(),
-        handleOpenBrowser: jest.fn(),
-        handleOpenAdminPanel: jest.fn(),
-        handleConfigure: jest.fn(),
-        handleOpenDevConsole: jest.fn(),
-        handleDeleteProject: jest.fn(),
-        handleEditProject: jest.fn(),
-        handleExportProject: jest.fn(),
-        handleResetProject: jest.fn(),
-    };
-
-    const edsProps = {
-        ...defaultProps,
-        isEds: true,
-        authoringExperience: 'da-live-classic' as const,
-        handleOpenLiveSite: jest.fn(),
-        handleOpenDaLive: jest.fn(),
-        handleSyncStorefront: jest.fn(),
-        handleRepublishContent: jest.fn(),
-    };
-
-    /** Resolve the zone container element for a given data-zone value. */
-    const getZone = (container: HTMLElement, zone: string): HTMLElement =>
-        container.querySelector(`[data-zone="${zone}"]`) as HTMLElement;
-
     beforeEach(() => {
         jest.clearAllMocks();
     });
@@ -284,11 +183,11 @@ describe('ActionGrid', () => {
             expect(within(storefront).queryByText('Storefront')).not.toBeInTheDocument();
         });
 
-        it('should place Sync Storefront in the storefront zone', () => {
+        it('no longer holds Sync Storefront — that moved to the More menu', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 
             const storefront = getZone(container, 'storefront');
-            expect(within(storefront).getByText('Sync Storefront')).toBeInTheDocument();
+            expect(within(storefront).queryByText('Sync Storefront')).not.toBeInTheDocument();
         });
 
         it('should not place the Author button in the storefront zone', () => {
@@ -304,11 +203,11 @@ describe('ActionGrid', () => {
             expect(screen.queryByText('Sync Storefront')).not.toBeInTheDocument();
         });
 
-        it('should not render the storefront zone when handleSyncStorefront is absent', () => {
+        it('survives without handleSyncStorefront — Republish is what the zone is for now', () => {
             const { handleSyncStorefront: _handleSyncStorefront, ...edsNoSync } = edsProps;
             const { container } = render(<ActionGrid {...edsNoSync} />);
 
-            expect(getZone(container, 'storefront')).not.toBeInTheDocument();
+            expect(getZone(container, 'storefront')).toBeInTheDocument();
             expect(screen.queryByText('Sync Storefront')).not.toBeInTheDocument();
         });
     });
@@ -332,181 +231,6 @@ describe('ActionGrid', () => {
             render(<ActionGrid {...defaultProps} />);
 
             expect(screen.queryByText('Deploy Mesh')).not.toBeInTheDocument();
-        });
-    });
-
-    describe('Overflow Menu', () => {
-        it('should render a More overflow trigger with an accessible label', () => {
-            render(<ActionGrid {...defaultProps} />);
-
-            expect(screen.getByLabelText('More actions')).toBeInTheDocument();
-        });
-
-        it('should expose Dev Console inside the overflow menu', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Dev Console')).toBeInTheDocument();
-        });
-
-        it('should call handleOpenDevConsole when Dev Console menu item clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Dev Console'));
-
-            expect(defaultProps.handleOpenDevConsole).toHaveBeenCalled();
-        });
-
-        it('should expose Export in the overflow menu', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Export')).toBeInTheDocument();
-        });
-
-        it('should expose Delete as the LAST overflow item (destructive-last convention)', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            const items = within(menu).getAllByRole('menuitem');
-            expect(items[items.length - 1]).toHaveTextContent('Delete');
-            expect(items[items.length - 2]).toHaveTextContent('Reset');
-        });
-
-        it('should call handleExportProject when Export clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Export'));
-
-            expect(defaultProps.handleExportProject).toHaveBeenCalled();
-        });
-
-        it('should call handleResetProject when Reset clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Reset'));
-
-            expect(defaultProps.handleResetProject).toHaveBeenCalled();
-        });
-    });
-
-    describe('Overflow Menu - No Rename item', () => {
-        it('offers no Rename anywhere — renaming is inline on the dashboard title', () => {
-            const { container } = render(<ActionGrid {...defaultProps} isRunning={false} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).queryByText('Rename')).not.toBeInTheDocument();
-            expect(screen.queryByText('Rename')).not.toBeInTheDocument();
-        });
-    });
-
-    describe('Overflow Menu - Edit Gating', () => {
-        it('should show Edit for a stopped non-EDS project', () => {
-            const { container } = render(<ActionGrid {...defaultProps} isRunning={false} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Edit')).toBeInTheDocument();
-        });
-
-        it('should hide Edit for a running non-EDS project', () => {
-            const { container } = render(<ActionGrid {...defaultProps} isRunning={true} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).queryByText('Edit')).not.toBeInTheDocument();
-        });
-
-        it('should show Edit for an EDS project even when running', () => {
-            const { container } = render(<ActionGrid {...edsProps} isRunning={true} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Edit')).toBeInTheDocument();
-        });
-
-        it('should hide Edit when no handleEditProject is provided', () => {
-            const { handleEditProject: _handleEditProject, ...noEdit } = defaultProps;
-            const { container } = render(<ActionGrid {...noEdit} isRunning={false} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).queryByText('Edit')).not.toBeInTheDocument();
-        });
-
-        it('should call handleEditProject when Edit clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} isRunning={false} />);
-
-            await user.click(screen.getByText('Edit'));
-
-            expect(defaultProps.handleEditProject).toHaveBeenCalled();
-        });
-    });
-
-    describe('Overflow Menu - Republish Content Gating (EDS)', () => {
-        it('should show Republish Content for EDS projects', () => {
-            const { container } = render(<ActionGrid {...edsProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Republish Content')).toBeInTheDocument();
-        });
-
-        it('should hide Republish Content for non-EDS projects', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).queryByText('Republish Content')).not.toBeInTheDocument();
-        });
-
-        it('should hide Republish Content when handleRepublishContent is absent (EDS)', () => {
-            const { handleRepublishContent: _rc, ...edsNoRepublish } = edsProps;
-            const { container } = render(<ActionGrid {...edsNoRepublish} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).queryByText('Republish Content')).not.toBeInTheDocument();
-        });
-
-        it('should call handleRepublishContent when Republish Content clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...edsProps} />);
-
-            await user.click(screen.getByText('Republish Content'));
-
-            expect(edsProps.handleRepublishContent).toHaveBeenCalled();
-        });
-    });
-
-    describe('Delete (destructive, in the More overflow)', () => {
-        it('renders NO isolated delete footer zone (Delete moved into More)', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            expect(container.querySelector('[data-zone="delete"]')).not.toBeInTheDocument();
-        });
-
-        it('renders Delete inside the overflow menu, not as a tile', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Delete')).toBeInTheDocument();
-            // Not a standalone action tile anywhere outside the menu.
-            expect(screen.getByText('Delete').closest('[role="menu"]')).toBe(menu);
-        });
-
-        it('marks the Delete menu item with the destructive text class', () => {
-            render(<ActionGrid {...defaultProps} />);
-
-            expect(screen.getByText('Delete').getAttribute('unsafe_classname')).toContain(
-                'menu-item-destructive'
-            );
-        });
-
-        it('should call handleDeleteProject when Delete clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Delete'));
-
-            expect(defaultProps.handleDeleteProject).toHaveBeenCalled();
         });
     });
 

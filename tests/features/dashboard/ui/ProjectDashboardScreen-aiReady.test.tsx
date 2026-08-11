@@ -9,7 +9,7 @@
  * uses the `verify-ai-setup` request.
  */
 
-import { screen, fireEvent, act } from '@testing-library/react';
+import { screen, fireEvent, act, within } from '@testing-library/react';
 import { setupTestContext, renderDashboard, type TestContext } from './ProjectDashboardScreen.testUtils';
 
 /** A passing verify response carrying the given skills inventory. */
@@ -44,12 +44,16 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
     }
 
     describe('Badge Presence', () => {
-        // The masthead badges are Frontend + AI (+ IMS Org): the mesh badge
-        // retired in D3 Step 08 — mesh status lives in the integrations list.
-        it('renders the AI Ready status badge alongside Frontend', () => {
+        // The masthead holds ENVIRONMENT health only — AI (+ IMS Org). Artifact
+        // state moved to the zone that owns it: the mesh to the integrations
+        // list (D3 Step 08), and the frontend to the ActionGrid's
+        // Primary/Storefront zone, where its Restart/Republish fixes already
+        // lived. Being separated from those fixes is why the Frontend badge was
+        // the only one that named a problem and offered nothing.
+        it('renders the AI Ready badge, and no artifact badges beside it', () => {
             renderDashboard({ hasMesh: true });
-            expect(screen.getByTestId('status-card-Frontend')).toBeInTheDocument();
             expect(screen.getByTestId('status-card-AI')).toBeInTheDocument();
+            expect(screen.queryByTestId('status-card-Frontend')).not.toBeInTheDocument();
             expect(screen.queryByTestId('status-card-API Mesh')).not.toBeInTheDocument();
         });
 
@@ -145,6 +149,30 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
             deliverVerify(verifyWithSkillsAndMcps(SKILLS, MCPS));
             expect(screen.getByTestId('ai-view-capabilities-trigger').textContent)
                 .toMatch(/View AI Capabilities/);
+        });
+
+        it('sits on the AI status LINE, not a row of its own beneath it', () => {
+            // It was a standalone link below the badges on the grounds that it is
+            // navigation rather than a remediation. True, but it cost the band a
+            // whole row to say one thing, and the thing it says is about the badge
+            // directly above it.
+            renderDashboard();
+            deliverVerify(verifyWithSkillsAndMcps(SKILLS, MCPS));
+
+            const row = screen.getByTestId('ai-status-row');
+            expect(within(row).getByTestId('ai-view-capabilities-trigger')).toBeInTheDocument();
+            expect(within(row).getByTestId('status-card-AI')).toBeInTheDocument();
+        });
+
+        it('still leaves room for the Regenerate remediation on the same line', () => {
+            // Both can show at once: Regenerate is the fix for an unhealthy badge,
+            // the capabilities link is always-on navigation.
+            renderDashboard();
+            deliverVerify({ checks: [{ name: 'skills', status: 'error' }] } as never);
+
+            const row = screen.getByTestId('ai-status-row');
+            expect(within(row).getByTestId('ai-regenerate-trigger')).toBeInTheDocument();
+            expect(within(row).getByTestId('ai-view-capabilities-trigger')).toBeInTheDocument();
         });
 
         it('opens the capabilities modal showing both skills and MCPs when clicked', async () => {
