@@ -130,7 +130,7 @@ describe('IntegrationsGrid actions', () => {
                 },
             });
 
-            const tile = card('custom-app', 'Update available');
+            const tile = card('custom-app', 'Update needed');
             await user.click(within(tile).getByRole('button', { name: /^update$/i }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('redeployAppBuilderComponent', {

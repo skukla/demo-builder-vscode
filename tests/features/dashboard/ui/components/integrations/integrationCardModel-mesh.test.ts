@@ -150,7 +150,7 @@ describe('deriveMeshCard — status matrix', () => {
         '%s collapses to stale: warning dot, Update leads the menu',
         (meshStatus) => {
             const model = deriveMeshCard(
-                display({ color: 'yellow', text: 'Update available' }),
+                display({ color: 'yellow', text: 'Update needed' }),
                 meshStatus,
                 meshEntry(),
                 false,
@@ -165,7 +165,7 @@ describe('deriveMeshCard — status matrix', () => {
     // config-incomplete used to collapse into 'stale' with the other two. It no
     // longer does, and the reason is the label: once the card takes its label from
     // the same table as its dot, collapsing would have relabelled an incomplete
-    // mesh "Update available" — which is not what missing required config means.
+    // mesh "Update needed" — which is not what missing required config means.
     // Its TREATMENT is deliberately unchanged (warning dot, Update leads); only
     // the status it keeps, and therefore the word it shows, is different.
     it('config-incomplete keeps its own status and label, with the stale treatment', () => {

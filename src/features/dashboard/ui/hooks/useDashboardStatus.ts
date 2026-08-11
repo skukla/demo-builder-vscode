@@ -548,9 +548,9 @@ export function useDashboardStatus(
                 case 'published':
                     return { color: 'green', text: 'Published' };
                 case 'stale':
-                    return { color: 'yellow', text: 'Republish Needed' };
+                    return { color: 'yellow', text: 'Republish needed' };
                 case 'update-declined':
-                    return { color: 'orange', text: 'Republish Needed' };
+                    return { color: 'orange', text: 'Republish needed' };
                 case 'not-published':
                     return { color: 'gray', text: 'Not Published' };
                 default:

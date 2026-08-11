@@ -89,8 +89,8 @@ describe('the persisted mesh view of the shared table', () => {
     // update-declined's case, already showed the same words as stale.
     it.each([
         ['deployed', 'Deployed', 'green', 'success'],
-        ['stale', 'Update available', 'yellow', 'warning'],
-        ['update-declined', 'Update available', 'yellow', 'warning'],
+        ['stale', 'Update needed', 'yellow', 'warning'],
+        ['update-declined', 'Update needed', 'yellow', 'warning'],
         ['config-incomplete', 'Incomplete', 'yellow', 'warning'],
         ['error', 'Deploy failed', 'red', 'error'],
         ['not-deployed', 'Not deployed', 'gray', 'neutral'],

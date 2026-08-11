@@ -368,7 +368,7 @@ export function toMeshCardStatus(status: MeshStatus | undefined): CardStatus {
         // 'config-changed' is the dashboard's spelling of stale, and a declined
         // update is still an available one. 'config-incomplete' is NOT here: it
         // means required config is missing, and collapsing it would relabel the
-        // card "Update available".
+        // card "Update needed".
         case 'config-changed':
         case 'update-declined':
             return 'stale';

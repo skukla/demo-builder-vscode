@@ -13,7 +13,7 @@
  * status WRITES, and never compared what the two paths RECORD. The live symptoms:
  *
  * - empty `envVars` sent the staleness detector to Adobe I/O on every window
- *   open ("Failed to parse mesh data"), so "Update available" could never fire
+ *   open ("Failed to parse mesh data"), so "Update needed" could never fire
  *   for a dashboard-added mesh — change Commerce credentials, get no prompt;
  * - a null `metadata` left meshVerifier with no mesh id, so every status request
  *   ran `aio api-mesh:describe`, failed, and logged "Verification failed".

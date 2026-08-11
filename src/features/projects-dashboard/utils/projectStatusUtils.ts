@@ -257,9 +257,9 @@ export function getStorefrontStatusText(project: Project): string {
     switch (status) {
         case 'stale':
         case 'update-declined':
-            return 'Republish Needed';
+            return 'Republish needed';
         case 'not-published':
-            return 'Not Published';
+            return 'Not published';
         case 'published':
         default:
             return 'Published';

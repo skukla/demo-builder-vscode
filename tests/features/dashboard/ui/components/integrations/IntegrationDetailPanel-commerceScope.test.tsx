@@ -129,7 +129,7 @@ describe('IntegrationDetailPanel — Commerce scope row', () => {
     it('shows the row on a STALE mesh, still showing the DEPLOYED scope', () => {
         // The badge says the mesh is behind; the row says what it is behind ON.
         // If the row appeared only when stale, it was built as a diff again.
-        renderPanel(makeMeshModel({ status: 'stale', statusLabel: 'Update available' }));
+        renderPanel(makeMeshModel({ status: 'stale', statusLabel: 'Update needed' }));
 
         expect(screen.getByText('Commerce scope')).toBeInTheDocument();
         expect(screen.getByText('citisignal')).toBeInTheDocument();

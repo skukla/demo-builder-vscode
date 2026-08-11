@@ -22,7 +22,7 @@ import type { Project } from '@/types';
  * flattened every component with `Object.assign`, so manifest iteration order
  * decided the winner.
  *
- * The observed 2026-08-10 symptom — a correct "Update available" — was luck:
+ * The observed 2026-08-10 symptom — a correct "Update needed" — was luck:
  * `adobe-commerce-accs` happened to sort after `eds-accs-mesh`. Flip the order and
  * the detector compares the deployed snapshot against the mesh's own STALE copy,
  * finds them equal, and reports clean while the mesh queries a website with no

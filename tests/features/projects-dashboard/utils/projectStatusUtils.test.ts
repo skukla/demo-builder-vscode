@@ -268,9 +268,9 @@ describe('projectStatusUtils', () => {
             expect(getMeshStatusText(project)).toBeNull();
         });
 
-        it('should return "Mesh · Update available" when stale', () => {
+        it('should return "Mesh · Update needed" when stale', () => {
             const project = createMockProject({ meshStatusSummary: 'stale' });
-            expect(getMeshStatusText(project)).toBe('Mesh · Update available');
+            expect(getMeshStatusText(project)).toBe('Mesh · Update needed');
         });
 
         it('should return "Mesh · Deployed" when deployed', () => {
@@ -288,9 +288,9 @@ describe('projectStatusUtils', () => {
             expect(getMeshStatusText(project)).toBe('Mesh · Incomplete');
         });
 
-        it('should return "Mesh · Update available" when update-declined', () => {
+        it('should return "Mesh · Update needed" when update-declined', () => {
             const project = createMockProject({ meshStatusSummary: 'update-declined' });
-            expect(getMeshStatusText(project)).toBe('Mesh · Update available');
+            expect(getMeshStatusText(project)).toBe('Mesh · Update needed');
         });
 
         it('should return "Mesh · Not deployed" when not-deployed', () => {
@@ -437,7 +437,7 @@ describe('projectStatusUtils', () => {
 
         it.each([
             ['error', 'Mesh · Deploy failed', 'error'],
-            ['stale', 'Mesh · Update available', 'warning'],
+            ['stale', 'Mesh · Update needed', 'warning'],
             ['not-deployed', 'Mesh · Not deployed', 'neutral'],
         ] as const)('maps a keyed %s mesh to %s', (status, text, variant) => {
             const project = createMockProject({
@@ -455,7 +455,7 @@ describe('projectStatusUtils', () => {
                 appBuilderComponents: { 'eds-accs-mesh': meshEntry('deployed') },
             });
 
-            expect(getMeshStatusText(project)).toBe('Mesh · Update available');
+            expect(getMeshStatusText(project)).toBe('Mesh · Update needed');
         });
     });
 

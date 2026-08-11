@@ -106,7 +106,7 @@ describe('ProjectCard', () => {
             const project = createMockProject({ meshStatusSummary: 'stale' });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
-            expect(screen.getByText('Mesh · Update available')).toBeInTheDocument();
+            expect(screen.getByText('Mesh · Update needed')).toBeInTheDocument();
         });
 
         it('should not show mesh status when meshStatusSummary is not set', () => {
@@ -114,7 +114,7 @@ describe('ProjectCard', () => {
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
             expect(screen.queryByText('Mesh · Deployed')).not.toBeInTheDocument();
-            expect(screen.queryByText('Mesh · Update available')).not.toBeInTheDocument();
+            expect(screen.queryByText('Mesh · Update needed')).not.toBeInTheDocument();
         });
     });
 

@@ -48,7 +48,11 @@ const STATUS_DISPLAY: Record<DisplayStatus, StatusDisplayEntry> = {
     'not-deployed': { label: 'Not deployed', severity: 'neutral' },
     deploying: { label: 'Deploying…', severity: 'info' },
     deployed: { label: 'Deployed', severity: 'success' },
-    stale: { label: 'Update available', severity: 'warning' },
+    // "Update NEEDED", not "available". A stale deployment is not an offer — the
+    // mesh is serving a store view the project no longer uses, and the storefront
+    // is publishing a config it no longer has. Software-update language read as
+    // optional, which is the opposite of true.
+    stale: { label: 'Update needed', severity: 'warning' },
     // NOT folded into `stale`: an incomplete mesh is missing required config,
     // which is not "an update is available". Folding it would relabel the card.
     'config-incomplete': { label: 'Incomplete', severity: 'warning' },
@@ -69,8 +73,8 @@ const STATUS_DISPLAY: Record<DisplayStatus, StatusDisplayEntry> = {
  *   never persisted — the handler normalized it away on write, and the hook
  *   invented it on read only to translate it back for the lookup, a round trip
  *   from 'stale' to 'stale'.
- * - `update-declined` means the user answered "Later" to an available update.
- *   It reads identically to `stale` ("Update available"), so it carried a
+ * - `update-declined` means the user answered "Later" to a needed update.
+ *   It reads identically to `stale` ("Update needed"), so it carried a
  *   distinction no one could act on.
  *
  * @param status - a persisted or live status, or undefined

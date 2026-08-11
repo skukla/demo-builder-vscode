@@ -147,12 +147,12 @@ describe('deriveIntegrationCard — status matrix', () => {
         expect(model.menuActions).toEqual(['redeploy', 'manage-apis', 'remove']);
     });
 
-    it('stale: warning dot, "Update available", Update LEADS the menu', () => {
+    it('stale: warning dot, "Update needed", Update LEADS the menu', () => {
         const model = deriveIntegrationCard(integration({ status: 'stale' }));
 
         expect(model.status).toBe('stale');
         expect(model.dotVariant).toBe('warning');
-        expect(model.statusLabel).toBe('Update available');
+        expect(model.statusLabel).toBe('Update needed');
         // No Redeploy beside it: Update IS the redeploy here, and two names for
         // one intent in one menu is what this whole change removed.
         expect(model.menuActions).toEqual(['update', 'manage-apis', 'remove']);

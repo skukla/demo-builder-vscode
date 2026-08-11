@@ -202,7 +202,7 @@ describe('useDashboardStatus — Status Display Strings', () => {
             });
         });
 
-        it('should return Update available for config-changed', () => {
+        it('should return Update needed for config-changed', () => {
             const { result } = renderHook(() => useDashboardStatus());
 
             act(() => {
@@ -216,7 +216,7 @@ describe('useDashboardStatus — Status Display Strings', () => {
 
             expect(result.current.meshStatusDisplay).toEqual({
                 color: 'yellow',
-                text: 'Update available',
+                text: 'Update needed',
             });
         });
 

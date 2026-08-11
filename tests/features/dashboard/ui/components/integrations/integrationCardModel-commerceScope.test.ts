@@ -113,7 +113,7 @@ describe('deriveMeshCard — deployed Commerce scope', () => {
 
     it('is present on a STALE mesh too — it is an attribute, not a diff', () => {
         const model = deriveMeshCard(
-            display({ color: 'orange', text: 'Update available' }),
+            display({ color: 'orange', text: 'Update needed' }),
             'config-changed',
             meshEntry({ envVars: ACCS_SCOPE }),
             false
