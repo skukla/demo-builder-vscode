@@ -307,7 +307,13 @@ Thin tools declared as data and dispatched to existing handler maps:
   storefront, EDS live site + DA.live authoring, Commerce admin, Developer Console
   deep link — computed from the same getters the open-in-browser handlers use, but
   WITHOUT opening a browser or running the admin-panel "Open Configure" prompt;
-  absent URLs are omitted).
+  absent URLs are omitted), `get_store_structure` (the Commerce websites / store
+  groups / store views the backend actually has, plus a `resolution` verdict of
+  `ok` / `missing` / `not-configured` for each scope code the project is configured
+  for — the read that lets an agent see a project pointing at a website or store
+  view that does not exist; PaaS uses the project's saved admin credentials, ACCS
+  proxies through a configured discovery service and prompts Adobe sign-in ONLY
+  when the read reports it needs a token).
 - Actions: `regenerate_ai_files`, `start_demo`, `stop_demo`, `rename_project`
   (current-project rename via the shared `renameProjectCore` — folder, saved
   state, and the project's baked MCP/AI configs move together; agents must use
