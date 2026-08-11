@@ -2104,13 +2104,6 @@ button[class*="spectrum-Button"][disabled],
     color: var(--spectrum-global-color-gray-500);
 }
 
-/* Scoped, not global: `.dest-context` is 12.5px — off the type scale — and the
-   add-integration modal renders the same component. Fixing it there is a
-   separate call on a surface this change never looked at. */
-.page-destination-row .dest-context {
-    font-size: 12px;
-}
-
 /* AI badge + its capabilities link on one line. The link was a standalone row
    beneath the badges, which cost the band a whole row to say one thing. */
 .dashboard-status-badge-inline {
@@ -4756,7 +4749,7 @@ div[class*="spectrum"] input[type="search"] {
     gap: 3px;
 }
 .int-row-api-item {
-    font-size: 12.5px;
+    font-size: var(--spectrum-global-dimension-font-size-75);
     line-height: 1.35;
     color: var(--spectrum-global-color-gray-700);
 }
@@ -4846,7 +4839,7 @@ div[class*="spectrum"] input[type="search"] {
     display: inline-flex;
     align-items: baseline;
     gap: 10px;
-    font-size: 12.5px;
+    font-size: var(--spectrum-global-dimension-font-size-75);
 }
 .dest-context-value {
     color: var(--spectrum-global-color-gray-700);
@@ -5024,14 +5017,14 @@ div[class*="spectrum"] input[type="search"] {
 }
 .intflow-api-info-note {
     margin: 8px 0 0;
-    font-size: 12.5px;
+    font-size: var(--spectrum-global-dimension-font-size-75);
     line-height: 1.5;
     color: var(--spectrum-global-color-gray-600);
 }
 /* Mesh enable failure on Add — the modal stays open and Add becomes a retry. */
 .intflow-api-info-error {
     margin: 12px 0 0;
-    font-size: 12.5px;
+    font-size: var(--spectrum-global-dimension-font-size-75);
     line-height: 1.5;
     color: var(--spectrum-global-color-red-600);
 }
