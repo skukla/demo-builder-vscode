@@ -56,3 +56,53 @@ export function applyBackendOwnedScope<T>(
     }
     return merged;
 }
+
+/**
+ * Drop backend-owned scope copies from every OTHER component's config.
+ *
+ * Existing manifests carry the same website / store / store view on the mesh and
+ * frontend components as well as the backend, because the config surfaces used to
+ * fan one field's value out to every component that declared it. Writes are now
+ * narrowed to the backend (`resolveWriteTargets`), so those copies are inert — but
+ * they stay on disk until something removes them, and while they exist a future
+ * resolver can still read a stale one.
+ *
+ * **A copy is only dropped when the backend actually defines that key.** Without
+ * that guard this deletes the value rather than the duplicate: nothing else holds
+ * it, and `.env` generation would fall through to empty.
+ *
+ * Pure and in-place on the passed map; returns whether anything changed so the
+ * caller can decide about persisting.
+ *
+ * @param componentConfigs - The project's componentConfigs map, mutated in place
+ * @param backendId - The project's backend component id
+ * @returns True when at least one duplicate was removed
+ */
+export function stripDuplicateBackendOwnedScope(
+    componentConfigs: Record<string, Record<string, unknown>> | undefined,
+    backendId: string | undefined,
+): boolean {
+    if (!componentConfigs || !backendId) return false;
+
+    const backendConfig = componentConfigs[backendId];
+    if (!backendConfig) return false;
+
+    let changed = false;
+    for (const componentId of Object.keys(componentConfigs)) {
+        if (componentId === backendId) continue;
+
+        const config = componentConfigs[componentId];
+        if (!config) continue;
+
+        for (const key of BACKEND_OWNED_SCOPE_KEYS) {
+            // `in` on the backend, not a truthiness check: a key the backend
+            // defines as blank is still the backend's answer, and the duplicate
+            // must not survive to fill that gap.
+            if (key in config && key in backendConfig) {
+                delete config[key];
+                changed = true;
+            }
+        }
+    }
+    return changed;
+}

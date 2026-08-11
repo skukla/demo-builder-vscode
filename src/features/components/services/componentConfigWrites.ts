@@ -16,6 +16,7 @@
  * @module features/components/services/componentConfigWrites
  */
 
+import { BACKEND_OWNED_SCOPE_KEYS } from '@/features/components/config/envVarKeys';
 import type { ComponentConfigs } from '@/types/webview';
 
 /** The shape both surfaces agree on: a field and the components that declare it. */
@@ -24,6 +25,37 @@ export interface FieldRef {
     key: string;
     /** Every component that declares this env var. */
     componentIds: string[];
+}
+
+/**
+ * Which components a field's value should actually be WRITTEN to.
+ *
+ * Normally every component that declares the env var: each one renders its own
+ * `.env`, and three consumers of one setting is not duplication.
+ *
+ * The exception is {@link BACKEND_OWNED_SCOPE_KEYS}. Website / store / store view
+ * are project-level facts, and storing a copy per component means one fact with
+ * several homes — which failed exactly as that shape does. On 2026-08-10 only the
+ * backend's copy was updated and the answer depended on which copy a resolver
+ * read: the mesh deployed against the previous website and every PDP returned 200
+ * with an empty product block. `backendOwnedScope` was added to make the READS
+ * agree; this makes the WRITE single, so there is no second copy to disagree with.
+ *
+ * `.env` generation is unaffected — `envFileGenerator.resolveFromComponentConfigs`
+ * already resolves these keys from the backend before its fallback sweep, so a
+ * mesh still gets the value in its own `.env`.
+ *
+ * Falls back to the declared list when the backend does not declare the field, so
+ * a value can never be written nowhere.
+ *
+ * @param field - The field being edited
+ * @param backendId - The project's backend component id, when known
+ * @returns The component ids to write to
+ */
+export function resolveWriteTargets(field: FieldRef, backendId: string | undefined): string[] {
+    if (!BACKEND_OWNED_SCOPE_KEYS.includes(field.key)) return field.componentIds;
+    if (!backendId || !field.componentIds.includes(backendId)) return field.componentIds;
+    return [backendId];
 }
 
 /**
@@ -81,6 +113,9 @@ export function writeFieldValue(
     configs: ComponentConfigs,
     field: FieldRef,
     value: string | boolean,
+    backendId?: string,
 ): ComponentConfigs {
-    return writeToComponents(configs, field.componentIds, { [field.key]: value });
+    return writeToComponents(configs, resolveWriteTargets(field, backendId), {
+        [field.key]: value,
+    });
 }

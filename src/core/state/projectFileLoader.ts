@@ -11,6 +11,7 @@ import * as vscode from 'vscode';
 import { migrateLegacyToAppBuilderComponents } from './appBuilderComponentMigration';
 import { migrateApiPicks } from './componentApiPicks';
 import { reconcileComponentSelections } from './componentSelectionReconcile';
+import { stripDuplicateBackendOwnedScope } from '@/features/components/config/backendOwnedScope';
 import type { Project, ComponentInstance } from '@/types';
 import type { AiPrompt } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
@@ -158,6 +159,18 @@ export class ProjectFileLoader {
             // unattributed key so every reader can go through resolveDesiredApis.
             // Read-side only — the on-disk manifest is untouched until next write.
             project.componentApiPicks = migrateApiPicks(project).componentApiPicks;
+
+            // Backend-owned store scope: existing manifests carry the same website /
+            // store / store view on the mesh and frontend components too, because the
+            // config surfaces used to fan one field out to every declaring component.
+            // Writes are narrowed to the backend now, so those copies are inert — and
+            // an inert copy is still one a future resolver can read by mistake, which
+            // is exactly how the 2026-08-10 wrong-website bug worked. Read-side only:
+            // the on-disk manifest is untouched until the next write.
+            stripDuplicateBackendOwnedScope(
+                project.componentConfigs as Record<string, Record<string, unknown>> | undefined,
+                project.componentSelections?.backend,
+            );
 
             // Detect if demo is actually running
             this.detectDemoStatus(project, terminalProvider);

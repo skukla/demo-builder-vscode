@@ -5,6 +5,7 @@ import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
 import { PAAS_URL, PAAS_GRAPHQL_ENDPOINT } from '@/features/components/config/envVarKeys';
 import {
     findFieldValue,
+    resolveWriteTargets,
     writeFieldValue,
     writeToComponents,
 } from '@/features/components/services/componentConfigWrites';
@@ -101,6 +102,7 @@ function applyFieldDefaults(
     prevConfigs: ComponentConfigs,
     groups: ServiceGroup[],
     packageConfigDefaults: Record<string, string> | undefined,
+    backendId: string | undefined,
 ): ComponentConfigs {
     let newConfigs = prevConfigs;
     let hasChanges = false;
@@ -113,8 +115,11 @@ function applyFieldDefaults(
             if (defaultValue === undefined || defaultValue === '') return;
 
             // A package default overrides whatever is there; a field default only fills a
-            // blank. Applied per component, since they can hold different values.
-            const targets = field.componentIds.filter(
+            // blank. The blank check is per component because STORAGE is per component —
+            // not because divergent values are wanted. Every write path fans one field's
+            // value to all its components, so two copies disagreeing is a defect, never a
+            // feature (see resolveWriteTargets).
+            const targets = resolveWriteTargets(field, backendId).filter(
                 (componentId) => packageValue || !newConfigs[componentId]?.[field.key],
             );
             if (targets.length === 0) return;
@@ -139,6 +144,11 @@ export function useComponentConfig({
     );
     const [hasInitializedFromState, setHasInitializedFromState] = useState(false);
     const [componentsData, setComponentsData] = useState<ComponentsData>({});
+
+    // The backend owns the store-scope keys, so those writes land only there
+    // (`resolveWriteTargets`). Every other field still writes to each component
+    // that declares it.
+    const backendId = selectedStack ? getStackById(selectedStack)?.backend : undefined;
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(true);
@@ -281,9 +291,9 @@ export function useComponentConfig({
         if (serviceGroups.length === 0) return;
 
         setComponentConfigs((prevConfigs) =>
-            applyFieldDefaults(prevConfigs, serviceGroups, packageConfigDefaults),
+            applyFieldDefaults(prevConfigs, serviceGroups, packageConfigDefaults, backendId),
         );
-    }, [serviceGroups, packageConfigDefaults]);
+    }, [serviceGroups, packageConfigDefaults, backendId]);
 
     // Note: Auto-fill mesh endpoint effect removed - MESH_ENDPOINT is now auto-configured
     // during project creation (after mesh deployment), not collected in Settings Collection
@@ -360,10 +370,10 @@ export function useComponentConfig({
                     }
                 }
 
-                return writeToComponents(prev, field.componentIds, writes);
+                return writeToComponents(prev, resolveWriteTargets(field, backendId), writes);
             });
         },
-        [touchedFields],
+        [touchedFields, backendId],
     );
 
     const getFieldValue = useCallback(
