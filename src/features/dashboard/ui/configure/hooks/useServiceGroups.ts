@@ -77,6 +77,20 @@ export function useServiceGroups({
         // populates, and the empty-group filter below drops the tab.
         fieldMap.delete('MESH_ENDPOINT');
 
+        // A DERIVED var is computed by the generator, never typed. Rendering one
+        // invites a value that `envFileGenerator` will overwrite — and in the
+        // Catalog tab it did worse: `ADOBE_CATALOG_SERVICE_ENDPOINT` is optional
+        // and blank and sorted ABOVE the required field it derives from, so the
+        // field a user reached for first was the computed one.
+        //
+        // Same treatment the App Builder field model already gives its derivedFrom
+        // bucket (appBuilderComponentFieldModel.ts) — dropped, not rendered.
+        for (const [key, field] of fieldMap) {
+            if ((field as { derivedFrom?: string[] }).derivedFrom?.length) {
+                fieldMap.delete(key);
+            }
+        }
+
         const groups: Record<string, UniqueField[]> = {};
 
         fieldMap.forEach((field) => {

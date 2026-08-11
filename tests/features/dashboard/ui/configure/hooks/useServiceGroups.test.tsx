@@ -39,6 +39,21 @@ const componentsData: ComponentsData = {
             required: false,
             group: 'adobe-assets',
         },
+        ADOBE_CATALOG_SERVICE_ENDPOINT: {
+            key: 'ADOBE_CATALOG_SERVICE_ENDPOINT',
+            label: 'Catalog Service Endpoint',
+            type: 'url',
+            required: false,
+            group: 'catalog-service',
+            derivedFrom: ['PAAS_CATALOG_SERVICE_ENDPOINT', 'ACCS_CATALOG_SERVICE_ENDPOINT'],
+        },
+        PAAS_CATALOG_SERVICE_ENDPOINT: {
+            key: 'PAAS_CATALOG_SERVICE_ENDPOINT',
+            label: 'PaaS Catalog Service Endpoint',
+            type: 'url',
+            required: true,
+            group: 'catalog-service',
+        },
         ACCS_GRAPHQL_ENDPOINT: {
             key: 'ACCS_GRAPHQL_ENDPOINT',
             label: 'ACCS GraphQL Endpoint',
@@ -101,6 +116,53 @@ describe('useServiceGroups', () => {
         const meshSection = result.current.find(group => group.id === 'mesh');
         expect(meshSection).toBeUndefined();
     });
+
+/**
+ * A DERIVED env var is computed by the generator, not typed by a user.
+ *
+ * `ADOBE_CATALOG_SERVICE_ENDPOINT` declares
+ * `derivedFrom: [PAAS_…, ACCS_…]`, and `envFileGenerator` honours that when it
+ * writes the `.env`. Configure rendered it anyway — blank, editable, optional,
+ * and sorted ABOVE the required field it derives from — so the field a user
+ * reaches for first was the one the generator intends to compute.
+ *
+ * The house already treats derived vars this way: the App Builder field model
+ * drops its `derivedFrom` bucket entirely rather than rendering it
+ * (`appBuilderComponentFieldModel.ts:40`). The wizard does not show this field
+ * either. Configure was the outlier.
+ */
+describe('useServiceGroups — derived fields', () => {
+    const catalogBackend: SelectedComponent = {
+        id: 'adobe-commerce-paas',
+        type: 'Backend',
+        data: {
+            id: 'adobe-commerce-paas',
+            name: 'Adobe Commerce PaaS',
+            configuration: {
+                requiredEnvVars: ['PAAS_CATALOG_SERVICE_ENDPOINT'],
+                optionalEnvVars: ['ADOBE_CATALOG_SERVICE_ENDPOINT'],
+            },
+        },
+    } as SelectedComponent;
+
+    it('does not render a field the generator computes', () => {
+        const { result } = renderHook(() =>
+            useServiceGroups({ selectedComponents: [catalogBackend], componentsData }),
+        );
+
+        const keys = result.current.flatMap(g => g.fields.map(f => f.key));
+        expect(keys).not.toContain('ADOBE_CATALOG_SERVICE_ENDPOINT');
+    });
+
+    it('still renders the field it derives FROM — the control', () => {
+        const { result } = renderHook(() =>
+            useServiceGroups({ selectedComponents: [catalogBackend], componentsData }),
+        );
+
+        const keys = result.current.flatMap(g => g.fields.map(f => f.key));
+        expect(keys).toContain('PAAS_CATALOG_SERVICE_ENDPOINT');
+    });
+});
 
     it('does not include MESH_ENDPOINT in any section when mesh is absent', () => {
         const { result } = renderHook(() =>

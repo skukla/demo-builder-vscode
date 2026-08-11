@@ -102,7 +102,14 @@ export const SERVICE_GROUP_DEFINITIONS: ServiceGroupDef[] = [
         id: 'catalog-service',
         label: 'Catalog Service',
         order: 3,
-        fieldOrder: [K.CATALOG_SERVICE_ENDPOINT, K.PAAS_ENVIRONMENT_ID, K.CATALOG_API_KEY],
+        // Endpoint first, then the dataspace and key that address it.
+        // CATALOG_SERVICE_ENDPOINT is deliberately absent — it is derivedFrom the
+        // PaaS/ACCS endpoints and is no longer rendered (useServiceGroups).
+        fieldOrder: [
+            K.PAAS_CATALOG_SERVICE_ENDPOINT,
+            K.PAAS_ENVIRONMENT_ID,
+            K.CATALOG_API_KEY,
+        ],
     },
     { id: 'mesh', label: 'API Mesh', order: 4 },
     { id: 'adobe-assets', label: 'Adobe Assets', order: 5 },
