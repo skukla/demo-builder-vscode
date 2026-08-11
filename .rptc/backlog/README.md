@@ -111,6 +111,10 @@ Core self-heal **shipped** (see Recently shipped). Residual scope from the origi
 
 Of the 13 generated skills, **zero** cover diagnosis — every one is a do-this-task skill (verified 2026-08-11: `grep -rli "troubleshoot\|diagnos\|debug"` over `templates/skills/` returns 0 files). So a tool like `get_store_structure` has no home: an agent finds it by tool search, but nothing says to check store scope *when PDPs come back empty* — the failure that cost an afternoon in the PDP handoff §3. Scope is one symptom → check routing table (shaped like `sync-changes.md`), covering the eight read tools plus the Diagnostics command and Debug Logs channel; the file carries the inventory. **Not blocked — ready to execute.** Listed here only because it needs an `AI_CONTEXT_VERSION` bump, which re-prompts every existing project to regenerate; worth batching with another bundle change rather than shipping alone.
 
+#### Audit: project-level facts stored per-component ([`2026-08-11-project-level-facts-stored-per-component.md`](2026-08-11-project-level-facts-stored-per-component.md))
+
+`componentConfigs` is keyed by who CONSUMES a value, not by what the value IS, so one fact is stored once per declaring component. Measured 2026-08-11: **17 of 25** declared env vars have more than one owner; 6 are the Commerce scope keys (single-sourced 2026-08-11), leaving **11**. The drift mechanism is NOT a second writer — there is none; it is that Configure's fan-out targets come from `selectedComponents`, so a component holding a copy but missing from the selection lists never gets updated (the same gap `reconcileComponentSelections` exists for). That is **key-agnostic**, so all 11 are exposed. Two candidate fixes: widen the fan-out target set (one change, every key) or single-source per key (what scope got). **Do the fan-out audit first** — it may make most of the per-key work unnecessary. **Not blocked.**
+
 ### D. Deferred by design (gated on an external condition)
 
 #### Retire `legacyLookupKey` infrastructure — DA/repo unification cleanup ([`2026-06-08-rename-existing-da-content-to-repo-name.md`](2026-06-08-rename-existing-da-content-to-repo-name.md))
