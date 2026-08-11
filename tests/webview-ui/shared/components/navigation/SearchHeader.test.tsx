@@ -250,4 +250,67 @@ describe('SearchHeader', () => {
             expect(screen.queryByText(/items/i)).not.toBeInTheDocument();
         });
     });
+
+    /**
+     * `countTrailing` — the end of the count row.
+     *
+     * That row is `justify-content: space-between` with the count on the left and,
+     * when there is no search field, the action buttons on the right. With a field
+     * showing, the right half is empty width on every screen using this component.
+     *
+     * The integrations band needed somewhere for its "Deploys to …" context that
+     * was neither the page header (where the LOCAL project name and the REMOTE
+     * Adobe destination were indistinguishable) nor a row of its own (which spent
+     * a line on the least-used fact on the screen). This is that space.
+     */
+    describe('countTrailing', () => {
+        it('renders at the end of the count row', () => {
+            render(
+                <SearchHeader
+                    searchQuery=""
+                    onSearchQueryChange={jest.fn()}
+                    totalCount={2}
+                    filteredCount={2}
+                    hasLoadedOnce
+                    alwaysShowCount
+                    searchThreshold={0}
+                    countTrailing={<span data-testid="trailing">context</span>}
+                />
+            );
+
+            expect(screen.getByTestId('trailing')).toBeInTheDocument();
+        });
+
+        it('omits the slot entirely when nothing is passed — control', () => {
+            const { container } = render(
+                <SearchHeader
+                    searchQuery=""
+                    onSearchQueryChange={jest.fn()}
+                    totalCount={2}
+                    filteredCount={2}
+                    hasLoadedOnce
+                    alwaysShowCount
+                    searchThreshold={0}
+                />
+            );
+
+            expect(container.querySelector('[data-testid="trailing"]')).not.toBeInTheDocument();
+        });
+
+        it('does not render when the count itself is hidden', () => {
+            // No point anchoring context to a row that is not there.
+            render(
+                <SearchHeader
+                    searchQuery=""
+                    onSearchQueryChange={jest.fn()}
+                    totalCount={0}
+                    filteredCount={0}
+                    hasLoadedOnce={false}
+                    countTrailing={<span data-testid="trailing">context</span>}
+                />
+            );
+
+            expect(screen.queryByTestId('trailing')).not.toBeInTheDocument();
+        });
+    });
 });
