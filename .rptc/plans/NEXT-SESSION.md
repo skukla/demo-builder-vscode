@@ -1,96 +1,126 @@
 # Next session — start here
 
-Rewritten 2026-08-11 (second session that day). **Everything is committed AND PUSHED.**
-`develop` is level with `origin/develop` at `e865294b`. Still on `v1.0.0-beta.127` — no
-release was cut this session.
+Rewritten 2026-08-11 (second session that day, after a history rewrite). **Everything is
+committed AND PUSHED.** `develop` is level with `origin/develop` at `12f4b802`. Still on
+`v1.0.0-beta.127` — no release was cut this session.
 
-Gate at handoff, run in full immediately before writing this: **969 suites / 12297 tests**,
-`tsc --noEmit` clean, whole-repo eslint 0 errors 0 warnings.
+Gate at handoff: **969 suites / 12301 tests**, `tsc --noEmit` clean, whole-repo eslint
+0 errors 0 warnings.
+
+> **History was rewritten twice this session.** Every SHA from `dda7dd93` onward is new.
+> If you are reading an older note, plan or commit message that cites `35b2b41d`,
+> `8213b829`, `dd05499b`, `e865294b`, `72fe00e2`, `15baa6d2`, `a069b792`, `99ccfc6f`,
+> `a1d7bb4b`, `00f689d6`, `5d215fdd`, `de41f9a3` or `b768472f` — those objects are gone.
+> Match on the commit SUBJECT instead.
 
 ---
 
-## ⚠️ Two things need a human, and one has a clock on it
+## ⚠️ One thing still needs a human
 
-### 1. A public-repo exposure was cleaned up. Two steps remain — neither is doable by an agent.
+**Tell the service owner whose name was public.** A probe writeup published an internal
+Adobe colleague's name beside a defect in their own service, in this **public** repo, for
+roughly an hour. History has been rewritten and their name is gone from `develop` and from
+every local clone — but no technical step reaches whatever fetched or crawled the repo in
+that window. This is the only item with no remedy but a conversation.
 
-`8213b829` (originally `35b2b41d`) published details of an internal Adobe service in this
-**public** repo. No credentials — no tokens, keys, emails or IPs — but four things went out:
-a colleague named beside a defect in their own service, the stage Runtime endpoint including
-its namespace id, two activation ids from live responses, and an internal env var name quoted
-from an error body.
+**GitHub Support GC: not being filed.** Unreferenced objects still resolve by SHA until
+GitHub collects them. The user's call (2026-08-11) is to let natural GC handle it, which the
+conditions support: **0 forks, 0 network copies, 0 PRs** reference the commits, so nothing
+holds them alive. A Support request would buy speed, not outcome.
 
-**Done:** file redacted, history rewritten across 9 commits, force-pushed (branch protection
-lifted and restored — verified identical field-by-field), local backup refs deleted and
-`gc --prune=now` run. `develop` and this machine no longer contain the unredacted text.
-Verified: 0 forks, 0 network copies, 0 PRs referencing the commit.
+### What the exposure was, and what was done
 
-**Still outstanding:**
+`dda7dd93` (originally `35b2b41d`) published details of an internal Adobe service. **No
+credentials** — no tokens, keys, emails or IPs. What went out: a colleague's name, the stage
+Runtime endpoint including its namespace id, **six ACCS tenant ids plus one more in prose**,
+two activation ids, and two internal env var names.
 
-- **GitHub Support GC.** `35b2b41d` still resolves through the GitHub API. A force-push does
-  NOT garbage-collect; GitHub keeps unreferenced objects and cached views until Support runs
-  it. Ask them to purge unreferenced commits and cached views for `skukla/demo-builder-vscode`.
-- **Tell the colleague.** Their name was public for roughly an hour. No technical step reaches
-  whatever crawled it in that window, and this was the highest-severity item.
+Cleaned in two passes, because **the first pass was incomplete**: it caught the name,
+endpoint and activation ids but missed a fenced code block of six tenant ids in §5. The
+method failed in a specific way worth remembering — the verification scanned for the six
+strings already identified and reported "all clear", never scanning for identifier SHAPES
+not thought of in advance. The second pass scanned structurally (fenced blocks, alnum runs
+≥12, hosts, UUIDs) and found the rest. **The redaction rule in `.rptc/CLAUDE.md` already
+named tenant ids explicitly** — the rule was written and then its own clause not applied.
 
-**Prevention landed** (`e865294b`): a redaction rule in `.rptc/CLAUDE.md` beside the artifact
-policy, and `.gitignore` entries for raw probe captures (`**/raw/`, `*.probe.json`,
-`*.probe.txt`). The rule exists because `.rptc/` is tracked and this repo is public, so a
-writeup that probes an internal service publishes whatever it quotes.
+Prevention landed in `ea22ed5b`: the redaction rule in `.rptc/CLAUDE.md`, and `.gitignore`
+entries for raw probe captures (`**/raw/`, `*.probe.json`, `*.probe.txt`).
 
-### 2. `AI_CONTEXT_VERSION` is now 7 — every existing project will prompt to regenerate
+---
 
-Intended (the new `diagnose-demo` skill only reaches projects that regenerate), but `.127` did
-the same thing and it generated support questions. **Put it in the release notes** whenever
-this ships.
+## Coordination: a second session is active on this repo
+
+`data-installer-integration` is building the Data Installer feature on the
+`feature/data-installer` worktree, starting Stage 1 from `12f4b802`.
+
+- Its branch was **reset onto the rewritten history** during the second rewrite. It had zero
+  commits of its own, so nothing was lost — but that is why the rewrite happened when it did.
+  Rewriting `develop` alone would have left the tenant ids on that branch, and a later merge
+  would have reintroduced them. **If you rewrite history again, rebase or recreate every
+  branch that descends from the rewritten range in the same operation.**
+- Its Stage 1 adds ~6 rows to `readDescriptors.ts`. That file has **no count pin**; only the
+  handler-map pins move.
+- **Ping before wholesale edits to `.rptc/backlog/README.md`** — both sessions write it.
+- **Do not delete `getWorkspaceCredential`.** `dead-code-scan` will surface it as an unused
+  export with zero callers. It is pre-positioned, not cruft: the pending
+  `appbuilder-deployable-model` D2 track A plan names it as the pattern to mirror for five new
+  passthroughs, and that plan's Risks section says it stays cache-bound.
 
 ---
 
 ## What shipped this session
 
-Nine commits. SHAs below are post-rewrite — the pre-rewrite ones are gone.
-
 | Commit | What |
 |---|---|
-| `8213b829` | Data Installer live-API probe writeup (now redacted) |
-| `b768472f` | Backlog: `export_project_settings` ignores `includeSecrets` |
-| `de41f9a3` | gitignore vendor doc exports |
-| `a1d7bb4b` | Four off-scale font sizes → `font-size-75` token; scoped override deleted |
-| `99ccfc6f` | Commerce store scope single-sourced (write narrowing + load migration) |
-| `5d215fdd` | Backlog: project-level facts stored per-component |
-| `00f689d6` | Test pins for `a1d7bb4b` (see "a commit that didn't stand alone") |
-| `a069b792` | `diagnose-demo` skill + AGENTS.md pointer, `AI_CONTEXT_VERSION` 7 |
-| `e865294b` | Redaction + prevention rules |
+| `dda7dd93` | Data Installer live-API probe writeup (redacted; see above) |
+| `21838aea` | Backlog: `export_project_settings` ignores `includeSecrets` |
+| `8f3df26f` | gitignore vendor doc exports |
+| `a4b4e414` | Four off-scale font sizes → `font-size-75` token; scoped override deleted |
+| `e9275329` | Commerce store scope single-sourced (write narrowing + load migration) |
+| `e2e49c58` | Backlog: project-level facts stored per-component |
+| `8f43b206` | Test pins for `a4b4e414` — see "a commit that didn't stand alone" |
+| `63b76b63` | `diagnose-demo` skill + AGENTS.md pointer, `AI_CONTEXT_VERSION` 7 |
+| `ea22ed5b` | Redaction pass 1 + prevention rules |
+| `5fe11b01` | Handoff rewrite (superseded by this one) |
+| `ac86c45b` | Redaction pass 2 — the tenant ids (authored by the peer session) |
+| `12f4b802` | `includeSecrets` actually removes secrets |
 
-Earlier the same day (previous session, already in history): `get_store_structure` MCP tool,
-`who_created` write removal, `pickSampleSku` served-config sampling, and the
-generated-diagnosis-skill backlog item.
+Earlier the same day, previous session: `get_store_structure` MCP tool, `who_created` write
+removal, `pickSampleSku` served-config sampling (`7ab129a2`).
 
-### Three findings worth keeping
+### `AI_CONTEXT_VERSION` is now 7 — every existing project will prompt to regenerate
 
-**`who_created` was NOT dead weight, in the direction that mattered.** The handoff called it
-cosmetic. Reading the consumers showed the READ side gates project deletion
-(`projectOwnership.ts:104` compares it to the token's IMS user id), and there were **three**
-write sites, not two. The write removal is safe — the gate only ever reads Adobe's response —
-but the framing was wrong. Still unverified: whether Adobe actually overwrites the value.
-One glance at `who_created` on a freshly created project settles it; it changes nothing either
-way.
+Intended (the new `diagnose-demo` skill only reaches projects that regenerate), but `.127` did
+the same thing and it generated support questions. **Put it in the release notes.**
 
-**The duplicated-scope item was unimplementable as written.** It said "a migration dropping the
-duplicate copies would dissolve the bug class." A migration alone dissolves nothing — the
-duplicates are re-created on every Configure save, because the config surfaces fan one field's
-value to every component declaring it. The fix needed a write-side change first
-(`resolveWriteTargets`), then the migration. Reads already preferred the backend.
+### Four findings worth keeping
+
+**`who_created` was NOT dead weight, in the direction that mattered.** The old handoff called
+it cosmetic. The READ side gates project deletion (`projectOwnership.ts:104` compares it to the
+token's IMS user id), and there were **three** write sites, not two. Removing the writes is
+safe — the gate only reads Adobe's response. Still unverified: whether Adobe actually
+overwrites the value. One glance at `who_created` on a freshly created project settles it.
+
+**The duplicated-scope item was unimplementable as written.** "A migration dropping the
+duplicate copies would dissolve the bug class" — a migration alone dissolves nothing, because
+the duplicates are re-created on every Configure save. The fix needed a write-side change
+first (`resolveWriteTargets`), then the migration.
 
 **`citisignal-b2b` appearing twice is NOT a bug** — closed. Those are `codePatchSource.path`
-entries pointing at the patch **ledger** directory in `eds-demo-patches`, kept deliberately
-when the hybrid plan repointed CitiSignal onto the B2B base. `custom` uses the sibling `b2b`
-ledger the same way. The old handoff's "ambiguous, so untouched" was the right call; this
-resolves it.
+entries pointing at the patch **ledger** in `eds-demo-patches`, kept deliberately when the
+hybrid plan repointed CitiSignal onto the B2B base. `custom` uses the sibling `b2b` ledger the
+same way.
+
+**`type: 'password'` is not a secret definition in this codebase.** Of 28 catalog env vars,
+exactly ONE is typed `password`; all three API keys are typed `text`, because `type` drives
+field RENDERING, not sensitivity. A filter on it would have stripped the admin password and
+still shipped three API keys in a file stamped `includesSecrets: false` — a bug that reads as
+fixed. Hence the explicit `SECRET_ENV_KEYS` list in `envVarKeys.ts`.
 
 ### A commit that didn't stand alone
 
-`a1d7bb4b` (the CSS change) removed rules that two tests in `destinationRowType.test.ts`
-pinned, so it is red in isolation; `00f689d6` fixes it. Cause: the CSS change was checked with
+`a4b4e414` (the CSS change) removed rules that two tests in `destinationRowType.test.ts`
+pinned, so it is red in isolation; `8f43b206` fixes it. Cause: the CSS change was checked with
 lint and `tsc` but not jest, because CSS "usually has no tests" — this project tests CSS rules.
 **Run jest for CSS changes.**
 
@@ -98,19 +128,20 @@ lint and `tsc` but not jest, because CSS "usually has no tests" — this project
 
 ## Read this before trusting any claim in this file
 
-**Three times this session a claim would have shipped wrong until the thing was RUN rather
-than grepped for.** Different failure from the last handoff's "correct command, wrong tree" —
-this one is greps confirming what you expect and missing what you didn't think to look for:
+**The recurring failure this session was verifying a list you authored instead of scanning for
+what you did not think of.** Four instances, all caught by running or tracing rather than
+grepping:
 
-| Wrong claim | Why the grep missed it | Caught by |
+| Wrong claim | Why the check missed it | Caught by |
 |---|---|---|
 | "no count pin on `edsHandlers`" | the pin keys on `types`, not `edsHandlers` | running the suite |
 | "the CSS change is complete" | lint + tsc pass; the tests are in jest | running the suite |
-| "a second writer causes the scope drift" | there is none; the mechanism is the fan-out **target set** | tracing all writers |
+| "a second writer causes the scope drift" | there is none; it's the fan-out TARGET SET | tracing all writers |
+| **"the redaction is clean"** | scanned for 6 known strings, not for identifier shapes | a peer re-reading it |
 
-The rule that follows: **a grep can support a positive claim; only running the thing supports a
-negative one.** "Nothing pins this" and "nothing else writes that" are the two shapes that keep
-being wrong.
+The rule: **a grep can support a positive claim; only running or exhaustively tracing supports
+a negative one.** "Nothing pins this", "nothing else writes that", "nothing sensitive remains"
+are the three shapes that keep being wrong.
 
 ---
 
@@ -123,41 +154,51 @@ being wrong.
   order-independent. `demo-builder-test` still carries the disagreement — do not clean it up
   before testing.
 - **`hybrid-storefront-model` — unblocked, gated on live verification.** The `citisignal-b2b`
-  ambiguity that parked it is resolved (above). What remains is the step-02 gate:
-  individual-vs-company login against a real B2B backend. Tier 2 is otherwise functionally
-  complete per its own overview.
+  ambiguity that parked it is resolved. What remains is the step-02 gate: individual-vs-company
+  login against a real B2B backend.
 - **Two visual checks nothing here can reach.** Whether the four font-size changes read
   correctly on the integrations surface, and whether an agent actually reaches for
-  `diagnose-demo` when handed a vague symptom ("PDPs are empty") rather than editing first.
+  `diagnose-demo` when handed a vague symptom rather than editing first.
 
 **Real work, not started:**
 
-- **`appbuilder-deployable-model` D2–D6.** Only D1 is built.
+- **`appbuilder-deployable-model` D2–D6.** Only D1 is built. Track A is what pre-positions
+  `getWorkspaceCredential` — see the coordination note above.
 
 **Unresolved, not reproducing:**
 
 - **Four suites flake under parallel load** (`extension-context`, both `inExtensionMcpServer`
-  suites, `mcpConfigWriter`). Did NOT recur in any run this session, including two full passes.
+  suites, `mcpConfigWriter`). Did NOT recur in any run this session, including three full passes.
 
-**New backlog items (both filed today, both ready, neither blocked):**
+**Known gap, no gate:**
+
+- **`SECRET_ENV_KEYS` is a list with a doc comment, not an enforced contract.** A new Commerce
+  credential added to `components.json` ships in a "secret-free" export unless someone
+  remembers to list it. A test asserting that every credential-shaped catalog key
+  (`/PASSWORD|SECRET|API_KEY|TOKEN|CREDENTIAL/`) appears in `SECRET_ENV_KEYS` would close it,
+  and would have caught the three API keys before this session. Proposed by the peer session,
+  not yet built. The Data Installer Stage 2 introduces Commerce `client_id`/`client_secret`,
+  which makes it timely — though that plan routes both to SecretStorage, so they should never
+  reach `componentConfigs`.
+
+**Backlog items filed today (all ready, none blocked):**
 
 - **`2026-08-11-project-level-facts-stored-per-component.md`** — 17 of 25 declared env vars have
   more than one owner in `componentConfigs`; 6 are the scope keys now fixed, 11 unexamined.
-  **Its first draft asked the wrong question and the file records that**: there is no second
+  **The file records that its own first draft asked the wrong question**: there is no second
   writer anywhere. The drift mechanism is that Configure's fan-out targets come from
   `selectedComponents`, so a component holding a copy but missing from the selection lists never
-  updates. Key-agnostic. Step 1 is reproducing it before any code moves — if it does not
-  reproduce, the premise needs rechecking.
-- **`2026-08-11-generated-diagnosis-skill.md`** — SHIPPED as `a069b792`. Move to
+  updates. Key-agnostic. Step 1 is reproducing it before any code moves.
+- **`2026-08-11-generated-diagnosis-skill.md`** — SHIPPED as `63b76b63`. Move to
+  `.rptc/complete/` on the next pass.
+- **`2026-08-11-export-settings-ignores-include-secrets.md`** — SHIPPED as `12f4b802`. Move to
   `.rptc/complete/` on the next pass.
 
 **Carried forward, still true:**
 
-- **`pickSampleSku` samples from the served config now**, and reports scope divergence as a
-  finding only when the project reads `published` yet the CDN serves a different scope — the one
-  case `edsStorefrontStatusSummary` structurally cannot detect, because it compares bookkeeping
-  to intent and never reads the CDN.
+- **`pickSampleSku` samples from the served config**, and reports scope divergence as a finding
+  only when the project reads `published` yet the CDN serves a different scope — the one case
+  `edsStorefrontStatusSummary` structurally cannot detect.
 - **`updateField`'s linked-field write** puts the DERIVED key's value on the SOURCE field's
-  component list (`ADOBE_COMMERCE_URL` → `ADOBE_COMMERCE_GRAPHQL_ENDPOINT`). The sets are a
-  superset today so every declarer is covered, but it also writes the key onto `headless`, which
-  does not declare it. Harmless now; wrong by construction. Noted in the audit item.
+  component list. The sets are a superset today so every declarer is covered, but it also writes
+  the key onto `headless`, which does not declare it. Harmless now; wrong by construction.
