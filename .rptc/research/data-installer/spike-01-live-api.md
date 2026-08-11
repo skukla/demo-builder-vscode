@@ -186,6 +186,42 @@ comfortably fit one page today.
 
 ---
 
+## Spike A results (2026-08-11, same day) — three corrections
+
+Re-ran the full read surface via the extension's own token path
+(`aio config get ims.contexts.cli.access_token`, the source `tokenManager` reads) and captured
+15 sanitized fixtures. Those land under `tests/fixtures/data-installer/` with the
+`feature/data-installer` branch; the findings are recorded here because they describe the
+external service, not our code. Three of them change the design:
+
+**1. The two status endpoints fail in OPPOSITE directions.** §6 below records that
+`async-process-status` lies about a completed job. Spike A found the inverse for a job that
+never started: `datapack-process-status` returns `200` with an **empty `data_types: {}`** and
+`overall_processing_time: null` — indistinguishable from "still starting" — while
+`async-process-status` returns the actual reason
+(`{"success":false,"error":"Invalid input. Must provide one of: (datapack_name), …"}`). So
+neither endpoint is sufficient alone: **the durable one decides terminal success/failure, the
+OpenWhisk one explains why nothing happened.** Note also that the never-started shape is an
+empty map, *not* the `{"error":"No request log found…"}` the docs describe — key on the empty
+map.
+
+**2. The `overall_processsing_time` typo is the DOC's, not the API's.** The API Reference lists
+a triple-s field for `get-installed-datapacks`. The live endpoint returns
+`overall_processing_time` — normal spelling — on 35/35 rows. Reading it from the doc would have
+produced a parser test asserting a field that does not exist.
+
+**3. Cover art is absent more often than present among curated packs.** 15 of the 23
+`shared: true` entries have an empty `cover_image`; all 23 have a `thumbnail_image`. A card's
+cover → thumbnail → placeholder fallback is the common path, not an edge case.
+
+**Not resolvable in this environment:** whether the catalog is org-scoped. `aio console org
+list` returns exactly one reachable org, which is consistent with the org-bound-token model, so
+there is no second org to test against from here. Nothing in any response shape carries an org
+id, which suggests the catalog is global to the service — but that is an inference, not a
+measurement, and it stays open.
+
+---
+
 ## Open questions for the next spike
 
 1. **Extension IMS token** — repeat §1 with the extension's own token, not `aio`'s.
