@@ -165,6 +165,11 @@ were both caught by the control and neither by reading the output: a zsh glob er
 made `grep` never run while `0 remaining` printed ten times, and a `grep -c … | head`
 reported three skills as lacking coverage they might well have had.
 
+**Quote glob arguments in zsh.** `--include=*.css` is expanded by the shell before
+`grep` ever sees it, and the command dies with "no matches found" — printing a zero
+that reads exactly like a result. Write `--include='*.css'`. This is the specific
+error behind both of the 2026-08-07 all-clears, and it recurred twice on 2026-08-11.
+
 ## Gotchas (verified, load-bearing)
 
 - **Adobe Spectrum Flex constrains width** (450px): use a standard HTML div with flex styles for critical wizard layouts.

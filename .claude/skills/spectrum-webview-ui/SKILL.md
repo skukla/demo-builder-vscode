@@ -106,10 +106,29 @@ anywhere.
   that test's `DOCUMENTED_EXCEPTIONS` map with a reason.
 
 ## Verify
-Compilation is not enough — the mock can't render real Spectrum popup layout, and scale/overflow
-bugs only show at runtime.
+
+**You cannot see this UI.** It renders in a VS Code webview — no Playwright, no screenshot, no
+devtools you can reach. The global CLAUDE.md "verify in the browser" rule does not apply here and
+nothing automatic replaces it. Compilation proves nothing either: the mock can't render real
+Spectrum popup layout, and scale/overflow bugs only show at runtime. The user is the only
+renderer, so:
+
+- **Never report a visual result you did not see.** "The rows line up now", "this matches the
+  project card" — that is a prediction. Say so, or ask for a screenshot.
+- **Never assert parity from declarations.** Identical properties render differently under
+  different ancestors. `.integration-card` was commented "Matched to `.project-card-spectrum`",
+  had the same declarations, and rendered at a different height.
+- **Make parity structural instead.** One shared custom property that both surfaces consume
+  (`--card-min-height` / `--card-min-width` / `--card-padding` / `--card-gap`, in
+  `custom-spectrum.css`). A number that exists once cannot drift; a number copied twice already
+  has.
+- **Check a list's real cardinality before designing per-row anything.** A per-row hint built to
+  explain 6 rows annotated all 717, and was reverted.
+
+Then, with the user driving:
 1. `npm run watch:all` in the background; F5 once, then Cmd+R in the Extension Dev Host after edits.
-2. Eyeball the actual surface: decoration centered under its element at both scales; a grouped/
+2. Ask for a screenshot of the surface **populated** — an empty one hides every density, overflow
+   and cardinality bug. Check: decoration centered under its element at both scales; a grouped/
    submenu Menu opens and the submenu is reachable; no element overflows its container.
 3. Open the webview devtools console — no errors; a hang or repeated identical renders points at
    an inline empty-array/object reference passed to a hook.
