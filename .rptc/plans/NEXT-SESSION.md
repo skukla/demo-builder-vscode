@@ -49,8 +49,17 @@ tree.
 | **A release-note setting name** | wrote `demoBuilder.eds.defaultDaLiveOrg` from memory; the real key is `demoBuilder.daLive.defaultOrg` | diffing `package.json` against the `.126` tag |
 
 The last one would have shipped a wrong setting name to users. **Assume the same rate
-applies to any claim in this file that is not marked verified.** This is the strongest
-candidate for the next `dream` run — the evidence is already in `.rptc/dream/2026-08-11.md`.
+applies to any claim in this file that is not marked verified.**
+
+**This is now a rule, not a candidate.** Root `CLAUDE.md` `## Verifying` gained two
+paragraphs: a control must be run at the question's scope (say where the answer would be if
+it existed, then confirm your command reads there), and never publish an identifier you have
+not read from source. Recorded as Proposal 5 in `.rptc/dream/2026-08-11.md`.
+
+**How the next `dream` run should check whether it took:** count *wrong-tree negatives*, not
+positive controls. Control COUNT is already high — the 2026-08-07 rule drove it from ~0.2% to
+~3–6% of Bash calls — and every one of this session's five failures happened *with* a control
+present. The signal is a negative result asserted about a path the command never read.
 
 **And one wrong claim I made about behaviour, corrected only after it reached a commit
 message:** see "the edsConfig fix" below.
