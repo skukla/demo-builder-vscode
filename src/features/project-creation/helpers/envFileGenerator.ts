@@ -8,11 +8,11 @@ import { formatGroupName } from './formatters';
 import { generateConfigFile } from '@/core/config/configFileGenerator';
 import { COMPONENT_IDS } from '@/core/constants';
 import { normalizeIfUrl } from '@/core/validation/Validator';
+import { resolveBackendOwnedScopeValue } from '@/features/components/config/backendOwnedScope';
 import {
     PAAS_CATALOG_SERVICE_ENDPOINT,
     CATALOG_SERVICE_ENDPOINT,
     ACCS_CATALOG_SERVICE_ENDPOINT,
-    BACKEND_OWNED_SCOPE_KEYS,
 } from '@/features/components/config/envVarKeys';
 import {
     generateConfigJson,
@@ -139,11 +139,12 @@ function resolveFromComponentConfigs(
     const componentConfigs = context.getComponentConfigs();
     if (!componentConfigs) return undefined;
 
-    if (BACKEND_OWNED_SCOPE_KEYS.includes(key)) {
-        const backendId = context.getBackendId();
-        const fromBackend = backendId ? componentConfigs[backendId]?.[key] : undefined;
-        if (fromBackend !== undefined) return String(fromBackend);
-    }
+    const backendId = context.getBackendId();
+    const fromBackend = resolveBackendOwnedScopeValue(
+        key,
+        backendId ? componentConfigs[backendId] : undefined,
+    );
+    if (fromBackend !== undefined) return String(fromBackend);
 
     for (const compId in componentConfigs) {
         const configValue = componentConfigs[compId]?.[key];

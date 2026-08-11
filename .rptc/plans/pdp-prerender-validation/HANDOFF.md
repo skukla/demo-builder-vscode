@@ -74,16 +74,32 @@ socket. Worth its own fix; likely a missing cleanup or a missing tmpdir override
 
 ## 2. The duplication / scope data-model fix
 
-Four resolvers over `componentConfigs`, each with its own tiebreak. Two are fixed;
+Four resolvers over `componentConfigs`, each with its own tiebreak. Three are fixed;
 the underlying duplication is not.
 
-**Fixed today** — both now consult `BACKEND_OWNED_SCOPE_KEYS`
-(`src/features/components/config/envVarKeys.ts`):
+**Fixed** — all three now call the shared backend-first resolver in
+`src/features/components/config/backendOwnedScope.ts`, which enforces the key list in
+`envVarKeys.ts`. A docstring saying "any new resolver must consult the backend first" is
+what let the third one be missed for a day, so the rule is now a function three call
+sites share:
 
-| Resolver | Old tiebreak |
-|---|---|
-| `mergeComponentConfigs` (→ `config.json`) | mesh wins every key |
-| `envFileGenerator` value lookup (→ component `.env`) | first in key order wins |
+| Resolver | Old tiebreak | Fixed |
+|---|---|---|
+| `mergeComponentConfigs` (→ `config.json`) | mesh wins every key | 2026-08-10 (`4b517cfb`) |
+| `envFileGenerator` value lookup (→ component `.env`) | first in key order wins | 2026-08-10 (`4b517cfb`) |
+| `detectMeshChanges` (→ the staleness verdict) | last in manifest order wins | 2026-08-10, `mesh-staleness-scope` step 01 |
+
+`detectMeshChanges` also had a SECOND disagreement, on the non-scope keys: it
+flattened last-wins while `envFileGenerator` takes first-wins, so for the six
+duplicated connection keys (Commerce endpoint / URL / environment id / catalog
+key) it could compare the deployed baseline against a value the generator would
+never write. It now flattens first-wins, matching the generator — the baseline
+came out of that generated `.env`, so agreeing with it is the whole job. Measured:
+12 of the detector's 13 watched keys are declared by more than one component.
+
+The third mattered most: in the wrong key order it compared the deployed snapshot against
+the mesh's OWN stale duplicate, found them equal, and reported the mesh clean while it
+queried a website with no products — on the one surface whose job is catching that.
 
 **Still outstanding:**
 

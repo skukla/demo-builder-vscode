@@ -6,6 +6,7 @@
  */
 
 import type { CustomBlockLibrary, InstalledBlockLibrary } from './blockLibraries';
+import type { CommerceStoreStructure } from './commerceStore';
 import type { ServiceDefinition } from './components';
 
 /**
@@ -61,6 +62,23 @@ export interface Project {
     };
     // Component configurations (environment variables and settings)
     componentConfigs?: Record<string, Record<string, string | boolean | number | undefined>>;
+    /**
+     * The discovered Commerce store hierarchy — websites, store groups and store
+     * views, each with its `code` AND its human `name`.
+     *
+     * The pickers show the user "CitiSignal Store"; only `citisignal_store` was
+     * ever kept, so every later surface made them translate. The structure is
+     * the one thing that holds both, and it was fetched and thrown away on every
+     * discovery. Persisting it turns a name into an offline lookup BY CODE on any
+     * surface — which is also why nothing has to pair a name with a code
+     * defensively: the code IS the lookup key, so a name can never land on the
+     * wrong one.
+     *
+     * A CATALOG, not a selection: refreshed wholesale whenever discovery runs.
+     * Absent until it has run once (every project predating this) — consumers
+     * then show the bare code, which is a correct rendering, not a degraded one.
+     */
+    commerceStoreStructure?: CommerceStoreStructure;
     // Package/Stack/Addons selections (vertical + architecture)
     /** Package ID selected during project creation (e.g., 'citisignal', 'buildright') */
     selectedPackage?: string;

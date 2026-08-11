@@ -13,7 +13,6 @@
  * - core/state/projectFileLoader.ts               — reads manifest.meshState/appState (legacy manifests load forever)
  * - core/state/appBuilderComponentMigration.ts    — the legacy→keyed read-migration
  * - features/app-builder/services/appBuilderComponentState.ts — accessor module (legacy synthesis fallback)
- * - features/app-builder/services/appComponentManager.ts — clearing write (prevents legacy-synthesis resurrection on remove)
  * - features/mesh/services/stalenessDetector.ts   — getCurrentMeshState per-field legacy fallback + post-deploy clearing write
  * - features/mesh/services/meshUpdateDecline.ts   — isMeshUpdateDeclined per-field legacy fallback read
  * - features/mesh/services/meshVerifier.ts        — clearing write (mesh gone remotely)
@@ -34,7 +33,6 @@ const ALLOWED_FILES: ReadonlyMap<string, number> = new Map([
     ['core/state/projectFileLoader.ts', 2],
     ['core/state/appBuilderComponentMigration.ts', 5],
     ['features/app-builder/services/appBuilderComponentState.ts', 3],
-    ['features/app-builder/services/appComponentManager.ts', 1],
     ['features/mesh/services/stalenessDetector.ts', 2],
     ['features/mesh/services/meshUpdateDecline.ts', 1],
     ['features/mesh/services/meshVerifier.ts', 1],

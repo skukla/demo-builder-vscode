@@ -207,8 +207,7 @@ export function ConfigureScreen({
 
     // Sections come and go as components are configured, so the stored id can go stale;
     // fall back to the first tab (Project, which is always present) rather than a blank view.
-    const activeSection =
-        sections.find((section) => section.id === activeSectionId) ?? sections[0];
+    const activeSection = sections.find((section) => section.id === activeSectionId) ?? sections[0];
 
     const railTabs = useMemo(
         () => toStepRailTabs(sections, activeSection.id),
@@ -240,7 +239,13 @@ export function ConfigureScreen({
         } finally {
             setIsSaving(false);
         }
-    }, [componentConfigs, projectName, project.name, isEds, authoringExperience]);
+    }, [
+        componentConfigs,
+        projectName,
+        project.name,
+        isEds,
+        authoringExperience,
+    ]);
 
     const handleCancel = useCallback(() => {
         webviewClient.postMessage('cancel');

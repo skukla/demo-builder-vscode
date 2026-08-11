@@ -64,7 +64,10 @@ export const PAAS_CATALOG_SERVICE_ENDPOINT = 'PAAS_CATALOG_SERVICE_ENDPOINT';
  * deploy reported success.
  *
  * Any new resolver over `componentConfigs` must consult the backend first for
- * these keys.
+ * these keys — call `resolveBackendOwnedScopeValue` / `applyBackendOwnedScope`
+ * from `./backendOwnedScope` rather than hand-rolling a fourth copy. A third
+ * resolver (the mesh staleness detector) missed this rule while it was prose
+ * only, and could report a mesh clean while it served the wrong website.
  */
 export const BACKEND_OWNED_SCOPE_KEYS: readonly string[] = [
     ACCS_WEBSITE_CODE,
@@ -76,3 +79,4 @@ export const BACKEND_OWNED_SCOPE_KEYS: readonly string[] = [
     PAAS_STORE_VIEW_CODE,
     PAAS_CUSTOMER_GROUP,
 ];
+

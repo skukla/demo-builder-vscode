@@ -92,6 +92,7 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand {
             projectName: project?.name ?? '',
             hasAdobeContext: Boolean(project?.adobe?.organization),
             appBuilderComponents: project?.appBuilderComponents,
+            commerceStoreStructure: project?.commerceStoreStructure,
             appBuilderComponentCatalog: this.resolveCatalog(project ?? null),
             destination: {
                 projectTitle: project?.adobe?.projectTitle,

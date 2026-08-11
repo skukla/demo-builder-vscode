@@ -410,7 +410,7 @@
             }
         },
         "ACCS_WEBSITE_CODE": {
-            "label": "Website Code",
+            "label": "Website code",
             "type": "text",
             "required": true,
             "default": "citisignal",
@@ -419,7 +419,7 @@
             "group": "accs"
         },
         "ACCS_STORE_CODE": {
-            "label": "Store Code",
+            "label": "Store code",
             "type": "text",
             "required": true,
             "default": "citisignal_store",
@@ -428,7 +428,7 @@
             "group": "accs"
         },
         "ACCS_STORE_VIEW_CODE": {
-            "label": "Store View Code",
+            "label": "Store view code",
             "type": "text",
             "required": true,
             "default": "citisignal_us",
@@ -585,7 +585,7 @@
             "group": "adobe-commerce"
         },
         "ADOBE_COMMERCE_STORE_CODE": {
-            "label": "Store Code",
+            "label": "Store code",
             "type": "text",
             "required": true,
             "placeholder": "main_website_store",
@@ -593,7 +593,7 @@
             "group": "adobe-commerce"
         },
         "ADOBE_COMMERCE_STORE_VIEW_CODE": {
-            "label": "Store View Code",
+            "label": "Store view code",
             "type": "text",
             "required": true,
             "placeholder": "default",
@@ -617,7 +617,7 @@
             "group": "adobe-commerce"
         },
         "ADOBE_COMMERCE_WEBSITE_CODE": {
-            "label": "Website Code",
+            "label": "Website code",
             "type": "text",
             "required": true,
             "placeholder": "base",

@@ -46,6 +46,7 @@ import {
 import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
+import type { CommerceStoreStructure } from '@/types/commerceStore';
 
 /** Module-level stable empty catalog — avoids a new array ref each render. */
 const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];
@@ -68,6 +69,12 @@ export interface IntegrationsScreenProps {
     adobeWorkspaceId?: string;
     /** The IMS org — the add flow's signed-in test reads this, not the project id. */
     adobeOrgId?: string;
+    /**
+     * The discovered Commerce store hierarchy, so the mesh card can NAME the
+     * scope codes it was deployed against. Absent until discovery has run once;
+     * the row then shows bare codes.
+     */
+    commerceStoreStructure?: CommerceStoreStructure;
 }
 
 /**
@@ -135,6 +142,7 @@ export function IntegrationsScreen({
     adobeProjectId,
     adobeWorkspaceId,
     adobeOrgId,
+    commerceStoreStructure,
 }: IntegrationsScreenProps): React.ReactElement {
     const { meshStatusDisplay, meshStatus, isTransitioning, projectStatus } = useDashboardStatus({
         hasAdobeContext,
@@ -182,9 +190,20 @@ export function IntegrationsScreen({
             mesh?.state ?? getMeshAppBuilderComponent(project),
             isMeshBusy(meshStatus) || isTransitioning,
             mesh?.id,
+            // Names the deployed codes. A pure by-code lookup, so it cannot
+            // name the wrong one and needs nothing captured at deploy time.
+            commerceStoreStructure,
         );
         return [meshCard, ...integrationCards];
-    }, [components, overrides, catalog, meshStatusDisplay, meshStatus, isTransitioning]);
+    }, [
+        components,
+        overrides,
+        catalog,
+        meshStatusDisplay,
+        meshStatus,
+        isTransitioning,
+        commerceStoreStructure,
+    ]);
 
     const visibleCards = useMemo(() => filterCards(cards, searchQuery), [cards, searchQuery]);
 

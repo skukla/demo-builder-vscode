@@ -5,7 +5,7 @@
  * under the eslint max-lines limit; add/deploy/remove routing coverage lives in
  * that sibling, shared factories in appBuilderComponentRunner.testUtils.ts.
  *
- * Org-context discipline mirrors appComponentManager.test.ts: withOrgContext is
+ * Org-context discipline: withOrgContext is
  * mocked to record its target and run the callback (no global mutation).
  */
 

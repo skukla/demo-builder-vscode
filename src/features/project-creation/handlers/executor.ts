@@ -50,6 +50,7 @@ import { TransformedComponentDefinition } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import { AdobeConfig } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
+import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { Logger } from '@/types/logger';
 import type { Stack } from '@/types/stacks';
 import {
@@ -170,6 +171,8 @@ interface ProjectCreationConfig {
         appBuilder?: string[];
     };
     componentConfigs?: Record<string, Record<string, unknown>>;
+    /** The discovered Commerce store hierarchy (names for the chosen codes). */
+    commerceStoreStructure?: CommerceStoreStructure;
     apiMesh?: {
         meshId?: string;
         endpoint?: string;
@@ -329,6 +332,16 @@ export function buildInitialProject(
             string,
             Record<string, string | number | boolean | undefined>
         >,
+        // The discovered store hierarchy — a CATALOG that names the scope codes
+        // on every later surface, kept out of componentConfigs so no `.env`
+        // generator can walk it.
+        //
+        // Falls back to the EXISTING structure, like `created` above: this
+        // rebuilds the whole Project, and an edit session that never reached the
+        // Commerce step carries no structure. Overwriting a good one with
+        // undefined would silently drop every store name the project had.
+        commerceStoreStructure:
+            typedConfig.commerceStoreStructure ?? existingProject?.commerceStoreStructure,
         selectedPackage: typedConfig.selectedPackage,
         selectedStack: typedConfig.selectedStack,
         selectedAddons: typedConfig.selectedAddons,

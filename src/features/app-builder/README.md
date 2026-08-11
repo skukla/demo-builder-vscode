@@ -20,7 +20,6 @@ features/app-builder/
     ├── appBuilderDeployOutcome.ts    # recordDeployOutcome — the keyed deploy-record writer
     ├── appBuilderComponentRunner.ts  # keyed runner: clone → install → subscribe → deploy per id
     ├── appBuilderComponentRunnerDeps.ts # RunnerDepsContext factory (catalog, subscriber, secrets)
-    ├── appComponentManager.ts        # addAppComponent / removeAppComponent (live add/remove)
     ├── deployAppIsolated.ts          # package-isolated deploy (applyIsolatedPackages + deploy)
     ├── appDeployment.ts              # deployAppComponent — org-agnostic deploy helper
     ├── appConfigPackages.ts          # app.config.yaml package rewrite (isolation)

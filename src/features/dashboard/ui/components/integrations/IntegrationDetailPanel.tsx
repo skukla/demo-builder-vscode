@@ -115,6 +115,10 @@ function PanelContent({
     // EACH OTHER, which is how a card-duplicating row survived being audited.
     const showKind = model.kindLabel !== model.name;
     const deployedEndpoints = selectEndpoints(model.deployedUrls, model.url);
+    // Named rather than inlined into the JSX guard: three conditions in a row
+    // there is exactly the chain the SOP scan flags, and the name says WHY the
+    // mesh check belongs — integrations have no Commerce scope.
+    const commerceScope = model.isMesh ? model.commerceScope : undefined;
 
     return (
         <>
@@ -208,6 +212,43 @@ function PanelContent({
                         ))}
                     </PanelRow>
                 )}
+                {/* What the mesh is DEPLOYED against — a permanent row, not a
+                    stale-only diff. The scope it serves is always true, and
+                    "what is my mesh pointed at?" should not need a warning badge
+                    before it becomes answerable. On a stale mesh the badge says
+                    the mesh is behind and this row says what it is behind ON, so
+                    the stale case needs no special treatment.
+
+                    `isMesh` guards it rather than the caller: integrations have
+                    no Commerce scope, and a stray field on one must not leak a
+                    row. */}
+                {commerceScope?.length ? (
+                    <PanelRow label="Commerce scope">
+                        {commerceScope.map(({ label, code, name }) => (
+                            <span key={label} className="integration-panel-scope">
+                                <span className="integration-panel-scope-key">{label}</span>
+                                {/* Name first, code parenthesised and muted: the
+                                    name is what the user picked, the code is what
+                                    is in the `.env` and what they would grep for.
+                                    With no name the code stands ALONE — not
+                                    "(unknown)", not an empty bracket. That is the
+                                    correct rendering for every project predating
+                                    name capture, and it must not look broken. */}
+                                <span className="integration-panel-scope-value">
+                                    {name && <>{name} </>}
+                                    <span
+                                        className={cn(
+                                            'integration-panel-scope-code',
+                                            name && 'integration-panel-scope-code--aside',
+                                        )}
+                                    >
+                                        {name ? `(${code})` : code}
+                                    </span>
+                                </span>
+                            </span>
+                        ))}
+                    </PanelRow>
+                ) : null}
                 {model.lastDeployed && (
                     <PanelRow label="Last deploy">{model.lastDeployed}</PanelRow>
                 )}

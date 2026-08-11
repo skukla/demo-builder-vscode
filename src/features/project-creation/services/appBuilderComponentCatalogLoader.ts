@@ -125,8 +125,7 @@ export function isBlankSource(source: { owner: string; repo: string }): boolean 
 }
 
 /**
- * GitHub owner/repo charset — mirrors the dashboard's resolvePublicRepo gate
- * (appComponentManager). owner/repo are interpolated into a shell-executed
+ * GitHub owner/repo charset. owner/repo are interpolated into a shell-executed
  * `git clone` and into componentDef.id (a path segment), so shell
  * metacharacters and dot-only names are rejected fail-fast. Sources can arrive
  * from imported settings files, not just the UI, so the gate lives here.

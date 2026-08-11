@@ -5507,6 +5507,39 @@ div[class*="spectrum"] input[type="search"] {
     display: block;
 }
 
+/* Commerce scope: three sub-labelled lines inside ONE row's value column.
+   Grid rather than flex so the codes align down a column no matter how the
+   labels differ in width, and so a long code wraps inside its own cell instead
+   of widening the drawer (the value column is only ~264px). */
+.integration-panel-scope {
+    display: grid;
+    grid-template-columns: 68px minmax(0, 1fr);
+    gap: 8px;
+    align-items: baseline;
+    padding: 1px 0;
+}
+.integration-panel-scope-key {
+    font-size: 11px;
+    color: var(--spectrum-global-color-gray-600);
+}
+/* Prose, because the NAME the user picked leads the cell. The code inside opts
+   back into the code face; with no name that span holds the bare code, so the
+   mono face lives there rather than here. */
+.integration-panel-scope-value {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+/* The code itself — always mono, so it reads as a value you could grep for. */
+.integration-panel-scope-code {
+    font-family: var(--spectrum-font-family-code, monospace);
+    font-size: 12px;
+}
+/* Muted only when a NAME precedes it: then the code is the secondary reading.
+   Standing alone it is the whole value and must not look de-emphasised. */
+.integration-panel-scope-code--aside {
+    color: var(--spectrum-global-color-gray-600);
+}
+
 /* Heading over a RUN of rows that share a kind (the deployed endpoints), as
    opposed to `.integration-panel-row-key`, which labels one row's value. Without
    it a list of N per-action URLs reads as N more metadata rows peered with Status

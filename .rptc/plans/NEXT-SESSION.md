@@ -167,13 +167,13 @@ re-creates the same race. `InExtensionMcpServer.dispose`'s docstring explains wh
   highest-value gap. An agent debugging PDP failures cannot see that a project points at a
   Commerce website with no products. That cost most of an afternoon.
 - **Duplicated Commerce scope still in existing manifests.** Confirmed still present on
-  `demo-builder-test` after the 2026-08-10 mesh fix. TWO resolvers consult
-  `BACKEND_OWNED_SCOPE_KEYS`; a **third** — the mesh staleness detector — does not, and
-  its verdict therefore turns on manifest key order. **Now an ACTIVE plan**:
-  [`mesh-staleness-scope/`](mesh-staleness-scope/) — four steps, promoted 2026-08-10. Step 01
-  (the correctness fix) ships value alone; steps 02–03 add the deployed-vs-configured diff
-  to the mesh flyout, which is why they are folded in rather than filed separately.
-  A migration that drops the duplicate copies would dissolve the whole bug class; the
+  `demo-builder-test` after the 2026-08-10 mesh fix. All THREE resolvers now consult
+  `BACKEND_OWNED_SCOPE_KEYS` through the shared `backendOwnedScope.ts` — the staleness
+  detector was the third and was fixed by [`mesh-staleness-scope/`](mesh-staleness-scope/)
+  step 01, so its verdict no longer turns on manifest key order. Steps 02–04 (the permanent
+  "Commerce scope" row on the mesh flyout, plus store NAMES captured at selection) shipped
+  with it; step 05 is Dev Host verification. **What remains here is the DATA MODEL**: a
+  migration dropping the duplicate copies would dissolve the whole bug class, and the
   scope-key rule is the interim. PDP handoff §2.
 - **`pickSampleSku` reads the project manifest**, not the storefront's served
   `config.json`. `check-sku-exists` reads the served config, which is the right source.

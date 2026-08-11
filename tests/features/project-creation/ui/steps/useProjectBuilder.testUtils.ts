@@ -5,7 +5,7 @@
  *
  * NOTE: `jest.mock` calls are per-file and stay in each test file; only the
  * mock-free fixtures and the renderHook wrapper live here (same pattern as
- * appComponentManager.testUtils.ts).
+ * appBuilderComponentRunner.testUtils.ts).
  */
 
 import { renderHook } from '@testing-library/react';

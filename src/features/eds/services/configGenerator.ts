@@ -25,6 +25,7 @@ import {
     getProvidedEnvVars,
     getMeshAppBuilderComponent,
 } from '@/features/app-builder/services/appBuilderComponentState';
+import { applyBackendOwnedScope } from '@/features/components/config/backendOwnedScope';
 import componentsConfig from '@/features/components/config/components.json';
 import {
     PAAS_GRAPHQL_ENDPOINT,
@@ -40,7 +41,6 @@ import {
     ACCS_STORE_CODE,
     ACCS_WEBSITE_CODE,
     ACCS_CUSTOMER_GROUP,
-    BACKEND_OWNED_SCOPE_KEYS,
 } from '@/features/components/config/envVarKeys';
 import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
 import type { Logger, Project } from '@/types';
@@ -239,6 +239,7 @@ export function mapBackendToEnvironmentType(backendComponentId?: string): Enviro
 export function mergeComponentConfigs(
     componentConfigs: ComponentConfigs | undefined,
     meshEndpoint?: string,
+    backendComponentId?: string,
 ): Record<string, string | boolean | number | undefined> {
     if (!componentConfigs) return {};
 
@@ -265,10 +266,14 @@ export function mergeComponentConfigs(
     // republish reported success because it had faithfully published what the
     // merge told it. Endpoint precedence is handled explicitly below and in
     // `extractConfigParamsFromConfigs`, so nothing here needs to cover it.
-    const merged = { ...nonMesh, ...mesh };
-    for (const key of BACKEND_OWNED_SCOPE_KEYS) {
-        if (key in nonMesh) merged[key] = nonMesh[key];
-    }
+    // The BACKEND's own entry when the caller knows it. `nonMesh` is only an
+    // approximation of "the backend": `headless` is a FRONTEND and declares all
+    // three ADOBE_COMMERCE_* scope keys, so on a headless project the scope was
+    // still decided by whichever non-mesh component iterated last. Callers that
+    // cannot name the backend keep the old approximation rather than losing the
+    // mesh protection entirely.
+    const authoritative = backendComponentId ? componentConfigs[backendComponentId] : nonMesh;
+    const merged = applyBackendOwnedScope({ ...nonMesh, ...mesh }, authoritative);
 
     // Deployed mesh endpoint overrides everything
     if (meshEndpoint) {
@@ -283,7 +288,7 @@ export function extractConfigParamsFromConfigs(
     meshEndpoint?: string,
     backendComponentId?: string,
 ): Partial<ConfigGeneratorParams> {
-    const config = mergeComponentConfigs(componentConfigs, meshEndpoint);
+    const config = mergeComponentConfigs(componentConfigs, meshEndpoint, backendComponentId);
     const environmentType = mapBackendToEnvironmentType(backendComponentId);
     const isAccs = environmentType === 'accs';
 

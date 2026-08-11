@@ -145,3 +145,57 @@ describe('buildInitialProject', () => {
         });
     });
 });
+
+/**
+ * EDIT mode must not wipe the discovered store structure.
+ *
+ * `buildInitialProject` rebuilds the Project from the wizard config, so anything
+ * it does not carry over from `existingProject` is destroyed on an edit — the
+ * same reason `created` is explicitly preserved a few lines up.
+ *
+ * The structure is fetched from Commerce, not authored, and an edit session that
+ * never reaches the Commerce step carries none. Overwriting a good structure with
+ * `undefined` would silently drop every store NAME the project had, and the only
+ * recovery is a Configure open the user has no reason to suspect they need.
+ */
+describe('buildInitialProject — commerceStoreStructure across an edit', () => {
+    const STRUCTURE = {
+        websites: [{ id: 2, code: 'citisignal', name: 'CitiSignal' }],
+        storeGroups: [],
+        storeViews: [],
+    };
+
+    it('keeps the existing structure when the edit session discovered none', () => {
+        const existing = { commerceStoreStructure: STRUCTURE } as never;
+
+        const project = buildInitialProject(
+            { projectName: 'p' } as never,
+            '/p',
+            existing,
+        );
+
+        expect(project.commerceStoreStructure).toEqual(STRUCTURE);
+    });
+
+    it('prefers a freshly discovered structure over the stored one', () => {
+        const fresh = {
+            websites: [{ id: 3, code: 'renamed', name: 'Renamed' }],
+            storeGroups: [],
+            storeViews: [],
+        };
+
+        const project = buildInitialProject(
+            { projectName: 'p', commerceStoreStructure: fresh } as never,
+            '/p',
+            { commerceStoreStructure: STRUCTURE } as never,
+        );
+
+        expect(project.commerceStoreStructure).toEqual(fresh);
+    });
+
+    it('carries none on a fresh create with no discovery — control', () => {
+        const project = buildInitialProject({ projectName: 'p' } as never, '/p');
+
+        expect(project.commerceStoreStructure).toBeUndefined();
+    });
+});

@@ -4,7 +4,7 @@
  * appBuilderComponentRunner-keyed-state.test.ts — keyed-state/name persistence).
  *
  * NOTE: `jest.mock` calls are per-file and stay in each test file; only the
- * mock-free factories live here (same pattern as appComponentManager.testUtils.ts).
+ * mock-free factories live here.
  */
 
 import type { Project } from '@/types/base';

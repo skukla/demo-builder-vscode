@@ -22,13 +22,6 @@ export type {
     ApiSubscriberClient,
 } from './apiSubscriber';
 
-export { addAppComponent, removeAppComponent } from './appComponentManager';
-export type {
-    AppComponentManagerDeps,
-    AddAppResult,
-    RemoveAppResult,
-} from './appComponentManager';
-
 export {
     getAppBuilderComponent,
     listAppBuilderComponents,

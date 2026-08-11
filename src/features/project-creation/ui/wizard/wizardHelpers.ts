@@ -747,6 +747,10 @@ export function buildProjectConfig(
             : undefined,
         apiMesh: wizardState.apiMesh,
         componentConfigs: wizardState.componentConfigs,
+        // The discovered store hierarchy, which the wizard fetched and would
+        // otherwise throw away. Persisting it is what lets any later surface
+        // name a scope CODE without a second Commerce call.
+        commerceStoreStructure: wizardState.storeDiscoveryData,
         importedWorkspaceId: importedSettings?.adobe?.workspaceId,
         importedMeshEndpoint,
         selectedPackage: wizardState.selectedPackage,

@@ -489,20 +489,43 @@ if (!currentState || Object.keys(currentState.envVars).length === 0) {
         getKeyedMeshAppBuilderComponent(project).envVars = deployedConfig;
         // Continue with comparison
     } else {
-        // Failed to fetch - unknown deployed state
+        // Failed to fetch - unknown deployed state. Conservative: do NOT force a
+        // redeploy on a verdict we could not reach (stalenessDetector.ts).
         return {
-            hasChanges: true,
+            hasChanges: false,
             unknownDeployedState: true
         };
     }
 }
 
 // 2. Compare env vars
-const newEnvVars = getMeshEnvVars(newComponentConfig);
+//
+// The baseline was read FROM the mesh .env, so the only correct question is
+// "would the generator write something different?". That makes
+// envFileGenerator.resolveFromComponentConfigs the spec, and this resolves the
+// same way:
+//   a) flatten ALL componentConfigs, FIRST definition wins — cross-boundary vars
+//      the mesh needs (the GraphQL endpoint) live under the BACKEND component,
+//      and the generator takes the first component that defines a key;
+//   b) then the BACKEND's copy for the store scope, which every other component
+//      only carries as a duplicate that its own side never updates.
+//
+// 12 of the 13 watched keys are declared by more than one component. This used
+// to flatten LAST-wins — the opposite of the generator for (a), and no (b) at
+// all — so the detector could compare against a value that would never ship.
+const allConfigs = flattenFirstWins(newComponentConfigs);
+applyBackendOwnedScope(allConfigs, newComponentConfigs[backendId]);
+const newEnvVars = getMeshEnvVars(allConfigs);
+
+// Only the vars relevant to THIS mesh type (ACCS vs PaaS), so cross-backend
+// vars in componentConfigs cannot produce false mismatches.
 const changedEnvVars = [];
 
-for (const key of MESH_ENV_VARS) {
-    if (currentState.envVars[key] !== newEnvVars[key]) {
+for (const key of getRelevantMeshEnvVars(meshId)) {
+    // Missing is normalized to empty: a watch-list key no component declares
+    // (ACCS_CUSTOMER_GROUP) is absent on BOTH sides, and counting that as a
+    // difference would mark every ACCS mesh permanently stale.
+    if ((currentState.envVars[key] || '') !== (newEnvVars[key] || '')) {
         changedEnvVars.push(key);
     }
 }

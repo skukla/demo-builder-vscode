@@ -31,6 +31,7 @@ The `Project` type (`src/types/base.ts`) contains these key state containers:
 |-------|---------|-------------------|
 | `componentInstances` | Runtime state | Component status, PID, port |
 | `componentConfigs` | Configuration | Environment variables per component |
+| `commerceStoreStructure` | Name catalog | Turning a Commerce store CODE back into its human NAME |
 | `componentSelections` | User choices | Which components were selected |
 | `appBuilderComponents` | App Builder deploy state (keyed) | Mesh endpoint + staleness baseline, per-integration URLs/status |
 | `additionalConsoleApis` | User-picked APIs | Extra Adobe Console APIs picked beyond the required sets |
@@ -81,6 +82,44 @@ The `Project` type (`src/types/base.ts`) contains these key state containers:
 
 **Read Locations**: Configure UI, env file generation, staleness detection
 
+Every resolver over `componentConfigs` must take the Commerce store scope (website /
+store / store-view codes) from the BACKEND component — mesh entries carry a duplicate
+copy that only the backend's side updates. Call the shared
+`src/features/components/config/backendOwnedScope.ts` rather than hand-rolling it; three
+resolvers each rolled their own and the third silently returned the stale copy.
+
+---
+
+### commerceStoreStructure
+
+**Purpose**: The discovered Commerce hierarchy — websites, store groups and store views,
+each with its `code` AND its human `name`.
+
+The pickers show the user "CitiSignal Store" and only `citisignal_store` was ever kept, so
+every later surface made them translate. The structure is the one thing holding both, and
+discovery fetched it and threw it away every time. Persisting it makes a name an offline
+lookup BY CODE on any surface — which is also why nothing pairs a name with a code
+defensively: the code IS the lookup key, so a name cannot land on the wrong one.
+
+A CATALOG, not a selection. It is refreshed wholesale whenever discovery runs, and a code
+it does not contain simply renders bare.
+
+**Deliberately NOT inside `componentConfigs`**: it is reference data, not a deployable
+value, and nothing that walks `componentConfigs` into a `.env` may see it (pinned by
+`tests/features/project-creation/helpers/envFileGenerator-storeStructureExcluded.test.ts`).
+
+**Write Authority**:
+- `src/features/dashboard/handlers/configureHandlers.ts`
+  (`handleDiscoverStoreStructureAndPersist`) — wraps the shared discovery handler and saves
+  what it fetched. Wrapped rather than folded in, because the same handler is registered by
+  the WIZARD, where there is no project yet and `getCurrentProject()` would return whatever
+  was last open
+- `src/features/project-creation/handlers/executor.ts` — creation, carrying the wizard's
+  own `storeDiscoveryData` through `buildProjectConfig`
+
+**Read Locations**: `deriveMeshCard`, to name the Commerce scope codes a mesh was deployed
+against. Absent until discovery has run once; consumers then show the bare code.
+
 ---
 
 ### appBuilderComponents (keyed — the single source of truth)
@@ -110,7 +149,8 @@ in Step 07).
 - `src/features/mesh/services/meshVerifier.ts` - when the mesh is gone remotely,
   mark the keyed mesh entry `not-deployed` (volatile deploy record cleared,
   identity fields kept so a redeploy re-lands on the same entry)
-- `src/features/app-builder/services/appComponentManager.ts` - remove an entry
+- `src/features/app-builder/services/appBuilderComponentRunner.ts`
+  (`removeAppBuilderComponent`) - remove an entry
 
 **Read Locations**: Everything reads through the accessors —
 `getMeshEndpointUrl` (typeGuards), `getMeshAppBuilderComponent` /
@@ -150,8 +190,8 @@ and the legacy singulars are dropped.
 
 **Write Authority**: NONE. No production code writes these fields anymore
 (ADR-011 D3 Step 07). The only remaining assignments are *clearing* writes
-(`meshVerifier`, `stalenessDetector`, `appComponentManager`) that prevent the
-accessors' legacy-synthesis fallback from resurrecting stale in-memory state.
+(`meshVerifier`, `stalenessDetector`) that prevent the accessors'
+legacy-synthesis fallback from resurrecting stale in-memory state.
 
 **CRITICAL**: The legacy `meshState` is never authoritative — the mesh endpoint
 lives on the keyed mesh `appBuilderComponents` entry. Any endpoint stored in
@@ -255,6 +295,10 @@ Files updated (Phase 2, historical):
 - `frontendEnvState.envVars` = Config at demo start (HISTORICAL for restart)
 
 **Verdict**: Not a violation. Each serves a distinct purpose.
+
+`commerceStoreStructure` is NOT a fourth member of this set and needs no snapshot. It is a
+catalog keyed by code, not a record of what was selected or deployed: the mesh entry's
+`envVars` already says which codes shipped, and the structure only supplies their labels.
 
 ---
 

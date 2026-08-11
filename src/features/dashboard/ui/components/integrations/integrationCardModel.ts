@@ -32,11 +32,20 @@ import {
 } from '@/core/ui/utils/statusVocabulary';
 import type { IdentifiedAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import {
+    ACCS_WEBSITE_CODE,
+    ACCS_STORE_CODE,
+    ACCS_STORE_VIEW_CODE,
+    PAAS_WEBSITE_CODE,
+    PAAS_STORE_CODE,
+    PAAS_STORE_VIEW_CODE,
+} from '@/features/components/config/envVarKeys';
+import {
     getAppBuilderComponentEntry,
     isBlankSource,
 } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
+import type { CommerceStoreStructure } from '@/types/commerceStore';
 
 /**
  * Card status vocabulary — the shared one. Re-exported under the grid's own name
@@ -132,6 +141,29 @@ export interface IntegrationCardModel {
      */
     componentId?: string;
     canRename: boolean;
+    /**
+     * The Commerce scope the mesh is DEPLOYED against, in display order.
+     *
+     * An attribute of the deployment, not a difference — which is why it is a
+     * permanent row rather than a stale-only diff. Mesh cards only; integrations
+     * have no Commerce scope. Absent when the deployed snapshot carries no codes
+     * (a mesh deployed before this shipped, or never deployed at all).
+     */
+    commerceScope?: CommerceScopePart[];
+}
+
+/** One sub-labelled line of the Commerce scope row. */
+export interface CommerceScopePart {
+    label: string;
+    code: string;
+    /**
+     * The name the scope was CHOSEN by, when the deployment captured one.
+     *
+     * Absent on every mesh deployed before names were captured, and on any part
+     * the user has not re-picked since. Consumers render the bare code then —
+     * that is the correct rendering, not a degraded one.
+     */
+    name?: string;
 }
 
 type IntegrationStatus = 'not-deployed' | 'deploying' | 'deployed' | 'stale' | 'error';
@@ -377,6 +409,68 @@ function meshMenuActions(
 }
 
 /**
+ * The three parts of the Commerce scope, in display order, with the ACCS and
+ * PaaS key that each can arrive under.
+ *
+ * Labels are FIXED, not registry-derived. The registry says "Website code" /
+ * "Store code" / "Store view code"; under a "Commerce scope" key the trailing
+ * "code" is noise, and the underlying keys differ by backend while the concept
+ * does not — three fixed labels make the row read identically on ACCS and PaaS
+ * instead of leaking which backend the project is on.
+ *
+ * Sentence case, matching every other label in the panel ("APIs in use", "Last
+ * deploy") and the pickers these names come from.
+ *
+ * Customer Group is deliberately absent: `ACCS_CUSTOMER_GROUP` is a Catalog
+ * Service PRICE modifier, not a location. It sits in the scope-key and staleness
+ * lists defensively, but no component declares it, so it reaches no `.env`.
+ */
+const COMMERCE_SCOPE_PARTS: { label: string; keys: string[]; list: keyof CommerceStoreStructure }[] =
+    [
+        { label: 'Website', keys: [ACCS_WEBSITE_CODE, PAAS_WEBSITE_CODE], list: 'websites' },
+        { label: 'Store', keys: [ACCS_STORE_CODE, PAAS_STORE_CODE], list: 'storeGroups' },
+        {
+            label: 'Store view',
+            keys: [ACCS_STORE_VIEW_CODE, PAAS_STORE_VIEW_CODE],
+            list: 'storeViews',
+        },
+    ];
+
+/**
+ * Read the deployed Commerce scope off a mesh entry's captured `.env` snapshot,
+ * naming each code from the persisted store structure.
+ *
+ * The CODES decide which parts exist; the structure only supplies labels. Because
+ * the lookup is BY CODE, a name can never land on the wrong one — no pairing to
+ * check, no snapshot to keep in step. A code the structure does not contain (or a
+ * project where discovery has never run) renders bare, which is correct rather
+ * than degraded.
+ *
+ * @param envVars - `meshEntry.envVars`, what the mesh was actually deployed with
+ * @param structure - `project.commerceStoreStructure`, the discovered hierarchy
+ * @returns the parts that carry a code, or undefined when none do
+ */
+function deriveCommerceScope(
+    envVars: Record<string, string> | undefined,
+    structure: CommerceStoreStructure | undefined,
+): CommerceScopePart[] | undefined {
+    if (!envVars) return undefined;
+
+    const parts: CommerceScopePart[] = [];
+    for (const { label, keys, list } of COMMERCE_SCOPE_PARTS) {
+        // Blank is not a value: an empty code renders as a label with nothing
+        // beside it, which reads as broken rather than as "not set".
+        const key = keys.find((candidate) => envVars[candidate]);
+        if (!key) continue;
+
+        const code = envVars[key];
+        const name = structure?.[list].find((entity) => entity.code === code)?.name;
+        parts.push(name ? { label, code, name } : { label, code });
+    }
+    return parts.length > 0 ? parts : undefined;
+}
+
+/**
  * Derive the mesh peer card. The status label is ALWAYS the live
  * `statusDisplay.text` (the retired badge's vocabulary, unchanged), and every
  * action carries `disabled: isActionDisabled` (mesh/demo operation in flight).
@@ -387,6 +481,7 @@ export function deriveMeshCard(
     meshEntry: AppBuilderComponentState | undefined,
     isActionDisabled: boolean,
     meshComponentId?: string,
+    storeStructure?: CommerceStoreStructure,
 ): IntegrationCardModel {
     const cardStatus = toMeshCardStatus(status);
     const shared = getStatusDisplay(cardStatus);
@@ -424,6 +519,9 @@ export function deriveMeshCard(
         menuActions: meshMenuActions(cardStatus, isActionDisabled, meshComponentId),
         componentId: meshComponentId,
         canRename: false,
+        // Off the SAME entry the endpoint and last-deploy come from — the scope
+        // is already persisted, already correct, and already in hand.
+        commerceScope: deriveCommerceScope(meshEntry?.envVars, storeStructure),
     };
 }
 

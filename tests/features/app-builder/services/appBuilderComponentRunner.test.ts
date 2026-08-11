@@ -9,7 +9,7 @@
  * boundary (the two deploy tails, the API subscriber, clone/install, undeploy/
  * delete commands, and the storefront republish) is injected via deps and mocked.
  *
- * Org-context discipline mirrors appComponentManager.test.ts: withOrgContext is
+ * Org-context discipline: withOrgContext is
  * mocked to record its target and run the callback (no global mutation).
  *
  * Covers the ADD and REDEPLOY arms. Siblings hold the rest, split on the axis the

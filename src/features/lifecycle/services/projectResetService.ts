@@ -103,7 +103,7 @@ export function buildComponentList(
  * source) from the saved instance — otherwise the app is dropped from the
  * re-clone and silently lost. Returns undefined when there is nothing to clone
  * (no saved instance, or a saved instance without a repo URL). Mirrors the
- * git-source shape produced by appComponentManager's buildAppDefinition.
+ * git-source shape `appBuilderComponentRunner.buildDefinition` produces.
  */
 export function buildAppBuilderDefinitionFromInstance(
     project: Project,

@@ -129,3 +129,58 @@ describe('mergeComponentConfigs', () => {
         });
     });
 });
+
+/**
+ * The BACKEND owns the store scope — not "whichever non-mesh component sorted
+ * last".
+ *
+ * The first fix split components into mesh / non-mesh and let the non-mesh side
+ * win the scope keys. That was right about the mesh and wrong about everything
+ * else: `headless` is a FRONTEND and declares all three `ADOBE_COMMERCE_*` scope
+ * keys (components.json), so on a headless project the scope was decided by
+ * whichever of frontend/backend iterated last — the same order-dependence, just
+ * moved. `extractConfigParamsFromConfigs` has known the backend id all along and
+ * simply was not passing it down.
+ */
+describe('mergeComponentConfigs — the backend owns the scope, not the last non-mesh component', () => {
+    const PAAS_BACKEND = {
+        ADOBE_COMMERCE_WEBSITE_CODE: 'citisignal',
+        ADOBE_COMMERCE_STORE_VIEW_CODE: 'citisignal_us',
+    };
+    const STALE_FRONTEND = {
+        ADOBE_COMMERCE_WEBSITE_CODE: 'base',
+        ADOBE_COMMERCE_STORE_VIEW_CODE: 'default',
+    };
+
+    it("takes the backend's scope over a stale FRONTEND copy", () => {
+        const result = mergeComponentConfigs(
+            { 'adobe-commerce-paas': PAAS_BACKEND, headless: STALE_FRONTEND },
+            undefined,
+            'adobe-commerce-paas',
+        );
+
+        expect(result.ADOBE_COMMERCE_WEBSITE_CODE).toBe('citisignal');
+        expect(result.ADOBE_COMMERCE_STORE_VIEW_CODE).toBe('citisignal_us');
+    });
+
+    it('reaches the same answer with the components in the opposite order', () => {
+        const result = mergeComponentConfigs(
+            { headless: STALE_FRONTEND, 'adobe-commerce-paas': PAAS_BACKEND },
+            undefined,
+            'adobe-commerce-paas',
+        );
+
+        expect(result.ADOBE_COMMERCE_WEBSITE_CODE).toBe('citisignal');
+    });
+
+    it('keeps the old non-mesh behaviour when no backend id is supplied', () => {
+        // The control. Callers that cannot name the backend must be unaffected,
+        // which is what lets the existing suite above stand unedited.
+        const result = mergeComponentConfigs({
+            'eds-accs-mesh': { ACCS_WEBSITE_CODE: 'base' },
+            'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'citisignal' },
+        });
+
+        expect(result.ACCS_WEBSITE_CODE).toBe('citisignal');
+    });
+});

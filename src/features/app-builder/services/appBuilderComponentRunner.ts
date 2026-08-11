@@ -42,6 +42,7 @@ import {
     type CachedOrgRef,
     type CommandExecutor,
 } from '@/core/shell';
+import { reconcileComponentSelections } from '@/core/state/componentSelectionReconcile';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
@@ -224,6 +225,11 @@ async function persistOutcome(
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<void> {
     recordDeployOutcome(project, entry.kind, entry.id, outcome, { create: true });
+    // Record the SELECTION too. Configure's rail and project reset both read the
+    // selection lists rather than the keyed map, and this path is the only live
+    // add — leaving them empty is what made a dashboard-added mesh invisible to
+    // Configure and disposable by reset.
+    reconcileComponentSelections(project);
     await deps.saveProject(project);
 }
 
@@ -361,12 +367,7 @@ async function dispatchDeploy(
         }
         return {
             ok: true,
-            outcome: await meshOutcome(
-                entry,
-                result.data,
-                componentPath,
-                deps.captureMeshBaseline,
-            ),
+            outcome: await meshOutcome(entry, result.data, componentPath, deps.captureMeshBaseline),
         };
     }
     const owPackage = deriveOwPackage(entry.id);

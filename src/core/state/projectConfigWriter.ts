@@ -12,6 +12,66 @@ import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 import { getComponentIds } from '@/types/typeGuards';
 
+/**
+ * Copy the project's OPTIONAL fields onto the manifest, omitting each when it
+ * has nothing to say.
+ *
+ * A key present-but-empty is not the same as absent: the loader's legacy
+ * migrations key off absence, and an empty map would defeat them. Extracted
+ * from `writeManifest` because this list only grows, and every addition was
+ * charging one more branch to a function already near the complexity limit.
+ */
+function addOptionalManifestFields(manifest: Record<string, unknown>, project: Project): void {
+    if (project.selectedPackage !== undefined) {
+        manifest.selectedPackage = project.selectedPackage;
+    }
+    if (project.selectedStack !== undefined) {
+        manifest.selectedStack = project.selectedStack;
+    }
+    if (project.selectedAddons?.length) {
+        manifest.selectedAddons = project.selectedAddons;
+    }
+    if (project.selectedBlockLibraries?.length) {
+        manifest.selectedBlockLibraries = project.selectedBlockLibraries;
+    }
+    if (project.customBlockLibraries?.length) {
+        manifest.customBlockLibraries = project.customBlockLibraries;
+    }
+    if (project.aiPrompts?.length) {
+        manifest.aiPrompts = project.aiPrompts;
+    }
+    // The discovered Commerce store hierarchy — what turns a store CODE back into
+    // the NAME the user picked it by, on any surface, offline. Deliberately NOT
+    // inside componentConfigs: it is a catalog, not a deployable value, and
+    // nothing that walks componentConfigs into a `.env` may ever see it.
+    if (project.commerceStoreStructure) {
+        manifest.commerceStoreStructure = project.commerceStoreStructure;
+    }
+    // Ad-hoc Console API picks beyond requiredApis (§E) — NOT derivable, and the
+    // dashboard's full-union subscription PUT reads it: without persistence a
+    // post-reload redeploy silently drops the user's picks.
+    if (project.additionalConsoleApis?.length) {
+        manifest.additionalConsoleApis = project.additionalConsoleApis;
+    }
+    // The ATTRIBUTED form of the same picks (per-integration API attribution,
+    // step 01). Omitted when empty so legacy manifests keep loading through the
+    // read-side migration rather than a persisted empty map.
+    // `additionalConsoleApis` above stays written until the flat path is retired.
+    if (project.componentApiPicks && Object.keys(project.componentApiPicks).length > 0) {
+        manifest.componentApiPicks = project.componentApiPicks;
+    }
+    // Keyed App Builder component state (ADR-011 D3 Step 01) — the durable model
+    // that replaces the singular meshState/appState (retired in Step 07). Omitted
+    // when empty so legacy manifests keep loading via the read-side migration
+    // fallback instead of a persisted-but-empty map.
+    if (project.appBuilderComponents && Object.keys(project.appBuilderComponents).length) {
+        manifest.appBuilderComponents = project.appBuilderComponents;
+    }
+    if (project.pinned) {
+        manifest.pinned = true;
+    }
+}
+
 export class ProjectConfigWriter {
     private logger: Logger;
 
@@ -106,52 +166,7 @@ export class ProjectConfigWriter {
                 components: getComponentIds(project.componentInstances),
             };
 
-            // Add optional fields if they exist
-            if (project.selectedPackage !== undefined) {
-                manifest.selectedPackage = project.selectedPackage;
-            }
-            if (project.selectedStack !== undefined) {
-                manifest.selectedStack = project.selectedStack;
-            }
-            if (project.selectedAddons?.length) {
-                manifest.selectedAddons = project.selectedAddons;
-            }
-            if (project.selectedBlockLibraries?.length) {
-                manifest.selectedBlockLibraries = project.selectedBlockLibraries;
-            }
-            if (project.customBlockLibraries?.length) {
-                manifest.customBlockLibraries = project.customBlockLibraries;
-            }
-            if (project.aiPrompts?.length) {
-                manifest.aiPrompts = project.aiPrompts;
-            }
-            // Ad-hoc Console API picks beyond requiredApis (§E) — NOT derivable,
-            // and the dashboard's full-union subscription PUT reads it: without
-            // persistence a post-reload redeploy silently drops the user's picks.
-            if (project.additionalConsoleApis?.length) {
-                manifest.additionalConsoleApis = project.additionalConsoleApis;
-            }
-            // The ATTRIBUTED form of the same picks (per-integration API
-            // attribution, step 01). Omitted when empty so legacy manifests keep
-            // loading through the read-side migration rather than a persisted
-            // empty map. `additionalConsoleApis` above stays written until the
-            // flat write path is retired.
-            if (
-                project.componentApiPicks &&
-                Object.keys(project.componentApiPicks).length > 0
-            ) {
-                manifest.componentApiPicks = project.componentApiPicks;
-            }
-            // Keyed App Builder component state (ADR-011 D3 Step 01) — the durable
-            // model that replaces the singular meshState/appState (retired in Step 07).
-            // Omitted when empty so legacy manifests keep loading via the read-side
-            // migration fallback instead of a persisted-but-empty map.
-            if (project.appBuilderComponents && Object.keys(project.appBuilderComponents).length) {
-                manifest.appBuilderComponents = project.appBuilderComponents;
-            }
-            if (project.pinned) {
-                manifest.pinned = true;
-            }
+            addOptionalManifestFields(manifest, project);
 
             // Atomic write (temp file + rename) via the shared helper.
             await writeFileAtomic(manifestPath, JSON.stringify(manifest, null, 2));

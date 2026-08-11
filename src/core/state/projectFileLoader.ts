@@ -10,6 +10,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { migrateLegacyToAppBuilderComponents } from './appBuilderComponentMigration';
 import { migrateApiPicks } from './componentApiPicks';
+import { reconcileComponentSelections } from './componentSelectionReconcile';
 import type { Project, ComponentInstance } from '@/types';
 import type { AiPrompt } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
@@ -48,6 +49,7 @@ export interface ProjectManifest {
     componentInstances?: Project['componentInstances'];
     componentSelections?: Project['componentSelections'];
     componentConfigs?: Project['componentConfigs'];
+    commerceStoreStructure?: Project['commerceStoreStructure'];
     componentVersions?: Project['componentVersions'];
     meshState?: Project['meshState'];
     appState?: Project['appState'];
@@ -115,6 +117,7 @@ export class ProjectFileLoader {
                 componentInstances,
                 componentSelections: manifest.componentSelections,
                 componentConfigs: manifest.componentConfigs,
+                commerceStoreStructure: manifest.commerceStoreStructure,
                 componentVersions,
                 meshState: manifest.meshState,
                 appState: manifest.appState,
@@ -142,6 +145,13 @@ export class ProjectFileLoader {
             // arbitrary age must keep loading).
             project.appBuilderComponents =
                 manifest.appBuilderComponents ?? migrateLegacyToAppBuilderComponents(manifest);
+
+            // Selections vs reality: the dashboard add path records the keyed
+            // entry and the component instance but never wrote the selection
+            // lists, so a mesh or integration added there is invisible to
+            // Configure's rail and — worse — dropped by project reset, which
+            // rebuilds its component list from those lists. Additive only.
+            reconcileComponentSelections(project);
 
             // Per-integration API attribution (step 01): a pre-attribution manifest
             // carries only the flat `additionalConsoleApis`; move it under the
