@@ -60,9 +60,12 @@ Displays a single project as a clickable card.
 
 **Displays:**
 - Project name (title)
-- Status indicator (● Running / ○ Stopped)
-- Port number (if running)
-- Component list (stacked)
+- Brand + stack summary
+- **Two status lines, one per axis** — and no more:
+  - **Runtime** (`getRuntimeSummary`) — the LOCAL dev server: `Running on port 3000` / `Stopped`. EDS projects have no running state, so they get this line only while an operation is in flight (`Republishing...`, `Resetting...`).
+  - **Deployment** (`getDeploymentSummary`) — the CLOUD side, worst-of across mesh + storefront + integrations: `Deployed` / `Attention needed` / `Deploying…` / `Not deployed`. Absent when the project has nothing deployable.
+
+The card deliberately does NOT name individual components. It used to render `Mesh · Update needed` plus an integrations count while saying nothing about the storefront, which drifts identically. Per-component detail belongs to the integrations dashboard one click away; the card answers "is what is deployed current?". `getProjectStatusDisplay` still serves `ProjectRow`, which shows exactly one line and therefore keeps the storefront in it.
 
 ### ProjectsGrid
 

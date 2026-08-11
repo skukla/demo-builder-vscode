@@ -302,42 +302,6 @@ const ProjectsDashboardApp: React.FC = () => {
         [fetchProjects],
     );
 
-    // Handle republish content (EDS projects)
-    const handleRepublishContent = useCallback(
-        async (project: Project) => {
-            try {
-                const response = await webviewClient.request<{
-                    success: boolean;
-                }>('republishContent', { projectPath: project.path });
-
-                // Refresh projects list if republish was successful
-                if (response?.success) {
-                    fetchProjects(true);
-                }
-            } catch (error) {
-                console.error('Failed to republish content:', error);
-            }
-        },
-        [fetchProjects],
-    );
-
-    // Handle redeploy mesh (projects with a mesh in a "Redeploy Mesh" state)
-    const handleRedeployMesh = useCallback(
-        async (project: Project) => {
-            try {
-                const response = await webviewClient.request<{ success: boolean }>('redeployMesh', {
-                    projectPath: project.path,
-                });
-                if (response?.success) {
-                    fetchProjects(true);
-                }
-            } catch (error) {
-                console.error('Failed to redeploy mesh:', error);
-            }
-        },
-        [fetchProjects],
-    );
-
     // Handle per-integration redeploy (one kebab item per redeployable keyed
     // integration; the id targets that integration only — ADR-011 D3 Step 04).
     // ONE route to the surface that owns integrations, replacing the
@@ -393,17 +357,6 @@ const ProjectsDashboardApp: React.FC = () => {
         [fetchProjects],
     );
 
-    // Handle copy project path
-    const handleCopyPath = useCallback(async (project: Project) => {
-        try {
-            await webviewClient.postMessage('copy-project-path', {
-                projectPath: project.path,
-            });
-        } catch (error) {
-            console.error('Failed to copy project path:', error);
-        }
-    }, []);
-
     // Handle Open AI - dispatches to the `demoBuilder.openAi` command
     // via the dashboard handler bridge.
     const handleOpenAiForProject = useCallback(async (project: Project) => {
@@ -456,12 +409,9 @@ const ProjectsDashboardApp: React.FC = () => {
             onOpenDaLive: handleOpenDaLive,
             onOpenAdminPanel: handleOpenAdminPanel,
             onResetProject: handleResetProject,
-            onRepublishContent: handleRepublishContent,
-            onRedeployMesh: handleRedeployMesh,
             onOpenIntegrations: handleOpenIntegrations,
             onEdit: handleEditProject,
             onRenameSubmit: handleRenameSubmit,
-            onCopyPath: handleCopyPath,
             onExport: handleExportProject,
             onOpenAi: handleOpenAiForProject,
             onPinToggle: handlePinToggle,
@@ -475,12 +425,9 @@ const ProjectsDashboardApp: React.FC = () => {
             handleOpenDaLive,
             handleOpenAdminPanel,
             handleResetProject,
-            handleRepublishContent,
-            handleRedeployMesh,
             handleOpenIntegrations,
             handleEditProject,
             handleRenameSubmit,
-            handleCopyPath,
             handleExportProject,
             handleOpenAiForProject,
             handlePinToggle,

@@ -94,33 +94,43 @@ describe('ProjectCard', () => {
         });
     });
 
-    describe('mesh status', () => {
-        it('should show mesh deployed status when meshStatusSummary is deployed', () => {
-            const project = createMockProject({ meshStatusSummary: 'deployed' });
-            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
-
-            expect(screen.getByText('Mesh · Deployed')).toBeInTheDocument();
-        });
-
-        it('should show redeploy needed when meshStatusSummary is stale', () => {
+    /**
+     * ONE deployment line, not three.
+     *
+     * The card used to name the mesh ("Mesh · Update needed") and count
+     * integrations, while saying nothing about the storefront — whose status
+     * function existed, was tested, and was rendered by nobody. Naming one
+     * component on the PROJECT card is a leftover from when the mesh was the
+     * whole integration story; it is now the first peer card in a dedicated
+     * integrations dashboard, and per-component detail belongs there.
+     *
+     * Wording and worst-of precedence are covered in deploymentSummary.test.ts;
+     * these assert what the CARD renders.
+     */
+    describe('deployment status', () => {
+        it('shows one consolidated line, not a per-component one', () => {
             const project = createMockProject({ meshStatusSummary: 'stale' });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
-            expect(screen.getByText('Mesh · Update needed')).toBeInTheDocument();
+            expect(screen.getByText('Attention needed')).toBeInTheDocument();
+            expect(screen.queryByText(/^Mesh ·/)).not.toBeInTheDocument();
         });
 
-        it('should not show mesh status when meshStatusSummary is not set', () => {
-            const project = createMockProject();
+        it('says Deployed when everything is current', () => {
+            const project = createMockProject({ meshStatusSummary: 'deployed' });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
-            expect(screen.queryByText('Mesh · Deployed')).not.toBeInTheDocument();
-            expect(screen.queryByText('Mesh · Update needed')).not.toBeInTheDocument();
+            expect(screen.getByText('Deployed')).toBeInTheDocument();
         });
-    });
 
-    describe('app status', () => {
-        it('shows the app status dot from a keyed deployed integration (reloaded project)', () => {
-            // Durable keyed entry only — no volatile appStatusSummary, as after a reload.
+        it('reports a drifted STOREFRONT, which the card could not do before', () => {
+            const project = createMockProject({ edsStorefrontStatusSummary: 'stale' });
+            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
+
+            expect(screen.getByText('Attention needed')).toBeInTheDocument();
+        });
+
+        it('folds integrations into the same line rather than counting them', () => {
             const project = createMockProject({
                 appBuilderComponents: {
                     'acme-widget': {
@@ -131,40 +141,64 @@ describe('ProjectCard', () => {
                 },
             });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
-            // Counts the integrations rather than naming an "app" the project
-            // does not have — see projectStatusUtils.getAppStatusText.
-            expect(screen.getByText('1 integration deployed')).toBeInTheDocument();
-        });
 
-        it('shows no app status when the project has no keyed integrations', () => {
-            renderWithProvider(<ProjectCard project={createMockProject()} onSelect={jest.fn()} />);
+            expect(screen.getByText('Deployed')).toBeInTheDocument();
             expect(screen.queryByText(/integration/i)).not.toBeInTheDocument();
         });
 
-        it('should show "Mesh · Incomplete" when config-incomplete', () => {
-            const project = createMockProject({ meshStatusSummary: 'config-incomplete' });
-            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
-
-            expect(screen.getByText('Mesh · Incomplete')).toBeInTheDocument();
-        });
-
-        it('should show "Mesh · Deploy failed" when error', () => {
-            const project = createMockProject({ meshStatusSummary: 'error' });
-            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
-
-            expect(screen.getByText('Mesh · Deploy failed')).toBeInTheDocument();
-        });
-
-        // No placeholder line for a project without a mesh: cards are allowed to
-        // differ in how many status lines they carry.
-        it('shows no mesh line at all when the project has no mesh', () => {
+        it('renders NO deployment line when the project has nothing deployable', () => {
             const project = createMockProject({
                 meshStatusSummary: undefined,
                 appBuilderComponents: {},
             });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
+            expect(screen.queryByText('Deployed')).not.toBeInTheDocument();
+            expect(screen.queryByText('Attention needed')).not.toBeInTheDocument();
             expect(screen.queryByText(/Mesh/)).not.toBeInTheDocument();
+        });
+
+        it('does not make an EDS card say the same thing twice', () => {
+            // EDS projects have no running state, so their primary line carried
+            // STOREFRONT status. With the storefront now inside the deployment
+            // summary, keeping it would render "Republish needed" directly above
+            // "Attention needed" — two warning dots for one problem.
+            const project = createMockProject({
+                selectedStack: 'eds-dalive',
+                edsStorefrontStatusSummary: 'stale',
+            });
+            const { container } = renderWithProvider(
+                <ProjectCard project={project} onSelect={jest.fn()} />
+            );
+
+            expect(
+                container.querySelectorAll('.project-card-spectrum-status')
+            ).toHaveLength(1);
+            expect(screen.getByText('Attention needed')).toBeInTheDocument();
+            expect(screen.queryByText('Republish needed')).not.toBeInTheDocument();
+        });
+
+        it('still shows an EDS republish WHILE it is in flight', () => {
+            // Transient and local — the summary has no way to express it.
+            const project = createMockProject({
+                selectedStack: 'eds-dalive',
+                status: 'republishing',
+                edsStorefrontStatusSummary: 'published',
+            });
+            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
+
+            expect(screen.getByText('Republishing...')).toBeInTheDocument();
+            expect(screen.getByText('Deployed')).toBeInTheDocument();
+        });
+
+        it('keeps the RUNTIME line separate — a different axis', () => {
+            // Running locally and "what is deployed is current" are independent;
+            // collapsing them would make stopped-but-healthy read as drifted.
+            const project = createRunningProject({ meshStatusSummary: 'stale' });
+            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
+
+            expect(screen.getByText('Attention needed')).toBeInTheDocument();
+            expect(screen.getByText(/Running/)).toBeInTheDocument();
         });
     });
 
@@ -175,12 +209,12 @@ describe('ProjectCard', () => {
     // eyes on the running card.
     //
     // The statuses read TOP-DOWN from just beneath the stack description:
-    // storefront highest, then mesh, then integrations. The list is
-    // variable-length — a project may have one line or three — so anchoring it to
-    // the card's BOTTOM (margin-top:auto on the first row, in a flex column) made
-    // the first line's position depend on how many followed it. Order was always
-    // right; POSITION moved, which is what read as inconsistent when scanning a
-    // grid of cards.
+    // runtime first, then deployment. The list used to be variable-length — one to
+    // three lines — so anchoring it to the card's BOTTOM (margin-top:auto on the
+    // first row, in a flex column) made the first line's position depend on how
+    // many followed it. Consolidating the deployment lines into one caps it at two,
+    // which narrows that problem but does not remove it: a project with nothing
+    // deployable still renders one line. Keep the top anchor.
     describe('status order', () => {
         function statusLines(container: HTMLElement): string[] {
             return Array.from(container.querySelectorAll('.project-card-spectrum-status')).map(
@@ -211,7 +245,7 @@ describe('ProjectCard', () => {
             expect(rule).not.toMatch(/flex-grow/);
         });
 
-        it('lists storefront, then mesh, then integrations', () => {
+        it('lists runtime first, then deployment', () => {
             const project = createMockProject({
                 edsStorefrontStatusSummary: 'published',
                 meshStatusSummary: 'deployed',
@@ -227,12 +261,13 @@ describe('ProjectCard', () => {
                 <ProjectCard project={project} onSelect={jest.fn()} />
             );
 
+            // Two lines for a project with a storefront, a mesh AND an integration —
+            // the case that used to render three.
             const lines = statusLines(container);
-            expect(lines).toHaveLength(3);
-            // Line 0 is the project/storefront status — its wording depends on
-            // whether the project is EDS, which is not what this pins.
-            expect(lines[1]).toBe('Mesh · Deployed');
-            expect(lines[2]).toBe('1 integration deployed');
+            expect(lines).toHaveLength(2);
+            // Line 0 is the runtime status; its wording depends on whether the demo
+            // is running, which is not what this pins.
+            expect(lines[1]).toBe('Deployed');
         });
 
     });

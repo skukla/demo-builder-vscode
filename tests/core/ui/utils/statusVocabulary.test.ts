@@ -9,6 +9,7 @@
 
 import {
     getStatusDisplay,
+    getStorefrontStatusDisplay,
     isUpdatePending,
     normalizeDisplayStatus,
     severityToColor,
@@ -122,5 +123,75 @@ describe('isUpdatePending — one predicate for both spellings', () => {
         // mistaken for a pending update.
         expect(isUpdatePending('published')).toBe(false);
         expect(isUpdatePending('not-published')).toBe(false);
+    });
+});
+
+/**
+ * The STOREFRONT vocabulary — the second table this module owns.
+ *
+ * It is separate from the deployable-component table on purpose. A storefront
+ * publishes; it does not deploy. Folding it in would have relabelled a drifted
+ * storefront "Update needed", which is the deployable wording, and lost the verb
+ * the user actually needs ("Republish").
+ *
+ * What it replaces is two switch statements over the same four states, in
+ * `projectStatusUtils.getStorefrontStatusText` and the EDS branch of
+ * `useDashboardStatus.demoStatusDisplay`. They had already drifted: one spelled
+ * the empty state "Not published", the other "Not Published".
+ */
+describe('getStorefrontStatusDisplay', () => {
+    it('names the drifted state with the VERB that fixes it', () => {
+        // Not "Update needed" — that is the deployable vocabulary. A storefront
+        // is republished, and the word is the whole hint about where to go.
+        expect(getStorefrontStatusDisplay('stale')).toEqual({
+            label: 'Republish needed',
+            severity: 'warning',
+        });
+    });
+
+    it('treats a declined update as still needing the republish', () => {
+        // "Later" postpones the prompt, not the drift. Same words as `stale`,
+        // matching how the deployable table already collapses this alias.
+        expect(getStorefrontStatusDisplay('update-declined')).toEqual({
+            label: 'Republish needed',
+            severity: 'warning',
+        });
+    });
+
+    it('spells the empty state ONE way', () => {
+        // The casing the two old switches disagreed about.
+        expect(getStorefrontStatusDisplay('not-published')).toEqual({
+            label: 'Not published',
+            severity: 'neutral',
+        });
+    });
+
+    it('reports a healthy storefront as Published', () => {
+        expect(getStorefrontStatusDisplay('published')).toEqual({
+            label: 'Published',
+            severity: 'success',
+        });
+    });
+
+    it('falls back to Published for an absent or unrecognised status', () => {
+        // Both old switches defaulted this way: a project with no recorded
+        // storefront status has almost always published, and claiming otherwise
+        // put a false warning on a healthy project.
+        expect(getStorefrontStatusDisplay(undefined).label).toBe('Published');
+        expect(getStorefrontStatusDisplay('something-new').label).toBe('Published');
+    });
+
+    it('does NOT leak into the deployable vocabulary', () => {
+        // Control: 'stale' means different words to the two tables, and asking
+        // the wrong one is a real mistake this pins.
+        expect(getStatusDisplay('stale')?.label).toBe('Update needed');
+        expect(getStorefrontStatusDisplay('stale').label).toBe('Republish needed');
+    });
+
+    it('carries a severity the existing adapters already understand', () => {
+        // No new colour space — reuses severityToColor/severityToVariant, which
+        // is the point of putting this table in this module.
+        expect(severityToColor(getStorefrontStatusDisplay('stale').severity)).toBe('yellow');
+        expect(severityToVariant(getStorefrontStatusDisplay('published').severity)).toBe('success');
     });
 });

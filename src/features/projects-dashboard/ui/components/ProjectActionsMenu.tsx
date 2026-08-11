@@ -7,11 +7,16 @@
  * Actions are grouped into labeled sections rather than a flat list:
  * - USE: open/run the demo (Start/Stop or Open in Browser, Author Content,
  *   Manage Commerce, Open AI).
- * - MANAGE: project-entry actions (Edit, Pin/Unpin, Reset).
- * - More…: a submenu for low-frequency actions (Copy Path, Export, — for EDS —
- *   Republish Content, and the deploy-state-gated Redeploy Mesh / Redeploy App).
+ * - MANAGE: project-entry actions (Edit, Integrations…, Pin/Unpin, Reset, Export).
  *   There is NO Rename item: renaming happens in place on the card name /
  *   dashboard title (InlineRenameField).
+ *
+ *   There is no More… submenu. It held Copy Path and Export plus the
+ *   deploy-state-gated Republish Content / Redeploy Mesh. The deploy items moved
+ *   to the surfaces that own them, Copy Path was dropped (a developer affordance
+ *   on a grid used to PICK a demo, and the path is one click away on the
+ *   dashboard), and a submenu wrapping the last survivor charged two clicks for
+ *   one action.
  * - Delete sits alone in a trailing un-headed section, isolated from the rest.
  *
  * Empty groups render nothing (no orphaned heading). Gating is unchanged from
@@ -24,14 +29,12 @@
  * - Edit is always available (no need to stop first)
  */
 
-import { Text, Menu, Section, SubmenuTrigger, Item } from '@adobe/react-spectrum';
-import More from '@spectrum-icons/workflow/More';
+import { Text, Section, Item } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo } from 'react';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 import {
     hasIntegrations,
-    meshNeedsRedeploy,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import type { Project } from '@/types/base';
 import { isEdsProject } from '@/types/typeGuards';
@@ -44,10 +47,14 @@ interface MenuItem {
 }
 
 /** The grouped items that make up the menu, built from project state. */
+/**
+ * Two sections, not three. The "More…" submenu is gone: it held Copy Path and
+ * Export, Copy Path was removed, and a submenu wrapping one item charges two
+ * clicks for one action.
+ */
 interface MenuGroups {
     use: MenuItem[];
     manage: MenuItem[];
-    more: MenuItem[];
 }
 
 /**
@@ -68,13 +75,6 @@ export interface ProjectActions {
     onOpenDaLive?: (project: Project) => void;
     onOpenAdminPanel?: (project: Project) => void;
     onResetProject?: (project: Project) => void;
-    onRepublishContent?: (project: Project) => void;
-    /** Redeploy the API Mesh (shown for a mesh in a "Redeploy Mesh" state). */
-    onRedeployMesh?: (project: Project) => void;
-    /**
-     * Redeploy ONE App Builder integration by its keyed id (one submenu item
-     * per redeployable integration — ADR-011 D3 Step 04).
-     */
     /**
      * Open the Integrations page for this project. Replaced the per-integration
      * redeploy callbacks — that surface owns those actions now.
@@ -87,7 +87,6 @@ export interface ProjectActions {
      * inline. There is deliberately no menu Rename item.
      */
     onRenameSubmit?: (project: Project, newName: string) => Promise<string | null>;
-    onCopyPath?: (project: Project) => void;
     onExport?: (project: Project) => void;
     onOpenAi?: (project: Project) => void;
     /**
@@ -99,36 +98,6 @@ export interface ProjectActions {
 }
 
 /** Icon lookup - maps menu item icon keys to Spectrum icon components */
-
-/** Callbacks that decide which "More…" submenu items appear. */
-type MoreCallbacks = Pick<
-    ProjectActions,
-    'onCopyPath' | 'onExport' | 'onRepublishContent' | 'onRedeployMesh'
->;
-
-/**
- * The "More…" submenu items, gated by callback presence AND project state:
- * Republish is EDS-only, Redeploy Mesh needs a mesh in a "Redeploy Mesh" state,
- * and each redeployable keyed integration gets its own "Redeploy <label>" item
- * (per-integration, ADR-011 D3 Step 04). Extracted to keep the grouping memo's
- * complexity in check.
- */
-function buildMoreItems(project: Project, isEds: boolean, cb: MoreCallbacks): MenuItem[] {
-    const more: MenuItem[] = [];
-    if (cb.onCopyPath) {
-        more.push({ key: 'copyPath', label: 'Copy Path', icon: 'copy' });
-    }
-    if (cb.onExport) {
-        more.push({ key: 'export', label: 'Export', icon: 'export' });
-    }
-    if (isEds && cb.onRepublishContent) {
-        more.push({ key: 'republishContent', label: 'Republish Content', icon: 'republish' });
-    }
-    if (cb.onRedeployMesh && meshNeedsRedeploy(project)) {
-        more.push({ key: 'redeployMesh', label: 'Redeploy Mesh', icon: 'redeploy' });
-    }
-    return more;
-}
 
 export interface ProjectActionsMenuProps {
     /** The project to perform actions on */
@@ -161,11 +130,8 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         onOpenDaLive,
         onOpenAdminPanel,
         onResetProject,
-        onRepublishContent,
-        onRedeployMesh,
         onOpenIntegrations,
         onEdit,
-        onCopyPath,
         onExport,
         onOpenAi,
         onPinToggle,
@@ -186,11 +152,8 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             openDaLive: onOpenDaLive,
             openAdminPanel: onOpenAdminPanel,
             resetProject: onResetProject,
-            republishContent: onRepublishContent,
-            redeployMesh: onRedeployMesh,
             openIntegrations: onOpenIntegrations,
             edit: onEdit,
-            copyPath: onCopyPath,
             export: onExport,
             openAi: onOpenAi,
             pinToggle: onPinToggle,
@@ -204,12 +167,9 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             onOpenDaLive,
             onOpenAdminPanel,
             onResetProject,
-            onRepublishContent,
-            onRedeployMesh,
             onOpenIntegrations,
             onEdit,
-            onCopyPath,
-            onExport,
+                onExport,
             onOpenAi,
             onPinToggle,
             onDelete,
@@ -283,16 +243,17 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         if (onResetProject) {
             manage.push({ key: 'resetProject', label: 'Reset', icon: 'reset' });
         }
+        // Export sits directly in the menu. It was behind a "More…" submenu
+        // alongside Copy Path; Copy Path is gone (a developer affordance on a
+        // grid used to PICK a demo, and the path is one click away on the
+        // dashboard), which left a submenu holding one item — two clicks charged
+        // for one action, on a hover target that can be missed.
+        if (onExport) {
+            manage.push({ key: 'export', label: 'Export', icon: 'export' });
+        }
 
         // More… — low-frequency + deploy-state-gated actions, tucked into a submenu.
-        const more = buildMoreItems(project, isEds, {
-            onCopyPath,
-            onExport,
-            onRepublishContent,
-            onRedeployMesh,
-        });
-
-        return { use, manage, more };
+        return { use, manage };
     }, [
         isEds,
         isRunning,
@@ -304,11 +265,8 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
         onOpenDaLive,
         onOpenAdminPanel,
         onResetProject,
-        onRepublishContent,
-        onRedeployMesh,
         onOpenIntegrations,
         onEdit,
-        onCopyPath,
         onExport,
         onOpenAi,
         onPinToggle,
@@ -318,7 +276,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     if (
         groups.use.length === 0 &&
         groups.manage.length === 0 &&
-        groups.more.length === 0 &&
         !onDelete
     ) {
         return null;
@@ -347,16 +304,6 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 <Section key="manage" title="Manage">
                     {groups.manage.map(renderItem)}
                 </Section>
-            ) : null}
-
-            {groups.more.length > 0 ? (
-                <SubmenuTrigger>
-                    <Item key="more" textValue="More">
-                        <More size="S" />
-                        <Text>More</Text>
-                    </Item>
-                    <Menu onAction={handleMenuAction}>{groups.more.map(renderItem)}</Menu>
-                </SubmenuTrigger>
             ) : null}
 
             {onDelete ? (

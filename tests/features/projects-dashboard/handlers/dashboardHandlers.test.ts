@@ -8,7 +8,6 @@ import {
     handleGetProjects,
     handleSelectProject,
     handleCreateProject,
-    handleCopyProjectPath,
     handleOpenAiForProject,
     handleOpenLiveSite,
     handleOpenDaLive,
@@ -428,57 +427,6 @@ describe('dashboardHandlers', () => {
             await handleCreateProject(context as any);
 
             expect(context.sendMessage).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('handleCopyProjectPath', () => {
-        it('should copy the project path to clipboard', async () => {
-            const context = createMockHandlerContext([]);
-            const vscode = require('vscode');
-
-            const result = await handleCopyProjectPath(context as any, {
-                projectPath: `${require('os').homedir()}/.demo-builder/projects/test-project`,
-            });
-
-            expect(vscode.env.clipboard.writeText).toHaveBeenCalledWith(
-                `${require('os').homedir()}/.demo-builder/projects/test-project`
-            );
-            expect(result).toEqual({ success: true });
-        });
-
-        it('should show an information message after copying', async () => {
-            const context = createMockHandlerContext([]);
-            const vscode = require('vscode');
-
-            await handleCopyProjectPath(context as any, {
-                projectPath: `${require('os').homedir()}/.demo-builder/projects/test-project`,
-            });
-
-            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-                expect.stringContaining('copied')
-            );
-        });
-
-        it('should return error when projectPath is missing', async () => {
-            const context = createMockHandlerContext([]);
-
-            const result = await handleCopyProjectPath(context as any, undefined);
-
-            expect(result.success).toBe(false);
-            expect(result.error).toBeDefined();
-        });
-
-        it('should handle clipboard error', async () => {
-            const context = createMockHandlerContext([]);
-            const vscode = require('vscode');
-            vscode.env.clipboard.writeText.mockRejectedValue(new Error('Clipboard failed'));
-
-            const result = await handleCopyProjectPath(context as any, {
-                projectPath: `${require('os').homedir()}/.demo-builder/projects/test-project`,
-            });
-
-            expect(result.success).toBe(false);
-            expect(context.logger.error).toHaveBeenCalled();
         });
     });
 

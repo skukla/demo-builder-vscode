@@ -22,14 +22,11 @@ import {
     handleOpenDaLive,
     handleOpenAdminPanel,
     handleResetProject,
-    handleRepublishContent,
-    handleRedeployMesh,
     handleEditProject,
     handleRenameProject,
     handleOpenHelp,
     handleOpenSettings,
     handleSetViewModeOverride,
-    handleCopyProjectPath,
     handleOpenAiForProject,
     handleSetProjectPinned,
 } from './dashboardHandlers';
@@ -69,10 +66,6 @@ export const projectsListHandlers = defineHandlers({
 
     // Project reset handler
     resetProject: handleResetProject,
-    republishContent: handleRepublishContent,
-
-    // Mesh / App Builder redeploy handlers (kebab More items)
-    redeployMesh: handleRedeployMesh,
 
     // Project edit handler
     editProject: handleEditProject,
@@ -87,8 +80,7 @@ export const projectsListHandlers = defineHandlers({
     // View mode override (session persistence)
     setViewModeOverride: handleSetViewModeOverride,
 
-    // Project folder actions
-    'copy-project-path': handleCopyProjectPath,
+
 
     // Open AI surface for a specific project (E3)
     openAi: handleOpenAiForProject,

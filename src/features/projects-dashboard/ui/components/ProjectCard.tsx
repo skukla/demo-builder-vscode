@@ -18,11 +18,8 @@ import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { normalizeProjectName } from '@/core/validation/normalizers';
 import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {
-    getProjectStatusDisplay,
-    getMeshStatusText,
-    getMeshStatusVariant,
-    getAppStatusText,
-    getAppStatusVariant,
+    getRuntimeSummary,
+    getDeploymentSummary,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import type { Project } from '@/types/base';
 
@@ -54,14 +51,23 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
 }) => {
     const { handleClick, handleKeyDown } = useProjectSelectHandlers(project, onSelect);
 
-    const { statusText, statusVariant } = getProjectStatusDisplay(project);
     const brandStackSummary = useMemo(() => getBrandStackSummary(project), [project]);
-    const meshText = getMeshStatusText(project);
-    const meshVariant = getMeshStatusVariant(project);
-    const appText = getAppStatusText(project);
-    const appVariant = getAppStatusVariant(project);
+    // Two axes, one line each. Runtime is the LOCAL dev server, so EDS projects —
+    // which have no running state — get that line only while an operation is in
+    // flight. Deployment is the cloud side: the card used to name the mesh and
+    // count integrations while saying nothing about the storefront, which drifts
+    // the same way. Per-component detail lives on the integrations dashboard, one
+    // click away; the card answers "is what is deployed current?".
+    const runtime = getRuntimeSummary(project);
+    const deployment = getDeploymentSummary(project);
 
-    const ariaLabel = `${project.name}, ${statusText}${brandStackSummary ? `, ${brandStackSummary}` : ''}`;
+    // Both status lines reach the label, because either may be absent: an EDS
+    // project at rest has no runtime line, and a project with nothing deployed has
+    // no deployment line. Joining what exists keeps the spoken label matching the
+    // visible card instead of hard-coding a slot that may be empty.
+    const ariaLabel = [project.name, runtime?.text, deployment?.text, brandStackSummary]
+        .filter(Boolean)
+        .join(', ');
 
     return (
         <div
@@ -118,33 +124,27 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             )}
 
             {/* Status rows, read TOP-DOWN from directly beneath the stack summary:
-                storefront, then mesh, then integrations.
+                runtime, then deployment.
 
                 No `marginTop="auto"` here. In this flex column that pushed the row
                 — and every status row after it — to the card's BOTTOM edge, so the
                 first status sat at a different height depending on how many
-                followed it. Order was always storefront-first; the POSITION moved,
+                followed it. Order was always runtime-first; the POSITION moved,
                 which is what read as inconsistent across a grid of cards. Anchored
                 to the top, the first status lands in the same place on every card
                 and the slack falls below. */}
-            <Flex alignItems="center" gap="size-100">
-                <StatusDot variant={statusVariant} size={6} />
-                <Text UNSAFE_className="project-card-spectrum-status">{statusText}</Text>
-            </Flex>
-
-            {/* Mesh Status Row */}
-            {meshText && meshVariant && (
+            {runtime && (
                 <Flex alignItems="center" gap="size-100">
-                    <StatusDot variant={meshVariant} size={6} />
-                    <Text UNSAFE_className="project-card-spectrum-status">{meshText}</Text>
+                    <StatusDot variant={runtime.variant} size={6} />
+                    <Text UNSAFE_className="project-card-spectrum-status">{runtime.text}</Text>
                 </Flex>
             )}
 
-            {/* App Builder Status Row */}
-            {appText && appVariant && (
+            {/* Deployment Status Row — mesh + storefront + integrations, worst-of */}
+            {deployment && (
                 <Flex alignItems="center" gap="size-100">
-                    <StatusDot variant={appVariant} size={6} />
-                    <Text UNSAFE_className="project-card-spectrum-status">{appText}</Text>
+                    <StatusDot variant={deployment.variant} size={6} />
+                    <Text UNSAFE_className="project-card-spectrum-status">{deployment.text}</Text>
                 </Flex>
             )}
         </div>

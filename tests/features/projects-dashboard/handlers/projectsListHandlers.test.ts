@@ -89,24 +89,38 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'setViewModeOverride')).toBe(true);
         });
 
-        it('should include project reset and EDS action handlers', () => {
-            // Given: projectsListHandlers object
-            // When: Checking for project reset and EDS action message types
-            // Then: Reset and EDS action handlers present
+        it('should include the project reset handler', () => {
             expect(hasHandler(projectsListHandlers, 'resetProject')).toBe(true);
-            expect(hasHandler(projectsListHandlers, 'republishContent')).toBe(true);
         });
 
-        it('should include the mesh redeploy handler', () => {
-            expect(hasHandler(projectsListHandlers, 'redeployMesh')).toBe(true);
-            // redeployApp retired 2026-08-04 with deployAppHeadless: the kebab
-            // items it served became one route to the Integrations page, and the
-            // MCP deploy tools were always on the keyed-runner path.
-            expect(hasHandler(projectsListHandlers, 'redeployApp')).toBe(false);
-        });
+        /**
+         * The projects list routes NO per-component deploy.
+         *
+         * Each of these three retired the same way: the kebab item it served
+         * moved to the surface that owns the component, leaving the message with
+         * no sender. `redeployApp` went first (2026-08-04) when its items became
+         * one route to the Integrations page. `redeployMesh` and
+         * `republishContent` followed once the tile collapsed to a single
+         * deployment line — the mesh's Redeploy already sat on the integrations
+         * grid, and Republish Content already sat on the project dashboard's
+         * ActionGrid.
+         *
+         * Registering one again means a deploy is being fired from a grid of
+         * OTHER projects, with no log and no progress. Route to the owning
+         * surface instead.
+         */
+        it.each(['redeployMesh', 'redeployApp', 'republishContent'])(
+            'does not route %s',
+            (type) => {
+                expect(hasHandler(projectsListHandlers, type)).toBe(false);
+            }
+        );
 
-        it('should include copy path handler', () => {
-            expect(hasHandler(projectsListHandlers, 'copy-project-path')).toBe(true);
+        it('no longer routes copy-project-path', () => {
+            // Copy Path left the project-card kebab — a developer affordance on a
+            // grid used to PICK a demo, with the path one click away on the
+            // dashboard — so the message has no sender.
+            expect(hasHandler(projectsListHandlers, 'copy-project-path')).toBe(false);
         });
 
         it('should include openAi handler (E3)', () => {
@@ -121,9 +135,9 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'setAuthoringExperience')).toBe(false);
         });
 
-        it('should have exactly 24 handlers', () => {
+        it('should have exactly 21 handlers', () => {
             const types = getRegisteredTypes(projectsListHandlers);
-            expect(types).toHaveLength(24);
+            expect(types).toHaveLength(21);
         });
 
         it('should have handlers as functions', () => {

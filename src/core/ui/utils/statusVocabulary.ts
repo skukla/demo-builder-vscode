@@ -111,6 +111,52 @@ export function isUpdatePending(status: string | undefined): boolean {
 }
 
 // ==========================================================
+// Storefront vocabulary — a SECOND table, deliberately
+// ==========================================================
+
+/**
+ * What an EDS storefront can be showing. Narrower than the deployable states and
+ * spoken in publish language, which is why it is not folded into
+ * {@link STATUS_DISPLAY}: a drifted storefront needs "Republish needed", and the
+ * deployable table would have called it "Update needed" — losing the one word
+ * that says where to go.
+ */
+export type StorefrontDisplayStatus = 'published' | 'stale' | 'update-declined' | 'not-published';
+
+const STOREFRONT_DISPLAY: Record<StorefrontDisplayStatus, StatusDisplayEntry> = {
+    published: { label: 'Published', severity: 'success' },
+    // Both drift spellings read the same, matching how the deployable table
+    // collapses `update-declined`: "Later" postpones the prompt, not the drift.
+    // The dashboard used to tint these differently (yellow vs orange) — a
+    // distinction with no matching action, and no severity to carry it.
+    stale: { label: 'Republish needed', severity: 'warning' },
+    'update-declined': { label: 'Republish needed', severity: 'warning' },
+    'not-published': { label: 'Not published', severity: 'neutral' },
+};
+
+/**
+ * Label + severity for a storefront status.
+ *
+ * Replaces two switch statements over these four states — one in
+ * `projectStatusUtils.getStorefrontStatusText`, one in the EDS branch of
+ * `useDashboardStatus.demoStatusDisplay`. They had already drifted apart on the
+ * casing of the empty state.
+ *
+ * Total, unlike {@link getStatusDisplay}: every project has a storefront state
+ * even when nothing recorded one, and both callers already defaulted to
+ * published rather than hiding the line. Claiming otherwise puts a false warning
+ * on a healthy project.
+ *
+ * @param status - a persisted storefront status, or undefined
+ * @returns the label and severity; published when the value is unrecognised
+ */
+export function getStorefrontStatusDisplay(status: string | undefined): StatusDisplayEntry {
+    return status && status in STOREFRONT_DISPLAY
+        ? STOREFRONT_DISPLAY[status as StorefrontDisplayStatus]
+        : STOREFRONT_DISPLAY.published;
+}
+
+// ==========================================================
 // Severity adapters — one per consuming component
 // ==========================================================
 

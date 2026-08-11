@@ -10,17 +10,12 @@
  * Tests for those functions are in tests/types/typeGuards-project-accessors.test.ts.
  */
 
-import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import type { ProjectStatus } from '@/types/base';
 import {
     getStatusText,
     getStatusVariant,
     getFrontendPort,
-    getMeshStatusText,
-    getMeshStatusVariant,
-    getAppStatusText,
-    getAppStatusVariant,
-    meshNeedsRedeploy,
+    getDeploymentSummary,
     hasIntegrations,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import { createMockProject, createRunningProject } from '../testUtils';
@@ -262,93 +257,6 @@ describe('projectStatusUtils', () => {
         });
     });
 
-    describe('getMeshStatusText', () => {
-        it('should return null when no meshStatusSummary', () => {
-            const project = createMockProject();
-            expect(getMeshStatusText(project)).toBeNull();
-        });
-
-        it('should return "Mesh · Update needed" when stale', () => {
-            const project = createMockProject({ meshStatusSummary: 'stale' });
-            expect(getMeshStatusText(project)).toBe('Mesh · Update needed');
-        });
-
-        it('should return "Mesh · Deployed" when deployed', () => {
-            const project = createMockProject({ meshStatusSummary: 'deployed' });
-            expect(getMeshStatusText(project)).toBe('Mesh · Deployed');
-        });
-
-        it('should return null when unknown', () => {
-            const project = createMockProject({ meshStatusSummary: 'unknown' });
-            expect(getMeshStatusText(project)).toBeNull();
-        });
-
-        it('should return "Mesh · Incomplete" when config-incomplete', () => {
-            const project = createMockProject({ meshStatusSummary: 'config-incomplete' });
-            expect(getMeshStatusText(project)).toBe('Mesh · Incomplete');
-        });
-
-        it('should return "Mesh · Update needed" when update-declined', () => {
-            const project = createMockProject({ meshStatusSummary: 'update-declined' });
-            expect(getMeshStatusText(project)).toBe('Mesh · Update needed');
-        });
-
-        it('should return "Mesh · Not deployed" when not-deployed', () => {
-            const project = createMockProject({ meshStatusSummary: 'not-deployed' });
-            expect(getMeshStatusText(project)).toBe('Mesh · Not deployed');
-        });
-
-        it('should return "Mesh · Deploy failed" when error', () => {
-            const project = createMockProject({ meshStatusSummary: 'error' });
-            expect(getMeshStatusText(project)).toBe('Mesh · Deploy failed');
-        });
-    });
-
-    describe('getMeshStatusVariant', () => {
-        it('should return null when no meshStatusSummary', () => {
-            const project = createMockProject();
-            expect(getMeshStatusVariant(project)).toBeNull();
-        });
-
-        it('should return "warning" when stale', () => {
-            const project = createMockProject({ meshStatusSummary: 'stale' });
-            expect(getMeshStatusVariant(project)).toBe('warning');
-        });
-
-        it('should return "success" when deployed', () => {
-            const project = createMockProject({ meshStatusSummary: 'deployed' });
-            expect(getMeshStatusVariant(project)).toBe('success');
-        });
-
-        it('should return "warning" when config-incomplete', () => {
-            const project = createMockProject({ meshStatusSummary: 'config-incomplete' });
-            expect(getMeshStatusVariant(project)).toBe('warning');
-        });
-
-        it('should return "warning" when update-declined', () => {
-            const project = createMockProject({ meshStatusSummary: 'update-declined' });
-            expect(getMeshStatusVariant(project)).toBe('warning');
-        });
-
-        it('should return "error" when error', () => {
-            const project = createMockProject({ meshStatusSummary: 'error' });
-            expect(getMeshStatusVariant(project)).toBe('error');
-        });
-
-        it('should return "neutral" when not-deployed', () => {
-            const project = createMockProject({ meshStatusSummary: 'not-deployed' });
-            expect(getMeshStatusVariant(project)).toBe('neutral');
-        });
-
-        it('should return null when unknown', () => {
-            const project = createMockProject({ meshStatusSummary: 'unknown' });
-            expect(getMeshStatusVariant(project)).toBeNull();
-        });
-    });
-
-    // Note: isEdsProject, getEdsLiveUrl, getEdsPreviewUrl tests moved to
-    // tests/types/typeGuards-project-accessors.test.ts (canonical source)
-
     describe('getStatusText with isEds', () => {
         it('should return "Published" for EDS projects regardless of status', () => {
             expect(getStatusText('running', 3000, true)).toBe('Published');
@@ -377,39 +285,34 @@ describe('projectStatusUtils', () => {
         });
     });
 
-    // The card's app line derives from the DURABLE keyed map (worst status across
-    // kind:'integration' entries), NOT the deploy-time-only appStatusSummary —
-    // a reloaded project carries only the keyed entries.
-    // The mesh line appears only when the project HAS a mesh — a keyed component
-    // or a deploy summary. No slot, no "No Mesh Exists" placeholder: a project
-    // without a mesh has no mesh line, and cards may differ in how many status
-    // lines they carry.
+    // Which mesh state the card reads is unchanged by the consolidation — only
+    // where it lands. It comes from the DURABLE keyed map, not the
+    // deploy-time-only `meshStatusSummary`, because a reloaded project carries
+    // only the keyed entries. The summary still WINS when present: it expresses
+    // states the entry cannot (update-declined, config-incomplete).
     //
-    // `meshStatusSummary` is written at deploy time and never persisted, so a
-    // reloaded project carries only its durable keyed entry — the line reads that
-    // too. The summary wins when present: it expresses states the entry cannot
-    // (update-declined, config-incomplete).
-    describe('getMeshStatusText — only when the project has a mesh', () => {
+    // A mesh is optional and contributes nothing when absent, so a project with
+    // no mesh and nothing else deployable gets no line at all.
+    describe('the mesh feeds the deployment summary — only when there IS one', () => {
         const meshEntry = (status: 'deployed' | 'error' | 'stale' | 'not-deployed') => ({
             kind: 'mesh' as const,
             status,
             source: { owner: 'adobe', repo: 'commerce-mesh' },
         });
 
-        it('shows NO line when there is neither a component nor a summary', () => {
+        it('contributes nothing when there is neither a component nor a summary', () => {
             const project = createMockProject({
                 meshStatusSummary: undefined,
                 appBuilderComponents: {},
             });
 
-            expect(getMeshStatusText(project)).toBeNull();
-            expect(getMeshStatusVariant(project)).toBeNull();
+            expect(getDeploymentSummary(project)).toBeNull();
         });
 
         // A mesh DEPENDENCY in the stack is not a mesh. Selecting one during
         // creation says the project may have a mesh, not that it does — driving
         // the line off that is what put a placeholder on cards with no mesh.
-        it('shows NO line for a stack that merely selected a mesh dependency', () => {
+        it('is still nothing for a stack that merely selected a mesh dependency', () => {
             const project = createMockProject({
                 componentSelections: {
                     frontend: 'eds-storefront',
@@ -422,171 +325,57 @@ describe('projectStatusUtils', () => {
                 appBuilderComponents: {},
             });
 
-            expect(getMeshStatusText(project)).toBeNull();
+            expect(getDeploymentSummary(project)).toBeNull();
         });
 
-        it('derives the line from the keyed entry when no summary survived the reload', () => {
+        it('reads the keyed entry when no summary survived the reload', () => {
             const project = createMockProject({
                 meshStatusSummary: undefined,
                 appBuilderComponents: { 'eds-accs-mesh': meshEntry('deployed') },
             });
 
-            expect(getMeshStatusText(project)).toBe('Mesh · Deployed');
-            expect(getMeshStatusVariant(project)).toBe('success');
+            expect(getDeploymentSummary(project)).toEqual({
+                text: 'Deployed',
+                variant: 'success',
+            });
         });
 
         it.each([
-            ['error', 'Mesh · Deploy failed', 'error'],
-            ['stale', 'Mesh · Update needed', 'warning'],
-            ['not-deployed', 'Mesh · Not deployed', 'neutral'],
-        ] as const)('maps a keyed %s mesh to %s', (status, text, variant) => {
+            ['error', 'error'],
+            ['stale', 'warning'],
+        ] as const)('a keyed %s mesh needs attention, with the %s dot', (status, variant) => {
             const project = createMockProject({
                 meshStatusSummary: undefined,
                 appBuilderComponents: { 'eds-accs-mesh': meshEntry(status) },
             });
 
-            expect(getMeshStatusText(project)).toBe(text);
-            expect(getMeshStatusVariant(project)).toBe(variant);
+            expect(getDeploymentSummary(project)).toEqual({
+                text: 'Attention needed',
+                variant,
+            });
+        });
+
+        it('a keyed not-deployed mesh is not a problem, just not shipped', () => {
+            const project = createMockProject({
+                meshStatusSummary: undefined,
+                appBuilderComponents: { 'eds-accs-mesh': meshEntry('not-deployed') },
+            });
+
+            expect(getDeploymentSummary(project)?.text).toBe('Not deployed');
         });
 
         it('PREFERS the live summary — it knows states the keyed entry cannot express', () => {
+            // 'update-declined' has no keyed equivalent; reading the entry alone
+            // would report a healthy mesh the user has already been warned about.
             const project = createMockProject({
                 meshStatusSummary: 'update-declined',
                 appBuilderComponents: { 'eds-accs-mesh': meshEntry('deployed') },
             });
 
-            expect(getMeshStatusText(project)).toBe('Mesh · Update needed');
+            expect(getDeploymentSummary(project)?.text).toBe('Attention needed');
         });
     });
 
-    describe('app status display', () => {
-        const integration = (
-            status: 'deployed' | 'stale' | 'error' | 'not-deployed'
-        ) => ({
-            kind: 'integration' as const,
-            status,
-            source: { owner: 'acme', repo: 'widget' },
-        });
-
-        it('derives text + variant from a reloaded project with keyed entries only (no appStatusSummary)', () => {
-            const project = createMockProject({
-                appBuilderComponents: { 'acme-widget': integration('deployed') },
-            });
-            expect(getAppStatusText(project)).toBe('1 integration deployed');
-            expect(getAppStatusVariant(project)).toBe('success');
-        });
-
-        // "App Deployed" named a thing that does not exist: there is no single
-        // app, and the line is a roll-up of N integrations that happen to share
-        // one workspace. Worse, at N > 1 it hid both the count and how many were
-        // actually in the reported state — "App Error" with two integrations told
-        // you neither which had failed nor that the other was fine.
-        it('counts the integrations instead of naming a nonexistent app', () => {
-            const two = createMockProject({
-                appBuilderComponents: {
-                    a: integration('deployed'),
-                    b: integration('deployed'),
-                },
-            });
-            expect(getAppStatusText(two)).toBe('2 integrations deployed');
-        });
-
-        it('reports how many of how many are in the WORST state', () => {
-            const oneOfTwoFailed = createMockProject({
-                appBuilderComponents: {
-                    a: integration('deployed'),
-                    b: integration('error'),
-                },
-            });
-            expect(getAppStatusText(oneOfTwoFailed)).toBe('1 of 2 integrations failed');
-
-            const bothFailed = createMockProject({
-                appBuilderComponents: {
-                    a: integration('error'),
-                    b: integration('error'),
-                },
-            });
-            expect(getAppStatusText(bothFailed)).toBe('2 integrations failed');
-        });
-
-        it('drops the "of N" when there is only one integration', () => {
-            const single = createMockProject({
-                appBuilderComponents: { a: integration('error') },
-            });
-            expect(getAppStatusText(single)).toBe('1 integration failed');
-        });
-
-        it('returns null when the project has no integrations at all', () => {
-            expect(getAppStatusText(createMockProject({ appBuilderComponents: {} }))).toBeNull();
-            expect(getAppStatusVariant(createMockProject({ appBuilderComponents: {} }))).toBeNull();
-        });
-
-        it('shows the WORST status across integration entries', () => {
-            const errorProject = createMockProject({
-                appBuilderComponents: {
-                    a: integration('deployed'),
-                    b: integration('error'),
-                },
-            });
-            expect(getAppStatusText(errorProject)).toBe('1 of 2 integrations failed');
-            expect(getAppStatusVariant(errorProject)).toBe('error');
-
-            const staleProject = createMockProject({
-                appBuilderComponents: {
-                    a: integration('deployed'),
-                    b: integration('stale'),
-                },
-            });
-            expect(getAppStatusText(staleProject)).toBe('1 of 2 integrations need redeploy');
-            expect(getAppStatusVariant(staleProject)).toBe('warning');
-
-            const notDeployedProject = createMockProject({
-                appBuilderComponents: {
-                    a: integration('deployed'),
-                    b: integration('not-deployed'),
-                },
-            });
-            expect(getAppStatusText(notDeployedProject)).toBe('1 of 2 integrations not deployed');
-            expect(getAppStatusVariant(notDeployedProject)).toBe('neutral');
-        });
-
-        it('ignores mesh entries and returns null with no integrations', () => {
-            const meshOnly = createMockProject({
-                appBuilderComponents: {
-                    mesh: {
-                        kind: 'mesh',
-                        status: 'deployed',
-                        source: { owner: '', repo: '' },
-                    },
-                },
-            });
-            expect(getAppStatusText(meshOnly)).toBeNull();
-            expect(getAppStatusVariant(meshOnly)).toBeNull();
-            expect(getAppStatusText(createMockProject({}))).toBeNull();
-            expect(getAppStatusVariant(createMockProject({}))).toBeNull();
-        });
-    });
-
-    describe('meshNeedsRedeploy', () => {
-        it('is true only for the Redeploy-Mesh statuses', () => {
-            expect(meshNeedsRedeploy(createMockProject({ meshStatusSummary: 'stale' }))).toBe(true);
-            expect(
-                meshNeedsRedeploy(createMockProject({ meshStatusSummary: 'update-declined' }))
-            ).toBe(true);
-            expect(meshNeedsRedeploy(createMockProject({ meshStatusSummary: 'deployed' }))).toBe(
-                false
-            );
-            expect(meshNeedsRedeploy(createMockProject({}))).toBe(false);
-        });
-    });
-
-    // ADR-011 D3 Step 04: the kebab's redeploy affordance is per-integration,
-    // enumerated from the durable keyed map (replaces the singular appIsDeployable
-    // read of appStatusSummary).
-    // Replaced `listRedeployableIntegrations`, which built one "Redeploy <name>"
-    // menu item per integration. Those grew with N and predate the dedicated
-    // Integrations page; the kebab now needs a single yes/no for whether to offer
-    // a route there.
     describe('hasIntegrations', () => {
         it('is true for any keyed App Builder component', () => {
             const project = createMockProject({
@@ -661,11 +450,9 @@ describe('mesh status resolution matches the canonical resolver', () => {
             },
         } as never;
 
-        // Derived from the shared table rather than hard-coded, so a wording
-        // change moves this with it — the claim under test is WHICH mesh was
-        // resolved, not how 'deployed' is spelled. The `Mesh · ` prefix is the
-        // project card's own composition (see getMeshStatusText).
-        expect(getMeshStatusText(project)).toBe(`Mesh · ${getMeshStatusDisplay('deployed')?.text}`);
+        // The two entries disagree, so the verdict names which one was read: the
+        // canonical 'deployed' gives "Deployed", the stray 'error' would not.
+        expect(getDeploymentSummary(project)?.text).toBe('Deployed');
     });
 
     it('still falls back to the only mesh when there is no canonical key', () => {
@@ -673,11 +460,9 @@ describe('mesh status resolution matches the canonical resolver', () => {
             appBuilderComponents: { 'eds-accs-mesh': { kind: 'mesh', status: 'deployed' } },
         } as never;
 
-        // Derived from the shared table rather than hard-coded, so a wording
-        // change moves this with it — the claim under test is WHICH mesh was
-        // resolved, not how 'deployed' is spelled. The `Mesh · ` prefix is the
-        // project card's own composition (see getMeshStatusText).
-        expect(getMeshStatusText(project)).toBe(`Mesh · ${getMeshStatusDisplay('deployed')?.text}`);
+        // The two entries disagree, so the verdict names which one was read: the
+        // canonical 'deployed' gives "Deployed", the stray 'error' would not.
+        expect(getDeploymentSummary(project)?.text).toBe('Deployed');
     });
 });
 

@@ -5,8 +5,14 @@
  *
  * - the integrations grid's mesh card reads `CARD_STATUS_DISPLAY`
  *   (integrationCardModel), keyed by the CARD status;
- * - the projects-list card reads `MESH_STATUS_DISPLAY` (core/ui/utils), keyed by
- *   the PERSISTED mesh status, and adds its own `Mesh · ` prefix.
+ * - the project dashboard's mesh status reads `MESH_STATUS_DISPLAY`
+ *   (core/ui/utils, via `useDashboardStatus`), keyed by the PERSISTED status.
+ *
+ * This used to be driven through `getMeshStatusText`, the projects-list card's
+ * accessor, which added a `Mesh · ` prefix. That card no longer names the mesh —
+ * it carries one consolidated deployment line — so the test drives the shared
+ * table directly. The contract is between the two TABLES; the accessor was only
+ * ever how one of them was reached.
  *
  * They were not merged, deliberately. The persisted vocabulary carries a
  * `color`/`variant` the grid has no use for and draws distinctions the grid
@@ -22,9 +28,8 @@
  */
 
 import { deriveMeshCard, display, meshEntry } from './integrationCardModel.testUtils';
-import { getMeshStatusText } from '@/features/projects-dashboard/utils/projectStatusUtils';
+import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import type { MeshStatus } from '@/features/dashboard/ui/hooks/useDashboardStatus';
-import type { Project } from '@/types';
 
 jest.mock('@/core/logging', () => ({
     getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
@@ -50,11 +55,6 @@ const SETTLED_MESH_STATUSES = [
     'not-deployed',
 ] as const;
 
-/** A project whose persisted summary is the status under test. */
-function projectWithMesh(status: string): Project {
-    return { name: 'demo', path: '/tmp/demo', meshStatusSummary: status } as unknown as Project;
-}
-
 describe('grid and projects-list describe a mesh state identically', () => {
     it.each(SETTLED_MESH_STATUSES)('%s reads the same on both surfaces', (status) => {
         const gridLabel = deriveMeshCard(
@@ -64,10 +64,7 @@ describe('grid and projects-list describe a mesh state identically', () => {
             false
         ).statusLabel;
 
-        // The prefix is the projects-list card's own composition — that card is
-        // headed with the PROJECT name, so it supplies the noun the grid's card
-        // already has in its heading. Strip it and the state name must match.
-        expect(getMeshStatusText(projectWithMesh(status))).toBe(`Mesh · ${gridLabel}`);
+        expect(getMeshStatusDisplay(status)?.text).toBe(gridLabel);
     });
 
     it('is not vacuous — a wording change on one surface alone would fail', () => {
@@ -76,6 +73,6 @@ describe('grid and projects-list describe a mesh state identically', () => {
         const gridLabel = deriveMeshCard(display(), 'deployed', meshEntry(), false).statusLabel;
 
         expect(gridLabel).toBe('Deployed');
-        expect(getMeshStatusText(projectWithMesh('deployed'))).toBe('Mesh · Deployed');
+        expect(getMeshStatusDisplay('deployed')?.text).toBe('Deployed');
     });
 });

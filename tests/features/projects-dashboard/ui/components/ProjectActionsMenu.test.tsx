@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ProjectActionsMenu } from '@/features/projects-dashboard/ui/components/ProjectActionsMenu';
 import type { ProjectActions } from '@/features/projects-dashboard/ui/components/ProjectActionsMenu';
@@ -24,7 +24,6 @@ const openMenu = (): void => {
 };
 
 /** The "More…" submenu container, present only when low-frequency actions exist. */
-const submenu = (): HTMLElement => screen.getByTestId('spectrum-submenu');
 
 /** Labels of all menuitems in document order (includes the submenu's items). */
 const menuItemLabels = (): string[] =>
@@ -158,8 +157,9 @@ describe('ProjectActionsMenu', () => {
             openMenu();
 
             // Reset is a top-level menuitem; Copy Path lives in the submenu.
-            expect(within(submenu()).queryByText('Reset')).not.toBeInTheDocument();
-            expect(within(submenu()).getByText('Copy Path')).toBeInTheDocument();
+            // Reset stays a first-class Manage action. (It was contrasted against
+            // Copy Path in the submenu; both the submenu and Copy Path are gone.)
+            expect(screen.getByText('Reset')).toBeInTheDocument();
         });
 
         it('flips the pin label to Unpin when the project is pinned', () => {
@@ -175,147 +175,60 @@ describe('ProjectActionsMenu', () => {
     });
 
     describe('More… submenu', () => {
-        it('tucks Copy Path and Export into the submenu', () => {
-            const actions: ProjectActions = {
-                onCopyPath: jest.fn(),
-                onExport: jest.fn(),
-            };
+        it('puts Export straight in the menu, with no submenu wrapper', () => {
             renderWithProvider(
                 <ProjectActionsMenu
                     project={createMockProject({ name: 'Test' })}
-                    actions={actions}
+                    actions={{ onExport: jest.fn() }}
                 />
             );
             openMenu();
 
-            expect(screen.getByTestId('spectrum-submenu-trigger')).toBeInTheDocument();
-            const inSubmenu = within(submenu());
-            expect(inSubmenu.getByText('Copy Path')).toBeInTheDocument();
-            expect(inSubmenu.getByText('Export')).toBeInTheDocument();
+            expect(screen.queryByTestId('spectrum-submenu-trigger')).not.toBeInTheDocument();
+            expect(screen.getByText('Export')).toBeInTheDocument();
         });
 
-        it('shows Redeploy Mesh only for a mesh in a "Redeploy Mesh" state, and fires the callback', () => {
-            const onRedeployMesh = jest.fn();
-            const project = createMockProject({ name: 'Test', meshStatusSummary: 'stale' });
-            renderWithProvider(
-                <ProjectActionsMenu project={project} actions={{ onRedeployMesh }} />
-            );
-            openMenu();
-
-            within(submenu()).getByText('Redeploy Mesh').click();
-            expect(onRedeployMesh).toHaveBeenCalledWith(project);
-        });
-
-        it('hides Redeploy Mesh when the mesh is deployed (not stale)', () => {
-            renderWithProvider(
-                <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test', meshStatusSummary: 'deployed' })}
-                    actions={{ onRedeployMesh: jest.fn(), onCopyPath: jest.fn() }}
-                />
-            );
-            openMenu();
-            expect(within(submenu()).queryByText('Redeploy Mesh')).not.toBeInTheDocument();
-        });
-
-        // ADR-011 D3 Step 04 built one "Redeploy <name>" item per integration
-        // here. They grew with N and predate the dedicated Integrations page —
-        // which now owns per-integration actions — so they collapsed into a
-        // single route to that page, in Manage rather than More.
-        it('offers ONE Integrations… entry, whatever the integration count', () => {
-            const onOpenIntegrations = jest.fn();
-            const project = createMockProject({
-                name: 'Test',
-                appBuilderComponents: {
-                    'int-a': {
-                        kind: 'integration',
-                        status: 'deployed',
-                        name: 'My Integration',
-                        source: { owner: 'acme', repo: 'a' },
-                    },
-                    'int-b': {
-                        kind: 'integration',
-                        status: 'error',
-                        source: { owner: 'acme', repo: 'b' },
-                    },
-                },
-            } as any);
-            renderWithProvider(
-                <ProjectActionsMenu project={project} actions={{ onOpenIntegrations }} />
-            );
-            openMenu();
-
-            expect(screen.queryByText(/^Redeploy /)).not.toBeInTheDocument();
-            screen.getByText('Integrations…').click();
-            expect(onOpenIntegrations).toHaveBeenCalledWith(project);
-        });
-
-        it('omits Integrations… when the project has no App Builder components', () => {
+        it('offers Export directly, with no More submenu to open first', () => {
+            const onExport = jest.fn();
             renderWithProvider(
                 <ProjectActionsMenu
                     project={createMockProject({ name: 'Test' })}
-                    actions={{ onOpenIntegrations: jest.fn(), onCopyPath: jest.fn() }}
+                    actions={{ onExport }}
                 />
             );
             openMenu();
 
-            expect(screen.queryByText('Integrations…')).not.toBeInTheDocument();
+            expect(screen.queryByTestId('spectrum-submenu-trigger')).not.toBeInTheDocument();
+            screen.getByText('Export').click();
+            expect(onExport).toHaveBeenCalledTimes(1);
         });
 
-        it('offers NO Rename item anywhere — inline rename on the card owns it', () => {
-            const actions: ProjectActions = {
-                onEdit: jest.fn(),
-                onCopyPath: jest.fn(),
-                onExport: jest.fn(),
-                onDelete: jest.fn(),
-            };
+        it('no longer offers Copy Path', () => {
             renderWithProvider(
                 <ProjectActionsMenu
                     project={createMockProject({ name: 'Test' })}
-                    actions={actions}
+                    actions={{ onExport: jest.fn() }}
                 />
             );
             openMenu();
 
-            expect(screen.queryByText('Rename')).not.toBeInTheDocument();
-            expect(within(submenu()).queryByText('Rename')).not.toBeInTheDocument();
+            expect(screen.queryByText('Copy Path')).not.toBeInTheDocument();
         });
 
-        it('invokes a submenu action with the project when selected', () => {
-            const project = createMockProject({ name: 'Test' });
-            const onCopyPath = jest.fn();
-            renderWithProvider(<ProjectActionsMenu project={project} actions={{ onCopyPath }} />);
-            openMenu();
-
-            within(submenu()).getByText('Copy Path').click();
-
-            expect(onCopyPath).toHaveBeenCalledWith(project);
-            expect(onCopyPath).toHaveBeenCalledTimes(1);
-        });
-
-        it('includes Republish Content in the submenu for EDS projects', () => {
-            const actions: ProjectActions = {
-                onRepublishContent: jest.fn(),
-                onCopyPath: jest.fn(),
-            };
-            renderWithProvider(<ProjectActionsMenu project={edsProject()} actions={actions} />);
-            openMenu();
-
-            expect(within(submenu()).getByText('Republish Content')).toBeInTheDocument();
-        });
-
-        it('omits Republish Content for non-EDS projects even when wired', () => {
-            const actions: ProjectActions = {
-                onRepublishContent: jest.fn(),
-                onCopyPath: jest.fn(),
-            };
+        it('offers no deploy actions either — those live on their own surfaces', () => {
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createMockProject({ name: 'Test' })}
-                    actions={actions}
+                    project={createMockProject({ name: 'Test', meshStatusSummary: 'stale' })}
+                    actions={{
+                        onExport: jest.fn(),
+                        onRepublishContent: jest.fn(),
+                        onRedeployMesh: jest.fn(),
+                    }}
                 />
             );
             openMenu();
 
+            expect(screen.queryByText('Redeploy Mesh')).not.toBeInTheDocument();
             expect(screen.queryByText('Republish Content')).not.toBeInTheDocument();
         });
     });
@@ -344,7 +257,7 @@ describe('ProjectActionsMenu', () => {
             expect(labels[labels.length - 1]).toContain('Delete');
         });
 
-        it('keeps Delete out of the More… submenu', () => {
+        it('keeps Delete in its own isolated section', () => {
             const actions: ProjectActions = { onCopyPath: jest.fn(), onDelete: jest.fn() };
             renderWithProvider(
                 <ProjectActionsMenu
@@ -354,7 +267,6 @@ describe('ProjectActionsMenu', () => {
             );
             openMenu();
 
-            expect(within(submenu()).queryByText('Delete')).not.toBeInTheDocument();
             expect(screen.getByText('Delete')).toBeInTheDocument();
         });
     });
