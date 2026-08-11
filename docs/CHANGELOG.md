@@ -7,32 +7,154 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.127] - 2026-08-11
+
+The largest release so far — 484 commits. `.126` was a diagnostics hotfix cut from `.125`,
+so everything built on `develop` since early July arrives here at once.
+
+**Two things to know before you upgrade.**
+
+1. **Every existing project will flag its AI files as out of date and offer to regenerate.**
+   That is expected, and you should accept it. This release adds an AI-context freshness
+   check, and the regenerate is the only thing that replaces the broken git-sync hook
+   described under Fixed. Skipping it leaves the dead hook in place.
+2. **If you use Claude to edit a storefront, those edits have not been reaching GitHub.**
+   Details under Fixed. Regenerating the AI files repairs it.
+
+---
+
+### Added
+
+- **"Build Your Project" — the wizard is now one guided step.** Backend, storefront and
+  integrations are configured inside a single step with three areas (Commerce, Storefront,
+  Integrations), each with its own sub-step rail and a running summary of what you have
+  chosen. Continue advances an area only once it is genuinely complete. This replaces the
+  architecture modal and the long flat step list; the brand card on the welcome screen now
+  only picks a demo package.
+
+- **A project can hold many App Builder integrations, each with a name you choose.**
+  Previously a project had at most one custom app. Add pre-built catalog entries or an
+  AI-built blank shell, name each one, and deploy, redeploy, rename or remove them
+  independently. The API Mesh is now one integration among them rather than a special case.
+
+- **A dedicated Integrations surface.** A card grid with a detail flyout, per-card actions,
+  live endpoint links, deploy state, and the list of Adobe APIs each integration uses.
+
+- **Create Adobe I/O projects and workspaces without leaving the extension.** The wizard can
+  provision a Console project and a Stage workspace inline, using the same browse-or-create
+  interaction as GitHub repo selection.
+
+- **Delete Adobe I/O Console projects from the picker** — restricted to projects you created,
+  and it says what blocked the delete when something does.
+
+- **Change where a project deploys.** Pick a different Adobe project or workspace and the
+  existing integrations move with it. The move is all-or-nothing, so a partial failure
+  cannot leave integrations split across two workspaces.
+
+- **Per-integration Adobe API attribution.** The extension now records which integration asked
+  for which Console API, so Manage APIs edits one integration at a time, and a project-level
+  union view cleans up orphaned picks.
+
+- **One coordinated set of checks when a project opens.** Org context, mesh verification, AI
+  verification and MCP health now run through a single orchestrator and report on one channel.
+  Two rules it enforces: no surprise side effects (nothing launches a browser on its own — a
+  signed-out check degrades to "sign in to check"), and no silent failures.
+
+- **New agent tools (MCP).** `rename_project`, `get_project_urls`, `deploy_integration`,
+  `redeploy_integration`, `remove_integration`, `deploy_mesh`, `refresh_block_library`,
+  `export_project_settings` (settings to a file, secrets never on the wire), plus
+  `list_console_apis` / `add_console_apis` so an agent can request the Adobe APIs it needs.
+  A global entry point with socket discovery means these work from any directory.
+
+- **Storefront repos are checked before they are used.** The extension classifies whether a
+  repository is ready to become a storefront, gates selection on what the repo actually
+  contains, and verifies AEM Code Sync is installed *before* the first write rather than
+  half-way through the pipeline.
+
+- **DA.live organization is now a picker driven by your GitHub namespaces** — your personal
+  login plus any GitHub organizations you belong to. The free-text field, the default-org
+  setting and the pre-authentication gate are gone.
+
+- **Rename a project in place** on the project card or the dashboard title, with live name
+  normalization.
+
+- **Open the Commerce Admin Panel** from the dashboard and from project cards.
+
+- **Commerce configuration is split into Connection and Business Structure**, which also
+  fixes a PaaS deadlock where required Catalog fields sat inside a step locked by a verdict
+  that included those same fields.
+
+- **Diagnostics** gains a probe for whether your credential can actually reach the site
+  configuration service.
+
+### Changed
+
+- **Project cards answer two questions, one line each:** is the demo running, and is what is
+  deployed current. The per-component mesh line and integration count are gone; that detail
+  lives on the Integrations surface.
+
+- **Status is placed by what it is about.** Environment health (AI Ready, IMS Org) sits in the
+  dashboard header band; the state of a specific artifact appears on the button that fixes it,
+  wearing an amber dot and a tooltip explaining why.
+
+- **Page content is left-aligned by default** on a unified 960px content width, and the
+  Integrations dashboard now matches the project dashboard exactly — same grid, same card
+  metrics, same filter behaviour.
+
+- **"App Builder app" is called an "integration"** throughout the interface.
+
+- **Adobe API Mesh access is enabled for you.** Where the extension previously showed
+  hand-written Console instructions when the API Mesh API was missing, it now subscribes the
+  API as a visible step during creation and deploy.
+
 ### Fixed
 
-- **The AI git-sync hook now actually runs.** Every EDS project generated since
-  beta.109 shipped a `PostToolUse` hook meant to commit and push storefront edits
-  automatically. It read the edited file path from a `$CLAUDE_TOOL_INPUT`
-  environment variable that Claude Code never sets — it delivers the tool-call JSON
-  on **stdin** — so the path was always empty, the storefront guard never matched,
-  and the hook did nothing. Silently, by design: its own source noted the variable
-  name was unverified and that "if wrong, the hook silently does nothing".
+- **The AI git-sync hook now actually runs — and AI-authored storefront edits now reach
+  GitHub.** Every EDS project generated since beta.109 shipped a `PostToolUse` hook meant to
+  commit and push storefront edits automatically. It read the edited file path from a
+  `$CLAUDE_TOOL_INPUT` environment variable that Claude Code never sets — it delivers the
+  tool call on stdin — so the path was always empty and the hook did nothing. Worse, the
+  generated `sync-changes` skill told agents the hook handled commit and push, so agents
+  skipped `sync_storefront` too. Block changes stayed on disk, never reached GitHub, and
+  never published, with nothing reporting it at either end. **Existing projects must
+  regenerate their AI files to get a working hook.**
 
-  The damage was not just a missing convenience. The generated `sync-changes` skill
-  told every agent the hook handled commit and push, so agents skipped
-  `sync_storefront` — AI-authored block changes stayed on disk, never reached
-  GitHub, and never published, with nothing reporting it at either end.
+- **Republishing a storefront now clears its "Republish needed" state.** The flag was updated
+  in memory and never written to disk, so reopening the dashboard showed amber again after a
+  successful republish.
 
-  The extractor now reads stdin, matching every hook in this repo's own
-  `.claude/hooks/`. `AI_CONTEXT_VERSION` bumps to **6**, so existing projects flag
-  as stale and prompt a regenerate — **existing projects must regenerate to get a
-  working hook.** `sync-changes.md` now describes what the hook does and does not
-  cover (it commits and pushes; it does not publish, and it does not see edits made
-  outside the Write/Edit tools).
+- **A saved Commerce scope change now reaches the storefront**, and a PaaS storefront no
+  longer silently keeps serving the old backend.
 
-  Flagged as **Critical (G4)** by the 2026-05-20 MCP sync-gap audit and carried
-  unfixed since. It survived because its tests asserted the command string
-  *contained* `process.env.CLAUDE_TOOL_INPUT` — pinning the bug rather than the
-  behaviour. The extractor is now pinned by tests that **execute** it.
+- **Adobe operations run against the right organization.** A broad correctness pass through
+  the org-context handling: entity lookups, workspace listing, developer-permission probes and
+  mesh reads no longer fall back to a stale CLI selection, and an org mismatch offers "Switch
+  IMS Org" instead of failing opaquely. Background reads are SDK-only, so a cosmetic fetch can
+  never pop a browser window.
+
+- **Deploy state is honest.** A failed deploy is persisted with the reason, so the dashboard
+  stops reporting "Mesh Deployed" for something that failed; a stale deployment says it needs
+  an update rather than appearing current; and a mesh deploy retries create-as-update (and
+  update-as-create) when the workspace and the remote disagree.
+
+- **A 404 on a product page names both possible causes** instead of only the alarming one, and
+  diagnostics no longer reports a PDP prerender that never happened.
+
+- **Long Adobe operations tell you what they are doing.** Progress notifications open before
+  the guards run rather than after, name the thing being fetched, and stop claiming causes the
+  extension cannot actually determine.
+
+- Dozens of interface fixes across the wizard, modals and dashboard: content clipping at
+  narrow and zoomed viewports, the integrations grid collapsing to one column, API lists
+  reordering while you select from them, modals resizing as you type, and loading states
+  landing in the wrong place.
+
+### Removed
+
+- The architecture modal and the project rename dialogs, both replaced by in-place interaction.
+- The manual API Mesh setup instructions and their error dialog — the extension subscribes the
+  API itself.
+- The `demoBuilder.daLive.defaultOrg` setting, superseded by the GitHub-namespace picker.
 
 ## [1.0.0-beta.126] - 2026-08-07
 
