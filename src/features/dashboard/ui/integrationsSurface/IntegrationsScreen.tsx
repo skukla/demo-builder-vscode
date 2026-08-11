@@ -243,11 +243,6 @@ export function IntegrationsScreen({
     }
 
     return (
-        // `page-left-anchored`: content starts at the same left edge as the
-        // project dashboard's, one click away. Without it the shared
-        // `.page-container-padded` centers this screen inside the 960px band and
-        // the two surfaces disagree about where content begins.
-        <div className="page-left-anchored">
         <PageLayout
             header={
                 <PageHeader
@@ -357,6 +352,5 @@ export function IntegrationsScreen({
                 />
             </div>
         </PageLayout>
-        </div>
     );
 }

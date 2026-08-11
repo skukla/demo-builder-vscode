@@ -584,15 +584,21 @@ describe('IntegrationsScreen — destination control', () => {
      * pageLeftAnchor.test.ts; this pins that the screen actually opts in, which
      * jsdom CAN see.
      */
-    it('opts into the left-anchored page layout, like the project dashboard', () => {
-        // Must settle status first — the screen renders a full-height loading
-        // gate until it arrives, and that branch has no page chrome at all.
+    it('needs no alignment opt-out — left is the shared default', () => {
+        // This screen briefly carried `.page-left-anchored` to match the project
+        // dashboard. The default moved instead, so the opt-out is gone; leaving
+        // it behind would re-create the trap that made this screen centre in the
+        // first place.
+        //
+        // Status must settle first: the screen renders a full-height loading gate
+        // until it arrives, and that branch has no page chrome at all.
         const handlers = captureHandlers();
         const { container } = render(
             <IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />
         );
         settleStatus(handlers);
 
-        expect(container.querySelector('.page-left-anchored')).toBeInTheDocument();
+        expect(container.querySelector('.page-container-padded')).toBeInTheDocument();
+        expect(container.querySelector('.page-left-anchored')).not.toBeInTheDocument();
     });
 });

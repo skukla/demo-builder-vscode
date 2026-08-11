@@ -560,11 +560,16 @@ button[class*="spectrum-Button"][disabled],
    Replace utility class combinations with meaningful names
    =========================================== */
 
-/* Page container - centers content at the canonical content width */
+/* Page container — caps content at the canonical width, LEFT-ALIGNED.
+   These used to centre (margin: auto), contradicting the --content-width
+   docblock below and the wizard's .content-column, which never centred. Screens
+   coped one at a time: the project dashboard added an opt-out, the integrations
+   surface inherited the centred default when its grid moved out of that
+   dashboard, and the projects list and Prompt Library never opted out at all.
+   Fixing the DEFAULT is the only version that cannot rot — a new screen gets
+   canonical behaviour by doing nothing. */
 .page-container {
     max-width: var(--content-width) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
 }
 
 /* === Dedicated content layouts (ContentColumn / ContentWithSidebar) ===
@@ -599,12 +604,13 @@ button[class*="spectrum-Button"][disabled],
 }
 
 /* Page container with horizontal padding */
+/* size-400 (32px), NOT 16: PageHeader pads its own content by size-400, so a
+   narrower body inset left every screen's content 16px adrift of its title. The
+   old per-screen opt-out had been silently correcting that too. */
 .page-container-padded {
     max-width: var(--content-width) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    padding-left: 16px !important;
-    padding-right: 16px !important;
+    padding-left: var(--spectrum-global-dimension-size-400) !important;
+    padding-right: var(--spectrum-global-dimension-size-400) !important;
 }
 
 /* Page header section spacing */
@@ -2065,31 +2071,6 @@ button[class*="spectrum-Button"][disabled],
     display: flex !important;
     align-items: center !important;
     gap: 12px !important;
-}
-
-/* Left-anchored page content — opt in with `.page-left-anchored` on a screen root.
-   The shared .page-container / .page-container-padded center their content
-   (margin: auto), which on a wide editor floats a screen in the middle with gaps
-   on both sides. Opting out drops the centering so the column hugs the left edge
-   — consistent with the wizard's left-aligned content. The full-width
-   header/status BANDS (background + border) still span edge-to-edge; only their
-   inner content left-anchors. Left padding is normalized to size-400 (32px) so
-   status badges, org banner and action tiles all share the page title's left
-   edge (the title sits at the PageHeader's size-400 inset).
-
-   Was `.dashboard-left` — a name for WHICH screen rather than WHAT it does. The
-   integrations grid used to live inside the project dashboard and inherited the
-   anchor; when it moved to its own surface it silently reverted to the centered
-   default, and the two screens disagreed about where content starts. A behaviour
-   name lets the next screen opt in by saying what it wants. */
-.page-left-anchored .page-container,
-.page-left-anchored .page-container-padded {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-}
-.page-left-anchored .page-container-padded {
-    padding-left: var(--spectrum-global-dimension-size-400) !important;
-    padding-right: var(--spectrum-global-dimension-size-400) !important;
 }
 
 /* Match the height of the Projects List search header so content aligns */
@@ -5253,10 +5234,20 @@ div[class*="spectrum"] input[type="search"] {
    them to ~420px and the content read as mostly empty. `justify-content: start`
    packs them left instead of spreading. Gap matches the extension's card-grid
    rhythm (.projects-grid, 24px / size-300). */
+/* Mirrors .projects-grid — the same card-grid problem, already solved there.
+   `minmax(268px, 300px)` needed 3*268 + 2*24 = 852px for three columns and the
+   left-anchored content band is ~815px, so it fell to two and wrapped the third
+   tile onto a row of its own. 240px min clears three columns with room to spare;
+   `1fr` fills the row, which is why `justify-content: start` is gone (it only
+   mattered while tracks were capped at 300px).
+
+   `grid-auto-rows: 1fr` equalises rows. Grid equalises heights WITHIN a row, so
+   an add tile alone on the last row kept its own floor while the cards' row was
+   sized by card content — they matched only when they happened to share a row. */
 .integrations-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(268px, 300px));
-    justify-content: start;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-auto-rows: 1fr;
     gap: 24px;
     padding: 8px;
 }
@@ -5395,7 +5386,9 @@ div[class*="spectrum"] input[type="search"] {
     border: 1.5px dashed var(--spectrum-global-color-gray-400);
     border-radius: 8px;
     background: transparent;
-    min-height: 128px;
+    /* Same floor as .integration-card so the two tile families agree even
+       before grid-auto-rows equalises the rows. */
+    min-height: 100px;
     display: flex;
     align-items: center;
     justify-content: center;
