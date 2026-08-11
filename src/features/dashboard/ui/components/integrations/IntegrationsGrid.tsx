@@ -37,12 +37,6 @@ export interface IntegrationsGridProps {
      * without a second source of truth.
      */
     cards: IntegrationCardModel[];
-    /**
-     * Open the add-integration picker. The modal itself is hosted by the SCREEN,
-     * so the sticky header's "Add integration" button and this grid's add tile
-     * open the same one instance.
-     */
-    onAddRequest: () => void;
     /** Mesh callbacks — the mesh card routes here, never to the keyed messages. */
     onDeployMesh?: () => void;
     /** User-initiated re-auth for the mesh needs-auth state. */
@@ -86,7 +80,6 @@ async function requestRename(id: string, name: string): Promise<string | null> {
 /** The integrations card grid + its hosted drawer, modals, and confirm dialog. */
 export function IntegrationsGrid({
     cards,
-    onAddRequest,
     onDeployMesh,
     onReAuthenticate,
     destinationLabel,
@@ -192,14 +185,6 @@ export function IntegrationsGrid({
                         onRename={requestRename}
                     />
                 ))}
-                <button
-                    type="button"
-                    className="integration-add-tile"
-                    data-testid="integration-add-tile"
-                    onClick={onAddRequest}
-                >
-                    + Add integration
-                </button>
             </div>
 
             <IntegrationDetailPanel

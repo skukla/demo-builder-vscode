@@ -447,27 +447,37 @@ describe('IntegrationsGrid actions', () => {
         });
     });
 
-    describe('add flow', () => {
-        // The MODAL is hosted by the screen so the header button and this tile
-        // open one instance; the grid's only job is to ask for it.
-        it('asks the screen to open the add picker', async () => {
-            const user = setupUser();
-            const { onAddRequest } = renderGrid();
-
-            await user.click(screen.getByTestId('integration-add-tile'));
-
-            expect(onAddRequest).toHaveBeenCalledTimes(1);
-        });
-
-        it('renders the add tile as the last cell', () => {
+    /**
+     * The grid offers no add affordance.
+     *
+     * It used to end with a dashed "+ Add integration" tile that opened the same
+     * modal instance as the sticky header's button — two doors, one room. The
+     * projects grid, one click away, has never had one: it shows exactly one add
+     * affordance in every state, while this screen always showed two.
+     *
+     * The tile also cost more than it looked. As a grid participant it had to be
+     * kept dimensionally in sync with real cards, it affected wrapping, and it
+     * was half the reason row-equalisation needed fixing. A header button is
+     * inert by comparison — and it never scrolls away, whereas the tile drifted
+     * to the end of the grid as integrations accumulated, hardest to find
+     * exactly when the list was longest.
+     *
+     * The empty state keeps its own CTA; it renders instead of the grid, so it
+     * was never the tile's job.
+     */
+    describe('no add affordance', () => {
+        it('renders no add tile', () => {
             renderGrid({ appBuilderComponents: twoDeployed() });
 
-            const tile = screen.getByTestId('integration-add-tile');
+            expect(screen.queryByTestId('integration-add-tile')).not.toBeInTheDocument();
+        });
+
+        it('ends with the last integration card, nothing after it', () => {
+            const { container } = renderGrid({ appBuilderComponents: twoDeployed() });
+
+            const grid = container.querySelector('.integrations-grid') as HTMLElement;
             const cards = screen.getAllByRole('button', { name: /, Deployed$/ });
-            expect(
-                cards[cards.length - 1].compareDocumentPosition(tile) &
-                    Node.DOCUMENT_POSITION_FOLLOWING,
-            ).toBeTruthy();
+            expect(grid.lastElementChild).toBe(cards[cards.length - 1]);
         });
     });
 });

@@ -19,7 +19,7 @@
  * @module features/dashboard/ui/integrationsSurface/IntegrationsScreen
  */
 
-import { Button, Flex, View } from '@adobe/react-spectrum';
+import { Button, Flex, Text, View } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
     buildIntegrationCards,
@@ -206,6 +206,9 @@ export function IntegrationsScreen({
     ]);
 
     const visibleCards = useMemo(() => filterCards(cards, searchQuery), [cards, searchQuery]);
+    // Named rather than inlined: a 4-operand && chain in JSX trips the
+    // complex-expression SOP scan (tests/sop/complex-expressions.test.ts).
+    const searchFoundNothing = Boolean(searchQuery) && visibleCards.length === 0 && cards.length > 0;
 
     const handleBack = useCallback((): void => {
         webviewClient.postMessage('showProjectDashboard');
@@ -329,11 +332,29 @@ export function IntegrationsScreen({
                 ) : (
                     <IntegrationsGrid
                         cards={visibleCards}
-                        onAddRequest={openAdd}
                         onDeployMesh={handleDeployMesh}
                         onReAuthenticate={handleReAuthenticate}
                         destinationLabel={destinationLabel}
                     />
+                )}
+
+                {/* No-results message, mirroring the projects list. The grid gets
+                    search-FILTERED cards while the empty-state gate above reads
+                    the unfiltered list, so a no-match search renders an empty
+                    grid. The dashed add tile used to sit there alone, reading as
+                    "add one" rather than "nothing matched"; with the tile gone
+                    the area would otherwise be blank, and the header's "0 of N"
+                    is a count, not an answer. */}
+                {searchFoundNothing && (
+                    <Flex
+                        justifyContent="center"
+                        alignItems="center"
+                        UNSAFE_className="centered-padding-lg"
+                    >
+                        <Text UNSAFE_className="text-gray-500">
+                            No integrations match &quot;{searchQuery}&quot;
+                        </Text>
+                    </Flex>
                 )}
 
                 {/* Hosted HERE so the header button and the grid's add tile open

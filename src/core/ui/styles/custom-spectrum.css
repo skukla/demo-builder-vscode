@@ -5401,34 +5401,6 @@ div[class*="spectrum"] input[type="search"] {
 }
 /* The deploying pulse lives in StatusDot now (`status-dot--pulse`, index.css) —
    it is a property of the `info` status, not of this card. */
-/* The add tile IS the empty state: a dashed last grid cell. */
-.integration-add-tile {
-    border: 1.5px dashed var(--spectrum-global-color-gray-400);
-    border-radius: 8px;
-    background: transparent;
-    /* The shared card floor — this tile sits in the same grid as the cards and
-       must match them, not merely approach them. */
-    min-height: var(--card-min-height);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    cursor: pointer;
-    color: var(--spectrum-global-color-gray-600);
-    font-size: 13px;
-    transition: border-color 0.2s ease, color 0.2s ease;
-}
-.integration-add-tile:hover,
-.integration-add-tile:focus {
-    border-color: var(--spectrum-global-color-blue-400);
-    color: var(--spectrum-global-color-blue-600);
-    outline: none;
-}
-.integration-add-tile:focus-visible {
-    outline: 2px solid var(--spectrum-global-color-blue-400);
-    outline-offset: 2px;
-}
-
 /* ---- Detail FLYOUT (over the grid) ----
  * Restored from the pre-master/detail build: this surface IS the integrations
  * grid, so an overlay covers only its own page. The scrim + slide live on the

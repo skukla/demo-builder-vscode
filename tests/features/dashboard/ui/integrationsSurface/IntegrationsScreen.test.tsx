@@ -81,6 +81,9 @@ jest.mock('@adobe/react-spectrum', () => ({
         </button>
     ),
     Flex: ({ children }: any) => <div>{children}</div>,
+    // Added with the no-results message: a per-suite Spectrum mock exports only
+    // what the tree rendered when it was written.
+    Text: ({ children }: any) => <span>{children}</span>,
     View: ({ children }: any) => <div>{children}</div>,
     ProgressCircle: (p: any) => <div data-testid="spinner" aria-label={p['aria-label']} />,
 }));
@@ -600,5 +603,35 @@ describe('IntegrationsScreen — destination control', () => {
 
         expect(container.querySelector('.page-container-padded')).toBeInTheDocument();
         expect(container.querySelector('.page-left-anchored')).not.toBeInTheDocument();
+    });
+
+    /**
+     * A search that matches nothing says so, like the projects list does.
+     *
+     * The grid receives search-FILTERED cards while the empty-state gate reads
+     * the unfiltered list, so a no-match search renders the grid with zero
+     * cards. That used to leave the dashed add tile sitting alone, which read as
+     * "add one" rather than "nothing matched". Removing the tile would have left
+     * the area blank, so the message the projects list already shows comes with
+     * it — the header count alone ("0 of 2") is not an answer.
+     */
+    it('says nothing matched when a search filters everything out', () => {
+        const handlers = captureHandlers();
+        render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
+        settleStatus(handlers);
+
+        fireEvent.change(screen.getByLabelText('Filter integrations'), {
+            target: { value: 'zzzz-no-match' },
+        });
+
+        expect(screen.getByText(/no integrations match/i)).toHaveTextContent('zzzz-no-match');
+    });
+
+    it('stays quiet when the search matches something — control', () => {
+        const handlers = captureHandlers();
+        render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
+        settleStatus(handlers);
+
+        expect(screen.queryByText(/no integrations match/i)).not.toBeInTheDocument();
     });
 });

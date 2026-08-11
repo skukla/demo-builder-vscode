@@ -520,3 +520,20 @@ knew to ask for it — the integrations surface, the projects list, the Prompt
 Library — silently centred instead. Fixing the default removed the trap.
 
 Pinned by `tests/core/ui/pageContentAlignment.test.ts`.
+
+## One add affordance per grid
+
+The integrations screen offers exactly one way to add, in every state — the
+sticky header's **Add integration** button, or the empty state's CTA when there
+is nothing to list. This matches the projects list, which has always shown one.
+
+The grid used to end with a dashed "+ Add integration" tile opening the same
+modal instance as the header button. It was removed: two doors to one room, and
+as a grid participant it had to be kept dimensionally in sync with real cards,
+affected wrapping, and drifted to the end of the grid as integrations
+accumulated — least findable exactly when the list was longest.
+
+Removing it exposed a gap it had been accidentally covering: the grid receives
+search-FILTERED cards while the empty-state gate reads the unfiltered list, so a
+no-match search renders an empty grid. That now shows
+`No integrations match "…"`, mirroring the projects list.

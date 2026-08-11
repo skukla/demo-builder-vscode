@@ -78,25 +78,14 @@ describe('IntegrationsGrid', () => {
             );
         });
 
-        it('renders the add tile as the LAST grid cell', () => {
-            renderGrid({ appBuilderComponents: twoDeployed(), withMesh: true });
+        it('renders nothing after the last card — the add tile is gone', () => {
+            // The grid offers no add affordance; the sticky header's button is
+            // the single door. See IntegrationsGrid-actions.test.tsx.
+            const { container } = renderGrid({ appBuilderComponents: twoDeployed() });
 
-            const tile = screen.getByTestId('integration-add-tile');
-            const cards = screen.getAllByRole('button', { name: /, Deployed$/ });
-            const last = cards[cards.length - 1];
-            expect(
-                last.compareDocumentPosition(tile) & Node.DOCUMENT_POSITION_FOLLOWING,
-            ).toBeTruthy();
+            expect(screen.queryByTestId('integration-add-tile')).not.toBeInTheDocument();
+            const grid = container.querySelector('.integrations-grid') as HTMLElement;
+            expect(grid.querySelectorAll(':scope > *')).toHaveLength(2);
         });
-
-        it('renders the add tile as the empty state (no "No integrations yet." copy)', () => {
-            renderGrid();
-
-            expect(screen.getByTestId('integration-add-tile')).toBeInTheDocument();
-            expect(screen.queryByText(/no integrations yet/i)).not.toBeInTheDocument();
-        });
-
     });
-
-
 });
