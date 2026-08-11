@@ -163,7 +163,7 @@ ownership.
 | # | Action | Confidence | Size |
 |---|---|---|---|
 | 1 | ~~Add `who_created` to `lean()` so the value is readable~~ **DONE** — answered §2 within minutes | High | 2 lines |
-| 2 | Tooltip on non-deletable rows: **"Created by a different Adobe account"**. Not "another user" — §2 shows the other account may be the SAME PERSON before an identity consolidation | High | Small |
+| 2 | ~~Per-row hint on non-deletable rows~~ **BUILT, THEN REVERTED 2026-08-11.** See §8 — it does not survive real list sizes | Rejected | — |
 | 3 | Call `can-delete` on press; report blockers instead of an opaque failure. PARKED. Note it only ever makes the extension MORE cautious — it reports blockers on projects you already own and never grants deletion — so it stays compatible with the #4 decision if revisited | Medium (endpoint undocumented) | Medium |
 | 4 | ~~Decide the policy: gate on ownership, or on what Adobe permits?~~ **DECIDED 2026-08-11: keep the ownership gate.** Deliberately cautious about deletion; do not widen | Settled | — |
 | 5 | Remove the `who_created: 'Demo Builder'` literal, or send the token's user id | Medium | ~1 line |
@@ -179,8 +179,11 @@ convenience. Accepted consequence: projects created under a former identity are
 undeletable in the extension forever, and the Adobe Developer Console is the
 supported way to remove them.
 
-That makes #2 the whole remaining fix. It cannot make the orphaned projects
-deletable; it can stop the UI being silent about why they are not.
+#2 was built and reverted (§8). Nothing remains that is worth doing: the gate is
+correct, the decision is to keep it, and the explanation is not worth its cost at
+the scale the picker actually runs at.
+
+Remaining: #3 (parked) and #5 (cosmetic, fold into the next edit of that file).
 
 ---
 
@@ -197,3 +200,39 @@ org once §6 #1 exposed `who_created` (§2).
 **Still not probed:** the `can-delete` endpoint (§3) and whether Adobe overwrites
 the `who_created` we send on create (§5) — the latter is inferred from the fact
 that Demo Builder-created projects are deletable by their creator.
+
+---
+
+## 8. Recommendation #2 was built and reverted
+
+A muted `InfoOutline` in the row's trailing slot, `aria-label` + `title` =
+"Created by a different Adobe account". Shipped, seen in the Dev Host, reverted
+the same day. Two problems, the second fatal.
+
+**Placement.** Spectrum's `<Item>` slots an icon-bearing child into the ICON
+position — the START of the row — so the hint landed before the selection
+checkbox and collided with it. The trash button escapes this because
+`ActionButton` slots differently. Fixable.
+
+**Scale, which is not fixable.** The picker showed **723 projects** in the Adobe
+Demo System org, of which the user owns a handful. The hint marked the ~717
+non-deletable rows to explain the ~6 deletable ones: it annotated the RULE and
+left the EXCEPTION unmarked. The trash icon was already the signal; adding an
+icon to everything else buried it.
+
+The reporting user's reaction — "Should I be seeing anything here?" — is the
+finding. A glyph repeated 717 times explains nothing.
+
+`SelectionStepContent` already has a precedent for this
+(`disabledReasons` → row description, "the account-switch hint"), and it fails
+the same way here: a second line on nearly every row of a 723-item list.
+
+**Decision: no explanation in the picker at all.** The gate is correct, deletion
+is safe, and the trash icon on owned rows is self-explanatory. A single line of
+copy near the list was offered as an alternative and declined — the absence needs
+no narration.
+
+**The transferable lesson:** the recommendation assumed a short list where a
+missing affordance would be conspicuous. It was written from code, without ever
+seeing the surface populated. Check the cardinality of a list before designing
+per-row anything.
