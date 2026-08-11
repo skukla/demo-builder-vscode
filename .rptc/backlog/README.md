@@ -107,6 +107,10 @@ Reframe `prerequisites.json` from "project prerequisites" to two tiers (extensio
 
 Core self-heal **shipped** (see Recently shipped). Residual scope from the original consolidation, **verify against current code before picking up**: (B) concurrency safety — re-pin under an exclusive lock spanning select→command and/or per-project `aio` config isolation; (C) human org-picker (real `get-organizations`/`select-org`) + typed non-retryable `ORG_MISMATCH` for agents + AGENTS.md/skills guidance. Was the FIX-FIRST gate for the App-Builder-deployable + workspace work; the gate is cleared now that the self-heal landed.
 
+#### Generated diagnosis skill — teach agents how to LOOK ([`2026-08-11-generated-diagnosis-skill.md`](2026-08-11-generated-diagnosis-skill.md))
+
+Of the 13 generated skills, **zero** cover diagnosis — every one is a do-this-task skill (verified 2026-08-11: `grep -rli "troubleshoot\|diagnos\|debug"` over `templates/skills/` returns 0 files). So a tool like `get_store_structure` has no home: an agent finds it by tool search, but nothing says to check store scope *when PDPs come back empty* — the failure that cost an afternoon in the PDP handoff §3. Scope is one symptom → check routing table (shaped like `sync-changes.md`), covering the eight read tools plus the Diagnostics command and Debug Logs channel; the file carries the inventory. **Not blocked — ready to execute.** Listed here only because it needs an `AI_CONTEXT_VERSION` bump, which re-prompts every existing project to regenerate; worth batching with another bundle change rather than shipping alone.
+
 ### D. Deferred by design (gated on an external condition)
 
 #### Retire `legacyLookupKey` infrastructure — DA/repo unification cleanup ([`2026-06-08-rename-existing-da-content-to-repo-name.md`](2026-06-08-rename-existing-da-content-to-repo-name.md))
