@@ -75,6 +75,15 @@ yarn-error.log*
 # under .rptc/research/ instead (see .rptc/research/data-installer/).
 docs/research/data-installer/
 
+# Raw live-probe captures — curl output, response bodies, HAR files. A probe
+# against an internal service carries endpoints, activation ids and error text
+# that name internal infrastructure, and this repo is PUBLIC. Capture here,
+# then write up the FINDING in a tracked `spike-*.md` with those details
+# redacted (see the redaction rule in .rptc/CLAUDE.md).
+.rptc/research/**/raw/
+.rptc/research/**/*.probe.json
+.rptc/research/**/*.probe.txt
+
 # Analysis artifacts
 report/
 jscpd-output/
