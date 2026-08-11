@@ -7,11 +7,18 @@
 
 const { execSync } = require('child_process');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 describe('check-test-file-sizes script', () => {
     const scriptPath = path.join(__dirname, '..', '..', 'scripts', 'check-test-file-sizes.js');
-    const tempTestDir = path.join(__dirname, '__temp_test_files__');
+    // OUTSIDE the repo, deliberately. These fixtures are named `*.test.ts` and were
+    // written into `tests/scripts/__temp_test_files__/`, where EIGHT SOP suites walk
+    // the tests tree looking for exactly that pattern. Jest runs suites in parallel
+    // workers, so a walker could list a fixture and then read it after this suite's
+    // afterEach had deleted it — an ENOENT that surfaced as an unrelated SOP failure
+    // and vanished on re-run. Keyed by pid so concurrent runs cannot collide.
+    const tempTestDir = path.join(os.tmpdir(), `demo-builder-file-size-fixtures-${process.pid}`);
 
     beforeEach(() => {
         // Create temp test directory with tests/ subdirectory
