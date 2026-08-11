@@ -51,12 +51,6 @@ import type { CommerceStoreStructure } from '@/types/commerceStore';
 /** Module-level stable empty catalog — avoids a new array ref each render. */
 const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];
 
-/**
- * Filtering only earns its keep past a handful of integrations; below this the
- * search field would be chrome over three cards.
- */
-const FILTER_THRESHOLD = 6;
-
 export interface IntegrationsScreenProps {
     projectName?: string;
     hasAdobeContext?: boolean;
@@ -259,7 +253,14 @@ export function IntegrationsScreen({
                                 searchQuery={searchQuery}
                                 onSearchQueryChange={setSearchQuery}
                                 searchPlaceholder="Filter integrations..."
-                                searchThreshold={FILTER_THRESHOLD}
+                                // 0, matching the projects list: show the field
+                                // from the first item. Not a tuning knob — the
+                                // COUNT's position depends on it. SearchHeader
+                                // puts the count beside the refresh button when
+                                // there is no field, and on its own line beneath
+                                // the field when there is; a high threshold left
+                                // this screen rendering the no-search fallback.
+                                searchThreshold={0}
                                 totalCount={cards.length}
                                 filteredCount={visibleCards.length}
                                 itemNoun="integration"

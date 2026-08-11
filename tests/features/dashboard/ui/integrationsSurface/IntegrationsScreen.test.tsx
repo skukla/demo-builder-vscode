@@ -47,14 +47,25 @@ jest.mock('@/core/ui/components/layout', () => ({
 }));
 
 jest.mock('@/core/ui/components/navigation/SearchHeader', () => ({
-    SearchHeader: ({ totalCount, filteredCount, onSearchQueryChange, onRefresh }: any) => (
+    // Mirrors the real `showSearch: totalCount > searchThreshold` so the
+    // threshold this screen passes is actually exercised. The mock used to
+    // render the field unconditionally, which made the threshold untestable.
+    SearchHeader: ({
+        totalCount,
+        filteredCount,
+        onSearchQueryChange,
+        onRefresh,
+        searchThreshold,
+    }: any) => (
         <div data-testid="search-header">
             <span data-testid="total-count">{totalCount}</span>
             <span data-testid="filtered-count">{filteredCount}</span>
-            <input
-                aria-label="Filter integrations"
-                onChange={(e) => onSearchQueryChange(e.target.value)}
-            />
+            {totalCount > (searchThreshold ?? 5) && (
+                <input
+                    aria-label="Filter integrations"
+                    onChange={(e) => onSearchQueryChange(e.target.value)}
+                />
+            )}
             <button onClick={onRefresh}>refresh</button>
         </div>
     ),
@@ -657,5 +668,40 @@ describe('IntegrationsScreen — destination control', () => {
         settleStatus(handlers);
 
         expect(screen.queryByText(/no integrations match/i)).not.toBeInTheDocument();
+    });
+
+    /**
+     * Search shows from the first integration, as on the projects list.
+     *
+     * The threshold was 6, so a project with two integrations saw no field —
+     * leaving the count alone on a row it only occupies as a FALLBACK for having
+     * no search (`SearchHeader` puts the count beside the refresh button when
+     * `showSearch` is false, and on its own line beneath the field when true).
+     * That is why the count's placement read as arbitrary: it was rendering the
+     * no-search layout on a screen that otherwise looks like a list.
+     *
+     * A previous pass argued for keeping 6 — "a search box above three cards is
+     * clutter". That weighed the field in isolation and missed that the count
+     * position depends on it.
+     */
+    it('shows the filter field with only two integrations', () => {
+        const handlers = captureHandlers();
+        render(
+            <IntegrationsScreen
+                hasAdobeContext
+                appBuilderComponents={{ a: DEPLOYED, b: DEPLOYED }}
+            />
+        );
+        settleStatus(handlers);
+
+        expect(screen.getByLabelText('Filter integrations')).toBeInTheDocument();
+    });
+
+    it('shows it for a single integration too — the projects-list rule', () => {
+        const handlers = captureHandlers();
+        render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
+        settleStatus(handlers);
+
+        expect(screen.getByLabelText('Filter integrations')).toBeInTheDocument();
     });
 });

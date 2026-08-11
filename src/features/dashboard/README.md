@@ -547,8 +547,15 @@ actions trailing:
 Integrations   demo-builder-test          <- header: the LOCAL project only
 ------------------------------------------------------------------
 DEPLOYS TO  Kukla Mesh . Stage  Change    <- context row
-2 integrations        [refresh] [Project Dashboard] [Add integration]
+[Filter integrations...] [refresh]  [Project Dashboard] [Add integration]
+2 integrations
 ```
+
+Search shows from the first integration (`searchThreshold={0}`), as on the
+projects list. That is not a taste call: `SearchHeader` puts the count beside the
+refresh button when there is NO field and on its own line beneath the field when
+there is, so a high threshold left this screen rendering the no-search fallback
+and the count looking arbitrarily placed.
 
 The destination used to ride in the header subtitle as a third crumb. It moved
 because the band's left side is context, not actions — it holds the count, with
