@@ -1,6 +1,7 @@
 import { TextField, Text } from '@adobe/react-spectrum';
 import React, { useEffect, useCallback } from 'react';
 import { BrandGallery } from '../components/BrandGallery';
+import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -174,23 +175,7 @@ export function WelcomeStep({
 
         // Always set template config from storefront (source of truth)
         updateState({
-            edsConfig: {
-                ...state.edsConfig,
-                accsHost: state.edsConfig?.accsHost || '',
-                storeViewCode: state.edsConfig?.storeViewCode || '',
-                customerGroup: state.edsConfig?.customerGroup || '',
-                repoName: state.edsConfig?.repoName || '',
-                daLiveOrg: state.edsConfig?.daLiveOrg || '',
-                daLiveSite: state.edsConfig?.daLiveSite || '',
-                templateOwner: storefront.templateOwner,
-                templateRepo: storefront.templateRepo,
-                contentSource: storefront.contentSource,
-                accountContentSource: storefront.accountContentSource,
-                byomOverlayUrl: storefront.byomOverlayUrl,
-                patches: storefront.patches,
-                contentPatches: storefront.contentPatches,
-                contentPatchSource: storefront.contentPatchSource,
-            },
+            edsConfig: buildEdsConfigFromStorefront(storefront, state.edsConfig),
         });
     }, [state.selectedStack, state.selectedPackage, packages, updateState, state.edsConfig]);
 

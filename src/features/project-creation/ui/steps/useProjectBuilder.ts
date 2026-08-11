@@ -5,7 +5,8 @@
  * directly via `updateState` — no modal-local draft/open/close lifecycle (the
  * step persists selections in place).
  *
- * Selection logic is MOVED VERBATIM from ArchitectureModal / useModalState:
+ * Two invariants carried here (both predate this hook; `ArchitectureModal` and
+ * `useModalState`, which used to hold them, are deleted — git has that history):
  *
  *  - onAppBuilderComponentToggle carries the MESH DUAL-FLOW INVARIANT. Toggling
  *    a mesh App Builder component mirror-writes selectedOptionalDependencies via
@@ -32,6 +33,7 @@ import {
     withSelectedAppBuilderComponent,
     meshAppBuilderComponentToComponentIds,
 } from '../wizard/appBuilderComponentSelectionState';
+import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import type { BlankInstance } from '@/features/project-creation/ui/components/integration-flow';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
@@ -48,7 +50,7 @@ export interface UseProjectBuilderDeps {
     stacks: Stack[];
     /**
      * Notifies the wizard when the stack CHANGES (old !== new), so it can reset
-     * the org-dependent downstream steps. Mirrors WelcomeStep.handleStackSelect.
+     * the org-dependent downstream steps.
      * Not fired on the initial stack selection or a same-stack re-select.
      */
     onArchitectureChange?: (oldStackId: string, newStackId: string) => void;
@@ -58,10 +60,7 @@ export interface UseProjectBuilderDeps {
     customBlockLibraryDefaults?: CustomBlockLibrary[];
 }
 
-/**
- * Compute the IDs of addons that the package marks as `required`.
- * Moved verbatim from useModalState.handleStackSelect.
- */
+/** Compute the IDs of addons that the package marks as `required`. */
 function getRequiredAddons(pkg: DemoPackage): string[] {
     if (!pkg.addons) return [];
     return Object.entries(pkg.addons)
@@ -84,7 +83,7 @@ export interface UseProjectBuilderReturn {
      */
     onAddCustomAppBuilderComponent: (
         source: { owner: string; repo: string; branch?: string },
-        instance?: BlankInstance,
+        instance?: BlankInstance
     ) => void;
     /** Remove an added App Builder integration: clears its selection AND its source. */
     onRemoveAppBuilderComponent: (id: string) => void;
@@ -101,7 +100,6 @@ export interface UseProjectBuilderReturn {
 /**
  * Compute the optional mesh dependencies for a package + stack.
  * Returns the deps array when mesh is required, null when not applicable.
- * Moved verbatim from useModalState.
  */
 function resolveMeshOptionalDeps(
     pkg: DemoPackage | undefined,
@@ -117,7 +115,9 @@ function resolveMeshOptionalDeps(
 /**
  * Derive the EDS template config for a stack from the package's storefront.
  * Returns the populated config for EDS stacks, or undefined for non-EDS stacks
- * (clearing stale EDS data). Mirrors WelcomeStep.handleStackSelect verbatim.
+ * (clearing stale EDS data). The field mapping itself lives in
+ * {@link buildEdsConfigFromStorefront}, shared with WelcomeStep's package-change
+ * effect — the two were separate copies and drifted on `codePatches`.
  */
 function buildEdsConfigUpdate(
     pkg: DemoPackage | undefined,
@@ -128,31 +128,12 @@ function buildEdsConfigUpdate(
     const isEdsStack = Boolean(stackObj?.requiresGitHub || stackObj?.requiresDaLive);
     const storefront = pkg?.storefronts?.[stackId];
     if (!isEdsStack || !storefront) return undefined;
-    return {
-        ...prev,
-        accsHost: prev?.accsHost || '',
-        storeViewCode: prev?.storeViewCode || '',
-        customerGroup: prev?.customerGroup || '',
-        repoName: prev?.repoName || '',
-        daLiveOrg: prev?.daLiveOrg || '',
-        daLiveSite: prev?.daLiveSite || '',
-        templateOwner: storefront.templateOwner,
-        templateRepo: storefront.templateRepo,
-        contentSource: storefront.contentSource,
-        accountContentSource: storefront.accountContentSource,
-        byomOverlayUrl: storefront.byomOverlayUrl,
-        patches: storefront.patches,
-        contentPatches: storefront.contentPatches,
-        contentPatchSource: storefront.contentPatchSource,
-        codePatches: storefront.codePatches,
-        codePatchSource: storefront.codePatchSource,
-    } as EDSConfig;
+    return buildEdsConfigFromStorefront(storefront, prev);
 }
 
 /**
  * Seed the default addons for a newly-selected stack: the package's `required`
- * addons unioned with the stack's `default` optional addons. Moved verbatim
- * from useModalState.handleStackSelect.
+ * addons unioned with the stack's `default` optional addons.
  */
 function resolveDefaultAddons(pkg: DemoPackage | undefined, stackObj: Stack | undefined): string[] {
     const requiredAddons = pkg ? getRequiredAddons(pkg) : [];
@@ -187,7 +168,6 @@ interface BlockLibrarySeed {
  * Seed block libraries for a newly-selected stack. EDS stacks pre-select the
  * native libraries unioned with the user's defaults, and fall back to the
  * custom-library defaults when the state has none; non-EDS stacks clear both.
- * Moved verbatim from useModalState.handleStackSelect.
  */
 function resolveBlockLibrarySeed(
     stackObj: Stack | undefined,
@@ -263,7 +243,7 @@ export function useProjectBuilder(
             );
 
             // On a stack CHANGE (not the initial pick), notify the wizard so it can
-            // reset the org-dependent downstream steps (mirrors WelcomeStep).
+            // reset the org-dependent downstream steps.
             if (selectedStack && selectedStack !== stackId) {
                 onArchitectureChange?.(selectedStack, stackId);
             }
@@ -341,10 +321,7 @@ export function useProjectBuilder(
     );
 
     const onAddCustomAppBuilderComponent = useCallback(
-        (
-            source: { owner: string; repo: string; branch?: string },
-            instance?: BlankInstance,
-        ) => {
+        (source: { owner: string; repo: string; branch?: string }, instance?: BlankInstance) => {
             const id = instance?.id ?? `${source.owner}-${source.repo}`;
             const record = { owner: source.owner, repo: source.repo, branch: source.branch };
             const nextComponents = withSelectedAppBuilderComponent(
