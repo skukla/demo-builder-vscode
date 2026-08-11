@@ -89,9 +89,13 @@ describe('integrations grid — every tile the same size', () => {
     });
 
     it('floors the add tile at the card height, not above it', () => {
-        expect(px(ruleFor('.integration-add-tile'), 'min-height')).toBe(
-            px(ruleFor('.integration-card'), 'min-height')
-        );
+        // Both read the shared token now (see cardMetrics.test.ts), so this
+        // compares the SOURCE rather than two numbers that happen to agree.
+        const floor = (sel: string) =>
+            ruleFor(sel).match(/min-height:\s*([^;]+);/)![1].trim();
+
+        expect(floor('.integration-add-tile')).toBe(floor('.integration-card'));
+        expect(floor('.integration-card')).toBe('var(--card-min-height)');
     });
 
     it('leaves the projects grid alone — positive control', () => {

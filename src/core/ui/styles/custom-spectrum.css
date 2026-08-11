@@ -581,6 +581,22 @@ button[class*="spectrum-Button"][disabled],
  * footer and every screen share this width. */
 :root {
     --content-width: 960px;
+
+    /* Dashboard card family — ONE source for the metrics `.project-card-spectrum`
+       and `.integration-card` share. Both rules used to declare these separately
+       and each carried a comment promising it matched the other, which is a
+       convention, not a guarantee.
+
+       The floor is 128px, not 100px, because identical declarations do not make
+       two cards the same size when one has twice the rows. A project card is
+       name(20) + summary(17) + runtime(15) + deployment(15) + 3 gaps(24) +
+       padding(32) ~= 123px; an integration card is name + one status line, ~75px,
+       so it sat on the old 100px floor while the project card cleared it. Only a
+       shared floor above the richer card's content makes them equal. */
+    --card-min-height: 128px;
+    --card-min-width: 200px;
+    --card-padding: 16px;
+    --card-gap: 8px;
 }
 .content-column {
     width: 100% !important;
@@ -2817,9 +2833,12 @@ button[class*="spectrum-Button"][disabled],
 .project-card-spectrum {
     background: var(--spectrum-global-color-gray-50) !important;
     border-radius: 8px !important;
-    /* Match the demo-package card family (.expandable-brand-card): 16px padding +
-       a 100px height floor so the two card types read at the same scale. */
-    padding: 16px !important;
+    /* Metrics come from the shared --card-* tokens (see :root) so this card and
+       .integration-card cannot drift. NOTE: this no longer matches
+       .expandable-brand-card, which keeps the original 100px floor — it lives in
+       the wizard's package picker and was deliberately left out of the dashboard
+       card sizing. */
+    padding: var(--card-padding) !important;
     border: 1px solid var(--spectrum-global-color-gray-300) !important;
     cursor: pointer !important;
 
@@ -2829,10 +2848,10 @@ button[class*="spectrum-Button"][disabled],
     /* Layout for content */
     display: flex !important;
     flex-direction: column !important;
-    gap: 8px !important;
+    gap: var(--card-gap) !important;
 
-    min-height: 100px !important;
-    min-width: 200px !important;
+    min-height: var(--card-min-height) !important;
+    min-width: var(--card-min-width) !important;
 }
 
 .project-card-spectrum:hover,
@@ -5255,15 +5274,16 @@ div[class*="spectrum"] input[type="search"] {
     background: var(--spectrum-global-color-gray-50);
     border: 1px solid var(--spectrum-global-color-gray-300);
     border-radius: 8px;
-    padding: 16px;
+    /* Shared --card-* tokens (see :root) — the same values .project-card-spectrum
+       reads, so the two families are equal by construction rather than by two
+       comments promising each other they match. The mesh carries no accent
+       border: it is a peer card, identified by its name, not chrome. */
+    padding: var(--card-padding);
     display: flex;
     flex-direction: column;
-    /* Matched to .project-card-spectrum so both card families read the same:
-       same gap, height floor and width floor. The mesh no longer carries an
-       accent border — it is a peer card, identified by its name, not chrome. */
-    gap: 8px;
-    min-height: 100px;
-    min-width: 200px;
+    gap: var(--card-gap);
+    min-height: var(--card-min-height);
+    min-width: var(--card-min-width);
     cursor: pointer;
     transition: all 0.3s ease;
 }
@@ -5386,9 +5406,9 @@ div[class*="spectrum"] input[type="search"] {
     border: 1.5px dashed var(--spectrum-global-color-gray-400);
     border-radius: 8px;
     background: transparent;
-    /* Same floor as .integration-card so the two tile families agree even
-       before grid-auto-rows equalises the rows. */
-    min-height: 100px;
+    /* The shared card floor — this tile sits in the same grid as the cards and
+       must match them, not merely approach them. */
+    min-height: var(--card-min-height);
     display: flex;
     align-items: center;
     justify-content: center;
