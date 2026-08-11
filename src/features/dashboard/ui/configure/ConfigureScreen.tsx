@@ -321,6 +321,9 @@ export function ConfigureScreen({
                                 section={activeSection}
                                 serviceGroups={serviceGroups}
                                 renderFieldRow={renderFieldRow}
+                                // Same signal StoreConfigFieldRow discloses on, so the
+                                // Business Structure heading and its fields appear together.
+                                storeStructureReady={Boolean(autoDetectKey)}
                                 projectName={projectName}
                                 onProjectNameChange={handleProjectNameChange}
                                 projectNameError={projectNameError}

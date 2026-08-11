@@ -20,67 +20,23 @@
  *
  * Slices the error map `useComponentConfig` already produces rather than
  * re-deriving required/URL/pattern rules — one validation implementation, sliced
- * two ways.
+ * two ways. The SPLIT itself lives in `features/components/config/storeFieldHelpers`
+ * so the Configure screen can use it too without one feature importing another.
  *
  * @module features/project-creation/ui/components/commerceSectionValidity
  */
 
 import {
-    CONNECTION_FIELDS,
-    STORE_GROUP_IDS,
-    isStoreCodeField,
+    filterGroupsForSection,
+    type ConnectStoreSection,
 } from '@/features/components/config/storeFieldHelpers';
 import type { ServiceGroup } from '@/features/components/ui/hooks/useComponentConfig';
 
-/** Which slice of the commerce config a caller wants. */
-export type ConnectStoreSection = 'connection' | 'business-structure' | 'catalog';
-
-/** The two groups that carry the Commerce connection + store scope. */
-const CONNECTION_GROUP_IDS: ReadonlySet<string> = new Set([
-    STORE_GROUP_IDS.ACCS,
-    STORE_GROUP_IDS.PAAS,
-]);
-
-/** Whether a group carries the Commerce connection + store scope. */
-export function isConnectionGroup(groupId: string): boolean {
-    return CONNECTION_GROUP_IDS.has(groupId);
-}
-
-/**
- * Filter the visible service groups down to one section's fields.
- *
- * The hooks stay fully mounted regardless of section — only what renders is
- * filtered, so store-discovery/config state persists across tab switches.
- *
- * - connection: connection groups, CONNECTION_FIELDS only (no store-code cascade)
- * - business-structure: connection groups, the store-code cascade only
- * - catalog: the non-connection groups (already gated on store selection upstream)
- *
- * @param groups - the full service-group list
- * @param section - the slice to keep
- * @returns groups containing only that section's fields, empties dropped
- */
-export function filterGroupsForSection(
-    groups: ServiceGroup[],
-    section: ConnectStoreSection,
-): ServiceGroup[] {
-    if (section === 'catalog') {
-        return groups.filter((group) => !CONNECTION_GROUP_IDS.has(group.id));
-    }
-
-    const keepField =
-        section === 'connection'
-            ? (key: string) => CONNECTION_FIELDS.has(key)
-            : (key: string) => isStoreCodeField(key);
-
-    return groups
-        .filter((group) => CONNECTION_GROUP_IDS.has(group.id))
-        .map((group) => ({
-            ...group,
-            fields: group.fields.filter((field) => keepField(field.key)),
-        }))
-        .filter((group) => group.fields.length > 0);
-}
+export {
+    filterGroupsForSection,
+    isConnectionGroup,
+} from '@/features/components/config/storeFieldHelpers';
+export type { ConnectStoreSection } from '@/features/components/config/storeFieldHelpers';
 
 /** Per-section verdicts. A section with no fields is valid, not unfinished. */
 export type CommerceSectionValidity = Record<ConnectStoreSection, boolean>;

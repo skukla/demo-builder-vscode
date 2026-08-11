@@ -20,6 +20,11 @@ import type { ServiceGroup, UniqueField } from './configureTypes';
 import { ConfigSection } from '@/core/ui/components/forms';
 import { getValidationState } from '@/core/ui/utils/validationState';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import {
+    filterGroupsForSection,
+    isConnectionGroup,
+    type ConnectStoreSection,
+} from '@/features/components/config/storeFieldHelpers';
 import { ServiceGroupList } from '@/features/components/ui/components/ServiceGroupList';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AuthoringExperience } from '@/types/base';
@@ -50,6 +55,14 @@ export interface ConfigureSectionBodyProps {
     appBuilderComponentSecretFlags: Record<string, Record<string, boolean>>;
     /** Stage an App Builder value (text and secret share the staging path). */
     onAppBuilderValueChange: (componentId: string, varName: string, value: string) => void;
+    /**
+     * Whether store discovery can run yet (connection fields filled).
+     *
+     * Gates the Business Structure sub-section. Its fields render null before
+     * this — StoreConfigFieldRow's own disclosure gate — so without it the
+     * heading would sit above nothing.
+     */
+    storeStructureReady: boolean;
     /** EDS authoring-experience preference. */
     authoringExperience: AuthoringExperience;
     onAuthoringExperienceChange: (value: AuthoringExperience) => void;
@@ -141,6 +154,58 @@ function AuthoringBody({
 }
 
 /**
+ * The Commerce group rendered as Connection + Business Structure.
+ *
+ * `renderFieldRow` receives the ORIGINAL group, never a synthetic one: the store
+ * cascade resolves its three env keys from `group.id`
+ * (`StoreSelectionRow.getFieldKeys`) and progressive disclosure keys off the same
+ * value, so a relabelled id would orphan the pickers.
+ *
+ * Uses `ConfigSection` directly rather than `ServiceGroupList`, which keys its
+ * sections by `group.id` — both halves share one id here, and only the chrome
+ * differs.
+ */
+function CommerceSubSections({
+    group,
+    renderFieldRow,
+    storeStructureReady,
+}: {
+    group: ServiceGroup;
+    renderFieldRow: (field: UniqueField, group: ServiceGroup) => React.ReactNode;
+    storeStructureReady: boolean;
+}): React.ReactElement {
+    const parts: { section: ConnectStoreSection; label: string }[] = [
+        { section: 'connection', label: 'Connection' },
+        ...(storeStructureReady
+            ? [{ section: 'business-structure' as ConnectStoreSection, label: 'Business Structure' }]
+            : []),
+    ];
+
+    return (
+        <>
+            {parts.map(({ section, label }, index) => {
+                const sliced = filterGroupsForSection([group], section)[0];
+                if (!sliced) return null;
+                return (
+                    <ConfigSection
+                        key={section}
+                        id={section}
+                        label={label}
+                        showDivider={index > 0}
+                    >
+                        {sliced.fields.map((field) => (
+                            <React.Fragment key={field.key}>
+                                {renderFieldRow(field, group)}
+                            </React.Fragment>
+                        ))}
+                    </ConfigSection>
+                );
+            })}
+        </>
+    );
+}
+
+/**
  * Draw the active section.
  *
  * @param props - the section plus every source it might need to draw itself
@@ -159,6 +224,7 @@ export function ConfigureSectionBody({
     providedEnvVars,
     appBuilderComponentSecretFlags,
     onAppBuilderValueChange,
+    storeStructureReady,
     authoringExperience,
     onAuthoringExperienceChange,
 }: ConfigureSectionBodyProps): React.ReactElement | null {
@@ -201,6 +267,23 @@ export function ConfigureSectionBody({
 
     const group = serviceGroups.find((g) => g.id === section.id);
     if (!group) return null;
+
+    // The Commerce group is TWO tasks: reaching the instance, and choosing the
+    // scope within it. Eight fields on PaaS with nothing separating them.
+    //
+    // Sub-sections, not tabs: Configure edits rather than sequences, every tab is
+    // always reachable, and there is no lock vocabulary here. Two tabs would have
+    // to borrow the wizard's gating, which is what deadlocked PaaS.
+    if (isConnectionGroup(group.id)) {
+        return (
+            <CommerceSubSections
+                group={group}
+                renderFieldRow={renderFieldRow}
+                storeStructureReady={storeStructureReady}
+            />
+        );
+    }
+
     // One group in, so `ServiceGroupList` gives it showDivider={false} — right, because
     // there is nothing above it to divide from.
     return <ServiceGroupList groups={[group]} renderFieldRow={renderFieldRow} />;
