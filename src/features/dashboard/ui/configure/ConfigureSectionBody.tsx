@@ -183,16 +183,15 @@ function CommerceSubSections({
 
     return (
         <>
-            {parts.map(({ section, label }, index) => {
+            {parts.map(({ section, label }) => {
                 const sliced = filterGroupsForSection([group], section)[0];
                 if (!sliced) return null;
                 return (
-                    <ConfigSection
-                        key={section}
-                        id={section}
-                        label={label}
-                        showDivider={index > 0}
-                    >
+                    // No `showDivider`. Every ConfigSection header already draws its own
+                    // border-bottom, so the divider would put a SECOND rule between two
+                    // sub-sections of one tab — reading as a harder break than the tab
+                    // boundaries above it. The headings are the separation.
+                    <ConfigSection key={section} id={section} label={label}>
                         {sliced.fields.map((field) => (
                             <React.Fragment key={field.key}>
                                 {renderFieldRow(field, group)}

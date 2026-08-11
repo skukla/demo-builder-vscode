@@ -126,6 +126,14 @@ describe('ConfigureSectionBody — the Commerce tab splits into two sub-sections
         expect(screen.queryByText('Business Structure')).not.toBeInTheDocument();
     });
 
+    it('draws no divider between the two sub-sections', () => {
+        // Each ConfigSection header already has a border-bottom. A Divider on top of
+        // that is a second rule, and it read as a harder break than the tab strip.
+        const { container } = renderBody(COMMERCE);
+
+        expect(container.querySelectorAll('hr')).toHaveLength(0);
+    });
+
     it('leaves a NON-connection group as a single section — control', () => {
         renderBody(CATALOG);
 
