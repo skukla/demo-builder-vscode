@@ -41,7 +41,9 @@ function makeAuth(overrides: Record<string, unknown> = {}) {
             { id: 'org-1', code: 'C1@AdobeOrg', name: 'Org One' },
             { id: 'org-2', code: 'C2@AdobeOrg', name: 'Org Two' },
         ]),
-        getProjects: jest.fn(async () => [{ id: 'proj-1', name: 'Proj One', title: 'P1' }]),
+        getProjects: jest.fn(async () => [
+            { id: 'proj-1', name: 'Proj One', title: 'P1', who_created: 'ABC123@AdobeID.e' },
+        ]),
         getWorkspaces: jest.fn(async () => [{ id: 'ws-1', name: 'Stage' }]),
         getCurrentOrganization: jest.fn(async () => ({ id: 'org-1', name: 'Org One' })),
         getCurrentProject: jest.fn(async () => ({ id: 'proj-1', name: 'Proj One' })),
@@ -165,6 +167,45 @@ describe('registerAdobeTools', () => {
         setAdobeTarget({ orgId: 'org-1' });
         const res = await server.call('select_workspace', { workspaceId: 'ws-1' });
         expect(res.error).toMatch(/select_project first/);
+    });
+
+    /**
+     * `who_created` is the ONLY thing that decides whether a project shows a
+     * delete affordance — `projectOwnership.stampProjectsDeletable` compares it
+     * against the token's `user_id` claim and fails closed on any mismatch.
+     *
+     * The list already fetches it and `lean()` threw it away, so when a user
+     * asked why two projects they had created were not deletable, the value that
+     * answers the question could not be read from anywhere: not the picker, not
+     * a diagnostic, not an agent. Four competing explanations, no way to tell
+     * them apart. Keeping the field is the difference between a guess and a fact.
+     *
+     * It is not sensitive: it is a creator id already visible in the Adobe
+     * Console UI, and the ownership STAMP still happens extension-side — this
+     * exposes the field to the agent, not the comparison.
+     */
+    it('list_adobe_projects keeps who_created, the field that decides deletability', async () => {
+        const server = fakeServer();
+        registerAdobeTools(server, ctxFactoryWith(makeAuth()));
+
+        expect(await server.call('list_adobe_projects')).toEqual([
+            { id: 'proj-1', name: 'Proj One', title: 'P1', who_created: 'ABC123@AdobeID.e' },
+        ]);
+    });
+
+    it('omits who_created when the Console did not return one', async () => {
+        // Absent is meaningful: `stampProjectsDeletable` fails closed on it, so
+        // a project with no creator recorded is never deletable. The key must
+        // stay absent rather than appear as undefined.
+        const auth = makeAuth({
+            getProjects: jest.fn(async () => [{ id: 'p', name: 'N', title: 'T' }]),
+        });
+        const server = fakeServer();
+        registerAdobeTools(server, ctxFactoryWith(auth));
+
+        expect(await server.call('list_adobe_projects')).toEqual([
+            { id: 'p', name: 'N', title: 'T' },
+        ]);
     });
 
     it('list_adobe_projects passes the stored org to getProjects when a target is set', async () => {

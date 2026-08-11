@@ -68,7 +68,27 @@ async function authedManager(ctx: HandlerContext): Promise<HandlerContext['authM
     return (await mgr.isAuthenticated()) ? mgr : null;
 }
 
-const lean = (e: { id: string; name: string; title?: string }) => ({ id: e.id, name: e.name, ...(e.title ? { title: e.title } : {}) });
+/**
+ * Trim a Console entity to what an agent needs.
+ *
+ * `who_created` rides along when present (projects have it; orgs and workspaces
+ * do not). It is the ONLY field that decides whether a project offers a delete
+ * affordance — `projectOwnership.stampProjectsDeletable` compares it against the
+ * token's `user_id` claim and fails closed. The list already fetched it and this
+ * function used to discard it, so when a user asked why two projects they had
+ * created were not deletable, the value that answers could be read from nowhere.
+ *
+ * Exposing it is safe: it is a creator id the Adobe Console UI already shows, and
+ * the ownership COMPARISON still happens extension-side. Absent stays absent —
+ * the fail-closed path treats a missing creator as not-deletable, and an
+ * explicit `undefined` would blur that.
+ */
+const lean = (e: { id: string; name: string; title?: string; who_created?: string }) => ({
+    id: e.id,
+    name: e.name,
+    ...(e.title ? { title: e.title } : {}),
+    ...(e.who_created ? { who_created: e.who_created } : {}),
+});
 
 /**
  * Register list_orgs / list_adobe_projects / list_workspaces and

@@ -293,6 +293,12 @@ used while assembling a `create_project` call.
 `select_project`, `list_workspaces`, `select_workspace`. These back the
 [auth handoff](#auth-handoff) other tools rely on.
 
+`list_adobe_projects` returns `who_created` when the Console reports one. That
+field alone decides whether a project offers a delete affordance — the ownership
+gate compares it to the token's `user_id` claim and fails closed — so exposing it
+is what makes "why can I not delete this project?" answerable. The comparison
+stays extension-side; only the field travels.
+
 ### Descriptor-driven tools — `readDescriptors.ts` / `actionDescriptors.ts` (via `toolDescriptors.ts`)
 Thin tools declared as data and dispatched to existing handler maps:
 - Reads: `verify_ai_setup`, `list_ai_prompts`, `check_mesh`, `list_console_apis`
