@@ -64,7 +64,7 @@ Org-agnostic deploy helper (callers wrap it in `withOrgContext`, exactly like
 Node version is `'auto'` — resolves to the Node version the Adobe `aio` CLI runs under (no
 hardcoded version).
 
-### `addAppComponent(project, gitUrl, deps)` / `removeAppComponent(project, appId, deps)`
+### `addAppBuilderComponent(project, entry, deps)` / `removeAppBuilderComponent(project, id, deps)`
 
 Additive add / per-id remove on a **live** project (no re-clone of the rest of the project, no
 edit-wipe, no reset `rm -rf`). N custom integrations coexist — ADR-011 D3 Step 05 dropped the
