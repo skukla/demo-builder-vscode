@@ -118,7 +118,6 @@ jest.mock('@/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter
 // above every import, so the screen always loads against the mocks.
 import {
     formatDestination,
-    formatHeaderSubtitle,
     IntegrationsScreen,
 } from '@/features/dashboard/ui/integrationsSurface/IntegrationsScreen';
 
@@ -209,9 +208,7 @@ describe('IntegrationsScreen', () => {
 
             expect(screen.getByTestId('empty-state')).toBeInTheDocument();
             expect(screen.getByText('Integrations')).toBeInTheDocument();
-            expect(screen.getByTestId('page-subtitle')).toHaveTextContent(
-                'demo-builder-test · Kukla Mesh · Stage'
-            );
+            expect(screen.getByTestId('page-subtitle')).toHaveTextContent('demo-builder-test');
             expect(screen.getByRole('button', { name: 'Project Dashboard' })).toBeInTheDocument();
             // Exactly ONE Add integration: the empty state's CTA. The band's copy
             // is withheld while empty rather than doubling it.
@@ -258,31 +255,6 @@ describe('IntegrationsScreen', () => {
         });
     });
 
-    describe('formatHeaderSubtitle', () => {
-    it('joins the project name and the destination', () => {
-        expect(
-            formatHeaderSubtitle('demo-builder-test', {
-                projectTitle: 'Kukla Mesh',
-                workspaceTitle: 'Stage',
-            })
-        ).toBe('demo-builder-test · Kukla Mesh · Stage');
-    });
-
-    it('returns the project alone when there is no destination', () => {
-        expect(formatHeaderSubtitle('demo-builder-test', undefined)).toBe('demo-builder-test');
-    });
-
-    it('returns the destination alone when the project is unnamed', () => {
-        expect(formatHeaderSubtitle(undefined, { projectTitle: 'Kukla Mesh' })).toBe('Kukla Mesh');
-    });
-
-    // Undefined, not '' — PageHeader omits the crumb element entirely on undefined
-    // rather than rendering an empty one.
-    it('returns undefined when neither is known', () => {
-        expect(formatHeaderSubtitle(undefined, undefined)).toBeUndefined();
-    });
-});
-
 describe('header', () => {
         it('names the project', () => {
             const handlers = captureHandlers();
@@ -321,9 +293,12 @@ describe('header', () => {
                 );
                 settleStatus(handlers);
 
+                // The crumb is the LOCAL project only; the remote destination
+                // moved to the band's context row.
                 expect(screen.getByTestId('page-subtitle')).toHaveTextContent(
-                    'demo-builder-test · Kukla Mesh · Stage'
+                    'demo-builder-test'
                 );
+                expect(screen.getByTestId('page-destination')).toHaveTextContent('Kukla Mesh');
             });
 
             // The case the original band tests were really reaching for: a project
@@ -343,7 +318,44 @@ describe('header', () => {
                 expect(screen.getByTestId('page-subtitle').textContent).not.toContain('·');
             });
 
-            it('renders no destination line in the action band', () => {
+            /**
+             * The destination moved OUT of the header and INTO the band.
+             *
+             * It used to ride in the subtitle as a third crumb —
+             * "demo-builder-test · Kukla Mesh · Stage" — on the reasoning that
+             * the band was "otherwise about acting on the list". The band's left
+             * side is not actions: it holds the count, with most of its width
+             * empty. It is context-left / actions-right, exactly like the project
+             * dashboard's status band.
+             *
+             * Moving it also fixes an ambiguity the old docblock admitted to and
+             * could not solve in place: the LOCAL project name and the REMOTE
+             * Adobe project/workspace read as peers in one dot-separated run.
+             * Split across header and band, the distinction is structural.
+             */
+            it('puts the destination in the band, not the header subtitle', () => {
+                const handlers = captureHandlers();
+                render(
+                    <IntegrationsScreen
+                        hasAdobeContext
+                        appBuilderComponents={{ a: DEPLOYED }}
+                        projectName="demo-builder-test"
+                        destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
+                    />
+                );
+                settleStatus(handlers);
+
+                const band = screen.getByTestId('page-destination');
+                expect(band).toHaveTextContent('Kukla Mesh');
+                expect(band).toHaveTextContent('Stage');
+                // The header keeps the LOCAL project name and nothing else.
+                expect(screen.getByTestId('page-subtitle')).toHaveTextContent(
+                    'demo-builder-test'
+                );
+                expect(screen.getByTestId('page-subtitle')).not.toHaveTextContent('Kukla Mesh');
+            });
+
+            it('labels it, the way the dashboard band labels its rows', () => {
                 const handlers = captureHandlers();
                 render(
                     <IntegrationsScreen
@@ -351,6 +363,18 @@ describe('header', () => {
                         appBuilderComponents={{ a: DEPLOYED }}
                         destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
                     />
+                );
+                settleStatus(handlers);
+
+                expect(screen.getByTestId('page-destination')).toHaveTextContent(/deploys to/i);
+            });
+
+            it('renders no destination row when there is none — control', () => {
+                // DestinationContext returns null on a half-known destination, so
+                // the row must not appear as an empty labelled shell.
+                const handlers = captureHandlers();
+                render(
+                    <IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />
                 );
                 settleStatus(handlers);
 
@@ -529,7 +553,7 @@ describe('header', () => {
 describe('IntegrationsScreen — destination control', () => {
     const DEST = { projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' };
 
-    it('offers Change beside the destination in the header', () => {
+    it('offers Change beside the destination in the band', () => {
         const handlers = captureHandlers();
         render(
             <IntegrationsScreen

@@ -537,3 +537,26 @@ Removing it exposed a gap it had been accidentally covering: the grid receives
 search-FILTERED cards while the empty-state gate reads the unfiltered list, so a
 no-match search renders an empty grid. That now shows
 `No integrations match "…"`, mirroring the projects list.
+
+## Integrations band: context above controls
+
+The band mirrors the project dashboard's shape — stacked context on the left,
+actions trailing:
+
+```
+Integrations   demo-builder-test          <- header: the LOCAL project only
+------------------------------------------------------------------
+DEPLOYS TO  Kukla Mesh . Stage  Change    <- context row
+2 integrations        [refresh] [Project Dashboard] [Add integration]
+```
+
+The destination used to ride in the header subtitle as a third crumb. It moved
+because the band's left side is context, not actions — it holds the count, with
+most of its width empty — and because the old arrangement put the LOCAL project
+name and the REMOTE Adobe project/workspace in one dot-separated run where
+nothing told them apart. Split across header and band, the distinction is
+structural.
+
+No status dot on the row: the destination has no state to report (the row simply
+does not render when there is none), and a dot that is always one colour is
+decoration.

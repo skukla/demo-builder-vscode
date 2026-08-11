@@ -2081,6 +2081,26 @@ button[class*="spectrum-Button"][disabled],
     padding-bottom: 4px !important;
 }
 
+/* Integrations band, context row: "Deploys to <project> · <workspace>  Change".
+   Sits above the list-control row, mirroring the project dashboard's band —
+   stacked context on the left, actions trailing. The label is what distinguishes
+   the REMOTE Adobe destination from the LOCAL project name in the page header;
+   they used to sit in one dot-separated run in the subtitle, where nothing told
+   them apart. */
+.page-destination-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.page-destination-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--spectrum-global-color-gray-600);
+}
+
 /* AI badge + its capabilities link on one line. The link was a standalone row
    beneath the badges, which cost the band a whole row to say one thing. */
 .dashboard-status-badge-inline {
