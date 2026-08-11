@@ -10,7 +10,14 @@
  */
 
 import { Text, Form } from '@adobe/react-spectrum';
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
+import {
+    computeCommerceSectionValidity,
+    isConnectionGroup,
+    filterGroupsForSection,
+    type CommerceSectionValidity,
+    type ConnectStoreSection,
+} from './commerceSectionValidity';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
@@ -18,59 +25,14 @@ import {
     ACCS_STORE_VIEW_CODE,
     PAAS_STORE_VIEW_CODE,
 } from '@/features/components/config/envVarKeys';
-import {
-    CONNECTION_FIELDS,
-    isStoreCodeField,
-} from '@/features/components/config/storeFieldHelpers';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import { ServiceGroupList } from '@/features/components/ui/components/ServiceGroupList';
 import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
 import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
-import {
-    useComponentConfig,
-    type ServiceGroup,
-} from '@/features/components/ui/hooks/useComponentConfig';
+import { useComponentConfig } from '@/features/components/ui/hooks/useComponentConfig';
 import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { ComponentConfigs } from '@/types/webview';
-
-/** Groups that contain connection + store fields (shown immediately with progressive disclosure) */
-const CONNECTION_GROUPS = new Set(['accs', 'adobe-commerce']);
-
-/** Which slice of the commerce config to render. Absent = render everything (legacy callers). */
-export type ConnectStoreSection = 'connection' | 'business-structure' | 'catalog';
-
-/**
- * Filter the visible service groups down to a single section's fields.
- *
- * The hooks stay fully mounted regardless of section — only what renders is
- * filtered, so store-discovery/config state persists across tab switches.
- *
- * - connection: connection groups, CONNECTION_FIELDS only (no store-code cascade)
- * - business-structure: connection groups, the store-code cascade only
- * - catalog: the non-connection groups (already gated on store selection upstream)
- */
-function filterGroupsForSection(
-    groups: ServiceGroup[],
-    section: ConnectStoreSection,
-): ServiceGroup[] {
-    if (section === 'catalog') {
-        return groups.filter((group) => !CONNECTION_GROUPS.has(group.id));
-    }
-
-    const keepField =
-        section === 'connection'
-            ? (key: string) => CONNECTION_FIELDS.has(key)
-            : (key: string) => isStoreCodeField(key);
-
-    return groups
-        .filter((group) => CONNECTION_GROUPS.has(group.id))
-        .map((group) => ({
-            ...group,
-            fields: group.fields.filter((field) => keepField(field.key)),
-        }))
-        .filter((group) => group.fields.length > 0);
-}
 
 // ---------------------------------------------------------------------------
 // Props
@@ -82,7 +44,8 @@ export interface ConnectStoreStepContentProps {
     packageConfigDefaults?: Record<string, string>;
     adobeOrg?: { id: string; code?: string };
     onComponentConfigsChange: (configs: ComponentConfigs) => void;
-    onValidationChange: (allValid: boolean) => void;
+    /** Per-sub-step verdicts — each section answers for the fields IT renders. */
+    onValidationChange: (validity: CommerceSectionValidity) => void;
     /** Persisted store structure — skips auto-detect on step re-entry */
     storeDiscoveryData?: CommerceStoreStructure;
     /** Called when store structure changes — persist to wizard state */
@@ -99,6 +62,9 @@ export interface ConnectStoreStepContentProps {
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
+
+/** The hook still needs a callback; its whole-form verdict is not the gate. */
+const noopValidation = (): void => {};
 
 export function ConnectStoreStepContent({
     selectedStackId,
@@ -127,7 +93,10 @@ export function ConnectStoreStepContent({
         componentConfigs,
         packageConfigDefaults,
         onConfigsChange: onComponentConfigsChange,
-        onValidationChange,
+        // The hook's whole-form verdict is deliberately discarded: using it as a
+        // per-sub-step gate is what deadlocked PaaS. Per-section verdicts are
+        // reported below, sliced from the same error map.
+        onValidationChange: noopValidation,
     });
 
     const {
@@ -157,6 +126,19 @@ export function ConnectStoreStepContent({
         hasStoreData,
         isFetching,
     });
+
+    // Report each sub-step's own verdict. Whole-form validity was the deadlock:
+    // Catalog's required fields kept Connection from ever completing, and Catalog
+    // is locked until Connection completes.
+    const sectionValidity = useMemo(
+        () => computeCommerceSectionValidity(serviceGroups, validationErrors),
+        [serviceGroups, validationErrors],
+    );
+    const onValidationChangeRef = useRef(onValidationChange);
+    onValidationChangeRef.current = onValidationChange;
+    useEffect(() => {
+        onValidationChangeRef.current(sectionValidity);
+    }, [sectionValidity]);
 
     // Surface the store-discovery fetch state so the Business Structure Continue gate
     // can block while the structure is still loading.
@@ -203,7 +185,7 @@ export function ConnectStoreStepContent({
     // Filter groups: non-connection groups (e.g., AEM Assets, Catalog Service)
     // are hidden until store selection is complete
     const disclosedGroups = serviceGroups.filter(
-        (group) => CONNECTION_GROUPS.has(group.id) || storeSelectionComplete,
+        (group) => isConnectionGroup(group.id) || storeSelectionComplete,
     );
 
     // When a section is requested (Commerce tabs), render only that slice.

@@ -284,9 +284,10 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
     // -----------------------------------------------------------------------
 
     describe('validation propagation', () => {
-        it('should propagate validation state via onValidationChange', () => {
+        it('reports every section valid when the error map is empty', () => {
             const onValidationChange = jest.fn();
             mockUseComponentConfig.serviceGroups = [catalogServiceGroup as any];
+            mockUseComponentConfig.validationErrors = {};
 
             renderWithProvider(
                 <ConnectStoreStepContent
@@ -295,17 +296,22 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
                 />,
             );
 
-            expect(capturedSetCanProceed).toBeDefined();
-            act(() => {
-                capturedSetCanProceed?.(true);
+            expect(onValidationChange).toHaveBeenCalledWith({
+                connection: true,
+                'business-structure': true,
+                catalog: true,
             });
-
-            expect(onValidationChange).toHaveBeenCalledWith(true);
         });
 
-        it('should propagate validation failure', () => {
+        it('charges an error to the section that RENDERS the field, not to all three', () => {
+            // The deadlock in miniature: a catalog-service error must not make
+            // Connection incomplete, because Catalog is locked until Connection
+            // completes and its fields render nowhere else.
             const onValidationChange = jest.fn();
-            mockUseComponentConfig.serviceGroups = [];
+            mockUseComponentConfig.serviceGroups = [catalogServiceGroup as any];
+            mockUseComponentConfig.validationErrors = {
+                ADOBE_CATALOG_API_KEY: 'Catalog API Key is required',
+            };
 
             renderWithProvider(
                 <ConnectStoreStepContent
@@ -314,12 +320,9 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
                 />,
             );
 
-            expect(capturedSetCanProceed).toBeDefined();
-            act(() => {
-                capturedSetCanProceed?.(false);
-            });
-
-            expect(onValidationChange).toHaveBeenCalledWith(false);
+            expect(onValidationChange).toHaveBeenCalledWith(
+                expect.objectContaining({ connection: true, catalog: false }),
+            );
         });
 
         it('should show validation error on touched field', () => {

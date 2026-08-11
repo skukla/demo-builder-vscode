@@ -34,7 +34,11 @@ import type { WizardState } from '@/types/webview';
  * @returns true when a stack is selected AND the connect form reported valid
  */
 export function isCommerceConfigured(state: WizardState): boolean {
-    return Boolean(state.selectedStack) && state.commerceConnectValid === true;
+    return (
+        Boolean(state.selectedStack) &&
+        state.commerceConnectValid === true &&
+        state.commerceCatalogValid !== false
+    );
 }
 
 /**

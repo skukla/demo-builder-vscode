@@ -77,7 +77,13 @@ jest.mock('@/features/project-creation/ui/components/ConnectStoreStepContent', (
             <button
                 type="button"
                 data-testid="connect-valid"
-                onClick={() => props.onValidationChange(true)}
+                onClick={() =>
+                    props.onValidationChange({
+                        connection: true,
+                        'business-structure': true,
+                        catalog: true,
+                    })
+                }
             >
                 mark valid
             </button>
@@ -313,7 +319,9 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             );
         });
 
-        it('should persist commerceConnectValid when the connect panel reports valid', () => {
+        it('persists the per-section verdicts the connect panel reports', () => {
+            // One whole-form boolean gating both Connection and Catalog is what
+            // deadlocked PaaS; the panel now answers per sub-step.
             const { updateState } = setup({
                 selectedPackage: 'buildright',
                 selectedBackend: PAAS,
@@ -321,7 +329,10 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             });
             fireEvent.click(screen.getByTestId('connect-valid'));
             expect(updateState).toHaveBeenCalledWith(
-                expect.objectContaining({ commerceConnectValid: true }),
+                expect.objectContaining({
+                    commerceConnectValid: true,
+                    commerceCatalogValid: true,
+                }),
             );
         });
 

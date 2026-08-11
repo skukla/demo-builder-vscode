@@ -455,3 +455,69 @@ describe('firstOpenSection — re-exported pure helper', () => {
         expect(firstOpenSection(sections)).toBe('connection');
     });
 });
+
+/**
+ * The PaaS deadlock, asserted where the user meets it.
+ *
+ * `ADOBE_CATALOG_API_KEY` and `ADOBE_COMMERCE_ENVIRONMENT_ID` are required on
+ * PaaS, have no default, are seeded by no demo package, and render ONLY in the
+ * Catalog sub-step. While one whole-form verdict answered for every section,
+ * their emptiness made Connection incomplete — and Catalog is locked until
+ * Connection completes. A locked rail tab is not clickable and Continue reads the
+ * same verdict, so the only place to fill them was unreachable.
+ */
+describe('commerceSectionStates — Catalog is reachable while its own fields are empty', () => {
+    const connectedButCatalogEmpty = state({
+        selectedBackend: PAAS,
+        commerceConnectValid: true,
+        commerceStoreViewChosen: true,
+        commerceCatalogValid: false,
+    });
+
+    it('unlocks Catalog so its required fields can be filled', () => {
+        const sections = commerceSectionStates(connectedButCatalogEmpty, {
+            isAccs: false,
+            signedIn: false,
+        });
+
+        expect(sections.find((s) => s.id === 'catalog')?.status).not.toBe('locked');
+    });
+
+    it('still refuses to call Catalog complete — the gate moved, it did not vanish', () => {
+        // Otherwise unblocking the deadlock would let a user walk past required
+        // fields and generate a .env with blanks.
+        expect(
+            isCommerceStepComplete(connectedButCatalogEmpty, 'catalog', {
+                isAccs: false,
+                signedIn: false,
+            }),
+        ).toBe(false);
+    });
+
+    it('calls Catalog complete once its fields are valid — control', () => {
+        expect(
+            isCommerceStepComplete(
+                state({
+                    selectedBackend: PAAS,
+                    commerceConnectValid: true,
+                    commerceStoreViewChosen: true,
+                    commerceCatalogValid: true,
+                }),
+                'catalog',
+                { isAccs: false, signedIn: false },
+            ),
+        ).toBe(true);
+    });
+
+    it('stays permissive when no verdict has been reported yet', () => {
+        // ACCS has an empty catalog-service group and the body may not have
+        // mounted; an unknown verdict must not block Continue.
+        expect(
+            isCommerceStepComplete(
+                state({ selectedBackend: PAAS, commerceConnectValid: true }),
+                'catalog',
+                { isAccs: false, signedIn: false },
+            ),
+        ).toBe(true);
+    });
+});

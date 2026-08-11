@@ -233,7 +233,12 @@ export function CommerceStep({
                 packageConfigDefaults={state.packageConfigDefaults}
                 adobeOrg={state.adobeOrg}
                 onComponentConfigsChange={handleComponentConfigsChange}
-                onValidationChange={(valid) => updateState({ commerceConnectValid: valid })}
+                onValidationChange={(validity) =>
+                    updateState({
+                        commerceConnectValid: validity.connection,
+                        commerceCatalogValid: validity.catalog,
+                    })
+                }
                 storeDiscoveryData={state.storeDiscoveryData}
                 onStoreDiscoveryDataChange={(data) =>
                     updateState({ storeDiscoveryData: data ?? undefined })

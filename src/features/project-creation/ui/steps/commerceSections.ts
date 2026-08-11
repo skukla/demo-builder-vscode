@@ -305,7 +305,12 @@ export function isCommerceStepComplete(
             // before the structure the user is confirming has loaded.
             return state.commerceStoreViewChosen === true && state.commerceStoreLoading !== true;
         case 'catalog':
-            return true;
+            // Was unconditionally true. With Connection no longer answering for
+            // Catalog's fields, something has to — otherwise unblocking the
+            // deadlock would let a user walk past required catalog fields and
+            // ship a .env with blanks. `!== false` so an unknown verdict (the
+            // body has not mounted yet) stays as permissive as before.
+            return state.commerceCatalogValid !== false;
     }
 }
 

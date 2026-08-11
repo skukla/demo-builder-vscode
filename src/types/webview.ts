@@ -71,7 +71,10 @@ export interface WizardState {
     // RepoSelectionInline); persisting the verdict keeps each tile's status badge
     // and the step's Continue gate correct when the modal is closed and across
     // back/forward navigation. See ui/steps/tileStatus.ts.
-    commerceConnectValid?: boolean; // Commerce connect form reported valid (ConnectStoreStepContent)
+    commerceConnectValid?: boolean; // Connection sub-step's OWN fields are valid (ConnectStoreStepContent)
+    commerceCatalogValid?: boolean; // Catalog sub-step's OWN fields are valid. Separate from the
+    // above because one whole-form verdict gating both deadlocked PaaS: Catalog's required fields
+    // kept Connection incomplete, and Catalog is locked until Connection completes.
     commerceStoreViewChosen?: boolean; // Persisted verdict: the Business Structure store-view selection was made — drives the Catalog tab's gate/status
     commerceStoreLoading?: boolean; // Transient: store discovery is fetching the structure — blocks the Business Structure Continue gate while true
     storefrontRepoValid?: boolean; // Storefront repo selection reported valid (RepoSelectionInline repository phase)
