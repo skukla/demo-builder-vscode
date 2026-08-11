@@ -11,13 +11,12 @@ describe('AI_CONTEXT_VERSION', () => {
     // Pin the current bundle version. Bump this pin ONLY together with a real
     // generated-content change (see the ai-context-authoring discipline): the
     // constant re-gates every existing project for a bundle refresh.
-    // v6: the PostToolUse git-sync hook actually fires. It read a
-    // `$CLAUDE_TOOL_INPUT` env var Claude Code never sets, so it silently did
-    // nothing on every EDS project ever generated — and sync-changes.md told the
-    // agent the hook covered commit+push, so it skipped sync_storefront too.
-    // Existing projects need the regenerate this bump triggers.
-    it('is 6 (working PostToolUse git-sync hook)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(6);
+    // v7: the always-on `diagnose-demo` skill. None of the twelve generated skills
+    // covered diagnosis — every one told the agent how to DO something — so a read
+    // like get_store_structure had no home and nothing told an agent to check store
+    // scope when product pages come back empty.
+    it('is 7 (diagnose-demo skill)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(7);
     });
 });
 
@@ -71,7 +70,7 @@ describe('COMPONENT_IDS', () => {
             ];
 
             // Runtime verification
-            validIds.forEach(id => {
+            validIds.forEach((id) => {
                 expect(Object.values(COMPONENT_IDS)).toContain(id);
             });
         });

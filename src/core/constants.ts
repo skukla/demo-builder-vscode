@@ -43,7 +43,13 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // while sync-changes.md told the agent the hook handled commit+push, so it
 // skipped sync_storefront and AI-authored block edits never reached the live
 // site. Existing projects MUST regenerate to get a hook that works.
-export const AI_CONTEXT_VERSION = 6;
+// v7: new always-on `diagnose-demo` skill. Of the twelve generated skills none
+// covered DIAGNOSIS — every one told the agent how to DO something, so a read
+// like get_store_structure had no home and nothing told an agent to check store
+// scope when product pages come back empty. Routes symptom → check, and carries
+// the two traps that read as false negatives: pushed is not published, and
+// deploy_mesh does not regenerate `.env` (only a Configure save does).
+export const AI_CONTEXT_VERSION = 7;
 
 /**
  * Component IDs for standardized component instance access
