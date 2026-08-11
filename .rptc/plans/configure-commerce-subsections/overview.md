@@ -57,8 +57,14 @@ So: retagging within the existing group set is free; inventing groups is not.
 
 | Shape | Today | After |
 |---|---|---|
-| EDS + ACCS + mesh | Project · ACCS · API Mesh · Adobe Assets · Authoring | Project · Commerce · Storefront |
-| EDS + PaaS + mesh | Project · Adobe Commerce · Catalog Service · API Mesh · Adobe Assets · Authoring | Project · Commerce · Catalog · Storefront |
+| EDS + ACCS + mesh | Project · ACCS · API Mesh · Adobe Assets · Authoring | Project · Commerce · Adobe Assets · Authoring |
+| EDS + PaaS + mesh | Project · Adobe Commerce · Catalog Service · API Mesh · Adobe Assets · Authoring | Project · Commerce · Catalog · Adobe Assets · Authoring |
+
+**Revised 2026-08-11.** The target used to end in a merged "Storefront" tab. Step 03 was
+dropped once its premise was checked — `AEM_ASSETS_ENABLED` has no code relationship to the
+AEM settings value the merge was justified by. See `step-03.md`. Commerce still gains
+Connection / Business Structure sub-sections (step 04); the tab COUNT gain is now step 02's
+alone.
 
 Catalog Service is PaaS-only — all three of its values are `isAccs ? undefined : …` —
 which is why EDS+ACCS reaches three tabs and EDS+PaaS four.
@@ -74,7 +80,7 @@ deliberately always reachable (`configureSections.ts:181-188`).
 |---|---|---|
 | Connection / Business Structure | Sub-sections inside one Commerce tab | Configure edits; it does not sequence. Two tabs would import the wizard's gating, which this plan explicitly avoids |
 | API Mesh tab | **Delete** | Its one field is optional, auto-supplied and display-locked; the mesh's real controls are the Integrations grid. Deleting it also removes the display-vs-validation dead end |
-| Adobe Assets + Authoring | Merge into **Storefront** | Both are EDS storefront concerns, both hold one control, and the Assets prerequisite is currently pointed at from the *other* tab |
+| Adobe Assets + Authoring | **Leave separate** | The merge's stated prerequisite-coupling does not exist in the code; a data-source flag and a tooling choice are not one concern. Dropped 2026-08-11, see `step-03.md` |
 | `ADOBE_COMMERCE_ENVIRONMENT_ID` | **Leave in `catalog-service`** | Its name says instance, its description and its use say Catalog Service dataspace. An earlier draft proposed retagging it; see step-01's correction note |
 | Unreachable sections (ACO / Experience Platform / Additional Settings) | **Leave** | Out of scope. They render for nobody, so they cost nobody. Filed in the research |
 | Wizard's taxonomy | Copy the names, not the component | The data-source divergence that deferred this in the first place is untouched |
@@ -85,12 +91,11 @@ deliberately always reachable (`configureSections.ts:181-188`).
 |---|---|---|
 | `step-01` | Put the two Catalog endpoints together; settle the derived field | — |
 | `step-02` | Delete the API Mesh tab; remove the `MESH_ENDPOINT` display/validate dead end | — |
-| `step-03` | Merge Adobe Assets + Authoring into a Storefront tab | 02 |
-| `step-04` | Connection / Business Structure sub-sections inside the Commerce tab | 03 |
+| `step-03` | ~~Merge Adobe Assets + Authoring~~ — **DROPPED**, premise disproved | — |
+| `step-04` | Connection / Business Structure sub-sections inside the Commerce tab | 02 |
 
-Steps 01–03 are independent of 04 and ship value alone. **Stop after 03** if 04 looks
-bigger than it is worth — that alone takes EDS+ACCS from five tabs to four and removes
-two defects.
+Steps 01–02 are independent of 04 and ship value alone — together they take EDS+ACCS from
+five tabs to four and remove two defects. Step 04 is the only remaining substantive work.
 
 ## Out of scope
 

@@ -152,11 +152,11 @@ Split the work. The deadlock is a blocker and is small; the regrouping is a desi
 | 1 | Fix the PaaS deadlock | small, do first |
 | 2 | Put the two Catalog endpoints adjacent; settle the derived one | small |
 | 3 | Drop the API Mesh tab — read-only field, real controls live on Integrations, and it removes defect 2 | small |
-| 4 | Merge Adobe Assets + Authoring into one "Storefront" tab — both EDS storefront concerns, both one control, and the Assets prerequisite is pointed at from the other one | medium |
+| 4 | ~~Merge Adobe Assets + Authoring~~ — **withdrawn 2026-08-11**: no code ties `AEM_ASSETS_ENABLED` to the AEM settings value this was justified by | — |
 | 5 | Adopt the wizard's Connection / Business Structure split *inside* the Commerce tab, as sub-sections | its own plan — touches the gating |
 
-Items 2–4 take EDS+ACCS from 5 tabs to 3 (Project · Commerce · Storefront) and EDS+PaaS
-from 6 to 4.
+With item 4 withdrawn, items 2–3 take EDS+ACCS from 5 tabs to 4 and EDS+PaaS from 6 to 5.
+Item 5 changes structure inside the Commerce tab rather than the tab count.
 
 ## Confidence
 
