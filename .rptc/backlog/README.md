@@ -173,6 +173,18 @@ floor — which is precisely what this item exists to protect.
 
 ### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
 
+#### `export_project_settings` ignores `includeSecrets` ([`2026-08-11-export-settings-ignores-include-secrets.md`](2026-08-11-export-settings-ignores-include-secrets.md))
+
+Filed 2026-08-11, found in passing during Data Installer credential research. `includeSecrets: false`
+writes secrets to the file **and** returns `includesSecrets: false` — not a missing filter but an
+affirmative false claim, and the MCP tool's description explicitly promises "pass `includeSecrets:false`
+for a secret-free copy" (`actionDescriptors.ts:126-130`). Whole chain traced: the flag threads correctly
+through four hops and is then consumed only to stamp a label, while
+`settingsSerializer.ts:156` emits `componentConfigs` unconditionally. Exposes
+`ADOBE_COMMERCE_ADMIN_PASSWORD`; SecretStorage-backed secrets are unaffected. Existing tests pin the
+flag's value, not any stripping. Two entry points also disagree on the default (`false` at
+`settingsSerializer.ts:203`, `true` at `settingsTransferService.ts:305`). **Public repo → `high`.**
+
 #### Reset consent only when there is something to lose ([`2026-07-29-reset-consent-only-when-there-is-something-to-lose.md`](2026-07-29-reset-consent-only-when-there-is-something-to-lose.md))
 
 **In progress** — classifier landed on `develop`; UI wiring remains. New repos already pin + patch
