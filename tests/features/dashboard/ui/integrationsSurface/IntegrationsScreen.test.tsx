@@ -56,6 +56,7 @@ jest.mock('@/core/ui/components/navigation/SearchHeader', () => ({
         onSearchQueryChange,
         onRefresh,
         searchThreshold,
+        countTrailing,
     }: any) => (
         <div data-testid="search-header">
             <span data-testid="total-count">{totalCount}</span>
@@ -67,6 +68,7 @@ jest.mock('@/core/ui/components/navigation/SearchHeader', () => ({
                 />
             )}
             <button onClick={onRefresh}>refresh</button>
+            {countTrailing}
         </div>
     ),
 }));
@@ -364,6 +366,37 @@ describe('header', () => {
                     'demo-builder-test'
                 );
                 expect(screen.getByTestId('page-subtitle')).not.toHaveTextContent('Kukla Mesh');
+            });
+
+            /**
+             * It sits BELOW the controls and the count, not above them.
+             *
+             * Third placement, and the reasoning for each rejection is worth
+             * keeping. Top of the band: handed the most prominent slot to the
+             * least-used fact and pushed the primary actions down a row. Its own
+             * row beneath the count: same total height for something that fits in
+             * space the count row already wastes.
+             *
+             * Not back in the header either: that is where it started, as a third
+             * crumb, and it is why the LOCAL project name and the REMOTE Adobe
+             * destination were indistinguishable.
+             */
+            it('rides the count row rather than taking a row of its own', () => {
+                const handlers = captureHandlers();
+                render(
+                    <IntegrationsScreen
+                        hasAdobeContext
+                        appBuilderComponents={{ a: DEPLOYED }}
+                        destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
+                    />
+                );
+                settleStatus(handlers);
+
+                // The count row is space-between with an empty right half once a
+                // search field shows; the destination fills it instead of costing
+                // the band another line.
+                const controls = screen.getByTestId('search-header');
+                expect(controls).toContainElement(screen.getByTestId('page-destination'));
             });
 
             it('labels it, the way the dashboard band labels its rows', () => {

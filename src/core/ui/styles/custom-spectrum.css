@@ -2082,8 +2082,9 @@ button[class*="spectrum-Button"][disabled],
 }
 
 /* Integrations band, context row: "Deploys to <project> · <workspace>  Change".
-   Sits above the list-control row, mirroring the project dashboard's band —
-   stacked context on the left, actions trailing. The label is what distinguishes
+   Rides the END of SearchHeader's count row, which is space-between and has an
+   empty right half once a search field shows. Costs the band no extra line for
+   what is the least-used fact on the screen. The label is what distinguishes
    the REMOTE Adobe destination from the LOCAL project name in the page header;
    they used to sit in one dot-separated run in the subtitle, where nothing told
    them apart. */
@@ -2091,14 +2092,23 @@ button[class*="spectrum-Button"][disabled],
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-bottom: 8px;
 }
 
+/* One size for the whole row — it sits beside SearchHeader's 12px count, and
+   11px uppercase (borrowed from the dashboard's badge rows, where it stands
+   alone) read as a mismatch rather than a hierarchy. Sentence case, so the row
+   reads as a phrase: "Deploys to Kukla Mesh · Stage". The three roles separate by
+   COLOUR now that size does not: dim label, darker value, blue action. */
 .page-destination-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--spectrum-global-color-gray-600);
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-500);
+}
+
+/* Scoped, not global: `.dest-context` is 12.5px — off the type scale — and the
+   add-integration modal renders the same component. Fixing it there is a
+   separate call on a surface this change never looked at. */
+.page-destination-row .dest-context {
+    font-size: 12px;
 }
 
 /* AI badge + its capabilities link on one line. The link was a standalone row

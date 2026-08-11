@@ -538,18 +538,27 @@ search-FILTERED cards while the empty-state gate reads the unfiltered list, so a
 no-match search renders an empty grid. That now shows
 `No integrations match "…"`, mirroring the projects list.
 
-## Integrations band: context above controls
-
-The band mirrors the project dashboard's shape — stacked context on the left,
-actions trailing:
+## Integrations band
 
 ```
-Integrations   demo-builder-test          <- header: the LOCAL project only
+Integrations   demo-builder-test        <- header: the LOCAL project only
 ------------------------------------------------------------------
-DEPLOYS TO  Kukla Mesh . Stage  Change    <- context row
-[Filter integrations...] [refresh]  [Project Dashboard] [Add integration]
-2 integrations
+[Filter integrations...] [refresh]   [Project Dashboard] [Add integration]
+2 integrations           Deploys to Kukla Mesh . Stage  Change
 ```
+
+The destination rides the END of SearchHeader's count row via its `countTrailing`
+slot. That row is space-between and its right half is empty width once a search
+field shows — on every consumer — so page-level context costs the band no extra
+line. Two earlier placements were tried and rejected: its own row at the TOP of
+the band (most prominent slot for the least-used fact, and it pushed the primary
+actions down), and its own row BELOW the count (same height for something that
+fits in space already going spare).
+
+The whole row reads at 12px, the count's size, with the three roles separated by
+colour — dim label, darker value, blue action. It first shipped mixing 11px
+uppercase (borrowed from the dashboard's badge rows, where that treatment stands
+alone), 12.5px, and 12px on one line.
 
 Search shows from the first integration (`searchThreshold={0}`), as on the
 projects list. That is not a taste call: `SearchHeader` puts the count beside the

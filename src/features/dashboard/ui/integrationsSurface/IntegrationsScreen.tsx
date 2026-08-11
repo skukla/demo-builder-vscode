@@ -234,19 +234,6 @@ export function IntegrationsScreen({
         >
             <div className="projects-sticky-header">
                 <div className="page-container-padded page-header-section">
-                    {/* Context row, then the list-control row — the project
-                        dashboard's band shape (stacked context left, actions
-                        right). Context precedes the controls that act on it. */}
-                    {destinationLabel && (
-                        <div className="page-destination-row" data-testid="page-destination">
-                            <span className="page-destination-label">Deploys to</span>
-                            <DestinationContext
-                                project={destination?.projectTitle}
-                                workspace={destination?.workspaceTitle}
-                                onChange={openDestination}
-                            />
-                        </div>
-                    )}
                     <Flex alignItems="start" gap="size-300">
                         <View flex>
                             <SearchHeader
@@ -268,6 +255,30 @@ export function IntegrationsScreen({
                                 refreshAriaLabel="Refresh integrations"
                                 hasLoadedOnce
                                 alwaysShowCount
+                                // The count row is space-between and its right
+                                // half is empty once a field shows. The deploy
+                                // destination goes there rather than costing the
+                                // band a row: it is the least-used fact on the
+                                // screen. NOT the page header — that is where the
+                                // LOCAL project name and the REMOTE Adobe
+                                // destination were indistinguishable.
+                                countTrailing={
+                                    destinationLabel ? (
+                                        <div
+                                            className="page-destination-row"
+                                            data-testid="page-destination"
+                                        >
+                                            <span className="page-destination-label">
+                                                Deploys to
+                                            </span>
+                                            <DestinationContext
+                                                project={destination?.projectTitle}
+                                                workspace={destination?.workspaceTitle}
+                                                onChange={openDestination}
+                                            />
+                                        </div>
+                                    ) : undefined
+                                }
                             />
                         </View>
                         {/* Trailing buttons mirror DashboardStatusHeader: a
@@ -286,6 +297,7 @@ export function IntegrationsScreen({
                             </Button>
                         )}
                     </Flex>
+
                 </div>
             </div>
 
