@@ -1,7 +1,9 @@
 # Step 04 — Connection and Business Structure inside the Commerce tab
 
-Depends on 03. The only step with real design content; also the only one that can be
-dropped without leaving the rail half-changed.
+**SHIPPED 2026-08-11.** Notes below are the as-built record; the two items marked
+DONE differ slightly from what was planned, and the differences are the point.
+
+Depended on 02 (03 was dropped). The only step with real design content.
 
 ## Why
 
@@ -31,14 +33,41 @@ renders a labelled block with an optional divider and is used for exactly this.
 
 ## Change
 
-1. Render the Commerce tab body as two `ConfigSection`s — "Connection" and "Business
-   Structure" — using `filterGroupsForSection` to split the group's fields.
-2. Handle the field that belongs to **neither**: `ADOBE_COMMERCE_ADMIN_URL` is in a
-   connection group but is neither a `CONNECTION_FIELD` nor a store code, so the wizard
-   renders it nowhere. Configure must not inherit that hole — give it a home (Connection is
-   the honest one) or the field disappears from the only surface that still shows it.
-3. Keep the store cascade exactly where it is. It renders at the website-code field's
-   position inside Business Structure, which is where it already logically sits.
+1. **DONE.** Render the Commerce tab body as two `ConfigSection`s — "Connection" and
+   "Business Structure" — using `filterGroupsForSection`.
+
+   Two things the plan did not anticipate:
+
+   - `filterGroupsForSection` lived in `features/project-creation`, and Configure is in
+     `features/dashboard`. Features do not import each other, so the splitter moved to
+     `features/components/config/storeFieldHelpers.ts` — beside the field predicates it
+     already used, and a module both surfaces already depend on. It is generic over
+     `{ id, fields: [{ key }] }` because the two surfaces have structurally identical but
+     separately declared `ServiceGroup` types.
+   - `ServiceGroupList` could not be reused: it keys each `ConfigSection` by `group.id`,
+     and both halves share one id here. `ConfigSection` is used directly instead — which
+     is what `ServiceGroupList` itself does, so no chrome is re-implemented.
+2. **DONE, and it fixed the wizard too.** `ADOBE_COMMERCE_ADMIN_URL` is in a connection
+   group but is neither a `CONNECTION_FIELD` nor a store code, so the wizard rendered it
+   nowhere.
+
+   Rather than special-casing it, the `connection` predicate flipped from a membership
+   test (`CONNECTION_FIELDS.has(key)`) to a negation (`!isStoreCodeField(key)`). Every
+   field in a connection group now lands in exactly one sub-section by construction, so
+   no future field can be orphaned the same way. Pinned by
+   `tests/features/components/config/storeFieldSections.test.ts` — "every field lands in
+   exactly one section — no orphans, no duplicates".
+
+   Because the splitter is shared, the wizard picked the fix up as well.
+3. **DONE.** The store cascade is untouched. `renderFieldRow` receives the ORIGINAL
+   group, never a relabelled one — `StoreSelectionRow.getFieldKeys` and the disclosure
+   gate both branch on `group.id`, so a synthetic `connection` id would have orphaned the
+   pickers. Pinned by a test asserting every row still receives `adobe-commerce`.
+
+4. **ADDED, not planned.** Business Structure is hidden until store discovery can run.
+   Its fields already render `null` before then (StoreConfigFieldRow's own gate), so the
+   split would otherwise have put a heading above nothing. Gated on the same
+   `autoDetectKey` the fields use, so heading and content appear together.
 
 ## Do not
 

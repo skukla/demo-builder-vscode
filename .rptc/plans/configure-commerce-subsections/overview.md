@@ -92,10 +92,11 @@ deliberately always reachable (`configureSections.ts:181-188`).
 | `step-01` | Put the two Catalog endpoints together; settle the derived field | — |
 | `step-02` | Delete the API Mesh tab; remove the `MESH_ENDPOINT` display/validate dead end | — |
 | `step-03` | ~~Merge Adobe Assets + Authoring~~ — **DROPPED**, premise disproved | — |
-| `step-04` | Connection / Business Structure sub-sections inside the Commerce tab | 02 |
+| `step-04` | Connection / Business Structure sub-sections inside the Commerce tab | 02 — **shipped 2026-08-11** |
 
-Steps 01–02 are independent of 04 and ship value alone — together they take EDS+ACCS from
-five tabs to four and remove two defects. Step 04 is the only remaining substantive work.
+**All steps resolved.** 01 and 02 shipped and take EDS+ACCS from five tabs to four while
+removing two defects; 03 was dropped once its premise was disproved; 04 shipped and gives
+the Commerce tab two named sub-sections. Nothing outstanding in this plan.
 
 ## Out of scope
 
