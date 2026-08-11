@@ -1,0 +1,183 @@
+{
+  "count": 18,
+  "data_types": [
+    {
+      "api_type": "rest",
+      "data_type": "product_attributes",
+      "depends_on": [],
+      "description": "Export product attributes",
+      "order": 0,
+      "processor_script": "ProductAttributeExportProcessor"
+    },
+    {
+      "api_type": "rest",
+      "data_type": "attribute_sets",
+      "depends_on": [],
+      "description": "Export attribute sets",
+      "order": 1,
+      "processor_script": "AttributeSetExportProcessor"
+    },
+    {
+      "api_type": "rest",
+      "data_type": "attribute_assign_to_set",
+      "depends_on": [
+        "product_attributes",
+        "attribute_sets"
+      ],
+      "description": "Export attribute assignments to attribute sets (automatically runs after product_attributes export)",
+      "order": 2,
+      "processor_script": "AttributeAssignmentExportProcessor"
+    },
+    {
+      "api_type": "rest",
+      "data_type": "customer_groups",
+      "depends_on": [],
+      "description": "Export customer groups",
+      "order": 3,
+      "processor_script": "CustomerGroupExportProcessor"
+    },
+    {
+      "api_type": "rest",
+      "data_type": "customers",
+      "depends_on": [
+        "customer_groups"
+      ],
+      "description": "Export customer data",
+      "order": 4,
+      "processor_script": "CustomerExportProcessor"
+    },
+    {
+      "api_type": "rest",
+      "data_type": "categories",
+      "depends_on": [],
+      "description": "Export categories",
+      "order": 5,
+      "processor_script": "CategoryExportProcessor"
+    },
+    {
+      "api_type": "rest",
+      "data_type": "products",
+      "depends_on": [
+        "categories",
+        "product_attributes",
+        "attribute_sets",
+        "attribute_assign_to_set",
+        "customer_groups"
+      ],
+      "description": "Export products (individual product format for POST /V1/products)",
+      "order": 6,
+      "processor_script": "ProductsExportProcessor"
+    },
+    {
+      "api_type": "rest",
+      "data_type": "cart_rules",
+      "depends_on": [
+        "categories",
+        "customer_groups",
+        "product_attributes",
+        "attribute_sets"
+      ],
+      "description": "Export cart/price rules",
+      "order": 7,
+      "processor_script": "CartRuleExportProcessor"
+    },
+    {
+      "api_type": "rest",
+      "data_type": "coupons",
+      "depends_on": [
+        "cart_rules"
+      ],
+      "description": "Export coupons (converts rule_id to rule_name for import compatibility)",
+      "order": 8,
+      "processor_script": "instance-01"
+    },
+    {
+      "api_type": "rest",
+      "data_type": "stocks",
+      "depends_on": [],
+      "description": "Export inventory stocks",
+      "order": 9,
+      "processor_script": "instance-02"
+    },
+    {
+      "api_type": "rest",
+      "data_type": "sources",
+      "depends_on": [],
+      "description": "Export inventory sources",
+      "order": 10,
+      "processor_script": "instance-03"
+    },
+    {
+      "api_type": "rest",
+      "data_type": "stock_source_links",
+      "depends_on": [
+        "stocks",
+        "sources"
+      ],
+      "description": "Export inventory stock-source-links",
+      "order": 11,
+      "processor_script": "StockSourceLinkExportProcessor"
+    },
+    {
+      "api_type": "rest",
+      "data_type": "source_items",
+      "depends_on": [
+        "products",
+        "sources"
+      ],
+      "description": "Export inventory source items",
+      "order": 12,
+      "processor_script": "SourceItemsExportProcessor"
+    },
+    {
+      "api_type": "rest",
+      "data_type": "b2b_companies",
+      "depends_on": [],
+      "description": "Export B2B companies",
+      "order": 13,
+      "processor_script": "B2BCompanyExportProcessor"
+    },
+    {
+      "api_type": "rest",
+      "data_type": "b2b_shared_catalogs",
+      "depends_on": [],
+      "description": "Export B2B shared catalogs",
+      "order": 14,
+      "processor_script": "SharedCatalogExportProcessor"
+    },
+    {
+      "api_type": "rest",
+      "data_type": "b2b_shared_catalog_company_assignments",
+      "depends_on": [
+        "b2b_shared_catalogs",
+        "b2b_companies"
+      ],
+      "description": "Export shared catalog company assignments",
+      "order": 15,
+      "processor_script": "SharedCatalogCompanyAssignmentExportProcessor"
+    },
+    {
+      "api_type": "rest",
+      "data_type": "b2b_shared_catalog_categories",
+      "depends_on": [
+        "b2b_shared_catalogs",
+        "categories"
+      ],
+      "description": "Export shared catalog category assignments",
+      "order": 16,
+      "processor_script": "SharedCatalogCategoriesExportProcessor"
+    },
+    {
+      "api_type": "rest",
+      "data_type": "b2b_shared_catalog_products",
+      "depends_on": [
+        "b2b_shared_catalogs",
+        "products"
+      ],
+      "description": "Export shared catalog product assignments",
+      "order": 17,
+      "processor_script": "SharedCatalogProductsExportProcessor"
+    }
+  ],
+  "success": true
+}
