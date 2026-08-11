@@ -1,171 +1,163 @@
 # Next session — start here
 
-Rewritten 2026-08-11, after the `.127` cut. **Everything is committed AND PUSHED.**
-`develop` is level with `origin/develop`; `master` carries the release merge.
+Rewritten 2026-08-11 (second session that day). **Everything is committed AND PUSHED.**
+`develop` is level with `origin/develop` at `e865294b`. Still on `v1.0.0-beta.127` — no
+release was cut this session.
 
-**`v1.0.0-beta.127` SHIPPED** — https://github.com/skukla/demo-builder-vscode/releases/tag/v1.0.0-beta.127
-484 commits, pre-release, one `.vsix` asset. Beta users auto-update to it.
-
-Gate at handoff: **965 suites / 12250 tests**, whole-repo eslint (0 errors, 0 warnings), tsc.
-
----
-
-## There is no release stream any more. Pick from Outstanding.
-
-The session ran `dream` → `codebase-sweep` → 3 fixes → cut `.127`. Nothing is
-half-finished in the tree.
-
-### What shipped in `.127` that changes existing projects
-
-Only two things touch projects that already exist. Both are in the release notes and the
-CHANGELOG; repeated here because they generate support questions:
-
-1. **Every project flags its AI files stale and prompts a regenerate.** Intended. The
-   generated `PostToolUse` git-sync hook never fired on any project since beta.109, and only
-   a regenerate replaces it. Users who skip the prompt keep a dead hook.
-2. **AI-authored storefront edits were never reaching GitHub.** Same defect — the hook read
-   `$CLAUDE_TOOL_INPUT`, which Claude Code does not set (it uses stdin), and the generated
-   `sync-changes` skill told agents the hook handled commit+push so they skipped
-   `sync_storefront` too. Silent at both ends. (`df4156b2`)
-
-A third, `777b81a3`, cleared the storefront "Republish needed" flag on disk — visible but
-self-explanatory.
+Gate at handoff, run in full immediately before writing this: **969 suites / 12297 tests**,
+`tsc --noEmit` clean, whole-repo eslint 0 errors 0 warnings.
 
 ---
 
-## Read this before trusting anything else in this file
+## ⚠️ Two things need a human, and one has a clock on it
 
-**Five times this session I got a wrong answer from a correct command aimed at the wrong
-place.** No positive control caught any of them, because each control inherited the same
-wrong scope. A control proves the tool works; it does not prove you pointed it at the right
-tree.
+### 1. A public-repo exposure was cleaned up. Two steps remain — neither is doable by an agent.
 
-| What | The wrong aim | Caught by |
+`8213b829` (originally `35b2b41d`) published details of an internal Adobe service in this
+**public** repo. No credentials — no tokens, keys, emails or IPs — but four things went out:
+a colleague named beside a defect in their own service, the stage Runtime endpoint including
+its namespace id, two activation ids from live responses, and an internal env var name quoted
+from an error body.
+
+**Done:** file redacted, history rewritten across 9 commits, force-pushed (branch protection
+lifted and restored — verified identical field-by-field), local backup refs deleted and
+`gc --prune=now` run. `develop` and this machine no longer contain the unredacted text.
+Verified: 0 forks, 0 network copies, 0 PRs referencing the commit.
+
+**Still outstanding:**
+
+- **GitHub Support GC.** `35b2b41d` still resolves through the GitHub API. A force-push does
+  NOT garbage-collect; GitHub keeps unreferenced objects and cached views until Support runs
+  it. Ask them to purge unreferenced commits and cached views for `skukla/demo-builder-vscode`.
+- **Tell the colleague.** Their name was public for roughly an hour. No technical step reaches
+  whatever crawled it in that window, and this was the highest-severity item.
+
+**Prevention landed** (`e865294b`): a redaction rule in `.rptc/CLAUDE.md` beside the artifact
+policy, and `.gitignore` entries for raw probe captures (`**/raw/`, `*.probe.json`,
+`*.probe.txt`). The rule exists because `.rptc/` is tracked and this repo is public, so a
+writeup that probes an internal service publishes whatever it quotes.
+
+### 2. `AI_CONTEXT_VERSION` is now 7 — every existing project will prompt to regenerate
+
+Intended (the new `diagnose-demo` skill only reaches projects that regenerate), but `.127` did
+the same thing and it generated support questions. **Put it in the release notes** whenever
+this ships.
+
+---
+
+## What shipped this session
+
+Nine commits. SHAs below are post-rewrite — the pre-rewrite ones are gone.
+
+| Commit | What |
+|---|---|
+| `8213b829` | Data Installer live-API probe writeup (now redacted) |
+| `b768472f` | Backlog: `export_project_settings` ignores `includeSecrets` |
+| `de41f9a3` | gitignore vendor doc exports |
+| `a1d7bb4b` | Four off-scale font sizes → `font-size-75` token; scoped override deleted |
+| `99ccfc6f` | Commerce store scope single-sourced (write narrowing + load migration) |
+| `5d215fdd` | Backlog: project-level facts stored per-component |
+| `00f689d6` | Test pins for `a1d7bb4b` (see "a commit that didn't stand alone") |
+| `a069b792` | `diagnose-demo` skill + AGENTS.md pointer, `AI_CONTEXT_VERSION` 7 |
+| `e865294b` | Redaction + prevention rules |
+
+Earlier the same day (previous session, already in history): `get_store_structure` MCP tool,
+`who_created` write removal, `pickSampleSku` served-config sampling, and the
+generated-diagnosis-skill backlog item.
+
+### Three findings worth keeping
+
+**`who_created` was NOT dead weight, in the direction that mattered.** The handoff called it
+cosmetic. Reading the consumers showed the READ side gates project deletion
+(`projectOwnership.ts:104` compares it to the token's IMS user id), and there were **three**
+write sites, not two. The write removal is safe — the gate only ever reads Adobe's response —
+but the framing was wrong. Still unverified: whether Adobe actually overwrites the value.
+One glance at `who_created` on a freshly created project settles it; it changes nothing either
+way.
+
+**The duplicated-scope item was unimplementable as written.** It said "a migration dropping the
+duplicate copies would dissolve the bug class." A migration alone dissolves nothing — the
+duplicates are re-created on every Configure save, because the config surfaces fan one field's
+value to every component declaring it. The fix needed a write-side change first
+(`resolveWriteTargets`), then the migration. Reads already preferred the backend.
+
+**`citisignal-b2b` appearing twice is NOT a bug** — closed. Those are `codePatchSource.path`
+entries pointing at the patch **ledger** directory in `eds-demo-patches`, kept deliberately
+when the hybrid plan repointed CitiSignal onto the B2B base. `custom` uses the sibling `b2b`
+ledger the same way. The old handoff's "ambiguous, so untouched" was the right call; this
+resolves it.
+
+### A commit that didn't stand alone
+
+`a1d7bb4b` (the CSS change) removed rules that two tests in `destinationRowType.test.ts`
+pinned, so it is red in isolation; `00f689d6` fixes it. Cause: the CSS change was checked with
+lint and `tsc` but not jest, because CSS "usually has no tests" — this project tests CSS rules.
+**Run jest for CSS changes.**
+
+---
+
+## Read this before trusting any claim in this file
+
+**Three times this session a claim would have shipped wrong until the thing was RUN rather
+than grepped for.** Different failure from the last handoff's "correct command, wrong tree" —
+this one is greps confirming what you expect and missing what you didn't think to look for:
+
+| Wrong claim | Why the grep missed it | Caught by |
 |---|---|---|
-| "`appbuilder-shell-app` is unmerged" | grepped `features/components/config/`; catalog is in `project-creation/config/` | re-grepping wider |
-| "12 of 13 facts are in no skill" | grepped `.claude/skills/`; the App Builder skills are GLOBAL (`~/.claude/skills/`) | noticing the count was implausible |
-| "tsc and eslint pass" | `${PIPESTATUS[0]}` is bash; this is zsh, so both exit codes came back **empty** | the blank output looking wrong |
-| eslint positive control | temp file outside the base path → eslint skipped it, exit 0 | reading the "File ignored" line |
-| **A release-note setting name** | wrote `demoBuilder.eds.defaultDaLiveOrg` from memory; the real key is `demoBuilder.daLive.defaultOrg` | diffing `package.json` against the `.126` tag |
+| "no count pin on `edsHandlers`" | the pin keys on `types`, not `edsHandlers` | running the suite |
+| "the CSS change is complete" | lint + tsc pass; the tests are in jest | running the suite |
+| "a second writer causes the scope drift" | there is none; the mechanism is the fan-out **target set** | tracing all writers |
 
-The last one would have shipped a wrong setting name to users. **Assume the same rate
-applies to any claim in this file that is not marked verified.**
-
-**This is now a rule, not a candidate.** Root `CLAUDE.md` `## Verifying` gained two
-paragraphs: a control must be run at the question's scope (say where the answer would be if
-it existed, then confirm your command reads there), and never publish an identifier you have
-not read from source. Recorded as Proposal 5 in `.rptc/dream/2026-08-11.md`.
-
-**How the next `dream` run should check whether it took:** count *wrong-tree negatives*, not
-positive controls. Control COUNT is already high — the 2026-08-07 rule drove it from ~0.2% to
-~3–6% of Bash calls — and every one of this session's five failures happened *with* a control
-present. The signal is a negative result asserted about a path the command never read.
-
-**And one wrong claim I made about behaviour, corrected only after it reached a commit
-message:** see "the edsConfig fix" below.
-
----
-
-## What landed this session
-
-### `dream` — 4 proposals, all applied (`.rptc/dream/2026-08-11.md`)
-
-Theme: **nothing told the agent it cannot see this UI.** 16 user turns carried a screenshot
-across 3 of 4 sessions; every visual defect was caught that way, none by the agent. Meanwhile
-`spectrum-webview-ui` §Verify said *"Eyeball the actual surface"* — written to a human.
-
-- `spectrum-webview-ui` §Verify rewritten: the agent cannot see the surface; never report an
-  unseen visual result; **never assert parity from declarations** (identical rules render
-  differently under different ancestors — `.integration-card` proved it); make parity
-  structural via shared custom properties; check real cardinality before designing per-row
-  anything.
-- Root `CLAUDE.md` §Verifying: quote your globs (`--include='*.css'`).
-- 10 plans moved to `.rptc/complete/`, each against a verified deliverable.
-- `project_appbuilder_app_family` memory pruned ~45 lines → ~30. Its branch-state claims had
-  all gone false.
-
-**Two long-open items CLOSED with measurements.** The 2026-08-07 verifying rule stuck:
-positive controls went 0.2–0.9% → 3.0–6.2% per 100 Bash calls, pipe-into-`||` fell 4.00% →
-~1.2%. The skill-invocation gap opened 2026-07-31 is gone: 5.3/7.4/15.1% vs 2.1/4.0%.
-
-### `codebase-sweep` — the codebase improved (`.rptc/research/codebase-sweep-2026-08-11/`)
-
-Component-extraction groups **9 → 4** (the `step-view`/`step-nav` shell got extracted).
-Cycles flat at 13. jscpd flat at 64 clones / 0.70%. Doc-drift 1 → 0.
-
-**A finding was proposed, accepted, and then WITHDRAWN on implementation.** The
-`page-container-padded page-header-section` trio looked like a shared shell; opening the CSS
-showed `page-container-padded` composes with four different modifiers, so it is the
-base-plus-modifier idiom. Lesson recorded in the sweep: check whether shared classes are a
-base + modifier pair before calling a trio a shell.
-
-### The edsConfig fix — and the claim I got wrong
-
-`ab198c72` extracted `buildEdsConfigFromStorefront` so `WelcomeStep` and `useProjectBuilder`
-stop deriving `edsConfig` separately. That part is right and gate-green.
-
-**Its commit message names a scenario that cannot happen.** It says "changing the demo
-package leaves the fields pinned to the previous package". A package change sets
-`selectedStack: undefined` in the same update (`WelcomeStep.tsx:99`), so the effect's `eds-`
-guard never passes. I asserted a failure mode having read only one of the two functions.
-
-The **real** exposure is edit: `useWizardState` rehydrates package and stack together
-(`useWizardState.ts:287`), and the effect refreshed 14 catalog-derived fields while skipping
-`codePatches`/`codePatchSource`. A project created before its storefront gained a code patch
-keeps the OLD ones — and `citisignal/eds-paas` carries nine, three of them the
-`product-teaser-*` PDP link-encoding fixes. Now pinned by
-`WelcomeStep-edsConfigRefresh.test.tsx` (`dcfd7de1`), control-verified. The sweep doc carries
-the correction; the commit message cannot be rewritten (pushed, and in the release).
+The rule that follows: **a grep can support a positive claim; only running the thing supports a
+negative one.** "Nothing pins this" and "nothing else writes that" are the two shapes that keep
+being wrong.
 
 ---
 
 ## Outstanding
 
-Carried forward, still true:
+**Needs a Dev Host or a live backend — cannot be done by an agent:**
 
-- **`mesh-staleness-scope` step 05 — never run.** Flip `componentConfigs` key order in a
-  manifest and confirm the staleness verdict is order-independent. The only check that
-  exercises the original defect on real data; code is committed and unit-tested.
-- **Missing `get_store_structure` MCP tool** — PDP handoff §3, still the highest-value gap.
-  An agent debugging PDP failures cannot see that a project points at a Commerce website with
-  no products.
-- **Duplicated Commerce scope still in existing manifests.** All three resolvers consult
-  `BACKEND_OWNED_SCOPE_KEYS`, so verdicts no longer turn on key order. **What remains is the
-  DATA MODEL** — a migration dropping the duplicate copies would dissolve the bug class.
-- **`pickSampleSku` reads the project manifest**, not the storefront's served `config.json`.
-  Recorded as intended and never made.
-- **`.dest-context` is 12.5px — off the type scale.** Verified still true this session
-  (`custom-spectrum.css:4845`, scoped 12px override at `2107`). The add-integration modal
-  renders the same component and still gets 12.5px.
-- **`who_created: 'Demo Builder'` is dead weight** (`adobeEntityFetcher.ts:908`, verified).
-  Adobe overwrites it with the authenticated user's IMS id — inferred, not confirmed against
-  the API. Cosmetic; fold into the next edit of that file.
-- **Four suites flake under parallel load** — `extension-context`, both `inExtensionMcpServer`
-  suites, `mcpConfigWriter`. All passed in isolation; reads as socket contention. Did NOT
-  recur in either full run this session.
+- **`mesh-staleness-scope` step 05 — still never run.** Its own text says "cannot be done by
+  tests." Flip `componentConfigs` key order in a manifest and confirm the staleness verdict is
+  order-independent. `demo-builder-test` still carries the disagreement — do not clean it up
+  before testing.
+- **`hybrid-storefront-model` — unblocked, gated on live verification.** The `citisignal-b2b`
+  ambiguity that parked it is resolved (above). What remains is the step-02 gate:
+  individual-vs-company login against a real B2B backend. Tier 2 is otherwise functionally
+  complete per its own overview.
+- **Two visual checks nothing here can reach.** Whether the four font-size changes read
+  correctly on the integrations surface, and whether an agent actually reaches for
+  `diagnose-demo` when handed a vague symptom ("PDPs are empty") rather than editing first.
 
-New, from the sweep's rejected list — revisit triggers, not work:
+**Real work, not started:**
 
-- **`webviewCommunicationManager.ts:320-340` ≡ `WebviewClient.ts:107-127`.** The
-  pending-request settle is logically identical, but they are the two ends of one protocol
-  and the surrounding dispatch differs. Two sites, no drift, so it waits. **Revisit if** a
-  third correlation-id consumer appears, or a fix lands on one end only — that second
-  condition is exactly what promoted the edsConfig finding.
-- **`ProgressUnifier.ts` has 4 internal clones.** Same-file, so fine per triage. If it grows
-  again, run `decompose-god-file` rather than re-reading that line.
-- **Two plans deliberately left in `.rptc/plans/`**: `appbuilder-deployable-model` (D2–D6
-  pending per its own overview) and `hybrid-storefront-model` (it retires `citisignal-b2b`,
-  which still appears twice as a `path` in `demo-packages.json` — ambiguous, so untouched).
+- **`appbuilder-deployable-model` D2–D6.** Only D1 is built.
 
----
+**Unresolved, not reproducing:**
 
-## Verifying the `.127` release itself
+- **Four suites flake under parallel load** (`extension-context`, both `inExtensionMcpServer`
+  suites, `mcpConfigWriter`). Did NOT recur in any run this session, including two full passes.
 
-Nothing is required — it is published and verified (`gh release view` shows pre-release,
-not draft, one `.vsix`). If you want eyes on the shipped build, the highest-value manual
-check is the one thing tests structurally cannot reach:
+**New backlog items (both filed today, both ready, neither blocked):**
 
-**Regenerate AI files on an existing EDS project, then have Claude edit a block.** The
-`[CodePatch]` and git-sync paths both log to the Debug Logs channel, so the evidence is
-`[Storefront Setup]` / `[CodePatch] Applied '<id>'` lines rather than anything visual.
-That exercises the two behaviour changes that reach existing projects.
+- **`2026-08-11-project-level-facts-stored-per-component.md`** — 17 of 25 declared env vars have
+  more than one owner in `componentConfigs`; 6 are the scope keys now fixed, 11 unexamined.
+  **Its first draft asked the wrong question and the file records that**: there is no second
+  writer anywhere. The drift mechanism is that Configure's fan-out targets come from
+  `selectedComponents`, so a component holding a copy but missing from the selection lists never
+  updates. Key-agnostic. Step 1 is reproducing it before any code moves — if it does not
+  reproduce, the premise needs rechecking.
+- **`2026-08-11-generated-diagnosis-skill.md`** — SHIPPED as `a069b792`. Move to
+  `.rptc/complete/` on the next pass.
+
+**Carried forward, still true:**
+
+- **`pickSampleSku` samples from the served config now**, and reports scope divergence as a
+  finding only when the project reads `published` yet the CDN serves a different scope — the one
+  case `edsStorefrontStatusSummary` structurally cannot detect, because it compares bookkeeping
+  to intent and never reads the CDN.
+- **`updateField`'s linked-field write** puts the DERIVED key's value on the SOURCE field's
+  component list (`ADOBE_COMMERCE_URL` → `ADOBE_COMMERCE_GRAPHQL_ENDPOINT`). The sets are a
+  superset today so every declarer is covered, but it also writes the key onto `headless`, which
+  does not declare it. Harmless now; wrong by construction. Noted in the audit item.
