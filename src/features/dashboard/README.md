@@ -505,3 +505,17 @@ if (!verification.exists) {
 
 For overall architecture, see `../../CLAUDE.md`
 For shared infrastructure, see `../shared/CLAUDE.md`
+
+## Page layout: left-anchored content
+
+Project-scoped screens opt into `page-left-anchored` on their root. The shared
+`.page-container` / `.page-container-padded` centre content in a 960px band,
+which on a wide editor floats a screen in the middle; the opt-out drops the
+auto margins and normalises the inset to size-400 so content lines up under the
+page title.
+
+Both `ProjectDashboardScreen` and `IntegrationsScreen` use it — they are one
+click apart and must agree on where content starts. The class was
+`.dashboard-left`, named for a screen rather than a behaviour, which is how the
+integrations surface came to miss it when its grid moved out of the dashboard.
+Pinned by `tests/features/dashboard/ui/pageLeftAnchor.test.ts`.

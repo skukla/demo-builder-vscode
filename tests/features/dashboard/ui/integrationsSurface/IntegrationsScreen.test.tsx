@@ -572,4 +572,27 @@ describe('IntegrationsScreen — destination control', () => {
 
         expect(screen.getByTestId('add-modal')).toHaveAttribute('data-mode', 'destination');
     });
+
+    /**
+     * Content must start where the project dashboard's does.
+     *
+     * This surface is one click from that dashboard, and the two disagreed about
+     * where content begins — the dashboard anchors left, this one centred inside
+     * the shared 960px band, so moving between them shifted everything sideways.
+     *
+     * The anchor is opt-in via a root class. The stylesheet half is pinned in
+     * pageLeftAnchor.test.ts; this pins that the screen actually opts in, which
+     * jsdom CAN see.
+     */
+    it('opts into the left-anchored page layout, like the project dashboard', () => {
+        // Must settle status first — the screen renders a full-height loading
+        // gate until it arrives, and that branch has no page chrome at all.
+        const handlers = captureHandlers();
+        const { container } = render(
+            <IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />
+        );
+        settleStatus(handlers);
+
+        expect(container.querySelector('.page-left-anchored')).toBeInTheDocument();
+    });
 });

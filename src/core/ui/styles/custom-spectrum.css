@@ -2067,22 +2067,27 @@ button[class*="spectrum-Button"][disabled],
     gap: 12px !important;
 }
 
-/* Project dashboard: left-anchored single column.
+/* Left-anchored page content — opt in with `.page-left-anchored` on a screen root.
    The shared .page-container / .page-container-padded center their content
-   (margin: auto), which on a wide editor floats the whole dashboard in the
-   middle with gaps on both sides. Scoped under .dashboard-left (the screen
-   root) we drop the centering so the column hugs the left edge — consistent
-   with the wizard's left-aligned content. The full-width header/status BANDS
-   (background + border) still span edge-to-edge; only their inner content
-   left-anchors. Left padding is normalized to size-400 (32px) so the status
-   badges, org banner, action tiles, and integrations all share the project
-   title's left edge (the title sits at the PageHeader's size-400 inset). */
-.dashboard-left .page-container,
-.dashboard-left .page-container-padded {
+   (margin: auto), which on a wide editor floats a screen in the middle with gaps
+   on both sides. Opting out drops the centering so the column hugs the left edge
+   — consistent with the wizard's left-aligned content. The full-width
+   header/status BANDS (background + border) still span edge-to-edge; only their
+   inner content left-anchors. Left padding is normalized to size-400 (32px) so
+   status badges, org banner and action tiles all share the page title's left
+   edge (the title sits at the PageHeader's size-400 inset).
+
+   Was `.dashboard-left` — a name for WHICH screen rather than WHAT it does. The
+   integrations grid used to live inside the project dashboard and inherited the
+   anchor; when it moved to its own surface it silently reverted to the centered
+   default, and the two screens disagreed about where content starts. A behaviour
+   name lets the next screen opt in by saying what it wants. */
+.page-left-anchored .page-container,
+.page-left-anchored .page-container-padded {
     margin-left: 0 !important;
     margin-right: 0 !important;
 }
-.dashboard-left .page-container-padded {
+.page-left-anchored .page-container-padded {
     padding-left: var(--spectrum-global-dimension-size-400) !important;
     padding-right: var(--spectrum-global-dimension-size-400) !important;
 }

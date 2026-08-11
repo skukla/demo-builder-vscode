@@ -209,7 +209,7 @@ export function ProjectDashboardScreen({
     const isMeshActionDisabled = isTransitioning || isMeshBusy(meshStatus);
 
     return (
-        <div ref={containerRef} className="dashboard-left">
+        <div ref={containerRef} className="page-left-anchored">
             <PageLayout
                 header={
                     <PageHeader
