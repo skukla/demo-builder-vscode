@@ -1,104 +1,43 @@
 # Next session — start here
 
-Rewritten 2026-08-10 (third pass, same day). **Everything is committed AND PUSHED —
-`develop` is level with `origin/develop` at `3c8e651f`.**
-Gate at handoff: 945 suites / 12100 tests, whole-repo eslint, tsc.
+Rewritten 2026-08-11. **Everything is committed AND PUSHED — `develop` is level with
+`origin/develop` at `d33181fe`.**
+Gate at handoff: **962 suites / 12228 tests**, whole-repo eslint (0 errors, 0 warnings), tsc.
 
-**Streams A and B are both discharged.** Only the release remains.
-
----
-
-## One stream remains.
-
-| # | Stream | Working directory | Branch |
-|---|---|---|---|
-| C | Release `.127` | main checkout | `develop` → `master` |
-
-Nothing is outstanding behind it — start whenever.
+**The release is the only stream.** 27 commits landed since the last handoff; nothing
+from this session is half-finished in the tree.
 
 ---
 
-## B. Configure step rail — SHIPPED 2026-08-10, merged to develop
+## C. Release `.127` — start here
 
-Plan moved to `.rptc/complete/configure-step-rail/`. Landed as six commits on develop;
-the worktree has been removed. The Configure screen now renders the wizard's horizontal
-`StepRail` with one section on screen at a time.
+Re-verified 2026-08-11, do not assume:
 
-**What it turned up that was not in the plan:**
+- **It is `.127`, not `.128`.** `package.json` reads `1.0.0-beta.127`; the newest tag is
+  `v1.0.0-beta.126`. The bump came from the `.126` hotfix merge-back and was never cut.
+  Do not apply the usual +1.
+- **476 non-merge commits** since `v1.0.0-beta.126` (438 at the last handoff; this session
+  added 27 and the rest predate it). `.126` was a hotfix off `.125` and develop diverged,
+  so expect add-then-remove arcs — describe net shipped behaviour.
 
-- **`componentConfigs` writes were mutating the caller's object.** `{ ...prev }` clones
-  one level, and both commerce config surfaces then wrote through into the nested
-  per-component object — which on Configure is the `existingEnvValues` PROP. Three sites
-  in `useComponentConfig`, one in the new Configure hook. Now one shared immutable writer
-  (`features/components/services/componentConfigWrites.ts`). It presented as a test that
-  passed alone and failed in sequence; the shared fixture had been rewritten by an
-  earlier test.
-- **Two of the six deleted Configure hooks were STALE FORKS of live logic**, not merely
-  unused: `useFieldValidation` and `useConfigureFields` had lost the default handling and
-  the shared-component lookup. Re-extract from the live code, never revive an orphan.
-- **`getValidationState` existed three times**, one of them alive only because its own
-  test imported it. Now `core/ui/utils/validationState.ts`.
+### Three things that MUST reach the release notes
 
-**The two validators stay separate — SETTLED 2026-08-10, do not re-litigate.**
-`useComponentConfig`'s validation and Configure's `validateServiceGroups` look like one
-job. On inspection only ONE of the four apparent divergences was real:
+1. **`AI_CONTEXT_VERSION` 5 → 6.** Every existing project will flag its AI bundle stale and
+   prompt a regenerate. That is intended and unavoidable: the generated `PostToolUse`
+   git-sync hook **never fired on any project since beta.109**, and only a regenerate
+   replaces it. Users who skip the prompt keep a dead hook.
+2. **AI-authored storefront edits were never reaching GitHub.** Same defect. The hook read
+   a `$CLAUDE_TOOL_INPUT` env var Claude Code does not set, while the generated
+   `sync-changes` skill told agents the hook handled commit+push — so agents skipped
+   `sync_storefront` too. Silent at both ends. (`df4156b2`)
+3. **Republishing a storefront never cleared its "Republish needed" state on disk.** The
+   flag was set in memory and none of the five callers saved it, so reopening the dashboard
+   showed amber again after a successful republish. (`777b81a3`)
 
-| Divergence | Verdict |
-|---|---|
-| MESH_ENDPOINT: wizard filters upstream, Configure defers in the check | Same outcome, different mechanism |
-| Defaults: wizard pre-writes them, Configure accepts them in the check | Same outcome, different mechanism |
-| Configure also sweeps NON-declaring components | Real — Configure needs it (`.env` values can sit under another component id); the wizard does not |
-| Wizard used a bare truthiness check | The only defect — **fixed**, see below |
-
-So convergence would have meant giving the wizard a lookup it does not need, to erase a
-fork that was one flaw wide. The flaw was fixed on its own instead: the wizard now uses
-the shared `findFieldValue`, so a required field holding `false` or `0` reads as PRESENT
-rather than "required but missing" — an error the user could not clear, because the
-checkbox IS ticked. It was unreachable (no env var declares a boolean) but armed:
-`ConfigFieldRenderer` has a live `case 'boolean'` that writes real booleans. Pinned by
-`useComponentConfig-validation.test.ts`, whose two failing cases each have a passing
-control beside them.
-
-**The one thing that could still be wrong:** the Dev Host pass (step 05) was never
-confirmed by either of us. The build is verified — the rail is in
-`dist/webview/configure-bundle.js`, the old sidebar CSS is gone, and both CSS tokens
-landed on `.container-configure` — but nobody checked the rail's padding, the new 960px
-content cap, or the sub-1180px behaviour on screen. Branch `feature/configure-step-rail`
-is kept for that reason; `git reset --hard ca559eca` on develop reverts the lot.
-
-Also carried over: Configure's content is now capped at the canonical 960px band. Losing
-the 300px sidebar freed that width and it would otherwise all have gone into field width.
-
----
-
-## C. Release `.127`
-
-**No longer blocked** — the feature it was waiting on (stream B) has landed.
-
-- **It is `.127`, not `.128`.** `package.json` reads `1.0.0-beta.127` and no
-  `v1.0.0-beta.127` tag exists — re-verified 2026-08-10. The bump came from the `.126`
-  hotfix merge-back and was never cut. Do not apply the usual +1.
-- **438 non-merge commits** since `v1.0.0-beta.126` (counted 2026-08-10; the earlier
-  figure of 430 predated this session). `.126` was a hotfix off `.125` and develop
-  diverged, so expect add-then-remove arcs — describe net shipped behaviour. This needs
-  fresh attention, not the tail of a session.
-- **Three MCP reliability fixes from this session belong in the notes** (`409de593`,
-  `31ce91dc`, `0309abb8`). The first two are user-visible; the third is developer-facing
-  only but explains why a test run no longer kills a live MCP session.
+Items 2 and 3 are the only two commits this session that change behaviour on existing
+projects. Everything else is UI.
 
 Follow the `cut-release` skill, which also says to offer `codebase-sweep` and `dream` first.
-
-**`dream` has unusually good material.** The 2026-08-10 session produced five instances of
-one disease — *state recording intent rather than reality*: a probe reporting a prerender
-that never happened, a dashboard badge reading a persisted string, published-state
-recording what we meant to publish, a republish reporting success while publishing the
-wrong content, and a verdict asserting a cause it could not distinguish. That is a pattern
-worth naming in a skill or in CLAUDE.md.
-
-A **second** pattern earned its place during stream A: *a check whose failure is invisible
-from the side that fails*. The test suite bound the live MCP socket and killed it, and no
-test could ever have noticed — the suite passes either way. Same shape as the "nothing
-found" verifications CLAUDE.md already warns about.
 
 **Launch:**
 ```
@@ -108,86 +47,151 @@ cd /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builde
 
 ---
 
-## A. Socket TOCTOU — SHIPPED 2026-08-10, verified live
+## `dream` has a strong, single theme this time
 
-Three commits, pushed:
+**A convention recorded in prose is not a constraint.** Five instances in one session,
+each one a comment asserting something the code contradicted:
 
-| Commit | What |
-|---|---|
-| `409de593` | `removeIfStillOurs` deleted entirely — no check makes unlinking a shared pathname safe |
-| `31ce91dc` | `resolveProxyTarget` resolves by liveness first, existence only as a fallback |
-| `0309abb8` | Test suites can no longer bind the live MCP socket |
+| Where | The comment said | The code did |
+|---|---|---|
+| `--content-width` docblock | "the canonical, LEFT-ALIGNED content width" | `.page-container*` centred with auto margins |
+| Masthead badge markup | "a single horizontal row … instead of stacking" | CSS stacked them — **and I flattened the CSS to match the comment, which was the stale side** |
+| `.integration-card` | "Matched to `.project-card-spectrum`" | identical declarations, different rendered heights |
+| `formatHeaderSubtitle` | "the band is otherwise about acting on the list" | the band's left held the count, mostly empty |
+| Generated git-sync hook | "if wrong, the hook silently does nothing" | it was wrong, and it did — for two releases |
 
-**Two things turned up that no previous handoff recorded.** Both matter more than the
-original bug report did.
+The last one is the sharpest: the author predicted the failure exactly, in the file, and it
+shipped anyway. A comment that admits a risk is not a mitigation.
 
-1. **The test suite was hijacking the live socket.** `tests/extension-context.test.ts` and
-   `tests/extension-activation-navigation.test.ts` call the real `activate()`, and the
-   default projects dir hashes to the **exact** socket a running Dev Host binds — verified
-   by computing both, `135b859e0a31db31.sock` either way. So every full `npx jest` with a
-   window open renamed its own socket over yours. Same symptom as the TOCTOU, far more
-   frequent, and the previous fix did nothing against it. Now isolated via
-   `DEMO_BUILDER_MCP_SOCKET_DIR` in `tests/setup/node.ts` — **do not remove that**; the
-   failure is silent from the test's side.
-2. **The "jest worker alive 4 days" was not a live leak.** The orphan (pid 82596) started
-   Aug 5 23:15:20; commit `4a99d861`, which fixed that hang, landed 23:20:29 — five minutes
-   later. It was residue from the `--detectOpenHandles` run that produced the fix. Killed.
-   The real defect underneath it was (1).
+**Second pattern: tests that pin the implementation, so they pass whatever the behaviour.**
 
-Verified in the running app, not just in tests: two Dev Host reloads left the socket
-present and reachable (51 tools) with a negative control returning ENOENT; a full 948-suite
-run with the Dev Host live left the socket's inode and mtime unchanged; and against the
-built proxy, a dead pin with nothing live now emits guidance in **0.11s** instead of ~23s,
-while a live pin still connects `via env`.
+- Three tests asserted the hook's command string *contained*
+  `process.env.CLAUDE_TOOL_INPUT`. They pinned the bug. The extractor is now covered by
+  tests that **execute** it against a real stdin payload.
+- The integrations suite's `SearchHeader` mock rendered the filter field unconditionally,
+  so `searchThreshold` was untestable and two search tests passed regardless of it. The
+  mock now mirrors the real `totalCount > searchThreshold`.
 
-Design record: `.rptc/complete/2026-08-10-mcp-socket-existence-is-not-liveness.md`, which
-also records one claim from its own filing that turned out to be wrong.
+Both are the same shape as the "nothing found" verifications CLAUDE.md already warns about:
+a check that cannot fail for the reason you care about.
 
-**Hard constraint for anyone who touches this next:** do not reintroduce unlinking the
-shared socket name — no inode check, no lock, no sweep-at-start. Every one of those
-re-creates the same race. `InExtensionMcpServer.dispose`'s docstring explains why.
+**Third, and it is about how I worked, not the code.** Three visual judgments were wrong
+this session and **the user caught every one from a screenshot** — a status row that
+dangled off the tile grid, a per-row hint that annotated 717 rows to explain 6, and a dot I
+described in the design and then silently did not build. All three came from reasoning
+about layout from CSS without seeing the surface populated. Check a list's real cardinality
+before designing per-row anything.
 
 ---
 
-## Also outstanding, smaller
+## What landed this session (27 commits)
 
-- ~~**`demo-builder-test` mesh still runs on `base`.**~~ **RESOLVED 2026-08-10** — mesh
-  redeployed; `.env`, the recorded snapshot and the flattened configs all read
-  `citisignal_*` and the "Update available" badge cleared.
-  **The note that came with it was wrong and is worth correcting**: it said `deploy_mesh`
-  does not regenerate the `.env`, "only a Configure save does". Both mesh deploy paths DO
-  regenerate it — `appBuilderComponentRunner.ts:330` (`writeComponentEnv`, aborts on
-  failure) and `deployMeshHeadless.ts:162` (best-effort, warns and continues). The
-  best-effort arm is the plausible seed of the original observation: a silent regeneration
-  failure there leaves a stale `.env` and the deploy proceeds anyway.
-  **Still true after the fix:** `componentConfigs['eds-accs-mesh']` STILL holds the stale
-  `base`/`main_website_store`/`default` copy. Nothing authoritative reads it, but it is
-  live ammunition for the staleness order-dependence below.
-- **Missing `get_store_structure` MCP tool** — PDP handoff §3, flagged as the
-  highest-value gap. An agent debugging PDP failures cannot see that a project points at a
-  Commerce website with no products. That cost most of an afternoon.
-- **Duplicated Commerce scope still in existing manifests.** Confirmed still present on
-  `demo-builder-test` after the 2026-08-10 mesh fix. All THREE resolvers now consult
-  `BACKEND_OWNED_SCOPE_KEYS` through the shared `backendOwnedScope.ts` — the staleness
-  detector was the third and was fixed by [`mesh-staleness-scope/`](mesh-staleness-scope/)
-  step 01, so its verdict no longer turns on manifest key order. Steps 02–04 (the permanent
-  "Commerce scope" row on the mesh flyout, plus store NAMES captured at selection) shipped
-  with it; step 05 is Dev Host verification. **What remains here is the DATA MODEL**: a
-  migration dropping the duplicate copies would dissolve the whole bug class, and the
-  scope-key rule is the interim. PDP handoff §2.
-- **`pickSampleSku` reads the project manifest**, not the storefront's served
-  `config.json`. `check-sku-exists` reads the served config, which is the right source.
+Four arcs. Nothing outstanding behind any of them.
+
+### Configure field regrouping
+`e4014759` `2dff9961` `663580ba` `63bdb448` `d3c609fa` + research/plan docs
+
+API Mesh tab dropped; Commerce tab split into **Connection** and **Business Structure**;
+a real PaaS deadlock fixed (required Catalog fields sat in a step locked by a whole-form
+verdict that included those fields). The splitter's `connection` predicate is a **negation**
+(`!isStoreCodeField`), so no field can be orphaned — `ADOBE_COMMERCE_ADMIN_URL` had been
+rendering nowhere.
+
+Plan `configure-commerce-subsections/` is fully shipped and should move to
+`.rptc/complete/`. **Not moved** — housekeeping left for the release session.
+
+### Status model
+`f62059bf` `a8002632` `271157be` `88b170c8`
+
+Project cards carry **two lines, one per axis**: runtime (local dev server) and deployment
+(worst-of mesh + storefront + integrations). The per-component mesh line and integration
+count are gone — the card answers "is what is deployed current?", detail lives on the
+integrations dashboard.
+
+The dashboard's rule, documented at the top of `ActionGrid.tsx`: **environment health →
+the masthead band; artifact state → the zone that owns the part**, as a *remedy tile* (the
+button that fixes it, dotted when due, tooltip saying why). `DashboardTile` makes the
+dot/tooltip pairing structural — `status` carries both in one object, so a dot with no
+explanation is unrepresentable.
+
+`restartDemo` is new: "Restart needed" had no fix anywhere before.
+
+### The two bug fixes
+`df4156b2` `777b81a3` — see the release-notes section above.
+
+### Layout consistency
+`1feb4a85` `88b170c8` `218e768e` `8e15ac32` `1f304fa8` `d33181fe`
+
+Left-alignment is now the **default** (`.page-container*` no longer centre) rather than a
+per-screen opt-out; `.page-left-anchored` / `.dashboard-left` are deleted. Body inset moved
+16px → size-400 to line up with the page title, which had never matched on any screen that
+did not override it.
+
+Integrations now mirrors the dashboard: three-column grid, shared `--card-*` metrics, one
+add affordance (the grid tile is gone), and the filter field shows from the first item.
+
+The deploy destination left the header crumb — where the LOCAL project name and the REMOTE
+Adobe project/workspace sat in one dot-run with nothing telling them apart — and now rides
+the end of `SearchHeader`'s count row through a new `countTrailing` slot:
+
+```
+[Filter integrations…] [⟳]      [Project Dashboard] [Add integration]
+2 integrations          Deploys to Kukla Mesh · Stage  Change
+```
+
+**Three placements were tried.** Its own row at the top of the band (most prominent slot
+for the least-used fact); its own row below the count (same height for something that fits
+in space already going spare); and this. The rejections are recorded in the placement
+test's docblock so the next person does not re-run the experiment.
+
+---
+
+## Outstanding
+
+Carried forward, still true:
+
+- **`mesh-staleness-scope` step 05 — never run.** Flip `componentConfigs` key order in a
+  manifest and confirm the staleness verdict is order-independent. The only check that
+  exercises the original defect on real data; the code is committed and unit-tested. Plan
+  stays in `.rptc/plans/` for that reason.
+- **Missing `get_store_structure` MCP tool** — PDP handoff §3, still the highest-value gap.
+  An agent debugging PDP failures cannot see that a project points at a Commerce website
+  with no products.
+- **Duplicated Commerce scope still in existing manifests.** All three resolvers consult
+  `BACKEND_OWNED_SCOPE_KEYS` via `backendOwnedScope.ts`, so verdicts no longer turn on key
+  order. **What remains is the DATA MODEL** — a migration dropping the duplicate copies
+  would dissolve the bug class. PDP handoff §2.
+- **`pickSampleSku` reads the project manifest**, not the storefront's served `config.json`.
   Recorded as intended and never made.
 
+New this session:
+
+- **`.dest-context` is 12.5px — off the type scale**, which nothing else uses. Scoped to
+  12px inside the integrations destination row; the add-integration modal renders the same
+  component and still gets 12.5px. Fixing it there is a real cleanup on a surface this
+  change never looked at.
+- **`who_created: 'Demo Builder'` is dead weight** (`adobeEntityFetcher.ts:908`). Adobe
+  overwrites it with the authenticated user's IMS id — inferred from the fact that
+  Demo-Builder-created projects are deletable by their creator, not confirmed against the
+  API. Cosmetic; fold into the next edit of that file.
+  Full research: `.rptc/research/adobe-project-ownership/research.md`, which also records
+  the decision to **keep** the ownership gate rather than widen it to whatever Adobe
+  permits, and that a per-row "why can't I delete this" hint was built and rejected.
+- **Four suites flake under parallel load** — `extension-context`, both
+  `inExtensionMcpServer` suites, and `mcpConfigWriter`. All four passed in isolation and the
+  full suite passed clean on a second run. They are the slowest suites (11–13s) and bind
+  sockets, so it reads as contention, not a defect. Not investigated. Expect it in CI.
+
 ---
 
-## Read before trusting the 2026-08-10 narrative
+## Read before trusting any narrative here
 
-`.rptc/plans/pdp-prerender-validation/HANDOFF.md` **§3 lists five things stated confidently
-during that session that were wrong**, and §6 lists where to recheck the work. Error rate
-was high; every mistake was caught by a test or a control rather than by reading output.
+`.rptc/plans/pdp-prerender-validation/HANDOFF.md` §3 lists five things stated confidently
+during that session that were wrong, and §6 lists where to recheck.
 
-Stream A held to that standard deliberately: every "nothing found" result was paired with a
-positive control, and two of this session's own intermediate conclusions were wrong and
-caught that way — an `iso-dir-appeared=0` whose poll window was too short to be meaningful,
-and a claim that `mcpInspector` was misreporting when it was in fact honest.
+This session held the "positive control on every nothing-found" rule and it earned its
+keep: a `grep` that reported three skills lacking coverage they had, a zsh glob that made
+`grep` never run while printing `0 remaining`, and — this session — a claim that
+`getStorefrontStatusText` was dead when `getProjectStatusDisplay` used it, caught because
+the grep had excluded the defining file. Assume the same rate applies to anything here that
+is not marked verified.
