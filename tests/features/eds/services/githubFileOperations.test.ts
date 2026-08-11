@@ -296,6 +296,53 @@ describe('GitHub File Operations', () => {
             expect(callArgs.content).toBe(Buffer.from('File content').toString('base64'));
         });
 
+        /**
+         * A real 2026-08-11 report died with GitHub's raw text — "Repository rule
+         * violations found / Secret detected in content" — which names no file. This
+         * pipeline writes eight of them, so the reporter could not tell which was
+         * refused. The path is known right here; these pin that it reaches the message.
+         */
+        it('names the blocked file when push protection rejects the write', async () => {
+            const service = new GitHubFileOperations(mockTokenService);
+            const rejection = new Error(
+                'Repository rule violations found\n\nSecret detected in content'
+            ) as Error & { status?: number };
+            rejection.status = 422;
+            mockOctokitRequest.mockRejectedValue(rejection);
+
+            await expect(
+                service.createOrUpdateFile('owner', 'repo', 'fstab.yaml', 'body', 'msg')
+            ).rejects.toThrow(/fstab\.yaml/);
+        });
+
+        it('says nothing was written, so the repo is not assumed half-updated', async () => {
+            const service = new GitHubFileOperations(mockTokenService);
+            const rejection = new Error('Repository rule violations found') as Error & {
+                status?: number;
+            };
+            rejection.status = 422;
+            mockOctokitRequest.mockRejectedValue(rejection);
+
+            await expect(
+                service.createOrUpdateFile('owner', 'repo', 'config.json', 'body', 'msg')
+            ).rejects.toThrow(/nothing was written/i);
+        });
+
+        it('leaves an unrelated failure untouched', async () => {
+            // 422 is also a stale-SHA conflict, which has a different remedy. Relabelling
+            // it as a secret block would send the reader to the wrong place entirely.
+            const service = new GitHubFileOperations(mockTokenService);
+            const staleSha = new Error('is at abc123 but expected def456') as Error & {
+                status?: number;
+            };
+            staleSha.status = 422;
+            mockOctokitRequest.mockRejectedValue(staleSha);
+
+            await expect(
+                service.createOrUpdateFile('owner', 'repo', 'fstab.yaml', 'body', 'msg')
+            ).rejects.toThrow('is at abc123 but expected def456');
+        });
+
         it('should update existing file with SHA', async () => {
             // Given: Existing file SHA
             const service = new GitHubFileOperations(mockTokenService);

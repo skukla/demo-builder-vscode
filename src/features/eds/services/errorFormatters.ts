@@ -12,6 +12,7 @@
  */
 
 import type { EdsError, GitHubErrorCode, DaLiveErrorCode, HelixErrorCode } from './types';
+import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 
 // ==========================================================
 // GitHub Error Formatting
@@ -61,6 +62,93 @@ const GITHUB_ERROR_PATTERNS: Record<
         recoveryHint: 'If the problem persists, check GitHub status at status.github.com.',
     },
 };
+
+/**
+ * A repository ruleset rejected the write. `GH013` covers EVERY ruleset rule —
+ * push protection, file-path restrictions, file-size limits, required signatures,
+ * commit-message patterns — so this alone does NOT mean a secret was involved.
+ */
+const RULESET_REJECTION_PATTERNS = [/repository rule violations/i, /GH013/];
+
+/** The subset that means push protection specifically found a secret. */
+const SECRET_BLOCK_PATTERNS = [/secret detected in content/i, /push protection/i];
+
+/** Longest detail we quote from GitHub into a log the user may paste into a ticket. */
+const MAX_DETAIL_LENGTH = 200;
+
+/**
+ * Describe a push-protection rejection, naming the file that caused it.
+ *
+ * GitHub's own message names no file: a rejected write reads only "Repository
+ * rule violations found / Secret detected in content". The pipeline pushes eight
+ * different files, so that message cannot tell the reader which one was refused —
+ * a real 2026-08-11 report ended with the reporter asking an AI what the error
+ * meant. The path is known at the call site; this puts it in the message.
+ *
+ * Returns undefined for anything that is not a push-protection rejection. That
+ * matters more than it looks: GitHub also returns 422 for a stale-SHA conflict on
+ * update, which has an entirely different remedy, so detection keys on the message
+ * rather than the status.
+ *
+ * @param error - The error octokit raised
+ * @param path - Repo-relative path of the file being written
+ * @returns An actionable message, or undefined when this is a different failure
+ */
+/**
+ * Whether a GitHub error or git stderr is a repository-ruleset rejection.
+ *
+ * Shared by the API path ({@link describePushProtectionBlock}) and the CLI-git
+ * push path, which both have to distinguish this from an ordinary rejection —
+ * `git push` prints `! [remote rejected] … (push declined due to repository rule
+ * violations)`, which reads as a non-fast-forward unless you look for the ruleset
+ * markers first. One copy of the patterns, because two would drift.
+ *
+ * @param text - An error message or git stderr
+ * @returns True when a repository ruleset refused the write
+ */
+export function isRulesetRejection(text: string): boolean {
+    return RULESET_REJECTION_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+export function describePushProtectionBlock(error: unknown, path: string): string | undefined {
+    const message = error instanceof Error ? error.message : String(error ?? '');
+    if (!isRulesetRejection(message)) {
+        return undefined;
+    }
+
+    // GitHub names the secret type in `errors[].message` when it recognises one.
+    // Sanitized and capped: this string is GitHub-controlled, it lands in the
+    // exportable debug log verbatim, and its multi-line form would otherwise let a
+    // `\n[ERROR] …` line forge log entries. `sanitizeErrorForLogging` keeps the
+    // first line — the secret TYPE — and drops the locations block behind it.
+    const response = (error as { response?: { data?: { errors?: { message?: string }[] } } })
+        .response;
+    const rawDetail = response?.data?.errors?.find((e) => e.message)?.message;
+    const detail = rawDetail
+        ? sanitizeErrorForLogging(rawDetail).slice(0, MAX_DETAIL_LENGTH)
+        : undefined;
+
+    // Only claim "secret" when GitHub said so. A file-size or path-restriction
+    // rejection reported as a secret sends the reader hunting for one that does not
+    // exist — worse than the anonymous message this replaces, because it is
+    // confidently wrong.
+    const isSecretBlock =
+        SECRET_BLOCK_PATTERNS.some((pattern) => pattern.test(message)) ||
+        /secret/i.test(detail ?? '');
+
+    const cause = isSecretBlock
+        ? 'push protection detected a secret in the content'
+        : "the repository's rules rejected the content";
+
+    // No pointer to Security → Secret scanning: a BLOCKED push creates no alert
+    // there, so that page is empty and the reader is sent to a dead end. GitHub's
+    // own detail above is the evidence.
+    return (
+        `GitHub blocked writing ${path} — ${cause}` +
+        (detail ? `: ${detail}` : '') +
+        '. Nothing was written.'
+    );
+}
 
 /**
  * Format GitHub errors into user-friendly messages
@@ -136,8 +224,7 @@ const DALIVE_ERROR_PATTERNS: Record<
     },
     NETWORK_ERROR: {
         patterns: [/network/i, /abort/i, /timeout/i, /econnrefused/i, /fetch failed/i],
-        userMessage:
-            'Could not connect to DA.live. The connection timed out or was interrupted.',
+        userMessage: 'Could not connect to DA.live. The connection timed out or was interrupted.',
         recoveryHint:
             'Check your internet connection and try again. If the problem persists, DA.live may be temporarily unavailable.',
     },
@@ -227,8 +314,7 @@ const HELIX_ERROR_PATTERNS: Record<
         patterns: [/503/i, /service unavailable/i, /temporarily unavailable/i],
         userMessage:
             'The Helix configuration service is temporarily unavailable. Please try again in a few minutes.',
-        recoveryHint:
-            'This is usually a temporary issue. Try again in a few minutes.',
+        recoveryHint: 'This is usually a temporary issue. Try again in a few minutes.',
     },
     SYNC_TIMEOUT: {
         patterns: [/sync.*timeout/i, /timeout.*sync/i, /code.*sync/i],
@@ -244,7 +330,8 @@ const HELIX_ERROR_PATTERNS: Record<
     },
     NETWORK_ERROR: {
         patterns: [/network/i, /timeout/i, /abort/i, /econnrefused/i],
-        userMessage: 'Could not connect to the Helix service. Please check your internet connection.',
+        userMessage:
+            'Could not connect to the Helix service. Please check your internet connection.',
         recoveryHint: 'Verify your internet connection and try again.',
     },
     UNKNOWN: {

@@ -23,6 +23,7 @@
 
 import * as childProcess from 'child_process';
 import { promisify } from 'util';
+import { isRulesetRejection } from './errorFormatters';
 import { injectTokenIntoUrl } from './githubHelpers';
 import { previewAndPublishPage } from './helixApiClient';
 
@@ -228,6 +229,18 @@ async function push(storefrontPath: string, githubToken?: string): Promise<void>
         }
     } catch (err) {
         const stderr = (err as NodeJS.ErrnoException & { stderr?: string }).stderr ?? '';
+        // Checked BEFORE non-fast-forward: GitHub prints `! [remote rejected] main ->
+        // main (push declined due to repository rule violations)`, which contains
+        // "rejected" and so used to be reported as "pull and rebase, then retry" —
+        // a remedy that cannot clear a ruleset rejection, so the user loops.
+        if (isRulesetRejection(stderr)) {
+            throw new PushRejectedError(
+                "git push blocked: the repository's rules rejected it (for example push " +
+                    'protection finding a secret). Rebasing will not clear this — the content ' +
+                    'itself has to change.',
+                stderr,
+            );
+        }
         if (/non-fast-forward|rejected/i.test(stderr)) {
             throw new PushRejectedError(
                 'git push rejected: remote has new commits. Pull and rebase, then retry.',

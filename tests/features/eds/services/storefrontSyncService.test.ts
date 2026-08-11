@@ -76,6 +76,23 @@ function execImplWithPushRejected(): void {
     });
 }
 
+/** Fail `git push` with an arbitrary stderr, for rejection-classification tests. */
+function execImplWithPushStderr(stderr: string): void {
+    execFileMock.mockImplementation((cmd: string, args: string[], cb: (err: Error | null, result?: { stdout: string; stderr: string }) => void) => {
+        if (args.includes('remote') && args.includes('get-url')) {
+            cb(null, { stdout: 'https://github.com/owner/repo.git\n', stderr: '' });
+            return;
+        }
+        if (args.includes('push')) {
+            const err = new Error('Command failed') as NodeJS.ErrnoException & { stderr?: string };
+            err.stderr = stderr;
+            cb(err);
+            return;
+        }
+        cb(null, { stdout: '', stderr: '' });
+    });
+}
+
 beforeEach(() => {
     jest.clearAllMocks();
     defaultExecImpl();
@@ -127,6 +144,48 @@ describe('storefrontSyncService.syncAndPublish', () => {
             await expect(
                 syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' }),
             ).rejects.toBeInstanceOf(PushRejectedError);
+        });
+    });
+
+    describe('push blocked by a repository ruleset', () => {
+        /**
+         * GitHub prints `! [remote rejected] main -> main (push declined due to
+         * repository rule violations)` when push protection or another ruleset rule
+         * refuses the push. That contains "rejected", so the non-fast-forward branch
+         * claimed it — telling the user to pull and rebase. Rebasing cannot clear a
+         * ruleset rejection, so the advice loops them forever.
+         */
+        const RULESET_STDERR =
+            'remote: error: GH013: Repository rule violations found for refs/heads/main.\n' +
+            'remote: - Push cannot contain secrets\n' +
+            '! [remote rejected] main -> main (push declined due to repository rule violations)\n' +
+            'error: failed to push some refs';
+
+        it('does not tell the user to pull and rebase', async () => {
+            execImplWithPushStderr(RULESET_STDERR);
+
+            await expect(
+                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' }),
+            ).rejects.not.toThrow(/pull and rebase/i);
+        });
+
+        it('says the repository rules blocked the push', async () => {
+            execImplWithPushStderr(RULESET_STDERR);
+
+            await expect(
+                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' }),
+            ).rejects.toThrow(/rule/i);
+        });
+
+        it('still treats a real non-fast-forward as one', async () => {
+            // The existing behaviour must survive: this remedy IS pull-and-rebase.
+            execImplWithPushStderr(
+                '! [rejected] main -> main (non-fast-forward)\nerror: failed to push some refs',
+            );
+
+            await expect(
+                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' }),
+            ).rejects.toThrow(/pull and rebase/i);
         });
     });
 
