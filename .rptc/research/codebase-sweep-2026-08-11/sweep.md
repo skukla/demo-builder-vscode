@@ -31,11 +31,24 @@ the copies **no longer agree**.
   `codePatchSource`** — and those are load-bearing, read at
   `src/features/eds/handlers/storefrontSetupPhases.ts:282-283` to apply code patches during
   storefront setup.
-- **Failure mode** (read from code, not reproduced): `WelcomeStep`'s effect spreads
-  `...state.edsConfig` first, so it does not *drop* the two fields — it refreshes the other 14
-  from the newly-selected storefront and silently leaves those two behind. Change the demo
-  package after a stack is chosen and `codePatches`/`codePatchSource` can stay pinned to the
-  **previous** package's storefront.
+- **Failure mode — CORRECTED 2026-08-11 after the fix landed.** The first write-up here (and
+  in commit `ab198c72`) said "change the demo package after a stack is chosen". **That is
+  wrong and the scenario is unreachable:** `handlePackageSelect` sets `selectedStack:
+  undefined` in the same update (`WelcomeStep.tsx:99`), so the effect's `eds-` guard cannot
+  pass on a package change. I asserted a failure mode from reading one of the two functions
+  involved.
+
+  The reachable path is **edit**, where `useWizardState` rehydrates `selectedPackage` and
+  `selectedStack` together (`useWizardState.ts:287`). There the effect spreads
+  `...state.edsConfig`, refreshes 14 catalog-derived fields from the CURRENT
+  `demo-packages.json`, and leaves `codePatches`/`codePatchSource` at the manifest's stored
+  values. So a project created before its storefront gained a code patch picks up the new
+  `templateOwner` and `contentPatches` on edit but keeps the OLD code patches — and per
+  `demo-packages.json`, `citisignal/eds-paas` carries nine, three of which
+  (`product-teaser-*`) are the PDP link-encoding fixes.
+
+  Pinned by `WelcomeStep-edsConfigRefresh.test.tsx` (`dcfd7de1`), whose control confirms the
+  two drift tests fail when the 14-field inline object is reinstated.
 - Proposal: extract one exported `buildEdsConfigFromStorefront(storefront, prev)` and call it
   from both. The standing Rule-of-Three override applies directly — the same behaviour has
   already been changed on one surface and not the other, which is demonstrated drift, so it
