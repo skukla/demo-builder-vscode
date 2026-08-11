@@ -13,9 +13,11 @@
  * - `.mcp.json` — Claude Code project-scope config at the project root
  * - `.claude/settings.json` — PostToolUse git-sync hook for EDS projects
  *
- * Known Limitations (unverified assumptions — see [Unreleased] in CHANGELOG):
- * - PostToolUse hook env var for the modified file path is $CLAUDE_TOOL_INPUT parsed for file_path.
- *   Not verified against Claude Code hooks docs. If wrong, the hook silently does nothing.
+ * The PostToolUse hook reads the tool-call JSON on STDIN and takes
+ * `tool_input.file_path`, matching every hook in this repo's own
+ * `.claude/hooks/`. It previously read a `$CLAUDE_TOOL_INPUT` env var that
+ * Claude Code never sets, so it silently did nothing; the extractor is now
+ * pinned by tests that EXECUTE it rather than grep the command string.
  */
 
 import * as childProcess from 'child_process';
@@ -360,11 +362,20 @@ const SHELL_METACHAR_RE = /["`$;|&<>\n\r\\'*?[\](){}]/;
  * Build the shell snippet that extracts the edited file path from the
  * PostToolUse payload into `$TOOL_FILE`.
  *
- * Parses `$CLAUDE_TOOL_INPUT` with a single `node -e` invocation using the
- * already-resolved Node binary (the same one the MCP proxy depends on) — no
- * `jq`/`python3`/`grep`+`sed` cascade. The Node one-liner:
- *   - reads `process.env.CLAUDE_TOOL_INPUT` directly (defaulting to `"{}"`), so
- *     the shell never expands the env var,
+ * Reads the tool-call JSON from STDIN, which is how Claude Code delivers it.
+ * This previously read `process.env.CLAUDE_TOOL_INPUT` — an env var Claude Code
+ * does not set — so `TOOL_FILE` was always empty, the path guard never matched,
+ * and the hook silently did nothing on every EDS project ever generated. The
+ * original author flagged the assumption as unverified; it was wrong.
+ *
+ * Ground truth is this repo's own `.claude/hooks/`: all nine read stdin and take
+ * `tool_input.file_path`, and `format-on-edit.sh` is the same
+ * PostToolUse/`Edit|Write` pair as this hook.
+ *
+ * Parsed with a single `node -e` invocation using the already-resolved Node
+ * binary (the same one the MCP proxy depends on) — no `jq`/`python3`/`grep`+`sed`
+ * cascade. The Node one-liner:
+ *   - reads fd 0 to end (defaulting to `"{}"` when empty),
  *   - `JSON.parse`s it inside try/catch (parse failure ⇒ prints nothing),
  *   - recursively finds the FIRST string-valued `file_path` at any nesting depth
  *     (parity with the old `.. | .file_path` recursion; Claude passes it at
@@ -378,12 +389,11 @@ const SHELL_METACHAR_RE = /["`$;|&<>\n\r\\'*?[\](){}]/;
  */
 function buildToolFileExtraction(nodePath: string): string {
     // No single quotes anywhere in this script — it is wrapped in single quotes
-    // for the shell. Double quotes only. Reads the env var directly (no shell
-    // expansion of $CLAUDE_TOOL_INPUT), recurses for the first string file_path,
-    // and writes it with no trailing newline.
+    // for the shell. Double quotes only. Reads the payload from stdin, recurses
+    // for the first string file_path, and writes it with no trailing newline.
     const script =
         `try{` +
-        `var o=JSON.parse(process.env.CLAUDE_TOOL_INPUT||"{}");` +
+        `var o=JSON.parse(require("fs").readFileSync(0,"utf8")||"{}");` +
         `var f=function(v){` +
         `if(v&&typeof v==="object"){` +
         `if(typeof v.file_path==="string")return v.file_path;` +

@@ -37,7 +37,13 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // own Wayfinder doc router (adobe-commerce/wayfinder), pinned to a commit rather
 // than @main so upstream cannot alter a generated project's instructions without
 // our review. Re-pinning the SHA is itself a bundle change: bump this again.
-export const AI_CONTEXT_VERSION = 5;
+// v6: the generated PostToolUse git-sync hook actually FIRES. It read a
+// `$CLAUDE_TOOL_INPUT` env var Claude Code never sets, so `TOOL_FILE` was always
+// empty and the hook silently did nothing on every EDS project ever generated —
+// while sync-changes.md told the agent the hook handled commit+push, so it
+// skipped sync_storefront and AI-authored block edits never reached the live
+// site. Existing projects MUST regenerate to get a hook that works.
+export const AI_CONTEXT_VERSION = 6;
 
 /**
  * Component IDs for standardized component instance access

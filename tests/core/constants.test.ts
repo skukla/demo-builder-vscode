@@ -11,12 +11,13 @@ describe('AI_CONTEXT_VERSION', () => {
     // Pin the current bundle version. Bump this pin ONLY together with a real
     // generated-content change (see the ai-context-authoring discipline): the
     // constant re-gates every existing project for a bundle refresh.
-    // v5: AGENTS.md "Finding Adobe Documentation" — routes agents to Adobe's
-    // Wayfinder doc router, pinned to a commit. Re-pinning that SHA changes what
-    // a generated project instructs its agent to fetch, so it is a bundle change
-    // and bumps this pin again.
-    it('is 5 (Wayfinder documentation routing in AGENTS.md)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(5);
+    // v6: the PostToolUse git-sync hook actually fires. It read a
+    // `$CLAUDE_TOOL_INPUT` env var Claude Code never sets, so it silently did
+    // nothing on every EDS project ever generated — and sync-changes.md told the
+    // agent the hook covered commit+push, so it skipped sync_storefront too.
+    // Existing projects need the regenerate this bump triggers.
+    it('is 6 (working PostToolUse git-sync hook)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(6);
     });
 });
 

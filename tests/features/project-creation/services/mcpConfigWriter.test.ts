@@ -323,15 +323,74 @@ describe('generateClaudeSettings', () => {
     });
 
     describe('PostToolUse hook hardening', () => {
+        /**
+         * RUN the extractor, do not just grep it.
+         *
+         * This hook shipped reading `process.env.CLAUDE_TOOL_INPUT`, which Claude
+         * Code never sets — it delivers the tool-call JSON on stdin, as every hook
+         * in this repo's own `.claude/hooks/` does (`format-on-edit.sh` is the
+         * same PostToolUse/Edit|Write pair). So `TOOL_FILE` was always empty, the
+         * path guard never matched, and the hook silently did nothing.
+         *
+         * It survived because the tests asserted the command STRING contained the
+         * env var — pinning the bug rather than the behaviour. A containment
+         * assertion cannot tell a working extractor from a broken one; only
+         * executing it can.
+         */
+        it('EXECUTES: pulls the edited path off stdin, the way Claude Code sends it', () => {
+            const project = makeEdsProject();
+            const command =
+                generateClaudeSettings(project, NODE_PATH).hooks?.['PostToolUse']?.[0]?.hooks?.[0]
+                    ?.command ?? '';
+            const script = command.slice(
+                command.indexOf("-e '") + 4,
+                command.indexOf("'); ")
+            );
+            const payload = JSON.stringify({
+                tool_name: 'Edit',
+                tool_input: { file_path: '/demo/storefront/blocks/hero/hero.js' },
+            });
+
+            const out = require('child_process').execFileSync(
+                process.execPath,
+                ['-e', script],
+                { input: payload, encoding: 'utf8' }
+            );
+
+            expect(out).toBe('/demo/storefront/blocks/hero/hero.js');
+        });
+
+        it('EXECUTES: yields empty (and the guard skips) when there is no file_path', () => {
+            const project = makeEdsProject();
+            const command =
+                generateClaudeSettings(project, NODE_PATH).hooks?.['PostToolUse']?.[0]?.hooks?.[0]
+                    ?.command ?? '';
+            const script = command.slice(
+                command.indexOf("-e '") + 4,
+                command.indexOf("'); ")
+            );
+
+            const out = require('child_process').execFileSync(
+                process.execPath,
+                ['-e', script],
+                { input: JSON.stringify({ tool_name: 'Bash' }), encoding: 'utf8' }
+            );
+
+            expect(out).toBe('');
+        });
+
         it('extracts the tool input with a single node -e invocation (no jq/python3/grep cascade)', () => {
             const project = makeEdsProject();
             const command =
                 generateClaudeSettings(project, NODE_PATH).hooks?.['PostToolUse']?.[0]?.hooks?.[0]
                     ?.command ?? '';
 
-            // Parses via the resolved node binary, reading the env var directly.
+            // Parses via the resolved node binary, reading the payload on STDIN.
             expect(command).toContain(`TOOL_FILE=$("${NODE_PATH}" -e '`);
-            expect(command).toContain('process.env.CLAUDE_TOOL_INPUT');
+            expect(command).toContain('readFileSync(0');
+            // The env var this used to read is never set by Claude Code — see the
+            // executable test below, which is what should have caught it.
+            expect(command).not.toContain('CLAUDE_TOOL_INPUT');
             expect(command).toContain('JSON.parse');
             // Recursive first-string file_path finder (parity with old `.. | .file_path`).
             expect(command).toContain('file_path');
@@ -396,7 +455,8 @@ describe('buildHomeGitSyncCommand', () => {
     it('extracts the edited file with a single node -e invocation (no jq/python3/grep cascade)', () => {
         const command = buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH);
         expect(command).toContain(`TOOL_FILE=$("${NODE_PATH}" -e '`);
-        expect(command).toContain('process.env.CLAUDE_TOOL_INPUT');
+        expect(command).toContain('readFileSync(0');
+        expect(command).not.toContain('CLAUDE_TOOL_INPUT');
         expect(command).toContain('JSON.parse');
         expect(command).toContain('file_path');
         expect(command).toContain('TOOL_FILE=');

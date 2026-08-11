@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The AI git-sync hook now actually runs.** Every EDS project generated since
+  beta.109 shipped a `PostToolUse` hook meant to commit and push storefront edits
+  automatically. It read the edited file path from a `$CLAUDE_TOOL_INPUT`
+  environment variable that Claude Code never sets — it delivers the tool-call JSON
+  on **stdin** — so the path was always empty, the storefront guard never matched,
+  and the hook did nothing. Silently, by design: its own source noted the variable
+  name was unverified and that "if wrong, the hook silently does nothing".
+
+  The damage was not just a missing convenience. The generated `sync-changes` skill
+  told every agent the hook handled commit and push, so agents skipped
+  `sync_storefront` — AI-authored block changes stayed on disk, never reached
+  GitHub, and never published, with nothing reporting it at either end.
+
+  The extractor now reads stdin, matching every hook in this repo's own
+  `.claude/hooks/`. `AI_CONTEXT_VERSION` bumps to **6**, so existing projects flag
+  as stale and prompt a regenerate — **existing projects must regenerate to get a
+  working hook.** `sync-changes.md` now describes what the hook does and does not
+  cover (it commits and pushes; it does not publish, and it does not see edits made
+  outside the Write/Edit tools).
+
+  Flagged as **Critical (G4)** by the 2026-05-20 MCP sync-gap audit and carried
+  unfixed since. It survived because its tests asserted the command string
+  *contained* `process.env.CLAUDE_TOOL_INPUT` — pinning the bug rather than the
+  behaviour. The extractor is now pinned by tests that **execute** it.
+
 ## [1.0.0-beta.126] - 2026-08-07
 
 Released from `hotfix/beta.126-storefront-diagnostics`, branched off `.125` — none of
@@ -409,7 +436,7 @@ skip a published version.
 ### Known Limitations
 
 - **MCP config files contain machine-specific paths.** `.claude/mcp.json` and `.mcp.json` hold absolute paths to the Demo Builder MCP server binary. These files are automatically added to `.gitignore`. No credentials are written to these files — only machine paths.
-- **PostToolUse hook env var unverified.** The generated git-sync hook reads `$CLAUDE_TOOL_INPUT` for the modified file path. This variable name has not been confirmed end-to-end with Claude Code hooks. If wrong, the hook silently does nothing.
+- ~~**PostToolUse hook env var unverified.**~~ Confirmed wrong and fixed in [Unreleased] — the variable is never set, so the hook silently did nothing from this release until then.
 
 ## [1.0.0-beta.110] - 2026-04-14
 

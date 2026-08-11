@@ -442,7 +442,11 @@ config when a project is created (and on "Regenerate AI files"):
   own `node_modules` so they install even when the storefront's `npm install` can't.
 - **`.claude/settings.json`** — a `PostToolUse` git-sync hook for EDS projects
   (commit/push storefront edits the agent makes). Skipped if the path contains
-  shell metacharacters.
+  shell metacharacters. The extractor reads the tool-call JSON on **stdin** and
+  takes `tool_input.file_path`; it once read a `$CLAUDE_TOOL_INPUT` env var Claude
+  Code never sets, so the hook silently did nothing from beta.109 until the
+  AI_CONTEXT_VERSION 6 fix. It commits and pushes only — publishing is
+  `sync_content` / `sync_storefront`.
 - All three are added to the project's **`.gitignore`** — they contain
   machine-specific absolute paths and must not be committed.
 
