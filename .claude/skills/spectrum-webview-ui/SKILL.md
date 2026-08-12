@@ -62,6 +62,25 @@ Reference impl: `src/features/projects-dashboard/ui/components/ProjectActionsMen
    `within(getByTestId('spectrum-submenu'))` with no user-event. Section headings are
    `role="presentation"`, not menuitems.
 
+### `Picker` / collection children: build ONE array, never static + mapped
+A static `<Item>` beside a `{list.map(…)}` in the same children list makes React prefix the
+MAPPED items — they are a nested array, so their keys come back namespaced and the plain
+key never reaches `onSelectionChange`. Measured 2026-08-12 with `React.Children.toArray`:
+
+| children | resulting `child.key` |
+|---|---|
+| `<Item key="all"/>` then `{arr.map(…)}` | `.$all`, **`.1:$import`**, **`.1:$export`** |
+| one `.map()` over `['all','import','export']` | `.$all`, `.$import`, `.$export` |
+
+**The static item is fine; the mapped ones break** — the opposite of the intuitive reading,
+so look at the list, not at the option you hand-wrote. The repo's Spectrum mock decodes only
+`.$key` / `.key` (`tests/__mocks__/@adobe/react-spectrum.tsx` `getOriginalKey`), so
+`.1:$import` survives as the literal string `1:$import`.
+
+Fix: put every option in one array and map it once — `DatapackActivityView.tsx:132` is the
+reference. A test catches this **only if it asserts the payload** `onSelectionChange`
+received; asserting that a request merely fired passes with a mangled key.
+
 ### Layout width & box model
 - **Spectrum `Flex` caps width at ~450px** — use a plain `<div>` with flex styles for any
   full-width wizard/webview layout (root `CLAUDE.md` gotcha; see ui-patterns.md "Width Debugging").
@@ -122,6 +141,15 @@ renderer, so:
   (`--card-min-height` / `--card-min-width` / `--card-padding` / `--card-gap`, in
   `custom-spectrum.css`). A number that exists once cannot drift; a number copied twice already
   has.
+  - **Caveat — some of those numbers are READ AS TEXT by a guard, so leave them literal.**
+    `tests/features/dashboard/ui/components/integrations/integrationsGridLayout.test.ts`
+    parses px out of the stylesheet SOURCE (`minmax(\d+px`, `gap:\s*\d+px`) because jsdom
+    resolves no layout and a rendering test would pass either way. Lifting `.projects-grid` /
+    `.integrations-grid` track and gap values into a `var()` moves the number out of the rule
+    and the suite fails — including its positive control asserting `.projects-grid` still
+    matches `minmax(240px, 1fr)`. It fails LOUDLY, which is the design; **the fix is to keep
+    the literal, never to loosen the guard to accept `var()`.** Attempted and reverted
+    2026-08-12. Before deduplicating any CSS number, grep `tests/` for the selector.
 - **Check a list's real cardinality before designing per-row anything.** A per-row hint built to
   explain 6 rows annotated all 717, and was reverted.
 
