@@ -258,3 +258,40 @@ describe('describeRejectionDiagnostics — real push-protection body', () => {
         expect(out).toContain('Repository rule violations found');
     });
 });
+
+/**
+ * The headline message is what lands on `[Storefront Setup] Failed: …` and is the
+ * first line anyone reads. It took its detail from `errors[]`, which GitHub does
+ * not populate for push protection, so it named the file but not the secret.
+ */
+describe('describePushProtectionBlock — names the secret from the real body', () => {
+    function realBody(): Error {
+        const err = new Error(
+            'Repository rule violations found\n\nSecret detected in content\n'
+        ) as Error & { status?: number; response?: unknown };
+        err.status = 409;
+        err.response = {
+            data: {
+                message: 'Repository rule violations found\n\nSecret detected in content\n',
+                metadata: {
+                    secret_scanning: {
+                        bypass_placeholders: [
+                            { placeholder_id: 'ABC123', token_type: 'SLACK_WEBHOOK' },
+                        ],
+                    },
+                },
+            },
+        };
+        return err;
+    }
+
+    it('puts the token_type in the headline, not only the debug block', () => {
+        expect(describePushProtectionBlock(realBody(), 'fstab.yaml')).toContain('SLACK_WEBHOOK');
+    });
+
+    it('still names the file and states nothing was written', () => {
+        const out = describePushProtectionBlock(realBody(), 'fstab.yaml');
+        expect(out).toContain('fstab.yaml');
+        expect(out).toMatch(/nothing was written/i);
+    });
+});

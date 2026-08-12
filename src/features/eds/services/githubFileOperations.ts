@@ -164,7 +164,7 @@ export class GitHubFileOperations {
                 // it comes from policy on the reporting user's account — so what
                 // GitHub said here is the only evidence that will ever exist.
                 const detail = describeRejectionDiagnostics(error);
-                if (detail) this.logger.error(`[GitHub] ${detail}`);
+                if (detail) this.logger.debug(`[GitHub] ${detail}`);
                 throw new Error(blocked);
             }
             throw error;
@@ -443,7 +443,7 @@ export class GitHubFileOperations {
             const blocked = describePushProtectionBlock(error, `commit ${sha.slice(0, 7)}`);
             if (blocked) {
                 const detail = describeRejectionDiagnostics(error);
-                if (detail) this.logger.error(`[GitHub] ${detail}`);
+                if (detail) this.logger.debug(`[GitHub] ${detail}`);
                 throw new Error(blocked);
             }
             throw error;

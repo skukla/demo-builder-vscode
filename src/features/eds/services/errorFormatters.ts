@@ -234,9 +234,14 @@ export function describePushProtectionBlock(error: unknown, path: string): strin
     // exportable debug log verbatim, and its multi-line form would otherwise let a
     // `\n[ERROR] …` line forge log entries. `sanitizeErrorForLogging` keeps the
     // first line — the secret TYPE — and drops the locations block behind it.
-    const response = (error as { response?: { data?: { errors?: { message?: string }[] } } })
-        .response;
-    const rawDetail = response?.data?.errors?.find((e) => e.message)?.message;
+    const data = (error as GitHubRejection).response?.data;
+    // `bypass_placeholders[].token_type` FIRST — that is where push protection puts
+    // the secret type. `errors[]` is the fallback for other repository-rule types;
+    // reading only it named the file but never the secret, which is most of the
+    // value on the one line a reader actually sees.
+    const rawDetail =
+        data?.metadata?.secret_scanning?.bypass_placeholders?.find((p) => p?.token_type)
+            ?.token_type ?? data?.errors?.find((e) => e.message)?.message;
     const detail = rawDetail
         ? sanitizeErrorForLogging(rawDetail).slice(0, MAX_DETAIL_LENGTH)
         : undefined;

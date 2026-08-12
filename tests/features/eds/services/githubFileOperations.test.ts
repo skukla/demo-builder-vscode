@@ -352,7 +352,9 @@ describe('GitHub File Operations', () => {
                 service.createOrUpdateFile('owner', 'repo', 'fstab.yaml', 'body', 'msg')
             ).rejects.toThrow(/fstab\.yaml/);
 
-            const logged = logger.error.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+            // Debug channel only: User Logs keeps the clean headline, which already
+            // names the secret. debugLogger.ts:100-104 defines that split.
+            const logged = logger.debug.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
             expect(logged).toContain('Adobe Client Secret');
             expect(logged).toContain('REQ:9');
             expect(logged).toContain('422');
