@@ -25,51 +25,12 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "Bash|Edit|Write|WebFetch|WebSearch|mcp__adobe-exl__.*|mcp__fluffyjaws__.*|mcp__helix-mcp-server__aem-docs-search|mcp__MCP_DOCKER__fetch|mcp__MCP_DOCKER__resolve-library-id|mcp__MCP_DOCKER__get-library-docs|mcp__MCP_DOCKER__perplexity_.*",
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/jest-pipe-guard.sh\"",
-            "statusMessage": "jest pipe guard"
-          }
-        ]
-      },
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/webview-test-skill-router.sh\"",
-            "statusMessage": "webview-test skill router"
-          }
-        ]
-      },
-      {
-        "matcher": "Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/reuse-first-router.sh\"",
-            "statusMessage": "reuse-first router"
-          }
-        ]
-      },
-      {
-        "matcher": "mcp__adobe-exl__.*|mcp__fluffyjaws__.*|mcp__helix-mcp-server__aem-docs-search|mcp__MCP_DOCKER__fetch|mcp__MCP_DOCKER__resolve-library-id|mcp__MCP_DOCKER__get-library-docs|mcp__MCP_DOCKER__perplexity_.*|WebFetch|WebSearch",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/adobe-docs-skill-router.sh\"",
-            "statusMessage": "adobe-docs skill router"
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/data-installer-probe-router.sh\""
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/router.sh\"",
+            "statusMessage": "hook router"
           }
         ]
       }

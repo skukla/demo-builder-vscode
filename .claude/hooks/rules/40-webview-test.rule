@@ -1,0 +1,26 @@
+# Routes React+Spectrum webview test authoring to its skill.
+rule_id=webview-test-skill
+rule_once=1
+
+rule_match() {
+    case "$1" in
+        Edit|Write) ;;
+        *) return 1 ;;
+    esac
+    [ -n "$3" ] || return 1
+    case "$3" in
+        */tests/*/ui/*.test.tsx|*/tests/*/ui/*.testUtils.tsx) return 0 ;;
+        */tests/webview-ui/*.test.tsx) return 0 ;;
+    esac
+    return 1
+}
+
+rule_message() {
+    cat <<'MSG'
+Before writing/fixing a React+Spectrum webview test, invoke the `webview-test-authoring`
+skill (Skill tool, skill: "webview-test-authoring"). It carries the traps this stack hits
+that the docs do not: the Spectrum mock preamble, the fake-timer userEvent contract,
+hoist-safe .testUtils extraction, querying div-role cards, and the mocked-vs-bundled-JSON
+trap. Then retry this edit — this hook fires only once per session.
+MSG
+}

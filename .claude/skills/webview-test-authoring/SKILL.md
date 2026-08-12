@@ -22,7 +22,7 @@ for the traps.
 ## Non-negotiables
 
 - **Never pipe jest through `tail`/`head`/`grep`** — output buffering makes it look hung.
-  Redirect to a file and read that. A PreToolUse hook blocks it (`.claude/hooks/jest-pipe-guard.sh`).
+  Redirect to a file and read that. A PreToolUse hook blocks it (`.claude/hooks/rules/10-jest-pipe.rule`).
 - The react project is jsdom + `tests/setup/react.ts`, which calls `jest.useFakeTimers()`
   (line 49). Everything below follows from that.
 

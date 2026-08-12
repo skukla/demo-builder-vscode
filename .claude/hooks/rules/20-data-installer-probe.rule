@@ -1,0 +1,54 @@
+# Routes hand-probing of the Data Installer API to the drift checker.
+#
+# Why: on 2026-08-12 a session hand-curled the service to answer a "blocking
+# spike", read a stage database as a specification, and turned five junk rows into
+# a documented contract — for a conclusion that was already the safe default. The
+# instruction against it already existed in prose and lost to a competing line in
+# the same file.
+#
+# Known gap: `curl "$BASE/logs"` alone matches nothing here. Widening to `logs`
+# would fire on half the shell commands in this repo, which is how a hook gets
+# switched off. Partial coverage that stays trusted beats total coverage that does not.
+rule_id=di-probe
+rule_once=1
+
+rule_match() {
+    [ "$1" = "Bash" ] || return 1
+    case "$2" in
+        *dataInstallerDrift*|*data-installer:drift*) return 1 ;;
+    esac
+    case "$2" in
+        *curl*|*wget*|*httpie*) ;;
+        *) return 1 ;;
+    esac
+    # Match the ACTION, not the host: the host is usually in a shell variable.
+    case "$2" in
+        *datapack*|*data-installer*|*datainstallerapi*) return 0 ;;
+    esac
+    return 1
+}
+
+rule_message() {
+    cat <<'MSG'
+You are about to hand-probe the Data Installer API.
+
+If the question is "does the live service still match what we recorded?", the
+answer is `npm run data-installer:drift`. It checks six read endpoints against the
+committed fixtures, reports what moved, and — unlike a hand-rolled curl — treats a
+404/401/unparseable body as a FAILURE rather than printing something that reads
+like a clean result.
+
+If the question is anything else, read `docs/systems/data-installer.md` first. The
+contract is already recorded there and in `dataInstallerParsers.ts`, which is the
+only module allowed to see a wire shape.
+
+Two things that a hand probe has repeatedly got wrong here:
+  - Stage data is NOT a specification. Junk rows in a stage database say what has
+    been written, not what is allowed.
+  - Runtime routes on the LAST path segment, so a guessed action name returns a
+    bare 404 that parses as an empty result.
+
+Proceed if you have a reason the checker cannot serve — Stage 2's write endpoints
+are deliberately outside it. This fires only once per session.
+MSG
+}

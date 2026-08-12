@@ -107,7 +107,7 @@ distinct, so it gets its own once-per-session landing and loads this skill too.
 
 ## Enforcement
 
-`.claude/hooks/adobe-docs-skill-router.sh` (PreToolUse) blocks the first doc-lookup tool
+`.claude/hooks/rules/50-adobe-docs.rule` (PreToolUse) blocks the first doc-lookup tool
 call of a session — any of the routes above, plus WebFetch/WebSearch — until this skill is
 loaded. It fires once per session. A skill description cannot cover this case: by the time
 you reach for a doc tool you have already chosen the source, and the choice IS the thing

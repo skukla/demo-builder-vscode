@@ -1,0 +1,22 @@
+# Blocks piping jest through tail/head/grep.
+#
+# NOT once-per-session, unlike every other rule here: this is a hard stop on a
+# mechanical mistake, not a nudge toward a skill. Making it spendable by doing it
+# twice would defeat it.
+#
+# Why: jest writes massive output and tail/head/grep buffer ALL of it until the
+# process exits, so the run looks hung for minutes. Rule lives in tests/README.md.
+rule_id=jest-pipe
+rule_once=0
+
+rule_match() {
+    [ "$1" = "Bash" ] || return 1
+    printf '%s' "$2" | grep -qE '(^|[[:space:]/])jest[[:space:]][^|;]*\|[[:space:]]*(tail|head|grep)([[:space:]]|$)'
+}
+
+rule_message() {
+    cat <<'MSG'
+Blocked: never pipe jest through tail/head/grep — output buffering makes the run look hung.
+Instead redirect to a file and read it: npx jest --no-coverage <pattern> > /tmp/jest-output.txt 2>&1
+MSG
+}

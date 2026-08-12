@@ -8,7 +8,7 @@
 #
 # Why a hook and not a skill: the scans are pull-only and depend on someone
 # remembering to look, which is the failure this repo already named in
-# reuse-first-router.sh. On 2026-08-05 a doc claimed the AI surface's "Refresh"
+# rules/30-reuse-first.rule. On 2026-08-05 a doc claimed the AI surface's "Refresh"
 # action called `inspect-mcp`; there is no Refresh action, and that stale sentence
 # was the strongest argument for KEEPING dead code. Docs that lie outlive the code
 # they describe.

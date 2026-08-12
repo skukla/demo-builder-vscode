@@ -1,0 +1,30 @@
+# Routes documentation lookups to the skill that picks the right source.
+#
+# Matches on TOOL NAME rather than on any payload field — the only rule here that does.
+rule_id=adobe-docs
+rule_once=1
+
+rule_match() {
+    case "$1" in
+        mcp__adobe-exl__*) return 0 ;;
+        mcp__fluffyjaws__*documentation_search) return 0 ;;
+        mcp__helix-mcp-server__aem-docs-search) return 0 ;;
+        mcp__MCP_DOCKER__fetch) return 0 ;;
+        mcp__MCP_DOCKER__resolve-library-id|mcp__MCP_DOCKER__get-library-docs) return 0 ;;
+        mcp__MCP_DOCKER__perplexity_*) return 0 ;;
+        WebFetch|WebSearch) return 0 ;;
+    esac
+    return 1
+}
+
+rule_message() {
+    cat <<'MSG'
+You are about to look something up. Invoke the `adobe-docs-lookup` skill (Skill
+tool, skill: "adobe-docs-lookup") first, then retry this call.
+
+The five doc sources cover DIFFERENT corpora and choosing wrong returns confident,
+plausible, off-target results rather than an error. In particular: App Builder
+concept docs live on developer.adobe.com, which NEITHER adobe-exl NOR fluffyjaws
+indexes. This hook fires only once per session.
+MSG
+}
