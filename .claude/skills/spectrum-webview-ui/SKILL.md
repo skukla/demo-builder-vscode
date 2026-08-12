@@ -64,8 +64,8 @@ Reference impl: `src/features/projects-dashboard/ui/components/ProjectActionsMen
 
 ### `Picker` / collection children: build ONE array, never static + mapped
 A static `<Item>` beside a `{list.map(…)}` in the same children list makes React prefix the
-MAPPED items — they are a nested array, so their keys come back namespaced and the plain
-key never reaches `onSelectionChange`. Measured 2026-08-12 with `React.Children.toArray`:
+MAPPED items — they are a nested array, so their keys come back namespaced rather than as the
+plain key you wrote. Measured 2026-08-12 with `React.Children.toArray`:
 
 | children | resulting `child.key` |
 |---|---|
@@ -77,9 +77,15 @@ so look at the list, not at the option you hand-wrote. The repo's Spectrum mock 
 `.$key` / `.key` (`tests/__mocks__/@adobe/react-spectrum.tsx` `getOriginalKey`), so
 `.1:$import` survives as the literal string `1:$import`.
 
-Fix: put every option in one array and map it once — `DatapackActivityView.tsx:132` is the
-reference. A test catches this **only if it asserts the payload** `onSelectionChange`
-received; asserting that a request merely fired passes with a mangled key.
+**Scope of the evidence — do not overstate it.** React's namespacing and the mock's decoder
+are both measured above. Whether the REAL `@adobe/react-spectrum` collection builder mangles
+keys the same way is **unverified**; the only observed breakage was through the mock. So a
+mixed children list is a guaranteed TEST failure and a suspected runtime one. If you hit an
+empty/garbled key at runtime, treat this as a lead, not a diagnosis.
+
+Fix either way: put every option in one array and map it once — `DatapackActivityView.tsx`'s
+`MODE_OPTIONS` is the reference. A test catches this **only if it asserts the payload**
+`onSelectionChange` received; asserting that a request merely fired passes with a mangled key.
 
 ### Layout width & box model
 - **Spectrum `Flex` caps width at ~450px** — use a plain `<div>` with flex styles for any
