@@ -131,6 +131,27 @@ lint and `tsc` but not jest, because CSS "usually has no tests" — this project
 
 ## Open bug: GitHub blocks a storefront write — MECHANISM known, TRIGGER not
 
+> **2026-08-12 — the reporter is UNBLOCKED, and the trigger is still unknown.** On
+> `v1.0.0-beta.128` they re-ran Storefront Setup against the same repo and it succeeded.
+> **`.128` cannot be the reason.** The whole `.127..128` write-path diff
+> (`githubFileOperations.ts`, `storefrontSyncService.ts`) is error text, debug logging and
+> reformatting — same bytes, same endpoints — so nothing shipped changed what gets pushed.
+> Something on their side changed between the failure and the success.
+>
+> **Leading hypothesis, unfalsifiable from here:** the CLI probe commands they were given
+> pushed the storefront content by hand and succeeded, so the extension's later write had
+> no new content for push protection to scan. Testing that needs their account, not this
+> machine — do not present it as the cause.
+>
+> **The one experiment that would still close this** is a run against a **brand-new empty
+> repo** on their account (wizard → Storefront → **New**, let the extension create it). A
+> failure there is a live reproduction on the only account that has ever shown one, and
+> `.128` now logs the file and `token_type`. A success means the original failure was tied
+> to state on that one repo. Instructions were sent 2026-08-12; **result not yet in.**
+>
+> If they never run it, this closes by attrition: `.128` is in every beta user's hands, so
+> the next occurrence arrives with the file name and secret type attached.
+
 Reported 2026-08-11 by a colleague (`jogosset`). Storefront Setup dies with GitHub's raw
 text — "Repository rule violations found / Secret detected in content" — naming no file.
 Reproduced on two of their repos (`brookshires-bgc`, `test`); the reporter had to ask an AI
@@ -196,14 +217,16 @@ endpoint requires. Both are logged now. Also fixed: the CLI-git path matched
 repository rule violations)` and advised "pull and rebase, then retry" — which can never
 clear a ruleset rejection and loops the user.
 
-**To close this, two facts are needed from the reporter — nothing else:**
+**What was asked of the reporter, and what came back:**
 
-1. Is **"Push protection for yourself"** enabled at github.com/settings/security_analysis?
-2. The output of a CLI push, which is far more verbose than the REST error and names the
-   secret type, file, line and unblock URL:
-   `git clone … && echo x >> README.md && git commit -am probe && git push`
+| Asked | Result |
+|---|---|
+| Is **"Push protection for yourself"** enabled at github.com/settings/security_analysis? | **Never answered.** (The screenshot in that exchange was the maintainer's OWN account — enabled — not theirs. Do not read it as their setting.) |
+| CLI push probe: `git clone … && echo x >> README.md && git commit -am probe && git push` | **Succeeded.** Verbose CLI output would have named the secret, file, line and unblock URL — but there was nothing to name. |
+| Retry Storefront Setup on `.128` and send Debug Logs | **Retry succeeded; logs never sent.** No `[GitHub] GitHub rejection detail:` block exists, because nothing was rejected. |
 
-Or simply have them retry on a build containing `466bf140` and send the Debug Logs.
+So the two most informative probes both came back green, which is itself the finding: by
+the time anyone measured, the block was gone. Nothing was captured from the failing state.
 
 **Known gap, deliberately not fixed:** every Contents write after `fstab.yaml` —
 `delayed.js`, `head.html`, `404.html`, `scripts.js`, `quick-edit.js`, block code patches —
