@@ -1,8 +1,16 @@
 /**
- * Drawer — the dashboard's hand-rolled right-panel primitive (integrations
- * grid, Step 3). Presentation-agnostic: hosts whatever children the caller
- * renders (the integration detail drawer is its one consumer today;
- * promote to core at the second consumer).
+ * Drawer — a hand-rolled right-panel primitive. Presentation-agnostic: hosts
+ * whatever children the caller renders.
+ *
+ * Promoted here from `features/dashboard/ui/components/integrations/` when the
+ * Data Installer detail pane became its second consumer, which is the trigger
+ * its previous docstring named. Behaviour-preserving move: the integrations
+ * suites passed unedited across it.
+ *
+ * Its CSS lives in the "Integrations grid + drawer" section of
+ * custom-spectrum.css. The classes (`db-drawer`, `db-drawer-scrim`) were already
+ * generically named, so nothing moved with it — only that section comment is now
+ * narrower than its contents.
  *
  * Why not Spectrum Tray: it's mobile-only and unmocked in the test stack.
  * Instead: an always-mounted plain-div scrim + panel pair whose `.open`
@@ -19,7 +27,7 @@
  *   - minimal Tab wrap (Tab on last focusable → first; Shift+Tab on first →
  *     last) — deliberately NOT react-aria FocusScope (transitive dep; YAGNI)
  *
- * @module features/dashboard/ui/components/integrations/Drawer
+ * @module core/ui/components/ui/Drawer
  */
 
 import React, { useEffect, useRef } from 'react';

@@ -16,7 +16,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { Drawer } from '@/features/dashboard/ui/components/integrations/Drawer';
+import { Drawer } from '@/core/ui/components/ui/Drawer';
 import '@testing-library/jest-dom';
 
 function renderDrawer(isOpen: boolean) {

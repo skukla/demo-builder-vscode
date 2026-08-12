@@ -25,6 +25,7 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | A menu row's icon | `renderMenuIcon('<concept>')` | importing a Spectrum icon per menu |
 | Rename in place | `forms/InlineRenameField` | a bespoke pencil + TextField |
 | Any modal | `ui/Modal` | `DialogContainer` assembled by hand |
+| Slide-in right panel for detail beside a list or grid | `ui/Drawer` | Spectrum `Tray` (mobile-only, unmocked in the test stack) or a bespoke scrim + panel |
 | Page shell (header, back, footer) | `layout/PageLayout` + `PageHeader` + `PageFooter` | a bespoke page div |
 | Two-column / grid / sidebar layout | `layout/TwoColumnLayout`, `GridLayout`, `ContentWithSidebar` | raw flex (see the 450px trap) |
 | Search box over a list | `navigation/SearchHeader` / `SearchableList` | a TextField + filter |
