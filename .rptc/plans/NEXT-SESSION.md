@@ -1,8 +1,11 @@
 # Next session — start here
 
 Rewritten 2026-08-11 (second session that day, after a history rewrite). **Everything is
-committed AND PUSHED.** `develop` is level with `origin/develop` at `12f4b802`. Still on
+committed AND PUSHED.** `develop` is level with `origin/develop` at `b0455aac`. Still on
 `v1.0.0-beta.127` — no release was cut this session.
+
+> A second session has also been pushing to `develop`. The tip moved between two of this
+> session's own pushes, so treat any SHA below as "at time of writing" and check `git log`.
 
 Gate at handoff: **969 suites / 12301 tests**, `tsc --noEmit` clean, whole-repo eslint
 0 errors 0 warnings.
@@ -123,6 +126,69 @@ fixed. Hence the explicit `SECRET_ENV_KEYS` list in `envVarKeys.ts`.
 pinned, so it is red in isolation; `8f43b206` fixes it. Cause: the CSS change was checked with
 lint and `tsc` but not jest, because CSS "usually has no tests" — this project tests CSS rules.
 **Run jest for CSS changes.**
+
+---
+
+## Open bug: GitHub blocks a storefront write — cause NOT identified
+
+Reported 2026-08-11 by a colleague (`jogosset`). Storefront Setup dies with GitHub's raw
+text — "Repository rule violations found / Secret detected in content" — naming no file.
+Reproduced on two of their repos (`brookshires-bgc`, `test`); the reporter had to ask an AI
+what the error meant.
+
+**What was established** (traced through code + their full log):
+
+- The rejected call is the **`fstab.yaml` Contents API PUT**. Phase 1 ends at the LKG pin;
+  Phase 2's first action is that push; its success line is absent; it is the only post-reset
+  Contents PUT **not** wrapped in a catch, which is why setup aborts there. `pushed_at` on
+  their repo equals the tree push exactly — nothing after it landed.
+- The 3345-file template push **succeeds** (Git Data API) moments earlier.
+- `fstab.yaml` is two lines (`mountpoints:` + a `content.da.live/<org>/<site>/` URL). It
+  contains nothing a scanner would flag. **That contradiction is still unexplained.**
+
+**Three reproduction attempts FAILED — do not repeat them:**
+
+| Attempt | Result |
+|---|---|
+| Innocent Contents write to `skukla/demo-builder-test` (public, same template content, `secret_scanning_push_protection: enabled`) | **Accepted** |
+| Contents write of a fake `ghp_` token to a throwaway public repo | **Accepted** (GitHub PATs carry a checksum; random strings fail it) |
+| Contents write of a real generated RSA private key to the same repo | **Accepted** |
+
+Scans of `adobe-commerce/boilerplate-b2b-template@041462d` (3344 files) and
+`skukla/eds-demo-patches@main` found **no** high-confidence partner-pattern secret. The
+template does carry credential-shaped values (a 35-char `MAGENTO_API_KEY` in
+`cypress/src/tests/b2c/verifyAemAssets.spec.js`, 32-char hex keys in the cypress configs),
+but those are present in `demo-builder-test` too, which accepts writes fine.
+
+**Conclusion: the block is policy on the reporter's account or Adobe's enterprise** —
+custom secret-scanning patterns or an org ruleset — not this codebase and not the template.
+Note `gh api repos/jogosset/test/rules/branches/main` returned `[]`, but on a repo you do
+not own that may mean "not visible" rather than "none"; do not lean on it.
+
+**What shipped** (`69047776`, `b0455aac`): the write paths now name the blocked file, and
+the FULL GitHub response body — status, `x-github-request-id`, `data.message`,
+`documentation_url`, every `errors[]` entry — is sanitized, capped, and written to the debug
+log. Also fixed: the CLI-git path matched `/non-fast-forward|rejected/i` against GitHub's
+`! [remote rejected] … (push declined due to repository rule violations)` and told users to
+"pull and rebase, then retry" — advice that can never clear a ruleset rejection and loops
+them indefinitely.
+
+**To actually find the cause, cheapest first:**
+
+1. Have the reporter run a CLI `git push` on the repo (`git clone … && echo x >> README.md
+   && git commit -am probe && git push`). GitHub's git-side rejection is far more verbose
+   than the REST one: it names the secret type, file, line, and an unblock URL.
+2. Or have them retry setup on a build containing `b0455aac` and send the Debug Logs.
+
+**To unblock them immediately, independent of diagnosis:** make the repo private (push
+protection on private repos needs Advanced Security), or use the unblock link in GitHub's
+rejection.
+
+**Known gap, deliberately not fixed:** every Contents write after `fstab.yaml` —
+`delayed.js`, `head.html`, `404.html`, `scripts.js`, `quick-edit.js`, block code patches —
+is wrapped in a catch and only warns. If `fstab.yaml` were made non-fatal or moved to the
+Git Data API, setup would report success while silently shipping a storefront with no
+smart-404 handler, no Quick Edit and no code patches. **Do not "fix" it that way.**
 
 ---
 
