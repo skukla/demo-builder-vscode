@@ -58,16 +58,39 @@ surfaces render: catalog, detail flyout, installed, activity.
 Get both before writing any Stage 2 code. They are cheap, and either can invalidate the
 design.
 
-### 1. The instance-id spike (blocking)
+### 1. The instance-id spike (blocking) — now TWO questions
 
 Does the Data Installer's `commerce_instance` equal the tenant id from
 `ACCS_ENDPOINT_PATTERN` group 2 (`src/features/components/services/envVarHelpers.ts`)?
-Shapes match — 21–22 char base62 — but this is **unverified**.
+The plan says the shapes match — 21–22 char base62 — but this is **unverified**.
 
 It matters because **importing into the wrong instance writes sample data into someone's
-live demo**. Either way the plan's answer is a user-editable field pre-filled with the
-derived value; if the derivation is wrong, the prefill is actively harmful rather than
-merely unhelpful.
+live demo**. Either way the answer is a user-editable field pre-filled with the derived
+value; if the derivation is wrong, the prefill is actively harmful rather than merely
+unhelpful.
+
+**A second question was folded in on 2026-08-12: is the field even ONE shape?** The plan
+recorded "an ACCS instance id in every real record, never a REST URL". The captured
+fixture contradicts it — `get-installed-datapacks.json` holds 30 scrubbed ids
+(`instance-NN`) and **5 scrubbed URLs** (`https://datapack-accs.test`, on `carvello`,
+`citisignal_original`, `frescopa`, `grocery`, `venia`). The scrub was done by hand and
+preserved shape, so the originals most likely differed the same way — but they are
+unrecoverable, so that is inference. If instead the scrub invented a shape, the fixture
+misrepresents the API, which is its own problem.
+
+**The fixtures cannot settle either question** — the real values are gone. It needs a live
+read:
+
+1. `list_installed_datapacks` (the MCP tool, or the panel's Installed view) against the
+   live service, and note the raw `commerce_instance` values and their shapes.
+2. For a project whose backend is ACCS, read its endpoint and take
+   `ACCS_ENDPOINT_PATTERN` group 2.
+3. Compare. Equal → prefill is safe. Different → prefill is a footgun and the field starts
+   empty. Mixed shapes → Stage 2 handles both, whatever the comparison says.
+
+This is a live call against another team's stage service, so it needs the user present —
+and anything written up from it follows the public-repo rule below (strip instance ids,
+activation ids, endpoints; keep the finding).
 
 ### 2. A question for the service owner (blocking, and cheaper than testing)
 

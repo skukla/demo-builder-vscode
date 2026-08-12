@@ -81,7 +81,12 @@ healthbeauty, luma, venia, wecafe, wknd). The rest is developer scratch. Default
   `luma`, `venia`) ship only `eds-compatible` + `hold`.
 - **15 of 23 curated entries have an empty `cover_image`** but all have a `thumbnail_image`,
   so a card's fallback chain is the common path.
-- `commerce_instance` in every real record is an **ACCS instance id**, never a REST URL.
+- `commerce_instance` — **this claim is CONTRADICTED by the fixture and is now unresolved.**
+  It read "an ACCS instance id in every real record, never a REST URL". But
+  `get-installed-datapacks.json` holds 30 scrubbed ids (`instance-NN`) and **5 scrubbed
+  URLs** (`https://datapack-accs.test`). The hand scrub preserved shape, so the originals
+  most likely differed the same way — unrecoverable either way. Stage 2 must handle both
+  shapes, and the live check below should settle it.
 - The brands do **not** map 1:1 onto `demo-packages.json` — `citisignal` corresponds to
   *two* packs; `isle5` and `buildright` to none. Any suggestion feature needs an explicit
   table, never a name match.

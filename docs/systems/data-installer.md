@@ -72,8 +72,18 @@ type.
 - **A pack can declare a data type the service holds no item for.** The declared
   count alone would misstate what installing gets you, which is why the detail
   handler pairs the metadata with a batch item lookup.
-- **`commerce_instance` in every real record is an ACCS instance id**, never a
-  REST URL. There is nothing to link.
+- **`commerce_instance` carries TWO shapes, and the contract is unresolved.** The
+  plan recorded it as "an ACCS instance id in every real record, never a REST
+  URL"; the captured fixture contradicts that. In
+  `tests/fixtures/data-installer/get-installed-datapacks.json`, 30 of 35 rows
+  hold a scrubbed id (`instance-NN`) and **5 hold a scrubbed URL**
+  (`https://datapack-accs.test`, on `carvello`, `citisignal_original`,
+  `frescopa`, `grocery`, `venia`). The scrub was done by hand and preserved
+  shape, so the likeliest reading is that the originals differed the same way —
+  but the real values are unrecoverable, so this is inference, not proof. The
+  alternative is that sanitization invented a shape, which would mean the fixture
+  misrepresents the API. **Either way, nothing downstream may assume one shape.**
+  The UI renders the value verbatim, which is correct under both readings.
 - **Import-capable ≠ export-capable.** The import processor order contains
   `product_export`, `customers_export` and `giftcards`, which the export list
   lacks. Ask per mode; never cache one "all types" answer.
