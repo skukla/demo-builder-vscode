@@ -136,18 +136,74 @@ const MAX_DIAGNOSTIC_LENGTH = 1200;
  * @param error - The error octokit raised
  * @returns A multi-line diagnostic block, or '' when there is nothing to add
  */
-export function describeRejectionDiagnostics(error: unknown): string {
-    const err = error as {
-        status?: number;
-        response?: {
-            headers?: Record<string, string>;
-            data?: {
-                message?: string;
-                documentation_url?: string;
-                errors?: { resource?: string; message?: string }[];
+/** The parts of a GitHub error response this module reads. */
+interface GitHubRejection {
+    status?: number;
+    response?: {
+        headers?: Record<string, string>;
+        data?: {
+            message?: string;
+            documentation_url?: string;
+            errors?: { resource?: string; message?: string }[];
+            /**
+             * Where push protection ACTUALLY puts the useful fields. Captured
+             * 2026-08-11 by reproducing a block on a throwaway repo; the first
+             * version of this code read `errors[]`, which GitHub does not populate
+             * for push protection, so it logged the generic message and dropped the
+             * only two facts that identify the secret.
+             */
+            metadata?: {
+                secret_scanning?: {
+                    bypass_placeholders?: { placeholder_id?: string; token_type?: string }[];
+                };
             };
         };
-    } | null;
+    };
+}
+
+type Cleaner = (value: unknown) => string;
+
+/**
+ * The two facts that identify the secret: `token_type` names it (e.g.
+ * SLACK_WEBHOOK) and `placeholder_id` is what the "Create a push protection
+ * bypass" endpoint requires. Both live here and nowhere else in the payload.
+ */
+function describeDetectedSecrets(
+    data: NonNullable<NonNullable<GitHubRejection['response']>['data']>,
+    clean: Cleaner,
+): string[] {
+    const out: string[] = [];
+    for (const ph of data.metadata?.secret_scanning?.bypass_placeholders ?? []) {
+        const type = clean(ph?.token_type);
+        const id = clean(ph?.placeholder_id);
+        if (type || id) {
+            out.push(`  detected: ${type || 'unknown type'}${id ? ` (bypass id ${id})` : ''}`);
+        }
+    }
+    return out;
+}
+
+/**
+ * EVERY `errors[]` entry — the first is often a generic summary and the
+ * informative one sits behind it. Empty for push protection; populated for other
+ * repository-rule types.
+ */
+function describeRuleErrors(
+    data: NonNullable<NonNullable<GitHubRejection['response']>['data']>,
+    clean: Cleaner,
+): string[] {
+    const out: string[] = [];
+    for (const [i, entry] of (data.errors ?? []).entries()) {
+        const detail = clean(entry?.message);
+        if (detail) {
+            out.push(`  errors[${i}]${entry?.resource ? ` (${entry.resource})` : ''}: ${detail}`);
+        }
+    }
+    return out;
+}
+
+export function describeRejectionDiagnostics(error: unknown): string {
+    const err = error as GitHubRejection | null;
     const data = err?.response?.data;
     if (!data) return '';
 
@@ -161,13 +217,7 @@ export function describeRejectionDiagnostics(error: unknown): string {
     if (requestId) lines.push(`  request-id: ${clean(requestId)}`);
     if (data.message) lines.push(`  message: ${clean(data.message)}`);
     if (data.documentation_url) lines.push(`  docs: ${clean(data.documentation_url)}`);
-    // EVERY entry — the first is often a generic summary and the informative one
-    // sits behind it, which is exactly what the one-line path was missing.
-    for (const [i, entry] of (data.errors ?? []).entries()) {
-        const detail = clean(entry?.message);
-        if (detail)
-            lines.push(`  errors[${i}]${entry?.resource ? ` (${entry.resource})` : ''}: ${detail}`);
-    }
+    lines.push(...describeDetectedSecrets(data, clean), ...describeRuleErrors(data, clean));
 
     if (lines.length === 0) return '';
     return `GitHub rejection detail:\n${lines.join('\n')}`.slice(0, MAX_DIAGNOSTIC_LENGTH);

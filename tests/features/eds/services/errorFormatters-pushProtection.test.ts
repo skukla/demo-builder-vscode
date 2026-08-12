@@ -200,3 +200,61 @@ describe('describeRejectionDiagnostics', () => {
         expect(describeRejectionDiagnostics(null)).toBe('');
     });
 });
+
+/**
+ * REAL response body, captured 2026-08-11 by reproducing the block on a throwaway
+ * public repo with a synthetic Slack webhook URL. Everything before this was
+ * guessed: the first version of describeRejectionDiagnostics read `errors[]`,
+ * which GitHub does not populate for push protection. The secret type and the
+ * bypass id live under metadata.secret_scanning.bypass_placeholders[].
+ */
+describe('describeRejectionDiagnostics — real push-protection body', () => {
+    function realBody(): Error {
+        const err = new Error(
+            'Repository rule violations found\n\nSecret detected in content\n'
+        ) as Error & { status?: number; response?: unknown };
+        err.status = 409;
+        err.response = {
+            data: {
+                message: 'Repository rule violations found\n\nSecret detected in content\n',
+                metadata: {
+                    secret_scanning: {
+                        bypass_placeholders: [
+                            { placeholder_id: '3HnRVDxAJuxU4qXmB90XxgeAbPa', token_type: 'SLACK_WEBHOOK' },
+                        ],
+                    },
+                },
+                documentation_url: 'https://docs.github.com/rest/git/blobs#create-a-blob',
+            },
+        };
+        return err;
+    }
+
+    it('reports the token_type — the single fact that identifies the secret', () => {
+        expect(describeRejectionDiagnostics(realBody())).toContain('SLACK_WEBHOOK');
+    });
+
+    it('reports the placeholder_id, which the bypass endpoint requires', () => {
+        expect(describeRejectionDiagnostics(realBody())).toContain('3HnRVDxAJuxU4qXmB90XxgeAbPa');
+    });
+
+    it('reports every placeholder when GitHub returns more than one', () => {
+        const err = realBody() as Error & { response?: any };
+        err.response.data.metadata.secret_scanning.bypass_placeholders.push({
+            placeholder_id: 'SECOND',
+            token_type: 'STRIPE_API_KEY',
+        });
+
+        const out = describeRejectionDiagnostics(err);
+
+        expect(out).toContain('SLACK_WEBHOOK');
+        expect(out).toContain('STRIPE_API_KEY');
+    });
+
+    it('still reports status and message alongside them', () => {
+        const out = describeRejectionDiagnostics(realBody());
+
+        expect(out).toContain('409');
+        expect(out).toContain('Repository rule violations found');
+    });
+});
