@@ -1,0 +1,256 @@
+/**
+ * Data Installer webview/agent message handlers.
+ *
+ * Six read message types, each three lines: guard, client call, response. All the
+ * judgement lives in {@link resolveDataInstallerAccess}, so a new handler cannot
+ * accidentally skip a check.
+ *
+ * These handlers serve BOTH surfaces — the webview panel and the MCP tools — which
+ * is why the guard branches on `context.panel`. `ensureAdobeIOAuth` shows a VS Code
+ * warning notification: correct from a webview, wrong from an agent tool, where it
+ * would pop a modal on the user's window and block the tool until someone clicks.
+ * The headless branch checks authentication and hands back a `needsAuth` marker
+ * instead of prompting.
+ *
+ * @module features/data-installer/handlers/dataInstallerHandlers
+ */
+
+import { DataInstallerClient } from '../services/dataInstallerClient';
+import { isDataInstallerEnabled, resolveDataInstallerBaseUrl } from '../services/dataInstallerConfig';
+import { DataInstallerApiError, isDataInstallerAuthError } from '../services/dataInstallerErrors';
+import type { DatapackId, OperationMode } from '../types';
+import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
+import { ErrorCode } from '@/types/errorCodes';
+import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
+
+
+const LOG_PREFIX = '[Data Installer]';
+
+/** A ready client, or the response to return instead. */
+export type DataInstallerAccess =
+    | { ok: true; client: DataInstallerClient }
+    | { ok: false; response: HandlerResponse };
+
+/** Shape a guard refusal into a HandlerResponse with an actionable code. */
+function refuse(error: string, code: ErrorCode, extra: Record<string, unknown> = {}): DataInstallerAccess {
+    return { ok: false, response: { success: false, error, code, ...extra } };
+}
+
+/**
+ * Resolve an authorized client, or the reason we cannot have one.
+ *
+ * Order matters: the cheap local checks run before anything that could prompt the
+ * user or hit the network.
+ */
+export async function resolveDataInstallerAccess(
+    context: HandlerContext,
+): Promise<DataInstallerAccess> {
+    if (!isDataInstallerEnabled()) {
+        return refuse(
+            'The Data Installer is turned off. Enable demoBuilder.dataInstaller.enabled to use it.',
+            ErrorCode.INVALID_OPERATION,
+        );
+    }
+
+    const resolved = resolveDataInstallerBaseUrl();
+    if (!resolved.ok) {
+        // Fingerprint only: a rejected URL may carry a secret in its query string.
+        if (resolved.reason === 'invalid-url') {
+            context.logger.warn(
+                `${LOG_PREFIX} Ignoring invalid demoBuilder.dataInstaller.apiBaseUrl (${resolved.fingerprint ?? 'unreadable'}). Expected https://.`,
+            );
+        }
+        return refuse(
+            resolved.reason === 'not-configured'
+                ? 'No Data Installer API URL is configured. Set demoBuilder.dataInstaller.apiBaseUrl.'
+                : 'The configured Data Installer API URL is not usable. It must be an https:// URL.',
+            ErrorCode.INVALID_OPERATION,
+        );
+    }
+
+    const authManager = context.authManager;
+    if (!authManager) {
+        return refuse('Adobe sign-in is required.', ErrorCode.AUTH_REQUIRED);
+    }
+
+    const interactive = context.panel !== undefined;
+    if (interactive) {
+        const authResult = await ensureAdobeIOAuth({
+            authManager: authManager as never,
+            logger: context.logger,
+            logPrefix: LOG_PREFIX,
+            warningMessage: 'Adobe sign-in required to browse Data Installer datapacks.',
+        });
+        if (!authResult.authenticated) {
+            return refuse('Adobe sign-in is required.', ErrorCode.AUTH_REQUIRED);
+        }
+    } else if (!(await authManager.isAuthenticated())) {
+        // Agent surface: report, never prompt.
+        return refuse(
+            'Adobe sign-in required. Check get_auth_status, then sign_in(provider:"adobe") once the user agrees.',
+            ErrorCode.AUTH_REQUIRED,
+            { needsAuth: 'adobe' },
+        );
+    }
+
+    const inspection = await authManager.getTokenManager().inspectToken();
+    if (!inspection.token) {
+        context.logger.warn(
+            `${LOG_PREFIX} No IMS token available (valid=${inspection.valid}, expiresIn=${inspection.expiresIn}min).`,
+        );
+        return refuse('Could not read an Adobe IMS token. Sign in again.', ErrorCode.AUTH_REQUIRED);
+    }
+
+    return {
+        ok: true,
+        client: new DataInstallerClient({
+            baseUrl: resolved.baseUrl,
+            // A provider, not a value: tokens expire mid-session.
+            getToken: async () => (await authManager.getTokenManager().inspectToken()).token ?? '',
+            onDrift: (endpoint, missingKeys) => {
+                context.logger.warn(
+                    `${LOG_PREFIX} shape-drift ${endpoint} missing=[${missingKeys.join(', ')}]`,
+                );
+            },
+        }),
+    };
+}
+
+/** Turn a thrown error into a response the UI can act on. */
+function toFailure(error: unknown, fallback: string): HandlerResponse {
+    if (isDataInstallerAuthError(error)) {
+        return {
+            success: false,
+            error: 'Adobe sign-in is required.',
+            code: ErrorCode.AUTH_REQUIRED,
+        };
+    }
+    // UNKNOWN is the enum's documented fallback "when no specific code applies",
+    // and it maps to a Retry affordance — which is the right offer for a 5xx.
+    if (error instanceof DataInstallerApiError) {
+        return { success: false, error: error.message, code: ErrorCode.UNKNOWN };
+    }
+    return {
+        success: false,
+        error: error instanceof Error ? error.message : fallback,
+        code: ErrorCode.UNKNOWN,
+    };
+}
+
+/** Run one client call behind the guard, mapping both failure kinds. */
+async function withClient(
+    context: HandlerContext,
+    fallback: string,
+    run: (client: DataInstallerClient) => Promise<unknown>,
+): Promise<HandlerResponse> {
+    const access = await resolveDataInstallerAccess(context);
+    if (!access.ok) {
+        return access.response;
+    }
+    try {
+        return { success: true, data: await run(access.client) };
+    } catch (error) {
+        return toFailure(error, fallback);
+    }
+}
+
+/** Payload for the catalog listing. */
+interface FindDatapacksPayload {
+    search?: string;
+    includeCommunity?: boolean;
+    limit?: number;
+    skip?: number;
+}
+
+/** Payload identifying one datapack. */
+interface DatapackRefPayload {
+    datapackName?: string;
+    version?: string;
+}
+
+export const dataInstallerHandlers = defineHandlers({
+    'check-datapack-service': async (context: HandlerContext): Promise<HandlerResponse> =>
+        withClient(context, 'Could not reach the Data Installer API.', (client) => client.checkHealth()),
+
+    'find-datapacks': async (
+        context: HandlerContext,
+        payload?: FindDatapacksPayload,
+    ): Promise<HandlerResponse> =>
+        withClient(context, 'Could not list datapacks.', (client) =>
+            client.findDatapacks({
+                // Curated by default: 23 of 40 live entries are shared, and the
+                // rest is developer scratch nobody wants to browse.
+                ...(payload?.includeCommunity ? {} : { shared: true }),
+                ...(payload?.limit !== undefined ? { limit: payload.limit } : {}),
+                ...(payload?.skip !== undefined ? { skip: payload.skip } : {}),
+            }),
+        ),
+
+    'get-datapack-detail': async (
+        context: HandlerContext,
+        payload?: DatapackRefPayload,
+    ): Promise<HandlerResponse> => {
+        const id = toDatapackId(payload);
+        if (!id) {
+            return { success: false, error: 'A datapack name and version are required.' };
+        }
+        return withClient(context, 'Could not load the datapack.', async (client) => {
+            const detail = await client.getDatapackDetail(id);
+            // Explicit types only — omitting them returns a 400 from the service.
+            const inventory =
+                detail.dataTypes.length > 0
+                    ? await client.batchGetDataItems(id, detail.dataTypes)
+                    : { present: [], missing: [], presentCount: 0, missingCount: 0, requestedCount: 0 };
+            return { detail, inventory };
+        });
+    },
+
+    'list-datapack-data-types': async (
+        context: HandlerContext,
+        payload?: { operationMode?: OperationMode },
+    ): Promise<HandlerResponse> => {
+        const mode = payload?.operationMode;
+        if (!mode) {
+            return {
+                success: false,
+                // No default: the import and export sets genuinely differ, so
+                // guessing one would offer the wrong types.
+                error: 'An operation mode is required (import, export, delete or validate).',
+            };
+        }
+        return withClient(context, 'Could not list data types.', async (client) => ({
+            mode,
+            dataTypes: await client.getProcessorOrder(mode),
+            catalog: mode === 'export' ? await client.getExportDataTypes() : undefined,
+        }));
+    },
+
+    'list-installed-datapacks': async (
+        context: HandlerContext,
+        payload?: { commerceInstance?: string; datapackName?: string; limit?: number; skip?: number },
+    ): Promise<HandlerResponse> =>
+        withClient(context, 'Could not list installed datapacks.', (client) =>
+            client.getInstalledDatapacks({ ...(payload ?? {}) }),
+        ),
+
+    'get-datapack-activity': async (
+        context: HandlerContext,
+        payload?: {
+            datapackName?: string;
+            commerceInstance?: string;
+            operationMode?: OperationMode;
+            limit?: number;
+            skip?: number;
+        },
+    ): Promise<HandlerResponse> =>
+        withClient(context, 'Could not load activity.', (client) =>
+            client.getActivityLog({ ...(payload ?? {}) }),
+        ),
+});
+
+/** Build an identity from a payload, or undefined when either half is missing. */
+function toDatapackId(payload?: DatapackRefPayload): DatapackId | undefined {
+    const name = payload?.datapackName;
+    const version = payload?.version;
+    return name && version ? { name, version } : undefined;
+}

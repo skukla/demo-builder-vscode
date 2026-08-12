@@ -34,10 +34,16 @@ export function isDataInstallerEnabled(): boolean {
     return typeof raw === 'boolean' ? raw : true;
 }
 
-/** Outcome of resolving the base URL — success carries the validated value. */
+/**
+ * Outcome of resolving the base URL — success carries the validated value.
+ *
+ * A rejection carries a `fingerprint` rather than the value, so a caller can log
+ * something diagnostic without this module having to know how to phrase it, and
+ * without anyone re-reading the setting just to describe it.
+ */
 export type BaseUrlResolution =
     | { ok: true; baseUrl: string }
-    | { ok: false; reason: 'not-configured' | 'invalid-url' };
+    | { ok: false; reason: 'not-configured' | 'invalid-url'; fingerprint?: string };
 
 /**
  * Read and validate the Data Installer base URL.
@@ -62,13 +68,13 @@ export function resolveDataInstallerBaseUrl(): BaseUrlResolution {
     }
 
     if (trimmed.length > DATA_INSTALLER_MAX_URL_LENGTH) {
-        return { ok: false, reason: 'invalid-url' };
+        return { ok: false, reason: 'invalid-url', fingerprint: fingerprintUrl(trimmed) };
     }
 
     try {
         validateURL(trimmed, ['https']);
     } catch {
-        return { ok: false, reason: 'invalid-url' };
+        return { ok: false, reason: 'invalid-url', fingerprint: fingerprintUrl(trimmed) };
     }
 
     return { ok: true, baseUrl: stripTrailingSlash(trimmed) };

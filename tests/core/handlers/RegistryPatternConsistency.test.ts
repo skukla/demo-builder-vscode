@@ -17,6 +17,7 @@ import { meshHandlers } from '@/features/mesh/handlers';
 import { edsHandlers } from '@/features/eds/handlers';
 import { prerequisitesHandlers } from '@/features/prerequisites/handlers';
 import { lifecycleHandlers } from '@/features/lifecycle/handlers';
+import { dataInstallerHandlers } from '@/features/data-installer/handlers';
 
 describe('Handler Map Pattern Consistency', () => {
     const handlerMaps = [
@@ -26,6 +27,7 @@ describe('Handler Map Pattern Consistency', () => {
         { name: 'edsHandlers', handlers: edsHandlers },
         { name: 'prerequisitesHandlers', handlers: prerequisitesHandlers },
         { name: 'lifecycleHandlers', handlers: lifecycleHandlers },
+        { name: 'dataInstallerHandlers', handlers: dataInstallerHandlers },
     ];
 
     describe('Object Literal Pattern', () => {

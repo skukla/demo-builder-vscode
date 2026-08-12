@@ -75,17 +75,17 @@ describe('dataInstallerConfig', () => {
 
         it('rejects http — this is a remote service, not a local dev server', () => {
             setupConfig({ apiBaseUrl: 'http://example-namespace.adobeioruntime.net/api' });
-            expect(resolveDataInstallerBaseUrl()).toEqual({ ok: false, reason: 'invalid-url' });
+            expect(resolveDataInstallerBaseUrl()).toMatchObject({ ok: false, reason: 'invalid-url' });
         });
 
         it('rejects a URL longer than the cap', () => {
             setupConfig({ apiBaseUrl: `https://example.invalid/${'a'.repeat(DATA_INSTALLER_MAX_URL_LENGTH)}` });
-            expect(resolveDataInstallerBaseUrl()).toEqual({ ok: false, reason: 'invalid-url' });
+            expect(resolveDataInstallerBaseUrl()).toMatchObject({ ok: false, reason: 'invalid-url' });
         });
 
         it('rejects a value that is not URL-shaped', () => {
             setupConfig({ apiBaseUrl: 'not a url' });
-            expect(resolveDataInstallerBaseUrl()).toEqual({ ok: false, reason: 'invalid-url' });
+            expect(resolveDataInstallerBaseUrl()).toMatchObject({ ok: false, reason: 'invalid-url' });
         });
 
         it('reports not-configured for an empty setting', () => {
@@ -101,7 +101,19 @@ describe('dataInstallerConfig', () => {
         it('never returns a message — callers own the wording', () => {
             setupConfig({ apiBaseUrl: 'not a url' });
             const result = resolveDataInstallerBaseUrl();
-            expect(Object.keys(result).sort()).toEqual(['ok', 'reason']);
+            // `fingerprint` is diagnostic data, not prose: a caller logs it, and
+            // it exists so nobody re-reads the setting just to describe it.
+            expect(Object.keys(result).sort()).toEqual(['fingerprint', 'ok', 'reason']);
+            expect(result.ok === false && result.fingerprint).not.toContain('not a url');
+        });
+
+        it('carries a fingerprint on rejection so the raw value never needs re-reading', () => {
+            setupConfig({ apiBaseUrl: 'http://host.example.invalid/p?token=super-secret' });
+            const result = resolveDataInstallerBaseUrl();
+            expect(result.ok).toBe(false);
+            const fp = result.ok === false ? result.fingerprint : undefined;
+            expect(fp).toContain('host.example.invalid');
+            expect(fp).not.toContain('super-secret');
         });
     });
 
