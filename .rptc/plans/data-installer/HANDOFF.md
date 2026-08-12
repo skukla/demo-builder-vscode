@@ -106,14 +106,28 @@ a bare 404 that looks like an empty result if you do not check the status code.
 Anything written up from a live read follows the public-repo rule below: strip instance
 ids, activation ids and endpoints; keep the finding.
 
-### 2. A question for the service owner (blocking, and cheaper than testing)
+### 2. The service-owner ask (blocking) — DRAFTED, awaiting send
 
-What `scope` does the service's `auth/authenticate.js` send? A hardcoded `commerce.accs`
-makes the credential pair ACCS-only, and PaaS import needs a different path.
+Both open questions are now in one message, since blocker 1's remainder is cheapest to
+answer by asking rather than probing:
 
-Pair this with the two genuine server-side defects the spike found, which are still owed
-to them: the `batch-get-data-items` 400 when `data_types` is omitted, and
-`202`-before-validation on the async entry point.
+1. **What `scope` does `auth/authenticate.js` request?** A hardcoded ACCS-only scope means
+   one credential path cannot serve both backend types and Stage 2 must branch.
+2. **What populates `commerce_instance` — is it the ACCS tenant id, and is it validated or
+   free text?** The free-text half is the real question: 5 of 35 records hold a
+   non-routable placeholder URL, which suggests no validation.
+
+It also reports the two server-side defects owed to them (the `batch-get-data-items` 400
+when `data_types` is omitted, quoting the env-var error text; and `202`-before-validation
+on the async entry point, contrasted with the sync twin's 400), and offers the seven doc
+divergences if they want them.
+
+**The draft is NOT in this repo** — it names stage behaviour and is a message, not a
+project artifact. It lives in the session scratchpad; regenerate it from this section and
+`docs/systems/data-installer.md` §2 and §5 if it is gone.
+
+Nothing in Stage 2 should start until at least question 1 is answered. Question 2 has a
+safe default already recorded: the target field starts empty.
 
 Then build Stage 2 per `overview.md` — credentials in SecretStorage, the job runner, the
 import UI. The runner's rules (two status endpoints failing in opposite directions, the
