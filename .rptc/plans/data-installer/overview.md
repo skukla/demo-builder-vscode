@@ -51,9 +51,9 @@ seven places.** Fixtures captured from the real API live in
 | `overall_processsing_time` (three s's) | live uses the **normal** spelling — the typo is the DOC's |
 
 **Auth is solved.** The extension's IMS token (`aio config get
-ims.contexts.cli.access_token`, what `tokenManager.ts:113` reads) is accepted as-is. No
-dedicated client-credentials integration is needed. Verified byte-identical to the token a
-successful probe used.
+ims.contexts.cli.access_token`, what `authentication/services/tokenManager.ts` reads) is
+accepted as-is. No dedicated client-credentials integration is needed. Verified
+byte-identical to the token a successful probe used.
 
 **The two status endpoints fail in OPPOSITE directions.** Neither is sufficient alone:
 
@@ -195,13 +195,13 @@ min and the `timeout` parameter never fires. Do **not** use `usePollingWithTimeo
 consumers, restarts on every render with an un-memoized caller, and dies on the first error.
 
 **Blocking spike before any Stage 2 UI**: does `commerce_instance` equal the tenant id from
-`ACCS_ENDPOINT_PATTERN` group 2 (`components/services/envVarHelpers.ts:35`)? Shapes match
+`ACCS_ENDPOINT_PATTERN` group 2 (`components/services/envVarHelpers.ts`)? Shapes match
 (21–22 char base62) but this is **unverified**. Either way the instance id is a
 **user-editable field pre-filled with the derived value** — importing into the wrong
 instance writes sample data into someone's live demo.
 
 Reuse (confirmed with the session that built it): **skip `readStoreStructure`** (derives from
-the saved project). For PaaS, `getAdminToken` (`eds/services/commerceStoreDiscovery.ts:37`)
+the saved project). For PaaS, `getAdminToken` (`eds/services/commerceStoreDiscovery.ts`)
 **is** the credential check. For ACCS nothing local can validate the pair — which is why
 `operation_mode: 'validate'` against the Data Installer is the only real check. Reuse
 `selectDiscoveryService` rather than re-reading the setting.

@@ -125,7 +125,7 @@ describe('DatapackCard', () => {
         });
 
         // The webview CSP resolves img-src to [cspSource, https:, data:]
-        // (core/utils/getWebviewHTMLWithBundles.ts:51). An http: URL is blocked
+        // (`getWebviewHTML`'s `imgSources`). An http: URL is blocked
         // before the request, so it is dropped rather than rendered as a broken
         // image that only fixes itself via onError.
         it('skips an art URL the webview CSP cannot load', () => {

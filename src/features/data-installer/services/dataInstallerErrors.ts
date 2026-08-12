@@ -7,7 +7,7 @@
  * actually returned.
  *
  * Transport failures are classified STRUCTURALLY — by error name and instance —
- * never by looking for words in a message. `commerceStoreDiscovery.ts:245-268`
+ * never by looking for words in a message. `discoverStoreStructure`'s catch in `commerceStoreDiscovery.ts`
  * records why: substring matching collided with response bodies that happen to
  * contain "timeout" or "fetch failed", and this service's bodies are exactly
  * that kind of prose ("Collection name required. Provide <collection env var>

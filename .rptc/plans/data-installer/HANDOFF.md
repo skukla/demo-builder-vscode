@@ -61,7 +61,7 @@ design.
 ### 1. The instance-id spike (blocking)
 
 Does the Data Installer's `commerce_instance` equal the tenant id from
-`ACCS_ENDPOINT_PATTERN` group 2 (`src/features/components/services/envVarHelpers.ts:35`)?
+`ACCS_ENDPOINT_PATTERN` group 2 (`src/features/components/services/envVarHelpers.ts`)?
 Shapes match — 21–22 char base62 — but this is **unverified**.
 
 It matters because **importing into the wrong instance writes sample data into someone's

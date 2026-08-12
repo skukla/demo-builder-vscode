@@ -3,7 +3,7 @@
  *
  * The load-bearing assertion here is the anti-substring pin: transport failures
  * are classified STRUCTURALLY (error name, instanceof) and never by looking for
- * words in a message. `commerceStoreDiscovery.ts:245-268` records why — substring
+ * words in a message. `discoverStoreStructure`'s catch in `commerceStoreDiscovery.ts` records why — substring
  * matching collided with service-response bodies that happen to contain
  * "timeout" or "fetch failed", and this service's bodies are exactly that kind
  * of prose ("Collection name required. Provide <collection env var>...").

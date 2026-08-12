@@ -3,8 +3,9 @@
  *
  * A handler that RETURNS `{success:false, error, code}` does not reject: the
  * communication manager puts the whole `HandlerResponse` in the response payload
- * (`webviewCommunicationManager.ts:383`) and `webviewClient.request` only rejects
- * when the handler THROWS (`WebviewClient.ts:117`). So `useVSCodeRequest` resolves
+ * (the `sendRawMessage` that echoes the handler `result`) and
+ * `webviewClient.request` rejects only on a response carrying `message.error`,
+ * which the manager sets only when the handler THROWS. So `useVSCodeRequest` resolves
  * with the envelope and leaves `error` null — a refusal from the guard reads as a
  * success unless something unwraps it.
  *
