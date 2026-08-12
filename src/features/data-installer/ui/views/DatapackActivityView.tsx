@@ -44,9 +44,21 @@ const MODES: OperationMode[] = ['import', 'export', 'delete', 'validate'];
 /**
  * Filter options as ONE array.
  *
- * Not a static `<Item>` followed by a mapped array: React renumbers the keys of a
- * mixed children list, so the "all" key stopped surviving to `onSelectionChange`
- * and the filter sent an empty mode. One array keeps every key intact.
+ * Not a static `<Item>` followed by a mapped array. React namespaces the NESTED
+ * ARRAY, so it is the MAPPED children that come out mangled while the
+ * hand-written sibling is fine — measured with `React.Children.toArray`:
+ *
+ *   mixed:  ['.$all', '.1:$import', '.1:$export']   ← the mapped pair breaks
+ *   single: ['.$all', '.$import',   '.$export']     ← all clean
+ *
+ * The test mock's `getOriginalKey` decodes `.$key` and `.key` only, so
+ * `.1:$import` survives as the literal string `1:$import`; selecting `import`
+ * then matches no option and the change event fires with `''`. Mapping once over
+ * one array keeps every key intact.
+ *
+ * Scoped claim: this is React's key namespacing plus the MOCK's decoder, both
+ * measured. Whether real Spectrum's collection builder mangles it the same way
+ * is NOT verified — the bug was seen in tests, never at runtime.
  */
 const MODE_OPTIONS: { key: string; label: string }[] = [
     { key: ALL_MODES, label: 'All operations' },

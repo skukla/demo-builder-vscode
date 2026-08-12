@@ -40,8 +40,9 @@
  * DRY move and is the wrong one here: `integrationsGridLayout.test.ts` guards
  * these grids by parsing the px values out of the stylesheet text — jsdom
  * resolves no layout, so a rendering test cannot count columns and would pass
- * either way. A `var()` moves the number out of the rule and blinds that guard.
- * Drift is already prevented by test, which is why it does not need a token.
+ * either way. A `var()` moves the number out of the rule, and that guard then
+ * FAILS — loudly, positive control included. Keep the literal; do not loosen the
+ * test. Drift is already prevented by test, which is why this needs no token.
  *
  * The constraint those tests encode: 3 tracks + 2 gaps must fit the ~815px
  * content band, so 3*240 + 2*24 = 768. Its sibling suite extends it here.

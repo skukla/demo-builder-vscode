@@ -127,16 +127,23 @@ in the overview and in `docs/systems/data-installer.md` §5.
   ~517px each.
 - **Card-grid metrics stay LITERAL in CSS.** `integrationsGridLayout.test.ts` guards the
   grids by parsing px values out of the stylesheet text — jsdom resolves no layout, so a
-  rendering test would pass either way. Lifting them into shared custom properties blinds
-  that guard; it was tried and reverted.
+  rendering test would pass either way. Lifting them into shared custom properties **fails**
+  that guard (loudly, positive control included) rather than blinding it; it was tried and
+  reverted. The fix is to keep the literal, never to loosen the test.
 - **`searchThreshold` is not a tuning knob.** `SearchHeader` puts the count beside the
   refresh button with no field and beneath it with one, so a non-zero value changes the
   band's shape as the list crosses it. Page-level surfaces use `0`.
 - **`SearchableList` is for SELECTION**, and needs a flex parent with a resolved height.
   It is the wrong component for a read-only list on a page.
-- **A Spectrum `Picker` with a static `<Item>` before a mapped array loses keys** — React
-  renumbers a mixed children list, and the static key stopped reaching
-  `onSelectionChange`. Build one array.
+- **A Spectrum `Picker` with a static `<Item>` before a mapped array loses keys — on the
+  MAPPED items, not the static one.** React namespaces the nested array, measured with
+  `React.Children.toArray`: mixed gives `['.$all', '.1:$import', '.1:$export']`, one array
+  gives `['.$all', '.$import', '.$export']`. The mock's `getOriginalKey` decodes `.$key`
+  and `.key` only, so `.1:$import` survives as `1:$import` and selecting `import` matches
+  no option. Build one array. (A peer session corrected my first write-up of this, which
+  blamed the static option — the one element that works. Scoped claim: React's namespacing
+  and the mock's decoder are both measured; whether REAL Spectrum's collection builder
+  behaves the same is unverified — this was seen in tests, never at runtime.)
 - **`Page.skip` is not reliably echoed by the service.** Key append-vs-replace on the skip
   you REQUESTED, not on the response.
 
