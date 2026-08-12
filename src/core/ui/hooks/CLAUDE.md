@@ -49,9 +49,11 @@ This directory contains custom React hooks that extract and encapsulate reusable
 
 The hook rejects only when the request rejects, and a request rejects only when the handler
 **throws**. This project's handler convention is the opposite: guards *return*
-`{ success: false, error, code }`. `webviewCommunicationManager.ts:376-386` puts that return
-value straight into the response `payload` and sets no `error` field, so `WebviewClient`
-resolves it (`WebviewClient.ts:117-120`) and the hook reports success.
+`{ success: false, error, code }`. `WebviewCommunicationManager.handleWebviewMessage` puts
+whatever the handler RETURNED into the response `payload` and sets an `error` field only in
+its `catch` — and `WebviewClient`'s message listener (`initialize`) rejects solely when that
+`error` field is present, otherwise resolving the payload. So a refusal arrives resolved and
+the hook reports success.
 
 Consequence: **`useVSCodeRequest<SomeDomainType>` is typed on a lie.** `data` is the envelope,
 not your domain object, and `data.someField` on a refusal is `undefined` — which renders as a
@@ -59,8 +61,9 @@ default, not as an error. (2026-08-12: a connectivity line read `data.reachable`
 and showed signed-out users "Connected" for two steps.)
 
 Use `webviewClient.request<{ success: boolean; … }>` and branch on `.success` — the pattern
-already used in `features/eds` (`repoSelectionInline.helpers.tsx:53,74,80`). Reach for this
-hook only against a handler that genuinely throws on failure.
+already used in `features/eds`, where `GitHubAppCheckResult` declares `success` and
+`pollGitHubAppInstallation` checks it before reading anything else. Reach for this hook only
+against a handler that genuinely throws on failure.
 
 ### useSelectionStep
 
