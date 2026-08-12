@@ -1,13 +1,13 @@
 # Next session — start here
 
 Rewritten 2026-08-11 (second session that day, after a history rewrite). **Everything is
-committed AND PUSHED.** `develop` is level with `origin/develop` at `b0455aac`. Still on
+committed AND PUSHED.** `develop` is level with `origin/develop` at `466bf140`. Still on
 `v1.0.0-beta.127` — no release was cut this session.
 
 > A second session has also been pushing to `develop`. The tip moved between two of this
 > session's own pushes, so treat any SHA below as "at time of writing" and check `git log`.
 
-Gate at handoff: **969 suites / 12301 tests**, `tsc --noEmit` clean, whole-repo eslint
+Gate at handoff: **971 suites / 12331 tests**, `tsc --noEmit` clean, whole-repo eslint
 0 errors 0 warnings.
 
 > **History was rewritten twice this session.** Every SHA from `dda7dd93` onward is new.
@@ -129,7 +129,7 @@ lint and `tsc` but not jest, because CSS "usually has no tests" — this project
 
 ---
 
-## Open bug: GitHub blocks a storefront write — cause NOT identified
+## Open bug: GitHub blocks a storefront write — MECHANISM known, TRIGGER not
 
 Reported 2026-08-11 by a colleague (`jogosset`). Storefront Setup dies with GitHub's raw
 text — "Repository rule violations found / Secret detected in content" — naming no file.
@@ -146,43 +146,64 @@ what the error meant.
 - `fstab.yaml` is two lines (`mountpoints:` + a `content.da.live/<org>/<site>/` URL). It
   contains nothing a scanner would flag. **That contradiction is still unexplained.**
 
-**Three reproduction attempts FAILED — do not repeat them:**
+**The mechanism is now REPRODUCED and understood. The trigger is not.**
 
-| Attempt | Result |
+Reproduced on a throwaway public repo 2026-08-11: writing content containing a detectable
+secret (a synthetic Slack webhook URL) through the Contents API returns the reporter's error
+byte for byte — `Repository rule violations found` / `Secret detected in content`. So this is
+**secret scanning push protection**, surfaced through the repository-rules engine, which is
+why it speaks in ruleset language. An earlier draft of this section called it a separate
+repository ruleset; that was wrong.
+
+**Experiments run — do not repeat them:**
+
+| Experiment | Result |
 |---|---|
-| Innocent Contents write to `skukla/demo-builder-test` (public, same template content, `secret_scanning_push_protection: enabled`) | **Accepted** |
-| Contents write of a fake `ghp_` token to a throwaway public repo | **Accepted** (GitHub PATs carry a checksum; random strings fail it) |
-| Contents write of a real generated RSA private key to the same repo | **Accepted** |
+| Innocent Contents write to `skukla/demo-builder-test` (public, same template content) | **Accepted** |
+| Fake `ghp_` token via Contents API | **Accepted** — GitHub PATs carry a checksum; random strings fail it |
+| Real generated RSA private key via Contents API | **Accepted** |
+| Slack webhook / Slack bot token / `sk_live_` via Contents API | **BLOCKED** — these are reliably detectable |
+| Same Slack webhook via `POST /git/blobs` AND `POST /git/trees` | **BLOCKED** on both |
+| **Fork of the b2b template (all 3345 files), then write `fstab.yaml` exactly as the extension does** | **Accepted** |
+| Scan of `jogosset/test` current tip (public) for every pattern GitHub actually blocks | **Nothing found** |
+| Scans of `boilerplate-b2b-template@041462d` and `eds-demo-patches@main` | **Nothing found** |
 
-Scans of `adobe-commerce/boilerplate-b2b-template@041462d` (3344 files) and
-`skukla/eds-demo-patches@main` found **no** high-confidence partner-pattern secret. The
-template does carry credential-shaped values (a 35-char `MAGENTO_API_KEY` in
-`cypress/src/tests/b2c/verifyAemAssets.spec.js`, 32-char hex keys in the cypress configs),
-but those are present in `demo-builder-test` too, which accepts writes fine.
+**Two theories killed by those results.** The Git Data API does NOT escape push protection —
+`/git/trees` rejects the same content with the same message, so the extension's template push
+is scanned like any other write and nothing in this codebase routes around scanning. And the
+template content is not the trigger: a full-template repo accepts the `fstab.yaml` write.
 
-**Conclusion: the block is policy on the reporter's account or Adobe's enterprise** —
-custom secret-scanning patterns or an org ruleset — not this codebase and not the template.
-Note `gh api repos/jogosset/test/rules/branches/main` returned `[]`, but on a repo you do
-not own that may mean "not visible" rather than "none"; do not lean on it.
+**What is left.** Every variable reachable from this machine produces success. The remaining
+difference is the reporter's ACCOUNT. The most likely candidate is the per-user setting
+**"Push protection for yourself"** (github.com/settings/security_analysis), which applies to
+every repo that user writes to regardless of repo settings and is not exposed through the API
+— not even for your own account. `jogosset` is a plain personal account, NOT an Enterprise
+Managed User (no `_shortcode` suffix), so enterprise custom patterns should not apply; that
+theory is also dead.
 
-**What shipped** (`69047776`, `b0455aac`): the write paths now name the blocked file, and
-the FULL GitHub response body — status, `x-github-request-id`, `data.message`,
-`documentation_url`, every `errors[]` entry — is sanitized, capped, and written to the debug
-log. Also fixed: the CLI-git path matched `/non-fast-forward|rejected/i` against GitHub's
-`! [remote rejected] … (push declined due to repository rule violations)` and told users to
-"pull and rebase, then retry" — advice that can never clear a ruleset rejection and loops
-them indefinitely.
+**What shipped** (`69047776`, `b0455aac`, `466bf140`): the write paths name the blocked file,
+and the full response body is sanitized, capped and logged. `466bf140` matters most — the
+first version read `data.errors[]`, which GitHub does NOT populate for push protection. The
+useful fields live in `metadata.secret_scanning.bypass_placeholders[]`:
 
-**To actually find the cause, cheapest first:**
+```
+{ "placeholder_id": "...", "token_type": "SLACK_WEBHOOK" }
+```
 
-1. Have the reporter run a CLI `git push` on the repo (`git clone … && echo x >> README.md
-   && git commit -am probe && git push`). GitHub's git-side rejection is far more verbose
-   than the REST one: it names the secret type, file, line, and an unblock URL.
-2. Or have them retry setup on a build containing `b0455aac` and send the Debug Logs.
+`token_type` names the secret; `placeholder_id` is what the "Create a push protection bypass"
+endpoint requires. Both are logged now. Also fixed: the CLI-git path matched
+`/non-fast-forward|rejected/i` against GitHub's `! [remote rejected] … (push declined due to
+repository rule violations)` and advised "pull and rebase, then retry" — which can never
+clear a ruleset rejection and loops the user.
 
-**To unblock them immediately, independent of diagnosis:** make the repo private (push
-protection on private repos needs Advanced Security), or use the unblock link in GitHub's
-rejection.
+**To close this, two facts are needed from the reporter — nothing else:**
+
+1. Is **"Push protection for yourself"** enabled at github.com/settings/security_analysis?
+2. The output of a CLI push, which is far more verbose than the REST error and names the
+   secret type, file, line and unblock URL:
+   `git clone … && echo x >> README.md && git commit -am probe && git push`
+
+Or simply have them retry on a build containing `466bf140` and send the Debug Logs.
 
 **Known gap, deliberately not fixed:** every Contents write after `fstab.yaml` —
 `delayed.js`, `head.html`, `404.html`, `scripts.js`, `quick-edit.js`, block code patches —
