@@ -87,6 +87,49 @@ document.head.appendChild(__s);
 };
 
 // ---------------------------------------------------------------------------
+// Build stamp — write dist/build-info.json naming the checkout, branch, commit
+// and build time.
+//
+// Why: launch.json passes --extensionDevelopmentPath=${workspaceFolder}, so F5
+// binds the Extension Dev Host to whichever WINDOW had focus. On 2026-08-12 two
+// dist/ trees existed (main checkout + a worktree) and the Dev Host loaded the
+// other one — every change was invisible, with nothing anywhere naming the build
+// that was actually running. This stamp is what makes that answerable.
+//
+// Never fails the build: git may be absent, or this may be an archive export.
+// ---------------------------------------------------------------------------
+function gitOutput(args) {
+    try {
+        return require('child_process')
+            .execFileSync('git', args, { cwd: __dirname, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] })
+            .trim();
+    } catch {
+        return '';
+    }
+}
+
+function writeBuildInfo() {
+    try {
+        fs.mkdirSync(path.join(__dirname, 'dist'), { recursive: true });
+        const info = {
+            checkoutPath: __dirname,
+            branch: gitOutput(['rev-parse', '--abbrev-ref', 'HEAD']) || 'unknown',
+            commit: gitOutput(['rev-parse', '--short', 'HEAD']) || 'unknown',
+            dirty: gitOutput(['status', '--porcelain']).length > 0,
+            builtAt: new Date().toISOString(),
+        };
+        fs.writeFileSync(
+            path.join(__dirname, 'dist', 'build-info.json'),
+            JSON.stringify(info, null, 2) + '\n',
+        );
+        return info;
+    } catch (e) {
+        console.warn('[build] could not write build-info.json:', e.message);
+        return null;
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Create a context, run the initial build, and return it for watch mode.
 // In non-watch mode the context is built once and disposed.
 // ---------------------------------------------------------------------------
@@ -235,6 +278,10 @@ function startWatch(contexts) {
                 const result = await ctx.rebuild();
                 logOutputSizes(result.metafile);
             }
+            // Re-stamp on every rebuild: builtAt is what the staleness check
+            // compares against, so a stamp frozen at watcher start would report
+            // every later rebuild as stale.
+            writeBuildInfo();
             console.log(`[watch] rebuilt in ${Date.now() - started}ms`);
         } catch (e) {
             console.error('[watch] rebuild failed:', e.message);
@@ -283,6 +330,11 @@ async function main() {
         tasks.push(runWebviewBuild());
     }
     const contexts = (await Promise.all(tasks)).filter(Boolean);
+
+    const info = writeBuildInfo();
+    if (info) {
+        console.log(`[build] ${info.branch}@${info.commit}${info.dirty ? '+' : ''} from ${info.checkoutPath}`);
+    }
 
     if (watch) {
         startWatch(contexts);

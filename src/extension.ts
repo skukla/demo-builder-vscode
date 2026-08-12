@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { CommandManager } from '@/commands/commandManager';
 import { BaseWebviewCommand } from '@/core/base';
+import { registerBuildStamp } from '@/core/build/buildStampUi';
 import { ServiceLocator } from '@/core/di';
 import { initializeLogger, getLogger } from '@/core/logging';
 import { CommandExecutor } from '@/core/shell';
@@ -95,6 +96,11 @@ export async function activate(context: vscode.ExtensionContext) {
     logger = getLogger();
     const version = context.extension.packageJSON.version || '1.0.0';
     logger.debug(`[Extension] Adobe Demo Builder v${version} starting...`);
+
+    // Name the build BEFORE anything else can fail: with several checkouts on one
+    // machine, F5 binds to whichever window had focus, and "which dist/ is this?"
+    // is the first question worth being able to answer.
+    await registerBuildStamp(context, logger);
 
     try {
         // Initialize state manager FIRST (needed by sidebar)
