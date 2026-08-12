@@ -41,21 +41,30 @@ function ruleFor(selectorList: string): string {
 }
 
 const size = (rule: string): string =>
-    rule.match(/font-size:\s*([^;]+);/)![1].replace(/\s*!important/, '').trim();
+    rule
+        .match(/font-size:\s*([^;]+);/)![1]
+        .replace(/\s*!important/, '')
+        .trim();
 
 describe('destination row type', () => {
     it('sets the label to the count size', () => {
         expect(size(ruleFor('.page-destination-label'))).toBe('12px');
     });
 
-    it('brings the destination value onto the scale, scoped to this row', () => {
-        // 12.5px exists nowhere else in the scale.
-        expect(size(ruleFor('.page-destination-row .dest-context'))).toBe('12px');
+    it('puts the destination value on the type scale via the token', () => {
+        // Was 12.5px with a 12px override scoped to this row, because the base was
+        // off-scale and the add-integration modal renders the same component. The
+        // base is on-scale now, so both surfaces get it from one rule — and the
+        // token tracks medium/large instead of pinning a px.
+        expect(size(ruleFor('.dest-context'))).toBe(
+            'var(--spectrum-global-dimension-font-size-75)'
+        );
     });
 
-    it('leaves the shared .dest-context alone — the modal is not in scope', () => {
-        // Control: scoping means the global rule is untouched.
-        expect(size(ruleFor('.dest-context'))).toBe('12.5px');
+    it('keeps no scoped override, since there is nothing left to correct', () => {
+        // A base plus a patch for one of its two surfaces is how the modal ended up
+        // half a pixel off the page header. One rule cannot disagree with itself.
+        expect(() => ruleFor('.page-destination-row .dest-context')).toThrow(/no rule for/);
     });
 
     it('reads as a phrase, not a badge label', () => {

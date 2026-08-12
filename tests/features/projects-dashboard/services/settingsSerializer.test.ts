@@ -378,21 +378,97 @@ describe('settingsSerializer', () => {
         };
 
         it('should include extension version in source', () => {
-            const result = createExportSettings(project, '1.2.3');
+            const result = createExportSettings(project, '1.2.3', false);
 
             expect(result.source.extension).toBe('1.2.3');
-        });
-
-        it('should default includesSecrets to false', () => {
-            const result = createExportSettings(project, '1.0.0');
-
-            expect(result.includesSecrets).toBe(false);
         });
 
         it('should allow including secrets when requested', () => {
             const result = createExportSettings(project, '1.0.0', true);
 
             expect(result.includesSecrets).toBe(true);
+        });
+    });
+
+    /**
+     * The `includesSecrets` label used to be the ONLY thing the flag controlled —
+     * configs were emitted whole either way. So `includeSecrets: false` produced a
+     * file containing the admin password and stamped it `includesSecrets: false`,
+     * against an MCP description promising "a secret-free copy". These pin the
+     * label and the content agreeing.
+     */
+    describe('includeSecrets actually removes secret values', () => {
+        const withSecrets: Project = {
+            name: 'secret-test',
+            created: new Date(),
+            lastModified: new Date(),
+            path: '/path/to/project',
+            status: 'ready',
+            componentSelections: {},
+            componentConfigs: {
+                'adobe-commerce-paas': {
+                    ADOBE_COMMERCE_URL: 'https://shop.example.com',
+                    ADOBE_COMMERCE_ADMIN_USERNAME: 'admin',
+                    ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret',
+                    ADOBE_CATALOG_API_KEY: 'catalog-key-value',
+                },
+                'some-integration': {
+                    ACO_API_KEY: 'aco-key-value',
+                    EXPERIENCE_PLATFORM_API_KEY: 'ep-key-value',
+                },
+            },
+        } as unknown as Project;
+
+        it('strips every secret-valued key when includeSecrets is false', () => {
+            const result = extractSettingsFromProject(withSecrets, false);
+
+            const paas = result.configs['adobe-commerce-paas'];
+            expect(paas.ADOBE_COMMERCE_ADMIN_PASSWORD).toBeUndefined();
+            // Typed `text` in components.json, so a `type: 'password'` filter would
+            // have missed it and shipped a key in a "secret-free" file.
+            expect(paas.ADOBE_CATALOG_API_KEY).toBeUndefined();
+            const integration = result.configs['some-integration'];
+            expect(integration.ACO_API_KEY).toBeUndefined();
+            expect(integration.EXPERIENCE_PLATFORM_API_KEY).toBeUndefined();
+        });
+
+        it('keeps non-secret config so the file is still importable', () => {
+            const result = extractSettingsFromProject(withSecrets, false);
+
+            const paas = result.configs['adobe-commerce-paas'];
+            expect(paas.ADOBE_COMMERCE_URL).toBe('https://shop.example.com');
+            // A username is half a credential, not a secret — and re-import needs it.
+            expect(paas.ADOBE_COMMERCE_ADMIN_USERNAME).toBe('admin');
+        });
+
+        it('keeps secrets when includeSecrets is true (the local-backup case)', () => {
+            const result = extractSettingsFromProject(withSecrets, true);
+
+            expect(result.configs['adobe-commerce-paas'].ADOBE_COMMERCE_ADMIN_PASSWORD).toBe(
+                'fake-test-pw-not-a-secret'
+            );
+            expect(result.includesSecrets).toBe(true);
+        });
+
+        it('does not mutate the live project when stripping', () => {
+            // Callers hand this `project.componentConfigs` directly; a mutating
+            // strip would empty the running project's credentials.
+            extractSettingsFromProject(withSecrets, false);
+
+            expect(
+                withSecrets.componentConfigs?.['adobe-commerce-paas'].ADOBE_COMMERCE_ADMIN_PASSWORD
+            ).toBe('fake-test-pw-not-a-secret');
+        });
+
+        it('the label never claims secret-free while carrying a secret', () => {
+            // The invariant the defect violated, stated directly.
+            for (const flag of [true, false]) {
+                const result = extractSettingsFromProject(withSecrets, flag);
+                const hasSecret = Object.values(result.configs).some(
+                    (c) => c.ADOBE_COMMERCE_ADMIN_PASSWORD !== undefined
+                );
+                expect(hasSecret).toBe(result.includesSecrets);
+            }
         });
     });
 

@@ -40,11 +40,18 @@ import {
 } from './configGenerator';
 import { derivePrepublishUrl } from './pdp404HandlerPublisher';
 import { encodeSkuForUrl, sanitizeUrlKey } from './pdpUrlEncoding';
+import {
+    describeScope,
+    fetchServedStorefrontConfig,
+    scopesMatch,
+    type StoreScope,
+} from './servedStorefrontConfig';
 import type { EdsPipelineProgressCallback } from './types';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import { getEdsGithubRepo } from '@/types/typeGuards';
 
 /**
  * Concurrency for the bulk prepublish-pdp POST calls. Helix admin
@@ -360,6 +367,94 @@ export interface SamplePdp {
     urlKey: string;
     /** Built with the SAME helpers the storefront's `getProductLink` uses. */
     path: string;
+    /** Which config the store scope came from. `manifest` means the CDN read failed. */
+    scopeSource: 'served' | 'manifest';
+    /**
+     * Set when the served and manifest scopes disagree.
+     *
+     * Usually EXPECTED: a Configure save marks the project stale and the scopes
+     * differ until Republish. `unexpected` is the case worth acting on — the
+     * project claims `published` yet the CDN serves a different scope, meaning a
+     * publish did not take. `edsStorefrontStatusSummary` cannot see that,
+     * because it compares bookkeeping to intent and never reads the CDN.
+     */
+    scopeDivergence?: {
+        served: StoreScope;
+        manifest: StoreScope;
+        unexpected: boolean;
+    };
+}
+
+/** What {@link applyServedScope} resolved: the params to enumerate with, and why. */
+interface ScopedEnumeration {
+    params: Partial<ConfigGeneratorParams>;
+    scopeSource: 'served' | 'manifest';
+    scopeDivergence?: SamplePdp['scopeDivergence'];
+}
+
+/**
+ * Swap the manifest's store scope for the one the storefront is actually serving.
+ *
+ * The probe asks the LIVE storefront whether a PDP renders, so the sample product
+ * has to come from the scope that storefront is querying. Picking from the
+ * manifest instead is what turns a scope mismatch into a "broken storefront"
+ * verdict on a storefront that is serving its own scope correctly.
+ *
+ * Only the SCOPE is taken from the served config. The endpoint stays the
+ * manifest's: enumeration talks to Catalog Service directly, which is not
+ * necessarily what `commerce-endpoint` names.
+ *
+ * Falls back to the manifest whenever the CDN cannot be read — no answer at all
+ * is worse than one built from the project's own intent.
+ */
+async function applyServedScope(
+    project: Project,
+    params: Partial<ConfigGeneratorParams>,
+    logger: Logger,
+): Promise<ScopedEnumeration> {
+    const manifestScope: StoreScope = {
+        websiteCode: params.websiteCode,
+        storeCode: params.storeCode,
+        storeViewCode: params.storeViewCode,
+    };
+
+    const githubRepo = getEdsGithubRepo(project);
+    const [owner, repo] = (githubRepo ?? '').split('/');
+    if (!owner || !repo) {
+        return { params, scopeSource: 'manifest' };
+    }
+
+    const served = await fetchServedStorefrontConfig(owner, repo, logger);
+    if (!served) {
+        logger.debug('[Storefront Probe] Served config unreadable — sampling from the manifest');
+        return { params, scopeSource: 'manifest' };
+    }
+
+    const matched = scopesMatch(served.scope, manifestScope);
+    if (!matched) {
+        // A save-then-Republish gap makes this expected; `published` here means a
+        // publish silently did not take, which nothing else measures.
+        const unexpected = project.edsStorefrontStatusSummary === 'published';
+        const detail =
+            `[Storefront Probe] Serving ${describeScope(served.scope)}, ` +
+            `project configured for ${describeScope(manifestScope)}`;
+        if (unexpected) {
+            logger.warn(`${detail} — project reads 'published', so a publish did not take`);
+        } else {
+            logger.info(
+                `${detail} (status: ${project.edsStorefrontStatusSummary ?? 'unknown'}) — ` +
+                    'sampling from the served scope',
+            );
+        }
+
+        return {
+            params: { ...params, ...served.scope },
+            scopeSource: 'served',
+            scopeDivergence: { served: served.scope, manifest: manifestScope, unexpected },
+        };
+    }
+
+    return { params, scopeSource: 'served' };
 }
 
 /**
@@ -405,8 +500,14 @@ export async function pickSampleSku(
         return undefined;
     }
 
+    const scoped = await applyServedScope(project, params, logger);
+
     try {
-        const [first] = await enumerateAccsCatalog(params as ConfigGeneratorParams, logger, 1);
+        const [first] = await enumerateAccsCatalog(
+            scoped.params as ConfigGeneratorParams,
+            logger,
+            1,
+        );
         if (!first) {
             logger.debug('[Storefront Probe] No SKU sample — catalog returned no products');
             return undefined;
@@ -415,6 +516,8 @@ export async function pickSampleSku(
             sku: first.sku,
             urlKey: first.urlKey,
             path: `/products/${sanitizeUrlKey(first.urlKey)}/${encodeSkuForUrl(first.sku)}`,
+            scopeSource: scoped.scopeSource,
+            scopeDivergence: scoped.scopeDivergence,
         };
     } catch (error) {
         logger.debug(

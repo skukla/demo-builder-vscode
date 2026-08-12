@@ -13,6 +13,7 @@
 import type { ToolDescriptor } from './toolDescriptors';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
+import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { meshHandlers } from '@/features/mesh/handlers';
 
 export const READ_DESCRIPTORS: ToolDescriptor[] = [
@@ -44,6 +45,16 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             'add_console_apis to find the right code (e.g. for Firefly Services).',
         map: dashboardHandlers,
         type: 'listConsoleApis',
+    },
+    {
+        tool: 'get_store_structure',
+        description:
+            "The Commerce websites, store groups and store views the project's backend actually " +
+            'has, plus whether the website/store/store-view codes the project is configured for ' +
+            'resolve against them. Use when catalog or PDP pages come back empty, or before ' +
+            'trusting a configured store scope.',
+        map: edsHandlers,
+        type: 'get-store-structure',
     },
     {
         tool: 'get_project_urls',

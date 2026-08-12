@@ -1,197 +1,291 @@
 # Next session — start here
 
-Rewritten 2026-08-11. **Everything is committed AND PUSHED — `develop` is level with
-`origin/develop` at `d33181fe`.**
-Gate at handoff: **962 suites / 12228 tests**, whole-repo eslint (0 errors, 0 warnings), tsc.
+Rewritten 2026-08-11 (second session that day, after a history rewrite). **Everything is
+committed AND PUSHED.** `develop` is level with `origin/develop` at `466bf140`. Still on
+`v1.0.0-beta.127` — no release was cut this session.
 
-**The release is the only stream.** 27 commits landed since the last handoff; nothing
-from this session is half-finished in the tree.
+> A second session has also been pushing to `develop`. The tip moved between two of this
+> session's own pushes, so treat any SHA below as "at time of writing" and check `git log`.
 
----
+Gate at handoff: **971 suites / 12331 tests**, `tsc --noEmit` clean, whole-repo eslint
+0 errors 0 warnings.
 
-## C. Release `.127` — start here
-
-Re-verified 2026-08-11, do not assume:
-
-- **It is `.127`, not `.128`.** `package.json` reads `1.0.0-beta.127`; the newest tag is
-  `v1.0.0-beta.126`. The bump came from the `.126` hotfix merge-back and was never cut.
-  Do not apply the usual +1.
-- **476 non-merge commits** since `v1.0.0-beta.126` (438 at the last handoff; this session
-  added 27 and the rest predate it). `.126` was a hotfix off `.125` and develop diverged,
-  so expect add-then-remove arcs — describe net shipped behaviour.
-
-### Three things that MUST reach the release notes
-
-1. **`AI_CONTEXT_VERSION` 5 → 6.** Every existing project will flag its AI bundle stale and
-   prompt a regenerate. That is intended and unavoidable: the generated `PostToolUse`
-   git-sync hook **never fired on any project since beta.109**, and only a regenerate
-   replaces it. Users who skip the prompt keep a dead hook.
-2. **AI-authored storefront edits were never reaching GitHub.** Same defect. The hook read
-   a `$CLAUDE_TOOL_INPUT` env var Claude Code does not set, while the generated
-   `sync-changes` skill told agents the hook handled commit+push — so agents skipped
-   `sync_storefront` too. Silent at both ends. (`df4156b2`)
-3. **Republishing a storefront never cleared its "Republish needed" state on disk.** The
-   flag was set in memory and none of the five callers saved it, so reopening the dashboard
-   showed amber again after a successful republish. (`777b81a3`)
-
-Items 2 and 3 are the only two commits this session that change behaviour on existing
-projects. Everything else is UI.
-
-Follow the `cut-release` skill, which also says to offer `codebase-sweep` and `dream` first.
-
-**Launch:**
-```
-cd /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode
-/cut-release
-```
+> **History was rewritten twice this session.** Every SHA from `dda7dd93` onward is new.
+> If you are reading an older note, plan or commit message that cites `35b2b41d`,
+> `8213b829`, `dd05499b`, `e865294b`, `72fe00e2`, `15baa6d2`, `a069b792`, `99ccfc6f`,
+> `a1d7bb4b`, `00f689d6`, `5d215fdd`, `de41f9a3` or `b768472f` — those objects are gone.
+> Match on the commit SUBJECT instead.
 
 ---
 
-## `dream` has a strong, single theme this time
+## ⚠️ One thing still needs a human
 
-**A convention recorded in prose is not a constraint.** Five instances in one session,
-each one a comment asserting something the code contradicted:
+**Tell the service owner whose name was public.** A probe writeup published an internal
+Adobe colleague's name beside a defect in their own service, in this **public** repo, for
+roughly an hour. History has been rewritten and their name is gone from `develop` and from
+every local clone — but no technical step reaches whatever fetched or crawled the repo in
+that window. This is the only item with no remedy but a conversation.
 
-| Where | The comment said | The code did |
+**GitHub Support GC: not being filed.** Unreferenced objects still resolve by SHA until
+GitHub collects them. The user's call (2026-08-11) is to let natural GC handle it, which the
+conditions support: **0 forks, 0 network copies, 0 PRs** reference the commits, so nothing
+holds them alive. A Support request would buy speed, not outcome.
+
+### What the exposure was, and what was done
+
+`dda7dd93` (originally `35b2b41d`) published details of an internal Adobe service. **No
+credentials** — no tokens, keys, emails or IPs. What went out: a colleague's name, the stage
+Runtime endpoint including its namespace id, **six ACCS tenant ids plus one more in prose**,
+two activation ids, and two internal env var names.
+
+Cleaned in two passes, because **the first pass was incomplete**: it caught the name,
+endpoint and activation ids but missed a fenced code block of six tenant ids in §5. The
+method failed in a specific way worth remembering — the verification scanned for the six
+strings already identified and reported "all clear", never scanning for identifier SHAPES
+not thought of in advance. The second pass scanned structurally (fenced blocks, alnum runs
+≥12, hosts, UUIDs) and found the rest. **The redaction rule in `.rptc/CLAUDE.md` already
+named tenant ids explicitly** — the rule was written and then its own clause not applied.
+
+Prevention landed in `ea22ed5b`: the redaction rule in `.rptc/CLAUDE.md`, and `.gitignore`
+entries for raw probe captures (`**/raw/`, `*.probe.json`, `*.probe.txt`).
+
+---
+
+## Coordination: a second session is active on this repo
+
+`data-installer-integration` is building the Data Installer feature on the
+`feature/data-installer` worktree, starting Stage 1 from `12f4b802`.
+
+- Its branch was **reset onto the rewritten history** during the second rewrite. It had zero
+  commits of its own, so nothing was lost — but that is why the rewrite happened when it did.
+  Rewriting `develop` alone would have left the tenant ids on that branch, and a later merge
+  would have reintroduced them. **If you rewrite history again, rebase or recreate every
+  branch that descends from the rewritten range in the same operation.**
+- Its Stage 1 adds ~6 rows to `readDescriptors.ts`. That file has **no count pin**; only the
+  handler-map pins move.
+- **Ping before wholesale edits to `.rptc/backlog/README.md`** — both sessions write it.
+- **Do not delete `getWorkspaceCredential`.** `dead-code-scan` will surface it as an unused
+  export with zero callers. It is pre-positioned, not cruft: the pending
+  `appbuilder-deployable-model` D2 track A plan names it as the pattern to mirror for five new
+  passthroughs, and that plan's Risks section says it stays cache-bound.
+
+---
+
+## What shipped this session
+
+| Commit | What |
+|---|---|
+| `dda7dd93` | Data Installer live-API probe writeup (redacted; see above) |
+| `21838aea` | Backlog: `export_project_settings` ignores `includeSecrets` |
+| `8f3df26f` | gitignore vendor doc exports |
+| `a4b4e414` | Four off-scale font sizes → `font-size-75` token; scoped override deleted |
+| `e9275329` | Commerce store scope single-sourced (write narrowing + load migration) |
+| `e2e49c58` | Backlog: project-level facts stored per-component |
+| `8f43b206` | Test pins for `a4b4e414` — see "a commit that didn't stand alone" |
+| `63b76b63` | `diagnose-demo` skill + AGENTS.md pointer, `AI_CONTEXT_VERSION` 7 |
+| `ea22ed5b` | Redaction pass 1 + prevention rules |
+| `5fe11b01` | Handoff rewrite (superseded by this one) |
+| `ac86c45b` | Redaction pass 2 — the tenant ids (authored by the peer session) |
+| `12f4b802` | `includeSecrets` actually removes secrets |
+
+Earlier the same day, previous session: `get_store_structure` MCP tool, `who_created` write
+removal, `pickSampleSku` served-config sampling (`7ab129a2`).
+
+### `AI_CONTEXT_VERSION` is now 7 — every existing project will prompt to regenerate
+
+Intended (the new `diagnose-demo` skill only reaches projects that regenerate), but `.127` did
+the same thing and it generated support questions. **Put it in the release notes.**
+
+### Four findings worth keeping
+
+**`who_created` was NOT dead weight, in the direction that mattered.** The old handoff called
+it cosmetic. The READ side gates project deletion (`projectOwnership.ts:104` compares it to the
+token's IMS user id), and there were **three** write sites, not two. Removing the writes is
+safe — the gate only reads Adobe's response. Still unverified: whether Adobe actually
+overwrites the value. One glance at `who_created` on a freshly created project settles it.
+
+**The duplicated-scope item was unimplementable as written.** "A migration dropping the
+duplicate copies would dissolve the bug class" — a migration alone dissolves nothing, because
+the duplicates are re-created on every Configure save. The fix needed a write-side change
+first (`resolveWriteTargets`), then the migration.
+
+**`citisignal-b2b` appearing twice is NOT a bug** — closed. Those are `codePatchSource.path`
+entries pointing at the patch **ledger** in `eds-demo-patches`, kept deliberately when the
+hybrid plan repointed CitiSignal onto the B2B base. `custom` uses the sibling `b2b` ledger the
+same way.
+
+**`type: 'password'` is not a secret definition in this codebase.** Of 28 catalog env vars,
+exactly ONE is typed `password`; all three API keys are typed `text`, because `type` drives
+field RENDERING, not sensitivity. A filter on it would have stripped the admin password and
+still shipped three API keys in a file stamped `includesSecrets: false` — a bug that reads as
+fixed. Hence the explicit `SECRET_ENV_KEYS` list in `envVarKeys.ts`.
+
+### A commit that didn't stand alone
+
+`a4b4e414` (the CSS change) removed rules that two tests in `destinationRowType.test.ts`
+pinned, so it is red in isolation; `8f43b206` fixes it. Cause: the CSS change was checked with
+lint and `tsc` but not jest, because CSS "usually has no tests" — this project tests CSS rules.
+**Run jest for CSS changes.**
+
+---
+
+## Open bug: GitHub blocks a storefront write — MECHANISM known, TRIGGER not
+
+Reported 2026-08-11 by a colleague (`jogosset`). Storefront Setup dies with GitHub's raw
+text — "Repository rule violations found / Secret detected in content" — naming no file.
+Reproduced on two of their repos (`brookshires-bgc`, `test`); the reporter had to ask an AI
+what the error meant.
+
+**What was established** (traced through code + their full log):
+
+- The rejected call is the **`fstab.yaml` Contents API PUT**. Phase 1 ends at the LKG pin;
+  Phase 2's first action is that push; its success line is absent; it is the only post-reset
+  Contents PUT **not** wrapped in a catch, which is why setup aborts there. `pushed_at` on
+  their repo equals the tree push exactly — nothing after it landed.
+- The 3345-file template push **succeeds** (Git Data API) moments earlier.
+- `fstab.yaml` is two lines (`mountpoints:` + a `content.da.live/<org>/<site>/` URL). It
+  contains nothing a scanner would flag. **That contradiction is still unexplained.**
+
+**The mechanism is now REPRODUCED and understood. The trigger is not.**
+
+Reproduced on a throwaway public repo 2026-08-11: writing content containing a detectable
+secret (a synthetic Slack webhook URL) through the Contents API returns the reporter's error
+byte for byte — `Repository rule violations found` / `Secret detected in content`. So this is
+**secret scanning push protection**, surfaced through the repository-rules engine, which is
+why it speaks in ruleset language. An earlier draft of this section called it a separate
+repository ruleset; that was wrong.
+
+**Experiments run — do not repeat them:**
+
+| Experiment | Result |
+|---|---|
+| Innocent Contents write to `skukla/demo-builder-test` (public, same template content) | **Accepted** |
+| Fake `ghp_` token via Contents API | **Accepted** — GitHub PATs carry a checksum; random strings fail it |
+| Real generated RSA private key via Contents API | **Accepted** |
+| Slack webhook / Slack bot token / `sk_live_` via Contents API | **BLOCKED** — these are reliably detectable |
+| Same Slack webhook via `POST /git/blobs` AND `POST /git/trees` | **BLOCKED** on both |
+| **Fork of the b2b template (all 3345 files), then write `fstab.yaml` exactly as the extension does** | **Accepted** |
+| Scan of `jogosset/test` current tip (public) for every pattern GitHub actually blocks | **Nothing found** |
+| Scans of `boilerplate-b2b-template@041462d` and `eds-demo-patches@main` | **Nothing found** |
+
+**Two theories killed by those results.** The Git Data API does NOT escape push protection —
+`/git/trees` rejects the same content with the same message, so the extension's template push
+is scanned like any other write and nothing in this codebase routes around scanning. And the
+template content is not the trigger: a full-template repo accepts the `fstab.yaml` write.
+
+**What is left.** Every variable reachable from this machine produces success. The remaining
+difference is the reporter's ACCOUNT. The most likely candidate is the per-user setting
+**"Push protection for yourself"** (github.com/settings/security_analysis), which applies to
+every repo that user writes to regardless of repo settings and is not exposed through the API
+— not even for your own account. `jogosset` is a plain personal account, NOT an Enterprise
+Managed User (no `_shortcode` suffix), so enterprise custom patterns should not apply; that
+theory is also dead.
+
+**What shipped** (`69047776`, `b0455aac`, `466bf140`): the write paths name the blocked file,
+and the full response body is sanitized, capped and logged. `466bf140` matters most — the
+first version read `data.errors[]`, which GitHub does NOT populate for push protection. The
+useful fields live in `metadata.secret_scanning.bypass_placeholders[]`:
+
+```
+{ "placeholder_id": "...", "token_type": "SLACK_WEBHOOK" }
+```
+
+`token_type` names the secret; `placeholder_id` is what the "Create a push protection bypass"
+endpoint requires. Both are logged now. Also fixed: the CLI-git path matched
+`/non-fast-forward|rejected/i` against GitHub's `! [remote rejected] … (push declined due to
+repository rule violations)` and advised "pull and rebase, then retry" — which can never
+clear a ruleset rejection and loops the user.
+
+**To close this, two facts are needed from the reporter — nothing else:**
+
+1. Is **"Push protection for yourself"** enabled at github.com/settings/security_analysis?
+2. The output of a CLI push, which is far more verbose than the REST error and names the
+   secret type, file, line and unblock URL:
+   `git clone … && echo x >> README.md && git commit -am probe && git push`
+
+Or simply have them retry on a build containing `466bf140` and send the Debug Logs.
+
+**Known gap, deliberately not fixed:** every Contents write after `fstab.yaml` —
+`delayed.js`, `head.html`, `404.html`, `scripts.js`, `quick-edit.js`, block code patches —
+is wrapped in a catch and only warns. If `fstab.yaml` were made non-fatal or moved to the
+Git Data API, setup would report success while silently shipping a storefront with no
+smart-404 handler, no Quick Edit and no code patches. **Do not "fix" it that way.**
+
+---
+
+## Read this before trusting any claim in this file
+
+**The recurring failure this session was verifying a list you authored instead of scanning for
+what you did not think of.** Four instances, all caught by running or tracing rather than
+grepping:
+
+| Wrong claim | Why the check missed it | Caught by |
 |---|---|---|
-| `--content-width` docblock | "the canonical, LEFT-ALIGNED content width" | `.page-container*` centred with auto margins |
-| Masthead badge markup | "a single horizontal row … instead of stacking" | CSS stacked them — **and I flattened the CSS to match the comment, which was the stale side** |
-| `.integration-card` | "Matched to `.project-card-spectrum`" | identical declarations, different rendered heights |
-| `formatHeaderSubtitle` | "the band is otherwise about acting on the list" | the band's left held the count, mostly empty |
-| Generated git-sync hook | "if wrong, the hook silently does nothing" | it was wrong, and it did — for two releases |
+| "no count pin on `edsHandlers`" | the pin keys on `types`, not `edsHandlers` | running the suite |
+| "the CSS change is complete" | lint + tsc pass; the tests are in jest | running the suite |
+| "a second writer causes the scope drift" | there is none; it's the fan-out TARGET SET | tracing all writers |
+| **"the redaction is clean"** | scanned for 6 known strings, not for identifier shapes | a peer re-reading it |
 
-The last one is the sharpest: the author predicted the failure exactly, in the file, and it
-shipped anyway. A comment that admits a risk is not a mitigation.
-
-**Second pattern: tests that pin the implementation, so they pass whatever the behaviour.**
-
-- Three tests asserted the hook's command string *contained*
-  `process.env.CLAUDE_TOOL_INPUT`. They pinned the bug. The extractor is now covered by
-  tests that **execute** it against a real stdin payload.
-- The integrations suite's `SearchHeader` mock rendered the filter field unconditionally,
-  so `searchThreshold` was untestable and two search tests passed regardless of it. The
-  mock now mirrors the real `totalCount > searchThreshold`.
-
-Both are the same shape as the "nothing found" verifications CLAUDE.md already warns about:
-a check that cannot fail for the reason you care about.
-
-**Third, and it is about how I worked, not the code.** Three visual judgments were wrong
-this session and **the user caught every one from a screenshot** — a status row that
-dangled off the tile grid, a per-row hint that annotated 717 rows to explain 6, and a dot I
-described in the design and then silently did not build. All three came from reasoning
-about layout from CSS without seeing the surface populated. Check a list's real cardinality
-before designing per-row anything.
-
----
-
-## What landed this session (27 commits)
-
-Four arcs. Nothing outstanding behind any of them.
-
-### Configure field regrouping
-`e4014759` `2dff9961` `663580ba` `63bdb448` `d3c609fa` + research/plan docs
-
-API Mesh tab dropped; Commerce tab split into **Connection** and **Business Structure**;
-a real PaaS deadlock fixed (required Catalog fields sat in a step locked by a whole-form
-verdict that included those fields). The splitter's `connection` predicate is a **negation**
-(`!isStoreCodeField`), so no field can be orphaned — `ADOBE_COMMERCE_ADMIN_URL` had been
-rendering nowhere.
-
-Plan `configure-commerce-subsections/` is fully shipped and should move to
-`.rptc/complete/`. **Not moved** — housekeeping left for the release session.
-
-### Status model
-`f62059bf` `a8002632` `271157be` `88b170c8`
-
-Project cards carry **two lines, one per axis**: runtime (local dev server) and deployment
-(worst-of mesh + storefront + integrations). The per-component mesh line and integration
-count are gone — the card answers "is what is deployed current?", detail lives on the
-integrations dashboard.
-
-The dashboard's rule, documented at the top of `ActionGrid.tsx`: **environment health →
-the masthead band; artifact state → the zone that owns the part**, as a *remedy tile* (the
-button that fixes it, dotted when due, tooltip saying why). `DashboardTile` makes the
-dot/tooltip pairing structural — `status` carries both in one object, so a dot with no
-explanation is unrepresentable.
-
-`restartDemo` is new: "Restart needed" had no fix anywhere before.
-
-### The two bug fixes
-`df4156b2` `777b81a3` — see the release-notes section above.
-
-### Layout consistency
-`1feb4a85` `88b170c8` `218e768e` `8e15ac32` `1f304fa8` `d33181fe`
-
-Left-alignment is now the **default** (`.page-container*` no longer centre) rather than a
-per-screen opt-out; `.page-left-anchored` / `.dashboard-left` are deleted. Body inset moved
-16px → size-400 to line up with the page title, which had never matched on any screen that
-did not override it.
-
-Integrations now mirrors the dashboard: three-column grid, shared `--card-*` metrics, one
-add affordance (the grid tile is gone), and the filter field shows from the first item.
-
-The deploy destination left the header crumb — where the LOCAL project name and the REMOTE
-Adobe project/workspace sat in one dot-run with nothing telling them apart — and now rides
-the end of `SearchHeader`'s count row through a new `countTrailing` slot:
-
-```
-[Filter integrations…] [⟳]      [Project Dashboard] [Add integration]
-2 integrations          Deploys to Kukla Mesh · Stage  Change
-```
-
-**Three placements were tried.** Its own row at the top of the band (most prominent slot
-for the least-used fact); its own row below the count (same height for something that fits
-in space already going spare); and this. The rejections are recorded in the placement
-test's docblock so the next person does not re-run the experiment.
+The rule: **a grep can support a positive claim; only running or exhaustively tracing supports
+a negative one.** "Nothing pins this", "nothing else writes that", "nothing sensitive remains"
+are the three shapes that keep being wrong.
 
 ---
 
 ## Outstanding
 
-Carried forward, still true:
+**Needs a Dev Host or a live backend — cannot be done by an agent:**
 
-- **`mesh-staleness-scope` step 05 — never run.** Flip `componentConfigs` key order in a
-  manifest and confirm the staleness verdict is order-independent. The only check that
-  exercises the original defect on real data; the code is committed and unit-tested. Plan
-  stays in `.rptc/plans/` for that reason.
-- **Missing `get_store_structure` MCP tool** — PDP handoff §3, still the highest-value gap.
-  An agent debugging PDP failures cannot see that a project points at a Commerce website
-  with no products.
-- **Duplicated Commerce scope still in existing manifests.** All three resolvers consult
-  `BACKEND_OWNED_SCOPE_KEYS` via `backendOwnedScope.ts`, so verdicts no longer turn on key
-  order. **What remains is the DATA MODEL** — a migration dropping the duplicate copies
-  would dissolve the bug class. PDP handoff §2.
-- **`pickSampleSku` reads the project manifest**, not the storefront's served `config.json`.
-  Recorded as intended and never made.
+- **`mesh-staleness-scope` step 05 — still never run.** Its own text says "cannot be done by
+  tests." Flip `componentConfigs` key order in a manifest and confirm the staleness verdict is
+  order-independent. `demo-builder-test` still carries the disagreement — do not clean it up
+  before testing.
+- **`hybrid-storefront-model` — unblocked, gated on live verification.** The `citisignal-b2b`
+  ambiguity that parked it is resolved. What remains is the step-02 gate: individual-vs-company
+  login against a real B2B backend.
+- **Two visual checks nothing here can reach.** Whether the four font-size changes read
+  correctly on the integrations surface, and whether an agent actually reaches for
+  `diagnose-demo` when handed a vague symptom rather than editing first.
 
-New this session:
+**Real work, not started:**
 
-- **`.dest-context` is 12.5px — off the type scale**, which nothing else uses. Scoped to
-  12px inside the integrations destination row; the add-integration modal renders the same
-  component and still gets 12.5px. Fixing it there is a real cleanup on a surface this
-  change never looked at.
-- **`who_created: 'Demo Builder'` is dead weight** (`adobeEntityFetcher.ts:908`). Adobe
-  overwrites it with the authenticated user's IMS id — inferred from the fact that
-  Demo-Builder-created projects are deletable by their creator, not confirmed against the
-  API. Cosmetic; fold into the next edit of that file.
-  Full research: `.rptc/research/adobe-project-ownership/research.md`, which also records
-  the decision to **keep** the ownership gate rather than widen it to whatever Adobe
-  permits, and that a per-row "why can't I delete this" hint was built and rejected.
-- **Four suites flake under parallel load** — `extension-context`, both
-  `inExtensionMcpServer` suites, and `mcpConfigWriter`. All four passed in isolation and the
-  full suite passed clean on a second run. They are the slowest suites (11–13s) and bind
-  sockets, so it reads as contention, not a defect. Not investigated. Expect it in CI.
+- **`appbuilder-deployable-model` D2–D6.** Only D1 is built. Track A is what pre-positions
+  `getWorkspaceCredential` — see the coordination note above.
 
----
+**Unresolved, not reproducing:**
 
-## Read before trusting any narrative here
+- **Four suites flake under parallel load** (`extension-context`, both `inExtensionMcpServer`
+  suites, `mcpConfigWriter`). Did NOT recur in any run this session, including three full passes.
 
-`.rptc/plans/pdp-prerender-validation/HANDOFF.md` §3 lists five things stated confidently
-during that session that were wrong, and §6 lists where to recheck.
+**Known gap, no gate:**
 
-This session held the "positive control on every nothing-found" rule and it earned its
-keep: a `grep` that reported three skills lacking coverage they had, a zsh glob that made
-`grep` never run while printing `0 remaining`, and — this session — a claim that
-`getStorefrontStatusText` was dead when `getProjectStatusDisplay` used it, caught because
-the grep had excluded the defining file. Assume the same rate applies to anything here that
-is not marked verified.
+- **`SECRET_ENV_KEYS` is a list with a doc comment, not an enforced contract.** A new Commerce
+  credential added to `components.json` ships in a "secret-free" export unless someone
+  remembers to list it. A test asserting that every credential-shaped catalog key
+  (`/PASSWORD|SECRET|API_KEY|TOKEN|CREDENTIAL/`) appears in `SECRET_ENV_KEYS` would close it,
+  and would have caught the three API keys before this session. Proposed by the peer session,
+  not yet built. The Data Installer Stage 2 introduces Commerce `client_id`/`client_secret`,
+  which makes it timely — though that plan routes both to SecretStorage, so they should never
+  reach `componentConfigs`.
+
+**Backlog items filed today (all ready, none blocked):**
+
+- **`2026-08-11-project-level-facts-stored-per-component.md`** — 17 of 25 declared env vars have
+  more than one owner in `componentConfigs`; 6 are the scope keys now fixed, 11 unexamined.
+  **The file records that its own first draft asked the wrong question**: there is no second
+  writer anywhere. The drift mechanism is that Configure's fan-out targets come from
+  `selectedComponents`, so a component holding a copy but missing from the selection lists never
+  updates. Key-agnostic. Step 1 is reproducing it before any code moves.
+- **`2026-08-11-generated-diagnosis-skill.md`** — SHIPPED as `63b76b63`. Move to
+  `.rptc/complete/` on the next pass.
+- **`2026-08-11-export-settings-ignores-include-secrets.md`** — SHIPPED as `12f4b802`. Move to
+  `.rptc/complete/` on the next pass.
+
+**Carried forward, still true:**
+
+- **`pickSampleSku` samples from the served config**, and reports scope divergence as a finding
+  only when the project reads `published` yet the CDN serves a different scope — the one case
+  `edsStorefrontStatusSummary` structurally cannot detect.
+- **`updateField`'s linked-field write** puts the DERIVED key's value on the SOURCE field's
+  component list. The sets are a superset today so every declarer is covered, but it also writes
+  the key onto `headless`, which does not declare it. Harmless now; wrong by construction.

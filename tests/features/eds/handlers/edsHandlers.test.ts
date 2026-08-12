@@ -68,15 +68,24 @@ describe('edsHandlers', () => {
             expect(hasHandler(edsHandlers, 'refresh-block-library')).toBe(true);
         });
 
-        it('should have exactly 19 handlers', () => {
+        it('should include the agent-facing get-store-structure handler', () => {
+            // Given: edsHandlers object
+            // When: Checking for the headless store-structure read type
+            // Then: Present (behind the get_store_structure MCP tool)
+            expect(hasHandler(edsHandlers, 'get-store-structure')).toBe(true);
+        });
+
+        it('should have exactly 15 handlers', () => {
             // Given: edsHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(edsHandlers);
 
-            // Then: Exactly 20 handlers (6 GitHub + 8 DA.live + 2 ACCS/Store +
-            // 3 Storefront Setup + 1 refresh-block-library)
-            // 20 → 15: five superseded handlers removed 2026-08-05 (nothing sent them).
-            expect(types).toHaveLength(14);
+            // Then: 5 GitHub + 5 DA.live + 2 store discovery (wizard +
+            // agent-facing get-store-structure) + 2 Storefront Setup +
+            // 1 refresh-block-library = 15.
+            // History: 20 → 14 when five superseded handlers were removed
+            // 2026-08-05; 14 → 15 with get-store-structure.
+            expect(types).toHaveLength(15);
         });
 
         it('should have handlers as functions', () => {

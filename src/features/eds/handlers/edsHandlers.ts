@@ -14,7 +14,7 @@
  * @module features/eds/handlers
  */
 
-import * as vscode from 'vscode';
+import { selectDiscoveryService } from '../services/accsDiscoveryConfig';
 import { discoverStoreStructure } from '../services/commerceStoreDiscovery';
 import {
     handleCheckDaLiveAuth,
@@ -31,10 +31,8 @@ import {
     handleCreateGitHubRepo,
 } from './edsGitHubHandlers';
 import { handleRefreshBlockLibraryHeadless } from './refreshBlockLibraryHandler';
-import {
-    handleStartStorefrontSetup,
-    handleCancelStorefrontSetup,
-} from './storefrontSetupHandlers';
+import { handleStartStorefrontSetup, handleCancelStorefrontSetup } from './storefrontSetupHandlers';
+import { handleGetStoreStructure } from './storeStructureHandler';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { validateURL } from '@/core/validation';
 import type { StoreDiscoveryParams } from '@/types/commerceStore';
@@ -50,25 +48,6 @@ export { clearServiceCache } from './edsHelpers';
 // ==========================================================
 // ACCS Handler
 // ==========================================================
-
-
-// ==========================================================
-// Store Discovery Helpers
-// ==========================================================
-
-/** ACCS Discovery Service entry from VS Code settings */
-interface AccsDiscoveryService {
-    orgName: string;
-    orgId?: string;
-    serviceUrl: string;
-}
-
-/** Get all configured discovery services from VS Code settings */
-function getDiscoveryServices(): AccsDiscoveryService[] {
-    return vscode.workspace
-        .getConfiguration('demoBuilder.accsDiscovery')
-        .get<AccsDiscoveryService[]>('services', []);
-}
 
 // ==========================================================
 // Store Discovery Handler
@@ -189,13 +168,22 @@ async function buildAccsDiscoveryParams(
     payload: DiscoverStoreStructurePayload,
     params: StoreDiscoveryParams,
 ): Promise<HandlerResponse | null> {
-    const services = getDiscoveryServices();
-    if (services.length === 0) {
+    // Selected BEFORE sign-in: a missing or malformed service is not something a
+    // login can fix, and prompting first would be a pointless interruption.
+    const selection = selectDiscoveryService(payload.orgId);
+    if (!selection.ok) {
+        if (selection.reason === 'none-configured') {
+            await context.sendMessage('store-discovery-result', {
+                success: false,
+                error: 'No discovery service configured. Enter store codes manually.',
+            });
+            return { success: true };
+        }
         await context.sendMessage('store-discovery-result', {
             success: false,
-            error: 'No discovery service configured. Enter store codes manually.',
+            error: 'Discovery service URL must be a valid HTTPS URL.',
         });
-        return { success: true };
+        return { success: false, error: 'Invalid discovery service URL' };
     }
 
     if (!context.authManager) {
@@ -238,20 +226,8 @@ async function buildAccsDiscoveryParams(
     }
 
     params.imsToken = imsToken;
-    const service = payload.orgId
-        ? (services.find((s) => s.orgId === payload.orgId) ?? services[0])
-        : services[0];
-    try {
-        validateURL(service.serviceUrl, ['https']);
-    } catch {
-        await context.sendMessage('store-discovery-result', {
-            success: false,
-            error: 'Discovery service URL must be a valid HTTPS URL.',
-        });
-        return { success: false, error: 'Invalid discovery service URL' };
-    }
-    params.discoveryServiceUrl = service.serviceUrl;
-    context.logger.info(`[Store Discovery] discovery service: ${service.serviceUrl}`);
+    params.discoveryServiceUrl = selection.serviceUrl;
+    context.logger.info(`[Store Discovery] discovery service: ${selection.serviceUrl}`);
 
     if (payload.accsGraphqlEndpoint) {
         try {
@@ -297,6 +273,9 @@ export const edsHandlers = defineHandlers({
 
     // Store discovery
     'discover-store-structure': handleDiscoverStoreStructure,
+
+    // Agent-facing: headless store-structure read behind the get_store_structure MCP tool
+    'get-store-structure': handleGetStoreStructure,
 
     // Storefront setup handlers (renamed from eds-preflight-*)
     'storefront-setup-start': handleStartStorefrontSetup,

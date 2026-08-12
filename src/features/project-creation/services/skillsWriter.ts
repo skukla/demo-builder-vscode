@@ -9,6 +9,7 @@
  *    - `sync-changes.md` — push code changes via sync_storefront
  *    - `update-credentials.md` — edit .env credentials via update_project_config
  *    - `create-eds-project.md` — provision a new project headlessly via create_project
+ *    - `diagnose-demo.md` — route a broken-demo symptom to the check that answers it
  *
  * 2. **Adobe skill bundles** (component-driven): each `RawComponentDefinition`
  *    may declare `aiSkillBundle: { path, prefix }`. The bundle is copied from
@@ -33,6 +34,7 @@ import commerceBlockMapperContent from '../templates/skills/commerce-block-mappe
 import connectAuthenticatedSiteContent from '../templates/skills/connect-authenticated-site.md';
 import createEdsProjectContent from '../templates/skills/create-eds-project.md';
 import demoDataInjectorContent from '../templates/skills/demo-data-injector.md';
+import diagnoseDemoContent from '../templates/skills/diagnose-demo.md';
 import extendAppBuilderAppContent from '../templates/skills/extend-app-builder-app.md';
 import headerNavFooterContent from '../templates/skills/header-nav-footer.md';
 import refineVisualMatchContent from '../templates/skills/refine-visual-match.md';
@@ -79,6 +81,9 @@ export const DEMO_BUILDER_SKILLS: ReadonlyArray<{ filename: string; content: str
     { filename: 'sync-changes.md', content: syncChangesContent },
     { filename: 'update-credentials.md', content: updateCredentialsContent },
     { filename: 'create-eds-project.md', content: createEdsProjectContent },
+    // Diagnosis: routes a symptom to the check that answers it. Always-on — every
+    // project can break, and the bundle had no skill for looking, only for doing.
+    { filename: 'diagnose-demo.md', content: diagnoseDemoContent },
     // EDS site-scraping skills
     { filename: 'scrape-reference-site.md', content: scrapeReferenceSiteContent },
     { filename: 'connect-authenticated-site.md', content: connectAuthenticatedSiteContent },

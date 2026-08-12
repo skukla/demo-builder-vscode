@@ -882,6 +882,12 @@ export class AdobeEntityFetcher {
                 return undefined;
             }
 
+            // `who_created` is deliberately NOT sent. Adobe stamps it with the calling
+            // token's IMS user id and discards whatever we pass — which is what makes
+            // `verifyProjectOwnership` work at all: it compares the field to the current
+            // user id, so a literal like 'Demo Builder' would make every project we
+            // create undeletable. Sending it only implies we control a delete gate we
+            // do not. (`who_created` is optional in aio-lib-console's ProjectDetails.)
             const client = this.sdkClient.getClient() as {
                 createFireflyProject: (
                     orgId: string,
@@ -889,7 +895,6 @@ export class AdobeEntityFetcher {
                         name: string;
                         title: string;
                         description: string;
-                        who_created: string;
                     }
                 ) => Promise<SDKResponse<RawAdobeProject>>;
             };
@@ -905,7 +910,6 @@ export class AdobeEntityFetcher {
                 name,
                 title,
                 description,
-                who_created: 'Demo Builder',
             });
 
             // The create endpoint returns only the new id ({ projectId }), NOT a full
@@ -971,7 +975,6 @@ export class AdobeEntityFetcher {
                         name: string;
                         title: string;
                         description: string;
-                        who_created: string;
                     }
                 ) => Promise<SDKResponse<RawAdobeWorkspace>>;
             };
@@ -979,7 +982,6 @@ export class AdobeEntityFetcher {
                 name: 'Stage',
                 title: 'Stage',
                 description: '',
-                who_created: 'Demo Builder',
             });
             this.debugLogger.info(
                 '[Entity Fetcher] Created Stage workspace (App Builder template parity)',
@@ -1118,7 +1120,6 @@ export class AdobeEntityFetcher {
                         name: string;
                         title: string;
                         description: string;
-                        who_created: string;
                     }
                 ) => Promise<SDKResponse<RawAdobeWorkspace>>;
             };
@@ -1134,7 +1135,6 @@ export class AdobeEntityFetcher {
                 name,
                 title,
                 description,
-                who_created: 'Demo Builder',
             });
 
             // The create endpoint returns only the new id ({ workspaceId }), NOT a full

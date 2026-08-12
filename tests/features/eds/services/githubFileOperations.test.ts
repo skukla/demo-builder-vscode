@@ -296,6 +296,85 @@ describe('GitHub File Operations', () => {
             expect(callArgs.content).toBe(Buffer.from('File content').toString('base64'));
         });
 
+        /**
+         * A real 2026-08-11 report died with GitHub's raw text — "Repository rule
+         * violations found / Secret detected in content" — which names no file. This
+         * pipeline writes eight of them, so the reporter could not tell which was
+         * refused. The path is known right here; these pin that it reaches the message.
+         */
+        it('names the blocked file when push protection rejects the write', async () => {
+            const service = new GitHubFileOperations(mockTokenService);
+            const rejection = new Error(
+                'Repository rule violations found\n\nSecret detected in content'
+            ) as Error & { status?: number };
+            rejection.status = 422;
+            mockOctokitRequest.mockRejectedValue(rejection);
+
+            await expect(
+                service.createOrUpdateFile('owner', 'repo', 'fstab.yaml', 'body', 'msg')
+            ).rejects.toThrow(/fstab\.yaml/);
+        });
+
+        it('says nothing was written, so the repo is not assumed half-updated', async () => {
+            const service = new GitHubFileOperations(mockTokenService);
+            const rejection = new Error('Repository rule violations found') as Error & {
+                status?: number;
+            };
+            rejection.status = 422;
+            mockOctokitRequest.mockRejectedValue(rejection);
+
+            await expect(
+                service.createOrUpdateFile('owner', 'repo', 'config.json', 'body', 'msg')
+            ).rejects.toThrow(/nothing was written/i);
+        });
+
+        it('logs the full GitHub response body, not just the tidy message', async () => {
+            // The block cannot be reproduced locally — it comes from policy on the
+            // reporting user's account. What GitHub said is the only evidence there
+            // will ever be, so it has to reach the debug log.
+            const logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() };
+            const service = new GitHubFileOperations(mockTokenService, logger);
+            const rejection = new Error('Repository rule violations found') as Error & {
+                status?: number;
+                response?: unknown;
+            };
+            rejection.status = 422;
+            rejection.response = {
+                headers: { 'x-github-request-id': 'REQ:9' },
+                data: {
+                    message: 'Repository rule violations found',
+                    errors: [{ resource: 'PushRule', message: 'Adobe Client Secret' }],
+                },
+            };
+            mockOctokitRequest.mockRejectedValue(rejection);
+
+            await expect(
+                service.createOrUpdateFile('owner', 'repo', 'fstab.yaml', 'body', 'msg')
+            ).rejects.toThrow(/fstab\.yaml/);
+
+            // Debug channel only: User Logs keeps the clean headline, which already
+            // names the secret. debugLogger.ts:100-104 defines that split.
+            const logged = logger.debug.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+            expect(logged).toContain('Adobe Client Secret');
+            expect(logged).toContain('REQ:9');
+            expect(logged).toContain('422');
+        });
+
+        it('leaves an unrelated failure untouched', async () => {
+            // 422 is also a stale-SHA conflict, which has a different remedy. Relabelling
+            // it as a secret block would send the reader to the wrong place entirely.
+            const service = new GitHubFileOperations(mockTokenService);
+            const staleSha = new Error('is at abc123 but expected def456') as Error & {
+                status?: number;
+            };
+            staleSha.status = 422;
+            mockOctokitRequest.mockRejectedValue(staleSha);
+
+            await expect(
+                service.createOrUpdateFile('owner', 'repo', 'fstab.yaml', 'body', 'msg')
+            ).rejects.toThrow('is at abc123 but expected def456');
+        });
+
         it('should update existing file with SHA', async () => {
             // Given: Existing file SHA
             const service = new GitHubFileOperations(mockTokenService);

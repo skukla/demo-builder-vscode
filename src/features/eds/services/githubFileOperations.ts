@@ -11,6 +11,7 @@
 import { Octokit } from '@octokit/core';
 import { retry } from '@octokit/plugin-retry';
 import AdmZip from 'adm-zip';
+import { describePushProtectionBlock, describeRejectionDiagnostics } from './errorFormatters';
 import type { GitHubTokenService } from './githubTokenService';
 import type {
     GitHubFileContent,
@@ -85,15 +86,12 @@ export class GitHubFileOperations {
         const octokit = await this.ensureAuthenticated();
 
         try {
-            const response = await octokit.request(
-                'GET /repos/{owner}/{repo}/contents/{path}',
-                {
-                    owner,
-                    repo,
-                    path,
-                    ...(ref && { ref }),
-                },
-            );
+            const response = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
+                owner,
+                repo,
+                path,
+                ...(ref && { ref }),
+            });
 
             const data = response.data as {
                 content: string;
@@ -145,17 +143,32 @@ export class GitHubFileOperations {
         // Base64 encode content
         const encodedContent = Buffer.from(content).toString('base64');
 
-        const response = await octokit.request(
-            'PUT /repos/{owner}/{repo}/contents/{path}',
-            {
+        let response;
+        try {
+            response = await octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
                 owner,
                 repo,
                 path,
                 message,
                 content: encodedContent,
                 ...(sha && { sha }),
-            },
-        );
+            });
+        } catch (error) {
+            // GitHub's push-protection message names no file, and this pipeline
+            // writes eight of them — so the raw error cannot say which was refused.
+            // The path is right here; put it in the message.
+            const blocked = describePushProtectionBlock(error, path);
+            if (blocked) {
+                // The thrown message stays short for the UI; the FULL response body
+                // goes to the debug log. This block cannot be reproduced locally —
+                // it comes from policy on the reporting user's account — so what
+                // GitHub said here is the only evidence that will ever exist.
+                const detail = describeRejectionDiagnostics(error);
+                if (detail) this.logger.debug(`[GitHub] ${detail}`);
+                throw new Error(blocked);
+            }
+            throw error;
+        }
 
         return {
             sha: response.data.content?.sha ?? '',
@@ -171,30 +184,32 @@ export class GitHubFileOperations {
      * @param branch - Branch to list (default: 'main')
      * @returns Array of file entries (excludes directories)
      */
-    async listRepoFiles(
-        owner: string,
-        repo: string,
-        branch = 'main',
-    ): Promise<GitHubTreeEntry[]> {
+    async listRepoFiles(owner: string, repo: string, branch = 'main'): Promise<GitHubTreeEntry[]> {
         const octokit = await this.ensureAuthenticated();
 
         try {
             // First get the branch's latest commit SHA
-            const branchResponse = await octokit.request('GET /repos/{owner}/{repo}/branches/{branch}', {
-                owner,
-                repo,
-                branch,
-            });
+            const branchResponse = await octokit.request(
+                'GET /repos/{owner}/{repo}/branches/{branch}',
+                {
+                    owner,
+                    repo,
+                    branch,
+                },
+            );
 
             const treeSha = branchResponse.data.commit.commit.tree.sha;
 
             // Get the tree recursively
-            const treeResponse = await octokit.request('GET /repos/{owner}/{repo}/git/trees/{tree_sha}', {
-                owner,
-                repo,
-                tree_sha: treeSha,
-                recursive: '1',
-            });
+            const treeResponse = await octokit.request(
+                'GET /repos/{owner}/{repo}/git/trees/{tree_sha}',
+                {
+                    owner,
+                    repo,
+                    tree_sha: treeSha,
+                    recursive: '1',
+                },
+            );
 
             // Filter to only blobs (files), not trees (directories)
             return treeResponse.data.tree
@@ -224,19 +239,18 @@ export class GitHubFileOperations {
      * @param branch - Branch name (default: 'main')
      * @returns The latest commit SHA, or null if branch/repo not found
      */
-    async getLatestCommitSha(
-        owner: string,
-        repo: string,
-        branch = 'main',
-    ): Promise<string | null> {
+    async getLatestCommitSha(owner: string, repo: string, branch = 'main'): Promise<string | null> {
         const octokit = await this.ensureAuthenticated();
 
         try {
-            const branchResponse = await octokit.request('GET /repos/{owner}/{repo}/branches/{branch}', {
-                owner,
-                repo,
-                branch,
-            });
+            const branchResponse = await octokit.request(
+                'GET /repos/{owner}/{repo}/branches/{branch}',
+                {
+                    owner,
+                    repo,
+                    branch,
+                },
+            );
 
             return branchResponse.data.commit.sha;
         } catch (error) {
@@ -323,11 +337,14 @@ export class GitHubFileOperations {
     ): Promise<{ treeSha: string; commitSha: string }> {
         const octokit = await this.ensureAuthenticated();
 
-        const branchResponse = await octokit.request('GET /repos/{owner}/{repo}/branches/{branch}', {
-            owner,
-            repo,
-            branch,
-        });
+        const branchResponse = await octokit.request(
+            'GET /repos/{owner}/{repo}/branches/{branch}',
+            {
+                owner,
+                repo,
+                branch,
+            },
+        );
 
         return {
             treeSha: branchResponse.data.commit.commit.tree.sha,
@@ -410,13 +427,27 @@ export class GitHubFileOperations {
     ): Promise<void> {
         const octokit = await this.ensureAuthenticated();
 
-        await octokit.request('PATCH /repos/{owner}/{repo}/git/refs/heads/{branch}', {
-            owner,
-            repo,
-            branch,
-            sha,
-            force,
-        });
+        try {
+            await octokit.request('PATCH /repos/{owner}/{repo}/git/refs/heads/{branch}', {
+                owner,
+                repo,
+                branch,
+                sha,
+                force,
+            });
+        } catch (error) {
+            // A multi-file commit is rejected here, at the ref update — and unlike a
+            // Contents PUT there is no single path to name, so say which commit and
+            // let the reader open it. Without this the message is the same anonymous
+            // "Repository rule violations found" the Contents path used to give.
+            const blocked = describePushProtectionBlock(error, `commit ${sha.slice(0, 7)}`);
+            if (blocked) {
+                const detail = describeRejectionDiagnostics(error);
+                if (detail) this.logger.debug(`[GitHub] ${detail}`);
+                throw new Error(blocked);
+            }
+            throw error;
+        }
     }
 
     /**
@@ -462,7 +493,9 @@ export class GitHubFileOperations {
         }
 
         const { url: zipUrl, isSha } = buildArchiveUrl(owner, repo, ref);
-        this.logger.debug(`[GitHub] Downloading repository archive from ${owner}/${repo}@${ref} (${isSha ? 'SHA' : 'branch'})`);
+        this.logger.debug(
+            `[GitHub] Downloading repository archive from ${owner}/${repo}@${ref} (${isSha ? 'SHA' : 'branch'})`,
+        );
 
         const response = await fetch(zipUrl, {
             headers: {
@@ -476,7 +509,9 @@ export class GitHubFileOperations {
 
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        this.logger.debug(`[GitHub] Downloaded ${(buffer.length / 1024 / 1024).toFixed(2)} MB archive`);
+        this.logger.debug(
+            `[GitHub] Downloaded ${(buffer.length / 1024 / 1024).toFixed(2)} MB archive`,
+        );
 
         // Extract files from zipball
         const zip = new AdmZip(buffer);
@@ -552,14 +587,22 @@ export class GitHubFileOperations {
         // getBranchInfo hit the GitHub branches API with a SHA, which 404s
         // with "Branch not found".
         const targetBranch = 'main';
-        this.logger.info(`[GitHub] Resetting ${targetOwner}/${targetRepo}@${targetBranch} to template ${templateOwner}/${templateRepo}@${templateRef}`);
+        this.logger.info(
+            `[GitHub] Resetting ${targetOwner}/${targetRepo}@${targetBranch} to template ${templateOwner}/${templateRepo}@${templateRef}`,
+        );
 
         // Step 1: Get target branch info (need current commit as parent)
         const targetBranchInfo = await this.getBranchInfo(targetOwner, targetRepo, targetBranch);
-        this.logger.info(`[GitHub] Target branch commit: ${targetBranchInfo.commitSha.substring(0, 7)}`);
+        this.logger.info(
+            `[GitHub] Target branch commit: ${targetBranchInfo.commitSha.substring(0, 7)}`,
+        );
 
         // Step 2: Download entire template repo as zipball (single request - avoids rate limits)
-        const templateContents = await this.downloadRepoContents(templateOwner, templateRepo, templateRef);
+        const templateContents = await this.downloadRepoContents(
+            templateOwner,
+            templateRepo,
+            templateRef,
+        );
 
         // Step 3: Build tree entries with content
         const treeEntries: GitHubTreeInput[] = [];

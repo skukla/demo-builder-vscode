@@ -151,10 +151,22 @@ function buildHeader(project: Project, stacksConfig: Stack[]): string {
     ].join('\n');
 }
 
+/**
+ * The skills pointer.
+ *
+ * `diagnose-demo` is named rather than left to discovery because the moment it
+ * matters is BEFORE anything gets edited, and the old wording ("guides for each
+ * operation") framed the whole directory as how-to-DO instructions — an agent
+ * reading it had no reason to think a diagnosis guide was in there at all.
+ */
 function buildHowToChangeThings(): string {
     return [
         '## How to Change Things',
         '> See `.claude/skills/` for step-by-step guides for each operation.',
+        '>',
+        '> **If something is wrong and you do not yet know why, read the `diagnose-demo`',
+        '> skill FIRST.** It routes the symptom to the check that answers it. Changing',
+        '> things to see what moves is slower and destroys the evidence.',
     ].join('\n');
 }
 
@@ -506,7 +518,7 @@ function buildDocumentationRouting(): string {
         '## Finding Adobe Documentation',
         `Before answering an Adobe question — EDS, storefront drop-ins, document authoring, Commerce Admin, App Builder, API Mesh — fetch and follow the routing guide at: ${WAYFINDER_ROUTER_URL}`,
         'It maps the question to the right Adobe property and gives an agent-optimised entry point for each. Fetch the docs it points at; do not answer these from training data, and do not invent config keys, CLI flags, GraphQL fields, or Admin paths.',
-        'Read this project\'s own code first where it applies — it reflects actual current state and beats general documentation.',
+        "Read this project's own code first where it applies — it reflects actual current state and beats general documentation.",
     ].join('\n');
 }
 

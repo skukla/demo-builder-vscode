@@ -10,8 +10,10 @@
  * @module commands/diagnosticsReport
  */
 
+import type { SamplePdp } from '@/features/eds/services/catalogPrewarmService';
 import type { ConfigServiceProbeResult } from '@/features/eds/services/configServiceProbe';
 import type { CredentialProbeResult } from '@/features/eds/services/githubCredentialProbe';
+import { describeScope } from '@/features/eds/services/servedStorefrontConfig';
 import type { StorefrontProbeResult } from '@/features/eds/services/storefrontProbe';
 
 // Diagnostic Type Definitions
@@ -139,6 +141,18 @@ export interface DiagnosticsReport {
      * attempted. Absent when no EDS project is open.
      */
     storefront?: StorefrontProbeResult;
+    /**
+     * Which store scope the PDP sample came from, and any disagreement with the
+     * project's own config. Absent when no EDS project is open or no SKU was
+     * sampled.
+     */
+    storefrontScope?: StorefrontScopeReport;
+}
+
+/** The scope the probe sampled from, plus a disagreement when there is one. */
+export interface StorefrontScopeReport {
+    source: 'served' | 'manifest';
+    divergence?: SamplePdp['scopeDivergence'];
 }
 
 /** Describe GitHub's write-access answer, or why we don't have one. */
@@ -195,7 +209,33 @@ function credentialLines(cred: CredentialProbeResult): string[] {
  * Says what is SERVING, which the rest of the report cannot: every other EDS
  * signal here describes the extension's own last run.
  */
-function storefrontLines(probe: StorefrontProbeResult): string[] {
+/**
+ * Describe the scope the PDP sample came from.
+ *
+ * Silent when the served and project scopes agree — that is the normal case and
+ * needs no line. A disagreement between a Configure save and a Republish is
+ * expected too, so it reads as context; only `unexpected` (the project claims
+ * published yet the CDN serves something else) is called out as wrong.
+ */
+function scopeLines(scope: StorefrontScopeReport): string[] {
+    if (scope.source === 'manifest') {
+        return ['  Scope: sampled from the project (served config.json unreadable)'];
+    }
+    if (!scope.divergence) return [];
+
+    const { served, manifest, unexpected } = scope.divergence;
+    const lines = [
+        `  Scope: serving ${describeScope(served)}, project configured for ${describeScope(manifest)}`,
+    ];
+    lines.push(
+        unexpected
+            ? '    ⚠ Project reads "published" — a republish did not take'
+            : '    (expected: republish pending)',
+    );
+    return lines;
+}
+
+function storefrontLines(probe: StorefrontProbeResult, scope?: StorefrontScopeReport): string[] {
     const lines = ['', 'Storefront delivery (what is serving now):', `  URL: ${probe.baseUrl}`];
     const mark = (leg?: { installed: boolean; status?: number; error?: string }): string => {
         if (!leg) return 'not checked';
@@ -216,6 +256,7 @@ function storefrontLines(probe: StorefrontProbeResult): string[] {
                 `  PDP ${probe.pdp.path} (SKU ${probe.pdp.sku}): ` +
                     `HTTP ${probe.pdp.status} (${probe.pdp.served ? 'served' : 'NOT SERVED'})`,
             );
+            if (scope) lines.push(...scopeLines(scope));
         } else {
             lines.push('  PDP: not checked (no catalog SKU available)');
         }
@@ -343,7 +384,8 @@ export function buildSummaryLines(report: DiagnosticsReport): string[] {
 
     lines.push(...credentialLines(report.githubCredential));
     if (report.configService) lines.push(...configServiceLines(report.configService));
-    if (report.storefront) lines.push(...storefrontLines(report.storefront));
+    if (report.storefront)
+        lines.push(...storefrontLines(report.storefront, report.storefrontScope));
     lines.push('', 'Use VS Code\'s "Set Log Level..." command to see debug/trace details');
     return lines;
 }

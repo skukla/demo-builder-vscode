@@ -47,6 +47,13 @@ export const CATALOG_API_KEY = 'ADOBE_CATALOG_API_KEY';
 export const CATALOG_SERVICE_ENDPOINT = 'ADOBE_CATALOG_SERVICE_ENDPOINT';
 export const PAAS_CATALOG_SERVICE_ENDPOINT = 'PAAS_CATALOG_SERVICE_ENDPOINT';
 
+// ==========================================================
+// ACO (Adobe Commerce Optimizer) / Experience Platform
+// ==========================================================
+
+export const ACO_API_KEY = 'ACO_API_KEY';
+export const EXPERIENCE_PLATFORM_API_KEY = 'EXPERIENCE_PLATFORM_API_KEY';
+
 /**
  * Commerce store-scope keys the BACKEND component owns.
  *
@@ -80,3 +87,54 @@ export const BACKEND_OWNED_SCOPE_KEYS: readonly string[] = [
     PAAS_CUSTOMER_GROUP,
 ];
 
+/**
+ * Commerce env-var keys whose VALUES are credentials.
+ *
+ * These must be stripped from any artifact that claims to be secret-free —
+ * today that is the settings export (`includeSecrets: false`), which promises
+ * "a secret-free copy" in the `export_project_settings` MCP description.
+ *
+ * **Why this list rather than `type: 'password'`.** The env-var definitions in
+ * `components.json` type exactly ONE var as `password`
+ * (`ADOBE_COMMERCE_ADMIN_PASSWORD`); all three API keys are typed `text`,
+ * because `type` drives how the Configure field RENDERS, not whether the value
+ * is sensitive. Filtering on it would strip the admin password and still write
+ * three API keys into a file stamped `includesSecrets: false`.
+ *
+ * App Builder component secrets are NOT here: their catalog marks them
+ * `type: 'secret'` and `splitAppBuilderComponentSecrets` routes them to VS Code
+ * SecretStorage, so they never reach `componentConfigs` in the first place.
+ *
+ * A username is deliberately absent — it is half a credential, not a secret,
+ * and the export stays useful for re-import with it present.
+ *
+ * Adding a Commerce credential? Add it here, or it ships in a "secret-free" file.
+ */
+export const SECRET_ENV_KEYS: readonly string[] = [
+    PAAS_ADMIN_PASSWORD,
+    CATALOG_API_KEY,
+    ACO_API_KEY,
+    EXPERIENCE_PLATFORM_API_KEY,
+];
+
+/**
+ * Strip every {@link SECRET_ENV_KEYS} value from a componentConfigs map.
+ *
+ * Returns a new map; the input is untouched, because callers hand this the LIVE
+ * `project.componentConfigs` and a mutating strip would empty the running
+ * project's credentials.
+ *
+ * @param configs - componentConfigs, keyed by component id
+ * @returns A copy with secret-valued keys removed from every component
+ */
+export function stripSecretValues<T>(
+    configs: Record<string, Record<string, T>> | undefined,
+): Record<string, Record<string, T>> {
+    const out: Record<string, Record<string, T>> = {};
+    for (const [componentId, config] of Object.entries(configs ?? {})) {
+        const copy = { ...config };
+        for (const key of SECRET_ENV_KEYS) delete copy[key];
+        out[componentId] = copy;
+    }
+    return out;
+}

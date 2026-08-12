@@ -476,4 +476,26 @@ describe('aiContextWriter', () => {
             expect(content).toBe(generated);
         });
     });
+    describe('How to Change Things — the skills pointer', () => {
+        it('names diagnose-demo as the FIRST thing to read when something is wrong', () => {
+            // The skills directory used to be described only as "step-by-step guides
+            // for each operation", which frames every skill as how-to-DO. An agent
+            // reading that had no reason to think a diagnosis guide existed — the
+            // exact gap diagnose-demo was written to close.
+            const content = generateAgentsMd(makeEdsProject(), STACKS);
+
+            expect(content).toContain('## How to Change Things');
+            expect(content).toContain('`diagnose-demo`');
+            expect(content).toMatch(/do not yet know why/i);
+        });
+
+        it('points at the skills directory for every project shape', () => {
+            // Diagnosis is not EDS-specific: any project can break.
+            for (const project of [makeEdsProject(), makeHeadlessProject()]) {
+                const content = generateAgentsMd(project, STACKS);
+                expect(content).toContain('.claude/skills/');
+                expect(content).toContain('`diagnose-demo`');
+            }
+        });
+    });
 });

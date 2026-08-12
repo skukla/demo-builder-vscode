@@ -170,6 +170,40 @@ reported three skills as lacking coverage they might well have had.
 that reads exactly like a result. Write `--include='*.css'`. This is the specific
 error behind both of the 2026-08-07 all-clears, and it recurred twice on 2026-08-11.
 
+**A control proves the tool works, not that you aimed it right.** Run it at the same
+scope as the question — same tree, same shell, same flags — or it inherits the mistake
+and passes with you. Before trusting a negative, say where the answer would be if it
+existed, then confirm your command actually reads there. Five wrong answers on
+2026-08-11 were all a correct command pointed at the wrong place, and no control caught
+any of them because each shared the wrong scope:
+
+- grepped `src/features/components/config/`; the catalog is in `project-creation/config/`
+  → "that plan is unmerged", wrong
+- grepped `.claude/skills/`; the App Builder skills are global in `~/.claude/skills/`
+  → "12 of 13 facts are in no skill", wrong
+- `${PIPESTATUS[0]}` is bash and this shell is zsh (`$pipestatus`, 1-indexed), so the
+  exit code came back **empty** and blank output read as "passed" — as are `${!arr[@]}`,
+  `declare -A` and `local -n`. Run bash-array snippets through `bash -c` or rewrite them;
+  zsh fails these with `bad substitution`, which reads like a quoting typo rather than a
+  shell mismatch (`${!NAMES[@]}` cost a mid-experiment retry on 2026-08-11)
+- wrote an eslint control to `/tmp`, outside the base path — eslint skipped the file and
+  exited 0, proving nothing
+
+**Before proposing a CAUSE, name the command that would falsify it — and run that
+first.** Every rule above governs claims about FACTS. A claim about *why* something
+happened is different: cheap to state, expensive to retract, and the user cannot check
+it. On 2026-08-11 five explanations for one bug were proposed and each was killed by a
+single command available before it was offered — fetch the template and scan it, write
+one file through the other endpoint, read one field off the account. If no command would
+falsify a proposed cause, say it is unfalsifiable from here and name who can test it,
+rather than presenting it as the explanation.
+
+**Never publish an identifier you have not read from the source.** Same day, a setting
+name written from memory into release notes — `demoBuilder.eds.defaultDaLiveOrg` — was
+wrong; the real key is `demoBuilder.daLive.defaultOrg`. Caught only by diffing
+`package.json` against the previous tag. Setting keys, env vars, command ids, file paths
+and function names are cheap to grep and expensive to get wrong in something users read.
+
 ## Gotchas (verified, load-bearing)
 
 - **Adobe Spectrum Flex constrains width** (450px): use a standard HTML div with flex styles for critical wizard layouts.

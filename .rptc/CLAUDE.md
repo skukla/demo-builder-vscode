@@ -38,6 +38,25 @@ Write working artifacts to these locations, never ad-hoc paths:
 | Curated research | `docs/research/<date>-<topic>.md` | **Promoted only.** Landmark research cited by ADRs / CHANGELOG. Don't write here directly; promote from `.rptc/research/` once durable. |
 | Backlog items | `.rptc/backlog/<slug>.md` or `.rptc/backlog/<feature>/` | Designed/proposed work that isn't active (index: `.rptc/backlog/README.md`) |
 
+### Live-probe writeups: redact before committing
+
+**This repo is PUBLIC and `.rptc/` is tracked**, so a writeup that probes an internal
+service publishes whatever it quotes. Before committing a `spike-*.md` or any research
+that hit a live endpoint, strip:
+
+- **Names of people.** Never name a colleague — least of all beside a defect in their
+  service. Write the role ("the service owner").
+- **Internal / pre-release endpoints**, including Runtime namespace ids.
+- **Record identifiers** from real responses — activation ids, datapack ids, tenant ids.
+- **Infrastructure names** quoted out of error text — internal env vars, backing stores.
+
+Keep the finding, drop the identifier: `<activation-id-A>` reads fine and the contract it
+demonstrates is the durable part. Raw captures are gitignored (see `.gitignore`); the
+redacted writeup is what gets tracked.
+
+Recorded 2026-08-11 after a probe writeup reached the public remote carrying a colleague's
+name, a stage Runtime endpoint and two live activation ids.
+
 ## Worktree Convention
 
 - All worktrees live in the **visible sibling directory**

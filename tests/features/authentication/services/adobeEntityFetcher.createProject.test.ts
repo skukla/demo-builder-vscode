@@ -123,9 +123,12 @@ describe('AdobeEntityFetcher.createProject()', () => {
             expect.objectContaining({
                 title: 'My Demo',
                 name: expect.stringMatching(/^MyDemo[A-Za-z0-9]+$/),
-                who_created: 'Demo Builder',
             })
         );
+        // `who_created` must NOT be sent: Adobe stamps it with the caller's IMS user id,
+        // and `verifyProjectOwnership` compares that field to the current user. A literal
+        // would make every project we create fail its own delete gate.
+        expect(createFireflyProject.mock.calls[0][1]).not.toHaveProperty('who_created');
     });
 
     it('creates a "Stage" workspace after the project (App Builder template parity)', async () => {
@@ -138,8 +141,9 @@ describe('AdobeEntityFetcher.createProject()', () => {
             'org-123',
             'proj-new',
             // Named exactly "Stage" — NOT the suffix-derived name — to match the convention.
-            expect.objectContaining({ name: 'Stage', title: 'Stage', who_created: 'Demo Builder' })
+            expect.objectContaining({ name: 'Stage', title: 'Stage' })
         );
+        expect(createWorkspace.mock.calls[0][2]).not.toHaveProperty('who_created');
     });
 
     it('returns the project even when the Stage workspace fails (best-effort)', async () => {

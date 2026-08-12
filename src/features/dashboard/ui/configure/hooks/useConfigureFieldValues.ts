@@ -21,6 +21,7 @@ import { normalizeUrl } from '@/core/validation/Validator';
 import { PAAS_URL, PAAS_GRAPHQL_ENDPOINT } from '@/features/components/config/envVarKeys';
 import {
     findFieldValue,
+    resolveWriteTargets,
     writeToComponents,
 } from '@/features/components/services/componentConfigWrites';
 import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
@@ -66,6 +67,11 @@ export function useConfigureFieldValues({
 }: UseConfigureFieldValuesProps): UseConfigureFieldValuesReturn {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>({});
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
+
+    // The backend owns the store-scope keys, so those writes land only there
+    // (`resolveWriteTargets`). Every other field still writes to each component
+    // that declares it.
+    const backendId = project.componentSelections?.backend;
 
     // Seed from whichever source has values. Re-opening Configure re-sends `init`
     // without remounting React, so this runs again and resets the configs.
@@ -153,10 +159,10 @@ export function useConfigureFieldValues({
                     }
                 }
 
-                return writeToComponents(prev, field.componentIds, writes);
+                return writeToComponents(prev, resolveWriteTargets(field, backendId), writes);
             });
         },
-        [touchedFields],
+        [touchedFields, backendId],
     );
 
     // Stage an App Builder component's bucket-3 value under its own id. Text values flow
@@ -186,10 +192,12 @@ export function useConfigureFieldValues({
             if (normalized === currentValue) return;
 
             setComponentConfigs((prev) =>
-                writeToComponents(prev, field.componentIds, { [field.key]: normalized }),
+                writeToComponents(prev, resolveWriteTargets(field, backendId), {
+                    [field.key]: normalized,
+                }),
             );
         },
-        [componentConfigs],
+        [componentConfigs, backendId],
     );
 
     return {
