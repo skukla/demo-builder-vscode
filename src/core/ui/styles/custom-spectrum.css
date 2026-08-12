@@ -2106,11 +2106,6 @@ button[class*="spectrum-Button"][disabled],
 
 /* AI badge + its capabilities link on one line. The link was a standalone row
    beneath the badges, which cost the band a whole row to say one thing. */
-.dashboard-status-badge-inline {
-    display: flex !important;
-    align-items: center !important;
-    gap: 12px !important;
-}
 
 /* Match the height of the Projects List search header so content aligns */
 .dashboard-status-header > div {
@@ -2185,6 +2180,24 @@ button[class*="spectrum-Button"][disabled],
    scoped to the masthead stack — other StatusCard uses keep natural widths. */
 .dashboard-status-badges .status-label {
     min-width: 80px !important;
+}
+
+/* "View AI Capabilities" on its own line, indented to the status column so it
+   reads as a continuation of the AI row above it rather than a new fact.
+
+   102px = the dot (6px at StatusCard size="S" — see getSizeInPixels) + the
+   .status-row gap (8) + the reserved label column (80) + gap (8), i.e. exactly
+   where "READY" starts. An earlier 104 used 8px for the dot, which is the size
+   "M" value.
+
+   This replaced a min-width reservation on the AI row's status text. That could
+   not work: the link followed the StatusCard, and the Regenerate remediation
+   renders INSIDE that card, after the status text — so an unhealthy AI badge
+   displaced the link no matter how much room the text was given. Taking the link
+   out of the row removes the coupling instead of padding around it. */
+.dashboard-status-capabilities-link {
+    margin-left: 102px !important;
+    font-size: 12px !important;
 }
 
 /* Dashboard status badges - match card grid style */
@@ -2325,11 +2338,78 @@ button[class*="spectrum-Button"][disabled],
     padding-right: 8px; /* keep the scrollbar off the text */
 }
 
-/* The flat skills list itself just stacks its groups — the BODY scrolls. */
-.ai-skills-scroll {
+/* A PERSISTENT scrollbar. macOS paints overlay scrollbars only while you are
+   scrolling, so a bounded region at rest looks like a complete list — which is
+   how 10 of 21 skills went missing with nothing to suggest more existed.
+   Nothing else in this app styles a scrollbar; this is the first.
+   A bar rather than a bottom fade: a static fade keeps promising more content
+   after you have reached the end, and making it honest needs scroll-position
+   state for something a scrollbar already says. */
+.ai-capabilities-body::-webkit-scrollbar {
+    width: 10px;
+}
+.ai-capabilities-body::-webkit-scrollbar-track {
+    background: var(--spectrum-global-color-gray-100);
+    border-radius: 5px;
+}
+.ai-capabilities-body::-webkit-scrollbar-thumb {
+    background: var(--spectrum-global-color-gray-400);
+    border-radius: 5px;
+}
+.ai-capabilities-body::-webkit-scrollbar-thumb:hover {
+    background: var(--spectrum-global-color-gray-500);
+}
+
+/* Sections stack full-width; the SKILLS GROUPS are what run in two columns
+   (see .ai-skills-scroll). Putting the columns around the two sections was the
+   first attempt and barely helped — skills is the tall section, so a 3-row MCP
+   list beside a 21-row skills list takes the height from 3 + 21 to max(3, 21):
+   three rows saved, not half. */
+.ai-capabilities-columns {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 24px;
+}
+
+/* Section heading (MCP servers / Skills) — the level ABOVE a group header.
+   Both used to be 12px, differing only in colour, so "section > group > names"
+   existed in the comments and not on screen. */
+/* `!important` because this lands on Spectrum `Heading`/`Text`, which ship their
+   own single-class rules — a tie on specificity that source order decides, and
+   Spectrum wins it. The three utilities this replaced (.text-sm,
+   .font-semibold, .text-gray-800) all carried it for the same reason, as do
+   167 of the 238 font declarations in this file. Dropping it silently reverted
+   the heading to Spectrum's own size, which is how this shipped looking
+   unchanged the first time. */
+.ai-section-heading {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+    /* Mirrors `.config-section-header` — the app's section convention, used by
+       ConfigureScreen: a title over a hairline rule. Matching it is what makes
+       this modal read as part of the same application.
+       (Ideally this would REUSE ConfigSection rather than restate its look, but
+       that component takes no test id and this list is queried by one; worth
+       doing when ConfigSection next earns a `data-testid` prop.) */
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important;
+    padding-bottom: 4px !important;
+    margin: 0 0 4px 0 !important;
+}
+
+/* The skills GROUPS run in two columns — this is what stops the list cutting
+   itself off. With 21 skills a single column ended mid-group at `sync-changes`
+   and everything after it sat below a fold that macOS overlay scrollbars never
+   advertise: the heading said 21, the eye saw 11.
+
+   Whole groups are the unit, so a header never separates from its own skills.
+   `minmax(0, 1fr)` rather than `1fr` so a long name shrinks its track instead of
+   pushing the grid wider than the dialog; `align-items: start` keeps a short
+   group from stretching to match a tall neighbour. */
+.ai-skills-scroll {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px 24px;
+    align-items: start;
 }
 
 /* Sticky group headers — deliberately QUIETER than the "Skills · N installed"
@@ -2339,7 +2419,10 @@ button[class*="spectrum-Button"][disabled],
 .ai-skills-group-header {
     position: sticky;
     top: 0;
-    font-size: 12px;
+    /* 13px: still clearly subordinate to the 16px section heading, but the names
+       beneath it now sit at the Spectrum default rather than a forced 12px, so a
+       12px group header had stopped reading as a header at all. */
+    font-size: 13px;
     font-weight: 600;
     color: var(--spectrum-global-color-gray-600);
     background: var(--spectrum-global-color-gray-100);

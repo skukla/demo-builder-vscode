@@ -32,11 +32,7 @@
 
 import { View, Flex, Button, Link } from '@adobe/react-spectrum';
 import React from 'react';
-import type {
-    StatusDisplay,
-    AiReadyState,
-    OrgCheckState,
-} from '../hooks/useDashboardStatus';
+import type { StatusDisplay, AiReadyState, OrgCheckState } from '../hooks/useDashboardStatus';
 import { StatusCard } from '@/core/ui/components/feedback';
 
 export interface DashboardStatusHeaderProps {
@@ -88,47 +84,13 @@ export function DashboardStatusHeader({
                                     Pinned by a test that reads the CSS, since jsdom
                                     resolves no layout and cannot tell the difference. */}
                                 <div className="dashboard-status-badges">
-                                    {/* AI Ready Status, with BOTH its affordances on the
-                                        same line: "Regenerate AI files" (the fix,
-                                        only when red/yellow) via StatusCard.action,
-                                        and the always-on "View AI Capabilities"
-                                        navigation beside it.
+                                    {/* IMS Org FIRST, so the capabilities link below can sit
+                                        directly under the AI badge it describes. With AI on
+                                        top, that link hung under IMS Org and read as
+                                        belonging to it, or to nothing — which is why it was
+                                        pulled onto the AI line in the first place.
 
-                                        The capabilities link used to sit in a row of
-                                        its own below the badges, on the grounds that
-                                        navigation is not a remediation. That is true
-                                        and it still is not one — but it cost the band
-                                        a whole row to say one thing, about the badge
-                                        directly above it. */}
-                                    <div
-                                        className="dashboard-status-badge-inline"
-                                        data-testid="ai-status-row"
-                                    >
-                                        <StatusCard
-                                            label={aiReady.label}
-                                            status={aiReady.text}
-                                            color={aiReady.color}
-                                            size="S"
-                                            className="dashboard-status-badge"
-                                            action={(aiReady.color === 'red' || aiReady.color === 'yellow')
-                                                ? {
-                                                    label: 'Regenerate AI files',
-                                                    onPress: onRegenerateAi,
-                                                    testId: 'ai-regenerate-trigger',
-                                                }
-                                                : undefined}
-                                        />
-                                        <Link
-                                            data-testid="ai-view-capabilities-trigger"
-                                            onPress={onViewCapabilities}
-                                            isQuiet
-                                            UNSAFE_className="text-sm cursor-pointer"
-                                        >
-                                            View AI Capabilities
-                                        </Link>
-                                    </div>
-
-                                    {/* IMS Org status — ambient org-context health (blue checking →
+                                        IMS Org status — ambient org-context health (blue checking →
                                         green org name / red wrong org). Shown only for Adobe projects.
                                         The `unknown` case (couldn't check non-interactively on open)
                                         surfaces a quiet "Sign in to check" via StatusCard.action — a
@@ -141,13 +103,58 @@ export function DashboardStatusHeader({
                                             color={imsOrgDisplay.color}
                                             size="S"
                                             className="dashboard-status-badge"
-                                            action={orgCheckState === 'unknown'
-                                                ? { label: 'Sign in to check', onPress: onReAuthenticate }
-                                                : undefined}
+                                            action={
+                                                orgCheckState === 'unknown'
+                                                    ? {
+                                                          label: 'Sign in to check',
+                                                          onPress: onReAuthenticate,
+                                                      }
+                                                    : undefined
+                                            }
                                         />
                                     )}
-                                </div>
 
+                                    {/* AI Ready Status, carrying its remediation only:
+                                        "Regenerate AI files" (red/yellow) via StatusCard.action. */}
+                                    <div data-testid="ai-status-row">
+                                        <StatusCard
+                                            label={aiReady.label}
+                                            status={aiReady.text}
+                                            color={aiReady.color}
+                                            size="S"
+                                            className="dashboard-status-badge"
+                                            action={
+                                                aiReady.color === 'red' ||
+                                                aiReady.color === 'yellow'
+                                                    ? {
+                                                          label: 'Regenerate AI files',
+                                                          onPress: onRegenerateAi,
+                                                          testId: 'ai-regenerate-trigger',
+                                                      }
+                                                    : undefined
+                                            }
+                                        />
+                                    </div>
+
+                                    {/* Its OWN line, indented to the status column so it reads
+                                        as a continuation of the AI row above.
+
+                                        It sat on the AI line to save a row, and that put it
+                                        after a variable-width StatusCard: its position moved
+                                        with the status text, and again whenever Regenerate
+                                        appeared beside it. No rule outside the card can hold
+                                        it still, because what displaces it is inside. The row
+                                        is free anyway — the band reserves 122px and two badge
+                                        rows use about 44px. */}
+                                    <Link
+                                        data-testid="ai-view-capabilities-trigger"
+                                        onPress={onViewCapabilities}
+                                        isQuiet
+                                        UNSAFE_className="dashboard-status-capabilities-link cursor-pointer"
+                                    >
+                                        View AI Capabilities
+                                    </Link>
+                                </div>
                             </div>
                         </View>
                         {/* All Projects button */}

@@ -10,10 +10,16 @@
  */
 
 import { screen, fireEvent, act, within } from '@testing-library/react';
-import { setupTestContext, renderDashboard, type TestContext } from './ProjectDashboardScreen.testUtils';
+import {
+    setupTestContext,
+    renderDashboard,
+    type TestContext,
+} from './ProjectDashboardScreen.testUtils';
 
 /** A passing verify response carrying the given skills inventory. */
-function verifyWithSkills(skills: Array<{ name: string; description: string | null; path: string; source: string }>) {
+function verifyWithSkills(
+    skills: Array<{ name: string; description: string | null; path: string; source: string }>
+) {
     return {
         status: 'ok',
         checks: [{ name: 'skill-files', status: 'ok' }],
@@ -124,11 +130,25 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
 
     describe('View AI Capabilities — capability discovery (separate from the badge)', () => {
         const SKILLS = [
-            { name: 'Add a component', description: 'Adds a component to your project', path: '/p/.claude/skills/add-component.md', source: 'demo-builder' },
-            { name: 'Sync changes', description: 'Picks the right sync operation', path: '/p/.claude/skills/sync-changes.md', source: 'demo-builder' },
+            {
+                name: 'Add a component',
+                description: 'Adds a component to your project',
+                path: '/p/.claude/skills/add-component.md',
+                source: 'demo-builder',
+            },
+            {
+                name: 'Sync changes',
+                description: 'Picks the right sync operation',
+                path: '/p/.claude/skills/sync-changes.md',
+                source: 'demo-builder',
+            },
         ];
         const MCPS = [
-            { id: 'demo-builder', status: 'ok' as const, tools: [{ name: 'list_projects', description: 'd' }] },
+            {
+                id: 'demo-builder',
+                status: 'ok' as const,
+                tools: [{ name: 'list_projects', description: 'd' }],
+            },
         ];
 
         function verifyWithSkillsAndMcps(skills: typeof SKILLS, mcps: typeof MCPS) {
@@ -147,32 +167,64 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
         it('renders a clickable "View AI Capabilities" link', () => {
             renderDashboard();
             deliverVerify(verifyWithSkillsAndMcps(SKILLS, MCPS));
-            expect(screen.getByTestId('ai-view-capabilities-trigger').textContent)
-                .toMatch(/View AI Capabilities/);
+            expect(screen.getByTestId('ai-view-capabilities-trigger').textContent).toMatch(
+                /View AI Capabilities/
+            );
         });
 
-        it('sits on the AI status LINE, not a row of its own beneath it', () => {
-            // It was a standalone link below the badges on the grounds that it is
-            // navigation rather than a remediation. True, but it cost the band a
-            // whole row to say one thing, and the thing it says is about the badge
-            // directly above it.
+        it('sits on its OWN line beneath the badges, not on the AI status line', () => {
+            // It lived on the AI line to save a row. The cost: it followed a
+            // variable-width StatusCard, so its position moved with the status
+            // text ("Ready" vs "Setup incomplete") and again whenever the
+            // Regenerate remediation appeared beside it. Nothing outside that card
+            // can hold it still, because the thing that displaces it is INSIDE.
+            //
+            // The row is free: the band reserves min-height 122px and two badge
+            // rows at row-gap 4px use about 44px of it.
             renderDashboard();
             deliverVerify(verifyWithSkillsAndMcps(SKILLS, MCPS));
 
             const row = screen.getByTestId('ai-status-row');
-            expect(within(row).getByTestId('ai-view-capabilities-trigger')).toBeInTheDocument();
             expect(within(row).getByTestId('status-card-AI')).toBeInTheDocument();
+            expect(within(row).queryByTestId('ai-view-capabilities-trigger')).toBeNull();
+            expect(screen.getByTestId('ai-view-capabilities-trigger')).toBeInTheDocument();
         });
 
-        it('still leaves room for the Regenerate remediation on the same line', () => {
-            // Both can show at once: Regenerate is the fix for an unhealthy badge,
-            // the capabilities link is always-on navigation.
+        it('comes LAST in the badge stack, directly after the AI row', () => {
+            // This is what makes the standalone line read correctly, and it is why
+            // AI moved below IMS Org in the markup: a link under the LAST badge
+            // continues it, whereas one under a stack led by AI hung off IMS Org
+            // and looked like it belonged there, or to nothing.
+            //
+            // The IMS-before-AI order itself is not asserted here: this fixture
+            // renders no IMS badge (no `status-card-IMS Org` anywhere in it), so a
+            // check for it would pass vacuously rather than mean anything.
+            renderDashboard();
+            deliverVerify(verifyWithSkillsAndMcps(SKILLS, MCPS));
+
+            const badges = screen.getByTestId('ai-status-row').parentElement!;
+            const children = Array.from(badges.children);
+            const aiIndex = children.findIndex(
+                (el) => el.getAttribute('data-testid') === 'ai-status-row'
+            );
+            const link = screen.getByTestId('ai-view-capabilities-trigger');
+
+            expect(children[children.length - 1]).toContainElement(link);
+            expect(aiIndex).toBe(children.length - 2);
+        });
+
+        it('coexists with the Regenerate remediation, which stays ON the badge', () => {
+            // Both show at once: Regenerate is the fix for an unhealthy badge and
+            // belongs to it; the capabilities link is always-on navigation and
+            // belongs to the surface. Regenerate living inside the StatusCard is
+            // exactly why the link could not be pinned while it sat alongside.
             renderDashboard();
             deliverVerify({ checks: [{ name: 'skills', status: 'error' }] } as never);
 
             const row = screen.getByTestId('ai-status-row');
             expect(within(row).getByTestId('ai-regenerate-trigger')).toBeInTheDocument();
-            expect(within(row).getByTestId('ai-view-capabilities-trigger')).toBeInTheDocument();
+            expect(within(row).queryByTestId('ai-view-capabilities-trigger')).toBeNull();
+            expect(screen.getByTestId('ai-view-capabilities-trigger')).toBeInTheDocument();
         });
 
         it('opens the capabilities modal showing both skills and MCPs when clicked', async () => {
@@ -186,9 +238,13 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
             expect(screen.getByTestId('ai-capabilities-modal')).toBeInTheDocument();
             expect(screen.getByTestId('ai-capabilities-modal-skills-count').textContent).toBe('2');
             expect(screen.getByTestId('ai-capabilities-modal-mcps-count').textContent).toBe('1');
-            const skillRows = screen.getAllByTestId('ai-capabilities-modal-skill').map(r => r.textContent);
+            const skillRows = screen
+                .getAllByTestId('ai-capabilities-modal-skill')
+                .map((r) => r.textContent);
             expect(skillRows).toContain('Add a component');
-            const mcpRows = screen.getAllByTestId('ai-capabilities-modal-mcp').map(r => r.textContent);
+            const mcpRows = screen
+                .getAllByTestId('ai-capabilities-modal-mcp')
+                .map((r) => r.textContent);
             expect(mcpRows).toContain('demo-builder');
         });
 
@@ -207,7 +263,9 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
                 await Promise.resolve();
             });
 
-            const types = (webviewClient.request as jest.Mock).mock.calls.map((c: unknown[]) => c[0]);
+            const types = (webviewClient.request as jest.Mock).mock.calls.map(
+                (c: unknown[]) => c[0]
+            );
             expect(types).toContain('regenerate-ai-files');
             expect(types).toContain('verify-ai-setup');
         });
@@ -232,7 +290,11 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
         });
 
         it('clicking the conditional Regenerate link dispatches regenerate-ai-files', async () => {
-            const webviewClient = mockAiRequests({ status: 'ok', checks: [], inventory: { skills: [], mcps: [], sessionMcps: [] } });
+            const webviewClient = mockAiRequests({
+                status: 'ok',
+                checks: [],
+                inventory: { skills: [], mcps: [], sessionMcps: [] },
+            });
             renderDashboard();
             deliverVerify({
                 status: 'warning',
@@ -245,7 +307,9 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
                 await Promise.resolve();
                 await Promise.resolve();
             });
-            const types = (webviewClient.request as jest.Mock).mock.calls.map((c: unknown[]) => c[0]);
+            const types = (webviewClient.request as jest.Mock).mock.calls.map(
+                (c: unknown[]) => c[0]
+            );
             expect(types).toContain('regenerate-ai-files');
         });
     });

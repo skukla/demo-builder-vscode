@@ -119,7 +119,7 @@ export function AiSkillsList({
         return (
             <Flex gap="size-100" alignItems="center" data-testid="ai-skills-error">
                 <AlertCircle size="S" UNSAFE_className="text-yellow-600" />
-                <Text UNSAFE_className="text-sm text-gray-700">
+                <Text UNSAFE_className="text-gray-700">
                     Couldn&apos;t read the project&apos;s skills. Try Regenerate AI files.
                 </Text>
             </Flex>
@@ -132,14 +132,14 @@ export function AiSkillsList({
         return (
             <Flex gap="size-100" alignItems="center" data-testid="ai-skills-loading">
                 <Spinner size="S" aria-label="Checking" />
-                <Text UNSAFE_className="text-sm text-gray-700">Checking the project's skills…</Text>
+                <Text UNSAFE_className="text-gray-700">Checking the project's skills…</Text>
             </Flex>
         );
     }
 
     if (skills.length === 0) {
         return (
-            <Text UNSAFE_className="text-sm text-gray-700" data-testid="ai-skills-empty">
+            <Text UNSAFE_className="text-gray-700" data-testid="ai-skills-empty">
                 No skills yet. Regenerate AI files to set them up.
             </Text>
         );
@@ -147,11 +147,11 @@ export function AiSkillsList({
 
     return (
         <Flex direction="column" gap="size-100" data-testid="ai-skills-list">
-            <Text
-                data-testid="ai-skills-summary"
-                UNSAFE_className="text-sm font-semibold text-gray-800"
-            >
-                Skills · {skills.length} installed
+            {/* Counted the same way as the MCP section heading. One said
+                "Skills · N installed" and the other just "MCP servers", so two
+                parallel lists were labelled by two different rules. */}
+            <Text data-testid="ai-skills-summary" UNSAFE_className="ai-section-heading">
+                Skills · {skills.length}
             </Text>
             {/* Fixed-height scroll region — the modal frame never resizes. */}
             <div className="ai-skills-scroll">
@@ -163,12 +163,15 @@ export function AiSkillsList({
                         >
                             {label} · {items.length}
                         </div>
-                        <Flex direction="column" gap="size-50" marginStart="size-150">
+                        {/* Flush with the group header, matching the MCP list.
+                            The skills were indented and the MCP rows were not,
+                            so two lists in one modal read as two systems. */}
+                        <Flex direction="column" gap="size-50">
                             {items.map((skill) => (
                                 <Text
                                     key={skill.path}
                                     data-testid="ai-skill-row"
-                                    UNSAFE_className="text-sm text-gray-800"
+                                    UNSAFE_className="text-gray-800"
                                 >
                                     {skill.name}
                                 </Text>

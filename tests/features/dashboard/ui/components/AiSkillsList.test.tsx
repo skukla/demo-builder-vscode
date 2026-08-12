@@ -32,7 +32,7 @@ function renderList(props: Partial<React.ComponentProps<typeof AiSkillsList>> = 
 
 describe('AiSkillsList', () => {
     describe('Default state — groups visible, individually collapsed', () => {
-        it('shows a "Skills · N installed" summary line with the total count', () => {
+        it('shows a "Skills · N" summary line counted like the MCP section', () => {
             renderList({
                 skills: [
                     makeSkill('add-component', 'demo-builder'),
@@ -42,8 +42,7 @@ describe('AiSkillsList', () => {
             });
 
             const summary = screen.getByTestId('ai-skills-summary');
-            expect(summary).toHaveTextContent(/Skills/);
-            expect(summary).toHaveTextContent(/3 installed/);
+            expect(summary).toHaveTextContent('Skills · 3');
         });
 
         it('renders group rows with their counts by default (no outer toggle)', () => {
@@ -170,6 +169,14 @@ describe('AiSkillsList', () => {
             expect(screen.getByTestId('ai-skills-group-adobe-aem')).toHaveTextContent(
                 'Adobe AEM · 1'
             );
+        });
+
+        it('leaves skill names at the app default size, not the 12px .text-sm', () => {
+            // Every other modal uses bare Spectrum <Text>; this list forced 12px
+            // in nine places, which is why it read denser than the rest of the app.
+            renderList({ skills: [makeSkill('add-component', 'demo-builder')] });
+
+            expect(screen.getByTestId('ai-skill-row')).not.toHaveClass('text-sm');
         });
 
         it('marks headers with the sticky readable-header class', () => {

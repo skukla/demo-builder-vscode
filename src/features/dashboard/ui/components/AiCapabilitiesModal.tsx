@@ -75,7 +75,7 @@ export function AiCapabilitiesModal({
     return (
         <Modal
             title="AI Capabilities"
-            size="M"
+            size="L"
             onClose={onClose}
             actionButtons={[
                 {
@@ -133,7 +133,7 @@ export function AiCapabilitiesModal({
                             // common case 1. Use neutral copy that fits both.
                             <>
                                 <Spinner size="L" aria-label="Checking AI setup" />
-                                <Text UNSAFE_className="text-sm text-gray-700">
+                                <Text UNSAFE_className="text-gray-700">
                                     Checking AI setup…
                                 </Text>
                             </>
@@ -141,21 +141,35 @@ export function AiCapabilitiesModal({
                     </Flex>
                 ) : (
                     /* ONE scroll region for everything beneath the modal heading —
-                       MCP servers and skills scroll together; the frame stays put. */
+                       MCP servers and skills scroll together; the frame stays put.
+                       A plain div, not Spectrum Flex, for the columns: Flex caps
+                       width at ~450px (see the spectrum-webview-ui skill). */
                     <div className="ai-capabilities-body">
-                        <Flex direction="column" gap="size-300">
+                        <div
+                            className="ai-capabilities-columns"
+                            data-testid="ai-capabilities-columns"
+                        >
                             <Flex direction="column" gap="size-150">
                                 <Heading
                                     level={4}
-                                    UNSAFE_className="text-sm font-semibold text-gray-800 m-0"
+                                    UNSAFE_className="ai-section-heading"
+                                    data-testid="ai-mcps-heading"
                                 >
-                                    MCP servers
+                                    MCP servers · {mcps.length}
                                 </Heading>
-                                <AiMcpsList mcps={mcps} hasError={hasMcpsError} isLoading={isLoading} />
+                                <AiMcpsList
+                                    mcps={mcps}
+                                    hasError={hasMcpsError}
+                                    isLoading={isLoading}
+                                />
                             </Flex>
 
-                            <AiSkillsList skills={skills} hasError={hasSkillsError} isLoading={isLoading} />
-                        </Flex>
+                            <AiSkillsList
+                                skills={skills}
+                                hasError={hasSkillsError}
+                                isLoading={isLoading}
+                            />
+                        </div>
                     </div>
                 )}
             </View>
