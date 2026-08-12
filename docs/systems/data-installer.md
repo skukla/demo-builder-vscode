@@ -72,18 +72,22 @@ type.
 - **A pack can declare a data type the service holds no item for.** The declared
   count alone would misstate what installing gets you, which is why the detail
   handler pairs the metadata with a batch item lookup.
-- **`commerce_instance` carries TWO shapes, and the contract is unresolved.** The
-  plan recorded it as "an ACCS instance id in every real record, never a REST
-  URL"; the captured fixture contradicts that. In
-  `tests/fixtures/data-installer/get-installed-datapacks.json`, 30 of 35 rows
-  hold a scrubbed id (`instance-NN`) and **5 hold a scrubbed URL**
-  (`https://datapack-accs.test`, on `carvello`, `citisignal_original`,
-  `frescopa`, `grocery`, `venia`). The scrub was done by hand and preserved
-  shape, so the likeliest reading is that the originals differed the same way —
-  but the real values are unrecoverable, so this is inference, not proof. The
-  alternative is that sanitization invented a shape, which would mean the fixture
-  misrepresents the API. **Either way, nothing downstream may assume one shape.**
-  The UI renders the value verbatim, which is correct under both readings.
+- **`commerce_instance` carries TWO shapes.** Verified against the live service
+  on 2026-08-12; the plan's "an ACCS instance id in every real record, never a
+  REST URL" is **wrong**. Of 35 installed records: **30 are base62 ids** (28 of
+  22 chars, 2 of 21) and **5 are the literal URL `https://datapack-accs.test`**,
+  on `carvello/main`, `citisignal_original/hold`, `frescopa/main`,
+  `grocery/main` and `venia/hold`. That URL is the real stored value, not a
+  fixture artifact — `.test` is RFC 6761 reserved and non-routable, so it is
+  someone's placeholder typed into the service, and the fixture correctly left
+  it alone. **Nothing downstream may assume one shape.** The UI renders the value
+  verbatim, which is right for both.
+- **Whether an id EQUALS the ACCS tenant id is still open**, and the live check
+  could not settle it. Across the full request log (1063 rows) only **16
+  distinct instances** have ever had Data Installer activity, and none of them
+  is a tenant derived from a local ACCS project — so there is no overlap to
+  test, rather than a mismatch. Shapes are consistent on both sides (base62,
+  21–22 chars). Closing it needs a project that HAS had a datapack installed.
 - **Import-capable ≠ export-capable.** The import processor order contains
   `product_export`, `customers_export` and `giftcards`, which the export list
   lacks. Ask per mode; never cache one "all types" answer.

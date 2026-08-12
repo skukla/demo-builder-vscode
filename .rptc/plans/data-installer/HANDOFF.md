@@ -69,28 +69,42 @@ live demo**. Either way the answer is a user-editable field pre-filled with the 
 value; if the derivation is wrong, the prefill is actively harmful rather than merely
 unhelpful.
 
-**A second question was folded in on 2026-08-12: is the field even ONE shape?** The plan
-recorded "an ACCS instance id in every real record, never a REST URL". The captured
-fixture contradicts it — `get-installed-datapacks.json` holds 30 scrubbed ids
-(`instance-NN`) and **5 scrubbed URLs** (`https://datapack-accs.test`, on `carvello`,
-`citisignal_original`, `frescopa`, `grocery`, `venia`). The scrub was done by hand and
-preserved shape, so the originals most likely differed the same way — but they are
-unrecoverable, so that is inference. If instead the scrub invented a shape, the fixture
-misrepresents the API, which is its own problem.
+**Ran the live check 2026-08-12. It settled the shape question and NOT the identity one.**
 
-**The fixtures cannot settle either question** — the real values are gone. It needs a live
-read:
+**SETTLED — the field carries two shapes, and the plan was wrong.** Of 35 installed
+records: 30 base62 ids (28×22 chars, 2×21) and **5 the literal
+`https://datapack-accs.test`**. That URL is really stored, not a fixture artifact —
+`.test` is RFC 6761 reserved and non-routable, so it is a placeholder someone typed in.
+Stage 2 must handle both shapes no matter how the rest resolves; do not add id-specific
+formatting, linking or validation.
 
-1. `list_installed_datapacks` (the MCP tool, or the panel's Installed view) against the
-   live service, and note the raw `commerce_instance` values and their shapes.
-2. For a project whose backend is ACCS, read its endpoint and take
-   `ACCS_ENDPOINT_PATTERN` group 2.
-3. Compare. Equal → prefill is safe. Different → prefill is a footgun and the field starts
-   empty. Mixed shapes → Stage 2 handles both, whatever the comparison says.
+**STILL OPEN — does an id equal the ACCS tenant id?** The check could not test it. Across
+the full request log (1063 rows, paged) only **16 distinct instances** have ever had Data
+Installer activity, and none is a tenant derived from a local ACCS project. So there is
+**no overlap to compare**, which is different from a mismatch. The comparison itself is
+sound — positive control: all 12 installed instances were found in the log. Shapes are
+consistent on both sides (base62, 21–22 chars), which is weak supporting evidence and
+nothing more.
 
-This is a live call against another team's stage service, so it needs the user present —
-and anything written up from it follows the public-repo rule below (strip instance ids,
-activation ids, endpoints; keep the finding).
+**To close it, one of:**
+
+1. Name an ACCS project that HAS had a datapack installed, derive `ACCS_ENDPOINT_PATTERN`
+   group 2 from its endpoint, and check membership in the live instance set. Definitive.
+2. Ask the service owner what populates `commerce_instance` — folds into blocker 2's
+   conversation and costs nothing extra.
+
+Until then Stage 2's target field starts EMPTY rather than prefilled. A prefill derived
+from an unverified equality is the failure mode that writes sample data into someone
+else's live demo.
+
+Reproducing the check: `GET {base}/logs?limit=500&skip=N` and
+`GET {base}/get-installed-datapacks?limit=200`, bearer from
+`aio config get ims.contexts.cli.access_token --json`. Note the activity action is `logs`,
+not `get-datapack-request-logs` — Runtime routes on the last segment, so a guessed name is
+a bare 404 that looks like an empty result if you do not check the status code.
+
+Anything written up from a live read follows the public-repo rule below: strip instance
+ids, activation ids and endpoints; keep the finding.
 
 ### 2. A question for the service owner (blocking, and cheaper than testing)
 
