@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.128] - 2026-08-11
+
+### Added
+
+- **`get_store_structure` MCP tool.** Agents can now see the websites, store groups and store views a project's Commerce backend actually has — plus an `ok` / `missing` / `not-configured` verdict for each store-scope code the project is configured for. A project pointing at a website that does not exist used to look like every other failure; now it says so. PaaS uses the project's saved admin credentials; ACCS proxies through the configured discovery service and only prompts for Adobe sign-in when the read actually needs a token.
+
+- **A `diagnose-demo` skill in every generated project.** Of the twelve skills shipped into a project's AI bundle, none covered diagnosis — every one told an agent how to *do* something. This one routes a symptom to the check that answers it, and carries the two traps that read as false negatives: pushing is not publishing, and `deploy_mesh` does not regenerate `.env` (only a Configure save does), so deploying first redeploys the old configuration and reports success. AGENTS.md now points at it before anything gets edited.
+
+> **This release bumps `AI_CONTEXT_VERSION`, so every existing project will prompt you to regenerate its AI files.** That is intended — the new skill only reaches a project that regenerates.
+
+### Fixed
+
+- **A secret-free settings export was not secret-free.** `export_project_settings` with `includeSecrets: false` promised "a secret-free copy" and delivered a file containing your Commerce admin password and API keys, stamped `includesSecrets: false`. The flag was only ever used to write the label. It now actually removes them. Filtering on the field type would not have been enough — exactly one catalog field is typed as a password while all three API keys are typed as text, so a type-based filter would have stripped the password and shipped three keys in a file that claimed to have none.
+
+- **GitHub write failures now say what was blocked.** When GitHub refuses a write, the message named no file — and the storefront pipeline writes eight of them, so there was no way to tell which. It now names the file, names the detected secret type, and states that nothing was written. The full response body, including the bypass id, goes to the Debug Logs channel.
+
+- **A blocked push no longer sends you round in circles.** GitHub prints `! [remote rejected] … (push declined due to repository rule violations)` when a ruleset refuses a push. That contains the word "rejected", so it was reported as an ordinary out-of-date branch and you were told to pull and rebase — advice that can never clear a ruleset rejection.
+
+- **Storefront diagnostics stopped blaming healthy storefronts.** The PDP probe asks your live storefront whether a product page renders, but picked the product using the project file rather than the configuration the storefront is actually serving. When those disagreed on store scope, it asked for a product outside the storefront's own scope and reported a broken storefront that was working. It now samples from the served configuration, and reports a genuine mismatch only when the project claims it is published yet the CDN serves something else.
+
+- **Commerce store scope has one home again.** Website, store and store view were written into several components at once, so one fact had several copies and only some were updated on a change. A stale copy could win, which is how a project moved to a new website kept deploying against the old one — with both the storefront republish and the mesh deploy reporting success. The value is now written once, and existing projects have their duplicates cleaned up on load.
+
+- **Four labels are back on the type scale.** The destination line, an integration row and two flow notices each sat half a pixel off every other label.
+
+### Changed
+
+- **Adobe project and workspace creation no longer sends a `who_created` value.** Adobe stamps that field with the calling user's identity and discarded what was sent. Sending it implied control over a field that decides whether you can later delete the project.
+
 ## [1.0.0-beta.127] - 2026-08-11
 
 The largest release so far — 484 commits. `.126` was a diagnostics hotfix cut from `.125`,
