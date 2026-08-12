@@ -2,10 +2,21 @@
  * The datapack catalog: a searchable grid of packs, one card per name.
  *
  * A composition of the shared vocabulary, per `reuse-first`: `SearchHeader` for
- * the search/count bar, `GridLayout` for the grid, `LoadingDisplay` /
- * `EmptyState` / `StatusDisplay` for the states, `matchesSearchFields` for the
- * filter. Only `DatapackCard` is new, and only because nothing else renders an
- * image (see its module docstring).
+ * the search/count bar, `LoadingDisplay` / `EmptyState` / `StatusDisplay` for the
+ * states, `matchesSearchFields` for the filter. Only `DatapackCard` is new, and
+ * only because nothing else renders an image (see its module docstring).
+ *
+ * **The page shell is the house one**, copied from `IntegrationsScreen` (the
+ * newest full-screen surface) and `ProjectsDashboard`: a sticky
+ * `.projects-sticky-header` band holding the controls, then content in
+ * `.page-container-padded`. Both constrain to `--content-width` (960px). Without
+ * them this view spanned the whole panel and its three columns rendered at ~517px
+ * each — the cards were not too big, the band was missing.
+ *
+ * `GridLayout` was rejected here despite being the shared component: it takes a
+ * fixed column COUNT, and both shipped card grids reflow by width instead
+ * (`auto-fill` + `minmax`). Its one consumer, `PromptGrid`, is tiles inside a
+ * panel rather than a page-level grid.
  *
  * **One card per NAME.** The service returns one row per `(name, version)` — 40
  * rows for 25 names live — which is not a list anyone can read. `groupDatapacks`
@@ -40,18 +51,20 @@ import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { GridLayout } from '@/core/ui/components/layout/GridLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 
 /** Fields a query is matched against — the id and the label, nothing else. */
 const SEARCH_FIELDS: ReadonlyArray<keyof DatapackGroup> = ['name', 'displayName'];
 
-/** Below the wizard's own default (5): a catalog of a handful still filters well. */
-const SEARCH_THRESHOLD = 2;
-
-/** Grid width. Three reads comfortably in a full editor tab. */
-const COLUMNS = 3;
+/**
+ * Show the search field from the first item, as both page-level peers do.
+ *
+ * NOT a tuning knob. `SearchHeader` puts the count BESIDE the refresh button when
+ * there is no field and BENEATH the field when there is, so a non-zero threshold
+ * makes the band change shape as the catalog crosses it.
+ */
+const SEARCH_THRESHOLD = 0;
 
 export function DatapackCatalogView(): React.JSX.Element {
     const [includeCommunity, setIncludeCommunity] = useState(false);
@@ -88,30 +101,44 @@ export function DatapackCatalogView(): React.JSX.Element {
     }
 
     return (
-        <div>
-            <SearchHeader
-                searchQuery={query}
-                onSearchQueryChange={setQuery}
-                searchPlaceholder="Filter datapacks..."
-                searchThreshold={SEARCH_THRESHOLD}
-                totalCount={groups.length}
-                filteredCount={filtered.length}
-                itemNoun="datapack"
-                onRefresh={refresh}
-                isRefreshing={loading}
-                refreshAriaLabel="Refresh datapacks"
-                hasLoadedOnce={value !== null}
-                // Always: the toggle lives on this row, and an empty curated
-                // catalog is exactly when the user needs to reach it.
-                alwaysShowCount
-                countTrailing={
-                    <Switch isSelected={includeCommunity} onChange={setIncludeCommunity}>
-                        Include community datapacks
-                    </Switch>
-                }
-            />
-            {renderBody({ groups, filtered, query, versions, pickVersion })}
-        </div>
+        <>
+            {/* Sticky controls band — the shape ProjectsDashboard and
+                IntegrationsScreen both use. No `Flex` wrapper around the header:
+                those two need one for their trailing buttons, and this surface
+                has none to place. */}
+            <div className="projects-sticky-header">
+                <div className="page-container-padded page-header-section">
+                    <SearchHeader
+                        searchQuery={query}
+                        onSearchQueryChange={setQuery}
+                        searchPlaceholder="Filter datapacks..."
+                        searchThreshold={SEARCH_THRESHOLD}
+                        totalCount={groups.length}
+                        filteredCount={filtered.length}
+                        itemNoun="datapack"
+                        onRefresh={refresh}
+                        isRefreshing={loading}
+                        refreshAriaLabel="Refresh datapacks"
+                        hasLoadedOnce={value !== null}
+                        // Always: the toggle lives on this row, and an empty
+                        // curated catalog is exactly when it must be reachable.
+                        alwaysShowCount
+                        countTrailing={
+                            <Switch
+                                isSelected={includeCommunity}
+                                onChange={setIncludeCommunity}
+                            >
+                                Include community datapacks
+                            </Switch>
+                        }
+                    />
+                </div>
+            </div>
+
+            <div className="page-container-padded pb-6">
+                {renderBody({ groups, filtered, query, versions, pickVersion })}
+            </div>
+        </>
     );
 }
 
@@ -139,7 +166,7 @@ function renderBody(args: {
     }
 
     return (
-        <GridLayout columns={COLUMNS} gap="size-300">
+        <div className="datapack-grid">
             {filtered.map((group) => (
                 <DatapackCard
                     key={group.name}
@@ -148,6 +175,6 @@ function renderBody(args: {
                     onVersionChange={(version) => pickVersion(group.name, version)}
                 />
             ))}
-        </GridLayout>
+        </div>
     );
 }

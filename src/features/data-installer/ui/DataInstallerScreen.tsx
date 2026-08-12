@@ -51,10 +51,20 @@ export function DataInstallerScreen(_props: DataInstallerScreenProps): React.JSX
                 <PageHeader
                     title="Data Installer"
                     subtitle="Browse and install Adobe Commerce sample-data datapacks"
+                    // Aligns the title with the content band below it. Both
+                    // page-level peers set it; without it the header ran the full
+                    // panel width while the body sat in a 960px column.
+                    constrainWidth
                 />
             }
+            backgroundColor="var(--spectrum-global-color-gray-50)"
         >
-            <ViewSwitcher views={VIEWS} activeId={activeView} onSelect={setActiveView} />
+            {/* Constrained like every other band on the page. Renders an empty
+                wrapper today because the switcher hides itself at one view; the
+                alternative is remembering to add it when the second view lands. */}
+            <div className="page-container-padded">
+                <ViewSwitcher views={VIEWS} activeId={activeView} onSelect={setActiveView} />
+            </div>
             {activeView === 'catalog' ? <DatapackCatalogView /> : null}
         </PageLayout>
     );
