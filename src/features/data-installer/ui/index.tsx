@@ -12,6 +12,9 @@ import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/custom-spectrum.css';
+// Feature-scoped: this is the ONLY entry that loads it, so its classes exist in
+// this bundle and nowhere else.
+import './styles/data-installer.css';
 
 const container = document.getElementById('root');
 if (!container) {

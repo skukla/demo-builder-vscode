@@ -145,11 +145,11 @@ describe('CommandManager', () => {
             );
         });
 
-        it('should register all 29 commands (30 total, but resetAll only in dev mode)', () => {
+        it('should register all 31 commands (resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
-            // Verify registerCommand was called 30 times (resetAll excluded - dev mode only)
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(30);
+            // Verify registerCommand was called 31 times (resetAll excluded - dev mode only)
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(31);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -160,6 +160,9 @@ describe('CommandManager', () => {
                 // summary tile (registered right after the dashboard it replaces
                 // the grid section of).
                 'demoBuilder.showIntegrations',
+                // Standalone panel: the datapack catalog is global to the service,
+                // so it opens without a project and disposes no sibling tab.
+                'demoBuilder.showDataInstaller',
                 'demoBuilder.loadProject',
                 'demoBuilder.startDemo',
                 'demoBuilder.stopDemo',
