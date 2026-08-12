@@ -110,6 +110,69 @@ export function isRulesetRejection(text: string): boolean {
     return RULESET_REJECTION_PATTERNS.some((pattern) => pattern.test(text));
 }
 
+/** Cap on the whole diagnostic block — it goes to the debug log, not a report. */
+const MAX_DIAGNOSTIC_LENGTH = 1200;
+
+/**
+ * Everything GitHub said about a refused write, for the debug log.
+ *
+ * WHY this exists rather than just the tidy one-line message: on 2026-08-11 a
+ * write was refused with "Repository rule violations found / Secret detected in
+ * content" and nobody could establish WHY. Three reproduction attempts failed —
+ * a fake PAT and a real RSA private key were both accepted on a public repo with
+ * push protection enabled — which means the block came from policy on the
+ * reporter's account (custom scanning patterns or an org ruleset) and cannot be
+ * triggered anywhere else. When a failure only happens on someone else's
+ * machine, the response body is the only evidence that will ever exist, and the
+ * extension was discarding all of it: `data.message`, `documentation_url`, and
+ * every entry in `errors[]` beyond the first.
+ *
+ * Emits nothing when there is no body to report, so ordinary network failures
+ * stay quiet.
+ *
+ * Every field is sanitized and the whole block is capped: this lands in the
+ * exportable debug log, which users paste into tickets.
+ *
+ * @param error - The error octokit raised
+ * @returns A multi-line diagnostic block, or '' when there is nothing to add
+ */
+export function describeRejectionDiagnostics(error: unknown): string {
+    const err = error as {
+        status?: number;
+        response?: {
+            headers?: Record<string, string>;
+            data?: {
+                message?: string;
+                documentation_url?: string;
+                errors?: { resource?: string; message?: string }[];
+            };
+        };
+    } | null;
+    const data = err?.response?.data;
+    if (!data) return '';
+
+    const clean = (v: unknown): string =>
+        typeof v === 'string' ? sanitizeErrorForLogging(v).slice(0, MAX_DETAIL_LENGTH) : '';
+
+    const lines: string[] = [];
+    if (err?.status) lines.push(`  status: ${err.status}`);
+    // The request id is what GitHub Support asks for first.
+    const requestId = err?.response?.headers?.['x-github-request-id'];
+    if (requestId) lines.push(`  request-id: ${clean(requestId)}`);
+    if (data.message) lines.push(`  message: ${clean(data.message)}`);
+    if (data.documentation_url) lines.push(`  docs: ${clean(data.documentation_url)}`);
+    // EVERY entry — the first is often a generic summary and the informative one
+    // sits behind it, which is exactly what the one-line path was missing.
+    for (const [i, entry] of (data.errors ?? []).entries()) {
+        const detail = clean(entry?.message);
+        if (detail)
+            lines.push(`  errors[${i}]${entry?.resource ? ` (${entry.resource})` : ''}: ${detail}`);
+    }
+
+    if (lines.length === 0) return '';
+    return `GitHub rejection detail:\n${lines.join('\n')}`.slice(0, MAX_DIAGNOSTIC_LENGTH);
+}
+
 export function describePushProtectionBlock(error: unknown, path: string): string | undefined {
     const message = error instanceof Error ? error.message : String(error ?? '');
     if (!isRulesetRejection(message)) {

@@ -18,7 +18,10 @@
  * "secret" for ruleset rules that have nothing to do with secrets.
  */
 
-import { describePushProtectionBlock } from '@/features/eds/services/errorFormatters';
+import {
+    describePushProtectionBlock,
+    describeRejectionDiagnostics,
+} from '@/features/eds/services/errorFormatters';
 
 /** The shape octokit raises for a 422 ruleset rejection. */
 function rulesetError(topLine: string, errorsDetail?: string): Error {
@@ -127,5 +130,73 @@ describe('describePushProtectionBlock', () => {
 
     it('handles a null error without throwing', () => {
         expect(describePushProtectionBlock(null, 'fstab.yaml')).toBeUndefined();
+    });
+});
+
+/**
+ * The reason a write was refused lives in GitHub's response BODY, and the
+ * extension discarded all of it — `data.message`, `documentation_url`, every
+ * entry in `errors[]`. Three failed reproduction attempts on 2026-08-11 (a fake
+ * PAT, a real RSA private key, both accepted on a public repo with push
+ * protection enabled) showed the block cannot be triggered locally: it comes
+ * from policy on the reporter's account. So the ONLY way anyone learns why is to
+ * capture what GitHub said, on their machine, at the moment it said it.
+ */
+describe('describeRejectionDiagnostics', () => {
+    it('captures data.message, which the message-only path drops', () => {
+        const err = new Error('Repository rule violations found') as Error & { response?: unknown };
+        err.response = {
+            data: { message: 'Repository rule violations found', documentation_url: 'https://d' },
+        };
+
+        const out = describeRejectionDiagnostics(err);
+
+        expect(out).toContain('Repository rule violations found');
+    });
+
+    it('captures EVERY entry in errors[], not just the first', () => {
+        // The first entry is often the generic summary; the useful one can be later.
+        const err = new Error('boom') as Error & { response?: unknown };
+        err.response = {
+            data: {
+                errors: [
+                    { resource: 'PushRule', message: 'generic summary' },
+                    { resource: 'PushRule', message: 'Adobe Client Secret detected' },
+                ],
+            },
+        };
+
+        const out = describeRejectionDiagnostics(err);
+
+        expect(out).toContain('generic summary');
+        expect(out).toContain('Adobe Client Secret detected');
+    });
+
+    it('records the HTTP status and the request id for GitHub Support', () => {
+        const err = new Error('boom') as Error & { status?: number; response?: unknown };
+        err.status = 422;
+        err.response = { headers: { 'x-github-request-id': 'ABC1:123' }, data: {} };
+
+        const out = describeRejectionDiagnostics(err);
+
+        expect(out).toContain('422');
+        expect(out).toContain('ABC1:123');
+    });
+
+    it('redacts and caps — it lands in a log users paste into tickets', () => {
+        const err = new Error('boom') as Error & { response?: unknown };
+        err.response = {
+            data: { message: 'x'.repeat(4000), errors: [{ message: 'y'.repeat(4000) }] },
+        };
+
+        const out = describeRejectionDiagnostics(err);
+
+        expect(out.length).toBeLessThan(1500);
+    });
+
+    it('returns empty string when there is no response body to report', () => {
+        // A plain network error has nothing to add; do not emit noise.
+        expect(describeRejectionDiagnostics(new Error('fetch failed'))).toBe('');
+        expect(describeRejectionDiagnostics(null)).toBe('');
     });
 });

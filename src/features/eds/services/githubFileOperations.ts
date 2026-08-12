@@ -11,7 +11,7 @@
 import { Octokit } from '@octokit/core';
 import { retry } from '@octokit/plugin-retry';
 import AdmZip from 'adm-zip';
-import { describePushProtectionBlock } from './errorFormatters';
+import { describePushProtectionBlock, describeRejectionDiagnostics } from './errorFormatters';
 import type { GitHubTokenService } from './githubTokenService';
 import type {
     GitHubFileContent,
@@ -159,6 +159,12 @@ export class GitHubFileOperations {
             // The path is right here; put it in the message.
             const blocked = describePushProtectionBlock(error, path);
             if (blocked) {
+                // The thrown message stays short for the UI; the FULL response body
+                // goes to the debug log. This block cannot be reproduced locally —
+                // it comes from policy on the reporting user's account — so what
+                // GitHub said here is the only evidence that will ever exist.
+                const detail = describeRejectionDiagnostics(error);
+                if (detail) this.logger.error(`[GitHub] ${detail}`);
                 throw new Error(blocked);
             }
             throw error;
@@ -436,6 +442,8 @@ export class GitHubFileOperations {
             // "Repository rule violations found" the Contents path used to give.
             const blocked = describePushProtectionBlock(error, `commit ${sha.slice(0, 7)}`);
             if (blocked) {
+                const detail = describeRejectionDiagnostics(error);
+                if (detail) this.logger.error(`[GitHub] ${detail}`);
                 throw new Error(blocked);
             }
             throw error;
