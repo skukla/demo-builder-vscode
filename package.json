@@ -121,6 +121,11 @@
         "command": "demoBuilder.manageGitHubRepos",
         "title": "Manage GitHub Repositories",
         "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.showDataInstaller",
+        "title": "Open Data Installer",
+        "category": "Demo Builder"
       }
     ],
     "configuration": [
@@ -355,6 +360,22 @@
             ],
             "default": "claude-code",
             "description": "Which AI tool Demo Builder launches. Currently only Claude Code is supported; reserved for future engines (e.g. Codex)."
+          }
+        }
+      },
+      {
+        "title": "Data Installer",
+        "properties": {
+          "demoBuilder.dataInstaller.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable the Data Installer surface for browsing and installing Adobe Commerce sample-data datapacks. When off, the panel and its AI tools report the feature as unavailable."
+          },
+          "demoBuilder.dataInstaller.apiBaseUrl": {
+            "type": "string",
+            "default": "",
+            "format": "uri",
+            "description": "Data Installer API base URL, without a trailing action segment. Required — no default ships, because this repository is public. Ask your team for the deployment URL. Must be https."
           }
         }
       }

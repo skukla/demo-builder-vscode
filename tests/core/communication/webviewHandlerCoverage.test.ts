@@ -56,6 +56,11 @@ const PANELS: ReadonlyArray<{ name: string; entry: string; command: string; noRe
         command: 'features/dashboard/commands/showIntegrations.ts',
     },
     {
+        name: 'dataInstaller',
+        entry: 'features/data-installer/ui/index.tsx',
+        command: 'features/data-installer/commands/showDataInstaller.ts',
+    },
+    {
         // Not a panel command: a WebviewViewProvider, but the same contract applies.
         // It sends no `request` at all — every action is a fire-and-forget
         // postMessage or a VS Code command — so it has nothing that can hang.

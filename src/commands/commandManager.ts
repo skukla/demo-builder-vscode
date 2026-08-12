@@ -18,6 +18,7 @@ import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/co
 import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { ShowIntegrationsCommand } from '@/features/dashboard/commands/showIntegrations';
+import { ShowDataInstallerCommand } from '@/features/data-installer/commands/showDataInstaller';
 import { getBookmarkletSetupPageUrl } from '@/features/eds/ui/helpers/bookmarkletSetupPage';
 import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
 import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
@@ -123,6 +124,19 @@ export class CommandManager {
             ShowProjectsListCommand.disposeActivePanel();
             ConfigureProjectWebviewCommand.disposeActivePanel();
             await integrations.execute();
+        });
+
+        // Data Installer surface (palette-opened). Deliberately NOT a tab
+        // replacement: the datapack catalog is global to the service rather than
+        // project-scoped, so browsing it should not close whatever the user was
+        // looking at.
+        const dataInstaller = new ShowDataInstallerCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.showDataInstaller', async () => {
+            await dataInstaller.execute();
         });
 
         // Load Project (from tree view click)
