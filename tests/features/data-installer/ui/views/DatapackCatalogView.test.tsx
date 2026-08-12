@@ -184,6 +184,104 @@ describe('DatapackCatalogView', () => {
         });
     });
 
+    describe('detail flyout', () => {
+        /** Resolve find-datapacks, then the detail request that follows. */
+        function resolveCatalogThenDetail() {
+            mockRequest.mockImplementation((type: string) => {
+                if (type === 'find-datapacks') {
+                    return Promise.resolve({
+                        success: true,
+                        data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length },
+                    });
+                }
+                return Promise.resolve({
+                    success: true,
+                    data: {
+                        detail: { ...CATALOG[0], description: 'B2B office supplies' },
+                        inventory: {
+                            present: ['products'],
+                            missing: [],
+                            presentCount: 1,
+                            missingCount: 0,
+                            requestedCount: 1,
+                        },
+                    },
+                });
+            });
+        }
+
+        it('stays closed until a card is pressed', async () => {
+            resolveWith(CATALOG);
+
+            render(<DatapackCatalogView />);
+            await screen.findAllByTestId('datapack-card');
+
+            expect(screen.getByRole('dialog', { hidden: true })).not.toHaveClass('open');
+        });
+
+        it('asks for the detail of the pressed card, at its selected version', async () => {
+            resolveCatalogThenDetail();
+
+            render(<DatapackCatalogView />);
+            const cards = await screen.findAllByTestId('datapack-card');
+
+            fireEvent.click(cards[0]);
+
+            await waitFor(() =>
+                expect(lastRequest()).toEqual({
+                    type: 'get-datapack-detail',
+                    payload: { datapackName: 'bodea', version: 'main' },
+                }),
+            );
+        });
+
+        it('opens the flyout with the loaded detail', async () => {
+            resolveCatalogThenDetail();
+
+            render(<DatapackCatalogView />);
+            const cards = await screen.findAllByTestId('datapack-card');
+
+            fireEvent.click(cards[0]);
+
+            await waitFor(() => expect(screen.getByRole('dialog')).toHaveClass('open'));
+            expect(await screen.findByText('B2B office supplies')).toBeInTheDocument();
+        });
+
+        it('follows the version the user picked', async () => {
+            resolveCatalogThenDetail();
+
+            render(<DatapackCatalogView />);
+            const cards = await screen.findAllByTestId('datapack-card');
+
+            fireEvent.change(within(cards[0]).getByTestId('spectrum-picker-select'), {
+                target: { value: 'tierpricingfix' },
+            });
+            fireEvent.click(cards[0]);
+
+            await waitFor(() =>
+                expect(lastRequest()).toEqual({
+                    type: 'get-datapack-detail',
+                    payload: { datapackName: 'bodea', version: 'tierpricingfix' },
+                }),
+            );
+        });
+
+        it('closes from the flyout', async () => {
+            resolveCatalogThenDetail();
+
+            render(<DatapackCatalogView />);
+            const cards = await screen.findAllByTestId('datapack-card');
+            fireEvent.click(cards[0]);
+            await waitFor(() => expect(screen.getByRole('dialog')).toHaveClass('open'));
+
+            fireEvent.click(screen.getByRole('button', { name: /close details/i }));
+
+            await waitFor(() =>
+                expect(screen.getByRole('dialog', { hidden: true })).not.toHaveClass('open'),
+            );
+        });
+    });
+
     describe('states', () => {
         it('shows an empty state for an empty catalog, keeping the toggle reachable', async () => {
             resolveWith([]);

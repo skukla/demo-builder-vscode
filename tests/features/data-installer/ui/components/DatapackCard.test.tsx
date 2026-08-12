@@ -53,14 +53,16 @@ function makeGroup(overrides: Partial<DatapackGroup> = {}): DatapackGroup {
 
 function renderCard(group: DatapackGroup, selectedVersion = group.versions[0].id.version) {
     const onVersionChange = jest.fn();
+    const onOpen = jest.fn();
     const view = render(
         <DatapackCard
             group={group}
             selectedVersion={selectedVersion}
             onVersionChange={onVersionChange}
+            onOpen={onOpen}
         />,
     );
-    return { ...view, onVersionChange, card: screen.getByTestId('datapack-card') };
+    return { ...view, onVersionChange, onOpen, card: screen.getByTestId('datapack-card') };
 }
 
 describe('DatapackCard', () => {
@@ -207,6 +209,67 @@ describe('DatapackCard', () => {
             );
 
             expect(screen.getByTestId('datapack-card-art')).toHaveAttribute('src', COVER);
+        });
+    });
+
+    // The card gained an open affordance with the detail drawer. It is a
+    // div-role button, not a <button>, because it hosts the version Picker and a
+    // control inside a button is invalid HTML and unreachable by keyboard — the
+    // IntegrationCard precedent.
+    describe('opening the detail', () => {
+        it('is a keyboard-reachable button naming the pack', () => {
+            const { card } = renderCard(makeGroup());
+
+            expect(card).toHaveAttribute('role', 'button');
+            expect(card).toHaveAttribute('tabindex', '0');
+            expect(card).toHaveAttribute('aria-label', expect.stringContaining('Bodea'));
+        });
+
+        it.each([
+            ['click', (card: HTMLElement) => fireEvent.click(card)],
+            ['Enter', (card: HTMLElement) => fireEvent.keyDown(card, { key: 'Enter' })],
+            ['Space', (card: HTMLElement) => fireEvent.keyDown(card, { key: ' ' })],
+        ])('opens the detail on %s, carrying the selected version', (_label, activate) => {
+            const { card, onOpen } = renderCard(makeGroup());
+
+            activate(card);
+
+            expect(onOpen).toHaveBeenCalledWith({ name: 'bodea', version: 'main' });
+        });
+
+        it('opens the VERSION the user picked, not the default', () => {
+            const group = makeGroup({
+                versions: [
+                    makeVersion(),
+                    makeVersion({ id: { name: 'bodea', version: 'tierpricingfix' } }),
+                ],
+            });
+            const { card, onOpen } = renderCard(group, 'tierpricingfix');
+
+            fireEvent.click(card);
+
+            expect(onOpen).toHaveBeenCalledWith({ name: 'bodea', version: 'tierpricingfix' });
+        });
+
+        // Containment pin. Without it the picker's press bubbles to the card and
+        // choosing a version also opens the drawer — the conflicting-nested-action
+        // problem the integrations grid already hit.
+        it('does NOT open the detail when the version picker is used', () => {
+            const group = makeGroup({
+                versions: [
+                    makeVersion(),
+                    makeVersion({ id: { name: 'bodea', version: 'tierpricingfix' } }),
+                ],
+            });
+            const { card, onOpen, onVersionChange } = renderCard(group);
+
+            fireEvent.click(within(card).getByTestId('spectrum-picker'));
+            fireEvent.change(within(card).getByTestId('spectrum-picker-select'), {
+                target: { value: 'tierpricingfix' },
+            });
+
+            expect(onVersionChange).toHaveBeenCalledWith('tierpricingfix');
+            expect(onOpen).not.toHaveBeenCalled();
         });
     });
 

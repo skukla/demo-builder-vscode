@@ -45,8 +45,15 @@ import {
     pickDefaultVersion,
     type DatapackGroup,
 } from '../../services/datapackCatalog';
-import type { DatapackSummary, Page } from '../../types';
+import type {
+    DataItemInventory,
+    DatapackDetail,
+    DatapackId,
+    DatapackSummary,
+    Page,
+} from '../../types';
 import { DatapackCard } from '../components/DatapackCard';
+import { DatapackDetailPanel } from '../components/DatapackDetailPanel';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
@@ -66,14 +73,22 @@ const SEARCH_FIELDS: ReadonlyArray<keyof DatapackGroup> = ['name', 'displayName'
  */
 const SEARCH_THRESHOLD = 0;
 
+/** What `get-datapack-detail` hands back — metadata plus what is actually stored. */
+interface DatapackDetailResponse {
+    detail: DatapackDetail;
+    inventory: DataItemInventory;
+}
+
 export function DatapackCatalogView(): React.JSX.Element {
     const [includeCommunity, setIncludeCommunity] = useState(false);
     const [query, setQuery] = useState('');
     const [versions, setVersions] = useState<Record<string, string>>({});
+    const [selected, setSelected] = useState<DatapackId | undefined>(undefined);
 
     const { load, loading, value, failure } = useDataInstallerRequest<Page<DatapackSummary>>(
         'find-datapacks',
     );
+    const detail = useDataInstallerRequest<DatapackDetailResponse>('get-datapack-detail');
 
     useEffect(() => {
         load({ includeCommunity });
@@ -91,6 +106,21 @@ export function DatapackCatalogView(): React.JSX.Element {
             setVersions((current) => ({ ...current, [name]: version })),
         [],
     );
+
+    const loadDetail = detail.load;
+    const openDetail = useCallback(
+        (id: DatapackId): void => {
+            setSelected(id);
+            loadDetail({ datapackName: id.name, version: id.version });
+        },
+        [loadDetail],
+    );
+    const closeDetail = useCallback((): void => setSelected(undefined), []);
+    const retryDetail = useCallback((): void => {
+        if (selected) {
+            loadDetail({ datapackName: selected.name, version: selected.version });
+        }
+    }, [loadDetail, selected]);
 
     if (loading && !value) {
         return <LoadingDisplay size="L" message="Loading datapacks..." />;
@@ -136,8 +166,18 @@ export function DatapackCatalogView(): React.JSX.Element {
             </div>
 
             <div className="page-container-padded pb-6">
-                {renderBody({ groups, filtered, query, versions, pickVersion })}
+                {renderBody({ groups, filtered, query, versions, pickVersion, openDetail })}
             </div>
+
+            <DatapackDetailPanel
+                selected={selected}
+                detail={detail.value?.detail ?? null}
+                inventory={detail.value?.inventory ?? null}
+                loading={detail.loading}
+                failure={detail.failure}
+                onClose={closeDetail}
+                onRetry={retryDetail}
+            />
         </>
     );
 }
@@ -149,8 +189,9 @@ function renderBody(args: {
     query: string;
     versions: Record<string, string>;
     pickVersion: (name: string, version: string) => void;
+    openDetail: (id: DatapackId) => void;
 }): React.JSX.Element {
-    const { groups, filtered, query, versions, pickVersion } = args;
+    const { groups, filtered, query, versions, pickVersion, openDetail } = args;
 
     if (groups.length === 0) {
         return (
@@ -173,6 +214,7 @@ function renderBody(args: {
                     group={group}
                     selectedVersion={versions[group.name] ?? pickDefaultVersion(group) ?? ''}
                     onVersionChange={(version) => pickVersion(group.name, version)}
+                    onOpen={openDetail}
                 />
             ))}
         </div>

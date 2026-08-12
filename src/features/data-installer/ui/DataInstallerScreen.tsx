@@ -23,7 +23,9 @@
 
 import React, { useState } from 'react';
 import { ViewSwitcher, type SwitchableView } from './components/ViewSwitcher';
+import { DatapackActivityView } from './views/DatapackActivityView';
 import { DatapackCatalogView } from './views/DatapackCatalogView';
+import { InstalledDatapacksView } from './views/InstalledDatapacksView';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 
@@ -36,11 +38,17 @@ export interface DataInstallerScreenProps {
 /**
  * Views the panel can show.
  *
- * Module-level so the reference is stable across renders. One entry today, which
- * is why no switcher renders yet — `ViewSwitcher` hides itself below two views
- * rather than showing a lone tab. The installed and activity views join this list.
+ * Module-level so the reference is stable across renders — an inline array is a
+ * new reference every render and would re-fire any effect depending on it.
+ *
+ * Order is browse → what happened → the full log: the catalog is what the panel
+ * is FOR, and the activity log is the diagnostic you reach for last.
  */
-const VIEWS: SwitchableView[] = [{ id: 'catalog', label: 'Catalog' }];
+const VIEWS: SwitchableView[] = [
+    { id: 'catalog', label: 'Catalog' },
+    { id: 'installed', label: 'Installed' },
+    { id: 'activity', label: 'Activity' },
+];
 
 export function DataInstallerScreen(_props: DataInstallerScreenProps): React.JSX.Element {
     const [activeView, setActiveView] = useState(VIEWS[0].id);
@@ -59,13 +67,26 @@ export function DataInstallerScreen(_props: DataInstallerScreenProps): React.JSX
             }
             backgroundColor="var(--spectrum-global-color-gray-50)"
         >
-            {/* Constrained like every other band on the page. Renders an empty
-                wrapper today because the switcher hides itself at one view; the
-                alternative is remembering to add it when the second view lands. */}
+            {/* Constrained like every other band on the page. */}
             <div className="page-container-padded">
                 <ViewSwitcher views={VIEWS} activeId={activeView} onSelect={setActiveView} />
             </div>
-            {activeView === 'catalog' ? <DatapackCatalogView /> : null}
+            {/* Mounted one at a time on purpose: each view owns its own request,
+                so keeping the others mounted would spend round trips on screens
+                nobody is looking at. The cost is a re-fetch when you switch back,
+                which is the cheaper of the two. */}
+            {renderView(activeView)}
         </PageLayout>
     );
+}
+
+/** The body for the active view id. */
+function renderView(activeView: string): React.JSX.Element | null {
+    if (activeView === 'installed') {
+        return <InstalledDatapacksView />;
+    }
+    if (activeView === 'activity') {
+        return <DatapackActivityView />;
+    }
+    return <DatapackCatalogView />;
 }

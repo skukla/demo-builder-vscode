@@ -149,6 +149,123 @@
 }
 
 /* ===========================================
+   Detail flyout
+   =========================================== */
+/* Head/body chrome and the key/value rows come from custom-spectrum.css
+   (`db-drawer-*`, `integration-panel-row*`) — global, so they reach this bundle.
+   Only what is specific to a datapack lives here. */
+.datapack-panel-title {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+}
+
+/* Data types as wrapping chips: a pack can carry 18, and a comma-joined line
+   ran to four wrapped rows in an 88px-key row layout. */
+.datapack-panel-types {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.datapack-panel-type {
+    padding: 1px 6px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+/* Declared but not stored — muted and dashed, so the difference reads without
+   colour alone carrying it. */
+.datapack-panel-type.is-missing {
+    border-style: dashed;
+    color: var(--spectrum-global-color-gray-500);
+}
+
+/* ===========================================
+   Row lists (installed, activity)
+   =========================================== */
+/* A record list, not a card grid — the ProjectRowList shape. Rows are full
+   width and stack; there is no art to give them a tile. */
+.datapack-row-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 8px;
+}
+
+.datapack-row {
+    box-sizing: border-box;
+    padding: 12px 16px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    background: var(--spectrum-global-color-gray-50);
+}
+
+.datapack-row-main {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.datapack-row-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+}
+
+.datapack-row-version {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* Wraps rather than truncating: an ACCS instance id is 21–22 characters and
+   sits beside three other facts, which overflows a narrow pane on one line. */
+.datapack-row-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.datapack-row-instance {
+    font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.datapack-row-mode {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* ===========================================
+   Activity view
+   =========================================== */
+.datapack-activity-filters {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.datapack-activity-count {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* Centred under the feed, the way a "more" affordance reads — not pinned to
+   either edge, where it looks like a form action. */
+.datapack-activity-more {
+    display: flex;
+    justify-content: center;
+    padding-top: 16px;
+}
+
+/* ===========================================
    Catalog view
    =========================================== */
 .datapack-catalog-empty {

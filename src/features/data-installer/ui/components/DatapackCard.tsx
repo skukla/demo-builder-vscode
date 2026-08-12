@@ -26,9 +26,10 @@
  */
 
 import { Item, Picker } from '@adobe/react-spectrum';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import type { DatapackGroup } from '../../services/datapackCatalog';
-import type { DatapackArt, DatapackSummary } from '../../types';
+import type { DatapackArt, DatapackId, DatapackSummary } from '../../types';
+import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 
 export interface DatapackCardProps {
     /** Every version of one datapack, already ordered by the catalog service. */
@@ -37,6 +38,8 @@ export interface DatapackCardProps {
     selectedVersion: string;
     /** Fires with the picked version. */
     onVersionChange: (version: string) => void;
+    /** Card press → open the detail flyout for the SELECTED version. */
+    onOpen: (id: DatapackId) => void;
 }
 
 /**
@@ -51,12 +54,31 @@ export function DatapackCard({
     group,
     selectedVersion,
     onVersionChange,
+    onOpen,
 }: DatapackCardProps): React.JSX.Element {
     const version = selectVersion(group, selectedVersion);
     const typeCount = version?.dataTypes.length ?? 0;
 
+    const handleOpen = useCallback(
+        (): void => onOpen({ name: group.name, version: selectedVersion }),
+        [onOpen, group.name, selectedVersion],
+    );
+    const handleKeyDown = useActivateOnKey(handleOpen);
+
     return (
-        <div className="datapack-card" data-testid="datapack-card" data-datapack={group.name}>
+        // A div-role button, not a <button>: this card hosts the version Picker,
+        // and a control nested in a button is invalid HTML and unreachable by
+        // keyboard. Same treatment as IntegrationCard and ProjectCard.
+        <div
+            role="button"
+            tabIndex={0}
+            aria-label={`${group.displayName}, version ${selectedVersion}`}
+            className="datapack-card"
+            data-testid="datapack-card"
+            data-datapack={group.name}
+            onClick={handleOpen}
+            onKeyDown={handleKeyDown}
+        >
             <CardArt
                 key={selectedVersion}
                 candidates={artCandidates(version?.art)}
@@ -67,16 +89,27 @@ export function DatapackCard({
                     <span className="datapack-card-name">{group.displayName}</span>
                     {group.shared ? null : <span className="datapack-card-tag">Community</span>}
                 </div>
-                <Picker
-                    aria-label={`Version of ${group.displayName}`}
-                    selectedKey={selectedVersion}
-                    onSelectionChange={(key) => onVersionChange(String(key))}
-                    UNSAFE_className="datapack-card-version"
+                {/* Containment: the picker's press must not bubble to the card,
+                    or choosing a version would also open the flyout — the
+                    conflicting-nested-action problem the integrations grid hit.
+                    A span rather than a handler on the Picker because the popup
+                    and its options are the parts that escape. */}
+                {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- containment only; interaction lives on the child Picker (InlineRenameField precedent) */}
+                <span
+                    className="datapack-card-version"
+                    onClick={stopPropagation}
+                    onKeyDown={stopPropagation}
                 >
-                    {group.versions.map((candidate) => (
-                        <Item key={candidate.id.version}>{candidate.id.version}</Item>
-                    ))}
-                </Picker>
+                    <Picker
+                        aria-label={`Version of ${group.displayName}`}
+                        selectedKey={selectedVersion}
+                        onSelectionChange={(key) => onVersionChange(String(key))}
+                    >
+                        {group.versions.map((candidate) => (
+                            <Item key={candidate.id.version}>{candidate.id.version}</Item>
+                        ))}
+                    </Picker>
+                </span>
                 <span className="datapack-card-types">
                     {typeCount} {typeCount === 1 ? 'data type' : 'data types'}
                 </span>
@@ -141,4 +174,9 @@ function artCandidates(art: DatapackArt | undefined): string[] {
 /** The letter tile's glyph. */
 function initial(displayName: string): string {
     return displayName.trim().charAt(0).toUpperCase() || '?';
+}
+
+/** Keep a nested control's events inside the control. */
+function stopPropagation(event: React.SyntheticEvent): void {
+    event.stopPropagation();
 }
