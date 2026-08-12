@@ -25,6 +25,11 @@ tool, skill: "adobe-docs-lookup") first, then retry this call.
 The five doc sources cover DIFFERENT corpora and choosing wrong returns confident,
 plausible, off-target results rather than an error. In particular: App Builder
 concept docs live on developer.adobe.com, which NEITHER adobe-exl NOR fluffyjaws
-indexes. This hook fires only once per session.
+indexes — searching them for App Builder behaviour returns whichever PRODUCT
+happens to mention it.
+
+The skill carries the corpus→source table, the URL shapes that work, the
+already-established facts (so you do not re-fetch them), and what to do when a
+source returns -32002 or 401. This hook fires only once per session.
 MSG
 }
