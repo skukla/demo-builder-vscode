@@ -15,7 +15,7 @@ The harness is **Claude Code (CLI)** — users open a generated project with `cl
 | File | Purpose |
 |------|---------|
 | `aiSetupVerifier.ts` | File-presence checks + `gatherInventory` orchestrator; returns `AiVerificationResult` |
-| `skillInspector.ts` | Walks `.claude/skills/`, parses YAML frontmatter, classifies skills (`demo-builder` / `adobe` / `unknown`) |
+| `skillInspector.ts` | Walks `.claude/skills/`, parses YAML frontmatter, classifies skills (`demo-builder` / `adobe` / `unknown`) and records which Adobe `bundle` a nested skill came from |
 | `mcpInspector.ts` | Inspects each `.claude/mcp.json` server (third-party via `@modelcontextprotocol/sdk` stdio client; the in-extension `demo-builder` server via a direct socket probe), returns tool inventory with TTL cache |
 | `sessionMcpDetector.ts` | Reads `~/.claude.json` + `~/.claude/mcp-needs-auth-cache.json` to enumerate session-level Adobe MCPs |
 | `index.ts` | Public API exports |
@@ -43,7 +43,9 @@ Runs the three inspectors via `Promise.allSettled` so a failing inspector degrad
 
 ### `inspectSkills(projectPath): Promise<SkillInventoryEntry[]>`
 
-Walks `<project>/.claude/skills/` and returns one entry per `.md` file with `{ name, description, path, source }`. Classification: top-level Demo Builder lifecycle skills → `'demo-builder'`; nested in an Adobe bundle subdir → `'adobe'`; other top-level → `'unknown'`.
+Walks `<project>/.claude/skills/` and returns one entry per `.md` file with `{ name, description, path, source, bundle? }`. Classification: a top-level filename in `DEMO_BUILDER_SKILL_FILES` → `'demo-builder'`; nested in a bundle subdir → `'adobe'`, with `bundle` set to that directory's `<prefix>` (`aem`, `appbuilder`); other top-level → `'unknown'`.
+
+`DEMO_BUILDER_SKILL_FILES` lives in `@/types/ai` and is the **single home** for those filenames — `skillsWriter` builds its write list from the same constant. They were separate lists once and drifted: `diagnose-demo.md` shipped in the writer without being added here, so the AI Capabilities modal filed a first-party skill under "Custom". `bundle` exists for the same class of reason — `source: 'adobe'` only means "arrived in a bundle", so the UI grouped every bundle under one hardcoded "Adobe AEM" heading and labelled App Builder skills as AEM.
 
 ### `inspectAllServers(projectPath): Promise<McpInventoryEntry[]>` + `clearMcpCache(serverId?)`
 

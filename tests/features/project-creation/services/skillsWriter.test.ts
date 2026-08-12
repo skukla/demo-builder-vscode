@@ -11,7 +11,11 @@
 
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
-import { writeSkillFiles } from '@/features/project-creation/services/skillsWriter';
+import {
+    DEMO_BUILDER_SKILLS,
+    writeSkillFiles,
+} from '@/features/project-creation/services/skillsWriter';
+import { DEMO_BUILDER_ALWAYS_ON_SKILLS } from '@/types/ai';
 import type { Project, ComponentInstance } from '@/types/base';
 
 jest.mock('fs/promises', () => ({
@@ -138,6 +142,27 @@ function mockMissingAdobeBundle(): void {
         throw err;
     });
 }
+
+describe('the always-on skill list has ONE home', () => {
+    // The inspector that classifies skills for the AI Capabilities modal used to
+    // keep its own copy of these filenames. It drifted: diagnose-demo.md was
+    // added here and not there, so the modal filed it under "Custom" as though a
+    // user had written it. Both sides now read the same constant — this pins that
+    // the writer is still driven by it rather than by a second literal.
+    it('writes exactly the canonical always-on set, in canonical order', () => {
+        expect(DEMO_BUILDER_SKILLS.map((s) => s.filename)).toEqual([
+            ...DEMO_BUILDER_ALWAYS_ON_SKILLS,
+        ]);
+    });
+
+    it('pairs every canonical filename with non-empty content', () => {
+        for (const { filename, content } of DEMO_BUILDER_SKILLS) {
+            expect(typeof content).toBe('string');
+            expect(content.length).toBeGreaterThan(0);
+            expect(filename.endsWith('.md')).toBe(true);
+        }
+    });
+});
 
 describe('skillsWriter', () => {
     beforeEach(() => {

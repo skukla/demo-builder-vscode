@@ -14,8 +14,12 @@ import { AiSkillsList } from '@/features/dashboard/ui/components/AiSkillsList';
 import type { SkillInventoryEntry } from '@/types/ai';
 import '@testing-library/jest-dom';
 
-function makeSkill(name: string, source: SkillInventoryEntry['source']): SkillInventoryEntry {
-    return { name, description: null, path: `/p/.claude/skills/${name}.md`, source };
+function makeSkill(
+    name: string,
+    source: SkillInventoryEntry['source'],
+    bundle?: string
+): SkillInventoryEntry {
+    return { name, description: null, path: `/p/.claude/skills/${name}.md`, source, bundle };
 }
 
 function renderList(props: Partial<React.ComponentProps<typeof AiSkillsList>> = {}) {
@@ -33,7 +37,7 @@ describe('AiSkillsList', () => {
                 skills: [
                     makeSkill('add-component', 'demo-builder'),
                     makeSkill('sync-changes', 'demo-builder'),
-                    makeSkill('aem-tester', 'adobe'),
+                    makeSkill('aem-tester', 'adobe', 'aem'),
                 ],
             });
 
@@ -47,7 +51,7 @@ describe('AiSkillsList', () => {
                 skills: [
                     makeSkill('add-component', 'demo-builder'),
                     makeSkill('sync-changes', 'demo-builder'),
-                    makeSkill('aem-tester', 'adobe'),
+                    makeSkill('aem-tester', 'adobe', 'aem'),
                 ],
             });
 
@@ -55,16 +59,16 @@ describe('AiSkillsList', () => {
             expect(dbRow).toHaveTextContent(/Demo Builder/);
             expect(dbRow).toHaveTextContent(/2/);
 
-            const adobeRow = screen.getByTestId('ai-skills-group-adobe');
+            const adobeRow = screen.getByTestId('ai-skills-group-adobe-aem');
             expect(adobeRow).toHaveTextContent(/Adobe AEM/);
             expect(adobeRow).toHaveTextContent(/1/);
         });
 
-        it('renders groups in canonical order: Demo Builder → Adobe AEM → Custom', () => {
+        it('renders groups in canonical order: Demo Builder → Adobe bundles → Custom', () => {
             renderList({
                 skills: [
                     makeSkill('zeta', 'unknown'),
-                    makeSkill('beta', 'adobe'),
+                    makeSkill('beta', 'adobe', 'aem'),
                     makeSkill('alpha', 'demo-builder'),
                 ],
             });
@@ -73,9 +77,48 @@ describe('AiSkillsList', () => {
             const ids = rows.map((r) => r.getAttribute('data-testid'));
             expect(ids).toEqual([
                 'ai-skills-group-demo-builder',
-                'ai-skills-group-adobe',
+                'ai-skills-group-adobe-aem',
                 'ai-skills-group-unknown',
             ]);
+        });
+
+        it('labels an App Builder bundle as App Builder, not AEM', () => {
+            // The whole reported defect: every nested bundle was labelled "Adobe
+            // AEM" because the group was keyed on "lives in a subdirectory".
+            renderList({
+                skills: [
+                    makeSkill('appbuilder-architect', 'adobe', 'appbuilder'),
+                    makeSkill('appbuilder-tester', 'adobe', 'appbuilder'),
+                ],
+            });
+
+            const row = screen.getByTestId('ai-skills-group-adobe-appbuilder');
+            expect(row).toHaveTextContent('Adobe App Builder · 2');
+            expect(screen.queryByText(/Adobe AEM/)).not.toBeInTheDocument();
+        });
+
+        it('separates two Adobe bundles into their own groups', () => {
+            renderList({
+                skills: [
+                    makeSkill('appbuilder-architect', 'adobe', 'appbuilder'),
+                    makeSkill('aem-block-builder', 'adobe', 'aem'),
+                ],
+            });
+
+            expect(screen.getByTestId('ai-skills-group-adobe-aem')).toHaveTextContent(
+                'Adobe AEM · 1'
+            );
+            expect(screen.getByTestId('ai-skills-group-adobe-appbuilder')).toHaveTextContent(
+                'Adobe App Builder · 1'
+            );
+        });
+
+        it('falls back to a plain Adobe label for an unrecognised bundle', () => {
+            // A future bundle must not silently inherit another bundle's name.
+            renderList({ skills: [makeSkill('x', 'adobe', 'sometool')] });
+
+            const row = screen.getByTestId('ai-skills-group-adobe-sometool');
+            expect(row).toHaveTextContent('Adobe · 1');
         });
 
         it('omits groups with no skills', () => {
@@ -90,7 +133,7 @@ describe('AiSkillsList', () => {
             renderList({
                 skills: [
                     makeSkill('add-component', 'demo-builder'),
-                    makeSkill('aem-tester', 'adobe'),
+                    makeSkill('aem-tester', 'adobe', 'aem'),
                 ],
             });
             expect(screen.getByText('add-component')).toBeInTheDocument();
@@ -117,14 +160,16 @@ describe('AiSkillsList', () => {
                 skills: [
                     makeSkill('add-component', 'demo-builder'),
                     makeSkill('sync-changes', 'demo-builder'),
-                    makeSkill('aem-tester', 'adobe'),
+                    makeSkill('aem-tester', 'adobe', 'aem'),
                 ],
             });
 
             expect(screen.getByTestId('ai-skills-group-demo-builder')).toHaveTextContent(
                 'Demo Builder · 2'
             );
-            expect(screen.getByTestId('ai-skills-group-adobe')).toHaveTextContent('Adobe AEM · 1');
+            expect(screen.getByTestId('ai-skills-group-adobe-aem')).toHaveTextContent(
+                'Adobe AEM · 1'
+            );
         });
 
         it('marks headers with the sticky readable-header class', () => {
