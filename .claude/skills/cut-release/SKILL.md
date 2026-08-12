@@ -37,6 +37,12 @@ decide what (if anything) to fix before tagging.
 
 - **`codebase-sweep`** — duplication, extraction, cycles, orphans, doc drift (~30s).
 - **`dream`** — memory / skills / CLAUDE.md staleness across recent sessions.
+- **`npm run data-installer:drift`** — the Data Installer fixtures vs the live
+  service (~5s, needs `aio login`). The only check that can catch that API moving:
+  the feature's tests are fully offline against committed fixtures, so they stay
+  green while the client mis-parses real responses. A non-200 exits non-zero and
+  says "unreachable" — it never reports clean when it could not reach the service.
+  Drift is a finding for the feature owner, not a blocker on the tag.
 
 Offer them; do not silently skip. If the user declines, say so in the release notes
 so the next cut knows the interval. These were documented as "runs at release cuts"

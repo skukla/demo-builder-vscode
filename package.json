@@ -413,6 +413,7 @@
     "watch:all": "node esbuild.config.js --watch",
     "vscode:prepublish": "npm run compile",
     "pretest": "npm run compile && npm run lint",
+    "data-installer:drift": "node scripts/dataInstallerDrift.js",
     "lint": "eslint \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
