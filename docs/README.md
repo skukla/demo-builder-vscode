@@ -22,6 +22,7 @@ Documentation about system design and high-level architecture.
 Detailed documentation about specific subsystems.
 
 - **[MCP Server](./systems/mcp-server.md)** - How the in-extension Model Context Protocol server exposes the extension's capabilities as tools for AI agents (Claude Code). Start here if you're new to MCP.
+- **[Data Installer](./systems/data-installer.md)** - Browsing and installing Commerce sample-data datapacks: the verified API contract (the published docs are wrong in seven places), the containment layer that absorbs it, and what is deliberately withheld from agents
 - **[Prerequisites System](./systems/prerequisites-system.md)** - Comprehensive guide to the configuration-driven prerequisites and progress tracking system
 - **[Error Logging](./systems/error-logging.md)** - Error handling, logging strategy, and notification system
 - **[Logging System](./systems/logging-system.md)** - Logging architecture and output channels

@@ -313,7 +313,15 @@ Thin tools declared as data and dispatched to existing handler maps:
   for — the read that lets an agent see a project pointing at a website or store
   view that does not exist; PaaS uses the project's saved admin credentials, ACCS
   proxies through a configured discovery service and prompts Adobe sign-in ONLY
-  when the read reports it needs a token).
+  when the read reports it needs a token), and the six **Data Installer** reads —
+  `check_datapack_service`, `find_datapacks` (one row per `(name, version)` pair;
+  curated packs only unless `includeCommunity`), `get_datapack` (metadata plus
+  which declared data types the service actually STORES — a pack can declare a
+  type it holds no item for), `list_datapack_data_types` (per operation mode: the
+  import and export sets genuinely differ, so there is no default),
+  `list_installed_datapacks` (the service's own tracking, not a live check of the
+  instance) and `get_datapack_activity`. Datapack AUTHORING is deliberately not
+  exposed — see `data-installer.md` for what is withheld and why.
 - Actions: `regenerate_ai_files`, `start_demo`, `stop_demo`, `rename_project`
   (current-project rename via the shared `renameProjectCore` — folder, saved
   state, and the project's baked MCP/AI configs move together; agents must use

@@ -154,9 +154,14 @@ async function withClient(
     }
 }
 
-/** Payload for the catalog listing. */
+/**
+ * Payload for the catalog listing.
+ *
+ * No `search`: the service has no server-side name filter, so the field was
+ * declared and silently ignored — a lie the MCP tool would have advertised.
+ * Filtering is the caller's, over the page it holds.
+ */
 interface FindDatapacksPayload {
-    search?: string;
     includeCommunity?: boolean;
     limit?: number;
     skip?: number;
