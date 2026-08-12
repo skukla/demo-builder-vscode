@@ -373,9 +373,9 @@
           },
           "demoBuilder.dataInstaller.apiBaseUrl": {
             "type": "string",
-            "default": "",
+            "default": "https://285361-datainstallerapi-stage.adobeioruntime.net/api/v1/web/data-installer-api",
             "format": "uri",
-            "description": "Data Installer API base URL, without a trailing action segment. Required — no default ships, because this repository is public. Ask your team for the deployment URL. Must be https."
+            "description": "Data Installer API base URL, without a trailing action segment. Defaults to the team's deployed stage instance; override to point at a different deployment. Must be https."
           }
         }
       }
