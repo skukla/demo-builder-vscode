@@ -6,7 +6,7 @@
 fast-forward). Gate-green at merge: 17 suites / 265 tests in the feature, whole
 suite 988/12,617, `tsc` clean, whole-repo lint 0 problems, `npm run compile` emits
 `dataInstaller-bundle.js`. All four UI surfaces visually confirmed by the user.
-**Stage 2 is blocked on two answers** — see HANDOFF.md "Next action".
+**Stage 2 is unblocked** — see HANDOFF.md "Next action".
 
 **Start here → [`HANDOFF.md`](HANDOFF.md)** for exact next actions and the traps.
 This file is the design.
@@ -81,12 +81,10 @@ healthbeauty, luma, venia, wecafe, wknd). The rest is developer scratch. Default
   `luma`, `venia`) ship only `eds-compatible` + `hold`.
 - **15 of 23 curated entries have an empty `cover_image`** but all have a `thumbnail_image`,
   so a card's fallback chain is the common path.
-- `commerce_instance` — **the original claim was WRONG; corrected against the live service
-  2026-08-12.** It read "an ACCS instance id in every real record, never a REST URL". Live:
-  of 35 installed records, **30 are base62 ids** (28×22 chars, 2×21) and **5 are the
-  literal `https://datapack-accs.test`** — a real stored value, not a fixture artifact
-  (`.test` is RFC 6761 reserved, so it is a placeholder someone typed in). Stage 2 must
-  handle both shapes. Whether an id EQUALS the ACCS tenant id is still open — see HANDOFF.
+- `commerce_instance` — **an opaque caller-supplied string.** Don't derive, validate or
+  format it. The original claim ("always an ACCS instance id") was over-specified, and so
+  was the correction that replaced it: a stage read found a few junk rows and I wrote them
+  up as a second shape. Stage data is not a spec.
 - The brands do **not** map 1:1 onto `demo-packages.json` — `citisignal` corresponds to
   *two* packs; `isle5` and `buildright` to none. Any suggestion feature needs an explicit
   table, never a name match.

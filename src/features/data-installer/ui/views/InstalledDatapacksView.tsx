@@ -142,12 +142,8 @@ function InstalledRow({ record }: { record: InstalledDatapack }): React.JSX.Elem
                 <span className="datapack-row-version">{record.id.version}</span>
             </div>
             <div className="datapack-row-meta">
-                {/* Verbatim, and deliberately shape-agnostic. The plan recorded
-                    this field as always an ACCS instance id; the captured fixture
-                    holds 5 URL-shaped values among 35, so that is unresolved (see
-                    docs/systems/data-installer.md §2). Rendering the raw value is
-                    correct under either reading — do NOT add id-specific
-                    formatting or linking until the live check settles it. */}
+                {/* Verbatim. `commerce_instance` is an opaque caller-supplied
+                    string — don't format, link or validate it. */}
                 <span className="datapack-row-instance">{record.commerceInstance}</span>
                 <span>{record.dataTypes.length} data types</span>
                 {record.installedAt ? <span>{formatDate(record.installedAt)}</span> : null}

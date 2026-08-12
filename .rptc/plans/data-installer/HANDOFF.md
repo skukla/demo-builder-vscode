@@ -3,8 +3,7 @@
 Read this, then [`overview.md`](overview.md) for the design and the verified API contract.
 
 **Stage 1 (reads) has SHIPPED** — merged to `develop` as `a3c07420`, 14 commits,
-fast-forward. Stage 2 (import) is next and is **blocked on two answers**, neither of
-them code. See "Next action".
+fast-forward. Stage 2 (import) is next and is **not blocked** — see "Next action".
 
 ## Where the work is
 
@@ -53,86 +52,37 @@ Expect **17 suites / 265 tests** green. The descriptor rows have their own suite
 **The panel works end to end and has been visually confirmed by the user.** All four
 surfaces render: catalog, detail flyout, installed, activity.
 
-## Next action — Stage 2 is blocked on two answers
+## Next action — Stage 2, unblocked
 
-Get both before writing any Stage 2 code. They are cheap, and either can invalidate the
-design.
+**Nothing is waiting on the service owner.** Both questions were put to them and will not
+be answered; their read was that this was going too deep. They are right, and the two
+"blockers" dissolve into defensive design that is more robust than any answer would have
+been:
 
-### 1. The instance-id spike (blocking) — now TWO questions
+- **`commerce_instance`** — an opaque string the user supplies. A plain text field, no
+  derivation, no prefill, no validation, no formatting. This was already the safe default;
+  the spike that "justified" it was wasted motion.
+- **Auth `scope`** — find out by doing. Attempt the credential flow and handle failure with
+  a clear message, rather than branching on a scope value nobody will confirm. If PaaS and
+  ACCS turn out to need different paths, the failure will say so on the first attempt.
 
-Does the Data Installer's `commerce_instance` equal the tenant id from
-`ACCS_ENDPOINT_PATTERN` group 2 (`src/features/components/services/envVarHelpers.ts`)?
-The plan says the shapes match — 21–22 char base62 — but this is **unverified**.
+Then build Stage 2 per `overview.md`: credentials in SecretStorage, the job runner, the
+import UI. The runner's rules — two status endpoints failing in opposite directions, the
+grace window, `partial` as a first-class outcome, the covering-set terminal rule — are in
+the overview and in `docs/systems/data-installer.md` §5, and those DID come from probing
+behaviour rather than reading stored data.
 
-It matters because **importing into the wrong instance writes sample data into someone's
-live demo**. Either way the answer is a user-editable field pre-filled with the derived
-value; if the derivation is wrong, the prefill is actively harmful rather than merely
-unhelpful.
+### The lesson worth more than the spike
 
-**Ran the live check 2026-08-12. It settled the shape question and NOT the identity one.**
+**Stage data is not a specification.** A live read of the installed list found a few rows
+holding `https://datapack-accs.test` — test junk in a stage database. That became a
+documented "two-shape contract", three file edits, two commits and a long letter to
+another team. The correct response to an anomaly in stage data is to treat the field as
+opaque and move on.
 
-**SETTLED — the field carries two shapes, and the plan was wrong.** Of 35 installed
-records: 30 base62 ids (28×22 chars, 2×21) and **5 the literal
-`https://datapack-accs.test`**. That URL is really stored, not a fixture artifact —
-`.test` is RFC 6761 reserved and non-routable, so it is a placeholder someone typed in.
-Stage 2 must handle both shapes no matter how the rest resolves; do not add id-specific
-formatting, linking or validation.
-
-**STILL OPEN — does an id equal the ACCS tenant id?** The check could not test it. Across
-the full request log (1063 rows, paged) only **16 distinct instances** have ever had Data
-Installer activity, and none is a tenant derived from a local ACCS project. So there is
-**no overlap to compare**, which is different from a mismatch. The comparison itself is
-sound — positive control: all 12 installed instances were found in the log. Shapes are
-consistent on both sides (base62, 21–22 chars), which is weak supporting evidence and
-nothing more.
-
-**To close it, one of:**
-
-1. Name an ACCS project that HAS had a datapack installed, derive `ACCS_ENDPOINT_PATTERN`
-   group 2 from its endpoint, and check membership in the live instance set. Definitive.
-2. Ask the service owner what populates `commerce_instance` — folds into blocker 2's
-   conversation and costs nothing extra.
-
-Until then Stage 2's target field starts EMPTY rather than prefilled. A prefill derived
-from an unverified equality is the failure mode that writes sample data into someone
-else's live demo.
-
-Reproducing the check: `GET {base}/logs?limit=500&skip=N` and
-`GET {base}/get-installed-datapacks?limit=200`, bearer from
-`aio config get ims.contexts.cli.access_token --json`. Note the activity action is `logs`,
-not `get-datapack-request-logs` — Runtime routes on the last segment, so a guessed name is
-a bare 404 that looks like an empty result if you do not check the status code.
-
-Anything written up from a live read follows the public-repo rule below: strip instance
-ids, activation ids and endpoints; keep the finding.
-
-### 2. The service-owner ask (blocking) — DRAFTED, awaiting send
-
-Both open questions are now in one message, since blocker 1's remainder is cheapest to
-answer by asking rather than probing:
-
-1. **What `scope` does `auth/authenticate.js` request?** A hardcoded ACCS-only scope means
-   one credential path cannot serve both backend types and Stage 2 must branch.
-2. **What populates `commerce_instance` — is it the ACCS tenant id, and is it validated or
-   free text?** The free-text half is the real question: 5 of 35 records hold a
-   non-routable placeholder URL, which suggests no validation.
-
-It also reports the two server-side defects owed to them (the `batch-get-data-items` 400
-when `data_types` is omitted, quoting the env-var error text; and `202`-before-validation
-on the async entry point, contrasted with the sync twin's 400), and offers the seven doc
-divergences if they want them.
-
-**The draft is NOT in this repo** — it names stage behaviour and is a message, not a
-project artifact. It lives in the session scratchpad; regenerate it from this section and
-`docs/systems/data-installer.md` §2 and §5 if it is gone.
-
-Nothing in Stage 2 should start until at least question 1 is answered. Question 2 has a
-safe default already recorded: the target field starts empty.
-
-Then build Stage 2 per `overview.md` — credentials in SecretStorage, the job runner, the
-import UI. The runner's rules (two status endpoints failing in opposite directions, the
-grace window, `partial` as a first-class outcome, the covering-set terminal rule) are all
-in the overview and in `docs/systems/data-installer.md` §5.
+The service owner's own conclusion is worth recording: this is a case for **discovery
+metadata in the API for AI introspection**. Absent that, probing stored data to infer a
+contract will keep producing confident wrong answers — so don't.
 
 ## Process this repo actually enforces
 
