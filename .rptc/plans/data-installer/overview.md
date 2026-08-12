@@ -2,9 +2,11 @@
 
 **Branch**: `feature/data-installer` (worktree at
 `demo-builder-vscode.worktrees/feature/data-installer`)
-**State at handoff**: 8 commits ahead of `develop`, gate-green
-(7 suites / 160 tests, `tsc` clean, whole-repo lint 0/0, `npm run compile` emits
-`dataInstaller-bundle.js`).
+**State**: **Stage 1 SHIPPED** — merged to `develop` as `a3c07420` (14 commits,
+fast-forward). Gate-green at merge: 17 suites / 265 tests in the feature, whole
+suite 988/12,617, `tsc` clean, whole-repo lint 0 problems, `npm run compile` emits
+`dataInstaller-bundle.js`. All four UI surfaces visually confirmed by the user.
+**Stage 2 is blocked on two answers** — see HANDOFF.md "Next action".
 
 **Start here → [`HANDOFF.md`](HANDOFF.md)** for exact next actions and the traps.
 This file is the design.
@@ -106,7 +108,7 @@ than failing its list, every parser survives `null`/string/array/empty. A shape 
 upstream must degrade the UI, never break it — which is why this uses hand-rolled readers
 rather than a schema validator that would throw on a widened type.
 
-### Built (steps 1–9 + 10a)
+### Built — all of Stage 1
 
 | File | Responsibility |
 |---|---|
@@ -118,28 +120,38 @@ rather than a schema validator that would throw on a widened type.
 | `services/datapackCatalog.ts` | Grouping + version ordering + default-version pick. |
 | `handlers/dataInstallerHandlers.ts` | 6 read message types + `resolveDataInstallerAccess`. |
 | `commands/showDataInstaller.ts` | Panel. Standalone — deliberately does NOT dispose sibling tabs. |
-| `ui/DataInstallerScreen.tsx` | Connectivity shell (step 10b replaces the body). |
+| `ui/DataInstallerScreen.tsx` | Page shell: header + `ViewSwitcher` + the active view. Owns no data. |
+| `ui/hooks/useDataInstallerRequest.ts` | Unwraps the response envelope. A guard refusal RETURNS rather than throws, so without this it reads as a success — which is exactly what the connectivity line it replaced did. **Every view goes through this, not `useVSCodeRequest`.** |
+| `ui/dataInstallerFailure.tsx` | The one failure treatment for every view. Signed-out is never a Retry. |
+| `ui/components/DatapackCard.tsx` | Card: cover → thumbnail → CSS letter tile, version `Picker` (contained), opens the flyout. Promotes to `core/ui` at Stage 4. |
+| `ui/components/DatapackDetailPanel.tsx` | `core/ui/Drawer`'s second consumer. Pairs metadata with the stored-item inventory. |
+| `ui/components/ViewSwitcher.tsx` | Feature-local; renders nothing below two views. |
+| `ui/views/` | `DatapackCatalogView`, `InstalledDatapacksView`, `DatapackActivityView`. |
+| `ui/styles/data-installer.css` | Feature-scoped — reaches ONLY the `dataInstaller` bundle. |
+| `ai/server/readDescriptors.ts` (rows) | Six read tools. A test pins that the exposed types EQUAL the handler map's keys. |
 
 **The headless branch is the point of the guard.** `ensureAdobeIOAuth` pops a VS Code
 warning — right from a webview, wrong from an MCP tool, where it blocks the agent on a modal
 on the user's window. So the guard branches on `context.panel`; the headless path returns a
 `needsAuth` marker. A test asserts `ensureAdobeIOAuth` is never called without a panel.
 
-### Remaining — Stage 1
+### Where Stage 1 diverged from this plan
 
-- **10b. Catalog UI.** `DatapackCard` (cover → thumbnail → CSS letter tile via `onError`;
-  no card in the repo renders an image, so this is genuinely new), `ViewSwitcher` (~30 lines
-  over `ActionButton` — `StepRail` is forward-only by design and Spectrum `Tabs` is used in
-  **0** files), and the catalog view over `SearchHeader` + `GridLayout` + `useSearchFilter`.
-  Both new pieces stay **feature-local** until a second consumer.
-- **11.** Detail drawer (`core/ui/Drawer`, already promoted — this is its second consumer),
-  installed list (`SearchableList`), activity view (filters + "Load 50 more"; **no table, no
-  pagination component** — both verified absent and one consumer doesn't justify inventing
-  them).
-- **12.** Six MCP read rows in `READ_DESCRIPTORS` + `docs/systems/mcp-server.md` §9 sync +
-  a new `docs/systems/data-installer.md`. `get_datapack` needs a custom `shape` — a data
-  item can be megabytes and would flood an agent's context.
-- **13.** `gate`.
+Three of the components this plan named turned out to be the wrong ones when read from
+source. Recorded so the same calls are not re-litigated:
+
+- **`useSearchFilter`** (10b) — zero consumers, and its `Record<string, unknown>`
+  constraint does not admit an interface. Both peers that filter lists call the underlying
+  `matchesSearchFields` predicate directly, and so does this.
+- **`GridLayout`** (10b) — takes a fixed column COUNT. Both shipped card grids reflow by
+  width (`auto-fill` + `minmax`), so the catalog uses a CSS class like they do.
+- **`SearchableList`** (11) — built for SELECTION, and its container needs a flex parent
+  with a resolved height that `.page-container-padded` is not. The installed list uses
+  `ProjectRowList`'s shape instead.
+
+And one non-deviation worth stating: **no read tool needs a custom `shape`.** Measured
+against the fixtures, the whole 40-row catalog is ~17KB of JSON and a datapack's metadata
+~0.5KB. The megabyte payload is a data ITEM, which no exposed handler returns.
 
 ### Stage 2 — import
 

@@ -2,122 +2,176 @@
 
 Read this, then [`overview.md`](overview.md) for the design and the verified API contract.
 
+**Stage 1 (reads) has SHIPPED** — merged to `develop` as `a3c07420`, 14 commits,
+fast-forward. Stage 2 (import) is next and is **blocked on two answers**, neither of
+them code. See "Next action".
+
 ## Where the work is
 
 ```
 worktree   demo-builder-vscode.worktrees/feature/data-installer
-branch     feature/data-installer   (8 commits ahead of develop at handoff)
+branch     feature/data-installer   (== origin/develop at handoff; pushed)
 ```
 
 **Work in the worktree, not the main checkout.** Both exist and they are different
-directories. The previous session edited the main checkout by mistake once — absolute paths
-default to wherever a file was first created — and only noticed because a commit came out one
-file short. `git -C <worktree> rev-parse --show-toplevel` before trusting a path.
+directories. A previous session edited the main checkout by mistake — absolute paths
+default to wherever a file was first created — and only noticed because a commit came out
+one file short. `git -C <worktree> rev-parse --show-toplevel` before trusting a path.
+
+The main checkout is also on `develop` and will be behind after any push from here; `git
+pull` it before touching it.
 
 ## First three commands
 
 ```bash
 cd <repo>.worktrees/feature/data-installer
-git fetch origin && git -C . rebase origin/develop   # develop moved 8+ times in one day
+git fetch origin && git rebase origin/develop   # develop moves several times a day
 npx jest --no-coverage tests/features/data-installer > /tmp/j.txt 2>&1   # never pipe jest
 ```
 
-Expect **7 suites / 160 tests** green. Another agent is active on `develop`; rebase before
-each commit, not after. Their work has been entirely in `src/features/eds/` so far, so
-rebases have been clean — verify rather than assume.
+Expect **17 suites / 265 tests** green. The descriptor rows have their own suite at
+`tests/features/ai/server/readDescriptors.test.ts`.
 
-## What is done
-
-Stage 1 steps 1–9 plus the catalog-shaping half of 10:
+## What is done — all of Stage 1
 
 | Commit | What |
 |---|---|
-| `22982c41` | 15 sanitized fixtures captured from the live API |
-| `2b4790d3` | settings read + error taxonomy |
-| `8c129a9c` | wire→domain containment layer (the parsers) |
-| `e3582e26` | read client |
-| `2b8ee9ea` | handler map (6 read types) + access guard |
-| `1e61d700` | panel command + esbuild/package.json/commandManager wiring |
-| `e4df996b` | `Drawer` promoted to `core/ui` |
-| `e1461a66` | catalog grouping + version ordering |
+| `63fb7be3` | 15 sanitized fixtures captured from the live API |
+| `974db1bd` | settings read + error taxonomy |
+| `a387aac9` | wire→domain containment layer (the parsers) |
+| `6ba2a897` | read client |
+| `cf9202ba` | handler map (6 read types) + access guard |
+| `8c3414c5` | panel command + esbuild/package.json/commandManager wiring |
+| `6a00ded0` | `Drawer` promoted to `core/ui` |
+| `ce03bede` | catalog grouping + version ordering |
+| `1fe051e3` | catalog UI — card grid, art fallback chain, version picker |
+| `5369d015` | guard test: the shipped endpoint default carries no credential |
+| `d9d73151` | catalog moved into the house page layout |
+| `734941ae` | detail flyout + installed + activity views |
+| `a3c07420` | six MCP read tools + `docs/systems/data-installer.md` |
 
-**The panel opens.** `Cmd+Shift+P` → "Demo Builder: Open Data Installer" reaches the live
-service and reports connectivity.
+**The panel works end to end and has been visually confirmed by the user.** All four
+surfaces render: catalog, detail flyout, installed, activity.
 
-## Next action
+## Next action — Stage 2 is blocked on two answers
 
-**Step 10b — the catalog UI.** In order:
+Get both before writing any Stage 2 code. They are cheap, and either can invalidate the
+design.
 
-1. `ui/components/DatapackCard.tsx` — image card. Cover → thumbnail → CSS letter tile via
-   `onError`. **Nothing in the repo renders an image**, so this is the one genuinely new
-   component; the fallback is the common path (15 of 23 curated packs have no cover). Version
-   `Picker` inside the card, defaulted via `pickDefaultVersion`.
-2. `ui/components/ViewSwitcher.tsx` — ~30 lines over `ActionButton`. Not `StepRail`
-   (forward-only by design), not Spectrum `Tabs` (used in **0** files).
-3. `ui/views/DatapackCatalogView.tsx` — `SearchHeader` + `GridLayout` + `useSearchFilter`,
-   community toggle via Spectrum `Switch` (used in 5 files), `LoadingDisplay` /
-   `StatusDisplay` / `EmptyState` for the states.
-4. Rewire `DataInstallerScreen.tsx` to host views instead of the connectivity line.
+### 1. The instance-id spike (blocking)
 
-Both new components stay **feature-local** until a second consumer exists.
+Does the Data Installer's `commerce_instance` equal the tenant id from
+`ACCS_ENDPOINT_PATTERN` group 2 (`src/features/components/services/envVarHelpers.ts:35`)?
+Shapes match — 21–22 char base62 — but this is **unverified**.
 
-Then 11 (detail drawer + installed + activity), 12 (six MCP read rows + doc sync), 13 (`gate`).
+It matters because **importing into the wrong instance writes sample data into someone's
+live demo**. Either way the plan's answer is a user-editable field pre-filled with the
+derived value; if the derivation is wrong, the prefill is actively harmful rather than
+merely unhelpful.
+
+### 2. A question for the service owner (blocking, and cheaper than testing)
+
+What `scope` does the service's `auth/authenticate.js` send? A hardcoded `commerce.accs`
+makes the credential pair ACCS-only, and PaaS import needs a different path.
+
+Pair this with the two genuine server-side defects the spike found, which are still owed
+to them: the `batch-get-data-items` 400 when `data_types` is omitted, and
+`202`-before-validation on the async entry point.
+
+Then build Stage 2 per `overview.md` — credentials in SecretStorage, the job runner, the
+import UI. The runner's rules (two status endpoints failing in opposite directions, the
+grace window, `partial` as a first-class outcome, the covering-set terminal rule) are all
+in the overview and in `docs/systems/data-installer.md` §5.
 
 ## Process this repo actually enforces
 
-- **TDD, tests first.** Write the test, run it, confirm it fails, and confirm **no `src` file
-  was touched** during RED. Every commit here did that.
-- **Invoke skills, don't reproduce them.** `gate` (its §6 whole-repo lint is what CI runs),
-  `reuse-first` (a hook blocks a new UI component until you do), `webview-test-authoring`,
-  `spectrum-webview-ui`. Hand-running the steps skips rules in the body.
+- **TDD, tests first.** Write the test, run it, confirm it fails, and confirm **no `src`
+  file was touched** during RED. Every commit here did that.
+- **Invoke skills, don't reproduce them.** `gate` (its §6 whole-repo lint is what CI
+  runs), `reuse-first` (a hook blocks a new UI component until you do),
+  `webview-test-authoring`, `spectrum-webview-ui`, `mcp-tool-authoring`. Hand-running the
+  steps skips rules in the body.
 - **Never commit without asking.** Show the message first.
 - **No `Co-Authored-By`** (project convention overrides the global default).
 - **Never pipe jest** through `tail`/`head`/`grep` — a hook blocks it.
 
 ## Traps that already cost time here
 
-- **`tsc` catches what tests cannot.** 167 tests passed while `tsc` failed on four invented
-  `ErrorCode` members. Read enum members, setting keys, and import paths **from source** —
-  `getBundleUri` is in `@/core/utils/bundleUri`, not the module that exports `getWebviewHTML`.
+- **A handler that RETURNS `{success:false}` does not reject.** The communication manager
+  puts the whole `HandlerResponse` in the response payload, and `webviewClient` rejects
+  only when a handler THROWS — so a guard refusal arrives at the webview looking exactly
+  like a success. The connectivity line shipped in step 9 read `data.reachable` off that
+  envelope and told signed-out users "Connected". `ui/hooks/useDataInstallerRequest.ts`
+  is the fix; any new view must go through it rather than `useVSCodeRequest` directly.
+- **`tsc` catches what tests cannot.** 167 tests passed while `tsc` failed on four
+  invented `ErrorCode` members. Read enum members, setting keys and import paths **from
+  source**.
 - **The whole-repo lint is the gate CI runs.** A scoped lint reported a real `error` as a
-  warning-level pass once.
-- **Never rewrite `package.json` with `json.dump`.** It is 2-space; a 4-space dump produced a
-  987-line diff for a 15-line change. Targeted edits only.
-- **A check you don't gate on is decorative.** A leak check and a commit in the same command
-  block means a non-zero result stops nothing. Assert into a variable and branch.
-- **Piping into `sed`/`wc` masks the exit code**, so `|| echo "none"` never fires. Count into
-  a variable instead.
-- **Verify a "nothing found" with a positive control at the same scope.** `git show` on a
-  rewritten object errors, and `grep -c` on empty input returns `0` — indistinguishable from a
-  real negative.
+  warning-level pass once. It also blocks on WARNINGS by this project's bar, not just
+  errors — two landed this way (a jsx-a11y containment warning, an import/order one).
+- **Full-suite green is not scoped-suite green.** `commandManager.test.ts` pinned the
+  command count at 30 and had been failing since step 9 added the panel command; the
+  "gate-green" claim in the previous handoff was scoped-only.
+- **Never rewrite `package.json` with `json.dump`.** It is 2-space; a 4-space dump
+  produced a 987-line diff for a 15-line change. Targeted edits only.
+- **A check you don't gate on is decorative**, and **piping into `sed`/`wc` masks the exit
+  code**. Assert into a variable and branch.
+- **Verify a "nothing found" with a positive control at the same scope.** A `-A1` grep
+  window one line too short reported the endpoint default as missing when it was present.
 
-## The public-repo rule, which this feature already violated once
+### UI traps specific to this feature
 
-`.rptc/` is tracked and the repo is **public**. A probe writeup reached the remote carrying a
-colleague's name beside a defect in his service, a stage Runtime endpoint, and live record
-ids. It took a history rewrite and a force-push to remove.
+- **The page shell is not optional.** `<PageHeader constrainWidth />` plus
+  `.page-container-padded` is what puts content in the 960px `--content-width` band. Built
+  without them, the catalog spanned the whole panel and its three columns rendered at
+  ~517px each.
+- **Card-grid metrics stay LITERAL in CSS.** `integrationsGridLayout.test.ts` guards the
+  grids by parsing px values out of the stylesheet text — jsdom resolves no layout, so a
+  rendering test would pass either way. Lifting them into shared custom properties blinds
+  that guard; it was tried and reverted.
+- **`searchThreshold` is not a tuning knob.** `SearchHeader` puts the count beside the
+  refresh button with no field and beneath it with one, so a non-zero value changes the
+  band's shape as the list crosses it. Page-level surfaces use `0`.
+- **`SearchableList` is for SELECTION**, and needs a flex parent with a resolved height.
+  It is the wrong component for a read-only list on a page.
+- **A Spectrum `Picker` with a static `<Item>` before a mapped array loses keys** — React
+  renumbers a mixed children list, and the static key stopped reaching
+  `onSelectionChange`. Build one array.
+- **`Page.skip` is not reliably echoed by the service.** Key append-vs-replace on the skip
+  you REQUESTED, not on the response.
+
+## The public-repo rule
+
+`.rptc/` is tracked and the repo is **public**. A probe writeup once reached the remote
+carrying a colleague's name beside a defect in his service, a stage Runtime endpoint, and
+live record ids. It took a history rewrite and a force-push to remove.
 
 Before committing anything that touched a live endpoint, strip: **names of people**,
-**internal/pre-release endpoints** (incl. Runtime namespace ids), **record identifiers**
-(activation, tenant, object ids), **infrastructure names** quoted out of error text. Keep the
-finding, drop the identifier. The rule is in `.rptc/CLAUDE.md` §"Live-probe writeups". Raw
-captures are gitignored; the redacted writeup is what gets tracked.
+**record identifiers** (activation, tenant, object ids), and **infrastructure names quoted
+out of error text**. Keep the finding, drop the identifier. Raw captures are gitignored;
+the redacted writeup is what gets tracked. Fixtures follow the same rule: **captured real,
+then sanitized** — hand-written fixtures would encode the docs' lies, and one of the seven
+divergences was found exactly that way.
 
-Fixtures follow the same rule: **captured real, then sanitized**. Hand-written fixtures would
-encode the docs' lies — one of the seven divergences was found exactly that way.
+**Endpoints are the exception, decided deliberately.**
+`demoBuilder.dataInstaller.apiBaseUrl` ships the team's stage deployment as its default,
+matching `byom.overlayUrl`, `accsDiscovery.services` and `daLive.aemAuthorUrl`. Access is
+gated by the caller's IMS token, not by knowing the URL. What must never ship is a
+credential riding IN a URL — pinned by `dataInstallerSettingsSchema.test.ts`.
 
 ## What cannot be verified by an agent
 
-Steps 10b–11 are visual. Tests confirm the right props reach the right components; they
-cannot tell you the grid looks right or the fallback tile is legible. Every visual defect in
-this codebase this month was caught by the user's screenshot, never by the agent. **When the
-UI lands, the check is the user opening the panel in the Extension Dev Host** — say so rather
-than reporting an unseen visual result as verified.
+Every UI surface. Tests confirm the right props reach the right components; they cannot
+tell you the grid looks right or the fallback tile is legible. **When UI lands, the check
+is the user opening the panel in the Extension Dev Host** — say so rather than reporting an
+unseen visual result as verified.
 
-## Two open items owned by the user, not code
+MCP tools need an extension-host restart (F5), not a webview reload (Cmd+R), before Claude
+Code sees them.
 
-1. **A GitHub Support GC request** — force-push removed the unredacted objects from the
-   branch, not from GitHub's storage; they stay fetchable by SHA until GC.
-2. **A heads-up to the service owner** whose name was public for a window, which pairs with
-   reporting the two genuine server-side defects found: the `batch-get-data-items` 400 when
-   `data_types` is omitted, and `202`-before-validation on the async entry point.
+## Open items owned by the user, not code
+
+1. **A GitHub Support GC request** — an earlier force-push removed unredacted objects from
+   the branch, not from GitHub's storage; they stay fetchable by SHA until GC.
+2. **The service-owner conversation** — blocking question 2 above, plus the two defect
+   reports.
