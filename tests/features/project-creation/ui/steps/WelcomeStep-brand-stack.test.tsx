@@ -22,8 +22,6 @@ jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
 describe('WelcomeStep - Package + Stack Selection', () => {
     const mockUpdateState = jest.fn();
     const mockSetCanProceed = jest.fn();
-    const mockOnNext = jest.fn();
-    const mockOnBack = jest.fn();
 
     const mockPackages: DemoPackage[] = [
         {
