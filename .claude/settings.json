@@ -24,6 +24,11 @@
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/rptc-record-drift.sh\"",
             "statusMessage": "rptc record drift"
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/backlog-claim-drift.sh\"",
+            "statusMessage": "backlog claim drift"
           }
         ]
       }
