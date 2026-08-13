@@ -1,5 +1,37 @@
 # Plan: App Builder deployable model (Model B) — overview
 
+> ## ⚠️ D1, D2 and D3 have SHIPPED — do not execute their step files
+>
+> Verified 2026-08-13 against `src/` and ADR-011, whose status note reads: *"D1 (keyed state +
+> catalog + kind-dispatch runner + two-path subscriber) and D2 (live mesh subscribe + selection
+> UX) shipped first; **D3 shipped 2026-07-15**"* (merged as `5d6f4956`).
+>
+> The `d2-track-a/`, `d2-track-b/` and `d3/` step files describe a codebase that no longer
+> exists. All nine substantive D3 steps fail against current source:
+>
+> | Step | Its premise | Reality now |
+> |---|---|---|
+> | 01 | `writeManifest` omits the keyed map | `projectConfigWriter` references it |
+> | 02, 03, 04 | route `deployAppHeadless` | module DELETED (`9bb3b820`) |
+> | 05, 07 | retire `appComponentManager` | module DELETED (`4c85a15d`) |
+> | 06 | move mesh onto the keyed model | `appBuilderComponentState` already keyed |
+> | 08 | `AppBuilderComponentsList` unwired | file gone |
+> | 09 | build migration | `appBuilderComponentMigration.ts` exists |
+>
+> Their "surgical anchors (verified 2026-07-15)" point into deleted files. Kept for the record
+> of HOW it was done; treat them as history, not as instructions.
+>
+> **ADR-011 predicted this exact rot:** "`overview.md` continues to describe the singular model
+> and is updated only when D1–D3 ship." The trigger fired; the update did not, for four weeks.
+>
+> ## What is actually left
+>
+> The **Gaps to resolve** section below (line ~273), which is design and functional work the
+> shipped tracks never covered: per-deployable `.env` + env-var graph + secrets (marked HIGH and
+> pressure-tested), the deployables list UX, per-deployable status model, removal confirmation,
+> error/recovery states, and the AI-shell flow (D4). That section — not the step files — is what
+> a next session should scope from.
+
 **Status:** Design accepted (Model B). **D1 spike DONE** (all 5 questions answered live — see
 `../../research/appbuilder-deployable-model/d1-spike-findings.md`). **D1 IMPLEMENTED — steps 01–08
 shipped & green** (keyed state + accessors + migration + catalog + generalized `providesEnvVars`

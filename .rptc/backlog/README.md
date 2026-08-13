@@ -144,13 +144,25 @@ authentication has 8 tools and no skill, mesh has 3 and none dedicated, prerequi
 surface at all. Step 01 is mechanical and the worklist of all 41 is written; backing research
 is `.rptc/research/ai-surface-coverage/research.md`. **Not blocked.**
 
-#### App Builder deployable model — D2–D6 ([`appbuilder-deployable-model/`](appbuilder-deployable-model/overview.md))
+#### App Builder deployable model — the unresolved gaps ([`appbuilder-deployable-model/`](appbuilder-deployable-model/overview.md))
 
-Moved from `plans/` 2026-08-13: D1 is built and D2–D6 have not started, so it is not active
-work. ADR-011's keyed `appBuilderComponents` model is shipped; what remains is the rest of the
-deployable spine. **Track A pre-positions `getWorkspaceCredential`** — `dead-code-scan` will
-report it as an unused export with zero callers and it is NOT cruft; the D2 plan names it as
-the pattern five new passthroughs mirror. Not blocked.
+Moved from `plans/` 2026-08-13. **Corrected the same day: an earlier version of this entry said
+"D1 is built and D2–D6 have not started." That was wrong in both directions.** ADR-011's status
+note records D1 and D2 as shipped and **D3 shipped 2026-07-15** (`5d6f4956`), and there is no
+D4–D6 track — the plan defines D1, D2 Track A/B and D3. Verified against `src/`: all nine
+substantive D3 steps fail, two of them naming modules that have since been DELETED
+(`deployAppHeadless`, `appComponentManager`), so their "surgical anchors" point into files that
+no longer exist. The step files are now flagged at the top of the overview as history, not
+instructions.
+
+**What actually remains is the "Gaps to resolve" section** — work the shipped tracks never
+covered: per-deployable `.env` + env-var graph + secrets (marked HIGH, pressure-tested
+2026-06-19 — catalog entries must bring their own env-var schema and there is no collection
+surface for arbitrary integrations), the deployables list UX, per-deployable status model,
+removal confirmation for a destructive cloud op, error/recovery states, and the AI-shell flow.
+Scope from that section, never from the step files. **Track A pre-positions
+`getWorkspaceCredential`** — `dead-code-scan` reports it as an unused export and it is NOT
+cruft. Not blocked.
 
 #### Integrations host contract — declare what hosting the wizard flow requires ([`integrations-host-contract/`](integrations-host-contract/overview.md))
 
