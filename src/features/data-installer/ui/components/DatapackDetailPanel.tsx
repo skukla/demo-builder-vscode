@@ -28,11 +28,10 @@
 
 import { ActionButton, Button } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
-import React, { useState } from 'react';
+import React from 'react';
 import type { DataItemInventory, DatapackDetail, DatapackId } from '../../types';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
-import { ImportDatapackModal } from './ImportDatapackModal';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { Drawer } from '@/core/ui/components/ui/Drawer';
 
@@ -51,6 +50,15 @@ export interface DatapackDetailPanelProps {
     onClose: () => void;
     /** Re-run the detail request. */
     onRetry: () => void;
+    /**
+     * Import was requested for this pack.
+     *
+     * The panel raises it rather than owning the modal: rendering one here made it
+     * a child of the Drawer — a dialog inside a drawer, which no other surface in
+     * this extension does. `IntegrationsScreen` mounts its flow modal beside the
+     * list and keeps its detail flyout view-only; this now matches.
+     */
+    onImport: (id: DatapackId) => void;
 }
 
 export function DatapackDetailPanel({
@@ -61,9 +69,9 @@ export function DatapackDetailPanel({
     failure,
     onClose,
     onRetry,
+    onImport,
 }: DatapackDetailPanelProps): React.JSX.Element {
     const title = detail?.displayName ?? selected?.name ?? 'Datapack';
-    const [importing, setImporting] = useState(false);
 
     // What you can import is what the service HOLDS, not what the pack declares:
     // a pack can declare a type it stores no item for, and offering an import of
@@ -86,20 +94,12 @@ export function DatapackDetailPanel({
                         {renderPanelBody({ detail, inventory, loading, failure, onRetry })}
                         {detail && importable.length > 0 ? (
                             <div className="db-drawer-actions">
-                                <Button variant="accent" onPress={() => setImporting(true)}>
+                                <Button variant="accent" onPress={() => onImport(detail.id)}>
                                     Import…
                                 </Button>
                             </div>
                         ) : null}
                     </div>
-                    {importing && detail ? (
-                        <ImportDatapackModal
-                            id={detail.id}
-                            displayName={detail.displayName}
-                            availableTypes={importable}
-                            onClose={() => setImporting(false)}
-                        />
-                    ) : null}
                 </>
             ) : null}
         </Drawer>

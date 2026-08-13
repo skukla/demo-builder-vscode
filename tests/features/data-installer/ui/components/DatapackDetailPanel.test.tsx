@@ -57,6 +57,7 @@ function renderPanel(
             failure={null}
             onClose={onClose}
             onRetry={jest.fn()}
+            onImport={jest.fn()}
             {...over}
         />,
     );
@@ -147,6 +148,14 @@ describe('DatapackDetailPanel', () => {
         });
     });
 
+    /**
+     * The panel RAISES import; it does not own the modal.
+     *
+     * It used to render `ImportDatapackModal` as a child of the Drawer — a dialog
+     * nested inside a drawer, which no other surface here does. The view mounts it
+     * now, the way `IntegrationsScreen` mounts its flow modal beside the list, so
+     * this panel is view-only like `IntegrationDetailPanel`.
+     */
     describe('importing', () => {
         it('offers an Import affordance for a pack the service actually stores', () => {
             renderPanel();
@@ -170,27 +179,21 @@ describe('DatapackDetailPanel', () => {
             expect(screen.queryByRole('button', { name: /import/i })).not.toBeInTheDocument();
         });
 
-        it('opens the import modal on press', () => {
-            renderPanel();
+        it('raises import with the pack it is showing', () => {
+            const onImport = jest.fn();
+            renderPanel({ onImport });
 
             fireEvent.click(screen.getByRole('button', { name: /import/i }));
 
-            // Asserted by CONTENT, not by dialog name. `core/ui/Modal` renders
-            // role="dialog" with no accessible name — a real a11y gap, but a
-            // shared-component one, so it is reported rather than worked around
-            // here. The instance field appearing proves the modal opened AND is
-            // usable, which is the outcome that matters.
-            expect(screen.getByText('Commerce instance')).toBeInTheDocument();
+            expect(onImport).toHaveBeenCalledWith({ name: 'bodea', version: 'main' });
         });
 
-        it('offers only the types the service stores', () => {
+        it('renders no modal of its own', () => {
             renderPanel();
 
             fireEvent.click(screen.getByRole('button', { name: /import/i }));
 
-            expect(screen.getByRole('checkbox', { name: 'categories' })).toBeInTheDocument();
-            // Declared but not stored — importing it would ask for nothing.
-            expect(screen.queryByRole('checkbox', { name: 'giftcards' })).not.toBeInTheDocument();
+            expect(screen.queryByText('Commerce instance')).not.toBeInTheDocument();
         });
     });
 

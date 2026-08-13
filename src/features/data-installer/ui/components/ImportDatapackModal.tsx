@@ -196,7 +196,7 @@ export function ImportDatapackModal({
                 {dryRun.value ? (
                     <div className="datapack-import-verdict">
                         {dryRun.value.valid
-                            ? 'Validated — the service says this request would be accepted. Nothing has been written.'
+                            ? 'Dry run passed — the service says this request would be accepted. Nothing has been written.'
                             : 'The service refused this request:'}
                         {dryRun.value.reason ? (
                             <div className="datapack-import-reason">{dryRun.value.reason}</div>
@@ -255,9 +255,11 @@ function buildActions(
         ];
     }
     return [
-        // A dry run, because there is otherwise no way to check a request without
-        // writing: starting chains validate and start.
-        { label: 'Validate', variant: 'secondary', onPress: a.validate, isDisabled: !a.canStart },
+        // "Dry run", not "Validate": the start handler already validates
+        // server-side before it starts, so this is a REHEARSAL of the same
+        // request, not a gate the user must pass through first. Two peer labels
+        // invited "must I press this before importing?" — the answer is no.
+        { label: 'Dry run', variant: 'secondary', onPress: a.validate, isDisabled: !a.canStart },
         // Arms only. Removing data always takes a second, explicit press.
         { label: 'Reset…', variant: 'secondary', onPress: a.armReset, isDisabled: !a.canStart },
         { label: 'Start import', variant: 'accent', onPress: a.startImport, isDisabled: !a.canStart },
