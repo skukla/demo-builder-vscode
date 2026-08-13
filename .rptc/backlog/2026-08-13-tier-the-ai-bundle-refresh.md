@@ -21,12 +21,16 @@
 > including the healthy verdict (`debug`); either stale branch logs the WHY at `info`,
 > naming the missing packages. A test pins that the healthy path logs.
 >
-> **NOT done — needs the user's tier-2 policy decision first** (see "The risk to
-> settle first"): steps 2 (per-tier version detail), 3 (split `generateAIContextFiles`
-> by tier), 4 (silent tier-1 repair on activation), 5 (tier-2 policy), 6 (prompt
-> wording), 8 (reconcile `updateExecutor`'s silent regeneration with the check's
-> prompt). The under-firing HALF is fixed via the existing consent surface; the
-> proportionality half is untouched.
+> **Policy DECIDED 2026-08-14 — option 1, hash-and-skip**, recorded as
+> [ADR-013](../../docs/architecture/adr/013-generated-file-edit-survival.md):
+> generated files carry a write-time hash; refresh overwrites only files that still
+> match; edited files are skipped, logged, and reported. That unblocks the remaining
+> steps, none of which are implemented yet: 2 (per-tier version detail), 3 (split
+> `generateAIContextFiles` by tier), 4 (silent tier-1 repair on activation),
+> 5 (hash-and-skip itself, per the ADR), 6 (prompt wording), 8 (reconcile
+> `updateExecutor`'s silent regeneration with the check's prompt). The under-firing
+> HALF is fixed via the existing consent surface; the proportionality half is
+> designed but unbuilt.
 
 *(Filed as "tier the AI-bundle refresh". Renamed after research widened it — see
 "The check is also under-firing".)*
