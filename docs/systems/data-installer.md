@@ -172,10 +172,14 @@ service's own.
 
 ## 5. The write path (Stage 2 — BUILT, never run live)
 
-**Status, stated plainly: every piece below is unit-tested and none of it has met
-the service.** The first real run writes data into a Commerce instance, and there
-is no undo and no cancel. Treat this section as "built and unverified", not as
-"working".
+**Status: the read-only half of the write path passed live on 2026-08-13.** A dry
+run through the modal succeeded end to end — guard → credentials from declared
+config → `get-websites-and-stores` 200 → `operation_mode: 'validate'` 200 — which
+confirms the credential field names, the auth model (user IMS bearer to the
+service, OAuth S2S pair to Commerce), the request body shape, AND that the tenant
+id derived from `ACCS_GRAPHQL_ENDPOINT` is accepted as `commerce_instance`.
+**`import` and `delete` have still never run.** The first real import writes data
+into a Commerce instance, and there is no undo and no cancel.
 
 | Piece | What it does |
 |---|---|

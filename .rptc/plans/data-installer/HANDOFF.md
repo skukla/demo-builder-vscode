@@ -78,10 +78,12 @@ It also checks the credentials first, with `get-websites-and-stores`.
 `docs/systems/data-installer.md` §6 keeps the equivalent direct curl, for probing without
 the extension open.
 
-One assumption remains that this answers: **what scope the service's auth wants** — the
-question the service owner declined, arriving empirically. (The credential field names are
-no longer a guess; `admin_username`/`admin_password` and `client_id`/`client_secret` were
-read off the live probe and corrected in `c26a60bc`.)
+**DONE 2026-08-13 — the dry run passed live.** `get-websites-and-stores` 200, then
+`operation_mode: 'validate'` 200, through the modal, with the Debug Logs lines to prove it.
+That answered the auth-scope question empirically (user IMS bearer to the service; OAuth
+S2S pair with `commerce.accs` scope to the instance) and proved the derived tenant id is
+accepted as `commerce_instance`. The entitlement recipe — create the S2S credential,
+subscribe `ACCS-REST-API` to it — is in `docs/systems/data-installer.md` §pre-flight.
 
 ### 2. Then one real import, on a target you own
 
