@@ -24,6 +24,7 @@ describe('ProjectSetupContext', () => {
             error: jest.fn(),
             warn: jest.fn(),
             debug: jest.fn(),
+            trace: jest.fn(),
         };
 
         mockHandlerContext = {
@@ -48,6 +49,7 @@ describe('ProjectSetupContext', () => {
         } as jest.Mocked<HandlerContext>;
 
         mockRegistry = {
+            version: '1.0.0',
             envVars: {
                 TEST_VAR: {
                     label: 'Test Var',
@@ -69,12 +71,15 @@ describe('ProjectSetupContext', () => {
             name: 'test-project',
             path: '/test/path',
             status: 'ready',
-            created: new Date().toISOString(),
+            created: new Date(),
+            lastModified: new Date(),
             meshState: {
+                envVars: {},
+                sourceHash: null,
+                lastDeployed: '',
                 endpoint: 'https://mesh.adobe.io/graphql',
-                workspace: 'test-workspace',
             },
-        } as Project;
+        };
 
         mockConfig = {
             components: {
@@ -238,19 +243,24 @@ describe('ProjectSetupContext', () => {
             expect(endpoint).toBeUndefined();
         });
 
-        it('should prioritize meshState.endpoint over componentInstances', () => {
-            const projectWithBoth = {
+        it('should prioritize the keyed mesh endpoint over legacy meshState', () => {
+            const projectWithBoth: Project = {
                 ...mockProject,
                 meshState: {
-                    endpoint: 'https://priority-mesh.adobe.io/graphql',
-                    workspace: 'test',
+                    envVars: {},
+                    sourceHash: null,
+                    lastDeployed: '',
+                    endpoint: 'https://fallback-mesh.adobe.io/graphql',
                 },
-                componentInstances: {
-                    'eds-commerce-mesh': {
-                        endpoint: 'https://fallback-mesh.adobe.io/graphql',
+                appBuilderComponents: {
+                    mesh: {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: '', repo: '' },
+                        endpoint: 'https://priority-mesh.adobe.io/graphql',
                     },
                 },
-            } as Project;
+            };
 
             const context = new ProjectSetupContext(
                 mockHandlerContext,

@@ -19,6 +19,8 @@ import {
 } from '@/features/project-creation/ui/wizard/wizardHelpers';
 import type { WizardState, ComponentSelection } from '@/types/webview';
 
+const NEUTRAL_AUTH: WizardState['adobeAuth'] = { isAuthenticated: false, isChecking: false };
+
 describe('wizardHelpers - state & config', () => {
     // State Initialization Helpers
     describe('initializeComponentsFromImport', () => {
@@ -205,6 +207,7 @@ describe('wizardHelpers - state & config', () => {
             const state: WizardState = {
                 currentStep: 'review',
                 projectName: 'test-project',
+                adobeAuth: NEUTRAL_AUTH,
                 selectedAddons: ['adobe-commerce-aco'],
                 components: {
                     frontend: 'headless',
@@ -221,6 +224,7 @@ describe('wizardHelpers - state & config', () => {
             const state: WizardState = {
                 currentStep: 'review',
                 projectName: 'test-project',
+                adobeAuth: NEUTRAL_AUTH,
                 // No selectedAddons
             };
 
@@ -233,6 +237,7 @@ describe('wizardHelpers - state & config', () => {
             const state: WizardState = {
                 currentStep: 'review',
                 projectName: 'test-project',
+                adobeAuth: NEUTRAL_AUTH,
                 selectedPackage: 'citisignal',
                 selectedStack: 'headless-paas',
             };
@@ -247,6 +252,7 @@ describe('wizardHelpers - state & config', () => {
             const state: WizardState = {
                 currentStep: 'review',
                 projectName: 'test-project',
+                adobeAuth: NEUTRAL_AUTH,
                 adobeOrg: { id: 'org-123', code: 'ORG', name: 'Test Org' },
                 adobeProject: { id: 'proj-456', name: 'test-proj', title: 'Test Project' },
                 adobeWorkspace: { id: 'ws-789', name: 'Stage' },
@@ -264,6 +270,7 @@ describe('wizardHelpers - state & config', () => {
             const state: WizardState = {
                 currentStep: 'review',
                 projectName: 'test-project',
+                adobeAuth: NEUTRAL_AUTH,
                 wizardMode: 'edit',
                 editProjectPath: '/path/to/project',
             };
@@ -277,6 +284,7 @@ describe('wizardHelpers - state & config', () => {
             const state: WizardState = {
                 currentStep: 'review',
                 projectName: 'test-project',
+                adobeAuth: NEUTRAL_AUTH,
                 edsConfig: {
                     repoName: 'my-repo',
                     repoMode: 'new',
@@ -303,6 +311,7 @@ describe('wizardHelpers - state & config', () => {
             const state: WizardState = {
                 currentStep: 'review',
                 projectName: 'test-project',
+                adobeAuth: NEUTRAL_AUTH,
                 edsConfig: {
                     repoName: 'my-repo',
                     repoMode: 'new',
@@ -330,6 +339,7 @@ describe('wizardHelpers - state & config', () => {
             const state: WizardState = {
                 currentStep: 'review',
                 projectName: 'test-project',
+                adobeAuth: NEUTRAL_AUTH,
                 selectedPackage: 'citisignal',
                 selectedStack: 'eds-paas',
                 edsConfig: {
@@ -351,13 +361,17 @@ describe('wizardHelpers - state & config', () => {
                 {
                     id: 'citisignal',
                     name: 'CitiSignal',
+                    description: '',
+                    configDefaults: {},
                     storefronts: {
                         'eds-paas': {
                             name: 'CitiSignal EDS',
+                            description: '',
                             source: {
                                 type: 'git' as const,
                                 url: 'https://github.com/demo-system-stores/accs-citisignal',
                                 branch: 'main',
+                                gitOptions: {},
                             },
                         },
                     },
@@ -379,6 +393,7 @@ describe('wizardHelpers - state & config', () => {
             const state: WizardState = {
                 currentStep: 'review',
                 projectName: 'test-project',
+                adobeAuth: NEUTRAL_AUTH,
                 customBlockLibraries: [
                     {
                         name: 'my-blocks',
@@ -405,6 +420,7 @@ describe('wizardHelpers - state & config', () => {
             const state: WizardState = {
                 currentStep: 'review',
                 projectName: 'test-project',
+                adobeAuth: NEUTRAL_AUTH,
                 selectedAppBuilderComponents: ['erp-sync', 'owner-custom-app'],
                 appBuilderComponentSources: {
                     'owner-custom-app': { owner: 'owner', repo: 'custom-app', branch: 'dev' },
@@ -423,6 +439,7 @@ describe('wizardHelpers - state & config', () => {
             const state: WizardState = {
                 currentStep: 'review',
                 projectName: 'test-project',
+                adobeAuth: NEUTRAL_AUTH,
             };
 
             const config = buildProjectConfig(state);
@@ -435,6 +452,7 @@ describe('wizardHelpers - state & config', () => {
             const state: WizardState = {
                 currentStep: 'review',
                 projectName: 'test-project',
+                adobeAuth: NEUTRAL_AUTH,
                 // No customBlockLibraries
             };
 
@@ -447,6 +465,7 @@ describe('wizardHelpers - state & config', () => {
             const state: WizardState = {
                 currentStep: 'review',
                 projectName: 'test-project',
+                adobeAuth: NEUTRAL_AUTH,
                 selectedPackage: 'citisignal',
                 selectedStack: 'eds-paas',
                 edsConfig: {
@@ -471,6 +490,7 @@ describe('wizardHelpers - state & config', () => {
         const baseState = (selectedConsoleApis?: Record<string, string[]>): WizardState => ({
             currentStep: 'review',
             projectName: 'test-project',
+            adobeAuth: NEUTRAL_AUTH,
             selectedConsoleApis,
         });
 
