@@ -205,8 +205,11 @@ innocent: of six update kinds only `performAdobeMcpUpdates` regenerates, and the
 not change component membership — **the gap is in ADD, not UPDATE.** Supporting finding: the
 extension already regenerates silently on that update path, so "regeneration needs consent"
 is already false here; two routes just disagree. **Settle first:** the prompt is currently
-the only thing protecting a hand-edited `AGENTS.md`. **Step 0 is reproducing the silent
-case.** Not blocked.
+the only thing protecting a hand-edited `AGENTS.md`. **And the plan makes more things
+silent, so it carries a logging section:** today the freshness check logs only on the
+stale branch, so "checked and fine" and "never ran" are the same silence — the
+`|| echo "none"` ambiguity in another costume, and the reason the under-firing case is
+invisible. **Step 0 is reproducing the silent case.** Not blocked.
 
 #### AI surface coverage — tools and skills vs features ([`ai-surface-coverage/`](ai-surface-coverage/))
 

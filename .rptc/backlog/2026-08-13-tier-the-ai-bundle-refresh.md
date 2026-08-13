@@ -115,6 +115,46 @@ Options, in order of preference:
 
 Do not go silent by simply not noticing.
 
+## Logging — silence must stop being ambiguous
+
+Every failure chased on 2026-08-12/13 was invisible for want of a line: a `dist/` from
+another checkout, a global MCP entry frozen at an old version, a project qualifying for
+packages it never received. **This plan proposes to make MORE things silent**, so it has to
+say what replaces the prompt as the trace.
+
+**Today silence means two different things.** `aiContextFreshnessCheck` returns
+`{ status: 'ok' }` and logs nothing when the stamp is current; it logs only on the stale
+branch. So "we checked and the bundle is fine" and "the check never ran" are
+indistinguishable in Debug Logs — the same ambiguity this repo's CLAUDE.md flags for
+`|| echo "none"`, where the output reads the same whether the command found nothing or never
+executed. It is also exactly why the under-firing case is invisible: a project that has
+outgrown its bundle logs the same nothing as a healthy one.
+
+Requirements, in priority order:
+
+1. **Log the DECISION, not just the exception.** One line per check with what was compared
+   and the verdict — version axis, composition axis, result. A check that only speaks when
+   unhappy cannot be distinguished from a check that is broken.
+2. **Anything done silently leaves a record of what changed.** The precedent is already set
+   by `global-mcp-version-pin` (`d90b4f3f`): `info` naming the repair when it fires, `warn`
+   when the repair itself fails, because a failed silent repair reopens the dead end with
+   nobody watching. Tier 1 and tier 2 need the same treatment.
+3. **Say WHY, not just WHAT.** "regenerated AI files" is not useful six weeks later.
+   "regenerated: project gained app-builder component, installed
+   @adobe-commerce/commerce-extensibility-tools@^3.4.0" is what a support question is
+   answered from — and support questions are exactly what `.127`/`.128` produced.
+4. **Channel discipline.** Debug Logs for the routine per-open verdict; User Logs for
+   anything the user must act on or would be surprised by (a package download, a file left
+   alone because they had edited it). `debug()` is excluded from the export buffer, so
+   anything support may need to see must not be `debug`-only.
+5. **A skipped file is an event.** If tier 2 lands hash-and-skip, "left AGENTS.md alone
+   because it was modified" must be logged. A silent skip is how someone's edit survives
+   for months and then vanishes on the one release that changes policy.
+
+**Test the ambiguity, not just the happy path.** The suite should pin that a healthy check
+logs something, not merely that a stale one does — otherwise the regression that reintroduces
+silence passes.
+
 ## Execution plan
 
 0. **Reproduce the under-firing case first**, because it is the half nobody has seen fail:
@@ -137,7 +177,9 @@ Do not go silent by simply not noticing.
 5. **Decide the tier-2 policy** using the risk section above, and implement whichever wins.
 6. **Leave tier 3 behind a prompt**, and make that prompt say what it will download — the
    current wording covers all three jobs and so explains none of them.
-7. **Reconcile the two paths.** Whatever policy lands, `updateExecutor`'s silent regeneration
+7. **Give every check and silent action its log line**, per the logging section above —
+   including the healthy verdict, so silence stops being ambiguous.
+8. **Reconcile the two paths.** Whatever policy lands, `updateExecutor`'s silent regeneration
    and the freshness check must follow the same one.
 
 ## Constraints
