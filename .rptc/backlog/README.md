@@ -156,7 +156,10 @@ Give an agent the same 403 repair a human now gets from `Demo Builder: Manage Si
 
 #### Component secret routing — the declaration decides where a credential lives ([`component-secret-routing/`](component-secret-routing/overview.md))
 
-Filed 2026-08-13, from Data Installer Stage 2 live verification. An ACCS project cannot import:
+Filed 2026-08-13; **small version shipped same day** (`ce840267`: ACCS fields declared, the
+`SECRET_ENV_KEYS` guard, one reader per credential pair). Remaining scope is the seam itself —
+generalize `type: 'secret'` routing beyond App Builder, then migrate the two secrets now in
+`componentConfigs`. Originally from Data Installer Stage 2 live verification. An ACCS project cannot import:
 the modal says "add an OAuth client id and secret" and there is **nowhere to add them** —
 `storeAccsCredentials` is called from tests only. Two designs were rejected before this one (a
 feature-specific form; collapsing the per-backend branch), both recorded in the plan so they are

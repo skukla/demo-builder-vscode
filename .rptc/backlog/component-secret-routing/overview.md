@@ -1,6 +1,22 @@
 # Component secret routing — the declaration decides where a credential lives
 
-**Status: PROPOSED. Nothing built.** Written for review before any code.
+**Status: PARTIALLY SHIPPED.** The small version — step 3, step 5 and phase 1 —
+landed in `ce840267` (2026-08-13, same day, on `feature/data-installer`). What
+remains is the seam itself: steps 1–2 and migration phases 2–3. This file is the
+record for THAT remaining work; do not file it anywhere else, or one job gets two
+records in two lifecycle states.
+
+**Shipped, so do not redo:**
+
+- ACCS OAuth fields declared on `adobe-commerce-accs` (optional, not required).
+- The `SECRET_ENV_KEYS` guard — `tests/sop/credential-env-vars-registered.test.ts`.
+- One reader per pair — `readPaasAdminPair` / `readAccsOAuthPair` in
+  `envVarHelpers`, all three value-consumers collapsed onto them. When the value
+  moves, these two functions change and the consumers do not; that is the seam
+  point the remaining work builds on.
+- The ACCS SecretStorage path (`storeAccsCredentials` et al.) is DELETED, not
+  waiting to be wired. The remaining work re-introduces SecretStorage via the
+  generalized `type: 'secret'` seam, not by resurrecting that code.
 
 **Provenance.** Raised 2026-08-13 during Data Installer Stage 2 live verification.
 The user rejected two earlier designs of mine in a row — a feature-specific
@@ -93,13 +109,17 @@ This is a generalization, not a new subsystem.
 Each is independently reviewable; 1 and 2 are shared infrastructure and the risk
 sits there, not in the feature.
 
-| # | Step | Touches |
-|---|---|---|
-| 1 | Generalize the secret seam to any component catalog entry | `components/`, `dashboard/` |
-| 2 | Migrate `ADOBE_COMMERCE_ADMIN_PASSWORD` from `componentConfigs` to SecretStorage | shared + existing projects |
-| 3 | Declare the ACCS OAuth fields | `components.json` |
-| 4 | Point `resolveCommerceCredentials` at the general path; delete the bespoke one | `data-installer/` |
-| 5 | Shrink `SECRET_ENV_KEYS`, and guard it so the list cannot silently fall behind | `components/` |
+| # | Step | Touches | State |
+|---|---|---|---|
+| 1 | Generalize the secret seam to any component catalog entry | `components/`, `dashboard/` | open |
+| 2 | Migrate `ADOBE_COMMERCE_ADMIN_PASSWORD` (and now `ACCS_OAUTH_CLIENT_SECRET`) from `componentConfigs` to SecretStorage | shared + existing projects | open |
+| 3 | Declare the ACCS OAuth fields | `components.json` | **shipped** `ce840267` |
+| 4 | Point `resolveCommerceCredentials` at the general path | `data-installer/` | folded into 3 — it reads declared config via the shared readers |
+| 5 | Guard `SECRET_ENV_KEYS` so the list cannot silently fall behind | `components/` | **shipped** `ce840267` |
+
+Step 2's scope GREW with step 3: the ACCS client secret now also sits in
+`componentConfigs` (registered in `SECRET_ENV_KEYS`, so exports stay clean), and
+migrates in the same pass as the admin password.
 
 ### Step 2 is the one with real risk — and it is bigger than "move a value"
 
