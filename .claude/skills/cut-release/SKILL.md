@@ -37,6 +37,11 @@ decide what (if anything) to fix before tagging.
 
 - **`codebase-sweep`** — duplication, extraction, cycles, orphans, doc drift (~30s).
 - **`dream`** — memory / skills / CLAUDE.md staleness across recent sessions.
+- **`bash .claude/skills/rptc-hygiene-scan/scan.sh`** — rot in the RPTC record itself
+  (~2s, offline): backlog links that do not resolve, items with no index entry, plans that
+  shipped and never moved, citations naming a deleted file. Read the CONTROL line in each
+  section — a "(none)" from a check that did not run looks identical to a clean one. Findings
+  are for the record, never a blocker on the tag.
 - **`npm run data-installer:drift`** — the Data Installer fixtures vs the live
   service (~5s, needs `aio login`). The only check that can catch that API moving:
   the feature's tests are fully offline against committed fixtures, so they stay
