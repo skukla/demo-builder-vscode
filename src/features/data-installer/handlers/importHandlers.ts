@@ -236,9 +236,9 @@ export const importHandlers = defineHandlers({
      * admin URL, and that id is a 21–22 character base62 nanoid — the shape the
      * spike measured for `commerce_instance`.
      *
-     * **This answers; it does not decide.** `verified` says whether the shape is
-     * the one the service was observed to take, so the modal can label a guess as a
-     * guess and keep the field editable.
+     * **This answers; it does not decide.** It reports the instance the project
+     * implies and nothing else — the field stays editable, and a dry run is what
+     * checks a seeded value before an import writes with it.
      */
     'get-datapack-import-target': async (context: HandlerContext): Promise<HandlerResponse> => {
         // No guard and no client: this reads project state only. A missing project
@@ -251,16 +251,20 @@ export const importHandlers = defineHandlers({
 
         const accs = deriveAccsTenantId(lookupComponentConfigValue(configs, ACCS_GRAPHQL_ENDPOINT));
         if (accs) {
-            return { success: true, data: { instance: accs, source: 'accs', verified: true } };
+            return { success: true, data: { instance: accs } };
         }
 
-        // PaaS is a GUESS, and is reported as one. Every `commerce_instance`
-        // observed live was an ACCS nanoid with `site_type: 'accs'`, and no REST
-        // base URL appears in any installation record — so this is offered to save
-        // typing, and `verified: false` is what tells the modal to say so.
+        // PaaS gets the project's Commerce URL. The service DERIVES the site type
+        // (nothing in `buildBody` sends one) and a URL-shaped instance IS accepted:
+        // across all 1063 log records the vocabulary is `accs`, `aco` and `local`,
+        // and the `local` rows carry a full URL. So a URL is the right shape for an
+        // instance the service cannot look up, which is what a PaaS instance is.
+        //
+        // Unproven for PaaS specifically: no `paas` row exists anywhere in that
+        // sample. See docs/systems/data-installer.md.
         const paas = lookupComponentConfigValue(configs, PAAS_URL);
         if (paas) {
-            return { success: true, data: { instance: paas, source: 'paas', verified: false } };
+            return { success: true, data: { instance: paas } };
         }
 
         return { success: true, data: {} };

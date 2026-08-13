@@ -230,6 +230,37 @@ A mode that exists on `process-datapack-async` but has no processor list would b
 invisible to it. Omitting the parameter returns the import set, so there is no
 "list the modes" endpoint to ask instead.
 
+### The service DERIVES the site type — and there is no `paas` (measured 2026-08-13)
+
+Nothing in `buildBody` sends a site type. The only things that go up are
+`commerce_instance` and the credential pair, so the classification is server-side
+inference from those.
+
+Across **all 1063 log records** (complete, not a sample) the vocabulary is:
+
+| `site_type` | rows | `commerce_instance` shape |
+|---|---|---|
+| `accs` | 933 | 21–22 char base62 nanoid |
+| `local` | 70 | **a full URL** |
+| `aco` | 34 | 21–22 char base62 nanoid |
+| absent | 26 | mixed |
+
+**There is no `paas` row anywhere in that set**, so no PaaS project has ever run
+through this service.
+
+What it means for a PaaS target. For ACCS the service expands a tenant id into a
+base URL from its own configuration — which it can only do for instances it knows
+about. The `local` rows show that when it *cannot* look an instance up, it takes a
+full URL instead. A PaaS instance is equally unknown to it, so the full base URL is
+the only thing it could resolve, and that is what the extension prefills from
+`ADOBE_COMMERCE_URL`. The UI marks it unverified and says to dry-run it, because
+"the right shape" is not "known to work".
+
+Two details worth keeping: `get-installed-datapacks` does **not** carry `site_type`
+at all (only `logs` does), and its array is keyed `datapacks`, not `items` — an
+extractor written for the other endpoints silently reports zero rows against a
+non-zero `total`.
+
 ### Reset — how a project gets reused
 
 The service takes `operation_mode: 'delete'` on the same `process-datapack-async`

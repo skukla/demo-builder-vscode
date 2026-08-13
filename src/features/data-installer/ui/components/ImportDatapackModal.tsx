@@ -30,10 +30,10 @@
  * `ACCS_GRAPHQL_ENDPOINT` all along to build the admin URL, and that id is the
  * 21–22 character base62 shape the spike measured for `commerce_instance`.
  *
- * A seeded value therefore carries its provenance (see {@link describeTarget}). A
- * PaaS target is offered as an explicit GUESS: no REST base URL appears in any
- * installation record, so that shape has never been observed to work, and the copy
- * says to check it with a dry run rather than implying it is derived.
+ * A PaaS target is seeded from the project's Commerce URL. The service DERIVES the
+ * site type rather than being told it, and a URL-shaped instance is accepted — but
+ * no PaaS project has ever run through it, so that seed is a shape that should work
+ * rather than one known to.
  *
  * **"Stop watching" is not cancel.** There is no cancel endpoint. Stopping ends
  * the WATCH; the job keeps running server-side, which the copy says outright.
@@ -68,9 +68,6 @@ const DOT_VARIANT: Record<DataTypeStatus, 'success' | 'error' | 'info' | 'neutra
 /** What the open project implies about where this import should go. */
 interface ImportTarget {
     instance?: string;
-    source?: 'accs' | 'paas';
-    /** Whether the shape matches what the service was observed to accept. */
-    verified?: boolean;
 }
 
 export interface ImportDatapackModalProps {
@@ -234,7 +231,7 @@ export function ImportDatapackModal({
                                 value={commerceInstance}
                                 onChange={editInstance}
                                 required
-                                description={describeTarget(target.value)}
+                                description="Where this data will be written. There is no undo — check it with whoever owns the target."
                             />
                             <div className="datapack-import-types">
                                 <div className="datapack-import-types-head">
@@ -342,23 +339,6 @@ function buildActions(
             isDisabled: !a.canStart,
         },
     ];
-}
-
-/**
- * What to say under the instance field.
- *
- * A derived value must carry its provenance: the user has to be able to tell a
- * value the project implied from one they typed, and an ACCS tenant id from a PaaS
- * URL that is only a plausible guess. Silence here would make all three look alike.
- */
-function describeTarget(target: ImportTarget | null): string {
-    const warning = 'Where this data will be written. There is no undo — check it with whoever owns the target.';
-    if (!target?.instance) {
-        return warning;
-    }
-    return target.verified
-        ? `From this project's Commerce configuration. ${warning}`
-        : `From this project's Commerce URL, but this service was never observed to accept that shape — check it with a dry run first. ${warning}`;
 }
 
 /** Where the job stands, plus a row per reported type. */

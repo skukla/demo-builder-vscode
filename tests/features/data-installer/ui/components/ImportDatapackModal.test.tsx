@@ -142,24 +142,6 @@ describe('ImportDatapackModal', () => {
             expect(await screen.findByDisplayValue('UoGYsHrcxMyeoVd2zUktZi')).toBeInTheDocument();
         });
 
-        it('says where the value came from', async () => {
-            withTarget({ instance: 'UoGYsHrcxMyeoVd2zUktZi', source: 'accs', verified: true });
-            renderModal();
-
-            expect(await screen.findByText(/from this project/i)).toBeInTheDocument();
-        });
-
-        // A PaaS target is a plausible guess, not a derivation: every observed
-        // commerce_instance was an ACCS nanoid, and no REST base URL appears in any
-        // installation record. The UI has to say so, or a dry run is the only thing
-        // between a guess and a write.
-        it('marks an unverified guess as unverified', async () => {
-            withTarget({ instance: 'https://demo.adobedemo.com', source: 'paas', verified: false });
-            renderModal();
-
-            expect(await screen.findByText(/check it with a dry run/i)).toBeInTheDocument();
-        });
-
         it('stays empty when the project implies nothing', async () => {
             withTarget({});
             renderModal();

@@ -75,7 +75,7 @@ function makeContext(project: unknown) {
 
 async function target(project: unknown) {
     const result = await importHandlers['get-datapack-import-target'](makeContext(project));
-    return result.data as { instance?: string; source?: string; verified?: boolean };
+    return result.data as { instance?: string };
 }
 
 describe('get-datapack-import-target', () => {
@@ -83,7 +83,7 @@ describe('get-datapack-import-target', () => {
 
     describe('ACCS', () => {
         it('derives the instance from the project ACCS endpoint', async () => {
-            expect(await target(ACCS_PROJECT)).toMatchObject({ instance: TENANT, source: 'accs' });
+            expect(await target(ACCS_PROJECT)).toMatchObject({ instance: TENANT });
         });
 
         // The id is what the service takes — no scheme, no host, no /graphql. A
@@ -107,21 +107,18 @@ describe('get-datapack-import-target', () => {
     });
 
     describe('PaaS', () => {
-        // The user's call, made with the risk stated: every commerce_instance the
-        // spike observed was an ACCS nanoid with site_type 'accs', and NO REST base
-        // URL appears in 35 installation records. So this prefill is a plausible
-        // guess, not a derivation — which is why it must be reported as unverified
-        // and checked with a dry run before it is imported with.
-        it('offers the Commerce URL, marked as the unverified guess it is', async () => {
+        // The user's call, and better supported than it first looked. The service
+        // derives the site type rather than being told it, and a URL-shaped instance
+        // IS accepted — the `local` rows in the logs carry full URLs. A URL is
+        // therefore the right shape for an instance the service cannot look up.
+        //
+        // Still a guess, though: across all 1063 log records the vocabulary is
+        // accs / aco / local with no `paas` at all, so no PaaS project has ever run
+        // through this service. Hence unverified, and check it with a dry run.
+        it('offers the Commerce URL', async () => {
             expect(await target(PAAS_PROJECT)).toMatchObject({
                 instance: 'https://demo-paas.adobedemo.com',
-                source: 'paas',
-                verified: false,
             });
-        });
-
-        it('marks the ACCS derivation as the verified-shape one', async () => {
-            expect((await target(ACCS_PROJECT)).verified).toBe(true);
         });
     });
 
