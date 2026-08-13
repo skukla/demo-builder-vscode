@@ -2,10 +2,10 @@
  * Configure, start and watch one import.
  *
  * A composition of the shared vocabulary, per `reuse-first`: `core/ui/Modal` for
- * the shell, `forms/FormField` for the instance input, `ui/StatusDot` for the
- * per-type rows (the same dot-plus-label treatment `IntegrationCard` uses, so a
- * status reads identically wherever it appears), and the feature's own
- * `useDataInstallerRequest` so a guard refusal cannot read as success.
+ * the shell, `forms/FormField` for the instance input, `LoadingDisplay` and
+ * `StatusDisplay` (with their `subMessage`/`details` slots carrying the per-type
+ * states), and the feature's own `useDataInstallerRequest` so a guard refusal
+ * cannot read as success.
  *
  * Spectrum `Checkbox` direct: there is no shared checkbox-group component, and
  * one consumer does not justify inventing one.
@@ -55,24 +55,15 @@
 
 import { ActionButton, Checkbox, DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
-import type { DataTypeStatus, DatapackId, ImportJobRecord } from '../../types';
+import type { DatapackId, ImportJobRecord } from '../../types';
 import { useDataInstallerRequest, type DataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { FormField } from '@/core/ui/components/forms/FormField';
 import { Modal } from '@/core/ui/components/ui/Modal';
-import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 
 /** How often to re-read the recorded job while one is in flight. */
 const STATUS_POLL_MS = 2000;
-
-/** Per-type status → the shared dot vocabulary. */
-const DOT_VARIANT: Record<DataTypeStatus, 'success' | 'error' | 'info' | 'neutral'> = {
-    success: 'success',
-    error: 'error',
-    processing: 'info',
-    pending: 'neutral',
-};
 
 /** What the open project implies about where this import should go. */
 interface ImportTarget {
@@ -233,7 +224,15 @@ export function ImportDatapackModal({
                 })}
             >
                 <div className="datapack-import-body">
-                    {record ? <ImportProgress record={record} watching={watching} /> : null}
+                    {/* A RUNNING record always shows — the watch is detached and a
+                        reopened modal must pick it back up. A TERMINAL record shows
+                        only for a job THIS modal started: anything else is a previous
+                        session's history, and history must not greet a fresh modal
+                        wearing a success icon (live verification did exactly that). */}
+                    {record &&
+                    (record.outcome === 'watching' || record.activationId === startedActivation) ? (
+                        <ImportProgress record={record} watching={watching} />
+                    ) : null}
 
                     {resetArmed ? (
                         <div className="datapack-import-danger">
@@ -413,13 +412,13 @@ function ImportTargetField({
 }
 
 /**
- * Where the job stands, plus a row per reported type.
+ * Where the job stands.
  *
- * The house feedback vocabulary end to end: `LoadingDisplay` while the job is
- * being watched (in-flight is a spinner, not a sentence in a box), and
- * `StatusDisplay` for a terminal outcome — the same success/warning/error
- * treatment every other surface uses. The custom bordered panel this replaces
- * was a rebuild of exactly that vocabulary, caught in live verification.
+ * House vocabulary end to end, including the slots: while the job runs,
+ * `LoadingDisplay` with the per-type states in its `subMessage` slot; once
+ * terminal, `StatusDisplay` with the per-type results in its `details` slot.
+ * An earlier version drew its own bordered card and a parallel dot-row list —
+ * both rebuilds of slots the components already had, caught in live review.
  */
 function ImportProgress({
     record,
@@ -428,27 +427,24 @@ function ImportProgress({
     record: ImportJobRecord;
     watching: boolean;
 }): React.JSX.Element {
-    const inFlight = record.outcome === 'watching';
+    const perType = Object.entries(record.perType).map(([type, state]) => `${type}: ${state}`);
 
+    if (record.outcome === 'watching') {
+        return (
+            <LoadingDisplay
+                size="M"
+                message={describeOutcome(record, watching)}
+                subMessage={perType.join(' · ') || undefined}
+            />
+        );
+    }
     return (
-        <div className="datapack-import-progress">
-            {inFlight ? (
-                <LoadingDisplay size="M" message={describeOutcome(record, watching)} />
-            ) : (
-                <StatusDisplay
-                    variant={OUTCOME_VARIANT[record.outcome] ?? 'info'}
-                    title={describeOutcome(record, watching)}
-                    message={record.reason}
-                />
-            )}
-            {Object.entries(record.perType).map(([type, state]) => (
-                <div key={type} className="datapack-import-type">
-                    <StatusDot variant={DOT_VARIANT[state] ?? 'neutral'} size={6} />
-                    <span>{type}</span>
-                    <span className="datapack-import-state">{state}</span>
-                </div>
-            ))}
-        </div>
+        <StatusDisplay
+            variant={OUTCOME_VARIANT[record.outcome] ?? 'info'}
+            title={describeOutcome(record, watching)}
+            message={record.reason}
+            details={perType}
+        />
     );
 }
 

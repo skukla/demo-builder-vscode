@@ -520,6 +520,47 @@ describe('ImportDatapackModal', () => {
         });
     });
 
+    /**
+     * A record OUTLIVES the modal on purpose — the watch is detached, so
+     * reopening must pick a RUNNING job back up. But a TERMINAL record is
+     * history, and history must not greet a fresh modal wearing a success icon:
+     * live verification opened the modal to a full-size "Import finished" for an
+     * import pressed minutes earlier.
+     */
+    describe('a fresh modal', () => {
+        it('resumes a RUNNING job from a previous session', async () => {
+            mockRequest.mockImplementation(async (type: string) =>
+                type === 'get-datapack-import-status'
+                    ? { success: true, data: { activationId: 'old', dataTypes: ['categories'], outcome: 'watching', perType: {} } }
+                    : { success: true, data: null },
+            );
+            renderModal();
+
+            expect(await screen.findByText(/continues on the server/i)).toBeInTheDocument();
+        });
+
+        it('does NOT show a finished record from a previous session', async () => {
+            mockRequest.mockImplementation(async (type: string) =>
+                type === 'get-datapack-import-status'
+                    ? { success: true, data: { activationId: 'old', dataTypes: ['categories'], outcome: 'success', perType: { categories: 'success' } } }
+                    : { success: true, data: null },
+            );
+            renderModal();
+
+            // Polling and REQUIRING the timeout: a plain queryBy cannot fail
+            // here, because the record needs several settle rounds to render —
+            // measured: two flush-based versions of this test passed against
+            // code that provably showed the stale outcome. findByText gives the
+            // outcome every chance to appear; only its absence-after-polling is
+            // a statement about behaviour.
+            await expect(
+                screen.findByText(/import finished/i, undefined, { timeout: 1500 }),
+            ).rejects.toThrow();
+            // The form is what greets a fresh modal.
+            expect(screen.getByRole('textbox', { name: /commerce instance/i })).toBeInTheDocument();
+        });
+    });
+
     describe('watching', () => {
         function withStatus(record: unknown) {
             mockRequest.mockImplementation(async (type: string) =>
@@ -529,6 +570,8 @@ describe('ImportDatapackModal', () => {
             );
         }
 
+        // Per-type progress rides in LoadingDisplay's subMessage slot — the
+        // house component's own place for it, not a parallel row list.
         it('shows per-type progress while running', async () => {
             withStatus({
                 activationId: 'act-1',
@@ -538,8 +581,8 @@ describe('ImportDatapackModal', () => {
             });
             renderModal();
 
-            expect(await screen.findByText('categories')).toBeInTheDocument();
-            expect(await screen.findByText(/processing/i)).toBeInTheDocument();
+            expect(await screen.findByText(/categories: success/i)).toBeInTheDocument();
+            expect(screen.getByText(/products: processing/i)).toBeInTheDocument();
         });
 
         // There is NO cancel endpoint. Both strings are pinned, because softening
@@ -580,9 +623,24 @@ describe('ImportDatapackModal', () => {
             );
         }
 
+        /** Outcomes show for THIS session's job, so start one. */
+        async function startAJob() {
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(startButton());
+        }
+
+        it('shows the per-type result in the message slot, not a row list', async () => {
+            finished('success', { categories: 'success' });
+            await startAJob();
+
+            expect(await screen.findByText(/categories: success/i)).toBeInTheDocument();
+        });
+
         it('reports success', async () => {
             finished('success', { categories: 'success' });
-            renderModal();
+            await startAJob();
 
             expect(await screen.findByText(/import finished/i)).toBeInTheDocument();
         });
@@ -590,14 +648,14 @@ describe('ImportDatapackModal', () => {
         // Not a failure: a re-run legitimately skips items that already exist.
         it('reports partial as its own outcome, not as an error', async () => {
             finished('partial', { categories: 'success', products: 'error' });
-            renderModal();
+            await startAJob();
 
             expect(await screen.findByText(/some data types/i)).toBeInTheDocument();
         });
 
         it('explains a never-registered job with the service reason', async () => {
             finished('never-registered', {}, { reason: 'Invalid input. Must provide one of: (datapack_name)' });
-            renderModal();
+            await startAJob();
 
             expect(await screen.findByText(/never started/i)).toBeInTheDocument();
             expect(await screen.findByText(/Must provide one of/)).toBeInTheDocument();
