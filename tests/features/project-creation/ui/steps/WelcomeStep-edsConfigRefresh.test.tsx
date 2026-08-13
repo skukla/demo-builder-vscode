@@ -89,8 +89,6 @@ function renderWelcome(updateState: jest.Mock, stackId: string, edsConfig?: obje
                 state={state}
                 updateState={updateState}
                 setCanProceed={jest.fn()}
-                onNext={jest.fn()}
-                onBack={jest.fn()}
                 packages={PACKAGES}
                 stacks={[]}
             />

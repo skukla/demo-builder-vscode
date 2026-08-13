@@ -132,8 +132,6 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                 <WelcomeStep
                     state={stateWithNoSelection as WizardState}
                     updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
                     packages={mockPackages}
                     stacks={mockStacks}
@@ -157,8 +155,6 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                 <WelcomeStep
                     state={stateWithPackageOnly as WizardState}
                     updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
                     packages={mockPackages}
                     stacks={mockStacks}
@@ -182,8 +178,6 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                 <WelcomeStep
                     state={stateWithStackOnly as WizardState}
                     updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
                     packages={mockPackages}
                     stacks={mockStacks}
@@ -207,8 +201,6 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                 <WelcomeStep
                     state={stateWithInvalidName as WizardState}
                     updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
                     packages={mockPackages}
                     stacks={mockStacks}
@@ -234,8 +226,6 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                 <WelcomeStep
                     state={stateWithNoSelection as WizardState}
                     updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
                     packages={mockPackages}
                     stacks={mockStacks}
@@ -270,8 +260,6 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                 <WelcomeStep
                     state={stateWithSelections as WizardState}
                     updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
                     packages={mockPackages}
                     stacks={mockStacks}
@@ -318,8 +306,6 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                 <WelcomeStep
                     state={stateWithSelections as WizardState}
                     updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
                     packages={mockPackages}
                     stacks={mockStacks}
@@ -359,8 +345,6 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                 <WelcomeStep
                     state={stateWithNoSelection as WizardState}
                     updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
                     packages={mockPackages}
                     stacks={mockStacks}
@@ -395,8 +379,6 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                 <WelcomeStep
                     state={stateWithNoSelection as WizardState}
                     updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
                     packages={mockPackages}
                     stacks={mockStacks}
@@ -423,8 +405,6 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                 <WelcomeStep
                     state={stateWithNoSelection as WizardState}
                     updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
                     packages={mockPackages}
                     stacks={mockStacks}
@@ -446,8 +426,6 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                 <WelcomeStep
                     state={stateWithNoSelection as WizardState}
                     updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
                     packages={mockPackages}
                     stacks={mockStacks}
@@ -466,8 +444,6 @@ describe('WelcomeStep - Package + Stack Selection', () => {
                 <WelcomeStep
                     state={baseState as WizardState}
                     updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
                     setCanProceed={mockSetCanProceed}
                 />
             );

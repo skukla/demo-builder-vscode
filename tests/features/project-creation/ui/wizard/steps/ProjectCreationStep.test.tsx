@@ -80,6 +80,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={baseState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -96,6 +97,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={baseState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -111,6 +113,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={baseState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -126,6 +129,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={baseState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -140,6 +144,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={baseState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -156,6 +161,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={baseState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -173,6 +179,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={successState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -189,6 +196,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={successState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -205,6 +213,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={successState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -221,6 +230,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={successState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -239,6 +249,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={successState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -265,6 +276,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={errorState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -280,6 +292,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={errorState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -294,6 +307,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={errorState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -308,6 +322,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={errorState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -333,6 +348,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={initialState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -356,6 +372,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={midState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -380,6 +397,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={stateWithoutLogs as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -404,6 +422,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={stateWithManyLogs as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -427,6 +446,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={stateWithoutProgress as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -453,6 +473,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={stateWithPartialProgress as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -471,6 +492,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={baseState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -486,6 +508,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={successState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -502,6 +525,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={errorState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
@@ -516,6 +540,7 @@ describe('ProjectCreationStep', () => {
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
                         state={successState as WizardState}
+                        updateState={jest.fn()}
                         onBack={mockOnBack}
                     />
                 </Provider>
