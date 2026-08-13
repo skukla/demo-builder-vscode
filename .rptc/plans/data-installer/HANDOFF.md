@@ -9,8 +9,11 @@ fast-forward. **Stage 2 (import) is BUILT and has never run live** — see "Next
 
 ```
 worktree   demo-builder-vscode.worktrees/feature/data-installer
-branch     feature/data-installer   (== origin/develop at handoff; pushed)
+branch     feature/data-installer   (BEHIND origin/develop; local commits unpushed)
 ```
+
+A peer session holds `develop`. Rebase onto it, push only this branch, and land
+through them — do not push `develop` from here.
 
 **Work in the worktree, not the main checkout.** Both exist and they are different
 directories. A previous session edited the main checkout by mistake — absolute paths
@@ -28,7 +31,8 @@ git fetch origin && git rebase origin/develop   # develop moves several times a 
 npx jest --no-coverage tests/features/data-installer > /tmp/j.txt 2>&1   # never pipe jest
 ```
 
-Expect **17 suites / 265 tests** green. The descriptor rows have their own suite at
+Expect **22 suites / 370 tests** green. Add `tests/scripts` for the drift checker
+(2 more suites, 34 more tests). The descriptor rows have their own suite at
 `tests/features/ai/server/readDescriptors.test.ts`.
 
 ## What is done — all of Stage 1
@@ -54,9 +58,9 @@ surfaces render: catalog, detail flyout, installed, activity.
 
 ## Next action — verify Stage 2 against the live service
 
-**Stage 2 is built. Not one line of it has spoken to the service.** Five commits on
-`feature/data-installer`: write client, credential resolution, job runner, handler spine,
-import modal, and the wiring that makes it reachable from the detail flyout.
+**Stage 2 is built. Not one line of it has spoken to the service.** Write client,
+credential resolution, job runner, handler spine, import modal, the wiring that makes it
+reachable from the detail flyout, a dry run, and reset.
 
 Everything is unit-tested. That proves the pieces agree with each other, and nothing about
 whether they agree with the API — which is the same trap that produced a "two-shape
@@ -65,14 +69,19 @@ until an import has actually run.**
 
 ### 1. Validate without writing (do this first)
 
-There is no dry-run in the UI: `start-datapack-import` chains validate and start, so a
-passing validation goes straight to a real import. The safe probe is a direct call to the
-SYNC endpoint with `operation_mode: 'validate'` — exact command and how to read each answer
-in `docs/systems/data-installer.md` §6.
+**There IS a dry-run in the UI now** — the **Validate** button beside Start in the import
+modal. It runs the same guard, credentials and request body as a start and stops after the
+synchronous `operation_mode: 'validate'` call; both paths build that body through one
+shared `prepareImport`, so it cannot check something other than what a start would send.
+It also checks the credentials first, with `get-websites-and-stores`.
 
-It answers the two things the build assumes and cannot confirm: whether the credential field
-names are what the service expects, and what scope its auth wants — the question the service
-owner declined, arriving empirically instead.
+`docs/systems/data-installer.md` §6 keeps the equivalent direct curl, for probing without
+the extension open.
+
+One assumption remains that this answers: **what scope the service's auth wants** — the
+question the service owner declined, arriving empirically. (The credential field names are
+no longer a guess; `admin_username`/`admin_password` and `client_id`/`client_secret` were
+read off the live probe and corrected in `c26a60bc`.)
 
 ### 2. Then one real import, on a target you own
 
@@ -83,15 +92,29 @@ server-side. Prefer a throwaway instance and a single small data type.
 Watch for: whether the status map fills the way the runner expects, whether the grace window
 is long enough for a real start, and whether `partial` ever appears.
 
-### 3. Only then, Stage 3
+### 3. Then reset, and import again — the reuse claim
+
+**Reset** in the import modal removes that datapack's data from the instance
+(`operation_mode: 'delete'`), so the same project can be rebuilt. It is confirm-gated: the
+handler refuses without `confirm: true` and the modal arms that with a second press.
+
+Import → reset → import is the whole reuse claim, and running it is the only thing that
+proves it. Watch for: whether the same 21 `data_type`s come back terminal on a delete, and
+whether a re-import after a reset behaves like a first import rather than reporting
+`partial` because something survived.
+
+### 4. Only then, Stage 3
 
 Export reuses the runner unchanged with `operation_mode: 'export'`. **If it needs runner
 changes, the Stage 2 seam was wrong** — that is the design's own falsification test, and the
-cheapest review of this work available.
+cheapest review of this work available. Reset already passed that test: it needed nothing.
+
+Export lists **18** of import's 21 `data_type`s, and only one of the three is a real gap:
+`giftcards` has no export processor. `product_export` and `customers_export` are
+import-side input formats, not missing exports — the `_export` suffix names the shape of
+the data being read in. So that screen must say it will skip gift cards.
 
 ### Known gaps, deliberately left
-
-- **No dry-run affordance in the UI.** Worth adding if live testing turns into a loop.
 - **`core/ui/Modal` renders `role="dialog"` with no accessible name.** Real a11y gap, shared
   code, touches every modal in the extension — reported, not fixed here.
 - **The gate is noisy.** Run the full suite at `--maxWorkers=25%`; see
@@ -111,6 +134,18 @@ cheapest review of this work available.
 
 ## Traps that already cost time here
 
+- **Coverage is `action × parameter`, not action.** The plan enumerated every ACTION name
+  and made an explicit call on each — wired, held back, or deferred. It still missed reset,
+  because reset is not an action: it is `operation_mode: 'delete'` on an action the plan had
+  already ticked off. The plan *used* two values of that axis (`validate`, `export`) without
+  ever enumerating it. Any request field with a fixed value set gets its values listed and
+  each one decided, or the next capability hides the same way. `npm run
+  data-installer:drift` now fails on a mode with no recorded decision; the enumeration and
+  its limits are in `docs/systems/data-installer.md`.
+- **An unknown `operation_mode` answers `200` with an empty list, never a `400`.** So the
+  readable signal is the COUNT, and a deliberate nonsense mode is the only thing that proves
+  a count means anything. Seven guesses and the control were indistinguishable — which is
+  the correct result, and unreadable without the control.
 - **A handler that RETURNS `{success:false}` does not reject.** The communication manager
   puts the whole `HandlerResponse` in the response payload, and `webviewClient` rejects
   only when a handler THROWS — so a guard refusal arrives at the webview looking exactly
