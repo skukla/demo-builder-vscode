@@ -37,11 +37,14 @@ function ok(body: unknown, status = 200) {
     });
 }
 
+const logLines: string[] = [];
+
 function makeClient(fetchImpl: jest.Mock) {
     return new DataInstallerWriteClient({
         baseUrl: BASE,
         getToken: async () => 'ims-token',
         fetchImpl: fetchImpl as unknown as typeof fetch,
+        log: (line: string) => logLines.push(line),
     });
 }
 
@@ -54,6 +57,67 @@ const REQUEST = {
 };
 
 describe('DataInstallerWriteClient', () => {
+    beforeEach(() => {
+        logLines.length = 0;
+    });
+
+    /**
+     * Every call logs its action and outcome — because the first live dry run
+     * produced a refusal and an EMPTY Debug Logs channel. A user staring at a
+     * service refusal with no record of what was sent or what came back cannot
+     * debug anything, and neither could we.
+     *
+     * The line carries the ACTION and the STATUS/reason. Never the credentials,
+     * never the request body — a body carries a secret pair by construction.
+     */
+    describe('logging', () => {
+        it('logs the action and status of a refused call', async () => {
+            const fetchImpl = jest.fn().mockResolvedValue(
+                new Response(JSON.stringify({ success: false, error: 'Pre-flight check failed' }), {
+                    status: 400,
+                }),
+            );
+
+            await makeClient(fetchImpl).checkCredentials(REQUEST);
+
+            const line = logLines.find((l) => l.includes('get-websites-and-stores'));
+            expect(line).toBeDefined();
+            expect(line).toContain('400');
+        });
+
+        it('logs a successful validate with its status', async () => {
+            const fetchImpl = ok({ success: true });
+
+            await makeClient(fetchImpl).validateImport(REQUEST);
+
+            const line = logLines.find((l) => l.includes('process-datapack'));
+            expect(line).toBeDefined();
+            expect(line).toContain('200');
+        });
+
+        it('never logs a credential value', async () => {
+            const fetchImpl = ok({ success: true });
+
+            await makeClient(fetchImpl).validateImport(REQUEST);
+            await makeClient(fetchImpl).checkCredentials(REQUEST);
+
+            const joined = logLines.join('\n');
+            expect(joined).not.toContain(REQUEST.credentials.kind === 'paas' ? REQUEST.credentials.password : '');
+            expect(joined).not.toMatch(/password|client_secret/);
+        });
+
+        it('stays silent when no logger is supplied', async () => {
+            const fetchImpl = ok({ activation_id: 'x' }, 202);
+            const client = new DataInstallerWriteClient({
+                baseUrl: BASE,
+                getToken: async () => 'tok',
+                fetchImpl: fetchImpl as unknown as typeof fetch,
+            });
+
+            await expect(client.startImport(REQUEST)).resolves.toBeDefined();
+        });
+    });
+
     describe('startImport', () => {
         it('returns the activation id from a 202', async () => {
             const fetchImpl = ok(

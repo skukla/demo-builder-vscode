@@ -67,6 +67,15 @@ export interface DataInstallerWriteClientDeps {
     getToken: () => Promise<string>;
     fetchImpl?: typeof fetch;
     timeoutMs?: number;
+    /**
+     * One line per call: action + HTTP status + the service's reason. Never the
+     * request body — it carries the Commerce credential pair by construction.
+     *
+     * Exists because the first live dry run produced a refusal and an EMPTY
+     * Debug Logs channel: nothing recorded what was sent or what came back, so
+     * the user could not debug and neither could we.
+     */
+    log?: (line: string) => void;
 }
 
 export class DataInstallerWriteClient {
@@ -108,9 +117,13 @@ export class DataInstallerWriteClient {
 
         const body = safeParse(await response.text());
         if (response.status === 200 && (body as { success?: unknown })?.success === true) {
+            this.deps.log?.(`get-websites-and-stores → ${response.status} (credentials usable)`);
             return { usable: true };
         }
         const reason = describe(body);
+        this.deps.log?.(
+            `get-websites-and-stores → ${response.status}${reason ? ` (${reason})` : ''}`,
+        );
         return { usable: false, ...(reason ? { reason } : {}) };
     }
 
@@ -203,6 +216,10 @@ export class DataInstallerWriteClient {
         });
 
         const raw = await response.text();
+        const reason = describe(safeParse(raw));
+        this.deps.log?.(
+            `${action} (${mode}) → ${response.status}${reason ? ` (${reason})` : ''}`,
+        );
         if (response.status === 400 && opts.treat400AsVerdict) {
             return safeParse(raw);
         }

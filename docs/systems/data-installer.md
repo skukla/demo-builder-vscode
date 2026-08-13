@@ -261,6 +261,32 @@ at all (only `logs` does), and its array is keyed `datapacks`, not `items` — a
 extractor written for the other endpoints silently reports zero rows against a
 non-zero `total`.
 
+### Pre-flight, and what the first live dry run proved (2026-08-13)
+
+The first dry run that REACHED the service came back:
+
+> Pre-flight check failed for all configured site types (accs, local). Verify
+> commerce_instance and authentication.
+
+Four facts, each measured:
+
+- **The service's own error names its complete site-type vocabulary — `accs` and
+  `local`.** Independent confirmation of the axis probe: there is no `paas`
+  handler configured server-side.
+- **A syntactically valid OAuth S2S pair passes IMS.** A bogus pair gets
+  `401 invalid_client`; the real pair proceeds to pre-flight. So `checkCredentials`
+  distinguishes "pair is wrong" from "pair is entitled to nothing".
+- **Pre-flight fails IDENTICALLY for a real instance and a nonsense string**, so
+  the error cannot distinguish "instance unknown to the service" from "technical
+  account has no access to it". Neither can we, from outside — settling it needs
+  the service owner or an instance already known to work.
+- **A freshly created `demo-builder-s2s` credential carries scopes
+  `AdobeID,openid` only.** It authenticates and is entitled to nothing. Creating
+  the credential is automatable (proven live); granting its technical account
+  access to a Commerce instance is the product-profile step that is not — and that
+  grant is an authorization decision, which is arguably the one step that SHOULD
+  stay human.
+
 ### Reset — how a project gets reused
 
 The service takes `operation_mode: 'delete'` on the same `process-datapack-async`
