@@ -51,6 +51,34 @@ export const DEMO_BUILDER_ALWAYS_ON_SKILLS = [
  */
 export const DEMO_BUILDER_CONDITIONAL_SKILLS = ['extend-app-builder-app.md'] as const;
 
+/**
+ * Which ai-defaults MCP tool a generated skill DRIVES — the machine-readable
+ * form of a relationship that previously lived only as prose inside skill
+ * bodies. Values are `ai-defaults.json` entry `id`s (pinned by test; the JSON
+ * is not imported here because this module also reaches webview bundles).
+ *
+ * Classified by READING each skill (2026-08-14), not by counting mentions:
+ * `scrape-reference-site` routes between two workflows but actively instructs
+ * Playwright use in workflow B; `connect-authenticated-site` is entirely the
+ * Playwright `storageState` flow; `refine-visual-match` declares itself
+ * Playwright-workflow-only. The other three scraping skills
+ * (`commerce-block-mapper`, `demo-data-injector`, `header-nav-footer`) work on
+ * already-scraped material and never touch the tool — an opt-out that removed
+ * them would delete working capability.
+ *
+ * A skill missing from this map depends on no MCP tool. A guard test holds the
+ * map against the template bodies in both directions, so a skill that starts
+ * (or stops) instructing a tool fails until this map says so — the point is
+ * that "if the tool is absent, which skills are affected?" now has an answer
+ * the code can act on (see ADR-013's sibling backlog item,
+ * `third-party-tooling-visible-and-optional`).
+ */
+export const SKILL_MCP_TOOL_DEPENDENCIES = {
+    'scrape-reference-site.md': 'playwright',
+    'connect-authenticated-site.md': 'playwright',
+    'refine-visual-match.md': 'playwright',
+} as const satisfies Partial<Record<(typeof DEMO_BUILDER_ALWAYS_ON_SKILLS)[number], string>>;
+
 /** Every filename that identifies a first-party skill, however it was delivered. */
 export const DEMO_BUILDER_SKILL_FILES: ReadonlySet<string> = new Set<string>([
     ...DEMO_BUILDER_ALWAYS_ON_SKILLS,
