@@ -86,6 +86,11 @@ type ApiRow = {
     requiresProfile: boolean;
     requiresReview: boolean;
     group?: { code: string; name: string };
+    // Attribution fields (per-integration API attribution steps 01-05). The
+    // handler has returned these since the feature shipped; this local helper
+    // type had fallen behind the real response shape.
+    ownership?: import('@/core/state/apiRowState').ApiRowOwnership;
+    requiredBy?: string[];
 };
 
 function apisOf(result: { data?: unknown }): ApiRow[] {
@@ -390,7 +395,11 @@ describe('attribution (step 04)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockIsAuthenticated.mockResolvedValue(true);
-        mockGetCachedOrganization.mockReturnValue({ id: 'org-1', code: 'o@AdobeOrg', name: 'Org One' });
+        mockGetCachedOrganization.mockReturnValue({
+            id: 'org-1',
+            code: 'o@AdobeOrg',
+            name: 'Org One',
+        });
         mockGetOrganizationsSdkOnly.mockResolvedValue([]);
         mockGetServicesForOrg.mockResolvedValue(ORG_SERVICES);
         (getAppBuilderComponentEntry as jest.Mock).mockImplementation((id: string) => CATALOG[id]);
@@ -417,7 +426,7 @@ describe('attribution (step 04)', () => {
         expect(row?.requiredBy).toEqual([]);
     });
 
-    it('treats the asking integration\'s own requirement as mine, not another\'s', async () => {
+    it("treats the asking integration's own requirement as mine, not another's", async () => {
         // Edit mode: re-opening the API picker FOR commerce-events. Its own required
         // codes must not read as somebody else holding them.
         const result = await handleListOrgConsoleApis(makeContext(), {

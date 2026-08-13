@@ -191,7 +191,7 @@ describe('DataInstallerClient', () => {
 
         it('folds status, statusText and body into the message', async () => {
             const f = jsonFetch({ success: false, error: 'Authentication required' }, 401, 'Unauthorized');
-            const err = await makeClient(f).findDatapacks({}).catch((e: unknown) => e as Error);
+            const err = (await makeClient(f).findDatapacks({}).catch((e: unknown) => e)) as Error;
             expect(err.message).toContain('find-datapacks');
             expect(err.message).toContain('401');
             expect(err.message).toContain('Authentication required');
@@ -199,7 +199,7 @@ describe('DataInstallerClient', () => {
 
         it('handles a non-JSON error body without throwing a parse error', async () => {
             const f = textFetch('<html>502 Bad Gateway</html>', 502, 'Bad Gateway');
-            const err = await makeClient(f).findDatapacks({}).catch((e: unknown) => e as Error);
+            const err = (await makeClient(f).findDatapacks({}).catch((e: unknown) => e)) as Error;
             expect(err).toBeInstanceOf(DataInstallerApiError);
             expect(err.message).toContain('502');
         });
@@ -207,7 +207,7 @@ describe('DataInstallerClient', () => {
         it('NEVER puts the token in a thrown message', async () => {
             // Errors get logged; a token in one is a leak in a public repo.
             const f = jsonFetch({ success: false, error: 'nope' }, 500, 'Internal Server Error');
-            const err = await makeClient(f).findDatapacks({}).catch((e: unknown) => e as Error);
+            const err = (await makeClient(f).findDatapacks({}).catch((e: unknown) => e)) as Error;
             expect(err.message).not.toContain(TOKEN);
             expect(JSON.stringify(err)).not.toContain(TOKEN);
         });
@@ -226,7 +226,7 @@ describe('DataInstallerClient', () => {
 
         it('does not misclassify a 500 whose body text mentions timeout', async () => {
             const f = jsonFetch({ error: 'upstream timeout contacting Commerce' }, 500, 'Internal Server Error');
-            const err = await makeClient(f).findDatapacks({}).catch((e: unknown) => e as Error);
+            const err = (await makeClient(f).findDatapacks({}).catch((e: unknown) => e)) as Error;
             expect(err).toBeInstanceOf(DataInstallerApiError);
             expect((err as DataInstallerApiError).status).toBe(500);
         });

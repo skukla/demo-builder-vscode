@@ -163,7 +163,7 @@ describe('RepoSelectionInline - GitHub App Check', () => {
             // Given: No GitHub user authenticated
             const _repoMode = 'existing' as const;
             const _selectedRepo = { name: 'test-repo', fullName: 'test-user/test-repo' };
-            const githubUser = undefined;
+            const githubUser: { login: string } | undefined = undefined;
 
             // When: Evaluating check conditions
             const owner = githubUser?.login;

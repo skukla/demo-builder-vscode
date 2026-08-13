@@ -97,7 +97,7 @@ describe('sidebarHandlers', () => {
             const result = await handleGetContext(context);
 
             expect(result.success).toBe(true);
-            expect(result.data?.context).toEqual({ type: 'projects' });
+            expect((result.data as { context: unknown })?.context).toEqual({ type: 'projects' });
         });
 
         it('should return project context when project is current', async () => {
@@ -112,8 +112,8 @@ describe('sidebarHandlers', () => {
             const result = await handleGetContext(context);
 
             expect(result.success).toBe(true);
-            expect(result.data?.context.type).toBe('project');
-            expect((result.data?.context as { type: 'project'; project: typeof mockProject }).project).toEqual(mockProject);
+            expect((result.data as { context: { type: string } })?.context.type).toBe('project');
+            expect(((result.data as { context: { type: string; project: unknown } }).context).project).toEqual(mockProject);
         });
 
         it('should handle errors gracefully', async () => {

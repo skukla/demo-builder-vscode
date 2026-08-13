@@ -61,7 +61,7 @@ describe('Mock Structure Validation', () => {
 
         it('should use section-based structure (not deprecated components map)', () => {
             // Current structure uses separate sections, not unified 'components' map
-            expect(mockRawRegistry.components).toBeUndefined();
+            expect('components' in mockRawRegistry).toBe(false);
         });
 
         it('should have component definitions with required fields', () => {

@@ -53,7 +53,7 @@ describe('settingsSerializer', () => {
                 appBuilderComponents: { 'firefly-image-gen': INSTANCE_STATE },
             });
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.appBuilderComponentSources).toEqual({
                 'firefly-image-gen': {
@@ -70,7 +70,7 @@ describe('settingsSerializer', () => {
                 appBuilderComponents: { 'acme-widget': CUSTOM_IMPORT_STATE },
             });
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.appBuilderComponentSources).toEqual({
                 'acme-widget': { owner: 'acme', repo: 'widget', branch: 'dev' },
@@ -96,7 +96,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(Object.keys(result.appBuilderComponentSources ?? {})).toEqual([
                 'firefly-image-gen',
@@ -121,7 +121,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.appBuilderComponentSources).toBeUndefined();
         });
@@ -137,7 +137,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(Object.keys(result.appBuilderComponentSources ?? {})).toEqual(['acme-widget']);
         });
@@ -145,7 +145,7 @@ describe('settingsSerializer', () => {
         it('omits appBuilderComponentSources when the project has no keyed map', () => {
             const project = createProject();
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.appBuilderComponentSources).toBeUndefined();
         });
@@ -155,7 +155,7 @@ describe('settingsSerializer', () => {
                 additionalConsoleApis: ['AssetComputeSDK', 'CCAPI'],
             });
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.additionalConsoleApis).toEqual(['AssetComputeSDK', 'CCAPI']);
         });
@@ -163,7 +163,7 @@ describe('settingsSerializer', () => {
         it('should omit additionalConsoleApis when absent', () => {
             const project = createProject();
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.additionalConsoleApis).toBeUndefined();
         });
@@ -180,7 +180,7 @@ describe('settingsSerializer', () => {
                 additionalConsoleApis: ['CCAPI', 'AssetComputeSDK'],
             });
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.componentApiPicks).toEqual({
                 'erp-sync': ['CCAPI'],
@@ -189,7 +189,7 @@ describe('settingsSerializer', () => {
         });
 
         it('omits the keyed picks when there are none', () => {
-            expect(extractSettingsFromProject(createProject()).componentApiPicks).toBeUndefined();
+            expect(extractSettingsFromProject(createProject(), false).componentApiPicks).toBeUndefined();
         });
 
         it('should keep the existing shape stable alongside the derived fields', () => {
@@ -198,7 +198,7 @@ describe('settingsSerializer', () => {
                 additionalConsoleApis: ['CCAPI'],
             });
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.selections).toEqual({
                 appBuilder: ['firefly-image-gen', 'acme-widget'],
@@ -225,7 +225,7 @@ describe('settingsSerializer', () => {
                 additionalConsoleApis: ['AssetComputeSDK', 'CCAPI'],
             });
 
-            const exported = extractSettingsFromProject(project);
+            const exported = extractSettingsFromProject(project, false);
             const parseResult = parseSettingsFile(JSON.stringify(exported));
 
             expect(parseResult.success).toBe(true);

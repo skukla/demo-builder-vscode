@@ -294,7 +294,6 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     mockComponentsData,
-                    false,
                     [], // backendServiceNames
                 );
 
@@ -463,7 +462,6 @@ describe('reviewStepHelpers', () => {
                     state.components,
                     undefined,
                     undefined,
-                    false,
                     [],
                 );
 

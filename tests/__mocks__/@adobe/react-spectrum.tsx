@@ -120,7 +120,7 @@ export const Picker: React.FC<any> = ({
     // Find the selected item's label - compare using cleaned keys
     const selectedItem = items.find((child: any) =>
         getOriginalKey(child.key) === selectedKey
-    ) as React.ReactElement | undefined;
+    ) as React.ReactElement<{ textValue?: string; children?: React.ReactNode }> | undefined;
     const selectedLabel = selectedItem?.props?.textValue || selectedItem?.props?.children || placeholder || '';
 
     return (
@@ -765,7 +765,7 @@ export const TabPanels: React.FC<any> = ({ children, selectedKey, ...props }) =>
     const active = panels.find((child: any) => getOriginalKey(child.key) === selectedKey);
     return (
         <div data-testid="spectrum-tabpanels" {...filterSpectrumProps(props)}>
-            {active ? (active as React.ReactElement).props?.children : null}
+            {active ? (active as React.ReactElement<{ children?: React.ReactNode }>).props?.children : null}
         </div>
     );
 };

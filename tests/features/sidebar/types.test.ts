@@ -25,10 +25,7 @@ function createAllValidContexts(): SidebarContext[] {
     // IMPORTANT: This array should contain ALL valid SidebarContext variants.
     // If a variant is missing, TypeScript's exhaustive checking would catch it
     // in getContextLabel() below.
-    return [
-        { type: 'projects' },
-        { type: 'project', project: mockProject },
-    ];
+    return [{ type: 'projects' }, { type: 'project', project: mockProject }];
 }
 
 /**
@@ -169,15 +166,11 @@ describe('Sidebar Types - Type Reduction', () => {
 });
 
 describe('Sidebar Types - Supporting Types', () => {
-    describe('NavItem type', () => {
-        it('should exist and be importable', async () => {
-            // NavItem is still used by SidebarNav component
-            const { NavItem: _NavItem } = await import('@/features/sidebar/types');
-            // NavItem is a type, not a value, so we can't directly test it
-            // but we can verify the module exports it by checking no error
-            expect(true).toBe(true);
-        });
-    });
+    // A "NavItem type should exist and be importable" test sat here asserting an
+    // export that no longer exists anywhere in the sidebar feature. It passed
+    // because destructuring a stripped type at runtime just yields undefined —
+    // its only real assertion was expect(true).toBe(true). Deleted 2026-08-13
+    // when the test tree was first typechecked; tsc was what caught it.
 
     describe('WizardStep type removal', () => {
         it('should not export WizardStep type from sidebar types', async () => {

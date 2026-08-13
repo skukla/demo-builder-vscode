@@ -157,7 +157,7 @@ describe('refreshBlockLibraryHeadless', () => {
 
     it('retries once after DaLiveAuthError, then succeeds', async () => {
         pipelineMock
-            .mockRejectedValueOnce(new DaLiveAuthError())
+            .mockRejectedValueOnce(new DaLiveAuthError('DA.live authentication expired'))
             .mockResolvedValueOnce({ success: true, libraryPaths: ['/.da/library/blocks/hero'] });
         ensureAuthMock.mockResolvedValueOnce({ authenticated: true });
 
@@ -169,7 +169,7 @@ describe('refreshBlockLibraryHeadless', () => {
     });
 
     it('returns a cancelled result when the user declines re-auth', async () => {
-        pipelineMock.mockRejectedValueOnce(new DaLiveAuthError());
+        pipelineMock.mockRejectedValueOnce(new DaLiveAuthError('DA.live authentication expired'));
         ensureAuthMock.mockResolvedValueOnce({ authenticated: false, cancelled: true });
 
         const result = await refreshBlockLibraryHeadless(deps());

@@ -127,7 +127,7 @@ describe('handleSetProjectDestination', () => {
 
         const result = await handleSetProjectDestination(context, NEW_DESTINATION);
 
-        expect(result.data?.previous).toMatchObject({
+        expect((result.data as { previous: unknown })?.previous).toMatchObject({
             projectId: 'old-project-id',
             workspace: 'old-workspace-id',
         });

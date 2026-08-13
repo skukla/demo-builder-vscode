@@ -37,7 +37,6 @@ export function createMockHandlerContext(
     return {
         prereqManager: {} as jest.Mocked<HandlerContext['prereqManager']>,
         authManager: {} as jest.Mocked<HandlerContext['authManager']>,
-        componentHandler: {} as jest.Mocked<HandlerContext['componentHandler']>,
         errorLogger: {} as jest.Mocked<HandlerContext['errorLogger']>,
         progressUnifier: {} as jest.Mocked<HandlerContext['progressUnifier']>,
         stepLogger: {} as jest.Mocked<HandlerContext['stepLogger']>,

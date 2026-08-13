@@ -119,7 +119,7 @@ describe('settingsSerializer', () => {
         it('should extract basic settings from project', () => {
             const project = createProject();
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.version).toBe(SETTINGS_FILE_VERSION);
             expect(result.source.project).toBe('test-project');
@@ -148,7 +148,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.adobe).toBeDefined();
             expect(result.adobe?.orgId).toBe('org-789');
@@ -169,7 +169,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.adobe?.projectName).toBe('833BronzeShark');
             expect(result.adobe?.projectTitle).toBe('Citisignal Headless');
@@ -187,7 +187,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.adobe?.workspaceId).toBe('ws-456');
             expect(result.adobe?.workspaceTitle).toBe('Staging Environment');
@@ -206,7 +206,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.adobe).toEqual({
                 orgId: 'org-789',
@@ -221,7 +221,7 @@ describe('settingsSerializer', () => {
         it('should not include adobe field when no adobe config', () => {
             const project = createProject({ adobe: undefined });
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.adobe).toBeUndefined();
         });
@@ -232,7 +232,7 @@ describe('settingsSerializer', () => {
                 componentConfigs: undefined,
             });
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.selections).toEqual({});
             expect(result.configs).toEqual({});
@@ -259,7 +259,7 @@ describe('settingsSerializer', () => {
                 customBlockLibraries: customLibs,
             };
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.customBlockLibraries).toEqual(customLibs);
         });
@@ -276,7 +276,7 @@ describe('settingsSerializer', () => {
                 // No customBlockLibraries
             };
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.customBlockLibraries).toBeUndefined();
         });
@@ -309,7 +309,7 @@ describe('settingsSerializer', () => {
             };
 
             // Export (serialize)
-            const exported = extractSettingsFromProject(project);
+            const exported = extractSettingsFromProject(project, false);
             const json = JSON.stringify(exported);
 
             // Import (parse)
@@ -344,7 +344,7 @@ describe('settingsSerializer', () => {
                 installedBlockLibraries: installedLibs,
             };
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.installedBlockLibraries).toEqual(installedLibs);
         });
@@ -360,7 +360,7 @@ describe('settingsSerializer', () => {
                 componentConfigs: {},
             };
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.installedBlockLibraries).toBeUndefined();
         });
@@ -499,7 +499,7 @@ describe('settingsSerializer', () => {
                 },
             };
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.selectedPackage).toBe('citisignal');
         });
@@ -517,7 +517,7 @@ describe('settingsSerializer', () => {
                 selectedStack: 'headless-paas',
             };
 
-            const result = extractSettingsFromProject(project);
+            const result = extractSettingsFromProject(project, false);
 
             expect(result.selectedPackage).toBeUndefined();
         });

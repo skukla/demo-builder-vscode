@@ -120,9 +120,7 @@ describe('handleAddAppBuilderComponent', () => {
 
         expect(result.success).toBe(true);
         expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(
-            mockContext.stateManager.getCurrentProject.mock
-                ? expect.anything()
-                : expect.anything(),
+            expect.anything(),
             expect.objectContaining({
                 kind: 'integration',
                 source: expect.objectContaining({ owner: 'owner', repo: 'custom-app' }),

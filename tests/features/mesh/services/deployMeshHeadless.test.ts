@@ -237,7 +237,7 @@ describe('deployMeshHeadless', () => {
             'existing-1'
         );
         expect(mockUpdateMeshState).toHaveBeenCalledWith(expect.any(Object), 'https://new/graphql');
-        expect(d.stateManager.saveProject).toHaveBeenCalled();
+        expect((d.stateManager as { saveProject: jest.Mock }).saveProject).toHaveBeenCalled();
         expect(result).toEqual({
             success: true,
             meshId: 'mesh-1',
