@@ -94,7 +94,7 @@ design, which is version-independent already and is not implicated.
 
 ## Kickoff prompt
 
-> Read `.rptc/backlog/2026-08-13-global-mcp-entry-pins-the-extension-version.md`. Reproduce
+> Read `.rptc/plans/global-mcp-version-pin/overview.md`. Reproduce
 > the conflicting-scopes diagnostic by hand-writing a stale `~/.claude.json` entry, then
 > extend `detectMcpDrift` to cover user scope and self-heal the entry on activation when it
 > points at a different extension version. `registerGlobalMcp` is the only module allowed to

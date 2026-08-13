@@ -1,10 +1,9 @@
 # Next session — start here
 
-Rewritten 2026-08-12. **Everything is committed AND PUSHED except the last commit**
-(`95dfdaa1`, the AI-surface research + plan) — check `git status` and push if it is still
-local. `develop` was at `c64cfef8` when this was written; `v1.0.0-beta.128` is released.
+Rewritten 2026-08-12, header refreshed 2026-08-13. **Everything is committed AND PUSHED**;
+`develop` was at `81c13451` when this line was written. `v1.0.0-beta.128` is released.
 
-Gate at handoff: **991 suites / 12,678 tests**, `tsc --noEmit` clean, whole-repo eslint
+Gate at handoff: **993 suites / 12,721 tests**, `tsc --noEmit` clean, whole-repo eslint
 0 errors 0 warnings.
 
 > A second session works `feature/data-installer` in a sibling worktree. It ceded control of
@@ -143,14 +142,19 @@ negative one. And pair every "nothing found" with a positive control at the same
 
 ## Outstanding
 
-**Ready to start — the plan is written:**
+**Active plan:**
 
-- **`.rptc/plans/ai-surface-coverage/`** — seven steps, unstarted. Step 01 is mechanical:
-  derive the handler inventory by importing the maps (not parsing them) and commit a test
-  that fails when any handler lacks a disposition. The worklist of all 41 unexposed handlers
-  is already in `.rptc/research/ai-surface-coverage/research.md` § Appendix. Read
-  `ensure-mesh-api-subscribed` and the four unclassified `dashboardHandlers` entries first —
-  everything else is probably navigation, fire-and-forget, or covered elsewhere.
+- **`.rptc/plans/global-mcp-version-pin/`** — the global MCP entry pins the extension
+  version and is never refreshed, so Claude Code reports [Conflicting scopes] and refuses to
+  add a server. Filed 2026-08-13 from a colleague's screenshot, traced from source the same
+  day. Step 1 is reproducing it with a hand-written stale `~/.claude.json` entry rather than
+  trusting a screenshot from another machine.
+
+**Paused, ready to resume:**
+
+- **`.rptc/backlog/ai-surface-coverage/`** — research done, seven steps written, deferred
+  2026-08-13 so the live defect above could go first. Step 01 is mechanical and the worklist
+  of all 41 unexposed handlers is in `.rptc/research/ai-surface-coverage/research.md`.
 
 **Needs a Dev Host or a live backend — cannot be done by an agent:**
 

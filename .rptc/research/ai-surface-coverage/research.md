@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-12
 **Method:** source measurement (no agents). Two passes; the second corrected the first.
-**Feeds:** `.rptc/plans/ai-surface-coverage/`
+**Feeds:** `.rptc/backlog/ai-surface-coverage/` (paused 2026-08-13)
 
 ## Summary
 

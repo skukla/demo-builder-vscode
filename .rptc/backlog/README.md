@@ -177,21 +177,20 @@ floor — which is precisely what this item exists to protect.
 
 ### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
 
-#### Global MCP entry pins the extension version ([`2026-08-13-global-mcp-entry-pins-the-extension-version.md`](2026-08-13-global-mcp-entry-pins-the-extension-version.md))
+#### AI surface coverage — tools and skills vs features ([`ai-surface-coverage/`](ai-surface-coverage/))
 
-Filed 2026-08-13 from a colleague's screenshot: Claude Code refused to add an MCP server and
-showed **[Conflicting scopes]** instead — `demo-builder` defined in user scope at
-`…beta.111/dist/mcp-server.js` and in project scope at `…beta.128/dist/mcp-proxy.js`, with
-OAuth tokens stored per endpoint so auth in one context does not carry to the other. Cause
-(read from source, not inferred): `demoBuilder.registerGlobalMcp` writes
-`path.join(context.extensionPath, 'dist', …)`, and `extensionPath` is version-pinned, so the
-entry is correct exactly once and **nothing rewrites it on update** — no reference to it
-anywhere under `src/features/updates/`. Compounded because the entry point was renamed too:
-the old path names `mcp-server.js`, the retired standalone process that current builds no
-longer produce. `detectMcpDrift` is exactly the right shape to catch this but reads only the
-project's `.claude/mcp.json`; nothing reads `~/.claude.json`, so **the one entry that cannot
-heal itself is the one nothing looks at**. Affects any user who ran the global opt-in and
-has since updated. **Not blocked** — step 1 is reproducing it with a hand-written stale entry.
+Paused 2026-08-13 with the research done and seven steps written; deferred so a live defect
+could go first. Measured: **58 tools, 14 skills, 67 handlers** across five feature maps, 26
+exposed by descriptor rows. The apparent gap is mostly not one — reading the 41 handlers
+without a row splits them into UI navigation, fire-and-forget dispatchers, and capability
+already reachable through one of the 32 tools registered outside the descriptor tables. That
+turned up a disqualifier `mcp-tool-authoring` does not state: a handler can be perfectly
+headless and still unexposable because its return carries the DISPATCH rather than the
+OUTCOME (`handleSyncStorefront` is two lines that run a command and return success), so
+exposing it hands an agent a tool that cannot fail. Real gaps are on the guidance side —
+authentication has 8 tools and no skill, mesh has 3 and none dedicated, prerequisites has no
+surface at all. Step 01 is mechanical and the worklist of all 41 is written; backing research
+is `.rptc/research/ai-surface-coverage/research.md`. **Not blocked.**
 
 #### `export_project_settings` ignores `includeSecrets` ([`2026-08-11-export-settings-ignores-include-secrets.md`](2026-08-11-export-settings-ignores-include-secrets.md))
 
