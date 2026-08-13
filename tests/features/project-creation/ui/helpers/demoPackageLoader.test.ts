@@ -218,7 +218,7 @@ describe('shipped demo-packages.json (config integrity)', () => {
         const packages = await loadDemoPackages();
 
         packages.forEach(pkg => {
-            expect((pkg as Record<string, unknown>).contentSources).toBeUndefined();
+            expect((pkg as unknown as Record<string, unknown>).contentSources).toBeUndefined();
         });
     });
 

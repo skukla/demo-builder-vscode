@@ -9,7 +9,7 @@
 import * as vscode from 'vscode';
 import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { UpdateManager } from '@/features/updates/services/updateManager';
-import type { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/core/state';
 
 jest.mock('vscode', () => ({

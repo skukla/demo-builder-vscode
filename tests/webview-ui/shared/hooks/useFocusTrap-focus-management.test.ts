@@ -59,7 +59,6 @@ describe('useFocusTrap - Focus Management', () => {
         { initialProps: { enabled: false } }
       );
 
-      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Force effect to re-run with container now set by toggling enabled
@@ -77,7 +76,6 @@ describe('useFocusTrap - Focus Management', () => {
         useFocusTrap({ autoFocus: false, enabled: true })
       );
 
-      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       expect(document.activeElement).not.toBe(button1);
@@ -88,7 +86,6 @@ describe('useFocusTrap - Focus Management', () => {
         useFocusTrap({ autoFocus: true, enabled: false })
       );
 
-      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       expect(document.activeElement).not.toBe(button1);
@@ -99,7 +96,6 @@ describe('useFocusTrap - Focus Management', () => {
     it('does not trap focus when disabled', () => {
       const { result } = renderHook(() => useFocusTrap({ enabled: false }));
 
-      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       button3.focus();
@@ -124,7 +120,6 @@ describe('useFocusTrap - Focus Management', () => {
         { initialProps: { enabled: false } }
       );
 
-      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Start disabled - should not trap
@@ -160,7 +155,6 @@ describe('useFocusTrap - Focus Management', () => {
     it('removes event listener on unmount', () => {
       const { result, unmount } = renderHook(() => useFocusTrap({ enabled: true }));
 
-      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Unmount

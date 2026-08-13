@@ -22,16 +22,16 @@ import * as vscode from 'vscode';
 
 // The global vscode mock doesn't include showInputBox / withProgress overrides
 // we need for these tests. Patch them on first import.
-(vscode.window as { showInputBox?: jest.Mock }).showInputBox =
-    (vscode.window as { showInputBox?: jest.Mock }).showInputBox ?? jest.fn();
-(vscode.commands as { executeCommand?: jest.Mock }).executeCommand =
-    (vscode.commands as { executeCommand?: jest.Mock }).executeCommand ?? jest.fn();
-(vscode.env as { openExternal?: jest.Mock }).openExternal =
-    (vscode.env as { openExternal?: jest.Mock }).openExternal ?? jest.fn();
-(vscode.window as { showTextDocument?: jest.Mock }).showTextDocument =
-    (vscode.window as { showTextDocument?: jest.Mock }).showTextDocument ?? jest.fn();
-(vscode.workspace as { openTextDocument?: jest.Mock }).openTextDocument =
-    (vscode.workspace as { openTextDocument?: jest.Mock }).openTextDocument ?? jest.fn();
+(vscode.window as unknown as { showInputBox?: jest.Mock }).showInputBox =
+    (vscode.window as unknown as { showInputBox?: jest.Mock }).showInputBox ?? jest.fn();
+(vscode.commands as unknown as { executeCommand?: jest.Mock }).executeCommand =
+    (vscode.commands as unknown as { executeCommand?: jest.Mock }).executeCommand ?? jest.fn();
+(vscode.env as unknown as { openExternal?: jest.Mock }).openExternal =
+    (vscode.env as unknown as { openExternal?: jest.Mock }).openExternal ?? jest.fn();
+(vscode.window as unknown as { showTextDocument?: jest.Mock }).showTextDocument =
+    (vscode.window as unknown as { showTextDocument?: jest.Mock }).showTextDocument ?? jest.fn();
+(vscode.workspace as unknown as { openTextDocument?: jest.Mock }).openTextDocument =
+    (vscode.workspace as unknown as { openTextDocument?: jest.Mock }).openTextDocument ?? jest.fn();
 
 // Make the conflict-resolution poll resolve immediately — the condition is
 // driven by git state we mock per-test, not by real timers.

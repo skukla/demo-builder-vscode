@@ -5,7 +5,7 @@
  * ProgressUnifier with controlled time and process behavior.
  */
 
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import {
     ProgressUnifier,
     IDateProvider,

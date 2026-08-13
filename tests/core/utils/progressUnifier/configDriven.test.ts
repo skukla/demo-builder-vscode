@@ -262,7 +262,6 @@ describe('ProgressUnifier - Config-Driven Approach', () => {
                 'some-command',
                 10000
             );
-            // @ts-expect-error - Testing undefined case
             step.progressStrategy = undefined;
 
             // Mock spawn

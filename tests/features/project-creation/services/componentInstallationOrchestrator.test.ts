@@ -13,7 +13,7 @@ import {
     type InstallationContext,
 } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import type { Project } from '@/types';
 
 const mockInstallNpmDependencies = jest.fn();

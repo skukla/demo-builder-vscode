@@ -10,7 +10,7 @@
  */
 
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import type { Project } from '@/types';
 
 // Mock dependencies

@@ -316,7 +316,7 @@ describe('handleResetProject DA.live auth (confirmation-first flow)', () => {
         (ServiceLocatorDirect.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthService);
 
         // Make HelixService constructor return our mock
-        (HelixService as jest.Mock).mockImplementation(() => mockHelixService);
+        (HelixService as unknown as jest.Mock).mockImplementation(() => mockHelixService);
 
         // Setup GitHub mocks
         const gitHubServices = (getGitHubServices as jest.Mock)();

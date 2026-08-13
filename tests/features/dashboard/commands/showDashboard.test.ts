@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { BaseWebviewCommand } from '@/core/base';
 import { StateManager } from '@/core/state';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 
 // Mock dependencies
 jest.mock('@/core/logging/debugLogger');

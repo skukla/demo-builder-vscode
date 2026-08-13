@@ -14,7 +14,7 @@ import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { StateManager } from '@/core/state';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 
 // Mock dependencies
 jest.mock('@/core/logging/debugLogger');

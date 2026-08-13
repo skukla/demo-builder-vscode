@@ -339,7 +339,7 @@ describe('toolHandlers.getComponentConfig', () => {
             return Promise.resolve(s);
         });
         // Also mock realpathSync for resolveProjectPath
-        (fsSync.realpathSync as jest.Mock).mockImplementation((p: string) => {
+        (fsSync.realpathSync as unknown as jest.Mock).mockImplementation((p: string) => {
             const s = String(p);
             if (s.startsWith('/tmp/')) return s.replace('/tmp/', '/private/tmp/');
             return s;

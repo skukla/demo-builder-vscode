@@ -46,7 +46,7 @@ describe('dataInstallerParsers', () => {
         });
 
         it('drops _id entirely — it is never a key', () => {
-            const first = parseDatapackList(body).items[0] as Record<string, unknown>;
+            const first = parseDatapackList(body).items[0] as unknown as Record<string, unknown>;
             expect(first._id).toBeUndefined();
             expect(JSON.stringify(first)).not.toContain('_id');
         });
@@ -313,7 +313,7 @@ describe('dataInstallerParsers', () => {
                     { datapack_name: 'x', version: 'main', display_name: 'X', data_types: [], schema_version: 9, brand_new: {} },
                 ],
             };
-            const item = parseDatapackList(future).items[0] as Record<string, unknown>;
+            const item = parseDatapackList(future).items[0] as unknown as Record<string, unknown>;
             expect(item.schema_version).toBeUndefined();
             expect(item.brand_new).toBeUndefined();
             expect(item.displayName).toBe('X');

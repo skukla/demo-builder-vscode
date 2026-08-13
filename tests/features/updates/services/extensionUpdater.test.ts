@@ -6,7 +6,7 @@
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 
 // Mock modules
 jest.mock('fs/promises');

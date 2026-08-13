@@ -269,7 +269,7 @@ describe('handleResetProject', () => {
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthService);
 
         // Make HelixService constructor return our mock
-        (HelixService as jest.Mock).mockImplementation(() => mockHelixService);
+        (HelixService as unknown as jest.Mock).mockImplementation(() => mockHelixService);
 
         // Setup GitHub mocks - get references from the mocked module
         const gitHubServices = (getGitHubServices as jest.Mock)();

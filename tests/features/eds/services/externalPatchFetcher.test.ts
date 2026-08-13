@@ -30,7 +30,7 @@ const SOURCE = { owner: 'skukla', repo: 'eds-demo-patches', path: 'b2b' };
 const LEDGER = { patches: [{ id: 'x', target: 'scripts/a.js' }] };
 
 function makeLogger(): Logger {
-    return { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() } as Logger;
+    return { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() } as unknown as Logger;
 }
 
 /** Route by URL so each test reads as a scenario rather than a call sequence. */

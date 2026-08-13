@@ -94,7 +94,6 @@ jest.mock('vscode', () => ({
 export {
     aiHandlers,
     handleVerifyAiSetup,
-    handleInspectMcp,
     handleRegenerateAiFiles,
     handleOpenInClaude,
     handleSaveAiPrompt,

@@ -142,7 +142,7 @@ describe('demo-packages.json', () => {
             const buildright = packagesConfig.packages.find(p => p.id === 'buildright');
             expect(buildright).toBeDefined();
             expect(Object.keys(buildright!.storefronts).length).toBe(1);
-            expect((buildright as Record<string, unknown>).status).toBe('coming-soon');
+            expect((buildright as unknown as Record<string, unknown>).status).toBe('coming-soon');
         });
 
         it('should have storefronts keyed by stack ID', () => {
@@ -171,7 +171,7 @@ describe('demo-packages.json', () => {
 
         it('should NOT have package-level contentSources (content source is per-storefront)', () => {
             packagesConfig.packages.forEach(pkg => {
-                expect((pkg as Record<string, unknown>).contentSources).toBeUndefined();
+                expect((pkg as unknown as Record<string, unknown>).contentSources).toBeUndefined();
             });
         });
     });
@@ -179,11 +179,11 @@ describe('demo-packages.json', () => {
     describe('EDS storefronts - contentSource', () => {
         it('should have contentSource for branded EDS storefronts', () => {
             packagesConfig.packages.forEach(pkg => {
-                if ((pkg as Record<string, unknown>).status === 'coming-soon') return;
+                if ((pkg as unknown as Record<string, unknown>).status === 'coming-soon') return;
                 Object.entries(pkg.storefronts).forEach(([stackId, storefront]) => {
                     if (stackId.startsWith('eds-')) {
-                        expect((storefront as Record<string, unknown>).contentSource).toBeDefined();
-                        const contentSource = (storefront as Record<string, unknown>).contentSource as { org: string; site: string };
+                        expect((storefront as unknown as Record<string, unknown>).contentSource).toBeDefined();
+                        const contentSource = (storefront as unknown as Record<string, unknown>).contentSource as { org: string; site: string };
                         expect(contentSource.org).toBeDefined();
                         expect(contentSource.site).toBeDefined();
                     }
@@ -197,7 +197,7 @@ describe('demo-packages.json', () => {
             const citisignal = packagesConfig.packages.find(p => p.id === 'citisignal');
             expect(citisignal).toBeDefined();
 
-            const edsAccs = citisignal!.storefronts['eds-accs'] as Record<string, unknown>;
+            const edsAccs = citisignal!.storefronts['eds-accs'] as unknown as Record<string, unknown>;
             expect(edsAccs).toBeDefined();
 
             const patches = edsAccs.contentPatches as string[];
@@ -213,7 +213,7 @@ describe('demo-packages.json', () => {
 
         it('should have contentPatchSource for eds-accs storefront', () => {
             const citisignal = packagesConfig.packages.find(p => p.id === 'citisignal');
-            const edsAccs = citisignal!.storefronts['eds-accs'] as Record<string, unknown>;
+            const edsAccs = citisignal!.storefronts['eds-accs'] as unknown as Record<string, unknown>;
 
             const patchSource = edsAccs.contentPatchSource as { owner: string; repo: string; path: string };
             expect(patchSource).toBeDefined();
@@ -224,7 +224,7 @@ describe('demo-packages.json', () => {
 
         it('should have all 5 content patches for eds-paas storefront', () => {
             const citisignal = packagesConfig.packages.find(p => p.id === 'citisignal');
-            const edsPaas = citisignal!.storefronts['eds-paas'] as Record<string, unknown>;
+            const edsPaas = citisignal!.storefronts['eds-paas'] as unknown as Record<string, unknown>;
 
             const patches = edsPaas.contentPatches as string[];
             expect(patches).toBeDefined();
@@ -417,7 +417,7 @@ describe('demo-packages.json', () => {
         it('should have contentSource pointing to stephen-garner-adobe org', () => {
             const pkg = packagesConfig.packages.find(p => p.id === 'isle5');
             Object.values(pkg!.storefronts).forEach(storefront => {
-                const sf = storefront as Record<string, unknown>;
+                const sf = storefront as unknown as Record<string, unknown>;
                 const contentSource = sf.contentSource as { org: string; site: string };
                 expect(contentSource.org).toBe('stephen-garner-adobe');
                 expect(contentSource.site).toBe('isle5');
