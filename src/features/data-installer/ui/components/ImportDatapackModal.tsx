@@ -56,7 +56,9 @@
 import { ActionButton, Checkbox, DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import type { DataTypeStatus, DatapackId, ImportJobRecord } from '../../types';
-import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
+import { useDataInstallerRequest, type DataInstallerRequest } from '../hooks/useDataInstallerRequest';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { FormField } from '@/core/ui/components/forms/FormField';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
@@ -200,7 +202,11 @@ export function ImportDatapackModal({
         reset.load({ ...requestBody(), confirm: true });
     }, [reset, requestBody]);
 
-    const canStart = commerceInstance.length > 0 && selected.length > 0 && !start.loading;
+    // One in-flight operation freezes the whole footer: the labels swap on the
+    // active one (ManageApisModal's 'Applying…' pattern) and everything disables,
+    // because a second request mid-flight has no meaning here.
+    const busy = dryRun.loading || start.loading || reset.loading;
+    const canStart = commerceInstance.length > 0 && selected.length > 0 && !busy;
 
     return (
         <DialogContainer type="modal" onDismiss={onClose}>
@@ -215,6 +221,9 @@ export function ImportDatapackModal({
                     watching,
                     resetArmed,
                     canStart,
+                    checking: dryRun.loading,
+                    starting: start.loading,
+                    resetting: reset.loading,
                     stopWatching: () => setWatching(false),
                     validate,
                     armReset: () => setResetArmed(true),
@@ -232,7 +241,14 @@ export function ImportDatapackModal({
                         </div>
                     ) : null}
 
-                    {!running && !resetArmed ? (
+                    {start.loading || reset.loading ? (
+                        <LoadingDisplay
+                            size="M"
+                            message={start.loading ? 'Starting import…' : 'Starting reset…'}
+                        />
+                    ) : null}
+
+                    {!running && !resetArmed && !start.loading && !reset.loading ? (
                         <>
                             <ImportTargetField
                                 projectName={target.value?.projectName}
@@ -263,28 +279,8 @@ export function ImportDatapackModal({
                         </>
                     ) : null}
 
-                    {dryRun.value ? (
-                        <div className="datapack-import-verdict">
-                            {dryRun.value.valid
-                                ? 'Dry run passed — the service says this request would be accepted. Nothing has been written.'
-                                : 'The service refused this request:'}
-                            {dryRun.value.reason ? (
-                                <div className="datapack-import-reason">{dryRun.value.reason}</div>
-                            ) : null}
-                        </div>
-                    ) : null}
+                    <RequestFeedback dryRun={dryRun} start={start} reset={reset} />
 
-                    {dryRun.failure ? (
-                        <div className="datapack-import-error">{dryRun.failure.message}</div>
-                    ) : null}
-
-                    {start.failure ? (
-                        <div className="datapack-import-error">{start.failure.message}</div>
-                    ) : null}
-
-                    {reset.failure ? (
-                        <div className="datapack-import-error">{reset.failure.message}</div>
-                    ) : null}
                 </div>
             </Modal>
         </DialogContainer>
@@ -297,6 +293,9 @@ interface ActionInputs {
     watching: boolean;
     resetArmed: boolean;
     canStart: boolean;
+    checking: boolean;
+    starting: boolean;
+    resetting: boolean;
     stopWatching: () => void;
     validate: () => void;
     armReset: () => void;
@@ -324,10 +323,16 @@ function buildActions(
         // NOT "Cancel" — no endpoint exists to cancel with.
         return [{ label: 'Stop watching', variant: 'secondary', onPress: a.stopWatching }];
     }
-    if (a.resetArmed) {
+    if (a.resetArmed || a.resetting) {
         return [
-            { label: 'Keep the data', variant: 'secondary', onPress: a.disarmReset },
-            { label: 'Remove the data', variant: 'negative', onPress: a.confirmReset },
+            { label: 'Keep the data', variant: 'secondary', onPress: a.disarmReset, isDisabled: a.resetting },
+            {
+                // ManageApisModal's 'Applying…' pattern: swap the label, disable.
+                label: a.resetting ? 'Removing…' : 'Remove the data',
+                variant: 'negative',
+                onPress: a.confirmReset,
+                isDisabled: a.resetting,
+            },
         ];
     }
     return [
@@ -335,11 +340,16 @@ function buildActions(
         // server-side before it starts, so this is a REHEARSAL of the same
         // request, not a gate the user must pass through first. Two peer labels
         // invited "must I press this before importing?" — the answer is no.
-        { label: 'Dry run', variant: 'secondary', onPress: a.validate, isDisabled: !a.canStart },
+        {
+            label: a.checking ? 'Checking…' : 'Dry run',
+            variant: 'secondary',
+            onPress: a.validate,
+            isDisabled: !a.canStart,
+        },
         // Arms only. Removing data always takes a second, explicit press.
         { label: 'Reset…', variant: 'secondary', onPress: a.armReset, isDisabled: !a.canStart },
         {
-            label: 'Start import',
+            label: a.starting ? 'Starting…' : 'Start import',
             variant: 'accent',
             onPress: a.startImport,
             isDisabled: !a.canStart,
@@ -402,7 +412,15 @@ function ImportTargetField({
     );
 }
 
-/** Where the job stands, plus a row per reported type. */
+/**
+ * Where the job stands, plus a row per reported type.
+ *
+ * The house feedback vocabulary end to end: `LoadingDisplay` while the job is
+ * being watched (in-flight is a spinner, not a sentence in a box), and
+ * `StatusDisplay` for a terminal outcome — the same success/warning/error
+ * treatment every other surface uses. The custom bordered panel this replaces
+ * was a rebuild of exactly that vocabulary, caught in live verification.
+ */
 function ImportProgress({
     record,
     watching,
@@ -410,10 +428,19 @@ function ImportProgress({
     record: ImportJobRecord;
     watching: boolean;
 }): React.JSX.Element {
+    const inFlight = record.outcome === 'watching';
+
     return (
         <div className="datapack-import-progress">
-            <div className="datapack-import-outcome">{describeOutcome(record, watching)}</div>
-            {record.reason ? <div className="datapack-import-reason">{record.reason}</div> : null}
+            {inFlight ? (
+                <LoadingDisplay size="M" message={describeOutcome(record, watching)} />
+            ) : (
+                <StatusDisplay
+                    variant={OUTCOME_VARIANT[record.outcome] ?? 'info'}
+                    title={describeOutcome(record, watching)}
+                    message={record.reason}
+                />
+            )}
             {Object.entries(record.perType).map(([type, state]) => (
                 <div key={type} className="datapack-import-type">
                     <StatusDot variant={DOT_VARIANT[state] ?? 'neutral'} size={6} />
@@ -424,6 +451,73 @@ function ImportProgress({
         </div>
     );
 }
+
+/**
+ * The dry-run spinner, its verdict, and the three failure states.
+ *
+ * Extracted for the same reason as {@link ImportTargetField}: each state is one
+ * branch, and inlining all of them pushed the modal past the complexity ceiling.
+ * All house vocabulary — LoadingDisplay while checking, StatusDisplay for
+ * verdicts and failures (a refusal is an ANSWER, so it renders as warning, not
+ * error). StatusDisplay renders `message` only beneath a `title`, so every
+ * failure carries one — found when a message-only error rendered as nothing.
+ */
+function RequestFeedback({
+    dryRun,
+    start,
+    reset,
+}: {
+    dryRun: DataInstallerRequest<{ valid: boolean; reason?: string }>;
+    start: DataInstallerRequest<{ activationId: string }>;
+    reset: DataInstallerRequest<{ activationId: string }>;
+}): React.JSX.Element {
+    return (
+        <>
+            {dryRun.loading ? <LoadingDisplay size="S" message="Checking with the service…" /> : null}
+
+            {dryRun.value && !dryRun.loading ? (
+                <StatusDisplay
+                    variant={dryRun.value.valid ? 'success' : 'warning'}
+                    title={dryRun.value.valid ? 'Dry run passed' : 'The service refused this request'}
+                    message={
+                        dryRun.value.valid
+                            ? 'The service says this request would be accepted. Nothing has been written.'
+                            : dryRun.value.reason
+                    }
+                />
+            ) : null}
+
+            {dryRun.failure ? (
+                <StatusDisplay variant="error" title="Dry run failed" message={dryRun.failure.message} />
+            ) : null}
+            {start.failure ? (
+                <StatusDisplay
+                    variant="error"
+                    title="Import failed to start"
+                    message={start.failure.message}
+                />
+            ) : null}
+            {reset.failure ? (
+                <StatusDisplay
+                    variant="error"
+                    title="Reset failed to start"
+                    message={reset.failure.message}
+                />
+            ) : null}
+        </>
+    );
+}
+
+/** Terminal outcome → the house StatusDisplay variant. `partial` is a warning, not a failure. */
+const OUTCOME_VARIANT: Record<string, 'success' | 'warning' | 'error' | 'info'> = {
+    success: 'success',
+    partial: 'warning',
+    error: 'error',
+    'never-registered': 'error',
+    stopped: 'info',
+    'still-running': 'info',
+    unwatchable: 'warning',
+};
 
 /**
  * One line saying where the job stands.

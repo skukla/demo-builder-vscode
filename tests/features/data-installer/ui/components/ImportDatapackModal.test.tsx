@@ -468,6 +468,58 @@ describe('ImportDatapackModal', () => {
         });
     });
 
+    /**
+     * In-flight states use the HOUSE vocabulary, not silence: busy buttons swap
+     * their label and disable (ManageApisModal's 'Applying…' pattern), and the
+     * body shows a LoadingDisplay while a start/reset is in flight. Both exist
+     * because the first live dry run gave the user NO feedback of any kind
+     * between the press and the verdict.
+     */
+    describe('pending states', () => {
+        /** A request for `type` that never resolves, so loading stays true. */
+        function neverResolve(type: string) {
+            mockRequest.mockImplementation((t: string) =>
+                t === type ? new Promise(() => undefined) : Promise.resolve({ success: true, data: null }),
+            );
+        }
+
+        it('shows a busy Dry run button while the check is in flight', async () => {
+            neverResolve('validate-datapack-import');
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+
+            fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
+
+            expect(await screen.findByRole('button', { name: /checking…/i })).toBeInTheDocument();
+        });
+
+        it('shows a spinner while an import is starting', async () => {
+            neverResolve('start-datapack-import');
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+
+            fireEvent.click(startButton());
+
+            expect(await screen.findByText(/starting import/i)).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /starting…/i })).toBeInTheDocument();
+        });
+
+        it('disables every action while one is in flight', async () => {
+            neverResolve('validate-datapack-import');
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+
+            fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
+            await screen.findByRole('button', { name: /checking…/i });
+
+            expect(screen.getByRole('button', { name: /start import/i })).toHaveAttribute('aria-disabled', 'true');
+            expect(screen.getByRole('button', { name: /reset/i })).toHaveAttribute('aria-disabled', 'true');
+        });
+    });
+
     describe('watching', () => {
         function withStatus(record: unknown) {
             mockRequest.mockImplementation(async (type: string) =>

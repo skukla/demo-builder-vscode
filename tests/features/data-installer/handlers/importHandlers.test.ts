@@ -546,7 +546,7 @@ describe('get-datapack-import-status', () => {
     it('returns nothing when no import has been started', async () => {
         const { context } = makeContext();
 
-        const result = await importHandlers['get-datapack-import-status'](context, {});
+        const result = await importHandlers['get-datapack-import-status'](context);
 
         expect(result.success).toBe(true);
         expect(result.data).toBeNull();
@@ -557,7 +557,7 @@ describe('get-datapack-import-status', () => {
         const { context } = makeContext();
         await importHandlers['start-datapack-import'](context, PAYLOAD);
 
-        const result = await importHandlers['get-datapack-import-status'](context, {});
+        const result = await importHandlers['get-datapack-import-status'](context);
 
         expect(result.success).toBe(true);
         expect(result.data).toMatchObject({ activationId: 'act-1', datapackName: 'bodea' });
