@@ -23,7 +23,7 @@
  */
 
 import { resolveCommerceCredentials } from '../services/commerceCredentials';
-import { DataInstallerWriteClient } from '../services/dataInstallerWriteClient';
+import { DataInstallerWriteClient, type ImportRequest } from '../services/dataInstallerWriteClient';
 import { watchImportJob } from '../services/importJobRunner';
 import type { ImportJobRecord } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
@@ -58,49 +58,11 @@ export const importHandlers = defineHandlers({
         context: HandlerContext,
         payload?: StartImportPayload,
     ): Promise<HandlerResponse> => {
-        const input = readInput(payload);
-        if ('error' in input) {
-            return { success: false, error: input.error };
+        const prepared = await prepareImport(context, payload);
+        if ('response' in prepared) {
+            return prepared.response;
         }
-
-        const access = await resolveDataInstallerAccess(context);
-        if (!access.ok) {
-            return access.response;
-        }
-
-        const project = await context.stateManager.getCurrentProject();
-        if (!project) {
-            return { success: false, error: 'Open a project before importing a datapack.' };
-        }
-
-        const credentials = await resolveCommerceCredentials({
-            project: {
-                stackBackend: (project as { stack?: { backend?: string } }).stack?.backend ?? '',
-                componentConfigs:
-                    (project as { componentConfigs?: Record<string, Record<string, string>> })
-                        .componentConfigs ?? {},
-            },
-            secrets: context.context.secrets,
-            projectName: (project as { name?: string }).name ?? '',
-        });
-        if (!credentials.ok) {
-            return {
-                success: false,
-                error: CREDENTIAL_MESSAGES[credentials.reason] ?? 'Commerce credentials are missing.',
-                code: ErrorCode.INVALID_OPERATION,
-            };
-        }
-
-        const writeClient = new DataInstallerWriteClient({
-            baseUrl: access.baseUrl,
-            getToken: access.getToken,
-        });
-        const request = {
-            id: { name: input.datapackName, version: input.version },
-            commerceInstance: input.commerceInstance,
-            dataTypes: input.dataTypes,
-            credentials: credentials.credentials,
-        };
+        const { writeClient, request } = prepared;
 
         try {
             // The sync twin is the only thing that will tell us this request is
@@ -116,10 +78,10 @@ export const importHandlers = defineHandlers({
             const start = await writeClient.startImport(request);
             const record: ImportJobRecord = {
                 activationId: start.activationId,
-                datapackName: input.datapackName,
-                version: input.version,
-                commerceInstance: input.commerceInstance,
-                dataTypes: input.dataTypes,
+                datapackName: request.id.name,
+                version: request.id.version,
+                commerceInstance: request.commerceInstance,
+                dataTypes: request.dataTypes,
                 startedAt: new Date().toISOString(),
                 outcome: 'watching',
                 perType: {},
@@ -141,12 +103,108 @@ export const importHandlers = defineHandlers({
         }
     },
 
+    /**
+     * The dry run — validate and stop.
+     *
+     * Same guard, same credentials, same request body as a real start; it simply
+     * does not go on to `startImport`. This exists because there was otherwise NO
+     * way to check a request without writing: the start handler chains validate
+     * and start, so a passing validation went straight to a real import.
+     *
+     * A refusal comes back as `{valid:false, reason}` with `success: true` — the
+     * call worked and the service answered. Only a broken call is a failure.
+     */
+    'validate-datapack-import': async (
+        context: HandlerContext,
+        payload?: StartImportPayload,
+    ): Promise<HandlerResponse> => {
+        const prepared = await prepareImport(context, payload);
+        if ('response' in prepared) {
+            return prepared.response;
+        }
+        try {
+            return {
+                success: true,
+                data: await prepared.writeClient.validateImport(prepared.request),
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'The request could not be validated.',
+                code: ErrorCode.UNKNOWN,
+            };
+        }
+    },
+
     'get-datapack-import-status': async (context: HandlerContext): Promise<HandlerResponse> => {
         const transient = new TransientStateManager(context.context);
         const record = await transient.get<ImportJobRecord | null>(JOB_KEY, null);
         return { success: true, data: record };
     },
 });
+
+/**
+ * Everything both write handlers need, or the response to return instead.
+ *
+ * Extracted at the SECOND caller rather than the third: the two paths have to
+ * agree on the guard, the credentials and the request body byte for byte, or a
+ * dry run would check something other than what a start would send — which is the
+ * one thing that would make a dry run worse than useless.
+ */
+async function prepareImport(
+    context: HandlerContext,
+    payload: StartImportPayload | undefined,
+): Promise<
+    { writeClient: DataInstallerWriteClient; request: ImportRequest } | { response: HandlerResponse }
+> {
+    const input = readInput(payload);
+    if ('error' in input) {
+        return { response: { success: false, error: input.error } };
+    }
+
+    const access = await resolveDataInstallerAccess(context);
+    if (!access.ok) {
+        return { response: access.response };
+    }
+
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { response: { success: false, error: 'Open a project before importing a datapack.' } };
+    }
+
+    const credentials = await resolveCommerceCredentials({
+        project: {
+            stackBackend: (project as { stack?: { backend?: string } }).stack?.backend ?? '',
+            componentConfigs:
+                (project as { componentConfigs?: Record<string, Record<string, string>> })
+                    .componentConfigs ?? {},
+        },
+        secrets: context.context.secrets,
+        projectName: (project as { name?: string }).name ?? '',
+    });
+    if (!credentials.ok) {
+        return {
+            response: {
+                success: false,
+                error: CREDENTIAL_MESSAGES[credentials.reason] ?? 'Commerce credentials are missing.',
+                code: ErrorCode.INVALID_OPERATION,
+            },
+        };
+    }
+
+    return {
+        writeClient: new DataInstallerWriteClient({
+            baseUrl: access.baseUrl,
+            getToken: access.getToken,
+        }),
+        request: {
+            id: { name: input.datapackName, version: input.version },
+            commerceInstance: input.commerceInstance,
+            dataTypes: input.dataTypes,
+            credentials: credentials.credentials,
+        },
+    };
+}
 
 /**
  * Watch to a terminal outcome and record it.

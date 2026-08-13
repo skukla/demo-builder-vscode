@@ -66,6 +66,9 @@ export function ImportDatapackModal({
     const [watching, setWatching] = useState(true);
 
     const start = useDataInstallerRequest<{ activationId: string }>('start-datapack-import');
+    const dryRun = useDataInstallerRequest<{ valid: boolean; reason?: string }>(
+        'validate-datapack-import',
+    );
     const status = useDataInstallerRequest<ImportJobRecord | null>('get-datapack-import-status');
 
     const loadStatus = status.load;
@@ -100,16 +103,26 @@ export function ImportDatapackModal({
         );
     }, []);
 
-    const startImport = useCallback((): void => {
-        setWatching(true);
-        start.load({
+    /** The one body both paths send, so a dry run checks what a start would do. */
+    const requestBody = useCallback(
+        () => ({
             datapackName: id.name,
             version: id.version,
             // Verbatim — not trimmed, not normalised. See the module docstring.
             commerceInstance,
             dataTypes: selected,
-        });
-    }, [start, id, commerceInstance, selected]);
+        }),
+        [id, commerceInstance, selected],
+    );
+
+    const validate = useCallback((): void => {
+        dryRun.load(requestBody());
+    }, [dryRun, requestBody]);
+
+    const startImport = useCallback((): void => {
+        setWatching(true);
+        start.load(requestBody());
+    }, [start, requestBody]);
 
     const canStart = commerceInstance.length > 0 && selected.length > 0 && !start.loading;
 
@@ -131,6 +144,15 @@ export function ImportDatapackModal({
                           },
                       ]
                     : [
+                          {
+                              // A dry run, because there is otherwise no way to
+                              // check a request without writing: starting chains
+                              // validate and start.
+                              label: 'Validate',
+                              variant: 'secondary' as const,
+                              onPress: validate,
+                              isDisabled: !canStart,
+                          },
                           {
                               label: 'Start import',
                               variant: 'accent' as const,
@@ -167,6 +189,21 @@ export function ImportDatapackModal({
                             ))}
                         </div>
                     </>
+                ) : null}
+
+                {dryRun.value ? (
+                    <div className="datapack-import-verdict">
+                        {dryRun.value.valid
+                            ? 'Validated — the service says this request would be accepted. Nothing has been written.'
+                            : 'The service refused this request:'}
+                        {dryRun.value.reason ? (
+                            <div className="datapack-import-reason">{dryRun.value.reason}</div>
+                        ) : null}
+                    </div>
+                ) : null}
+
+                {dryRun.failure ? (
+                    <div className="datapack-import-error">{dryRun.failure.message}</div>
                 ) : null}
 
                 {start.failure ? (

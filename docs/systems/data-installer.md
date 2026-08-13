@@ -185,10 +185,17 @@ is no undo and no cancel. Treat this section as "built and unverified", not as
 | `handlers/importHandlers.ts` | Validate → start → DETACHED watch recording into `TransientStateManager`, so closing the panel does not abandon an import. |
 | `ui/components/ImportDatapackModal.tsx` | Instance field (empty, never derived), type checkboxes limited to what the service STORES, progress, and "Stop watching". |
 
-**There is no dry-run.** `start-datapack-import` chains validate and start: a
-passing validation proceeds straight to a real import. Verifying the request shape
-without writing means calling `process-datapack` directly with
-`operation_mode: 'validate'` — see §6.
+**There IS a dry run.** `validate-datapack-import` runs the same guard,
+credentials and request body as a start and stops after the synchronous
+`operation_mode: 'validate'` call — the **Validate** button beside Start in the
+import modal. Both paths build that body through one shared `prepareImport`, so a
+dry run cannot check something other than what a start would send.
+
+A refusal comes back as `{valid:false, reason}` with `success: true`: the call
+worked and the service answered. The reason is the service's own wording and is
+the whole point of the button.
+
+§6 keeps the equivalent direct call, for probing without the extension open.
 
 **Two things the build assumes and cannot yet confirm**: that the credential field
 names (`commerce_username`/`commerce_password`, `client_id`/`client_secret`) are

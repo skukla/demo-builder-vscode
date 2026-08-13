@@ -149,6 +149,82 @@ describe('ImportDatapackModal', () => {
         });
     });
 
+    describe('the dry run', () => {
+        const validateButton = () => screen.getByRole('button', { name: /^validate$/i });
+
+        it('is offered beside Start, with the same requirements', async () => {
+            renderModal();
+            await instanceField();
+
+            expect(validateButton()).toHaveAttribute('aria-disabled', 'true');
+        });
+
+        it('checks WITHOUT starting an import', async () => {
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+
+            fireEvent.click(validateButton());
+
+            await waitFor(() =>
+                expect(
+                    mockRequest.mock.calls.some((c) => c[0] === 'validate-datapack-import'),
+                ).toBe(true),
+            );
+            expect(mockRequest.mock.calls.some((c) => c[0] === 'start-datapack-import')).toBe(false);
+        });
+
+        it('sends the same body a start would', async () => {
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: '  Weird Value  ' } });
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+
+            fireEvent.click(validateButton());
+
+            await waitFor(() => {
+                const call = mockRequest.mock.calls.find((c) => c[0] === 'validate-datapack-import');
+                expect(call?.[1]).toMatchObject({
+                    datapackName: 'bodea',
+                    version: 'main',
+                    commerceInstance: '  Weird Value  ',
+                    dataTypes: ['categories'],
+                });
+            });
+        });
+
+        it('says so when the service accepts the request', async () => {
+            mockRequest.mockImplementation(async (type: string) =>
+                type === 'validate-datapack-import'
+                    ? { success: true, data: { valid: true } }
+                    : { success: true, data: null },
+            );
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+
+            fireEvent.click(validateButton());
+
+            expect(await screen.findByText(/would be accepted/i)).toBeInTheDocument();
+        });
+
+        // The reason IS the payload — it is the service's own wording about why
+        // the request will not run, and the only thing this button exists to get.
+        it('shows the refusal reason verbatim', async () => {
+            mockRequest.mockImplementation(async (type: string) =>
+                type === 'validate-datapack-import'
+                    ? { success: true, data: { valid: false, reason: 'Invalid input. Must provide one of: (datapack_name)' } }
+                    : { success: true, data: null },
+            );
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+
+            fireEvent.click(validateButton());
+
+            expect(await screen.findByText(/Must provide one of/)).toBeInTheDocument();
+        });
+    });
+
     describe('watching', () => {
         function withStatus(record: unknown) {
             mockRequest.mockImplementation(async (type: string) =>

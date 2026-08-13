@@ -258,6 +258,72 @@ describe('start-datapack-import', () => {
     });
 });
 
+describe('validate-datapack-import', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        setupSettings();
+    });
+
+    it('validates WITHOUT starting anything', async () => {
+        const { validateImport, startImport } = happyClient();
+        const { context } = makeContext();
+
+        const result = await importHandlers['validate-datapack-import'](context, PAYLOAD);
+
+        expect(validateImport).toHaveBeenCalled();
+        expect(startImport).not.toHaveBeenCalled();
+        expect(result.success).toBe(true);
+        expect(result.data).toEqual({ valid: true });
+    });
+
+    it('never records a job — nothing ran', async () => {
+        happyClient();
+        const { context, stores } = makeContext();
+
+        await importHandlers['validate-datapack-import'](context, PAYLOAD);
+
+        expect(stores.globalState.update).not.toHaveBeenCalled();
+    });
+
+    it('never starts a watch', async () => {
+        happyClient();
+        const { context } = makeContext();
+
+        await importHandlers['validate-datapack-import'](context, PAYLOAD);
+
+        expect(mockedWatch).not.toHaveBeenCalled();
+    });
+
+    // A refusal is the ANSWER here, not a failure: the request reached the
+    // service and the service said why it will not run.
+    it('returns the service refusal as a verdict, not an error', async () => {
+        const validateImport = jest
+            .fn()
+            .mockResolvedValue({ valid: false, reason: 'Invalid input. Must provide one of: …' });
+        MockedWriteClient.mockImplementation(() => ({ validateImport, startImport: jest.fn() }) as never);
+        const { context } = makeContext();
+
+        const result = await importHandlers['validate-datapack-import'](context, PAYLOAD);
+
+        expect(result.success).toBe(true);
+        expect(result.data).toMatchObject({ valid: false, reason: expect.stringMatching(/Must provide/) });
+    });
+
+    it('checks credentials before sending, like the start path', async () => {
+        const { validateImport } = happyClient();
+        const { context } = makeContext({
+            name: 'demo-a',
+            stack: { backend: 'adobe-commerce-paas' },
+            componentConfigs: {},
+        });
+
+        const result = await importHandlers['validate-datapack-import'](context, PAYLOAD);
+
+        expect(result.success).toBe(false);
+        expect(validateImport).not.toHaveBeenCalled();
+    });
+});
+
 describe('get-datapack-import-status', () => {
     beforeEach(() => {
         jest.clearAllMocks();
