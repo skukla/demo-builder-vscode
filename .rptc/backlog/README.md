@@ -65,6 +65,19 @@ draft  →  ready  →  active  →  shipped/dropped
 > caught so far has been a symbol or a count, which may say more about the detector than about
 > the backlog.
 >
+> **Read that last sentence literally.** These are not three kinds of staleness; they are two
+> kinds of staleness and one kind of *detectability*. A shape claim rotting is not a different
+> failure — it is the same failure with no instrument pointed at it. So the honest state of
+> this backlog is **"no evidence of shape rot"**, never "no shape rot", and from here those two
+> look identical. That is the `|| echo "none"` ambiguity this repo keeps re-learning, applied
+> to this very table.
+>
+> The reason there is no instrument is probably not laziness: a shape claim requires holding
+> both shapes in mind at once, which is judgement rather than grep — the same reason
+> `architecture-duplication-scan` is a guided review and not a scanner. So the detector for
+> shape rot is **a person deciding to look, on a schedule**, which is the shape `dream` and
+> `codebase-sweep` already have. Do not expect a hook to cover it.
+>
 > **And being well-written is not evidence of being current.** The most credible-looking of
 > the five — precise `file:line` table, traced chain, quoted MCP description — is the one that
 > later fooled a second session into building on it. Those signals record how carefully
