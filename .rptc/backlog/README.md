@@ -177,6 +177,22 @@ floor — which is precisely what this item exists to protect.
 
 ### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
 
+#### Global MCP entry pins the extension version ([`2026-08-13-global-mcp-entry-pins-the-extension-version.md`](2026-08-13-global-mcp-entry-pins-the-extension-version.md))
+
+Filed 2026-08-13 from a colleague's screenshot: Claude Code refused to add an MCP server and
+showed **[Conflicting scopes]** instead — `demo-builder` defined in user scope at
+`…beta.111/dist/mcp-server.js` and in project scope at `…beta.128/dist/mcp-proxy.js`, with
+OAuth tokens stored per endpoint so auth in one context does not carry to the other. Cause
+(read from source, not inferred): `demoBuilder.registerGlobalMcp` writes
+`path.join(context.extensionPath, 'dist', …)`, and `extensionPath` is version-pinned, so the
+entry is correct exactly once and **nothing rewrites it on update** — no reference to it
+anywhere under `src/features/updates/`. Compounded because the entry point was renamed too:
+the old path names `mcp-server.js`, the retired standalone process that current builds no
+longer produce. `detectMcpDrift` is exactly the right shape to catch this but reads only the
+project's `.claude/mcp.json`; nothing reads `~/.claude.json`, so **the one entry that cannot
+heal itself is the one nothing looks at**. Affects any user who ran the global opt-in and
+has since updated. **Not blocked** — step 1 is reproducing it with a hand-written stale entry.
+
 #### `export_project_settings` ignores `includeSecrets` ([`2026-08-11-export-settings-ignores-include-secrets.md`](2026-08-11-export-settings-ignores-include-secrets.md))
 
 Filed 2026-08-11, found in passing during Data Installer credential research. `includeSecrets: false`
