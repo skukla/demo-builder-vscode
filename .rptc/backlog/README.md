@@ -188,6 +188,27 @@ because a flake "fixed" by one green run is a flake you stopped looking at.
 
 ### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
 
+#### Make third-party AI tooling visible, optional, and coherently gated ([`2026-08-13-third-party-tooling-visible-and-optional.md`](2026-08-13-third-party-tooling-visible-and-optional.md))
+
+Filed 2026-08-13. Most of this already works — packages install automatically into the
+isolated `.demo-builder-mcp/`, `.mcp.json` is written for the user, install failure is
+surfaced, a package that goes missing is caught by `detectMcpDrift` and healed, a broken
+server shows in the AI Capabilities modal, and `scrape-reference-site` tells the agent how to
+recover. Three gaps remain. **(1) The biggest download is invisible:** `@playwright/mcp` is
+only the server; Playwright fetches a ~150 MB Chromium on first USE, and nothing in `src/`
+knows that binary exists — on a restricted network it fails at an agent mid-scrape, as an
+error the extension never sees. **(2) Progress is a label, not progress** — one opaque step
+claiming "up to a minute" it cannot know. **(3) There is no opt-out, and the blocker is not
+the toggle:** `ai-defaults.json` declares packages, `DEMO_BUILDER_ALWAYS_ON_SKILLS` declares
+skills, and **nothing connects them** — the skill→tool dependency exists only as prose inside
+skill bodies, so "which skills are disabled if I opt out?" has no machine-readable answer.
+Nor is it all-or-nothing: of the six EDS scraping skills only three drive Playwright, the
+other three work on already-scraped material. **The state to avoid is a skill that tells an
+agent to use a tool that is not installed** — worse than no skill, because the agent tries,
+fails and improvises. Step 1 is declaring the dependency. Do the composition axis of
+[`2026-08-13-tier-the-ai-bundle-refresh.md`](2026-08-13-tier-the-ai-bundle-refresh.md) first;
+this shares its gate. Not blocked.
+
 #### Watch both AI-bundle staleness axes, then refresh proportionately ([`2026-08-13-tier-the-ai-bundle-refresh.md`](2026-08-13-tier-the-ai-bundle-refresh.md))
 
 Filed 2026-08-13 out of the `global-mcp-version-pin` work, then **widened by research that
