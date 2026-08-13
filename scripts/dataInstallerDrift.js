@@ -23,6 +23,16 @@
  * additive change upstream is safe — reporting it would make this cry wolf, and a
  * tool that cries wolf gets ignored and then deleted.
  *
+ * KNOWN BLIND SPOT, accepted deliberately: a null on either side is treated as
+ * carrying no shape information, so a field that goes **permanently null** is
+ * invisible here. That rule exists because log rows are heterogeneous and the
+ * first live run reported drift on three fields whose contract had not moved —
+ * the false positive that gets a checker switched off. The trade is coverage for
+ * trust, and it is the right way round, but this is not full coverage: a field
+ * quietly emptying upstream will not be caught by this script. The parsers
+ * already tolerate it, so the failure mode is a UI that shows nothing rather than
+ * one that breaks.
+ *
  * Write endpoints are deliberately absent. This must stay safe to run at any time.
  *
  * Usage: npm run data-installer:drift
