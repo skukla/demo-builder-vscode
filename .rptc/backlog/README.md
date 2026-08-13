@@ -28,8 +28,22 @@ draft  →  ready  →  active  →  shipped/dropped
   └─ idea capture, may still change shape
 ```
 
-> **Index last reconciled: 2026-08-05** (full audit: 8 dead links cleared, 9 duplicate entries removed,
-> 4 items archived, 2 false claims corrected). Backlog descriptions drift from reality between audits — when in doubt, trust the code and `git log`, not this file.
+> **Index last reconciled: 2026-08-13.** Every link resolved mechanically: 62 links, 1 dead
+> (`appbuilder-shell-app`, which shipped and moved to `complete/` in `fe38d1c4` while this
+> file still called it an active plan — now repointed), and 0 unreferenced items. 35 items
+> indexed.
+>
+> A "32 entries vs 34 files" discrepancy reported during that pass was a MEASUREMENT error,
+> not a gap: some entries link two files, and plan directories count differently from single
+> files. Nothing was missing. Recording it because a wrong count in a reconcile note is worse
+> than none — it sends the next person hunting for items that were never lost.
+>
+> **Section C is absent on purpose.** It was "Ready to pick up", it emptied when its only
+> item (`mcp-affordance-coverage`) shipped, and it was removed rather than left hollow. The
+> letters are not renumbered so older references keep resolving.
+>
+> Backlog descriptions still drift between audits — when in doubt, trust the code and
+> `git log`, not this file.
 
 ## Recently shipped (archived to `../complete/`)
 
@@ -59,7 +73,7 @@ Also resolved since last index (now archived to `../complete/`): **oversized tes
 
 Add a custom Adobe App Builder app to a demo project as a first-class, deployable component — the App Builder analog of the component-first direction. **Decided model** (from [`../research/app-builder-app-structure/research.md`](../research/app-builder-app-structure/research.md)): one workspace per demo = the API Mesh (separate artifact) + **one** custom app, with multiple integration domains as **packages inside that one app** — so the singleton `meshState` shape fits and no keyed app array is needed. **Build principle:** reuse existing primitives (org targeting, command plumbing, clone/install, the block-library additive pattern), share the mesh deploy scaffold where duplication is real, and hold off on a generalized deployable framework until a 3rd deployable type appears (Rule of Three). Effort 1 (remove the dormant `integration-service` + `appBuilderApps` mechanism) shipped earlier (`c98e5125`); Effort 2 (discovery least-privilege token) **DECLINED 2026-06-15** (no attacker exposure it closes; VS Code Secret Storage is the cheap fix if at-rest plaintext ever matters).
 
-**Active plan (between slices 3 and 4):** [`appbuilder-shell-app`](../plans/appbuilder-shell-app/overview.md) — the "first app": blank-shell catalog entry (`skukla/app-builder-shell`), Developer Agent tooling un-gated to all App Builder-adjacent projects, runtime API access for AI (`list_console_apis`/`add_console_apis` + persisted `additionalConsoleApis`), AI guidance. Steps 1–3 + guidance shipped 2026-07-09; live Firefly walkthrough pending.
+**Shipped (archived 2026-08-13 reconcile; moved to `complete/` in `fe38d1c4`):** [`appbuilder-shell-app`](../complete/appbuilder-shell-app/overview.md) — the "first app": blank-shell catalog entry (`skukla/app-builder-shell`), Developer Agent tooling un-gated to all App Builder-adjacent projects, runtime API access for AI (`list_console_apis`/`add_console_apis` + persisted `additionalConsoleApis`), AI guidance. Steps 1–3 + guidance shipped 2026-07-09; live Firefly walkthrough pending.
 
 Five sequenced slices; **slice 1 gates the rest**:
 
