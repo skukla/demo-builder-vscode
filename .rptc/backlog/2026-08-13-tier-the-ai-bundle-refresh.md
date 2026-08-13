@@ -1,15 +1,53 @@
-# Tier the AI-bundle refresh instead of prompting for everything
+# Watch both staleness axes, then refresh proportionately
+
+*(Filed as "tier the AI-bundle refresh". Renamed after research widened it — see
+"The check is also under-firing".)*
 
 ## Provenance
 
 Asked 2026-08-13, while fixing the global MCP entry that pins the extension version:
-"If they need to be regenerated, why wouldn't we do that as part of an update?"
+"If they need to be regenerated, why wouldn't we do that as part of an update?" Then, on
+being asked whether any of it connects to the per-project upgrade flow, researched — and
+the answer reversed half the item.
 
 The prompt has a cost history: `.127` and `.128` each bumped `AI_CONTEXT_VERSION`, each
 re-prompted every existing project, and each generated support questions. Both times the
 change was small.
 
-## The finding that makes this worth doing
+## The check is also UNDER-firing, which is the more serious half
+
+The first framing was "it prompts too much." Half right. It also stays silent when it
+should speak, because it watches the wrong thing.
+
+**Which packages and skills a project needs is a function of its COMPONENTS.**
+`projectNeedsAppBuilderTooling` returns true when the project has an EDS storefront, a mesh,
+or any App Builder component.
+
+**The freshness check never looks at components.** `aiContextFreshnessCheck` compares the
+project's `aiContextVersion` stamp against `AI_CONTEXT_VERSION` and nothing else. One axis
+where there are two:
+
+| Axis | Question | Watched? |
+|---|---|---|
+| Bundle version | did WE change what we ship? | yes |
+| Project composition | did YOU change what you have? | **no** |
+
+**So a project that gains a qualifying component silently goes under-equipped.**
+`addAppBuilderComponent` calls `componentManager.installComponent` and never reaches
+`installAiDefaultsMcpTools` or `generateAIContextFiles`. The project now qualifies for
+`@adobe-commerce/commerce-extensibility-tools` and the seven `appbuilder-*` skills and
+receives neither. Nothing prompts, because the version did not move. Storefront setup has
+the same shape — no `generateAIContextFiles` anywhere under `src/features/eds/`.
+
+`ai-context-authoring` already states the rule — "anything creation writes, Regenerate must
+reproduce for a project that gains the qualifying component LATER (dashboard add)."
+Regenerate *would* fix it. Nothing tells anyone to run it.
+
+**The upgrade flow itself is mostly innocent.** Six update kinds exist; only
+`performAdobeMcpUpdates` regenerates, and the others do not change component membership so
+they do not need to. The gap is in ADD, not UPDATE.
+
+## The finding that makes the other half worth doing
 
 **The extension already regenerates silently — on a different path.**
 `updateExecutor.ts` (the Adobe MCP package update) runs `npm update`, then calls
@@ -43,15 +81,23 @@ objection to doing it silently.
 
 ## Goal
 
-Make the refresh proportionate. Repair what we own without asking; ask only before spending
-someone's time or network.
+**Watch both axes, then act proportionately to what is actually stale.** Repair what we own
+without asking; ask only before spending someone's time or network; and stop being silent
+when a project has genuinely outgrown its bundle.
 
-- Config paths → silent, on activation. (The `global-mcp-version-pin` plan is the first
-  instance of exactly this, for `~/.claude.json`.)
-- Skills / AGENTS.md → silent, or a passive notice. See the risk below.
-- Package installs → prompt, as today.
+| What is stale | Response |
+|---|---|
+| Config paths point at a dead build | silent repair on activation |
+| Skills / AGENTS.md text changed | silent, or a passive notice — see the risk below |
+| A package must be downloaded | prompt, as today |
+| **The project gained a component** | **prompt** — it needs a package it does not have |
 
-Most releases would then prompt nobody.
+That last row is the case that currently produces nothing at all, and it is the one most
+worth a prompt: a real download, caused by something the user just did, at a moment when
+they are already thinking about that component.
+
+Most releases would then prompt nobody, while the people who need a prompt would start
+getting one.
 
 ## The risk to settle first
 
@@ -71,17 +117,27 @@ Do not go silent by simply not noticing.
 
 ## Execution plan
 
-1. **Make the freshness check say WHAT is stale, not just THAT something is.** Either compare
+0. **Reproduce the under-firing case first**, because it is the half nobody has seen fail:
+   take a project with no App Builder component, add one from the dashboard, and confirm that
+   `.demo-builder-mcp/` gains no package, `.claude/skills/` gains no `appbuilder-*` directory,
+   and nothing prompts. That is the bug; everything else is proportionality.
+
+1. **Give the freshness check its second axis.** It needs to answer "does this project's
+   bundle match its CURRENT composition?" — i.e. evaluate `aiDefaultsEntryApplies` against
+   the project now and compare with what is installed. Cheap and offline: the entries are in
+   `ai-defaults.json` and the evidence is a directory listing of `.demo-builder-mcp/`.
+
+2. **Make the check say WHAT is stale, not just THAT something is.** Either compare
    per-artifact, or have `AI_CONTEXT_VERSION` carry which tiers each bump touched. The
    constant's comment already records what each version added by convention — formalise it.
-2. **Split `generateAIContextFiles` by tier** so callers can request one without the others.
+3. **Split `generateAIContextFiles` by tier** so callers can request one without the others.
    The three writers already exist as separate services; the orchestrator is what fuses them.
-3. **Repair tier 1 on activation**, silently, for every known project. Offline and
+4. **Repair tier 1 on activation**, silently, for every known project. Offline and
    deterministic, so it cannot hang a window.
-4. **Decide the tier-2 policy** using the risk section above, and implement whichever wins.
-5. **Leave tier 3 behind a prompt**, and make that prompt say what it will download — the
+5. **Decide the tier-2 policy** using the risk section above, and implement whichever wins.
+6. **Leave tier 3 behind a prompt**, and make that prompt say what it will download — the
    current wording covers all three jobs and so explains none of them.
-6. **Reconcile the two paths.** Whatever policy lands, `updateExecutor`'s silent regeneration
+7. **Reconcile the two paths.** Whatever policy lands, `updateExecutor`'s silent regeneration
    and the freshness check must follow the same one.
 
 ## Constraints
@@ -99,8 +155,9 @@ Do not go silent by simply not noticing.
 
 ## Kickoff prompt
 
-> Read `.rptc/backlog/2026-08-13-tier-the-ai-bundle-refresh.md`. Start by confirming the
-> inconsistency: `updateExecutor.ts` regenerates the AI bundle silently after an Adobe MCP
-> package update, while `aiContextFreshnessCheck` prompts for the same operation. Then decide
-> the tier-2 policy — whether a user's edits to a generated file should survive a refresh —
-> because everything else follows from that answer.
+> Read `.rptc/backlog/2026-08-13-tier-the-ai-bundle-refresh.md`. Start with step 0 —
+> reproduce the under-firing case, where adding an App Builder component to a live project
+> leaves it without the packages and skills it now qualifies for and prompts nobody. That is
+> the actual bug; the prompting-too-much half is proportionality on top of it. Then decide
+> whether a user's edits to a generated file should survive a refresh, because the rest
+> follows from that answer.

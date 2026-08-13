@@ -188,21 +188,25 @@ because a flake "fixed" by one green run is a flake you stopped looking at.
 
 ### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
 
-#### Tier the AI-bundle refresh instead of prompting for everything ([`2026-08-13-tier-the-ai-bundle-refresh.md`](2026-08-13-tier-the-ai-bundle-refresh.md))
+#### Watch both AI-bundle staleness axes, then refresh proportionately ([`2026-08-13-tier-the-ai-bundle-refresh.md`](2026-08-13-tier-the-ai-bundle-refresh.md))
 
-Filed 2026-08-13 out of the `global-mcp-version-pin` work. "Regenerate AI files" is three
-jobs behind one button — rewrite config paths (instant, offline), rewrite skills + AGENTS.md
-(fast, offline), install MCP tool packages (slow, networked, can fail) — and the prompt asks
-permission for the third every time, even when only the first changed. `AI_CONTEXT_VERSION`
-is one integer, so the freshness check cannot tell which happened. `.127` and `.128` each
-re-prompted every project and each generated support questions. **The load-bearing finding:
-the extension already regenerates silently on a different path** — `updateExecutor.ts` runs
-`npm update`, then `generateAIContextFiles`, then persists the stamp, with no prompt — so
-"regeneration needs consent" is already false here; the two routes just disagree. Also
-verified: regeneration is not destructive (`skillsWriter` only writes files it owns, so a
-user-authored skill survives). **One thing to settle first:** the prompt is currently the
-only thing protecting a hand-edited `AGENTS.md` from being overwritten, so going silent needs
-a hash-and-skip or a deliberate decision — not silence by not noticing. **Not blocked.**
+Filed 2026-08-13 out of the `global-mcp-version-pin` work, then **widened by research that
+reversed half of it**. The first framing was "the prompt fires too often": "Regenerate AI
+files" is three jobs behind one button — rewrite config paths (instant, offline), rewrite
+skills + AGENTS.md (fast, offline), install MCP tool packages (slow, networked, can fail) —
+and it asks permission for the third every time, because `AI_CONTEXT_VERSION` is one integer
+and the check cannot tell which changed. `.127` and `.128` each re-prompted every project for
+a small change. **But it also UNDER-fires, which is worse.** Which packages a project needs
+is a function of its COMPONENTS (`projectNeedsAppBuilderTooling`), and the freshness check
+never looks at them — so `addAppBuilderComponent` on a live project leaves it qualifying for
+`@adobe-commerce/commerce-extensibility-tools` and the seven `appbuilder-*` skills while
+receiving neither, silently. Storefront setup has the same shape. The upgrade flow is mostly
+innocent: of six update kinds only `performAdobeMcpUpdates` regenerates, and the others do
+not change component membership — **the gap is in ADD, not UPDATE.** Supporting finding: the
+extension already regenerates silently on that update path, so "regeneration needs consent"
+is already false here; two routes just disagree. **Settle first:** the prompt is currently
+the only thing protecting a hand-edited `AGENTS.md`. **Step 0 is reproducing the silent
+case.** Not blocked.
 
 #### AI surface coverage — tools and skills vs features ([`ai-surface-coverage/`](ai-surface-coverage/))
 
