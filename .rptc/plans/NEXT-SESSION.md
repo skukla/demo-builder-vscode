@@ -1,15 +1,23 @@
 # Next session — start here
 
-Rewritten 2026-08-12, refreshed twice on 2026-08-13. **Everything is committed AND PUSHED**;
-`develop` was at `684c42c3` when this line was written. `v1.0.0-beta.128` is released.
+Rewritten 2026-08-12, refreshed three times on 2026-08-13. **Everything is committed AND
+PUSHED**; `develop` was at `8c619a57` when this line was written. `v1.0.0-beta.128` is released.
 
-Gate at handoff: **996 suites / 12,764 tests** (at `--maxWorkers=25%`; see the flake item — a default-workers green is one sample of a noisy process), `tsc --noEmit` clean, whole-repo eslint
-0 errors 0 warnings.
+Gate at handoff: **997 suites / 12,777 tests** at the DEFAULT `maxWorkers: '75%'`,
+`tsc --noEmit` clean, whole-repo eslint 0 errors 0 warnings, `validate:jest-config` passing.
+
+**The old caveat on that number is retired and replaced by a sharper one.** This line used to
+read "at `--maxWorkers=25%` … a default-workers green is one sample of a noisy process." The
+worker count was never the problem — see the jest section below. What IS still true: a
+full-suite result is worth exactly what the `ps` sampling beside it is worth, because
+contention comes from OTHER runs, not from this one's settings.
 
 > A second session works `feature/data-installer` in a sibling worktree. It ceded control of
 > `develop` and pushes only its own branch; if something of theirs needs landing they will
 > name the branch and range. Its Stage 1 (14 commits) and two doc corrections are already on
-> `develop`.
+> `develop`; `08d38c88` (detached-watch fix) and `1f01fb53` (a repo-wide guard test requiring
+> every `core/ui/Modal` consumer to be hosted by a `DialogContainer`/`DialogTrigger`) are on
+> their branch and will bind you once merged.
 
 ---
 
@@ -38,7 +46,61 @@ Two probe habits from the same episode:
 
 ---
 
-## What shipped this session
+## What shipped this session (2026-08-13, jest/gate)
+
+| Commit | What |
+|---|---|
+| `528c1b5d` | The full-suite flake: cause, concurrency guard, assertion + config repair |
+| `83cbcc8e` | Per-run MCP socket tree |
+| `8c619a57` | Repointed the references the item's move left dangling |
+
+### The gate was lying, and not for the reason it was filed under
+
+A full run failed ~3 random suites on timeouts. The backlog item blamed `maxWorkers: '75%'`
+and `workerIdleMemoryLimit` and planned a worker-count bisect. Both are innocent:
+
+| Condition | Runs | Runs with failures |
+|---|---|---|
+| One suite at a time | 10 | **0** |
+| Two suites concurrently | 6 | **6** (4–6 suites each) |
+
+The cause is a second jest run sharing the machine — two sessions work this repo and the
+sibling worktree symlinks `node_modules` back here, so overlapping runs were routine and
+nothing announced them. The planned bisect would have "fixed" it by making runs slower and
+the collision window narrower, leaving the cause untouched. **Read the diagnosis in a backlog
+item as a hypothesis, not a finding** — this one had been read as settled for a day.
+
+Shipped with it: `15-jest-concurrent.rule` blocks a second run; four machine-speed assertions
+removed from `processCleanup.timeout` (each already proven with fake timers elsewhere);
+`spawnedPids` there was declared and **never pushed to**, so its `afterEach` safety net
+iterated an empty array and every failed test leaked a 60s node process; `cacheDirectory`
+moved into `projects` where jest actually reads it (`.jest-cache/` had been gitignored since
+the day it was configured and had never existed); `validate:jest-config` was failing on
+`develop`, wired into no CI, pinning a tuning knob.
+
+**Timings in the docs were wrong by an order of magnitude.** Full suite is **~20 seconds**,
+not the "3–5 minutes" that was in `.rptc/CLAUDE.md`, the testing SOP and the cheatsheet.
+`test:unit` ~12s, `test:ui` ~5s. If you budget minutes for a gate you will walk away from a
+run that finished.
+
+### Three limits on all of that, stated because they are easy to miss
+
+- **The guard is a PreToolUse hook, so it only sees Claude's tool calls.** Terminal-launched
+  runs, script-launched runs (including the measurement harness used here) and sessions whose
+  checkout predates the rule all still contend. It narrows the window; it does not close it.
+  Demonstrated during its own verification: the first final-gate run came back with the exact
+  contention set, and the next one — sampled to confirm it was alone — was clean.
+- **`ps` sampling is the check, and the naive version is broken.** A peer sampled with
+  `ps … | grep -cE 'jest…'` and counted its own grep, because the pattern is in its own argv.
+  Anchor on something that cannot appear in the sampler's argv (`node_modules/.bin/jest`
+  works) or filter its pid, and confirm some samples read 0 — a self-matching sampler never can.
+- **The socket-tree fix is verified by construction, not by a failure going away.** It does
+  NOT reduce contention failures (measured before/after: same counts), and the `ENOTEMPTY`
+  that motivated it was never reproduced locally — 0 across 20 runs.
+
+---
+
+## What shipped the session before (2026-08-12/13, AI surface + build stamp)
 
 | Commit | What |
 |---|---|
@@ -101,6 +163,22 @@ in `backlog/` or `complete/`.
 **A caveat this file cannot fix by itself:** the hook watches the index, not this handoff. This
 header went five commits stale within an hour of being written. Check `git log` against it.
 
+**A blind spot found 2026-08-13, worth knowing before you trust a clean scan.** §4 matches
+`file:line` citations. References written as a **bare path with no line number** are invisible
+to it, and so is any reference living outside the scanned directories. Moving the flake item
+to `complete/` left three such references behind — two of them inside
+`15-jest-concurrent.rule`, including the **user-facing block message**, which for a while told
+whoever it stopped to go read a file that no longer existed. The scan reported §1 and §2 clean
+and correct throughout; a `grep` for the old path found all three in one command.
+
+So after moving anything under `.rptc/`, run the scan AND grep the repo for the old path. The
+scan checks that the index points at real files; it does not check that the rest of the repo
+stopped pointing at the old one.
+
+Related, from the same pass: when you kill a dead citation, remove the `file:line` form rather
+than annotating it in place. Leaving the literal path keeps §4 reporting a hit forever, and a
+scan with a permanent known-false entry is one people stop reading.
+
 ## Open bug: GitHub blocked a storefront write — CLOSED BY ATTRITION, not solved
 
 Reported 2026-08-11 by a colleague (`jogosset`): Storefront Setup died on the `fstab.yaml`
@@ -156,8 +234,21 @@ not think of**, and its sibling: **recording an error instead of fixing it.**
 | "two watchers are fighting" | inferred from a timestamp; one existed, and it was mine | `lsof` on the pid |
 | "the modal shows no change" | `dist/` was 10 hours old and from another checkout | comparing mtimes |
 | **"dashboard exposes 9 handlers"** | a 400-char regex window silently dropped a row | diffing against all `tool:` literals |
+| "the per-TMPDIR trial isolates socket collision" | it moved paths for suites reading `os.tmpdir()` directly, so it changed several variables | reading the actual error text, not the counts |
+| "the concurrency guard is safe to ship" | it made `router.test.ts` itself contention-sensitive — 6/6 failures | running the contention harness against it |
+| "the shared socket root is the leading explanation" | a mechanism plus a timestamp correlation, never reproduced | asking what would falsify it |
+| "the record is cleaned up" | the hygiene scan cannot see bare-path references | the user asking, then one `grep` |
 
-That last one has a second lesson. The first response was to patch the count by hand and
+Four of those five are from 2026-08-13 and three were caught by somebody else asking a plain
+question. The instrument you build to check your work is part of what needs checking: the
+sampler that counted itself, the guard that broke the suite guarding it, and the scan that
+could not see the rot are all the same mistake.
+
+The `router.test.ts` one generalises: **a test that asserts on ambient machine state will
+pass alone and fail exactly when the condition it guards against occurs.** It now runs against
+a synthetic `ps` snapshot for that reason.
+
+That "dashboard exposes 9 handlers" one has a second lesson. The first response was to patch the count by hand and
 write a note — but every LIST behind the number still came from the broken parse. **A derived
 number corrected without regenerating its data is a coincidence you have not checked.** The
 re-run happened to agree; that could not have been known in advance.
@@ -171,6 +262,9 @@ negative one. And pair every "nothing found" with a positive control at the same
 
 **Shipped since this file was written:**
 
+- **The full-suite flake** — done, `528c1b5d` + `83cbcc8e`, archived to
+  `.rptc/complete/2026-08-13-jest-full-suite-timeout-flake.md`. Cause was concurrent runs,
+  not config. Read the "Three limits" note above before quoting any gate number.
 - **`global-mcp-version-pin`** — done, `d90b4f3f`, archived to
   `.rptc/complete/global-mcp-version-pin/` with its outcome and the three review
   findings. One thing NOT verified: that Claude Code stops reporting conflicting scopes
@@ -213,23 +307,21 @@ being worked; five shipped plans were sitting there too, one of which said so in
   handlers it reuses (19 references), so the contract drifts whenever the flow grows and the
   guard tests only catch it after someone writes failing code. Verified still true 2026-08-13.
 
-**Unresolved, NOW REPRODUCING — backlogged 2026-08-13:**
+**Latent, measured but not fixed:**
 
-- ~~**~3 suites flake per full run, a different set each time.**~~ **RESOLVED 2026-08-13**
-  (`528c1b5d`, `83cbcc8e`). The cause was **a second concurrent jest run**, not the config:
-  one suite at a time failed 0 of 10 runs, two concurrently failed all 6. `maxWorkers: '75%'`
-  and `workerIdleMemoryLimit` — the two suspects this was filed against — are both innocent,
-  and the planned worker-count bisect would have "fixed" it by narrowing the collision window.
-  A PreToolUse rule now blocks the second run; the wall-clock assertions that made it loudest
-  are gone; each run gets its own MCP socket tree. Outcome, including what is still open:
-  `.rptc/complete/2026-08-13-jest-full-suite-timeout-flake.md`.
-
-  **The "one sample of a noisy process" warning still stands, for a narrower reason.** The
-  guard is a PreToolUse hook, so it only sees Claude's own tool calls — runs started from a
-  terminal, from a script, or by a checkout without the rule still contend. Failures clustered
-  in `inExtensionMcpServer` / `mcpConfigWriter` / `extension-context` /
-  `executor-*ComponentLoading` mean *suspect contention before suspecting your change*, and a
-  full-suite result is worth what the `ps` sampling beside it is worth.
+- **Ten wall-clock upper-bound assertions remain** across `cacheManager-operations`
+  (`duration < 10` — the most fragile in the repo), `retryStrategyManager`,
+  `csp-nonce-security`, `commandSequencer`, `adobeEntityService-organizations-edgeCases` and
+  `processCleanup.test.ts`. None failed solo; `processCleanup.test.ts` failed once under a
+  concurrency trial. Same starvation story as the four already removed. The inventory is in
+  the completed flake record so nobody re-derives it.
+- **Force-exit warnings appear in ~44% of full runs** (7 of 16 measured), not the "3/3 at 75%,
+  reproducible on demand" its backlog entry claimed — corrected there 2026-08-13. It never
+  co-occurred with the peer's `ENOTEMPTY` (0/16). If you plan an experiment around that item,
+  design it for 44%.
+- **Five `file:line` citations in other people's backlog items do not resolve** (§4 of the
+  hygiene scan). Pre-existing, left for their owners: `appbuilder-deployable-model` d3 steps,
+  `legacy-soft-deprecation`, and one curated research doc.
 
 **Known gap, no gate:**
 
