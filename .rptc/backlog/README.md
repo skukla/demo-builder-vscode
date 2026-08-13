@@ -57,6 +57,21 @@ draft  →  ready  →  active  →  shipped/dropped
 > the trap in the entry that read "verified 2026-08-13" — that was a re-assertion of the
 > item's own text, not a re-measurement.
 >
+> **That rule has a known blind spot, stated here so it is not read as a clearance.** It is
+> cheap only when you already know which command falsifies the claim. An item naming a SYMBOL
+> (`stripSecretValues`, `legacyLookupKey`) or asserting a COUNT is one grep away. An item
+> asserting a SHAPE — "X and Y are two implementations of the same thing", "nothing links A to
+> B" — has no such command, and a stale one would survive this rule untouched. Every item
+> caught so far has been a symbol or a count, which may say more about the detector than about
+> the backlog.
+>
+> **And being well-written is not evidence of being current.** The most credible-looking of
+> the five — precise `file:line` table, traced chain, quoted MCP description — is the one that
+> later fooled a second session into building on it. Those signals record how carefully
+> somebody checked *on the day they wrote it*. The `file:line` table is actively the worst of
+> them: line numbers here have a half-life of about a day, so a precise citation reads as more
+> reliable and is less.
+>
 > The first pass checked only that links resolve. That is half a reconcile, and it hid four
 > things: three plan directories moved in from `plans/` with **no index entry at all**
 > (`appbuilder-deployable-model`, `integrations-host-contract`,

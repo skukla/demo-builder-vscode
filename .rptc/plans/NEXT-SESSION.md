@@ -296,6 +296,27 @@ Two traps worth carrying forward:
 So: **before picking any item up, run one command against `src/` that would falsify its central
 claim.** Do that before reading the execution plan, not after.
 
+**But know what that rule does not cover.** It is cheap only when you already know which
+command falsifies the claim, and that depends on what KIND of claim it is:
+
+| The item's central claim | Falsifiable in one command? |
+|---|---|
+| Names a **symbol** (`stripSecretValues`, `legacyLookupKey`, `componentApiPicks`) | **Yes.** grep for it, or for its callers. |
+| States a **count** ("19 references", "zero of 13 skills", "17 of 25 keys") | **Yes**, and these are the ones that fall fastest. |
+| Asserts a **shape** ("X and Y are two implementations of one thing", "nothing links A to B") | **No.** There is no grep for "these should be one thing". |
+
+Every stale item caught so far was a symbol or a count. A shape claim going stale would
+survive this rule completely — a peer session raised that, correctly, after being fooled by an
+item and then catching it only because it happened to name a symbol. So treat the rule as a
+detector with known blind spots, not as a clearance.
+
+And **being well-written is not evidence of being current.** The most credible-looking of the
+five — precise `file:line` table, traced chain, quoted MCP description — was the one that
+fooled a second session. Every one of those signals records how carefully somebody checked *on
+the day they wrote it*. The `file:line` table is the worst of them: line numbers here have a
+half-life of about a day, so a precise citation is MORE convincing and LESS reliable than a
+vague one. Quality of writing measures the past; only running something measures the present.
+
 The unquoted-glob trap bit again during this pass (`pdp404*.test.ts` → "no matches found"), and
 was caught only because a fallback printed nothing where it should have printed something.
 
