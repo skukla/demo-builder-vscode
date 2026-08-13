@@ -257,6 +257,24 @@ because a flake "fixed" by one green run is a flake you stopped looking at.
 
 ### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
 
+#### Block authoring has no oracle — the type scale exists and nothing points at it ([`2026-08-13-block-authoring-has-no-type-scale-oracle.md`](2026-08-13-block-authoring-has-no-type-scale-oracle.md))
+
+Filed 2026-08-13 from "fonts are too small and Claude spins a lot authoring blocks — would
+Playwright help, or SLICC?" **Neither: the tool is not the problem.** Measured — every
+generated storefront ships **36 `--type-*` custom properties** (a full scale, size and
+line-height per role) in `aem-boilerplate-commerce`'s `styles.css`, and **no generated skill
+mentions them** (zero hits; control confirms the files are read). So an authoring agent picks
+sizes by eye, and `refine-visual-match` cannot correct it because that skill requires
+`.scraped/<domain>/` references — outside the scrape flow there is no oracle, so iteration runs
+against taste, unbounded. Playwright already screenshots at 1440/375 and caps at 3 rounds; the
+missing piece is a standard, not an instrument. SLICC was ruled out 2026-05-28 (BYOT-key
+friction vs auto-install), **though that assessment was scoped to scraping** and is not
+automatically closed for verification. Cheapest fix first: tell the skills the scale exists,
+measure, and only then consider a computed-style checker. **Two honest gaps:** no
+Claude-authored block was available to observe, so the failure is inferred — step 1 is
+reproducing it; and the boilerplate is itself inconsistent (13 of 83 block stylesheets use the
+tokens, 6 hardcode), so an agent reading neighbours finds both conventions. Not blocked.
+
 #### Make third-party AI tooling visible, optional, and coherently gated ([`2026-08-13-third-party-tooling-visible-and-optional.md`](2026-08-13-third-party-tooling-visible-and-optional.md))
 
 Filed 2026-08-13. Most of this already works — packages install automatically into the
