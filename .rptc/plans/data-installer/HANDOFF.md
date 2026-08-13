@@ -85,7 +85,19 @@ S2S pair with `commerce.accs` scope to the instance) and proved the derived tena
 accepted as `commerce_instance`. The entitlement recipe — create the S2S credential,
 subscribe `ACCS-REST-API` to it — is in `docs/systems/data-installer.md` §pre-flight.
 
-### 2. Then one real import, on a target you own
+### 2. DONE at the service level (2026-08-13) — the modal pass remains
+
+Import → reset → re-verify ran live by direct service calls against a populated
+instance: categories import landed 12 nodes (11 + the pack's own root), reset
+removed exactly those 12, zero collateral, products untouched. Scoped-delete
+semantics proven; see `docs/systems/data-installer.md` § "Reset semantics".
+
+**What has NOT run: the extension's own write path** — modal → handler → runner →
+TransientStateManager record. That is now risk-free to exercise: press Import
+(categories only) in the modal, watch the per-type rows, then Reset. The runner
+watching a delete unchanged is the seam's own test.
+
+### 2b. The original step, kept for its cautions: one real import, on a target you own
 
 Needs a project open (the handler requires one), its credentials resolvable, and an instance
 id you have checked. There is **no cancel endpoint**: once started it runs to completion

@@ -306,6 +306,36 @@ Four facts, each measured:
   codes plus `ACCS-REST-API` — which is what the auto-provisioning enhancement
   must use, or the filter must learn the flag.
 
+### Reset semantics — PROVEN scoped, by controlled experiment (2026-08-13)
+
+Run live against a populated instance (14 pre-existing categories in a CitiSignal
+tree, 130 products), with before/after snapshots via the instance's own REST API:
+
+- import `bodea` `categories` → 202, per-type `success` in ~11s → **+12 nodes**:
+  the 11 pack categories **plus a `Bodea` root category the import created**.
+  Packs bring their own root; they do not merge into an existing tree.
+- delete (same body, `operation_mode: 'delete'`) → 202, `success` → **exactly
+  those 12 nodes removed**. Pre-existing categories, the CitiSignal tree and all
+  130 products untouched. Category count byte-identical to the pre-import state.
+
+Corroborated by the service's own records: all 434 historical delete runs carry a
+`scenario` of `DATAPACK_ALL_ITEMS` (381), `DATAPACK_SPECIFIC_ITEMS` (8) or
+`SINGLE_DIRECT` (31) — every scenario is expressed in terms of the PACK's items;
+no type-wide wipe scenario exists.
+
+Two operational facts learned the hard way:
+
+- **`GET /V1/categories` shows only the default store group's subtree.** A
+  multi-root instance (Default + CitiSignal + a pack's root) makes an import look
+  like a no-op through that endpoint while `per-type: success` is telling the
+  truth. Use `GET /V1/categories/list` (flat search) to see reality.
+- **Bodea's `products` hard-code `website_ids: [3]`** (numeric ids, 116
+  references). `websites` is not an importable type, so a full Bodea install
+  requires a third website to already exist WITH THAT ID. Validate will not catch
+  its absence — it checks request shape, not referential integrity — so this
+  surfaces as `partial`/errors at import time. A pack-authoring portability
+  issue, not an installer defect.
+
 ### Reset — how a project gets reused
 
 The service takes `operation_mode: 'delete'` on the same `process-datapack-async`
