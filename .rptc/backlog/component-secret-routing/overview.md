@@ -196,13 +196,26 @@ being held hostage to it.
 
 ### Later, not now
 
-Console-free provisioning — `ensureOAuthCredentialId` already creates an OAuth S2S
-credential and `runtimeCredentials.ts` already downloads a workspace config to a
-0700 temp dir — becomes an enhancement that FILLS these fields rather than a
-parallel mechanism. It is gated on one unverified fact: whether
-`aio console workspace download` includes the client **secret** or only the
-client id. One command settles it against a live workspace; the selected one
-currently 404s.
+Console-free provisioning becomes an enhancement that FILLS these fields rather
+than a parallel mechanism — and its gate is now OPEN. Verified live 2026-08-13,
+with user approval, against the real workspace a project is bound to:
+
+1. Read the project's Console binding (org/project/workspace) from the
+   extension's own state — demonstrated over the extension MCP socket.
+2. Create the OAuth S2S credential with the extension's exact SDK call
+   (`createOAuthServerToServerCredential`, name `demo-builder-s2s`) — succeeded.
+3. `aio console workspace download --orgId --projectId --workspaceId` (explicit
+   ids, no selected-context dependence) — the downloaded JSON's
+   `oauth_server_to_server` block carries `client_id` AND `client_secrets`
+   (non-empty). Presence verified by key inspection; the value was never printed.
+
+So the full loop needs nothing the extension does not already ship:
+`ensureOAuthCredentialId` + the workspace-download path `runtimeCredentials.ts`
+already uses (0700 temp dir, deleted in `finally`) + a write into the two declared
+fields. The remaining work is wiring, not discovery. One caution for the
+implementer: the secret must flow download → SecretStorage/config WITHOUT passing
+through logs or UI, and the temp-file hygiene in `runtimeCredentials.ts` is the
+pattern to copy.
 
 ## What this does not fix
 
