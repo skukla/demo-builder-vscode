@@ -17,10 +17,20 @@ Four sections, each ending in a CONTROL line. Read the control first: a `(none)`
 check that never executed reads exactly like a clean result — the `|| echo "none"` failure
 this repo's CLAUDE.md names.
 
-## When to use
-- **At a release cut**, alongside `codebase-sweep` and `dream`. Advisory, never blocking.
-- **Right after moving or archiving a plan** — that is when the two directions diverge.
-- When the backlog no longer feels trustworthy enough to pick from.
+## When it runs
+
+Three layers, because an instruction to "remember to run this" is the failure it exists to
+catch:
+
+| Trigger | Covers |
+|---|---|
+| **Stop hook** `rptc-record-drift.sh` | Automatic, the moment damage is done. Fires only when a turn ADDED, DELETED, MOVED something under `.rptc/{plans,backlog,complete}/` or edited the index — never on an item body edit. Reports §1–2 only, silent when clean. |
+| **`cut-release`** advisory block | Periodic. Runs all four sections, including the slow-drifting §3 and §4 the hook deliberately skips. |
+| **This skill, on demand** | When the backlog stops feeling trustworthy, or after a bulk edit the hook's scoping would miss. |
+
+The hook is scoped narrowly on purpose. Attaching the same pre-existing §3/§4 list to every
+plan move is how a hook stops being read — the trade named in `rules/20-data-installer-probe`:
+partial coverage that stays trusted beats total coverage that gets switched off.
 
 ## When NOT to use
 - To find dead CODE — that is `dead-code-scan`.
