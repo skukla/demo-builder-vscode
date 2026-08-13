@@ -32,6 +32,15 @@ case "$payload" in
     # two-word literal rather than a bare *test* — that would drag in every path
     # with "test" in it, which is most of this repo.
     *"npm test"*|*"npm run test"*) ;;
+    # 12-unquoted-glob. Each of these is a NECESSARY condition for that rule to
+    # fire, so the gate cannot hide a real hit. Kept as the specific flag spellings
+    # rather than a bare `*"*"*` (an asterisk appears in most payloads) — this stays
+    # cheap while still admitting everything the rule can match.
+    # `--exclude` without the `=` on purpose: `--exclude-dir=` does NOT contain
+    # `--exclude=`, so gating on the latter silently dropped every exclude-dir
+    # call. Caught by a test; it looked exactly like a rule that simply never
+    # matched.
+    *"--include="*|*"--exclude"*|*"-name "*|*"-iname "*|*"-path "*|*"-ipath "*) ;;
     *) exit 0 ;;
 esac
 

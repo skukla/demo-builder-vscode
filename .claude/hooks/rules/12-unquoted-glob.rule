@@ -1,0 +1,72 @@
+# Blocks an unquoted glob in a --include=/--exclude=/-name/-path argument.
+#
+# NOT once-per-session, like 10-jest-pipe and unlike the skill nudges: this is a
+# mechanical mistake with a silent failure mode, not a pointer to a document.
+# Making it spendable by doing it twice would defeat it.
+#
+# Why it matters more than ordinary quoting sloppiness. zsh expands globs BEFORE
+# the command runs. When nothing in the CWD matches, zsh aborts the command with
+# `no matches found` and the tool never executes — so a search that was never
+# performed returns nothing, which is indistinguishable from a search that found
+# nothing. It is the `|| echo "none"` ambiguity wearing different clothes.
+#
+# Three incidents on 2026-08-13 alone, across two sessions, and the two signatures
+# differ in exactly the way that matters:
+#   - one printed `no matches found` and was noticed
+#   - one printed FIVE CLEAN ZEROS and was caught only by a positive control
+# The second is the dangerous mode: the glob does not just fail, it fails quietly
+# enough to read as a result. CLAUDE.md already names quoting; naming it was not
+# enough under load, which is why this is mechanical now.
+#
+# Scope is deliberately narrow — only flags where the pattern is meant for the
+# TOOL rather than the shell, so shell expansion is unambiguously a bug. A bare
+# `ls *.ts` is NOT flagged: there the expansion is the point.
+#
+# KNOWN FALSE POSITIVE, accepted: the rule reads the whole command string and
+# cannot tell an argument from prose, so a heredoc that WRITES ABOUT the pattern
+# trips it — this rule's own commit message did, twice. The workaround is to put
+# the text in a file and pass the file, which is better practice regardless. Not
+# worth softening: every way of excluding heredocs also opens a hole a real
+# unquoted glob can sit in, and the failure this guards is silent while this
+# false positive is loud and instantly obvious.
+rule_id=unquoted-glob
+rule_once=0
+
+rule_match() {
+    [ "$1" = "Bash" ] || return 1
+    # A single quote inside a single-quoted pattern is unwriteable, so build the
+    # character class from a variable.
+    local q="'"
+    # Two shapes, both "glob intended for the tool, left unquoted":
+    #   --include=*.ts / --exclude=*.md / --exclude-dir=*foo
+    #   -name *.ts / -iname *.MD / -path */dist/* / -ipath ...
+    # The negated class stops at a quote, so a correctly quoted value never
+    # reaches the \* and never matches.
+    # `exclude-dir` MUST precede `exclude` in the alternation: ERE alternation is
+    # leftmost-first here, so `exclude` matches, the `=` check fails against the
+    # `-`, and the longer branch is never tried. That produced a silent pass.
+    printf '%s' "$2" | grep -qE -- \
+        "--(include|exclude-dir|exclude)=[^${q}\"[:space:]]*\*|[[:space:]]-i?(name|path)[[:space:]]+[^${q}\"[:space:]]*\*"
+}
+
+rule_message() {
+    cat <<'MSG'
+Blocked: quote that glob — zsh expands it before the command runs.
+
+  --include=*.ts     ->  --include='*.ts'
+  -name *.test.ts    ->  -name '*.test.ts'
+
+With no match in the CWD, zsh aborts with `no matches found` and the command
+NEVER RUNS. The zero you get back is "never searched", not "found nothing", and
+the two are indistinguishable in the output. On 2026-08-13 one such glob printed
+five clean zeros across two sessions; only a positive control caught it.
+
+If you meant the shell to expand it (e.g. `ls *.ts`), this rule does not fire —
+it only flags patterns being passed to grep/find, where expansion is always a bug.
+
+Writing ABOUT the pattern rather than running it — a commit message, a heredoc,
+documentation? This rule reads the whole command and cannot tell prose from an
+argument. Put the text in a file with Write and pass the file (`git commit -F`),
+which is the better habit anyway.
+MSG
+}

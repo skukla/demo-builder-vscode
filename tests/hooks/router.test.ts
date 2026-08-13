@@ -283,6 +283,65 @@ describe('adobe-docs rule — matches on TOOL NAME, not on any payload field', (
     });
 });
 
+describe('unquoted-glob rule', () => {
+    /**
+     * zsh expands a glob BEFORE the command runs. With no match in the CWD it
+     * aborts with `no matches found` and the tool never executes — so the result
+     * is "never searched", which reads identically to "found nothing". Three
+     * incidents on 2026-08-13; one printed five clean zeros and was caught only
+     * by a positive control.
+     *
+     * These tests live here rather than in a shell script for a reason worth
+     * keeping: a shell harness that feeds `--include=*.ts` to the router trips
+     * this very rule on its own command line. The guard cannot tell a fixture
+     * from real usage, so the fixture has to reach it through a child process.
+     */
+    const GLOB = /quote that glob/;
+
+    it.each([
+        ['grep --include', 'grep -rn foo src/ --include=*.ts'],
+        ['grep --exclude', 'grep -rn foo . --exclude=*.min.js'],
+        ['grep --exclude-dir with a star', 'grep -rl x . --exclude-dir=*modules'],
+        ['find -name', 'find tests -name *.test.ts'],
+        ['find -iname', 'find . -iname *.MD'],
+        ['find -path', 'find . -path */dist/*'],
+    ])('blocks %s', (_label, command) => {
+        expect(run(bash(command), fresh()).stderr).toMatch(GLOB);
+    });
+
+    it.each([
+        ['single-quoted', "grep -rn foo src/ --include='*.ts'"],
+        ['double-quoted', 'grep -rn foo src/ --include="*.ts"'],
+        ['quoted -name', "find tests -name '*.test.ts'"],
+        ['no glob at all', 'grep -rn foo src/ --include=index.ts'],
+    ])('allows %s', (_label, command) => {
+        expect(run(bash(command), fresh()).stderr).not.toMatch(GLOB);
+    });
+
+    it.each([
+        ['ls', 'ls *.ts'],
+        ['cat a path glob', 'cat src/*.json'],
+        ['a for-loop over a glob', 'for f in src/*.ts; do echo "$f"; done'],
+    ])('does not fire on %s — there the expansion IS the point', (_label, command) => {
+        expect(run(bash(command), fresh()).stderr).not.toMatch(GLOB);
+    });
+
+    it('is a hard stop, not once-per-session', () => {
+        // Same session twice. A spendable guard against a mechanical mistake is
+        // no guard: the second occurrence is exactly as silent as the first.
+        const session = fresh();
+        expect(run(bash('grep -rn a . --include=*.ts'), session).stderr).toMatch(GLOB);
+        expect(run(bash('grep -rn b . --include=*.tsx'), session).stderr).toMatch(GLOB);
+    });
+
+    it('reaches the rule at all — the router pre-filter admits these commands', () => {
+        // The dispatcher has a cheap substring gate before it parses JSON. A rule
+        // whose tokens are missing from that gate can never fire, and would look
+        // exactly like a rule that works and never matches.
+        expect(run(bash('find . -name *.ts'), fresh()).code).toBe(2);
+    });
+});
+
 describe('rules do not bleed into each other', () => {
     // Each rule must fire ONLY for its own trigger. With five rules in one
     // dispatcher, a loose pattern silently steals another rule's calls.
