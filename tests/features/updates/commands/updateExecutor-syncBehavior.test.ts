@@ -100,7 +100,7 @@ function makeCtx(saveImpl?: () => Promise<void>): {
         secrets: {} as vscode.SecretStorage,
         extensionPath: '/ext',
         stateManager: { saveProject: jest.fn(saveImpl ?? (() => Promise.resolve())) },
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
     };
 }
 

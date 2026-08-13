@@ -35,7 +35,7 @@ import { republishStorefrontContent } from '@/features/eds/services/storefrontRe
 import { verifyConfigOnCdn } from '@/features/eds/services/configSyncService';
 import type { Logger } from '@/types/logger';
 
-const logger = { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() } as unknown as Logger;
+const logger = { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as unknown as Logger;
 
 function params(overrides: Record<string, unknown> = {}) {
     return {

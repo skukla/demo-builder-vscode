@@ -19,7 +19,7 @@ jest.mock('@/core/state');
 jest.mock('@/features/components/services/ComponentRegistryManager');
 
 jest.mock('@/core/logging', () => ({
-    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
+    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() }),
     Logger: jest.fn().mockImplementation(() => ({
         debug: jest.fn(),
         info: jest.fn(),

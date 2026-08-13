@@ -50,7 +50,7 @@ function deps() {
     return {
         project: { name: 'p', path: '/p' },
         stateManager: {},
-        logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+        logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
         extensionPath: '/ext',
     } as never;
 }

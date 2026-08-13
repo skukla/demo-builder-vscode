@@ -24,7 +24,7 @@
 
 import { classifyRepoForStorefront } from '@/features/eds/services/repoStorefrontReadiness';
 
-const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
 
 /** Stub GitHubFileOperations: `present` lists the paths that exist. */
 function fileOps(present: string[], opts: { emptyRepo?: boolean; throwOn?: string } = {}) {

@@ -20,7 +20,7 @@
 
 import { probeConfigService } from '@/features/eds/services/configServiceProbe';
 
-const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
 const TOKEN = 'ims-token-value-never-logged';
 
 function tokenProvider() {

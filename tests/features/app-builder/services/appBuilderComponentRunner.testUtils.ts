@@ -84,7 +84,7 @@ export function createCommandManager() {
 }
 
 export function createLogger() {
-    return { info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn() };
+    return { info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(), trace: jest.fn() };
 }
 
 export function createDeps(overrides: Partial<Record<string, unknown>> = {}) {

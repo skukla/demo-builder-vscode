@@ -83,7 +83,7 @@ function deps(overrides: Record<string, unknown> = {}) {
     return {
         project: project(),
         stateManager: { saveProject: jest.fn().mockResolvedValue(undefined) } as never,
-        logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() } as never,
+        logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as never,
         extensionPath: '/ext',
         ...overrides,
     };

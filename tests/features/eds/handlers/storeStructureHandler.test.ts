@@ -30,7 +30,7 @@ const PROJECT = {
 function ctx(project: unknown, token?: string): HandlerContext {
     return {
         stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() },
+        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
         authManager: {
             getTokenManager: () => ({
                 inspectToken: jest.fn().mockResolvedValue({ valid: !!token, token }),

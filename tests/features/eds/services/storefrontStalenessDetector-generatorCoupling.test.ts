@@ -25,7 +25,7 @@ import { getStorefrontEnvVars } from '@/features/eds/services/storefrontStalenes
 import * as ENV from '@/features/components/config/envVarKeys';
 
 jest.mock('@/core/logging', () => ({
-    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
+    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() }),
 }));
 
 /**

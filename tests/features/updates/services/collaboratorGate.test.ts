@@ -36,7 +36,7 @@ function makeSecrets(stored?: string): any {
 }
 
 function makeLogger(): any {
-    return { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() };
+    return { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() };
 }
 
 /** A valid EDS token blob (matches GitHubToken shape: { token, tokenType, scopes }). */

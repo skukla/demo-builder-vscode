@@ -41,7 +41,7 @@ let callOrder: string[];
 
 function makeContext(): HandlerContext {
     return {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
         sendMessage: jest.fn().mockResolvedValue(undefined),
         context: { secrets: {}, globalState: { get: jest.fn(), update: jest.fn() } },
     } as unknown as HandlerContext;

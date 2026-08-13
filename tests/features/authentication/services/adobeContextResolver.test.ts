@@ -91,6 +91,7 @@ describe('AdobeContextResolver', () => {
                 }),
                 stderr: '',
                 code: 0,
+                duration: 0,
             });
 
             const result = await resolver.getConsoleWhereContext();
@@ -106,6 +107,7 @@ describe('AdobeContextResolver', () => {
                 stdout: '',
                 stderr: 'Error',
                 code: 1,
+                duration: 0,
             });
 
             const result = await resolver.getConsoleWhereContext();

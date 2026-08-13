@@ -132,6 +132,7 @@ describe('AdobeEntityFetcher', () => {
                 stdout: JSON.stringify([{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'CLI Org' }]),
                 stderr: '',
                 code: 0,
+                duration: 0,
             });
 
             const result = await fetcher.getOrganizations();
@@ -162,6 +163,7 @@ describe('AdobeEntityFetcher', () => {
                     ]),
                     stderr: '',
                     code: 0,
+                    duration: 0,
                 });
 
                 const resultPromise = fetcher.getOrganizations();
@@ -188,6 +190,7 @@ describe('AdobeEntityFetcher', () => {
                 stdout: JSON.stringify([{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'CLI Org' }]),
                 stderr: '',
                 code: 0,
+                duration: 0,
             });
 
             const result = await fetcher.getOrganizations();
@@ -204,6 +207,7 @@ describe('AdobeEntityFetcher', () => {
                 stdout: JSON.stringify([]),
                 stderr: '',
                 code: 0,
+                duration: 0,
             });
 
             const result = await fetcher.getOrganizations();
@@ -220,6 +224,7 @@ describe('AdobeEntityFetcher', () => {
                 stdout: '',
                 stderr: 'Command failed',
                 code: 1,
+                duration: 0,
             });
 
             await expect(fetcher.getOrganizations()).rejects.toThrow('Failed to get organizations');
@@ -444,6 +449,7 @@ describe('AdobeEntityFetcher', () => {
                 ]),
                 stderr: '',
                 code: 0,
+                duration: 0,
             });
 
             const result = await fetcher.getProjects();
@@ -460,6 +466,7 @@ describe('AdobeEntityFetcher', () => {
                 stdout: JSON.stringify([]),
                 stderr: '',
                 code: 0,
+                duration: 0,
             });
 
             await fetcher.getProjects({ silent: true });
@@ -479,6 +486,7 @@ describe('AdobeEntityFetcher', () => {
                 stdout: '',
                 stderr: 'does not have any projects',
                 code: 1,
+                duration: 0,
             });
 
             const result = await fetcher.getProjects();
@@ -505,6 +513,7 @@ describe('AdobeEntityFetcher', () => {
                 stdout: warningLines + '\n' + jsonData,
                 stderr: '',
                 code: 2,
+                duration: 0,
             });
 
             const result = await fetcher.getProjects();
@@ -524,6 +533,7 @@ describe('AdobeEntityFetcher', () => {
                 stdout: warningLines + jsonData,
                 stderr: '',
                 code: 2,
+                duration: 0,
             });
 
             const result = await fetcher.getOrganizations();

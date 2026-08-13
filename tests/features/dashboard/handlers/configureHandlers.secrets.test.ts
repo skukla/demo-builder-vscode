@@ -120,7 +120,7 @@ describe('persistAppBuilderComponentSecrets', () => {
 
     it('never logs the secret value', async () => {
         const { api } = makeSecretStorage();
-        const logger = { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() };
+        const logger = { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() };
 
         await persistAppBuilderComponentSecrets(
             [{ appBuilderComponentId: 'erp-integration', varName: 'ERP_API_KEY', value: FAKE_SECRET }],

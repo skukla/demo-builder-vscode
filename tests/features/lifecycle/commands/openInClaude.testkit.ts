@@ -37,7 +37,7 @@ export interface MockLogger {
 }
 
 export function makeLogger(): MockLogger {
-    return { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+    return { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
 }
 
 export function makeStateManager(project: Partial<Project> | null): { getCurrentProject: jest.Mock } {

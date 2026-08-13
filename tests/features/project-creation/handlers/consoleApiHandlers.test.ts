@@ -74,7 +74,7 @@ const ORG_SERVICES = [
 
 function makeContext(): HandlerContext {
     return {
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() },
+        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
         sendMessage: jest.fn(),
     } as unknown as HandlerContext;
 }

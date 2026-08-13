@@ -30,7 +30,7 @@ function makeStateManager(): { getCurrentProject: jest.Mock } {
     return { getCurrentProject: jest.fn().mockResolvedValue(null) };
 }
 
-const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
 
 /** Reach the protected members the way a subclass test must. */
 type Internals = {

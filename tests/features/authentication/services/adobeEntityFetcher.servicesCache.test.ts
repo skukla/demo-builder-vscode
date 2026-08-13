@@ -48,7 +48,7 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
             { execute: jest.fn() } as unknown as jest.Mocked<CommandExecutor>,
             mockSDKClient,
             {} as unknown as jest.Mocked<AuthCacheManager>,
-            { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() } as unknown as jest.Mocked<Logger>,
+            { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as unknown as jest.Mocked<Logger>,
             { logTemplate: jest.fn() } as unknown as jest.Mocked<StepLogger>,
         );
     });

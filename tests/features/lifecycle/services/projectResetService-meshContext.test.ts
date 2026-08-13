@@ -87,7 +87,7 @@ function createProject(): Project {
 
 function createContext(): HandlerContext {
     return {
-        logger: { info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn() },
+        logger: { info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(), trace: jest.fn() },
         stateManager: { saveProject: jest.fn().mockResolvedValue(undefined) },
     } as unknown as HandlerContext;
 }

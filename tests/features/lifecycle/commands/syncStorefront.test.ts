@@ -109,7 +109,7 @@ function makeLogger(): {
     error: jest.Mock;
     debug: jest.Mock;
 } {
-    return { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+    return { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
 }
 
 function makeEdsProject(): Record<string, unknown> {

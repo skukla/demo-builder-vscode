@@ -16,7 +16,7 @@ import type { OnOpenCheckContext } from '@/features/dashboard/services/onOpenChe
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 
-const mockLogger: Logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+const mockLogger: Logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
 
 const CURRENT_VERSION = 2;
 

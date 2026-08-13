@@ -559,7 +559,7 @@ describe('ConfigurationService', () => {
  * remedy the evidence contradicts.
  */
 describe('ConfigurationService — failure reporting', () => {
-    const logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() };
+    const logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() };
     const tokenProvider = { getAccessToken: jest.fn().mockResolvedValue('ims-token') };
     const params: SiteRegistrationParams = {
         org: 'acme-corp',

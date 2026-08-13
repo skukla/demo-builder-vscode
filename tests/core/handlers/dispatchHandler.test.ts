@@ -13,8 +13,8 @@ import type { HandlerMap, HandlerContext } from '@/types/handlers';
 // Mock handler context factory
 function createMockContext(): HandlerContext {
     return {
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() } as any,
-        debugLogger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() } as any,
+        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as any,
+        debugLogger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as any,
         context: {} as any,
         panel: undefined,
         stateManager: {} as any,

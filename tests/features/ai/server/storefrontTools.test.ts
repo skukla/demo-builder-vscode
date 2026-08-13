@@ -58,7 +58,7 @@ const ctxFactory = () =>
     ({
         stateManager: { getCurrentProject },
         context: { secrets: {} },
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() },
+        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
     }) as unknown as HandlerContext;
 
 const EDS_PROJECT = { name: 'eds-proj', path: '/p/eds-proj' };

@@ -12,7 +12,7 @@ import {
     scopesMatch,
 } from '@/features/eds/services/servedStorefrontConfig';
 
-const mockLogger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() };
+const mockLogger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() };
 
 const CS = {
     'Magento-Website-Code': 'citisignal',

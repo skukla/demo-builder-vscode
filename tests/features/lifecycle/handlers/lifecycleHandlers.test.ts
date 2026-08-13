@@ -95,7 +95,7 @@ describe('handleOpenExternal - Security', () => {
             warn: jest.fn(),
             error: jest.fn(),
         } as any,
-        debugLogger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() } as any,
+        debugLogger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as any,
         context: {} as any,
         panel: undefined,
         stateManager: {} as any,

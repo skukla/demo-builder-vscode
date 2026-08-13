@@ -61,7 +61,7 @@ const AUTH_HANDLERS = ['check-auth', 'authenticate', 'switchOrg'] as const;
 
 function createContext(): HandlerContext & { sendMessage: jest.Mock } {
     return {
-        logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+        logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
         sendMessage: jest.fn().mockResolvedValue(undefined),
         authManager: {
             // If a guard is missing, the handler reaches these — the fetch that

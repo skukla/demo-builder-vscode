@@ -30,7 +30,7 @@ import {
     SMART_404_HEAD_MARKER_START,
 } from '@/features/eds/services/pdp404Snippet';
 
-const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
 
 /**
  * Route each probed URL to a canned response, matched on the exact PATHNAME.

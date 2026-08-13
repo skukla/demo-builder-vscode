@@ -20,7 +20,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 
 function ctx() {
     return {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
         context: { secrets: {} },
         sendMessage: jest.fn(),
     };

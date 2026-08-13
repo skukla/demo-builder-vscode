@@ -52,7 +52,7 @@ function makeContext(version: string): any {
 }
 
 function makeLogger(): any {
-    return { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() };
+    return { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() };
 }
 
 function setChannel(channel: string): void {

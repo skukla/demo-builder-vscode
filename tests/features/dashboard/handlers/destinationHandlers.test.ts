@@ -74,7 +74,7 @@ function makeContext(adobe: Record<string, unknown> | undefined = EXISTING_ADOBE
     const project = { name: 'demo', path: '/p/demo', adobe: adobe ? { ...adobe } : undefined };
     const saveProject = jest.fn().mockResolvedValue(undefined);
     const context = {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
         stateManager: {
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject,
@@ -135,7 +135,7 @@ describe('handleSetProjectDestination', () => {
 
     it('fails when there is no current project', async () => {
         const context = {
-            logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+            logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
             stateManager: { getCurrentProject: jest.fn().mockResolvedValue(undefined) },
         } as unknown as HandlerContext;
 
@@ -171,7 +171,7 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
         };
         const saveProject = jest.fn().mockResolvedValue(undefined);
         const context = {
-            logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+            logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
             stateManager: {
                 getCurrentProject: jest.fn().mockResolvedValue(project),
                 saveProject,
@@ -230,7 +230,7 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
             appBuilderComponents: { 'eds-accs-mesh': { kind: 'mesh', status: 'deployed' } },
         };
         const context = {
-            logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+            logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
             stateManager: {
                 getCurrentProject: jest.fn().mockResolvedValue(project),
                 saveProject: jest.fn().mockResolvedValue(undefined),

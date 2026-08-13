@@ -159,7 +159,7 @@ describe('copyContentFromSource — reference-following discovery', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockLogger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() } as unknown as Logger;
+        mockLogger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as unknown as Logger;
         const tokenProvider: TokenProvider = { getAccessToken: jest.fn().mockResolvedValue('mock-ims-token') };
         service = new DaLiveContentOperations(tokenProvider, mockLogger);
 

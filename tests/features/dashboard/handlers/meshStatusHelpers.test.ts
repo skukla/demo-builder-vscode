@@ -558,7 +558,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
             const context = {
                 panel: { webview: { postMessage } },
                 stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
-                logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+                logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
             } as any;
 
             await sendDemoStatusUpdate(context);
