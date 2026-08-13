@@ -8,6 +8,26 @@ priority: high
 
 # Nothing in this repo typechecks test files
 
+> ## ⏳ IN PROGRESS — 711 → 336 as of 2026-08-13 (develop `7b9729f4`)
+>
+> `tsconfig.test.json` + `npm run typecheck:tests` exist (note the trap found while adding
+> them: a `test:typecheck` script already existed and typechecks ONLY `src/`). Eight commits,
+> full suite green throughout (12,803 — one FEWER than before: a dead "NavItem should be
+> importable" test asserting a deleted export was removed; tsc caught it).
+>
+> Eliminated entirely: wrong-import (51), stale `@ts-expect-error` (20), **invented fields
+> (47 — the `prepareImport` bug class, each read individually)**, arg-count drift (39),
+> property-access (36), logger/CommandResult interface drift (~99), wizard prop drift (~76).
+> Also: one `src/` fix (fileWatcher's literal-typed timeout param), three retirement-guard
+> tests rewritten as `'field' in result` so they typecheck AND still bite, and real findings —
+> tests calling `getPluginNodeVersions` with a parameter deleted in `07bb26b8`, retitled.
+>
+> **Remaining 336** (`npx tsc -p tsconfig.test.json`): the partial-fixture long tail —
+> TS2741 (~105), TS2345 (~65), TS2322 (~43), TS2739 (~31), fixture-shaped TS2352 casts (26),
+> index-signature TS7053 (18), misc. Spread thin (~85 files, biggest single file now ≤13).
+> Same treatable classes; the pattern that works is: read the fixture, fill/delete against the
+> real type, run the suite. **Not wired into CI — do that only at 0.**
+
 ## Provenance
 
 Raised 2026-08-13 by the Data Installer session (`feature/data-installer`) and routed here to
