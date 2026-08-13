@@ -81,7 +81,7 @@ below stands, uncontested.**
 branch, when the work had been merged straight to develop. Plan status lives in the CODE.)*
 
 **Taxonomy already shipped — it constrains the resolver.**
-[`../2026-07-13-deterministic-integrations.md`](../2026-07-13-deterministic-integrations.md)
+[`../2026-07-13-deterministic-integrations.md`](../../complete/2026-07-13-deterministic-integrations.md)
 Layer 1 is SHIPPED: **mesh + catalog** integrations have declared `requiredApis`, shown-not-picked,
 auto-subscribed at deploy; only **custom (blank shell) + import (repo)** get an interactive picker. So
 "Added for *this* integration" rows exist **only for custom/import kinds** — a mesh or catalog

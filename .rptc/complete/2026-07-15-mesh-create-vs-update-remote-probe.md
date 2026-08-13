@@ -1,5 +1,14 @@
 # Mesh deploy: create-vs-update must consult the remote (+ blank-error formatter fix)
 
+> **Archived 2026-08-13.** This file had said SHIPPED since 2026-07-15 and sat in `backlog/`
+> for four weeks regardless — the record announced itself and nobody moved it. Re-verified
+> against source before archiving: the retry-as-update fallback is live at
+> `meshDeployment.ts` (`'[Mesh Deployment] Workspace already has a mesh — retrying as update'`,
+> guarded by an `/already has a mesh/i` probe), and `errorFormatter.ts` is present under
+> `src/features/mesh/utils/`. Pinned by
+> `tests/features/mesh/services/meshDeployment-createFallback.test.ts`, whose header comment
+> cites this file — repointed to `complete/` in the same change.
+
 > **✅ SHIPPED 2026-07-15** (same-day pull-forward, `/rptc:fix` on develop). Landed: (b) the
 > "already has a mesh" → one-shot retry-as-update fallback in `deployMeshComponent` (same
 > withOrgContext; update-path failures never loop); the blank-error fix (`formatAdobeCliError`
@@ -72,7 +81,7 @@ to surface the CLI stderr/stdout summary in the user-facing error.
 - Timeout handling per `src/commands/CLAUDE.md` (CLI ops can succeed after the timeout fires).
 
 ## Kickoff prompt
-> Fix mesh create-vs-update (`.rptc/backlog/2026-07-15-mesh-create-vs-update-remote-probe.md`)
+> Fix mesh create-vs-update (`.rptc/complete/2026-07-15-mesh-create-vs-update-remote-probe.md`)
 > via `/rptc:fix`. First check whether the wizard already probes for an existing mesh
 > (`typedConfig.apiMesh` arrives undefined at the executor); wire it through if so. Then add the
 > "already has a mesh" → retry-as-update fallback in `meshDeployment.ts` and surface CLI stderr

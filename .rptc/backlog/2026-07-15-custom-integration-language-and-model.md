@@ -123,13 +123,13 @@ dashboard grid follows D3.**
   [`../research/app-builder-integration-model/research.md`](../research/app-builder-integration-model/research.md)
   — the model as built (many apps, one workspace), all gap evidence, and the UX grid assessment.
 - Decided model + slices: backlog §A "App Builder app family"
-  ([`2026-06-17-appbuilder-app-deploy-spine.md`](2026-06-17-appbuilder-app-deploy-spine.md)),
+  ([`2026-06-17-appbuilder-app-deploy-spine.md`](../complete/2026-06-17-appbuilder-app-deploy-spine.md)),
   slice 3 ([`2026-06-17-appbuilder-app-package-bound.md`](2026-06-17-appbuilder-app-package-bound.md)).
 - Wizard-selection persistence + ReviewStep visibility: backlog §E
   ([`2026-06-21-appbuilder-component-first-class-persistence.md`](2026-06-21-appbuilder-component-first-class-persistence.md))
   — distinct from item 2 here (that item is deployed-runtime `appState`; §E is wizard selections).
 - Deterministic integrations (kind picker, custom/import lifecycle):
-  [`2026-07-13-deterministic-integrations.md`](2026-07-13-deterministic-integrations.md).
+  [`2026-07-13-deterministic-integrations.md`](../complete/2026-07-13-deterministic-integrations.md).
 
 ## Constraints
 - Public repo — no secrets in `appState`/manifest; `appBuilderComponentSources` holds only

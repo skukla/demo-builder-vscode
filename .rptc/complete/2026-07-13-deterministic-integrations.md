@@ -1,5 +1,21 @@
 # Deterministic integrations + custom-app lifecycle
 
+> ## ✅ DISCHARGED — archived 2026-08-13
+>
+> All three layers are resolved, and this file says so itself further down: *"Only Layer 3
+> (promote a custom app to a repo) remains, scoped out to…"*. Once Layer 3 became its own
+> backlog item, nothing was left here — but the file stayed in `backlog/`, so it read as
+> live work.
+>
+> | Layer | State | Verified 2026-08-13 |
+> |---|---|---|
+> | 1 — api-access informational for mesh/catalog, interactive picker for custom/import | ✅ shipped | `48f637d3`, `5aa064c8` |
+> | 2 — kind picker regrouped into 4 flat cards | ✅ shipped | `69ea4831`; `KindStage.tsx` present under `ui/components/integration-flow/stages/` |
+> | 3 — promote a shell-built app to a repo | split out | tracked as [`2026-07-13-promote-app-to-repo.md`](../backlog/2026-07-13-promote-app-to-repo.md), still open |
+>
+> An item whose entire remaining scope lives in another item is done. Layer 3's status is
+> that item's to report.
+
 ## Provenance
 
 Designed 2026-07-13 with the user while testing the Add-Integration flow. **Supersedes**

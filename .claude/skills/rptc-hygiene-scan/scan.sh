@@ -86,6 +86,28 @@ for ov in "$RPTC"/plans/*/overview.md "$RPTC"/plans/*/HANDOFF.md; do
 done
 [ "$found" -eq 0 ] && echo "  (none)"
 echo "  control: $(ls -d "$RPTC"/plans/*/ 2>/dev/null | wc -l | tr -d ' ') plan dirs scanned"
+
+# Same question aimed at backlog/, which nothing asked until 2026-08-13. Five items there
+# declared themselves SHIPPED / LANDED / IMPLEMENTED / RETIRED — one for over a month —
+# and the user found them by opening the folder, not by any check. A backlog entry that
+# says it is finished is not a backlog entry.
+#
+# Deliberately stricter than the plans pass above: it anchors on a marker in the first 12
+# lines (a status banner), NOT anywhere in the body. Items routinely say "Layer 1 ✅" about
+# a sub-part while remaining live, and reporting those would bury the real hits.
+echo "  -- backlog items declaring themselves finished --"
+bfound=0
+for it in "$RPTC"/backlog/*.md "$RPTC"/backlog/*/overview.md; do
+    [ -f "$it" ] || continue
+    case "$it" in */README.md) continue;; esac
+    if head -12 "$it" | grep -qiE '(✅|❌).{0,40}(shipped|landed|implemented|retired|complete|discharged)|^\s*>?\s*\*\*(status|state)\*\*:?\s*(✅|shipped|complete|retired)'; then
+        echo "  DECLARES DONE  ${it#"$RPTC"/backlog/}"
+        head -12 "$it" | grep -m1 -iE '✅|❌|shipped|landed|implemented|retired' | cut -c1-92 | sed 's/^/      /'
+        bfound=$((bfound + 1))
+    fi
+done
+[ "$bfound" -eq 0 ] && echo "  (none)"
+echo "  control: $(ls "$RPTC"/backlog/*.md 2>/dev/null | grep -vc README) backlog files scanned"
 echo
 
 # ── 4. file:line citations ───────────────────────────────────────────────────

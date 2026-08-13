@@ -1,7 +1,26 @@
 # App Builder app — deploy spine (import public git URL, dashboard-first)
 
-> **Status: READY. This is slice 1 of 5 and GATES the other four** (curated catalog,
-> package-bound, scaffold-and-author). Build and merge to `develop` first.
+> ## ✅ SHIPPED — archived 2026-08-13
+>
+> **The "Status: READY" line below is stale.** Slice 1 landed as `20fae62f`
+> ("feat(app-builder): App Builder app deploy spine (slice 1/5)"), verified 2026-08-13:
+> `git merge-base --is-ancestor 20fae62f HEAD` confirms it on `develop`. The index had
+> been carrying "✅ LANDED" for weeks while this file still said READY and sat in
+> `backlog/`.
+>
+> The slice-1 gate it describes is therefore open, which is what unblocked slices 2–5.
+> Their state is tracked in the App Builder family entry in the backlog index, not here:
+> slice 2 (curated catalog) shipped, slice 3 (package-bound) is gated on a first real
+> bound integration, slice 4 (scaffold-and-author) was retired into shell instancing, and
+> slice 5 (app-only project) is partial.
+>
+> **Caveat carried forward:** the step-7 live `aio` probes — deploy-prune default,
+> `app delete action` undeploy, trigger/rule orphan-on-rename — were deferred to a live
+> workspace and, as far as this record shows, never run.
+>
+> *(The original header read: "Status: READY. This is slice 1 of 5 and GATES the other four
+> (curated catalog, package-bound, scaffold-and-author). Build and merge to `develop` first."
+> It did both, weeks ago.)*
 
 ## Provenance
 
@@ -150,5 +169,5 @@ installBlockCollections pattern (bypass the edit-mode/reset component wipe); rem
 undeploy + clear appState + drop from the selection. Extend projectRequiresAppBuilder to the new
 category. Dashboard-first add/deploy/redeploy surface, public git URL only. Defer curated catalog,
 package-binding, scaffolding, app-only projects, and multi-workspace/API-subscription. See
-.rptc/backlog/2026-06-17-appbuilder-app-deploy-spine.md and
+.rptc/complete/2026-06-17-appbuilder-app-deploy-spine.md and
 .rptc/research/app-builder-app-structure/research.md."`

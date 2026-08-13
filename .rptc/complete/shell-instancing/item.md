@@ -1,5 +1,27 @@
 # Shell instancing — N AI-built integrations via name-derived instance ids
 
+> ## ✅ SHIPPED — archived 2026-08-13, and consolidated
+>
+> **This item was the design; [`overview.md`](overview.md) beside it is the execution plan.**
+> The plan was archived here when the work shipped and the item was left behind in
+> `backlog/`, so one piece of work had two records in two lifecycle states. They are now
+> together.
+>
+> Verified 2026-08-13 rather than taken from the index's "✅ IMPLEMENTED":
+>
+> - `feature/shell-instancing` **no longer exists on the remote** (`git ls-remote --heads`
+>   returns nothing), which is what a merged-and-deleted branch looks like.
+> - The instancing machinery is in `develop`'s `src/`: `deployAppIsolated.ts`,
+>   `appBuilderComponentRunner.ts`, `appBuilderDeployOutcome.ts` under
+>   `src/features/app-builder/services/`.
+>
+> Shipped beyond the original scope, per the index: rename-after-add (display name only —
+> the id, folder and `ow.package` stay immutable), the §E fold-in (edit-mode sources derived
+> from the keyed map, `Project.appBuilderComponentSources` deleted), and the AI-built row
+> discriminator fixed to shell-source match. It also **subsumes slice 4** of the App Builder
+> family, `2026-06-17-appbuilder-app-scaffold-author.md`, which is archived alongside it as
+> retired.
+
 ## Provenance
 
 Scoped 2026-07-16 from a direct user requirement during D3 live testing: *"What if I wanted the
@@ -67,7 +89,7 @@ Everything downstream is already id-generic post-D3 — REUSE, do not rebuild:
   home; solve together, don't fork).
 
 ## Kickoff prompt
-> Implement shell instancing (`.rptc/backlog/2026-07-16-shell-instancing-named-ai-integrations.md`)
+> Implement shell instancing (`.rptc/complete/shell-instancing/item.md`)
 > via `/rptc:feat` AFTER the D3 branch merges. Start with the name-first add flow (the wizard
 > prototype specifies the UX), derive collision-checked instance ids, and instantiate the shell
 > catalog entry under the instance id — reuse the install-by-{id, cloneUrl} path and the keyed

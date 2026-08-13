@@ -72,6 +72,20 @@ least reliable evidence available:
 So this section is a prompt to check, never a verdict. Confirm against `src/` and `git log`,
 then move to `.rptc/complete/` with an outcome — what landed, and what was NOT verified.
 
+**§3b asks the same question of `backlog/`, and nothing did until 2026-08-13.** Five items
+there declared themselves SHIPPED / LANDED / IMPLEMENTED / RETIRED — one had said so for over
+a month — and they were found by the user opening the folder, not by any check. A backlog
+entry that says it is finished is not a backlog entry.
+
+It is deliberately **stricter** than the `plans/` pass: it anchors on a marker in the first 12
+lines, i.e. a status banner, not anywhere in the body. Items routinely say "Layer 1 ✅" about
+one sub-part while staying live, and reporting those would bury the real hits. The control
+covers both directions — a banner is caught, an inline sub-part ✅ is not.
+
+Note this is a different failure from the one §4 and the `backlog-claim-drift` hook address.
+Those catch items that went stale *silently*. §3b catches items that announced it and were
+left anyway, which no amount of measurement finds — only reading the list.
+
 ### 4. Citations that cannot resolve
 
 `GONE` — the file no longer exists. `PAST END` — the line number is beyond the file's length.

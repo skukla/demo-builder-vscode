@@ -73,5 +73,5 @@ the demo's existing org/project/workspace (--standalone-app -y -o -p -w), struct
 one-app/multi-package model; ensure the App Builder skills reach .claude/skills/ for the AI authoring
 loop; deploy the authored app via the slice-1 spine. Decide code home (lean: project subfolder for v1,
 no GitHub repo creation — defer that to a later publish action). See
-.rptc/backlog/2026-06-17-appbuilder-app-scaffold-author.md and
+.rptc/complete/2026-06-17-appbuilder-app-scaffold-author.md and
 .rptc/research/app-builder-app-structure/research.md."`

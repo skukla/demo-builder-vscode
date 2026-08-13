@@ -14,7 +14,7 @@ import {
  * carry a mesh (Adobe allows one per workspace). `aio api-mesh:create` then
  * fails with "Selected org, project and workspace already has a mesh" and
  * creation aborted with no fallback (live incident 2026-07-15; backlog
- * `2026-07-15-mesh-create-vs-update-remote-probe.md`).
+ * `.rptc/complete/2026-07-15-mesh-create-vs-update-remote-probe.md`).
  *
  * Pins: the signature triggers ONE retry as update (same org context — the
  * retry happens inside the same deployMeshComponent call the caller wrapped
