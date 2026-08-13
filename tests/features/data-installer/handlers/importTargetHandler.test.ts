@@ -75,7 +75,7 @@ function makeContext(project: unknown) {
 
 async function target(project: unknown) {
     const result = await importHandlers['get-datapack-import-target'](makeContext(project));
-    return result.data as { instance?: string };
+    return result.data as { instance?: string; projectName?: string };
 }
 
 describe('get-datapack-import-target', () => {
@@ -119,6 +119,22 @@ describe('get-datapack-import-target', () => {
             expect(await target(PAAS_PROJECT)).toMatchObject({
                 instance: 'https://demo-paas.adobedemo.com',
             });
+        });
+    });
+
+    // The id is what the service needs and what a person cannot read. The project
+    // name is the only human-recognisable handle on the same target, so it rides
+    // along and the modal leads with it.
+    describe('the human-readable handle', () => {
+        it('returns the project name beside the instance', async () => {
+            expect(await target(ACCS_PROJECT)).toMatchObject({
+                instance: TENANT,
+                projectName: 'demo-accs',
+            });
+        });
+
+        it('returns it for a PaaS project too', async () => {
+            expect((await target(PAAS_PROJECT)).projectName).toBe('demo-paas');
         });
     });
 

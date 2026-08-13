@@ -306,6 +306,18 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 4px 16px;
+    /* Type names are underscore-joined with no spaces to break at, so a long one
+       (b2b_shared_catalog_company_assignments) overruns its track and collides
+       with the next column. `anywhere` is the only value that breaks a word with
+       no break opportunity; `break-word` leaves it overflowing. Inherited, so it
+       reaches the Spectrum label text without naming a Spectrum class. */
+    overflow-wrap: anywhere;
+}
+
+/* Grid items default to min-width:auto, which refuses to shrink below their
+   content — so the minmax(0, 1fr) above cannot take effect without this. */
+.datapack-import-type-grid > * {
+    min-width: 0;
 }
 
 .datapack-import-label {
@@ -373,4 +385,33 @@
     gap: 4px;
     font-size: 12px;
     color: var(--spectrum-global-color-gray-800);
+}
+
+/* The derived target, shown instead of an input. Leads with the project name —
+   the only part a person can confirm — and keeps the instance id visible but
+   subordinate, because the id is what actually decides where data lands. */
+.datapack-import-target {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.datapack-import-target-name {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.datapack-import-target-id {
+    /* Monospace, matching `.datapack-row-instance`: an instance id is checked
+       character by character against the console, which proportional type makes
+       harder for exactly the strings that matter (l/1, O/0). */
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-700);
+    overflow-wrap: anywhere;
+}
+
+.datapack-import-target-warning {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
 }

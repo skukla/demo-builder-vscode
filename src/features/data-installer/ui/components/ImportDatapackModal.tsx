@@ -17,9 +17,16 @@
  * mounts this component only while open, so the container lives here rather than
  * being a thing each caller must remember.
  *
- * **The instance field is SEEDED from the project, and stays the user's.** It is
- * seeded once, only into an untouched field, and sent verbatim — never trimmed or
- * reformatted on the way out.
+ * **The target comes from the project, and is shown rather than typed.** When the
+ * project supplies one, a read-only summary stands in for the field: it leads with
+ * the project NAME, because a 22-character nanoid is not something anyone can
+ * confirm is right, and keeps the id visible underneath because the id is what
+ * actually decides where the data lands. `Change` swaps in the editable field for
+ * an override, and a project that derives nothing gets that field directly — or it
+ * could not be imported into at all.
+ *
+ * In the editable path the value is seeded once, only into an untouched field, and
+ * sent verbatim — never trimmed or reformatted on the way out.
  *
  * It started empty, on the reasoning that a prefilled write target with no undo
  * would be a guess: the spike could not confirm the target was derivable, because
@@ -68,6 +75,8 @@ const DOT_VARIANT: Record<DataTypeStatus, 'success' | 'error' | 'info' | 'neutra
 /** What the open project implies about where this import should go. */
 interface ImportTarget {
     instance?: string;
+    /** The open project's name — the only human-readable handle on this target. */
+    projectName?: string;
 }
 
 export interface ImportDatapackModalProps {
@@ -125,6 +134,7 @@ export function ImportDatapackModal({
         setTouched(true);
         setCommerceInstance(value);
     }, []);
+
 
     const record = status.value ?? null;
     const running = record?.outcome === 'watching';
@@ -224,14 +234,10 @@ export function ImportDatapackModal({
 
                     {!running && !resetArmed ? (
                         <>
-                            <FormField
-                                fieldKey="commerceInstance"
-                                label="Commerce instance"
-                                type="text"
-                                value={commerceInstance}
+                            <ImportTargetField
+                                projectName={target.value?.projectName}
+                                instance={commerceInstance}
                                 onChange={editInstance}
-                                required
-                                description="Where this data will be written. There is no undo — check it with whoever owns the target."
                             />
                             <div className="datapack-import-types">
                                 <div className="datapack-import-types-head">
@@ -339,6 +345,61 @@ function buildActions(
             isDisabled: !a.canStart,
         },
     ];
+}
+
+/**
+ * Where the import will be written — shown, not typed, when the project knows.
+ *
+ * Its own component because the choice between a read-only summary and an input is
+ * self-contained, and inlining it pushed the modal past the complexity ceiling.
+ * The override state lives here for the same reason: nothing else needs it.
+ *
+ * The summary leads with the project NAME because a 22-character nanoid is not
+ * something anyone can confirm is right, and keeps the id underneath because the
+ * id is what actually decides where data lands. No project name means nothing
+ * human to lead with, so the field shows instead — as it does for a project that
+ * derives no target at all, which would otherwise be unimportable.
+ */
+function ImportTargetField({
+    projectName,
+    instance,
+    onChange,
+}: {
+    projectName?: string;
+    instance: string;
+    onChange: (value: string) => void;
+}): React.JSX.Element {
+    const [overriding, setOverriding] = useState(false);
+
+    if (!projectName || !instance || overriding) {
+        return (
+            <FormField
+                fieldKey="commerceInstance"
+                label="Commerce instance"
+                type="text"
+                value={instance}
+                onChange={onChange}
+                required
+                description="Where this data will be written. There is no undo — check it with whoever owns the target."
+            />
+        );
+    }
+
+    return (
+        <div className="datapack-import-target">
+            <div className="datapack-import-types-head">
+                <span className="datapack-import-label">Target</span>
+                <ActionButton isQuiet onPress={() => setOverriding(true)}>
+                    Change
+                </ActionButton>
+            </div>
+            <div className="datapack-import-target-name">{projectName}</div>
+            <div className="datapack-import-target-id">Commerce instance {instance}</div>
+            <div className="datapack-import-target-warning">
+                There is no undo — check the target with whoever owns it.
+            </div>
+        </div>
+    );
 }
 
 /** Where the job stands, plus a row per reported type. */

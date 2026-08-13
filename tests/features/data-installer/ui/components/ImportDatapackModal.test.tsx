@@ -133,12 +133,63 @@ describe('ImportDatapackModal', () => {
             );
         }
 
-        it('prefills the instance the project implies', async () => {
-            withTarget({ instance: 'UoGYsHrcxMyeoVd2zUktZi', source: 'accs', verified: true });
+        // The id is what gets WRITTEN to and what nobody can read. Leading with the
+        // project name gives the user something they can actually confirm, without
+        // hiding the value that decides where the data lands.
+        it('leads with the project name, keeping the id visible', async () => {
+            withTarget({ instance: 'UoGYsHrcxMyeoVd2zUktZi', projectName: 'bodea-demo' });
             renderModal();
 
-            // findByDisplayValue, not findByRole: the element exists immediately
-            // and the VALUE arrives with the async target response.
+            expect(await screen.findByText('bodea-demo')).toBeInTheDocument();
+            expect(screen.getByText(/UoGYsHrcxMyeoVd2zUktZi/)).toBeInTheDocument();
+        });
+
+        // Hand-typing a 22-character nanoid into a field with no undo is all risk
+        // and no benefit when the project already knows the answer.
+        it('is read-only once the project has supplied one', async () => {
+            withTarget({ instance: 'UoGYsHrcxMyeoVd2zUktZi', projectName: 'bodea-demo' });
+            renderModal();
+            await screen.findByText('bodea-demo');
+
+            expect(screen.queryByRole('textbox', { name: /commerce instance/i })).not.toBeInTheDocument();
+        });
+
+        it('opens an editable field on Change, carrying the derived value in', async () => {
+            withTarget({ instance: 'UoGYsHrcxMyeoVd2zUktZi', projectName: 'bodea-demo' });
+            renderModal();
+            fireEvent.click(await screen.findByRole('button', { name: /change/i }));
+
+            expect(await screen.findByDisplayValue('UoGYsHrcxMyeoVd2zUktZi')).toBeInTheDocument();
+        });
+
+        // A project that derives nothing — PaaS with no URL, or misconfigured —
+        // must still be importable, so the fallback is the editable field.
+        it('falls back to an editable field when nothing is derived', async () => {
+            withTarget({});
+            renderModal();
+
+            expect(await instanceField()).toBeInTheDocument();
+        });
+
+        it('sends the derived instance without the user touching it', async () => {
+            withTarget({ instance: 'UoGYsHrcxMyeoVd2zUktZi', projectName: 'bodea-demo' });
+            renderModal();
+            await screen.findByText('bodea-demo');
+
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(startButton());
+
+            await waitFor(() =>
+                expect(startPayload()).toMatchObject({ commerceInstance: 'UoGYsHrcxMyeoVd2zUktZi' }),
+            );
+        });
+
+        it('prefills the instance the project implies', async () => {
+            withTarget({ instance: 'UoGYsHrcxMyeoVd2zUktZi' });
+            renderModal();
+
+            // No projectName, so there is nothing human to lead with and the
+            // editable field is what shows — still seeded.
             expect(await screen.findByDisplayValue('UoGYsHrcxMyeoVd2zUktZi')).toBeInTheDocument();
         });
 
@@ -151,7 +202,7 @@ describe('ImportDatapackModal', () => {
 
         // Derived, not imposed. The whole reason it is a field and not a label.
         it('lets the user replace the derived value', async () => {
-            withTarget({ instance: 'UoGYsHrcxMyeoVd2zUktZi', source: 'accs', verified: true });
+            withTarget({ instance: 'UoGYsHrcxMyeoVd2zUktZi' });
             renderModal();
             const field = await screen.findByDisplayValue('UoGYsHrcxMyeoVd2zUktZi');
 

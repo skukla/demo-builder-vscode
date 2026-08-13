@@ -248,10 +248,14 @@ export const importHandlers = defineHandlers({
         const configs =
             (project as { componentConfigs?: Record<string, Record<string, string>> } | null)
                 ?.componentConfigs ?? {};
+        // The id is what the service needs and what nobody can read. The project
+        // name is the only human-recognisable handle on the same target, so it
+        // rides along for the modal to lead with.
+        const projectName = (project as { name?: string } | null)?.name;
 
         const accs = deriveAccsTenantId(lookupComponentConfigValue(configs, ACCS_GRAPHQL_ENDPOINT));
         if (accs) {
-            return { success: true, data: { instance: accs } };
+            return { success: true, data: { instance: accs, projectName } };
         }
 
         // PaaS gets the project's Commerce URL. The service DERIVES the site type
@@ -264,7 +268,7 @@ export const importHandlers = defineHandlers({
         // sample. See docs/systems/data-installer.md.
         const paas = lookupComponentConfigValue(configs, PAAS_URL);
         if (paas) {
-            return { success: true, data: { instance: paas } };
+            return { success: true, data: { instance: paas, projectName } };
         }
 
         return { success: true, data: {} };
