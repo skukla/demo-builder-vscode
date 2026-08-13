@@ -164,9 +164,13 @@ negative one. And pair every "nothing found" with a positive control at the same
 Moved to `.rptc/backlog/` on 2026-08-13. `plans/` is for ACTIVE work and none of these is
 being worked; five shipped plans were sitting there too, one of which said so in its own text.
 
-- **`backlog/mesh-staleness-scope` step 05 — still never run.** Flip `componentConfigs` key
-  order in a manifest, confirm the staleness verdict is order-independent. `demo-builder-test`
-  carries the disagreement; do not clean it up before testing.
+- **`mesh-staleness-scope` — DROPPED 2026-08-13, not archived.** Steps 01–04 shipped as
+  code; step 05 was a manual Dev Host confirmation that never happened, and the user chose to
+  stop carrying it. Two consequences worth knowing: the staleness fix was never eyeballed on a
+  live window, and **`demo-builder-test` no longer needs preserving** — it was being kept
+  intact purely as the fixture for that test. Its build-first advice ("a `0` means another
+  tree or an older build won") is superseded by the build stamp, which answers that in the
+  status bar. Deleted rather than stubbed, per no-soft-deprecation; `git log` holds it.
 - **`backlog/hybrid-storefront-model`** — unblocked, gated on individual-vs-company login
   against a real B2B backend.
 - **`backlog/per-integration-api-attribution`** — steps 01–05 shipped, 06 withdrawn, 07 is
