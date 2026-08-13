@@ -64,6 +64,24 @@ describe('ImportDatapackModal', () => {
         mockRequest.mockResolvedValue({ success: true, data: null });
     });
 
+    /**
+     * A bare Spectrum `Dialog` renders NOTHING. `core/ui/Modal` is a `Dialog` with
+     * no overlay of its own, so it must sit inside a `DialogContainer` — every
+     * working modal in this repo has one somewhere up its tree.
+     *
+     * This modal shipped without one and never rendered: pressing Import did
+     * nothing at all, first in the flyout and then at view level. No test caught it
+     * because the suites mock `Modal`, so the body rendered happily into a stub
+     * where a real Spectrum Dialog would have swallowed it. Mount-level hosting is
+     * invisible to a mocked child by construction, which is why it gets its own
+     * assertion rather than being trusted to the other 25 tests.
+     */
+    it('hosts itself in a DialogContainer — a bare Dialog renders nothing', async () => {
+        renderModal();
+
+        expect(await screen.findByTestId('spectrum-dialog-container')).toBeInTheDocument();
+    });
+
     describe('the instance field', () => {
         it('starts EMPTY — never prefilled or derived', async () => {
             renderModal();

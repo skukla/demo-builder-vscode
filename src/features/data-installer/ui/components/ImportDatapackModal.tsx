@@ -10,6 +10,13 @@
  * Spectrum `Checkbox` direct: there is no shared checkbox-group component, and
  * one consumer does not justify inventing one.
  *
+ * **The `DialogContainer` is load-bearing, not decoration.** `core/ui/Modal` is a
+ * Spectrum `Dialog` with no overlay of its own, and a bare `Dialog` renders
+ * NOTHING — so without this wrapper pressing Import did nothing at all. Every
+ * working modal in this repo has a container somewhere up its tree; the parent
+ * mounts this component only while open, so the container lives here rather than
+ * being a thing each caller must remember.
+ *
  * **The instance field starts EMPTY, and stays the user's.** No prefill, no
  * derivation, no trimming or reformatting on the way out. The spike that would
  * have justified deriving it from the project's ACCS tenant could not be answered
@@ -28,7 +35,7 @@
  * @module features/data-installer/ui/components/ImportDatapackModal
  */
 
-import { Checkbox } from '@adobe/react-spectrum';
+import { Checkbox, DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import type { DataTypeStatus, DatapackId, ImportJobRecord } from '../../types';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
@@ -139,84 +146,86 @@ export function ImportDatapackModal({
     const canStart = commerceInstance.length > 0 && selected.length > 0 && !start.loading;
 
     return (
-        <Modal
-            title={`Import ${displayName}`}
-            size="M"
-            fitContent
-            onClose={onClose}
-            closeLabel="Close"
-            actionButtons={buildActions({
-                running,
-                watching,
-                resetArmed,
-                canStart,
-                stopWatching: () => setWatching(false),
-                validate,
-                armReset: () => setResetArmed(true),
-                disarmReset: () => setResetArmed(false),
-                confirmReset,
-                startImport,
-            })}
-        >
-            <div className="datapack-import-body">
-                {record ? <ImportProgress record={record} watching={watching} /> : null}
+        <DialogContainer type="modal" onDismiss={onClose}>
+            <Modal
+                title={`Import ${displayName}`}
+                size="M"
+                fitContent
+                onClose={onClose}
+                closeLabel="Close"
+                actionButtons={buildActions({
+                    running,
+                    watching,
+                    resetArmed,
+                    canStart,
+                    stopWatching: () => setWatching(false),
+                    validate,
+                    armReset: () => setResetArmed(true),
+                    disarmReset: () => setResetArmed(false),
+                    confirmReset,
+                    startImport,
+                })}
+            >
+                <div className="datapack-import-body">
+                    {record ? <ImportProgress record={record} watching={watching} /> : null}
 
-                {resetArmed ? (
-                    <div className="datapack-import-danger">
-                        {`Remove ${displayName}'s ${selected.join(', ')} from ${commerceInstance}. This cannot be undone — the Data Installer has no restore.`}
-                    </div>
-                ) : null}
-
-                {!running && !resetArmed ? (
-                    <>
-                        <FormField
-                            fieldKey="commerceInstance"
-                            label="Commerce instance"
-                            type="text"
-                            value={commerceInstance}
-                            onChange={setCommerceInstance}
-                            required
-                            description="Where this data will be written. There is no undo — check it with whoever owns the target."
-                        />
-                        <div className="datapack-import-types">
-                            <span className="datapack-import-label">Data types</span>
-                            {availableTypes.map((type) => (
-                                <Checkbox
-                                    key={type}
-                                    isSelected={selected.includes(type)}
-                                    onChange={(isSelected) => toggle(type, isSelected)}
-                                >
-                                    {type}
-                                </Checkbox>
-                            ))}
+                    {resetArmed ? (
+                        <div className="datapack-import-danger">
+                            {`Remove ${displayName}'s ${selected.join(', ')} from ${commerceInstance}. This cannot be undone — the Data Installer has no restore.`}
                         </div>
-                    </>
-                ) : null}
+                    ) : null}
 
-                {dryRun.value ? (
-                    <div className="datapack-import-verdict">
-                        {dryRun.value.valid
-                            ? 'Dry run passed — the service says this request would be accepted. Nothing has been written.'
-                            : 'The service refused this request:'}
-                        {dryRun.value.reason ? (
-                            <div className="datapack-import-reason">{dryRun.value.reason}</div>
-                        ) : null}
-                    </div>
-                ) : null}
+                    {!running && !resetArmed ? (
+                        <>
+                            <FormField
+                                fieldKey="commerceInstance"
+                                label="Commerce instance"
+                                type="text"
+                                value={commerceInstance}
+                                onChange={setCommerceInstance}
+                                required
+                                description="Where this data will be written. There is no undo — check it with whoever owns the target."
+                            />
+                            <div className="datapack-import-types">
+                                <span className="datapack-import-label">Data types</span>
+                                {availableTypes.map((type) => (
+                                    <Checkbox
+                                        key={type}
+                                        isSelected={selected.includes(type)}
+                                        onChange={(isSelected) => toggle(type, isSelected)}
+                                    >
+                                        {type}
+                                    </Checkbox>
+                                ))}
+                            </div>
+                        </>
+                    ) : null}
 
-                {dryRun.failure ? (
-                    <div className="datapack-import-error">{dryRun.failure.message}</div>
-                ) : null}
+                    {dryRun.value ? (
+                        <div className="datapack-import-verdict">
+                            {dryRun.value.valid
+                                ? 'Dry run passed — the service says this request would be accepted. Nothing has been written.'
+                                : 'The service refused this request:'}
+                            {dryRun.value.reason ? (
+                                <div className="datapack-import-reason">{dryRun.value.reason}</div>
+                            ) : null}
+                        </div>
+                    ) : null}
 
-                {start.failure ? (
-                    <div className="datapack-import-error">{start.failure.message}</div>
-                ) : null}
+                    {dryRun.failure ? (
+                        <div className="datapack-import-error">{dryRun.failure.message}</div>
+                    ) : null}
 
-                {reset.failure ? (
-                    <div className="datapack-import-error">{reset.failure.message}</div>
-                ) : null}
-            </div>
-        </Modal>
+                    {start.failure ? (
+                        <div className="datapack-import-error">{start.failure.message}</div>
+                    ) : null}
+
+                    {reset.failure ? (
+                        <div className="datapack-import-error">{reset.failure.message}</div>
+                    ) : null}
+                </div>
+            </Modal>
+        </DialogContainer>
     );
 }
 
@@ -243,7 +252,12 @@ interface ActionInputs {
  */
 function buildActions(
     a: ActionInputs,
-): { label: string; variant: 'secondary' | 'accent' | 'negative'; onPress: () => void; isDisabled?: boolean }[] {
+): {
+    label: string;
+    variant: 'secondary' | 'accent' | 'negative';
+    onPress: () => void;
+    isDisabled?: boolean;
+}[] {
     if (a.running && a.watching) {
         // NOT "Cancel" — no endpoint exists to cancel with.
         return [{ label: 'Stop watching', variant: 'secondary', onPress: a.stopWatching }];
@@ -262,7 +276,12 @@ function buildActions(
         { label: 'Dry run', variant: 'secondary', onPress: a.validate, isDisabled: !a.canStart },
         // Arms only. Removing data always takes a second, explicit press.
         { label: 'Reset…', variant: 'secondary', onPress: a.armReset, isDisabled: !a.canStart },
-        { label: 'Start import', variant: 'accent', onPress: a.startImport, isDisabled: !a.canStart },
+        {
+            label: 'Start import',
+            variant: 'accent',
+            onPress: a.startImport,
+            isDisabled: !a.canStart,
+        },
     ];
 }
 
