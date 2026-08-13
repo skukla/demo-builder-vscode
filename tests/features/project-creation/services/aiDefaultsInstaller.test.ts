@@ -17,7 +17,9 @@
 
 import * as fsPromises from 'fs/promises';
 import {
+    applicableMcpPackages,
     installAiDefaultsMcpTools,
+    readInstalledMcpPackages,
     resolveMcpToolsDir,
 } from '@/features/project-creation/services/aiDefaultsInstaller';
 import { COMPONENT_IDS } from '@/core/constants';
@@ -27,6 +29,7 @@ import type { Project } from '@/types/base';
 jest.mock('fs/promises', () => ({
     mkdir: jest.fn().mockResolvedValue(undefined),
     writeFile: jest.fn().mockResolvedValue(undefined),
+    readFile: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
 }));
 
 const executeMock = jest.fn();
@@ -211,5 +214,61 @@ describe('installAiDefaultsMcpTools', () => {
         expect(result.error).toMatch(/EACCES/);
         // npm install must NOT run if the prep step failed.
         expect(executeMock).not.toHaveBeenCalled();
+    });
+});
+
+// =============================================================================
+// The composition-axis readers (aiContextFreshnessCheck compares these two).
+// =============================================================================
+
+describe('applicableMcpPackages', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        executeMock.mockReset();
+    });
+
+    it('names the Developer Agent package for a mesh-only project', () => {
+        const pkgs = applicableMcpPackages(MESH_PROJECT);
+        expect(pkgs).toContain('@adobe-commerce/commerce-extensibility-tools');
+    });
+
+    it('returns every entry for an EDS storefront project (superset of mesh-only)', () => {
+        const eds = applicableMcpPackages(EDS_PROJECT);
+        const mesh = applicableMcpPackages(MESH_PROJECT);
+        for (const pkg of mesh) expect(eds).toContain(pkg);
+        expect(eds.length).toBeGreaterThanOrEqual(mesh.length);
+    });
+
+    it('returns nothing for a bare project', () => {
+        expect(applicableMcpPackages(BARE_PROJECT)).toEqual([]);
+    });
+
+    it('agrees with what the installer would install (the two must not drift)', async () => {
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+        await installAiDefaultsMcpTools(PROJECT_PATH, MESH_PROJECT);
+        const manifest = captureToolsPackageJson();
+        expect(Object.keys((manifest?.dependencies as object) ?? {}).sort()).toEqual(
+            applicableMcpPackages(MESH_PROJECT).sort()
+        );
+    });
+});
+
+describe('readInstalledMcpPackages', () => {
+    it('reads the dependency names from the isolated tools manifest', async () => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValueOnce(
+            JSON.stringify({ dependencies: { 'pkg-a': '^1.0.0', 'pkg-b': '^2.0.0' } })
+        );
+
+        await expect(readInstalledMcpPackages(PROJECT_PATH)).resolves.toEqual(['pkg-a', 'pkg-b']);
+        expect(fsPromises.readFile).toHaveBeenCalledWith(TOOLS_PACKAGE_JSON_PATH, 'utf-8');
+    });
+
+    it('reads as [] when the manifest is absent (nothing installed — can only cause a warning, never mask one)', async () => {
+        await expect(readInstalledMcpPackages(PROJECT_PATH)).resolves.toEqual([]);
+    });
+
+    it('reads as [] when the manifest is unparseable', async () => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValueOnce('not json');
+        await expect(readInstalledMcpPackages(PROJECT_PATH)).resolves.toEqual([]);
     });
 });

@@ -61,6 +61,10 @@ import {
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
+import {
+    applicableMcpPackages,
+    readInstalledMcpPackages,
+} from '@/features/project-creation/services/aiDefaultsInstaller';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 import type { Project } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
@@ -192,11 +196,17 @@ export const handleRequestStatus: MessageHandler = async (context) => {
             detectDrift: detectMcpDrift,
             heal: () => handleRegenerateAiFiles(context),
         }),
-        // ai-context-freshness (all projects): stamp-vs-constant staleness. Detect-only
-        // per the OnOpenCheck P1 contract — a stale project flips the AI badge to
-        // "AI files out of date", surfacing the existing "Regenerate AI files" action
-        // (the user's explicit click is the remediation; no on-open prompt or heal).
-        createAiContextFreshnessCheck({ currentVersion: AI_CONTEXT_VERSION }),
+        // ai-context-freshness (all projects): both staleness axes — stamp-vs-constant
+        // (did WE change the bundle?) and composition-vs-installed (did the PROJECT
+        // gain a component whose tooling it never received?). Detect-only per the
+        // OnOpenCheck P1 contract — either axis flips the AI badge, surfacing the
+        // existing "Regenerate AI files" action (the user's explicit click is the
+        // remediation; no on-open prompt or heal).
+        createAiContextFreshnessCheck({
+            currentVersion: AI_CONTEXT_VERSION,
+            applicablePackages: applicableMcpPackages,
+            installedPackages: readInstalledMcpPackages,
+        }),
         createAiVerifyCheck({
             verify: async (p) => {
                 // dist path resolved lazily (inside the check) — server-side only.

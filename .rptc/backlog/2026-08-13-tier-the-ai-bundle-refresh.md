@@ -1,5 +1,33 @@
 # Watch both staleness axes, then refresh proportionately
 
+> ## ⏳ PARTIAL — steps 0, 1 and the check's share of 7 SHIPPED 2026-08-14
+>
+> **Step 0 (reproduce)**: done as a RED test, not a Dev Host session — with the real
+> check, a project with a FRESH version stamp and a qualifying component whose package
+> was never installed returned `ok` and logged nothing (the exact silent under-fire).
+> `tests/features/dashboard/services/onOpenChecks/aiContextFreshnessCheck.test.ts`,
+> "composition axis" describe, holds the reproduction; it now passes against the fix.
+>
+> **Step 1 (second axis)**: `aiContextFreshnessCheck` now compares
+> `applicableMcpPackages(project)` (new, in `aiDefaultsInstaller.ts`, built on
+> `aiDefaultsEntryApplies`) against `readInstalledMcpPackages(projectPath)` (new,
+> reads the `.demo-builder-mcp/package.json` manifest; absent/unparseable reads as
+> "nothing installed" — can only cause a warning, never mask one). Either axis stale →
+> the existing badge + "Regenerate AI files" surface. A parity test pins that
+> `applicableMcpPackages` and the installer's own dependency set cannot drift.
+> No `AI_CONTEXT_VERSION` bump — generated content is unchanged; only the check grew.
+>
+> **Step 7 (partial — the check only)**: every run now logs its decision, both axes,
+> including the healthy verdict (`debug`); either stale branch logs the WHY at `info`,
+> naming the missing packages. A test pins that the healthy path logs.
+>
+> **NOT done — needs the user's tier-2 policy decision first** (see "The risk to
+> settle first"): steps 2 (per-tier version detail), 3 (split `generateAIContextFiles`
+> by tier), 4 (silent tier-1 repair on activation), 5 (tier-2 policy), 6 (prompt
+> wording), 8 (reconcile `updateExecutor`'s silent regeneration with the check's
+> prompt). The under-firing HALF is fixed via the existing consent surface; the
+> proportionality half is untouched.
+
 *(Filed as "tier the AI-bundle refresh". Renamed after research widened it — see
 "The check is also under-firing".)*
 
