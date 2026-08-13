@@ -4,9 +4,11 @@
  * PaaS has no gap: the admin username and password are already in
  * `componentConfigs`, put there when the project was built. ACCS has nothing —
  * its REST API accepts only IMS OAuth2, and the client_id/client_secret pair
- * comes from a Developer Console credential the user creates by hand. It cannot
- * be auto-provisioned: the service is product-profile gated on *Commerce Cloud
- * Manager*, which is the step that silently hides it.
+ * comes from a Developer Console OAuth S2S credential. Auto-provisioning the
+ * pair IS possible — proven live 2026-08-13: create the credential, subscribe
+ * `ACCS-REST-API` (grants commerce.accs + projectedProductContext), read the
+ * pair back from the workspace download. An earlier claim here that it "cannot
+ * be auto-provisioned (product-profile gated)" was wrong.
  *
  * **Both pairs are DECLARED config, read the same way.** ACCS declares its OAuth
  * pair on the `adobe-commerce-accs` component, exactly as PaaS declares its admin

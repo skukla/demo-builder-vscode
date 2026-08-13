@@ -281,11 +281,26 @@ Four facts, each measured:
   account has no access to it". Neither can we, from outside — settling it needs
   the service owner or an instance already known to work.
 - **A freshly created `demo-builder-s2s` credential carries scopes
-  `AdobeID,openid` only.** It authenticates and is entitled to nothing. Creating
-  the credential is automatable (proven live); granting its technical account
-  access to a Commerce instance is the product-profile step that is not — and that
-  grant is an authorization decision, which is arguably the one step that SHOULD
-  stay human.
+  `AdobeID,openid` only.** It authenticates and is entitled to nothing.
+- **Subscribing `ACCS-REST-API` to the credential is the entire fix** — measured
+  same day: after the subscription the scopes become `commerce.accs`,
+  `additional_info.projectedProductContext`, `additional_info.roles` (+ profile,
+  email, org.read), and the SAME `get-websites-and-stores` call that pre-flight
+  refused returns `200 site_type:accs` with the instance's real store structure.
+  No Admin Console grant, no product profile step, no human action. An earlier
+  version of this section — and the original research — said the entitlement
+  "cannot be auto-provisioned"; that is now disproven live. The full loop
+  (create credential → subscribe → read pair from the workspace download → write
+  config) is automatable end to end.
+- **The extension's own subscribe path cannot do that subscription today.**
+  `ACCS-REST-API` lists `platformList: [NativeApp, SinglePageApp, WebApp]` and
+  `oauthServerToServerOnly: true`; the subscribe axis filter reads ONLY
+  `platformList`, so the one service that is S2S-only matches neither bucket and
+  is silently dropped (`add_console_apis` reported subscribing just the managed
+  mesh API). The working call is the direct
+  `subscribeOAuthServerToServerIntegrationToServices` with the union of existing
+  codes plus `ACCS-REST-API` — which is what the auto-provisioning enhancement
+  must use, or the filter must learn the flag.
 
 ### Reset — how a project gets reused
 

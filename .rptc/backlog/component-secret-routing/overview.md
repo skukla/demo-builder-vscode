@@ -209,13 +209,25 @@ with user approval, against the real workspace a project is bound to:
    `oauth_server_to_server` block carries `client_id` AND `client_secrets`
    (non-empty). Presence verified by key inspection; the value was never printed.
 
-So the full loop needs nothing the extension does not already ship:
-`ensureOAuthCredentialId` + the workspace-download path `runtimeCredentials.ts`
-already uses (0700 temp dir, deleted in `finally`) + a write into the two declared
-fields. The remaining work is wiring, not discovery. One caution for the
-implementer: the secret must flow download → SecretStorage/config WITHOUT passing
-through logs or UI, and the temp-file hygiene in `runtimeCredentials.ts` is the
-pattern to copy.
+Same-day addendum, also measured: a fresh credential's scopes are `AdobeID,openid`
+and the Data Installer pre-flight refuses it. **Subscribing `ACCS-REST-API` is the
+entire fix** — scopes become `commerce.accs` + `additional_info.*`, and the same
+pre-flight call returns 200 with the instance's store structure. No Admin Console
+grant needed; the old "cannot be auto-provisioned" claim is disproven.
+
+So the full loop needs nothing the extension does not already ship —
+`ensureOAuthCredentialId`, the subscribe call, the workspace-download path
+`runtimeCredentials.ts` already uses (0700 temp dir, deleted in `finally`), and a
+write into the two declared fields. Two cautions for the implementer:
+
+- **The subscribe axis filter has a bug this enhancement must route around or
+  fix:** `ACCS-REST-API` carries `oauthServerToServerOnly: true` but a
+  `platformList` of webapp types, and the filter reads only `platformList` — so
+  `add_console_apis` silently drops the one service that is S2S-only. Call
+  `subscribeOAuthServerToServerIntegrationToServices` directly with the union of
+  existing codes + `ACCS-REST-API`, or teach the filter the flag.
+- The secret must flow download → storage WITHOUT passing through logs or UI;
+  the temp-file hygiene in `runtimeCredentials.ts` is the pattern to copy.
 
 ## What this does not fix
 
