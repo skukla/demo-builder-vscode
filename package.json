@@ -430,6 +430,7 @@
     "test:integration": "node --max-old-space-size=4096 node_modules/.bin/jest --testPathPattern='integration'",
     "test:ui": "node --max-old-space-size=4096 node_modules/.bin/jest --selectProjects react",
     "test:typecheck": "tsc --noEmit",
+    "typecheck:tests": "tsc -p tsconfig.test.json",
     "metrics:baseline": "node scripts/capture-baseline-metrics.js",
     "validate:jest-config": "node scripts/validate-jest-config.js",
     "validate:eslint-rules": "node scripts/validate-eslint-rules.js",
