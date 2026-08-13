@@ -179,11 +179,11 @@ is no undo and no cancel. Treat this section as "built and unverified", not as
 
 | Piece | What it does |
 |---|---|
-| `services/dataInstallerWriteClient.ts` | `validateImport` (sync) + `startImport` (async). Credentialed sibling of the read client; status polling deliberately stays on the read client, since watching needs no credentials. |
+| `services/dataInstallerWriteClient.ts` | `validateImport` (sync) + `startImport` (async) + `startDelete` (async, `operation_mode: 'delete'`) + `checkCredentials`. Credentialed sibling of the read client; status polling deliberately stays on the read client, since watching needs no credentials. |
 | `services/commerceCredentials.ts` | PaaS reads the admin pair from `componentConfigs`; ACCS reads an OAuth pair from **SecretStorage only**, keyed per project. Answers "is there something to try?", never "will it work?". |
 | `services/importJobRunner.ts` | The state machine — grace window on the empty map, covering-set terminal rule, `partial` as a first-class outcome, the echo consulted once. |
-| `handlers/importHandlers.ts` | Validate → start → DETACHED watch recording into `TransientStateManager`, so closing the panel does not abandon an import. |
-| `ui/components/ImportDatapackModal.tsx` | Instance field (empty, never derived), type checkboxes limited to what the service STORES, progress, and "Stop watching". |
+| `handlers/importHandlers.ts` | Validate → start → DETACHED watch recording into `TransientStateManager`, so closing the panel does not abandon an import. Also `validate-datapack-import` (dry run) and `reset-datapack` (confirm-gated removal). |
+| `ui/components/ImportDatapackModal.tsx` | Instance field (empty, never derived), type checkboxes limited to what the service STORES, progress, "Stop watching", and the two-press Reset. |
 
 **There IS a dry run.** `validate-datapack-import` runs the same guard,
 credentials and request body as a start and stops after the synchronous
@@ -195,13 +195,87 @@ A refusal comes back as `{valid:false, reason}` with `success: true`: the call
 worked and the service answered. The reason is the service's own wording and is
 the whole point of the button.
 
+Validate answers "is this request well-formed". It does **not** answer "do these
+credentials reach that instance" — so the dry run asks that first, with
+`get-websites-and-stores`, a read that cannot start work by accident. A credential
+gap comes back as the same `{valid:false, reason}` shape, because from the user's
+side it is the same answer: this will not run.
+
 §6 keeps the equivalent direct call, for probing without the extension open.
 
-**Two things the build assumes and cannot yet confirm**: that the credential field
-names (`commerce_username`/`commerce_password`, `client_id`/`client_secret`) are
-what the service expects, and what scope its auth requests. The scope question was
-put to the service owner and declined, so the design finds out by attempting —
-which means the first live call is the experiment.
+### The `operation_mode` axis is closed at four (probed 2026-08-13)
+
+`import`, `validate`, `delete`, `export`. Nine other candidates (`update`, `upsert`,
+`sync`, `compare`, `rollback`, `uninstall`, `reset`, plus a deliberate nonsense
+string and the parameter omitted entirely) were walked against
+`get-processor-order`. **Every unknown mode answers `200` with an EMPTY processor
+list — it never 400s**, so the readable signal is the count, not the status. The
+nonsense control behaved identically to the guesses, which is what makes the four
+non-empty answers mean something.
+
+This axis is recorded because it is what the original plan missed: the plan
+enumerated ACTION names and decided each one, but `operation_mode` is a parameter
+whose values were *used* (`validate`, `export`) without ever being *enumerated* —
+and `delete`, the reset, lived there. Coverage has to be `action × mode`.
+
+**This is re-checked, not trusted.** `npm run data-installer:drift` walks the four
+decided modes, seven undecided candidates and the control on every run, and **exits
+non-zero** when a decided mode goes empty, a candidate turns real, or the control
+stops behaving. A capability the service adds later surfaces there instead of
+waiting to be noticed by hand. Adding a mode to `DECIDED_MODES` requires writing the
+decision here first — that coupling is the point.
+
+**Limit, stated plainly:** this enumerates modes `get-processor-order` knows about.
+A mode that exists on `process-datapack-async` but has no processor list would be
+invisible to it. Omitting the parameter returns the import set, so there is no
+"list the modes" endpoint to ask instead.
+
+### Reset — how a project gets reused
+
+The service takes `operation_mode: 'delete'` on the same `process-datapack-async`
+action, and `get-processor-order?operation_mode=delete` returns the **same 21
+`data_type`s** as import — verified as a set, not by count — in its own dependency
+order. That order is **not** the reverse of import's, so do not derive one from the
+other. Read plainly: nothing importable is undeletable, and a reset is an activation
+id like any other, so the runner watches it with **no changes** — the seam working
+as designed.
+
+For Stage 3: `export` lists **18** of those 21, but that is **not** a three-capability
+gap. Two of the three are naming artifacts, and the service's own descriptions say so:
+
+| Type | Import processor | What the service calls it |
+|---|---|---|
+| `product_export` | `JsonImportProcessor` | "Import product data via bulk import endpoint" |
+| `customers_export` | `JsonImportProcessor` | "Import customer data with batch processing" |
+| `giftcards` | `GiftCardImportProcessor` | "Import gift card products with loop processing" |
+
+`product_export` and `customers_export` are **import-side input formats**, not export
+capabilities — the `_export` suffix names the shape of the data being read in, not a
+direction. Export already emits products and customers through `ProductsExportProcessor`
+and `CustomerExportProcessor` under the plain `products` / `customers` types.
+
+So the only genuine export gap is **`giftcards`**: it has an import processor and no
+export counterpart. That is the one the Stage 3 UI must say it will skip.
+
+**Unverified, do not build on it yet:** that an export artifact can be re-imported
+through `product_export` / `customers_export` is a reasonable reading of the names,
+but nothing here proves it. Confirming it means running an export and inspecting the
+artifact's data types — a write, so it waits for live verification.
+
+`reset-datapack` refuses anything without `confirm: true`, and the modal arms that
+confirm with a separate press that replaces the whole footer. There is no undo, so
+one mis-click must not be able to remove data.
+
+Two other "deletes" exist and are deliberately NOT wired: `delete-datapack` removes
+a pack from the shared catalog for everyone, and `DELETE get-installed-datapacks`
+edits tracking only, which would make the record disagree with the instance.
+
+**One thing the build assumes and cannot yet confirm**: what scope its auth
+requests. The question was put to the service owner and declined, so the design
+finds out by attempting — the first live call is the experiment. (The credential
+field names are no longer a guess: `admin_username`/`admin_password` for PaaS and
+`client_id`/`client_secret` for ACCS, both read off the live probe in
+`.rptc/research/data-installer/spike-01-live-api.md`.)
 
 Everything below was measured and is expensive to re-derive.
 
@@ -249,10 +323,19 @@ curl -sS -X POST "$BASE/process-datapack" \
   -H "Authorization: Bearer $TOK" -H 'Content-Type: application/json' \
   -d '{"datapack_name":"bodea","version":"main","commerce_instance":"<your-instance>",
        "data_types":["categories"],"operation_mode":"validate",
-       "commerce_username":"<admin>","commerce_password":"<password>"}'
+       "admin_username":"<admin>","admin_password":"<password>"}'
 ```
 
-Swap the two `commerce_*` fields for `"client_id"`/`"client_secret"` on ACCS.
+Swap the two `admin_*` fields for `"client_id"`/`"client_secret"` on ACCS.
+
+To check the credentials alone, without a datapack in the request at all:
+
+```bash
+curl -sS -X POST "$BASE/get-websites-and-stores" \
+  -H "Authorization: Bearer $TOK" -H 'Content-Type: application/json' \
+  -d '{"commerce_instance":"<your-instance>",
+       "admin_username":"<admin>","admin_password":"<password>"}'
+```
 
 What each answer means:
 
