@@ -101,19 +101,48 @@ sits there, not in the feature.
 | 4 | Point `resolveCommerceCredentials` at the general path; delete the bespoke one | `data-installer/` |
 | 5 | Shrink `SECRET_ENV_KEYS`, and guard it so the list cannot silently fall behind | `components/` |
 
-### Step 2 is the one with real risk
+### Step 2 is the one with real risk — and it is bigger than "move a value"
 
-Existing projects already hold that password in `componentConfigs` in the clear.
-Retyping the field does not move what is already saved. So:
+Existing projects hold the password in `componentConfigs` in the clear, and retyping
+the field does not move what is already saved. But the sequencing problem is the
+real cost: **five consumers read it straight out of `componentConfigs` today**, and
+one of them cannot follow it to SecretStorage.
 
-- read SecretStorage first, fall back to `componentConfigs`;
-- move it on next save;
-- decide whether to strip the old plaintext copy eagerly or only on save.
+| Consumer | Runs in |
+|---|---|
+| `data-installer/services/commerceCredentials.ts` | extension host |
+| `eds/services/storeStructureReader.ts` | extension host |
+| `components/config/storeFieldHelpers.ts` | shared |
+| `components/services/serviceGroupTransforms.ts` | extension host |
+| **`components/ui/hooks/useAutoStoreDetect.ts`** | **the webview** |
 
-**Open question for review:** eager strip is safer but rewrites project files
-nobody asked to touch, and a half-finished migration leaves a project with the
-credential in neither place. Fallback-read plus move-on-save is reversible and
-slower to converge. This plan does not decide it.
+SecretStorage is extension-host only. A webview cannot read it at all, so
+`useAutoStoreDetect` needs a handler round-trip before the value can move. Strip the
+old location first and auto-store-detect silently stops finding stores.
+
+**Recommended: three phases, and phase 1 is what de-risks the rest.**
+
+1. **One accessor, no storage change.** Route all five consumers through a single
+   read that checks SecretStorage then falls back to `componentConfigs`. The webview
+   consumer becomes a handler round-trip. Behaviour is identical, nothing moves, and
+   it is independently valuable — five call sites reaching into a config map for a
+   credential is the thing that made this migration expensive in the first place.
+2. **Write-through with verified read-back.** On save: write to SecretStorage, read
+   it back, and only on a successful read remove it from `componentConfigs`. There
+   is never a state where the credential is in neither place — which was the whole
+   argument against an eager strip.
+3. **Converge on load.** A one-time migration doing the same write → verify → strip,
+   so projects converge without waiting for a user to happen to open Configure and
+   save.
+
+This is eager, but only ever after the new home is proven to hold the value. The
+rejected alternatives: a bare eager strip can leave a project with the credential
+nowhere; fallback-read plus move-on-save is safe but may never converge, and
+"eventually stops leaking" is not a property worth designing for when the file is
+plaintext on disk.
+
+**Phase 1 is worth doing even if phases 2-3 never happen** — same standalone
+argument as step 5.
 
 ### Step 5 is the durable half, and it inherits a live dependency
 

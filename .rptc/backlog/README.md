@@ -175,9 +175,12 @@ today nothing enforces the list at all, and the export's safety rests entirely o
 (`stripSecretValues`, wired in `12f4b802`). Take step 5 even if steps 1-2 are rejected or the
 migration question stalls; it does not depend on either.
 
-**Step 2 is where the risk is** — existing projects already hold a Commerce admin password in
-`componentConfigs` in the clear, and retyping the field does not move what is already saved. The
-migration strategy is deliberately left open for review. **Steps 1-2 are shared infrastructure**;
+**Step 2 is where the risk is**, and it is bigger than moving a value: **five consumers read that
+password straight out of `componentConfigs`**, one of them (`useAutoStoreDetect`) in the WEBVIEW,
+which cannot read SecretStorage at all. Recommended migration is three phases — one accessor with
+fallback first (behaviour-identical, independently valuable), then write-through with verified
+read-back so the credential is never in neither place, then converge on load. Phase 1 is worth
+doing even if the rest never happens. **Steps 1-2 are shared infrastructure**;
 step 3 alone would unblock ACCS the existing (worse) way. Verified against the live service, not
 assumed: it refuses with "Provide either (client_id + client_secret) or (admin_username +
 admin_password)" and 401s on a bogus pair. Not blocked; needs a design decision before code.
