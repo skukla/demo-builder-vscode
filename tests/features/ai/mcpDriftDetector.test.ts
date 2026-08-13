@@ -22,7 +22,9 @@ const readFile = fsPromises.readFile as jest.Mock;
 const access = fsPromises.access as jest.Mock;
 
 /** Mock `.claude/mcp.json` contents. */
-function mockMcpJson(servers: Record<string, { command?: string; args?: string[]; env?: Record<string, string> }>) {
+function mockMcpJson(
+    servers: Record<string, { command?: string; args?: string[]; env?: Record<string, string> }>
+) {
     readFile.mockResolvedValue(JSON.stringify({ mcpServers: servers }));
 }
 
@@ -30,7 +32,10 @@ function mockMcpJson(servers: Record<string, { command?: string; args?: string[]
 function existsOnly(existing: string[]) {
     const set = new Set(existing);
     access.mockImplementation((p: string) =>
-        set.has(p) ? Promise.resolve() : Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })));
+        set.has(p)
+            ? Promise.resolve()
+            : Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
+    );
 }
 
 beforeEach(() => {
@@ -63,15 +68,33 @@ it('drifted: a missing arg path is reported', async () => {
     expect(result.missing).toContain(path.join(TOOLS_DIR, '@playwright/mcp/index.js'));
 });
 
-it('skips the extension-managed demo-builder proxy (its absent path is not drift)', async () => {
-    mockMcpJson({ 'demo-builder': { command: 'node', args: ['dist/mcp-proxy.js'] } });
-    existsOnly([]); // proxy path absent
+it('CHECKS the demo-builder entry — it is the one that rots on update', async () => {
+    // Reversed 2026-08-13. This used to assert the opposite, on the reasoning
+    // that the entry is "extension-managed". The extension writes it and never
+    // re-writes it, so managed meant written once and forgotten: both writers
+    // embed the VERSIONED dist path, and a colleague's CLI ended up refusing to
+    // add any MCP server because user and project scope named different builds.
+    //
+    // The fixture is absolute because that is what both writers emit
+    // (`path.join(extensionDistPath, 'mcp-proxy.js')`).
+    const stale = '/ext/skukla.adobe-demo-builder-1.0.0-beta.111/dist/mcp-proxy.js';
+    mockMcpJson({ 'demo-builder': { command: 'node', args: [stale] } });
+    existsOnly([]); // the version it names is gone
 
     const result = await detectMcpDrift(PROJECT);
 
-    expect(result).toEqual({ drifted: false, missing: [] });
-    // demo-builder is never stat'd.
-    expect(access).not.toHaveBeenCalled();
+    expect(result.drifted).toBe(true);
+    expect(result.missing).toEqual([stale]);
+});
+
+it('ignores a RELATIVE arg on the demo-builder entry rather than guessing', async () => {
+    // Our writers always emit absolute. A relative arg is not something we wrote,
+    // and resolving it against the PROJECT's tools dir would invent a path that
+    // was never going to exist and report it as drift.
+    mockMcpJson({ 'demo-builder': { command: 'node', args: ['dist/mcp-proxy.js'] } });
+    existsOnly([]);
+
+    expect(await detectMcpDrift(PROJECT)).toEqual({ drifted: false, missing: [] });
 });
 
 it('resolves a relative arg against the MCP tools dir (not cwd)', async () => {
