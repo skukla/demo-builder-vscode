@@ -3,7 +3,7 @@
 Read this, then [`overview.md`](overview.md) for the design and the verified API contract.
 
 **Stage 1 (reads) has SHIPPED** — merged to `develop` as `a3c07420`, 14 commits,
-fast-forward. Stage 2 (import) is next and is **not blocked** — see "Next action".
+fast-forward. **Stage 2 (import) is BUILT and has never run live** — see "Next action".
 
 ## Where the work is
 
@@ -52,37 +52,50 @@ Expect **17 suites / 265 tests** green. The descriptor rows have their own suite
 **The panel works end to end and has been visually confirmed by the user.** All four
 surfaces render: catalog, detail flyout, installed, activity.
 
-## Next action — Stage 2, unblocked
+## Next action — verify Stage 2 against the live service
 
-**Nothing is waiting on the service owner.** Both questions were put to them and will not
-be answered; their read was that this was going too deep. They are right, and the two
-"blockers" dissolve into defensive design that is more robust than any answer would have
-been:
+**Stage 2 is built. Not one line of it has spoken to the service.** Five commits on
+`feature/data-installer`: write client, credential resolution, job runner, handler spine,
+import modal, and the wiring that makes it reachable from the detail flyout.
 
-- **`commerce_instance`** — an opaque string the user supplies. A plain text field, no
-  derivation, no prefill, no validation, no formatting. This was already the safe default;
-  the spike that "justified" it was wasted motion.
-- **Auth `scope`** — find out by doing. Attempt the credential flow and handle failure with
-  a clear message, rather than branching on a scope value nobody will confirm. If PaaS and
-  ACCS turn out to need different paths, the failure will say so on the first attempt.
+Everything is unit-tested. That proves the pieces agree with each other, and nothing about
+whether they agree with the API — which is the same trap that produced a "two-shape
+contract" out of stage junk earlier in this feature. **Do not build Stage 3 on top of this
+until an import has actually run.**
 
-Then build Stage 2 per `overview.md`: credentials in SecretStorage, the job runner, the
-import UI. The runner's rules — two status endpoints failing in opposite directions, the
-grace window, `partial` as a first-class outcome, the covering-set terminal rule — are in
-the overview and in `docs/systems/data-installer.md` §5, and those DID come from probing
-behaviour rather than reading stored data.
+### 1. Validate without writing (do this first)
 
-### The lesson worth more than the spike
+There is no dry-run in the UI: `start-datapack-import` chains validate and start, so a
+passing validation goes straight to a real import. The safe probe is a direct call to the
+SYNC endpoint with `operation_mode: 'validate'` — exact command and how to read each answer
+in `docs/systems/data-installer.md` §6.
 
-**Stage data is not a specification.** A live read of the installed list found a few rows
-holding `https://datapack-accs.test` — test junk in a stage database. That became a
-documented "two-shape contract", three file edits, two commits and a long letter to
-another team. The correct response to an anomaly in stage data is to treat the field as
-opaque and move on.
+It answers the two things the build assumes and cannot confirm: whether the credential field
+names are what the service expects, and what scope its auth wants — the question the service
+owner declined, arriving empirically instead.
 
-The service owner's own conclusion is worth recording: this is a case for **discovery
-metadata in the API for AI introspection**. Absent that, probing stored data to infer a
-contract will keep producing confident wrong answers — so don't.
+### 2. Then one real import, on a target you own
+
+Needs a project open (the handler requires one), its credentials resolvable, and an instance
+id you have checked. There is **no cancel endpoint**: once started it runs to completion
+server-side. Prefer a throwaway instance and a single small data type.
+
+Watch for: whether the status map fills the way the runner expects, whether the grace window
+is long enough for a real start, and whether `partial` ever appears.
+
+### 3. Only then, Stage 3
+
+Export reuses the runner unchanged with `operation_mode: 'export'`. **If it needs runner
+changes, the Stage 2 seam was wrong** — that is the design's own falsification test, and the
+cheapest review of this work available.
+
+### Known gaps, deliberately left
+
+- **No dry-run affordance in the UI.** Worth adding if live testing turns into a loop.
+- **`core/ui/Modal` renders `role="dialog"` with no accessible name.** Real a11y gap, shared
+  code, touches every modal in the extension — reported, not fixed here.
+- **The gate is noisy.** Run the full suite at `--maxWorkers=25%`; see
+  `.rptc/backlog/2026-08-13-jest-full-suite-timeout-flake.md`.
 
 ## Process this repo actually enforces
 
