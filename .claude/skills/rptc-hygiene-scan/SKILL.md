@@ -98,8 +98,18 @@ that reports its own examples teaches people to ignore it.
 ## Fix the record, then ask what it was hiding
 
 Rot in the index is rarely only a formatting problem. Filing the three unindexed directories
-on 2026-08-13 surfaced that `integrations-host-contract` had real remaining work —
-`showIntegrations.ts` still hand-lists 19 handler references, the exact drift the plan was
-written to stop. That was invisible while the directory was.
+on 2026-08-13 surfaced `integrations-host-contract`, which had been invisible while the
+directory was.
+
+**But note how that finding was itself wrong.** It recorded that `showIntegrations.ts` "still
+hand-lists 19 handler references" — read out of the plan's own text, not measured. A
+claim-validation pass later the same day measured it: **0 references.** The hand-list had been
+replaced by `getRegisteredTypes()` in `0b9f0f6d`, and the item was archived as shipped.
+
+So this scan has a second blind spot beyond the bare-path one in §4: **it verifies that the
+record points at real files, never that the record is true.** A shipped item's links resolve
+perfectly. When a scan surfaces an item, run one command against `src/` before believing what
+the item says about it — especially any number, which is the cheapest kind of claim to check
+and the most convincing kind to be wrong about.
 
 So when this scan finds something, repair it and then read what you repaired.

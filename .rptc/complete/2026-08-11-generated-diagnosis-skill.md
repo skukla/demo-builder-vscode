@@ -1,5 +1,20 @@
 # Generated diagnosis skill — teach agents how to LOOK, not just how to DO
 
+> ## ✅ SHIPPED — archived 2026-08-13
+>
+> **The premise below is no longer true.** `diagnose-demo` exists:
+> `src/features/project-creation/templates/skills/diagnose-demo.md`, written by
+> `skillsWriter.ts` and registered in `DEMO_BUILDER_ALWAYS_ON_SKILLS`. Found on 2026-08-13
+> during a validation pass.
+>
+> The generated bundle is now **fourteen** always-on skills, and `src/features/CLAUDE.md`
+> describes the new one in this item's own terms — *"the only one that tells an agent how to
+> LOOK rather than how to DO — routes a symptom to the check that answers it"* — which is the
+> shape this item specified.
+>
+> The `AI_CONTEXT_VERSION` bump this item was waiting to batch has also happened; the constant
+> is at **7** (`src/core/constants.ts`).
+
 **Filed:** 2026-08-11, during the `get_store_structure` MCP tool work.
 
 ## Provenance
@@ -90,7 +105,7 @@ Non-tool surfaces worth naming: the **"Demo Builder: Diagnostics"** command and 
 ## Kickoff prompt
 
 > Add a `diagnose-demo` skill to the generated AI bundle. Read
-> `.rptc/backlog/2026-08-11-generated-diagnosis-skill.md` for the affordance inventory and
+> `.rptc/complete/2026-08-11-generated-diagnosis-skill.md` for the affordance inventory and
 > symptom routing it must cover. Model its shape on
 > `src/features/project-creation/templates/skills/sync-changes.md` — a symptom → check
 > decision table that routes, rather than restating tool documentation. Register it in

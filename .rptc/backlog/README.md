@@ -28,14 +28,40 @@ draft  →  ready  →  active  →  shipped/dropped
   └─ idea capture, may still change shape
 ```
 
-> **Index last reconciled: 2026-08-13** (second pass — the first fixed links and missed
-> semantics). Verified in BOTH directions with a control for each: 65 links, 0 dead; 38 items,
-> every one reachable from a `####` entry or as a numbered slice inside one.
+> **Index last reconciled: 2026-08-13** (THIRD pass — a claim-validation pass; see below).
+> The second pass verified in both directions with a control for each: 65 links, 0 dead;
+> 38 items, every one reachable from a `####` entry or as a numbered slice inside one.
+>
+> ### The third pass checked whether the entries were TRUE, and five were not
+>
+> Structure and truth are different properties. The first two passes established that every
+> link resolves and every item is reachable — and every one of those findings still holds.
+> Neither pass asked whether the described defect still existed, so **five items were
+> describing work that had already shipped**, one of them ranked first on a
+> pick-your-next-task list minutes before it was checked.
+>
+> The 14 actionable items were validated against `src/` on 2026-08-13. Result: **5 shipped**
+> (now archived — see "Archived 2026-08-13" below), **1 premise stale**
+> (`legacy-soft-deprecation`: ~2.5 months out of date, re-scoped in place), **1 partly
+> overtaken** (`third-party-tooling-visible-and-optional`), **6 confirmed accurate**, and
+> **1 spot-checked only** (`appbuilder-deployable-model` — treat as unverified).
+>
+> **The predictor is age, not topic.** Everything filed 2026-08-13 measured true. Everything
+> filed 2026-07-29 → 2026-08-11 was roughly a coin flip. The mechanism is simple and will
+> recur: a fixing commit touches `src/` and `tests/`, never `.rptc/`, so nothing in the
+> workflow makes the item's death visible. The hygiene scan cannot catch this — a shipped
+> item's links resolve perfectly.
+>
+> **So before picking an item up, re-measure its central claim.** Two of the five had counts
+> in them (`19 references`, `zero of 13 skills`); both took one command to disprove. And note
+> the trap in the entry that read "verified 2026-08-13" — that was a re-assertion of the
+> item's own text, not a re-measurement.
 >
 > The first pass checked only that links resolve. That is half a reconcile, and it hid four
 > things: three plan directories moved in from `plans/` with **no index entry at all**
 > (`appbuilder-deployable-model`, `integrations-host-contract`,
-> `per-integration-api-attribution` — now filed), `ai-surface-coverage` filed under **Live
+> `per-integration-api-attribution` — filed then; `integrations-host-contract` has since been
+> archived as shipped), `ai-surface-coverage` filed under **Live
 > defects** because it was inserted against a convenient anchor rather than a correct one, and
 > `hybrid-storefront-model` sitting under "In flight" while gated on a live B2B backend.
 > A bulk path-rewrite had also produced `../backlog/…` links from files already inside
@@ -121,10 +147,6 @@ Reframe `prerequisites.json` from "project prerequisites" to two tiers (extensio
 
 Core self-heal **shipped** (see Recently shipped). Residual scope from the original consolidation, **verify against current code before picking up**: (B) concurrency safety — re-pin under an exclusive lock spanning select→command and/or per-project `aio` config isolation; (C) human org-picker (real `get-organizations`/`select-org`) + typed non-retryable `ORG_MISMATCH` for agents + AGENTS.md/skills guidance. Was the FIX-FIRST gate for the App-Builder-deployable + workspace work; the gate is cleared now that the self-heal landed.
 
-#### Generated diagnosis skill — teach agents how to LOOK ([`2026-08-11-generated-diagnosis-skill.md`](2026-08-11-generated-diagnosis-skill.md))
-
-Of the 13 generated skills, **zero** cover diagnosis — every one is a do-this-task skill (verified 2026-08-11: `grep -rli "troubleshoot\|diagnos\|debug"` over `templates/skills/` returns 0 files). So a tool like `get_store_structure` has no home: an agent finds it by tool search, but nothing says to check store scope *when PDPs come back empty* — the failure that cost an afternoon in the PDP handoff §3. Scope is one symptom → check routing table (shaped like `sync-changes.md`), covering the eight read tools plus the Diagnostics command and Debug Logs channel; the file carries the inventory. **Not blocked — ready to execute.** Listed here only because it needs an `AI_CONTEXT_VERSION` bump, which re-prompts every existing project to regenerate; worth batching with another bundle change rather than shipping alone.
-
 #### Audit: project-level facts stored per-component ([`2026-08-11-project-level-facts-stored-per-component.md`](2026-08-11-project-level-facts-stored-per-component.md))
 
 `componentConfigs` is keyed by who CONSUMES a value, not by what the value IS, so one fact is stored once per declaring component. Measured 2026-08-11: **17 of 25** declared env vars have more than one owner; 6 are the Commerce scope keys (single-sourced 2026-08-11), leaving **11**. The drift mechanism is NOT a second writer — there is none; it is that Configure's fan-out targets come from `selectedComponents`, so a component holding a copy but missing from the selection lists never gets updated (the same gap `reconcileComponentSelections` exists for). That is **key-agnostic**, so all 11 are exposed. Two candidate fixes: widen the fan-out target set (one change, every key) or single-source per key (what scope got). **Do the fan-out audit first** — it may make most of the per-key work unnecessary. **Not blocked.**
@@ -164,14 +186,6 @@ Scope from that section, never from the step files. **Track A pre-positions
 `getWorkspaceCredential`** — `dead-code-scan` reports it as an unused export and it is NOT
 cruft. Not blocked.
 
-#### Integrations host contract — declare what hosting the wizard flow requires ([`integrations-host-contract/`](integrations-host-contract/overview.md))
-
-Moved from `plans/` 2026-08-13, and it has REAL remaining work: `showIntegrations.ts` still
-hand-lists the wizard handlers the integrations surface reuses (19 references, verified
-2026-08-13). That list is a copy of a contract the flow owns, so it drifts every time the flow
-grows, and the guard tests only catch the drift after someone has written the failing code —
-which happened four times on 2026-07-31 before the plan was written. Nothing declares "hosting
-this flow requires X". Not blocked.
 
 ### D. Deferred by design (gated on an external condition)
 
@@ -232,7 +246,7 @@ Numbers-first measurement pass to map the codebase's actual size, complexity, an
 
 #### Legacy / soft-deprecation cleanup ([`2026-05-21-legacy-soft-deprecation.md`](2026-05-21-legacy-soft-deprecation.md))
 
-~30 inventoried items across `src/` — `@deprecated` JSDoc, "kept for backward compatibility" variants, deprecated API aliases. **3 zero-caller deletions are ready any time** for a small trim task. Downstream of the structural baseline (which will likely re-rank these). Full plan in batches L1–L5.
+**Re-measured 2026-08-13 — nearly all done.** The old text here ("~30 inventoried items… 3 zero-caller deletions are ready any time") was ~2.5 months stale: L1–L5 executed in Cycle 4 (PR #8, 2026-05-31) and three of the four follow-ups have shipped since. `@deprecated` in `src/` is down to **1** (`envFileGenerator.ts`, a Category-A keep), lint is **0 warnings / 0 errors**, and `componentHandler.ts` is deleted. What remains is small: half of follow-up 2 (`stalenessDetector.ts` still carries a service class *and* ten standalone function exports) plus the never-scheduled `demoPackageLoader` test seam. **Do not execute the batch plan in the file** — it is history; the banner at the top has the current scope.
 
 #### Jest worker force-exit ([`2026-06-09-jest-worker-force-exit.md`](2026-06-09-jest-worker-force-exit.md))
 
@@ -342,37 +356,6 @@ stale branch, so "checked and fine" and "never ran" are the same silence — the
 `|| echo "none"` ambiguity in another costume, and the reason the under-firing case is
 invisible. **Step 0 is reproducing the silent case.** Not blocked.
 
-#### `export_project_settings` ignores `includeSecrets` ([`2026-08-11-export-settings-ignores-include-secrets.md`](2026-08-11-export-settings-ignores-include-secrets.md))
-
-Filed 2026-08-11, found in passing during Data Installer credential research. `includeSecrets: false`
-writes secrets to the file **and** returns `includesSecrets: false` — not a missing filter but an
-affirmative false claim, and the MCP tool's description explicitly promises "pass `includeSecrets:false`
-for a secret-free copy" (`actionDescriptors.ts:126-130`). Whole chain traced: the flag threads correctly
-through four hops and is then consumed only to stamp a label, while
-`settingsSerializer.ts:156` emits `componentConfigs` unconditionally. Exposes
-`ADOBE_COMMERCE_ADMIN_PASSWORD`; SecretStorage-backed secrets are unaffected. Existing tests pin the
-flag's value, not any stripping. Two entry points also disagree on the default (`false` at
-`settingsSerializer.ts:203`, `true` at `settingsTransferService.ts:305`). **Public repo → `high`.**
-
-#### Reset consent only when there is something to lose ([`2026-07-29-reset-consent-only-when-there-is-something-to-lose.md`](2026-07-29-reset-consent-only-when-there-is-something-to-lose.md))
-
-**In progress** — classifier landed on `develop`; UI wiring remains. New repos already pin + patch
-unconditionally (ADR-006 Step 4b). Only the **existing-repo** path gates on the `resetToTemplate`
-checkbox, so an empty or non-storefront repo left unticked proceeds with no template, no LKG pin and
-no canonical patches, then reports `Complete`. Replaces one default-off checkbox with three states:
-auto-setup when empty, **refuse** when populated-but-not-a-storefront (the repo that prompted this had
-53 blocks and no `scripts/scripts.js`), prompt only when there is something to lose.
-
-#### PDP routing silently broken two ways ([`2026-07-29-code-patches-not-rehydrated-in-edit-mode.md`](2026-07-29-code-patches-not-rehydrated-in-edit-mode.md) · [`2026-07-29-pdp404-stale-sha-conflict.md`](2026-07-29-pdp404-stale-sha-conflict.md))
-
-Both found in a live Extension Host run, both present in `v1.0.0-beta.121`, neither a hotfix
-regression. (1) `edsConfig.codePatches`/`codePatchSource` are produced only by `WelcomeStep`, so every
-edit-mode republish trips a **silent** early return at `storefrontSetupPhase1.ts:115` and the ADR-007
-SKU-encoding patches never apply. (2) Inspector Tagging writes `scripts/delayed.js` via the Git Tree
-API; PDP404 then reads it via the Contents API and commits with a stale SHA, skipping the smart-404
-install. Together with the Configuration Service 403 (the only one that surfaces a message), a
-storefront can finish with no PDP support by any mechanism and still report `Complete`.
-
 #### App Builder attach — Model A seed ([`2026-06-15-integration-service-cleanup-and-discovery-token.md`](2026-06-15-integration-service-cleanup-and-discovery-token.md))
 
 Effort 1 (remove the dormant `integration-service` + `appBuilderApps` mechanism) **shipped** on
@@ -398,3 +381,15 @@ Pointers only; `../complete/` holds each writeup and git history holds the imple
 - **A second, dead, unwrapped mesh-creation implementation** ([`../complete/2026-08-04-dead-second-mesh-create-implementation.md`](../complete/2026-08-04-dead-second-mesh-create-implementation.md))
 - **Eleven superseded message handlers, still registered** ([`../complete/2026-08-05-eleven-superseded-message-handlers.md`](../complete/2026-08-05-eleven-superseded-message-handlers.md))
 - **MCP socket resolution: existence is no longer evidence of liveness** — filed and shipped 2026-08-10 alongside the socket-TOCTOU fix that created the condition; `resolveProxyTarget` now probes liveness first and falls back to existence only once some window is confirmed live ([`../complete/2026-08-10-mcp-socket-existence-is-not-liveness.md`](../complete/2026-08-10-mcp-socket-existence-is-not-liveness.md))
+
+### Archived 2026-08-13 by the claim-validation pass — shipped weeks earlier, never moved
+
+Five items were sitting in this index describing defects that no longer existed. None of the
+fixing commits touched `.rptc/`, which is exactly how they survived. Each archived file carries
+an outcome banner with the verifying evidence.
+
+- **`export_project_settings` ignores `includeSecrets`** — fixed by `12f4b802`; `stripSecretValues()` at the single emit site, the ambiguous default removed (now a required parameter), tests assert the value's absence ([`../complete/2026-08-11-export-settings-ignores-include-secrets.md`](../complete/2026-08-11-export-settings-ignores-include-secrets.md))
+- **PDP routing silently broken two ways** — both halves fixed by one commit, `3843b6be`: `rehydratePackageDerivedConfig()` restores package-derived config in edit mode and the guard now logs instead of returning silently; `writeDelayedJsWithStaleShaRetry()` re-reads and retries once, on SHA mismatch only ([`../complete/2026-07-29-code-patches-not-rehydrated-in-edit-mode.md`](../complete/2026-07-29-code-patches-not-rehydrated-in-edit-mode.md) · [`../complete/2026-07-29-pdp404-stale-sha-conflict.md`](../complete/2026-07-29-pdp404-stale-sha-conflict.md))
+- **Reset consent only when there is something to lose** — the "UI wiring remains" status was stale; all four readiness kinds are live in `repoStorefrontReadiness.ts`, and `not-a-storefront` refuses rather than offers ([`../complete/2026-07-29-reset-consent-only-when-there-is-something-to-lose.md`](../complete/2026-07-29-reset-consent-only-when-there-is-something-to-lose.md))
+- **Generated diagnosis skill** — premise dead: `templates/skills/diagnose-demo.md` exists and ships in the always-on bundle ([`../complete/2026-08-11-generated-diagnosis-skill.md`](../complete/2026-08-11-generated-diagnosis-skill.md))
+- **Integrations host contract** — fixed by `0b9f0f6d`; `showIntegrations.ts` enumerates both handler maps via `getRegisteredTypes()`, so the hand-list that drifted is gone (measured: 0 references, down from the claimed 19) ([`../complete/integrations-host-contract/overview.md`](../complete/integrations-host-contract/overview.md))

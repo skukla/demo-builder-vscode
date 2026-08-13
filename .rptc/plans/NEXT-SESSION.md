@@ -258,6 +258,47 @@ negative one. And pair every "nothing found" with a positive control at the same
 
 ---
 
+## 2026-08-13, later: the backlog was validated and a third of it was dead
+
+Prompted by the user reading a ranked pick-list and saying *"it looks like every backlog item
+needs to be re-validated."* They were right. The 14 actionable items were checked against
+`src/`:
+
+| Verdict | Count | Items |
+|---|---|---|
+| **Shipped, never archived** | 5 | export-settings/includeSecrets · the PDP pair (2 files) · reset-consent · generated-diagnosis-skill · integrations-host-contract |
+| Premise stale, re-scoped in place | 1 | legacy-soft-deprecation (~2.5 months out of date) |
+| Partly overtaken | 1 | third-party-tooling-visible-and-optional |
+| Confirmed accurate | 6 | ai-surface-coverage · project-level-facts · tier-ai-bundle · eds-drift-checker · block-type-scale · prereqs-reframe |
+| Spot-checked only — treat as unverified | 1 | appbuilder-deployable-model |
+
+**The item ranked #1 on the pick-list had been fixed weeks earlier** (`12f4b802`). So had the
+#2 pair (`3843b6be`), #3, #5 (`0b9f0f6d`) and #10. All five are now in `complete/` with
+outcome banners carrying the verifying evidence.
+
+**Age predicts truth; topic does not.** Everything filed 2026-08-13 measured true. Everything
+filed 2026-07-29 → 2026-08-11 was a coin flip. The mechanism will recur: a fixing commit
+touches `src/` and `tests/`, never `.rptc/`, so nothing makes an item's death visible. The
+hygiene scan cannot see it either — **a shipped item's links resolve perfectly.** Structure
+and truth are different properties, and only the first one has a scanner.
+
+Two traps worth carrying forward:
+
+- **"Verified <today's date>" in an index entry may be a re-assertion, not a re-measurement.**
+  `integrations-host-contract` said "19 references, verified 2026-08-13". The number came from
+  the item's own text. Measured the same day: 0.
+- **A count is the cheapest claim to check and the most convincing one to get wrong.** Both
+  numeric claims that were checked ("19 references", "zero of 13 skills cover diagnosis") fell
+  to one command each.
+
+So: **before picking any item up, run one command against `src/` that would falsify its central
+claim.** Do that before reading the execution plan, not after.
+
+The unquoted-glob trap bit again during this pass (`pdp404*.test.ts` → "no matches found"), and
+was caught only because a fallback printed nothing where it should have printed something.
+
+---
+
 ## Outstanding
 
 **Shipped since this file was written:**
@@ -303,9 +344,12 @@ being worked; five shipped plans were sitting there too, one of which said so in
 
 - **`backlog/appbuilder-deployable-model` D2–D6.** Only D1 is built. Track A pre-positions
   `getWorkspaceCredential` — `dead-code-scan` will call it unused; it is not.
-- **`backlog/integrations-host-contract`** — `showIntegrations.ts` still hand-lists the wizard
-  handlers it reuses (19 references), so the contract drifts whenever the flow grows and the
-  guard tests only catch it after someone writes failing code. Verified still true 2026-08-13.
+- **The integrations host contract item — SHIPPED, archived 2026-08-13.** This entry claimed
+  "19 references, verified still true 2026-08-13"; the measurement was 0. Fixed in `0b9f0f6d`
+  — `showIntegrations.ts` enumerates both handler maps with `getRegisteredTypes()`. Kept here
+  as the worked example of a "verified" claim that was never measured. (Named in prose, not as
+  a path, so it stops registering as a live reference — per the rule below about killing dead
+  citations rather than annotating them in place.)
 
 **Latent, measured but not fixed:**
 

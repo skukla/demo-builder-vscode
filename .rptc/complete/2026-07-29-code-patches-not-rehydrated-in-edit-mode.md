@@ -1,5 +1,29 @@
 # Code patches never run in edit mode — `edsConfig.codePatches` is not rehydrated
 
+> ## ✅ SHIPPED — archived 2026-08-13
+>
+> Fixed by **`3843b6be`** ("fix(eds): restore package settings in edit mode and survive a
+> stale delayed.js SHA") — one commit that closed this AND its sibling
+> [`2026-07-29-pdp404-stale-sha-conflict.md`](2026-07-29-pdp404-stale-sha-conflict.md).
+> Found still-open on 2026-08-13 during a validation pass.
+>
+> Both halves of the goal landed:
+>
+> 1. **Rehydration** — `rehydratePackageDerivedConfig()` in
+>    `src/features/eds/handlers/storefrontSetupConfigRehydration.ts`, called from
+>    `storefrontSetupHandlers.ts`. Resolved at the point of use, as the item asked, so MCP
+>    and reset paths get it too.
+> 2. **The guard speaks** — the early return in `pinIfThinLayer()` now logs
+>    `'[Storefront Setup] No code patches configured for this storefront — skipping patch step'`,
+>    carrying a comment that names this defect: *"Logged, never silent. This guard disabled the
+>    whole code-patch subsystem for every edit-mode run since before beta.121, and the absence
+>    of any log is what hid it."*
+>
+> **Two citations in this file are dead** and were left as written rather than repaired —
+> the file is history now. `storefrontSetupPhase1.ts` moved from `services/` to `handlers/`,
+> and the guard is no longer at `:115`. `WelcomeStep.tsx:155` is no longer the only producer;
+> `edsConfigFromStorefront.ts` and `wizardHelpers.ts` also emit `codePatches`.
+
 **Filed:** 2026-07-29
 **Origin:** Live Extension Host run against `skukla/demo-builder-test`, storefront
 republish from the edit wizard. Expected `[Patch] Fetching code-patches.json from
@@ -85,6 +109,6 @@ mechanism.
 
 ## Kickoff prompt
 
-> Read `.rptc/backlog/2026-07-29-code-patches-not-rehydrated-in-edit-mode.md`.
+> Read `.rptc/complete/2026-07-29-code-patches-not-rehydrated-in-edit-mode.md`.
 > Rehydrate `edsConfig.codePatches` / `codePatchSource` from the demo package when
 > absent, and make `storefrontSetupPhase1.ts:115` log when it skips. TDD.

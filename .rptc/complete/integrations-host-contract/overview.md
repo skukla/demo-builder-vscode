@@ -1,5 +1,29 @@
 # Integrations panel — make hosting the wizard flow an explicit contract
 
+> ## ✅ SHIPPED — archived 2026-08-13
+>
+> **The hand-list is gone.** Fixed by **`0b9f0f6d`** ("fix(integrations): register the reused
+> wizard flow's handler; stop reporting abandoned checks as failures"), building on
+> `0d4a49b0`. Found still-open on 2026-08-13 during a validation pass — the index still
+> claimed "19 references, verified 2026-08-13", which was a re-assertion of the item's own
+> text rather than a re-measurement.
+>
+> `src/features/dashboard/commands/showIntegrations.ts` now enumerates both handler maps
+> instead of naming their members:
+>
+> ```ts
+> for (const messageType of getRegisteredTypes(addIntegrationFlowHandlers)) { … }
+> for (const messageType of getRegisteredTypes(dashboardHandlers)) { … }
+> ```
+>
+> Measured after the change: **0** hand-listed handler references in that file (183 lines
+> total). The file's own comment now states the contract this plan was written to create —
+> *"adding a message to the flow is one edit"* — and the drift mechanism is closed at the
+> source: a handler added to the flow's map is registered by the host automatically, so the
+> host can no longer fall behind the flow.
+>
+> Note the file also moved: `src/features/dashboard/commands/`, not `app-builder/commands/`.
+
 ## Context
 
 The integrations surface renders the WIZARD's Add Integration flow

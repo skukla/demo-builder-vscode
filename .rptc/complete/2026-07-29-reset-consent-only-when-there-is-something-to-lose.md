@@ -1,5 +1,25 @@
 # Ask to reset only when there is something to lose
 
+> ## ✅ SHIPPED — archived 2026-08-13
+>
+> The **"UI wiring outstanding"** status below is stale; the wiring landed. Found on
+> 2026-08-13 during a validation pass, verified against source.
+>
+> The three-state model is live as a four-kind classifier in
+> `src/features/eds/services/repoStorefrontReadiness.ts`:
+>
+> | Kind | Behaviour | Where |
+> |---|---|---|
+> | `empty` | auto-reset, nothing to lose | `shouldAskBeforeReset()` |
+> | `storefront` | normal path, no prompt | `computeRepoValid()` returns true |
+> | `not-a-storefront` | **refuses** — `resetToTemplate` is required, not offered | `computeRepoValid()` returns `resetToTemplate === true` |
+> | `undetermined` | does not block over a GitHub blip — withholds the destructive default, not the user's ability to continue | `computeRepoValid()` |
+>
+> The refusal branch carries the reasoning this item argued for: *"A populated repo that is
+> not a storefront cannot complete setup: the steps that need scripts/scripts.js and
+> scripts/delayed.js skip themselves, and the run still reports Complete. Reset is the remedy,
+> so it is required rather than offered."*
+
 **Filed:** 2026-07-29
 **Origin:** Design question during the beta.122 test pass — why must the user tick
 "Reset to template" for a repo that is empty, when there is nothing to preserve?
@@ -100,6 +120,6 @@ and [2026-07-29-pdp404-stale-sha-conflict.md](2026-07-29-pdp404-stale-sha-confli
 
 ## Kickoff prompt
 
-> Read `.rptc/backlog/2026-07-29-reset-consent-only-when-there-is-something-to-lose.md`.
+> Read `.rptc/complete/2026-07-29-reset-consent-only-when-there-is-something-to-lose.md`.
 > Implement the three-state repo-selection behavior: auto-setup when empty, refuse
 > when populated-but-not-a-storefront, prompt only when there is something to lose. TDD.

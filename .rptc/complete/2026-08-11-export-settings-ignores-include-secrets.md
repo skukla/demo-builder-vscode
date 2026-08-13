@@ -1,12 +1,31 @@
 ---
 id: 2026-08-11-export-settings-ignores-include-secrets
 title: export_project_settings ignores includeSecrets and reports a false negative
-status: backlog
+status: complete
 created: 2026-08-11
+completed: 2026-08-13
 priority: high
 ---
 
 # `export_project_settings` ignores `includeSecrets` and reports a false negative
+
+> ## ✅ SHIPPED — archived 2026-08-13
+>
+> Fixed by **`12f4b802`** ("fix(settings): make includeSecrets actually remove secrets").
+> Discovered still-open in the backlog on 2026-08-13 during a validation pass; the fixing
+> commit never touched `.rptc/`, so the item outlived its defect by weeks.
+>
+> Verified against source, not against this file:
+>
+> | Scope item | Resolution |
+> |---|---|
+> | 1. Filter secrets from `configs` | `stripSecretValues(project.componentConfigs)` at `settingsSerializer.ts`, in the `includeSecrets ? … : …` emit — the single site, so both entry points inherit it |
+> | 2. Reconcile the two defaults | Resolved by **removing** the default: `createExportSettings` now takes `includeSecrets` as a REQUIRED parameter ("no default — see `extractSettingsFromProject`"). One default remains, at the public entry `settingsTransferService` (`?? true`) |
+> | 3. Tests assert absence | `settingsSerializer.test.ts` asserts `ADOBE_COMMERCE_ADMIN_PASSWORD` is `toBeUndefined()` when stripped, and `toBe('fake-test-pw-not-a-secret')` when included — the value, not the flag |
+> | 4. Re-read the MCP description | The emit site carries a comment narrating the old defect in the past tense |
+>
+> The filter lives in `src/features/components/config/envVarKeys.ts` (`stripSecretValues`),
+> which is option (a) from the execution plan below — declarative, derived from the catalog.
 
 ## Provenance
 
@@ -122,7 +141,7 @@ existing opt-out honest.
 
 ## Kickoff prompt
 
-> Read `.rptc/backlog/2026-08-11-export-settings-ignores-include-secrets.md`. `includeSecrets:
+> Read `.rptc/complete/2026-08-11-export-settings-ignores-include-secrets.md`. `includeSecrets:
 > false` currently writes secrets to the exported file and returns `includesSecrets: false`,
 > which is an affirmative false claim. Fix it at the single emit site
 > `src/features/projects-dashboard/services/settingsSerializer.ts:156`, deriving what counts as

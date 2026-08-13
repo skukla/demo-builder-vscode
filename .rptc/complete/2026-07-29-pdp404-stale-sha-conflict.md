@@ -1,5 +1,26 @@
 # Smart-404 install loses a SHA race with Inspector Tagging
 
+> ## ✅ SHIPPED — archived 2026-08-13
+>
+> Fixed by **`3843b6be`**, the same commit that closed its sibling
+> [`2026-07-29-code-patches-not-rehydrated-in-edit-mode.md`](2026-07-29-code-patches-not-rehydrated-in-edit-mode.md).
+> Found still-open on 2026-08-13 during a validation pass.
+>
+> `writeDelayedJsWithStaleShaRetry()` in `pdp404HandlerPublisher.ts` implements the scope
+> exactly as specified:
+>
+> - **Retryable only on SHA mismatch** — the predicate is `/does not match/i` against the
+>   error message; the code comments that permission and missing-file failures "are certain,
+>   and retrying them just doubles the latency of a known outcome."
+> - **Exactly once** — re-reads, then re-derives content from the fresh read and commits with
+>   the fresh SHA. Logs `'[PDP404] delayed.js changed under us (stale SHA) — re-reading and
+>   retrying once'`.
+> - **Still non-fatal**, per the constraint.
+> - **Pinned by tests** — `tests/unit/features/eds/services/pdp404HandlerPublisher.install.test.ts`.
+>
+> Note for anyone tracing tests from this file: the EDS suites live under
+> `tests/unit/features/eds/`, not `tests/features/eds/`. Both roots exist.
+
 **Filed:** 2026-07-29
 **Origin:** Live Extension Host run against `skukla/demo-builder-test`:
 
@@ -70,6 +91,6 @@ retry is safe — assert that in the test so a future edit can't break the assum
 
 ## Kickoff prompt
 
-> Read `.rptc/backlog/2026-07-29-pdp404-stale-sha-conflict.md`. Make the smart-404
+> Read `.rptc/complete/2026-07-29-pdp404-stale-sha-conflict.md`. Make the smart-404
 > install re-read and retry once on a SHA-mismatch commit failure, leaving other
 > failures skipping as they do now. TDD.
