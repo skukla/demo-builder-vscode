@@ -22,10 +22,14 @@ four test files that were silently scripts sharing one global scope), not delibe
 partials. The `src/`-side cast-removal partial (127 `as {` casts, ~121 needing reading)
 was deliberately NOT swept — it stays a cheap independent follow-up.
 
-**Queued behind it, both validated accurate 2026-08-13, neither started:**
-`tier-the-ai-bundle-refresh` (step 0 = REPRODUCE the silent under-fire before any fix) and
-`third-party-tooling-visible-and-optional` (real remaining gap: no machine-readable link
-between `ai-defaults.json` packages and the skills they power; shares the other item's gate).
+**Both queued items advanced 2026-08-14, banners in the items are current:**
+`tier-the-ai-bundle-refresh` — under-fire reproduced (RED test) and FIXED (`ba8480d8`: the
+freshness check now watches the composition axis and logs every verdict); tier-2 policy
+decided as hash-and-skip and recorded as **ADR-013** (`b762432f`); the tiered-refresh build
+(steps 2–6, 8) is designed but unbuilt. `third-party-tooling-visible-and-optional` — step 1
+shipped (`0027e5f3`: `SKILL_MCP_TOOL_DEPENDENCIES` in `src/types/ai.ts`, guard-tested both
+directions); steps 2–7 (gating, opt-out, modal reasons, Chromium pre-check) remain — note
+step 2 changes generated content, so batch it with an `AI_CONTEXT_VERSION` bump.
 
 **The old caveat on that number is retired and replaced by a sharper one.** This line used to
 read "at `--maxWorkers=25%` … a default-workers green is one sample of a noisy process." The
