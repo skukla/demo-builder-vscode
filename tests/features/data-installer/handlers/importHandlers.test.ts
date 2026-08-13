@@ -447,6 +447,86 @@ describe('reset-datapack', () => {
     });
 });
 
+/**
+ * The watch is detached, so when it cannot run there is nobody to tell.
+ *
+ * It used to return silently if the guard refused, and warn to a log channel if
+ * the runner threw. Either way the record stayed `outcome: 'watching'` forever and
+ * the modal showed "Importing… this can take several minutes" indefinitely — a
+ * failure invisible to the user AND to this suite, which is how a logger bug that
+ * killed every watch survived five green gates.
+ *
+ * A failure that reaches nobody cannot be tested for. So it lands in the record.
+ */
+describe('a watch that cannot run', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        setupSettings();
+    });
+
+    /** Let the detached watch get past its own setup before asserting. */
+    const settle = () => new Promise((r) => setTimeout(r, 25));
+
+    /** The record written by the LAST transient set. */
+    function lastRecord(stores: { globalState: { update: jest.Mock } }): Record<string, unknown> {
+        const calls = stores.globalState.update.mock.calls;
+        return calls[calls.length - 1]?.[1] as Record<string, unknown>;
+    }
+
+    it('records that it stopped watching when the runner throws', async () => {
+        happyClient();
+        mockedWatch.mockRejectedValue(new Error('the service went away'));
+        const { context, stores } = makeContext();
+
+        await importHandlers['start-datapack-import'](context, PAYLOAD);
+        await settle();
+
+        expect(lastRecord(stores as never).outcome).toBe('unwatchable');
+    });
+
+    // The reason IS the payload: "we stopped looking" is not actionable without
+    // saying why, and this is the only place the cause exists.
+    it('keeps the reason so the panel can say what went wrong', async () => {
+        happyClient();
+        mockedWatch.mockRejectedValue(new Error('the service went away'));
+        const { context, stores } = makeContext();
+
+        await importHandlers['start-datapack-import'](context, PAYLOAD);
+        await settle();
+
+        expect(lastRecord(stores as never)).toMatchObject({
+            outcome: 'unwatchable',
+            reason: expect.stringContaining('the service went away'),
+        });
+    });
+
+    // NOT 'stopped'. That means the user chose to stop looking; this means we
+    // could not look, and they never asked for that.
+    it('does not disguise a broken watch as the user stopping one', async () => {
+        happyClient();
+        mockedWatch.mockRejectedValue(new Error('boom'));
+        const { context, stores } = makeContext();
+
+        await importHandlers['start-datapack-import'](context, PAYLOAD);
+        await settle();
+
+        expect(lastRecord(stores as never).outcome).not.toBe('stopped');
+    });
+
+    // The import is unaffected — it is already running server-side. Only the
+    // watching failed, and the handler had already returned success.
+    it('still reports the import as started', async () => {
+        happyClient();
+        mockedWatch.mockRejectedValue(new Error('boom'));
+        const { context } = makeContext();
+
+        const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
+        await settle();
+
+        expect(result.success).toBe(true);
+    });
+});
+
 describe('get-datapack-import-status', () => {
     beforeEach(() => {
         jest.clearAllMocks();

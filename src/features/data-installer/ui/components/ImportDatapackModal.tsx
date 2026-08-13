@@ -336,6 +336,11 @@ function describeOutcome(record: ImportJobRecord, watching: boolean): string {
             return 'Stopped watching. The import continues on the server.';
         case 'still-running':
             return 'Still running after the watch window. The import continues on the server.';
+        // The WATCH failed, not the import — so this must not read as a failed
+        // import. The job is still going; the Installed tab is where its result
+        // will actually show up.
+        case 'unwatchable':
+            return 'Lost track of this job — it is still running on the server. Check the Installed tab for the result.';
         default:
             return String(record.outcome);
     }

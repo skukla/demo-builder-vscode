@@ -164,9 +164,21 @@ export interface ImportJobRecord {
     commerceInstance: string;
     dataTypes: string[];
     startedAt: string;
-    outcome: 'watching' | 'success' | 'partial' | 'error' | 'never-registered' | 'stopped' | 'still-running';
+    outcome:
+        | 'watching'
+        | 'success'
+        | 'partial'
+        | 'error'
+        | 'never-registered'
+        | 'stopped'
+        | 'still-running'
+        // The WATCH failed, not the import. Distinct from 'stopped', which is the
+        // user choosing to stop looking — this is us being unable to look, which
+        // they never asked for. Without it a dead watch left the record saying
+        // 'watching' forever and the panel claiming an import was still running.
+        | 'unwatchable';
     perType: Record<string, DataTypeStatus>;
-    /** Why nothing happened, for `never-registered`. */
+    /** Why nothing happened — for `never-registered` and `unwatchable`. */
     reason?: string;
     processingTimeMs?: number;
 }

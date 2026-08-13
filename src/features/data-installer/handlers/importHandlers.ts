@@ -289,9 +289,16 @@ async function prepareImport(
 /**
  * Watch to a terminal outcome and record it.
  *
- * Runs after its caller has returned. Errors are swallowed into the record
- * rather than thrown: nothing is awaiting this, so an unhandled rejection is the
- * only thing a throw could achieve.
+ * Runs after its caller has returned, so nothing is awaiting it and a throw could
+ * only become an unhandled rejection.
+ *
+ * **Every exit writes the record.** This used to return silently when the guard
+ * refused, and warn to a log channel when the runner threw — and in both cases the
+ * record stayed `watching`, so the panel showed "Importing…" forever for a job
+ * nobody was watching. A failure that reaches no one is also a failure no test can
+ * catch: exactly that shape hid a logger fault which killed every watch through
+ * five green gates. The import itself is unaffected — it is already running
+ * server-side — so this reports a lost WATCH, never a failed import.
  */
 async function watchAndRecord(
     context: HandlerContext,
@@ -300,6 +307,11 @@ async function watchAndRecord(
 ): Promise<void> {
     const access = await resolveDataInstallerAccess(context);
     if (!access.ok) {
+        await stopWatching(
+            transient,
+            record,
+            'The Data Installer could not be reached to watch this job.',
+        );
         return;
     }
     try {
@@ -319,12 +331,26 @@ async function watchAndRecord(
                 : {}),
         });
     } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
         context.logger.warn(
-            `[Data Installer] Stopped watching import ${record.activationId}: ${
-                error instanceof Error ? error.message : String(error)
-            }`,
+            `[Data Installer] Stopped watching import ${record.activationId}: ${reason}`,
         );
+        await stopWatching(transient, record, reason);
     }
+}
+
+/**
+ * Record that the watch ended without an answer.
+ *
+ * The reason IS the payload: "we stopped looking" is not actionable without
+ * saying why, and this is the only place the cause exists.
+ */
+async function stopWatching(
+    transient: TransientStateManager,
+    record: ImportJobRecord,
+    reason: string,
+): Promise<void> {
+    await transient.set(JOB_KEY, { ...record, outcome: 'unwatchable', reason });
 }
 
 /** Validate the payload, returning either usable input or the reason it is not. */
