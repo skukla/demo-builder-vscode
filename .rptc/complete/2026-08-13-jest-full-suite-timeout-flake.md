@@ -109,15 +109,7 @@ what the `ps` sampling alongside it is worth.
 
 ## Left open, deliberately
 
-- **The MCP socket root is shared across concurrent runs.** `tests/setup/node.ts`
-  points every worker at `$TMPDIR/demo-builder-mcp-test/w<JEST_WORKER_ID>` — no
-  per-run component, and worker ids restart at 1 each run, so two runs collide on
-  the same directories by construction. `tests/setup/globalTeardown.ts` then
-  `rmSync`s the whole shared root, not just its own run's dirs. This is a real bug
-  independent of the flake and is the leading explanation for the peer session's
-  `ENOTEMPTY: rmdir '<tmp>/demo-builder-mcp-test/w9'`. **Not fixed here** because
-  the fix belongs with whoever owns the socket-ownership design; a per-run nonce in
-  the root is the obvious shape. The guard makes it much harder to hit.
+- ~~The MCP socket root is shared across concurrent runs.~~ **FIXED — see below.**
 - **An attempt to isolate this variable is recorded as VOID, not as evidence.**
   Re-running the contention trial with per-run `TMPDIR`s moved socket paths for
   suites that derive them from `os.tmpdir()` directly, producing `EADDRINUSE` and
@@ -128,8 +120,75 @@ what the `ps` sampling alongside it is worth.
   full runs here it appeared in **7** — about 44%, not reliably reproducible on
   demand. It never co-occurred with `ENOTEMPTY` (0/16), which kills the peer's
   "one root cause" hypothesis in the direction testable from here.
-- **Ten other wall-clock upper-bound assertions remain** across `cacheManager-operations`
-  (`duration < 10`), `retryStrategyManager`, `csp-nonce-security`, `commandSequencer`,
-  `adobeEntityService-organizations-edgeCases` and `processCleanup.test.ts`. None
-  failed in any run measured here, so they are latent rather than broken. Listed so
-  the next person does not have to re-derive the inventory.
+- **Ten other wall-clock upper-bound assertions remain** across
+  `cacheManager-operations` (`duration < 10`), `retryStrategyManager`,
+  `csp-nonce-security`, `commandSequencer`,
+  `adobeEntityService-organizations-edgeCases` and `processCleanup.test.ts`.
+  None failed in any SOLO run. `processCleanup.test.ts` did fail once under a
+  later concurrency trial, which is the same starvation story as the assertions
+  already removed — so treat them as latent under contention rather than sound.
+  Listed so the next person does not have to re-derive the inventory.
+
+---
+
+# Follow-up: per-run MCP socket root (same day)
+
+The peer session declined this one and routed ownership to the user, who assigned
+it here. Their reason for declining was good and is worth keeping: it is
+`tests/setup/`, every suite depends on it, and changing teardown semantics for the
+whole repo from a feature branch on one unreproduced correlated failure is how the
+next invisible bug ships.
+
+## What changed
+
+- **`tests/setup/mcpTestSocketRoot.ts`** (new) — one home for the path, shared by
+  setup, teardown and the guard test, so the three cannot drift into disagreeing
+  about it.
+- **`tests/setup/globalSetup.ts`** (new) — stamps the jest MAIN process pid into
+  the environment before any worker spawns. Workers inherit it.
+- **`tests/setup/node.ts`** — socket dir is now `<base>/<runId>/w<workerId>`
+  instead of `<base>/w<workerId>`.
+- **`tests/setup/globalTeardown.ts`** — removes only `<base>/<runId>`, never the
+  shared base. Then sweeps sibling run dirs whose pid is dead, so keying per-run
+  does not simply trade a collision for unbounded growth. A run whose pid is still
+  alive is a concurrent run and is left strictly alone (EPERM counts as alive —
+  the safe direction, since treating a live run as dead is what deleted sockets).
+- **`tests/setup/mcpTestSocketRoot.test.ts`** (new, 4 tests) — runs in a WORKER, so
+  it passes only if globalSetup's env actually reached the worker. Nothing else in
+  the suite would notice if that chain broke: the fallback in `socketRootForRun()`
+  is deliberately silent, so a break would look like normal operation until two
+  concurrent runs deleted each other's sockets.
+
+`globalSetup`/`globalTeardown` DO apply to a multi-project run (jest runs them once
+for the whole run) — unlike `cache`/`roots`, which silently do not. Noted in
+`jest.config.js` so the next person does not have to re-derive which is which.
+
+## Verified
+
+Seeded the base with two fake run trees — one named for a live process, one for a
+dead pid — then ran the suite:
+
+- own subtree removed ✅
+- **live run's sockets survived** ✅ (this is the defect: it used to delete them)
+- dead run's tree swept ✅
+- run id observed in a worker is numeric, i.e. from globalSetup, not the fallback ✅
+
+Full suite **997 suites / 12,777 tests green**, sampled with `ps` throughout to
+confirm it ran alone (max 1 jest parent). tsc clean, eslint 0/0,
+`validate:jest-config` passing. Two concurrent full suites: **0 ENOTEMPTY, 0
+globalTeardown errors**.
+
+## What this does NOT fix, stated plainly
+
+**It does not reduce the contention failures.** Across 4 concurrent runs before and
+after, the MCP suites failed the same number of times (2 → 2 each); the movements
+elsewhere (2 → 4) are noise in a sample that small, not a regression signal. Those
+failures are CPU starvation and always were.
+
+**And the failure that motivated it was never reproduced here.** `ENOTEMPTY` was 0
+in all 20 runs measured across the day, before and after. The fix is verified
+correct by construction — a live run's tree demonstrably survives a concurrent
+teardown now, and demonstrably did not before — but no observed failure has been
+shown to go away, because none was ever observed locally. The peer's report plus
+the timestamp correlation (their failure 16 seconds after one of these teardowns
+fired) is the whole of the evidence that it was ever hit.

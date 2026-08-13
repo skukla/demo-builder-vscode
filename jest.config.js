@@ -172,6 +172,10 @@ module.exports = {
   resetMocks: true,
   restoreMocks: true,
 
-  // Global teardown to clean up any remaining handles
+  // Global setup/teardown. Unlike `cache` and `roots` above, these DO apply to a
+  // multi-project run — jest runs them once for the whole run, not per project.
+  // globalSetup stamps a per-run id that keeps concurrent runs' MCP sockets apart;
+  // globalTeardown removes that run's tree and sweeps dead ones.
+  globalSetup: '<rootDir>/tests/setup/globalSetup.ts',
   globalTeardown: '<rootDir>/tests/setup/globalTeardown.ts',
 };
