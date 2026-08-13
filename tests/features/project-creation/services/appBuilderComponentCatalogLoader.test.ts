@@ -381,7 +381,7 @@ describe('appBuilderComponentCatalogLoader', () => {
         });
     });
 });
-const S = { owner: 'o', repo: 'r' };
+const S = { owner: 'o', repo: 'r', branch: 'main' };
 
 /**
  * Reported 2026-08-06: "Pre-built integrations" lists two options on a catalog that

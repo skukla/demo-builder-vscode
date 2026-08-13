@@ -25,7 +25,11 @@ function createAllValidContexts(): SidebarContext[] {
     // IMPORTANT: This array should contain ALL valid SidebarContext variants.
     // If a variant is missing, TypeScript's exhaustive checking would catch it
     // in getContextLabel() below.
-    return [{ type: 'projects' }, { type: 'project', project: mockProject }];
+    return [
+        { type: 'projects' },
+        { type: 'projectsList' },
+        { type: 'project', project: mockProject },
+    ];
 }
 
 /**
@@ -37,6 +41,8 @@ function getContextLabel(context: SidebarContext): string {
     switch (context.type) {
         case 'projects':
             return 'Projects Dashboard';
+        case 'projectsList':
+            return 'Projects List';
         case 'project':
             return `Project: ${context.project.name}`;
         default: {
@@ -112,7 +118,7 @@ describe('Sidebar Types - Type Reduction', () => {
          * Runtime tests below document which types should NOT exist.
          */
 
-        it('should only support 2 context type variants', () => {
+        it('should only support 3 context type variants', () => {
             // Get all valid contexts from our helper
             const contexts = createAllValidContexts();
 
@@ -121,20 +127,19 @@ describe('Sidebar Types - Type Reduction', () => {
 
             // Verify only expected types exist
             expect(typeValues).toContain('projects');
+            expect(typeValues).toContain('projectsList');
             expect(typeValues).toContain('project');
-            expect(typeValues).toHaveLength(2);
+            expect(typeValues).toHaveLength(3);
 
             // Verify removed types are NOT in the list
-            expect(typeValues).not.toContain('projectsList');
             expect(typeValues).not.toContain('wizard');
             expect(typeValues).not.toContain('configure');
         });
 
-        it('should not include projectsList type variant', () => {
-            // 'projectsList' was removed - functionality merged into 'projects'
+        it('includes the projectsList variant (re-added in e28c2431 for the Projects List home grid)', () => {
             const contexts = createAllValidContexts();
             const typeValues = contexts.map((ctx) => ctx.type);
-            expect(typeValues).not.toContain('projectsList');
+            expect(typeValues).toContain('projectsList');
         });
 
         it('should not include wizard type variant', () => {
@@ -159,8 +164,9 @@ describe('Sidebar Types - Type Reduction', () => {
             const labels = contexts.map(getContextLabel);
 
             expect(labels).toContain('Projects Dashboard');
+            expect(labels).toContain('Projects List');
             expect(labels.some((l) => l.startsWith('Project:'))).toBe(true);
-            expect(labels).toHaveLength(2);
+            expect(labels).toHaveLength(3);
         });
     });
 });
@@ -250,6 +256,8 @@ describe('Type Narrowing', () => {
             switch (context.type) {
                 case 'projects':
                     return 'Projects Dashboard';
+                case 'projectsList':
+                    return 'Projects List';
                 case 'project':
                     return `Project: ${context.project.name}`;
                 default: {

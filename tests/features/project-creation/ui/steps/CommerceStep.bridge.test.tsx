@@ -64,7 +64,7 @@ jest.mock('@/features/project-creation/ui/components/ConnectStoreStepContent', (
         selectedStackId: string;
         componentConfigs: Record<string, unknown>;
         storeDiscoveryData?: unknown;
-        onValidationChange: (valid: boolean) => void;
+        onValidationChange: (validity: Record<string, boolean>) => void;
         onComponentConfigsChange: (configs: Record<string, unknown>) => void;
     }) => (
         <div
@@ -234,7 +234,7 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             selectedBackend: ACCS,
             selectedStack: 'eds-accs',
             adobeAuth: { isAuthenticated: true, isChecking: false },
-            adobeOrg: { id: 'org-1', name: 'Org One' },
+            adobeOrg: { id: 'org-1', name: 'Org One', code: 'ORG1' },
             commerceConnectValid: true,
             commerceStoreViewChosen: true,
         };

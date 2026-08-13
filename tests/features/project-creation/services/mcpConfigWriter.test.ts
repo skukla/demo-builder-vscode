@@ -194,6 +194,7 @@ describe('MCP config content', () => {
         const project = makeHeadlessProject({
             componentInstances: {
                 'headless-commerce-mesh': {
+                    id: 'headless-commerce-mesh',
                     name: 'Headless Commerce Mesh',
                     status: 'ready',
                     path: '/projects/headless-project/components/headless-commerce-mesh',

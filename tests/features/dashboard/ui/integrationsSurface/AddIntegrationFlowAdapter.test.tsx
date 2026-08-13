@@ -47,7 +47,7 @@ const CATALOG: AppBuilderComponentCatalogEntry[] = [
         name: 'ERP Sync',
         description: 'd',
         kind: 'integration',
-        source: { owner: 'acme', repo: 'erp-sync' },
+        source: { owner: 'acme', repo: 'erp-sync', branch: 'main' },
     },
     {
         id: 'app-builder-shell',
@@ -55,14 +55,14 @@ const CATALOG: AppBuilderComponentCatalogEntry[] = [
         description: 'd',
         kind: 'integration',
         blank: true,
-        source: { owner: 'skukla', repo: 'app-builder-shell' },
+        source: { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' },
     },
     {
         id: 'commerce-paas-mesh',
         name: 'API Mesh',
         description: 'd',
         kind: 'mesh',
-        source: { owner: 'acme', repo: 'mesh' },
+        source: { owner: 'acme', repo: 'mesh', branch: 'main' },
     },
 ];
 
@@ -336,10 +336,10 @@ describe('AddIntegrationFlowAdapter — persisting a destination change', () => 
         renderInDestinationMode();
 
         act(() => {
-            captured.updateState({ adobeProject: { id: 'proj-2', name: 'P2', title: 'Team Meeting' } });
+            captured!.updateState({ adobeProject: { id: 'proj-2', name: 'P2', title: 'Team Meeting' } });
         });
         act(() => {
-            captured.updateState({ adobeWorkspace: { id: 'ws-2', name: 'Production', title: 'Production' } });
+            captured!.updateState({ adobeWorkspace: { id: 'ws-2', name: 'Production', title: 'Production' } });
         });
 
         expect(getClient().postMessage).toHaveBeenCalledWith('setProjectDestination', {
@@ -352,7 +352,7 @@ describe('AddIntegrationFlowAdapter — persisting a destination change', () => 
         renderInDestinationMode();
 
         act(() => {
-            captured.updateState({ adobeProject: { id: 'proj-2', name: 'P2', title: 'Team Meeting' } });
+            captured!.updateState({ adobeProject: { id: 'proj-2', name: 'P2', title: 'Team Meeting' } });
         });
 
         expect(getClient().postMessage).not.toHaveBeenCalled();
@@ -362,7 +362,7 @@ describe('AddIntegrationFlowAdapter — persisting a destination change', () => 
         renderAdapter();
 
         act(() => {
-            captured.updateState({ adobeWorkspace: { id: 'ws-2', name: 'Production', title: 'Production' } });
+            captured!.updateState({ adobeWorkspace: { id: 'ws-2', name: 'Production', title: 'Production' } });
         });
 
         expect(getClient().postMessage).not.toHaveBeenCalledWith(

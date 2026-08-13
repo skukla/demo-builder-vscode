@@ -133,7 +133,7 @@ describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () =
             const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
             detectFrontendChanges.mockReturnValue(false);
             const { mockContext, mockProject } = setupMocks({ meshStatusSummary: summary } as any);
-            mockProject.componentInstances['commerce-mesh'].status = 'error';
+            mockProject.componentInstances!['commerce-mesh'].status = 'error';
             return mockContext;
         }
 

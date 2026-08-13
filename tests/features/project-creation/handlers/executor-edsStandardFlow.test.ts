@@ -155,7 +155,7 @@ describe('Executor - EDS Standard Flow', () => {
                 getCurrentProject: jest.fn().mockResolvedValue(null),
                 saveProject: jest.fn().mockResolvedValue(undefined),
             } as any,
-            sharedState: {},
+            sharedState: { isAuthenticating: false },
             sendMessage: jest.fn(),
             panel: { visible: false, dispose: jest.fn() } as any,
         };

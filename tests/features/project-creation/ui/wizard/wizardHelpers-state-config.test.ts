@@ -371,7 +371,7 @@ describe('wizardHelpers - state & config', () => {
                                 type: 'git' as const,
                                 url: 'https://github.com/demo-system-stores/accs-citisignal',
                                 branch: 'main',
-                                gitOptions: {},
+                                gitOptions: { shallow: true },
                             },
                         },
                     },

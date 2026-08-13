@@ -277,7 +277,7 @@ export const ProgressBar: React.FC<any> = ({ label, value, ...props }) => (
 
 // Heading mock
 export const Heading: React.FC<any> = ({ children, level = 2, UNSAFE_className, ...props }) => {
-    const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+    const Tag = `h${level}` as keyof React.JSX.IntrinsicElements;
     return <Tag data-testid="spectrum-heading" className={UNSAFE_className} {...filterSpectrumProps(props)}>{children}</Tag>;
 };
 

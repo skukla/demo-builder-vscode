@@ -108,6 +108,7 @@ function makeLogger(): {
     warn: jest.Mock;
     error: jest.Mock;
     debug: jest.Mock;
+    trace: jest.Mock;
 } {
     return { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
 }

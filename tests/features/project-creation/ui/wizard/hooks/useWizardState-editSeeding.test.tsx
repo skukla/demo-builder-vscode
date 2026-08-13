@@ -188,9 +188,10 @@ describe('useWizardState - edit-mode mesh dual-flow seeding', () => {
         );
         const meshCatalogEntry = {
             id: 'eds-accs-mesh',
-            kind: 'mesh',
+            kind: 'mesh' as const,
             name: 'API Mesh',
             description: 'GraphQL bridge',
+            source: { owner: 'adobe', repo: 'commerce-mesh', branch: 'main' },
         };
 
         const rows = resolveIntegrationRows(state, meshCatalogEntry, []);

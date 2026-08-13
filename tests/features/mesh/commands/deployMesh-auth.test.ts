@@ -284,7 +284,9 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
         testProject.adobe = {
             organization: 'custom-org',
             projectId: 'custom-proj',
+            projectName: 'custom-proj',
             workspace: 'custom-ws',
+            authenticated: true,
         };
         mockStateManager.getCurrentProject.mockResolvedValue(testProject);
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });

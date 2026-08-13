@@ -159,6 +159,7 @@ const citisignal: DemoPackage = {
     id: 'citisignal',
     name: 'CitiSignal',
     description: 'A test package',
+    configDefaults: {},
     storefronts: {
         'eds-paas': { name: 'CS EDS', description: '', source: mockGitSource },
         'venia-paas': { name: 'CS Venia', description: '', source: mockGitSource },

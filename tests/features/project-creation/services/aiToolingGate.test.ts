@@ -42,27 +42,41 @@ describe('projectNeedsAppBuilderTooling', () => {
     it('is true when an EDS storefront is installed (existing behavior preserved)', () => {
         const project = makeProject({
             componentInstances: {
-                [COMPONENT_IDS.EDS_STOREFRONT]: { path: '/projects/demo/storefront' },
+                [COMPONENT_IDS.EDS_STOREFRONT]: {
+                    id: COMPONENT_IDS.EDS_STOREFRONT,
+                    name: 'EDS Storefront',
+                    status: 'ready',
+                    path: '/projects/demo/storefront',
+                },
             },
-        } as Partial<Project>);
+        });
         expect(projectNeedsAppBuilderTooling(project)).toBe(true);
     });
 
     it('is true when a mesh component instance exists', () => {
         const project = makeProject({
             componentInstances: {
-                [COMPONENT_IDS.HEADLESS_COMMERCE_MESH]: { path: '/projects/demo/mesh' },
+                [COMPONENT_IDS.HEADLESS_COMMERCE_MESH]: {
+                    id: COMPONENT_IDS.HEADLESS_COMMERCE_MESH,
+                    name: 'API Mesh',
+                    status: 'ready',
+                    path: '/projects/demo/mesh',
+                },
             },
-        } as Partial<Project>);
+        });
         expect(projectNeedsAppBuilderTooling(project)).toBe(true);
     });
 
     it('is true when an App Builder component is attached', () => {
         const project = makeProject({
             appBuilderComponents: {
-                'app-builder-shell': { status: 'deployed' },
+                'app-builder-shell': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'skukla', repo: 'app-builder-shell' },
+                },
             },
-        } as unknown as Partial<Project>);
+        });
         expect(projectNeedsAppBuilderTooling(project)).toBe(true);
     });
 });
@@ -70,14 +84,24 @@ describe('projectNeedsAppBuilderTooling', () => {
 describe('aiDefaultsEntryApplies', () => {
     const edsProject = makeProject({
         componentInstances: {
-            [COMPONENT_IDS.EDS_STOREFRONT]: { path: '/projects/demo/storefront' },
+            [COMPONENT_IDS.EDS_STOREFRONT]: {
+                id: COMPONENT_IDS.EDS_STOREFRONT,
+                name: 'EDS Storefront',
+                status: 'ready',
+                path: '/projects/demo/storefront',
+            },
         },
-    } as Partial<Project>);
+    });
     const meshOnlyProject = makeProject({
         componentInstances: {
-            [COMPONENT_IDS.HEADLESS_COMMERCE_MESH]: { path: '/projects/demo/mesh' },
+            [COMPONENT_IDS.HEADLESS_COMMERCE_MESH]: {
+                id: COMPONENT_IDS.HEADLESS_COMMERCE_MESH,
+                name: 'API Mesh',
+                status: 'ready',
+                path: '/projects/demo/mesh',
+            },
         },
-    } as Partial<Project>);
+    });
     const bareProject = makeProject();
 
     it("requires: 'eds-storefront' applies only when a storefront is installed", () => {

@@ -24,7 +24,7 @@ jest.mock('@adobe/react-spectrum', () => ({
     View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     Flex: ({ children, ...props }: any) => <div style={{ display: 'flex' }} {...props}>{children}</div>,
     Heading: ({ children, level, ...props }: any) => {
-        const Tag = `h${level || 1}` as keyof JSX.IntrinsicElements;
+        const Tag = `h${level || 1}` as keyof React.JSX.IntrinsicElements;
         return <Tag {...props}>{children}</Tag>;
     },
     Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,

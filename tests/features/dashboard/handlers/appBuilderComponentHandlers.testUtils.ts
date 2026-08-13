@@ -35,8 +35,8 @@ export const mockBuildRunnerDepsContext = jest.fn(async () => ({
     secrets: { _secrets: true },
 }));
 jest.mock('@/features/app-builder/services/appBuilderComponentRunnerDeps', () => ({
-    buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...a),
-    buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...a),
+    buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...(a as [])),
+    buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...(a as [])),
 }));
 
 // ---- catalog loader --------------------------------------------------------
@@ -52,7 +52,7 @@ export const mockBuildCustomIntegrationEntry = jest.fn(
 );
 jest.mock('@/features/project-creation/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentEntry: (...a: unknown[]) => mockGetAppBuilderComponentEntry(...a),
-    buildCustomIntegrationEntry: (...a: unknown[]) => mockBuildCustomIntegrationEntry(...a),
+    buildCustomIntegrationEntry: (...a: unknown[]) => mockBuildCustomIntegrationEntry(...(a as [never])),
 }));
 
 // ---- guards (auth → org-mismatch → permission) ------------------------------

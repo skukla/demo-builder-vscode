@@ -71,7 +71,7 @@ describe('AdobeContextResolver', () => {
     describe('getConsoleWhereContext()', () => {
         it('should return cached context if available', async () => {
             const cachedContext = {
-                org: { id: 'org1', name: 'Test Org' },
+                org: { id: 'org1', name: 'Test Org', code: 'ORG1' },
                 project: { id: 'proj1', name: 'Test Project' },
             };
             mockCacheManager.getCachedConsoleWhere.mockReturnValue(cachedContext);

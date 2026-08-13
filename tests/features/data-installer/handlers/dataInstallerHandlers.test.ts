@@ -70,7 +70,7 @@ describe('dataInstallerHandlers', () => {
     });
 
     describe('the map', () => {
-        const EXPECTED = [
+        const EXPECTED: Array<keyof typeof dataInstallerHandlers> = [
             'check-datapack-service',
             'find-datapacks',
             'get-datapack-detail',

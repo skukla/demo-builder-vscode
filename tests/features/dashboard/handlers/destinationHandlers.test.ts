@@ -47,8 +47,8 @@ jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
     postMeshStatus: (...a: unknown[]) => mockPostMeshStatus(...(a as [])),
 }));
 jest.mock('@/features/app-builder/services/appBuilderComponentRunnerDeps', () => ({
-    buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...a),
-    buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...a),
+    buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...(a as [])),
+    buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...(a as [])),
 }));
 
 import { handleSetProjectDestination } from '@/features/dashboard/handlers/destinationHandlers';

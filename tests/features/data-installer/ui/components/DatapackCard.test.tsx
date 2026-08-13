@@ -202,10 +202,11 @@ describe('DatapackCard', () => {
                     group={multi}
                     selectedVersion="tierpricingfix"
                     onVersionChange={jest.fn()}
+                    onOpen={jest.fn()}
                 />,
             );
             rerender(
-                <DatapackCard group={multi} selectedVersion="main" onVersionChange={jest.fn()} />,
+                <DatapackCard group={multi} selectedVersion="main" onVersionChange={jest.fn()} onOpen={jest.fn()} />,
             );
 
             expect(screen.getByTestId('datapack-card-art')).toHaveAttribute('src', COVER);

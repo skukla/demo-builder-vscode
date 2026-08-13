@@ -71,8 +71,9 @@ describe('Handler Map Pattern Consistency', () => {
             '$name should have all handlers as functions',
             ({ handlers }) => {
                 const registeredTypes = getRegisteredTypes(handlers);
+                const map = handlers as Record<string, unknown>;
                 for (const type of registeredTypes) {
-                    expect(typeof handlers[type]).toBe('function');
+                    expect(typeof map[type]).toBe('function');
                 }
             },
         );

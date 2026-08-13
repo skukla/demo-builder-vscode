@@ -16,6 +16,7 @@ export function createMockLogger(): jest.Mocked<Logger> {
         info: jest.fn(),
         warn: jest.fn(),
         error: jest.fn(),
+        trace: jest.fn(),
     };
 }
 
@@ -36,6 +37,7 @@ export function createMockContext(overrides?: Partial<HandlerContext>): jest.Moc
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
+            trace: jest.fn(),
         } as HandlerContext['debugLogger'],
         context: {
             extensionPath: '/test/extension/path',

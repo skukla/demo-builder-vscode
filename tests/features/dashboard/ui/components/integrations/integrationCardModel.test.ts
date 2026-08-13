@@ -34,24 +34,24 @@ describe('deriveIntegrationCard — failure reason', () => {
     // still answer the question tomorrow.
     it('surfaces the persisted reason when there is no live override', () => {
         const model = deriveIntegrationCard(
-            integration({ status: 'error', error: 'invalid org/project/workspace combination' }),
+            integration({ status: 'error', error: 'invalid org/project/workspace combination' })
         );
 
         expect(model.message).toBe('invalid org/project/workspace combination');
     });
 
     it('lets a live override win — an in-flight deploy is fresher than the record', () => {
-        const model = deriveIntegrationCard(
-            integration({ status: 'error', error: 'yesterday' }),
-            { status: 'error', message: 'right now' },
-        );
+        const model = deriveIntegrationCard(integration({ status: 'error', error: 'yesterday' }), {
+            status: 'error',
+            message: 'right now',
+        });
 
         expect(model.message).toBe('right now');
     });
 
     it('does not show a stale reason on a card that is no longer failing', () => {
         const model = deriveIntegrationCard(
-            integration({ status: 'deployed', error: 'a failure since fixed' }),
+            integration({ status: 'deployed', error: 'a failure since fixed' })
         );
 
         expect(model.message).toBeUndefined();
@@ -81,10 +81,10 @@ describe('deriveIntegrationCard — status matrix', () => {
     // stopped. The mesh card never had this problem: its statusLabel IS the live
     // text. Both card kinds now behave the same way.
     it('deploying: info dot, the LIVE STEP as the label, NO face, NO menu', () => {
-        const model = deriveIntegrationCard(
-            integration({ status: 'not-deployed' }),
-            { status: 'deploying', message: 'Deploying erp-sync…' },
-        );
+        const model = deriveIntegrationCard(integration({ status: 'not-deployed' }), {
+            status: 'deploying',
+            message: 'Deploying erp-sync…',
+        });
 
         expect(model.status).toBe('deploying');
         expect(model.dotVariant).toBe('info');
@@ -110,7 +110,7 @@ describe('deriveIntegrationCard — status matrix', () => {
             integration({
                 status: 'error',
                 error: 'The specified organization, project, and workspace combination is invalid',
-            }),
+            })
         );
 
         expect(model.statusLabel).toBe('Deploy failed');
@@ -121,7 +121,7 @@ describe('deriveIntegrationCard — status matrix', () => {
 
     it('deployed (with url): success dot, "Deployed", NO face, Open leads the menu', () => {
         const model = deriveIntegrationCard(
-            integration({ status: 'deployed', url: 'https://245bce.adobeio-static.net' }),
+            integration({ status: 'deployed', url: 'https://245bce.adobeio-static.net' })
         );
 
         expect(model.status).toBe('deployed');
@@ -159,10 +159,10 @@ describe('deriveIntegrationCard — status matrix', () => {
     });
 
     it('error: error dot, "Deploy failed", Retry face, Manage APIs·Remove menu', () => {
-        const model = deriveIntegrationCard(
-            integration({ status: 'error' }),
-            { status: 'error', message: 'aio deploy failed' },
-        );
+        const model = deriveIntegrationCard(integration({ status: 'error' }), {
+            status: 'error',
+            message: 'aio deploy failed',
+        });
 
         expect(model.status).toBe('error');
         expect(model.dotVariant).toBe('error');
@@ -225,7 +225,7 @@ describe('no face affordance — every verb is a menu item', () => {
         for (const status of INTEGRATION_STATUSES) {
             const model = deriveIntegrationCard(
                 integration({ status: 'not-deployed', url: 'https://a.example' }),
-                { status },
+                { status }
             );
             expect('faceAction' in model).toBe(false);
         }
@@ -253,7 +253,7 @@ describe('deriveIntegrationCard — override precedence', () => {
 
     it('no override: the persisted status and name render as seeded', () => {
         const model = deriveIntegrationCard(
-            integration({ status: 'deployed', name: 'Firefly Image Gen' }),
+            integration({ status: 'deployed', name: 'Firefly Image Gen' })
         );
         expect(model.status).toBe('deployed');
         expect(model.name).toBe('Firefly Image Gen');
@@ -262,10 +262,10 @@ describe('deriveIntegrationCard — override precedence', () => {
     it('applies an update-borne display name so a rename refreshes the card label live', () => {
         // Ported: the rename handler rides the per-id channel with the entry's
         // current status plus the new name — the seeded map never re-delivers.
-        const model = deriveIntegrationCard(
-            integration({ name: 'Firefly Image Gen' }),
-            { status: 'deployed', name: 'Firefly Video Gen' },
-        );
+        const model = deriveIntegrationCard(integration({ name: 'Firefly Image Gen' }), {
+            status: 'deployed',
+            name: 'Firefly Video Gen',
+        });
         expect(model.name).toBe('Firefly Video Gen');
     });
 
@@ -285,10 +285,9 @@ describe('deriveIntegrationCard — override precedence', () => {
     });
 
     it('a name-less override keeps the persisted display name (deploy pushes)', () => {
-        const model = deriveIntegrationCard(
-            integration({ name: 'Firefly Image Gen' }),
-            { status: 'deployed' },
-        );
+        const model = deriveIntegrationCard(integration({ name: 'Firefly Image Gen' }), {
+            status: 'deployed',
+        });
         expect(model.name).toBe('Firefly Image Gen');
     });
 
@@ -324,7 +323,7 @@ describe('deriveIntegrationCard — kindLabel + canRename', () => {
             integration({
                 id: 'sfdc-connector',
                 source: { owner: 'adobe', repo: 'sfdc-connector' },
-            }),
+            })
         );
 
         expect(model.kindLabel).toBe('Pre-built');
@@ -336,7 +335,7 @@ describe('deriveIntegrationCard — kindLabel + canRename', () => {
 
     it('catalog id hit without requiredApis: apis is undefined', () => {
         const model = deriveIntegrationCard(
-            integration({ id: 'no-apis-entry', source: { owner: 'adobe', repo: 'no-apis-entry' } }),
+            integration({ id: 'no-apis-entry', source: { owner: 'adobe', repo: 'no-apis-entry' } })
         );
         expect(model.apis).toBeUndefined();
     });
@@ -347,7 +346,7 @@ describe('deriveIntegrationCard — kindLabel + canRename', () => {
                 id: 'my-firefly-gen',
                 name: 'Firefly Image Gen',
                 source: { owner: 'skukla', repo: 'app-builder-shell' },
-            }),
+            })
         );
 
         expect(model.kindLabel).toBe('Custom · blank starter');
@@ -359,7 +358,7 @@ describe('deriveIntegrationCard — kindLabel + canRename', () => {
 
     it('fork mismatch: same repo under the WRONG owner is an Imported repo, not AI', () => {
         const model = deriveIntegrationCard(
-            integration({ id: 'my-fork', source: { owner: 'acme', repo: 'app-builder-shell' } }),
+            integration({ id: 'my-fork', source: { owner: 'acme', repo: 'app-builder-shell' } })
         );
 
         expect(model.kindLabel).toBe('Imported repo');
@@ -378,7 +377,7 @@ describe('deriveIntegrationCard — kindLabel + canRename', () => {
 
     it('catalog id wins over a blank source (id lookup precedes source match)', () => {
         const model = deriveIntegrationCard(
-            integration({ id: 'app-builder-shell', source: BLANK_SOURCE }),
+            integration({ id: 'app-builder-shell', source: BLANK_SOURCE })
         );
         expect(model.kindLabel).toBe('Pre-built');
         expect(model.canRename).toBe(false);
@@ -386,7 +385,7 @@ describe('deriveIntegrationCard — kindLabel + canRename', () => {
 
     it('an empty legacy source renders "—" instead of a bare slash', () => {
         const model = deriveIntegrationCard(
-            integration({ id: 'legacy-app', source: { owner: '', repo: '' } }),
+            integration({ id: 'legacy-app', source: { owner: '', repo: '' } })
         );
         expect(model.sourceLine).toBe('—');
     });
@@ -401,7 +400,7 @@ describe('deriveIntegrationCard — url + lastDeployed derivation', () => {
             integration({
                 url: 'https://primary.example',
                 deployedUrls: { app: 'https://other.example' },
-            }),
+            })
         );
         expect(model.url).toBe('https://primary.example');
     });
@@ -410,7 +409,7 @@ describe('deriveIntegrationCard — url + lastDeployed derivation', () => {
         const model = deriveIntegrationCard(
             integration({
                 deployedUrls: { app: 'https://first.example', admin: 'https://second.example' },
-            }),
+            })
         );
         expect(model.url).toBe('https://first.example');
         expect(model.deployedUrls).toEqual({
@@ -455,10 +454,13 @@ describe('deriveIntegrationCard — url + lastDeployed derivation', () => {
             ['not-deployed', 'deploy'],
             ['stale', 'update'],
             ['error', 'retry'],
-        ] as const)('leads with the status verb, then Manage APIs + Remove on %s', (status, verb) => {
-            const model = deriveIntegrationCard(integration({ status }));
-            expect(model.menuActions).toEqual([verb, 'manage-apis', 'remove']);
-        });
+        ] as const)(
+            'leads with the status verb, then Manage APIs + Remove on %s',
+            (status, verb) => {
+                const model = deriveIntegrationCard(integration({ status }));
+                expect(model.menuActions).toEqual([verb, 'manage-apis', 'remove']);
+            }
+        );
 
         // Deployed is the exception: its deploy verb is not on the face (a healthy
         // card is calm), so Redeploy joins the menu.
@@ -470,7 +472,9 @@ describe('deriveIntegrationCard — url + lastDeployed derivation', () => {
         // Both would race the runner: an API change mid-deploy fights the
         // subscribe, and a remove would delete files out from under it.
         it('offers NOTHING while deploying', () => {
-            const model = deriveIntegrationCard(integration({ status: 'deploying' }));
+            // 'deploying' is transient and arrives via the override channel,
+            // never the persisted entry (normalizeIntegrationStatus's docblock).
+            const model = deriveIntegrationCard(integration(), { status: 'deploying' });
             expect(model.menuActions).toEqual([]);
         });
     });

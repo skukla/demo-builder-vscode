@@ -64,6 +64,7 @@ const mockLogger = {
     debug: jest.fn(),
     error: jest.fn(),
     warn: jest.fn(),
+    trace: jest.fn(),
 };
 
 describe('EnvFileWatcherService', () => {

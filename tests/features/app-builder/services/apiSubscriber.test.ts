@@ -35,7 +35,7 @@ function meshAppBuilderComponent(): AppBuilderComponentCatalogEntry {
         name: 'API Mesh',
         description: '',
         kind: 'mesh',
-        source: { owner: 'o', repo: 'r' },
+        source: { owner: 'o', repo: 'r', branch: 'main' },
         requiredApis: [MESH],
     };
 }
@@ -46,7 +46,7 @@ function integrationAppBuilderComponent(apis: string[]): AppBuilderComponentCata
         name: 'ERP',
         description: '',
         kind: 'integration',
-        source: { owner: 'o', repo: 'erp' },
+        source: { owner: 'o', repo: 'erp', branch: 'main' },
         requiredApis: apis,
     };
 }
@@ -352,7 +352,9 @@ describe('apiSubscriber', () => {
                     client,
                     undefined,
                     [],
-                    (event) => events.push(event)
+                    (event) => {
+                        events.push(event);
+                    }
                 );
 
                 // Baseline (OAuth) and mesh (apiKey) each get a start + done tick.
@@ -423,7 +425,9 @@ describe('apiSubscriber', () => {
                     client,
                     undefined,
                     [],
-                    (event) => events.push(event)
+                    (event) => {
+                        events.push(event);
+                    }
                 );
 
                 // No PUT runs, but the UI must still see each code land.

@@ -194,7 +194,6 @@ interface HarnessProps {
         onAddCustomAppBuilderComponent: jest.Mock;
     };
     updateSpy: jest.Mock;
-    onMeshEnableResult: jest.Mock;
 }
 
 /** Hosts the modal over a REAL useState wizard state (commits re-render the tree). */
@@ -207,7 +206,6 @@ function Harness({
     onClose,
     builder,
     updateSpy,
-    onMeshEnableResult,
 }: HarnessProps): React.ReactElement {
     const [state, setState] = useState<WizardState>(() => makeState(initial));
     const updateState = useCallback(
@@ -229,9 +227,6 @@ function Harness({
             blankComponent={BLANK}
             reservedIds={RESERVED_IDS}
             builder={builder}
-            meshBackendId="backend-1"
-            meshFrontendId="frontend-1"
-            onMeshEnableResult={onMeshEnableResult}
         />
     );
 }
@@ -251,7 +246,6 @@ function renderModal(options: RenderOptions = {}) {
         onAddCustomAppBuilderComponent: jest.fn(),
     };
     const updateSpy = jest.fn();
-    const onMeshEnableResult = jest.fn();
     const meshComponent = 'meshComponent' in options ? options.meshComponent : MESH;
     const makeElement = (isOpen: boolean): React.ReactElement => (
         <Provider theme={defaultTheme} colorScheme="light">
@@ -264,7 +258,6 @@ function renderModal(options: RenderOptions = {}) {
                 onClose={onClose}
                 builder={builder}
                 updateSpy={updateSpy}
-                onMeshEnableResult={onMeshEnableResult}
             />
         </Provider>
     );
@@ -273,7 +266,6 @@ function renderModal(options: RenderOptions = {}) {
         onClose,
         builder,
         updateSpy,
-        onMeshEnableResult,
         /** Rerender the tree (setOpen(true) doubles as a plain force-rerender). */
         setOpen: (open: boolean) => view.rerender(makeElement(open)),
     };

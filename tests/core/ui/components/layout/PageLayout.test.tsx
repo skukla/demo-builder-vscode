@@ -421,10 +421,10 @@ describe('PageLayout', () => {
             // Given: PageLayout with focusable elements
             renderWithProvider(
                 <PageLayout
-                    header={<Button data-testid="header-btn">Header Action</Button>}
-                    footer={<Button data-testid="footer-btn">Footer Action</Button>}
+                    header={<Button variant="primary" data-testid="header-btn">Header Action</Button>}
+                    footer={<Button variant="primary" data-testid="footer-btn">Footer Action</Button>}
                 >
-                    <Button data-testid="content-btn">Content Action</Button>
+                    <Button variant="primary" data-testid="content-btn">Content Action</Button>
                 </PageLayout>
             );
 

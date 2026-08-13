@@ -29,8 +29,8 @@ jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
 const mockBuildDefaultRunnerDeps = jest.fn(() => ({ _deps: true }));
 const mockBuildRunnerDepsContext = jest.fn(async () => ({ _ctx: true }));
 jest.mock('@/features/app-builder/services/appBuilderComponentRunnerDeps', () => ({
-    buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...a),
-    buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...a),
+    buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...(a as [])),
+    buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...(a as [])),
 }));
 
 // ---- permission gate -------------------------------------------------------

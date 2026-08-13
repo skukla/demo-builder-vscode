@@ -166,7 +166,7 @@ describe('stackHelpers', () => {
         describe('switching between same-frontend stacks (backend change only)', () => {
             it('should retain frontend config when switching headless-paas → headless-accs', () => {
                 // Given: User has configured headless frontend
-                const currentConfigs = {
+                const currentConfigs: Record<string, Record<string, unknown>> = {
                     headless: { PORT: 3000, API_KEY: 'abc123' },
                     'adobe-commerce-paas': { STORE_URL: 'https://old.store' },
                     'commerce-mesh': { MESH_ID: 'mesh-123' },
@@ -184,7 +184,7 @@ describe('stackHelpers', () => {
             });
 
             it('should clear backend config when backend changes', () => {
-                const currentConfigs = {
+                const currentConfigs: Record<string, Record<string, unknown>> = {
                     headless: { PORT: 3000 },
                     'adobe-commerce-paas': { STORE_URL: 'https://old.store' },
                 };
@@ -201,7 +201,7 @@ describe('stackHelpers', () => {
             });
 
             it('should retain shared dependency configs', () => {
-                const currentConfigs = {
+                const currentConfigs: Record<string, Record<string, unknown>> = {
                     'commerce-mesh': { MESH_ID: 'mesh-123', MESH_API_KEY: 'key-xyz' },
                     'adobe-commerce-aco': { ENABLED: true },
                 };
@@ -223,7 +223,7 @@ describe('stackHelpers', () => {
 
         describe('switching between different-frontend stacks', () => {
             it('should clear frontend config when frontend changes', () => {
-                const currentConfigs = {
+                const currentConfigs: Record<string, Record<string, unknown>> = {
                     headless: { PORT: 3000, CUSTOM_SETTING: 'value' },
                     'adobe-commerce-paas': { STORE_URL: 'https://store.com' },
                 };
@@ -240,7 +240,7 @@ describe('stackHelpers', () => {
             });
 
             it('should retain backend config when backend stays same', () => {
-                const currentConfigs = {
+                const currentConfigs: Record<string, Record<string, unknown>> = {
                     headless: { PORT: 3000 },
                     'adobe-commerce-paas': { STORE_URL: 'https://store.com', API_KEY: 'secret' },
                 };
@@ -260,7 +260,7 @@ describe('stackHelpers', () => {
             });
 
             it('should retain shared dependency configs when switching frontend', () => {
-                const currentConfigs = {
+                const currentConfigs: Record<string, Record<string, unknown>> = {
                     headless: { PORT: 3000 },
                     'commerce-mesh': { MESH_ID: 'mesh-456' },
                     'adobe-commerce-aco': { ENABLED: false },
@@ -280,7 +280,7 @@ describe('stackHelpers', () => {
 
         describe('switching to completely different stack', () => {
             it('should clear both frontend and backend when both change', () => {
-                const currentConfigs = {
+                const currentConfigs: Record<string, Record<string, unknown>> = {
                     headless: { PORT: 3000 },
                     'adobe-commerce-paas': { STORE_URL: 'https://store.com' },
                 };
@@ -297,7 +297,7 @@ describe('stackHelpers', () => {
             });
 
             it('should still retain shared dependencies', () => {
-                const currentConfigs = {
+                const currentConfigs: Record<string, Record<string, unknown>> = {
                     headless: { PORT: 3000 },
                     'adobe-commerce-paas': { STORE_URL: 'https://store.com' },
                     'commerce-mesh': { MESH_ID: 'mesh-789' },
@@ -318,7 +318,7 @@ describe('stackHelpers', () => {
 
         describe('edge cases', () => {
             it('should return empty object when oldStack is undefined (first selection)', () => {
-                const currentConfigs = {
+                const currentConfigs: Record<string, Record<string, unknown>> = {
                     headless: { PORT: 3000 },
                 };
 
@@ -342,7 +342,7 @@ describe('stackHelpers', () => {
             });
 
             it('should return empty object when currentConfigs has no matching components', () => {
-                const currentConfigs = {
+                const currentConfigs: Record<string, Record<string, unknown>> = {
                     'unknown-component': { SETTING: 'value' },
                     'another-unknown': { VALUE: 123 },
                 };
@@ -357,7 +357,7 @@ describe('stackHelpers', () => {
             });
 
             it('should handle configs with complex nested values', () => {
-                const currentConfigs = {
+                const currentConfigs: Record<string, Record<string, unknown>> = {
                     headless: {
                         PORT: 3000,
                         nested: { deep: { value: 'preserved' } },
@@ -379,7 +379,7 @@ describe('stackHelpers', () => {
             });
 
             it('should handle optional addons in old stack', () => {
-                const currentConfigs = {
+                const currentConfigs: Record<string, Record<string, unknown>> = {
                     'adobe-commerce-aco': { ACO_SETTING: 'enabled' },
                     'commerce-mesh': { MESH_ID: 'mesh' },
                 };
@@ -420,7 +420,7 @@ describe('stackHelpers', () => {
             };
 
             it('should migrate mesh config when switching eds-paas → headless-paas', () => {
-                const currentConfigs = {
+                const currentConfigs: Record<string, Record<string, unknown>> = {
                     'eds-storefront': { PORT: 3000 },
                     'adobe-commerce-paas': { STORE_URL: 'https://store.com' },
                     'eds-commerce-mesh': {
@@ -447,7 +447,7 @@ describe('stackHelpers', () => {
             });
 
             it('should migrate frontend config when switching eds-paas → headless-paas', () => {
-                const currentConfigs = {
+                const currentConfigs: Record<string, Record<string, unknown>> = {
                     'eds-storefront': { PORT: 3000, CUSTOM_VAR: 'value' },
                     'adobe-commerce-paas': { STORE_URL: 'https://store.com' },
                 };
@@ -469,7 +469,7 @@ describe('stackHelpers', () => {
                     dependencies: ['eds-commerce-mesh', 'extra-dep'],
                 };
 
-                const currentConfigs = {
+                const currentConfigs: Record<string, Record<string, unknown>> = {
                     'eds-commerce-mesh': { MESH_ID: 'mesh-123' },
                     'extra-dep': { EXTRA: 'val' },
                 };

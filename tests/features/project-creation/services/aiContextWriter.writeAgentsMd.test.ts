@@ -272,6 +272,10 @@ describe('aiContextWriter', () => {
             it('strips # from adobe organization field to prevent heading injection', () => {
                 const project = makeEdsProject({
                     adobe: {
+                        projectId: 'p1',
+                        projectName: 'proj',
+                        workspace: 'Stage',
+                        authenticated: true,
                         organization: 'My Org\n## Injected',
                         projectTitle: 'My Project',
                     },

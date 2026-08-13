@@ -30,6 +30,7 @@ import type { Project } from '@/types/base';
 // ----------------------------------------------------------------------------
 
 export interface MockLogger {
+    trace: jest.Mock;
     info: jest.Mock;
     warn: jest.Mock;
     error: jest.Mock;

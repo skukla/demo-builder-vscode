@@ -227,7 +227,7 @@ describe('registerAdobeTools', () => {
         await server.call('list_adobe_projects');
 
         // No stored target → no org argument (ambient/global behavior preserved).
-        const arg = auth.getProjects.mock.calls[0]?.[0];
+        const arg = (auth.getProjects.mock.calls[0] as unknown[] | undefined)?.[0];
         expect(arg).toBeUndefined();
     });
 

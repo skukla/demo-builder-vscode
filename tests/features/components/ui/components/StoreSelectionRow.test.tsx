@@ -64,6 +64,7 @@ jest.mock('@/features/components/services/envVarHelpers', () => ({
 
 const makeField = (key: string): UniqueField => ({
     key,
+    componentIds: ['test-component'],
     label: key,
     type: 'text',
     required: false,

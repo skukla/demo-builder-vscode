@@ -77,7 +77,9 @@ beforeEach(() => {
 
 describe('manifest carries commerceStoreStructure', () => {
     it('writes the structure when the project has one', async () => {
-        const writer = new ProjectConfigWriter(mockLogger as never);
+        const writer = new ProjectConfigWriter(mockLogger as never) as unknown as {
+            writeManifest(project: unknown): Promise<void>;
+        };
 
         await writer.writeManifest(
             createTestProject({ commerceStoreStructure: STRUCTURE }),
@@ -88,7 +90,9 @@ describe('manifest carries commerceStoreStructure', () => {
 
     it('omits the key entirely when there is none — control', async () => {
         // Every project predating this. The manifest must not gain a null key.
-        const writer = new ProjectConfigWriter(mockLogger as never);
+        const writer = new ProjectConfigWriter(mockLogger as never) as unknown as {
+            writeManifest(project: unknown): Promise<void>;
+        };
 
         await writer.writeManifest(createTestProject());
 

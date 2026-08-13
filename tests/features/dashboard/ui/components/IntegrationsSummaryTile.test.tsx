@@ -65,9 +65,16 @@ const DEPLOYED: AppBuilderComponentState = {
 };
 
 function components(
-    ...statuses: Array<AppBuilderComponentState['status']>
+    // 'deploying' is the live row-status vocabulary (AppBuilderComponentRowStatus);
+    // the tile ranks it in SEVERITY even though the persisted union lacks it.
+    ...statuses: Array<AppBuilderComponentState['status'] | 'deploying'>
 ): Record<string, AppBuilderComponentState> {
-    return Object.fromEntries(statuses.map((status, i) => [`app-${i}`, { ...DEPLOYED, status }]));
+    return Object.fromEntries(
+        statuses.map((status, i) => [
+            `app-${i}`,
+            { ...DEPLOYED, status } as AppBuilderComponentState,
+        ])
+    );
 }
 
 beforeEach(() => {
@@ -267,7 +274,10 @@ describe('IntegrationsSummaryTile', () => {
     // status. This tile is the surface that proved it.
     it('pulses while an integration is deploying', () => {
         render(
-            <IntegrationsSummaryTile hasAdobeContext appBuilderComponents={components('deploying')} />
+            <IntegrationsSummaryTile
+                hasAdobeContext
+                appBuilderComponents={components('deploying')}
+            />
         );
 
         const dot = screen.getByTestId('integrations-tile-dot');
@@ -277,7 +287,10 @@ describe('IntegrationsSummaryTile', () => {
 
     it('does not pulse once everything has settled', () => {
         render(
-            <IntegrationsSummaryTile hasAdobeContext appBuilderComponents={components('deployed')} />
+            <IntegrationsSummaryTile
+                hasAdobeContext
+                appBuilderComponents={components('deployed')}
+            />
         );
 
         expect(screen.getByTestId('integrations-tile-dot')).not.toHaveClass('status-dot--pulse');

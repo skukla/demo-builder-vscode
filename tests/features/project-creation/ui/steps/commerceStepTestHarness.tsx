@@ -80,6 +80,7 @@ const citisignal: DemoPackage = {
     id: 'citisignal',
     name: 'CitiSignal',
     description: 'A test package',
+    configDefaults: {},
     storefronts: {
         'headless-paas': { name: 'CS Headless', description: '', source: mockGitSource },
         'eds-paas': { name: 'CS EDS PaaS', description: '', source: mockGitSource },
@@ -92,6 +93,7 @@ const isle5: DemoPackage = {
     id: 'isle5',
     name: 'Isle5',
     description: 'A test package',
+    configDefaults: {},
     storefronts: {
         'eds-paas': { name: 'I5 EDS PaaS', description: '', source: mockGitSource },
         'eds-accs': { name: 'I5 EDS ACCS', description: '', source: mockGitSource },
@@ -103,6 +105,7 @@ const buildright: DemoPackage = {
     id: 'buildright',
     name: 'BuildRight',
     description: 'A test package',
+    configDefaults: {},
     storefronts: {
         'eds-paas': { name: 'BR EDS PaaS', description: '', source: mockGitSource },
     },

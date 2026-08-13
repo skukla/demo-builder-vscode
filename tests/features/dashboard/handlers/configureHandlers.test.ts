@@ -125,7 +125,7 @@ describe('configureHandlers', () => {
         });
 
         it('should have exactly 6 handlers', () => {
-            const types = getRegisteredTypes(configureHandlers);
+            const types = getRegisteredTypes(configureHandlers) as Array<keyof typeof configureHandlers>;
             // 6 → 5: create-workspace-credential removed 2026-08-05 (nothing sent it).
             expect(types).toHaveLength(5);
         });
@@ -138,7 +138,7 @@ describe('configureHandlers', () => {
         });
 
         it('should have all handlers as functions', () => {
-            const types = getRegisteredTypes(configureHandlers);
+            const types = getRegisteredTypes(configureHandlers) as Array<keyof typeof configureHandlers>;
             for (const type of types) {
                 expect(typeof configureHandlers[type]).toBe('function');
             }

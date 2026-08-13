@@ -61,7 +61,13 @@ const AUTH_HANDLERS = ['check-auth', 'authenticate', 'switchOrg'] as const;
 
 function createContext(): HandlerContext & { sendMessage: jest.Mock } {
     return {
-        logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
+        logger: {
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            trace: jest.fn(),
+        },
         sendMessage: jest.fn().mockResolvedValue(undefined),
         authManager: {
             // If a guard is missing, the handler reaches these — the fetch that
@@ -91,7 +97,9 @@ describe('Adobe entity handlers refuse before fetching when sign-in is declined'
 
     it.each(ENTITY_HANDLERS)('%s consults the sign-in guard', async (type) => {
         const context = createContext();
-        await addIntegrationFlowHandlers[type](context, {});
+        // Calling through the union makes the payload param the intersection of
+        // every handler's payload; the guard fires before any payload is read.
+        await addIntegrationFlowHandlers[type](context, {} as never);
 
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledTimes(1);
     });

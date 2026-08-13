@@ -41,7 +41,7 @@ describe('sidebarHandlers', () => {
                 },
             } as unknown as HandlerContext['panel'],
             ...overrides,
-        };
+        } as HandlerContext;
     }
 
     describe('handleNavigate', () => {

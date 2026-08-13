@@ -81,7 +81,7 @@ describe('ActionGrid', () => {
         });
 
         it('labels the Author button "Author Content" regardless of the resolved experience', () => {
-            render(<ActionGrid {...edsProps} authoringExperience="experience-workspace" />);
+            render(<ActionGrid {...edsProps} />);
 
             // Static label — the resolved experience still decides WHERE the
             // action opens (backend-side), not the tile text.
@@ -348,7 +348,7 @@ describe('ActionGrid', () => {
         });
 
         it('keeps the static "Author Content" label for the EW experience too', () => {
-            render(<ActionGrid {...edsProps} authoringExperience="experience-workspace" />);
+            render(<ActionGrid {...edsProps} />);
 
             expect(screen.getByRole('button', { name: 'Author Content' })).toHaveTextContent(
                 'Author Content'
@@ -357,7 +357,7 @@ describe('ActionGrid', () => {
 
         it('renders no authoring-experience flip/switch control (relocated to Configure)', () => {
             // The flip control moved to the Configure webview (setup-time preference).
-            render(<ActionGrid {...edsProps} authoringExperience="da-live-classic" />);
+            render(<ActionGrid {...edsProps} />);
 
             expect(screen.queryByText('Switch to Experience Workspace')).not.toBeInTheDocument();
             expect(screen.queryByText('Switch to DA.live Classic')).not.toBeInTheDocument();

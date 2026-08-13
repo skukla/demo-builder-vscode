@@ -62,9 +62,13 @@ describe('handleAddAppBuilderComponent', () => {
             }),
             // The notification's reporter, so the deploy tail's steps reach the
             // user instead of one static title for the whole add.
-            expect.any(Function),
+            expect.any(Function)
         );
-        expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(mockProject, ERP_ENTRY, expect.anything());
+        expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(
+            mockProject,
+            ERP_ENTRY,
+            expect.anything()
+        );
     });
 
     it('runs guards BEFORE deploying — auth failure does NOT call the runner', async () => {
@@ -81,7 +85,10 @@ describe('handleAddAppBuilderComponent', () => {
     it('aborts on org mismatch and does NOT call the runner', async () => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);
-        mockDetectProjectOrgMismatch.mockResolvedValue({ reachable: false, currentOrg: 'Other Org' });
+        mockDetectProjectOrgMismatch.mockResolvedValue({
+            reachable: false,
+            currentOrg: 'Other Org',
+        });
 
         const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
@@ -125,7 +132,7 @@ describe('handleAddAppBuilderComponent', () => {
                 kind: 'integration',
                 source: expect.objectContaining({ owner: 'owner', repo: 'custom-app' }),
             }),
-            expect.anything(),
+            expect.anything()
         );
     });
 
@@ -158,7 +165,10 @@ describe('handleAddAppBuilderComponent', () => {
         // Trailing undefined = the optional display-name slot (rename channel);
         // deploy-path pushes never carry a name.
         expect(mockSendAppBuilderComponentStatusUpdate).toHaveBeenCalledWith(
-            'erp-sync', 'error', expect.stringContaining('clone failed'), undefined,
+            'erp-sync',
+            'error',
+            expect.stringContaining('clone failed'),
+            undefined
         );
     });
 });
@@ -171,7 +181,11 @@ describe('handleDeployAppBuilderComponent / handleRedeployAppBuilderComponent', 
         const result = await handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
         expect(result.success).toBe(true);
-        expect(mockDeployAppBuilderComponent).toHaveBeenCalledWith(mockProject, 'erp-sync', expect.anything());
+        expect(mockDeployAppBuilderComponent).toHaveBeenCalledWith(
+            mockProject,
+            'erp-sync',
+            expect.anything()
+        );
     });
 
     it('redeploy routes to the runner deployAppBuilderComponent with the id', async () => {
@@ -181,7 +195,11 @@ describe('handleDeployAppBuilderComponent / handleRedeployAppBuilderComponent', 
         const result = await handleRedeployAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
         expect(result.success).toBe(true);
-        expect(mockDeployAppBuilderComponent).toHaveBeenCalledWith(mockProject, 'erp-sync', expect.anything());
+        expect(mockDeployAppBuilderComponent).toHaveBeenCalledWith(
+            mockProject,
+            'erp-sync',
+            expect.anything()
+        );
     });
 
     it('does not call the runner when a guard fails', async () => {
@@ -204,13 +222,20 @@ describe('handleRemoveAppBuilderComponent', () => {
         const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
         expect(result.success).toBe(true);
-        expect(mockRemoveAppBuilderComponent).toHaveBeenCalledWith(mockProject, 'erp-sync', expect.anything());
+        expect(mockRemoveAppBuilderComponent).toHaveBeenCalledWith(
+            mockProject,
+            'erp-sync',
+            expect.anything()
+        );
     });
 
     it('surfaces the runner error', async () => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);
-        mockRemoveAppBuilderComponent.mockResolvedValue({ success: false, error: 'undeploy failed' });
+        mockRemoveAppBuilderComponent.mockResolvedValue({
+            success: false,
+            error: 'undeploy failed',
+        });
 
         const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
@@ -272,7 +297,7 @@ describe('handleRenameAppBuilderComponent (display name only — shell instancin
             'firefly-image-gen',
             'deployed',
             undefined,
-            'Firefly Video Gen',
+            'Firefly Video Gen'
         );
     });
 
@@ -280,13 +305,13 @@ describe('handleRenameAppBuilderComponent (display name only — shell instancin
         const { mockContext, showInputBox } = setupRename();
         await handleRenameAppBuilderComponent(mockContext, { id: 'firefly-image-gen' });
         expect(showInputBox).toHaveBeenCalledWith(
-            expect.objectContaining({ value: 'Firefly Image Gen' }),
+            expect.objectContaining({ value: 'Firefly Image Gen' })
         );
 
         const unnamed = setupRename({ name: undefined });
         await handleRenameAppBuilderComponent(unnamed.mockContext, { id: 'firefly-image-gen' });
         expect(unnamed.showInputBox).toHaveBeenCalledWith(
-            expect.objectContaining({ value: 'firefly-image-gen' }),
+            expect.objectContaining({ value: 'firefly-image-gen' })
         );
     });
 
@@ -417,7 +442,6 @@ describe('handleRenameAppBuilderComponent (display name only — shell instancin
     });
 });
 
-
 /**
  * Duplicate-id adds (2026-08-06).
  *
@@ -452,8 +476,9 @@ describe('handleAddAppBuilderComponent — duplicate ids', () => {
         mockBuildCustomIntegrationEntry.mockReturnValue({
             id: 'acme-erp-sync',
             name: 'acme-erp-sync',
+            description: 'Custom App Builder component from acme/erp-sync',
             kind: 'integration',
-            source: { owner: 'acme', repo: 'erp-sync' },
+            source: { owner: 'acme', repo: 'erp-sync', branch: 'main' },
         });
         const { mockContext } = setupMocks({
             appBuilderComponents: {

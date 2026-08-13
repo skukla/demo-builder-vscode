@@ -52,7 +52,7 @@ function makeStorefront(overrides: Partial<Storefront> = {}): Storefront {
         contentPatches: ['content-a'],
         contentPatchSource: { owner: 'p-owner', repo: 'p-repo' },
         codePatches: ['code-a'],
-        codePatchSource: { owner: 'c-owner', repo: 'c-repo' },
+        codePatchSource: { owner: 'c-owner', repo: 'c-repo', path: 'patches' },
         ...overrides,
     } as Storefront;
 }
@@ -74,32 +74,40 @@ describe('buildEdsConfigFromStorefront', () => {
         it('carries codePatches and codePatchSource — the two fields that drifted', () => {
             const storefront = makeStorefront({
                 codePatches: ['thin-layer-1'],
-                codePatchSource: { owner: 'skukla', repo: 'eds-demo-patches' },
+                codePatchSource: { owner: 'skukla', repo: 'eds-demo-patches', path: 'patches' },
             });
 
             const result = buildEdsConfigFromStorefront(storefront, undefined);
 
             expect(result.codePatches).toEqual(['thin-layer-1']);
-            expect(result.codePatchSource).toEqual({ owner: 'skukla', repo: 'eds-demo-patches' });
+            expect(result.codePatchSource).toEqual({
+                owner: 'skukla',
+                repo: 'eds-demo-patches',
+                path: 'patches',
+            });
         });
 
         it('OVERWRITES a stale storefront-derived value from the previous package', () => {
             // The actual defect: switching packages refreshed 14 fields and left 2 behind.
             const prev = {
                 codePatches: ['from-the-OLD-package'],
-                codePatchSource: { owner: 'old-owner', repo: 'old-repo' },
+                codePatchSource: { owner: 'old-owner', repo: 'old-repo', path: 'patches' },
                 templateOwner: 'old-owner',
             } as EDSConfig;
             const storefront = makeStorefront({
                 codePatches: ['from-the-NEW-package'],
-                codePatchSource: { owner: 'new-owner', repo: 'new-repo' },
+                codePatchSource: { owner: 'new-owner', repo: 'new-repo', path: 'patches' },
                 templateOwner: 'new-owner',
             });
 
             const result = buildEdsConfigFromStorefront(storefront, prev);
 
             expect(result.codePatches).toEqual(['from-the-NEW-package']);
-            expect(result.codePatchSource).toEqual({ owner: 'new-owner', repo: 'new-repo' });
+            expect(result.codePatchSource).toEqual({
+                owner: 'new-owner',
+                repo: 'new-repo',
+                path: 'patches',
+            });
             expect(result.templateOwner).toBe('new-owner');
         });
 

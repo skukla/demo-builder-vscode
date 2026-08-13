@@ -31,7 +31,14 @@ jest.mock('@/core/logging', () => {
 });
 
 // Access the mock logger instance via the mocked module
-const loggingModule = jest.requireMock('@/core/logging') as { __mockLoggerInstance: typeof mockLoggerInstance };
+type MockLoggerShape = {
+    info: jest.Mock;
+    warn: jest.Mock;
+    error: jest.Mock;
+    debug: jest.Mock;
+    trace: jest.Mock;
+};
+const loggingModule = jest.requireMock('@/core/logging') as { __mockLoggerInstance: MockLoggerShape };
 export const mockLoggerInstance = loggingModule.__mockLoggerInstance;
 
 export const mockHomedir = '/mock/home';

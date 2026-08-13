@@ -18,11 +18,15 @@ jest.mock('@/core/logging');
 jest.mock('@/core/di');
 jest.mock('@/core/validation');
 jest.mock('fs/promises');
-jest.mock('vscode', () => ({
-    commands: {
-        executeCommand: jest.fn()
-    }
-}), { virtual: true });
+jest.mock(
+    'vscode',
+    () => ({
+        commands: {
+            executeCommand: jest.fn(),
+        },
+    }),
+    { virtual: true }
+);
 jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
     ComponentRegistryManager: jest.fn().mockImplementation(() => ({
         getComponentById: jest.fn().mockResolvedValue({
@@ -30,9 +34,9 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
             name: 'Test Component',
             configuration: {
                 // No buildScript means build step will be skipped
-            }
-        })
-    }))
+            },
+        }),
+    })),
 }));
 
 import * as fs from 'fs/promises';
@@ -60,8 +64,8 @@ describe('ComponentUpdater - Extended Coverage', () => {
                 stdout: '',
                 stderr: '',
                 code: 0,
-                duration: 100
-            })
+                duration: 100,
+            }),
         };
 
         (ServiceLocator.getCommandExecutor as jest.Mock) = jest.fn().mockReturnValue(mockExecutor);
@@ -82,7 +86,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
 
         global.fetch = jest.fn().mockResolvedValue({
             ok: true,
-            arrayBuffer: jest.fn().mockResolvedValue(new ArrayBuffer(1024))
+            arrayBuffer: jest.fn().mockResolvedValue(new ArrayBuffer(1024)),
         }) as unknown as typeof fetch;
 
         updater = new ComponentUpdater(mockLogger, '/mock/extension/path');
@@ -94,10 +98,10 @@ describe('ComponentUpdater - Extended Coverage', () => {
                 'test-component': {
                     id: 'test-component',
                     path: '/path/to/project/components/test-component',
-                    port: 3000
-                }
+                    port: 3000,
+                },
             },
-            componentVersions: {}
+            componentVersions: {},
         } as unknown as Project;
     });
 
@@ -109,17 +113,14 @@ describe('ComponentUpdater - Extended Coverage', () => {
             // Reset mock to track calls properly
             (fs.readFile as jest.Mock).mockReset();
             (fs.readFile as jest.Mock)
-                .mockResolvedValueOnce('OLD_VAR=old_value')  // .env
-                .mockResolvedValueOnce('LOCAL_VAR=local')   // .env.local
-                .mockResolvedValue('{"name": "test"}');     // package.json
+                .mockResolvedValueOnce('OLD_VAR=old_value') // .env
+                .mockResolvedValueOnce('LOCAL_VAR=local') // .env.local
+                .mockResolvedValue('{"name": "test"}'); // package.json
 
             await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
 
             // Verify .env was read (first calls should be for .env files)
-            expect(fs.readFile).toHaveBeenCalledWith(
-                expect.stringContaining('.env'),
-                'utf-8'
-            );
+            expect(fs.readFile).toHaveBeenCalledWith(expect.stringContaining('.env'), 'utf-8');
         });
 
         it('should restore .env unchanged when no .env.example exists', async () => {
@@ -176,7 +177,8 @@ describe('ComponentUpdater - Extended Coverage', () => {
             // Find the writeFile call for .env
             const writeFileCalls = (fs.writeFile as jest.Mock).mock.calls;
             const envWriteCall = writeFileCalls.find(
-                (call: unknown[]) => typeof call[0] === 'string' && (call[0] as string).endsWith('.env')
+                (call: unknown[]) =>
+                    typeof call[0] === 'string' && (call[0] as string).endsWith('.env')
             );
 
             expect(envWriteCall).toBeDefined();
@@ -219,9 +221,9 @@ describe('ComponentUpdater - Extended Coverage', () => {
             await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
 
             expect(mockProject.componentVersions).toBeDefined();
-            expect(mockProject.componentVersions['test-component']).toEqual({
+            expect(mockProject.componentVersions?.['test-component']).toEqual({
                 version: '1.0.0',
-                lastUpdated: expect.any(String)
+                lastUpdated: expect.any(String),
             });
         });
 
@@ -237,7 +239,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
             ).rejects.toThrow();
 
             // Version should not be set
-            expect(mockProject.componentVersions['test-component']).toBeUndefined();
+            expect(mockProject.componentVersions?.['test-component']).toBeUndefined();
         });
     });
 
@@ -260,7 +262,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
             expect(mockLogger.error).toHaveBeenCalledWith(
                 '[Updates] CRITICAL: Rollback failed',
                 expect.objectContaining({
-                    message: expect.stringContaining('internet connection')
+                    message: expect.stringContaining('internet connection'),
                 })
             );
         });
@@ -278,7 +280,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
             expect(mockLogger.error).toHaveBeenCalledWith(
                 '[Updates] CRITICAL: Rollback failed',
                 expect.objectContaining({
-                    message: expect.stringContaining('timed out')
+                    message: expect.stringContaining('timed out'),
                 })
             );
         });
@@ -289,7 +291,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
 
             (global.fetch as jest.Mock).mockResolvedValueOnce({
                 ok: false,
-                status: 404
+                status: 404,
             });
 
             await expect(
@@ -299,7 +301,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
             expect(mockLogger.error).toHaveBeenCalledWith(
                 '[Updates] CRITICAL: Rollback failed',
                 expect.objectContaining({
-                    message: expect.stringContaining('not found')
+                    message: expect.stringContaining('not found'),
                 })
             );
         });
@@ -310,7 +312,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
 
             (global.fetch as jest.Mock).mockResolvedValueOnce({
                 ok: false,
-                status: 403
+                status: 403,
             });
 
             await expect(
@@ -320,7 +322,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
             expect(mockLogger.error).toHaveBeenCalledWith(
                 '[Updates] CRITICAL: Rollback failed',
                 expect.objectContaining({
-                    message: expect.stringMatching(/rate limit|access denied/i)
+                    message: expect.stringMatching(/rate limit|access denied/i),
                 })
             );
         });
@@ -331,7 +333,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
 
             (global.fetch as jest.Mock).mockResolvedValueOnce({
                 ok: false,
-                status: 500
+                status: 500,
             });
 
             await expect(
@@ -341,7 +343,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
             expect(mockLogger.error).toHaveBeenCalledWith(
                 '[Updates] CRITICAL: Rollback failed',
                 expect.objectContaining({
-                    message: expect.stringMatching(/server error/i)
+                    message: expect.stringMatching(/server error/i),
                 })
             );
         });
@@ -354,22 +356,22 @@ describe('ComponentUpdater - Extended Coverage', () => {
 
             await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
 
-            expect(fs.access).toHaveBeenCalledWith(
-                expect.stringContaining('package.json')
-            );
+            expect(fs.access).toHaveBeenCalledWith(expect.stringContaining('package.json'));
         });
 
         it('should verify mesh.json exists for commerce-mesh component', async () => {
             const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
             const newVersion = '1.0.0';
 
-            const { ComponentRegistryManager } = require('@/features/components/services/ComponentRegistryManager');
+            const {
+                ComponentRegistryManager,
+            } = require('@/features/components/services/ComponentRegistryManager');
             ComponentRegistryManager.mockImplementation(() => ({
                 getComponentById: jest.fn().mockResolvedValue({
                     id: 'eds-commerce-mesh',
                     name: 'Commerce Mesh',
-                    configuration: {}
-                })
+                    configuration: {},
+                }),
             }));
 
             const meshProject = {
@@ -378,18 +380,21 @@ describe('ComponentUpdater - Extended Coverage', () => {
                     'eds-commerce-mesh': {
                         id: 'eds-commerce-mesh',
                         path: '/path/to/project/components/commerce-mesh',
-                        port: 3000
-                    }
-                }
+                        port: 3000,
+                    },
+                },
             } as unknown as Project;
 
             const meshUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path');
 
-            await meshUpdater.updateComponent(meshProject, 'eds-commerce-mesh', downloadUrl, newVersion);
-
-            expect(fs.access).toHaveBeenCalledWith(
-                expect.stringContaining('mesh.json')
+            await meshUpdater.updateComponent(
+                meshProject,
+                'eds-commerce-mesh',
+                downloadUrl,
+                newVersion
             );
+
+            expect(fs.access).toHaveBeenCalledWith(expect.stringContaining('mesh.json'));
         });
 
         it('should throw when component not found in project', async () => {
@@ -443,14 +448,14 @@ describe('ComponentUpdater - Extended Coverage', () => {
             expect(mockLogger.error).toHaveBeenCalledWith(
                 '[Updates] Update failed, rolling back to snapshot',
                 expect.objectContaining({
-                    message: expect.stringContaining('package.json is invalid')
+                    message: expect.stringContaining('package.json is invalid'),
                 })
             );
 
             expect(mockLogger.error).toHaveBeenCalledWith(
                 '[Updates] CRITICAL: Rollback failed',
                 expect.objectContaining({
-                    message: expect.stringContaining('incomplete or corrupted')
+                    message: expect.stringContaining('incomplete or corrupted'),
                 })
             );
         });
@@ -461,7 +466,8 @@ describe('ComponentUpdater - Extended Coverage', () => {
             const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
             const newVersion = '1.0.0';
 
-            const envWithComments = '# This is a comment\nVAR1=value1\n\n# Another comment\nVAR2=value2';
+            const envWithComments =
+                '# This is a comment\nVAR1=value1\n\n# Another comment\nVAR2=value2';
 
             (fs.readFile as jest.Mock).mockReset();
             (fs.readFile as jest.Mock).mockImplementation(async (filePath: string) => {
@@ -481,7 +487,8 @@ describe('ComponentUpdater - Extended Coverage', () => {
 
             const writeFileCalls = (fs.writeFile as jest.Mock).mock.calls;
             const envWriteCall = writeFileCalls.find(
-                (call: unknown[]) => typeof call[0] === 'string' && (call[0] as string).endsWith('.env')
+                (call: unknown[]) =>
+                    typeof call[0] === 'string' && (call[0] as string).endsWith('.env')
             );
 
             expect(envWriteCall).toBeDefined();
@@ -515,7 +522,8 @@ describe('ComponentUpdater - Extended Coverage', () => {
 
             const writeFileCalls = (fs.writeFile as jest.Mock).mock.calls;
             const envWriteCall = writeFileCalls.find(
-                (call: unknown[]) => typeof call[0] === 'string' && (call[0] as string).endsWith('.env')
+                (call: unknown[]) =>
+                    typeof call[0] === 'string' && (call[0] as string).endsWith('.env')
             );
 
             expect(envWriteCall).toBeDefined();

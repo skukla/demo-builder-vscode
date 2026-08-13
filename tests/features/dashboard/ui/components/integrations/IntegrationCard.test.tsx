@@ -87,9 +87,12 @@ function makeModel(overrides: Partial<IntegrationCardModel> = {}): IntegrationCa
 function renderCard(model: IntegrationCardModel) {
     const onOpen = jest.fn();
     const onAction = jest.fn();
-    const view = render(<IntegrationCard model={model} onOpen={onOpen} onAction={onAction} />);
+    const onRename = jest.fn();
+    const view = render(
+        <IntegrationCard model={model} onOpen={onOpen} onAction={onAction} onRename={onRename} />
+    );
     const card = view.container.querySelector('.integration-card') as HTMLElement;
-    return { onOpen, onAction, card, container: view.container };
+    return { onOpen, onAction, onRename, card, container: view.container };
 }
 
 describe('IntegrationCard', () => {

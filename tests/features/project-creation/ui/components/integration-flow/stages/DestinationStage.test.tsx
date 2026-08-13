@@ -133,7 +133,6 @@ function renderStage(view: View, overrides: StageOverrides = {}) {
     const updateState = jest.fn();
     const onPendingProject = jest.fn();
     const onPendingWorkspace = jest.fn();
-    const onChangeDestination = jest.fn();
     const onPhaseRunningChange = jest.fn();
     render(
         <Provider theme={defaultTheme} colorScheme="light">
@@ -145,7 +144,6 @@ function renderStage(view: View, overrides: StageOverrides = {}) {
                 pendingWorkspace={overrides.pendingWorkspace}
                 onPendingProject={onPendingProject}
                 onPendingWorkspace={onPendingWorkspace}
-                onChangeDestination={onChangeDestination}
                 onPhaseRunningChange={onPhaseRunningChange}
             />
         </Provider>
@@ -154,7 +152,6 @@ function renderStage(view: View, overrides: StageOverrides = {}) {
         updateState,
         onPendingProject,
         onPendingWorkspace,
-        onChangeDestination,
         onPhaseRunningChange,
     };
 }

@@ -133,12 +133,16 @@ function setupDefaultMocks(): {
     });
     MockUpdateManager.prototype.checkAllProjectsForUpdates = jest.fn().mockResolvedValue([]);
 
-    const MockTemplateChecker = TemplateUpdateChecker as jest.MockedClass<typeof TemplateUpdateChecker>;
+    const MockTemplateChecker = TemplateUpdateChecker as jest.MockedClass<
+        typeof TemplateUpdateChecker
+    >;
     MockTemplateChecker.prototype.checkForUpdates = jest.fn().mockResolvedValue(null);
 
     const MockForkSync = ForkSyncService as jest.MockedClass<typeof ForkSyncService>;
     MockForkSync.prototype.checkForkStatus = jest.fn().mockResolvedValue(null);
-    MockForkSync.prototype.syncFork = jest.fn().mockResolvedValue({ success: true, message: 'Synced' });
+    MockForkSync.prototype.syncFork = jest
+        .fn()
+        .mockResolvedValue({ success: true, message: 'Synced' });
 
     const MockAddonChecker = AddonUpdateChecker as jest.MockedClass<typeof AddonUpdateChecker>;
     MockAddonChecker.prototype.checkBlockLibraries = jest.fn().mockResolvedValue([]);
@@ -173,7 +177,9 @@ describe('CheckUpdatesCommand — Fork Sync', () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
         const project = makeProject();
 
-        mockStateManager.getAllProjects.mockResolvedValue([{ path: project.path }]);
+        mockStateManager.getAllProjects.mockResolvedValue([
+            { name: project.name, path: project.path, lastModified: new Date() },
+        ]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
 
         const MockForkSync = ForkSyncService as jest.MockedClass<typeof ForkSyncService>;
@@ -204,7 +210,9 @@ describe('CheckUpdatesCommand — Fork Sync', () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
         const project = makeProject();
 
-        mockStateManager.getAllProjects.mockResolvedValue([{ path: project.path }]);
+        mockStateManager.getAllProjects.mockResolvedValue([
+            { name: project.name, path: project.path, lastModified: new Date() },
+        ]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
 
         const MockForkSync = ForkSyncService as jest.MockedClass<typeof ForkSyncService>;
@@ -225,7 +233,9 @@ describe('CheckUpdatesCommand — Fork Sync', () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
         const project = makeProject();
 
-        mockStateManager.getAllProjects.mockResolvedValue([{ path: project.path }]);
+        mockStateManager.getAllProjects.mockResolvedValue([
+            { name: project.name, path: project.path, lastModified: new Date() },
+        ]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
 
         const MockForkSync = ForkSyncService as jest.MockedClass<typeof ForkSyncService>;
@@ -248,7 +258,9 @@ describe('CheckUpdatesCommand — Fork Sync', () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
         const project = makeProject();
 
-        mockStateManager.getAllProjects.mockResolvedValue([{ path: project.path }]);
+        mockStateManager.getAllProjects.mockResolvedValue([
+            { name: project.name, path: project.path, lastModified: new Date() },
+        ]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
         mockStateManager.getCurrentProject.mockResolvedValue(project);
 
@@ -276,7 +288,7 @@ describe('CheckUpdatesCommand — Fork Sync', () => {
         await executePromise;
 
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            expect.stringContaining('diverged'),
+            expect.stringContaining('diverged')
         );
     });
 
@@ -284,7 +296,9 @@ describe('CheckUpdatesCommand — Fork Sync', () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
         const project = makeProject();
 
-        mockStateManager.getAllProjects.mockResolvedValue([{ path: project.path }]);
+        mockStateManager.getAllProjects.mockResolvedValue([
+            { name: project.name, path: project.path, lastModified: new Date() },
+        ]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
         mockStateManager.getCurrentProject.mockResolvedValue(project);
 
@@ -296,7 +310,9 @@ describe('CheckUpdatesCommand — Fork Sync', () => {
             defaultBranch: 'main',
         });
 
-        const MockTemplateChecker = TemplateUpdateChecker as jest.MockedClass<typeof TemplateUpdateChecker>;
+        const MockTemplateChecker = TemplateUpdateChecker as jest.MockedClass<
+            typeof TemplateUpdateChecker
+        >;
         MockTemplateChecker.prototype.checkForUpdates.mockResolvedValue({
             hasUpdates: true,
             currentCommit: 'old',
@@ -312,7 +328,9 @@ describe('CheckUpdatesCommand — Fork Sync', () => {
             return { success: true, message: 'Synced' };
         });
 
-        const MockTemplateSync = TemplateSyncService as jest.MockedClass<typeof TemplateSyncService>;
+        const MockTemplateSync = TemplateSyncService as jest.MockedClass<
+            typeof TemplateSyncService
+        >;
         MockTemplateSync.prototype.syncWithTemplate.mockImplementation(async () => {
             callOrder.push('templateSync');
             return { success: true, syncedCommit: 'new-sha', strategy: 'merge' as const };
@@ -345,7 +363,9 @@ describe('CheckUpdatesCommand — Integration: Full Flow Order', () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
         const project = makeProject();
 
-        mockStateManager.getAllProjects.mockResolvedValue([{ path: project.path }]);
+        mockStateManager.getAllProjects.mockResolvedValue([
+            { name: project.name, path: project.path, lastModified: new Date() },
+        ]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
         mockStateManager.getCurrentProject.mockResolvedValue(project);
 
@@ -363,7 +383,9 @@ describe('CheckUpdatesCommand — Integration: Full Flow Order', () => {
             return { success: true, message: 'Synced' };
         });
 
-        const MockTemplateChecker = TemplateUpdateChecker as jest.MockedClass<typeof TemplateUpdateChecker>;
+        const MockTemplateChecker = TemplateUpdateChecker as jest.MockedClass<
+            typeof TemplateUpdateChecker
+        >;
         MockTemplateChecker.prototype.checkForUpdates.mockResolvedValue({
             hasUpdates: true,
             currentCommit: 'old',
@@ -373,7 +395,9 @@ describe('CheckUpdatesCommand — Integration: Full Flow Order', () => {
             templateRepo: 'my-storefront',
         });
 
-        const MockTemplateSync = TemplateSyncService as jest.MockedClass<typeof TemplateSyncService>;
+        const MockTemplateSync = TemplateSyncService as jest.MockedClass<
+            typeof TemplateSyncService
+        >;
         MockTemplateSync.prototype.syncWithTemplate.mockImplementation(async () => {
             executionOrder.push('template-sync');
             return { success: true, syncedCommit: 'new-sha', strategy: 'merge' as const };
@@ -384,7 +408,13 @@ describe('CheckUpdatesCommand — Integration: Full Flow Order', () => {
             {
                 componentId: 'eds-storefront',
                 latestVersion: '2.0.0',
-                releaseInfo: { downloadUrl: 'https://example.com/release.zip', version: '2.0.0' },
+                releaseInfo: {
+                    downloadUrl: 'https://example.com/release.zip',
+                    version: '2.0.0',
+                    releaseNotes: '',
+                    publishedAt: '',
+                    isPrerelease: false,
+                },
                 outdatedProjects: [{ project, currentVersion: '1.0.0' }],
             },
         ]);
@@ -419,7 +449,7 @@ describe('CheckUpdatesCommand — Integration: Full Flow Order', () => {
         expect(executionOrder[1]).toBe('template-sync');
         if (executionOrder.includes('component-update')) {
             expect(executionOrder.indexOf('component-update')).toBeGreaterThan(
-                executionOrder.indexOf('template-sync'),
+                executionOrder.indexOf('template-sync')
             );
         }
     });

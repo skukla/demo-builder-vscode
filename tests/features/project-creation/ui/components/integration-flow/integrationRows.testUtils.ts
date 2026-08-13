@@ -21,7 +21,7 @@ export const MESH_ENTRY: AppBuilderComponentCatalogEntry = {
     description: 'Unified GraphQL endpoint over Commerce services',
     kind: 'mesh',
     requiredApis: ['GraphQLServiceSDK'],
-    source: { owner: 'skukla', repo: 'commerce-mesh' },
+    source: { owner: 'skukla', repo: 'commerce-mesh', branch: 'main' },
 };
 
 export const ERP_ENTRY: AppBuilderComponentCatalogEntry = {
@@ -29,7 +29,7 @@ export const ERP_ENTRY: AppBuilderComponentCatalogEntry = {
     name: 'ERP Sync',
     description: 'Syncs orders into an ERP backend',
     kind: 'integration',
-    source: { owner: 'skukla', repo: 'erp-sync' },
+    source: { owner: 'skukla', repo: 'erp-sync', branch: 'main' },
 };
 
 /** The blank starter ("Build custom") — kind 'integration', blank, NO source. */
@@ -39,7 +39,7 @@ export const BLANK_ENTRY: AppBuilderComponentCatalogEntry = {
     description: 'A minimal App Builder app to build out with AI',
     kind: 'integration',
     blank: true,
-    source: { owner: 'skukla', repo: 'app-builder-shell' },
+    source: { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' },
 };
 
 export const CATALOG: AppBuilderComponentCatalogEntry[] = [MESH_ENTRY, ERP_ENTRY];

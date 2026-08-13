@@ -158,14 +158,14 @@ export const CATALOG: AppBuilderComponentCatalogEntry[] = [
         name: 'ERP Sync',
         description: 'Sync ERP data',
         kind: 'integration',
-        source: { owner: 'acme', repo: 'erp-sync' },
+        source: { owner: 'acme', repo: 'erp-sync', branch: 'main' },
     },
     {
         id: 'commerce-paas-mesh',
         name: 'API Mesh',
         description: 'Commerce mesh',
         kind: 'mesh',
-        source: { owner: 'acme', repo: 'mesh' },
+        source: { owner: 'acme', repo: 'mesh', branch: 'main' },
     },
 ];
 
@@ -207,7 +207,6 @@ export interface RenderOptions {
     isMeshActionDisabled?: boolean;
     onDeployMesh?: () => void;
     onReAuthenticate?: () => void;
-    onAddRequest?: () => void;
 }
 
 /**
@@ -225,7 +224,6 @@ export function renderGrid({
     isMeshActionDisabled = false,
     onDeployMesh = jest.fn(),
     onReAuthenticate = jest.fn(),
-    onAddRequest = jest.fn(),
 }: RenderOptions = {}) {
     const project = { appBuilderComponents } as never;
     const integrationCards = buildIntegrationCards(
@@ -252,12 +250,11 @@ export function renderGrid({
     const result = render(
         <IntegrationsGrid
             cards={cards}
-            onAddRequest={onAddRequest}
             onDeployMesh={onDeployMesh}
             onReAuthenticate={onReAuthenticate}
         />,
     );
-    return { ...result, onDeployMesh, onReAuthenticate, onAddRequest };
+    return { ...result, onDeployMesh, onReAuthenticate };
 }
 
 /** The card tile for a given accessible name (`name, statusLabel`). */

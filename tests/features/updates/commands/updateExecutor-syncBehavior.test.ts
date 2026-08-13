@@ -27,15 +27,19 @@ jest.mock('@/features/eds/services/githubFileOperations', () => ({
     GitHubFileOperations: jest.fn(),
 }));
 
-jest.mock('vscode', () => ({
-    window: {
-        showInformationMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-    },
-    workspace: {
-        getConfiguration: jest.fn(),
-    },
-}), { virtual: true });
+jest.mock(
+    'vscode',
+    () => ({
+        window: {
+            showInformationMessage: jest.fn(),
+            showErrorMessage: jest.fn(),
+        },
+        workspace: {
+            getConfiguration: jest.fn(),
+        },
+    }),
+    { virtual: true }
+);
 
 const installMock = installBlockCollections as jest.Mock;
 const showInfoMock = vscode.window.showInformationMessage as jest.Mock;
@@ -87,6 +91,9 @@ function makeItem(project: Project): BlockLibraryUpdateItem {
         project,
         library: project.installedBlockLibraries![0],
         latestCommit: 'bbb222',
+        commitsBehind: 1,
+        isBlockLibraryUpdate: true,
+        label: 'Test Library',
     };
 }
 
@@ -94,13 +101,25 @@ function makeCtx(saveImpl?: () => Promise<void>): {
     secrets: vscode.SecretStorage;
     extensionPath: string;
     stateManager: { saveProject: jest.Mock };
-    logger: { info: jest.Mock; warn: jest.Mock; error: jest.Mock; debug: jest.Mock };
+    logger: {
+        info: jest.Mock;
+        warn: jest.Mock;
+        error: jest.Mock;
+        debug: jest.Mock;
+        trace: jest.Mock;
+    };
 } {
     return {
         secrets: {} as vscode.SecretStorage,
         extensionPath: '/ext',
         stateManager: { saveProject: jest.fn(saveImpl ?? (() => Promise.resolve())) },
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
+        logger: {
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+            trace: jest.fn(),
+        },
     };
 }
 
@@ -159,7 +178,12 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const [, destOwner, destRepo, libs] = installMock.mock.calls[0];
             expect(destOwner).toBe('demo-org');
             expect(destRepo).toBe('demo-repo');
-            expect(libs).toEqual([{ source: { owner: 'stephen-garner-adobe', repo: 'isle5', branch: 'main' }, name: 'Isle5 Block Collection' }]);
+            expect(libs).toEqual([
+                {
+                    source: { owner: 'stephen-garner-adobe', repo: 'isle5', branch: 'main' },
+                    name: 'Isle5 Block Collection',
+                },
+            ]);
         });
 
         it('bumps commitSha to the latest upstream SHA on successful install', async () => {
@@ -173,7 +197,12 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
         });
 
         it('does NOT bump commitSha if installBlockCollections fails', async () => {
-            installMock.mockResolvedValueOnce({ success: false, blocksCount: 0, blockIds: [], error: 'upstream 404' });
+            installMock.mockResolvedValueOnce({
+                success: false,
+                blocksCount: 0,
+                blockIds: [],
+                error: 'upstream 404',
+            });
             setSyncBehavior('enabled');
             const project = makeProject();
             const ctx = makeCtx();
@@ -186,9 +215,14 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
         it('clears a pre-existing syncDisabledMarker after a successful re-install', async () => {
             setSyncBehavior('enabled');
             const project = makeProject({
-                installedBlockLibraries: [makeLibrary({
-                    syncDisabledMarker: { upstreamSha: 'ccc333', lastCheckedAt: '2026-04-01T00:00:00Z' },
-                })],
+                installedBlockLibraries: [
+                    makeLibrary({
+                        syncDisabledMarker: {
+                            upstreamSha: 'ccc333',
+                            lastCheckedAt: '2026-04-01T00:00:00Z',
+                        },
+                    }),
+                ],
             });
             const ctx = makeCtx();
 

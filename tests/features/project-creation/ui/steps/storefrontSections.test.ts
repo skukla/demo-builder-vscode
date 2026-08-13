@@ -138,7 +138,8 @@ describe('isStorefrontStepComplete', () => {
  * blocked button: a blocked button with nowhere to look.
  */
 describe('code-sync sub-step is present for existing repos too (2026-08-06)', () => {
-    const withMode = (repoMode: string) => ({ edsConfig: { repoMode } }) as never;
+    const withMode = (repoMode: string) =>
+        ({ edsConfig: { repoMode } }) as unknown as Parameters<typeof storefrontSectionOrder>[0];
 
     it('appears for an existing repo', () => {
         expect(storefrontSectionOrder(withMode('existing'))).toContain('code-sync');
@@ -157,7 +158,7 @@ describe('code-sync sub-step is present for existing repos too (2026-08-06)', ()
     it('gates the area in both modes, which is why it must be visible in both', () => {
         // isStorefrontConfigured requires storefrontCodeSyncValid regardless of mode.
         // Hiding the step did not remove the gate — it removed the explanation.
-        for (const mode of ['new', 'existing']) {
+        for (const mode of ['new', 'existing'] as const) {
             expect(
                 isStorefrontStepComplete(
                     { ...withMode(mode), storefrontCodeSyncValid: false } as never,

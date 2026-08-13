@@ -32,9 +32,9 @@ describe('typeGuards - Project Accessors', () => {
         it('should return version when component exists', () => {
             const project = {
                 componentVersions: {
-                    headless: { version: '1.2.3' },
+                    headless: { version: '1.2.3', lastUpdated: '' },
                 },
-            } as Project;
+            } as Partial<Project> as Project;
             expect(getComponentVersion(project, 'headless')).toBe('1.2.3');
         });
 
@@ -49,9 +49,9 @@ describe('typeGuards - Project Accessors', () => {
         it('should return undefined when component not found', () => {
             const project = {
                 componentVersions: {
-                    'other-component': { version: '1.0.0' },
+                    'other-component': { version: '1.0.0', lastUpdated: '' },
                 },
-            } as Project;
+            } as Partial<Project> as Project;
             expect(getComponentVersion(project, 'headless')).toBeUndefined();
         });
 
@@ -69,9 +69,9 @@ describe('typeGuards - Project Accessors', () => {
         it('should return port when frontend component exists', () => {
             const project = {
                 componentInstances: {
-                    headless: { type: 'frontend', port: 3000 },
+                    headless: { id: 'headless', name: 'Headless', status: 'ready', type: 'frontend', port: 3000 },
                 },
-            } as Project;
+            } as Partial<Project> as Project;
             expect(getProjectFrontendPort(project)).toBe(3000);
         });
 
@@ -86,9 +86,9 @@ describe('typeGuards - Project Accessors', () => {
         it('should return undefined when frontend component not found', () => {
             const project = {
                 componentInstances: {
-                    'other-component': { port: 8080 },
+                    'other-component': { id: 'other-component', name: 'Other', status: 'ready', port: 8080 },
                 },
-            } as Project;
+            } as Partial<Project> as Project;
             expect(getProjectFrontendPort(project)).toBeUndefined();
         });
 

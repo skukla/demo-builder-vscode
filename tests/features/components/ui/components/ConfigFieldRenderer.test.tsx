@@ -39,6 +39,7 @@ describe('ConfigFieldRenderer', () => {
     describe('text field type', () => {
         const textField: UniqueField = {
             key: 'TEST_FIELD',
+            componentIds: ['test-component'],
             label: 'Test Field',
             type: 'text',
             placeholder: 'Enter value',
@@ -139,6 +140,7 @@ describe('ConfigFieldRenderer', () => {
     describe('url field type', () => {
         const urlField: UniqueField = {
             key: 'API_URL',
+            componentIds: ['test-component'],
             label: 'API URL',
             type: 'url',
             placeholder: 'https://example.com',
@@ -177,6 +179,7 @@ describe('ConfigFieldRenderer', () => {
     describe('password field type', () => {
         const passwordField: UniqueField = {
             key: 'API_KEY',
+            componentIds: ['test-component'],
             label: 'API Key',
             type: 'password',
             placeholder: 'Enter API key',
@@ -216,6 +219,7 @@ describe('ConfigFieldRenderer', () => {
     describe('select field type', () => {
         const selectField: UniqueField = {
             key: 'ENVIRONMENT',
+            componentIds: ['test-component'],
             label: 'Environment',
             type: 'select',
             required: true,
@@ -261,6 +265,7 @@ describe('ConfigFieldRenderer', () => {
         it('handles select without options gracefully', () => {
             const fieldWithoutOptions: UniqueField = {
                 key: 'EMPTY_SELECT',
+                componentIds: ['test-component'],
                 label: 'Empty Select',
                 type: 'select',
                 required: false,
@@ -289,6 +294,7 @@ describe('ConfigFieldRenderer', () => {
     describe('boolean field type', () => {
         const booleanField: UniqueField = {
             key: 'ENABLE_FEATURE',
+            componentIds: ['test-component'],
             label: 'Enable Feature',
             type: 'boolean',
             required: false,
@@ -363,6 +369,7 @@ describe('ConfigFieldRenderer', () => {
     describe('default value highlighting', () => {
         const fieldWithDefault: UniqueField = {
             key: 'STORE_CODE',
+            componentIds: ['test-component'],
             label: 'Store Code',
             type: 'text',
             default: 'default_store',
@@ -410,6 +417,7 @@ describe('ConfigFieldRenderer', () => {
         it('returns null for unknown field type', () => {
             const unknownField: UniqueField = {
                 key: 'UNKNOWN',
+                componentIds: ['test-component'],
                 label: 'Unknown',
                 type: 'unknown' as any,
                 required: false,

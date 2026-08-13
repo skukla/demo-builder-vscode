@@ -53,7 +53,7 @@ describe('aiHandlers — setup & verification', () => {
         });
 
         it('should have exactly 8 handlers', () => {
-            const types = getRegisteredTypes(aiHandlers);
+            const types = getRegisteredTypes(aiHandlers) as Array<keyof typeof aiHandlers>;
             // 8 → 7: inspect-mcp removed 2026-08-05. The AI surface's documented
             // "Refresh" action that supposedly sent it does not exist in
             // AiOverviewScreen; the README claiming otherwise was stale.
@@ -90,7 +90,7 @@ describe('aiHandlers — setup & verification', () => {
         });
 
         it('should have all values as functions', () => {
-            const types = getRegisteredTypes(aiHandlers);
+            const types = getRegisteredTypes(aiHandlers) as Array<keyof typeof aiHandlers>;
             for (const type of types) {
                 expect(typeof aiHandlers[type]).toBe('function');
             }
