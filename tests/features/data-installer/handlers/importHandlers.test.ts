@@ -101,8 +101,11 @@ const PAYLOAD = {
 function happyClient() {
     const validateImport = jest.fn().mockResolvedValue({ valid: true });
     const startImport = jest.fn().mockResolvedValue({ activationId: 'act-1' });
-    MockedWriteClient.mockImplementation(() => ({ validateImport, startImport }) as never);
-    return { validateImport, startImport };
+    const checkCredentials = jest.fn().mockResolvedValue({ usable: true });
+    MockedWriteClient.mockImplementation(
+        () => ({ validateImport, startImport, checkCredentials }) as never,
+    );
+    return { validateImport, startImport, checkCredentials };
 }
 
 describe('start-datapack-import', () => {
@@ -264,6 +267,39 @@ describe('validate-datapack-import', () => {
         setupSettings();
     });
 
+    // Credentials first: if the pair cannot reach the instance, whether the
+    // request is well-formed is not the useful answer.
+    it('checks credentials BEFORE the request shape', async () => {
+        const { validateImport, checkCredentials } = happyClient();
+        const { context } = makeContext();
+
+        await importHandlers['validate-datapack-import'](context, PAYLOAD);
+
+        expect(checkCredentials.mock.invocationCallOrder[0]).toBeLessThan(
+            validateImport.mock.invocationCallOrder[0],
+        );
+    });
+
+    it('stops at unusable credentials and says so', async () => {
+        const validateImport = jest.fn();
+        MockedWriteClient.mockImplementation(
+            () =>
+                ({
+                    checkCredentials: jest
+                        .fn()
+                        .mockResolvedValue({ usable: false, reason: 'Authentication failed' }),
+                    validateImport,
+                    startImport: jest.fn(),
+                }) as never,
+        );
+        const { context } = makeContext();
+
+        const result = await importHandlers['validate-datapack-import'](context, PAYLOAD);
+
+        expect(validateImport).not.toHaveBeenCalled();
+        expect(result.data).toMatchObject({ valid: false, reason: expect.stringMatching(/Authentication/) });
+    });
+
     it('validates WITHOUT starting anything', async () => {
         const { validateImport, startImport } = happyClient();
         const { context } = makeContext();
@@ -300,7 +336,15 @@ describe('validate-datapack-import', () => {
         const validateImport = jest
             .fn()
             .mockResolvedValue({ valid: false, reason: 'Invalid input. Must provide one of: …' });
-        MockedWriteClient.mockImplementation(() => ({ validateImport, startImport: jest.fn() }) as never);
+        MockedWriteClient.mockImplementation(
+            () =>
+                ({
+                    validateImport,
+                    startImport: jest.fn(),
+                    // Credentials pass, so the shape verdict is what comes back.
+                    checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
+                }) as never,
+        );
         const { context } = makeContext();
 
         const result = await importHandlers['validate-datapack-import'](context, PAYLOAD);

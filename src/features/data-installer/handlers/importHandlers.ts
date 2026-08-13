@@ -123,6 +123,20 @@ export const importHandlers = defineHandlers({
             return prepared.response;
         }
         try {
+            // Credentials first. If the pair cannot reach the instance, whether
+            // the request is well-formed is not the answer anyone needs — and
+            // `get-websites-and-stores` answers it without going near
+            // process-datapack, so it cannot start work by accident.
+            const access = await prepared.writeClient.checkCredentials(prepared.request);
+            if (!access.usable) {
+                return {
+                    success: true,
+                    data: {
+                        valid: false,
+                        reason: access.reason ?? 'These credentials did not reach that Commerce instance.',
+                    },
+                };
+            }
             return {
                 success: true,
                 data: await prepared.writeClient.validateImport(prepared.request),
