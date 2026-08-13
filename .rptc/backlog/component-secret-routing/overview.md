@@ -118,8 +118,10 @@ slower to converge. This plan does not decide it.
 ### Step 5 is the durable half, and it inherits a live dependency
 
 `export_project_settings` was leaking `componentConfigs` into a file stamped
-secret-free. **That is fixed** — `12f4b802`, 2026-08-11, `settingsSerializer.ts:169`
-now strips when `includeSecrets` is false. (Filed and fixed the same day; the
+secret-free. **That is fixed** — `12f4b802`, 2026-08-11: `createExportSettings`
+in `settingsSerializer.ts` now calls `stripSecretValues` when `includeSecrets` is
+false. (Cited by symbol on purpose. This line was `:169` when written and was `:171`
+an hour later; a precise-looking line number reads as more reliable and is less.) (Filed and fixed the same day; the
 backlog item outlived the bug by two days and is now archived to `../complete/`.)
 
 But read what the fix depends on: `stripSecretValues` filters against
