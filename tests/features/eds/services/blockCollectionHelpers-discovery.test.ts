@@ -119,10 +119,10 @@ describe('installBlockCollections (single library)', () => {
             mockGithubFileOps.listRepoFiles
                 .mockResolvedValueOnce([]) // destination (empty)
                 .mockResolvedValueOnce([
-                    { path: 'blocks/hero-cta/hero-cta.js', mode: '100644', type: 'blob' as const, sha: 'sha-1' },
-                    { path: 'blocks/hero-cta/styles/main.css', mode: '100644', type: 'blob' as const, sha: 'sha-2' },
-                    { path: 'blocks/newsletter/newsletter.js', mode: '100644', type: 'blob' as const, sha: 'sha-3' },
-                    { path: 'blocks/newsletter/templates/default.html', mode: '100644', type: 'blob' as const, sha: 'sha-4' },
+                    { path: 'blocks/hero-cta/hero-cta.js', type: 'blob' as const, sha: 'sha-1' },
+                    { path: 'blocks/hero-cta/styles/main.css', type: 'blob' as const, sha: 'sha-2' },
+                    { path: 'blocks/newsletter/newsletter.js', type: 'blob' as const, sha: 'sha-3' },
+                    { path: 'blocks/newsletter/templates/default.html', type: 'blob' as const, sha: 'sha-4' },
                 ]);
             mockGithubFileOps.getBlobContent.mockResolvedValue('content');
             mockGithubFileOps.getFileContent.mockResolvedValue(null);
@@ -151,8 +151,8 @@ describe('installBlockCollections (single library)', () => {
             mockGithubFileOps.listRepoFiles
                 .mockResolvedValueOnce([]) // destination (empty)
                 .mockResolvedValueOnce([
-                    { path: 'blocks/README.md', mode: '100644', type: 'blob' as const, sha: 'sha-readme' },
-                    { path: 'blocks/hero-cta/hero-cta.js', mode: '100644', type: 'blob' as const, sha: 'sha-1' },
+                    { path: 'blocks/README.md', type: 'blob' as const, sha: 'sha-readme' },
+                    { path: 'blocks/hero-cta/hero-cta.js', type: 'blob' as const, sha: 'sha-1' },
                 ]);
             mockGithubFileOps.getBlobContent.mockResolvedValue('content');
             mockGithubFileOps.getFileContent.mockResolvedValue(null);
@@ -293,8 +293,8 @@ describe('installBlockCollections (single library)', () => {
             mockGithubFileOps.listRepoFiles
                 .mockResolvedValueOnce([]) // destination (empty)
                 .mockResolvedValueOnce([
-                    { path: 'README.md', mode: '100644', type: 'blob' as const, sha: 'sha-1' },
-                    { path: 'package.json', mode: '100644', type: 'blob' as const, sha: 'sha-2' },
+                    { path: 'README.md', type: 'blob' as const, sha: 'sha-1' },
+                    { path: 'package.json', type: 'blob' as const, sha: 'sha-2' },
                 ]);
             mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
 
@@ -338,14 +338,14 @@ describe('installBlockCollections (single library)', () => {
             mockGithubFileOps.listRepoFiles
                 .mockResolvedValueOnce([
                     // destination already has hero-cta and newsletter from template
-                    { path: 'blocks/hero-cta/hero-cta.js', mode: '100644', type: 'blob' as const, sha: 'sha-d1' },
-                    { path: 'blocks/newsletter/newsletter.js', mode: '100644', type: 'blob' as const, sha: 'sha-d2' },
+                    { path: 'blocks/hero-cta/hero-cta.js', type: 'blob' as const, sha: 'sha-d1' },
+                    { path: 'blocks/newsletter/newsletter.js', type: 'blob' as const, sha: 'sha-d2' },
                 ])
                 .mockResolvedValueOnce([
                     // source library has the same blocks — all duplicates
-                    { path: 'blocks/hero-cta/hero-cta.js', mode: '100644', type: 'blob' as const, sha: 'sha-s1' },
-                    { path: 'blocks/hero-cta/hero-cta.css', mode: '100644', type: 'blob' as const, sha: 'sha-s2' },
-                    { path: 'blocks/newsletter/newsletter.js', mode: '100644', type: 'blob' as const, sha: 'sha-s3' },
+                    { path: 'blocks/hero-cta/hero-cta.js', type: 'blob' as const, sha: 'sha-s1' },
+                    { path: 'blocks/hero-cta/hero-cta.css', type: 'blob' as const, sha: 'sha-s2' },
+                    { path: 'blocks/newsletter/newsletter.js', type: 'blob' as const, sha: 'sha-s3' },
                 ]);
             mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
 
@@ -369,10 +369,10 @@ describe('installBlockCollections (single library)', () => {
             mockGithubFileOps.listRepoFiles
                 .mockResolvedValueOnce([]) // destination (empty)
                 .mockResolvedValueOnce([
-                    { path: 'blocks/hero-cta/hero-cta.js', mode: '100644', type: 'blob' as const, sha: 'sha-1' },
-                    { path: 'blocks/hero-cta/hero-cta.css', mode: '100644', type: 'blob' as const, sha: 'sha-2' },
-                    { path: 'blocks/hero-cta/icons/arrow.svg', mode: '100644', type: 'blob' as const, sha: 'sha-3' },
-                    { path: 'blocks/newsletter/newsletter.js', mode: '100644', type: 'blob' as const, sha: 'sha-4' },
+                    { path: 'blocks/hero-cta/hero-cta.js', type: 'blob' as const, sha: 'sha-1' },
+                    { path: 'blocks/hero-cta/hero-cta.css', type: 'blob' as const, sha: 'sha-2' },
+                    { path: 'blocks/hero-cta/icons/arrow.svg', type: 'blob' as const, sha: 'sha-3' },
+                    { path: 'blocks/newsletter/newsletter.js', type: 'blob' as const, sha: 'sha-4' },
                 ]);
             mockGithubFileOps.getBlobContent.mockResolvedValue('content');
             mockGithubFileOps.getFileContent.mockResolvedValue(null);
@@ -415,10 +415,10 @@ describe('installBlockCollections (single library)', () => {
             mockGithubFileOps.listRepoFiles
                 .mockResolvedValueOnce([]) // destination (empty)
                 .mockResolvedValueOnce([
-                    { path: 'blocks/hero-cta/hero-cta.js', mode: '100644', type: 'blob' as const, sha: 'sha-1' },
-                    { path: 'scripts/main.js', mode: '100644', type: 'blob' as const, sha: 'sha-2' },
-                    { path: 'styles/global.css', mode: '100644', type: 'blob' as const, sha: 'sha-3' },
-                    { path: 'component-definition.json', mode: '100644', type: 'blob' as const, sha: 'sha-4' },
+                    { path: 'blocks/hero-cta/hero-cta.js', type: 'blob' as const, sha: 'sha-1' },
+                    { path: 'scripts/main.js', type: 'blob' as const, sha: 'sha-2' },
+                    { path: 'styles/global.css', type: 'blob' as const, sha: 'sha-3' },
+                    { path: 'component-definition.json', type: 'blob' as const, sha: 'sha-4' },
                 ]);
             mockGithubFileOps.getBlobContent.mockResolvedValue('content');
             mockGithubFileOps.getFileContent.mockResolvedValue(null);

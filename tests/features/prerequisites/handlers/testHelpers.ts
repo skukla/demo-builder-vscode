@@ -27,7 +27,6 @@ export function createMockContext(overrides?: Partial<HandlerContext>): jest.Moc
     const baseContext: HandlerContext = {
         prereqManager: {} as HandlerContext['prereqManager'],
         authManager: {} as HandlerContext['authManager'],
-        componentHandler: {} as HandlerContext['componentHandler'],
         errorLogger: {} as HandlerContext['errorLogger'],
         progressUnifier: {} as HandlerContext['progressUnifier'],
         stepLogger: {} as HandlerContext['stepLogger'],

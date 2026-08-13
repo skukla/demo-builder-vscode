@@ -20,7 +20,6 @@ describe('WelcomeStep', () => {
     const baseState: Partial<WizardState> = {
         currentStep: 'welcome',
         projectName: '',
-        projectTemplate: 'citisignal',
         componentConfigs: {},
         adobeAuth: {
             isAuthenticated: false,

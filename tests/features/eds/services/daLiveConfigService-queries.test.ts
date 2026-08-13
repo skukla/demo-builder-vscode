@@ -58,7 +58,6 @@ describe('DaLiveConfigService - queries & access', () => {
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
-            show: jest.fn(),
         };
 
         service = new DaLiveConfigService(mockTokenProvider, mockLogger);

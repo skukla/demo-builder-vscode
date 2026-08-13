@@ -39,7 +39,6 @@ describe('ProjectCreationStep', () => {
     const baseState: Partial<WizardState> = {
         currentStep: 'create-project',
         projectName: 'my-demo-project',
-        projectTemplate: 'citisignal',
         creationProgress: {
             currentOperation: 'Creating project directory',
             progress: 10,

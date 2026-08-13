@@ -194,8 +194,8 @@ describe('ProjectConfigWriter atomic writes', () => {
                     {
                         name: 'my-blocks',
                         source: {
-                            type: 'git',
-                            url: 'https://github.com/user/blocks',
+                            owner: 'user',
+                            repo: 'blocks',
                             branch: 'main',
                         },
                     },
@@ -217,7 +217,7 @@ describe('ProjectConfigWriter atomic writes', () => {
             expect(parsed.customBlockLibraries).toEqual([
                 {
                     name: 'my-blocks',
-                    source: { type: 'git', url: 'https://github.com/user/blocks', branch: 'main' },
+                    source: { owner: 'user', repo: 'blocks', branch: 'main' },
                 },
             ]);
         });

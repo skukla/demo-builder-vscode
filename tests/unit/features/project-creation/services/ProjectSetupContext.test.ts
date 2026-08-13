@@ -1,6 +1,6 @@
 /**
  * Unit tests for ProjectSetupContext
- * 
+ *
  * Tests the composition of HandlerContext and delegation of properties,
  * as well as domain-specific accessor methods.
  */
@@ -89,7 +89,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 mockProject,
-                mockConfig,
+                mockConfig
             );
 
             // Access logger to verify HandlerContext is being used
@@ -101,7 +101,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 mockProject,
-                mockConfig,
+                mockConfig
             );
 
             expect(context.registry).toBe(mockRegistry);
@@ -116,11 +116,11 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 mockProject,
-                mockConfig,
+                mockConfig
             );
 
             expect(context.logger).toBe(mockHandlerContext.logger);
-            
+
             // Verify it's a getter, not a stored property
             context.logger.info('test');
             expect(mockLogger.info).toHaveBeenCalledWith('test');
@@ -131,7 +131,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 mockProject,
-                mockConfig,
+                mockConfig
             );
 
             expect(context.extensionPath).toBe('/test/extension/path');
@@ -145,7 +145,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 mockProject,
-                mockConfig,
+                mockConfig
             );
 
             const envVars = context.getEnvVarDefinitions();
@@ -159,7 +159,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 registryWithoutEnvVars,
                 mockProject,
-                mockConfig,
+                mockConfig
             );
 
             const envVars = context.getEnvVarDefinitions();
@@ -173,7 +173,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 mockProject,
-                mockConfig,
+                mockConfig
             );
 
             const backendId = context.getBackendId();
@@ -186,7 +186,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 mockProject,
-                configWithoutComponents,
+                configWithoutComponents
             );
 
             const backendId = context.getBackendId();
@@ -199,7 +199,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 mockProject,
-                configWithoutBackend,
+                configWithoutBackend
             );
 
             const backendId = context.getBackendId();
@@ -213,7 +213,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 mockProject,
-                mockConfig,
+                mockConfig
             );
 
             const endpoint = context.getMeshEndpoint();
@@ -231,7 +231,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 projectWithoutMesh,
-                mockConfig,
+                mockConfig
             );
 
             const endpoint = context.getMeshEndpoint();
@@ -256,7 +256,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 projectWithBoth,
-                mockConfig,
+                mockConfig
             );
 
             const endpoint = context.getMeshEndpoint();
@@ -283,7 +283,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 keyedOnlyProject,
-                mockConfig,
+                mockConfig
             );
 
             expect(context.getMeshEndpoint()).toBe('https://keyed-mesh.adobe.io/graphql');
@@ -297,7 +297,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 mockProject,
-                configWithAddons,
+                configWithAddons
             );
 
             expect(context.getSelectedAddons()).toEqual(['adobe-commerce-aco']);
@@ -308,7 +308,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 mockProject,
-                mockConfig,
+                mockConfig
             );
 
             expect(context.getSelectedAddons()).toBeUndefined();
@@ -322,7 +322,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 mockProject,
-                configWithPackage,
+                configWithPackage
             );
 
             expect(context.getSelectedPackage()).toBe('custom');
@@ -333,7 +333,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 mockProject,
-                mockConfig,
+                mockConfig
             );
 
             expect(context.getSelectedPackage()).toBeUndefined();
@@ -346,15 +346,17 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 mockProject,
-                mockConfig,
+                mockConfig
             );
 
             const newProject: Project = {
                 ...mockProject,
                 name: 'updated-project',
                 meshState: {
+                    envVars: {},
+                    sourceHash: null,
+                    lastDeployed: '2026-01-01T00:00:00.000Z',
                     endpoint: 'https://updated-mesh.adobe.io/graphql',
-                    workspace: 'updated-workspace',
                 },
             };
 
@@ -371,7 +373,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 mockProject,
-                mockConfig,
+                mockConfig
             );
 
             const newProject: Project = {
@@ -391,7 +393,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 mockProject,
-                mockConfig,
+                mockConfig
             );
 
             const newProject: Project = {
@@ -409,12 +411,9 @@ describe('ProjectSetupContext', () => {
 
     describe('accessor error handling', () => {
         it('should handle null/undefined gracefully in getBackendId', () => {
-            const context = new ProjectSetupContext(
-                mockHandlerContext,
-                mockRegistry,
-                mockProject,
-                { components: null } as any,
-            );
+            const context = new ProjectSetupContext(mockHandlerContext, mockRegistry, mockProject, {
+                components: null,
+            } as any);
 
             expect(() => context.getBackendId()).not.toThrow();
             expect(context.getBackendId()).toBeUndefined();
@@ -431,7 +430,7 @@ describe('ProjectSetupContext', () => {
                 mockHandlerContext,
                 mockRegistry,
                 projectWithNull,
-                mockConfig,
+                mockConfig
             );
 
             expect(() => context.getMeshEndpoint()).not.toThrow();

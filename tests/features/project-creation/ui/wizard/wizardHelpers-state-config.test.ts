@@ -284,7 +284,7 @@ describe('wizardHelpers - state & config', () => {
                     daLiveSite: 'mysite',
                     githubAuth: {
                         isAuthenticated: true,
-                        user: { login: 'testuser', name: 'Test User', avatarUrl: '' },
+                        user: { login: 'testuser', avatarUrl: '' },
                     },
                 },
             };
@@ -310,7 +310,7 @@ describe('wizardHelpers - state & config', () => {
                     daLiveSite: 'mysite',
                     githubAuth: {
                         isAuthenticated: true,
-                        user: { login: 'testuser', name: 'Test User', avatarUrl: '' },
+                        user: { login: 'testuser', avatarUrl: '' },
                     },
                     // Results from StorefrontSetupStep
                     repoUrl: 'https://github.com/testuser/my-repo',
@@ -383,8 +383,8 @@ describe('wizardHelpers - state & config', () => {
                     {
                         name: 'my-blocks',
                         source: {
-                            type: 'git',
-                            url: 'https://github.com/user/blocks',
+                            owner: 'user',
+                            repo: 'blocks',
                             branch: 'main',
                         },
                     },
@@ -396,7 +396,7 @@ describe('wizardHelpers - state & config', () => {
             expect(config.customBlockLibraries).toEqual([
                 {
                     name: 'my-blocks',
-                    source: { type: 'git', url: 'https://github.com/user/blocks', branch: 'main' },
+                    source: { owner: 'user', repo: 'blocks', branch: 'main' },
                 },
             ]);
         });

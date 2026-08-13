@@ -25,11 +25,10 @@ export function createMockProject(overrides: Partial<Project> = {}): Project {
                 environmentId: 'env123',
                 storeView: 'default',
                 websiteCode: 'base',
-                storeCode: 'default'
+                storeCode: 'default',
             },
-            services: {}
         },
-        ...overrides
+        ...overrides,
     };
 }
 
@@ -42,7 +41,7 @@ export function createMockCommandExecutor(): jest.Mocked<CommandExecutor> {
             stdout: 'https://mesh-endpoint.adobe.io/graphql',
             stderr: '',
             code: 0,
-            duration: 1000
+            duration: 1000,
         }),
     } as unknown as jest.Mocked<CommandExecutor>;
 }
@@ -69,7 +68,7 @@ export function createProjectWithoutCommerce(): Project {
         path: '/test/project',
         status: 'ready',
         created: new Date(),
-        lastModified: new Date()
+        lastModified: new Date(),
     };
 }
 
@@ -83,7 +82,7 @@ export function createProjectWithNullCommerce(): Project {
         status: 'ready',
         created: new Date(),
         lastModified: new Date(),
-        commerce: null as any
+        commerce: null as any,
     };
 }
 
@@ -100,12 +99,14 @@ export interface MockCommandResult {
 /**
  * Creates a successful command result
  */
-export function createSuccessResult(stdout: string = 'https://mesh-endpoint.adobe.io/graphql'): MockCommandResult {
+export function createSuccessResult(
+    stdout: string = 'https://mesh-endpoint.adobe.io/graphql'
+): MockCommandResult {
     return {
         stdout,
         stderr: '',
         code: 0,
-        duration: 1000
+        duration: 1000,
     };
 }
 
@@ -117,6 +118,6 @@ export function createFailureResult(stderr: string = 'Command failed'): MockComm
         stdout: '',
         stderr,
         code: 1,
-        duration: 100
+        duration: 100,
     };
 }

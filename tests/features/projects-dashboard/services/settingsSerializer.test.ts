@@ -244,7 +244,7 @@ describe('settingsSerializer', () => {
             const customLibs: CustomBlockLibrary[] = [
                 {
                     name: 'my-blocks',
-                    source: { type: 'git', url: 'https://github.com/user/blocks', branch: 'main' },
+                    source: { owner: 'user', repo: 'blocks', branch: 'main' },
                 },
             ];
 
@@ -286,14 +286,14 @@ describe('settingsSerializer', () => {
                 {
                     name: 'partner-blocks',
                     source: {
-                        type: 'git',
-                        url: 'https://github.com/partner/blocks',
+                        owner: 'partner',
+                        repo: 'blocks',
                         branch: 'develop',
                     },
                 },
                 {
                     name: 'internal-blocks',
-                    source: { type: 'git', url: 'https://github.com/corp/blocks', branch: 'main' },
+                    source: { owner: 'corp', repo: 'blocks', branch: 'main' },
                 },
             ];
 

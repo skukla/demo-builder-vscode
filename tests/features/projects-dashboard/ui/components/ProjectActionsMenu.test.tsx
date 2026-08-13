@@ -151,7 +151,7 @@ describe('ProjectActionsMenu', () => {
             renderWithProvider(
                 <ProjectActionsMenu
                     project={createMockProject({ name: 'Test' })}
-                    actions={{ onResetProject: jest.fn(), onCopyPath: jest.fn() }}
+                    actions={{ onResetProject: jest.fn() }}
                 />
             );
             openMenu();
@@ -219,11 +219,16 @@ describe('ProjectActionsMenu', () => {
             renderWithProvider(
                 <ProjectActionsMenu
                     project={createMockProject({ name: 'Test', meshStatusSummary: 'stale' })}
-                    actions={{
-                        onExport: jest.fn(),
-                        onRepublishContent: jest.fn(),
-                        onRedeployMesh: jest.fn(),
-                    }}
+                    actions={
+                        // onRedeployMesh is deliberately NOT in ProjectActions —
+                        // the deploy surfaces own it now. The cast keeps this test
+                        // able to pass the retired callback and prove the menu
+                        // ignores it.
+                        {
+                            onExport: jest.fn(),
+                            onRedeployMesh: jest.fn(),
+                        } as ProjectActions
+                    }
                 />
             );
             openMenu();
@@ -241,7 +246,6 @@ describe('ProjectActionsMenu', () => {
                 onEdit: jest.fn(),
                 onPinToggle: jest.fn(),
                 onResetProject: jest.fn(),
-                onCopyPath: jest.fn(),
                 onExport: jest.fn(),
                 onDelete: jest.fn(),
             };
@@ -258,7 +262,7 @@ describe('ProjectActionsMenu', () => {
         });
 
         it('keeps Delete in its own isolated section', () => {
-            const actions: ProjectActions = { onCopyPath: jest.fn(), onDelete: jest.fn() };
+            const actions: ProjectActions = { onDelete: jest.fn() };
             renderWithProvider(
                 <ProjectActionsMenu
                     project={createMockProject({ name: 'Test' })}
