@@ -104,21 +104,25 @@ sits there, not in the feature.
 ### Step 2 is the one with real risk — and it is bigger than "move a value"
 
 Existing projects hold the password in `componentConfigs` in the clear, and retyping
-the field does not move what is already saved. But the sequencing problem is the
-real cost: **five consumers read it straight out of `componentConfigs` today**, and
-one of them cannot follow it to SecretStorage.
+the field does not move what is already saved. The sequencing is the real cost:
+**three consumers read the value straight out of `componentConfigs`**, and one of
+them cannot follow it to SecretStorage.
 
 | Consumer | Runs in |
 |---|---|
 | `data-installer/services/commerceCredentials.ts` | extension host |
 | `eds/services/storeStructureReader.ts` | extension host |
-| `components/config/storeFieldHelpers.ts` | shared |
-| `components/services/serviceGroupTransforms.ts` | extension host |
 | **`components/ui/hooks/useAutoStoreDetect.ts`** | **the webview** |
 
 SecretStorage is extension-host only. A webview cannot read it at all, so
 `useAutoStoreDetect` needs a handler round-trip before the value can move. Strip the
 old location first and auto-store-detect silently stops finding stores.
+
+(An earlier draft of this plan said FIVE consumers. Two of those —
+`storeFieldHelpers.ts` and `serviceGroupTransforms.ts` — reference the key NAME in a
+field-catalog list and never read the value, so they are unaffected by where it
+lives. A count is the cheapest kind of claim to check and the fastest to rot; this
+one was wrong within the hour of being written.)
 
 **Recommended: three phases, and phase 1 is what de-risks the rest.**
 

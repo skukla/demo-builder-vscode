@@ -114,7 +114,7 @@
                     "ACCS_STORE_CODE",
                     "ACCS_STORE_VIEW_CODE"
                 ],
-                "optionalEnvVars": []
+                "optionalEnvVars": ["ACCS_OAUTH_CLIENT_ID", "ACCS_OAUTH_CLIENT_SECRET"]
             }
         }
     },
@@ -434,6 +434,22 @@
             "default": "citisignal_us",
             "placeholder": "citisignal_us",
             "description": "The store view code for your ACCS instance",
+            "group": "accs"
+        },
+        "ACCS_OAUTH_CLIENT_ID": {
+            "label": "OAuth client ID",
+            "type": "text",
+            "required": false,
+            "placeholder": "your_oauth_client_id",
+            "description": "Adobe OAuth Server-to-Server credential. Needed only to import sample data into this instance. Create it in the Developer Console; it is product-profile gated on Commerce Cloud Manager.",
+            "group": "accs"
+        },
+        "ACCS_OAUTH_CLIENT_SECRET": {
+            "label": "OAuth client secret",
+            "type": "password",
+            "required": false,
+            "placeholder": "your_oauth_client_secret",
+            "description": "Paired secret for the OAuth client ID above. Stored with the project and stripped from settings exports.",
             "group": "accs"
         },
         "ACCS_CUSTOMER_GROUP": {

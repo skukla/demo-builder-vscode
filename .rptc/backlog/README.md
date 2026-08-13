@@ -175,7 +175,7 @@ today nothing enforces the list at all, and the export's safety rests entirely o
 (`stripSecretValues`, wired in `12f4b802`). Take step 5 even if steps 1-2 are rejected or the
 migration question stalls; it does not depend on either.
 
-**Step 2 is where the risk is**, and it is bigger than moving a value: **five consumers read that
+**Step 2 is where the risk is**, and it is bigger than moving a value: **three consumers read that
 password straight out of `componentConfigs`**, one of them (`useAutoStoreDetect`) in the WEBVIEW,
 which cannot read SecretStorage at all. Recommended migration is three phases — one accessor with
 fallback first (behaviour-identical, independently valuable), then write-through with verified

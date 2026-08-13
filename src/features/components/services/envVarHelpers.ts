@@ -5,6 +5,13 @@
  * based on relationships between fields.
  */
 
+import {
+    ACCS_OAUTH_CLIENT_ID,
+    ACCS_OAUTH_CLIENT_SECRET,
+    PAAS_ADMIN_PASSWORD,
+    PAAS_ADMIN_USERNAME,
+} from '../config/envVarKeys';
+
 /**
  * Derives the GraphQL endpoint from a Commerce URL.
  * PaaS backends always use {baseUrl}/graphql.
@@ -92,6 +99,50 @@ function parseAccsEndpoint(
     // A first segment of "graphql" means the tenant id is missing entirely.
     if (tenantId.toLowerCase() === 'graphql') return undefined;
     return { region, tenantId };
+}
+
+/** A Commerce config map, as a project carries it. */
+type ConfigMap = Record<string, Record<string, string | boolean | number | undefined>> | undefined;
+
+/**
+ * The PaaS admin pair, or nothing.
+ *
+ * **Both halves or nothing.** Half a credential starts a request that cannot
+ * authenticate and then reports the wrong cause, so callers get one answer to one
+ * question rather than two values to check.
+ *
+ * THE point of this function is that it is the only one. Three callers did this
+ * read themselves — the data installer, the EDS store-structure reader and the
+ * wizard's auto-detect hook — and three copies of "how do I get this credential"
+ * is what makes moving it expensive. It is planned to move
+ * (`.rptc/backlog/component-secret-routing/`); when it does, this changes and they
+ * do not.
+ *
+ * Deliberately PURE. `useAutoStoreDetect` runs in the WEBVIEW, which can reach
+ * neither SecretStorage nor the extension host, so anything shared with it must be
+ * callable from both sides.
+ */
+export function readPaasAdminPair(
+    configs: ConfigMap,
+): { username: string; password: string } | undefined {
+    const username = lookupComponentConfigValue(configs ?? {}, PAAS_ADMIN_USERNAME);
+    const password = lookupComponentConfigValue(configs ?? {}, PAAS_ADMIN_PASSWORD);
+    return username && password ? { username, password } : undefined;
+}
+
+/**
+ * The ACCS OAuth Server-to-Server pair, or nothing.
+ *
+ * Symmetric with {@link readPaasAdminPair}, including both-halves-or-nothing. The
+ * OAuth pair is the ACCS best practice — the IMS model for SaaS — and is read
+ * instead of an admin pair rather than in addition to one.
+ */
+export function readAccsOAuthPair(
+    configs: ConfigMap,
+): { clientId: string; clientSecret: string } | undefined {
+    const clientId = lookupComponentConfigValue(configs ?? {}, ACCS_OAUTH_CLIENT_ID);
+    const clientSecret = lookupComponentConfigValue(configs ?? {}, ACCS_OAUTH_CLIENT_SECRET);
+    return clientId && clientSecret ? { clientId, clientSecret } : undefined;
 }
 
 /**

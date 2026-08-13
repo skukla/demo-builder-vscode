@@ -33,15 +33,11 @@
  */
 
 import type { CommerceCredentials } from './dataInstallerWriteClient';
-import { PAAS_ADMIN_PASSWORD, PAAS_ADMIN_USERNAME } from '@/features/components/config/envVarKeys';
-import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
+import { readAccsOAuthPair, readPaasAdminPair } from '@/features/components/services/envVarHelpers';
 
 /** Backend component ids, as they appear on a stack in `stacks.json`. */
 const PAAS_BACKEND = 'adobe-commerce-paas';
 const ACCS_BACKEND = 'adobe-commerce-accs';
-
-/** SecretStorage key prefix. Per project — see {@link accsSecretKey}. */
-const ACCS_SECRET_PREFIX = 'demoBuilder.dataInstaller.accs';
 
 /** The minimum a caller must know about a project to resolve credentials. */
 export interface CredentialProject {
@@ -72,86 +68,52 @@ export type CredentialResolution =
  */
 export async function resolveCommerceCredentials(args: {
     project: CredentialProject;
-    secrets: SecretStore;
-    /** Names the SecretStorage entry; ACCS only. */
+    /**
+     * Unused, and kept only so callers need not change while the seam lands.
+     * Both backends now read DECLARED config; when a credential moves to
+     * SecretStorage (see `.rptc/backlog/component-secret-routing/`), this is where
+     * the store gets consulted.
+     */
+    secrets?: SecretStore;
     projectName?: string;
 }): Promise<CredentialResolution> {
-    const { project, secrets, projectName } = args;
+    const { project } = args;
 
     if (project.stackBackend === PAAS_BACKEND) {
-        // Deliberately does not touch SecretStorage: a PaaS project must never
-        // pick up a pair stored for some other project's ACCS backend.
         return resolvePaas(project);
     }
     if (project.stackBackend === ACCS_BACKEND) {
-        return resolveAccs(secrets, projectName);
+        return resolveAccs(project);
     }
     return { ok: false, reason: 'unsupported-backend' };
 }
 
-/** Store the ACCS pair. The only writer of this secret. */
-export async function storeAccsCredentials(args: {
-    secrets: SecretStore;
-    projectName: string;
-    clientId: string;
-    clientSecret: string;
-}): Promise<void> {
-    const { secrets, projectName, clientId, clientSecret } = args;
-    await secrets.store(accsSecretKey(projectName), JSON.stringify({ clientId, clientSecret }));
-}
-
-/** Forget the ACCS pair for one project. */
-export async function clearAccsCredentials(args: {
-    secrets: SecretStore;
-    projectName: string;
-}): Promise<void> {
-    await args.secrets.delete(accsSecretKey(args.projectName));
-}
-
 /** Both halves or nothing — half a credential is a failure, not a partial success. */
 function resolvePaas(project: CredentialProject): CredentialResolution {
-    const username = lookupComponentConfigValue(project.componentConfigs, PAAS_ADMIN_USERNAME);
-    const password = lookupComponentConfigValue(project.componentConfigs, PAAS_ADMIN_PASSWORD);
-    if (!username || !password) {
+    const pair = readPaasAdminPair(project.componentConfigs);
+    if (!pair) {
         return { ok: false, reason: 'missing-paas-admin' };
     }
-    return { ok: true, credentials: { kind: 'paas', username, password } };
-}
-
-/** Read the stored pair, treating anything unusable as absent. */
-async function resolveAccs(
-    secrets: SecretStore,
-    projectName: string | undefined,
-): Promise<CredentialResolution> {
-    if (!projectName) {
-        return { ok: false, reason: 'needs-accs-credentials' };
-    }
-    const raw = await secrets.get(accsSecretKey(projectName));
-    if (!raw) {
-        return { ok: false, reason: 'needs-accs-credentials' };
-    }
-    // A corrupted secret is "ask again", not a crash — the user can always
-    // re-paste, and there is nothing to diagnose in an opaque store.
-    try {
-        const parsed = JSON.parse(raw) as { clientId?: unknown; clientSecret?: unknown };
-        const clientId = typeof parsed.clientId === 'string' ? parsed.clientId : '';
-        const clientSecret = typeof parsed.clientSecret === 'string' ? parsed.clientSecret : '';
-        if (!clientId || !clientSecret) {
-            return { ok: false, reason: 'needs-accs-credentials' };
-        }
-        return { ok: true, credentials: { kind: 'accs', clientId, clientSecret } };
-    } catch {
-        return { ok: false, reason: 'needs-accs-credentials' };
-    }
+    return { ok: true, credentials: { kind: 'paas', ...pair } };
 }
 
 /**
- * Per-project key.
+ * Read the OAuth pair declared on the ACCS component.
  *
- * Not one global entry: a machine holds many projects, they can point at
- * different ACCS instances, and a shared key would silently authenticate an
- * import against whichever pair was stored last.
+ * Symmetric with {@link resolvePaas} on purpose: both halves or nothing, from the
+ * same declared-config surface, so a user supplies either backend's credential
+ * where they already supply everything else about it.
+ *
+ * **No admin-pair fallback.** The service accepts `admin_username`/`admin_password`
+ * for ACCS too, but that is the legacy path — OAuth Server-to-Server is the IMS
+ * model for SaaS. Accepting both here would quietly make the worse credential the
+ * easy one.
  */
-function accsSecretKey(projectName: string): string {
-    return `${ACCS_SECRET_PREFIX}.${projectName}`;
+function resolveAccs(project: CredentialProject): CredentialResolution {
+    const pair = readAccsOAuthPair(project.componentConfigs);
+    if (!pair) {
+        return { ok: false, reason: 'needs-accs-credentials' };
+    }
+    return { ok: true, credentials: { kind: 'accs', ...pair } };
 }
+

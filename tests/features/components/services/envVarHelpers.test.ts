@@ -9,9 +9,86 @@ import {
     deriveGraphqlEndpoint,
     deriveAccsAdminUrl,
     deriveAccsTenantId,
+    readAccsOAuthPair,
+    readPaasAdminPair,
 } from '@/features/components/services/envVarHelpers';
 
 describe('envVarHelpers', () => {
+    /**
+     * The ONE place that reads a Commerce credential out of componentConfigs.
+     *
+     * Three callers did this two-line both-or-nothing read themselves — the data
+     * installer, the EDS store-structure reader, and the wizard's auto-detect hook.
+     * Three copies of "how do I get this credential" is what makes moving it
+     * expensive, and moving it is planned
+     * (`.rptc/backlog/component-secret-routing/`). Collapsed here so that when the
+     * value moves, one function changes.
+     *
+     * Deliberately PURE — no vscode, no async. `useAutoStoreDetect` runs in the
+     * WEBVIEW, which cannot reach SecretStorage or the extension host, so anything
+     * it must share has to be callable from both sides.
+     */
+    describe('reading a credential pair', () => {
+        const PAAS = {
+            'adobe-commerce-paas': {
+                ADOBE_COMMERCE_ADMIN_USERNAME: 'admin',
+                ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret',
+            },
+        };
+
+        it('reads the PaaS admin pair', () => {
+            expect(readPaasAdminPair(PAAS)).toEqual({
+                username: 'admin',
+                password: 'fake-test-pw-not-a-secret',
+            });
+        });
+
+        // Half a credential is a failure, not a partial success: it would start a
+        // request that cannot authenticate, and report the wrong cause.
+        it('returns nothing for half a PaaS pair', () => {
+            expect(
+                readPaasAdminPair({ x: { ADOBE_COMMERCE_ADMIN_USERNAME: 'admin' } }),
+            ).toBeUndefined();
+            expect(
+                readPaasAdminPair({ x: { ADOBE_COMMERCE_ADMIN_PASSWORD: 'p' } }),
+            ).toBeUndefined();
+        });
+
+        // The value can be saved against any component, not just the backend one —
+        // the behaviour lookupComponentConfigValue already has, pinned here because
+        // three callers now depend on it.
+        it('finds the pair in ANY component', () => {
+            expect(
+                readPaasAdminPair({
+                    'some-other-component': {
+                        ADOBE_COMMERCE_ADMIN_USERNAME: 'admin',
+                        ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret',
+                    },
+                }),
+            ).toEqual({ username: 'admin', password: 'fake-test-pw-not-a-secret' });
+        });
+
+        it('reads the ACCS OAuth pair', () => {
+            expect(
+                readAccsOAuthPair({
+                    'adobe-commerce-accs': {
+                        ACCS_OAUTH_CLIENT_ID: 'id',
+                        ACCS_OAUTH_CLIENT_SECRET: 'fake-test-secret-not-a-secret',
+                    },
+                }),
+            ).toEqual({ clientId: 'id', clientSecret: 'fake-test-secret-not-a-secret' });
+        });
+
+        it('returns nothing for half an ACCS pair', () => {
+            expect(readAccsOAuthPair({ x: { ACCS_OAUTH_CLIENT_ID: 'id' } })).toBeUndefined();
+        });
+
+        it('returns nothing for no configs at all', () => {
+            expect(readPaasAdminPair(undefined)).toBeUndefined();
+            expect(readAccsOAuthPair(undefined)).toBeUndefined();
+        });
+    });
+
     describe('deriveGraphqlEndpoint', () => {
         it('should derive GraphQL endpoint from Commerce URL', () => {
             expect(deriveGraphqlEndpoint('https://my-store.adobedemo.com')).toBe(

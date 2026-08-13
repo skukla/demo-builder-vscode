@@ -33,6 +33,20 @@ export const PAAS_ENVIRONMENT_ID = 'ADOBE_COMMERCE_ENVIRONMENT_ID';
 // ==========================================================
 
 export const ACCS_GRAPHQL_ENDPOINT = 'ACCS_GRAPHQL_ENDPOINT';
+
+/**
+ * ACCS credential pair — the IMS OAuth Server-to-Server model, which is the
+ * best-practice credential for a SaaS instance.
+ *
+ * Optional on the component: an ACCS project is created and runs without these,
+ * and they are needed only to import sample data. Making them required would put a
+ * Developer Console trip in front of every project.
+ *
+ * The client id is NOT a secret — it is public by design, and only its paired
+ * secret belongs in {@link SECRET_ENV_KEYS}.
+ */
+export const ACCS_OAUTH_CLIENT_ID = 'ACCS_OAUTH_CLIENT_ID';
+export const ACCS_OAUTH_CLIENT_SECRET = 'ACCS_OAUTH_CLIENT_SECRET';
 export const ACCS_WEBSITE_CODE = 'ACCS_WEBSITE_CODE';
 export const ACCS_STORE_CODE = 'ACCS_STORE_CODE';
 export const ACCS_STORE_VIEW_CODE = 'ACCS_STORE_VIEW_CODE';
@@ -109,9 +123,13 @@ export const BACKEND_OWNED_SCOPE_KEYS: readonly string[] = [
  * and the export stays useful for re-import with it present.
  *
  * Adding a Commerce credential? Add it here, or it ships in a "secret-free" file.
+ * That instruction is now ENFORCED — `tests/sop/credential-env-vars-registered.test.ts`
+ * fails on a credential-shaped var in the catalog that is neither listed here nor
+ * documented as an exception, so forgetting is loud rather than silent.
  */
 export const SECRET_ENV_KEYS: readonly string[] = [
     PAAS_ADMIN_PASSWORD,
+    ACCS_OAUTH_CLIENT_SECRET,
     CATALOG_API_KEY,
     ACO_API_KEY,
     EXPERIENCE_PLATFORM_API_KEY,
