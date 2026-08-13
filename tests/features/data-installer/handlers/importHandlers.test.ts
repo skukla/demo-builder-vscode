@@ -23,6 +23,7 @@ import * as vscode from 'vscode';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
 import { watchImportJob } from '@/features/data-installer/services/importJobRunner';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
@@ -68,10 +69,18 @@ function makeStores() {
     };
 }
 
-/** A PaaS project — credentials already in componentConfigs, so no secret needed. */
-const PAAS_PROJECT = {
+/**
+ * A PaaS project, shaped like a PERSISTED one.
+ *
+ * `componentSelections.backend` is where the backend id actually lives — typed as
+ * `Project` on purpose, so tsc rejects an invented field. An earlier fixture used
+ * `stack: { backend }`, which exists nowhere in persisted state; every test passed
+ * against the invention and the import path could not resolve credentials for any
+ * real project. A live dry run found it, not this suite.
+ */
+const PAAS_PROJECT: Partial<Project> = {
     name: 'demo-a',
-    stack: { backend: 'adobe-commerce-paas' },
+    componentSelections: { backend: 'adobe-commerce-paas' },
     componentConfigs: {
         'adobe-commerce-paas': {
             ADOBE_COMMERCE_ADMIN_USERNAME: 'admin',

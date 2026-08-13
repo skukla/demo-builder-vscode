@@ -34,6 +34,7 @@ import {
     deriveAccsTenantId,
     lookupComponentConfigValue,
 } from '@/features/components/services/envVarHelpers';
+import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -244,14 +245,12 @@ export const importHandlers = defineHandlers({
         // No guard and no client: this reads project state only. A missing project
         // is not a failure — the catalog is browsable without one, and the modal
         // simply asks the user to type the target.
-        const project = await context.stateManager.getCurrentProject();
-        const configs =
-            (project as { componentConfigs?: Record<string, Record<string, string>> } | null)
-                ?.componentConfigs ?? {};
+        const project: Project | undefined = await context.stateManager.getCurrentProject();
+        const configs = project?.componentConfigs ?? {};
         // The id is what the service needs and what nobody can read. The project
         // name is the only human-recognisable handle on the same target, so it
         // rides along for the modal to lead with.
-        const projectName = (project as { name?: string } | null)?.name;
+        const projectName = project?.name;
 
         const accs = deriveAccsTenantId(lookupComponentConfigValue(configs, ACCS_GRAPHQL_ENDPOINT));
         if (accs) {
@@ -312,13 +311,18 @@ async function prepareImport(
 
     const credentials = await resolveCommerceCredentials({
         project: {
-            stackBackend: (project as { stack?: { backend?: string } }).stack?.backend ?? '',
-            componentConfigs:
-                (project as { componentConfigs?: Record<string, Record<string, string>> })
-                    .componentConfigs ?? {},
+            // `componentSelections.backend` — the field a PERSISTED project
+            // actually carries, and what the other six readers in this repo use.
+            // This read `stack?.backend` for its whole life, a shape that exists
+            // only in wizard state, so EVERY real project resolved to '' and got
+            // "this project has no Adobe Commerce backend". The unit fixtures had
+            // the same invented shape and so agreed with it — a live dry run is
+            // what caught it, which no test here could have.
+            stackBackend: project.componentSelections?.backend ?? '',
+            componentConfigs: project.componentConfigs ?? {},
         },
         secrets: context.context.secrets,
-        projectName: (project as { name?: string }).name ?? '',
+        projectName: project.name,
     });
     if (!credentials.ok) {
         return {

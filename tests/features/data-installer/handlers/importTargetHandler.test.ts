@@ -26,6 +26,7 @@
 
 import * as vscode from 'vscode';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
@@ -44,9 +45,11 @@ jest.mock('@/core/logging/debugLogger', () => ({
 /** The 22-character base62 tenant id the endpoint carries. */
 const TENANT = 'UoGYsHrcxMyeoVd2zUktZi';
 
-const ACCS_PROJECT = {
+// Typed as `Project` so tsc rejects an invented field — an earlier fixture used
+// `stack: { backend }`, a shape persisted projects never have.
+const ACCS_PROJECT: Partial<Project> = {
     name: 'demo-accs',
-    stack: { backend: 'adobe-commerce-accs' },
+    componentSelections: { backend: 'adobe-commerce-accs' },
     componentConfigs: {
         'adobe-commerce-accs': {
             ACCS_GRAPHQL_ENDPOINT: `https://na1-sandbox.api.commerce.adobe.com/${TENANT}/graphql`,
@@ -54,9 +57,9 @@ const ACCS_PROJECT = {
     },
 };
 
-const PAAS_PROJECT = {
+const PAAS_PROJECT: Partial<Project> = {
     name: 'demo-paas',
-    stack: { backend: 'adobe-commerce-paas' },
+    componentSelections: { backend: 'adobe-commerce-paas' },
     componentConfigs: {
         'adobe-commerce-paas': { ADOBE_COMMERCE_URL: 'https://demo-paas.adobedemo.com' },
     },
