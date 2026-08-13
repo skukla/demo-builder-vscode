@@ -172,10 +172,17 @@ negative one. And pair every "nothing found" with a positive control at the same
 - **`appbuilder-deployable-model` D2–D6.** Only D1 is built. Track A pre-positions
   `getWorkspaceCredential` — `dead-code-scan` will call it unused; it is not.
 
-**Unresolved, not reproducing:**
+**Unresolved, NOW REPRODUCING — backlogged 2026-08-13:**
 
-- **Four suites flake under parallel load** (`extension-context`, both `inExtensionMcpServer`
-  suites, `mcpConfigWriter`). Did not recur in any full run today.
+- **~3 suites flake per full run, a different set each time.** This line used to read "did
+  not recur in any full run today"; it recurred twice in consecutive runs on 2026-08-13,
+  and the set is wider than the four originally named — `executor-appBuilderComponentLoading`
+  and `processCleanup.timeout` joined it. All are **timeouts, not assertion failures**; one
+  is a wall-clock assertion that measured 12,793 ms against a 2,000 ms bound. Every affected
+  suite passes in isolation, verified by stashing to rule the working tree out.
+  **So every "full suite green" in this repo is one sample of a noisy process** — including
+  the ones quoted in today's handoffs. Evidence, suspects and a measure-first plan:
+  `.rptc/backlog/2026-08-13-jest-full-suite-timeout-flake.md`.
 
 **Known gap, no gate:**
 

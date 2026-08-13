@@ -174,8 +174,10 @@ against the fixtures, the whole 40-row catalog is ~17KB of JSON and a datapack's
   Do not wire it up. Also **do not delete it**: the pending `appbuilder-deployable-model` D2
   plan names it as the pattern to mirror.
 
-**One question for the service owner**, cheaper than testing: what `scope` does
-`auth/authenticate.js` send? A hardcoded `commerce.accs` makes the pair ACCS-only.
+**RESOLVED 2026-08-12 — the scope question will not be answered.** It was put to the
+service owner and declined; his read was that this was going too deep. So the auth scope is
+discovered by DOING: attempt the credential flow, report failure clearly. If PaaS and ACCS
+need different paths, the first attempt says so.
 
 **Job runner** — extension-host, panel-independent, records in `TransientStateManager`:
 
@@ -197,11 +199,15 @@ errors and keeps polling, which the grace-window 404 needs. **Raise `maxAttempts
 min and the `timeout` parameter never fires. Do **not** use `usePollingWithTimeout` — zero
 consumers, restarts on every render with an un-memoized caller, and dies on the first error.
 
-**Blocking spike before any Stage 2 UI**: does `commerce_instance` equal the tenant id from
-`ACCS_ENDPOINT_PATTERN` group 2 (`components/services/envVarHelpers.ts`)? Shapes match
-(21–22 char base62) but this is **unverified**. Either way the instance id is a
-**user-editable field pre-filled with the derived value** — importing into the wrong
-instance writes sample data into someone's live demo.
+**RESOLVED 2026-08-12 — the spike ran and the prefill is CANCELLED.** It asked whether
+`commerce_instance` equals the tenant id from `ACCS_ENDPOINT_PATTERN` group 2. It could not
+be answered: only 16 instances have ever had Data Installer activity and none is a tenant
+from a local project, so there was no overlap to compare. The instruction this paragraph
+used to carry — "a user-editable field **pre-filled with the derived value**" — is now
+**wrong and must not be built**. The field starts **EMPTY**: a prefill derived from an
+unverified equality is exactly what writes sample data into someone else's live demo.
+Treat `commerce_instance` as an opaque string the user supplies; do not derive, validate or
+format it.
 
 Reuse (confirmed with the session that built it): **skip `readStoreStructure`** (derives from
 the saved project). For PaaS, `getAdminToken` (`eds/services/commerceStoreDiscovery.ts`)

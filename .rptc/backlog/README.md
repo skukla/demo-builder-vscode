@@ -175,6 +175,17 @@ and no un-`unref`'d long timer remains in `src`. Higher concurrency did not crea
 suite-to-worker packing and exposed one. Tests pass and CI is green, so the cost is only the noise
 floor — which is precisely what this item exists to protect.
 
+#### Full-suite timeout flake ([`2026-08-13-jest-full-suite-timeout-flake.md`](2026-08-13-jest-full-suite-timeout-flake.md))
+
+**Same suspect as the item above, harder consequence — pair them.** A full run fails **~3 suites,
+a different set each time**, on **timeouts rather than assertions**; every affected suite passes in
+isolation. Two consecutive runs on 2026-08-13 failed disjoint sets. The sharpest evidence is a
+wall-clock assertion that measured **12,793 ms against a 2,000 ms bound** — nothing behavioural
+changed, the process was starved. Where force-exit costs only a noise floor, this costs the gate:
+**every "full suite green" in this repo is one sample of a noisy process.** Start from that item's
+`0/3 at 25%, 3/3 at 75%` measurement rather than re-deriving it; step 1 here is a 10× baseline,
+because a flake "fixed" by one green run is a flake you stopped looking at.
+
 ### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
 
 #### Tier the AI-bundle refresh instead of prompting for everything ([`2026-08-13-tier-the-ai-bundle-refresh.md`](2026-08-13-tier-the-ai-bundle-refresh.md))
