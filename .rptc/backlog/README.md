@@ -177,6 +177,22 @@ floor — which is precisely what this item exists to protect.
 
 ### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
 
+#### Tier the AI-bundle refresh instead of prompting for everything ([`2026-08-13-tier-the-ai-bundle-refresh.md`](2026-08-13-tier-the-ai-bundle-refresh.md))
+
+Filed 2026-08-13 out of the `global-mcp-version-pin` work. "Regenerate AI files" is three
+jobs behind one button — rewrite config paths (instant, offline), rewrite skills + AGENTS.md
+(fast, offline), install MCP tool packages (slow, networked, can fail) — and the prompt asks
+permission for the third every time, even when only the first changed. `AI_CONTEXT_VERSION`
+is one integer, so the freshness check cannot tell which happened. `.127` and `.128` each
+re-prompted every project and each generated support questions. **The load-bearing finding:
+the extension already regenerates silently on a different path** — `updateExecutor.ts` runs
+`npm update`, then `generateAIContextFiles`, then persists the stamp, with no prompt — so
+"regeneration needs consent" is already false here; the two routes just disagree. Also
+verified: regeneration is not destructive (`skillsWriter` only writes files it owns, so a
+user-authored skill survives). **One thing to settle first:** the prompt is currently the
+only thing protecting a hand-edited `AGENTS.md` from being overwritten, so going silent needs
+a hash-and-skip or a deliberate decision — not silence by not noticing. **Not blocked.**
+
 #### AI surface coverage — tools and skills vs features ([`ai-surface-coverage/`](ai-surface-coverage/))
 
 Paused 2026-08-13 with the research done and seven steps written; deferred so a live defect
