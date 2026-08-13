@@ -1,9 +1,9 @@
 # Next session — start here
 
-Rewritten 2026-08-12, header refreshed 2026-08-13. **Everything is committed AND PUSHED**;
-`develop` was at `81c13451` when this line was written. `v1.0.0-beta.128` is released.
+Rewritten 2026-08-12, refreshed twice on 2026-08-13. **Everything is committed AND PUSHED**;
+`develop` was at `684c42c3` when this line was written. `v1.0.0-beta.128` is released.
 
-Gate at handoff: **993 suites / 12,721 tests**, `tsc --noEmit` clean, whole-repo eslint
+Gate at handoff: **996 suites / 12,764 tests** (at `--maxWorkers=25%`; see the flake item — a default-workers green is one sample of a noisy process), `tsc --noEmit` clean, whole-repo eslint
 0 errors 0 warnings.
 
 > A second session works `feature/data-installer` in a sibling worktree. It ceded control of
@@ -73,6 +73,33 @@ Two sessions independently reached this and committed within minutes of each oth
 `DatapackActivityView.tsx:132` pointed at `:145` the same afternoon. Cite symbols.
 
 ---
+
+## The record now checks itself
+
+Three things landed 2026-08-13 that change how this repo keeps itself honest. Read them before
+adding another "remember to…" note anywhere.
+
+- **`rptc-hygiene-scan`** (`.claude/skills/rptc-hygiene-scan/`) — the first scan aimed at the
+  RECORD rather than the code: backlog links, items with no index entry, plans that shipped and
+  never moved, and `file:line` citations pointing at deleted files. Every section prints a
+  CONTROL line, because `(none)` from a check that did not run reads exactly like a clean
+  result.
+- **`rptc-record-drift.sh`** (Stop hook) — fires when a turn ADDS, DELETES or MOVES anything
+  under `.rptc/{plans,backlog,complete}/`, or edits the index. Silent otherwise. It exists
+  because both problems the scan found were created by moving things, and "check afterwards" is
+  the instruction that gets skipped.
+- **One PreToolUse dispatcher** (`.claude/hooks/router.sh` + `rules/*.rule`) replaced five
+  near-identical hook scripts. **Adding a guard is now dropping a file in `rules/`** — no
+  `settings.json` edit, no extra process. 21 tests, the first any hook here has had.
+
+**What that pass found, and what is still true:** five shipped plans were sitting in `plans/`
+(one saying so in its own overview), and `appbuilder-deployable-model`'s D1–D3 had shipped four
+weeks earlier — ADR-011 predicted that exact rot in its own text and the update never came.
+`.rptc/plans/` now holds `data-installer` (the peer's, active) and this file. Everything else is
+in `backlog/` or `complete/`.
+
+**A caveat this file cannot fix by itself:** the hook watches the index, not this handoff. This
+header went five commits stale within an hour of being written. Check `git log` against it.
 
 ## Open bug: GitHub blocked a storefront write — CLOSED BY ATTRITION, not solved
 

@@ -257,6 +257,22 @@ because a flake "fixed" by one green run is a flake you stopped looking at.
 
 ### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
 
+#### EDS contract drift checker ([`2026-08-13-eds-contract-drift-checker.md`](2026-08-13-eds-contract-drift-checker.md))
+
+Filed 2026-08-13, raised by the Data Installer session and re-measured here before filing.
+**EDS has 36 service files making external HTTP calls and no drift checker** — Helix Admin,
+DA.live, Config Service and GitHub, all with offline-only tests, so any of those contracts can
+move and the suite stays green. `tests/fixtures/eds/` exists but only 2 test files read it, and
+the three ad-hoc `scripts/test-*helix*` probes contain zero fixture references, so none would
+notice a shape change. Not theoretical: the Helix DELETE-auth rule, the Config Service lookup
+key, the DA.live site-vs-org scope and the aem.live path-encoding limit were each discovered by
+breakage. `scripts/dataInstallerDrift.js` is the reference, and its four rules are load-bearing
+— a non-200 is a FAILURE never "no drift", ADDED keys are not drift, coverage is action ×
+PARAMETER, and a nonsense control invalidates the run if it passes. **Cannot be a CI gate**: it
+needs interactive credentials, so it is a manual pre-release check in `cut-release`'s advisory
+block — say so, or someone wires it into CI, watches it fail, and disables it. Scope EDS only;
+reads only. Not blocked.
+
 #### Block authoring has no oracle — the type scale exists and nothing points at it ([`2026-08-13-block-authoring-has-no-type-scale-oracle.md`](2026-08-13-block-authoring-has-no-type-scale-oracle.md))
 
 Filed 2026-08-13 from "fonts are too small and Claude spins a lot authoring blocks — would
