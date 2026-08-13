@@ -10,7 +10,7 @@ import {
     type FinalizationContext,
 } from '@/features/project-creation/services/projectFinalizationService';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
-import type { Project, TransformedComponentDefinition } from '@/types';
+import type { Project } from '@/types';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
 
 // Mock dependencies

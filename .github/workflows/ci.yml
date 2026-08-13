@@ -31,6 +31,13 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit -p tsconfig.json
 
+      # Test files are excluded from tsconfig.json and @swc/jest strips types,
+      # so without this step nothing typechecks the test tree (fixtures could
+      # invent shapes and the suite agreed — see
+      # .rptc/complete/2026-08-13-test-files-are-not-typechecked.md).
+      - name: Typecheck tests
+        run: npm run typecheck:tests
+
       - name: Lint
         run: npm run lint
 

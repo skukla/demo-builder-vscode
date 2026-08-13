@@ -21,7 +21,8 @@ project.
 npm run watch:all        # Watch mode (extension + webviews) — run in background
 npm run compile          # Full production build
 npm run lint             # eslint over ALL of src/ + tests/ (matches CI)
-npx tsc --noEmit         # Typecheck
+npx tsc --noEmit         # Typecheck src/ (tsconfig.json excludes tests)
+npm run typecheck:tests  # Typecheck tests/ (tsconfig.test.json) — CI gates on both
 npx jest --no-coverage 2>&1 > /tmp/jest-output.txt   # Full suite (~20s, see below)
 ```
 

@@ -1,12 +1,41 @@
 ---
 id: 2026-08-13-test-files-are-not-typechecked
 title: Nothing typechecks test files — fixtures can invent shapes and the suite agrees
-status: backlog
+status: complete
 created: 2026-08-13
+completed: 2026-08-14
 priority: high
 ---
 
 # Nothing in this repo typechecks test files
+
+> ## ✅ SHIPPED — 802 (naive) / 711 (real config) → **0**, 2026-08-14 (develop `b1d6411f`)
+>
+> Twelve commits, `f49ab5e2..b1d6411f`. `tsconfig.test.json` + `npm run typecheck:tests`
+> now hold the test tree at 0 errors, wired into CI (`.github/workflows/ci.yml`,
+> "Typecheck tests" step) and into the `gate` skill (§3 inner loop + §6 pre-push).
+> Full suite green after every slice: **998 suites / 12,803 tests** (one FEWER than the
+> original 12,804 — a dead "NavItem should be importable" test asserting a deleted export
+> was removed; tsc caught it).
+>
+> The go/no-go question this item recorded ("mostly deliberate partials → maybe not worth
+> it") resolved decisively toward GO: the long tail was dominated by real drift, not
+> deliberate partials — retired props still passed (`ActionGrid.authoringExperience`,
+> `AddIntegrationFlowModal.meshBackendId`/`onMeshEnableResult`, `IntegrationsGrid.onAddRequest`,
+> `DestinationStage.onChangeDestination`), retired step ids and status values in fixtures,
+> stale mock signatures (`ConnectStoreStepContent.onValidationChange`), four test files that
+> were silently SCRIPTS sharing one global scope (no top-level import/export), and stale
+> "type reduction" assertions contradicting the re-added `projectsList` sidebar variant.
+> Three assertion updates were behaviour-visible and verified by the suite itself
+> (sidebar variant tests, codePatchSource pass-through, adapter source shape).
+>
+> Two small `src/` fixes fell out: `fileWatcher`'s literal-typed timeout param (earlier
+> slice), and `edsResetParams`' injectable `packages` param retyped from the JSON-literal
+> `typeof demoPackagesConfig.packages` to a structural `StorefrontConfigSource[]`.
+> The `src`-side cast-removal partial (127 `as {` casts) was NOT swept here — it remains
+> a cheap independent follow-up if a future bug points at a blinded consumer.
+
+*(Original text below, kept as filed. The banner above supersedes its counts.)*
 
 > ## ⏳ IN PROGRESS — 711 → 336 as of 2026-08-13 (develop `7b9729f4`)
 >
