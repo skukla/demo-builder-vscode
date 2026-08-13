@@ -1,0 +1,157 @@
+# Blocks starting a jest run while another one is already in flight.
+#
+# NOT once-per-session (like 10-jest-pipe, unlike the skill nudges): a second
+# concurrent run does not produce a worse result, it produces a WRONG one, and
+# making it spendable by trying twice would defeat it.
+#
+# Why, measured 2026-08-13 on this 16-core machine, tree clean at 1a66f939:
+#
+#   one full suite at a time   10 runs, 0 failed suites
+#   two full suites at once     6 runs, 6 failed (4-6 suites each)
+#
+# The concurrent failures are all starvation, not behaviour: "Exceeded timeout of
+# 10000 ms" in inExtensionMcpServer, mcpConfigWriter, extension-context,
+# executor-*ComponentLoading, and a wall-clock assertion in processCleanup.timeout
+# reading up to 12,793 ms against a 2,000 ms bound. Every one passes solo.
+#
+# This is the whole content of .rptc/backlog/2026-08-13-jest-full-suite-timeout-flake.md:
+# the suspects there were maxWorkers and workerIdleMemoryLimit, and both are
+# innocent — 75% workers is green 10/10 when it has the box to itself. What was
+# never true is that a gate run had the box to itself. Two Claude sessions work
+# this repo (the sibling worktree symlinks node_modules straight back here), so
+# overlapping runs are routine and nothing announced them.
+#
+# Detection: the parent process of any run is `node .../node_modules/.bin/jest`.
+# Verified disjoint from its own workers (1 parent vs 12 `jest-worker` children,
+# zero overlap), so a match count IS the number of live runs. Watch mode is
+# excluded — a resident `--watch` parent is idle almost always, and blocking every
+# run for the lifetime of an open watcher would make this unusable.
+#
+# A jest run that is this hook's OWN ANCESTOR is never counted. Without that, the
+# rule fires throughout `tests/hooks/router.test.ts` — the suite exercising the
+# router is itself hosted by a `node_modules/.bin/jest` parent — and every guard
+# under test would come back blocked by this one. "Do not count the run you are
+# executing inside" is also just correct: it is not a competing run.
+#
+# DBV_JEST_PS overrides the snapshot with a file in `ps -Ao pid=,command=` format.
+# It exists so the blocking path can be tested without a second real suite, and
+# it is a convenience, not a boundary — anything able to set it could equally run
+# jest directly.
+#
+# WHAT THIS DOES NOT COVER. A PreToolUse hook only sees Claude's own tool calls.
+# A run started from a terminal, from inside a shell script, or by a session whose
+# checkout predates this file is invisible to it and will contend anyway. That is
+# not theoretical: the full-suite verification run for this very change came back
+# with 7 failed suites — the exact contention set — and an immediately following
+# run, sampled with `ps` throughout to confirm it was alone, was 996/996 green.
+# Nothing was sampled during the failing run, so the contention is inferred from
+# the signature rather than proven, but the guard plainly did not prevent it.
+#
+# So: this narrows the window, it does not close it. If a run comes back with
+# failures concentrated in inExtensionMcpServer / mcpConfigWriter / extension-context
+# / executor-*ComponentLoading, suspect contention BEFORE suspecting your change,
+# and re-run while sampling `ps` before you believe either result.
+#
+# FAILS OPEN: if `ps` is unavailable or returns nothing parseable, the run proceeds.
+rule_id=jest-concurrent
+rule_once=0
+
+# PIDs from here up to init, space-padded for substring matching.
+_jc_ancestors() {
+    local p=$$ out=" "
+    while [ -n "$p" ] && [ "$p" -gt 1 ] 2>/dev/null; do
+        out="$out$p "
+        p=$(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' ')
+    done
+    printf '%s' "$out"
+}
+
+# True when some pipeline segment RUNS jest, rather than merely naming it.
+#
+# The first cut of this matched `jest` as a word anywhere in the command, which
+# fired on `ps -Ao pid=,command= | grep jest` — an inspection command that starts
+# nothing, and very close to the one this rule's own message recommends. A peer
+# session hit it within minutes. Mentioning jest is not running jest, so the test
+# is now on the COMMAND WORD of each segment, after stripping env assignments.
+_jc_invokes_jest() {
+    local norm="$1" seg first rest
+    norm="${norm//&&/$'\n'}"
+    norm="${norm//||/$'\n'}"
+    norm="${norm//;/$'\n'}"
+    norm="${norm//|/$'\n'}"
+
+    while IFS= read -r seg; do
+        seg="${seg#"${seg%%[![:space:]]*}"}"
+        # Drop leading VAR=value prefixes so `TMPDIR=/x npx jest` still counts.
+        while [ -n "$seg" ] && [[ "$seg" == [A-Za-z_]*=* ]] && [[ "$seg" == *[[:space:]]* ]]; do
+            case "${seg%%[[:space:]]*}" in
+                *=*) seg="${seg#*[[:space:]]}"; seg="${seg#"${seg%%[![:space:]]*}"}" ;;
+                *) break ;;
+            esac
+        done
+        first="${seg%%[[:space:]]*}"
+        case "$seg" in *[[:space:]]*) rest="${seg#*[[:space:]]}" ;; *) rest="" ;; esac
+
+        case "$first" in
+            jest|*/jest) return 0 ;;
+            npx|pnpm|yarn) case " $rest " in *" jest "*) return 0 ;; esac ;;
+            npm) case "$rest" in test|test\ *|run\ test*) return 0 ;; esac ;;
+            node|*/node) case "$rest" in *node_modules/.bin/jest*) return 0 ;; esac ;;
+        esac
+    done <<<"$norm"
+
+    return 1
+}
+
+rule_match() {
+    [ "$1" = "Bash" ] || return 1
+
+    # Covers `npx jest`, the `node --max-old-space-size=... node_modules/.bin/jest`
+    # form in package.json, and the `npm test` / `npm run test:*` wrappers.
+    _jc_invokes_jest "$2" || return 1
+
+    local snapshot
+    if [ -n "$DBV_JEST_PS" ] && [ -f "$DBV_JEST_PS" ]; then
+        snapshot=$(cat "$DBV_JEST_PS" 2>/dev/null) || return 1
+    else
+        snapshot=$(ps -Ao pid=,command= 2>/dev/null) || return 1
+    fi
+    [ -n "$snapshot" ] || return 1
+
+    local ancestors live=0 pid rest
+    ancestors=$(_jc_ancestors)
+
+    # Counted in the shell rather than with `grep -c` so the count is a value to
+    # assert on, never an exit status — a check that did not run must not read
+    # as "found nothing".
+    while read -r pid rest; do
+        case "$rest" in *node_modules/.bin/jest*) ;; *) continue ;; esac
+        case "$rest" in *--watch*) continue ;; esac
+        case "$ancestors" in *" $pid "*) continue ;; esac
+        live=$((live + 1))
+    done <<<"$snapshot"
+
+    [ "$live" -gt 0 ] || return 1
+
+    JEST_CONCURRENT_COUNT="$live"
+    return 0
+}
+
+rule_message() {
+    cat <<MSG
+Blocked: ${JEST_CONCURRENT_COUNT:-another} jest run is already in flight, and results from a
+concurrent run are not trustworthy — measured 2026-08-13, two overlapping full
+suites failed 4-6 suites every time on 10s timeouts while a solo run failed none
+in 10 attempts. A green result would be luck and a red one would be noise.
+
+Wait for it to finish, then re-run. To see what is holding it:
+
+  ps -Ao pid=,lstart=,command= > /tmp/jest-live.txt   # then read that file
+
+If that names a stale parent nothing is waiting on (this machine had an 8-day-old
+orphan on 2026-08-13), kill that PID and re-run. Do not work around this by
+scoping the run down — a scoped run contends for the same cores.
+
+Background: .rptc/backlog/2026-08-13-jest-full-suite-timeout-flake.md
+MSG
+}

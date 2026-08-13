@@ -237,23 +237,30 @@ Numbers-first measurement pass to map the codebase's actual size, complexity, an
 #### Jest worker force-exit ([`2026-06-09-jest-worker-force-exit.md`](2026-06-09-jest-worker-force-exit.md))
 
 ⚠️ **Was listed as resolved; it is not.** "A worker process has failed to exit gracefully" returned
-when `maxWorkers` went 25% → 75% (`3c17791e`, 2026-08-05). Now reproducible on demand — **0/3 runs at
-25%, 3/3 at 75%** — which is a far better starting point than the original filing had. The item's
-hypothesised cause is **stale**: the `useMeshDeployment.ts:211` 180s timer it named no longer exists,
-and no un-`unref`'d long timer remains in `src`. Higher concurrency did not create a leak, it changed
-suite-to-worker packing and exposed one. Tests pass and CI is green, so the cost is only the noise
-floor — which is precisely what this item exists to protect.
+when `maxWorkers` went 25% → 75% (`3c17791e`, 2026-08-05). The item's hypothesised cause is **stale**:
+the `useMeshDeployment.ts:211` 180s timer it named no longer exists, and no un-`unref`'d long timer
+remains in `src`. Higher concurrency did not create a leak, it changed suite-to-worker packing and
+exposed one. Tests pass and CI is green, so the cost is only the noise floor — which is precisely
+what this item exists to protect.
 
-#### Full-suite timeout flake ([`2026-08-13-jest-full-suite-timeout-flake.md`](2026-08-13-jest-full-suite-timeout-flake.md))
+📊 **Rate corrected 2026-08-13.** This entry read "reproducible on demand — 0/3 at 25%, **3/3 at
+75%**". Measured across 16 full runs at 75% while investigating the timeout flake, the warning
+appeared in **7 — about 44%**, not every run. Do not plan around it being reliable. It also never
+co-occurred with the `ENOTEMPTY` teardown failure a peer session reported (**0/16**), so the two are
+not one bug in the direction testable from here.
 
-**Same suspect as the item above, harder consequence — pair them.** A full run fails **~3 suites,
-a different set each time**, on **timeouts rather than assertions**; every affected suite passes in
-isolation. Two consecutive runs on 2026-08-13 failed disjoint sets. The sharpest evidence is a
-wall-clock assertion that measured **12,793 ms against a 2,000 ms bound** — nothing behavioural
-changed, the process was starved. Where force-exit costs only a noise floor, this costs the gate:
-**every "full suite green" in this repo is one sample of a noisy process.** Start from that item's
-`0/3 at 25%, 3/3 at 75%` measurement rather than re-deriving it; step 1 here is a 10× baseline,
-because a flake "fixed" by one green run is a flake you stopped looking at.
+#### ✅ Full-suite timeout flake — RESOLVED 2026-08-13 (moved to [`../complete/2026-08-13-jest-full-suite-timeout-flake.md`](../complete/2026-08-13-jest-full-suite-timeout-flake.md))
+
+**The cause was a second concurrent jest run, not the config.** One suite at a time: 0 failed suites
+in 10 runs. Two concurrently: failures in all 6, 4–6 suites each. `maxWorkers: '75%'` and
+`workerIdleMemoryLimit` — the two suspects this item was filed against — are both innocent, so the
+planned worker-count bisect was answering a dissolved question and would have "fixed" it by narrowing
+the collision window. A PreToolUse rule (`.claude/hooks/rules/15-jest-concurrent.rule`) now blocks the
+second run. Shipped alongside: four machine-speed assertions removed from `processCleanup.timeout`,
+a dead `spawnedPids` safety net wired up, `cacheDirectory` moved where jest actually reads it, a
+`validate:jest-config` that had been failing unnoticed, and the full-suite duration corrected from
+"3–5 minutes" to ~20 seconds everywhere it was documented. **Still open** and recorded in the outcome:
+the MCP socket root is shared across concurrent runs by construction.
 
 ### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
 

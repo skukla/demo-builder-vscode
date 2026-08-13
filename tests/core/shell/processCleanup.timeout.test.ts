@@ -29,6 +29,26 @@ jest.mock('@/core/logging/debugLogger', () => ({
  * survived this line being raised and kept the budget at 10s regardless. The
  * whole suite then took 9.6s solo — no headroom at all — and under full-suite
  * load on 2026-08-10 it timed out while passing in isolation.
+ *
+ * Do NOT assert on measured wall-clock here either (`expect(duration)
+ * .toBeLessThan(n)`). This suite drives REAL processes, so any upper bound on
+ * elapsed time asserts machine speed, not behaviour — four such bounds lived
+ * here and were the single most reliable failure in the repo whenever a second
+ * jest run shared the box (measured 2026-08-13: 0 failures in 10 solo runs,
+ * 5 of 6 concurrent runs failed on `duration < 2000` reading up to 12,793 ms).
+ *
+ * The timing CLAIMS are still covered, deterministically, with fake timers:
+ *   - SIGKILL after the graceful window  → processCleanup.mocked.test.ts
+ *     ('should send SIGKILL after timeout if SIGTERM ignored')
+ *   - zero timeout skips the wait        → processCleanup.mocked.test.ts
+ *     ('should handle zero timeout')
+ *   - early return when a process exits  → processCleanup-coverage.test.ts
+ *     ('should resolve immediately when process exits after initial signal')
+ *   - polling detects exit               → processCleanup-coverage.test.ts
+ *     ('should poll after force-kill in tree-kill path')
+ *
+ * What is left here is the claim only a real process can make: it actually
+ * dies. "Did not hang" is enforced by the suite timeout above.
  */
 jest.setTimeout(30_000);
 
@@ -67,23 +87,17 @@ describe('ProcessCleanup - Timeout Behavior', () => {
             ]);
 
             const pid = childProcess.pid!;
+            spawnedPids.push(pid);
 
             // Create cleanup with short timeout (1 second)
             const cleanup = new ProcessCleanup({ gracefulTimeout: 1000 });
 
             // When: killProcessTree called with SIGTERM
-            const startTime = Date.now();
             await cleanup.killProcessTree(pid, 'SIGTERM');
-            const duration = Date.now() - startTime;
 
-            // Then: Process should be terminated
-            // Note: tree-kill may kill faster than expected (uses aggressive mechanisms)
-            // We mainly care that the process is dead, not the exact timing
+            // Then: Process should be terminated. tree-kill may kill faster than
+            // the graceful window; all we assert is that the process is gone.
             expect(() => process.kill(pid, 0)).toThrow();
-
-            // Duration should be reasonable (either quick via tree-kill or after timeout)
-            expect(duration).toBeGreaterThan(0);
-            expect(duration).toBeLessThan(2000);
         });
 
         it('should kill process that ignores SIGTERM', async () => {
@@ -94,6 +108,7 @@ describe('ProcessCleanup - Timeout Behavior', () => {
             ]);
 
             const pid = childProcess.pid!;
+            spawnedPids.push(pid);
 
             const cleanup = new ProcessCleanup({ gracefulTimeout: 2000 });
 
@@ -120,6 +135,7 @@ describe('ProcessCleanup - Timeout Behavior', () => {
             ]);
 
             const pid = childProcess.pid!;
+            spawnedPids.push(pid);
             const cleanup = new ProcessCleanup({ gracefulTimeout: 500 });
 
             // When: Force kill via timeout
@@ -135,16 +151,15 @@ describe('ProcessCleanup - Timeout Behavior', () => {
             // Given: Process and zero timeout
             const childProcess = spawn('sleep', ['10']);
             const pid = childProcess.pid!;
+            spawnedPids.push(pid);
 
             const cleanup = new ProcessCleanup({ gracefulTimeout: 0 });
 
             // When: Kill with zero timeout
-            const startTime = Date.now();
             await cleanup.killProcessTree(pid, 'SIGTERM');
-            const duration = Date.now() - startTime;
 
-            // Then: Should complete very quickly (< 500ms)
-            expect(duration).toBeLessThan(500);
+            // Then: Process is dead. That a zero timeout skips the graceful wait
+            // is asserted with fake timers in processCleanup.mocked.test.ts.
             expect(() => process.kill(pid, 0)).toThrow();
         });
 
@@ -156,17 +171,17 @@ describe('ProcessCleanup - Timeout Behavior', () => {
             ]);
 
             const pid = childProcess.pid!;
+            spawnedPids.push(pid);
 
             // Long timeout shouldn't matter if process exits gracefully
             const cleanup = new ProcessCleanup({ gracefulTimeout: 30000 });
 
             // When: Kill with long timeout
-            const startTime = Date.now();
             await cleanup.killProcessTree(pid, 'SIGTERM');
-            const duration = Date.now() - startTime;
 
-            // Then: Should complete quickly (process exited before timeout)
-            expect(duration).toBeLessThan(1000);
+            // Then: Process is dead. The "returned early rather than waiting the
+            // full 30s window" claim is enforced by the 30s suite timeout above —
+            // waiting the window out would fail this test by timing out.
             expect(() => process.kill(pid, 0)).toThrow();
         });
     });
@@ -180,6 +195,7 @@ describe('ProcessCleanup - Timeout Behavior', () => {
             ]);
 
             const pid = childProcess.pid!;
+            spawnedPids.push(pid);
             const cleanup = new ProcessCleanup(); // Default settings
 
             // When: Kill with default settings
@@ -204,15 +220,15 @@ describe('ProcessCleanup - Timeout Behavior', () => {
             ]);
 
             const pid = childProcess.pid!;
+            spawnedPids.push(pid);
             const cleanup = new ProcessCleanup({ gracefulTimeout: 2000 });
 
             // When: Kill with polling
-            const startTime = Date.now();
             await cleanup.killProcessTree(pid, 'SIGTERM');
-            const duration = Date.now() - startTime;
 
-            // Then: Should detect exit before timeout (around 200ms, not 2000ms)
-            expect(duration).toBeLessThan(500);
+            // Then: Process is dead. That polling detects the exit rather than
+            // waiting out the graceful window is asserted with fake timers in
+            // processCleanup-coverage.test.ts.
             expect(() => process.kill(pid, 0)).toThrow();
         });
     });

@@ -27,6 +27,11 @@ payload=$(cat)
 # needs a new token means adding it here too.
 case "$payload" in
     *jest*|*curl*|*wget*|*httpie*|*.tsx*|*mcp__*|*WebFetch*|*WebSearch*) ;;
+    # `npm test` / `npm run test:*` start jest without the string "jest" anywhere
+    # in the command, so 15-jest-concurrent would never see them. Matched on the
+    # two-word literal rather than a bare *test* — that would drag in every path
+    # with "test" in it, which is most of this repo.
+    *"npm test"*|*"npm run test"*) ;;
     *) exit 0 ;;
 esac
 

@@ -94,7 +94,7 @@ npm run test:file -- tests/features/your-feature/yourService.test.ts
 **After completing all steps for a feature:**
 
 ```bash
-# Quick full validation (3-5 min)
+# Quick full validation (~20s — measured 2026-08-13, not the 3-5 min this used to claim)
 npm run test:fast
 ```
 
@@ -120,12 +120,15 @@ npm run test:changed
 ### Validation Commands (Use Before Commit)
 
 ```bash
-# Fast full validation (3-5 min) - NO compile/lint
+# Fast full validation (~20s) - NO compile/lint
 npm run test:fast
 
 # Fast validation by type
-npm run test:unit           # Node tests only (2-3 min)
-npm run test:ui             # React tests only (30s-1min)
+npm run test:unit           # Node tests only (~12s)
+npm run test:ui             # React tests only (~5s)
+
+# All three measured 2026-08-13 on 16 cores. Do not run two of them at once —
+# a concurrent run fails 4-6 suites at random on timeouts (a hook blocks it).
 npm run test:integration    # Integration tests only
 ```
 
