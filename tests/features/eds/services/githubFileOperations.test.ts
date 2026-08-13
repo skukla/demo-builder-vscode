@@ -4,6 +4,8 @@
  * Tests for file operations extracted from GitHubService.
  */
 
+export {};
+
 // Mock Octokit
 const mockOctokitRequest = jest.fn();
 jest.mock('@octokit/core', () => ({

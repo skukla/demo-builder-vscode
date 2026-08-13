@@ -29,13 +29,20 @@ import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getLogger } from '@/core/logging';
-import { ensureDaLiveAuth, getDaLiveAuthService, resolveByomOverlayConfig } from '@/features/eds/handlers/edsHelpers';
+import {
+    ensureDaLiveAuth,
+    getDaLiveAuthService,
+    resolveByomOverlayConfig,
+} from '@/features/eds/handlers/edsHelpers';
 import { ConfigurationService } from '@/features/eds/services/configurationService';
 import {
     createDaLiveServiceTokenProvider,
     DaLiveContentOperations,
 } from '@/features/eds/services/daLiveContentOperations';
-import { resolveStorefrontConfig } from '@/features/eds/services/edsResetParams';
+import {
+    resolveStorefrontConfig,
+    type StorefrontConfigSource,
+} from '@/features/eds/services/edsResetParams';
 import {
     migrateStorefrontNamingIfNeeded,
     type StorefrontMigrationContext,
@@ -164,7 +171,10 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
         // VS Code setting can override.
         let byomOverlayUrl: string | undefined;
         try {
-            const { byomOverlayUrl: baseUrl } = resolveStorefrontConfig(project, demoPackagesConfig.packages);
+            const { byomOverlayUrl: baseUrl } = resolveStorefrontConfig(
+                project,
+                demoPackagesConfig.packages as unknown as StorefrontConfigSource[],
+            );
             byomOverlayUrl = resolveByomOverlayConfig(baseUrl, daLiveOrg, repoName);
         } catch {
             // resolveStorefrontConfig can throw on malformed manifests;
@@ -190,12 +200,15 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
      */
     private async confirmMigration(candidates: MigrationCandidate[]): Promise<boolean> {
         const summary = candidates
-            .map((c) => `  • ${c.projectName}: ${c.daLiveOrg}/${c.daLiveSite} → ${c.daLiveOrg}/${c.repoName}`)
+            .map(
+                (c) =>
+                    `  • ${c.projectName}: ${c.daLiveOrg}/${c.daLiveSite} → ${c.daLiveOrg}/${c.repoName}`,
+            )
             .join('\n');
 
         const choice = await vscode.window.showInformationMessage(
             `Found ${candidates.length} storefront${candidates.length === 1 ? '' : 's'} that need to be migrated to match GitHub repo names. ` +
-            `This preserves all DA.live content (no reset, no upstream re-copy) and takes ~30 seconds per storefront.`,
+                `This preserves all DA.live content (no reset, no upstream re-copy) and takes ~30 seconds per storefront.`,
             { modal: true, detail: summary },
             'Migrate',
             'Cancel',
@@ -221,7 +234,9 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
                 cancellable: false,
             },
             async (progress) => {
-                const tokenProvider = createDaLiveServiceTokenProvider(getDaLiveAuthService(this.context));
+                const tokenProvider = createDaLiveServiceTokenProvider(
+                    getDaLiveAuthService(this.context),
+                );
                 const daLiveContentOps = new DaLiveContentOperations(tokenProvider, logger);
                 const configService = new ConfigurationService(tokenProvider, logger);
 
@@ -309,7 +324,7 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
 
         await this.showWarning(
             `Migrated ${succeeded.length} of ${outcomes.length} storefronts. ` +
-            `${failed.length} failed — check "Demo Builder: User Logs" for details.`,
+                `${failed.length} failed — check "Demo Builder: User Logs" for details.`,
         );
     }
 }

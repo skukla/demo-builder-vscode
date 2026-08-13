@@ -92,7 +92,7 @@ describe('edsHandlers', () => {
             // Given: edsHandlers object
             // When: Checking handler types
             // Then: All handlers should be functions
-            const types = getRegisteredTypes(edsHandlers);
+            const types = getRegisteredTypes(edsHandlers) as Array<keyof typeof edsHandlers>;
             for (const type of types) {
                 expect(typeof edsHandlers[type]).toBe('function');
             }

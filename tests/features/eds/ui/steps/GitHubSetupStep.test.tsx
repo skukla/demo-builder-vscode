@@ -48,7 +48,7 @@ const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 // Default wizard state for GitHub authentication
 const createDefaultState = (githubAuthOverrides?: Partial<WizardState['edsConfig']>): WizardState => ({
-    currentStep: 'github-auth',
+    currentStep: 'storefront-setup',
     projectName: 'test-project',
     adobeAuth: { isAuthenticated: true, isChecking: false },
     componentConfigs: {},

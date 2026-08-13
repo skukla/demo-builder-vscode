@@ -73,12 +73,12 @@ describe('installBlockCollections', () => {
                 async (owner: string, repo: string, path: string) => {
                     if (path === 'component-filters.json' || path === 'component-models.json') return null;
                     if (owner === SOURCE_A.owner && repo === SOURCE_A.repo) {
-                        return { content: sourceACompDef, sha: 'source-a-sha' };
+                        return { content: sourceACompDef, sha: 'source-a-sha', path, encoding: 'base64' };
                     }
                     if (owner === SOURCE_B.owner && repo === SOURCE_B.repo) {
-                        return { content: sourceBCompDef, sha: 'source-b-sha' };
+                        return { content: sourceBCompDef, sha: 'source-b-sha', path, encoding: 'base64' };
                     }
-                    return { content: destCompDef, sha: 'dest-sha' };
+                    return { content: destCompDef, sha: 'dest-sha', path, encoding: 'base64' };
                 },
             );
 
@@ -277,8 +277,8 @@ describe('installBlockCollections', () => {
             mockGithubFileOps.getFileContent.mockImplementation(
                 async (owner: string, repo: string, path: string) => {
                     if (path === 'component-filters.json' || path === 'component-models.json') return null;
-                    if (owner === SOURCE_A.owner) return { content: sourceCompDef, sha: 'source-sha' };
-                    return { content: destCompDef, sha: 'dest-sha' };
+                    if (owner === SOURCE_A.owner) return { content: sourceCompDef, sha: 'source-sha', path, encoding: 'base64' };
+                    return { content: destCompDef, sha: 'dest-sha', path, encoding: 'base64' };
                 },
             );
 
@@ -336,8 +336,8 @@ describe('installBlockCollections', () => {
             mockGithubFileOps.getFileContent.mockImplementation(
                 async (owner: string, repo: string, path: string) => {
                     if (path === 'component-filters.json' || path === 'component-models.json') return null;
-                    if (owner === SOURCE_A.owner) return { content: sourceCompDef, sha: 'source-sha' };
-                    return { content: destCompDef, sha: 'dest-sha' };
+                    if (owner === SOURCE_A.owner) return { content: sourceCompDef, sha: 'source-sha', path, encoding: 'base64' };
+                    return { content: destCompDef, sha: 'dest-sha', path, encoding: 'base64' };
                 },
             );
 
@@ -385,8 +385,8 @@ describe('installBlockCollections', () => {
             mockGithubFileOps.getFileContent.mockImplementation(
                 async (owner: string, repo: string, path: string) => {
                     if (path === 'component-filters.json' || path === 'component-models.json') return null;
-                    if (owner === SOURCE_A.owner) return { content: sourceCompDef, sha: 'source-sha' };
-                    return { content: destCompDef, sha: 'dest-sha' };
+                    if (owner === SOURCE_A.owner) return { content: sourceCompDef, sha: 'source-sha', path, encoding: 'base64' };
+                    return { content: destCompDef, sha: 'dest-sha', path, encoding: 'base64' };
                 },
             );
 
@@ -443,19 +443,19 @@ describe('installBlockCollections', () => {
                 async (owner: string, repo: string, path: string) => {
                     if (owner === SOURCE_A.owner && repo === SOURCE_A.repo) {
                         if (path === 'component-filters.json') {
-                            return { content: sourceAFilters, sha: 'sha-cf-a' };
+                            return { content: sourceAFilters, sha: 'sha-cf-a', path, encoding: 'base64' };
                         }
                         return null;
                     }
                     if (owner === SOURCE_B.owner && repo === SOURCE_B.repo) {
                         if (path === 'component-filters.json') {
-                            return { content: sourceBFilters, sha: 'sha-cf-b' };
+                            return { content: sourceBFilters, sha: 'sha-cf-b', path, encoding: 'base64' };
                         }
                         return null;
                     }
                     // destination
                     if (path === 'component-filters.json') {
-                        return { content: destFilters, sha: 'dest-sha-cf' };
+                        return { content: destFilters, sha: 'dest-sha-cf', path, encoding: 'base64' };
                     }
                     return null;
                 },
@@ -515,18 +515,18 @@ describe('installBlockCollections', () => {
                 async (owner: string, repo: string, path: string) => {
                     if (owner === SOURCE_A.owner && repo === SOURCE_A.repo) {
                         if (path === 'component-filters.json') {
-                            return { content: sourceAFilters, sha: 'sha-cf-a' };
+                            return { content: sourceAFilters, sha: 'sha-cf-a', path, encoding: 'base64' };
                         }
                         return null;
                     }
                     if (owner === SOURCE_B.owner && repo === SOURCE_B.repo) {
                         if (path === 'component-filters.json') {
-                            return { content: sourceBFilters, sha: 'sha-cf-b' };
+                            return { content: sourceBFilters, sha: 'sha-cf-b', path, encoding: 'base64' };
                         }
                         return null;
                     }
                     if (path === 'component-filters.json') {
-                        return { content: destFilters, sha: 'dest-sha-cf' };
+                        return { content: destFilters, sha: 'dest-sha-cf', path, encoding: 'base64' };
                     }
                     return null;
                 },

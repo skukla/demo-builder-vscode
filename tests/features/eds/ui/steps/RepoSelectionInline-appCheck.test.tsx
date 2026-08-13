@@ -131,7 +131,7 @@ describe('RepoSelectionInline - GitHub App Check', () => {
          */
         it('should NOT trigger check for existing repo selection (deferred to StorefrontSetup)', () => {
             // Given: User selects an existing repository
-            const repoMode = 'existing' as const;
+            const repoMode = 'existing' as 'existing' | 'new';
             const _selectedRepo = { name: 'test-repo', fullName: 'test-user/test-repo' };
 
             // When: Evaluating check conditions at GitHubRepoSelectionStep
@@ -354,7 +354,7 @@ describe('RepoSelectionInline - GitHub App Check', () => {
 
         it('should NOT show modal for EXISTING repos (check deferred to StorefrontSetup)', () => {
             // Given: User selects an existing repo
-            const repoMode = 'existing' as const;
+            const repoMode = 'existing' as 'existing' | 'new';
             const _selectedRepo = { name: 'test-repo', fullName: 'test-user/test-repo' };
             const _githubAppStatus: GitHubAppStatus = {
                 isChecking: false,
@@ -484,7 +484,7 @@ describe('RepoSelectionInline - GitHub App Check', () => {
 
         it('should only show status for NEW repos after creation', () => {
             // Given: Different repo modes
-            const existingRepoMode = 'existing' as const;
+            const existingRepoMode = 'existing' as 'existing' | 'new';
             const newRepoMode = 'new' as const;
             const repoCreationState = { isCreated: true, isCreating: false };
 

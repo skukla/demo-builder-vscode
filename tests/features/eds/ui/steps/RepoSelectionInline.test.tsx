@@ -54,7 +54,7 @@ const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const createDefaultState = (overrides?: Partial<EDSConfig>): WizardState => ({
-    currentStep: 'storefront',
+    currentStep: 'storefront-setup',
     projectName: 'test-project',
     adobeAuth: { isAuthenticated: true, isChecking: false },
     componentConfigs: {},

@@ -98,6 +98,7 @@ describe('applyAuthoringExperienceFlip', () => {
         return applyAuthoringExperienceFlip(project, experience, {
             context: mockContext,
             logger: mockLogger,
+            saveProject: jest.fn().mockResolvedValue(undefined),
         });
     }
 

@@ -54,6 +54,7 @@ describe('DaLiveConfigService - mutations', () => {
         };
 
         mockLogger = {
+            trace: jest.fn(),
             debug: jest.fn(),
             info: jest.fn(),
             warn: jest.fn(),

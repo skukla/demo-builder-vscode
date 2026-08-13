@@ -9,6 +9,8 @@
  * - HTTP 200 synchronous success
  */
 
+import type { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+
 // Mock vscode module
 jest.mock('vscode');
 
@@ -83,7 +85,7 @@ describe('HelixService - Preview/Publish', () => {
         global.fetch = mockFetch;
 
         const module = await import('@/features/eds/services/helixService');
-        service = new module.HelixService(undefined, mockGitHubTokenService, mockDaLiveTokenProvider);
+        service = new module.HelixService(undefined, mockGitHubTokenService as unknown as GitHubTokenService, mockDaLiveTokenProvider);
     });
 
     afterEach(() => {

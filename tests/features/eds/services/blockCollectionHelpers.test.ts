@@ -72,9 +72,9 @@ describe('installBlockCollections (single library)', () => {
                 if (path === 'component-filters.json' || path === 'component-models.json') return null;
                 if (owner === 'stephen-garner-adobe' && repo === 'isle5') {
                     if (sourceComponentDef === null) return null;
-                    return { content: sourceComponentDef, sha: 'source-sha' };
+                    return { content: sourceComponentDef, sha: 'source-sha', path, encoding: 'base64' };
                 }
-                return { content: destComponentDef, sha: 'dest-sha' };
+                return { content: destComponentDef, sha: 'dest-sha', path, encoding: 'base64' };
             },
         );
 

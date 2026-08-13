@@ -194,7 +194,7 @@ describe('Storefront Setup - GitHub App Check (Phase 2.5)', () => {
                 selectedRepo: { name: 'test', fullName: 'user/test', htmlUrl: 'https://github.com/user/test' },
             };
             const newRepoConfig = {
-                repoMode: 'new' as const,
+                repoMode: 'new' as 'new' | 'existing',
                 createdRepo: { owner: 'user', name: 'new-repo', url: 'https://github.com/user/new-repo', fullName: 'user/new-repo' },
             };
 

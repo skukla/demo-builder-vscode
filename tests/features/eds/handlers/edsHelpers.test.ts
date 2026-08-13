@@ -178,7 +178,9 @@ describe('edsHelpers', () => {
             const services = getGitHubServices(context);
 
             // Then: Should pass secrets to the token service
-            expect((services.tokenService as unknown as { secrets: unknown }).secrets).toBe(context.context.secrets);
+            expect((services.tokenService as unknown as { secrets: unknown }).secrets).toBe(
+                context.context.secrets
+            );
         });
     });
 
@@ -236,7 +238,7 @@ describe('edsHelpers', () => {
         it('should clear cached DaLiveAuthService and call dispose', () => {
             // Given: A cached DaLiveAuthService
             const context = createMockHandlerContext();
-            const firstService = getDaLiveAuthService(context);
+            const firstService = getDaLiveAuthService(context.context);
             const disposeMock = (firstService as unknown as { dispose: jest.Mock }).dispose;
 
             // When: Clearing the cache
@@ -246,7 +248,7 @@ describe('edsHelpers', () => {
             expect(disposeMock).toHaveBeenCalled();
 
             // And: Next call should create a new instance
-            const secondService = getDaLiveAuthService(context);
+            const secondService = getDaLiveAuthService(context.context);
             expect(secondService).not.toBe(firstService);
         });
     });
@@ -297,7 +299,7 @@ describe('edsHelpers', () => {
     describe('validateDaLiveToken - Expiry Detection', () => {
         it('should return invalid when token has expired', () => {
             // Given: A token that has already expired
-            const pastTime = Date.now() - (2 * 60 * 60 * 1000); // 2 hours ago
+            const pastTime = Date.now() - 2 * 60 * 60 * 1000; // 2 hours ago
             const token = createTestJwt({
                 email: 'test@adobe.com',
                 client_id: 'darkalley',

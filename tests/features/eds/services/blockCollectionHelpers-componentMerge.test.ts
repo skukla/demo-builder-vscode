@@ -68,9 +68,9 @@ describe('installBlockCollections (single library)', () => {
                 if (path === 'component-filters.json' || path === 'component-models.json') return null;
                 if (owner === 'stephen-garner-adobe' && repo === 'isle5') {
                     if (sourceComponentDef === null) return null;
-                    return { content: sourceComponentDef, sha: 'source-sha' };
+                    return { content: sourceComponentDef, sha: 'source-sha', path, encoding: 'base64' };
                 }
-                return { content: destComponentDef, sha: 'dest-sha' };
+                return { content: destComponentDef, sha: 'dest-sha', path, encoding: 'base64' };
             },
         );
 
@@ -331,18 +331,18 @@ describe('installBlockCollections (single library)', () => {
                     if (path === 'component-models.json') return null;
                     if (owner === 'stephen-garner-adobe' && repo === 'isle5') {
                         if (path === 'component-filters.json') {
-                            if (opts.sourceFilters === null) return null;
-                            return { content: opts.sourceFilters, sha: 'sha-cf' };
+                            if (opts.sourceFilters == null) return null;
+                            return { content: opts.sourceFilters, sha: 'sha-cf', path, encoding: 'base64' };
                         }
-                        if (opts.sourceCompDef === null) return null;
-                        return { content: opts.sourceCompDef ?? null, sha: 'sha-cd' };
+                        if (opts.sourceCompDef == null) return null;
+                        return { content: opts.sourceCompDef, sha: 'sha-cd', path, encoding: 'base64' };
                     }
                     // destination
                     if (path === 'component-filters.json') {
                         if (opts.destFilters === null || opts.destFilters === undefined) return null;
-                        return { content: opts.destFilters, sha: 'dest-sha-cf' };
+                        return { content: opts.destFilters, sha: 'dest-sha-cf', path, encoding: 'base64' };
                     }
-                    return { content: opts.destCompDef ?? createDestComponentDef(), sha: 'dest-sha' };
+                    return { content: opts.destCompDef ?? createDestComponentDef(), sha: 'dest-sha', path, encoding: 'base64' };
                 },
             );
 

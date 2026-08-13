@@ -13,6 +13,7 @@ import { ProjectSetupContext } from '@/features/project-creation/services/Projec
  */
 export function createMockLogger(): Logger {
     return {
+        trace: jest.fn(),
         info: jest.fn(),
         error: jest.fn(),
         warn: jest.fn(),
@@ -22,11 +23,13 @@ export function createMockLogger(): Logger {
 
 /**
  * Creates a mock HandlerContext for testing
- * 
+ *
  * Provides all essential HandlerContext properties with sensible defaults.
  * Can be overridden via the overrides parameter for specific test needs.
  */
-export function createMockHandlerContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
+export function createMockHandlerContext(
+    overrides?: Partial<HandlerContext>
+): jest.Mocked<HandlerContext> {
     return {
         logger: createMockLogger() as any,
         debugLogger: createMockLogger() as any,
@@ -52,7 +55,7 @@ export function createMockHandlerContext(overrides?: Partial<HandlerContext>): j
 
 /**
  * Creates a mock ProjectSetupContext for testing
- * 
+ *
  * Provides a fully initialized ProjectSetupContext with mock dependencies.
  * All parameters can be customized via the overrides object.
  */
@@ -66,6 +69,7 @@ export function createMockSetupContext(
 ): ProjectSetupContext {
     const mockHandlerContext = overrides?.handlerContext || createMockHandlerContext();
     const mockRegistry: ComponentRegistry = overrides?.registry || {
+        version: '1.0.0',
         envVars: sharedEnvVars,
         components: {
             frontends: [],
@@ -80,16 +84,12 @@ export function createMockSetupContext(
         name: 'test-project',
         path: '/test/path',
         status: 'ready',
-        created: new Date().toISOString(),
-    } as Project;
+        created: new Date(),
+        lastModified: new Date(),
+    };
     const mockConfig = overrides?.config || {};
-    
-    return new ProjectSetupContext(
-        mockHandlerContext,
-        mockRegistry,
-        mockProject,
-        mockConfig,
-    );
+
+    return new ProjectSetupContext(mockHandlerContext, mockRegistry, mockProject, mockConfig);
 }
 
 /**
