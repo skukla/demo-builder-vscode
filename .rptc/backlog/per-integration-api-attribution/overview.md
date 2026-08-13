@@ -81,7 +81,7 @@ below stands, uncontested.**
 branch, when the work had been merged straight to develop. Plan status lives in the CODE.)*
 
 **Taxonomy already shipped — it constrains the resolver.**
-[`../../backlog/2026-07-13-deterministic-integrations.md`](../../backlog/2026-07-13-deterministic-integrations.md)
+[`../2026-07-13-deterministic-integrations.md`](../2026-07-13-deterministic-integrations.md)
 Layer 1 is SHIPPED: **mesh + catalog** integrations have declared `requiredApis`, shown-not-picked,
 auto-subscribed at deploy; only **custom (blank shell) + import (repo)** get an interactive picker. So
 "Added for *this* integration" rows exist **only for custom/import kinds** — a mesh or catalog
@@ -99,7 +99,7 @@ build a second one.
 
 **Migration precedent already shipped.** `buildEditModeIntegrationState` (`useWizardState`) already
 rehydrates flat `additionalConsoleApis` as `selectedConsoleApis.__existing__`
-([`../../backlog/2026-06-21-appbuilder-component-first-class-persistence.md`](../../backlog/2026-06-21-appbuilder-component-first-class-persistence.md)).
+([`../2026-06-21-appbuilder-component-first-class-persistence.md`](../2026-06-21-appbuilder-component-first-class-persistence.md)).
 Step 01's migration copies working code, not a sketch.
 
 **Adjacent, NOT incorporated** (tracked separately; no dependency either way):

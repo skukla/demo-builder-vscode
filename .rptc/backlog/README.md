@@ -28,25 +28,24 @@ draft  →  ready  →  active  →  shipped/dropped
   └─ idea capture, may still change shape
 ```
 
-> **Index last reconciled: 2026-08-13.** Every link resolved mechanically: 62 links, 0 dead,
-> 0 unreferenced items. The checker was proved by injecting a link known to be broken and
-> confirming it was caught, so "0 dead" is a result rather than a silent pass.
+> **Index last reconciled: 2026-08-13** (second pass — the first fixed links and missed
+> semantics). Verified in BOTH directions with a control for each: 65 links, 0 dead; 38 items,
+> every one reachable from a `####` entry or as a numbered slice inside one.
 >
-> **Same pass audited `.rptc/plans/`, which held 11 directories while the handoff said nothing
-> was active.** Five had SHIPPED and were never archived — `integrations-surface` (whose own
-> header still read "no code written yet" two weeks after the screen shipped),
-> `integrations-grid`, `integrations-destination-control`, `storefront-delivery-probe` and
-> `pdp-prerender-validation` (open-looking until you read its handoff). Five were paused or
-> gated and moved here. `data-installer` is the only genuinely active plan. Every verdict came
-> from an artifact in `src/` or a commit, because several status lines were stale.
+> The first pass checked only that links resolve. That is half a reconcile, and it hid four
+> things: three plan directories moved in from `plans/` with **no index entry at all**
+> (`appbuilder-deployable-model`, `integrations-host-contract`,
+> `per-integration-api-attribution` — now filed), `ai-surface-coverage` filed under **Live
+> defects** because it was inserted against a convenient anchor rather than a correct one, and
+> `hybrid-storefront-model` sitting under "In flight" while gated on a live B2B backend.
+> A bulk path-rewrite had also produced `../backlog/…` links from files already inside
+> `backlog/` — resolvable, so invisible to a dead-link check, and collapsed now.
 >
-> An earlier "32 entries vs 34 files" discrepancy was a MEASUREMENT error, not a gap: some
-> entries link two files and plan directories count differently. Nothing was missing. Recorded
-> because a wrong count in a reconcile note sends the next person hunting for nothing.
+> **Section A was renamed.** "In flight (active front)" is a contradiction in a backlog: by
+> definition nothing here is in progress. It now says so.
 >
-> **Section C is absent on purpose.** It was "Ready to pick up", emptied when
-> `mcp-affordance-coverage` shipped, and was removed rather than left hollow. Letters are not
-> renumbered so older references keep resolving.
+> `.rptc/plans/` holds `data-installer` and this handoff's sibling. Five shipped plans were
+> archived to `complete/` in the same pass and `mesh-staleness-scope` was dropped outright.
 >
 > Descriptions still drift between audits — when in doubt, trust the code and `git log`.
 
@@ -72,7 +71,7 @@ Also resolved since last index (now archived to `../complete/`): **oversized tes
 
 ## Active backlog
 
-### A. In flight (active front)
+### A. Active front (nearest to actionable — nothing here is in progress)
 
 #### App Builder app family — attach a deployable app to a demo ([`2026-06-17-appbuilder-app-deploy-spine.md`](2026-06-17-appbuilder-app-deploy-spine.md))
 
@@ -108,10 +107,6 @@ User-confirmed 2026-07-15: the product noun for the custom, action-carrying inte
 
 **✅ SHIPPED 2026-07-15** (same-day pull-forward — it blocked the D3 live checks). Landed the "already has a mesh" → one-shot retry-as-update fallback in `deployMeshComponent`, the blank-error fix (`formatAdobeCliError` trims the leading-arrow newline), and the review's inverse-gap find (`edsResetMeshHelper` sources `existingMeshId` from remote truth). Residual noted in the item: `createHandler`'s duplicate create pipeline + drifting signature detector (architecture-duplication candidate).
 
-#### Hybrid storefront — Tier 2 (B2B+B2C in one site) ([`hybrid-storefront-model/`](../backlog/hybrid-storefront-model/overview.md) — still in `.rptc/plans/`)
-
-One CitiSignal storefront serves both B2C individuals and B2B company accounts by customer type at login, on the `boilerplate-b2b-template` base with branding as an overlay (no fork). **Functionally complete** on `develop` — hybrid merge (`b9c31575`), B2B-readiness detection (`24656460`, `c3cd0bbd`), account-chrome overlay, config-flag injection (ADR-009, `bd90c96d`). **⛔ Gated on live login-UX verification**: confirm an individual customer sees no B2B nav rows, a company user does, and B2C is not regressed. The one plan dir that legitimately stays active. Step checks in [`step-02.md`](../backlog/hybrid-storefront-model/step-02.md).
-
 ### B. Sequencing / blocked
 
 #### Prereqs architecture reframe — two-tier (Path A) ([`2026-06-11-prereqs-architecture-reframe.md`](2026-06-11-prereqs-architecture-reframe.md))
@@ -134,6 +129,38 @@ Of the 13 generated skills, **zero** cover diagnosis — every one is a do-this-
 
 `componentConfigs` is keyed by who CONSUMES a value, not by what the value IS, so one fact is stored once per declaring component. Measured 2026-08-11: **17 of 25** declared env vars have more than one owner; 6 are the Commerce scope keys (single-sourced 2026-08-11), leaving **11**. The drift mechanism is NOT a second writer — there is none; it is that Configure's fan-out targets come from `selectedComponents`, so a component holding a copy but missing from the selection lists never gets updated (the same gap `reconcileComponentSelections` exists for). That is **key-agnostic**, so all 11 are exposed. Two candidate fixes: widen the fan-out target set (one change, every key) or single-source per key (what scope got). **Do the fan-out audit first** — it may make most of the per-key work unnecessary. **Not blocked.**
 
+#### AI surface coverage — tools and skills vs features ([`ai-surface-coverage/`](ai-surface-coverage/))
+
+Paused 2026-08-13 with the research done and seven steps written; deferred so a live defect
+could go first. Measured: **58 tools, 14 skills, 67 handlers** across five feature maps, 26
+exposed by descriptor rows. The apparent gap is mostly not one — reading the 41 handlers
+without a row splits them into UI navigation, fire-and-forget dispatchers, and capability
+already reachable through one of the 32 tools registered outside the descriptor tables. That
+turned up a disqualifier `mcp-tool-authoring` does not state: a handler can be perfectly
+headless and still unexposable because its return carries the DISPATCH rather than the
+OUTCOME (`handleSyncStorefront` is two lines that run a command and return success), so
+exposing it hands an agent a tool that cannot fail. Real gaps are on the guidance side —
+authentication has 8 tools and no skill, mesh has 3 and none dedicated, prerequisites has no
+surface at all. Step 01 is mechanical and the worklist of all 41 is written; backing research
+is `.rptc/research/ai-surface-coverage/research.md`. **Not blocked.**
+
+#### App Builder deployable model — D2–D6 ([`appbuilder-deployable-model/`](appbuilder-deployable-model/overview.md))
+
+Moved from `plans/` 2026-08-13: D1 is built and D2–D6 have not started, so it is not active
+work. ADR-011's keyed `appBuilderComponents` model is shipped; what remains is the rest of the
+deployable spine. **Track A pre-positions `getWorkspaceCredential`** — `dead-code-scan` will
+report it as an unused export with zero callers and it is NOT cruft; the D2 plan names it as
+the pattern five new passthroughs mirror. Not blocked.
+
+#### Integrations host contract — declare what hosting the wizard flow requires ([`integrations-host-contract/`](integrations-host-contract/overview.md))
+
+Moved from `plans/` 2026-08-13, and it has REAL remaining work: `showIntegrations.ts` still
+hand-lists the wizard handlers the integrations surface reuses (19 references, verified
+2026-08-13). That list is a copy of a contract the flow owns, so it drifts every time the flow
+grows, and the guard tests only catch the drift after someone has written the failing code —
+which happened four times on 2026-07-31 before the plan was written. Nothing declares "hosting
+this flow requires X". Not blocked.
+
 ### D. Deferred by design (gated on an external condition)
 
 #### Retire `legacyLookupKey` infrastructure — DA/repo unification cleanup ([`2026-06-08-rename-existing-da-content-to-repo-name.md`](2026-06-08-rename-existing-da-content-to-repo-name.md))
@@ -151,6 +178,17 @@ When an SC deletes a SKU, the cached PDP serves the template and the drop-in get
 #### App Builder component — edit-mode rehydration + ReviewStep visibility ([`2026-06-21-appbuilder-component-first-class-persistence.md`](2026-06-21-appbuilder-component-first-class-persistence.md))
 
 Rewritten 2026-07-09: two of the three original claims were already resolved on `develop` (`buildProjectConfig` serialization EXISTS; custom-URL provisioning EXISTS via creation Phase 3b + the rebuilt `CustomIntegrationRow`; `showCustomDoor` is obsolete). Remaining: edit-mode rehydration (nothing persists the selections to rehydrate FROM), the live ReviewStep bug (reads always-empty `components.appBuilder`, so hand-picked integrations are invisible on Review), and the coupled **D3 dual-flow removal**.
+
+#### Hybrid storefront — Tier 2 (B2B+B2C in one site) ([`hybrid-storefront-model/`](hybrid-storefront-model/overview.md) — still in `.rptc/plans/`)
+
+One CitiSignal storefront serves both B2C individuals and B2B company accounts by customer type at login, on the `boilerplate-b2b-template` base with branding as an overlay (no fork). **Functionally complete** on `develop` — hybrid merge (`b9c31575`), B2B-readiness detection (`24656460`, `c3cd0bbd`), account-chrome overlay, config-flag injection (ADR-009, `bd90c96d`). **⛔ Gated on live login-UX verification**: confirm an individual customer sees no B2B nav rows, a company user does, and B2C is not regressed. The one plan dir that legitimately stays active. Step checks in [`step-02.md`](hybrid-storefront-model/step-02.md).
+
+#### Per-integration API attribution — step 07 ([`per-integration-api-attribution/`](per-integration-api-attribution/overview.md))
+
+Moved from `plans/` 2026-08-13. Steps 01–05 **shipped**, step 06 **withdrawn** (the capability
+it existed for turned out not to exist). Step 07 is **RELEASE-gated, not code-gated**: no
+shipped build reads `componentApiPicks`, so retiring the flat write today would lose API picks
+for anyone still on `v1.0.0-beta.123`. Do it once that build is out of circulation.
 
 ### E. Larger / untouched
 
@@ -250,21 +288,6 @@ silent, so it carries a logging section:** today the freshness check logs only o
 stale branch, so "checked and fine" and "never ran" are the same silence — the
 `|| echo "none"` ambiguity in another costume, and the reason the under-firing case is
 invisible. **Step 0 is reproducing the silent case.** Not blocked.
-
-#### AI surface coverage — tools and skills vs features ([`ai-surface-coverage/`](ai-surface-coverage/))
-
-Paused 2026-08-13 with the research done and seven steps written; deferred so a live defect
-could go first. Measured: **58 tools, 14 skills, 67 handlers** across five feature maps, 26
-exposed by descriptor rows. The apparent gap is mostly not one — reading the 41 handlers
-without a row splits them into UI navigation, fire-and-forget dispatchers, and capability
-already reachable through one of the 32 tools registered outside the descriptor tables. That
-turned up a disqualifier `mcp-tool-authoring` does not state: a handler can be perfectly
-headless and still unexposable because its return carries the DISPATCH rather than the
-OUTCOME (`handleSyncStorefront` is two lines that run a command and return success), so
-exposing it hands an agent a tool that cannot fail. Real gaps are on the guidance side —
-authentication has 8 tools and no skill, mesh has 3 and none dedicated, prerequisites has no
-surface at all. Step 01 is mechanical and the worklist of all 41 is written; backing research
-is `.rptc/research/ai-surface-coverage/research.md`. **Not blocked.**
 
 #### `export_project_settings` ignores `includeSecrets` ([`2026-08-11-export-settings-ignores-include-secrets.md`](2026-08-11-export-settings-ignores-include-secrets.md))
 
