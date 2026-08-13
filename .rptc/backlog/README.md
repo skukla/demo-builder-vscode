@@ -356,6 +356,30 @@ stale branch, so "checked and fine" and "never ran" are the same silence — the
 `|| echo "none"` ambiguity in another costume, and the reason the under-firing case is
 invisible. **Step 0 is reproducing the silent case.** Not blocked.
 
+#### Nothing typechecks test files ([`2026-08-13-test-files-are-not-typechecked.md`](2026-08-13-test-files-are-not-typechecked.md))
+
+Filed 2026-08-13 from the Data Installer session, re-verified here before filing.
+`tsconfig.json` excludes `tests/**/*` and both jest projects transform with `@swc/jest`, which
+strips types and checks nothing — so **a fixture can invent a field that does not exist on the
+interface it claims, and both `tsc` and the suite pass.** Not theoretical: `prepareImport` read
+`project.stack?.backend`, a shape that exists only in wizard state (persisted projects use
+`componentSelections.backend`, as six other readers do), so **every import and dry run on every
+real project** returned "no Adobe Commerce backend". The fixtures carried the same invented
+shape and agreed with the bug; a human pressing the button found it (`3d074706`). Measured
+here: **802 errors across 248 files, all in `tests/`, 0 in `src/`** — but that is an upper
+bound from a naive config, and ~110 of them are `TS2686`/`TS2305` shapes that a real
+`tsconfig.test.json` would likely erase without touching a test. **Step 1 is re-measuring with
+a proper config, then bucketing a sample into real-bug vs deliberate-partial** — that ratio
+decides whether the sweep is worth doing at all. **The `src/: 0` is not a clean bill of
+health**: it means zero errors that survive `src`'s own casts, and the bug that prompted this
+typechecked cleanly for its whole life behind `project as { stack?: … }`. Sized 2026-08-13:
+**127 `as {` casts across 77 files**, of which only 6 are provably benign by pattern — the rest
+need reading, since no grep distinguishes "narrowing something genuinely untyped" from
+"asserting a shape over a value that already had one". A cheap independent partial ships
+regardless: delete the casts that sit on already-typed values and the consuming side starts
+being checked again. **Do not widen `tsconfig.json`'s `include`** — CI would block every PR on
+day one. Not blocked.
+
 #### App Builder attach — Model A seed ([`2026-06-15-integration-service-cleanup-and-discovery-token.md`](2026-06-15-integration-service-cleanup-and-discovery-token.md))
 
 Effort 1 (remove the dormant `integration-service` + `appBuilderApps` mechanism) **shipped** on

@@ -238,6 +238,8 @@ not think of**, and its sibling: **recording an error instead of fixing it.**
 | "the concurrency guard is safe to ship" | it made `router.test.ts` itself contention-sensitive — 6/6 failures | running the contention harness against it |
 | "the shared socket root is the leading explanation" | a mechanism plus a timestamp correlation, never reproduced | asking what would falsify it |
 | "the record is cleaned up" | the hygiene scan cannot see bare-path references | the user asking, then one `grep` |
+| **"gate green" — reported four times** | the fixtures carried the same invented shape as the code, and NOTHING typechecks test files (`tsconfig` excludes them, `@swc/jest` strips types). The suite agreed with the bug. | a human pressing the button |
+| "`src/` has 0 type errors" | true, and it means *0 that survive `src`'s own casts* — the bug typechecked cleanly for its whole life behind `project as { stack?: … }` | the peer session, after the number was already filed |
 
 Four of those five are from 2026-08-13 and three were caught by somebody else asking a plain
 question. The instrument you build to check your work is part of what needs checking: the
