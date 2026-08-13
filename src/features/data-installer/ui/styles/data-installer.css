@@ -337,6 +337,15 @@
     color: var(--spectrum-global-color-red-600);
 }
 
+/* The armed reset confirmation. An accent BORDER, not a filled banner — that is
+   the convention here (see OrgContextNotice); saturated fills are not used. */
+.datapack-import-danger {
+    padding: 8px 12px;
+    border-left: 2px solid var(--spectrum-global-color-red-600);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
 /* Dry-run verdict. Not styled as an error: a refusal here is the answer the
    button was pressed for, and the service's wording below it is the payload. */
 .datapack-import-verdict {

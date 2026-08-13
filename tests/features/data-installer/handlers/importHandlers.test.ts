@@ -28,6 +28,14 @@ import type { HandlerContext } from '@/types/handlers';
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
 }));
+// `PollingService` reads the GLOBAL logger at construction, and the extension
+// host initializes that at activation — which no handler test does. Without this
+// the detached watch dies in its own try/catch and simply never starts, showing
+// up as "watchImportJob was not called" rather than as a logger error.
+jest.mock('@/core/logging/debugLogger', () => ({
+    ...jest.requireActual('@/core/logging/debugLogger'),
+    getLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
+}));
 jest.mock('@/features/data-installer/services/dataInstallerWriteClient');
 jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),
@@ -101,11 +109,12 @@ const PAYLOAD = {
 function happyClient() {
     const validateImport = jest.fn().mockResolvedValue({ valid: true });
     const startImport = jest.fn().mockResolvedValue({ activationId: 'act-1' });
+    const startDelete = jest.fn().mockResolvedValue({ activationId: 'act-9' });
     const checkCredentials = jest.fn().mockResolvedValue({ usable: true });
     MockedWriteClient.mockImplementation(
-        () => ({ validateImport, startImport, checkCredentials }) as never,
+        () => ({ validateImport, startImport, startDelete, checkCredentials }) as never,
     );
-    return { validateImport, startImport, checkCredentials };
+    return { validateImport, startImport, startDelete, checkCredentials };
 }
 
 describe('start-datapack-import', () => {
@@ -365,6 +374,76 @@ describe('validate-datapack-import', () => {
 
         expect(result.success).toBe(false);
         expect(validateImport).not.toHaveBeenCalled();
+    });
+});
+
+describe('reset-datapack', () => {
+    /** A reset only proceeds with an explicit confirm — see the gate test. */
+    const CONFIRMED = { ...PAYLOAD, confirm: true };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        setupSettings();
+        mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} });
+    });
+
+    it('removes the data rather than importing it', async () => {
+        const { startDelete, startImport } = happyClient();
+        const { context } = makeContext();
+
+        const result = await importHandlers['reset-datapack'](context, CONFIRMED);
+
+        expect(startDelete).toHaveBeenCalled();
+        expect(startImport).not.toHaveBeenCalled();
+        expect(result.success).toBe(true);
+    });
+
+    // A reset is destructive and irreversible, so it requires the same explicit
+    // opt-in the MCP action tools use. Nothing removes data by default.
+    it('refuses without an explicit confirm', async () => {
+        const { startDelete } = happyClient();
+        const { context } = makeContext();
+
+        const result = await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: false });
+
+        expect(startDelete).not.toHaveBeenCalled();
+        expect(result.success).toBe(false);
+    });
+
+    it('validates before removing, as the import path does', async () => {
+        const { validateImport, startDelete } = happyClient();
+        const { context } = makeContext();
+
+        await importHandlers['reset-datapack'](context, CONFIRMED);
+
+        expect(validateImport.mock.invocationCallOrder[0]).toBeLessThan(
+            startDelete.mock.invocationCallOrder[0],
+        );
+    });
+
+    // The seam test: the runner watches a reset with no changes, because a reset
+    // is an activation id like any other.
+    it('watches the reset with the unchanged runner', async () => {
+        happyClient();
+        const { context } = makeContext();
+
+        await importHandlers['reset-datapack'](context, CONFIRMED);
+
+        // The watch is detached and its own setup awaits the guard, so give it
+        // more than one tick before asserting it started.
+        await new Promise((r) => setTimeout(r, 25));
+        expect(mockedWatch).toHaveBeenCalledWith(
+            expect.objectContaining({ activationId: 'act-9' }),
+        );
+    });
+
+    it('records the reset so the panel can be closed', async () => {
+        happyClient();
+        const { context, stores } = makeContext();
+
+        await importHandlers['reset-datapack'](context, CONFIRMED);
+
+        expect(stores.globalState.update).toHaveBeenCalled();
     });
 });
 

@@ -135,6 +135,51 @@ describe('DataInstallerWriteClient', () => {
         });
     });
 
+    // The reset. Same endpoints, same async pattern, one field different — which
+    // is why the runner needs no changes to watch it.
+    describe('startDelete', () => {
+        it('sends operation_mode delete to the same async action', async () => {
+            const fetchImpl = ok({ activation_id: 'a'.repeat(32) }, 202);
+
+            const result = await makeClient(fetchImpl).startDelete(REQUEST);
+
+            const [url, init] = fetchImpl.mock.calls[0];
+            expect(String(url)).toBe(`${BASE}/process-datapack-async`);
+            expect(JSON.parse(init.body).operation_mode).toBe('delete');
+            expect(result.activationId).toBe('a'.repeat(32));
+        });
+
+        it('carries the same identity, instance and types an import would', async () => {
+            const fetchImpl = ok({ activation_id: 'x' }, 202);
+
+            await makeClient(fetchImpl).startDelete(REQUEST);
+
+            expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toMatchObject({
+                datapack_name: 'bodea',
+                version: 'main',
+                commerce_instance: 'whatever-the-user-typed',
+                data_types: ['categories', 'products'],
+            });
+        });
+
+        it('refuses an empty type list before the network, as import does', async () => {
+            const fetchImpl = ok({ activation_id: 'x' }, 202);
+
+            await expect(
+                makeClient(fetchImpl).startDelete({ ...REQUEST, dataTypes: [] }),
+            ).rejects.toBeInstanceOf(DataInstallerInputError);
+            expect(fetchImpl).not.toHaveBeenCalled();
+        });
+
+        it('fails when a 202 carries no activation id', async () => {
+            const fetchImpl = ok({ success: true }, 202);
+
+            await expect(makeClient(fetchImpl).startDelete(REQUEST)).rejects.toBeInstanceOf(
+                DataInstallerApiError,
+            );
+        });
+    });
+
     describe('validateImport', () => {
         it('uses the SYNCHRONOUS action with operation_mode validate', async () => {
             const fetchImpl = ok({ success: true });

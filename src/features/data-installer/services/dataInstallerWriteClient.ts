@@ -52,6 +52,9 @@ export interface ImportRequest {
     credentials: CommerceCredentials;
 }
 
+/** The write modes this client drives. `export` belongs to Stage 3. */
+type WriteMode = 'import' | 'validate' | 'delete';
+
 /** Whether a credential pair actually reaches its instance. */
 export interface CredentialCheck {
     usable: boolean;
@@ -150,11 +153,42 @@ export class DataInstallerWriteClient {
         return start;
     }
 
+    /**
+     * Remove this datapack's data from the instance — the RESET.
+     *
+     * Identical to {@link startImport} but for `operation_mode`, and that is the
+     * point: same endpoint, same body, same 202-with-an-activation-id, so the job
+     * runner watches it with no changes at all. The service supplies its own
+     * dependency ordering for delete (a different order from import, covering the
+     * same 21 data types), so nothing here has to reason about what to remove
+     * first.
+     *
+     * **There is no confirmation in this layer and no undo in the service.** The
+     * caller owns asking; by the time this is called the decision is made.
+     */
+    async startDelete(request: ImportRequest): Promise<ImportStart> {
+        if (request.dataTypes.length === 0) {
+            throw new DataInstallerInputError(
+                'Select at least one data type to remove. The service returns a 400 when the type list is omitted.',
+            );
+        }
+        const body = await this.send('process-datapack-async', request, 'delete');
+        const start = parseImportStart(body);
+        if (!start) {
+            throw new DataInstallerApiError(
+                'The service accepted the reset but returned no activation id, so its progress cannot be followed.',
+                202,
+                'process-datapack-async',
+            );
+        }
+        return start;
+    }
+
     /** POST one request, mapping failures without ever echoing a credential. */
     private async send(
         action: string,
         request: ImportRequest,
-        mode: 'import' | 'validate',
+        mode: WriteMode,
         opts: { treat400AsVerdict?: boolean } = {},
     ): Promise<unknown> {
         const url = actionUrl(this.deps.baseUrl, action);
@@ -186,7 +220,7 @@ export class DataInstallerWriteClient {
 }
 
 /** The wire body. The only module besides the parsers that writes snake_case. */
-function buildBody(request: ImportRequest, mode: 'import' | 'validate'): Record<string, unknown> {
+function buildBody(request: ImportRequest, mode: WriteMode): Record<string, unknown> {
     return {
         datapack_name: request.id.name,
         version: request.id.version,

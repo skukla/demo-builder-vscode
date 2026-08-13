@@ -64,8 +64,11 @@ export function ImportDatapackModal({
     const [commerceInstance, setCommerceInstance] = useState('');
     const [selected, setSelected] = useState<string[]>([]);
     const [watching, setWatching] = useState(true);
+    // Pressing Reset arms this; only the armed press may send `confirm`.
+    const [resetArmed, setResetArmed] = useState(false);
 
     const start = useDataInstallerRequest<{ activationId: string }>('start-datapack-import');
+    const reset = useDataInstallerRequest<{ activationId: string }>('reset-datapack');
     const dryRun = useDataInstallerRequest<{ valid: boolean; reason?: string }>(
         'validate-datapack-import',
     );
@@ -89,8 +92,9 @@ export function ImportDatapackModal({
         return () => clearInterval(timer);
     }, [running, watching, loadStatus]);
 
-    // Pick the job up as soon as one is accepted.
-    const startedActivation = start.value?.activationId;
+    // Pick the job up as soon as one is accepted. A reset is the same kind of job
+    // — same activation id, same runner, same record — so it is watched the same.
+    const startedActivation = start.value?.activationId ?? reset.value?.activationId;
     useEffect(() => {
         if (startedActivation) {
             loadStatus({});
@@ -124,6 +128,14 @@ export function ImportDatapackModal({
         start.load(requestBody());
     }, [start, requestBody]);
 
+    const confirmReset = useCallback((): void => {
+        setResetArmed(false);
+        setWatching(true);
+        // `confirm` is added HERE and nowhere else. The handler refuses without
+        // it, so the armed press is the only path that can remove data.
+        reset.load({ ...requestBody(), confirm: true });
+    }, [reset, requestBody]);
+
     const canStart = commerceInstance.length > 0 && selected.length > 0 && !start.loading;
 
     return (
@@ -133,39 +145,29 @@ export function ImportDatapackModal({
             fitContent
             onClose={onClose}
             closeLabel="Close"
-            actionButtons={
-                running && watching
-                    ? [
-                          {
-                              // NOT "Cancel" — no endpoint exists to cancel with.
-                              label: 'Stop watching',
-                              variant: 'secondary' as const,
-                              onPress: () => setWatching(false),
-                          },
-                      ]
-                    : [
-                          {
-                              // A dry run, because there is otherwise no way to
-                              // check a request without writing: starting chains
-                              // validate and start.
-                              label: 'Validate',
-                              variant: 'secondary' as const,
-                              onPress: validate,
-                              isDisabled: !canStart,
-                          },
-                          {
-                              label: 'Start import',
-                              variant: 'accent' as const,
-                              onPress: startImport,
-                              isDisabled: !canStart,
-                          },
-                      ]
-            }
+            actionButtons={buildActions({
+                running,
+                watching,
+                resetArmed,
+                canStart,
+                stopWatching: () => setWatching(false),
+                validate,
+                armReset: () => setResetArmed(true),
+                disarmReset: () => setResetArmed(false),
+                confirmReset,
+                startImport,
+            })}
         >
             <div className="datapack-import-body">
                 {record ? <ImportProgress record={record} watching={watching} /> : null}
 
-                {!running ? (
+                {resetArmed ? (
+                    <div className="datapack-import-danger">
+                        {`Remove ${displayName}'s ${selected.join(', ')} from ${commerceInstance}. This cannot be undone — the Data Installer has no restore.`}
+                    </div>
+                ) : null}
+
+                {!running && !resetArmed ? (
                     <>
                         <FormField
                             fieldKey="commerceInstance"
@@ -209,9 +211,57 @@ export function ImportDatapackModal({
                 {start.failure ? (
                     <div className="datapack-import-error">{start.failure.message}</div>
                 ) : null}
+
+                {reset.failure ? (
+                    <div className="datapack-import-error">{reset.failure.message}</div>
+                ) : null}
             </div>
         </Modal>
     );
+}
+
+/** What each action button does, so the three-state footer stays readable. */
+interface ActionInputs {
+    running: boolean;
+    watching: boolean;
+    resetArmed: boolean;
+    canStart: boolean;
+    stopWatching: () => void;
+    validate: () => void;
+    armReset: () => void;
+    disarmReset: () => void;
+    confirmReset: () => void;
+    startImport: () => void;
+}
+
+/**
+ * The footer has three states, and the destructive one is deliberately separate.
+ *
+ * Arming replaces the whole footer rather than adding a second button beside
+ * Start: with both on screen, "Remove the data" is one mis-click from "Start
+ * import", and the service has no undo.
+ */
+function buildActions(
+    a: ActionInputs,
+): { label: string; variant: 'secondary' | 'accent' | 'negative'; onPress: () => void; isDisabled?: boolean }[] {
+    if (a.running && a.watching) {
+        // NOT "Cancel" — no endpoint exists to cancel with.
+        return [{ label: 'Stop watching', variant: 'secondary', onPress: a.stopWatching }];
+    }
+    if (a.resetArmed) {
+        return [
+            { label: 'Keep the data', variant: 'secondary', onPress: a.disarmReset },
+            { label: 'Remove the data', variant: 'negative', onPress: a.confirmReset },
+        ];
+    }
+    return [
+        // A dry run, because there is otherwise no way to check a request without
+        // writing: starting chains validate and start.
+        { label: 'Validate', variant: 'secondary', onPress: a.validate, isDisabled: !a.canStart },
+        // Arms only. Removing data always takes a second, explicit press.
+        { label: 'Reset…', variant: 'secondary', onPress: a.armReset, isDisabled: !a.canStart },
+        { label: 'Start import', variant: 'accent', onPress: a.startImport, isDisabled: !a.canStart },
+    ];
 }
 
 /** Where the job stands, plus a row per reported type. */

@@ -225,6 +225,83 @@ describe('ImportDatapackModal', () => {
         });
     });
 
+    // Reset is how a project gets REUSED: it removes this datapack's data from the
+    // instance so the same demo can be rebuilt. The service has no undo, so the
+    // handler is confirm-gated and the UI must arm that confirm explicitly — one
+    // press can never remove data.
+    describe('resetting', () => {
+        const resetButton = () => screen.getByRole('button', { name: /^reset/i });
+        const resetCalls = () => mockRequest.mock.calls.filter((c) => c[0] === 'reset-datapack');
+
+        it('is offered once an instance and types are chosen', async () => {
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+
+            expect(resetButton()).not.toHaveAttribute('aria-disabled', 'true');
+        });
+
+        it('needs the same instance and types a start does', async () => {
+            renderModal();
+            await instanceField();
+
+            expect(resetButton()).toHaveAttribute('aria-disabled', 'true');
+        });
+
+        it('sends NOTHING on the first press — it arms a confirmation', async () => {
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+
+            fireEvent.click(resetButton());
+
+            expect(resetCalls()).toHaveLength(0);
+        });
+
+        it('names the instance the data will be removed from, and says there is no undo', async () => {
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+
+            fireEvent.click(resetButton());
+
+            expect(await screen.findByText(/cannot be undone/i)).toBeInTheDocument();
+            expect(screen.getByText(/inst/)).toBeInTheDocument();
+        });
+
+        it('can be backed out of without removing anything', async () => {
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+
+            fireEvent.click(resetButton());
+            fireEvent.click(screen.getByRole('button', { name: /keep the data/i }));
+
+            expect(resetCalls()).toHaveLength(0);
+            expect(screen.getByRole('button', { name: /start import/i })).toBeInTheDocument();
+        });
+
+        // The handler refuses anything without `confirm: true`, so the armed press
+        // is the ONLY thing that may send it.
+        it('sends confirm with the same body a start would, only from the confirmation', async () => {
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: '  Weird Value  ' } });
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+
+            fireEvent.click(resetButton());
+            fireEvent.click(screen.getByRole('button', { name: /remove the data/i }));
+
+            await waitFor(() => expect(resetCalls()).toHaveLength(1));
+            expect(resetCalls()[0][1]).toMatchObject({
+                datapackName: 'bodea',
+                version: 'main',
+                commerceInstance: '  Weird Value  ',
+                dataTypes: ['categories'],
+                confirm: true,
+            });
+        });
+    });
+
     describe('watching', () => {
         function withStatus(record: unknown) {
             mockRequest.mockImplementation(async (type: string) =>

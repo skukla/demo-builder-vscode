@@ -51,6 +51,8 @@ interface StartImportPayload {
     version?: string;
     commerceInstance?: string;
     dataTypes?: string[];
+    /** Reset only: must be true. Nothing removes data by default. */
+    confirm?: boolean;
 }
 
 export const importHandlers = defineHandlers({
@@ -145,6 +147,70 @@ export const importHandlers = defineHandlers({
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'The request could not be validated.',
+                code: ErrorCode.UNKNOWN,
+            };
+        }
+    },
+
+    /**
+     * Remove this datapack's data from the instance, so the project can be reused.
+     *
+     * The same shape as a start — validate, then a 202, then the SAME runner
+     * watching the same kind of activation id. That the runner needs no changes
+     * is the seam working as designed.
+     *
+     * **Confirm-gated.** A reset is destructive and the service has no undo, so it
+     * takes the same explicit opt-in the destructive MCP tools use rather than
+     * trusting a caller not to send it by accident.
+     */
+    'reset-datapack': async (
+        context: HandlerContext,
+        payload?: StartImportPayload,
+    ): Promise<HandlerResponse> => {
+        if (payload?.confirm !== true) {
+            return {
+                success: false,
+                error: 'A reset removes this datapack\'s data from the Commerce instance and cannot be undone. Confirm to proceed.',
+                code: ErrorCode.INVALID_OPERATION,
+            };
+        }
+
+        const prepared = await prepareImport(context, payload);
+        if ('response' in prepared) {
+            return prepared.response;
+        }
+        const { writeClient, request } = prepared;
+
+        try {
+            const verdict = await writeClient.validateImport(request);
+            if (!verdict.valid) {
+                return {
+                    success: false,
+                    error: verdict.reason ?? 'The Data Installer rejected this reset request.',
+                };
+            }
+
+            const start = await writeClient.startDelete(request);
+            const record: ImportJobRecord = {
+                activationId: start.activationId,
+                datapackName: request.id.name,
+                version: request.id.version,
+                commerceInstance: request.commerceInstance,
+                dataTypes: request.dataTypes,
+                startedAt: new Date().toISOString(),
+                outcome: 'watching',
+                perType: {},
+            };
+            const transient = new TransientStateManager(context.context);
+            await transient.set(JOB_KEY, record);
+
+            void watchAndRecord(context, transient, record);
+
+            return { success: true, data: { activationId: start.activationId } };
+        } catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'The reset could not be started.',
                 code: ErrorCode.UNKNOWN,
             };
         }
