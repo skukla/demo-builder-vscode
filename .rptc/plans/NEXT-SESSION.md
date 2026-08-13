@@ -142,13 +142,16 @@ negative one. And pair every "nothing found" with a positive control at the same
 
 ## Outstanding
 
-**Active plan:**
+**Shipped since this file was written:**
 
-- **`.rptc/plans/global-mcp-version-pin/`** — the global MCP entry pins the extension
-  version and is never refreshed, so Claude Code reports [Conflicting scopes] and refuses to
-  add a server. Filed 2026-08-13 from a colleague's screenshot, traced from source the same
-  day. Step 1 is reproducing it with a hand-written stale `~/.claude.json` entry rather than
-  trusting a screenshot from another machine.
+- **`global-mcp-version-pin`** — done, `d90b4f3f`, archived to
+  `.rptc/complete/global-mcp-version-pin/` with its outcome and the three review
+  findings. One thing NOT verified: that Claude Code stops reporting conflicting scopes
+  once both entries name the same file. The observable signal is a
+  `[MCP] refreshed the global ~/.claude.json entry` line in Debug Logs, which appears
+  only when the repair fired.
+
+**Nothing is active. Pick from the backlog.**
 
 **Paused, ready to resume:**
 

@@ -99,3 +99,35 @@ design, which is version-independent already and is not implicated.
 > extend `detectMcpDrift` to cover user scope and self-heal the entry on activation when it
 > points at a different extension version. `registerGlobalMcp` is the only module allowed to
 > write that file.
+
+---
+
+## Shipped 2026-08-13 — `d90b4f3f`
+
+Both halves, deliberately together: detection alone would have reported drift the
+heal cannot clear, since regenerate rewrites project files and never `~/.claude.json`.
+
+- `detectMcpDrift` checks the `demo-builder` entry instead of skipping it, and reads
+  user scope as well as the project's. A retired entry point (`mcp-server.js`) counts
+  as stale by name.
+- `refreshGlobalMcpIfPresent` repairs on activation. Never creates an entry — global
+  registration stays the explicit choice it was.
+- Staleness is judged on both halves: `args[0]` must name this build, and an absolute
+  `command` must still exist. The latter uses `access()` rather than re-resolving node,
+  because `resolveNodePath` spawns `which` and `realpath` and that cost does not belong
+  on every activation.
+
+**Three findings came from peer review, all taken:** the failure path logged at `debug`
+and silently reopened the dead end (now `warn`); a comment claimed it "cannot slow
+activation" without distinguishing the repair path; and the `command` gap above.
+
+**Step 1 landed differently than planned.** The plan said to reproduce by hand-writing a
+stale `~/.claude.json`. That would have meant editing live user state, so the
+reproduction is a test against a temp HOME instead
+(`mcpDriftDetector-globalScope.test.ts`) — which doubles as the RED gate. The CLI's
+own conflicting-scopes screen is evidenced by the report and was not re-derived.
+
+**Not verified here:** that Claude Code stops reporting conflicting scopes once both
+entries name the same file. That is the CLI's behaviour and needs a machine that had the
+fault. The observable signal is a `[MCP] refreshed the global ~/.claude.json entry` line
+in Debug Logs, which appears only when the repair actually fired.
