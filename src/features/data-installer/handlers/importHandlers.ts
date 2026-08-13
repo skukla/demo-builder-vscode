@@ -29,6 +29,11 @@ import type { ImportJobRecord } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { PollingService } from '@/core/shell/pollingService';
 import { TransientStateManager } from '@/core/state/transientStateManager';
+import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/features/components/config/envVarKeys';
+import {
+    deriveAccsTenantId,
+    lookupComponentConfigValue,
+} from '@/features/components/services/envVarHelpers';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -214,6 +219,51 @@ export const importHandlers = defineHandlers({
                 code: ErrorCode.UNKNOWN,
             };
         }
+    },
+
+    /**
+     * What the import modal should prefill as the target, and where it came from.
+     *
+     * The field started empty because a spike could not PROVE the target was
+     * derivable — none of the instances with Data Installer history matched a local
+     * project, so a derived value had nothing to be checked against, and guessing a
+     * write target with no undo was the wrong trade.
+     *
+     * Both halves of that reasoning have since expired. `checkCredentials` tests an
+     * instance read-only, so a derived value is now verifiable before anything is
+     * written. And the derivation already existed: `ACCS_ENDPOINT_PATTERN` has been
+     * pulling the tenant id out of `ACCS_GRAPHQL_ENDPOINT` all along to build the
+     * admin URL, and that id is a 21–22 character base62 nanoid — the shape the
+     * spike measured for `commerce_instance`.
+     *
+     * **This answers; it does not decide.** `verified` says whether the shape is
+     * the one the service was observed to take, so the modal can label a guess as a
+     * guess and keep the field editable.
+     */
+    'get-datapack-import-target': async (context: HandlerContext): Promise<HandlerResponse> => {
+        // No guard and no client: this reads project state only. A missing project
+        // is not a failure — the catalog is browsable without one, and the modal
+        // simply asks the user to type the target.
+        const project = await context.stateManager.getCurrentProject();
+        const configs =
+            (project as { componentConfigs?: Record<string, Record<string, string>> } | null)
+                ?.componentConfigs ?? {};
+
+        const accs = deriveAccsTenantId(lookupComponentConfigValue(configs, ACCS_GRAPHQL_ENDPOINT));
+        if (accs) {
+            return { success: true, data: { instance: accs, source: 'accs', verified: true } };
+        }
+
+        // PaaS is a GUESS, and is reported as one. Every `commerce_instance`
+        // observed live was an ACCS nanoid with `site_type: 'accs'`, and no REST
+        // base URL appears in any installation record — so this is offered to save
+        // typing, and `verified: false` is what tells the modal to say so.
+        const paas = lookupComponentConfigValue(configs, PAAS_URL);
+        if (paas) {
+            return { success: true, data: { instance: paas, source: 'paas', verified: false } };
+        }
+
+        return { success: true, data: {} };
     },
 
     'get-datapack-import-status': async (context: HandlerContext): Promise<HandlerResponse> => {

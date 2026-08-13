@@ -289,6 +289,25 @@
     gap: 4px;
 }
 
+/* Label on the left, the bulk toggle on the right of the same row. */
+.datapack-import-types-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+/* Two columns, because a pack ships up to 14 data types (Bodea does) and one
+   column turns a glanceable choice into a scroll inside the modal. Fixed at two
+   rather than auto-fill: the modal has a known width, and auto-fill would reflow
+   to three narrow columns that wrap the longer type names
+   (b2b_shared_catalog_company_assignments) mid-word. */
+.datapack-import-type-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 16px;
+}
+
 .datapack-import-label {
     font-size: 11px;
     text-transform: uppercase;

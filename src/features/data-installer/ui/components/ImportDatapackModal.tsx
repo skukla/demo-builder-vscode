@@ -17,12 +17,23 @@
  * mounts this component only while open, so the container lives here rather than
  * being a thing each caller must remember.
  *
- * **The instance field starts EMPTY, and stays the user's.** No prefill, no
- * derivation, no trimming or reformatting on the way out. The spike that would
- * have justified deriving it from the project's ACCS tenant could not be answered
- * — only 16 instances have ever had Data Installer activity and none matched a
- * local project — so any prefill would be a guess, and an import writes into
- * whatever this names.
+ * **The instance field is SEEDED from the project, and stays the user's.** It is
+ * seeded once, only into an untouched field, and sent verbatim — never trimmed or
+ * reformatted on the way out.
+ *
+ * It started empty, on the reasoning that a prefilled write target with no undo
+ * would be a guess: the spike could not confirm the target was derivable, because
+ * none of the instances with Data Installer history matched a local project. Both
+ * halves of that expired. `checkCredentials` now tests an instance read-only, so a
+ * derived value is checkable before anything is written; and the derivation already
+ * existed — `ACCS_ENDPOINT_PATTERN` has been extracting the tenant id from
+ * `ACCS_GRAPHQL_ENDPOINT` all along to build the admin URL, and that id is the
+ * 21–22 character base62 shape the spike measured for `commerce_instance`.
+ *
+ * A seeded value therefore carries its provenance (see {@link describeTarget}). A
+ * PaaS target is offered as an explicit GUESS: no REST base URL appears in any
+ * installation record, so that shape has never been observed to work, and the copy
+ * says to check it with a dry run rather than implying it is derived.
  *
  * **"Stop watching" is not cancel.** There is no cancel endpoint. Stopping ends
  * the WATCH; the job keeps running server-side, which the copy says outright.
@@ -35,7 +46,7 @@
  * @module features/data-installer/ui/components/ImportDatapackModal
  */
 
-import { Checkbox, DialogContainer } from '@adobe/react-spectrum';
+import { ActionButton, Checkbox, DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import type { DataTypeStatus, DatapackId, ImportJobRecord } from '../../types';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
@@ -53,6 +64,14 @@ const DOT_VARIANT: Record<DataTypeStatus, 'success' | 'error' | 'info' | 'neutra
     processing: 'info',
     pending: 'neutral',
 };
+
+/** What the open project implies about where this import should go. */
+interface ImportTarget {
+    instance?: string;
+    source?: 'accs' | 'paas';
+    /** Whether the shape matches what the service was observed to accept. */
+    verified?: boolean;
+}
 
 export interface ImportDatapackModalProps {
     id: DatapackId;
@@ -80,11 +99,35 @@ export function ImportDatapackModal({
         'validate-datapack-import',
     );
     const status = useDataInstallerRequest<ImportJobRecord | null>('get-datapack-import-status');
+    const target = useDataInstallerRequest<ImportTarget>('get-datapack-import-target');
 
     const loadStatus = status.load;
     useEffect(() => {
         loadStatus({});
     }, [loadStatus]);
+
+    const loadTarget = target.load;
+    useEffect(() => {
+        loadTarget({});
+    }, [loadTarget]);
+
+    // Seed ONCE, and only into a field the user has not touched. `touched` is the
+    // load-bearing half: the target request is async, so it can answer AFTER the
+    // user has started typing, and seeding on arrival would silently replace their
+    // value with a derived one — in a field that names a write target with no undo.
+    // A `seeded` flag alone does not prevent that, which a test caught.
+    const derived = target.value?.instance;
+    const [touched, setTouched] = useState(false);
+    useEffect(() => {
+        if (derived && !touched) {
+            setCommerceInstance(derived);
+        }
+    }, [derived, touched]);
+
+    const editInstance = useCallback((value: string): void => {
+        setTouched(true);
+        setCommerceInstance(value);
+    }, []);
 
     const record = status.value ?? null;
     const running = record?.outcome === 'watching';
@@ -113,6 +156,13 @@ export function ImportDatapackModal({
             isSelected ? [...current, type] : current.filter((t) => t !== type),
         );
     }, []);
+
+    // A pack ships up to 14 types (Bodea does), so ticking them one at a time is a
+    // chore for what is usually "all of it".
+    const allSelected = availableTypes.length > 0 && selected.length === availableTypes.length;
+    const toggleAll = useCallback((): void => {
+        setSelected(allSelected ? [] : [...availableTypes]);
+    }, [allSelected, availableTypes]);
 
     /** The one body both paths send, so a dry run checks what a start would do. */
     const requestBody = useCallback(
@@ -149,7 +199,7 @@ export function ImportDatapackModal({
         <DialogContainer type="modal" onDismiss={onClose}>
             <Modal
                 title={`Import ${displayName}`}
-                size="M"
+                size="L"
                 fitContent
                 onClose={onClose}
                 closeLabel="Close"
@@ -182,21 +232,30 @@ export function ImportDatapackModal({
                                 label="Commerce instance"
                                 type="text"
                                 value={commerceInstance}
-                                onChange={setCommerceInstance}
+                                onChange={editInstance}
                                 required
-                                description="Where this data will be written. There is no undo — check it with whoever owns the target."
+                                description={describeTarget(target.value)}
                             />
                             <div className="datapack-import-types">
-                                <span className="datapack-import-label">Data types</span>
-                                {availableTypes.map((type) => (
-                                    <Checkbox
-                                        key={type}
-                                        isSelected={selected.includes(type)}
-                                        onChange={(isSelected) => toggle(type, isSelected)}
-                                    >
-                                        {type}
-                                    </Checkbox>
-                                ))}
+                                <div className="datapack-import-types-head">
+                                    <span className="datapack-import-label">Data types</span>
+                                    <ActionButton isQuiet onPress={toggleAll}>
+                                        {allSelected ? 'Clear all' : 'Select all'}
+                                    </ActionButton>
+                                </div>
+                                {/* Two columns: a pack ships up to 14 types, and one
+                                    column turns a glanceable choice into a scroll. */}
+                                <div className="datapack-import-type-grid">
+                                    {availableTypes.map((type) => (
+                                        <Checkbox
+                                            key={type}
+                                            isSelected={selected.includes(type)}
+                                            onChange={(isSelected) => toggle(type, isSelected)}
+                                        >
+                                            {type}
+                                        </Checkbox>
+                                    ))}
+                                </div>
                             </div>
                         </>
                     ) : null}
@@ -283,6 +342,23 @@ function buildActions(
             isDisabled: !a.canStart,
         },
     ];
+}
+
+/**
+ * What to say under the instance field.
+ *
+ * A derived value must carry its provenance: the user has to be able to tell a
+ * value the project implied from one they typed, and an ACCS tenant id from a PaaS
+ * URL that is only a plausible guess. Silence here would make all three look alike.
+ */
+function describeTarget(target: ImportTarget | null): string {
+    const warning = 'Where this data will be written. There is no undo — check it with whoever owns the target.';
+    if (!target?.instance) {
+        return warning;
+    }
+    return target.verified
+        ? `From this project's Commerce configuration. ${warning}`
+        : `From this project's Commerce URL, but this service was never observed to accept that shape — check it with a dry run first. ${warning}`;
 }
 
 /** Where the job stands, plus a row per reported type. */

@@ -3,11 +3,12 @@
  *
  * The two rules that must not be softened, both pinned here:
  *
- *   **The instance field starts EMPTY.** No prefill, no derivation. A spike tried
- *   to establish that `commerce_instance` equals the ACCS tenant id and could not
- *   — there was no overlap to compare — so a prefilled value would be a guess,
- *   and importing into the wrong instance writes sample data into someone else's
- *   live demo. The user types it, every time.
+ *   **The instance field stays the USER'S.** It is now seeded from the open
+ *   project — the ACCS tenant id was always derivable, and `checkCredentials` can
+ *   check a value read-only before anything is written — but a seed must never
+ *   overwrite what the user typed, and a value that is a guess rather than a
+ *   derivation has to say so. Importing into the wrong instance writes sample data
+ *   into someone else's live demo, and there is no undo.
  *
  *   **"Stop watching" is not cancel.** There is no cancel endpoint. Stopping ends
  *   the WATCH; the job continues server-side, and the UI has to say so rather than
@@ -83,7 +84,10 @@ describe('ImportDatapackModal', () => {
     });
 
     describe('the instance field', () => {
-        it('starts EMPTY — never prefilled or derived', async () => {
+        // The default mock answers `get-datapack-import-target` with null, i.e. a
+        // project that implies nothing — so this pins the no-project case, not a
+        // "never derive" rule. The derivation has its own describe below.
+        it('is empty when there is nothing to derive', async () => {
             renderModal();
 
             expect(await instanceField()).toHaveValue('');
@@ -107,6 +111,113 @@ describe('ImportDatapackModal', () => {
 
             await waitFor(() =>
                 expect(startPayload()).toMatchObject({ commerceInstance: '  Weird Value  ' }),
+            );
+        });
+    });
+
+    /**
+     * The target is DERIVED from the open project, and says so.
+     *
+     * It used to start empty on the reasoning that a prefilled write target with no
+     * undo would be a guess. That held while the derivation was unproven — but the
+     * tenant id has been extracted from `ACCS_GRAPHQL_ENDPOINT` all along to build
+     * the admin URL, and `checkCredentials` can now check a value read-only before
+     * anything is written. So it is offered, sourced, and still editable.
+     */
+    describe('the derived target', () => {
+        function withTarget(target: unknown) {
+            mockRequest.mockImplementation(async (type: string) =>
+                type === 'get-datapack-import-target'
+                    ? { success: true, data: target }
+                    : { success: true, data: null },
+            );
+        }
+
+        it('prefills the instance the project implies', async () => {
+            withTarget({ instance: 'UoGYsHrcxMyeoVd2zUktZi', source: 'accs', verified: true });
+            renderModal();
+
+            // findByDisplayValue, not findByRole: the element exists immediately
+            // and the VALUE arrives with the async target response.
+            expect(await screen.findByDisplayValue('UoGYsHrcxMyeoVd2zUktZi')).toBeInTheDocument();
+        });
+
+        it('says where the value came from', async () => {
+            withTarget({ instance: 'UoGYsHrcxMyeoVd2zUktZi', source: 'accs', verified: true });
+            renderModal();
+
+            expect(await screen.findByText(/from this project/i)).toBeInTheDocument();
+        });
+
+        // A PaaS target is a plausible guess, not a derivation: every observed
+        // commerce_instance was an ACCS nanoid, and no REST base URL appears in any
+        // installation record. The UI has to say so, or a dry run is the only thing
+        // between a guess and a write.
+        it('marks an unverified guess as unverified', async () => {
+            withTarget({ instance: 'https://demo.adobedemo.com', source: 'paas', verified: false });
+            renderModal();
+
+            expect(await screen.findByText(/check it with a dry run/i)).toBeInTheDocument();
+        });
+
+        it('stays empty when the project implies nothing', async () => {
+            withTarget({});
+            renderModal();
+
+            expect(await instanceField()).toHaveValue('');
+        });
+
+        // Derived, not imposed. The whole reason it is a field and not a label.
+        it('lets the user replace the derived value', async () => {
+            withTarget({ instance: 'UoGYsHrcxMyeoVd2zUktZi', source: 'accs', verified: true });
+            renderModal();
+            const field = await screen.findByDisplayValue('UoGYsHrcxMyeoVd2zUktZi');
+
+            fireEvent.change(field, { target: { value: 'something-else' } });
+
+            expect(field).toHaveValue('something-else');
+        });
+    });
+
+    /** 14 types is the real cardinality — Bodea ships 14 — so bulk selection is not a nicety. */
+    describe('selecting every type', () => {
+        it('offers a select-all affordance', async () => {
+            renderModal();
+            await instanceField();
+
+            expect(screen.getByRole('button', { name: /select all/i })).toBeInTheDocument();
+        });
+
+        it('selects every available type at once', async () => {
+            renderModal();
+            await instanceField();
+
+            fireEvent.click(screen.getByRole('button', { name: /select all/i }));
+
+            expect(screen.getByRole('checkbox', { name: 'categories' })).toBeChecked();
+            expect(screen.getByRole('checkbox', { name: 'products' })).toBeChecked();
+        });
+
+        it('turns into a clear-all once everything is selected', async () => {
+            renderModal();
+            await instanceField();
+
+            fireEvent.click(screen.getByRole('button', { name: /select all/i }));
+            fireEvent.click(screen.getByRole('button', { name: /clear all/i }));
+
+            expect(screen.getByRole('checkbox', { name: 'categories' })).not.toBeChecked();
+            expect(screen.getByRole('checkbox', { name: 'products' })).not.toBeChecked();
+        });
+
+        it('sends every type when all are selected', async () => {
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+
+            fireEvent.click(screen.getByRole('button', { name: /select all/i }));
+            fireEvent.click(startButton());
+
+            await waitFor(() =>
+                expect(startPayload()).toMatchObject({ dataTypes: ['categories', 'products'] }),
             );
         });
     });
