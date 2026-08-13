@@ -132,6 +132,23 @@ export interface JobStatusSnapshot {
     hasRecord: boolean;
 }
 
+/**
+ * The verdict from a synchronous `operation_mode: 'validate'` call.
+ *
+ * A rejection is an ANSWER, not an error — the sync twin 400s requests the async
+ * entry point accepts with a 202, and its message names the cause.
+ */
+export interface ValidationResult {
+    valid: boolean;
+    /** The service's own wording when it refused. */
+    reason?: string;
+}
+
+/** What an accepted async start hands back: the id to poll. */
+export interface ImportStart {
+    activationId: string;
+}
+
 /** Why an async job produced nothing, as reported by the activation echo. */
 export interface JobFailureReason {
     /** The service's own message; surfaced verbatim because it names the cause. */

@@ -35,11 +35,13 @@ import type {
     DatapackDetail,
     DatapackId,
     DatapackSummary,
+    ImportStart,
     InstalledDatapack,
     JobFailureReason,
     JobStatusSnapshot,
     Page,
     ServiceHealth,
+    ValidationResult,
 } from '../types';
 
 const TERMINAL_STATUSES: readonly string[] = ['pending', 'processing', 'success', 'error'];
@@ -332,6 +334,38 @@ export function parseJobFailureReason(body: unknown): JobFailureReason | undefin
         return error ? { error } : undefined;
     }
     return undefined;
+}
+
+/**
+ * The activation id from an accepted async start.
+ *
+ * Shape observed in the spike on the ACO twin:
+ * `{success, status:"pending", activation_id, pipeline}`. Only `activation_id` is
+ * read — `pipeline` names the family and varies, `status` restates the 202.
+ *
+ * Returns undefined rather than an empty id when the field is absent. The caller
+ * must treat that as a failure: an accepted job with nothing to poll cannot be
+ * told apart from one that never reports.
+ */
+export function parseImportStart(body: unknown): ImportStart | undefined {
+    const activationId = str(obj(body).activation_id);
+    return activationId ? { activationId } : undefined;
+}
+
+/**
+ * The verdict from a synchronous validate call.
+ *
+ * `success: true` is the only positive signal; anything else is a refusal. The
+ * service's own `error` string rides through verbatim because it names the cause
+ * — getting that wording is the entire reason this call exists.
+ */
+export function parseValidation(body: unknown): ValidationResult {
+    const root = obj(body);
+    if (root.success === true) {
+        return { valid: true };
+    }
+    const reason = str(root.error);
+    return { valid: false, ...(reason ? { reason } : {}) };
 }
 
 /** Service reachability from the unauthenticated health endpoint. */
