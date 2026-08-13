@@ -1,10 +1,44 @@
 # Next session — start here
 
-Rewritten 2026-08-12, refreshed three times on 2026-08-13. **Everything is committed AND
-PUSHED**; `develop` was at `8c619a57` when this line was written. `v1.0.0-beta.128` is released.
+Rewritten 2026-08-12, refreshed through 2026-08-13 (latest: the record-validation +
+test-typecheck session). **Everything is committed AND PUSHED**; `develop` was at `0fe705f3`
+when this line was written. `v1.0.0-beta.128` is released.
 
-Gate at handoff: **997 suites / 12,777 tests** at the DEFAULT `maxWorkers: '75%'`,
-`tsc --noEmit` clean, whole-repo eslint 0 errors 0 warnings, `validate:jest-config` passing.
+Gate at handoff: **998 suites / 12,803 tests** at the DEFAULT `maxWorkers: '75%'`,
+`tsc --noEmit` clean, whole-repo eslint 0 errors 0 warnings. **The count went DOWN by one
+on purpose**: a dead "NavItem should be importable" test asserting a deleted export was
+removed when the test tree got typechecked — its only real assertion was
+`expect(true).toBe(true)`.
+
+## THE ACTIVE TASK: finish the test-typecheck sweep (711 → 336, in progress)
+
+`.rptc/backlog/2026-08-13-test-files-are-not-typechecked.md` carries the live banner.
+Nothing in this repo typechecked test files until today — `tsconfig.json` excludes them and
+`@swc/jest` strips types. Now `tsconfig.test.json` + `npm run typecheck:tests` exist
+(NOT `test:typecheck` — that pre-existing script checks only `src/` and is part of how the
+gap survived). Nine commits (`f49ab5e2..0fe705f3`) took 711 errors to 336, full suite green
+after every slice.
+
+**Extinct classes:** invented fields (47 — the `prepareImport` bug class, each read
+individually), wrong imports (51), arg-count drift (39), stale `@ts-expect-error` (20),
+property access (36), logger `trace` / `CommandResult.duration` drift (~99), wizard prop
+drift + required Button `variant` (~90). Plus one `src/` fix the tests were right about
+(fileWatcher's `as const`-inferred literal timeout param).
+
+**Remaining 336:** partial-fixture long tail, ~85 files, biggest ≤13. The method that
+worked: read the fixture against the real type; fill unread required fields with neutral
+values (`created`/`lastModified`/`status: 'ready'` is the recurring Project triple); when
+the fixture carries a field the type dropped, `git log -S` where it went — sometimes the
+honest fix is deleting or retitling a test that asserts retired behaviour. Retirement
+guards get `'field' in result` (three exist as the pattern). Fixture-shaped casts want a
+typed view (`ProjectStub` in `appBuilderDeployOutcome.test.ts`), not `as unknown as`.
+Commit per class with the running count in the subject. **At 0: wire into CI, add to the
+`gate` skill's §6, archive the item, update the index, then grep for the old path.**
+
+**Queued behind it, both validated accurate 2026-08-13, neither started:**
+`tier-the-ai-bundle-refresh` (step 0 = REPRODUCE the silent under-fire before any fix) and
+`third-party-tooling-visible-and-optional` (real remaining gap: no machine-readable link
+between `ai-defaults.json` packages and the skills they power; shares the other item's gate).
 
 **The old caveat on that number is retired and replaced by a sharper one.** This line used to
 read "at `--maxWorkers=25%` … a default-workers green is one sample of a noisy process." The
@@ -46,7 +80,38 @@ Two probe habits from the same episode:
 
 ---
 
-## What shipped this session (2026-08-13, jest/gate)
+## What shipped 2026-08-13, later session (record validation + typecheck sweep)
+
+| Commit | What |
+|---|---|
+| `c75e7336` | Backlog claim-validation: five items had already shipped; archived with evidence |
+| `e51b1fef` | Filed the test-typecheck gap, with the measured count |
+| `3527b2f1` | `backlog-claim-drift` Stop hook — fires when a turn changes code a live item cites (replayed against all five fixing commits: 6/6) |
+| `12b74b12` | Second archive wave: five items that ANNOUNCED they were done; scan §3b now asks backlog/ the claims-done question |
+| `681bd39f`, `9022f6c0` | The re-measure rule's blind spot recorded: symbol/count claims are one grep away, SHAPE claims have no instrument — "no evidence of shape rot" ≠ "no shape rot" |
+| `59bc4dca` | `12-unquoted-glob.rule` — blocks unquoted globs in grep/find args (3 incidents in one day; the dangerous mode prints clean zeros) |
+| `f49ab5e2..0fe705f3` | The typecheck sweep, 711 → 336 (see THE ACTIVE TASK above) |
+
+Backlog went **39 → 29 items** across the two archive waves. Three failure classes, three
+detectors: silently-stale → the `backlog-claim-drift` hook; announces-it's-done → hygiene
+scan §3b; looks-current-but-isn't → one falsifying command before trusting any item, noting
+that rule covers symbol and count claims only. **Being well-written is not evidence of being
+current** — the item that fooled a second session was the most credible-looking one, and its
+`file:line` table was the least reliable part.
+
+Session traps for whoever picks this up:
+
+- **zsh does not word-split `$VAR`** — `for f in $FILES` and `set -- $spec` both silently
+  broke mid-sweep. Use `while IFS= read -r`.
+- **The glob guard fires on heredocs that DESCRIBE the pattern** — commit messages naming
+  `--include=*.ts` must go through `git commit -F <file>`. Documented in the rule as an
+  accepted false positive: the failure it guards is silent, this one is loud.
+- **A scoped lint passes where whole-repo `npm run lint` fails** — it caught mocks orphaned
+  by dropped props. The `gate` skill's §6 is the contract; invoke it, don't hand-run.
+- The measurement instrument needs the same checking as the work: a broken noise-sweep
+  produced three plausible-looking cap numbers before one contradiction exposed it.
+
+## What shipped the session before (2026-08-13, jest/gate)
 
 | Commit | What |
 |---|---|
@@ -336,7 +401,10 @@ was caught only because a fallback printed nothing where it should have printed 
   `[MCP] refreshed the global ~/.claude.json entry` line in Debug Logs, which appears
   only when the repair fired.
 
-**Nothing is active. Pick from the backlog.**
+**One task IS active: the test-typecheck sweep at 336 remaining — see THE ACTIVE TASK at the
+top.** (This line used to say "Nothing is active. Pick from the backlog." — superseded
+2026-08-13.) After it, the user's chosen order is `tier-the-ai-bundle-refresh` then
+`third-party-tooling-visible-and-optional`.
 
 **Paused, ready to resume:**
 
