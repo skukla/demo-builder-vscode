@@ -154,6 +154,34 @@ Note: `2026-05-30-decouple-project-from-workspace.md` looks adjacent but its hea
 
 Give an agent the same 403 repair a human now gets from `Demo Builder: Manage Site Access` — `get_site_access` / `grant_site_admin` / `revoke_site_admin` over the existing `siteAccessManagerHeadless` core, which was built UI-free for exactly this. No new logic; the constraints (report `verified` separately from `status`, treat `not_authorized` as non-retryable, never remove the last admin, mask emails) are measured rather than assumed and are listed in the item. Filed 2026-08-14 from the `config-service-admin-grant` verify loop.
 
+#### Component secret routing — the declaration decides where a credential lives ([`component-secret-routing/`](component-secret-routing/overview.md))
+
+Filed 2026-08-13, from Data Installer Stage 2 live verification. An ACCS project cannot import:
+the modal says "add an OAuth client id and secret" and there is **nowhere to add them** —
+`storeAccsCredentials` is called from tests only. Two designs were rejected before this one (a
+feature-specific form; collapsing the per-backend branch), both recorded in the plan so they are
+not retried.
+
+The general problem: **nothing links a config DECLARATION to SecretStorage for ordinary
+components.** `type: 'secret'` → SecretStorage exists but is App Builder-only; a Commerce
+credential lands in `componentConfigs` in the clear and is kept out of exports by
+`SECRET_ENV_KEYS`, a hand-maintained list whose own docstring warns you to remember it. The fix
+generalizes the seam that already exists (`splitAppBuilderComponentSecrets` + `secretKey`), so a
+secret is never written rather than written-then-stripped.
+
+**Step 5 is worth doing on its own.** It shrinks that list and adds a guard that fails when a
+component declares a credential-shaped field which is neither `type: 'secret'` nor listed —
+today nothing enforces the list at all, and the export's safety rests entirely on it
+(`stripSecretValues`, wired in `12f4b802`). Take step 5 even if steps 1-2 are rejected or the
+migration question stalls; it does not depend on either.
+
+**Step 2 is where the risk is** — existing projects already hold a Commerce admin password in
+`componentConfigs` in the clear, and retyping the field does not move what is already saved. The
+migration strategy is deliberately left open for review. **Steps 1-2 are shared infrastructure**;
+step 3 alone would unblock ACCS the existing (worse) way. Verified against the live service, not
+assumed: it refuses with "Provide either (client_id + client_secret) or (admin_username +
+admin_password)" and 401s on a bogus pair. Not blocked; needs a design decision before code.
+
 #### App Builder app family — attach a deployable app to a demo ([`2026-06-17-appbuilder-app-deploy-spine.md`](../complete/2026-06-17-appbuilder-app-deploy-spine.md))
 
 Add a custom Adobe App Builder app to a demo project as a first-class, deployable component — the App Builder analog of the component-first direction. **Decided model** (from [`../research/app-builder-app-structure/research.md`](../research/app-builder-app-structure/research.md)): one workspace per demo = the API Mesh (separate artifact) + **one** custom app, with multiple integration domains as **packages inside that one app** — so the singleton `meshState` shape fits and no keyed app array is needed. **Build principle:** reuse existing primitives (org targeting, command plumbing, clone/install, the block-library additive pattern), share the mesh deploy scaffold where duplication is real, and hold off on a generalized deployable framework until a 3rd deployable type appears (Rule of Three). Effort 1 (remove the dormant `integration-service` + `appBuilderApps` mechanism) shipped earlier (`c98e5125`); Effort 2 (discovery least-privilege token) **DECLINED 2026-06-15** (no attacker exposure it closes; VS Code Secret Storage is the cheap fix if at-rest plaintext ever matters).

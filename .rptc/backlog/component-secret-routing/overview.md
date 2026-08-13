@@ -120,8 +120,7 @@ slower to converge. This plan does not decide it.
 `export_project_settings` was leaking `componentConfigs` into a file stamped
 secret-free. **That is fixed** — `12f4b802`, 2026-08-11, `settingsSerializer.ts:169`
 now strips when `includeSecrets` is false. (Filed and fixed the same day; the
-backlog item outlived the bug by two days. Archiving it and the index entry for
-this plan are with the session that owns the record — not applied here.)
+backlog item outlived the bug by two days and is now archived to `../complete/`.)
 
 But read what the fix depends on: `stripSecretValues` filters against
 `SECRET_ENV_KEYS` — the hand-maintained list. **The export is exactly as safe as
@@ -135,8 +134,10 @@ fails when a component declares a credential-shaped field that is neither
 guard: ask the source a question the runtime cannot be asked, so the rule does not
 depend on the next person having read the docstring.
 
-That guard is worth having even if review rejects steps 1-2, because today nothing
-enforces the list at all.
+**Take step 5 even if everything else here is rejected.** It depends on neither the
+seam nor the migration, and today nothing enforces the list at all — so if the
+migration question stalls, this is the part that should still ship rather than
+being held hostage to it.
 
 ### Later, not now
 
