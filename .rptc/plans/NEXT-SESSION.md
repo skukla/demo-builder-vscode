@@ -215,15 +215,21 @@ being worked; five shipped plans were sitting there too, one of which said so in
 
 **Unresolved, NOW REPRODUCING — backlogged 2026-08-13:**
 
-- **~3 suites flake per full run, a different set each time.** This line used to read "did
-  not recur in any full run today"; it recurred twice in consecutive runs on 2026-08-13,
-  and the set is wider than the four originally named — `executor-appBuilderComponentLoading`
-  and `processCleanup.timeout` joined it. All are **timeouts, not assertion failures**; one
-  is a wall-clock assertion that measured 12,793 ms against a 2,000 ms bound. Every affected
-  suite passes in isolation, verified by stashing to rule the working tree out.
-  **So every "full suite green" in this repo is one sample of a noisy process** — including
-  the ones quoted in today's handoffs. Evidence, suspects and a measure-first plan:
-  `.rptc/backlog/2026-08-13-jest-full-suite-timeout-flake.md`.
+- ~~**~3 suites flake per full run, a different set each time.**~~ **RESOLVED 2026-08-13**
+  (`528c1b5d`, `83cbcc8e`). The cause was **a second concurrent jest run**, not the config:
+  one suite at a time failed 0 of 10 runs, two concurrently failed all 6. `maxWorkers: '75%'`
+  and `workerIdleMemoryLimit` — the two suspects this was filed against — are both innocent,
+  and the planned worker-count bisect would have "fixed" it by narrowing the collision window.
+  A PreToolUse rule now blocks the second run; the wall-clock assertions that made it loudest
+  are gone; each run gets its own MCP socket tree. Outcome, including what is still open:
+  `.rptc/complete/2026-08-13-jest-full-suite-timeout-flake.md`.
+
+  **The "one sample of a noisy process" warning still stands, for a narrower reason.** The
+  guard is a PreToolUse hook, so it only sees Claude's own tool calls — runs started from a
+  terminal, from a script, or by a checkout without the rule still contend. Failures clustered
+  in `inExtensionMcpServer` / `mcpConfigWriter` / `extension-context` /
+  `executor-*ComponentLoading` mean *suspect contention before suspecting your change*, and a
+  full-suite result is worth what the `ps` sampling beside it is worth.
 
 **Known gap, no gate:**
 

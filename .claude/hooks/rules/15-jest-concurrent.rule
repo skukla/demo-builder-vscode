@@ -14,7 +14,7 @@
 # executor-*ComponentLoading, and a wall-clock assertion in processCleanup.timeout
 # reading up to 12,793 ms against a 2,000 ms bound. Every one passes solo.
 #
-# This is the whole content of .rptc/backlog/2026-08-13-jest-full-suite-timeout-flake.md:
+# This is the whole content of .rptc/complete/2026-08-13-jest-full-suite-timeout-flake.md:
 # the suspects there were maxWorkers and workerIdleMemoryLimit, and both are
 # innocent — 75% workers is green 10/10 when it has the box to itself. What was
 # never true is that a gate run had the box to itself. Two Claude sessions work
@@ -152,6 +152,6 @@ If that names a stale parent nothing is waiting on (this machine had an 8-day-ol
 orphan on 2026-08-13), kill that PID and re-run. Do not work around this by
 scoping the run down — a scoped run contends for the same cores.
 
-Background: .rptc/backlog/2026-08-13-jest-full-suite-timeout-flake.md
+Background: .rptc/complete/2026-08-13-jest-full-suite-timeout-flake.md
 MSG
 }

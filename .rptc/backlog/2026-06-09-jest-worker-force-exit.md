@@ -26,16 +26,20 @@ All tests pass. The warning doesn't fail CI. It does add ~5-30s to the wall-cloc
 - **Pre-existing.** Observed today (2026-06-09) on multiple branches that had no overlapping changes: PR #44 merge verification on develop, the BYOM Phase 1 ship, and the auth-fix branch. The warning was present in all three contexts.
 - **Single-suite reproduction.** The warning also appears when running just `tests/features/mesh/commands/deployMesh-storage.test.ts` in isolation, so the leak isn't from cross-suite state contamination.
 - **`--detectOpenHandles` reports nothing.** Running the same sweep with that flag finds zero open handles. This means the leak is something Jest's tracker doesn't see — typically a timer set up via a path the tracker doesn't instrument (e.g., inside a mocked module that wasn't fully cleared), or a Promise that never settles.
-- **Possible smoking gun.** During the `--detectOpenHandles` scan, `tests/features/mesh/ui/steps/useMeshDeployment.test.tsx` emitted React `act()` warnings on `useMeshDeployment.ts` lines `203` and `208`. Three lines later, the hook starts a `setTimeout(... 180_000ms)` and stores its ID in a ref:
+- ~~**Possible smoking gun.**~~ **DEAD — the file no longer exists.** This named a
+  `setTimeout(…, 180_000)` stored in a `timeoutIdRef` inside the `useMeshDeployment` hook
+  (then under `src/features/mesh/ui/steps/`), reached via `act()` warnings from its test.
+  There is no `useMeshDeployment` anywhere in `src/` today (verified 2026-08-13), so the
+  hypothesis cannot be checked and the investigation steps below that depend on it are void.
 
-  ```ts
-  // src/features/mesh/ui/steps/useMeshDeployment.ts:211
-  timeoutIdRef.current = setTimeout(() => {
-    dispatch({ type: 'TIMEOUT' });
-  }, 180_000);
-  ```
+  The line reference is deliberately not repeated here: it would keep §4 of
+  `rptc-hygiene-scan` reporting a hit that everyone already knows about, and a scan with a
+  permanent known-false entry is one people stop reading.
 
-  If the test unmounts before this timer fires AND the cleanup path doesn't clear it (or the dispatch fails because the component is gone), the worker stays alive until the 180s timer fires. Plausible source — not yet confirmed.
+  Kept rather than deleted because the SHAPE is still the thing to look for — an
+  un-`unref`'d long timer whose component unmounts first — but do not go looking at that
+  path. Cite a symbol next time: a line number in this repo has a half-life of about a day,
+  and this one outlived its whole file.
 
 ## What we ruled out
 
