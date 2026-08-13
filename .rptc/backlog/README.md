@@ -11,7 +11,7 @@ This directory is the **single source of truth** for "what's next." If it belong
 - **Required sections** (for single-file entries): Provenance · Goal/Scope · Execution plan · Constraints · Kickoff prompt.
 - **Before filing, grep `.rptc/plans/` as well as this directory.** An active plan for
   the same work is the more likely home, and a backlog duplicate splits the record. On
-  2026-08-07 an item was filed here for work `.rptc/plans/integrations-destination-control/`
+  2026-08-07 an item was filed here for work `.rptc/complete/integrations-destination-control/`
   had covered since 2026-08-03, including the very question the session was answering.
 - **Promotion**: when an item becomes active, move it to `.rptc/plans/<topic-slug>/`.
 
@@ -28,22 +28,27 @@ draft  →  ready  →  active  →  shipped/dropped
   └─ idea capture, may still change shape
 ```
 
-> **Index last reconciled: 2026-08-13.** Every link resolved mechanically: 62 links, 1 dead
-> (`appbuilder-shell-app`, which shipped and moved to `complete/` in `fe38d1c4` while this
-> file still called it an active plan — now repointed), and 0 unreferenced items. 35 items
-> indexed.
+> **Index last reconciled: 2026-08-13.** Every link resolved mechanically: 62 links, 0 dead,
+> 0 unreferenced items. The checker was proved by injecting a link known to be broken and
+> confirming it was caught, so "0 dead" is a result rather than a silent pass.
 >
-> A "32 entries vs 34 files" discrepancy reported during that pass was a MEASUREMENT error,
-> not a gap: some entries link two files, and plan directories count differently from single
-> files. Nothing was missing. Recording it because a wrong count in a reconcile note is worse
-> than none — it sends the next person hunting for items that were never lost.
+> **Same pass audited `.rptc/plans/`, which held 11 directories while the handoff said nothing
+> was active.** Five had SHIPPED and were never archived — `integrations-surface` (whose own
+> header still read "no code written yet" two weeks after the screen shipped),
+> `integrations-grid`, `integrations-destination-control`, `storefront-delivery-probe` and
+> `pdp-prerender-validation` (open-looking until you read its handoff). Five were paused or
+> gated and moved here. `data-installer` is the only genuinely active plan. Every verdict came
+> from an artifact in `src/` or a commit, because several status lines were stale.
 >
-> **Section C is absent on purpose.** It was "Ready to pick up", it emptied when its only
-> item (`mcp-affordance-coverage`) shipped, and it was removed rather than left hollow. The
-> letters are not renumbered so older references keep resolving.
+> An earlier "32 entries vs 34 files" discrepancy was a MEASUREMENT error, not a gap: some
+> entries link two files and plan directories count differently. Nothing was missing. Recorded
+> because a wrong count in a reconcile note sends the next person hunting for nothing.
 >
-> Backlog descriptions still drift between audits — when in doubt, trust the code and
-> `git log`, not this file.
+> **Section C is absent on purpose.** It was "Ready to pick up", emptied when
+> `mcp-affordance-coverage` shipped, and was removed rather than left hollow. Letters are not
+> renumbered so older references keep resolving.
+>
+> Descriptions still drift between audits — when in doubt, trust the code and `git log`.
 
 ## Recently shipped (archived to `../complete/`)
 
@@ -103,9 +108,9 @@ User-confirmed 2026-07-15: the product noun for the custom, action-carrying inte
 
 **✅ SHIPPED 2026-07-15** (same-day pull-forward — it blocked the D3 live checks). Landed the "already has a mesh" → one-shot retry-as-update fallback in `deployMeshComponent`, the blank-error fix (`formatAdobeCliError` trims the leading-arrow newline), and the review's inverse-gap find (`edsResetMeshHelper` sources `existingMeshId` from remote truth). Residual noted in the item: `createHandler`'s duplicate create pipeline + drifting signature detector (architecture-duplication candidate).
 
-#### Hybrid storefront — Tier 2 (B2B+B2C in one site) ([`hybrid-storefront-model/`](../plans/hybrid-storefront-model/overview.md) — still in `.rptc/plans/`)
+#### Hybrid storefront — Tier 2 (B2B+B2C in one site) ([`hybrid-storefront-model/`](../backlog/hybrid-storefront-model/overview.md) — still in `.rptc/plans/`)
 
-One CitiSignal storefront serves both B2C individuals and B2B company accounts by customer type at login, on the `boilerplate-b2b-template` base with branding as an overlay (no fork). **Functionally complete** on `develop` — hybrid merge (`b9c31575`), B2B-readiness detection (`24656460`, `c3cd0bbd`), account-chrome overlay, config-flag injection (ADR-009, `bd90c96d`). **⛔ Gated on live login-UX verification**: confirm an individual customer sees no B2B nav rows, a company user does, and B2C is not regressed. The one plan dir that legitimately stays active. Step checks in [`step-02.md`](../plans/hybrid-storefront-model/step-02.md).
+One CitiSignal storefront serves both B2C individuals and B2B company accounts by customer type at login, on the `boilerplate-b2b-template` base with branding as an overlay (no fork). **Functionally complete** on `develop` — hybrid merge (`b9c31575`), B2B-readiness detection (`24656460`, `c3cd0bbd`), account-chrome overlay, config-flag injection (ADR-009, `bd90c96d`). **⛔ Gated on live login-UX verification**: confirm an individual customer sees no B2B nav rows, a company user does, and B2C is not regressed. The one plan dir that legitimately stays active. Step checks in [`step-02.md`](../backlog/hybrid-storefront-model/step-02.md).
 
 ### B. Sequencing / blocked
 

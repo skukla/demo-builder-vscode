@@ -36,5 +36,5 @@ import graph, discoverable only by a source-scanning test.
 
 - `tests/core/communication/webviewHandlerCoverage.test.ts` — the panel-wide guard
 - `tests/features/dashboard/commands/panelHandlerContext.test.ts` — the context guard
-- `.rptc/plans/integrations-destination-control/` — adds ANOTHER host requirement, so
+- `.rptc/complete/integrations-destination-control/` — adds ANOTHER host requirement, so
   step-01 should land first

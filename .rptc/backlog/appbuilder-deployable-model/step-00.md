@@ -7,7 +7,7 @@ by a separate architect sub-agent; the TDD executor must reload context before w
 
 - [ ] Re-invoke the originating command (`/rptc:feat "App Builder deployable model — D1"` or the
       `/rptc:fix` equivalent the PM used) so the TDD loop runs with the correct skills/SOPs loaded.
-- [ ] Read `.rptc/plans/appbuilder-deployable-model/overview.md` (D1 section + constraints + test
+- [ ] Read `.rptc/backlog/appbuilder-deployable-model/overview.md` (D1 section + constraints + test
       strategy).
 - [ ] Read `.rptc/research/appbuilder-deployable-model/d1-spike-findings.md` (the empirical
       source of truth — honor the CORRECTION and DEFINITIVE sections).

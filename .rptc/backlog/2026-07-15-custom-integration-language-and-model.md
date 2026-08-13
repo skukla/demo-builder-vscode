@@ -76,7 +76,7 @@ authority, superseded by D3. Supersedes/absorbs the old "packages inside one app
 slice-3 premise.
 
 **→ SCOPED as a TDD-ready 9-step plan (2026-07-15):**
-[`../plans/appbuilder-deployable-model/d3/overview.md`](../plans/appbuilder-deployable-model/d3/overview.md)
+[`../backlog/appbuilder-deployable-model/d3/overview.md`](../backlog/appbuilder-deployable-model/d3/overview.md)
 — D3 is the documented remainder of ADR-011 (D1–D2 shipped). Item 4 (integration `name`) folds into
 its Step 01; the mesh→`config.json` edge stays byte-identical throughout (golden test, Step 06).
 

@@ -6,7 +6,7 @@ executor must reload context before writing code).
 ## Tasks
 
 - [ ] Re-invoke the originating command: `/rptc:feat "ADR-011 D3 — Plan is approved, continue to implementation"`.
-- [ ] Read `.rptc/plans/appbuilder-deployable-model/d3/overview.md` (the D3 step table, the component-structure
+- [ ] Read `.rptc/backlog/appbuilder-deployable-model/d3/overview.md` (the D3 step table, the component-structure
       guarantee, the non-negotiable mesh-edge discipline).
 - [ ] Read the parent `../overview.md` (§"Gaps to resolve" state-coherence seam) and
       `docs/architecture/adr/011-app-builder-deployables.md`.

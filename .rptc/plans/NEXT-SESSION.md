@@ -161,19 +161,26 @@ negative one. And pair every "nothing found" with a positive control at the same
 
 **Needs a Dev Host or a live backend — cannot be done by an agent:**
 
-- **`mesh-staleness-scope` step 05 — still never run.** Flip `componentConfigs` key order in
-  a manifest, confirm the staleness verdict is order-independent. `demo-builder-test` carries
-  the disagreement; do not clean it up before testing.
-- **`hybrid-storefront-model`** — unblocked, gated on individual-vs-company login against a
-  real B2B backend.
-- **One visual check outstanding from today:** whether the AI modal's two-column skill groups
-  and its new persistent scrollbar read well at a normal window width. Everything else in
-  that work was confirmed on screen.
+Moved to `.rptc/backlog/` on 2026-08-13. `plans/` is for ACTIVE work and none of these is
+being worked; five shipped plans were sitting there too, one of which said so in its own text.
+
+- **`backlog/mesh-staleness-scope` step 05 — still never run.** Flip `componentConfigs` key
+  order in a manifest, confirm the staleness verdict is order-independent. `demo-builder-test`
+  carries the disagreement; do not clean it up before testing.
+- **`backlog/hybrid-storefront-model`** — unblocked, gated on individual-vs-company login
+  against a real B2B backend.
+- **`backlog/per-integration-api-attribution`** — steps 01–05 shipped, 06 withdrawn, 07 is
+  RELEASE-gated: retiring the flat write loses picks for anyone still on `v1.0.0-beta.123`.
+- **One visual check outstanding:** the AI modal was confirmed readable 2026-08-13, but the
+  two-column skill groups and the persistent scrollbar specifically were never eyeballed.
 
 **Real work, not started:**
 
-- **`appbuilder-deployable-model` D2–D6.** Only D1 is built. Track A pre-positions
+- **`backlog/appbuilder-deployable-model` D2–D6.** Only D1 is built. Track A pre-positions
   `getWorkspaceCredential` — `dead-code-scan` will call it unused; it is not.
+- **`backlog/integrations-host-contract`** — `showIntegrations.ts` still hand-lists the wizard
+  handlers it reuses (19 references), so the contract drifts whenever the flow grows and the
+  guard tests only catch it after someone writes failing code. Verified still true 2026-08-13.
 
 **Unresolved, NOW REPRODUCING — backlogged 2026-08-13:**
 

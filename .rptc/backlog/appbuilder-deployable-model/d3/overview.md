@@ -132,7 +132,7 @@ the others. Component count ≠ App Builder project count (always 1).
 - D4 (AI shell), D5 (package binding), D6 (app-only project) — additive, later.
 
 ## Kickoff prompt
-> Implement ADR-011 D3 (`.rptc/plans/appbuilder-deployable-model/d3/overview.md`). Start at Step 01
+> Implement ADR-011 D3 (`.rptc/backlog/appbuilder-deployable-model/d3/overview.md`). Start at Step 01
 > (persist `appBuilderComponents` in `writeManifest` + loader-prefer + add the `name` field), RED-first.
 > Keep the `MESH_ENDPOINT`→`config.json` edge byte-identical throughout (golden test in Step 06); retire
 > the singular `meshState`/`appState` write-side (Step 07) only after mesh parity is proven. The

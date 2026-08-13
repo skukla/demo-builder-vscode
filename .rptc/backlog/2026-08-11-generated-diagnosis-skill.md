@@ -25,7 +25,7 @@ exists to pick between `sync_content` / `sync_storefront` / `deploy_mesh`;
 never a catalog. A single read like `get_store_structure` has no such home, so it went
 untaught: an agent finds it by tool search, but nothing tells it to check store scope *when
 PDPs come back empty*. That is exactly the failure the tool was built to prevent — it cost
-most of an afternoon in `.rptc/plans/pdp-prerender-validation/HANDOFF.md` §3.
+most of an afternoon in `.rptc/complete/pdp-prerender-validation/HANDOFF.md` §3.
 
 `get_store_structure` is the trigger, not the scope. The gap is the missing category.
 
