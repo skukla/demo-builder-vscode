@@ -23,6 +23,28 @@ export const handleConfigure: MessageHandler = async () => {
 };
 
 /**
+ * The shared tab-replacement sequence: dispose the named panel (if open)
+ * inside a webview transition — so its disposal callback doesn't fire and
+ * re-open another surface — then dispatch the target command.
+ */
+async function swapWebviewSurface(panelId: string, commandId: string): Promise<void> {
+    await BaseWebviewCommand.startWebviewTransition();
+    try {
+        const panel = BaseWebviewCommand.getActivePanel(panelId);
+        if (panel) {
+            try {
+                panel.dispose();
+            } catch {
+                // Panel may already be disposed - this is OK
+            }
+        }
+        await vscode.commands.executeCommand(commandId);
+    } finally {
+        BaseWebviewCommand.endWebviewTransition();
+    }
+}
+
+/**
  * Handle 'navigateBack' message - Navigate back to projects list
  *
  * Clears the current project and shows the projects list view.
@@ -35,27 +57,7 @@ export const handleNavigateBack: MessageHandler = async (context) => {
         // Clear current project from state
         await context.stateManager.clearProject();
 
-        // Start transition BEFORE disposing to prevent disposal callback from firing
-        await BaseWebviewCommand.startWebviewTransition();
-        try {
-            // Dispose Dashboard panel before opening Projects List
-            // This prevents the blank webview issue during transition
-            const dashboardPanel = BaseWebviewCommand.getActivePanel(
-                'demoBuilder.projectDashboard',
-            );
-            if (dashboardPanel) {
-                try {
-                    dashboardPanel.dispose();
-                } catch {
-                    // Panel may already be disposed - this is OK
-                }
-            }
-
-            // Navigate to projects list
-            await vscode.commands.executeCommand('demoBuilder.showProjectsList');
-        } finally {
-            BaseWebviewCommand.endWebviewTransition();
-        }
+        await swapWebviewSurface('demoBuilder.projectDashboard', 'demoBuilder.showProjectsList');
 
         return { success: true };
     } catch (error) {
@@ -67,15 +69,6 @@ export const handleNavigateBack: MessageHandler = async (context) => {
     }
 };
 
-/**
- * Handle 'openIntegrations' message - open the dedicated integrations surface
- *
- * The dashboard's integrations summary tile opens the full-width integrations
- * screen. Tab replacement, exactly like navigateBack: dispose the dashboard
- * panel inside a webview transition (so the disposal callback doesn't re-open
- * the projects list), then dispatch the command. The current project pointer is
- * NOT cleared — the surface is scoped to the project we came from.
- */
 /**
  * Warm the org's Adobe API catalog in the background.
  *
@@ -119,6 +112,13 @@ async function warmOrgServicesCatalog(context: HandlerContext): Promise<void> {
     }
 }
 
+/**
+ * Handle 'openIntegrations' message - open the dedicated integrations surface
+ *
+ * The dashboard's integrations summary tile opens the full-width integrations
+ * screen. Tab replacement, exactly like navigateBack — but the current project
+ * pointer is NOT cleared: the surface is scoped to the project we came from.
+ */
 export const handleOpenIntegrations: MessageHandler = async (context) => {
     try {
         context.logger.info('Opening integrations surface');
@@ -126,23 +126,7 @@ export const handleOpenIntegrations: MessageHandler = async (context) => {
         // Deliberately not awaited — see warmOrgServicesCatalog.
         void warmOrgServicesCatalog(context);
 
-        await BaseWebviewCommand.startWebviewTransition();
-        try {
-            const dashboardPanel = BaseWebviewCommand.getActivePanel(
-                'demoBuilder.projectDashboard',
-            );
-            if (dashboardPanel) {
-                try {
-                    dashboardPanel.dispose();
-                } catch {
-                    // Panel may already be disposed - this is OK
-                }
-            }
-
-            await vscode.commands.executeCommand('demoBuilder.showIntegrations');
-        } finally {
-            BaseWebviewCommand.endWebviewTransition();
-        }
+        await swapWebviewSurface('demoBuilder.projectDashboard', 'demoBuilder.showIntegrations');
 
         return { success: true };
     } catch (error) {
@@ -166,21 +150,7 @@ export const handleShowProjectDashboard: MessageHandler = async (context) => {
     try {
         context.logger.info('Returning to the project dashboard');
 
-        await BaseWebviewCommand.startWebviewTransition();
-        try {
-            const integrationsPanel = BaseWebviewCommand.getActivePanel('demoBuilder.integrations');
-            if (integrationsPanel) {
-                try {
-                    integrationsPanel.dispose();
-                } catch {
-                    // Panel may already be disposed - this is OK
-                }
-            }
-
-            await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
-        } finally {
-            BaseWebviewCommand.endWebviewTransition();
-        }
+        await swapWebviewSurface('demoBuilder.integrations', 'demoBuilder.showProjectDashboard');
 
         return { success: true };
     } catch (error) {

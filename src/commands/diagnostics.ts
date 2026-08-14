@@ -59,6 +59,8 @@ export type { DiagnosticsReport } from './diagnosticsReport';
 
 /** Actions offered on the completion notification. Copy is first: for a
  *  colleague reporting a problem it is the primary one. */
+export const DIAGNOSTICS_ACTIONS = ['Copy Report', 'Show Logs', 'Export Log'] as const;
+
 /**
  * The overlay's SOURCE template path — NOT a PDP.
  *
@@ -70,8 +72,6 @@ export type { DiagnosticsReport } from './diagnosticsReport';
  * fully broken storefront reported "delivery looks correct".
  */
 const AUTHORED_TEMPLATE_PATH = '/products/default';
-
-export const DIAGNOSTICS_ACTIONS = ['Copy Report', 'Show Logs', 'Export Log'] as const;
 
 /**
  * Handle the chosen completion action.
@@ -205,8 +205,7 @@ export class DiagnosticsCommand {
         // one. Probing the workspace socket described the retired
         // one-project-one-workspace model and reported "not running" whenever no
         // folder was open, which is the normal state for this window model.
-        const projectsDir =
-            resolveProjectsRoot();
+        const projectsDir = resolveProjectsRoot();
         const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
         const { primary: socketPath } = mcpSocketBindings(projectsDir, workspacePath);
 
@@ -238,13 +237,6 @@ export class DiagnosticsCommand {
         return probeGitHubCredential(tokenService, repoFullName, this.logger);
     }
 
-    /**
-     * Probe whether the DA.live credential can read this storefront's site
-     * config, and whether the same credential is accepted by DA.live itself.
-     *
-     * Returns undefined without an EDS project: there is no site to address,
-     * and an invented one would produce a 404 that reads like a real finding.
-     */
     /**
      * Probe what the storefront is actually SERVING.
      *
@@ -296,6 +288,13 @@ export class DiagnosticsCommand {
         };
     }
 
+    /**
+     * Probe whether the DA.live credential can read this storefront's site
+     * config, and whether the same credential is accepted by DA.live itself.
+     *
+     * Returns undefined without an EDS project: there is no site to address,
+     * and an invented one would produce a 404 that reads like a real finding.
+     */
     private async checkConfigService(): Promise<ConfigServiceProbeResult | undefined> {
         const project = await ServiceLocator.getStateManager()?.getCurrentProject();
         const target = getEdsDaLiveTarget(project);

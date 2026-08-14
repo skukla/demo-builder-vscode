@@ -52,12 +52,6 @@ export function isClaudeChatOpen(): boolean {
 export type OpenInClaudeArg = Project | { project?: Project; prompt?: string };
 
 /**
- * Resolve the projects root the home Chat always launches at:
- * `DEMO_BUILDER_PROJECTS_DIR` if set, else `~/.demo-builder/projects`.
- */
-
-
-/**
  * Re-home preamble prepended to a prompt when it's delivered into a CONTINUED
  * conversation (terminal reuse, or a spawn that resumes via `--continue`). A
  * resumed conversation doesn't re-read the home `AGENTS.md`, so it can keep stale
@@ -67,9 +61,9 @@ export type OpenInClaudeArg = Project | { project?: Project; prompt?: string };
  * truth). A cold spawn reads `AGENTS.md` and self-homes, so it gets no preamble.
  */
 export const REHOME_PROMPT_PREFIX =
-    'Before responding, call the get_current_project tool to re-confirm the active demo '
-    + 'project (it may have changed since this conversation started), then address the '
-    + 'request below.\n\n';
+    'Before responding, call the get_current_project tool to re-confirm the active demo ' +
+    'project (it may have changed since this conversation started), then address the ' +
+    'request below.\n\n';
 
 /**
  * OpenInClaudeCommand — opens Claude Code (`claude --continue`) in a VS Code

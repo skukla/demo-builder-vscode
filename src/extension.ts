@@ -248,8 +248,8 @@ export async function activate(context: vscode.ExtensionContext) {
         // there reaches the in-extension MCP server on the ROOT socket and can do
         // global / by-name work. Best-effort and additive — never blocks or
         // breaks activation, and changes no navigation/workspace behavior.
-        const projectsDir = resolveProjectsRoot();
-        void ensureHomeAiContext(projectsDir, path.join(context.extensionPath, 'dist'));
+        const projectsRoot = resolveProjectsRoot();
+        void ensureHomeAiContext(projectsRoot, path.join(context.extensionPath, 'dist'));
 
         // Register file watchers early (before loading projects)
         // This ensures the initializeFileHashes command exists when we need it
@@ -345,7 +345,6 @@ export async function activate(context: vscode.ExtensionContext) {
         // anchored to a project SUBDIR (e.g. a leftover anchor from an older
         // build), re-home it to the projects root and bail — the post-reopen
         // activation runs the cold-start path below.
-        const projectsRoot = resolveProjectsRoot();
         const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
         if (shouldReHomeToRoot(ws, projectsRoot)) {
             await fs.mkdir(projectsRoot, { recursive: true }).catch(() => {});
