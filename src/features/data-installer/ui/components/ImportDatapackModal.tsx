@@ -240,14 +240,13 @@ export function ImportDatapackModal({
                         </div>
                     ) : null}
 
-                    {start.loading || reset.loading ? (
-                        <LoadingDisplay
-                            size="M"
-                            message={start.loading ? 'Starting import…' : 'Starting reset…'}
-                        />
-                    ) : null}
+                    {/* One visual for every in-flight state: form out, centered
+                        spinner in — the ManageApisModal/AiCapabilitiesModal
+                        treatment, and what Start/Reset here already did. The dry
+                        run briefly had its own small inline row instead. */}
+                    {busy ? <LoadingDisplay size="M" message={busyMessage(start.loading, reset.loading)} /> : null}
 
-                    {!running && !resetArmed && !start.loading && !reset.loading ? (
+                    {!running && !resetArmed && !busy ? (
                         <>
                             <ImportTargetField
                                 projectName={target.value?.projectName}
@@ -448,8 +447,19 @@ function ImportProgress({
     );
 }
 
+/** Which in-flight operation the one busy spinner is narrating. */
+function busyMessage(starting: boolean, resetting: boolean): string {
+    if (starting) {
+        return 'Starting import…';
+    }
+    if (resetting) {
+        return 'Starting reset…';
+    }
+    return 'Checking with the service…';
+}
+
 /**
- * The dry-run spinner, its verdict, and the three failure states.
+ * The dry-run verdict and the three failure states.
  *
  * Extracted for the same reason as {@link ImportTargetField}: each state is one
  * branch, and inlining all of them pushed the modal past the complexity ceiling.
@@ -469,8 +479,6 @@ function RequestFeedback({
 }): React.JSX.Element {
     return (
         <>
-            {dryRun.loading ? <LoadingDisplay size="S" message="Checking with the service…" /> : null}
-
             {dryRun.value && !dryRun.loading ? (
                 <StatusDisplay
                     variant={dryRun.value.valid ? 'success' : 'warning'}

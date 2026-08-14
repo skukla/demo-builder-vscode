@@ -506,6 +506,22 @@ describe('ImportDatapackModal', () => {
             expect(screen.getByRole('button', { name: /starting…/i })).toBeInTheDocument();
         });
 
+        // All three in-flight states share one visual: the form swaps for a
+        // centered spinner (the ManageApisModal/AiCapabilitiesModal treatment).
+        // The dry run briefly had its own small inline row under the form.
+        it('replaces the form with the spinner while checking, like Start does', async () => {
+            neverResolve('validate-datapack-import');
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+
+            fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
+
+            expect(await screen.findByText(/checking with the service/i)).toBeInTheDocument();
+            expect(screen.queryByRole('textbox', { name: /commerce instance/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('checkbox', { name: 'categories' })).not.toBeInTheDocument();
+        });
+
         it('disables every action while one is in flight', async () => {
             neverResolve('validate-datapack-import');
             renderModal();
