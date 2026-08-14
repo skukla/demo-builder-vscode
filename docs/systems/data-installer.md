@@ -172,14 +172,13 @@ service's own.
 
 ## 5. The write path (Stage 2 — BUILT, never run live)
 
-**Status: the read-only half of the write path passed live on 2026-08-13.** A dry
-run through the modal succeeded end to end — guard → credentials from declared
-config → `get-websites-and-stores` 200 → `operation_mode: 'validate'` 200 — which
-confirms the credential field names, the auth model (user IMS bearer to the
-service, OAuth S2S pair to Commerce), the request body shape, AND that the tenant
-id derived from `ACCS_GRAPHQL_ENDPOINT` is accepted as `commerce_instance`.
-**`import` and `delete` have still never run.** The first real import writes data
-into a Commerce instance, and there is no undo and no cancel.
+**Status: VERIFIED LIVE END TO END, 2026-08-13 — including through the modal.**
+The full sequence ran against a real, populated ACCS instance twice over: once by
+direct service calls with before/after snapshots, then through the extension's own
+UI (modal import → per-type success; modal reset → instance diffed byte-identical
+to its pre-import state, zero collateral). Dry run, credential check, import,
+reset, and the detached watch have all met the service and behaved. Remaining
+unexercised: `partial` outcomes, multi-type imports, and everything in Stage 3.
 
 | Piece | What it does |
 |---|---|

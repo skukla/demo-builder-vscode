@@ -92,10 +92,12 @@ instance: categories import landed 12 nodes (11 + the pack's own root), reset
 removed exactly those 12, zero collateral, products untouched. Scoped-delete
 semantics proven; see `docs/systems/data-installer.md` § "Reset semantics".
 
-**What has NOT run: the extension's own write path** — modal → handler → runner →
-TransientStateManager record. That is now risk-free to exercise: press Import
-(categories only) in the modal, watch the per-type rows, then Reset. The runner
-watching a delete unchanged is the seam's own test.
+**DONE 2026-08-13, same day: the modal pass ran too.** Import through the UI
+(per-type success, verified +12 nodes on the instance), then Reset through the UI
+(verified: instance diffed byte-identical to pre-import, zero collateral). The
+runner watched the delete with no changes — the seam's own test, passed. Stage 2
+is verified end to end; the live session also drove six UX fixes (busy states,
+centered loaders, compact success, operation-aware copy), all committed.
 
 ### 2b. The original step, kept for its cautions: one real import, on a target you own
 
