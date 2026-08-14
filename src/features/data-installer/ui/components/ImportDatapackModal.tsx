@@ -46,6 +46,12 @@ import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { FormField } from '@/core/ui/components/forms/FormField';
 import { Modal } from '@/core/ui/components/ui/Modal';
 
+/**
+ * Provisioning talks to the Console three times; the subscribe PUT alone took
+ * 46 seconds live. Three minutes is headroom, not hope.
+ */
+const PROVISION_TIMEOUT_MS = 180_000;
+
 /** How often to re-read the recorded job while one is in flight. */
 const STATUS_POLL_MS = 2000;
 
@@ -97,7 +103,12 @@ export function ImportDatapackModal({
     const dryRun = useDataInstallerRequest<{ valid: boolean; reason?: string }>(
         'validate-datapack-import',
     );
-    const provision = useDataInstallerRequest<never>('provision-accs-credentials');
+    // Sized to the MEASURED loop, not the default: provisioning took ~50s live
+    // (the Console subscribe PUT alone was 46s), and the default timeout gave
+    // up first — the modal showed a failure over an operation that succeeded.
+    const provision = useDataInstallerRequest<never>('provision-accs-credentials', {
+        timeout: PROVISION_TIMEOUT_MS,
+    });
     const status = useDataInstallerRequest<ImportJobRecord | null>('get-datapack-import-status');
     const target = useDataInstallerRequest<ImportTarget>('get-datapack-import-target');
 

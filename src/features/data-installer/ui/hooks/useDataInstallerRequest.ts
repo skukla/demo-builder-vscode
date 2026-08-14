@@ -61,8 +61,11 @@ export interface DataInstallerRequest<T> {
 /** Fallback wording for a refusal that arrived with no message of its own. */
 const UNSTATED_FAILURE = 'The Data Installer request did not succeed.';
 
-export function useDataInstallerRequest<T>(type: string): DataInstallerRequest<T> {
-    const { execute, loading, error, data } = useVSCodeRequest<HandlerResponse>(type);
+export function useDataInstallerRequest<T>(
+    type: string,
+    options: { timeout?: number } = {},
+): DataInstallerRequest<T> {
+    const { execute, loading, error, data } = useVSCodeRequest<HandlerResponse>(type, options);
 
     const load = useCallback(
         (payload?: unknown): void => {

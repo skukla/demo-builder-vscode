@@ -353,6 +353,27 @@ describe('ImportDatapackModal — job lifecycle', () => {
             ).not.toBeInTheDocument();
         });
 
+        // Measured live 2026-08-14: the loop takes ~50s (the Console subscribe
+        // PUT alone took 46s), and the DEFAULT request timeout gave up first —
+        // the modal showed "Request timeout" over an operation that completed
+        // and saved. A false failure over a real success.
+        it('gives the provisioning request a timeout sized to the measured loop', async () => {
+            refuseNeedingCredentials();
+            await refuse();
+            await screen.findByText(/dry run failed/i);
+
+            fireEvent.click(
+                screen.getByRole('button', { name: /set up credentials automatically/i }),
+            );
+
+            await waitFor(() => {
+                const call = mockRequest.mock.calls.find(
+                    (entry) => entry[0] === 'provision-accs-credentials',
+                );
+                expect(call?.[2]).toBeGreaterThanOrEqual(180_000);
+            });
+        });
+
         it('runs the provisioning handler on press', async () => {
             refuseNeedingCredentials();
             await refuse();
