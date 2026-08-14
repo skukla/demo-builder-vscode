@@ -63,7 +63,12 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // written only when @playwright/mcp is actually installed. This bump triggers
 // the first silent tier-2 sweep on next activation; pre-v8 files get
 // overwrite-once + hash recording (ADR-013 grandfather rule).
-export const AI_CONTEXT_VERSION = 8;
+// v9: the AGENTS.md generated-file banner told users "hand edits are
+// overwritten" — the exact opposite of v8's hash-and-skip behavior. Reworded
+// to state the real trade: edits are kept but freeze the file at your version
+// until you delete it and regenerate. First bump under the silent-sweep model:
+// nobody is prompted; the activation sweep folds it in.
+export const AI_CONTEXT_VERSION = 9;
 
 /**
  * Component IDs for standardized component instance access

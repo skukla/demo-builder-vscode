@@ -12,11 +12,11 @@ describe('AI_CONTEXT_VERSION', () => {
     // generated-content change (see the ai-context-authoring discipline): the
     // constant re-gates every existing project for a bundle refresh — since v8
     // via the silent activation sweep rather than a prompt.
-    // v8: hash-and-skip edit survival (ADR-013), tiered refresh, and
-    // Playwright-skill gating shipped as ONE batch sharing one bump. This bump
-    // triggers the first silent tier-2 sweep on every existing project.
-    it('is 8 (ADR-013 hash-and-skip + tiered refresh + skill gating)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(8);
+    // v9: AGENTS.md banner reworded to match ADR-013 reality (edits are kept,
+    // not overwritten — but freeze the file until delete + regenerate). First
+    // bump under the silent-sweep model: no prompt, the sweep folds it in.
+    it('is 9 (honest ADR-013 banner)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(9);
     });
 });
 

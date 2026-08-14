@@ -10,8 +10,6 @@
  * their import path.
  */
 
-import * as os from 'os';
-import * as path from 'path';
 import * as vscode from 'vscode';
 import {
     checkAdobeCLI,
@@ -35,6 +33,7 @@ import {
 } from './diagnosticsReport';
 import { ServiceLocator } from '@/core/di';
 import { getLogger, type DebugLogger } from '@/core/logging';
+import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { mcpSocketBindings } from '@/features/ai/server/mcpSocketPath';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
 import { getDaLiveAuthService, resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
@@ -207,8 +206,7 @@ export class DiagnosticsCommand {
         // one-project-one-workspace model and reported "not running" whenever no
         // folder was open, which is the normal state for this window model.
         const projectsDir =
-            process.env.DEMO_BUILDER_PROJECTS_DIR ??
-            path.join(os.homedir(), '.demo-builder', 'projects');
+            resolveProjectsRoot();
         const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
         const { primary: socketPath } = mcpSocketBindings(projectsDir, workspacePath);
 

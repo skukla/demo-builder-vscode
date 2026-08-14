@@ -9,6 +9,7 @@ import { ServiceLocator } from '@/core/di';
 import { initializeLogger, getLogger } from '@/core/logging';
 import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
+import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
@@ -247,9 +248,7 @@ export async function activate(context: vscode.ExtensionContext) {
         // there reaches the in-extension MCP server on the ROOT socket and can do
         // global / by-name work. Best-effort and additive — never blocks or
         // breaks activation, and changes no navigation/workspace behavior.
-        const projectsDir =
-            process.env.DEMO_BUILDER_PROJECTS_DIR ??
-            path.join(os.homedir(), '.demo-builder', 'projects');
+        const projectsDir = resolveProjectsRoot();
         void ensureHomeAiContext(projectsDir, path.join(context.extensionPath, 'dist'));
 
         // Register file watchers early (before loading projects)
@@ -346,9 +345,7 @@ export async function activate(context: vscode.ExtensionContext) {
         // anchored to a project SUBDIR (e.g. a leftover anchor from an older
         // build), re-home it to the projects root and bail — the post-reopen
         // activation runs the cold-start path below.
-        const projectsRoot =
-            process.env.DEMO_BUILDER_PROJECTS_DIR ??
-            path.join(os.homedir(), '.demo-builder', 'projects');
+        const projectsRoot = resolveProjectsRoot();
         const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
         if (shouldReHomeToRoot(ws, projectsRoot)) {
             await fs.mkdir(projectsRoot, { recursive: true }).catch(() => {});
@@ -412,9 +409,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         // launches at the root. Refusing to start without a folder left anyone
         // driving the extension from the sidebar with no MCP server at all.
         const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        const projectsDir =
-            process.env.DEMO_BUILDER_PROJECTS_DIR ??
-            path.join(os.homedir(), '.demo-builder', 'projects');
+        const projectsDir = resolveProjectsRoot();
         // Handler-backed read/status tools dispatch through the existing handler
         // maps with a fresh headless context per call.
         const ctxFactory = () => createHeadlessHandlerContext(context, stateManager, logger);

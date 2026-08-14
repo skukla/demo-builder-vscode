@@ -27,14 +27,23 @@ import { createGeneratedFileWriter } from '@/features/project-creation/services/
 import { enoentError, makeMockLogger, makeTestWriter } from './generatedFileWriter.testUtils';
 import type { Logger } from '@/types/logger';
 
-jest.mock('fs/promises', () => ({
-    lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-    realpath: jest.fn(async (p: string) => p),
-    mkdir: jest.fn().mockResolvedValue(undefined),
-    writeFile: jest.fn().mockResolvedValue(undefined),
-    readFile: jest.fn(),
-    unlink: jest.fn().mockResolvedValue(undefined),
-}));
+jest.mock('fs/promises', () => {
+    const writeFile = jest.fn().mockResolvedValue(undefined);
+    return {
+        lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
+        realpath: jest.fn(async (p: string) => p),
+        mkdir: jest.fn().mockResolvedValue(undefined),
+        writeFile,
+        readFile: jest.fn(),
+        unlink: jest.fn().mockResolvedValue(undefined),
+        // O_NOFOLLOW writes go through open(); the returned handle delegates to
+        // the writeFile mock WITH the path, so path-based assertions keep working.
+        open: jest.fn(async (p: unknown) => ({
+            writeFile: jest.fn(async (d: unknown, e: unknown) => writeFile(p as string, d, e)),
+            close: jest.fn(async () => undefined),
+        })),
+    };
+});
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -498,11 +507,20 @@ describe('symlink and containment guards', () => {
         (fsPromises.realpath as jest.Mock).mockImplementation(async (p: string) => p);
         (fsPromises.readFile as jest.Mock).mockReset();
         (fsPromises.readFile as jest.Mock).mockRejectedValue(enoentError());
+        (fsPromises.open as jest.Mock).mockReset();
+        (fsPromises.open as jest.Mock).mockImplementation(async (p: unknown) => ({
+            writeFile: jest.fn(async (d: unknown, e: unknown) =>
+                (fsPromises.writeFile as jest.Mock)(p as string, d, e)
+            ),
+            close: jest.fn(async () => undefined),
+        }));
     });
 
-    it("refuses to write through a symlinked file → 'skipped', no write, no hash", async () => {
+    it("refuses to write through a symlinked file (O_NOFOLLOW → ELOOP) → 'skipped', no write, no hash", async () => {
         (fsPromises.readFile as jest.Mock).mockResolvedValue('old');
-        (fsPromises.lstat as jest.Mock).mockResolvedValue({ isSymbolicLink: () => true });
+        (fsPromises.open as jest.Mock).mockRejectedValue(
+            Object.assign(new Error('ELOOP: symbolic link encountered'), { code: 'ELOOP' })
+        );
         const logger = makeMockLogger();
         const writer = createGeneratedFileWriter(PROJECT, {}, logger);
 
@@ -513,6 +531,50 @@ describe('symlink and containment guards', () => {
         expect(writer.hashes()['AGENTS.md']).toBeUndefined();
         expect(writer.report().skipped).toContain('AGENTS.md');
         expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('symlink'));
+    });
+
+    it('non-ELOOP open failures (disk full) propagate — they are errors, not skips', async () => {
+        (fsPromises.readFile as jest.Mock).mockRejectedValue(enoentError());
+        (fsPromises.open as jest.Mock).mockRejectedValue(
+            Object.assign(new Error('ENOSPC: no space'), { code: 'ENOSPC' })
+        );
+        const writer = makeTestWriter(PROJECT);
+
+        await expect(writer.write('AGENTS.md', 'x')).rejects.toThrow('ENOSPC');
+    });
+
+    it('does NOT mkdir when the parent resolves outside the project (dir creation cannot escape)', async () => {
+        (fsPromises.readFile as jest.Mock).mockRejectedValue(enoentError());
+        (fsPromises.realpath as jest.Mock).mockImplementation(async (p: string) =>
+            p === PROJECT ? PROJECT : '/somewhere/else'
+        );
+        const writer = makeTestWriter(PROJECT);
+
+        const outcome = await writer.write('.claude/mcp.json', '{}');
+
+        expect(outcome).toBe('skipped');
+        expect(fsPromises.mkdir).not.toHaveBeenCalled();
+        expect(fsPromises.writeFile).not.toHaveBeenCalled();
+    });
+
+    it('walks to the deepest EXISTING ancestor when the parent does not exist yet (fresh project)', async () => {
+        // .claude/skills does not exist; .claude does not exist; PROJECT does.
+        (fsPromises.readFile as jest.Mock).mockRejectedValue(enoentError());
+        (fsPromises.realpath as jest.Mock).mockImplementation(async (p: string) => {
+            if (p === PROJECT) return PROJECT;
+            throw enoentError();
+        });
+        const writer = makeTestWriter(PROJECT);
+
+        const outcome = await writer.write('.claude/skills/new.md', 'body');
+
+        expect(outcome).toBe('written');
+        expect(fsPromises.mkdir).toHaveBeenCalled();
+        expect(fsPromises.writeFile).toHaveBeenCalledWith(
+            `${PROJECT}/.claude/skills/new.md`,
+            'body',
+            'utf-8'
+        );
     });
 
     it('refuses when the parent directory resolves outside the project root', async () => {
@@ -528,8 +590,10 @@ describe('symlink and containment guards', () => {
         expect(fsPromises.writeFile).not.toHaveBeenCalled();
     });
 
-    it('writeMerged refuses a symlinked target the same way', async () => {
-        (fsPromises.lstat as jest.Mock).mockResolvedValue({ isSymbolicLink: () => true });
+    it('writeMerged refuses a symlinked target the same way (O_NOFOLLOW → ELOOP)', async () => {
+        (fsPromises.open as jest.Mock).mockRejectedValue(
+            Object.assign(new Error('ELOOP'), { code: 'ELOOP' })
+        );
         const writer = makeTestWriter(PROJECT);
 
         await writer.writeMerged('.claude/settings.json', '{"a":1}');
@@ -552,7 +616,7 @@ describe('symlink and containment guards', () => {
         expect(fsPromises.unlink).not.toHaveBeenCalled();
     });
 
-    it('an absent target (lstat ENOENT) still writes normally — the guard tolerates absence', async () => {
+    it('an absent target still writes normally — O_CREAT covers the first write', async () => {
         (fsPromises.readFile as jest.Mock).mockRejectedValue(enoentError());
         const writer = makeTestWriter(PROJECT);
 

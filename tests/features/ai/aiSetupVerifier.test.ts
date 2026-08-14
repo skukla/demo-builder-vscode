@@ -13,6 +13,7 @@ import { createHash } from 'crypto';
 import * as fsPromises from 'fs/promises';
 
 jest.mock('fs/promises', () => ({
+    realpath: jest.fn(async (p: string) => p),
     readFile: jest.fn(),
     access: jest.fn(),
     readdir: jest.fn(),
@@ -464,5 +465,54 @@ describe('verifyAiSetup', () => {
 
             expect(result.inventory.editedFiles).toEqual(['.claude/mcp.json', 'AGENTS.md']);
         });
+    });
+});
+
+// Verify-loop security finding: recordedHashes keys come verbatim from the
+// project manifest — a crafted key must not make the verifier read outside the
+// project (or leak the key into the modal as an "edited" entry).
+describe('editedFiles — manifest-key containment', () => {
+    const sha = (s: string): string =>
+        require('crypto').createHash('sha256').update(s, 'utf-8').digest('hex');
+    beforeEach(() => {
+        setupAllOk();
+        (fsPromises.realpath as jest.Mock).mockImplementation(async (p: string) => p);
+    });
+
+    it('ignores traversal keys ("..") without reading them', async () => {
+        const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH, {
+            '../../outside/secrets.txt': sha('guess'),
+        });
+
+        expect(result.inventory.editedFiles).toEqual([]);
+        const readPaths = (fsPromises.readFile as jest.Mock).mock.calls.map((c) => String(c[0]));
+        expect(readPaths.some((p) => p.includes('outside'))).toBe(false);
+    });
+
+    it('ignores absolute-path keys without reading them', async () => {
+        const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH, {
+            '/etc/passwd': sha('guess'),
+        });
+
+        expect(result.inventory.editedFiles).toEqual([]);
+        const readPaths = (fsPromises.readFile as jest.Mock).mock.calls.map((c) => String(c[0]));
+        expect(readPaths.some((p) => p.startsWith('/etc'))).toBe(false);
+    });
+
+    it('ignores keys whose resolved file escapes the project via symlink (realpath outside root)', async () => {
+        (fsPromises.realpath as jest.Mock).mockImplementation(async (p: string) =>
+            p === PROJECT_PATH ? PROJECT_PATH : '/somewhere/else'
+        );
+        const base = (fsPromises.readFile as jest.Mock).getMockImplementation()!;
+        (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
+            if (String(filePath).endsWith('linked.md')) return Promise.resolve('content');
+            return base(filePath);
+        });
+
+        const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH, {
+            'linked.md': sha('other content'),
+        });
+
+        expect(result.inventory.editedFiles).toEqual([]);
     });
 });

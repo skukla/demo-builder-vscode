@@ -506,7 +506,6 @@ export const handleRefreshBlockLibrary: MessageHandler = async (context) => {
         return { success: false, error: 'No project loaded', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const { isEdsProject } = await import('@/types/typeGuards');
     if (!isEdsProject(project)) {
         return {
             success: false,
@@ -529,9 +528,6 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
     if (hasAdobeWorkspaceContext(project)) {
         // Validate Adobe IDs before URL construction (security: prevents URL injection)
         try {
-            const { validateOrgId, validateProjectId, validateWorkspaceId } = await import(
-                '@/core/validation'
-            );
             validateOrgId(project.adobe.organization);
             validateProjectId(project.adobe.projectId);
             validateWorkspaceId(project.adobe.workspace);
@@ -553,7 +549,6 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
     } else if (hasAdobeProjectContext(project)) {
         // Validate Adobe IDs before URL construction (security: prevents URL injection)
         try {
-            const { validateOrgId, validateProjectId } = await import('@/core/validation');
             validateOrgId(project.adobe.organization);
             validateProjectId(project.adobe.projectId);
         } catch (validationError) {
@@ -858,8 +853,6 @@ export const handleResetProject: MessageHandler = async (context) => {
         context.logger.error('[Dashboard] resetProject: No current project');
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
-
-    const { isEdsProject } = await import('@/types/typeGuards');
 
     if (isEdsProject(project)) {
         const { resetEdsProjectWithUI } = await import('@/features/eds/services/edsResetUI');

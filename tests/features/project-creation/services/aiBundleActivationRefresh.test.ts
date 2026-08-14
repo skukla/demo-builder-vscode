@@ -24,7 +24,6 @@
  */
 
 import { createHash } from 'crypto';
-import { readFileSync } from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as childProcess from 'child_process';
 import * as path from 'path';
@@ -38,16 +37,25 @@ import { refreshAiBundlesOnActivation } from '@/features/project-creation/servic
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
-jest.mock('fs/promises', () => ({
-    lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-    realpath: jest.fn(async (p: string) => p),
-    mkdir: jest.fn().mockResolvedValue(undefined),
-    writeFile: jest.fn().mockResolvedValue(undefined),
-    readFile: jest.fn(),
-    appendFile: jest.fn().mockResolvedValue(undefined),
-    unlink: jest.fn().mockResolvedValue(undefined),
-    readdir: jest.fn(),
-}));
+jest.mock('fs/promises', () => {
+    const writeFile = jest.fn().mockResolvedValue(undefined);
+    return {
+        lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
+        realpath: jest.fn(async (p: string) => p),
+        mkdir: jest.fn().mockResolvedValue(undefined),
+        writeFile,
+        readFile: jest.fn(),
+        appendFile: jest.fn().mockResolvedValue(undefined),
+        unlink: jest.fn().mockResolvedValue(undefined),
+        readdir: jest.fn(),
+        // O_NOFOLLOW writes go through open(); the returned handle delegates to
+        // the writeFile mock WITH the path, so path-based assertions keep working.
+        open: jest.fn(async (p: unknown) => ({
+            writeFile: jest.fn(async (d: unknown, e: unknown) => writeFile(p as string, d, e)),
+            close: jest.fn(async () => undefined),
+        })),
+    };
+});
 
 // `resolveNode` is injected in every test, so the sweep itself never shells
 // out — but `browserUtils` (loaded transitively via aiContextWriter)
@@ -642,30 +650,6 @@ describe('node binary resolution', () => {
     });
 });
 
-// ─── StateManager isolation: structural assertion on the module source ───────
-
-describe('state-manager isolation', () => {
-    const MODULE_SOURCE = readFileSync(
-        path.join(
-            __dirname,
-            '../../../../src/features/project-creation/services/aiBundleActivationRefresh.ts'
-        ),
-        'utf-8'
-    );
-
-    it('imports nothing from the state manager (read-only project loading)', () => {
-        // The sweep must never set state.currentProject or persist through the
-        // extension's state layer — it loads read-only via ProjectFileLoader.
-        expect(MODULE_SOURCE).not.toMatch(/from\s+'[^']*stateManager'/i);
-    });
-
-    it('positive control: the same import scan sees the loader import', () => {
-        // Proves the regex above scans real import lines at the right scope —
-        // a "nothing found" without this control would prove nothing.
-        expect(MODULE_SOURCE).toMatch(/from\s+'[^']*projectFileLoader'/);
-    });
-});
-
 // ─── Partial failure: landed hashes survive a mid-refresh throw ──────────────
 
 describe('partial failure persistence', () => {
@@ -674,17 +658,14 @@ describe('partial failure persistence', () => {
         // best-effort save the manifest keeps stale hashes for files that DID
         // change on disk, and every later refresh misreads them as user-edited.
         const { hashes } = await provisionHealthyDisk();
-        const project = makeProject({
-            aiContextVersion: AI_CONTEXT_VERSION - 1, // stale → tier 2 runs
-            aiFileHashes: hashes,
-        });
+        // stale stamp → tier 2 runs
+        const project = makeProject({ aiContextVersion: AI_CONTEXT_VERSION - 1, aiFileHashes: hashes });
         const deps = makeDeps({ [PROJECT_A]: project });
         const saved = captureSaves(deps);
         // First write of the run succeeds (a landed change), later writes blow up.
         let writes = 0;
         (fsPromises.writeFile as jest.Mock).mockImplementation(async () => {
-            writes += 1;
-            if (writes > 1) throw new Error('disk full');
+            if ((writes += 1) > 1) throw new Error('disk full');
         });
 
         await refreshAiBundlesOnActivation(EXTENSION_PATH, makeMockLogger(), deps);

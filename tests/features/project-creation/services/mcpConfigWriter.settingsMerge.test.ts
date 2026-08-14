@@ -14,14 +14,23 @@ import { makeTestWriter } from './generatedFileWriter.testUtils';
 import { writeMcpConfigs } from '@/features/project-creation/services/mcpConfigWriter';
 import type { Project } from '@/types/base';
 
-jest.mock('fs/promises', () => ({
-    lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-    realpath: jest.fn(async (p: string) => p),
-    mkdir: jest.fn().mockResolvedValue(undefined),
-    writeFile: jest.fn().mockResolvedValue(undefined),
-    readFile: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-    appendFile: jest.fn().mockResolvedValue(undefined),
-}));
+jest.mock('fs/promises', () => {
+    const writeFile = jest.fn().mockResolvedValue(undefined);
+    return {
+        lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
+        realpath: jest.fn(async (p: string) => p),
+        mkdir: jest.fn().mockResolvedValue(undefined),
+        writeFile,
+        readFile: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
+        appendFile: jest.fn().mockResolvedValue(undefined),
+        // O_NOFOLLOW writes go through open(); the returned handle delegates to
+        // the writeFile mock WITH the path, so path-based assertions keep working.
+        open: jest.fn(async (p: unknown) => ({
+            writeFile: jest.fn(async (d: unknown, e: unknown) => writeFile(p as string, d, e)),
+            close: jest.fn(async () => undefined),
+        })),
+    };
+});
 
 const EXTENSION_DIST = '/path/to/extension/dist';
 // Pre-resolved Node binary — passed so the writer never shells out in tests.

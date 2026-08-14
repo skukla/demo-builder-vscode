@@ -183,8 +183,10 @@ true by construction.
   `ProjectRow.tsx` — shift/cmd-click modifier passthrough
 - `src/features/dashboard/commands/showDashboard.ts` —
   `shouldAutoReopenProjectsList` helper + `dispose()` override
-- `src/features/project-creation/services/aiBundleService.ts` (generation moved here from projectFinalizationService, 2026-08-14) —
-  `openProjectAsWorkspace`, wired into `executor.ts` as Phase 7
+- `src/features/project-creation/services/aiBundleService.ts` —
+  `generateAIContextFiles`, wired into `handlers/executor.ts` as Phase 6 (moved
+  here from projectFinalizationService 2026-08-14; the `openProjectAsWorkspace`
+  anchoring this bullet once named was retired with the workspace-anchoring model)
 - `src/commands/openInClaude.ts` — workspace-aware `auto` mode, mismatch
   warning for `extension` mode
 

@@ -1,8 +1,7 @@
-import * as os from 'os';
-import * as path from 'path';
 import * as vscode from 'vscode';
 import { hasConversation as hasClaudeConversation } from './claudeSessionStore';
 import { BaseCommand } from '@/core/base';
+import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import type { Project } from '@/types/base';
 
 /**
@@ -56,9 +55,7 @@ export type OpenInClaudeArg = Project | { project?: Project; prompt?: string };
  * Resolve the projects root the home Chat always launches at:
  * `DEMO_BUILDER_PROJECTS_DIR` if set, else `~/.demo-builder/projects`.
  */
-export function resolveProjectsRoot(): string {
-    return process.env.DEMO_BUILDER_PROJECTS_DIR ?? path.join(os.homedir(), '.demo-builder', 'projects');
-}
+
 
 /**
  * Re-home preamble prepended to a prompt when it's delivered into a CONTINUED

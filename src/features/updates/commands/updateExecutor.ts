@@ -506,7 +506,7 @@ export async function updateCommitShaWithRollback(
  *
  * - `disabled`: record the upstream SHA in `syncDisabledMarker` and skip both
  *   the file re-install and the `commitSha` bump. The storefront stays at the
- *   install-time commit; the AI Configuration tab interprets the
+ *   install-time commit; the AI Overview screen interprets the
  *   marker as "Sync disabled — N commits behind upstream".
  * - `ask`: prompt the user. "Update" continues as if `enabled`; "Skip"
  *   continues as if `disabled`; dialog dismissal aborts the per-library

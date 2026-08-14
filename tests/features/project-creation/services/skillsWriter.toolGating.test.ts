@@ -31,15 +31,24 @@ import {
 import { SKILL_MCP_TOOL_DEPENDENCIES } from '@/types/ai';
 import type { Project, ComponentInstance } from '@/types/base';
 
-jest.mock('fs/promises', () => ({
-    lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-    realpath: jest.fn(async (p: string) => p),
-    mkdir: jest.fn().mockResolvedValue(undefined),
-    writeFile: jest.fn().mockResolvedValue(undefined),
-    readdir: jest.fn(),
-    readFile: jest.fn(),
-    unlink: jest.fn().mockResolvedValue(undefined),
-}));
+jest.mock('fs/promises', () => {
+    const writeFile = jest.fn().mockResolvedValue(undefined);
+    return {
+        lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
+        realpath: jest.fn(async (p: string) => p),
+        mkdir: jest.fn().mockResolvedValue(undefined),
+        writeFile,
+        readdir: jest.fn(),
+        readFile: jest.fn(),
+        unlink: jest.fn().mockResolvedValue(undefined),
+        // O_NOFOLLOW writes go through open(); the returned handle delegates to
+        // the writeFile mock WITH the path, so path-based assertions keep working.
+        open: jest.fn(async (p: unknown) => ({
+            writeFile: jest.fn(async (d: unknown, e: unknown) => writeFile(p as string, d, e)),
+            close: jest.fn(async () => undefined),
+        })),
+    };
+});
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

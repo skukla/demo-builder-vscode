@@ -18,7 +18,7 @@ export interface AiDefaultsMcpServer {
     command: string;
     /** Arguments passed to command. Paths are relative to the storefront root. */
     args: string[];
-    /** Human-readable description shown in the AI Configuration tab. */
+    /** Human-readable description shown in the AI Overview screen. */
     description: string;
     /**
      * Which projects this entry applies to:

@@ -30,6 +30,7 @@ import {
     parseExistingSettings,
 } from './claudeSettingsWriter';
 import type { GeneratedFileWriter } from './generatedFileWriter';
+import { getLogger } from '@/core/logging';
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
@@ -226,9 +227,28 @@ const MCP_GITIGNORE_ENTRIES: ReadonlyArray<string> = [
 /**
  * Ensure the project's .gitignore excludes generated MCP config files.
  * Appends only entries that are not already present — idempotent.
+ *
+ * Outside the ADR-013 seam by design (the seam's hash-and-skip would fight the
+ * append-only contract), but it carries the seam's SYMLINK guard: `appendFile`
+ * follows links, so a planted `.gitignore → ~/.gitconfig` would get this block
+ * appended to an arbitrary user file on every sweep repair (2026-08-14 review).
  */
 async function ensureMcpFilesGitignored(projectPath: string): Promise<void> {
     const gitignorePath = path.join(projectPath, '.gitignore');
+
+    let isSymlink = false;
+    try {
+        isSymlink = (await fsPromises.lstat(gitignorePath)).isSymbolicLink();
+    } catch {
+        // File may not exist yet — the append creates it.
+    }
+    if (isSymlink) {
+        getLogger().warn(
+            '[AI Bundle] Refusing to update .gitignore — it is a symlink; ' +
+                'MCP config files may be accidentally committed',
+        );
+        return;
+    }
 
     let existing = '';
     try {
@@ -247,12 +267,13 @@ async function ensureMcpFilesGitignored(projectPath: string): Promise<void> {
     try {
         await fsPromises.appendFile(gitignorePath, section, 'utf-8');
     } catch (err) {
-        // Non-fatal: project creation continues, but warn so the user knows the
-        // MCP config files are not gitignored.
-        process.stderr.write(
-            `[Demo Builder] WARNING: Could not update .gitignore — MCP config files ` +
-                `(${toAdd.join(', ')}) may be accidentally committed. Error: ` +
-                `${err instanceof Error ? err.message : String(err)}\n`,
+        // Non-fatal: project creation continues, but warn (through the logging
+        // system, where every other [AI Bundle] line lands) so the user knows
+        // the MCP config files are not gitignored.
+        getLogger().warn(
+            `[AI Bundle] Could not update .gitignore — MCP config files ` +
+                `(${toAdd.join(', ')}) may be accidentally committed: ` +
+                `${err instanceof Error ? err.message : String(err)}`,
         );
     }
 }

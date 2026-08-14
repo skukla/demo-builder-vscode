@@ -1,5 +1,5 @@
 /**
- * AI Setup Verifier — backs the Configure screen's AI Configuration tab.
+ * AI Setup Verifier — backs the standalone AI Overview screen.
  *
  * Verifies that a project's AI context files are present and valid:
  * - AGENTS.md: exists and non-empty (the real AI context file; `CLAUDE.md`
@@ -100,8 +100,22 @@ async function detectEditedFiles(
     const flags = await Promise.all(
         Object.entries(recordedHashes).map(async ([relPath, recorded]) => {
             if (MERGED_NOT_KEPT.has(relPath)) return null;
+            // Containment (2026-08-14 review): these keys come verbatim from the
+            // project manifest — a crafted key must never make this read outside
+            // the project (or leak the key into the modal as "edited"). Lexical
+            // rejection of traversal/absolute keys, then a realpath check so a
+            // symlinked file cannot smuggle the read out either.
+            if (path.isAbsolute(relPath) || relPath.split(/[\\/]/).includes('..')) return null;
             try {
-                const content = await fsPromises.readFile(path.join(projectPath, relPath), 'utf-8');
+                const absolute = path.join(projectPath, relPath);
+                const [realRoot, realFile] = await Promise.all([
+                    fsPromises.realpath(projectPath),
+                    fsPromises.realpath(absolute),
+                ]);
+                if (realFile !== realRoot && !realFile.startsWith(realRoot + path.sep)) {
+                    return null;
+                }
+                const content = await fsPromises.readFile(absolute, 'utf-8');
                 const current = createHash('sha256').update(content, 'utf-8').digest('hex');
                 return current !== recorded ? relPath : null;
             } catch {
