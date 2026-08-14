@@ -334,7 +334,7 @@ Test mocks for JSON configuration files MUST be derived from actual file structu
 
 1. **Primary pattern**: Use `testUtils.ts` files for shared mock data
 2. **Structure alignment**: Keep mocks aligned with current JSON structure
-3. **Drift detection**: `tests/templates/type-json-alignment.test.ts` catches type/JSON misalignment
+3. **Drift detection**: `tests/templates/type-json-alignment-prereqs-logging.test.ts` and `type-json-alignment-stacks-components.test.ts` catch type/JSON misalignment
 4. **Validation tests**: `tests/features/components/services/ComponentRegistryManager-mockValidation.test.ts` validates mock structure
 
 ### Example: ComponentRegistryManager.testUtils.ts
@@ -355,12 +355,12 @@ export const mockRawRegistry: RawComponentRegistry = {
 |----------|--------|
 | JSON schema changes | Update mock to match new structure |
 | Tests fail after JSON update | Verify mock reflects actual structure |
-| Adding new JSON field | Add field to mock AND `type-json-alignment.test.ts` |
+| Adding new JSON field | Add field to mock AND the matching `type-json-alignment-*.test.ts` |
 | Removing deprecated fields | Remove from mock and update type definitions |
 
 ### Key Files
 
-- `tests/templates/type-json-alignment.test.ts` - Catches JSON/TypeScript type drift
+- `tests/templates/type-json-alignment-prereqs-logging.test.ts` + `type-json-alignment-stacks-components.test.ts` - Catch JSON/TypeScript type drift
 - `tests/features/components/services/ComponentRegistryManager.testUtils.ts` - Shared component mocks
 - `tests/features/components/services/ComponentRegistryManager-mockValidation.test.ts` - Mock structure validation
 
