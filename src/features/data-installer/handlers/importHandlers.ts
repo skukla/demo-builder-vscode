@@ -22,11 +22,14 @@
  * @module features/data-installer/handlers/importHandlers
  */
 
+import { provisionAccsCredentials } from '../services/accsCredentialProvisioner';
 import { resolveCommerceCredentials } from '../services/commerceCredentials';
+import { downloadWorkspaceConfigJson } from '../services/workspaceConfigDownload';
 import { DataInstallerWriteClient, type ImportRequest } from '../services/dataInstallerWriteClient';
 import { watchImportJob } from '../services/importJobRunner';
 import type { ImportJobRecord } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
+import { ServiceLocator } from '@/core/di';
 import { PollingService } from '@/core/shell/pollingService';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/features/components/config/envVarKeys';
@@ -275,6 +278,66 @@ export const importHandlers = defineHandlers({
         return { success: true, data: {} };
     },
 
+    /**
+     * Console-free ACCS credential provisioning — the loop proven live
+     * 2026-08-13, wired to THIS project's own Adobe binding.
+     *
+     * On success the pair lands in `componentConfigs['adobe-commerce-accs']` —
+     * the DECLARED fields, exactly where a hand-pasted pair lives — and the
+     * project is saved. One storage path, not two. The response never carries
+     * the values; the next dry run reads them where everything else does.
+     *
+     * Panel-only by construction (never in the MCP maps): it creates a
+     * credential in the user's Console workspace.
+     */
+    'provision-accs-credentials': async (context: HandlerContext): Promise<HandlerResponse> => {
+        const project = await context.stateManager.getCurrentProject();
+        if (!project) {
+            return { success: false, error: 'Open a project first.', code: ErrorCode.PROJECT_NOT_FOUND };
+        }
+        if (project.componentSelections?.backend !== 'adobe-commerce-accs') {
+            return {
+                success: false,
+                error: 'Automatic setup applies to ACCS backends only — PaaS uses the admin username and password.',
+                code: ErrorCode.INVALID_OPERATION,
+            };
+        }
+        const adobe = project.adobe;
+        if (!adobe?.organization || !adobe.projectId || !adobe.workspace) {
+            return {
+                success: false,
+                error: 'This project has no Adobe project binding, so there is no workspace to provision in.',
+                code: ErrorCode.INVALID_OPERATION,
+            };
+        }
+        if (!context.authManager) {
+            return { success: false, error: 'Adobe sign-in is required.', code: ErrorCode.AUTH_REQUIRED };
+        }
+
+        const executor = ServiceLocator.getCommandExecutor();
+        const result = await provisionAccsCredentials(
+            {
+                auth: context.authManager,
+                downloadWorkspaceJson: (target) => downloadWorkspaceConfigJson(executor, target),
+                log: (line) => context.debugLogger.debug(`[Data Installer] provisioning: ${line}`),
+            },
+            { orgId: adobe.organization, projectId: adobe.projectId, workspaceId: adobe.workspace },
+        );
+        if (!result.ok) {
+            return { success: false, error: result.reason, code: ErrorCode.UNKNOWN };
+        }
+
+        project.componentConfigs = project.componentConfigs ?? {};
+        project.componentConfigs['adobe-commerce-accs'] = {
+            ...project.componentConfigs['adobe-commerce-accs'],
+            ACCS_OAUTH_CLIENT_ID: result.clientId,
+            ACCS_OAUTH_CLIENT_SECRET: result.clientSecret,
+        };
+        await context.stateManager.saveProject(project);
+
+        return { success: true };
+    },
+
     'get-datapack-import-status': async (context: HandlerContext): Promise<HandlerResponse> => {
         const transient = new TransientStateManager(context.context);
         const record = await transient.get<ImportJobRecord | null>(JOB_KEY, null);
@@ -332,6 +395,9 @@ async function prepareImport(
                 success: false,
                 error: CREDENTIAL_MESSAGES[credentials.reason] ?? 'Commerce credentials are missing.',
                 code: ErrorCode.INVALID_OPERATION,
+                // The UI offers console-free provisioning on exactly this gap —
+                // matching a message string would be the brittle version of this.
+                data: { needsAccsCredentials: credentials.reason === 'needs-accs-credentials' },
             },
         };
     }
