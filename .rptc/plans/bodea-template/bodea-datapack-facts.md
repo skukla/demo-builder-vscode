@@ -32,9 +32,17 @@ website 1. Do not design around website 3.
 
 ## Products — 56 total (32 simple, 17 virtual, 7 configurable)
 
-**No product carries `media_gallery_entries` — the pack ships ZERO images.** Every image in a
-Bodea demo must come from DA.live content or the brand-assets vendor point. (This is why
-product-teaser's unguarded `images[0]` was a real crash risk, fixed in bodea-source `77b9a18`.)
+**No product carries `media_gallery_entries` — and this is BY DESIGN, system-wide.** The pack-prep
+conversion deliberately clears `base_image`, `small_image`, `thumbnail`, `swatch_image`,
+`additional_images` and their labels — `data-installer-api-b2b/docs/CONVERT_CSV_EXPORT.md` §6
+"Image Path Removal", rationale "to avoid broken references". Measured across **11 packs / 4
+owners: zero `media_gallery_entries` anywhere**, including all citisignal versions. The products
+schema permits them; nothing uses them and the tooling strips them. (`TODO.md` lists image
+import as an open question for the service, not an unused feature.)
+
+So product imagery is **not** the datapack's job — see "Where product images come from" below.
+(This is also why product-teaser's unguarded `images[0]` was a certainty rather than a risk;
+fixed in bodea-source `77b9a18`.)
 
 `visibility` is numeric in the pack: **31 products = `4`** ("Catalog, Search"), **25 = `1`**
 ("Not Visible Individually" — the configurable children). None use `3`.
@@ -108,6 +116,35 @@ strings, not numeric ids** — e.g. `vrrack` → `[bodea, products, racks]` — 
   `get-data-item?data_type=customers` when needed; **never commit them** (public repo).
 - **Companies (3), all with quotes + purchase orders enabled:** Altura (admin mark@, San Jose) ·
   ServerSavvy Solutions (Austin) · RackMaster (admin kareena@, New York).
+
+## Where product images come from (NOT the pack)
+
+**Two different AEM Assets mechanisms are routinely confused. Name which one you mean.**
+
+**Path A — product images on the storefront. This is the one that matters here.**
+A **Commerce↔AEM Assets integration on the backend** resolves product→asset; the storefront
+merely needs to be told to use it. Our extension already does that: setting `AEM_ASSETS_ENABLED`
+→ `config-template.json` → **`commerce-assets-enabled`** in the generated `config.json`
+(`configGenerator.ts:317,526,552`). **Global, not per-package — the bodea entry declares
+nothing.** Default `true`; the CHANGELOG rationale is "All demo backends have AEM Assets
+integration configured." This is what makes `tryRenderAemAssetsImage` fire in our blocks.
+Not an SC editing products in Admin, and not a storefront-side SKU→asset map.
+
+**Path B — the DA.live authoring asset picker.** `aem.repositoryId` (from
+`demoBuilder.daLive.aemAuthorUrl`) written to the **per-site** DA config `/config/<org>/<site>`,
+where da.live's Library reads it to show an Assets panel to authors. Site scope is load-bearing
+— org-scoped once meant the block library appeared but the Assets panel did not. **Nothing to do
+with product images.**
+
+**The residual unknown, and it is a content question, not a code one:** whether AEM Assets
+actually holds assets for *Bodea's* SKUs. The plumbing self-heals (flag on, integration expected,
+dropin support present) but if nobody has uploaded Bodea assets, images stay empty with
+everything correctly configured. **Ask CoreTech before promising the storefront fills itself in.**
+Lead: the pack's own `cover_image` is hosted at `dsc3sv.adobedemo.com`, and "DSC" is the same
+acronym in the service's TODO line about image support — worth asking what DSC's role is.
+
+**Block-policy consequence:** treat missing images as a *temporary* state (keep the blocks, ship
+the placeholder), not a permanent condition to design around.
 
 ## What the pack does NOT provide
 
