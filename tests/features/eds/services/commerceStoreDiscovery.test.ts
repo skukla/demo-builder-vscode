@@ -279,6 +279,52 @@ describe('commerceStoreDiscovery', () => {
             }
         });
 
+        /**
+         * The admin scope is a consistent ID-0 TRIO on a real instance —
+         * website 0:admin, group 0:default, view 0:admin (measured live,
+         * 2026-08-14). It is technically a website and nobody can use it: no
+         * storefront, not editable in the backoffice. Filtering by CODE is the
+         * fragile version — the admin GROUP's code is 'default', which collides
+         * with the real 'default' store view — so the filter keys on id 0, at
+         * this seam, where every consumer inherits it. The dropdown used to
+         * filter locally while the discovery log counted raw, and the two
+         * numbers disagreed in front of the user.
+         */
+        it('strips the id-0 admin scope from the ACCS result', async () => {
+            fetchSpy.mockResolvedValueOnce({
+                ok: true,
+                json: () => Promise.resolve({
+                    success: true,
+                    data: {
+                        websites: [{ id: 0, code: 'admin', name: 'Admin' }, ...MOCK_WEBSITES],
+                        storeGroups: [
+                            { id: 0, code: 'default', name: 'Default', website_id: 0, root_category_id: 0 },
+                            ...MOCK_STORE_GROUPS,
+                        ],
+                        storeViews: [
+                            { id: 0, code: 'admin', name: 'Admin', website_id: 0, store_group_id: 0 },
+                            ...MOCK_STORE_VIEWS,
+                        ],
+                    },
+                }),
+            });
+
+            const result = await discoverStoreStructure({
+                backendType: 'accs',
+                baseUrl: 'https://na1-sandbox.api.commerce.adobe.com',
+                imsToken: 'mock-ims-token',
+                discoveryServiceUrl: 'https://actions.adobeioruntime.net/api/v1/web/discovery',
+                accsGraphqlEndpoint: 'https://na1-sandbox.api.commerce.adobe.com/Abcd1234/graphql',
+            });
+
+            expect(result.success).toBe(true);
+            if (result.success) {
+                expect(result.data.websites.map((w) => w.code)).toEqual(['base', 'citisignal']);
+                expect(result.data.storeGroups.map((g) => g.id)).toEqual([1, 2]);
+                expect(result.data.storeViews.every((v) => v.id !== 0)).toBe(true);
+            }
+        });
+
         it('should surface HTTP status + body when the discovery service rejects (for field diagnostics)', async () => {
             // The discovery service can reject for several distinct reasons —
             // invalid token, identity not on the email-domain allowlist, ACCS
