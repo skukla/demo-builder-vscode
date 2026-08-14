@@ -348,7 +348,8 @@ Two operational facts learned the hard way:
   `store_code` (a pair — one without the other is a 400): the service validates
   both against the target instance, including that the store belongs to the
   website, then runs the whole import against them. Omitted, they default to
-  `base` / website id `1`. Consequences:
+  **`base` / `default`** (`IMPORT_GUIDE.md` lines 21–29 — `store_code` has its
+  own documented default, which is easy to miss). Consequences:
 
   - A pack lands on exactly ONE website per run — the substitution collapses
     every `website_ids` to one element. Multi-website fan-out needs one run per
@@ -388,6 +389,25 @@ Two more import facts from the same run (2026-08-14):
   with the earlier finding that delete's processor order is not import's
   reverse. The full reset restored the instance byte-identical (categories,
   SKUs, websites all matching the pre-import snapshot).
+
+### Targeting has no documented convention (checked 2026-08-14)
+
+The service's docs describe the `website_code`/`store_code` mechanism and say
+nothing about when to use it: no guidance on branded-vs-`base`, and no
+pack-specific naming for `bodea` anywhere in `IMPORT_GUIDE.md`,
+`QUICK_START_GUIDE.md`, `USER_README.md` or `API_REFERENCE.md`.
+
+Nor can the run history settle it. **The log schema does not record the pair** —
+its fields are `activation_id, commerce_instance, data_types, datapack_name,
+operation_mode, scenario, site_type, timestamp, version`. Querying it prints an
+absent website code for every run, which reads exactly like "nobody targets" and
+is not evidence of anything. Do not draw that conclusion from it.
+
+What the history DOES show (1000 most recent runs): `bodea` has 121 runs across
+10 distinct instances between 2026-05-12 and 2026-08-14, 67 imports / 54
+deletes, and **9 of those 10 instances imported all 14 types** — full installs
+are routine. Settling the codes empirically needs a real instance's
+`/V1/store/websites`, not the log.
 
 ### Datapacks carry NO product images — by design
 
