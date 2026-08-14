@@ -95,8 +95,18 @@ declined. Remaining, in execution order:
 
    **Next move is a question for Jeff, not code.** Nothing was created by the
    probe (catalog 40 rows before and after).
-6. **Stage 4 (wizard hook)** — datapack selection in Build Your Project; the
-   datapack↔demo-package mapping is an explicit table and a product decision.
+6. ~~Stage 4 (wizard hook)~~ **DONE 2026-08-14** (`f2564d2e` wizard area,
+   `2752c7bd` panel loop). The product decision was made: **record in the
+   wizard, install from the panel afterwards** — an import needs a reachable
+   instance with working credentials and runs for minutes, and a failure
+   mid-wizard would leave a half-populated instance the wizard has no story for.
+
+   So there is **no datapack↔demo-package mapping table**. The user picks
+   explicitly in a new optional "Sample Data" area (always complete, never gates
+   Continue), the choice persists through the manifest, and the installer panel
+   says "<project> is set up for <pack>" with a link into it. An auto-mapping
+   table was considered and rejected: it is a maintenance surface, and packs
+   exist with no matching demo package.
 
 The standing cost accepted with this: the branch keeps rebasing onto develop
 (six times on 2026-08-13 alone) until all six are done.
