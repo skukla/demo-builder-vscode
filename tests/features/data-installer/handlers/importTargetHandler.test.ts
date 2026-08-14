@@ -78,7 +78,11 @@ function makeContext(project: unknown) {
 
 async function target(project: unknown) {
     const result = await importHandlers['get-datapack-import-target'](makeContext(project));
-    return result.data as { instance?: string; projectName?: string };
+    return result.data as {
+        instance?: string;
+        projectName?: string;
+        datapack?: { name: string; version: string };
+    };
 }
 
 describe('get-datapack-import-target', () => {
@@ -156,5 +160,30 @@ describe('get-datapack-import-target', () => {
             expect(result.success).toBe(true);
             expect((result.data as { instance?: string }).instance).toBeUndefined();
         });
+    });
+});
+
+/**
+ * The Stage 4 loop's other half.
+ *
+ * The wizard RECORDS which datapack a project should be seeded with; it never
+ * imports, because an import needs a reachable instance and runs for minutes.
+ * This handler is how the installer panel learns that choice, so the user does
+ * not have to remember it and re-find it in a 25-name catalog.
+ */
+describe('the recorded sample-data choice', () => {
+    it('reports the datapack the project was created with', async () => {
+        const data = await target({
+            name: 'demo',
+            datapack: { name: 'bodea', version: 'main' },
+        });
+
+        expect(data.datapack).toEqual({ name: 'bodea', version: 'main' });
+    });
+
+    it('reports nothing when the project recorded no choice', async () => {
+        const data = await target({ name: 'demo' });
+
+        expect(data.datapack).toBeUndefined();
     });
 });

@@ -38,7 +38,7 @@
  * @module features/data-installer/ui/views/DatapackCatalogView
  */
 
-import { Flex, Switch, View } from '@adobe/react-spectrum';
+import { Flex, Link, Switch, View } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     groupDatapacks,
@@ -91,10 +91,21 @@ export function DatapackCatalogView(): React.JSX.Element {
         'find-datapacks',
     );
     const detail = useDataInstallerRequest<DatapackDetailResponse>('get-datapack-detail');
+    // What the open project was CREATED to hold, recorded by the wizard's Sample
+    // Data area. Optional in every direction: no project, or a project that
+    // chose nothing, simply shows no banner.
+    const projectContext = useDataInstallerRequest<ProjectSampleData>(
+        'get-datapack-import-target',
+    );
 
     useEffect(() => {
         load({ includeCommunity });
     }, [load, includeCommunity]);
+
+    const loadProjectContext = projectContext.load;
+    useEffect(() => {
+        loadProjectContext({});
+    }, [loadProjectContext]);
 
     const groups = useMemo(() => groupDatapacks(value?.items ?? []), [value]);
     const filtered = useMemo(
@@ -185,6 +196,11 @@ export function DatapackCatalogView(): React.JSX.Element {
             </div>
 
             <div className="page-container-padded pb-6">
+                <RecordedChoiceNotice
+                    projectName={projectContext.value?.projectName}
+                    datapack={projectContext.value?.datapack}
+                    onOpen={openDetail}
+                />
                 {renderBody({ groups, filtered, query, versions, pickVersion, openDetail })}
             </div>
 
@@ -215,6 +231,50 @@ export function DatapackCatalogView(): React.JSX.Element {
 }
 
 /** Pick the one body state to show under the header. */
+
+/** What `get-datapack-import-target` reports about the open project. */
+interface ProjectSampleData {
+    projectName?: string;
+    datapack?: { name: string; version: string };
+}
+
+/**
+ * "This project is set up for X" — the visible end of the Stage 4 loop.
+ *
+ * The wizard records a datapack and deliberately does not import it (an import
+ * needs a reachable instance and runs for minutes). Without this the user would
+ * have to remember the name and find it again among 25 of them, which is the
+ * kind of small forgetting that makes a recorded choice worthless.
+ *
+ * Renders nothing at all when there is no project or no recorded choice — the
+ * catalog is browsable without either, and an empty banner explaining its own
+ * absence is worse than silence.
+ */
+function RecordedChoiceNotice({
+    projectName,
+    datapack,
+    onOpen,
+}: {
+    projectName?: string;
+    datapack?: { name: string; version: string };
+    onOpen: (id: DatapackId) => void;
+}): React.JSX.Element | null {
+    if (!datapack) {
+        return null;
+    }
+    return (
+        <div className="datapack-recorded-choice">
+            <span>
+                {projectName ? `${projectName} is` : 'This project is'} set up for{' '}
+                <strong>{datapack.name}</strong> ({datapack.version}).
+            </span>
+            <Link isQuiet onPress={() => onOpen(datapack)}>
+                Review and install
+            </Link>
+        </div>
+    );
+}
+
 function renderBody(args: {
     groups: DatapackGroup[];
     filtered: DatapackGroup[];

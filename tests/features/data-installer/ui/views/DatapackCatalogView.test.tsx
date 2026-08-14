@@ -36,6 +36,19 @@ const mockRequest = webviewClient.request as jest.Mock;
  * view leaves undefined, so asserting on the raw call array pins an argument
  * nothing here is about.
  */
+/**
+ * The most recent request OF A GIVEN TYPE.
+ *
+ * `lastRequest()` was sufficient while the view fired one request; it now also
+ * asks `get-datapack-import-target` for the project's recorded sample-data
+ * choice, so "the last call" is no longer "the catalog call". Assertions about
+ * the catalog request must name it.
+ */
+function requestOfType(type: string): { type: unknown; payload: unknown } | undefined {
+    const call = [...mockRequest.mock.calls].reverse().find((c) => c[0] === type);
+    return call ? { type: call[0], payload: call[1] } : undefined;
+}
+
 function lastRequest(): { type: unknown; payload: unknown } {
     const call = mockRequest.mock.calls[mockRequest.mock.calls.length - 1] ?? [];
     return { type: call[0], payload: call[1] };
@@ -91,7 +104,7 @@ describe('DatapackCatalogView', () => {
         render(<DatapackCatalogView />);
 
         await waitFor(() =>
-            expect(lastRequest()).toEqual({
+            expect(requestOfType('find-datapacks')).toEqual({
                 type: 'find-datapacks',
                 payload: { includeCommunity: false },
             }),
@@ -418,5 +431,52 @@ describe('DatapackCatalogView', () => {
 
             await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(3));
         });
+    });
+});
+
+/**
+ * The Stage 4 loop's visible end.
+ *
+ * The wizard records which pack a project was created to hold but never imports
+ * it — an import needs a reachable instance and runs for minutes. So the panel
+ * has to close the loop: say what this project is set up for and offer it
+ * directly, rather than making the user remember a name and find it again among
+ * 25 of them.
+ */
+describe('the project’s recorded sample data', () => {
+    function withRecordedChoice(datapack: unknown) {
+        mockRequest.mockImplementation((type: string) => {
+            if (type === 'find-datapacks') {
+                return Promise.resolve({
+                    success: true,
+                    data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length },
+                });
+            }
+            if (type === 'get-datapack-import-target') {
+                return Promise.resolve({
+                    success: true,
+                    data: { instance: 'inst-1', projectName: 'demo-1', datapack },
+                });
+            }
+            return Promise.resolve({ success: true, data: null });
+        });
+    }
+
+    it('names the pack this project was created for', async () => {
+        withRecordedChoice({ name: 'bodea', version: 'main' });
+        render(<DatapackCatalogView />);
+
+        await waitFor(() =>
+            expect(screen.getByText(/set up for/i)).toBeInTheDocument(),
+        );
+        expect(screen.getByText(/demo-1/)).toBeInTheDocument();
+    });
+
+    it('says nothing when the project recorded no choice', async () => {
+        withRecordedChoice(undefined);
+        render(<DatapackCatalogView />);
+
+        await waitFor(() => expect(screen.getAllByRole('button').length).toBeGreaterThan(0));
+        expect(screen.queryByText(/set up for/i)).not.toBeInTheDocument();
     });
 });
