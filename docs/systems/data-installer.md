@@ -107,6 +107,24 @@ type.
 Commerce credentials and will get a sibling, so "do we have credentials yet?" is a
 *type* question rather than a runtime one.
 
+### The Stage 4 loop — chosen in the wizard, installed here
+
+The wizard's optional **Sample Data** area (`buildYourProjectAreas.ts` area id
+`'sample-data'`, body `SampleDataStep.tsx`) records a datapack on the project as
+`Project.datapack` and **never imports it**: an import needs a reachable instance
+with working credentials and runs for minutes, and a failure inside creation
+would leave a half-populated instance the wizard has no story for. The area's
+status is unconditionally `completed`, so it can never gate Continue.
+
+`get-datapack-import-target` reports that choice back, and the catalog shows
+"&lt;project&gt; is set up for &lt;pack&gt;" with a link into its detail
+(`RecordedChoiceNotice` in `DatapackCatalogView.tsx`). Nothing renders when there
+is no project or no recorded choice.
+
+There is deliberately **no datapack↔demo-package mapping table**: once the choice
+is an explicit pick, an auto-map is a maintenance surface that still cannot cover
+packs with no matching demo package.
+
 ### The guard, and why it branches
 
 `resolveDataInstallerAccess` runs the cheap local checks first (enabled? URL
@@ -170,23 +188,28 @@ service's own.
 
 ---
 
-## 5. The write path (Stage 2 — BUILT, never run live)
+## 5. The write path (Stage 2 — VERIFIED LIVE)
 
 **Status: VERIFIED LIVE END TO END, 2026-08-13 — including through the modal.**
 The full sequence ran against a real, populated ACCS instance twice over: once by
 direct service calls with before/after snapshots, then through the extension's own
 UI (modal import → per-type success; modal reset → instance diffed byte-identical
 to its pre-import state, zero collateral). Dry run, credential check, import,
-reset, and the detached watch have all met the service and behaved. Remaining
-unexercised: `partial` outcomes, multi-type imports, and everything in Stage 3.
+reset, and the detached watch have all met the service and behaved. Multi-type import and a six-type reset were exercised
+2026-08-14 (see § "Reset semantics" and the run notes below). Remaining
+unexercised: `partial` outcomes, and Stage 3 — which is blocked on the service,
+see §6b.
 
 | Piece | What it does |
 |---|---|
 | `services/dataInstallerWriteClient.ts` | `validateImport` (sync) + `startImport` (async) + `startDelete` (async, `operation_mode: 'delete'`) + `checkCredentials`. Credentialed sibling of the read client; status polling deliberately stays on the read client, since watching needs no credentials. |
-| `services/commerceCredentials.ts` | PaaS reads the admin pair from `componentConfigs`; ACCS reads an OAuth pair from **SecretStorage only**, keyed per project. Answers "is there something to try?", never "will it work?". |
+| `services/commerceCredentials.ts` | PaaS reads the admin pair from `componentConfigs`; ACCS reads its OAuth pair from **`componentConfigs`** too, keyed on the `adobe-commerce-accs` component — one storage path, whether pasted or provisioned. Export safety comes from `SECRET_ENV_KEYS`, not from a second store. Answers "is there something to try?", never "will it work?". |
 | `services/importJobRunner.ts` | The state machine — grace window on the empty map, covering-set terminal rule, `partial` as a first-class outcome, the echo consulted once. |
-| `handlers/importHandlers.ts` | Validate → start → DETACHED watch recording into `TransientStateManager`, so closing the panel does not abandon an import. Also `validate-datapack-import` (dry run) and `reset-datapack` (confirm-gated removal). |
-| `ui/components/ImportDatapackModal.tsx` | Instance field (empty, never derived), type checkboxes limited to what the service STORES, progress, "Stop watching", and the two-press Reset. |
+| `handlers/importHandlers.ts` | Seven write-side message types: `start-datapack-import` (validate → start → DETACHED watch recording into `TransientStateManager`, so closing the panel does not abandon an import), `validate-datapack-import` (dry run), `reset-datapack` (confirm-gated removal), `get-datapack-import-status`, `get-datapack-import-target` (instance + project name + the recorded datapack choice), `list-datapack-import-scopes` (the target picker's websites/store views), and `provision-accs-credentials`. |
+| `ui/components/ImportDatapackModal.tsx` | An explicit state machine — one view at a time (form / busy / confirm-reset / watching / result). The target is DERIVED from the project and shown as name + id with a `Change` override; type checkboxes are limited to what the service STORES; optional website/store target pickers; a `products`-without-`customer_groups` warning; progress; "Stop watching"; and the two-press Reset. |
+| `services/accsCredentialProvisioner.ts` | Console-free ACCS credentials: ensure the S2S credential, subscribe `ACCS-REST-API` via the direct call, read the pair back. |
+| `services/workspaceConfigDownload.ts` | The impure half of the above — targeted `aio console workspace download` into a 0700 temp dir, deleted in `finally`. Validates the three ids first: the command is shell-executed. |
+| `ui/hooks/useImportScopes.ts` | The import's target scope — discovered websites/store views plus the user's choice within them. |
 
 **There IS a dry run.** `validate-datapack-import` runs the same guard,
 credentials and request body as a start and stops after the synchronous
@@ -308,8 +331,9 @@ Four facts, each measured:
   is silently dropped (`add_console_apis` reported subscribing just the managed
   mesh API). The working call is the direct
   `subscribeOAuthServerToServerIntegrationToServices` with the union of existing
-  codes plus `ACCS-REST-API` — which is what the auto-provisioning enhancement
-  must use, or the filter must learn the flag.
+  codes plus `ACCS-REST-API` — which is what `accsCredentialProvisioner` now
+  does. The `add_console_apis` axis-filter defect above it is still live; this
+  loop routes around it rather than fixing it.
 
 ### Reset semantics — PROVEN scoped, by controlled experiment (2026-08-13)
 
@@ -354,9 +378,13 @@ Two operational facts learned the hard way:
   - A pack lands on exactly ONE website per run — the substitution collapses
     every `website_ids` to one element. Multi-website fan-out needs one run per
     website.
-  - The extension's `buildBody` (`dataInstallerWriteClient.ts`) does not send
-    the pair yet, so every import targets `base`. The `get-websites-and-stores`
-    data already fetched for pre-flight could drive a target picker.
+  - **Shipped 2026-08-14**: `buildBody` sends the pair when the user picks a
+    target and omits both keys when they do not (absent means the service's
+    default; `""` is a value it would validate). The picker is fed by
+    `list-datapack-import-scopes`, which uses the extension's OWN
+    `discoverStoreStructure` — NOT `get-websites-and-stores`, which needs the
+    credential pair the wizard does not have yet and returns no store groups.
+    See `.rptc/plans/datapack-import-targeting/`.
   - **Observed live 2026-08-14**: a 5-type bodea import put all 56 products on
     website 1 (`base`) — pack said `[3]`, REST readback said `[1]` — and no
     phantom website appeared. The substitution is real on the deployed service.
@@ -383,7 +411,9 @@ Two more import facts from the same run (2026-08-14):
   name→id lookup (`customer_group_id: replaceWithLookup(customer_groups_search)`)
   finds nothing unless `customer_groups` was imported first. Validate cannot
   catch it (shape-only). Re-running with `customer_groups` + `products`
-  succeeded. The UI's type checkboxes let a user walk straight into this.
+  succeeded. The modal warns when `products` is selected without
+  `customer_groups`, and only when the pack actually stores `customer_groups` —
+  a warning naming an unavailable type would be noise.
 - **Delete order is its own order, observed**: the 6-type reset deleted
   `customer_groups` first while `products` was still processing — consistent
   with the earlier finding that delete's processor order is not import's
@@ -527,10 +557,16 @@ explains why nothing happened. Never poll the echo in a loop.
   logic rather than throwing five error lines into a healthy run's logs.
 
 Credentials are backend-conditional: PaaS reuses the admin username/password
-already in `componentConfigs`; ACCS needs a user-supplied OAuth Server-to-Server
-`client_id`/`client_secret` that **cannot be auto-provisioned** (it is
-product-profile gated on *Commerce Cloud Manager*) and belongs in **SecretStorage**,
-never in `componentConfigs`.
+already in `componentConfigs`; ACCS needs an OAuth Server-to-Server
+`client_id`/`client_secret`. **Both live in `componentConfigs`** — one storage
+path whether the user pastes the pair or the extension provisions it — and
+`ACCS_OAUTH_CLIENT_SECRET` is registered in `SECRET_ENV_KEYS` so exports strip
+it.
+
+An earlier revision of this section said the ACCS pair could not be
+auto-provisioned and belonged in SecretStorage. Both halves were wrong:
+`accsCredentialProvisioner` creates the credential and subscribes
+`ACCS-REST-API` to it, proven live 2026-08-13 (recorded above).
 
 ---
 
