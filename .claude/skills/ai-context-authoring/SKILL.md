@@ -1,6 +1,6 @@
 ---
 name: ai-context-authoring
-description: Change what Demo Builder generates into a project's AI bundle (skills, AGENTS.md, .mcp.json, ai-defaults MCPs) without stranding existing projects or desyncing creation vs regenerate. Use when adding/editing a generated skill or AGENTS.md section, touching ai-defaults.json or its gating, editing skillsWriter/aiContextWriter/mcpConfigWriter/aiDefaultsInstaller, or deciding whether AI_CONTEXT_VERSION must bump.
+description: Change what Demo Builder generates into a project's AI bundle (skills, AGENTS.md, .mcp.json, ai-defaults MCPs) without stranding existing projects or desyncing creation vs regenerate. Use when adding/editing a generated skill or AGENTS.md section, touching ai-defaults.json or its gating, editing skillsWriter/aiContextWriter/agentsMdSections/mcpConfigWriter/aiDefaultsInstaller, or deciding whether AI_CONTEXT_VERSION must bump.
 ---
 
 # AI Context Authoring
@@ -55,15 +55,16 @@ declares its own gate via `requires` (`'eds-storefront'` = Playwright-style stor
 |---|---|---|
 | `skillsWriter.writeSkillFiles` | `.claude/skills/*.md` | 13 filenames in `DEMO_BUILDER_ALWAYS_ON_SKILLS` (3 delivery-gated via `SKILL_MCP_TOOL_DEPENDENCIES`); conditional skills append to the `written` list (e.g. `extend-app-builder-app` on the predicate) |
 | same, Adobe bundles | prefixed skill DIRS | Two SOURCES: component `aiSkillBundle` copies from the component's own `node_modules` (EDS/aem); the integration-starter-kit copies from `resolveMcpToolsDir()` (installed by the installer — ordering matters, install precedes writers on both paths). `copyAdobeSkillBundle` ENOENT-skips silently |
-| `aiContextWriter.generateAgentsMd` | `AGENTS.md` | Section builders returning `''` when not applicable (e.g. `buildConsoleApiAccess`); sanitize every interpolated project value |
+| `aiContextWriter.generateAgentsMd` | `AGENTS.md` | Section builders returning `''` when not applicable (e.g. `buildConsoleApiAccess`; builders live in `agentsMdSections.ts`); sanitize every interpolated project value |
 | `mcpConfigWriter` | `.mcp.json`, `.claude/mcp.json`, settings merge | demo-builder entry + per-entry ai-defaults gating; args anchored to the isolated tools dir |
 
 Orchestrated by `generateAIContextFiles` (creation phase 6 + regenerate + update post-step).
 
 ## Test pins that move
 
-- `skillsWriter.test.ts` — EDS projects pin an exact skill-file COUNT (13 as of v3);
-  a new conditional skill bumps it and needs positive + negative (bare-project) cases.
+- `skillsWriter.test.ts` — EDS projects pin an exact skill-file COUNT (14 as of v7:
+  13 always-on + `extend-app-builder-app`); a new conditional skill bumps it and needs
+  positive + negative (bare-project) cases.
 - `aiContextWriter.writeAgentsMd.test.ts` — add section presence/absence tests.
 - `aiHandlers-setup.test.ts` / `aiHandlers-toolingGate.test.ts` — regenerate gating;
   NOTE its `testUtils` mocks the services barrel: a new export used by `aiHandlers`

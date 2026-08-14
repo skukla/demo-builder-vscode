@@ -22,14 +22,16 @@ four test files that were silently scripts sharing one global scope), not delibe
 partials. The `src/`-side cast-removal partial (127 `as {` casts, ~121 needing reading)
 was deliberately NOT swept — it stays a cheap independent follow-up.
 
-**Both queued items advanced 2026-08-14, banners in the items are current:**
-`tier-the-ai-bundle-refresh` — under-fire reproduced (RED test) and FIXED (`ba8480d8`: the
-freshness check now watches the composition axis and logs every verdict); tier-2 policy
-decided as hash-and-skip and recorded as **ADR-013** (`b762432f`); the tiered-refresh build
-(steps 2–6, 8) is designed but unbuilt. `third-party-tooling-visible-and-optional` — step 1
-shipped (`0027e5f3`: `SKILL_MCP_TOOL_DEPENDENCIES` in `src/types/ai.ts`, guard-tested both
-directions); steps 2–7 (gating, opt-out, modal reasons, Chromium pre-check) remain — note
-step 2 changes generated content, so batch it with an `AI_CONTEXT_VERSION` bump.
+**Both queued items advanced 2026-08-14 — the first one all the way:**
+`tier-the-ai-bundle-refresh` — **SHIPPED end to end.** Under-fire reproduced and fixed
+(`ba8480d8`), policy recorded as **ADR-013** (`b762432f`), and the full tiered build
+(`generatedFileWriter` hash-and-skip seam, `aiBundleService` tier functions, activation
+sweep, Playwright skill gating, modal edited-files surface, `AI_CONTEXT_VERSION` → 9)
+merged to develop as `86cb302d` with verify-loop hardening commits on top; plan archived
+to `.rptc/complete/tiered-ai-refresh/`. `third-party-tooling-visible-and-optional` —
+steps 1–2 shipped (`SKILL_MCP_TOOL_DEPENDENCIES` + gating in `writeSkillFiles`, batched
+into the same version bump); steps 3–7 (opt-out setting, modal absence reasons, Chromium
+pre-check, install progress, re-enable-must-install) remain.
 
 **The old caveat on that number is retired and replaced by a sharper one.** This line used to
 read "at `--maxWorkers=25%` … a default-workers green is one sample of a noisy process." The
@@ -392,9 +394,9 @@ was caught only because a fallback printed nothing where it should have printed 
   `[MCP] refreshed the global ~/.claude.json entry` line in Debug Logs, which appears
   only when the repair fired.
 
-**The test-typecheck sweep FINISHED 2026-08-14 (see the section at the top).** The user's
-chosen order for what's next: `tier-the-ai-bundle-refresh` (step 0 = REPRODUCE the silent
-under-fire before any fix) then `third-party-tooling-visible-and-optional`.
+**The test-typecheck sweep FINISHED 2026-08-14 (see the section at the top), and
+`tier-the-ai-bundle-refresh` SHIPPED the same day (see above).** Next in the user's chosen
+order: `third-party-tooling-visible-and-optional` steps 3–7.
 
 **Paused, ready to resume:**
 

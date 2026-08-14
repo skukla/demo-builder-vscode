@@ -87,7 +87,7 @@ The AI context files live in the project directory, not in this feature:
 ```
 
 The three writers live in `src/features/project-creation/services/`:
-- `aiContextWriter.ts` — generates `AGENTS.md` and the `CLAUDE.md` pointers. Its "Finding Adobe Documentation" section points agents at [Wayfinder](https://github.com/adobe-commerce/wayfinder), Adobe's own routing guide across aem.live / storefront / Experience League / da.live / developer.adobe.com, so the bundle does not re-derive that map. Pinned to a reviewed commit rather than `@main` — a remote document that becomes agent instructions must not change without our review.
+- `aiContextWriter.ts` — generates `AGENTS.md` and the `CLAUDE.md` pointers; the section builders (and the Wayfinder commit pin) live in its sibling `agentsMdSections.ts`. The "Finding Adobe Documentation" section points agents at [Wayfinder](https://github.com/adobe-commerce/wayfinder), Adobe's own routing guide across aem.live / storefront / Experience League / da.live / developer.adobe.com, so the bundle does not re-derive that map. Pinned to a reviewed commit rather than `@main` — a remote document that becomes agent instructions must not change without our review.
 - `skillsWriter.ts` — writes `.claude/skills/*.md` guides
 - `mcpConfigWriter.ts` — generates `.mcp.json`, `.claude/mcp.json`, `.claude/settings.json`
 

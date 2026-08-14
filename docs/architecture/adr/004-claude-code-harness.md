@@ -73,7 +73,7 @@ The harness setting (`demoBuilder.ai.harness`) lets users force one path:
 
 ### Negative
 
-- **Users without `claude` installed see a friction step.** The first time they invoke "Open in Claude Code" with `harness='terminal'` and no binary on PATH, the terminal opens but `claude` fails. Mitigated by the dashboard tile copy and by the AI Configuration tab's status panel, but not eliminated.
+- **Users without `claude` installed see a friction step.** The first time they invoke "Open in Claude Code" with `harness='terminal'` and no binary on PATH, the terminal opens but `claude` fails. Mitigated by the dashboard tile copy and by the AI Overview screen's status strip, but not eliminated.
 - **Two MCP file paths to maintain.** `<project>/.mcp.json` (canonical, read by Claude Code) and `<project>/.claude/mcp.json` (defensive mirror). One write, two files. If Anthropic ever drops the mirror, we delete one branch in `mcpConfigWriter.ts` and move on. (See research notes 2026-05-20 Impact C.)
 - **No control over the extension's panel location.** When the URI handler opens the extension, it lands wherever the user previously docked it. The one-time placement tip (gated by `globalState.demoBuilder.ai.firstClaudeOpenTipShown`) is the only nudge we can give.
 - **URI handler depends on extension version ≥ 2.1.72.** Older installations no-op silently. Mitigated by the rolling-extension-update channel; not directly detected at runtime.

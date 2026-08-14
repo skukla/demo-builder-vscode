@@ -38,11 +38,11 @@ The Adobe Demo Builder is a VS Code extension that streamlines the creation and 
 │  ├── Welcome Screen                                         │
 │  ├── Project Creation Wizard                               │
 │  ├── Project Dashboard                                     │
-│  └── Configuration Editor (incl. AI Configuration tab)    │
+│  └── AI Overview Screen (skills, prompts, AI health)      │
 ├─────────────────────────────────────────────────────────────┤
 │  AI Context Layer (harness: Claude Code CLI)               │
 │  ├── aiContextWriter — Generates AGENTS.md + CLAUDE.md ptr │
-│  ├── skillsWriter — Writes 11 Demo-Builder skills          │
+│  ├── skillsWriter — 13 Demo-Builder skills (+ gated)       │
 │  ├── mcpConfigWriter — Generates .mcp.json + tool settings │
 │  └── MCP Server (in-extension, via mcp-proxy.js) — agent  │
 │      tool surface; file-based subset shown below:          │
@@ -251,8 +251,8 @@ getCurrentOrganization() // SDK-powered, 1-minute cache
 **Purpose**: Generate AI agent context files at project creation and on demand, then introspect the resulting skills and MCPs for the standalone AI Overview screen and the dashboard's "AI Ready" badge.
 
 **Components**:
-- **`sanitization`** (`src/features/project-creation/services/sanitization.ts`): Shared sanitization helpers used by both `aiContextWriter` and `skillsWriter`. `sanitizeTemplateValue` strips `\n`, `\r`, and `#` from text fields. `sanitizeUrl` validates the `https://` protocol (non-https values become `[invalid URL]`) and strips `\n`, `\r`, and `]()` characters to prevent Markdown link injection. `sanitizeGithubSlug` restricts owner/repo slugs to alphanumeric, dot, dash, and slash.
-- **`aiContextWriter`** (`src/features/project-creation/services/aiContextWriter.ts`): Generates `AGENTS.md` at the project root with project-specific context (GitHub repo, live/preview URLs, Commerce endpoint, block libraries). Writes `CLAUDE.md` (root) and `.claude/CLAUDE.md` as one-line `see @AGENTS.md` pointers. All user-supplied values pass through the shared sanitization helpers before interpolation.
+- **`sanitization`** (`src/features/project-creation/services/sanitization.ts`): Sanitization helpers used by the AGENTS.md section builders (`agentsMdSections` is the sole importer). `sanitizeTemplateValue` strips `\n`, `\r`, and `#` from text fields. `sanitizeUrl` validates the `https://` protocol (non-https values become `[invalid URL]`) and strips `\n`, `\r`, and `]()` characters to prevent Markdown link injection. `sanitizeGithubSlug` restricts owner/repo slugs to alphanumeric, dot, dash, and slash.
+- **`aiContextWriter`** (`src/features/project-creation/services/aiContextWriter.ts`): Generates `AGENTS.md` at the project root with project-specific context (GitHub repo, live/preview URLs, Commerce endpoint, block libraries). Writes `CLAUDE.md` (root) and `.claude/CLAUDE.md` as one-line `see @AGENTS.md` pointers. The section builders are extracted to `agentsMdSections.ts` (same directory), where all user-supplied values pass through the shared sanitization helpers before interpolation.
 - **`skillsWriter`** (`src/features/project-creation/services/skillsWriter.ts`): Writes the thirteen first-party skills declared in `DEMO_BUILDER_ALWAYS_ON_SKILLS` (`@/types/ai` — four lifecycle including `create-eds-project.md`, `diagnose-demo.md`, six EDS site-scraping, two block-library registration) plus the conditional `extend-app-builder-app.md`. The three Playwright-driven scraping skills are delivery-gated per `SKILL_MCP_TOOL_DEPENDENCIES` — written only when `@playwright/mcp` is actually installed. Additional Adobe AEM skills come from the `@adobe-commerce/commerce-extensibility-tools` package when the EDS Storefront component is installed.
 - **`mcpConfigWriter`** (`src/features/project-creation/services/mcpConfigWriter.ts`): Generates `.mcp.json` (project root), `.claude/mcp.json`, and `.claude/settings.json` with the Demo Builder MCP server entry and a PostToolUse hook for auto-sync. Cursor and Codex read `.mcp.json` natively — no per-tool config files.
 - **`aiSetupVerifier`** (`src/features/ai/aiSetupVerifier.ts`): Runs four file-presence checks in parallel with `gatherInventory()`; returns `AiVerificationResult` with `{ status, checks, inventory }`.
@@ -485,11 +485,11 @@ try {
 ### Shipped in Phase 1 (AI layer, Cycles A–D)
 - AI context file generation at project creation (AGENTS.md, 3 lifecycle skills, MCP config)
 - In-extension Demo Builder MCP server exposing the full agent tool surface (see [`../systems/mcp-server.md`](../systems/mcp-server.md))
-- AI Configuration tab in Configure screen — verifies AI files, inspects skills and MCP servers and session MCPs, manages global MCP registration, and regenerates AI context files (Cycle D)
+- AI Configuration tab in Configure screen — verifies AI files, inspects skills and MCP servers and session MCPs, manages global MCP registration, and regenerates AI context files (Cycle D; since replaced by the standalone AI Overview screen — see §9)
 - Claude Code (CLI) as the primary AI harness — see [ADR-004](adr/004-claude-code-harness.md)
 - `@adobe-commerce/commerce-extensibility-tools` skill bundle installed per EDS project; updates surfaced by `AdobeMcpUpdateChecker` (Cycle B + D)
 - `demoBuilder.ai.engine` + `demoBuilder.ai.surface` (default `'terminal'`, with capability-aware extension-detected offer) + `demoBuilder.ai.dockToRight` (unified position preference syncing `claudeCode.preferredLocation`) settings + `OpenInClaudeCommand` + dashboard tile + project-card menu item + AI surface prompt cards (workspace-anchor + pending-prompt mechanism for prompt clicks; kebab Copy prompt; Browse Claude sessions link + one-time auto-open; surface-aware multi-click contract note)
-- AI inventory backend (`skillInspector`, `mcpInspector`, `sessionMcpDetector`, `gatherInventory`) consumed by the AI Configuration tab (Cycle C)
+- AI inventory backend (`skillInspector`, `mcpInspector`, `sessionMcpDetector`, `gatherInventory`) consumed by the AI Configuration tab (Cycle C; today it feeds the AI Overview screen and the AI Capabilities modal)
 
 ### Near-term (3-6 months)
 - Automated testing framework
