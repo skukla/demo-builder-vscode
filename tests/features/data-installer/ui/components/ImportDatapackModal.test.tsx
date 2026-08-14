@@ -577,6 +577,95 @@ describe('ImportDatapackModal', () => {
         });
     });
 
+    /**
+     * The needs-accs-credentials refusal offers console-free provisioning — the
+     * loop proven live 2026-08-13. The offer keys off the refusal's DATA flag,
+     * not its message string, and the pair lands in the project's config where a
+     * hand-pasted one would, so the user just runs the dry run again.
+     */
+    describe('automatic credential setup', () => {
+        function refuseNeedingCredentials() {
+            mockRequest.mockImplementation(async (type: string) =>
+                type === 'validate-datapack-import'
+                    ? {
+                          success: false,
+                          error: 'ACCS imports need an Adobe OAuth Server-to-Server client id and secret. Add them before importing.',
+                          code: 'INVALID_OPERATION',
+                          data: { needsAccsCredentials: true },
+                      }
+                    : { success: true, data: null },
+            );
+        }
+
+        async function refuse() {
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
+        }
+
+        it('offers automatic setup on the credential refusal', async () => {
+            refuseNeedingCredentials();
+            await refuse();
+
+            expect(
+                await screen.findByRole('button', { name: /set up credentials automatically/i }),
+            ).toBeInTheDocument();
+        });
+
+        it('does NOT offer it on other refusals', async () => {
+            mockRequest.mockImplementation(async (type: string) =>
+                type === 'validate-datapack-import'
+                    ? { success: false, error: 'The Data Installer is turned off.', code: 'INVALID_OPERATION' }
+                    : { success: true, data: null },
+            );
+            await refuse();
+
+            await screen.findByText(/turned off/i);
+            expect(
+                screen.queryByRole('button', { name: /set up credentials automatically/i }),
+            ).not.toBeInTheDocument();
+        });
+
+        it('runs the provisioning handler on press', async () => {
+            refuseNeedingCredentials();
+            await refuse();
+
+            fireEvent.click(
+                await screen.findByRole('button', { name: /set up credentials automatically/i }),
+            );
+
+            await waitFor(() =>
+                expect(
+                    mockRequest.mock.calls.some((call) => call[0] === 'provision-accs-credentials'),
+                ).toBe(true),
+            );
+        });
+
+        it('says what to do next once provisioning succeeds', async () => {
+            mockRequest.mockImplementation(async (type: string) => {
+                if (type === 'validate-datapack-import') {
+                    return {
+                        success: false,
+                        error: 'needs credentials',
+                        data: { needsAccsCredentials: true },
+                    };
+                }
+                if (type === 'provision-accs-credentials') {
+                    return { success: true };
+                }
+                return { success: true, data: null };
+            });
+            await refuse();
+
+            fireEvent.click(
+                await screen.findByRole('button', { name: /set up credentials automatically/i }),
+            );
+
+            expect(await screen.findByText(/credentials configured/i)).toBeInTheDocument();
+        });
+    });
+
     describe('watching', () => {
         function withStatus(record: unknown) {
             mockRequest.mockImplementation(async (type: string) =>

@@ -99,6 +99,7 @@ export function ImportDatapackModal({
         'validate-datapack-import',
     );
     const status = useDataInstallerRequest<ImportJobRecord | null>('get-datapack-import-status');
+    const provision = useDataInstallerRequest<never>('provision-accs-credentials');
     const target = useDataInstallerRequest<ImportTarget>('get-datapack-import-target');
 
     const loadStatus = status.load;
@@ -282,7 +283,7 @@ export function ImportDatapackModal({
                         </>
                     ) : null}
 
-                    <RequestFeedback dryRun={dryRun} start={start} reset={reset} />
+                    <RequestFeedback dryRun={dryRun} start={start} reset={reset} provision={provision} />
 
                 </div>
             </Modal>
@@ -499,13 +500,50 @@ function RequestFeedback({
     dryRun,
     start,
     reset,
+    provision,
 }: {
     dryRun: DataInstallerRequest<{ valid: boolean; reason?: string }>;
     start: DataInstallerRequest<{ activationId: string }>;
     reset: DataInstallerRequest<{ activationId: string }>;
+    provision: DataInstallerRequest<never>;
 }): React.JSX.Element {
+    // Keyed off the refusal's DATA flag, never its message string. Either write
+    // path can raise it; the offer is the same console-free loop.
+    const needsCredentials = [dryRun.failure, start.failure, reset.failure].some(
+        (failure) => (failure?.data as { needsAccsCredentials?: boolean } | undefined)?.needsAccsCredentials,
+    );
+    const provisionAction = needsCredentials
+        ? [
+              {
+                  label: provision.loading
+                      ? 'Setting up…'
+                      : 'Set up credentials automatically',
+                  variant: 'accent' as const,
+                  onPress: () => provision.load({}),
+              },
+          ]
+        : undefined;
+
+    // provision.value is never set (the handler returns no data), so success is
+    // "loading finished with no failure after a load happened".
+    const provisioned = !provision.loading && !provision.failure && provision.settled;
+
     return (
         <>
+            {provisioned ? (
+                <StatusDisplay
+                    variant="success"
+                    title="Credentials configured"
+                    message="The OAuth pair was created in this project's workspace and saved to its configuration. Run the dry run again."
+                />
+            ) : null}
+            {provision.failure ? (
+                <StatusDisplay
+                    variant="error"
+                    title="Automatic setup failed"
+                    message={provision.failure.message}
+                />
+            ) : null}
             {dryRun.value && !dryRun.loading ? (
                 <StatusDisplay
                     variant={dryRun.value.valid ? 'success' : 'warning'}
@@ -519,13 +557,19 @@ function RequestFeedback({
             ) : null}
 
             {dryRun.failure ? (
-                <StatusDisplay variant="error" title="Dry run failed" message={dryRun.failure.message} />
+                <StatusDisplay
+                    variant="error"
+                    title="Dry run failed"
+                    message={dryRun.failure.message}
+                    actions={provisionAction}
+                />
             ) : null}
             {start.failure ? (
                 <StatusDisplay
                     variant="error"
                     title="Import failed to start"
                     message={start.failure.message}
+                    actions={provisionAction}
                 />
             ) : null}
             {reset.failure ? (
@@ -533,6 +577,7 @@ function RequestFeedback({
                     variant="error"
                     title="Reset failed to start"
                     message={reset.failure.message}
+                    actions={provisionAction}
                 />
             ) : null}
         </>
