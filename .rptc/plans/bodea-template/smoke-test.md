@@ -32,6 +32,13 @@ that worktree's Dev Host, or use the documented direct call
 - Their shared instance sits at **baseline (no Bodea)** — imported and reset this morning,
   verified byte-identical: 14 categories, 130 CitiSignal products, websites `base` + `citisignal`.
   Seeding it needs the owner's approval; it is not ours to write to unasked.
+- The import modal now offers an **optional target website/store**, defaulting to none (the
+  service's `base`). Leave it unset for this smoke test — untargeted matches every assumption
+  in this checklist, and our shipped `configDefaults` are `base`/`default` to match. Targeting
+  requires the website to already exist in Commerce; the picker lists only what is there.
+- The `customer_groups`-with-`products` trap is now guarded in that modal (a warning when
+  `products` is selected and `customer_groups` is available but unticked), so following the UI
+  is safe. The rule still holds if you drive the API directly.
 
 ---
 
