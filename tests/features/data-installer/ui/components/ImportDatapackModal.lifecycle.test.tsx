@@ -170,6 +170,105 @@ describe('ImportDatapackModal — job lifecycle', () => {
      * live verification opened the modal to a full-size "Import finished" for an
      * import pressed minutes earlier.
      */
+    /**
+     * The modal shows ONE view at a time — form, busy, confirm-reset, watching,
+     * or result — with the footer narrating each. The previous shape let form,
+     * verdicts, failures and notices coexist as conditional fragments, and that
+     * produced a live bug nobody could localize: a bare error icon with its
+     * words lost somewhere in the pile. A state machine makes that class
+     * unwritable. Every outcome is a RESULT view with an explicit Back.
+     */
+    describe('the result view', () => {
+        function refuseNeedingCredentials() {
+            mockRequest.mockImplementation(async (type: string) =>
+                type === 'validate-datapack-import'
+                    ? {
+                          success: false,
+                          error: 'ACCS imports need an Adobe OAuth Server-to-Server client id and secret. Add them before importing.',
+                          code: 'INVALID_OPERATION',
+                          data: { needsAccsCredentials: true },
+                      }
+                    : { success: true, data: null },
+            );
+        }
+
+        async function dryRun() {
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
+        }
+
+        it('replaces the form — one view at a time, never a pile', async () => {
+            refuseNeedingCredentials();
+            await dryRun();
+
+            expect(await screen.findByText(/dry run failed/i)).toBeInTheDocument();
+            expect(screen.queryByRole('checkbox', { name: 'categories' })).not.toBeInTheDocument();
+        });
+
+        it('offers Back, which returns to the form with selections intact', async () => {
+            refuseNeedingCredentials();
+            await dryRun();
+            await screen.findByText(/dry run failed/i);
+
+            fireEvent.click(screen.getByRole('button', { name: /back/i }));
+
+            expect(screen.getByRole('checkbox', { name: 'categories' })).toBeChecked();
+            expect(screen.queryByText(/dry run failed/i)).not.toBeInTheDocument();
+        });
+
+        it('a passed dry run is a result view with Back too', async () => {
+            mockRequest.mockImplementation(async (type: string) =>
+                type === 'validate-datapack-import'
+                    ? { success: true, data: { valid: true } }
+                    : { success: true, data: null },
+            );
+            await dryRun();
+
+            expect(await screen.findByText(/dry run passed/i)).toBeInTheDocument();
+            expect(screen.queryByRole('checkbox', { name: 'categories' })).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
+        });
+
+        it('puts the contextual action in the FOOTER of the credentials refusal', async () => {
+            refuseNeedingCredentials();
+            await dryRun();
+            await screen.findByText(/dry run failed/i);
+
+            expect(
+                screen.getByRole('button', { name: /set up credentials automatically/i }),
+            ).toBeInTheDocument();
+        });
+
+        it('a terminal outcome is a result view with Back', async () => {
+            mockRequest.mockImplementation(async (type: string) => {
+                if (type === 'get-datapack-import-status') {
+                    return {
+                        success: true,
+                        data: {
+                            activationId: 'act-1',
+                            dataTypes: ['categories'],
+                            outcome: 'success',
+                            perType: { categories: 'success' },
+                            operation: 'reset',
+                        },
+                    };
+                }
+                return { success: true, data: { activationId: 'act-1' } };
+            });
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('button', { name: /^reset/i }));
+            fireEvent.click(screen.getByRole('button', { name: /remove the data/i }));
+
+            expect(await screen.findByText(/reset finished/i)).toBeInTheDocument();
+            fireEvent.click(screen.getByRole('button', { name: /back/i }));
+            expect(screen.getByRole('checkbox', { name: 'categories' })).toBeInTheDocument();
+        });
+    });
+
     describe('a fresh modal', () => {
         it('resumes a RUNNING job from a previous session', async () => {
             mockRequest.mockImplementation(async (type: string) =>
@@ -370,17 +469,20 @@ describe('ImportDatapackModal — job lifecycle', () => {
             expect(await screen.findByText(/categories: success/i)).toBeInTheDocument();
         });
 
-        // Success gets OUT OF THE WAY; problems stand in it. A terminal success
-        // is a midpoint in the reuse flow (reset → pick types → import), so it
-        // renders as a compact StatusCard with the form restored beneath it —
-        // live review found a full-bleed success block displacing the form the
-        // user needed next.
-        it('restores the form beneath a terminal success', async () => {
+        // Superseded contract, recorded: an earlier version restored the form
+        // BENEATH a compact success card. Live use showed coexisting fragments
+        // are exactly what made outcomes unreadable, so success is now a result
+        // view like everything else, and Back is the explicit way home.
+        it('shows a terminal success as a result view; Back restores the form', async () => {
             finished('success', { categories: 'success' });
             await startAJob();
 
             expect(await screen.findByText(/import finished/i)).toBeInTheDocument();
-            expect(screen.getByRole('checkbox', { name: 'categories' })).toBeInTheDocument();
+            expect(screen.queryByRole('checkbox', { name: 'categories' })).not.toBeInTheDocument();
+
+            fireEvent.click(screen.getByRole('button', { name: /back/i }));
+
+            expect(screen.getByRole('checkbox', { name: 'categories' })).toBeChecked();
             expect(screen.getByRole('button', { name: /start import/i })).toBeInTheDocument();
         });
 
