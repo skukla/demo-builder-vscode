@@ -64,6 +64,7 @@ function renderModal(props: Partial<React.ComponentProps<typeof AiCapabilitiesMo
                 isBusy={props.isBusy}
                 progress={props.progress}
                 editedFiles={props.editedFiles}
+                errorMessage={props.errorMessage}
             />
         </Provider>
     );
@@ -203,6 +204,32 @@ describe('AiCapabilitiesModal', () => {
         expect(screen.getByTestId('ai-skill-edited-flag')).toBeInTheDocument();
         // …and NOT duplicated in the non-skill note.
         expect(screen.queryByTestId('ai-edited-files-note')).not.toBeInTheDocument();
+    });
+
+    // ─── Regenerate failure surfacing ────────────────────────────────────────
+    // A failed regenerate (handler {success:false, error} or a rejected
+    // request) lands in the hook's aiRegenError; the modal renders it as a
+    // compact inline line so the failure isn't a silent return to idle.
+
+    it('renders an inline error line when errorMessage is present', () => {
+        renderModal({
+            skills: SKILLS,
+            mcps: MCPS,
+            errorMessage: 'Failed to install AI tooling dependencies: npm exploded',
+        });
+        expect(screen.getByTestId('ai-regen-error')).toHaveTextContent(
+            'Failed to install AI tooling dependencies: npm exploded'
+        );
+    });
+
+    it('omits the error line when errorMessage is absent', () => {
+        renderModal({ skills: SKILLS, mcps: MCPS });
+        expect(screen.queryByTestId('ai-regen-error')).not.toBeInTheDocument();
+    });
+
+    it('does not render the error line while busy (body is replaced by the loading state)', () => {
+        renderModal({ skills: SKILLS, mcps: MCPS, isBusy: true, errorMessage: 'boom' });
+        expect(screen.queryByTestId('ai-regen-error')).not.toBeInTheDocument();
     });
 
     // ─── Actions ─────────────────────────────────────────────────────────────

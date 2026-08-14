@@ -132,6 +132,7 @@ export function ProjectDashboardScreen({
         aiInventoryLoading,
         aiBusy,
         aiRegenProgress,
+        aiRegenError,
         regenerateAiFiles,
     } = useDashboardStatus(
         { hasMesh, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext },
@@ -317,6 +318,7 @@ export function ProjectDashboardScreen({
                         onRegenerate={regenerateAiFiles}
                         isBusy={aiBusy}
                         progress={aiRegenProgress ?? undefined}
+                        errorMessage={aiRegenError}
                     />
                 </DialogContainer>
             )}

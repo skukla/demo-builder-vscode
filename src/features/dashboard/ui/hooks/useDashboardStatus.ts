@@ -238,9 +238,19 @@ export interface UseDashboardStatusReturn {
      * `handleRegenerateAiFiles`. Forwarded into the AI Capabilities modal.
      */
     aiRegenProgress: AiRegenerateProgress | null;
+    /**
+     * Error from the last regenerate — the handler's `{success:false}.error`
+     * (e.g. the tooling-install failure) or a rejected request's message.
+     * Null when the last regenerate succeeded (or none ran). Rendered as an
+     * inline line in the AI Capabilities modal.
+     */
+    aiRegenError: string | null;
     /** Regenerate the project's AI files, then re-verify (refreshes badge + skills + MCPs) */
     regenerateAiFiles: () => Promise<void>;
 }
+
+/** Fallback when a failed regenerate carries no usable error message. */
+const AI_REGEN_FALLBACK_ERROR = 'Regenerating AI files failed.';
 
 /** Stable empty references so identity doesn't churn each render. */
 const EMPTY_SKILLS: SkillInventoryEntry[] = [];
@@ -317,6 +327,9 @@ export function useDashboardStatus(
     // run and reads as a dead link.
     const [aiRegenerating, setAiRegenerating] = useState(false);
     const [aiRegenProgress, setAiRegenProgress] = useState<AiRegenerateProgress | null>(null);
+    // Error from the last regenerate (handler {success:false}.error or a
+    // rejected request). Cleared by the next successful regenerate.
+    const [aiRegenError, setAiRegenError] = useState<string | null>(null);
     // Gate the "Checking Adobe organization…" indicator to a minimum visible
     // duration so a fast check is still perceived before the banner shows.
     const [orgCheckMinElapsed, setOrgCheckMinElapsed] = useState(false);
@@ -540,7 +553,7 @@ export function useDashboardStatus(
         setAiBusy(true);
         setAiRegenerating(true);
         try {
-            const result = await webviewClient.request<{ success?: boolean }>(
+            const result = await webviewClient.request<{ success?: boolean; error?: string }>(
                 'regenerate-ai-files',
                 {},
             );
@@ -552,8 +565,18 @@ export function useDashboardStatus(
                 // until the dashboard reopens. The reRunnable check re-confirms
                 // on next open.
                 setAiToolingMissing(false);
+                setAiRegenError(null);
+            } else {
+                // The handler built `error` precisely so callers can surface it
+                // (e.g. the tooling-install failure message) — discarding it
+                // left the modal returning to idle with no signal.
+                setAiRegenError(result.error || AI_REGEN_FALLBACK_ERROR);
             }
             await runVerify();
+        } catch (error) {
+            // A rejected request used to escape into a void'ed promise (no
+            // catch) — the same silent return to idle. Capture it instead.
+            setAiRegenError(error instanceof Error ? error.message : AI_REGEN_FALLBACK_ERROR);
         } finally {
             setAiBusy(false);
             setAiRegenerating(false);
@@ -747,14 +770,8 @@ export function useDashboardStatus(
 
     // Capability lists for the "View AI Capabilities" surface (extracted helper
     // — see deriveAiInventoryView).
-    const {
-        aiSkills,
-        aiMcps,
-        aiInventoryLoading,
-        aiSkillsError,
-        aiMcpsError,
-        aiEditedFiles,
-    } = deriveAiInventoryView(verifyResult, verifyFailed);
+    const { aiSkills, aiMcps, aiInventoryLoading, aiSkillsError, aiMcpsError, aiEditedFiles } =
+        deriveAiInventoryView(verifyResult, verifyFailed);
 
     return {
         projectStatus,
@@ -778,6 +795,7 @@ export function useDashboardStatus(
         aiInventoryLoading,
         aiBusy,
         aiRegenProgress,
+        aiRegenError,
         regenerateAiFiles,
     };
 }

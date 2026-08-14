@@ -363,4 +363,100 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         expect(types).toContain('regenerate-ai-files');
         expect(types).toContain('verify-ai-setup');
     });
+
+    // ─── Regenerate failure surfacing (aiRegenError) ─────────────────────────
+    // The handler builds `{ success: false, error }` precisely so callers can
+    // surface it (e.g. the tooling-install failure message); the hook used to
+    // discard it — and a rejected request escaped into a void'ed promise — so
+    // the modal returned to idle with no signal either way.
+
+    it('starts with no regenerate error', () => {
+        const { result } = renderHook(() => useDashboardStatus());
+        expect(result.current.aiRegenError).toBeNull();
+    });
+
+    it('captures the handler error on {success:false} and still re-verifies', async () => {
+        mocks.mockRequest.mockImplementation((type: string) =>
+            type === 'regenerate-ai-files'
+                ? Promise.resolve({
+                      success: false,
+                      error: 'Failed to install AI tooling dependencies: npm exploded',
+                  })
+                : Promise.resolve(buildVerifyResponse())
+        );
+        const { result } = renderHook(() => useDashboardStatus());
+
+        await act(async () => {
+            await result.current.regenerateAiFiles();
+        });
+
+        expect(result.current.aiRegenError).toBe(
+            'Failed to install AI tooling dependencies: npm exploded'
+        );
+        // Existing semantics preserved: a {success:false} response still
+        // re-verifies (the verify sat after the success check, unconditionally).
+        const types = mocks.mockRequest.mock.calls.map((c) => c[0]);
+        expect(types).toContain('verify-ai-setup');
+    });
+
+    it('falls back to a generic message when {success:false} carries no error string', async () => {
+        mocks.mockRequest.mockImplementation((type: string) =>
+            type === 'regenerate-ai-files'
+                ? Promise.resolve({ success: false })
+                : Promise.resolve(buildVerifyResponse())
+        );
+        const { result } = renderHook(() => useDashboardStatus());
+
+        await act(async () => {
+            await result.current.regenerateAiFiles();
+        });
+
+        expect(result.current.aiRegenError).toMatch(/failed/i);
+    });
+
+    it('captures a rejected request instead of letting it escape, and clears the busy state', async () => {
+        mocks.mockRequest.mockImplementation((type: string) =>
+            type === 'regenerate-ai-files'
+                ? Promise.reject(new Error('request timed out'))
+                : Promise.resolve(buildVerifyResponse())
+        );
+        const { result } = renderHook(() => useDashboardStatus());
+
+        // Must resolve (not reject) — the rejection is captured into state.
+        await act(async () => {
+            await result.current.regenerateAiFiles();
+        });
+
+        expect(result.current.aiRegenError).toBe('request timed out');
+        expect(result.current.aiBusy).toBe(false);
+        expect(result.current.aiReady.text).not.toBe('Regenerating AI files…');
+        // Existing semantics preserved: a rejected request never reached the
+        // re-verify, and still doesn't.
+        const types = mocks.mockRequest.mock.calls.map((c) => c[0]);
+        expect(types).not.toContain('verify-ai-setup');
+    });
+
+    it('clears the error on the next successful regenerate', async () => {
+        mocks.mockRequest.mockImplementation((type: string) =>
+            type === 'regenerate-ai-files'
+                ? Promise.resolve({ success: false, error: 'first run failed' })
+                : Promise.resolve(buildVerifyResponse())
+        );
+        const { result } = renderHook(() => useDashboardStatus());
+
+        await act(async () => {
+            await result.current.regenerateAiFiles();
+        });
+        expect(result.current.aiRegenError).toBe('first run failed');
+
+        mocks.mockRequest.mockImplementation((type: string) =>
+            type === 'regenerate-ai-files'
+                ? Promise.resolve({ success: true })
+                : Promise.resolve(buildVerifyResponse())
+        );
+        await act(async () => {
+            await result.current.regenerateAiFiles();
+        });
+        expect(result.current.aiRegenError).toBeNull();
+    });
 });
