@@ -1,6 +1,6 @@
 # Datapack Import Targeting — website/store picker + dependency guardrails
 
-**Status**: planned (design inputs verified live 2026-08-14)
+**Status**: SHIPPED 2026-08-14 (commits d3585249 client+handler, c2b01651 UI)
 **Parent**: data-installer DoD item 3b — split out as its own feat per the user,
 2026-08-14. The branch does not land without it.
 
@@ -82,3 +82,28 @@ offer what exists, and get out of the way.
   website 1.
 - Reset of all 6 types → instance byte-identical to baseline
   (14 categories / 130 products / 3 websites).
+
+---
+
+## What shipped
+
+- `ImportRequest.target` + `buildBody` emits `website_code`/`store_code` — or
+  omits both keys entirely, since absent means "the service default" while `""`
+  is a value it would validate. Carried onto delete too, so a reset matches its
+  import.
+- Handler refuses a half pair up front (the service rejects it in the worker,
+  minutes after the 202 that said the import started).
+- `list-datapack-import-scopes` runs discovery EXTENSION-SIDE and returns codes
+  only — the wizard's `useStoreDiscovery` posts admin credentials from the
+  webview, and this feature keeps the pair out of the panel.
+- Two cascading pickers, hidden when nothing was discovered, with the
+  precondition named underneath ("create it in Commerce first, then choose it").
+- The products/customer_groups warning from the live run.
+- `useImportScopes` extracted when the modal hit the complexity ceiling; 469
+  feature tests passed unmoved, which is what makes it a refactor.
+
+**Not done, deliberately**: no live re-verification of a TARGETED import. The
+substitution is proven and the pair is documented + validated by the service,
+but nothing has yet run an import with the pair actually set. That is one run
+against a Commerce instance with a second website, and it belongs to whoever
+next has one.

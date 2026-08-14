@@ -560,7 +560,7 @@ function buildActions(a: {
         // Arms only. Removing data always takes a second, explicit press.
         { label: 'Reset…', variant: 'secondary', onPress: a.armReset, isDisabled: !a.canStart },
         {
-            label: a.provisioning ? 'Setting up…' : a.starting ? 'Starting…' : 'Start import',
+            label: startLabel(a.provisioning, a.starting),
             variant: 'accent',
             onPress: a.startImport,
             isDisabled: !a.canStart,
@@ -600,6 +600,23 @@ function WatchProgress({
 }
 
 /** The form view: the derived target plus the type checkboxes. */
+/**
+ * The start button's label for the phase it is in.
+ *
+ * Provisioning wins over starting: the credential setup runs FIRST and can take
+ * ~50s on its own, so a "Starting…" label during it would be describing the
+ * wrong wait.
+ */
+function startLabel(provisioning: boolean, starting: boolean): string {
+    if (provisioning) {
+        return 'Setting up…';
+    }
+    if (starting) {
+        return 'Starting…';
+    }
+    return 'Start import';
+}
+
 /**
  * Whether to warn that `products` was chosen without `customer_groups`.
  *

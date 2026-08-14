@@ -68,13 +68,11 @@ declined. Remaining, in execution order:
    two declared fields). Every step rehearsed live 2026-08-13.
 2. **PaaS verified live** — the user has an instance to test against. One dry run
    answers whether the service's `local` handler takes a PaaS URL.
-3. ~~Website targeting~~ **DONE (3a) / SPLIT (3b), 2026-08-14**: substitution
-   confirmed live (bodea `website_ids:[3]` → all 56 products on `base`, REST
-   readback). The picker is now its own feat:
-   `.rptc/plans/datapack-import-targeting/overview.md` — design decisions
-   (picker consumes the extension's OWN store discovery, not
-   `get-websites-and-stores`; single-website invariant; customer_groups
-   dependency guardrail) are recorded there. Building it is DoD item 3.
+3. ~~Website targeting~~ **DONE 2026-08-14** (3a substitution confirmed live;
+   3b picker SHIPPED — `d3585249` client+handler, `c2b01651` UI). Plan and
+   what-shipped notes: `.rptc/plans/datapack-import-targeting/overview.md`.
+   One thing deliberately unverified: no import has yet RUN with the pair
+   actually set — that needs an instance with a second website.
 4. ~~Exercise `partial` and multi-type~~ **DONE 2026-08-14**: 5-type import →
    4 success + `products` fail (type-level ATOMIC: zero landed; cause: tier
    prices name "Platinum Buyer", needs `customer_groups` imported too);
