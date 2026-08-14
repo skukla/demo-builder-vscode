@@ -80,15 +80,16 @@ declined. Remaining, in execution order:
    prices name "Platinum Buyer", needs `customer_groups` imported too);
    recovery run succeeded; 6-type reset restored the instance byte-identical.
    Findings recorded in `docs/systems/data-installer.md`.
-5. **Stage 3 (export)** — **BLOCKED on the service, 2026-08-14.** Probed live
-   with controls: every export returns 200 / `success: false` / `exported: 0`
-   with no message (3 data types, 3 processors) while pre-flight reports auth
-   and connectivity true, and the control `validate` call in the same script
-   returns 200 `success: true`. `get-export-items` — the selections feed —
-   refuses the tenant id ("must be a full URL") AND the full URL ("pre-flight
-   failed for all site types"). There is no working export contract to build
-   against. Details + the corrected request/response shapes:
-   `docs/systems/data-installer.md` §6b.
+5. **Stage 3 (export)** — **NOT blocked; the payload is wrong.** An earlier note
+   here called export non-functional; that was corrected the same day.
+   `customer_groups` exports with `status: success` — it returned zero only
+   because the exclusion rules drop all five stock groups and the instance had
+   been reset to baseline first. `categories`/`products`/`attribute_sets` still
+   fail with a generic "Processing failed"; ruled out by measurement: missing
+   `version`, missing `root_category` (by id and by name), and store scope.
+   The remaining lead is the wiki's root-category guidance, which the service
+   author named and which is not in the repo doc set. `get-export-items` is
+   separately unusable for ACCS. Details: `docs/systems/data-installer.md` §6b.
 
    Two plan assumptions were also wrong and should not be carried forward: the
    documented `base_url` body is rejected (export takes `commerce_instance` like

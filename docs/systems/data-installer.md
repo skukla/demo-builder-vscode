@@ -618,6 +618,9 @@ deployed stage service with a positive control.
 
 ### `get-export-items` is unusable for an ACCS instance
 
+(Still true as measured; unlike the verdict below it, this one was never in
+doubt — both instance forms are refused outright.)
+
 It is the endpoint that would feed a selective-export UI (which items exist, so
 the user can choose). Both instance forms are refused:
 
@@ -677,10 +680,36 @@ Also worth noting: **the only four `export` runs in the last 200 log records are
 these probes.** Export appears simply unused on stage, which is consistent with
 it never having been exercised for ACCS.
 
-**Verdict: the export capability is non-functional for ACCS on the deployed
-stage service.** Combined with `get-export-items` refusing both instance forms,
-there is no export path that works today — Stage 3 cannot be built against a
-contract nothing has ever satisfied.
+**CORRECTION, same day.** The verdict above read "the export capability is
+non-functional for ACCS" — that was wrong, and it outran its own evidence. The
+service author's response was "just get the payload correct", and re-reading the
+service's own log shows he is right:
+
+**`customer_groups` returned `status: success`.** Export runs. It exported zero
+because `config/export_exclusions.json` excludes all five stock customer groups
+(`NOT LOGGED IN`, `General`, `Default (General)`, `Wholesale`, `Retailer`) — and
+the instance had been reset to baseline before the probe, so nothing else was
+left to export. `attribute_sets` is the same story: the exclusion list drops
+`Default`, which was the only set remaining. **Two of the three "failures" were
+the exclusion rules working exactly as designed, measured on an instance with
+nothing exportable on it.**
+
+What remains genuinely unexplained: `categories`, `products` and
+`attribute_sets` return `{"status":"fail","error":"Processing failed"}` in the
+log — including `products` with 130 non-downloadable products present, which
+rules out the exclusion explanation for that one. Ruled out by measurement:
+missing `version` (it IS required — a 400 says so, though the export docs omit
+it), a missing `root_category` selection (tried by both `id` and `name`), and
+store scope (tried against `citisignal`/`citisignal_us`).
+
+**Still needed**: the wiki's root-category guidance, which the service author
+named and which is NOT in the repo doc set. The generic "Processing failed" is
+the whole of the server's explanation.
+
+The lesson worth keeping: an all-zero result on an instance you have just emptied
+is not evidence about the capability. The control that would have caught this —
+export a type the instance demonstrably still holds — is the one I did not run
+before writing a verdict.
 
 ### The export contract differs from import's in three ways
 
