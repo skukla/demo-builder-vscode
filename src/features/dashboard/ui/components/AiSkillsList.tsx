@@ -38,6 +38,23 @@ export interface AiSkillsListProps {
      * regenerate files nothing had looked at.
      */
     isLoading?: boolean;
+    /**
+     * ADR-013: user-edited bundle files (project-relative posix paths). A skill
+     * whose file appears here gets an "edited — kept your version" flag on its
+     * row; non-skill entries are the modal note's job and are ignored here.
+     */
+    editedFiles?: string[];
+}
+
+/**
+ * Does this skill's on-disk file appear in the edited list? Suffix match:
+ * inventory paths are absolute while edited entries are project-relative, so
+ * anchor on a separator to avoid partial-name collisions. Backslashes are
+ * normalized for win32 inventory paths (edited keys are always posix).
+ */
+function isEditedSkill(skill: SkillInventoryEntry, editedFiles: string[]): boolean {
+    const normalized = skill.path.replace(/\\/g, '/');
+    return editedFiles.some((relPath) => normalized.endsWith(`/${relPath}`));
 }
 
 /**
@@ -87,6 +104,7 @@ export function AiSkillsList({
     skills,
     hasError = false,
     isLoading = false,
+    editedFiles,
 }: AiSkillsListProps): React.ReactElement {
     const grouped = useMemo(() => {
         const byKey = new Map<
@@ -174,6 +192,15 @@ export function AiSkillsList({
                                     UNSAFE_className="text-gray-800"
                                 >
                                     {skill.name}
+                                    {isEditedSkill(skill, editedFiles ?? []) && (
+                                        <span
+                                            data-testid="ai-skill-edited-flag"
+                                            className="text-gray-600"
+                                        >
+                                            {' '}
+                                            · edited — kept your version
+                                        </span>
+                                    )}
                                 </Text>
                             ))}
                         </Flex>

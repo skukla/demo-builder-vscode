@@ -9,6 +9,7 @@
  * - Overall aggregation: error > warning > ok
  */
 
+import { createHash } from 'crypto';
 import * as fsPromises from 'fs/promises';
 
 jest.mock('fs/promises', () => ({
@@ -382,6 +383,66 @@ describe('verifyAiSetup', () => {
             expect(inventory.skillsError).toBeUndefined();
             expect(inventory.mcpsError).toBeUndefined();
             expect(inventory.sessionMcpsError).toBeUndefined();
+        });
+    });
+
+    // ADR-013: `editedFiles` is the derived, always-current list of bundle files
+    // the user has edited — current disk sha-256 vs the hash recorded at the last
+    // generate. It makes silent-path skips (activation sweep, updates) durably
+    // visible in the modal without persisting a skip log.
+    describe('editedFiles (recorded-hash comparison, ADR-013)', () => {
+        // Contents match the setupAllOk() readFile mock verbatim.
+        const AGENTS_CONTENT = '# Demo Builder Project\n\nContent';
+        const MCP_CONTENT = JSON.stringify({ mcpServers: { 'demo-builder': {} } });
+        const sha = (s: string): string =>
+            createHash('sha256').update(s, 'utf-8').digest('hex');
+
+        beforeEach(() => {
+            setupAllOk();
+        });
+
+        it('is empty when no hashes are recorded (pre-ADR project: zero false "edited" flags)', async () => {
+            const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
+
+            expect(result.inventory.editedFiles).toEqual([]);
+        });
+
+        it('does not flag a file whose disk content still matches its recorded hash', async () => {
+            const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH, {
+                'AGENTS.md': sha(AGENTS_CONTENT),
+            });
+
+            expect(result.inventory.editedFiles).toEqual([]);
+        });
+
+        it('flags a file whose disk content differs from its recorded hash', async () => {
+            const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH, {
+                'AGENTS.md': sha('what we generated, before the user edited it'),
+            });
+
+            expect(result.inventory.editedFiles).toEqual(['AGENTS.md']);
+        });
+
+        it('treats a recorded file that is missing on disk as not edited', async () => {
+            // setupAllOk rejects reads for anything but AGENTS.md / mcp.json,
+            // so this recorded skill file reads as absent.
+            const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH, {
+                '.claude/skills/gone.md': sha('never mind'),
+            });
+
+            expect(result.inventory.editedFiles).toEqual([]);
+        });
+
+        it('lists every edited file (sorted), mixing edited, absent, and untouched entries', async () => {
+            const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH, {
+                // Both served by the mock with content that mismatches → edited.
+                'AGENTS.md': sha('edited since generation'),
+                '.claude/mcp.json': sha(`${MCP_CONTENT} + a user tweak`),
+                // Not served by the mock → absent on disk → not edited.
+                'CLAUDE.md': sha(AGENTS_CONTENT),
+            });
+
+            expect(result.inventory.editedFiles).toEqual(['.claude/mcp.json', 'AGENTS.md']);
         });
     });
 });

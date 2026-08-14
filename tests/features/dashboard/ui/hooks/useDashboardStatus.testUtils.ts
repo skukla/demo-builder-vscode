@@ -104,6 +104,8 @@ export const buildVerifyResponse = (overrides: {
         sessionMcps?: unknown[];
         skillsError?: string;
         mcpsError?: string;
+        /** ADR-013: bundle files whose disk hash differs from the recorded one. */
+        editedFiles?: string[];
     };
 } = {}) => ({
     success: true,
@@ -123,6 +125,9 @@ export const buildVerifyResponse = (overrides: {
             : {}),
         ...(overrides.inventory?.mcpsError !== undefined
             ? { mcpsError: overrides.inventory.mcpsError }
+            : {}),
+        ...(overrides.inventory?.editedFiles !== undefined
+            ? { editedFiles: overrides.inventory.editedFiles }
             : {}),
     },
 });

@@ -199,19 +199,23 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         // ai-context-freshness (all projects): both staleness axes — stamp-vs-constant
         // (did WE change the bundle?) and composition-vs-installed (did the PROJECT
         // gain a component whose tooling it never received?). Detect-only per the
-        // OnOpenCheck P1 contract — either axis flips the AI badge, surfacing the
-        // existing "Regenerate AI files" action (the user's explicit click is the
-        // remediation; no on-open prompt or heal).
+        // OnOpenCheck P1 contract. Since ADR-013 only the COMPOSITION axis flips
+        // the AI badge (surfacing "Regenerate AI files" — the real download); the
+        // version axis is logged-only because the activation sweep
+        // (`refreshAiBundlesOnActivation`) owns that repair silently.
         createAiContextFreshnessCheck({
             currentVersion: AI_CONTEXT_VERSION,
             applicablePackages: applicableMcpPackages,
             installedPackages: readInstalledMcpPackages,
         }),
         createAiVerifyCheck({
-            verify: async (p) => {
+            // `recordedHashes` = the project's ADR-013 aiFileHashes (the check
+            // passes them from ctx.project) → on-open inventory carries
+            // `editedFiles` for the modal's "kept your version" flags.
+            verify: async (p, recordedHashes) => {
                 // dist path resolved lazily (inside the check) — server-side only.
                 const extensionDistPath = path.join(context.context.extensionPath, 'dist');
-                const result = await verifyAiSetup(p, extensionDistPath);
+                const result = await verifyAiSetup(p, extensionDistPath, recordedHashes);
                 logAiVerification(context, result); // preserve the on-open observability
                 return result;
             },

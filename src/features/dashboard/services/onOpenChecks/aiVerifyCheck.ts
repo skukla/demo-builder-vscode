@@ -31,9 +31,18 @@ export interface AiVerifyCheckData {
     inventory: AiInventory;
 }
 
-/** Injected verify — the real wiring is `verifyAiSetup(projectPath, extensionDistPath)`. */
+/**
+ * Injected verify — the real wiring is
+ * `verifyAiSetup(projectPath, extensionDistPath, recordedHashes)`.
+ * `recordedHashes` is the project's ADR-013 `aiFileHashes` map; the check passes
+ * it so the ON-OPEN inventory carries `editedFiles` ("kept your version" flags)
+ * — without it, the flags would only appear after an explicit re-verify.
+ */
 export interface AiVerifyCheckDeps {
-    verify: (projectPath: string) => Promise<AiVerificationResult>;
+    verify: (
+        projectPath: string,
+        recordedHashes?: Record<string, string>,
+    ) => Promise<AiVerificationResult>;
 }
 
 const FILE_CHECK_FAILED = 'AI context files are missing or invalid — Regenerate AI files';
@@ -56,7 +65,7 @@ export function createAiVerifyCheck(deps: AiVerifyCheckDeps): OnOpenCheck {
         async run(ctx: OnOpenCheckContext): Promise<CheckResult<AiVerifyCheckData>> {
             const { project } = ctx;
 
-            const result = await deps.verify(project.path);
+            const result = await deps.verify(project.path, project.aiFileHashes);
             // Always carry the full result so the badge + modal render unchanged.
             const data: AiVerifyCheckData = { checks: result.checks, inventory: result.inventory };
 

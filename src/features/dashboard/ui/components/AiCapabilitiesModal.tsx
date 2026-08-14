@@ -59,7 +59,17 @@ export interface AiCapabilitiesModalProps {
      * live step instead of the static "Reinstalling…" fallback.
      */
     progress?: AiRegenerateProgress;
+    /**
+     * ADR-013: user-edited bundle files (project-relative posix paths, from
+     * `inventory.editedFiles`). Skill files flag their row in `AiSkillsList`;
+     * the rest ("AGENTS.md", ".mcp.json", …) render as a compact
+     * "Edited — kept your version" note. Nothing renders when empty.
+     */
+    editedFiles?: string[];
 }
+
+/** Bundle prefix that routes an edited file to the skills list instead of the note. */
+const SKILLS_PREFIX = '.claude/skills/';
 
 export function AiCapabilitiesModal({
     skills,
@@ -71,7 +81,9 @@ export function AiCapabilitiesModal({
     onRegenerate,
     isBusy = false,
     progress,
+    editedFiles,
 }: AiCapabilitiesModalProps): React.ReactElement {
+    const editedNonSkillFiles = (editedFiles ?? []).filter((f) => !f.startsWith(SKILLS_PREFIX));
     return (
         <Modal
             title="AI Capabilities"
@@ -145,6 +157,18 @@ export function AiCapabilitiesModal({
                        A plain div, not Spectrum Flex, for the columns: Flex caps
                        width at ~450px (see the spectrum-webview-ui skill). */
                     <div className="ai-capabilities-body">
+                        {/* ADR-013: user-edited non-skill bundle files were kept
+                            on the last refresh — say so, compactly, above the
+                            lists. Edited SKILL files flag their row in
+                            AiSkillsList instead. Absent when nothing is edited. */}
+                        {editedNonSkillFiles.length > 0 && (
+                            <Text
+                                data-testid="ai-edited-files-note"
+                                UNSAFE_className="text-gray-700"
+                            >
+                                Edited — kept your version: {editedNonSkillFiles.join(', ')}
+                            </Text>
+                        )}
                         <div
                             className="ai-capabilities-columns"
                             data-testid="ai-capabilities-columns"
@@ -168,6 +192,7 @@ export function AiCapabilitiesModal({
                                 skills={skills}
                                 hasError={hasSkillsError}
                                 isLoading={isLoading}
+                                editedFiles={editedFiles}
                             />
                         </div>
                     </div>

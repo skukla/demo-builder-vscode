@@ -41,6 +41,7 @@ export { ensureEdsContent } from './edsContentSetup';
 export {
     resolveMcpToolsDir,
     installAiDefaultsMcpTools,
+    applicableMcpPackages,
     type InstallAiDefaultsResult,
 } from './aiDefaultsInstaller';
 

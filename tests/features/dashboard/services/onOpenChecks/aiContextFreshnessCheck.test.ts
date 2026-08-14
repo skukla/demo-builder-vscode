@@ -2,12 +2,18 @@
  * ai-context-freshness on-open check — detect-and-surface.
  *
  * Per the OnOpenCheck P1 contract this check does NOT prompt or heal on open; it
- * is a cheap, read-only in-memory compare. A project is stale when its persisted
- * `aiContextVersion` stamp is older than the current `AI_CONTEXT_VERSION` constant
- * (or absent — catching every pre-feature project); stale → `warning` (which flips
- * the AI badge to "AI files out of date" and surfaces the existing Regenerate
- * action). It is NOT edsOnly (AI context is generated for all projects) and IS
- * reRunnable (re-evaluated each status refresh so the badge clears after Regenerate).
+ * is a cheap, read-only compare across two staleness axes:
+ *
+ * - VERSION axis (stamp < AI_CONTEXT_VERSION): logged-only since ADR-013 — the
+ *   activation sweep (`refreshAiBundlesOnActivation`) owns that repair, so the
+ *   badge no longer flips. The `info` line is the support trail: a stamp that
+ *   stays stale across restarts means the sweep is failing.
+ * - COMPOSITION axis (applicable packages missing from `.demo-builder-mcp`):
+ *   still `warning` — flips the AI badge and surfaces the Regenerate action
+ *   (the real download; no silent path installs packages).
+ *
+ * NOT edsOnly (AI context is generated for all projects) and IS reRunnable
+ * (re-evaluated each status refresh so the badge clears after Regenerate).
  */
 
 import { createAiContextFreshnessCheck } from '@/features/dashboard/services/onOpenChecks/aiContextFreshnessCheck';
@@ -81,30 +87,73 @@ it('fresh (stamp newer than current) → ok', async () => {
     expect((await check.run(ctx)).status).toBe('ok');
 });
 
-it('stale (older stamp) → warning with the "out of date" message', async () => {
-    const check = makeCheck();
-    const { ctx } = makeCtx(1);
+// =============================================================================
+// The version axis (ADR-013): stale stamps stopped flipping the badge — the
+// activation sweep owns that repair silently. The check keeps LOGGING the
+// staleness at info (the support trail if a sweep ever fails), but the verdict
+// is `ok` so the user is never prompted to fix what the sweep fixes itself.
+// =============================================================================
+
+describe('version axis — logged-only, repair owned by the activation sweep', () => {
+    it('version-stale (older stamp) → ok: the badge no longer flips', async () => {
+        const check = makeCheck();
+        const { ctx, post } = makeCtx(1);
+
+        const outcome = await check.run(ctx);
+
+        expect(outcome.status).toBe('ok');
+        expect(outcome.message).toBeUndefined();
+        expect(post).not.toHaveBeenCalled();
+    });
+
+    it('version-stale (absent stamp, pre-feature project) → ok', async () => {
+        const check = makeCheck();
+        const { ctx } = makeCtx(undefined);
+
+        expect((await check.run(ctx)).status).toBe('ok');
+    });
+
+    it('logs the stale stamp at info naming the activation sweep as the repair owner', async () => {
+        const check = makeCheck();
+        const { ctx } = makeCtx(1);
+
+        await check.run(ctx);
+
+        const logged = (mockLogger.info as jest.Mock).mock.calls
+            .map((c) => String(c[0]))
+            .join('\n');
+        // The WHY (stamp vs current) and the WHO (the sweep) — a stamp that
+        // stays stale across restarts means the sweep is failing.
+        expect(logged).toMatch(/stamp 1 < 2/);
+        expect(logged).toMatch(/activation sweep/i);
+    });
+
+    it('a version-stale project with missing packages still warns (composition wins)', async () => {
+        const PKG = '@playwright/mcp';
+        const check = makeCheck({
+            applicablePackages: () => [PKG],
+            installedPackages: async () => [],
+        });
+        const { ctx } = makeCtx(1);
+
+        const outcome = await check.run(ctx);
+
+        expect(outcome.status).toBe('warning');
+        expect(outcome.message).toMatch(/tooling missing/i);
+    });
+});
+
+it('never prompts or heals on open (detect-only, posts nothing even when warning)', async () => {
+    // Composition-stale is the one axis that still warns — assert the warning
+    // carries no side effects (no post, no heal).
+    const check = makeCheck({
+        applicablePackages: () => ['@playwright/mcp'],
+        installedPackages: async () => [],
+    });
+    const { ctx, post } = makeCtx(CURRENT_VERSION);
 
     const outcome = await check.run(ctx);
 
-    expect(outcome.status).toBe('warning');
-    expect(outcome.message).toMatch(/out of date/i);
-});
-
-it('stale (absent stamp) → warning (catches every pre-feature project)', async () => {
-    const check = makeCheck();
-    const { ctx } = makeCtx(undefined);
-
-    expect((await check.run(ctx)).status).toBe('warning');
-});
-
-it('never prompts or heals on open (returns synchronously from an in-memory compare)', async () => {
-    const check = makeCheck();
-    const { ctx, post } = makeCtx(1);
-
-    const outcome = await check.run(ctx);
-
-    // Detect-only: it reports staleness but performs no write/heal and posts nothing.
     expect(outcome.status).toBe('warning');
     expect(post).not.toHaveBeenCalled();
 });

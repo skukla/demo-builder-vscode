@@ -92,9 +92,10 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         });
         expect(result.current.aiReady).toEqual({ label: 'AI', color: 'green', text: 'Ready' });
 
-        // Freshness check reports the bundle is older than the extension → yellow
-        // "AI files out of date" (which surfaces the Regenerate action). No prompt,
-        // no "Updating" state — this is detect-only.
+        // Freshness check reports staleness (since ADR-013 only the COMPOSITION
+        // axis warns — version-stale is repaired silently by the activation sweep)
+        // → yellow "AI files out of date" (which surfaces the Regenerate action).
+        // No prompt, no "Updating" state — this is detect-only.
         act(() => {
             mocks.state.orgHandler?.({
                 checkId: 'ai-context-freshness',
@@ -281,6 +282,26 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         expect(result.current.aiSkills).toHaveLength(1);
         expect(result.current.aiSkills[0].name).toBe('Add a component');
         expect(result.current.aiSkillsError).toBe(false);
+    });
+
+    it('exposes inventory.editedFiles via aiEditedFiles (ADR-013 "kept your version" flags)', () => {
+        const { result } = renderHook(() => useDashboardStatus());
+        deliverAiVerify(
+            mocks,
+            buildVerifyResponse({
+                inventory: { editedFiles: ['AGENTS.md', '.claude/skills/add-component.md'] },
+            })
+        );
+        expect(result.current.aiEditedFiles).toEqual([
+            'AGENTS.md',
+            '.claude/skills/add-component.md',
+        ]);
+    });
+
+    it('degrades aiEditedFiles to an empty array when the inventory omits it (pre-ADR)', () => {
+        const { result } = renderHook(() => useDashboardStatus());
+        deliverAiVerify(mocks, buildVerifyResponse());
+        expect(result.current.aiEditedFiles).toEqual([]);
     });
 
     it('flags aiSkillsError when the skill inspector errored', () => {

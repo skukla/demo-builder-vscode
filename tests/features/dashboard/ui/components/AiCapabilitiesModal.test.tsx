@@ -63,6 +63,7 @@ function renderModal(props: Partial<React.ComponentProps<typeof AiCapabilitiesMo
                 hasMcpsError={props.hasMcpsError}
                 isBusy={props.isBusy}
                 progress={props.progress}
+                editedFiles={props.editedFiles}
             />
         </Provider>
     );
@@ -162,6 +163,46 @@ describe('AiCapabilitiesModal', () => {
         ];
         renderModal({ skills: SKILLS, mcps: broken });
         expect(screen.getByTestId('ai-mcp-broken-server')).toHaveTextContent(/error|failed/i);
+    });
+
+    // ─── Edited files — "kept your version" (ADR-013) ────────────────────────
+    // Hash-and-skip means user-edited bundle files survive regenerates; the
+    // modal is where that survival becomes visible instead of silent.
+
+    it('shows a compact note listing non-skill edited files', () => {
+        renderModal({
+            skills: SKILLS,
+            mcps: MCPS,
+            editedFiles: ['AGENTS.md', '.mcp.json'],
+        });
+
+        const note = screen.getByTestId('ai-edited-files-note');
+        expect(note).toHaveTextContent(/kept your version/i);
+        expect(note).toHaveTextContent('AGENTS.md');
+        expect(note).toHaveTextContent('.mcp.json');
+    });
+
+    it('omits the edited-files note entirely when nothing is edited', () => {
+        renderModal({ skills: SKILLS, mcps: MCPS, editedFiles: [] });
+        expect(screen.queryByTestId('ai-edited-files-note')).not.toBeInTheDocument();
+    });
+
+    it('omits the edited-files note when editedFiles is not supplied (pre-ADR project)', () => {
+        renderModal({ skills: SKILLS, mcps: MCPS });
+        expect(screen.queryByTestId('ai-edited-files-note')).not.toBeInTheDocument();
+    });
+
+    it('routes skill edits to the skills-list flags, not the note', () => {
+        renderModal({
+            skills: SKILLS,
+            mcps: MCPS,
+            editedFiles: ['.claude/skills/add-component.md'],
+        });
+
+        // Flagged in the list (the SKILLS fixture carries this path suffix)…
+        expect(screen.getByTestId('ai-skill-edited-flag')).toBeInTheDocument();
+        // …and NOT duplicated in the non-skill note.
+        expect(screen.queryByTestId('ai-edited-files-note')).not.toBeInTheDocument();
     });
 
     // ─── Actions ─────────────────────────────────────────────────────────────

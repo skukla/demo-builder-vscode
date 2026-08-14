@@ -126,6 +126,8 @@ interface VerifyAiSetupResponse {
         /** MCP servers wired into the project's .mcp.json, with per-server status + tool count. */
         mcps?: McpInventoryEntry[];
         mcpsError?: string;
+        /** ADR-013: bundle files whose disk hash differs from the recorded one ("kept your version"). */
+        editedFiles?: string[];
     };
 }
 
@@ -224,6 +226,8 @@ export interface UseDashboardStatusReturn {
     aiMcps: McpInventoryEntry[];
     /** True when the MCP inspector errored (list shows a warning row) */
     aiMcpsError: boolean;
+    /** ADR-013: user-edited bundle files (relative posix paths) — the modal's "kept your version" flags. */
+    aiEditedFiles: string[];
     /** The AI verify has not produced a result yet (nor failed) — inventory is unknown, not empty. */
     aiInventoryLoading: boolean;
     /** True while an AI verify/regenerate operation is in flight */
@@ -241,6 +245,43 @@ export interface UseDashboardStatusReturn {
 /** Stable empty references so identity doesn't churn each render. */
 const EMPTY_SKILLS: SkillInventoryEntry[] = [];
 const EMPTY_MCPS: McpInventoryEntry[] = [];
+const EMPTY_EDITED_FILES: string[] = [];
+
+/**
+ * Derive the "View AI Capabilities" inventory view from the verify state
+ * (extracted from the hook body to keep its complexity in budget).
+ *
+ * - loading: no result and no failure = still in flight. Without this the
+ *   modal collapsed "not asked yet" into "none exist" and told the user to
+ *   regenerate healthy files.
+ * - errors: a failed verify is an inspector error as far as these lists are
+ *   concerned — we could not read them, which is what the error row already
+ *   says. Claiming zero would be a different lie from the one just fixed.
+ * - editedFiles: ADR-013 "kept your version" flags; absent inventory (or a
+ *   pre-ADR verify response without the field) degrades to the stable empty
+ *   list.
+ */
+function deriveAiInventoryView(
+    verifyResult: VerifyAiSetupResponse | null,
+    verifyFailed: boolean,
+): {
+    aiSkills: SkillInventoryEntry[];
+    aiMcps: McpInventoryEntry[];
+    aiInventoryLoading: boolean;
+    aiSkillsError: boolean;
+    aiMcpsError: boolean;
+    aiEditedFiles: string[];
+} {
+    const inventory = verifyResult?.inventory;
+    return {
+        aiSkills: inventory?.skills ?? EMPTY_SKILLS,
+        aiMcps: inventory?.mcps ?? EMPTY_MCPS,
+        aiInventoryLoading: !verifyResult && !verifyFailed,
+        aiSkillsError: Boolean(inventory?.skillsError) || verifyFailed,
+        aiMcpsError: Boolean(inventory?.mcpsError) || verifyFailed,
+        aiEditedFiles: inventory?.editedFiles ?? EMPTY_EDITED_FILES,
+    };
+}
 
 /** Mesh statuses that indicate a user-initiated operation is in progress (preserve during updates) */
 const isMeshDeploying = (status: MeshStatus | undefined): boolean => status === 'deploying';
@@ -701,18 +742,16 @@ export function useDashboardStatus(
         return { label: 'AI', color: 'green', text: 'Ready' };
     }, [verifyResult, verifyFailed, mcpHealing, aiContextStale, aiRegenerating]);
 
-    // Capability lists for the "View AI Capabilities" surface.
-    const inventory = verifyResult?.inventory;
-    const aiSkills = inventory?.skills ?? EMPTY_SKILLS;
-    const aiMcps = inventory?.mcps ?? EMPTY_MCPS;
-    // No result and no failure = still in flight. Without this the modal collapsed
-    // "not asked yet" into "none exist" and told the user to regenerate healthy files.
-    const aiInventoryLoading = !verifyResult && !verifyFailed;
-    // A failed verify is an inspector error as far as these lists are concerned: we
-    // could not read them, which is what the error row already says. Claiming zero
-    // would be a different lie from the one just fixed.
-    const aiSkillsError = Boolean(inventory?.skillsError) || verifyFailed;
-    const aiMcpsError = Boolean(inventory?.mcpsError) || verifyFailed;
+    // Capability lists for the "View AI Capabilities" surface (extracted helper
+    // — see deriveAiInventoryView).
+    const {
+        aiSkills,
+        aiMcps,
+        aiInventoryLoading,
+        aiSkillsError,
+        aiMcpsError,
+        aiEditedFiles,
+    } = deriveAiInventoryView(verifyResult, verifyFailed);
 
     return {
         projectStatus,
@@ -732,6 +771,7 @@ export function useDashboardStatus(
         aiSkillsError,
         aiMcps,
         aiMcpsError,
+        aiEditedFiles,
         aiInventoryLoading,
         aiBusy,
         aiRegenProgress,

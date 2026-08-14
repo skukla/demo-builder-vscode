@@ -15,6 +15,7 @@
  * Pure fs/promises — no VS Code imports, easily unit-tested.
  */
 
+import { createHash } from 'crypto';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { inspectAllServers } from './mcpInspector';
@@ -45,11 +46,22 @@ export interface AiVerificationResult {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
+/**
+ * Verify a project's AI setup: file-presence checks + capability inventory.
+ *
+ * `recordedHashes` (optional) is the project's ADR-013 `aiFileHashes` map —
+ * when supplied, `inventory.editedFiles` lists the bundle files whose current
+ * disk sha-256 differs from the recorded one (user edits the hash-and-skip
+ * writer keeps). Omitted (pre-ADR projects) → `editedFiles` is empty: no
+ * false "edited" flags. Pure fs — the caller passes the hashes in; the
+ * verifier never reads VS Code state.
+ */
 export async function verifyAiSetup(
     projectPath: string,
     extensionDistPath: string,
+    recordedHashes?: Record<string, string>,
 ): Promise<AiVerificationResult> {
-    const [checks, inventory] = await Promise.all([
+    const [checks, inventory, editedFiles] = await Promise.all([
         Promise.all([
             checkAgentsMd(projectPath),
             checkMcpConfig(projectPath),
@@ -57,9 +69,36 @@ export async function verifyAiSetup(
             checkSkillFiles(projectPath),
         ]),
         gatherInventory(projectPath),
+        detectEditedFiles(projectPath, recordedHashes),
     ]);
 
-    return { status: aggregateStatus(checks), checks, inventory };
+    return { status: aggregateStatus(checks), checks, inventory: { ...inventory, editedFiles } };
+}
+
+/**
+ * ADR-013 derived list: recorded files whose disk content no longer matches
+ * the hash taken at the last generate (sha-256 over utf-8 content — the same
+ * hashing the `GeneratedFileWriter` seam records). A missing file is NOT
+ * "edited" (it was removed; the presence checks / regenerate flow own that
+ * case). Sorted for a stable render/log order.
+ */
+async function detectEditedFiles(
+    projectPath: string,
+    recordedHashes?: Record<string, string>,
+): Promise<string[]> {
+    if (!recordedHashes) return [];
+    const flags = await Promise.all(
+        Object.entries(recordedHashes).map(async ([relPath, recorded]) => {
+            try {
+                const content = await fsPromises.readFile(path.join(projectPath, relPath), 'utf-8');
+                const current = createHash('sha256').update(content, 'utf-8').digest('hex');
+                return current !== recorded ? relPath : null;
+            } catch {
+                return null; // absent/unreadable = not edited
+            }
+        }),
+    );
+    return flags.filter((p): p is string => p !== null).sort();
 }
 
 /**
