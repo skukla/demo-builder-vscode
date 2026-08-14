@@ -138,6 +138,26 @@ describe('publishBrandAssets policy', () => {
             ['non-link/script tag', '<iframe src="/x.html"></iframe>'],
             ['embedded end marker', `<link rel="stylesheet" href="/a.css">\n${BRAND_ASSETS_MARKER_END}`],
             ['external http script src', '<script src="http://evil.example/x.js"></script>'],
+            [
+                'event-handler attribute on a link',
+                '<link rel="stylesheet" href="/x.css" onload="alert(1)">',
+            ],
+            [
+                'decoy data-href smuggling an external stylesheet URL',
+                '<link rel="stylesheet" href="https://evil.example/x.css" data-href="/ok.css">',
+            ],
+            [
+                'decoy data-src smuggling an external script URL',
+                '<script type="module" src="https://evil.example/x.js" data-src="/ok.js"></script>',
+            ],
+            [
+                'backslash authority (WHATWG treats \\ as / in http URLs)',
+                '<script type="module" src="/\\evil.example/x.js"></script>',
+            ],
+            [
+                'tab-split authority (URL preprocessing strips tabs)',
+                '<link rel="stylesheet" href="/\t/evil.example/x.css">',
+            ],
         ])('refuses a snippet with %s without touching head.html', async (_label, headSnippet) => {
             mockSourceFetch();
             const github = makeMockGithub();
@@ -161,23 +181,29 @@ describe('publishBrandAssets policy', () => {
     });
 
     describe('failedTargets', () => {
-        it('keeps real failures, dropping installed and already-current targets', () => {
-            expect(failedTargets([
-                { path: 'styles/a.css', installed: true },
-                { path: 'styles/b.css', installed: false, reason: 'already current' },
-                { path: 'scripts/c.js', installed: false, reason: 'fetch failed: HTTP 404 Not Found' },
-                { path: 'head.html', installed: false, reason: 'malformed brand-assets marker block' },
-            ])).toEqual([
+        it('keeps real failures across files and headSnippet, dropping installed and already-current targets', () => {
+            expect(failedTargets({
+                success: false,
+                files: [
+                    { path: 'styles/a.css', installed: true },
+                    { path: 'styles/b.css', installed: false, reason: 'already current' },
+                    { path: 'scripts/c.js', installed: false, reason: 'fetch failed: HTTP 404 Not Found' },
+                ],
+                headSnippet: { path: 'head.html', installed: false, reason: 'malformed brand-assets marker block' },
+            })).toEqual([
                 { path: 'scripts/c.js', installed: false, reason: 'fetch failed: HTTP 404 Not Found' },
                 { path: 'head.html', installed: false, reason: 'malformed brand-assets marker block' },
             ]);
         });
 
-        it('returns an empty list when everything is current', () => {
-            expect(failedTargets([
-                { path: 'styles/a.css', installed: true },
-                { path: 'styles/b.css', installed: false, reason: 'already current' },
-            ])).toEqual([]);
+        it('returns an empty list when everything is current (no headSnippet declared)', () => {
+            expect(failedTargets({
+                success: true,
+                files: [
+                    { path: 'styles/a.css', installed: true },
+                    { path: 'styles/b.css', installed: false, reason: 'already current' },
+                ],
+            })).toEqual([]);
         });
     });
 });

@@ -178,9 +178,8 @@ async function pipelineApplyBrandAssets(
         brandAssets, githubFileOps, repoOwner, repoName, logger,
     );
     if (!result.success) {
-        const failed = failedTargets(
-            [...result.files, ...(result.headSnippet ? [result.headSnippet] : [])],
-        ).map((r) => `${r.path} (${r.reason ?? 'unknown'})`);
+        const failed = failedTargets(result)
+            .map((r) => `${r.path} (${r.reason ?? 'unknown'})`);
         logger.warn(
             `[EdsPipeline] Brand assets incomplete — storefront may be unbranded: ${failed.join(', ')}`,
         );

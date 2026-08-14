@@ -27,15 +27,6 @@ interface DemoPackagesConfig {
     packages: DemoPackage[];
 }
 
-const CUSTOM_B2B_CODE_PATCHES = [
-    'header-nav-tools-defensive',
-    'product-link-sku-encoding',
-    'product-link-sku-slash-encoding',
-    'aem-assets-sku-sanitization',
-    'commerce-account-sidebar-selector-race',
-    'account-page-column-layout',
-];
-
 describe('demo-packages.json — bodea package details (thin-layer B2B shape)', () => {
     let packagesConfig: DemoPackagesConfig;
     let schema: Record<string, unknown>;
@@ -108,10 +99,17 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
         });
     });
 
-    it('should carry the same six b2b codePatches as the custom package', () => {
+    it('should carry the same b2b codePatches as the custom package', () => {
+        // Parity is against the real custom package, read from the same
+        // config — not a hardcoded copy that silently drifts.
+        const custom = packagesConfig.packages.find(p => p.id === 'custom');
+        expect(custom).toBeDefined();
+        const customPatches = custom!.storefronts['eds-paas'].codePatches as string[];
+        expect(customPatches.length).toBeGreaterThan(0);
+
         const pkg = getBodea();
         Object.values(pkg.storefronts).forEach(sf => {
-            expect(sf.codePatches).toEqual(CUSTOM_B2B_CODE_PATCHES);
+            expect(sf.codePatches).toEqual(customPatches);
         });
     });
 

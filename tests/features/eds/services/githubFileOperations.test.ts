@@ -87,6 +87,37 @@ describe('buildArchiveUrl', () => {
     });
 });
 
+describe('isStaleShaFailure', () => {
+    // Classifies the Contents API update-with-SHA rejection. Shared by the
+    // publishers (brandAssetPublisher, pdp404HandlerPublisher) for their
+    // re-read-and-retry-once handling.
+
+
+    let isStaleShaFailure: any;
+
+    beforeEach(async () => {
+        jest.resetModules();
+        const module = await import('@/features/eds/services/githubFileOperations');
+        isStaleShaFailure = module.isStaleShaFailure;
+    });
+
+    it('matches GitHub\'s "does not match" stale-SHA rejection (case-insensitive)', () => {
+        expect(isStaleShaFailure(new Error('styles/x.css does not match sha'))).toBe(true);
+        expect(isStaleShaFailure(new Error('X Does Not Match Y'))).toBe(true);
+    });
+
+    it('does not match other failures', () => {
+        expect(isStaleShaFailure(new Error('403 Forbidden'))).toBe(false);
+        expect(isStaleShaFailure(new Error('Not Found'))).toBe(false);
+    });
+
+    it('is false for non-Error and message-less values', () => {
+        expect(isStaleShaFailure(undefined)).toBe(false);
+        expect(isStaleShaFailure('does not match')).toBe(false);
+        expect(isStaleShaFailure({})).toBe(false);
+    });
+});
+
 describe('resetRepoToTemplate — target branch vs template ref separation', () => {
     // Regression test for an ADR-006 Step 4 bug: `resetRepoToTemplate` previously
     // used a single `branch` parameter for BOTH the target branch lookup (getBranchInfo

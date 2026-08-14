@@ -18,7 +18,7 @@
  * @module features/eds/services/brandAssetPublisher
  */
 
-import type { GitHubFileOperations } from './githubFileOperations';
+import { isStaleShaFailure, type GitHubFileOperations } from './githubFileOperations';
 import { replaceMarkedBlock } from './pdp404Snippet';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { BrandAssetsConfig } from '@/types/demoPackages';
@@ -81,15 +81,25 @@ function isAllowedTarget(target: string): boolean {
 }
 
 /**
- * The only line shapes a head snippet may contain: a stylesheet link or a
- * script tag with an empty body, each referencing a root-relative path
- * (`/`, but not protocol-relative `//`). Inline script bodies, other tags,
- * and external URLs are refused — the snippet lands verbatim in every
- * generated storefront's head.html and runs in demo audiences' browsers.
+ * The only line shapes a head snippet may contain, pinned exactly (attribute
+ * order included, no other attributes permitted):
+ *
+ *   <link rel="stylesheet" href="/…">
+ *   <script type="module" src="/…"></script>
+ *
+ * each referencing a root-relative path (`/`, but not protocol-relative
+ * `//`). The path is restricted to a whitelisted alphabet rather than a
+ * character blacklist: WHATWG URL normalization treats `\` as `/` and strips
+ * tab/CR/LF, so `/\evil.example/x.js` or a tab-split authority would resolve
+ * off-origin while sneaking past any single-character exclusion. Anything
+ * looser reopened real bypasses (event-handler attributes; decoy
+ * `data-href`/`data-src` matching `\bhref=`/`\bsrc=` while the real URL
+ * pointed off-origin) — the snippet lands verbatim in every generated
+ * storefront's head.html and runs in demo audiences' browsers.
  */
 const ALLOWED_SNIPPET_LINES = [
-    /^<link\s[^>]*\bhref=["']\/(?!\/)[^"']*["'][^>]*>$/i,
-    /^<script\s[^>]*\bsrc=["']\/(?!\/)[^"']*["'][^>]*><\/script>$/i,
+    /^<link rel="stylesheet" href="\/(?!\/)[A-Za-z0-9._/-]*">$/i,
+    /^<script type="module" src="\/(?!\/)[A-Za-z0-9._/-]*"><\/script>$/i,
 ] as const;
 
 /**
@@ -111,23 +121,26 @@ function isAllowedHeadSnippet(snippet: string): boolean {
         .every((line) => ALLOWED_SNIPPET_LINES.some((rule) => rule.test(line)));
 }
 
-/** GitHub's update-with-SHA rejection when the SHA no longer matches HEAD. */
-function isStaleShaFailure(error: unknown): boolean {
-    return /does not match/i.test((error as Error)?.message ?? '');
-}
-
 /** An idempotent skip is a healthy outcome, not a failure. */
 function isCurrent(result: BrandAssetResult): boolean {
     return result.installed || result.reason === 'already current';
 }
 
+/** Every target in a result: the copied files plus the headSnippet when declared. */
+function allTargets(
+    result: Pick<BrandAssetsPublishResult, 'files' | 'headSnippet'>,
+): BrandAssetResult[] {
+    return result.headSnippet ? [...result.files, result.headSnippet] : result.files;
+}
+
 /**
- * The real failures in a result set — targets neither installed now nor
+ * The real failures in a publish result — targets neither installed now nor
  * already current. Owned here so consumers (the pipeline's warning summary)
- * don't re-derive the result semantics from the reason string.
+ * don't re-assemble the target list or re-derive the result semantics from
+ * the reason string.
  */
-export function failedTargets(results: BrandAssetResult[]): BrandAssetResult[] {
-    return results.filter((result) => !isCurrent(result));
+export function failedTargets(result: BrandAssetsPublishResult): BrandAssetResult[] {
+    return allTargets(result).filter((target) => !isCurrent(target));
 }
 
 /** Fetch one source file raw at branch HEAD. Throws on HTTP or network failure. */
@@ -306,6 +319,5 @@ export async function publishBrandAssets(
         ? await vendorHeadSnippet(config.headSnippet, context)
         : undefined;
 
-    const all = headSnippet ? [...files, headSnippet] : files;
-    return { success: all.every(isCurrent), files, headSnippet };
+    return { success: allTargets({ files, headSnippet }).every(isCurrent), files, headSnippet };
 }
