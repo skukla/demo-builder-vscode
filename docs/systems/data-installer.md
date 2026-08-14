@@ -623,6 +623,24 @@ and say nothing about why.
 `bodea`, which it finds). A zero-item export writes no datapack, so there was
 nothing to clean up.
 
+**Three sources disagree about the same run.** The service's own request log
+carries detail the HTTP response withheld:
+
+| Source | `attribute_sets` / `categories` | `customer_groups` |
+|---|---|---|
+| HTTP response | `success: false`, `exported: 0`, **no message** | `success: false`, `exported: 0`, **no message** |
+| Request log (`/logs`) | `{"status":"fail","error":"Processing failed"}` | **`{"status":"success"}`** |
+| Storage | nothing | **nothing** |
+
+So the response swallows an error the log has, and for `customer_groups` the log
+claims success for a run that stored nothing. Storage checked by TARGETED lookup,
+not a list scan: `get-datapack-metadata` and `get-data-item` both 404 for the
+probe pack while the same two calls for `bodea/main` return 200.
+
+Also worth noting: **the only four `export` runs in the last 200 log records are
+these probes.** Export appears simply unused on stage, which is consistent with
+it never having been exercised for ACCS.
+
 **Verdict: the export capability is non-functional for ACCS on the deployed
 stage service.** Combined with `get-export-items` refusing both instance forms,
 there is no export path that works today — Stage 3 cannot be built against a
