@@ -126,7 +126,7 @@ function renderPanelBody(args: {
         // the drawer body has. db-drawer-body is a flex column, so flex:1 centers.
         return (
             <div className="datapack-panel-loading">
-                <LoadingDisplay size="M" message="Loading datapack..." />
+                <LoadingDisplay size="L" message="Loading datapack..." />
             </div>
         );
     }

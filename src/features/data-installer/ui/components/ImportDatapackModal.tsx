@@ -244,7 +244,11 @@ export function ImportDatapackModal({
                         spinner in — the ManageApisModal/AiCapabilitiesModal
                         treatment, and what Start/Reset here already did. The dry
                         run briefly had its own small inline row instead. */}
-                    {busy ? <LoadingDisplay size="M" message={busyMessage(start.loading, reset.loading)} /> : null}
+                    {/* Size L on purpose: LoadingDisplay's own source keys the
+                        wizard treatment off it — `shouldCenter = size === 'L'`.
+                        M left-aligns the text and drops a size; it is not a
+                        smaller version of the same look. */}
+                    {busy ? <LoadingDisplay size="L" message={busyMessage(start.loading, reset.loading)} /> : null}
 
                     {!running && !resetArmed && !busy ? (
                         <>
@@ -429,11 +433,20 @@ function ImportProgress({
     const perType = Object.entries(record.perType).map(([type, state]) => `${type}: ${state}`);
 
     if (record.outcome === 'watching') {
+        // The reassurance rides in helperText — the slot LoadingDisplay documents
+        // for time expectations — so the headline stays one short line, like the
+        // wizard's. It belongs on screen WHILE Stop watching is available: learning
+        // that stopping does not cancel after you stopped is too late.
         return (
             <LoadingDisplay
-                size="M"
-                message={describeOutcome(record, watching)}
+                size="L"
+                message={watching ? 'Importing…' : 'Stopped watching.'}
                 subMessage={perType.join(' · ') || undefined}
+                helperText={
+                    watching
+                        ? 'This can take several minutes. Closing this or stopping the watch continues on the server.'
+                        : 'The import continues on the server.'
+                }
             />
         );
     }
@@ -533,12 +546,10 @@ const OUTCOME_VARIANT: Record<string, 'success' | 'warning' | 'error' | 'info'> 
 function describeOutcome(record: ImportJobRecord, watching: boolean): string {
     switch (record.outcome) {
         case 'watching':
-            // The reassurance belongs here, while Stop watching is on screen —
-            // not after it is pressed. Learning that stopping does not cancel
-            // AFTER you stopped is too late to have informed the decision.
-            return watching
-                ? 'Importing… this can take several minutes. Closing this or stopping the watch continues on the server.'
-                : 'Stopped watching. The import continues on the server.';
+            // Unreachable — ImportProgress renders the watching state itself
+            // (LoadingDisplay with the reassurance in helperText). Kept so the
+            // switch stays total over the outcome union.
+            return watching ? 'Importing…' : 'Stopped watching.';
         case 'success':
             return 'Import finished. All requested data types succeeded.';
         case 'partial':
