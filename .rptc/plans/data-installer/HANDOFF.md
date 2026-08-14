@@ -56,6 +56,29 @@ Expect **22 suites / 370 tests** green. Add `tests/scripts` for the drift checke
 **The panel works end to end and has been visually confirmed by the user.** All four
 surfaces render: catalog, detail flyout, installed, activity.
 
+## Definition of done — set by the user, 2026-08-13
+
+**The branch does NOT land until the feature is complete, and complete means the
+full plan (Stages 1–4).** Landing was offered after Stage 2 verification and
+declined. Remaining, in execution order:
+
+1. **Console-free credential provisioning** — wire the proven loop (create S2S
+   credential → subscribe `ACCS-REST-API` via the DIRECT S2S call, not
+   `add_console_apis` (axis-filter bug) → targeted workspace download → fill the
+   two declared fields). Every step rehearsed live 2026-08-13.
+2. **PaaS verified live** — the user has an instance to test against. One dry run
+   answers whether the service's `local` handler takes a PaaS URL.
+3. **Surface the full-pack surprise** — bodea `products` hard-code website id 3;
+   validate cannot catch it; the UI must say something before a Select-all import.
+4. **Exercise `partial` and multi-type** — one multi-type import/reset pass.
+5. **Stage 3 (export)** — capture a pack FROM an instance; must say it skips
+   `giftcards`; needs `create-datapack` + `add-data-item` on the client.
+6. **Stage 4 (wizard hook)** — datapack selection in Build Your Project; the
+   datapack↔demo-package mapping is an explicit table and a product decision.
+
+The standing cost accepted with this: the branch keeps rebasing onto develop
+(six times on 2026-08-13 alone) until all six are done.
+
 ## Next action — verify Stage 2 against the live service
 
 **Stage 2 is built. Not one line of it has spoken to the service.** Write client,
