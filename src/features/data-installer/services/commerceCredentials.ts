@@ -7,18 +7,23 @@
  * `componentConfigs`, written when the project was built, and `getAdminToken`
  * elsewhere already treats them as the credential check.
  *
- * **ACCS has nothing.** Its REST API accepts only IMS OAuth2, so the pair comes
- * from an Adobe Developer Console **OAuth Server-to-Server** credential in a
- * project that has the *Adobe Commerce as a Cloud Service* API added. It cannot
- * be auto-provisioned — that API is product-profile gated on *Commerce Cloud
- * Manager*, which is the step that silently hides it from the Console UI. The
- * user creates it by hand and pastes it in once.
+ * **ACCS needs an OAuth pair.** Its REST API accepts only IMS OAuth2, so the
+ * pair comes from an Adobe Developer Console **OAuth Server-to-Server**
+ * credential. The user can paste one in, or let the extension provision it —
+ * `accsCredentialProvisioner` creates the credential and subscribes
+ * `ACCS-REST-API` to it, proven live 2026-08-13. An earlier version of this
+ * docstring said auto-provisioning was impossible; that was wrong.
  *
- * **The ACCS pair lives in SecretStorage and nowhere else.** A value in
- * `componentConfigs` travels with the project on export unless its key is listed
- * in `SECRET_ENV_KEYS` (`components/config/envVarKeys.ts`) — so storing it there
- * would make a secret leave the machine the first time someone exported. Using
- * SecretStorage removes the question rather than answering it.
+ * **The ACCS pair lives in `componentConfigs`**, keyed on the
+ * `adobe-commerce-accs` component — the same place a hand-pasted pair goes, so
+ * there is one storage path and not two. An earlier version of this docstring
+ * claimed SecretStorage "and nowhere else", which was never true of the shipped
+ * code and is the kind of claim a reader trusts instead of checking.
+ *
+ * Export safety comes from `SECRET_ENV_KEYS` (`components/config/envVarKeys.ts`)
+ * instead: `ACCS_OAUTH_CLIENT_SECRET` is listed there, so `stripSecretValues`
+ * removes it from secret-free exports. The `secrets` parameter below is unused
+ * and kept only for call-site stability — see its own note.
  *
  * **This module never says whether a credential WORKS.** For PaaS that is
  * `getAdminToken`; for ACCS nothing local can, which is exactly why the write

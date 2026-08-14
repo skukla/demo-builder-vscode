@@ -63,6 +63,37 @@ interface ImportTarget {
     projectName?: string;
 }
 
+/**
+ * Which job to watch: the one the LAST action started.
+ *
+ * `useVSCodeRequest.execute` clears `error` before a request but NOT `data`, and
+ * nothing in this modal calls its `reset()`. So a finished import leaves
+ * `start.value.activationId` set for the modal's lifetime, and the previous
+ * `start ?? reset` preferred it forever — an import followed by a reset watched
+ * the completed import, never re-read status, and discarded the reset's record
+ * at the activation-id guard, dropping the user back on the form with Start
+ * enabled while a destructive reset ran server-side. Reset-then-import worked,
+ * which is what made it a bug and not a design.
+ *
+ * Exported for its own test: driving two full operations through the rendered
+ * modal proved far more expensive than the rule is complex.
+ */
+export function watchedActivation(
+    lastAction: LastAction | null,
+    startId: string | undefined,
+    resetId: string | undefined,
+): string | undefined {
+    if (lastAction === 'reset') {
+        return resetId;
+    }
+    if (lastAction === 'start') {
+        return startId;
+    }
+    // No write yet (a dry run, or provisioning): whichever exists is the job
+    // this modal was reopened onto.
+    return startId ?? resetId;
+}
+
 /** The operation whose outcome the result view should show. */
 type LastAction = 'dryRun' | 'start' | 'reset' | 'provision';
 
@@ -158,7 +189,20 @@ export function ImportDatapackModal({
 
     // Pick the job up as soon as one is accepted. A reset is the same kind of
     // job — same activation id, same runner, same record.
-    const startedActivation = start.value?.activationId ?? reset.value?.activationId;
+    //
+    // Keyed on the LAST ACTION, not `start ?? reset`: `useVSCodeRequest.execute`
+    // clears `error` before a request but NOT `data`, and nothing here calls its
+    // `reset()`. So a finished import leaves `start.value.activationId` set for
+    // the life of the modal, and `??` preferred it forever — an import followed
+    // by a reset watched the completed import, never re-read status, and
+    // discarded the reset's record at the `activationId` guard below. The modal
+    // fell back to the form, Start enabled, while the reset ran server-side.
+    // Reset-then-import worked, which is what made it a bug and not a design.
+    const startedActivation = watchedActivation(
+        lastAction,
+        start.value?.activationId,
+        reset.value?.activationId,
+    );
     useEffect(() => {
         if (startedActivation) {
             loadStatus({});
@@ -599,7 +643,6 @@ function WatchProgress({
     );
 }
 
-/** The form view: the derived target plus the type checkboxes. */
 /**
  * The start button's label for the phase it is in.
  *
@@ -702,6 +745,7 @@ function TargetScopeFields({
     );
 }
 
+/** The form view: the derived target plus the type checkboxes. */
 function ImportForm({
     projectName,
     instance,

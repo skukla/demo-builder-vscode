@@ -174,3 +174,29 @@ describe('provisionAccsCredentials', () => {
         expect(result).toMatchObject({ ok: false });
     });
 });
+
+/**
+ * SECURITY: the workspace download holds the client secret, and Node's
+ * JSON.parse SyntaxError quotes ~30 characters of the input it choked on. If
+ * that message escaped through `log()` or the returned `reason`, part of a
+ * secret would land in Debug Logs — which `debugLogger.debug()` does not redact
+ * and which people paste into tickets.
+ */
+describe('a malformed workspace download', () => {
+    it('never lets the parse error quote the secret', async () => {
+        const secret = 'fake-test-secret-not-a-secret';
+        const lines: string[] = [];
+        const { deps } = makeDeps({
+            downloadWorkspaceJson: jest.fn().mockResolvedValue(
+                `{"project":{"workspace":{"details":{"credentials":[{"client_secrets":["${secret}"`,
+            ),
+            log: (line: string) => lines.push(line),
+        });
+
+        const result = await provisionAccsCredentials(deps as never, TARGET);
+
+        expect(result.ok).toBe(false);
+        expect(JSON.stringify(result)).not.toContain(secret);
+        expect(lines.join('\n')).not.toContain(secret);
+    });
+});

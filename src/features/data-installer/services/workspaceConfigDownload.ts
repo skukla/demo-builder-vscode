@@ -18,6 +18,11 @@ import * as os from 'os';
 import * as path from 'path';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import {
+    validateOrgId,
+    validateProjectId,
+    validateWorkspaceId,
+} from '@/core/validation/validators/AdobeResourceValidator';
 
 export interface WorkspaceTarget {
     orgId: string;
@@ -35,6 +40,18 @@ export async function downloadWorkspaceConfigJson(
     executor: CommandExecutor,
     target: WorkspaceTarget,
 ): Promise<string> {
+    // SECURITY: these ids are interpolated into a command that CommandExecutor
+    // runs through a SHELL (it forces `shell: DEFAULT_SHELL` for anything
+    // starting `aio `). They come from `project.adobe.*`, read verbatim out of a
+    // `.demo-builder.json` on disk — and any folder containing one is picked up
+    // by the projects scanner, so a shared demo folder is an injection vector.
+    // Quoting would not be enough: `$(...)` survives double quotes.
+    // `core/shell/README.md` requires shell-true call sites to validate; this is
+    // that validation.
+    validateOrgId(target.orgId);
+    validateProjectId(target.projectId);
+    validateWorkspaceId(target.workspaceId);
+
     const scratchDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'db-di-ws-'));
     const filePath = path.join(scratchDir, `ws-${crypto.randomBytes(6).toString('hex')}.json`);
 

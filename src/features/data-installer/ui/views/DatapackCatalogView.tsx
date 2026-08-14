@@ -230,7 +230,6 @@ export function DatapackCatalogView(): React.JSX.Element {
     );
 }
 
-/** Pick the one body state to show under the header. */
 
 /** What `get-datapack-import-target` reports about the open project. */
 interface ProjectSampleData {
@@ -275,6 +274,7 @@ function RecordedChoiceNotice({
     );
 }
 
+/** Pick the one body state to show under the header. */
 function renderBody(args: {
     groups: DatapackGroup[];
     filtered: DatapackGroup[];

@@ -592,13 +592,6 @@ function readInput(
 }
 
 /**
- * The website/store pair, refused here if it is half-supplied.
- *
- * The service takes both or neither and rejects a half pair — but it rejects it
- * in the worker, minutes after the 202 that told the user the import started.
- * Catching it before the request keeps the failure where the user can act on it.
- */
-/**
  * Discovery params for whichever backend this project runs.
  *
  * Returns undefined when the project cannot be discovered against (no URL, or
@@ -668,6 +661,13 @@ function groupStoreViewsByWebsite(
     }));
 }
 
+/**
+ * The website/store pair, refused here if it is half-supplied.
+ *
+ * The service takes both or neither and rejects a half pair — but it rejects it
+ * in the worker, minutes after the 202 that told the user the import started.
+ * Catching it before the request keeps the failure where the user can act on it.
+ */
 function readTarget(
     payload: StartImportPayload | undefined,
 ): { target: ImportTarget | undefined } | { error: string } {

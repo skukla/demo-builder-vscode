@@ -127,7 +127,24 @@ export async function provisionAccsCredentials(
 
         log('reading the pair from the workspace configuration');
         const raw = await deps.downloadWorkspaceJson(target);
-        const parsed = JSON.parse(raw) as WorkspaceJson;
+        // Parsed in its OWN try: `raw` holds the client secret, and Node's
+        // JSON.parse SyntaxError quotes ~30 characters of the offending input.
+        // Left to the outer catch that message would reach `log()` and the
+        // returned `reason` — which the handler writes to debugLogger.debug()
+        // (no redaction there; only error()/trace() sanitize) and renders in the
+        // modal. A truncated download would then put part of a secret in a
+        // Debug Logs dump someone pastes into a ticket.
+        let parsed: WorkspaceJson;
+        try {
+            parsed = JSON.parse(raw) as WorkspaceJson;
+        } catch {
+            return {
+                ok: false,
+                reason:
+                    'The workspace configuration could not be read. Download it again, or copy ' +
+                    'the credential pair from the Developer Console.',
+            };
+        }
         const s2s = (parsed.project?.workspace?.details?.credentials ?? []).find(
             (entry) => entry.integration_type === 'oauth_server_to_server',
         )?.oauth_server_to_server;
