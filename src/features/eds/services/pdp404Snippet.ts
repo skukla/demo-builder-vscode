@@ -224,8 +224,9 @@ export function buildSmart404Snippet(triggerUrl: string, org: string, site: stri
  * Replace the marker-bounded block in `content` with the corresponding block
  * from `freshFull` (a freshly built snippet). Content outside the block —
  * including whitespace around it — is preserved. Returns `null` when both
- * markers aren't present in `content`, so the caller leaves the file untouched
- * rather than risk duplicating a malformed (half-marked) block.
+ * markers aren't present in `content` in order (missing, half-marked, or
+ * inverted), so the caller leaves the file untouched rather than risk
+ * duplicating or corrupting a malformed block.
  */
 export function replaceMarkedBlock(
     content: string,
@@ -234,8 +235,11 @@ export function replaceMarkedBlock(
     freshFull: string,
 ): string | null {
     const startIdx = content.indexOf(startMarker);
-    const endIdx = content.indexOf(endMarker);
-    if (startIdx === -1 || endIdx === -1) return null;
+    if (startIdx === -1) return null;
+    // Search only AFTER the start marker: an end marker that exists solely
+    // before it (mangled block) must not pull the splice point backwards.
+    const endIdx = content.indexOf(endMarker, startIdx + startMarker.length);
+    if (endIdx === -1) return null;
     const blockEnd = endIdx + endMarker.length;
     const freshStart = freshFull.indexOf(startMarker);
     const freshEnd = freshFull.indexOf(endMarker) + endMarker.length;

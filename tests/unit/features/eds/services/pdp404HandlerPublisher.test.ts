@@ -19,6 +19,7 @@ import {
     derivePrepublishUrl,
     extractCspNonce,
 } from '@/features/eds/services/pdp404HandlerPublisher';
+import { replaceMarkedBlock } from '@/features/eds/services/pdp404Snippet';
 
 describe('derivePrepublishUrl', () => {
     it('rewrites /render-pdp to /prepublish-pdp at the end of the path', () => {
@@ -287,6 +288,39 @@ describe('extractCspNonce', () => {
     it('matches nonce on any nonced script regardless of other attributes', () => {
         expect(extractCspNonce('<script type="importmap" nonce="aem" id="x">{}</script>')).toBe(
             'aem'
+        );
+    });
+});
+
+describe('replaceMarkedBlock', () => {
+    const START = '<!-- block start -->';
+    const END = '<!-- block end -->';
+    const fresh = `${START}\nnew body\n${END}`;
+
+    it('replaces a well-formed block, preserving surrounding content', () => {
+        const content = `before\n${START}\nold body\n${END}\nafter`;
+        expect(replaceMarkedBlock(content, START, END, fresh)).toBe(
+            `before\n${START}\nnew body\n${END}\nafter`
+        );
+    });
+
+    it('returns null when either marker is missing', () => {
+        expect(replaceMarkedBlock(`no markers here`, START, END, fresh)).toBeNull();
+        expect(replaceMarkedBlock(`${START}\nhalf-marked`, START, END, fresh)).toBeNull();
+        expect(replaceMarkedBlock(`half-marked\n${END}`, START, END, fresh)).toBeNull();
+    });
+
+    it('returns null on inverted markers (end before start) instead of splicing corruption', () => {
+        const inverted = `before\n${END}\nmiddle\n${START}\nafter`;
+        expect(replaceMarkedBlock(inverted, START, END, fresh)).toBeNull();
+    });
+
+    it('bounds the block at the first end marker after the start marker', () => {
+        // A stray end marker BEFORE the real block must not pull the splice
+        // point backwards.
+        const content = `${END}\nstray\n${START}\nold body\n${END}\ntail`;
+        expect(replaceMarkedBlock(content, START, END, fresh)).toBe(
+            `${END}\nstray\n${START}\nnew body\n${END}\ntail`
         );
     });
 });

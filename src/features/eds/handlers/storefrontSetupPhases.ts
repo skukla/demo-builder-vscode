@@ -281,6 +281,7 @@ async function runEdsPipelineWithRecovery(
                     contentPatchSource: edsConfig.contentPatchSource,
                     codePatches: edsConfig.codePatches,
                     codePatchSource: edsConfig.codePatchSource,
+                    brandAssets: edsConfig.brandAssets,
                     // Thread the orchestrator's shared patch report through so canonical-phase
                     // results (from Step 1 LKG-pinning) + block-phase + content-patch results
                     // all aggregate into ONE report. The orchestrator owns reportUnapplied so

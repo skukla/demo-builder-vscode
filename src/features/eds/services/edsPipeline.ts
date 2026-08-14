@@ -17,6 +17,7 @@
  * @module features/eds/services/edsPipeline
  */
 
+import { failedTargets, publishBrandAssets } from './brandAssetPublisher';
 import { prewarmCatalog } from './catalogPrewarmService';
 import { applyBlockCodePatches } from './codePatchPipelineHelpers';
 import type { DaLiveContentOperations } from './daLiveContentOperations';
@@ -25,7 +26,7 @@ import type { HelixService } from './helixService';
 import { createPatchReport, addCodeResult, type PatchReport } from './patchReportHelper';
 import { DaLiveAuthError, DaLiveError, type EdsPipelineProgressCallback } from './types';
 import type { Project } from '@/types/base';
-import type { ContentPatchSource, CodePatchSource } from '@/types/demoPackages';
+import type { BrandAssetsConfig, ContentPatchSource, CodePatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 
 // ==========================================================
@@ -63,6 +64,11 @@ export interface EdsPipelineParams {
     codePatches?: string[];
     /** External code-patch source. Sibling of `contentPatchSource`. */
     codePatchSource?: CodePatchSource;
+
+    /** Additive brand files + optional marker-bounded head.html snippet, vendored
+     *  after block install (so brand files can safely reference installed blocks).
+     *  Non-fatal per ADR-006 D1 — the publisher reports and logs, never throws. */
+    brandAssets?: BrandAssetsConfig;
 
     /** Optional preexisting patch report. When provided, the pipeline appends to it
      *  (so canonical-phase results from `resetRepoToTemplate` survive into the final
@@ -151,6 +157,34 @@ async function pipelineApplyBlockCodePatches(
         logger,
     );
     for (const r of blockResults) addCodeResult(patchReport, r);
+}
+
+/**
+ * Brand-assets slot. No-op when the package storefront declares none.
+ * `publishBrandAssets` is internally non-fatal (never throws for fetch or
+ * write failures); an incomplete result degrades to an unbranded storefront,
+ * so it is summarized as a warning rather than failing the pipeline —
+ * matching how block code patches report (proceed-and-warn, ADR-006 D1).
+ */
+async function pipelineApplyBrandAssets(
+    githubFileOps: GitHubFileOperations,
+    repoOwner: string,
+    repoName: string,
+    brandAssets: BrandAssetsConfig | undefined,
+    logger: Logger,
+): Promise<void> {
+    if (!brandAssets) return;
+    const result = await publishBrandAssets(
+        brandAssets, githubFileOps, repoOwner, repoName, logger,
+    );
+    if (!result.success) {
+        const failed = failedTargets(
+            [...result.files, ...(result.headSnippet ? [result.headSnippet] : [])],
+        ).map((r) => `${r.path} (${r.reason ?? 'unknown'})`);
+        logger.warn(
+            `[EdsPipeline] Brand assets incomplete — storefront may be unbranded: ${failed.join(', ')}`,
+        );
+    }
 }
 
 /**
@@ -588,6 +622,15 @@ export async function executeEdsPipeline(
             codePatchSource,
             patchReport,
             logger,
+        );
+
+        // Step 2.6: Brand assets (additive brand files + head.html snippet).
+        // After block install for the same reason as block-targeting patches:
+        // installed blocks are present to be referenced. Both create and reset
+        // reach this point through the shared pipeline, so the two paths stay
+        // behavior-identical. Skipped silently when the package declares none.
+        await pipelineApplyBrandAssets(
+            githubFileOps, repoOwner, repoName, params.brandAssets, logger,
         );
 
         // Step 3: EDS Settings

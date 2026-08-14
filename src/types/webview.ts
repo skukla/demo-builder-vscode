@@ -483,6 +483,14 @@ export interface EDSConfig {
         repo: string;
         path: string;
     };
+    /** Additive brand files copied into the generated repo + optional marker-bounded
+     *  head.html snippet (from demo-packages.json storefronts). Applied by
+     *  brandAssetPublisher as a shared-pipeline phase (create + reset). */
+    brandAssets?: {
+        source: { owner: string; repo: string; branch: string };
+        files: Array<{ from: string; to: string }>;
+        headSnippet?: string;
+    };
 
     // Repository creation state (set by RepoSelectionInline when creating a new repo)
     /** Created repository info - set when repo is created in selection step, before proceeding */

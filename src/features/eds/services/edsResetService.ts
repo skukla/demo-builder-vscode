@@ -202,6 +202,7 @@ async function runContentPipeline(
         contentPatchSource,
         codePatches,
         codePatchSource,
+        brandAssets,
         byomOverlayUrl,
         project,
     } = params;
@@ -238,6 +239,7 @@ async function runContentPipeline(
                     includeBlockLibrary,
                     codePatches,
                     codePatchSource,
+                    brandAssets,
                     patchReport,
                     blockCollectionIds: repoResetResult.blockCollectionIds,
                     libraryContentSources: repoResetResult.libraryContentSources,

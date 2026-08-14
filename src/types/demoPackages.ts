@@ -90,6 +90,30 @@ export interface CodePatchSource {
 }
 
 /**
+ * BrandAssetsConfig - Additive brand files vendored into generated storefront repos.
+ *
+ * ADR-006's prescribed shape for brand CSS ("one vendored link in head.html +
+ * an additive brand stylesheet"), generalized minimally: each `files[]` entry is
+ * copied verbatim from the source repo (raw, at `source.branch` HEAD) into the
+ * generated repo, and `headSnippet` (when set) is vendored into `head.html` as
+ * a marker-bounded block. Applied by `brandAssetPublisher.ts` during the shared
+ * EDS pipeline, so create and reset stay behavior-identical.
+ */
+export interface BrandAssetsConfig {
+    /** Source repo the brand files are fetched from (raw, at branch HEAD). */
+    source: {
+        owner: string;
+        repo: string;
+        branch: string;
+    };
+    /** Files to copy: `from` (source-repo path) → `to` (generated-repo path). */
+    files: Array<{ from: string; to: string }>;
+    /** Optional HTML snippet vendored into head.html between demo-builder
+     *  brand-assets markers (idempotent re-vendor on reset). */
+    headSnippet?: string;
+}
+
+/**
  * Storefront - A storefront variant within a package
  *
  * Storefronts are keyed by stack ID (e.g., 'headless-paas', 'eds-paas')
@@ -140,6 +164,10 @@ export interface Storefront {
      *  (per ADR-006) — `lastSyncedCommit` records the LKG SHA read from this repo's
      *  `last-known-good` file rather than canonical main HEAD, and reset pins to LKG. */
     codePatchSource?: CodePatchSource;
+    /** Additive brand files (theme CSS, brand modules) copied from a source repo
+     *  into the generated storefront repo, plus an optional marker-bounded
+     *  head.html snippet. See {@link BrandAssetsConfig}. */
+    brandAssets?: BrandAssetsConfig;
     /** API Mesh requirement for this storefront (overrides package-level requiresMesh).
      *  - true: mesh auto-included, no user choice
      *  - false: no mesh, no user choice
