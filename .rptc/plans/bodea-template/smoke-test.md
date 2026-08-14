@@ -22,6 +22,17 @@ The import UI lives on the `feature/data-installer` branch, not on develop. Eith
 that worktree's Dev Host, or use the documented direct call
 (`docs/systems/data-installer.md` §6 shape, with `operation_mode: 'import'`).
 
+**Operational detail from the data-installer session's own runs (2026-08-14):**
+- Send `customer_groups` **in the same request** as `products` — order within a request is the
+  service's to decide, so no sequencing needed; just never send `products` alone.
+- `commerce_instance` is the **22-char tenant id, not a URL** — the segment before `/graphql`
+  in `ACCS_GRAPHQL_ENDPOINT`.
+- Timing to budget: 5 types ≈ 74s · products-only retry ≈ 110s · 6-type reset ≈ 470s.
+  Roughly ten minutes for install → inspect → reset.
+- Their shared instance sits at **baseline (no Bodea)** — imported and reset this morning,
+  verified byte-identical: 14 categories, 130 CitiSignal products, websites `base` + `citisignal`.
+  Seeding it needs the owner's approval; it is not ours to write to unasked.
+
 ---
 
 ## Run
@@ -83,6 +94,14 @@ catalog-highlights   (any two authored rows — no backend needed, proves the bl
 | 4d commerce-account-hub (signed out) | "Sign in to view live account…" | — |
 | 4e commerce-account-hub (signed in as a company user) | Company tiles populate; **Quotes/Requisition Lists read 0** | 0 is correct — no pack can seed them |
 | 4f catalog-highlights | Renders fully | — |
+
+**Do not chase these — they are correct behaviour, not failures:**
+- **No product images.** The pack ships none by design; AEM Assets supplies them.
+- **Dropdowns, not swatches.** No swatch data exists in the pack.
+- **Quotes / Requisition Lists read 0.** No datapack can seed them; the service has no processor.
+- **Categories look missing via `GET /V1/categories`.** That endpoint shows only the default
+  store group's subtree, so a successful Bodea import can read as a no-op. Use
+  **`GET /V1/categories/list`** (flat search). This has cost a previous session real time.
 
 Sign-in for 4e: a customer from the pack (`@adobedemo.com`; passwords are in the pack's
 `customers` data type — read, don't commit). `mark@` and `kareena@` are company admins.
