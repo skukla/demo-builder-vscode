@@ -29,7 +29,7 @@ jest.mock('@/core/logging', () => ({
     })),
 }));
 
-import { generateAIContextFiles } from '@/features/project-creation/services/projectFinalizationService';
+import { generateAIContextFiles } from '@/features/project-creation/services/aiBundleService';
 import { writeAgentsMd } from '@/features/project-creation/services/aiContextWriter';
 import { writeMcpConfigs } from '@/features/project-creation/services/mcpConfigWriter';
 import { writeSkillFiles } from '@/features/project-creation/services/skillsWriter';

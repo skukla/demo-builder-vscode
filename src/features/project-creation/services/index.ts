@@ -24,9 +24,17 @@ export {
     generateEnvironmentFiles,
     finalizeProject,
     sendCompletionAndCleanup,
-    generateAIContextFiles,
     type FinalizationContext,
 } from './projectFinalizationService';
+
+// Tiered AI-bundle refresh (ADR-013). `generateAIContextFiles` moved here from
+// projectFinalizationService — the barrel preserves the name for all callers.
+export {
+    generateAIContextFiles,
+    refreshMcpConfigs,
+    refreshContextAndSkills,
+    type AiBundleRefreshResult,
+} from './aiBundleService';
 
 export { ensureEdsContent } from './edsContentSetup';
 

@@ -108,7 +108,7 @@ export async function renameProjectCore(
         if (newPath !== oldPath) {
             try {
                 const { generateAIContextFiles } = await import(
-                    '@/features/project-creation/services/projectFinalizationService'
+                    '@/features/project-creation/services'
                 );
                 await generateAIContextFiles(project.path, project, context.context.extensionPath);
                 // Persist the freshness stamp generateAIContextFiles set on `project`

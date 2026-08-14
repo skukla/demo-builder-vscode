@@ -8,24 +8,15 @@
  * Note: Manifest writing is handled by ProjectConfigWriter (single source of truth).
  */
 
-import * as path from 'path';
 import * as vscode from 'vscode';
-import stacksConfig from '../config/stacks.json';
 import { ProgressTracker } from '../handlers/shared';
-import { writeAgentsMd } from './aiContextWriter';
 import type { ComponentDefinitionEntry } from './componentInstallationOrchestrator';
-import { createGeneratedFileWriter } from './generatedFileWriter';
-import { writeMcpConfigs } from './mcpConfigWriter';
-import { writeSkillFiles } from './skillsWriter';
-import { AI_CONTEXT_VERSION, isMeshComponentId } from '@/core/constants';
-import { getLogger } from '@/core/logging';
+import { isMeshComponentId } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     ProjectSetupContext,
     generateComponentConfigFiles,
 } from '@/features/project-creation/helpers';
-import type { Project } from '@/types/base';
-import type { Stack } from '@/types/stacks';
 import { getComponentIds, getEntryCount } from '@/types/typeGuards';
 
 export interface FinalizationContext {
@@ -161,78 +152,4 @@ export async function sendCompletionAndCleanup(context: FinalizationContext): Pr
     }
 
     logger.debug('[Project Creation] ===== PROJECT CREATION WORKFLOW COMPLETE =====');
-}
-
-/**
- * Phase 6: Generate AI context files (AGENTS.md, .mcp.json, .claude/skills/)
- *
- * Delegates to the three writers. Non-blocking by design — callers should wrap in
- * try/catch and log warnings on failure.
- *
- * Pass `onProgress` to emit a step before each writer runs (dashboard "Regenerate
- * AI files" surfaces this in the AI Capabilities modal). The writers serialize when
- * an `onProgress` is supplied so each step's UI matches the work in flight; the
- * combined cost is negligible (small file writes, no network). Writer errors are
- * still collected across all three before being rethrown — same semantics as the
- * previous `Promise.allSettled` path. Calling without `onProgress` keeps the
- * original behavior for existing callers.
- */
-export async function generateAIContextFiles(
-    projectPath: string,
-    project: Project,
-    extensionPath: string,
-    onProgress?: ProgressTracker,
-): Promise<{ skills: string[] }> {
-    const distPath = path.join(extensionPath, 'dist');
-    let skills: string[] = [];
-
-    // Stamp the AI-context bundle version onto the project (single point shared by
-    // all callers — creation finalization and the dashboard Regenerate/heal). The
-    // caller persists the manifest; the dashboard's on-open freshness check reads
-    // this stamp to decide whether the project is stale.
-    project.aiContextVersion = AI_CONTEXT_VERSION;
-
-    // ONE ADR-013 hash-and-skip writer per refresh run, seeded from the
-    // project's recorded hashes (absent on pre-ADR projects → every bundle
-    // file gets the overwrite-once treatment and a fresh hash).
-    const writer = createGeneratedFileWriter(projectPath, project.aiFileHashes ?? {}, getLogger());
-
-    const steps: Array<{ label: string; run: () => Promise<void> }> = [
-        {
-            label: 'Writing AGENTS.md',
-            run: () => writeAgentsMd(projectPath, project, stacksConfig.stacks as Stack[], writer),
-        },
-        {
-            label: 'Writing MCP configuration',
-            run: () => writeMcpConfigs(projectPath, project, distPath),
-        },
-        {
-            label: 'Writing skills',
-            run: async () => {
-                const summary = await writeSkillFiles(projectPath, project, writer);
-                skills = summary?.written ?? [];
-            },
-        },
-    ];
-
-    const errors: string[] = [];
-    for (const step of steps) {
-        onProgress?.(step.label, 0);
-        try {
-            await step.run();
-        } catch (err) {
-            errors.push(err instanceof Error ? err.message : String(err));
-        }
-    }
-
-    // Persist the FULL updated hash map even when a writer failed — hashes for
-    // files that DID land must survive, or their next refresh would misread
-    // them as pre-ADR. The caller saves the manifest (unchanged contract).
-    project.aiFileHashes = writer.hashes();
-
-    if (errors.length > 0) {
-        throw new Error(`AI context file generation failed: ${errors.join('; ')}`);
-    }
-
-    return { skills };
 }

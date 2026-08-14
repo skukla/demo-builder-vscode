@@ -7,7 +7,7 @@
  * - Aggregates errors when one or more writers fail
  */
 
-import { generateAIContextFiles } from '@/features/project-creation/services/projectFinalizationService';
+import { generateAIContextFiles } from '@/features/project-creation/services/aiBundleService';
 import { AI_CONTEXT_VERSION } from '@/core/constants';
 import { writeAgentsMd } from '@/features/project-creation/services/aiContextWriter';
 import { writeMcpConfigs } from '@/features/project-creation/services/mcpConfigWriter';
@@ -78,15 +78,31 @@ describe('generateAIContextFiles', () => {
         );
     });
 
-    it('calls writeMcpConfigs with projectPath, project, and extensionPath joined with dist', async () => {
+    it('calls writeMcpConfigs with projectPath, project, dist path, and the writer seam', async () => {
         const project = makeProject();
         await expect(
             generateAIContextFiles('/projects/test', project, '/ext/path')
         ).resolves.toMatchObject({ skills: expect.any(Array) });
 
-        // No settings argument — writeMcpConfigs takes only the three positional
-        // args. External MCPs come from Claude Code's session-level catalog.
-        expect(writeMcpConfigs).toHaveBeenCalledWith('/projects/test', project, '/ext/path/dist');
+        // Positional: projectPath, project, distPath, ADR-013 writer seam, and
+        // nodePath (undefined here — writeMcpConfigs resolves it itself; the
+        // activation sweep passes a pre-resolved one).
+        expect(writeMcpConfigs).toHaveBeenCalledWith(
+            '/projects/test',
+            project,
+            '/ext/path/dist',
+            expect.objectContaining({ write: expect.any(Function), hashes: expect.any(Function) }),
+            undefined
+        );
+    });
+
+    it('returns the writer report alongside skills (additive contract)', async () => {
+        // Existing callers destructure `skills` only; the update paths log the
+        // report's skipped list. With all three writers mocked, nothing flows
+        // through the writer, so the report is present-but-empty.
+        const result = await generateAIContextFiles('/projects/test', makeProject(), '/ext/path');
+
+        expect(result.report).toEqual({ written: [], skipped: [], removed: [] });
     });
 
     it('calls writeSkillFiles with projectPath and project (no settings)', async () => {

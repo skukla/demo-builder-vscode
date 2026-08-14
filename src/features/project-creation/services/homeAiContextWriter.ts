@@ -29,7 +29,8 @@
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import { buildDemoBuilderMcpEntry, generateHomeClaudeSettings, resolveNodePath, type McpServerEntry } from './mcpConfigWriter';
+import { generateHomeClaudeSettings } from './claudeSettingsWriter';
+import { buildDemoBuilderMcpEntry, resolveNodePath, type McpServerEntry } from './mcpConfigWriter';
 import { DEMO_BUILDER_SKILLS } from './skillsWriter';
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 
