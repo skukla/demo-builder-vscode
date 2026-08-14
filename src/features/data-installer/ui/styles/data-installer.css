@@ -294,6 +294,38 @@
     gap: 16px;
 }
 
+/* Where the pack lands. Two pickers side by side — they are one decision, and
+   stacking them reads as two unrelated fields. */
+.datapack-import-scope {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.datapack-import-scope > [data-testid='spectrum-picker-wrapper'],
+.datapack-import-scope > div {
+    min-width: 0;
+}
+
+/* Names the manual precondition: `websites` is not an importable data type, so a
+   website the user has not created cannot appear in the picker above, and a short
+   list with no explanation reads as a bug. */
+.datapack-import-scope-hint {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--vscode-descriptionForeground);
+}
+
+/* The products/customer_groups dependency. Warning colour, not error: the import
+   is still valid and a pack without tier prices is unaffected. */
+.datapack-import-type-warning {
+    margin: 4px 0 0;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--vscode-editorWarning-foreground, var(--vscode-descriptionForeground));
+}
+
 .datapack-import-types {
     display: flex;
     flex-direction: column;

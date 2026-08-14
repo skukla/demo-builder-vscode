@@ -34,13 +34,14 @@
  * @module features/data-installer/ui/components/ImportDatapackModal
  */
 
-import { ActionButton, Checkbox, DialogContainer } from '@adobe/react-spectrum';
+import { ActionButton, Checkbox, DialogContainer, Item, Picker } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import type { DatapackId, ImportJobRecord } from '../../types';
 import {
     useDataInstallerRequest,
     type DataInstallerRequest,
 } from '../hooks/useDataInstallerRequest';
+import { useImportScopes, type TargetWebsite } from '../hooks/useImportScopes';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { FormField } from '@/core/ui/components/forms/FormField';
@@ -111,6 +112,8 @@ export function ImportDatapackModal({
     });
     const status = useDataInstallerRequest<ImportJobRecord | null>('get-datapack-import-status');
     const target = useDataInstallerRequest<ImportTarget>('get-datapack-import-target');
+    // Owns the discovered scopes AND the user's choice within them — see the hook.
+    const scope = useImportScopes();
 
     const loadStatus = status.load;
     useEffect(() => {
@@ -183,8 +186,10 @@ export function ImportDatapackModal({
             // Verbatim — not trimmed, not normalised. See ImportTargetField.
             commerceInstance,
             dataTypes: selected,
+            // Spread: an unchosen target contributes NO keys. See useImportScopes.
+            ...scope.targetFields(),
         }),
-        [id, commerceInstance, selected],
+        [id, commerceInstance, selected, scope],
     );
 
     const act = useCallback((action: LastAction): void => {
@@ -293,6 +298,11 @@ export function ImportDatapackModal({
                             allSelected={allSelected}
                             onToggle={toggle}
                             onToggleAll={toggleAll}
+                            websites={scope.websites}
+                            websiteCode={scope.websiteCode}
+                            storeCode={scope.storeCode}
+                            onWebsiteChange={scope.chooseWebsite}
+                            onStoreChange={scope.chooseStore}
                         />
                     ) : null}
                 </div>
@@ -590,6 +600,91 @@ function WatchProgress({
 }
 
 /** The form view: the derived target plus the type checkboxes. */
+/**
+ * Whether to warn that `products` was chosen without `customer_groups`.
+ *
+ * Measured 2026-08-14: Bodea's tier prices name the "Platinum Buyer" group, the
+ * service resolves that name to an id at import time, and with no groups
+ * imported the lookup failed and took the ENTIRE `products` type down — 56
+ * products, zero landed. `validate` cannot catch it; it checks request shape,
+ * not referential integrity.
+ *
+ * Only when the pack actually offers `customer_groups`: nothing else can be
+ * suggested, and a warning naming an unavailable type is noise.
+ */
+function needsCustomerGroups(availableTypes: string[], selected: string[]): boolean {
+    return (
+        selected.includes('products') &&
+        availableTypes.includes('customer_groups') &&
+        !selected.includes('customer_groups')
+    );
+}
+
+/**
+ * Where the pack lands.
+ *
+ * Hidden entirely when nothing was discovered — no project, no credentials, or a
+ * discovery that failed. Targeting is optional and an import without it still
+ * works, so an empty picker would be a dead control demanding explanation.
+ *
+ * The hint is not decoration. `websites` is not an importable data type, so a
+ * website the user has not created cannot appear here, and the failure mode is
+ * "the one I want is missing" — which reads as a bug unless the missing step is
+ * named. Per the service author: create it in Commerce first, then name it here.
+ */
+function TargetScopeFields({
+    websites,
+    websiteCode,
+    storeCode,
+    onWebsiteChange,
+    onStoreChange,
+}: {
+    websites: TargetWebsite[];
+    websiteCode: string;
+    storeCode: string;
+    onWebsiteChange: (code: string) => void;
+    onStoreChange: (code: string) => void;
+}): React.JSX.Element | null {
+    if (websites.length === 0) {
+        return null;
+    }
+    const storeViews = websites.find((site) => site.code === websiteCode)?.storeViews ?? [];
+
+    return (
+        <div className="datapack-import-scope">
+            <Picker
+                label="Target website"
+                placeholder="Default (base)"
+                selectedKey={websiteCode || null}
+                onSelectionChange={(key) => onWebsiteChange(String(key ?? ''))}
+            >
+                {websites.map((site) => (
+                    <Item key={site.code} textValue={site.name}>
+                        {site.name}
+                    </Item>
+                ))}
+            </Picker>
+            <Picker
+                label="Store view"
+                placeholder={websiteCode ? 'Choose a store view' : 'Choose a website first'}
+                isDisabled={!websiteCode}
+                selectedKey={storeCode || null}
+                onSelectionChange={(key) => onStoreChange(String(key ?? ''))}
+            >
+                {storeViews.map((view) => (
+                    <Item key={view.code} textValue={view.name}>
+                        {view.name}
+                    </Item>
+                ))}
+            </Picker>
+            <p className="datapack-import-scope-hint">
+                Only websites that already exist on this instance appear here. To land this pack
+                on its own website, create it in Commerce first, then choose it.
+            </p>
+        </div>
+    );
+}
+
 function ImportForm({
     projectName,
     instance,
@@ -599,6 +694,11 @@ function ImportForm({
     allSelected,
     onToggle,
     onToggleAll,
+    websites,
+    websiteCode,
+    storeCode,
+    onWebsiteChange,
+    onStoreChange,
 }: {
     projectName?: string;
     instance: string;
@@ -608,6 +708,11 @@ function ImportForm({
     allSelected: boolean;
     onToggle: (type: string, isSelected: boolean) => void;
     onToggleAll: () => void;
+    websites: TargetWebsite[];
+    websiteCode: string;
+    storeCode: string;
+    onWebsiteChange: (code: string) => void;
+    onStoreChange: (code: string) => void;
 }): React.JSX.Element {
     return (
         <>
@@ -615,6 +720,13 @@ function ImportForm({
                 projectName={projectName}
                 instance={instance}
                 onChange={onInstanceChange}
+            />
+            <TargetScopeFields
+                websites={websites}
+                websiteCode={websiteCode}
+                storeCode={storeCode}
+                onWebsiteChange={onWebsiteChange}
+                onStoreChange={onStoreChange}
             />
             <div className="datapack-import-types">
                 <div className="datapack-import-types-head">
@@ -636,6 +748,13 @@ function ImportForm({
                         </Checkbox>
                     ))}
                 </div>
+                {needsCustomerGroups(availableTypes, selected) ? (
+                    <p className="datapack-import-type-warning">
+                        Products whose tier prices name a customer group fail to import without
+                        it — and one failure fails the whole type. Add customer_groups unless you
+                        know this pack has no tier prices.
+                    </p>
+                ) : null}
             </div>
         </>
     );
