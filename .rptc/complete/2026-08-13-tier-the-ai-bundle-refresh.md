@@ -1,6 +1,6 @@
 # Watch both staleness axes, then refresh proportionately
 
-> ## ⏳ PARTIAL — steps 0, 1 and the check's share of 7 SHIPPED 2026-08-14
+> ## ✅ SHIPPED — merged to develop 2026-08-14 (fast-forward to `d2cb8e85`)
 >
 > **Step 0 (reproduce)**: done as a RED test, not a Dev Host session — with the real
 > check, a project with a FRESH version stamp and a qualifying component whose package
@@ -31,7 +31,7 @@
 > tiered+hashed function (barrel). Step 2 (per-tier version detail) was dropped as
 > YAGNI — with tier 2 silent, a single stamp + the composition axis covers every
 > case. Version staleness no longer prompts; only a needed download does.
-> Move this item to `.rptc/complete/` when the branch merges to develop.
+> Merged; archived per this line's own instruction.
 
 *(Filed as "tier the AI-bundle refresh". Renamed after research widened it — see
 "The check is also under-firing".)*

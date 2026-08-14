@@ -5,7 +5,7 @@
 **Decision Maker**: Project Owner
 **Implementer**: Implemented on `feature/tiered-ai-refresh` (steps 1-8, TDD)
 
-Related: [ADR-004 Claude Code Harness](004-claude-code-harness.md) (why every project carries a generated AI bundle at all). Backlog item `.rptc/backlog/2026-08-13-tier-the-ai-bundle-refresh.md` holds the full refresh redesign this decision unblocks; the `ai-context-authoring` skill governs the seams.
+Related: [ADR-004 Claude Code Harness](004-claude-code-harness.md) (why every project carries a generated AI bundle at all). Backlog item `.rptc/complete/2026-08-13-tier-the-ai-bundle-refresh.md` holds the full refresh redesign this decision unblocks; the `ai-context-authoring` skill governs the seams.
 
 ---
 
@@ -23,7 +23,7 @@ prompt exists for a different reason (a package download costs time and network)
 it fires on every `AI_CONTEXT_VERSION` bump for every project — `.127` and `.128`
 each re-prompted everyone over small changes, generating support questions.
 
-The refresh redesign (backlog: `tier-the-ai-bundle-refresh`) wants most refresh work
+The refresh redesign (archived: `tier-the-ai-bundle-refresh`) wants most refresh work
 to happen silently: config-path repair on activation, skills/AGENTS.md rewrites
 without a prompt, with only real downloads still asking. Going silent removes the
 accidental edit-protection the prompt provided, without replacing it — unless

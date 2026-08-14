@@ -352,28 +352,6 @@ fails and improvises. Step 1 is declaring the dependency. Do the composition axi
 [`2026-08-13-tier-the-ai-bundle-refresh.md`](2026-08-13-tier-the-ai-bundle-refresh.md) first;
 this shares its gate. Not blocked.
 
-#### Watch both AI-bundle staleness axes, then refresh proportionately ([`2026-08-13-tier-the-ai-bundle-refresh.md`](2026-08-13-tier-the-ai-bundle-refresh.md))
-
-Filed 2026-08-13 out of the `global-mcp-version-pin` work, then **widened by research that
-reversed half of it**. The first framing was "the prompt fires too often": "Regenerate AI
-files" is three jobs behind one button — rewrite config paths (instant, offline), rewrite
-skills + AGENTS.md (fast, offline), install MCP tool packages (slow, networked, can fail) —
-and it asks permission for the third every time, because `AI_CONTEXT_VERSION` is one integer
-and the check cannot tell which changed. `.127` and `.128` each re-prompted every project for
-a small change. **But it also UNDER-fires, which is worse.** Which packages a project needs
-is a function of its COMPONENTS (`projectNeedsAppBuilderTooling`), and the freshness check
-never looks at them — so `addAppBuilderComponent` on a live project leaves it qualifying for
-`@adobe-commerce/commerce-extensibility-tools` and the seven `appbuilder-*` skills while
-receiving neither, silently. Storefront setup has the same shape. The upgrade flow is mostly
-innocent: of six update kinds only `performAdobeMcpUpdates` regenerates, and the others do
-not change component membership — **the gap is in ADD, not UPDATE.** Supporting finding: the
-extension already regenerates silently on that update path, so "regeneration needs consent"
-is already false here; two routes just disagree. **Settle first:** the prompt is currently
-the only thing protecting a hand-edited `AGENTS.md`. **And the plan makes more things
-silent, so it carries a logging section:** today the freshness check logs only on the
-stale branch, so "checked and fine" and "never ran" are the same silence — the
-`|| echo "none"` ambiguity in another costume, and the reason the under-firing case is
-invisible. **Step 0 is reproducing the silent case.** Not blocked.
 
 #### App Builder attach — Model A seed ([`2026-06-15-integration-service-cleanup-and-discovery-token.md`](2026-06-15-integration-service-cleanup-and-discovery-token.md))
 
@@ -390,6 +368,7 @@ at-rest plaintext ever matters.
 
 Pointers only; `../complete/` holds each writeup and git history holds the implementation.
 
+- **Tier the AI-bundle refresh (watch both staleness axes)** — shipped 2026-08-14 on `feature/tiered-ai-refresh`, merged `d2cb8e85`: composition axis + ADR-013 hash-and-skip seam, tier split, silent activation sweep, Playwright-skill gating, one v8 bump — the last bump that prompts anyone ([`../complete/2026-08-13-tier-the-ai-bundle-refresh.md`](../complete/2026-08-13-tier-the-ai-bundle-refresh.md))
 - **Nothing typechecks test files** — shipped 2026-08-13/14 across twelve commits (`f49ab5e2..b1d6411f`): `tsconfig.test.json` + `npm run typecheck:tests` took 802 naive / 711 real errors to **0**, wired into CI and the `gate` skill §3/§6; full suite stayed green throughout (12,803 tests — one dead test deleted deliberately) ([`../complete/2026-08-13-test-files-are-not-typechecked.md`](../complete/2026-08-13-test-files-are-not-typechecked.md))
 - **Mesh deployment state: one fact, five readers, two writers** ([`../complete/2026-08-04-mesh-deployment-state-one-accessor.md`](../complete/2026-08-04-mesh-deployment-state-one-accessor.md))
 - **One status vocabulary, three tables** ([`../complete/2026-08-04-two-status-vocabularies-one-grid.md`](../complete/2026-08-04-two-status-vocabularies-one-grid.md))
