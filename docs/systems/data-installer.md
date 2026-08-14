@@ -702,9 +702,35 @@ missing `version` (it IS required — a 400 says so, though the export docs omit
 it), a missing `root_category` selection (tried by both `id` and `name`), and
 store scope (tried against `citisignal`/`citisignal_us`).
 
-**Still needed**: the wiki's root-category guidance, which the service author
-named and which is NOT in the repo doc set. The generic "Processing failed" is
-the whole of the server's explanation.
+**Eliminated by measurement** (each tried against the live service, 2026-08-14):
+
+| Hypothesis | Result |
+|---|---|
+| `version` missing | It is REQUIRED — omitting it 400s. The export docs omit it; the deployment does not. |
+| `selections` / `filters` required | Sent `attribute_set_id in [10,11,12,13,14,15,16,17]` — the eight non-`Default` sets that exist on the instance. Still `exported: 0`. |
+| `root_category` missing | Tried by `id` and by `name`. No change. |
+| Store scope missing | Tried `website_code: citisignal` + `store_code: citisignal_us`. No change. |
+| Dependency order | Sent the full `depends_on` chain for `products` in one request. No change. |
+| Datapack must exist first | `create-datapack` → 201, then export. No change. |
+| `EXPORT_PAGE_SIZE` unset | Sent `50` explicitly. No change. |
+| `base_url` instead of `commerce_instance` | `base_url` alone 400s; `commerce_instance` is the required field. |
+| The REST endpoints are unreachable | **All five return 200** with the same credentials handed to the service: `customerGroups/search`, `products`, `categories/list`, `attribute-sets/sets/list`, `products/attributes`. |
+
+**`get-export-items` cannot resolve an ACCS instance in EITHER form.** With the
+tenant id: "commerce_instance must be a full URL (https://…) or set
+`COMMERCE_INSTANCE_URL_TEMPLATE`" — an env var evidently unset on stage. With the
+full REST URL: "Pre-flight check failed for all configured site types". Note that
+`process-datapack` accepts the tenant id and its own pre-flight passes, so the
+two actions resolve the instance differently. Its documented shape is also wrong
+in the drop: it is a GET with `data_type` as a QUERY parameter (the path segment
+is not read) and an `x-commerce-instance` header (not `x-base-url`).
+
+**What remains**: `customer_groups` is the only type that reports success, and it
+is also the only type with ZERO items to process after exclusions. Every type
+that has something to transform and store fails with a generic "Processing
+failed" that appears only in the service's request log. That pattern points at
+the transform/store step rather than the fetch, but the server's own error text
+is the whole of the evidence available from outside.
 
 The lesson worth keeping: an all-zero result on an instance you have just emptied
 is not evidence about the capability. The control that would have caught this —
