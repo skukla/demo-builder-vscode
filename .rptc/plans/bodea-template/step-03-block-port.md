@@ -1,4 +1,4 @@
-# Step 03 — Block port waves (external: skukla/accs-bodea)
+# Step 03 — Block port waves (external: skukla/bodea-source)
 
 Never copy Jen's vendored `scripts/__dropins__/` or import map. Ported blocks must compile
 against the b2b LKG's dropin generation (CI from step 02.3 enforces). Verify each wave live

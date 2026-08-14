@@ -18,7 +18,7 @@ export const GROUP_JS = 'export function customerGroup() { return "vip"; }\n';
 export const HEAD_HTML = '<meta charset="UTF-8">\n<script nonce="aem" type="importmap">{}</script>\n';
 
 export const CONFIG: BrandAssetsConfig = {
-    source: { owner: 'skukla', repo: 'accs-bodea', branch: 'main' },
+    source: { owner: 'skukla', repo: 'bodea-source', branch: 'main' },
     files: [
         { from: 'styles/bodea-theme.css', to: 'styles/bodea-theme.css' },
         { from: 'scripts/bodea-customer-group.js', to: 'scripts/bodea-customer-group.js' },

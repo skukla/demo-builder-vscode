@@ -349,7 +349,7 @@ describe('executeEdsPipeline - operations', () => {
 
     describe('brand assets', () => {
         const BRAND_ASSETS = {
-            source: { owner: 'skukla', repo: 'accs-bodea', branch: 'main' },
+            source: { owner: 'skukla', repo: 'bodea-source', branch: 'main' },
             files: [{ from: 'styles/theme.css', to: 'styles/theme.css' }],
             headSnippet: '<link rel="stylesheet" href="/styles/theme.css">',
         };

@@ -44,7 +44,7 @@
       "type": "storefront",
       "source": {
         "owner": "skukla",
-        "repo": "accs-bodea",
+        "repo": "bodea-source",
         "branch": "main"
       },
       "nativeForPackages": ["bodea"],
@@ -52,7 +52,7 @@
       "stackTypes": ["eds-storefront"],
       "contentSource": {
         "org": "skukla",
-        "site": "accs-bodea"
+        "site": "bodea-source"
       }
     },
     {

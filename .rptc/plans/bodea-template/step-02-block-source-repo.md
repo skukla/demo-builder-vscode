@@ -1,13 +1,14 @@
-# Step 02 — accs-bodea block-source repo scaffold (external)
+# Step 02 — bodea-source block-source repo scaffold (external)
 
 Reference clones live in this session's scratchpad (jenhankib2bbodea + boilerplate-b2b-template
-+ repo-diff.txt); re-clone if starting fresh. Repo name `skukla/accs-bodea` mirrors
-`demo-system-stores/accs-citisignal`; confirm the name with the user before creating.
++ repo-diff.txt); re-clone if starting fresh. Repo `skukla/bodea-source` (created 2026-08-14
+from the boilerplate-b2b-template via template-generate; name user-chosen, backend-neutral,
+deliberately not "-template" — this repo is never generated from).
 
 ## 02.1 Repo scaffold
 
-Create `skukla/accs-bodea` as a working EDS site repo (boilerplate-b2b-template-derived so its
-own preview works and doc pages publish): fstab → `content.da.live/skukla/accs-bodea`,
+Create `skukla/bodea-source` as a working EDS site repo (boilerplate-b2b-template-derived so its
+own preview works and doc pages publish): fstab → `content.da.live/skukla/bodea-source`,
 aem-code-sync installed. Its ROLE is block source + published content site — it is NOT a
 template; no package points at it as templateRepo.
 

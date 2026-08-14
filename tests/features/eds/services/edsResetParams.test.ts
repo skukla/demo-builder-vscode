@@ -25,7 +25,7 @@ const mockPackages = [{
             contentPatches: ['patch-a'],
             byomOverlayUrl: 'https://byom.example.com',
             brandAssets: {
-                source: { owner: 'skukla', repo: 'accs-bodea', branch: 'main' },
+                source: { owner: 'skukla', repo: 'bodea-source', branch: 'main' },
                 files: [{ from: 'styles/theme.css', to: 'styles/theme.css' }],
                 headSnippet: '<link rel="stylesheet" href="/styles/theme.css">',
             },
@@ -81,7 +81,7 @@ describe('extractResetParams - brandAssets extraction', () => {
         expect(result.params).toEqual(
             expect.objectContaining({
                 brandAssets: {
-                    source: { owner: 'skukla', repo: 'accs-bodea', branch: 'main' },
+                    source: { owner: 'skukla', repo: 'bodea-source', branch: 'main' },
                     files: [{ from: 'styles/theme.css', to: 'styles/theme.css' }],
                     headSnippet: '<link rel="stylesheet" href="/styles/theme.css">',
                 },

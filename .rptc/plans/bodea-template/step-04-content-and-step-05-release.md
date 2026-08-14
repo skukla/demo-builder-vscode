@@ -1,6 +1,6 @@
 # Step 04 — DA.live content (manual/scripted ops)
 
-Site: DA.live org `skukla`, site `accs-bodea` (matches the block-source repo name).
+Site: DA.live org `skukla`, site `bodea-source` (matches the block-source repo name).
 
 1. Curated copy from `sayurihanki/jenhankib2bbodea`:
    - PRUNE pages for dropped blocks (medal-rack-configurator, product-technical-details,
@@ -11,8 +11,8 @@ Site: DA.live org `skukla`, site `accs-bodea` (matches the block-source repo nam
    customer-group module and store-locator with safe empty defaults.
 3. Authored configurator PDP pages (per step 03 Wave 3 routing decision).
 4. PUBLISH everything (preview + live): the extension copies from the published site and needs
-   `https://main--accs-bodea--skukla.aem.live/full-index.json` to resolve.
-5. Closure check (scripted): every block class in published page HTML exists in accs-bodea
+   `https://main--bodea-source--skukla.aem.live/full-index.json` to resolve.
+5. Closure check (scripted): every block class in published page HTML exists in bodea-source
    blocks/ or the boilerplate; every doc page's block exists. Run before every re-publish.
 
 # Step 05 — End-to-end verification, unhide, release

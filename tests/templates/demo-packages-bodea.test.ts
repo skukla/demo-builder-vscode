@@ -4,7 +4,7 @@
  * Structural pins for the bodea package in demo-packages.json:
  * - Hidden rollout state, mesh/addon posture, B2B configFlags pair
  * - Thin-layer shape: boilerplate-b2b-template + b2b codePatchSource/codePatches
- * - Content sources (skukla/accs-bodea + account-chrome overlay)
+ * - Content sources (skukla/bodea-source + account-chrome overlay)
  * - brandAssets vendor point (theme CSS + customer-group module + head snippet)
  *
  * Split out of demo-packages-data.test.ts (max-lines); the generic
@@ -113,12 +113,12 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
         });
     });
 
-    it('should source content from skukla/accs-bodea for both storefronts', () => {
+    it('should source content from skukla/bodea-source for both storefronts', () => {
         const pkg = getBodea();
         Object.values(pkg.storefronts).forEach(sf => {
             expect(sf.contentSource).toEqual({
                 org: 'skukla',
-                site: 'accs-bodea',
+                site: 'bodea-source',
             });
         });
     });
@@ -133,7 +133,7 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
         });
     });
 
-    it('should carry brandAssets sourcing theme + customer-group files from skukla/accs-bodea@main', () => {
+    it('should carry brandAssets sourcing theme + customer-group files from skukla/bodea-source@main', () => {
         const pkg = getBodea();
         Object.values(pkg.storefronts).forEach(sf => {
             const brandAssets = sf.brandAssets as {
@@ -143,7 +143,7 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
             expect(brandAssets).toBeDefined();
             expect(brandAssets!.source).toEqual({
                 owner: 'skukla',
-                repo: 'accs-bodea',
+                repo: 'bodea-source',
                 branch: 'main',
             });
             expect(brandAssets!.files).toEqual([

@@ -48,10 +48,10 @@ describe('publishBrandAssets', () => {
 
             const urls = fetchMock.mock.calls.map((c) => String(c[0]));
             expect(urls).toContain(
-                'https://raw.githubusercontent.com/skukla/accs-bodea/main/styles/bodea-theme.css',
+                'https://raw.githubusercontent.com/skukla/bodea-source/main/styles/bodea-theme.css',
             );
             expect(urls).toContain(
-                'https://raw.githubusercontent.com/skukla/accs-bodea/main/scripts/bodea-customer-group.js',
+                'https://raw.githubusercontent.com/skukla/bodea-source/main/scripts/bodea-customer-group.js',
             );
         });
 

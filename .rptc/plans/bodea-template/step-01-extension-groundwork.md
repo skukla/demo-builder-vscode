@@ -16,16 +16,16 @@ thin-layer shape (`demo-packages.json:86-187`):
 - Storefronts `eds-paas` + `eds-accs` (accs featured), each:
   `templateOwner/templateRepo: adobe-commerce/boilerplate-b2b-template`,
   `source.url: https://github.com/adobe-commerce/boilerplate-b2b-template`,
-  `contentSource: { org: skukla, site: accs-bodea }`,
+  `contentSource: { org: skukla, site: bodea-source }`,
   `accountContentSource: { org: adobe-commerce, site: boilerplate-b2b }`,
   `codePatches`: the six b2b ids (as `custom` lists them),
   `codePatchSource: { owner: skukla, repo: eds-demo-patches, path: b2b, lkgFile: b2b/last-known-good }`,
   plus the new `brandAssets` field from 01.2.
 
 `src/features/project-creation/config/block-libraries.json` — new entry:
-id `bodea-blocks`, `type: storefront`, `source: { owner: skukla, repo: accs-bodea, branch: main }`,
+id `bodea-blocks`, `type: storefront`, `source: { owner: skukla, repo: bodea-source, branch: main }`,
 `nativeForPackages: ["bodea"]`, `onlyForPackages: ["bodea"]`, `stackTypes: ["eds-storefront"]`,
-`contentSource: { org: skukla, site: accs-bodea }`.
+`contentSource: { org: skukla, site: bodea-source }`.
 
 RED first (pin suites are the spec):
 - `tests/templates/demo-packages-data.test.ts` — packages 4→5, id list, storefronts 8→10,

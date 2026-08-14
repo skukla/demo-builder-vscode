@@ -431,7 +431,7 @@
           "templateRepo": "boilerplate-b2b-template",
           "contentSource": {
             "org": "skukla",
-            "site": "accs-bodea"
+            "site": "bodea-source"
           },
           "accountContentSource": {
             "org": "adobe-commerce",
@@ -454,7 +454,7 @@
           "brandAssets": {
             "source": {
               "owner": "skukla",
-              "repo": "accs-bodea",
+              "repo": "bodea-source",
               "branch": "main"
             },
             "files": [
@@ -492,7 +492,7 @@
           "templateRepo": "boilerplate-b2b-template",
           "contentSource": {
             "org": "skukla",
-            "site": "accs-bodea"
+            "site": "bodea-source"
           },
           "accountContentSource": {
             "org": "adobe-commerce",
@@ -515,7 +515,7 @@
           "brandAssets": {
             "source": {
               "owner": "skukla",
-              "repo": "accs-bodea",
+              "repo": "bodea-source",
               "branch": "main"
             },
             "files": [
