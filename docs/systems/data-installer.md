@@ -616,10 +616,33 @@ not the answer.
 Three findings, none of which the plan anticipated. All measured against the
 deployed stage service with a positive control.
 
-### `get-export-items` is unusable for an ACCS instance
+### `get-export-items` — SOLVED: it needs `x-client-scope`
 
-(Still true as measured; unlike the verdict below it, this one was never in
-doubt — both instance forms are refused outright.)
+**Corrected 2026-08-14, second pass.** It works. The wiki's API User Guide lists
+an optional `x-client-scope` header that the repo source drop does not mention,
+and ACCS needs it. The working call:
+
+```
+GET  {base}/get-export-items?data_type=attribute_sets&page=1&page_size=50
+     Authorization: Bearer <IMS user token>
+     x-commerce-instance: <FULL Commerce REST base URL, not the tenant id>
+     x-client-id / x-client-secret: the project's ACCS OAuth pair
+     x-client-scope: openid,AdobeID,email,profile,
+                     additional_info.projectedProductContext,
+                     additional_info.roles,commerce.accs
+```
+
+Returns `{items:[{id, display_name, metadata}], pagination, excluded_count}` —
+measured: 8 attribute sets with `excluded_count: 1` (the `Default` set the
+exclusion rules drop). Three corrections to the source drop in one call:
+`data_type` is a QUERY parameter (the path segment is not read),
+`x-commerce-instance` replaces `x-base-url`, and the instance must be the full
+URL because `COMMERCE_INSTANCE_URL_TEMPLATE` — documented in the Quick Start
+Guide as the deployment config that enables instance-id shorthand — is not set
+for this action.
+
+The earlier note here said it was unusable. That was the missing header, not the
+endpoint.
 
 It is the endpoint that would feed a selective-export UI (which items exist, so
 the user can choose). Both instance forms are refused:
