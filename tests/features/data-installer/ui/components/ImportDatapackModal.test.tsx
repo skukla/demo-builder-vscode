@@ -654,6 +654,47 @@ describe('ImportDatapackModal', () => {
             expect(await screen.findByText(/categories: success/i)).toBeInTheDocument();
         });
 
+        // Success gets OUT OF THE WAY; problems stand in it. A terminal success
+        // is a midpoint in the reuse flow (reset → pick types → import), so it
+        // renders as a compact StatusCard with the form restored beneath it —
+        // live review found a full-bleed success block displacing the form the
+        // user needed next.
+        it('restores the form beneath a terminal success', async () => {
+            finished('success', { categories: 'success' });
+            await startAJob();
+
+            expect(await screen.findByText(/import finished/i)).toBeInTheDocument();
+            expect(screen.getByRole('checkbox', { name: 'categories' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /start import/i })).toBeInTheDocument();
+        });
+
+        // The record knows its operation now — a reset must not call itself an
+        // import, which it did live.
+        it('announces a finished reset as a reset', async () => {
+            mockRequest.mockImplementation(async (type: string) =>
+                type === 'get-datapack-import-status'
+                    ? {
+                          success: true,
+                          data: {
+                              activationId: 'act-1',
+                              dataTypes: ['categories'],
+                              outcome: 'success',
+                              perType: { categories: 'success' },
+                              operation: 'reset',
+                          },
+                      }
+                    : { success: true, data: { activationId: 'act-1' } },
+            );
+            renderModal();
+            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('button', { name: /^reset/i }));
+            fireEvent.click(screen.getByRole('button', { name: /remove the data/i }));
+
+            expect(await screen.findByText(/reset finished/i)).toBeInTheDocument();
+            expect(screen.queryByText(/import finished/i)).not.toBeInTheDocument();
+        });
+
         it('reports success', async () => {
             finished('success', { categories: 'success' });
             await startAJob();

@@ -87,6 +87,7 @@ export const importHandlers = defineHandlers({
             const record: ImportJobRecord = {
                 activationId: start.activationId,
                 datapackName: request.id.name,
+                operation: 'import',
                 version: request.id.version,
                 commerceInstance: request.commerceInstance,
                 dataTypes: request.dataTypes,
@@ -200,6 +201,7 @@ export const importHandlers = defineHandlers({
             const record: ImportJobRecord = {
                 activationId: start.activationId,
                 datapackName: request.id.name,
+                operation: 'reset',
                 version: request.id.version,
                 commerceInstance: request.commerceInstance,
                 dataTypes: request.dataTypes,

@@ -58,6 +58,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import type { DatapackId, ImportJobRecord } from '../../types';
 import { useDataInstallerRequest, type DataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StatusCard } from '@/core/ui/components/feedback/StatusCard';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { FormField } from '@/core/ui/components/forms/FormField';
 import { Modal } from '@/core/ui/components/ui/Modal';
@@ -417,11 +418,15 @@ function ImportTargetField({
 /**
  * Where the job stands.
  *
- * House vocabulary end to end, including the slots: while the job runs,
- * `LoadingDisplay` with the per-type states in its `subMessage` slot; once
- * terminal, `StatusDisplay` with the per-type results in its `details` slot.
- * An earlier version drew its own bordered card and a parallel dot-row list —
- * both rebuilds of slots the components already had, caught in live review.
+ * **Success gets out of the way; problems stand in it.** A terminal success is a
+ * MIDPOINT of the reuse flow (reset → pick types → import), so it renders as a
+ * compact StatusCard — the dashboard's ambient-status vocabulary — with the form
+ * usable beneath it. `partial` and failures keep the full StatusDisplay, because
+ * they end the flow until read. Live review found a full-bleed success block
+ * displacing the form the user needed next.
+ *
+ * The wording follows `record.operation` — the modal announced a completed reset
+ * as "Import finished" before the record carried it.
  */
 function ImportProgress({
     record,
@@ -430,30 +435,39 @@ function ImportProgress({
     record: ImportJobRecord;
     watching: boolean;
 }): React.JSX.Element {
+    const op = record.operation === 'reset' ? 'Reset' : 'Import';
     const perType = Object.entries(record.perType).map(([type, state]) => `${type}: ${state}`);
 
     if (record.outcome === 'watching') {
-        // The reassurance rides in helperText — the slot LoadingDisplay documents
-        // for time expectations — so the headline stays one short line, like the
-        // wizard's. It belongs on screen WHILE Stop watching is available: learning
-        // that stopping does not cancel after you stopped is too late.
+        const active = record.operation === 'reset' ? 'Resetting…' : 'Importing…';
         return (
             <LoadingDisplay
                 size="L"
-                message={watching ? 'Importing…' : 'Stopped watching.'}
+                message={watching ? active : 'Stopped watching.'}
                 subMessage={perType.join(' · ') || undefined}
                 helperText={
                     watching
                         ? 'This can take several minutes. Closing this or stopping the watch continues on the server.'
-                        : 'The import continues on the server.'
+                        : `The ${op.toLowerCase()} continues on the server.`
                 }
             />
         );
     }
+
+    if (record.outcome === 'success') {
+        return (
+            <StatusCard
+                color="green"
+                label={op.toUpperCase()}
+                status={`${op} finished — ${perType.join(' · ') || 'all requested data types succeeded'}`}
+            />
+        );
+    }
+
     return (
         <StatusDisplay
             variant={OUTCOME_VARIANT[record.outcome] ?? 'info'}
-            title={describeOutcome(record, watching)}
+            title={describeOutcome(record, op)}
             message={record.reason}
             details={perType}
         />
@@ -476,10 +490,10 @@ function busyMessage(starting: boolean, resetting: boolean): string {
  *
  * Extracted for the same reason as {@link ImportTargetField}: each state is one
  * branch, and inlining all of them pushed the modal past the complexity ceiling.
- * All house vocabulary — LoadingDisplay while checking, StatusDisplay for
- * verdicts and failures (a refusal is an ANSWER, so it renders as warning, not
- * error). StatusDisplay renders `message` only beneath a `title`, so every
- * failure carries one — found when a message-only error rendered as nothing.
+ * All house vocabulary — StatusDisplay for verdicts and failures (a refusal is
+ * an ANSWER, so it renders as warning, not error). StatusDisplay renders
+ * `message` only beneath a `title`, so every failure carries one — found when a
+ * message-only error rendered as nothing.
  */
 function RequestFeedback({
     dryRun,
@@ -537,34 +551,25 @@ const OUTCOME_VARIANT: Record<string, 'success' | 'warning' | 'error' | 'info'> 
 };
 
 /**
- * One line saying where the job stands.
+ * One line saying where a NON-success terminal job stands.
  *
- * `partial` gets its own wording rather than being folded into failure: a re-run
- * legitimately skips items that already exist, so a mix is the expected result of
- * importing twice, not a fault.
+ * `watching` and `success` never reach this — ImportProgress renders those
+ * itself. `partial` gets its own wording rather than being folded into failure:
+ * a re-run legitimately skips items that already exist.
  */
-function describeOutcome(record: ImportJobRecord, watching: boolean): string {
+function describeOutcome(record: ImportJobRecord, op: string): string {
+    const lower = op.toLowerCase();
     switch (record.outcome) {
-        case 'watching':
-            // Unreachable — ImportProgress renders the watching state itself
-            // (LoadingDisplay with the reassurance in helperText). Kept so the
-            // switch stays total over the outcome union.
-            return watching ? 'Importing…' : 'Stopped watching.';
-        case 'success':
-            return 'Import finished. All requested data types succeeded.';
         case 'partial':
-            return 'Import finished, but some data types did not. Re-running skips what already exists.';
+            return `${op} finished, but some data types did not. Re-running skips what already exists.`;
         case 'error':
-            return 'Import failed. No data type succeeded.';
+            return `${op} failed. No data type succeeded.`;
         case 'never-registered':
-            return 'The import never started — the service did not register it.';
+            return `The ${lower} never started — the service did not register it.`;
         case 'stopped':
-            return 'Stopped watching. The import continues on the server.';
+            return `Stopped watching. The ${lower} continues on the server.`;
         case 'still-running':
-            return 'Still running after the watch window. The import continues on the server.';
-        // The WATCH failed, not the import — so this must not read as a failed
-        // import. The job is still going; the Installed tab is where its result
-        // will actually show up.
+            return `Still running after the watch window. The ${lower} continues on the server.`;
         case 'unwatchable':
             return 'Lost track of this job — it is still running on the server. Check the Installed tab for the result.';
         default:

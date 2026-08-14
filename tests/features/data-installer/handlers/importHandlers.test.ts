@@ -133,6 +133,18 @@ describe('start-datapack-import', () => {
         mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} });
     });
 
+    it('records itself as an import', async () => {
+        happyClient();
+        const { context, stores } = makeContext();
+
+        await importHandlers['start-datapack-import'](context, PAYLOAD);
+
+        expect(stores.globalState.update).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ operation: 'import' }),
+        );
+    });
+
     it('validates BEFORE starting', async () => {
         const { validateImport, startImport } = happyClient();
         const { context } = makeContext();
@@ -443,6 +455,20 @@ describe('reset-datapack', () => {
         await new Promise((r) => setTimeout(r, 25));
         expect(mockedWatch).toHaveBeenCalledWith(
             expect.objectContaining({ activationId: 'act-9' }),
+        );
+    });
+
+    // The record must know WHICH operation it was: the modal showed "Import
+    // finished" for a completed reset, live, because nothing carried this.
+    it('records itself as a reset, not an import', async () => {
+        happyClient();
+        const { context, stores } = makeContext();
+
+        await importHandlers['reset-datapack'](context, CONFIRMED);
+
+        expect(stores.globalState.update).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ operation: 'reset' }),
         );
     });
 

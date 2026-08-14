@@ -160,6 +160,12 @@ export interface ImportJobRecord {
     activationId: string;
     datapackName: string;
     version: string;
+    /**
+     * Which operation this record is. Optional because records persisted before
+     * the field existed have none — those were all imports. Without it the modal
+     * announced a completed reset as "Import finished", live.
+     */
+    operation?: 'import' | 'reset';
     /** Whatever the user typed. Opaque. */
     commerceInstance: string;
     dataTypes: string[];
