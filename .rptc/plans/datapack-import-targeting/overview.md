@@ -19,6 +19,20 @@ atomically and fails entirely when tier prices name a customer group that
 `customer_groups` would have created — a cross-type dependency the type
 checkboxes let users walk into and validate cannot catch.
 
+## The intended workflow, from the service author
+
+Jeff, 2026-08-14, asked directly what happens when a pack's hardcoded website
+ids have no corresponding website: *"Yes before import. Then you can specify
+site and store on the data pack import. It will validate to make sure they
+exist."*
+
+That settles the design question this feat existed to answer. **Targeting is the
+intended path; landing on `base` is the skip-the-targeting fallback.** The
+website and store are a PRECONDITION the user satisfies in Commerce Admin before
+importing — `websites` is not an importable type, so the extension cannot create
+it and must not pretend otherwise. The UI's job is to state the precondition,
+offer what exists, and get out of the way.
+
 ## Decisions already made (do not relitigate)
 
 1. **The picker consumes the extension's own store discovery**
@@ -43,6 +57,12 @@ checkboxes let users walk into and validate cannot catch.
   `discover-store-structure` handler path, defaulting to `base`. Store options
   constrained to the chosen website (the service 400s a mismatched pair — catch
   it client-side instead).
+- **Say the precondition where it's needed.** A user importing a
+  brand-package pack (Bodea onto its own website) has to create that website in
+  Commerce Admin FIRST. The picker lists only what exists, so the failure mode
+  is "the website I want isn't in the list" — which needs a one-line hint
+  naming the Admin step, not a silent empty dropdown. Do NOT offer to create
+  the website: no importable type, not our job.
 - **`buildBody` gains the pair** (`website_code`, `store_code`) — sent only
   when the user picked something; omitted = today's behavior.
 - **Dependency guardrail**: when `products` is selected without

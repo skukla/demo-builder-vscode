@@ -360,6 +360,18 @@ Two operational facts learned the hard way:
     website 1 (`base`) — pack said `[3]`, REST readback said `[1]` — and no
     phantom website appeared. The substitution is real on the deployed service.
 
+  **The intended workflow, confirmed by Jeff (the service author), 2026-08-14:**
+  *"[Create the website] before import. Then you can specify site and store on
+  the data pack import. It will validate to make sure they exist."*
+
+  So the design is a precondition, not a fallback: **the target website and
+  store must already exist in Commerce before the import runs.** `websites` is
+  not an importable data type and never will be — creating it is a manual
+  Commerce Admin step (or another tool's job). Landing everything on `base` is
+  what happens when you skip the targeting, not the intended path for a pack
+  that wants its own website. This is the precondition the targeting UI must
+  state — see `.rptc/plans/datapack-import-targeting/`.
+
 Two more import facts from the same run (2026-08-14):
 
 - **A data type imports atomically.** One bad SKU (`vrrack`) failed the whole
@@ -394,14 +406,29 @@ not a defect to chase. Three independent confirmations (2026-08-14):
   `carvello`, and three third-party dev packs. The `products` JSON schema
   permits the field; nothing populates it.
 
-**Where images actually come from**: AEM Assets, via the Commerce↔AEM Assets
-integration on the backend. The EDS storefront's `AEM_ASSETS_ENABLED` setting
-renders to `commerce-assets-enabled` in generated `config.json` and tells the
-dropins to resolve product images through Assets. Do not confuse that with
-`aem.repositoryId`, which is written per-site to the DA.live config so da.live's
-*Library* shows an Assets panel to authors — a different mechanism with a
-different consumer. See `.claude/skills/eds-publish-and-config` for the scoping
-rules on the second one.
+**Where images actually come from**: AEM Assets. Confirmed by Jeff (the service
+author), 2026-08-14 — asked whether SCs are meant to supply product images in a
+pack, the answer was *"was expected to be in AEM"*. The EDS storefront's
+`AEM_ASSETS_ENABLED` setting renders to `commerce-assets-enabled` in generated
+`config.json` and tells the dropins to resolve product images through Assets.
+
+Do not confuse that with `aem.repositoryId`, which is written per-site to the
+DA.live config so da.live's *Library* shows an Assets panel to authors — a
+different mechanism with a different consumer. See
+`.claude/skills/eds-publish-and-config` for the scoping rules on the second one.
+
+**The escape hatch, if a demo genuinely needs catalog-hosted images**: Commerce's
+native product API accepts them, base64-encoded (Jeff, same conversation). That
+is outside the Data Installer entirely — a separate script against
+`POST /V1/products/:sku/media`, not something a datapack can carry.
+
+### Customer segments are not supported
+
+Jeff, 2026-08-14: *"true, api doesn't support"*. Segments cannot be imported,
+exported, or seeded by any pack — same permanent-gap class as quotes and
+requisition lists (no processor exists for those either; the vocabulary is 21
+import / 18 export types and none of the three appear). Anything a demo needs in
+those three areas is a manual post-import step, forever.
 
 ### Reset — how a project gets reused
 
