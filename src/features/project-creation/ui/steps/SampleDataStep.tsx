@@ -25,8 +25,9 @@ import { useVSCodeRequest } from '@/core/ui/hooks/useVSCodeRequest';
 import {
     groupDatapacks,
     pickDefaultVersion,
-} from '@/features/data-installer/services/datapackCatalog';
-import type { DatapackSummary, Page } from '@/features/data-installer/types';
+    type DatapackSummary,
+    type Page,
+} from '@/features/data-installer';
 import type { BaseStepProps } from '@/types/wizard';
 
 export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX.Element {
