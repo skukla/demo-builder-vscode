@@ -76,11 +76,21 @@ export async function verifyAiSetup(
 }
 
 /**
+ * `.claude/settings.json` is MERGED on every refresh (user hooks/permissions
+ * incorporated, hash re-recorded), never kept-as-is — so a hash mismatch there
+ * means "the user customized it and the merge will fold it in", not
+ * "we kept your version". Flagging it would be false for the one file users
+ * are explicitly invited to edit.
+ */
+const MERGED_NOT_KEPT = new Set(['.claude/settings.json']);
+
+/**
  * ADR-013 derived list: recorded files whose disk content no longer matches
  * the hash taken at the last generate (sha-256 over utf-8 content — the same
  * hashing the `GeneratedFileWriter` seam records). A missing file is NOT
  * "edited" (it was removed; the presence checks / regenerate flow own that
- * case). Sorted for a stable render/log order.
+ * case), and merged-path files (see {@link MERGED_NOT_KEPT}) are excluded.
+ * Sorted for a stable render/log order.
  */
 async function detectEditedFiles(
     projectPath: string,
@@ -89,6 +99,7 @@ async function detectEditedFiles(
     if (!recordedHashes) return [];
     const flags = await Promise.all(
         Object.entries(recordedHashes).map(async ([relPath, recorded]) => {
+            if (MERGED_NOT_KEPT.has(relPath)) return null;
             try {
                 const content = await fsPromises.readFile(path.join(projectPath, relPath), 'utf-8');
                 const current = createHash('sha256').update(content, 'utf-8').digest('hex');

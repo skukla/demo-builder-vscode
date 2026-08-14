@@ -20,7 +20,7 @@
  *
  * If the Adobe package isn't installed yet (e.g., npm install hasn't run, or
  * the component lacks a `node_modules`), the bundle copy step is skipped
- * silently — the three Demo-Builder skills always succeed.
+ * silently — the first-party Demo-Builder skills always succeed.
  *
  * Content sourcing for Demo-Builder skills: static .md files imported at build
  * time (esbuild text loader).
@@ -71,11 +71,12 @@ const COMPONENT_CATEGORIES = [
 const components = componentsConfig as unknown as RawComponentRegistry;
 
 /**
- * The twelve Demo-Builder skills written into every project's
- * `.claude/skills/` directory (filename → static content imported at build
- * time). Exported so other writers — notably the single home Chat
- * (`homeAiContextWriter`) — can write the exact same set without duplicating
- * the import list. Order is not significant.
+ * The 13 first-party Demo-Builder skill contents (filename → static content
+ * imported at build time), keyed by `DEMO_BUILDER_ALWAYS_ON_SKILLS`. Delivery
+ * of the three Playwright-driven ones is gated per `SKILL_MCP_TOOL_DEPENDENCIES`
+ * — they are NOT written into every project. Exported so other writers —
+ * notably the single home Chat (`homeAiContextWriter`) — can consume the same
+ * set without duplicating the import list. Order is not significant.
  */
 /**
  * Content for each always-on skill. The LIST of filenames is not defined here —
@@ -110,20 +111,10 @@ export const DEMO_BUILDER_SKILLS: ReadonlyArray<{ filename: string; content: str
 /**
  * Write skill files to `{projectPath}/.claude/skills/`.
  *
- * Always writes:
- *   - Four Demo-Builder lifecycle skills (add-component, sync-changes,
- *     update-credentials, create-eds-project) — operating against the Demo
- *     Builder MCP server.
- *   - Six EDS site-scraping skills (scrape-reference-site,
- *     connect-authenticated-site, commerce-block-mapper, demo-data-injector,
- *     header-nav-footer, refine-visual-match). They sit alongside the
- *     lifecycle skills because they're invoked from any project state; the
- *     `scrape-reference-site` orchestrator routes between Mod Agent and
- *     Playwright MCP based on user choice.
- *   - Two custom-block authoring skills: register-custom-block (calls
- *     `promote_block_to_library` to make a new block show up in DA.live's
- *     authoring picker) and remove-custom-block (calls
- *     `remove_block_from_library` to unregister it again).
+ * Writes the first-party set declared in `DEMO_BUILDER_ALWAYS_ON_SKILLS`
+ * (`@/types/ai` — the ONE home for the filenames; do not restate counts here,
+ * they rot). Three of those skills drive Playwright and are delivery-gated
+ * per `SKILL_MCP_TOOL_DEPENDENCIES` — see the gating paragraph below.
  *
  * Additionally copies any Adobe skill bundles declared by components in
  * `project.componentInstances` (via the `aiSkillBundle` field on the

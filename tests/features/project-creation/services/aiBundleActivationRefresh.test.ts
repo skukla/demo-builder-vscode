@@ -39,6 +39,8 @@ import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 jest.mock('fs/promises', () => ({
+    lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
+    realpath: jest.fn(async (p: string) => p),
     mkdir: jest.fn().mockResolvedValue(undefined),
     writeFile: jest.fn().mockResolvedValue(undefined),
     readFile: jest.fn(),
@@ -661,5 +663,33 @@ describe('state-manager isolation', () => {
         // Proves the regex above scans real import lines at the right scope —
         // a "nothing found" without this control would prove nothing.
         expect(MODULE_SOURCE).toMatch(/from\s+'[^']*projectFileLoader'/);
+    });
+});
+
+// ─── Partial failure: landed hashes survive a mid-refresh throw ──────────────
+
+describe('partial failure persistence', () => {
+    it('best-effort saves landed hashes when a tier throws mid-refresh', async () => {
+        // Phase-4 review: tier 1 lands writes, tier 2 throws → without a
+        // best-effort save the manifest keeps stale hashes for files that DID
+        // change on disk, and every later refresh misreads them as user-edited.
+        const { hashes } = await provisionHealthyDisk();
+        const project = makeProject({
+            aiContextVersion: AI_CONTEXT_VERSION - 1, // stale → tier 2 runs
+            aiFileHashes: hashes,
+        });
+        const deps = makeDeps({ [PROJECT_A]: project });
+        const saved = captureSaves(deps);
+        // First write of the run succeeds (a landed change), later writes blow up.
+        let writes = 0;
+        (fsPromises.writeFile as jest.Mock).mockImplementation(async () => {
+            writes += 1;
+            if (writes > 1) throw new Error('disk full');
+        });
+
+        await refreshAiBundlesOnActivation(EXTENSION_PATH, makeMockLogger(), deps);
+
+        // The sweep survives (never-throws contract) AND persisted what landed.
+        expect(saved.length).toBeGreaterThanOrEqual(1);
     });
 });

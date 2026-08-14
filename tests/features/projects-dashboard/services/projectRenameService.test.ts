@@ -58,6 +58,7 @@ function createMockContext(): HandlerContext {
     return {
         stateManager: {
             saveProject: jest.fn().mockResolvedValue(undefined),
+            saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
             removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
         } as unknown as HandlerContext['stateManager'],
         logger: {

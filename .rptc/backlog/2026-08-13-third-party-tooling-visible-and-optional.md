@@ -70,7 +70,7 @@ a customer.
 
 ## Gap 2 — progress is a label, not progress
 
-The regenerate path emits one step: `Installing AI tooling` / "This can take up to a minute."
+~~The regenerate path emits one step: `Installing AI tooling`~~ *(2026-08-14: the step now reads `Downloading AI tool packages` and names the packages — but it is still ONE opaque npm block with a guessed duration; the remaining gap below stands.)*
 `installAiDefaultsMcpTools` takes no progress callback, so npm runs as one opaque block, and
 the minute is a guess presented as fact.
 

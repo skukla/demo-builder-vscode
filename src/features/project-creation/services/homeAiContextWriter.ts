@@ -2,7 +2,10 @@
  * Home AI Context Writer
  *
  * Writes the AI context for the SINGLE home Chat at the Demo Builder projects
- * root (`~/.demo-builder/projects`). There is exactly ONE Chat, always rooted
+ * root (`~/.demo-builder/projects`). Deliberately OUTSIDE the ADR-013
+ * `GeneratedFileWriter` seam: this surface is not a per-project bundle — it
+ * has no manifest to record hashes in and no per-project tool install — so
+ * its direct `fsPromises.writeFile` calls are not seam violations. There is exactly ONE Chat, always rooted
  * here. Because every project lives in a subdirectory of this root, that one
  * Chat can natively read and edit any project's files on disk, and it reaches
  * the in-extension MCP server on the ROOT socket

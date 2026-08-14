@@ -92,7 +92,7 @@ export async function writeMcpConfigs(
     // signature, so a path change refreshes it (no duplicate) and a non-EDS
     // project just drops it (keeping the user's content).
     const settingsPath = path.join(projectPath, '.claude', 'settings.json');
-    const existingSettings = parseExistingSettings(await readIfPresent(settingsPath));
+    const existingSettings = parseExistingSettings(await readOrUndefined(settingsPath));
     const desiredSettings = generateClaudeSettings(project, resolvedNode);
     const merged = mergeClaudeSettings(existingSettings, desiredSettings);
     await writer.writeMerged('.claude/settings.json', JSON.stringify(merged, null, 2));
@@ -106,7 +106,7 @@ export async function writeMcpConfigs(
  * Read a file's content, or `undefined` when it is absent/unreadable — the
  * settings merge treats both the same way (nothing to merge into).
  */
-async function readIfPresent(filePath: string): Promise<string | undefined> {
+async function readOrUndefined(filePath: string): Promise<string | undefined> {
     try {
         return await fsPromises.readFile(filePath, 'utf-8');
     } catch {

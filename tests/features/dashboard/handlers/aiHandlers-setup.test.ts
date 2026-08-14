@@ -293,6 +293,30 @@ describe('aiHandlers — setup & verification', () => {
 
 
     describe('handleRegenerateAiFiles', () => {
+        it('persists landed hashes even when generation throws (no permanent skip-poisoning)', async () => {
+            // Phase-4 review: a partial run leaves new content on disk; without
+            // this save the manifest keeps the OLD hash and every future
+            // refresh misreads those files as user-edited, forever.
+            const saveProjectConfigOnly = jest.fn().mockResolvedValue(undefined);
+            (generateAIContextFiles as jest.Mock).mockImplementation(
+                async (_path: string, project: { aiFileHashes?: Record<string, string> }) => {
+                    project.aiFileHashes = { 'AGENTS.md': 'landed-hash' };
+                    throw new Error('step 2 failed');
+                }
+            );
+            const context = createMockContext({
+                stateManager: {
+                    getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                    saveProjectConfigOnly,
+                } as unknown as HandlerContext['stateManager'],
+            });
+
+            await expect(handleRegenerateAiFiles(context)).rejects.toThrow('step 2 failed');
+
+            expect(saveProjectConfigOnly).toHaveBeenCalledTimes(1);
+        });
+
+
         it('calls generateAIContextFiles using server-side project.path (ignores payload)', async () => {
             (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
 

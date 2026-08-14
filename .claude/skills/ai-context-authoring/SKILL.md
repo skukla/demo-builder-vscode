@@ -53,7 +53,7 @@ declares its own gate via `requires` (`'eds-storefront'` = Playwright-style stor
 
 | Writer | Output | Gating pattern |
 |---|---|---|
-| `skillsWriter.writeSkillFiles` | `.claude/skills/*.md` | 12 always-on `DEMO_BUILDER_SKILLS`; conditional skills append to the `written` list (e.g. `extend-app-builder-app` on the predicate) |
+| `skillsWriter.writeSkillFiles` | `.claude/skills/*.md` | 13 filenames in `DEMO_BUILDER_ALWAYS_ON_SKILLS` (3 delivery-gated via `SKILL_MCP_TOOL_DEPENDENCIES`); conditional skills append to the `written` list (e.g. `extend-app-builder-app` on the predicate) |
 | same, Adobe bundles | prefixed skill DIRS | Two SOURCES: component `aiSkillBundle` copies from the component's own `node_modules` (EDS/aem); the integration-starter-kit copies from `resolveMcpToolsDir()` (installed by the installer — ordering matters, install precedes writers on both paths). `copyAdobeSkillBundle` ENOENT-skips silently |
 | `aiContextWriter.generateAgentsMd` | `AGENTS.md` | Section builders returning `''` when not applicable (e.g. `buildConsoleApiAccess`); sanitize every interpolated project value |
 | `mcpConfigWriter` | `.mcp.json`, `.claude/mcp.json`, settings merge | demo-builder entry + per-entry ai-defaults gating; args anchored to the isolated tools dir |

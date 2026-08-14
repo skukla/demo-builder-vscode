@@ -147,10 +147,30 @@ async function refreshProjectBundle(
     const previousStamp = project.aiContextVersion ?? 0;
     const stampStale = previousStamp < AI_CONTEXT_VERSION;
 
-    await refreshMcpConfigs(summary.path, project, extensionPath, writer, nodePath);
-    if (stampStale) {
-        await refreshContextAndSkills(summary.path, project, extensionPath, writer);
-        project.aiContextVersion = AI_CONTEXT_VERSION;
+    try {
+        await refreshMcpConfigs(summary.path, project, extensionPath, writer, nodePath);
+        if (stampStale) {
+            await refreshContextAndSkills(summary.path, project, extensionPath, writer);
+            project.aiContextVersion = AI_CONTEXT_VERSION;
+        }
+    } catch (err) {
+        // Best-effort: hashes for writes that DID land must persist even when a
+        // later step throws, or those files read as user-edited forever
+        // (Phase-4 review finding). The stamp is deliberately NOT advanced —
+        // the next sweep retries the refresh.
+        const landed = writer.hashes();
+        if (!sameHashMap(recorded, landed)) {
+            project.aiFileHashes = landed;
+            try {
+                await deps.configWriter.saveProjectConfig(project);
+            } catch (saveErr) {
+                logger.warn(
+                    `[AI Bundle] ${summary.name}: could not persist landed hashes after a failed refresh: ` +
+                        describeError(saveErr),
+                );
+            }
+        }
+        throw err;
     }
 
     const report = writer.report();
@@ -173,7 +193,7 @@ async function refreshProjectBundle(
                 `stamp ${previousStamp} < ${AI_CONTEXT_VERSION}`,
         );
     } else {
-        logger.info(`[AI Bundle] ${summary.name}: repaired ${files} — config drift`);
+        logger.info(`[AI Bundle] ${summary.name}: repaired ${files || 'hash map only'} — config drift`);
     }
 
     project.aiFileHashes = updatedHashes;

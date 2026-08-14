@@ -377,11 +377,23 @@ export async function performAdobeMcpUpdates(
                     if (result.code !== 0) {
                         throw new Error(`npm update failed: ${result.stderr || result.stdout}`);
                     }
-                    const generated = await generateAIContextFiles(
-                        project.path,
-                        project,
-                        ctx.extensionPath,
-                    );
+                    let generated;
+                    try {
+                        generated = await generateAIContextFiles(
+                            project.path,
+                            project,
+                            ctx.extensionPath,
+                        );
+                    } catch (err) {
+                        // Landed hashes must survive a partial failure
+                        // (Phase-4 review).
+                        try {
+                            await ctx.stateManager.saveProjectConfigOnly(project);
+                        } catch {
+                            /* best-effort */
+                        }
+                        throw err;
+                    }
                     // WHY line: an npm update rewrote the isolated tools dir, so
                     // the AI bundle was regenerated around it; hash-and-skip
                     // (ADR-013) leaves user-edited files alone — name them so
@@ -391,8 +403,9 @@ export async function performAdobeMcpUpdates(
                             `skipped (user-edited): [${(generated?.report?.skipped ?? []).join(', ')}]`,
                     );
                     // Persist the freshness stamp + hashes generateAIContextFiles
-                    // set on `project`, else the on-open freshness check re-fires
-                    // forever.
+                    // set on `project`, else the activation sweep re-refreshes the
+                    // bundle on every start and the freshness log reports
+                    // perpetual staleness.
                     await ctx.stateManager.saveProjectConfigOnly(project);
                     successCount++;
                     ctx.logger.info(`[Updates] Updated ${packageName} in ${project.name} → ${latestVersion}`);

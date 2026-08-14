@@ -189,9 +189,10 @@ export interface Project {
     aiPrompts?: AiPrompt[];
     /**
      * Version of the AI context bundle last generated into this project (stamped
-     * from the `AI_CONTEXT_VERSION` constant on generate). The dashboard's
-     * on-open freshness check flags the project stale when this is older than
-     * the current constant (or absent, catching pre-feature projects).
+     * from the `AI_CONTEXT_VERSION` constant on generate). Since v8 a stale (or
+     * absent) stamp no longer flags the project in the UI — the activation sweep
+     * (`aiBundleActivationRefresh`) silently refreshes tiers 1+2 on the next
+     * extension start; the freshness check only logs it as a support trail.
      */
     aiContextVersion?: number;
     /**

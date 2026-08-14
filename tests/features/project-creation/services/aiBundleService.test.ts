@@ -33,6 +33,8 @@ import {
 import type { Project } from '@/types/base';
 
 jest.mock('fs/promises', () => ({
+    lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
+    realpath: jest.fn(async (p: string) => p),
     mkdir: jest.fn().mockResolvedValue(undefined),
     writeFile: jest.fn().mockResolvedValue(undefined),
     readFile: jest.fn(),
@@ -292,5 +294,27 @@ describe('generateAIContextFiles (integration over mocked fs)', () => {
 
         expect(project.aiFileHashes?.['.mcp.json']).toBeDefined();
         expect(project.aiFileHashes?.['AGENTS.md']).toBeDefined();
+    });
+});
+
+// Phase-4 review finding: a failed run must not stamp itself current, and the
+// hashes of files that DID land must still be assigned for the caller's
+// best-effort persistence.
+describe('partial failure', () => {
+    it('does NOT stamp aiContextVersion when a step fails, but still assigns hashes', async () => {
+        const project = makeProject();
+        project.aiContextVersion = 3;
+        (fsPromises.readFile as jest.Mock).mockRejectedValue(enoentError());
+        (fsPromises.writeFile as jest.Mock).mockImplementation(async (p: string) => {
+            if (String(p).endsWith('AGENTS.md')) return undefined;
+            throw new Error('disk full');
+        });
+
+        await expect(
+            generateAIContextFiles(PROJECT_PATH, project, EXTENSION_PATH)
+        ).rejects.toThrow(/generation failed/);
+
+        expect(project.aiContextVersion).toBe(3); // untouched — the run did not complete
+        expect(Object.keys(project.aiFileHashes ?? {})).toContain('AGENTS.md'); // landed hash survives
     });
 });

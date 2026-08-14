@@ -89,11 +89,44 @@ export function createGeneratedFileWriter(
         }
     }
 
-    async function persist(absolutePath: string, key: string, content: string): Promise<void> {
+    /**
+     * Security guard (2026-08-14 review): `writeFile` follows symlinks, and a
+     * symlinked parent directory would carry the write outside the project —
+     * a planted link inside a shared demo folder must never overwrite its
+     * TARGET. Refusal is a skip + warn + report, never a write through a link.
+     * An absent target (ENOENT lstat) is fine — that is a normal first write.
+     */
+    async function isWriteSafe(absolutePath: string, key: string): Promise<boolean> {
+        const realRoot = await fsPromises.realpath(projectPath);
+        const realDir = await fsPromises.realpath(path.dirname(absolutePath));
+        if (realDir !== realRoot && !realDir.startsWith(realRoot + path.sep)) {
+            logger.warn(
+                `[AI Bundle] Refusing ${key} — its directory resolves outside the project (symlink?)`,
+            );
+            report.skipped.push(key);
+            return false;
+        }
+        try {
+            const stat = await fsPromises.lstat(absolutePath);
+            if (stat.isSymbolicLink()) {
+                logger.warn(`[AI Bundle] Refusing ${key} — the target is a symlink`);
+                report.skipped.push(key);
+                return false;
+            }
+        } catch (err) {
+            if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+        }
+        return true;
+    }
+
+    /** @returns true when the write landed; false when the guard refused it. */
+    async function persist(absolutePath: string, key: string, content: string): Promise<boolean> {
         await fsPromises.mkdir(path.dirname(absolutePath), { recursive: true });
+        if (!(await isWriteSafe(absolutePath, key))) return false;
         await fsPromises.writeFile(absolutePath, content, 'utf-8');
         hashes[key] = sha256(content);
         report.written.push(key);
+        return true;
     }
 
     return {
@@ -119,8 +152,7 @@ export function createGeneratedFileWriter(
             }
             // Absent, ours-and-stale, or pre-ADR (no recorded hash → treat as
             // unmodified ONCE, per ADR-013).
-            await persist(absolutePath, key, content);
-            return 'written';
+            return (await persist(absolutePath, key, content)) ? 'written' : 'skipped';
         },
 
         async writeMerged(relPath, content) {
@@ -140,6 +172,18 @@ export function createGeneratedFileWriter(
         async remove(relPath, currentTemplate?) {
             const key = toKey(relPath);
             const absolutePath = toAbsolute(key);
+            // Same containment rule as writes: a symlinked parent directory
+            // would carry the unlink outside the project. (`unlink` itself
+            // does not follow a symlinked FILE — that case is already safe.)
+            const realRoot = await fsPromises.realpath(projectPath);
+            const realDir = await fsPromises.realpath(path.dirname(absolutePath));
+            if (realDir !== realRoot && !realDir.startsWith(realRoot + path.sep)) {
+                logger.warn(
+                    `[AI Bundle] Refusing to remove ${key} — its directory resolves outside the project (symlink?)`,
+                );
+                report.skipped.push(key);
+                return 'skipped';
+            }
             const onDisk = await readIfPresent(absolutePath);
 
             if (onDisk === undefined) {

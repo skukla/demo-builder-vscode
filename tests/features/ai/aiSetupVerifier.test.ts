@@ -433,6 +433,26 @@ describe('verifyAiSetup', () => {
             expect(result.inventory.editedFiles).toEqual([]);
         });
 
+        it('never flags .claude/settings.json — the merge path incorporates user edits by design', async () => {
+            // Phase-4 review: settings.json is MERGED (writeMerged), never
+            // kept-as-is, so "Edited — kept your version" would be false for
+            // the one file users are explicitly invited to customize. The mock
+            // SERVES mismatching content, so absence cannot make this pass.
+            const base = (fsPromises.readFile as jest.Mock).getMockImplementation()!;
+            (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
+                if (String(filePath).endsWith('.claude/settings.json')) {
+                    return Promise.resolve('{"user":"customized"}');
+                }
+                return base(filePath);
+            });
+
+            const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH, {
+                '.claude/settings.json': sha('what the last merge recorded'),
+            });
+
+            expect(result.inventory.editedFiles).toEqual([]);
+        });
+
         it('lists every edited file (sorted), mixing edited, absent, and untouched entries', async () => {
             const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH, {
                 // Both served by the mock with content that mismatches → edited.

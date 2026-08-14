@@ -24,9 +24,12 @@ import { createHash } from 'crypto';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { createGeneratedFileWriter } from '@/features/project-creation/services/generatedFileWriter';
+import { enoentError, makeMockLogger, makeTestWriter } from './generatedFileWriter.testUtils';
 import type { Logger } from '@/types/logger';
 
 jest.mock('fs/promises', () => ({
+    lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
+    realpath: jest.fn(async (p: string) => p),
     mkdir: jest.fn().mockResolvedValue(undefined),
     writeFile: jest.fn().mockResolvedValue(undefined),
     readFile: jest.fn(),
@@ -471,5 +474,91 @@ describe('createGeneratedFileWriter', () => {
                 removed: ['ours.md'],
             });
         });
+    });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Symlink + containment guards (security review F1): writeFile follows
+// symlinks, so a planted link inside a shared project folder would get its
+// TARGET overwritten by the sweep. The seam refuses instead: skip + warn +
+// report, never a write through a link or a redirected parent directory.
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe('symlink and containment guards', () => {
+    beforeEach(() => {
+        // clearAllMocks clears CALLS but not implementations (webview-test-
+        // authoring §6) — reset the sticky ones back to the factory defaults.
+        jest.clearAllMocks();
+        (fsPromises.mkdir as jest.Mock).mockResolvedValue(undefined);
+        (fsPromises.writeFile as jest.Mock).mockResolvedValue(undefined);
+        (fsPromises.unlink as jest.Mock).mockResolvedValue(undefined);
+        (fsPromises.lstat as jest.Mock).mockReset();
+        (fsPromises.lstat as jest.Mock).mockRejectedValue(enoentError());
+        (fsPromises.realpath as jest.Mock).mockReset();
+        (fsPromises.realpath as jest.Mock).mockImplementation(async (p: string) => p);
+        (fsPromises.readFile as jest.Mock).mockReset();
+        (fsPromises.readFile as jest.Mock).mockRejectedValue(enoentError());
+    });
+
+    it("refuses to write through a symlinked file → 'skipped', no write, no hash", async () => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue('old');
+        (fsPromises.lstat as jest.Mock).mockResolvedValue({ isSymbolicLink: () => true });
+        const logger = makeMockLogger();
+        const writer = createGeneratedFileWriter(PROJECT, {}, logger);
+
+        const outcome = await writer.write('AGENTS.md', 'new content');
+
+        expect(outcome).toBe('skipped');
+        expect(fsPromises.writeFile).not.toHaveBeenCalled();
+        expect(writer.hashes()['AGENTS.md']).toBeUndefined();
+        expect(writer.report().skipped).toContain('AGENTS.md');
+        expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('symlink'));
+    });
+
+    it('refuses when the parent directory resolves outside the project root', async () => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue('old');
+        (fsPromises.realpath as jest.Mock).mockImplementation(async (p: string) =>
+            p === PROJECT ? PROJECT : '/somewhere/else'
+        );
+        const writer = makeTestWriter(PROJECT);
+
+        const outcome = await writer.write('.claude/mcp.json', '{}');
+
+        expect(outcome).toBe('skipped');
+        expect(fsPromises.writeFile).not.toHaveBeenCalled();
+    });
+
+    it('writeMerged refuses a symlinked target the same way', async () => {
+        (fsPromises.lstat as jest.Mock).mockResolvedValue({ isSymbolicLink: () => true });
+        const writer = makeTestWriter(PROJECT);
+
+        await writer.writeMerged('.claude/settings.json', '{"a":1}');
+
+        expect(fsPromises.writeFile).not.toHaveBeenCalled();
+        expect(writer.hashes()['.claude/settings.json']).toBeUndefined();
+    });
+
+    it('remove refuses when the parent directory resolves outside the project root', async () => {
+        const content = 'ours';
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(content);
+        (fsPromises.realpath as jest.Mock).mockImplementation(async (p: string) =>
+            p === PROJECT ? PROJECT : '/somewhere/else'
+        );
+        const writer = makeTestWriter(PROJECT, { '.claude/skills/x.md': sha256('ours') });
+
+        const outcome = await writer.remove('.claude/skills/x.md');
+
+        expect(outcome).toBe('skipped');
+        expect(fsPromises.unlink).not.toHaveBeenCalled();
+    });
+
+    it('an absent target (lstat ENOENT) still writes normally — the guard tolerates absence', async () => {
+        (fsPromises.readFile as jest.Mock).mockRejectedValue(enoentError());
+        const writer = makeTestWriter(PROJECT);
+
+        const outcome = await writer.write('AGENTS.md', 'fresh');
+
+        expect(outcome).toBe('written');
+        expect(fsPromises.writeFile).toHaveBeenCalled();
     });
 });

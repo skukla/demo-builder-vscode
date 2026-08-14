@@ -31,6 +31,8 @@ export {
 // projectFinalizationService — the barrel preserves the name for all callers.
 export {
     generateAIContextFiles,
+    // Tier functions: plan-mandated public API for future per-tier callers —
+    // the activation sweep currently imports them directly, not via the barrel.
     refreshMcpConfigs,
     refreshContextAndSkills,
     type AiBundleRefreshResult,

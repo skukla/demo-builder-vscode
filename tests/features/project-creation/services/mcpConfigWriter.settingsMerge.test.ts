@@ -15,6 +15,8 @@ import { writeMcpConfigs } from '@/features/project-creation/services/mcpConfigW
 import type { Project } from '@/types/base';
 
 jest.mock('fs/promises', () => ({
+    lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
+    realpath: jest.fn(async (p: string) => p),
     mkdir: jest.fn().mockResolvedValue(undefined),
     writeFile: jest.fn().mockResolvedValue(undefined),
     readFile: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),

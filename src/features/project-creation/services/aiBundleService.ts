@@ -98,12 +98,14 @@ export async function refreshContextAndSkills(
  * - ONE hash-and-skip writer per run, seeded from `project.aiFileHashes`
  *   (absent on pre-ADR projects → every bundle file gets the overwrite-once
  *   treatment and a fresh hash).
- * - Stamps `project.aiContextVersion = AI_CONTEXT_VERSION` (single point
- *   shared by all callers; the on-open freshness check reads it).
+ * - Stamps `project.aiContextVersion = AI_CONTEXT_VERSION` ONLY on success
+ *   (single point shared by all callers; the activation sweep reads it — a
+ *   failed run must stay stale so the sweep retries).
  * - Assigns `project.aiFileHashes = writer.hashes()` BEFORE the
- *   collected-errors throw — hashes for files that DID land must survive, or
- *   their next refresh would misread them as pre-ADR. The caller persists the
- *   manifest (unchanged contract).
+ *   collected-errors throw — hashes for files that DID land must survive.
+ *   CALLERS MUST BEST-EFFORT PERSIST THE MANIFEST ON THE THROW PATH TOO, or
+ *   a partial run leaves disk ≠ recorded and those files read as user-edited
+ *   forever (every call site does; keep it that way).
  * - Returns `{ skills, report }` — additive; existing callers destructure
  *   `skills` only, the update paths log `report.skipped`.
  */
@@ -114,8 +116,6 @@ export async function generateAIContextFiles(
     onProgress?: ProgressTracker,
 ): Promise<AiBundleRefreshResult> {
     let skills: string[] = [];
-
-    project.aiContextVersion = AI_CONTEXT_VERSION;
 
     const writer = createGeneratedFileWriter(projectPath, project.aiFileHashes ?? {}, getLogger());
 
@@ -147,11 +147,18 @@ export async function generateAIContextFiles(
         }
     }
 
+    // Hashes for files that DID land are assigned even on failure — callers
+    // best-effort persist them so a partial run cannot poison the skip logic
+    // (an unrecorded landed write would read as "user-edited" forever).
     project.aiFileHashes = writer.hashes();
 
     if (errors.length > 0) {
         throw new Error(`AI context file generation failed: ${errors.join('; ')}`);
     }
+
+    // Stamp ONLY on success — a failed run must not declare itself current, or
+    // the activation sweep would never come back to finish the refresh.
+    project.aiContextVersion = AI_CONTEXT_VERSION;
 
     return { skills, report: writer.report() };
 }

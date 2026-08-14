@@ -23,6 +23,8 @@ import { writeSkillFiles } from '@/features/project-creation/services/skillsWrit
 import type { Project, ComponentInstance } from '@/types/base';
 
 jest.mock('fs/promises', () => ({
+    lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
+    realpath: jest.fn(async (p: string) => p),
     mkdir: jest.fn().mockResolvedValue(undefined),
     writeFile: jest.fn().mockResolvedValue(undefined),
     readdir: jest.fn(),

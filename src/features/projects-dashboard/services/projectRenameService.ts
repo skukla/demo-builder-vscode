@@ -112,9 +112,16 @@ export async function renameProjectCore(
                 );
                 await generateAIContextFiles(project.path, project, context.context.extensionPath);
                 // Persist the freshness stamp generateAIContextFiles set on `project`
-                // (aiContextVersion), else the on-open freshness check re-fires forever.
+                // (aiContextVersion), else the activation sweep re-refreshes the bundle on every start and the freshness log reports perpetual staleness.
                 await context.stateManager.saveProjectConfigOnly(project);
             } catch (regenError) {
+                // Landed hashes must survive a partial failure (Phase-4 review);
+                // best-effort — a failing save must not mask the original error.
+                try {
+                    await context.stateManager.saveProjectConfigOnly(project);
+                } catch {
+                    /* best-effort */
+                }
                 context.logger.warn(
                     `[Rename] AI context regeneration failed for "${newName}" — MCP/AI configs `
                     + 'may reference the old path until "Regenerate AI files" is run. '

@@ -333,11 +333,12 @@ export function useDashboardStatus(
     // (checkResult{mcp-health, warning} → true; ok/error → false). Drives the AI
     // badge's "Updating AI configuration…" telegraph (replaces the silent failure).
     const [mcpHealing, setMcpHealing] = useState(false);
-    // True when the ai-context-freshness check reports the project's AI bundle is
-    // older than the extension (checkResult{ai-context-freshness, warning} → true;
+    // True when the ai-context-freshness check reports the project is missing AI
+    // tooling packages its components qualify for (the composition axis — a stale
+    // version stamp returns ok + a log line and never lands here; warning → true,
     // ok → false). Detect-only: it flips the AI badge to "AI tooling missing",
     // which surfaces the existing "Regenerate AI files" action (the remediation).
-    const [aiContextStale, setAiContextStale] = useState(false);
+    const [aiToolingMissing, setAiToolingMissing] = useState(false);
     // Track whether status was requested (prevent StrictMode double-request)
     const statusRequestedRef = useRef(false);
 
@@ -431,7 +432,7 @@ export function useDashboardStatus(
                 // missing". Version staleness no longer warns here: the
                 // activation sweep repairs it silently (ADR-013 hash-and-skip).
                 // reRunnable, so a Regenerate clears this on the next refresh.
-                setAiContextStale(outcome.status === 'warning');
+                setAiToolingMissing(outcome.status === 'warning');
                 return;
             }
 
@@ -545,12 +546,12 @@ export function useDashboardStatus(
             );
             if (result?.success !== false) {
                 // The handler persisted a fresh aiContextVersion stamp, but
-                // `aiContextStale` is fed by the ON-OPEN freshness check, which
+                // `aiToolingMissing` is fed by the ON-OPEN freshness check, which
                 // does not re-run here — without this clear, a successful
                 // regenerate leaves the badge stuck on "AI tooling missing"
                 // until the dashboard reopens. The reRunnable check re-confirms
                 // on next open.
-                setAiContextStale(false);
+                setAiToolingMissing(false);
             }
             await runVerify();
         } finally {
@@ -737,12 +738,12 @@ export function useDashboardStatus(
         // not received (composition axis — gaining a component after creation).
         // Yellow surfaces the "Regenerate AI files" action, which downloads it;
         // the reRunnable check clears the badge once the packages land.
-        if (aiContextStale) {
+        if (aiToolingMissing) {
             return { label: 'AI', color: 'yellow', text: 'AI tooling missing' };
         }
 
         return { label: 'AI', color: 'green', text: 'Ready' };
-    }, [verifyResult, verifyFailed, mcpHealing, aiContextStale, aiRegenerating]);
+    }, [verifyResult, verifyFailed, mcpHealing, aiToolingMissing, aiRegenerating]);
 
     // Capability lists for the "View AI Capabilities" surface (extracted helper
     // — see deriveAiInventoryView).

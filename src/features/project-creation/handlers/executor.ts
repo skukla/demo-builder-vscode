@@ -596,9 +596,17 @@ export async function executeProjectCreation(
     try {
         await generateAIContextFiles(projectPath, project, context.context.extensionPath);
         // Persist the freshness stamp generateAIContextFiles set on `project`
-        // (aiContextVersion), else the on-open freshness check re-fires forever.
+        // (aiContextVersion), else the activation sweep re-refreshes the bundle on every start and the freshness log reports perpetual staleness.
         await context.stateManager.saveProjectConfigOnly(project);
     } catch (err) {
+        // Landed hashes must survive a partial failure (Phase-4 review) — on a
+        // fresh creation there are no OLD hashes to desync, but a retried
+        // creation over an existing directory has them.
+        try {
+            await context.stateManager.saveProjectConfigOnly(project);
+        } catch {
+            /* best-effort */
+        }
         context.logger.warn(
             '[Project Creation] Failed to generate AI context files',
             err instanceof Error ? err : undefined,

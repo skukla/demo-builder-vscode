@@ -220,13 +220,29 @@ export async function handleRegenerateAiFiles(context: HandlerContext): Promise<
     // Use server-side project.path — do not accept a webview-supplied path override.
     // Pass an onProgress tracker so the three writer steps surface in the same
     // creationProgress channel.
-    const generated = await generateAIContextFiles(
-        project.path,
-        project,
-        context.context.extensionPath,
-        (currentOperation: string, _progress: number, message?: string) =>
-            emit(currentOperation, message),
-    );
+    let generated;
+    try {
+        generated = await generateAIContextFiles(
+            project.path,
+            project,
+            context.context.extensionPath,
+            (currentOperation: string, _progress: number, message?: string) =>
+                emit(currentOperation, message),
+        );
+    } catch (err) {
+        // Best-effort: hashes for files that DID land were assigned to
+        // `project` before the throw — persist them, or every later refresh
+        // misreads those files as user-edited (Phase-4 review finding).
+        try {
+            await context.stateManager.saveProjectConfigOnly(project);
+        } catch (saveErr) {
+            context.logger.warn(
+                `[AI Verify] Could not persist landed hashes after a failed regenerate: ` +
+                    (saveErr instanceof Error ? saveErr.message : String(saveErr)),
+            );
+        }
+        throw err;
+    }
 
     const skills = generated?.skills ?? [];
     context.logger.info(
@@ -246,8 +262,9 @@ export async function handleRegenerateAiFiles(context: HandlerContext): Promise<
 
     // Persist the freshness stamp. generateAIContextFiles set
     // project.aiContextVersion = AI_CONTEXT_VERSION on the passed object; without
-    // this save the manifest keeps the old stamp and the on-open freshness check
-    // re-fires every open (both the dashboard button and the on-open heal use
+    // this save the manifest keeps the old stamp, so the activation sweep
+    // re-refreshes the bundle on every start and the freshness log reports
+    // perpetual staleness (both the dashboard button and the on-open heal use
     // this path). saveProjectConfigOnly writes the manifest without touching
     // currentProject or firing change events.
     await context.stateManager.saveProjectConfigOnly(project);
