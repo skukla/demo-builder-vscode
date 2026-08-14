@@ -184,6 +184,7 @@ interface ProjectCreationConfig {
     importedMeshEndpoint?: string;
     // Package/Stack selections
     selectedPackage?: string;
+    datapack?: { name: string; version: string };
     selectedStack?: string;
     // Selected App Builder integration ids (Model B deploy) + custom GitHub sources
     selectedAppBuilderComponents?: string[];
@@ -343,6 +344,11 @@ export function buildInitialProject(
         commerceStoreStructure:
             typedConfig.commerceStoreStructure ?? existingProject?.commerceStoreStructure,
         selectedPackage: typedConfig.selectedPackage,
+        // Same fallback reasoning as `commerceStoreStructure` above: this rebuilds
+        // the whole Project, and an edit session that never opened the Sample
+        // Data area carries no choice. Overwriting a recorded one with undefined
+        // would silently forget what the project was meant to be seeded with.
+        datapack: typedConfig.datapack ?? existingProject?.datapack,
         selectedStack: typedConfig.selectedStack,
         selectedAddons: typedConfig.selectedAddons,
         selectedBlockLibraries: typedConfig.selectedBlockLibraries,

@@ -62,6 +62,10 @@ const BUILD_AREA_DESCRIPTORS: readonly BuildAreaDescriptor[] = [
         condition: { stackRequiresAny: ['requiresGitHub', 'requiresDaLive'] },
     },
     { id: 'integrations', label: 'Integrations' },
+    // Last, and optional: it describes what goes INTO the backend, which only
+    // makes sense once the backend and storefront are chosen. Never gates
+    // Continue — see `statusForArea`.
+    { id: 'sample-data', label: 'Sample Data' },
 ] as const;
 
 /**
@@ -83,6 +87,10 @@ function statusForArea(
             return isStorefrontConfigured(state) ? 'completed' : 'upcoming';
         case 'integrations':
             return isIntegrationsComplete(state, packages, stacks) ? 'completed' : 'upcoming';
+        // Always complete: seeding is optional, and an area that can never be
+        // satisfied would gate Continue on a choice nobody has to make.
+        case 'sample-data':
+            return 'completed';
     }
 }
 

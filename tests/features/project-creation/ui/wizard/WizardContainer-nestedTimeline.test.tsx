@@ -138,7 +138,7 @@ describe('WizardContainer — sub-step → area → wizard-step progression', ()
         // children under the current Build step, the first active by default, with a
         // per-area status map and a click handler for jumping to a reached area.
         const childIds = (timelineProps.last?.childSteps ?? []).map((c: { id: string }) => c.id);
-        expect(childIds).toEqual(['commerce', 'integrations']);
+        expect(childIds).toEqual(['commerce', 'integrations', 'sample-data']);
         expect(timelineProps.last?.activeChildId).toBe('commerce');
         expect(timelineProps.last?.childStatusById).toBeDefined();
         expect(typeof timelineProps.last?.onChildClick).toBe('function');
@@ -199,8 +199,11 @@ describe('WizardContainer — sub-step → area → wizard-step progression', ()
         await clickContinue(user, COMMERCE_SUBSTEPS);
         expect(screen.getByTestId('build-your-project-step')).toBeInTheDocument();
 
-        // integrations is the LAST area (null driver — no sub-steps) → Continue
-        // advances the wizard step to review.
+        // integrations no longer ends the rail — `sample-data` was appended after
+        // it (Stage 4). Both are driverless, so each takes ONE Continue: the
+        // first hops integrations → sample-data, the second leaves the step.
+        await user.click(getContinue());
+        expect(screen.getByTestId('build-your-project-step')).toBeInTheDocument();
         await user.click(getContinue());
         await waitFor(
             () => {

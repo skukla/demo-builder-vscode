@@ -34,6 +34,7 @@ import { architectureLabel, buildSummaryGroups } from './buildSummary';
 import { buildYourProjectAreas } from './buildYourProjectAreas';
 import { CommerceStep } from './CommerceStep';
 import { IntegrationsStep } from './IntegrationsStep';
+import { SampleDataStep } from './SampleDataStep';
 import { StorefrontStep } from './StorefrontStep';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
@@ -171,6 +172,8 @@ function renderActiveArea(areaId: string | undefined, ctx: ActiveAreaContext): R
             return (
                 <IntegrationsStep {...ctx.bodyProps} packages={ctx.packages} stacks={ctx.stacks} />
             );
+        case 'sample-data':
+            return <SampleDataStep {...ctx.bodyProps} />;
         case 'commerce':
         default:
             return (

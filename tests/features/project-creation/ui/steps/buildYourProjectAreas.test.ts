@@ -54,7 +54,7 @@ function ids(state: WizardState, stacks: Stack[] = STACKS): string[] {
 
 describe('buildYourProjectAreas — visibility', () => {
     it('shows [commerce, integrations] (storefront hidden) when no stack is selected', () => {
-        expect(ids(state())).toEqual(['commerce', 'integrations']);
+        expect(ids(state())).toEqual(['commerce', 'integrations', 'sample-data']);
     });
 
     it('shows [commerce, storefront, integrations] for an EDS stack', () => {
@@ -62,11 +62,16 @@ describe('buildYourProjectAreas — visibility', () => {
             'commerce',
             'storefront',
             'integrations',
+            'sample-data',
         ]);
     });
 
     it('hides storefront for a non-EDS stack (no requiresGitHub/requiresDaLive)', () => {
-        expect(ids(state({ selectedStack: 'headless-paas' }))).toEqual(['commerce', 'integrations']);
+        expect(ids(state({ selectedStack: 'headless-paas' }))).toEqual([
+            'commerce',
+            'integrations',
+            'sample-data',
+        ]);
     });
 
     it('always keeps commerce < storefront < integrations order (EDS)', () => {
@@ -169,5 +174,45 @@ describe('buildYourProjectAreas — status', () => {
                 PACKAGES,
             ),
         ).toBe('completed');
+    });
+});
+
+/**
+ * Sample Data — the Stage 4 seam.
+ *
+ * The area RECORDS which datapack this project should be seeded with; it does not
+ * import. An import needs a reachable instance with working credentials and takes
+ * minutes on a full pack, so it belongs on the dashboard after creation, not
+ * inside the creation path (decided 2026-08-14).
+ *
+ * It sits LAST because it describes what goes into the backend, which only makes
+ * sense once the backend and storefront are chosen — and it is always OPTIONAL,
+ * so it can never block Continue.
+ */
+describe('buildYourProjectAreas — the sample data area', () => {
+    it('appears for every stack, after integrations', () => {
+        expect(ids(state({ selectedStack: 'eds-paas' }))).toEqual([
+            'commerce',
+            'storefront',
+            'integrations',
+            'sample-data',
+        ]);
+        expect(ids(state({ selectedStack: 'headless-paas' }))).toEqual([
+            'commerce',
+            'integrations',
+            'sample-data',
+        ]);
+    });
+
+    /** Optional means complete-by-default: picking nothing must not gate Continue. */
+    it('is complete whether or not a datapack was chosen', () => {
+        const without = buildYourProjectAreas(state({ selectedStack: 'eds-paas' }), STACKS);
+        expect(without.find((a) => a.id === 'sample-data')?.status).toBe('completed');
+
+        const chosen = buildYourProjectAreas(
+            state({ selectedStack: 'eds-paas', datapack: { name: 'bodea', version: 'main' } }),
+            STACKS,
+        );
+        expect(chosen.find((a) => a.id === 'sample-data')?.status).toBe('completed');
     });
 });

@@ -347,3 +347,67 @@
         padding: 0 !important;
     }
 }
+/* ==========================================================================
+   Sample Data area (Build Your Project)
+
+   A choice list, not a card grid: the datapack catalog is 25 names and this is
+   a one-line decision, so rows read faster than tiles. Consumes the shared card
+   custom properties rather than restating their values — a number that exists
+   once cannot drift.
+   ========================================================================== */
+
+.sample-data-area {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: var(--content-width);
+}
+
+.sample-data-intro {
+    margin: 0;
+    color: var(--spectrum-global-color-gray-700);
+    line-height: 1.5;
+}
+
+.sample-data-note {
+    margin: 0;
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+}
+
+.sample-data-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--card-gap);
+}
+
+.sample-data-choice {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--card-padding);
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 4px;
+    cursor: pointer;
+    /* reset.css sets border-box globally, but this element pairs padding with a
+       border and a max-width — state it rather than inherit it by luck. */
+    box-sizing: border-box;
+}
+
+.sample-data-choice:hover {
+    border-color: var(--spectrum-global-color-gray-400);
+}
+
+.sample-data-choice.is-selected {
+    border-color: var(--spectrum-global-color-blue-500);
+    background: var(--spectrum-global-color-gray-75);
+}
+
+.sample-data-choice-label {
+    font-weight: 600;
+}
+
+.sample-data-choice-description {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+}

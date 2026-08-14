@@ -22,7 +22,7 @@ export type WizardStep =
  * Distinct concept from the retired standalone wizard-step ids — these identify
  * the area the nested builder is currently focused on.
  */
-export type BuildAreaId = 'commerce' | 'storefront' | 'integrations';
+export type BuildAreaId = 'commerce' | 'storefront' | 'integrations' | 'sample-data';
 
 /**
  * The ordered Commerce sub-step ids within the `build-your-project` step's
@@ -80,6 +80,14 @@ export interface WizardState {
     storefrontRepoValid?: boolean; // Storefront repo selection reported valid (RepoSelectionInline repository phase)
     storefrontCodeSyncValid?: boolean; // Storefront AEM Code Sync app install reported valid (RepoSelectionInline code-sync phase)
     activeBuildArea?: BuildAreaId; // Area currently focused within the build-your-project step
+    /**
+     * Which datapack this project should be seeded with, if any.
+     *
+     * RECORDED here, IMPORTED from the dashboard afterwards: an import needs a
+     * reachable instance with working credentials and runs for minutes, so it
+     * does not belong inside the creation path. Optional throughout.
+     */
+    datapack?: { name: string; version: string };
     activeCommerceStep?: CommerceSectionId; // Active Commerce sub-step within the build step (footer Continue/Back walks sub-steps → areas → wizard steps)
     committedCommerceSteps?: CommerceSectionId[]; // Commerce sub-steps the user has pressed Continue past — gates the summary ✓ (a valid form alone does NOT mark a row done)
     activeStorefrontStep?: StorefrontSectionId; // Active Storefront sub-step within the build step (same footer-driven walk as Commerce)
