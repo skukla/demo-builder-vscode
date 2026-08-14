@@ -31,3 +31,18 @@ export function makeTestWriter(projectPath: string, recorded: Record<string, str
 export function enoentError(): NodeJS.ErrnoException {
     return Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
 }
+
+/**
+ * Contents of the isolated `.demo-builder-mcp/package.json` manifest with the
+ * given packages installed. Skill gating (`writeSkillFiles`) reads this via
+ * `readInstalledMcpPackages` — suites feed it to their readFile mock so the
+ * declared tools count as installed.
+ */
+export function mcpToolsManifest(packages: string[]): string {
+    return JSON.stringify({
+        name: 'demo-builder-mcp-tools',
+        private: true,
+        version: '1.0.0',
+        dependencies: Object.fromEntries(packages.map((pkg) => [pkg, '*'])),
+    });
+}

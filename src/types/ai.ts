@@ -68,10 +68,15 @@ export const DEMO_BUILDER_CONDITIONAL_SKILLS = ['extend-app-builder-app.md'] as 
  *
  * A skill missing from this map depends on no MCP tool. A guard test holds the
  * map against the template bodies in both directions, so a skill that starts
- * (or stops) instructing a tool fails until this map says so — the point is
- * that "if the tool is absent, which skills are affected?" now has an answer
- * the code can act on (see ADR-013's sibling backlog item,
- * `third-party-tooling-visible-and-optional`).
+ * (or stops) instructing a tool fails until this map says so.
+ *
+ * The code ACTS on this map: `writeSkillFiles` gates delivery on it — a skill
+ * whose tool is not usable by the project (entry doesn't apply, or its package
+ * isn't installed in `.demo-builder-mcp`, per `resolveAvailableMcpToolIds`) is
+ * not written, and a previously-delivered copy is reconciled through the
+ * ADR-013 removal matrix. Gating filters DELIVERY only —
+ * `DEMO_BUILDER_ALWAYS_ON_SKILLS` stays the classifier list, so a gated-out
+ * skill found on disk still classifies as first-party.
  */
 export const SKILL_MCP_TOOL_DEPENDENCIES = {
     'scrape-reference-site.md': 'playwright',

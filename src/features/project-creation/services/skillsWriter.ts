@@ -43,11 +43,11 @@ import removeCustomBlockContent from '../templates/skills/remove-custom-block.md
 import scrapeReferenceSiteContent from '../templates/skills/scrape-reference-site.md';
 import syncChangesContent from '../templates/skills/sync-changes.md';
 import updateCredentialsContent from '../templates/skills/update-credentials.md';
-import { resolveMcpToolsDir } from './aiDefaultsInstaller';
-import { projectNeedsAppBuilderTooling } from './aiToolingGate';
+import { readInstalledMcpPackages, resolveMcpToolsDir } from './aiDefaultsInstaller';
+import { projectNeedsAppBuilderTooling, resolveAvailableMcpToolIds } from './aiToolingGate';
 import type { GeneratedFileWriter } from './generatedFileWriter';
 import componentsConfig from '@/features/components/config/components.json';
-import { DEMO_BUILDER_ALWAYS_ON_SKILLS } from '@/types/ai';
+import { DEMO_BUILDER_ALWAYS_ON_SKILLS, SKILL_MCP_TOOL_DEPENDENCIES } from '@/types/ai';
 import type { Project } from '@/types/base';
 import type { RawComponentDefinition, RawComponentRegistry } from '@/types/components';
 
@@ -134,7 +134,19 @@ export const DEMO_BUILDER_SKILLS: ReadonlyArray<{ filename: string; content: str
  * user-edited skill is left in place and reported on `writer.report()`
  * rather than overwritten. No bundle write outside this seam. The `written`
  * return keeps its pre-ADR contract (the attempted Demo-Builder skill
- * filenames); skip visibility lives on the writer's report.
+ * filenames); skip/remove visibility lives on the writer's report.
+ *
+ * Tool-availability gating: a skill in `SKILL_MCP_TOOL_DEPENDENCIES` whose
+ * MCP tool is not usable by this project — the ai-defaults entry doesn't
+ * apply, or its package isn't in the isolated `.demo-builder-mcp` manifest
+ * (installed by `installAiDefaultsMcpTools` BEFORE this writer runs, on both
+ * the creation and regenerate paths — that ordering is load-bearing) — is
+ * not written and does not appear in `written`. A previously-delivered copy
+ * is reconciled via `writer.remove` with today's template as the ownership
+ * proof (ADR-013 removal matrix: recorded-hash match or byte-equal only; a
+ * user-edited copy is left and reported). `DEMO_BUILDER_ALWAYS_ON_SKILLS`
+ * stays the classifier list — a gated-out skill found on disk still
+ * classifies as first-party in the inspector; only delivery is filtered.
  */
 export async function writeSkillFiles(
     projectPath: string,
@@ -151,8 +163,18 @@ export async function writeSkillFiles(
         await writer.write(`.claude/skills/${filename}`, content);
     };
 
+    const installedPackages = await readInstalledMcpPackages(projectPath);
+    const gatedOut = gatedOutSkills(resolveAvailableMcpToolIds(project, installedPackages));
+
     await Promise.all(
-        DEMO_BUILDER_SKILLS.map(({ filename, content }) => writeSkill(filename, content)),
+        DEMO_BUILDER_SKILLS.map(({ filename, content }) =>
+            gatedOut.has(filename)
+                ? // Reconcile any previously-delivered copy. `content` is the
+                  // exact template we'd write today, so a pre-ADR unhashed
+                  // copy is removed only when byte-equal (provably ours).
+                  writer.remove(`.claude/skills/${filename}`, content)
+                : writeSkill(filename, content),
+        ),
     );
 
     // Copy Adobe skill bundles for components that declare aiSkillBundle.
@@ -178,7 +200,9 @@ export async function writeSkillFiles(
     // extend-app-builder-app skill teaching the runtime API-access loop
     // (list_console_apis → confirm → add_console_apis → build → deploy).
     // copyAdobeSkillBundle skips silently when the package isn't there.
-    const written = DEMO_BUILDER_SKILLS.map(({ filename }) => filename);
+    const written = DEMO_BUILDER_SKILLS.filter(({ filename }) => !gatedOut.has(filename)).map(
+        ({ filename }) => filename,
+    );
     if (projectNeedsAppBuilderTooling(project)) {
         await copyAdobeSkillBundle(
             resolveMcpToolsDir(projectPath),
@@ -197,6 +221,20 @@ export async function writeSkillFiles(
 }
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Always-on skill filenames whose declared MCP tool is not in the available
+ * set — gated OUT of delivery (not written; existing copies reconciled via
+ * the ADR-013 removal matrix). A skill absent from
+ * `SKILL_MCP_TOOL_DEPENDENCIES` depends on no tool and is never gated.
+ */
+function gatedOutSkills(availableToolIds: Set<string>): Set<string> {
+    return new Set(
+        Object.entries(SKILL_MCP_TOOL_DEPENDENCIES)
+            .filter(([, toolId]) => !availableToolIds.has(toolId))
+            .map(([filename]) => filename),
+    );
+}
 
 function lookupComponentDefinition(compId: string): RawComponentDefinition | undefined {
     const registry = components as unknown as Record<

@@ -11,7 +11,7 @@
 
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
-import { enoentError, makeTestWriter } from './generatedFileWriter.testUtils';
+import { enoentError, makeTestWriter, mcpToolsManifest } from './generatedFileWriter.testUtils';
 import {
     DEMO_BUILDER_SKILLS,
     writeSkillFiles,
@@ -135,6 +135,11 @@ function mockAdobeSkillBundle(skillFiles: Record<string, string[]>): void {
     });
 
     readFileMock.mockImplementation(async (filePath: string) => {
+        if (filePath.endsWith('.demo-builder-mcp/package.json')) {
+            // Installed-tools manifest: playwright present, so the gated
+            // skills stay deliverable and legacy count pins hold.
+            return mcpToolsManifest(['@playwright/mcp']);
+        }
         const filename = path.basename(filePath);
         const skillName = path.basename(path.dirname(filePath));
         if (filename.endsWith('.md')) {
@@ -178,9 +183,16 @@ describe('skillsWriter', () => {
         jest.clearAllMocks();
         // Default: no Adobe bundle present. Individual tests can override.
         mockMissingAdobeBundle();
-        // Default: nothing on disk — the ADR-013 writer's presence probe ENOENTs,
-        // so every skill lands on the absent→write matrix row.
-        (fsPromises.readFile as jest.Mock).mockRejectedValue(enoentError());
+        // Default: nothing on disk — the ADR-013 writer's presence probe
+        // ENOENTs, so every skill lands on the absent→write matrix row —
+        // EXCEPT the installed-tools manifest, which declares playwright so
+        // the gated skills stay deliverable and legacy count pins hold.
+        (fsPromises.readFile as jest.Mock).mockImplementation(async (p: string) => {
+            if (p.endsWith('.demo-builder-mcp/package.json')) {
+                return mcpToolsManifest(['@playwright/mcp']);
+            }
+            throw enoentError();
+        });
     });
 
     describe('core skills (always written, all project types)', () => {
@@ -611,6 +623,9 @@ describe('skillsWriter', () => {
                 throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
             });
             readFileMock.mockImplementation(async (filePath: string) => {
+                if (filePath.endsWith('.demo-builder-mcp/package.json')) {
+                    return mcpToolsManifest(['@adobe-commerce/commerce-extensibility-tools']);
+                }
                 const skillName = path.basename(path.dirname(filePath));
                 return `---\nname: ${skillName}\ndescription: ISK skill ${skillName}\n---\n\n# ${skillName}\n`;
             });
@@ -652,39 +667,9 @@ describe('skillsWriter', () => {
     });
 
     // ADR-013 hash-and-skip routing lives in its own suite:
-    // skillsWriter.hashAndSkip.test.ts (this file is at the max-lines cap).
-
-    describe('return summary', () => {
-        it('returns the list of skill filenames written (the thirteen Demo-Builder skills)', async () => {
-            mockMissingAdobeBundle();
-
-            const summary = await writeSkills('/projects/test', makeEdsProject());
-
-            expect(summary.written).toEqual(
-                expect.arrayContaining([
-                    'add-component.md',
-                    'sync-changes.md',
-                    'update-credentials.md',
-                    'create-eds-project.md',
-                    'diagnose-demo.md',
-                    'register-custom-block.md',
-                ])
-            );
-            // Thirteen always-written skills + the conditional extend-app-builder-app.
-            expect(summary.written).toHaveLength(14);
-            expect(summary.written).toContain('extend-app-builder-app.md');
-        });
-
-        it('returns bare filenames (basenames), not absolute paths', async () => {
-            mockMissingAdobeBundle();
-
-            const summary = await writeSkills('/projects/test', makeEdsProject());
-
-            for (const name of summary.written) {
-                expect(path.basename(name)).toBe(name);
-            }
-        });
-    });
+    // skillsWriter.hashAndSkip.test.ts. Tool-availability gating AND the
+    // `written` summary contract (now gating-shaped) live in
+    // skillsWriter.toolGating.test.ts (this file is at the max-lines cap).
 });
 
 function writtenContentForPath(filePath: string): string | undefined {

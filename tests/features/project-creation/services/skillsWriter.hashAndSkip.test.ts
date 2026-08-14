@@ -17,6 +17,7 @@ import * as fsPromises from 'fs/promises';
 import {
     enoentError,
     makeTestWriter as makeWriter,
+    mcpToolsManifest,
 } from './generatedFileWriter.testUtils';
 import { writeSkillFiles } from '@/features/project-creation/services/skillsWriter';
 import type { Project, ComponentInstance } from '@/types/base';
@@ -94,6 +95,9 @@ function mockAdobeSkillBundle(skillFiles: Record<string, string[]>): void {
         throw enoentError();
     });
     (fsPromises.readFile as jest.Mock).mockImplementation(async (filePath: string) => {
+        if (filePath.endsWith('.demo-builder-mcp/package.json')) {
+            return mcpToolsManifest(['@playwright/mcp']);
+        }
         const skillName = path.basename(path.dirname(filePath));
         return `---\nname: ${skillName}\ndescription: Adobe skill ${skillName}\n---\n\n# ${skillName}\n`;
     });
@@ -111,15 +115,25 @@ describe('skillsWriter — hash-and-skip routing (ADR-013)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockMissingAdobeBundle();
-        // Default: nothing on disk — the writer's presence probe ENOENTs,
-        // so every skill lands on the absent→write matrix row.
-        (fsPromises.readFile as jest.Mock).mockRejectedValue(enoentError());
+        // Default: nothing on disk — the writer's presence probe ENOENTs, so
+        // every skill lands on the absent→write matrix row — EXCEPT the
+        // installed-tools manifest, which declares playwright so the gated
+        // skills stay deliverable and this suite's count pins hold.
+        (fsPromises.readFile as jest.Mock).mockImplementation(async (p: string) => {
+            if (p.endsWith('.demo-builder-mcp/package.json')) {
+                return mcpToolsManifest(['@playwright/mcp']);
+            }
+            throw enoentError();
+        });
     });
 
     it('skips a user-edited skill while the other thirteen still write', async () => {
         const editedAbs = '/projects/test/.claude/skills/sync-changes.md';
         (fsPromises.readFile as jest.Mock).mockImplementation(async (p: string) => {
             if (p === editedAbs) return '# user rewrote this skill';
+            if (p.endsWith('.demo-builder-mcp/package.json')) {
+                return mcpToolsManifest(['@playwright/mcp']);
+            }
             throw enoentError();
         });
         const writer = makeWriter('/projects/test', {
@@ -137,6 +151,9 @@ describe('skillsWriter — hash-and-skip routing (ADR-013)', () => {
         const editedAbs = '/projects/test/.claude/skills/sync-changes.md';
         (fsPromises.readFile as jest.Mock).mockImplementation(async (p: string) => {
             if (p === editedAbs) return '# user rewrote this skill';
+            if (p.endsWith('.demo-builder-mcp/package.json')) {
+                return mcpToolsManifest(['@playwright/mcp']);
+            }
             throw enoentError();
         });
         const writer = makeWriter('/projects/test', {
