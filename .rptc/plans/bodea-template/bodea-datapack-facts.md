@@ -13,6 +13,14 @@ POST /batch-get-data-items  {datapack_name, version, data_types:[...], include_c
 Base URL = the `demoBuilder.dataInstaller.apiBaseUrl` default in demo-builder-vscode
 `package.json` (namespace-scoped — read it, don't paste it). Token =
 `aio config get ims.contexts.cli.access_token --json`. Any valid IMS **user** token works.
+
+⚠️ **Provenance rule for anything in this file.** Facts marked MEASURED came from the deployed
+service or a live instance. The local `data-installer-api-b2b` checkout is a **2026-03-06
+snapshot ~5 months behind the deployment** (proof: `commerce_instance` appears nowhere in it,
+yet every live endpoint accepts it). Anything read from that repo is a hypothesis about the
+deployment, not a statement of it. Also note: **export is currently broken for ACCS on stage** —
+`get-export-items` rejects both the tenant id and the full URL while the same credentials pass
+import validate — so capturing a pack *from* an instance is not an option today.
 **Trap:** `get-data-item` returns `data` as a JSON *string* — `JSON.parse` it.
 `batch-get-data-items` 400s without an explicit non-empty `data_types`.
 See `docs/systems/data-installer.md` for the full contract; `npm run data-installer:drift`
@@ -26,19 +34,29 @@ same request), the lookup fails and **the entire `products` type fails atomicall
 products land.** This bit a live run on 2026-08-14. Always import `customer_groups` with/before
 `products`.
 
-Also: the pack hardcodes `website_ids: [3]`, but the service rewrites it to the session website
-(`replaceWebsiteIdsWithSession()`, default `base`/id 1) — verified live, all 56 landed on
-website 1. Do not design around website 3.
+Also: the pack hardcodes `website_ids: [3]`, but the service rewrites it to the session website.
+**MEASURED for `products`:** all 56 landed on website 1 with the pack declaring `[3]`. Do not
+design around website 3 existing.
+*Hypothesis only (from the March source drop, unverified against the deployment):* that the
+mechanism is `replaceWebsiteIdsWithSession()` declared in `config/data_processors_import.json`,
+and that `cart_rules`, `product_export` and `stocks` receive equivalent treatment. The products
+behaviour is empirical; the other three types are not.
 
 ## Products — 56 total (32 simple, 17 virtual, 7 configurable)
 
-**No product carries `media_gallery_entries` — and this is BY DESIGN, system-wide.** The pack-prep
-conversion deliberately clears `base_image`, `small_image`, `thumbnail`, `swatch_image`,
-`additional_images` and their labels — `data-installer-api-b2b/docs/CONVERT_CSV_EXPORT.md` §6
-"Image Path Removal", rationale "to avoid broken references". Measured across **11 packs / 4
-owners: zero `media_gallery_entries` anywhere**, including all citisignal versions. The products
-schema permits them; nothing uses them and the tooling strips them. (`TODO.md` lists image
-import as an open question for the service, not an unused feature.)
+**No product carries `media_gallery_entries` — and this is BY DESIGN, system-wide.**
+
+- **MEASURED (live, `get-data-item`):** zero `media_gallery_entries` across **11 packs / 4
+  owners**, including every citisignal version. This is the load-bearing fact and it stands
+  on its own.
+- **AUTHORITATIVE (the service's author):** images "was expected to be in AEM" — see below.
+- *Explanation only, from the **March 2026 source drop*** (`data-installer-api-b2b/docs/
+  CONVERT_CSV_EXPORT.md` §6 "Image Path Removal"): pack-prep clears `base_image`, `small_image`,
+  `thumbnail`, `swatch_image`, `additional_images` and their labels, "to avoid broken
+  references". ⚠️ **That local repo is a snapshot dated 2026-03-06, ~5 months behind the deployed
+  service** — `commerce_instance` appears nowhere in it although every live endpoint accepts it.
+  Cite it as "the March source drop says", never as "the service does". The *outcome* here is
+  measured, so only the stated reason depends on the drop.
 
 So product imagery is **not** the datapack's job — see "Where product images come from" below.
 (This is also why product-teaser's unguarded `images[0]` was a certainty rather than a risk;
