@@ -139,7 +139,7 @@ Only the terminal harness was anchored correctly.
   the workspace already matches the project, no reload happens — the dashboard
   webview just surfaces.
 - **Wizard finish** (`openProjectAsWorkspace` from
-  `projectFinalizationService.ts`) opens the freshly-created project as the
+  `projectFinalizationService.ts`; the AI-bundle generation it triggered now lives in `aiBundleService.ts`) opens the freshly-created project as the
   current window's workspace right after AI context files and global MCP
   registration. The user flows from "creating a demo" into "working on the
   demo" without an extra gesture.
@@ -183,7 +183,7 @@ true by construction.
   `ProjectRow.tsx` — shift/cmd-click modifier passthrough
 - `src/features/dashboard/commands/showDashboard.ts` —
   `shouldAutoReopenProjectsList` helper + `dispose()` override
-- `src/features/project-creation/services/projectFinalizationService.ts` —
+- `src/features/project-creation/services/aiBundleService.ts` (generation moved here from projectFinalizationService, 2026-08-14) —
   `openProjectAsWorkspace`, wired into `executor.ts` as Phase 7
 - `src/commands/openInClaude.ts` — workspace-aware `auto` mode, mismatch
   warning for `extension` mode

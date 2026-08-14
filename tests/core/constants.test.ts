@@ -10,13 +10,13 @@ import { AI_CONTEXT_VERSION, COMPONENT_IDS, ComponentId } from '@/core/constants
 describe('AI_CONTEXT_VERSION', () => {
     // Pin the current bundle version. Bump this pin ONLY together with a real
     // generated-content change (see the ai-context-authoring discipline): the
-    // constant re-gates every existing project for a bundle refresh.
-    // v7: the always-on `diagnose-demo` skill. None of the twelve generated skills
-    // covered diagnosis — every one told the agent how to DO something — so a read
-    // like get_store_structure had no home and nothing told an agent to check store
-    // scope when product pages come back empty.
-    it('is 7 (diagnose-demo skill)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(7);
+    // constant re-gates every existing project for a bundle refresh — since v8
+    // via the silent activation sweep rather than a prompt.
+    // v8: hash-and-skip edit survival (ADR-013), tiered refresh, and
+    // Playwright-skill gating shipped as ONE batch sharing one bump. This bump
+    // triggers the first silent tier-2 sweep on every existing project.
+    it('is 8 (ADR-013 hash-and-skip + tiered refresh + skill gating)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(8);
     });
 });
 

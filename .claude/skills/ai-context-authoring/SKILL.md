@@ -11,10 +11,27 @@ disciplines that rot silently when skipped.
 ## Discipline 1 — hand-bump `AI_CONTEXT_VERSION` (src/core/constants.ts)
 
 Bump it on ANY change to generated content: a skill template, an AGENTS.md section, MCP
-config shape, or ai-defaults gating. The on-open freshness check compares each project's
-stamp against this constant; without the bump, **existing projects never learn the bundle
-changed** — no badge, no regenerate prompt, silent staleness. Record what each version
-added in the comment above the constant.
+config shape, or ai-defaults gating. Since v8 the stamp drives the ACTIVATION SWEEP
+(`aiBundleActivationRefresh`), not a prompt: a stale project is silently refreshed
+(tiers 1+2, hash-and-skip protected) on the next extension start. Without the bump,
+**existing projects never learn the bundle changed** — no sweep refresh, silent
+staleness. The freshness check's badge now fires ONLY on the composition axis (a
+package download genuinely needed). Record what each version added in the comment
+above the constant.
+
+## Discipline 1b — every bundle write goes through `GeneratedFileWriter` (ADR-013)
+
+`generatedFileWriter.ts` is the single hash-and-skip write path: sha-256 per file,
+recorded in the manifest's `aiFileHashes`; a user-edited file is skipped + reported,
+never overwritten; removal needs positive proof (hash match, or byte-equal to today's
+template). A writer that calls `fsPromises.writeFile` directly for a bundle file
+reverts that file to overwrite behavior — the review grep is "zero direct writeFile in
+skillsWriter/aiContextWriter/mcpConfigWriter". The tier API lives in
+`aiBundleService.ts` (`refreshMcpConfigs` = tier 1 configs, `refreshContextAndSkills`
+= tier 2 content, `generateAIContextFiles` = both + stamp); tier 3 stays
+`installAiDefaultsMcpTools`. The three Playwright-driven skills
+(`SKILL_MCP_TOOL_DEPENDENCIES` in `@/types/ai`) are written only when
+`@playwright/mcp` is installed, and removed (with proof) when it is not.
 
 ## Discipline 2 — the gate has FOUR seams; change all or none
 

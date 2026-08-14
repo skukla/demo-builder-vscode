@@ -82,7 +82,7 @@
 | [010](adr/010-content-copy-completeness.md) | Content-copy completeness — follow document references so unindexed fragments aren't dropped | Accepted |
 | [011](adr/011-app-builder-deployables.md) | App Builder deployables — a keyed set of deployable components in one App Builder project (shipped as `appBuilderComponents`) | Accepted; D1–D2 implemented, D3 pending |
 | [012](adr/012-diagnostic-surfaces.md) | Diagnostic surfaces — every capability human-reachable first, MCP tools wrap the same core; no remote probe manifest | Accepted; prerequisite landed, surfaces planned (beta.123) |
-| [013](adr/013-generated-file-edit-survival.md) | Generated AI files — hash-and-skip edit survival (refresh overwrites only unmodified files) | Accepted; implementation pending |
+| [013](adr/013-generated-file-edit-survival.md) | Generated AI files — hash-and-skip edit survival (refresh overwrites only unmodified files) | Implemented (feature/tiered-ai-refresh, 2026-08-14) |
 
 ## Quick Reference
 

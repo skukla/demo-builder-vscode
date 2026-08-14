@@ -83,7 +83,7 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         expect(result.current.aiReady.text).not.toBe('Updating AI configuration…');
     });
 
-    it('flips the AI badge to yellow "AI files out of date" when the freshness check reports stale', () => {
+    it('flips the AI badge to yellow "AI tooling missing" when the freshness check warns (composition axis)', () => {
         const { result } = renderHook(() => useDashboardStatus());
 
         // Files verify healthy → green Ready.
@@ -94,19 +94,19 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
 
         // Freshness check reports staleness (since ADR-013 only the COMPOSITION
         // axis warns — version-stale is repaired silently by the activation sweep)
-        // → yellow "AI files out of date" (which surfaces the Regenerate action).
+        // → yellow "AI tooling missing" (which surfaces the Regenerate action).
         // No prompt, no "Updating" state — this is detect-only.
         act(() => {
             mocks.state.orgHandler?.({
                 checkId: 'ai-context-freshness',
                 status: 'warning',
-                message: 'AI files out of date',
+                message: "AI tooling missing for this project's components",
             });
         });
         expect(result.current.aiReady).toEqual({
             label: 'AI',
             color: 'yellow',
-            text: 'AI files out of date',
+            text: 'AI tooling missing',
         });
 
         // reRunnable: after Regenerate persists a fresh stamp, the next run reports
@@ -126,10 +126,10 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
             mocks.state.orgHandler?.({
                 checkId: 'ai-context-freshness',
                 status: 'warning',
-                message: 'AI files out of date',
+                message: "AI tooling missing for this project's components",
             });
         });
-        expect(result.current.aiReady.text).toBe('AI files out of date');
+        expect(result.current.aiReady.text).toBe('AI tooling missing');
 
         // Click "Regenerate AI files": the badge telegraphs the in-flight run
         // (otherwise the click reads as a dead link for up to a minute) …
@@ -158,7 +158,7 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
             resolveRegen({ success: true });
             await done;
         });
-        expect(result.current.aiReady.text).not.toBe('AI files out of date');
+        expect(result.current.aiReady.text).not.toBe('AI tooling missing');
     });
 
     it('returns green Ready when all signals pass', () => {

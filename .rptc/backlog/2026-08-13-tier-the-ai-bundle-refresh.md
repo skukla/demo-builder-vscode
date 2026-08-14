@@ -21,16 +21,17 @@
 > including the healthy verdict (`debug`); either stale branch logs the WHY at `info`,
 > naming the missing packages. A test pins that the healthy path logs.
 >
-> **Policy DECIDED 2026-08-14 — option 1, hash-and-skip**, recorded as
-> [ADR-013](../../docs/architecture/adr/013-generated-file-edit-survival.md):
-> generated files carry a write-time hash; refresh overwrites only files that still
-> match; edited files are skipped, logged, and reported. That unblocks the remaining
-> steps, none of which are implemented yet: 2 (per-tier version detail), 3 (split
-> `generateAIContextFiles` by tier), 4 (silent tier-1 repair on activation),
-> 5 (hash-and-skip itself, per the ADR), 6 (prompt wording), 8 (reconcile
-> `updateExecutor`'s silent regeneration with the check's prompt). The under-firing
-> HALF is fixed via the existing consent surface; the proportionality half is
-> designed but unbuilt.
+> **REMAINING STEPS SHIPPED 2026-08-14 on `feature/tiered-ai-refresh`** (policy =
+> option 1 hash-and-skip, [ADR-013](../../docs/architecture/adr/013-generated-file-edit-survival.md),
+> now Implemented): step 3 → `aiBundleService.ts` tier split; step 4 →
+> `aiBundleActivationRefresh.ts` silent tier-1 repair every activation; step 5 →
+> `generatedFileWriter.ts` seam, hashes in the manifest's `aiFileHashes`, edited
+> files kept + reported in the AI Capabilities modal; step 6 → the Regenerate step
+> names the packages it downloads; step 8 → the update paths flow through the same
+> tiered+hashed function (barrel). Step 2 (per-tier version detail) was dropped as
+> YAGNI — with tier 2 silent, a single stamp + the composition axis covers every
+> case. Version staleness no longer prompts; only a needed download does.
+> Move this item to `.rptc/complete/` when the branch merges to develop.
 
 *(Filed as "tier the AI-bundle refresh". Renamed after research widened it — see
 "The check is also under-firing".)*

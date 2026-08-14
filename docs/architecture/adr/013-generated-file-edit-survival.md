@@ -1,9 +1,9 @@
 # ADR-013: Generated AI Files — Hash-and-Skip Edit Survival
 
-**Status**: Accepted — policy decided 2026-08-14; implementation pending (backlog: `tier-the-ai-bundle-refresh`)
+**Status**: Implemented 2026-08-14 (`feature/tiered-ai-refresh`) — `generatedFileWriter.ts` is the seam; hashes live in the manifest's `aiFileHashes`; the activation sweep (`aiBundleActivationRefresh.ts`) is the silent driver
 **Date**: 2026-08-14
 **Decision Maker**: Project Owner
-**Implementer**: Pending
+**Implementer**: Implemented on `feature/tiered-ai-refresh` (steps 1-8, TDD)
 
 Related: [ADR-004 Claude Code Harness](004-claude-code-harness.md) (why every project carries a generated AI bundle at all). Backlog item `.rptc/backlog/2026-08-13-tier-the-ai-bundle-refresh.md` holds the full refresh redesign this decision unblocks; the `ai-context-authoring` skill governs the seams.
 

@@ -16,8 +16,12 @@
 > fails the sweep until the map agrees. No `AI_CONTEXT_VERSION` bump: generated
 > content is unchanged; only the declaration and its guards were added.
 >
-> **NOT done**: steps 2–7 — gating `skillsWriter` on tool availability (a
-> generated-content change: batch with a version bump), the opt-out setting
+> **Step 2 SHIPPED 2026-08-14 on `feature/tiered-ai-refresh`** (with the ADR-013
+> batch, sharing its v8 `AI_CONTEXT_VERSION` bump): `writeSkillFiles` gates the
+> three Playwright skills on `resolveAvailableMcpToolIds` (entry applies AND
+> package installed) and removes stale copies only on positive proof of
+> ownership; the AI Capabilities modal flags edited/kept files.
+> **NOT done**: steps 3–7 — the opt-out setting
 > threaded through all four gate seams, the AI Capabilities modal saying why a
 > skill is absent, the Chromium cache pre-check, real install progress, and
 > re-enable-must-install.

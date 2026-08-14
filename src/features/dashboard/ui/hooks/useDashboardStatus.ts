@@ -108,7 +108,7 @@ export interface AiReadyState {
         | 'Broken'
         | 'Updating AI configuration…'
         | 'Regenerating AI files…'
-        | 'AI files out of date';
+        | 'AI tooling missing';
 }
 
 /**
@@ -335,7 +335,7 @@ export function useDashboardStatus(
     const [mcpHealing, setMcpHealing] = useState(false);
     // True when the ai-context-freshness check reports the project's AI bundle is
     // older than the extension (checkResult{ai-context-freshness, warning} → true;
-    // ok → false). Detect-only: it flips the AI badge to "AI files out of date",
+    // ok → false). Detect-only: it flips the AI badge to "AI tooling missing",
     // which surfaces the existing "Regenerate AI files" action (the remediation).
     const [aiContextStale, setAiContextStale] = useState(false);
     // Track whether status was requested (prevent StrictMode double-request)
@@ -425,10 +425,12 @@ export function useDashboardStatus(
             }
 
             if (outcome.checkId === CHECK_IDS.AI_CONTEXT_FRESHNESS) {
-                // Detect-only: `warning` = the project's AI bundle is stale (older
-                // than the extension) → flip the badge to "AI files out of date";
-                // `ok` = current. The check is reRunnable, so a Regenerate (which
-                // persists a fresh stamp) clears this on the next status refresh.
+                // Detect-only: `warning` = the COMPOSITION axis found tooling the
+                // project qualifies for but does not have (a real download —
+                // consent stays with the user) → flip the badge to "AI tooling
+                // missing". Version staleness no longer warns here: the
+                // activation sweep repairs it silently (ADR-013 hash-and-skip).
+                // reRunnable, so a Regenerate clears this on the next refresh.
                 setAiContextStale(outcome.status === 'warning');
                 return;
             }
@@ -545,7 +547,7 @@ export function useDashboardStatus(
                 // The handler persisted a fresh aiContextVersion stamp, but
                 // `aiContextStale` is fed by the ON-OPEN freshness check, which
                 // does not re-run here — without this clear, a successful
-                // regenerate leaves the badge stuck on "AI files out of date"
+                // regenerate leaves the badge stuck on "AI tooling missing"
                 // until the dashboard reopens. The reRunnable check re-confirms
                 // on next open.
                 setAiContextStale(false);
@@ -731,12 +733,12 @@ export function useDashboardStatus(
             return { label: 'AI', color: 'yellow', text: 'Setup incomplete' };
         }
 
-        // Files verify healthy, but the project's AI bundle predates the current
-        // extension (a new skill/template shipped since it was generated). Yellow
-        // surfaces the "Regenerate AI files" action; the reRunnable check clears it
-        // once the user regenerates.
+        // Files verify healthy, but the project qualifies for MCP tooling it has
+        // not received (composition axis — gaining a component after creation).
+        // Yellow surfaces the "Regenerate AI files" action, which downloads it;
+        // the reRunnable check clears the badge once the packages land.
         if (aiContextStale) {
-            return { label: 'AI', color: 'yellow', text: 'AI files out of date' };
+            return { label: 'AI', color: 'yellow', text: 'AI tooling missing' };
         }
 
         return { label: 'AI', color: 'green', text: 'Ready' };
