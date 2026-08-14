@@ -26,11 +26,14 @@ import { provisionAccsCredentials } from '../services/accsCredentialProvisioner'
 import { resolveCommerceCredentials } from '../services/commerceCredentials';
 import {
     DataInstallerWriteClient,
-    type CommerceCredentials,
     type ImportRequest,
     type ImportTarget,
 } from '../services/dataInstallerWriteClient';
 import { watchImportJob } from '../services/importJobRunner';
+import {
+    buildScopeDiscoveryParams,
+    groupStoreViewsByWebsite,
+} from '../services/importScopeDiscovery';
 import { downloadWorkspaceConfigJson } from '../services/workspaceConfigDownload';
 import type { ImportJobRecord } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
@@ -42,10 +45,8 @@ import {
     deriveAccsTenantId,
     lookupComponentConfigValue,
 } from '@/features/components/services/envVarHelpers';
-import { selectDiscoveryService } from '@/features/eds/services/accsDiscoveryConfig';
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import type { Project } from '@/types/base';
-import type { CommerceStoreStructure, StoreDiscoveryParams } from '@/types/commerceStore';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -89,44 +90,14 @@ export const importHandlers = defineHandlers({
         }
         const { writeClient, request } = prepared;
 
-        try {
-            // The sync twin is the only thing that will tell us this request is
-            // malformed. A 202 from the async entry point would not.
-            const verdict = await writeClient.validateImport(request);
-            if (!verdict.valid) {
-                return {
-                    success: false,
-                    error: verdict.reason ?? 'The Data Installer rejected this import request.',
-                };
-            }
-
-            const start = await writeClient.startImport(request);
-            const record: ImportJobRecord = {
-                activationId: start.activationId,
-                datapackName: request.id.name,
-                operation: 'import',
-                version: request.id.version,
-                commerceInstance: request.commerceInstance,
-                dataTypes: request.dataTypes,
-                startedAt: new Date().toISOString(),
-                outcome: 'watching',
-                perType: {},
-            };
-            const transient = new TransientStateManager(context.context);
-            await transient.set(JOB_KEY, record);
-
-            // DETACHED on purpose. Awaiting would hold the webview request open
-            // for up to ten minutes and tie the job's life to the panel's.
-            void watchAndRecord(context, transient, record);
-
-            return { success: true, data: { activationId: start.activationId } };
-        } catch (error) {
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'The import could not be started.',
-                code: ErrorCode.UNKNOWN,
-            };
-        }
+        // The sync twin is the only thing that will tell us this request is
+        // malformed. A 202 from the async entry point would not.
+        return runAndWatch(context, writeClient, request, {
+            operation: 'import',
+            begin: () => writeClient.startImport(request),
+            rejected: 'The Data Installer rejected this import request.',
+            failed: 'The import could not be started.',
+        });
     },
 
     /**
@@ -205,40 +176,12 @@ export const importHandlers = defineHandlers({
         }
         const { writeClient, request } = prepared;
 
-        try {
-            const verdict = await writeClient.validateImport(request);
-            if (!verdict.valid) {
-                return {
-                    success: false,
-                    error: verdict.reason ?? 'The Data Installer rejected this reset request.',
-                };
-            }
-
-            const start = await writeClient.startDelete(request);
-            const record: ImportJobRecord = {
-                activationId: start.activationId,
-                datapackName: request.id.name,
-                operation: 'reset',
-                version: request.id.version,
-                commerceInstance: request.commerceInstance,
-                dataTypes: request.dataTypes,
-                startedAt: new Date().toISOString(),
-                outcome: 'watching',
-                perType: {},
-            };
-            const transient = new TransientStateManager(context.context);
-            await transient.set(JOB_KEY, record);
-
-            void watchAndRecord(context, transient, record);
-
-            return { success: true, data: { activationId: start.activationId } };
-        } catch (error) {
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'The reset could not be started.',
-                code: ErrorCode.UNKNOWN,
-            };
-        }
+        return runAndWatch(context, writeClient, request, {
+            operation: 'reset',
+            begin: () => writeClient.startDelete(request),
+            rejected: 'The Data Installer rejected this reset request.',
+            failed: 'The reset could not be started.',
+        });
     },
 
     /**
@@ -556,6 +499,66 @@ async function stopWatching(
     await transient.set(JOB_KEY, { ...record, outcome: 'unwatchable', reason });
 }
 
+/**
+ * Validate, begin, record, and detach the watch — the half import and reset share.
+ *
+ * These two handlers were a verbatim 35-line copy of each other, differing only
+ * in which client method they call and two message strings. `prepareImport` was
+ * already extracted at the second caller because "the two paths have to agree
+ * byte for byte"; the RECORDING half was not, and it is the half that already
+ * drifted once — `operation` was added to `ImportJobRecord` precisely because a
+ * reset announced itself as "Import finished" in front of a user.
+ *
+ * The watch is DETACHED on purpose: awaiting it would hold the webview request
+ * open for the ten minutes a long install can take, and tie the job's life to
+ * the panel's.
+ */
+async function runAndWatch(
+    context: HandlerContext,
+    writeClient: DataInstallerWriteClient,
+    request: ImportRequest,
+    spec: {
+        operation: ImportJobRecord['operation'];
+        begin: () => Promise<{ activationId: string }>;
+        /** Wording when the service refuses the request shape. */
+        rejected: string;
+        /** Wording when the call itself fails. */
+        failed: string;
+    },
+): Promise<HandlerResponse> {
+    try {
+        const verdict = await writeClient.validateImport(request);
+        if (!verdict.valid) {
+            return { success: false, error: verdict.reason ?? spec.rejected };
+        }
+
+        const started = await spec.begin();
+        const record: ImportJobRecord = {
+            activationId: started.activationId,
+            datapackName: request.id.name,
+            operation: spec.operation,
+            version: request.id.version,
+            commerceInstance: request.commerceInstance,
+            dataTypes: request.dataTypes,
+            startedAt: new Date().toISOString(),
+            outcome: 'watching',
+            perType: {},
+        };
+        const transient = new TransientStateManager(context.context);
+        await transient.set(JOB_KEY, record);
+
+        void watchAndRecord(context, transient, record);
+
+        return { success: true, data: { activationId: started.activationId } };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : spec.failed,
+            code: ErrorCode.UNKNOWN,
+        };
+    }
+}
+
 /** Validate the payload, returning either usable input or the reason it is not. */
 function readInput(
     payload: StartImportPayload | undefined,
@@ -589,76 +592,6 @@ function readInput(
         return target;
     }
     return { datapackName, version, commerceInstance, dataTypes, target: target.target };
-}
-
-/**
- * Discovery params for whichever backend this project runs.
- *
- * Returns undefined when the project cannot be discovered against (no URL, or
- * ACCS without a configured discovery service / usable token) — targeting is
- * optional, so that is an empty picker rather than an error.
- */
-async function buildScopeDiscoveryParams(
-    context: HandlerContext,
-    project: Project,
-    credentials: CommerceCredentials,
-): Promise<StoreDiscoveryParams | undefined> {
-    const configs = project.componentConfigs ?? {};
-
-    if (credentials.kind === 'paas') {
-        const baseUrl = lookupComponentConfigValue(configs, PAAS_URL);
-        return baseUrl
-            ? {
-                  backendType: 'paas',
-                  baseUrl,
-                  username: credentials.username,
-                  password: credentials.password,
-              }
-            : undefined;
-    }
-
-    const accsEndpoint = lookupComponentConfigValue(configs, ACCS_GRAPHQL_ENDPOINT);
-    if (!accsEndpoint) {
-        return undefined;
-    }
-    // The ACCS path goes through the discovery service with the USER's IMS token
-    // — the project's Commerce pair is not what that service authenticates.
-    const selection = selectDiscoveryService(project.adobe?.organization);
-    if (!selection.ok) {
-        return undefined;
-    }
-    const inspection = await context.authManager?.getTokenManager().inspectToken();
-    if (!inspection?.token) {
-        return undefined;
-    }
-    return {
-        backendType: 'accs',
-        baseUrl: accsEndpoint,
-        accsGraphqlEndpoint: accsEndpoint,
-        discoveryServiceUrl: selection.serviceUrl,
-        imsToken: inspection.token,
-    };
-}
-
-/**
- * Websites, each carrying the store views that belong to it.
- *
- * The picker needs website→store view; the structure arrives as three flat
- * lists joined by numeric ids, so the join happens once here rather than in the
- * webview. Store GROUPS are deliberately collapsed: the service takes a
- * `store_code` that is a store VIEW code, so a group tier would be a level the
- * user picks through and nothing consumes.
- */
-function groupStoreViewsByWebsite(
-    structure: CommerceStoreStructure,
-): Array<{ code: string; name: string; storeViews: Array<{ code: string; name: string }> }> {
-    return structure.websites.map((website) => ({
-        code: website.code,
-        name: website.name,
-        storeViews: structure.storeViews
-            .filter((view) => Number(view.website_id) === Number(website.id))
-            .map((view) => ({ code: view.code, name: view.name })),
-    }));
 }
 
 /**
