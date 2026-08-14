@@ -575,6 +575,56 @@ What each answer means:
 request carries credentials — this repo is public. Report the shape of the answer,
 not the answer.
 
+## 6b. Stage 3 (export) — what the probe found, 2026-08-14
+
+Three findings, none of which the plan anticipated. All measured against the
+deployed stage service with a positive control.
+
+### `get-export-items` is unusable for an ACCS instance
+
+It is the endpoint that would feed a selective-export UI (which items exist, so
+the user can choose). Both instance forms are refused:
+
+| Request | Result |
+|---|---|
+| `commerce_instance` = tenant id (the form every other endpoint takes) | **400** — "must be a full URL (https://…) or set `COMMERCE_INSTANCE_URL_TEMPLATE` when using an instance id" |
+| `commerce_instance` = the instance's full REST base URL | **400** — "Pre-flight check failed for all configured site types (accs, local)" |
+
+**The control rules out our credentials**: the same pair and the same tenant id,
+in the same script, return **200** from `process-datapack` (`validate`) and
+**200** from `get-websites-and-stores`. So this is the endpoint, not the caller.
+
+Consequence: **a selections/filter UI cannot be built against ACCS today.** An
+export of everything for a data type may still work — that path was not probed,
+see below.
+
+### The export contract differs from import's in two ways
+
+- **Request**: the export docs use `base_url`, not `commerce_instance`
+  (`EXPORT_GUIDE.md` scenarios 1 and 2).
+- **Response**: `results: [{data_type, success, entity_counts: {fetched,
+  selected, exported, stored, excluded, filtered_out}, dependencies, message}]`
+  — a different shape from import's `data_types: {<type>: {status}}` map. The
+  Stage 2 parsers do not read it.
+
+Export also appears to write the datapack itself (`entity_counts.stored`), with
+no separate `create-datapack` call in any documented scenario — contradicting
+the plan's "needs `create-datapack` + `add-data-item` on the client".
+
+### The local `data-installer-api-b2b` source drop is STALE — do not trust it alone
+
+Dated **2026-03-06**, five months behind the deployment. The tell: the string
+`commerce_instance` appears NOWHERE in that source, yet every endpoint above
+accepts it live and the extension's imports have always used it.
+
+What survived re-verification against the live service: the
+`get-websites-and-stores` two-level shape (`websites[].stores[]`, admin already
+stripped) and the processor vocabularies (pulled live, not read). What was
+verified live independently: the `website_ids` substitution. Treat anything else
+read only from that drop as a hypothesis needing a live check.
+
+---
+
 ## 7. See also
 
 - [MCP Server](./mcp-server.md) — §9 lists the six read tools
