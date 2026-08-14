@@ -334,12 +334,31 @@ Two operational facts learned the hard way:
   multi-root instance (Default + CitiSignal + a pack's root) makes an import look
   like a no-op through that endpoint while `per-type: success` is telling the
   truth. Use `GET /V1/categories/list` (flat search) to see reality.
-- **Bodea's `products` hard-code `website_ids: [3]`** (numeric ids, 116
-  references). `websites` is not an importable type, so a full Bodea install
-  requires a third website to already exist WITH THAT ID. Validate will not catch
-  its absence — it checks request shape, not referential integrity — so this
-  surfaces as `partial`/errors at import time. A pack-authoring portability
-  issue, not an installer defect.
+- **Bodea's `products` hard-code `website_ids: [3]` — and the service rewrites
+  them.** (116 numeric references; an earlier revision of this doc called this a
+  portability landmine, which was wrong.) The service source
+  (`data-installer-api-b2b`, `config/data_processors_import.json`) declares
+  `website_ids: replaceWebsiteIdsWithSession()` on the `products` processor:
+  every `website_ids` array in the pack data is replaced with
+  `[session_website_id]` before it reaches Commerce. `cart_rules` gets the same
+  numeric replacement; `product_export` and `stocks` get the code-based
+  equivalent (`session_website_code` / sales-channel code).
+
+  The session values come from optional request params `website_code` +
+  `store_code` (a pair — one without the other is a 400): the service validates
+  both against the target instance, including that the store belongs to the
+  website, then runs the whole import against them. Omitted, they default to
+  `base` / website id `1`. Consequences:
+
+  - A pack lands on exactly ONE website per run — the substitution collapses
+    every `website_ids` to one element. Multi-website fan-out needs one run per
+    website.
+  - The extension's `buildBody` (`dataInstallerWriteClient.ts`) does not send
+    the pair yet, so every import targets `base`. The `get-websites-and-stores`
+    data already fetched for pre-flight could drive a target picker.
+  - Read from the source, not yet observed live — the deployed service logs
+    "Replaced website_ids with [N]" when it fires, so the first live products
+    import confirms or refutes this.
 
 ### Reset — how a project gets reused
 
