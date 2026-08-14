@@ -136,6 +136,14 @@ where da.live's Library reads it to show an Assets panel to authors. Site scope 
 — org-scoped once meant the block library appeared but the Assets panel did not. **Nothing to do
 with product images.**
 
+**CONFIRMED BY THE SERVICE'S AUTHOR (Jeff, via Steve, 2026-08-14):** asked whether SCs supply
+product images in a pack — *"was expected to be in AEM."* So Path A is the intended design, not
+an inference.
+
+*Fallback only:* Jeff also noted *"Images could be done via the native product api. They would
+need to be encoded."* — base64 through `POST /V1/products/:sku/media`, entirely outside the Data
+Installer and requiring a separate script. One runbook line as an escape hatch; not the plan.
+
 **The residual unknown, and it is a content question, not a code one:** whether AEM Assets
 actually holds assets for *Bodea's* SKUs. The plumbing self-heals (flag on, integration expected,
 dropin support present) but if nobody has uploaded Bodea assets, images stay empty with
@@ -148,9 +156,45 @@ the placeholder), not a permanent condition to design around.
 
 ## What the pack does NOT provide
 
-- **Customer segments** — not importable by the API at all. Manual in Admin, permanently.
-  Blocks the `customer-segment-personalization-block` story until created by hand.
+- **Customer segments** — **CONFIRMED by the service's author**: *"true, api doesn't support."*
+  No processor exists in either direction. An SC can create them by hand in Admin, but no import
+  on any pack will ever produce them. For `customer-segment-personalization-block` this means
+  **empty is the steady state of every fresh demo** until someone does manual work — unlike
+  images, which self-heal once Assets coverage exists.
 - **Store scope** (website/store/store view) — no `stores` processor; must pre-exist.
+  **The intended flow, per the author: create the website FIRST, then target the import at it.**
+  *"Yes before import. Then you can specify site and store on the data pack import. It will
+  validate to make sure they exist."* Everything landing on `base` (as the 2026-08-14 live run
+  showed) is what happens when targeting is **skipped**, not the intended end state. This is a
+  **precondition at the TOP of the runbook**, not a post-import step.
+  **DECIDED 2026-08-14 — ship `base` / `main_website_store` / `default` (i.e. keep what we have).**
+
+  Evidence behind the decision:
+  - **No documented convention exists.** `IMPORT_GUIDE.md:21-29` and `QUICK_START_GUIDE.md:128-129`
+    describe the params only: `website_code` optional → defaults `base`; `store_code` (a store
+    VIEW code) optional → defaults `default`; both validated against Commerce, and one without
+    the other is a 400. Nothing says when to target. `USER_README.md`/`API_REFERENCE.md` are
+    silent, and there is no Bodea naming convention anywhere in the doc set.
+  - **Our shipped values are exactly what an untargeted import produces** (`base` + `default`),
+    so the default path is self-consistent.
+  - **Empirically unresolvable, and honestly so:** Bodea has been imported 121 times across 10
+    instances (9 of them all 14 types), so full installs are routine — but the service log does
+    not record `website_code`/`store_code` at all, so it cannot say whether any of those were
+    targeted. (Reported as unknown rather than as "nobody targets", which is what the absent
+    field naively reads as.)
+  - **CitiSignal's branded codes are not a precedent for us**: its website is created by other
+    tooling as part of that demo's setup. Bodea has no such step, so branded codes here would
+    pre-fill a scope that does not exist on a first-time SC's instance.
+  - **Wrong-toward-`base` self-corrects; wrong-toward-branded does not.** The wizard has a real
+    store picker (`StoreSelectionRow.tsx` — website → store → store view, fed by live
+    discovery), so an SC who *did* create a Bodea website sees it and selects it. A branded
+    pre-fill naming a non-existent scope looks authoritative and is the failure mode that
+    silently empties a catalog.
+
+  **If we ever adopt a branded Bodea website**, the prerequisite is a documented "create it
+  first" step (Jeff's flow). The pipeline already supports it: as of 2026-08-14 the extension
+  sends `website_code`/`store_code` on import and reset, and the import modal's picker states
+  the precondition. No code change needed on our side — only a runbook step and a config flip.
 - **Product images** — see above.
 - **Orders** — no order processor; `commerce-account-hub`'s "Recent Orders" reads 0 until an
   order is placed by hand.
