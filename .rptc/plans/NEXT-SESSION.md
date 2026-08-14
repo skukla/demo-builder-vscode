@@ -418,8 +418,8 @@ being worked; five shipped plans were sitting there too, one of which said so in
   against a real B2B backend.
 - **`backlog/per-integration-api-attribution`** — steps 01–05 shipped, 06 withdrawn, 07 is
   RELEASE-gated: retiring the flat write loses picks for anyone still on `v1.0.0-beta.123`.
-- **One visual check outstanding:** the AI modal was confirmed readable 2026-08-13, but the
-  two-column skill groups and the persistent scrollbar specifically were never eyeballed.
+- ~~One visual check outstanding~~ **CLOSED 2026-08-14**: the user eyeballed the AI modal's
+  two-column skill groups and the persistent scrollbar on a live window — both look good.
 
 **Real work, not started:**
 
