@@ -4,10 +4,29 @@
  * Extracts status state, subscriptions, and computed status displays
  * from ProjectDashboardScreen.
  *
+ * Decomposed siblings (all re-exported here, so the public API is unchanged):
+ * - dashboardStatusTypes.ts — the status vocabulary (types + mesh predicates)
+ * - dashboardCheckRouting.ts — the on-open `checkResult` routing switch
+ * - aiStatusDerivations.ts — the AI badge + inventory-view pure derivations
+ *
  * @module features/dashboard/ui/hooks/useDashboardStatus
  */
 
-import { useState, useEffect, useMemo, useRef, useCallback, Dispatch, SetStateAction } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { deriveAiInventoryView, deriveAiReadyState } from './aiStatusDerivations';
+import { routeCheckOutcome } from './dashboardCheckRouting';
+import {
+    isMeshBusy,
+    isMeshDeploying,
+    type AiReadyState,
+    type MeshStatus,
+    type OrgCheckState,
+    type ProjectStatus,
+    type StatusDisplay,
+    type UseDashboardStatusProps,
+    type UseDashboardStatusReturn,
+    type VerifyAiSetupResponse,
+} from './dashboardStatusTypes';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import {
@@ -21,149 +40,25 @@ import type {
     CheckOutcome,
     CheckStatus,
     OrgContextCheckData,
-    MeshVerifyCheckData,
 } from '@/features/dashboard/services/onOpenChecks';
 import type { AiRegenerateProgress } from '@/features/dashboard/ui/components/AiCapabilitiesModal';
-import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
-import { CHECK_RESULT_MESSAGE, CHECK_IDS } from '@/types/messages';
+import { CHECK_RESULT_MESSAGE } from '@/types/messages';
 
-/**
- * Mesh deployment status values
- */
-export type MeshStatus =
-    | 'checking'
-    | 'needs-auth'
-    | 'not-deployed'
-    | 'deploying'
-    | 'deployed'
-    | 'config-changed'
-    | 'config-incomplete'
-    | 'update-declined'
-    | 'error';
-
-/**
- * Project status data from extension
- */
-export interface ProjectStatus {
-    name: string;
-    path: string;
-    status:
-        | 'created'
-        | 'configuring'
-        | 'ready'
-        | 'starting'
-        | 'running'
-        | 'stopping'
-        | 'stopped'
-        | 'error';
-    port?: number;
-    adobeOrg?: string;
-    adobeProject?: string;
-    frontendConfigChanged?: boolean;
-    mesh?: {
-        status: MeshStatus;
-        endpoint?: string;
-        message?: string;
-    };
-    edsStorefrontStatus?: EdsStorefrontStatus;
-}
-
-/**
- * Status display color values
- */
-export type StatusColor = 'blue' | 'green' | 'yellow' | 'orange' | 'red' | 'gray';
-
-/**
- * The fix a bad status needs, decided where the status is named rather than by
- * whichever component happens to render it.
- *
- * The Frontend badge used to report "Republish needed" and "Restart needed" and
- * offer neither: the republish sat in the ActionGrid's More overflow, and no
- * restart affordance existed at all. Naming the remedy beside the state is what
- * stops those drifting apart again.
- */
-export type StatusRemedy = 'republish' | 'restart';
-
-export interface StatusDisplay {
-    color: StatusColor;
-    text: string;
-    /** Present only when this state has an inline fix to offer. */
-    remedy?: StatusRemedy;
-}
-
-/**
- * AI Ready badge state — derived from `verify-ai-setup` response.
- *
- * Combines all 7 AI-setup signals (file checks + inventory inspectors +
- * global MCP registration) into a single 4-color badge. See the
- * "AI Ready badge state" section in the AI surface redesign plan.
- */
-export interface AiReadyState {
-    label: 'AI';
-    color: 'blue' | 'gray' | 'green' | 'yellow' | 'red';
-    text:
-        | 'Verifying'
-        | 'Ready'
-        | 'Setup incomplete'
-        | 'Broken'
-        | 'Updating AI configuration…'
-        | 'Regenerating AI files…'
-        | 'AI tooling missing';
-}
-
-/**
- * Shape we read from the AI verification — delivered on open via the
- * `checkResult{ai-verify}` push (`data`) and on demand via the `verify-ai-setup`
- * request (after Regenerate). `success` only appears on the request response.
- */
-interface VerifyAiSetupResponse {
-    success?: boolean;
-    checks?: Array<{ name: string; status: 'ok' | 'warning' | 'error' }>;
-    inventory?: {
-        /** Task-framed capability list surfaced by the "View AI Capabilities" link. */
-        skills?: SkillInventoryEntry[];
-        skillsError?: string;
-        /** MCP servers wired into the project's .mcp.json, with per-server status + tool count. */
-        mcps?: McpInventoryEntry[];
-        mcpsError?: string;
-        /** ADR-013: bundle files whose disk hash differs from the recorded one ("kept your version"). */
-        editedFiles?: string[];
-    };
-}
-
-/**
- * EDS storefront status values
- */
-export type EdsStorefrontStatus = 'published' | 'stale' | 'update-declined' | 'not-published';
-
-/**
- * Props for the useDashboardStatus hook
- */
-export interface UseDashboardStatusProps {
-    /** Whether project has mesh configuration */
-    hasMesh?: boolean;
-    /** Initial mesh status from card grid (avoids loading flash) */
-    initialMeshStatus?: string;
-    /** Initial EDS storefront status from initial data */
-    initialEdsStorefrontStatus?: EdsStorefrontStatus;
-    /**
-     * Whether the project has an Adobe org (from init). When true, a proactive
-     * org-context check runs on load; the UI telegraphs it as "checking" until
-     * the first status resolves it.
-     */
-    hasAdobeContext?: boolean;
-}
-
-/**
- * Org-context check lifecycle for the dashboard notice:
- * - `checking`: the proactive check is expected to run but hasn't resolved yet.
- * - `mismatch`: the token reaches a different org than the project (warning).
- * - `unknown`: the check couldn't run non-interactively (no token / SDK cold) —
- *   surfaces a quiet "Sign in to check" affordance instead of launching a browser.
- * - `ok`: resolved and the org is reachable (drives a transient success banner).
- * - `none`: no check applies (project has no Adobe org).
- */
-export type OrgCheckState = 'checking' | 'mismatch' | 'unknown' | 'ok' | 'none';
+// Public API — everything consumers imported from this module before the
+// decomposition still resolves here.
+export { isMeshBusy } from './dashboardStatusTypes';
+export type {
+    AiReadyState,
+    EdsStorefrontStatus,
+    MeshStatus,
+    OrgCheckState,
+    ProjectStatus,
+    StatusColor,
+    StatusDisplay,
+    StatusRemedy,
+    UseDashboardStatusProps,
+    UseDashboardStatusReturn,
+} from './dashboardStatusTypes';
 
 /**
  * Derive the org-check lifecycle (avoids a nested ternary in the hook body).
@@ -188,117 +83,8 @@ function deriveOrgCheckState(
     return 'ok';
 }
 
-/**
- * Return type for the useDashboardStatus hook
- */
-export interface UseDashboardStatusReturn {
-    /** Current project status data */
-    projectStatus: ProjectStatus | null;
-    /** Whether demo is currently running */
-    isRunning: boolean;
-    /** Whether UI is transitioning (button pressed, waiting for response) */
-    isTransitioning: boolean;
-    /** Setter for transitioning state */
-    setIsTransitioning: Dispatch<SetStateAction<boolean>>;
-    /** Computed demo status display */
-    demoStatusDisplay: StatusDisplay;
-    /** Computed mesh status display (null if no mesh) */
-    meshStatusDisplay: StatusDisplay | null;
-    /** Display name for project */
-    displayName: string;
-    /** Current project status value */
-    status: ProjectStatus['status'] | undefined;
-    /** Current mesh status value */
-    meshStatus: MeshStatus | undefined;
-    /** Proactive org-context mismatch (drives the "Switch IMS Org" banner) */
-    orgMismatch: OrgMismatchInfo | undefined;
-    /** Org-context check lifecycle — telegraphs checking → mismatch/ok/none */
-    orgCheckState: OrgCheckState;
-    /** "IMS Org" status badge display (color + org name), or null when N/A */
-    imsOrgDisplay: StatusDisplay | null;
-    /** Derived AI Ready badge state */
-    aiReady: AiReadyState;
-    /** Task-framed capability list (skills) for the "View AI Capabilities" surface */
-    aiSkills: SkillInventoryEntry[];
-    /** True when the skill inspector errored (list shows a warning row) */
-    aiSkillsError: boolean;
-    /** Project MCP servers inventory for the "View AI Capabilities" surface */
-    aiMcps: McpInventoryEntry[];
-    /** True when the MCP inspector errored (list shows a warning row) */
-    aiMcpsError: boolean;
-    /** ADR-013: user-edited bundle files (relative posix paths) — the modal's "kept your version" flags. */
-    aiEditedFiles: string[];
-    /** The AI verify has not produced a result yet (nor failed) — inventory is unknown, not empty. */
-    aiInventoryLoading: boolean;
-    /** True while an AI verify/regenerate operation is in flight */
-    aiBusy: boolean;
-    /**
-     * Live regenerate progress (step name + detail) when a regenerate is in flight,
-     * else null. Sourced from the wizard's `creationProgress` channel — see
-     * `handleRegenerateAiFiles`. Forwarded into the AI Capabilities modal.
-     */
-    aiRegenProgress: AiRegenerateProgress | null;
-    /**
-     * Error from the last regenerate — the handler's `{success:false}.error`
-     * (e.g. the tooling-install failure) or a rejected request's message.
-     * Null when the last regenerate succeeded (or none ran). Rendered as an
-     * inline line in the AI Capabilities modal.
-     */
-    aiRegenError: string | null;
-    /** Regenerate the project's AI files, then re-verify (refreshes badge + skills + MCPs) */
-    regenerateAiFiles: () => Promise<void>;
-}
-
 /** Fallback when a failed regenerate carries no usable error message. */
 const AI_REGEN_FALLBACK_ERROR = 'Regenerating AI files failed.';
-
-/** Stable empty references so identity doesn't churn each render. */
-const EMPTY_SKILLS: SkillInventoryEntry[] = [];
-const EMPTY_MCPS: McpInventoryEntry[] = [];
-const EMPTY_EDITED_FILES: string[] = [];
-
-/**
- * Derive the "View AI Capabilities" inventory view from the verify state
- * (extracted from the hook body to keep its complexity in budget).
- *
- * - loading: no result and no failure = still in flight. Without this the
- *   modal collapsed "not asked yet" into "none exist" and told the user to
- *   regenerate healthy files.
- * - errors: a failed verify is an inspector error as far as these lists are
- *   concerned — we could not read them, which is what the error row already
- *   says. Claiming zero would be a different lie from the one just fixed.
- * - editedFiles: ADR-013 "kept your version" flags; absent inventory (or a
- *   pre-ADR verify response without the field) degrades to the stable empty
- *   list.
- */
-function deriveAiInventoryView(
-    verifyResult: VerifyAiSetupResponse | null,
-    verifyFailed: boolean,
-): {
-    aiSkills: SkillInventoryEntry[];
-    aiMcps: McpInventoryEntry[];
-    aiInventoryLoading: boolean;
-    aiSkillsError: boolean;
-    aiMcpsError: boolean;
-    aiEditedFiles: string[];
-} {
-    const inventory = verifyResult?.inventory;
-    return {
-        aiSkills: inventory?.skills ?? EMPTY_SKILLS,
-        aiMcps: inventory?.mcps ?? EMPTY_MCPS,
-        aiInventoryLoading: !verifyResult && !verifyFailed,
-        aiSkillsError: Boolean(inventory?.skillsError) || verifyFailed,
-        aiMcpsError: Boolean(inventory?.mcpsError) || verifyFailed,
-        aiEditedFiles: inventory?.editedFiles ?? EMPTY_EDITED_FILES,
-    };
-}
-
-/** Mesh statuses that indicate a user-initiated operation is in progress (preserve during updates) */
-const isMeshDeploying = (status: MeshStatus | undefined): boolean => status === 'deploying';
-
-/** Mesh statuses that indicate any operation is in progress (disable UI actions) */
-export const isMeshBusy = (status: MeshStatus | undefined): boolean =>
-    status === 'deploying' || status === 'checking';
 
 /**
  * Hook to manage dashboard status state and computed displays
@@ -407,85 +193,23 @@ export function useDashboardStatus(
             }
         });
 
-        // On-open check results (decoupled from statusUpdate), routed by checkId:
-        //   - org-context: `pending` telegraph → ok / warning (mismatch) / unknown
-        //     ("sign in to check"). Re-checks (after a switch / re-auth) repeat.
-        //   - mcp-health: `warning` telegraphs a visible self-heal of stale MCP
-        //     paths; ok/error ends it. (mesh-verify / ai-verify join in later steps.)
+        // On-open check results (decoupled from statusUpdate), routed by checkId
+        // in routeCheckOutcome — see dashboardCheckRouting.ts for the per-check
+        // semantics (org-context, mcp-health, ai-context-freshness, mesh-verify,
+        // ai-verify).
         const unsubscribeChecks = webviewClient.onMessage(CHECK_RESULT_MESSAGE, (data: unknown) => {
-            const outcome = data as CheckOutcome<OrgContextCheckData>;
-
-            if (outcome.checkId === CHECK_IDS.ORG_CONTEXT) {
-                if (outcome.status === 'pending') {
-                    setOrgChecked(false);
-                    setOrgStatus('pending');
-                    setOrgMismatch(undefined);
-                    setOrgCurrentName(undefined);
-                    return;
-                }
-                setOrgChecked(true);
-                setOrgStatus(outcome.status);
-                setOrgMismatch(outcome.data?.orgMismatch);
-                setOrgCurrentName(outcome.data?.currentOrg);
-                return;
-            }
-
-            if (outcome.checkId === CHECK_IDS.MCP_HEALTH) {
-                // `warning` = heal in flight; `ok`/`error` end it. The AI badge
-                // reflects the in-flight state; a failed heal falls back to the
-                // verify-driven badge (whose "Regenerate AI files" is the retry).
-                setMcpHealing(outcome.status === 'warning');
-                return;
-            }
-
-            if (outcome.checkId === CHECK_IDS.AI_CONTEXT_FRESHNESS) {
-                // Detect-only: `warning` = the COMPOSITION axis found tooling the
-                // project qualifies for but does not have (a real download —
-                // consent stays with the user) → flip the badge to "AI tooling
-                // missing". Version staleness no longer warns here: the
-                // activation sweep repairs it silently (ADR-013 hash-and-skip).
-                // reRunnable, so a Regenerate clears this on the next refresh.
-                setAiToolingMissing(outcome.status === 'warning');
-                return;
-            }
-
-            if (outcome.checkId === CHECK_IDS.MESH_VERIFY) {
-                // The deployed mesh was background-verified. `warning` = it's gone
-                // → flip the badge to not-deployed (now VISIBLE, not a silent state
-                // mutation). `unknown` = transient verify error → leave the badge as
-                // persisted (don't scare). `ok` = still there → keep current badge.
-                const meshOutcome = outcome as CheckOutcome<MeshVerifyCheckData>;
-                if (meshOutcome.status === 'warning') {
-                    setProjectStatus((prev) =>
-                        prev
-                            ? {
-                                  ...prev,
-                                  mesh: {
-                                      status: 'not-deployed',
-                                      message: meshOutcome.message,
-                                      endpoint: prev.mesh?.endpoint,
-                                  },
-                              }
-                            : prev,
-                    );
-                }
-                return;
-            }
-
-            if (outcome.checkId === CHECK_IDS.AI_VERIFY) {
-                // The single on-open AI verification (the hook no longer pulls it).
-                // `data` carries {checks, inventory} → drives the AI badge + skills/
-                // MCP modal. A thrown verify arrives as an error outcome with no data
-                // → mark verify failed so the badge leaves 'Verifying'.
-                const aiData = (outcome as CheckOutcome<VerifyAiSetupResponse>).data;
-                if (aiData) {
-                    setVerifyResult(aiData);
-                    setVerifyFailed(false);
-                } else {
-                    setVerifyFailed(true);
-                }
-                setAiBusy(false);
-            }
+            routeCheckOutcome(data as CheckOutcome<OrgContextCheckData>, {
+                setOrgChecked,
+                setOrgStatus,
+                setOrgMismatch,
+                setOrgCurrentName,
+                setMcpHealing,
+                setAiToolingMissing,
+                setProjectStatus,
+                setVerifyResult,
+                setVerifyFailed,
+                setAiBusy,
+            });
         });
 
         // Subscribe to the wizard's `creationProgress` channel — the regenerate
@@ -709,64 +433,19 @@ export function useDashboardStatus(
         return { color: 'gray', text: 'Unknown' };
     }, [meshStatus, meshMessage, hasMesh, projectStatus, initialMeshStatus]);
 
-    // Derive AI Ready badge state from the verify response. Colors:
-    //   blue:   verify hasn't returned yet (initial) — matches the dashboard's
-    //           convention that blue is "in-flight / transient" across badges
-    //           (Mesh "Loading status...", Frontend "Starting...", etc.)
-    //   red:    any of the project AI file checks failed
-    //   yellow: files OK but an inventory inspector errored
-    //   green:  files OK and inventory healthy
-    //
-    // Global MCP registration (~/.claude.json) is an optional convenience for
-    // cross-directory discovery, not a readiness requirement — the per-project
-    // .mcp.json is written at creation and is sufficient. So it does NOT gate
-    // this badge; the "Demo Builder: Register Global MCP" command is the
-    // explicit opt-in.
-    const aiReady = useMemo<AiReadyState>(() => {
-        // A user-initiated regenerate is in flight (up to ~1 min with the tooling
-        // install) — telegraph it, or the "Regenerate AI files" click reads as a
-        // dead link. Highest precedence: it IS the current activity.
-        if (aiRegenerating) {
-            return { label: 'AI', color: 'blue', text: 'Regenerating AI files…' };
-        }
-        // The mcp-health check is visibly self-healing stale MCP paths — telegraph
-        // it on the badge (P2) so the work isn't silent. Overrides the verify state
-        // until the heal resolves (ok → verify-driven badge; error → falls back to
-        // the verify badge whose "Regenerate AI files" action is the retry).
-        if (mcpHealing) {
-            return { label: 'AI', color: 'blue', text: 'Updating AI configuration…' };
-        }
-        if (!verifyResult) {
-            // Verify failed — surface as 'Setup incomplete' rather than leaving
-            // the badge stuck on gray indefinitely.
-            if (verifyFailed) {
-                return { label: 'AI', color: 'yellow', text: 'Setup incomplete' };
-            }
-            return { label: 'AI', color: 'blue', text: 'Verifying' };
-        }
-
-        const checks = verifyResult.checks ?? [];
-        const anyCheckFailed = checks.some((c) => c.status !== 'ok');
-        if (anyCheckFailed) {
-            return { label: 'AI', color: 'red', text: 'Broken' };
-        }
-
-        const inv = verifyResult.inventory ?? {};
-        const hasInventoryError = Boolean(inv.skillsError ?? inv.mcpsError);
-        if (hasInventoryError) {
-            return { label: 'AI', color: 'yellow', text: 'Setup incomplete' };
-        }
-
-        // Files verify healthy, but the project qualifies for MCP tooling it has
-        // not received (composition axis — gaining a component after creation).
-        // Yellow surfaces the "Regenerate AI files" action, which downloads it;
-        // the reRunnable check clears the badge once the packages land.
-        if (aiToolingMissing) {
-            return { label: 'AI', color: 'yellow', text: 'AI tooling missing' };
-        }
-
-        return { label: 'AI', color: 'green', text: 'Ready' };
-    }, [verifyResult, verifyFailed, mcpHealing, aiToolingMissing, aiRegenerating]);
+    // AI Ready badge — pure derivation, see deriveAiReadyState for the color
+    // semantics and precedence order.
+    const aiReady = useMemo<AiReadyState>(
+        () =>
+            deriveAiReadyState({
+                verifyResult,
+                verifyFailed,
+                mcpHealing,
+                aiToolingMissing,
+                aiRegenerating,
+            }),
+        [verifyResult, verifyFailed, mcpHealing, aiToolingMissing, aiRegenerating],
+    );
 
     // Capability lists for the "View AI Capabilities" surface (extracted helper
     // — see deriveAiInventoryView).
