@@ -20,11 +20,6 @@
 
 import * as vscode from 'vscode';
 import { sanitizeErrorForLogging } from '@/core/validation';
-import {
-    applyBlockLibraryUpdateResolved,
-    updateCommitShaWithRollback,
-    type UpdateContext,
-} from '@/features/updates/commands/updateExecutor';
 import { getTemplateSource, shouldSkipBlockLibrary } from '@/features/updates/commands/updateTypes';
 import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
 import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
@@ -33,6 +28,11 @@ import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import { TemplateUpdateChecker } from '@/features/updates/services/templateUpdateChecker';
+import {
+    applyBlockLibraryUpdateResolved,
+    updateCommitShaWithRollback,
+    type UpdateContext,
+} from '@/features/updates/services/updateCore';
 import { UpdateManager } from '@/features/updates/services/updateManager';
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';

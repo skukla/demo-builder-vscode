@@ -16,20 +16,23 @@ import {
     type ProjectUpdateItem,
     type TemplateUpdateItem,
 } from './updateTypes';
-import { COMPONENT_IDS } from '@/core/constants';
-import type { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils';
 import { sleep } from '@/core/utils/sleep';
 import { sanitizeErrorForLogging } from '@/core/validation';
-import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
-import { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
-import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
-import type { InstalledBlockLibrary } from '@/types/blockLibraries';
-import type { Logger } from '@/types/logger';
+import {
+    applyBlockLibraryUpdateResolved,
+    updateCommitShaWithRollback,
+    type UpdateContext,
+} from '@/features/updates/services/updateCore';
+
+// Re-exported verbatim for existing importers (checkUpdates, tests); the
+// definitions moved to services/updateCore.ts so the headless apply service
+// stops importing from a commands module.
+export { applyBlockLibraryUpdateResolved, updateCommitShaWithRollback, type UpdateContext };
 
 /**
  * User preference for two-way block library sync. Mirrors the
@@ -41,17 +44,6 @@ function readSyncBehavior(): BlockLibrarySyncBehavior {
     return vscode.workspace
         .getConfiguration('demoBuilder.blockLibraries')
         .get<BlockLibrarySyncBehavior>('syncBehavior', 'ask');
-}
-
-// ---------------------------------------------------------------------------
-// Context passed from the command to executor functions
-// ---------------------------------------------------------------------------
-
-export interface UpdateContext {
-    secrets: vscode.SecretStorage;
-    extensionPath: string;
-    stateManager: StateManager;
-    logger: Logger;
 }
 
 // ---------------------------------------------------------------------------
@@ -450,30 +442,6 @@ export async function performAddonUpdates(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Shared helper
-// ---------------------------------------------------------------------------
-
-/**
- * Mutate a commitSha, save, and rollback on failure.
- * Prevents in-memory state poisoning when save throws.
- */
-export async function updateCommitShaWithRollback(
-    target: { commitSha: string } | undefined,
-    newSha: string,
-    save: () => Promise<void>,
-): Promise<void> {
-    if (!target) return;
-    const original = target.commitSha;
-    target.commitSha = newSha;
-    try {
-        await save();
-    } catch (error) {
-        target.commitSha = original;
-        throw error;
-    }
-}
-
 /**
  * Apply a block library update according to `demoBuilder.blockLibraries.syncBehavior`.
  *
@@ -523,96 +491,4 @@ async function applyBlockLibraryUpdate(
     }
 
     await applyBlockLibraryUpdateResolved(item, effectiveBehavior as 'enabled' | 'disabled', ctx);
-}
-
-/**
- * Apply a block library update with the sync behavior ALREADY resolved to a
- * concrete action ('enabled' | 'disabled') — no 'ask', no modal. Shared by the
- * UI `applyBlockLibraryUpdate` (which resolves 'ask' via a prompt) and the
- * headless `updateApplyService` (which resolves 'ask' to the safe 'disabled'
- * default). Keeps the snapshot/marker logic in one place.
- */
-export async function applyBlockLibraryUpdateResolved(
-    item: Pick<BlockLibraryUpdateItem, 'project' | 'library' | 'latestCommit'>,
-    effectiveBehavior: 'enabled' | 'disabled',
-    ctx: UpdateContext,
-): Promise<void> {
-    const lib = item.project.installedBlockLibraries?.find((l) => l.name === item.library.name);
-    if (!lib) {
-        ctx.logger.warn(
-            `[Updates] Block library "${item.library.name}" not in installedBlockLibraries; skipping`,
-        );
-        return;
-    }
-
-    if (effectiveBehavior === 'disabled') {
-        await applyDisabledMarker(lib, item.latestCommit, item.project, ctx);
-        ctx.logger.info(
-            `[Updates] Sync disabled — recorded marker for "${item.library.name}" at ${item.latestCommit.substring(0, 7)}`,
-        );
-        return;
-    }
-
-    // effectiveBehavior === 'enabled'
-    await reinstallBlockLibraryFiles(item, ctx);
-    await updateCommitShaWithRollback(lib, item.latestCommit, () =>
-        ctx.stateManager.saveProject(item.project),
-    );
-    if (lib.syncDisabledMarker) {
-        delete lib.syncDisabledMarker;
-        await ctx.stateManager.saveProject(item.project);
-    }
-    ctx.logger.info(
-        `[Updates] Updated block library "${item.library.name}" in ${item.project.name}`,
-    );
-}
-
-async function applyDisabledMarker(
-    lib: InstalledBlockLibrary,
-    upstreamSha: string,
-    project: { name: string; path: string },
-    ctx: UpdateContext,
-): Promise<void> {
-    const previous = lib.syncDisabledMarker;
-    lib.syncDisabledMarker = {
-        upstreamSha,
-        lastCheckedAt: new Date().toISOString(),
-    };
-    try {
-        await ctx.stateManager.saveProject(project as never);
-    } catch (err) {
-        // Restore previous state to avoid poisoning in-memory.
-        if (previous) {
-            lib.syncDisabledMarker = previous;
-        } else {
-            delete lib.syncDisabledMarker;
-        }
-        throw err;
-    }
-}
-
-async function reinstallBlockLibraryFiles(
-    item: Pick<BlockLibraryUpdateItem, 'project' | 'library'>,
-    ctx: UpdateContext,
-): Promise<void> {
-    const storefront = item.project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    const githubRepo = storefront?.metadata?.githubRepo;
-    if (!storefront || typeof githubRepo !== 'string' || !githubRepo.includes('/')) {
-        throw new Error(`Cannot re-install block library: storefront has no GitHub repo`);
-    }
-    const [destOwner, destRepo] = githubRepo.split('/');
-
-    const tokenService = new GitHubTokenService(ctx.secrets, ctx.logger);
-    const fileOps = new GitHubFileOperations(tokenService, ctx.logger);
-
-    const result = await installBlockCollections(
-        fileOps,
-        destOwner,
-        destRepo,
-        [{ source: item.library.source, name: item.library.name }],
-        ctx.logger,
-    );
-    if (!result.success) {
-        throw new Error(result.error ?? 'Block library re-install failed');
-    }
 }
