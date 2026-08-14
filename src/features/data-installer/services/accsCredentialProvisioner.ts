@@ -92,6 +92,21 @@ interface WorkspaceJson {
 }
 
 /**
+ * The S2S credential inside a workspace download.
+ *
+ * A named getter rather than a four-level optional chain inline (project rule:
+ * extract above two levels), so "the download had no such credential" has one
+ * place to fail and one place to be tested.
+ */
+function readS2SCredential(
+    parsed: WorkspaceJson,
+): { client_id?: string; client_secrets?: string[] } | undefined {
+    const credentials = parsed.project?.workspace?.details?.credentials ?? [];
+    return credentials.find((entry) => entry.integration_type === 'oauth_server_to_server')
+        ?.oauth_server_to_server;
+}
+
+/**
  * Run the loop. Failures come back as reasons, never throws — the caller shows
  * them beside the manual paste-the-pair path, which always remains available.
  */
@@ -145,9 +160,7 @@ export async function provisionAccsCredentials(
                     'the credential pair from the Developer Console.',
             };
         }
-        const s2s = (parsed.project?.workspace?.details?.credentials ?? []).find(
-            (entry) => entry.integration_type === 'oauth_server_to_server',
-        )?.oauth_server_to_server;
+        const s2s = readS2SCredential(parsed);
 
         const clientId = s2s?.client_id;
         const clientSecret = s2s?.client_secrets?.[0];

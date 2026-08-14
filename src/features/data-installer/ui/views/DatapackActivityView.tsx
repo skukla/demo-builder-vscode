@@ -163,36 +163,58 @@ export function DatapackActivityView(): React.JSX.Element {
             </div>
 
             <div className="page-container-padded pb-6">
-                {loading && entries.length === 0 ? (
-                    // Inline, under the filter that is still on screen — not the
-                    // full-block takeover, which would remove it.
-                    <LoadingDisplay size="M" message="Loading activity..." />
-                ) : entries.length === 0 ? (
-                    <EmptyState
-                        title="No activity yet"
-                        description="The Data Installer has logged no requests matching this filter."
-                    />
-                ) : (
-                    <>
-                        <div className="datapack-row-list">
-                            {entries.map((entry, index) => (
-                                <ActivityRow key={rowKey(entry, index)} entry={entry} />
-                            ))}
-                        </div>
-                        {entries.length < total ? (
-                            <div className="datapack-activity-more">
-                                <Button
-                                    variant="secondary"
-                                    onPress={loadMore}
-                                    isDisabled={loading}
-                                >
-                                    Load {PAGE_SIZE} more
-                                </Button>
-                            </div>
-                        ) : null}
-                    </>
-                )}
+                {renderActivityBody({ loading, entries, total, loadMore })}
             </div>
+        </>
+    );
+}
+
+/**
+ * Pick the one body state to show under the filter.
+ *
+ * An extracted helper rather than chained ternaries in JSX: nested ternaries are
+ * on the project's HIGH-priority avoid list, and the sibling views
+ * (`DatapackCatalogView`, `InstalledDatapacksView`) already solve the identical
+ * problem this way.
+ */
+function renderActivityBody({
+    loading,
+    entries,
+    total,
+    loadMore,
+}: {
+    loading: boolean;
+    entries: ActivityEntry[];
+    total: number;
+    loadMore: () => void;
+}): React.JSX.Element {
+    if (loading && entries.length === 0) {
+        // Inline, under the filter that is still on screen — not the full-block
+        // takeover, which would remove it.
+        return <LoadingDisplay size="M" message="Loading activity..." />;
+    }
+    if (entries.length === 0) {
+        return (
+            <EmptyState
+                title="No activity yet"
+                description="The Data Installer has logged no requests matching this filter."
+            />
+        );
+    }
+    return (
+        <>
+            <div className="datapack-row-list">
+                {entries.map((entry, index) => (
+                    <ActivityRow key={rowKey(entry, index)} entry={entry} />
+                ))}
+            </div>
+            {entries.length < total ? (
+                <div className="datapack-activity-more">
+                    <Button variant="secondary" onPress={loadMore} isDisabled={loading}>
+                        Load {PAGE_SIZE} more
+                    </Button>
+                </div>
+            ) : null}
         </>
     );
 }
