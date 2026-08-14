@@ -2,8 +2,10 @@
 
 Read this, then [`overview.md`](overview.md) for the design and the verified API contract.
 
-**Stage 1 (reads) has SHIPPED** — merged to `develop` as `a3c07420`, 14 commits,
-fast-forward. **Stage 2 (import) is BUILT and has never run live** — see "Next action".
+**Stages 1, 2 and 4 have SHIPPED and Stage 2 is VERIFIED LIVE end to end**
+(import, watch, reset, targeting — see the DoD list below). Stage 1 merged to
+`develop` as `a3c07420`. **Stage 3 (export) is BLOCKED on the service**, not on
+us: `docs/systems/data-installer.md` §6b.
 
 ## Where the work is
 
@@ -31,7 +33,7 @@ git fetch origin && git rebase origin/develop   # develop moves several times a 
 npx jest --no-coverage tests/features/data-installer > /tmp/j.txt 2>&1   # never pipe jest
 ```
 
-Expect **22 suites / 370 tests** green. Add `tests/scripts` for the drift checker
+Expect roughly **30 suites / 485 tests** green (counts move; the shape is what matters). Add `tests/scripts` for the drift checker
 (2 more suites, 34 more tests). The descriptor rows have their own suite at
 `tests/features/ai/server/readDescriptors.test.ts`.
 
@@ -111,16 +113,19 @@ declined. Remaining, in execution order:
 The standing cost accepted with this: the branch keeps rebasing onto develop
 (six times on 2026-08-13 alone) until all six are done.
 
-## Next action — verify Stage 2 against the live service
+## Next action — get Jeff's answer on ACCS export
 
-**Stage 2 is built. Not one line of it has spoken to the service.** Write client,
-credential resolution, job runner, handler spine, import modal, the wiring that makes it
-reachable from the detail flyout, a dry run, and reset.
+Stage 3 is the only DoD item left, and it is blocked on the service rather than
+on this branch. Every export returns 200 / `success: false` / `exported: 0` with
+no message while pre-flight reports auth and connectivity true, and the control
+`validate` call in the same script returns 200 `success: true`. The questions and
+the four activation ids to look up are in `docs/systems/data-installer.md` §6b.
 
-Everything is unit-tested. That proves the pieces agree with each other, and nothing about
-whether they agree with the API — which is the same trap that produced a "two-shape
-contract" out of stage junk earlier in this feature. **Do not build Stage 3 on top of this
-until an import has actually run.**
+**Historical note, kept because it is the lesson this feature keeps re-teaching:**
+Stage 2 was once fully unit-tested and had never spoken to the service. Unit
+tests prove the pieces agree with each other and nothing about whether they agree
+with the API — the same trap that produced a "two-shape contract" out of stage
+junk. Verifying it live is what found the divergences now recorded in §2.
 
 ### 1. Validate without writing (do this first)
 

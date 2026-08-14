@@ -9,10 +9,9 @@
 The Data Installer rewrites every pack `website_ids` with the session website
 (`replaceWebsiteIdsWithSession()`), driven by optional request params
 `website_code` + `store_code` (validated as a pair against the instance;
-default `base`/id 1). The extension's `buildBody`
-(`dataInstallerWriteClient.ts`) sends neither, so today every import lands on
-`base` with no say from the user. Proven live: a bodea import with
-`website_ids: [3]` throughout put all 56 products on website 1.
+default `base`/`default`). Before this feat, `buildBody` sent neither, so every
+import landed on `base` with no say from the user. Proven live: a bodea import
+with `website_ids: [3]` throughout put all 56 products on website 1.
 
 The same run surfaced a second UX gap this feat owns: `products` imports
 atomically and fails entirely when tier prices name a customer group that
