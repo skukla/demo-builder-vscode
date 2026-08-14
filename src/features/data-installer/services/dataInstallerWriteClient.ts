@@ -50,6 +50,27 @@ export interface ImportRequest {
     /** Explicit types only — omitting them is a 400 from the service. */
     dataTypes: string[];
     credentials: CommerceCredentials;
+    /**
+     * Where the pack lands. Absent means the service's own default (`base`).
+     *
+     * Both codes travel together or not at all — the service rejects one
+     * without the other, and validates that the store belongs to the website.
+     */
+    target?: ImportTarget;
+}
+
+/**
+ * The website and store an import runs against.
+ *
+ * This is what decides where a pack lands: the service turns the pair into
+ * `session_website_id` and substitutes it into every `website_ids` the pack
+ * carries. Per the service author (2026-08-14) the website and store must
+ * already exist in Commerce — the service validates them, and the extension
+ * cannot create them (`websites` is not an importable data type).
+ */
+export interface ImportTarget {
+    websiteCode: string;
+    storeCode: string;
 }
 
 /** The write modes this client drives. `export` belongs to Stage 3. */
@@ -245,8 +266,21 @@ function buildBody(request: ImportRequest, mode: WriteMode): Record<string, unkn
         commerce_instance: request.commerceInstance,
         data_types: request.dataTypes,
         operation_mode: mode,
+        ...targetFields(request.target),
         ...credentialFields(request.credentials),
     };
+}
+
+/**
+ * Targeting fields, present only when the user chose a target.
+ *
+ * Omitted is not the same as empty: absent means "the service's default
+ * (`base`)", while `""` is a value the service would try to validate. And the
+ * pair is atomic — one code without the other is a documented 400 — so this
+ * emits both keys or neither.
+ */
+function targetFields(target: ImportTarget | undefined): Record<string, string> {
+    return target ? { website_code: target.websiteCode, store_code: target.storeCode } : {};
 }
 
 /**

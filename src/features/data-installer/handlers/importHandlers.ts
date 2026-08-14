@@ -24,9 +24,14 @@
 
 import { provisionAccsCredentials } from '../services/accsCredentialProvisioner';
 import { resolveCommerceCredentials } from '../services/commerceCredentials';
-import { downloadWorkspaceConfigJson } from '../services/workspaceConfigDownload';
-import { DataInstallerWriteClient, type ImportRequest } from '../services/dataInstallerWriteClient';
+import {
+    DataInstallerWriteClient,
+    type CommerceCredentials,
+    type ImportRequest,
+    type ImportTarget,
+} from '../services/dataInstallerWriteClient';
 import { watchImportJob } from '../services/importJobRunner';
+import { downloadWorkspaceConfigJson } from '../services/workspaceConfigDownload';
 import type { ImportJobRecord } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { ServiceLocator } from '@/core/di';
@@ -37,7 +42,10 @@ import {
     deriveAccsTenantId,
     lookupComponentConfigValue,
 } from '@/features/components/services/envVarHelpers';
+import { selectDiscoveryService } from '@/features/eds/services/accsDiscoveryConfig';
+import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import type { Project } from '@/types/base';
+import type { CommerceStoreStructure, StoreDiscoveryParams } from '@/types/commerceStore';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -60,6 +68,12 @@ interface StartImportPayload {
     version?: string;
     commerceInstance?: string;
     dataTypes?: string[];
+    /**
+     * Where the pack lands — both codes or neither (see {@link readTarget}).
+     * Omitted means the service's own default, `base`.
+     */
+    websiteCode?: string;
+    storeCode?: string;
     /** Reset only: must be true. Nothing removes data by default. */
     confirm?: boolean;
 }
@@ -279,6 +293,55 @@ export const importHandlers = defineHandlers({
     },
 
     /**
+     * The websites and store views a pack can be imported onto.
+     *
+     * Targeting is the INTENDED path (the service author, 2026-08-14: create the
+     * website first, "then you can specify site and store on the data pack
+     * import"). This is what fills that picker.
+     *
+     * **Discovery runs here, not in the webview.** The wizard's
+     * `useStoreDiscovery` posts PaaS admin credentials from the panel because
+     * the wizard holds them in form state; this feature deliberately keeps the
+     * pair extension-side. So the structure is discovered where the credentials
+     * already live and only the codes travel back.
+     *
+     * Optional by design: no project, no credentials or a failed discovery all
+     * leave the user with a manual import onto the service's default. Only a
+     * discovery that actively failed is worth an error — the rest is an empty
+     * list.
+     */
+    'list-datapack-import-scopes': async (context: HandlerContext): Promise<HandlerResponse> => {
+        const project = await context.stateManager.getCurrentProject();
+        if (!project) {
+            return { success: true, data: { websites: [] } };
+        }
+
+        const credentials = await resolveCommerceCredentials({
+            project: {
+                stackBackend: project.componentSelections?.backend ?? '',
+                componentConfigs: project.componentConfigs ?? {},
+            },
+            secrets: context.context.secrets,
+            projectName: project.name,
+        });
+        if (!credentials.ok) {
+            // Not an error: the import still works, it just lands on the default.
+            return { success: true, data: { websites: [] } };
+        }
+
+        const params = await buildScopeDiscoveryParams(context, project, credentials.credentials);
+        if (!params) {
+            return { success: true, data: { websites: [] } };
+        }
+
+        const result = await discoverStoreStructure(params);
+        if (!result.success) {
+            return { success: false, error: result.error };
+        }
+        return { success: true, data: { websites: groupStoreViewsByWebsite(result.data) } };
+    },
+
+    /**
      * Console-free ACCS credential provisioning — the loop proven live
      * 2026-08-13, wired to THIS project's own Adobe binding.
      *
@@ -414,6 +477,7 @@ async function prepareImport(
             id: { name: input.datapackName, version: input.version },
             commerceInstance: input.commerceInstance,
             dataTypes: input.dataTypes,
+            target: input.target,
             credentials: credentials.credentials,
         },
     };
@@ -491,7 +555,13 @@ async function stopWatching(
 function readInput(
     payload: StartImportPayload | undefined,
 ):
-    | { datapackName: string; version: string; commerceInstance: string; dataTypes: string[] }
+    | {
+          datapackName: string;
+          version: string;
+          commerceInstance: string;
+          dataTypes: string[];
+          target: ImportTarget | undefined;
+      }
     | { error: string } {
     const datapackName = payload?.datapackName;
     const version = payload?.version;
@@ -509,5 +579,102 @@ function readInput(
     if (dataTypes.length === 0) {
         return { error: 'Select at least one data type to import.' };
     }
-    return { datapackName, version, commerceInstance, dataTypes };
+    const target = readTarget(payload);
+    if ('error' in target) {
+        return target;
+    }
+    return { datapackName, version, commerceInstance, dataTypes, target: target.target };
+}
+
+/**
+ * The website/store pair, refused here if it is half-supplied.
+ *
+ * The service takes both or neither and rejects a half pair — but it rejects it
+ * in the worker, minutes after the 202 that told the user the import started.
+ * Catching it before the request keeps the failure where the user can act on it.
+ */
+/**
+ * Discovery params for whichever backend this project runs.
+ *
+ * Returns undefined when the project cannot be discovered against (no URL, or
+ * ACCS without a configured discovery service / usable token) — targeting is
+ * optional, so that is an empty picker rather than an error.
+ */
+async function buildScopeDiscoveryParams(
+    context: HandlerContext,
+    project: Project,
+    credentials: CommerceCredentials,
+): Promise<StoreDiscoveryParams | undefined> {
+    const configs = project.componentConfigs ?? {};
+
+    if (credentials.kind === 'paas') {
+        const baseUrl = lookupComponentConfigValue(configs, PAAS_URL);
+        return baseUrl
+            ? {
+                  backendType: 'paas',
+                  baseUrl,
+                  username: credentials.username,
+                  password: credentials.password,
+              }
+            : undefined;
+    }
+
+    const accsEndpoint = lookupComponentConfigValue(configs, ACCS_GRAPHQL_ENDPOINT);
+    if (!accsEndpoint) {
+        return undefined;
+    }
+    // The ACCS path goes through the discovery service with the USER's IMS token
+    // — the project's Commerce pair is not what that service authenticates.
+    const selection = selectDiscoveryService(project.adobe?.organization);
+    if (!selection.ok) {
+        return undefined;
+    }
+    const inspection = await context.authManager?.getTokenManager().inspectToken();
+    if (!inspection?.token) {
+        return undefined;
+    }
+    return {
+        backendType: 'accs',
+        baseUrl: accsEndpoint,
+        accsGraphqlEndpoint: accsEndpoint,
+        discoveryServiceUrl: selection.serviceUrl,
+        imsToken: inspection.token,
+    };
+}
+
+/**
+ * Websites, each carrying the store views that belong to it.
+ *
+ * The picker needs website→store view; the structure arrives as three flat
+ * lists joined by numeric ids, so the join happens once here rather than in the
+ * webview. Store GROUPS are deliberately collapsed: the service takes a
+ * `store_code` that is a store VIEW code, so a group tier would be a level the
+ * user picks through and nothing consumes.
+ */
+function groupStoreViewsByWebsite(
+    structure: CommerceStoreStructure,
+): Array<{ code: string; name: string; storeViews: Array<{ code: string; name: string }> }> {
+    return structure.websites.map((website) => ({
+        code: website.code,
+        name: website.name,
+        storeViews: structure.storeViews
+            .filter((view) => Number(view.website_id) === Number(website.id))
+            .map((view) => ({ code: view.code, name: view.name })),
+    }));
+}
+
+function readTarget(
+    payload: StartImportPayload | undefined,
+): { target: ImportTarget | undefined } | { error: string } {
+    const websiteCode = payload?.websiteCode;
+    const storeCode = payload?.storeCode;
+    if (!websiteCode && !storeCode) {
+        return { target: undefined };
+    }
+    if (!websiteCode || !storeCode) {
+        return {
+            error: 'Choose both a target website and a store view, or neither — the Data Installer needs the pair.',
+        };
+    }
+    return { target: { websiteCode, storeCode } };
 }

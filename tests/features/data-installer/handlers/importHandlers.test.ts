@@ -277,6 +277,55 @@ describe('start-datapack-import', () => {
             expect(validateImport).not.toHaveBeenCalled();
         });
 
+        /**
+         * Targeting is the intended path (Jeff, the service author, 2026-08-14:
+         * create the website first, "then you can specify site and store on the
+         * data pack import"). The handler's job is to pass a complete pair
+         * through and refuse a half one — the service 400s on a half pair, and
+         * a 400 arriving minutes after a 202 is the worst place to learn it.
+         */
+        it('passes a complete target through to the request', async () => {
+            const { startImport } = happyClient();
+            const { context } = makeContext();
+
+            await importHandlers['start-datapack-import'](context, {
+                ...PAYLOAD,
+                websiteCode: 'bodea',
+                storeCode: 'bodea_store_view',
+            });
+
+            expect(startImport).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    target: { websiteCode: 'bodea', storeCode: 'bodea_store_view' },
+                }),
+            );
+        });
+
+        it('sends NO target when neither code was chosen — the service defaults to base', async () => {
+            const { startImport } = happyClient();
+            const { context } = makeContext();
+
+            await importHandlers['start-datapack-import'](context, PAYLOAD);
+
+            // Absent or explicitly undefined both satisfy the client, which
+            // emits the pair only when the target is truthy.
+            expect(startImport.mock.calls[0][0].target).toBeUndefined();
+        });
+
+        it('refuses a half pair rather than letting the service 400 after the 202', async () => {
+            const { startImport } = happyClient();
+            const { context } = makeContext();
+
+            const result = await importHandlers['start-datapack-import'](context, {
+                ...PAYLOAD,
+                websiteCode: 'bodea',
+            });
+
+            expect(result.success).toBe(false);
+            expect(result.error).toMatch(/store/i);
+            expect(startImport).not.toHaveBeenCalled();
+        });
+
         it('requires a commerce instance — it is the write target', async () => {
             happyClient();
             const { context } = makeContext();

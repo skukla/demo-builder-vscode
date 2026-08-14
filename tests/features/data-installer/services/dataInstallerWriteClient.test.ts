@@ -156,6 +156,60 @@ describe('DataInstallerWriteClient', () => {
             });
         });
 
+        /**
+         * Targeting, per the service author (Jeff, 2026-08-14): "you can specify
+         * site and store on the data pack import. It will validate to make sure
+         * they exist." The pair drives `session_website_id`, which the service
+         * substitutes into every pack `website_ids` — so this is what decides
+         * where a pack lands.
+         */
+        it('sends website_code and store_code when the user picked a target', async () => {
+            const fetchImpl = ok({ activation_id: 'x' }, 202);
+
+            await makeClient(fetchImpl).startImport({
+                ...REQUEST,
+                target: { websiteCode: 'bodea', storeCode: 'bodea_store_view' },
+            });
+
+            const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
+            expect(body).toMatchObject({
+                website_code: 'bodea',
+                store_code: 'bodea_store_view',
+            });
+        });
+
+        /**
+         * Omitted is not the same as empty. The service defaults to `base` when
+         * the pair is absent, but sending `""` is a value — and one without the
+         * other is a documented 400 ("Both website_code and store_code must be
+         * provided together"). No target means neither key exists.
+         */
+        it('omits both keys entirely when no target was picked', async () => {
+            const fetchImpl = ok({ activation_id: 'x' }, 202);
+
+            await makeClient(fetchImpl).startImport(REQUEST);
+
+            const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
+            expect(body).not.toHaveProperty('website_code');
+            expect(body).not.toHaveProperty('store_code');
+        });
+
+        it('carries the target onto a delete, so a reset matches its import', async () => {
+            const fetchImpl = ok({ activation_id: 'x' }, 202);
+
+            await makeClient(fetchImpl).startDelete({
+                ...REQUEST,
+                target: { websiteCode: 'bodea', storeCode: 'bodea_store_view' },
+            });
+
+            const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
+            expect(body).toMatchObject({
+                operation_mode: 'delete',
+                website_code: 'bodea',
+                store_code: 'bodea_store_view',
+            });
+        });
+
         // The instance is whatever the user typed. No derivation, no validation,
         // no formatting — a prefill from an unverified equality is what writes
         // sample data into someone else's live demo.
