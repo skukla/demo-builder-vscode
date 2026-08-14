@@ -725,12 +725,34 @@ two actions resolve the instance differently. Its documented shape is also wrong
 in the drop: it is a GET with `data_type` as a QUERY parameter (the path segment
 is not read) and an `x-commerce-instance` header (not `x-base-url`).
 
-**What remains**: `customer_groups` is the only type that reports success, and it
-is also the only type with ZERO items to process after exclusions. Every type
-that has something to transform and store fails with a generic "Processing
-failed" that appears only in the service's request log. That pattern points at
-the transform/store step rather than the fetch, but the server's own error text
-is the whole of the evidence available from outside.
+**The pattern, established across all 18 types at once.** Omitting `data_types`
+runs every processor (the request 504s on the sync endpoint, but the run
+completes and the log records it). Cross-referencing each type's outcome against
+how many items the instance actually holds:
+
+| Outcome | Types | Items on the instance |
+|---|---|---|
+| `success` | `cart_rules`, `coupons`, `b2b_shared_catalogs` | **0** |
+| `success` | `sources`, `stocks` | 1 each — the Default, which `export_exclusions.json` drops |
+| `success` | `customer_groups` | 5 — all five are on the exclusion list |
+| `fail` | `attribute_sets` | 9 |
+| `fail` | `categories` | 14 |
+| `fail` | `products` | 130 |
+| `fail` | `customers` | 3 |
+| `fail` | `product_attributes`, `b2b_companies`, `b2b_shared_catalog_*`, `stock_source_links` | non-zero |
+| `fail` | `source_items` | distinct error: `network UNKNOWN_ERROR: Unknown error occurred` |
+
+**Success correlates exactly with having nothing to export.** Every type with at
+least one item that survives exclusions fails; every "success" is an empty run.
+So this deployment has never exported a single item from this ACCS instance, for
+any data type — while the same credentials read all five search endpoints
+directly at 200.
+
+That is as far as outside evidence reaches. It is not a payload the docs
+describe: nine variants were eliminated (table above), and the failure is uniform
+across types whose payloads differ completely. The `COMMERCE_INSTANCE_URL_TEMPLATE`
+hint from `get-export-items` points the same way — at ACCS configuration on the
+stage deployment rather than at the request.
 
 The lesson worth keeping: an all-zero result on an instance you have just emptied
 is not evidence about the capability. The control that would have caught this —
