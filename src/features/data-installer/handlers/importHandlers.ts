@@ -387,6 +387,7 @@ async function watchAndRecord(
             activationId: record.activationId,
             requestedTypes: record.dataTypes,
             polling: new PollingService(),
+            ...(record.operation ? { operation: record.operation } : {}),
         });
         await transient.set(JOB_KEY, {
             ...record,

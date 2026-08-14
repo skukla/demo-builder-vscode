@@ -88,6 +88,12 @@ export async function watchImportJob(args: {
     requestedTypes: string[];
     polling: PollingService;
     abortSignal?: AbortSignal;
+    /**
+     * Names the poll task, which reaches the Debug Logs on every poll line — a
+     * reset's polls logged as "data-installer import", live. Optional because
+     * records persisted before the field existed were all imports.
+     */
+    operation?: 'import' | 'reset';
     graceMs?: number;
     /** Injectable clock, so the grace window is testable without wall time. */
     now?: () => number;
@@ -118,7 +124,7 @@ export async function watchImportJob(args: {
     try {
         await polling.pollUntilCondition(check, {
             ...IMPORT_POLL,
-            name: `data-installer import ${activationId}`,
+            name: `data-installer ${args.operation ?? 'import'} ${activationId}`,
             ...(abortSignal ? { abortSignal } : {}),
         });
     } catch {

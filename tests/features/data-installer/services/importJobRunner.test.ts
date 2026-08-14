@@ -79,6 +79,57 @@ function runWith(
     return { promise, getJobStatus, getJobFailureReason };
 }
 
+// The poll task label reaches the Debug Logs on every poll error, so it must
+// name the OPERATION: a reset's polls logged as "data-installer import", live.
+describe('the poll task name', () => {
+    it('names a reset a reset', async () => {
+        const polling = { pollUntilCondition: jest.fn().mockResolvedValue(undefined) };
+        const client = {
+            getJobStatus: jest.fn().mockResolvedValue({
+                hasRecord: true,
+                perType: { categories: 'success' },
+            }),
+            getJobFailureReason: jest.fn(),
+        };
+
+        await watchImportJob({
+            client: client as never,
+            polling: polling as never,
+            activationId: 'act-1',
+            requestedTypes: ['categories'],
+            operation: 'reset',
+        });
+
+        expect(polling.pollUntilCondition).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ name: 'data-installer reset act-1' }),
+        );
+    });
+
+    it('defaults to import for records that predate the field', async () => {
+        const polling = { pollUntilCondition: jest.fn().mockResolvedValue(undefined) };
+        const client = {
+            getJobStatus: jest.fn().mockResolvedValue({
+                hasRecord: true,
+                perType: { categories: 'success' },
+            }),
+            getJobFailureReason: jest.fn(),
+        };
+
+        await watchImportJob({
+            client: client as never,
+            polling: polling as never,
+            activationId: 'act-1',
+            requestedTypes: ['categories'],
+        });
+
+        expect(polling.pollUntilCondition).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ name: 'data-installer import act-1' }),
+        );
+    });
+});
+
 describe('watchImportJob', () => {
     beforeEach(() => jest.clearAllMocks());
 

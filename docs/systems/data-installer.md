@@ -405,6 +405,11 @@ explains why nothing happened. Never poll the echo in a loop.
 - **`partial` is a first-class outcome.** Re-runs legitimately skip existing items.
 - A job is terminal only when the status map **covers** every requested type and
   all are terminal — "all present are terminal" declares victory after the first.
+- **Before the worker registers an activation (~15s), `datapack-process-status`
+  returns `404` "No request log found"** — measured live 2026-08-13. The spike's
+  "200 with an empty map" is what an INVALID job returns; the warm-up shape is
+  this 404. The client maps it to `hasRecord: false`, so both land in the grace
+  logic rather than throwing five error lines into a healthy run's logs.
 
 Credentials are backend-conditional: PaaS reuses the admin username/password
 already in `componentConfigs`; ACCS needs a user-supplied OAuth Server-to-Server
