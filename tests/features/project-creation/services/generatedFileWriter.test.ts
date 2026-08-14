@@ -282,6 +282,23 @@ describe('createGeneratedFileWriter', () => {
             expect(writer.hashes()['.claude/settings.json']).toBe(sha256('{"merged":true}'));
             expect(writer.report().written).toEqual(['.claude/settings.json']);
         });
+
+        it('does not touch the disk when the merged content is byte-identical', async () => {
+            // The activation-sweep common path: settings on disk already equal
+            // the merge output. Still records the hash (a pre-ADR file becomes
+            // tracked), but no write and no "written" event — a healthy
+            // project must stay at zero disk writes.
+            primeDisk({
+                [path.join(PROJECT, '.claude/settings.json')]: '{"merged":true}',
+            });
+            const writer = createGeneratedFileWriter(PROJECT, {}, logger);
+
+            await writer.writeMerged('.claude/settings.json', '{"merged":true}');
+
+            expect(writeFileCalls()).toEqual([]);
+            expect(writer.hashes()['.claude/settings.json']).toBe(sha256('{"merged":true}'));
+            expect(writer.report().written).toEqual([]);
+        });
     });
 
     describe('remove — matrix row: recorded hash matches disk', () => {

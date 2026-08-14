@@ -37,6 +37,7 @@ import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRe
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
+import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundleActivationRefresh';
 import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/globalMcpRegistration';
 import { ensureHomeAiContext } from '@/features/project-creation/services/homeAiContextWriter';
 import { SidebarProvider } from '@/features/sidebar';
@@ -132,6 +133,18 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Register StateManager with ServiceLocator (for commands without handler context)
         ServiceLocator.setStateManager(stateManager);
+
+        // Silent AI-bundle upkeep for every known project (ADR-013): tier-1
+        // config repair always; tier-1+2 refresh + stamp when a project's
+        // aiContextVersion is stale. Fire-and-forget like the global-MCP
+        // repair above — never awaited, internally never throws, and the
+        // healthy path makes zero disk writes; runs after the state manager
+        // only to keep activation-critical work first (it does not use it).
+        void refreshAiBundlesOnActivation(context.extensionPath, logger).catch((error) => {
+            logger.warn(
+                `[AI Bundle] Activation sweep failed to start: ${(error as Error).message}`,
+            );
+        });
 
         // Seed built-in AI prompts into the global store once (starter recipes that
         // surface in every project's prompt library). Idempotent and non-fatal.

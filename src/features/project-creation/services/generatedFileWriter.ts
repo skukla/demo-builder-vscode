@@ -54,7 +54,9 @@ export interface GeneratedFileWriter {
     write(relPath: string, content: string): Promise<'written' | 'skipped' | 'unchanged'>;
     /**
      * Unconditional write for content that ALREADY incorporates user edits
-     * (the settings.json merge). Records the hash; never skips.
+     * (the settings.json merge). Records the hash; never skips. Byte-identical
+     * content is a no-op on disk (hash still recorded) so the activation
+     * common path stays write-free.
      */
     writeMerged(relPath: string, content: string): Promise<void>;
     /** Remove only on positive proof of ownership (removal matrix above). */
@@ -123,7 +125,16 @@ export function createGeneratedFileWriter(
 
         async writeMerged(relPath, content) {
             const key = toKey(relPath);
-            await persist(toAbsolute(key), key, content);
+            const absolutePath = toAbsolute(key);
+            const onDisk = await readIfPresent(absolutePath);
+            if (onDisk === content) {
+                // Already current — record the hash (a pre-ADR file becomes
+                // tracked) but keep the activation common path write-free:
+                // no disk touch, no "written" event.
+                hashes[key] = sha256(content);
+                return;
+            }
+            await persist(absolutePath, key, content);
         },
 
         async remove(relPath, currentTemplate?) {
