@@ -199,7 +199,7 @@
               "to": {
                 "type": "string",
                 "minLength": 1,
-                "description": "Target path in the generated storefront repo"
+                "description": "Target path in the generated storefront repo. Must be under styles/ with a .css extension or scripts/ with a .js extension — any other target is refused at publish time (non-fatal warn)"
               }
             }
           },
@@ -208,7 +208,7 @@
         "headSnippet": {
           "type": "string",
           "minLength": 1,
-          "description": "Optional HTML snippet vendored into head.html between demo-builder brand-assets markers (idempotent re-vendor on reset)"
+          "description": "Optional HTML snippet vendored into head.html between demo-builder brand-assets markers (idempotent re-vendor on reset). Only <link rel=\"stylesheet\" href=\"/...\"> and <script type=\"module\" src=\"/...\"></script> lines with root-relative paths are accepted; path characters are restricted to A-Za-z0-9 . _ / - (no query strings, spaces, or percent-escapes) — anything else is refused at publish time (non-fatal warn)"
         }
       }
     },

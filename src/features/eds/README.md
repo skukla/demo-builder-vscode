@@ -192,12 +192,13 @@ The full architecture (request flows, dependencies on Helix/Catalog Service case
 
 ### Code Patches — Thin-Layer Storefront (ADR-006)
 
-A generic patch engine that lets demo packages ship targeted file edits against a canonical storefront template, retiring the practice of maintaining storefront-shaped forks for small customizations. **Live on develop.** Four demo packages now drive the thin-layer pipeline:
+A generic patch engine that lets demo packages ship targeted file edits against a canonical storefront template, retiring the practice of maintaining storefront-shaped forks for small customizations. **Live on develop.** Three demo packages drive the thin-layer pipeline, all templating on `adobe-commerce/boilerplate-b2b-template`:
 
-- **CitiSignal (PaaS + ACCS)** — 8 patches against `hlxsites/aem-boilerplate-commerce`; replaces the retired `skukla/citisignal-eds-boilerplate` fork.
-- **custom (PaaS + ACCS)** — 2 universal patches (header + sidebar) against the same canonical.
-- **b2b (PaaS + ACCS)** — 5 patches (2 universal + 3 SKU/slash) against `adobe-commerce/boilerplate-b2b-template` — a different upstream from citisignal+custom; supported via the multi-canonical `lkgFile` field on `CodePatchSource`.
+- **CitiSignal (PaaS + ACCS)** — 9 patches via the `citisignal-b2b` ledger; replaces the retired `skukla/citisignal-eds-boilerplate` fork.
+- **custom (PaaS + ACCS)** — 6 patches via the `b2b` ledger.
 - **bodea (PaaS + ACCS, hidden)** — rides the same `b2b` ledger + LKG pin as `custom`; its brand delta ships additively (bodea-blocks library + the brand-assets vendor point below), not as new patches.
+
+The multi-canonical `lkgFile` field on `CodePatchSource` lets ledgers in the same patches repo track different upstreams; every current ledger pins via `b2b/last-known-good`.
 
 The mechanism:
 
@@ -207,7 +208,7 @@ The mechanism:
   - `applyBlockCodePatches` reads installed library blocks via `GitHubFileOperations`, runs the engine, writes patched files back with one commit per file. Phase routing is mechanical: targets starting with `blocks/` → block-phase, everything else → canonical-phase.
 - **lkgPinHelper** — Create-path counterpart to `edsResetRepoHelper`'s reset-side pinning. Runs after `generate-from-template` to bulk-Tree-reset the new repo to canonical@LKG with canonical patches applied. Result: a fresh create produces a repo byte-identical to what an immediate reset would produce. Create and reset mirror.
 - **externalPatchFetcher** — Shared HTTP fetch + per-source promise cache. Used by both `contentPatchRegistry` and `codePatchRegistry` so the two patch domains share one network surface.
-- **lkgReader** — Reads the plain-text `last-known-good` SHA file from the patches repo (D2 in ADR-006 — Chromium LKGR / Nix `git-revision` convention). Supports per-ledger `lkgFile` for multi-canonical patches repos (b2b's ledger tracks `adobe-commerce/boilerplate-b2b-template` and reads `b2b/last-known-good`; citisignal+custom share the root LKG). Strict 40-hex validation; returns `undefined` for all failure modes so the caller can fall back to `main` HEAD per D1 (proceed-and-warn).
+- **lkgReader** — Reads the plain-text `last-known-good` SHA file from the patches repo (D2 in ADR-006 — Chromium LKGR / Nix `git-revision` convention). Supports per-ledger `lkgFile` for multi-canonical patches repos (every current package entry — citisignal-b2b, b2b/custom, bodea — reads `b2b/last-known-good`, which tracks `adobe-commerce/boilerplate-b2b-template`; the root LKG file exists for ledgers tracking other canonicals). Strict 40-hex validation; returns `undefined` for all failure modes so the caller can fall back to `main` HEAD per D1 (proceed-and-warn).
 - **patchReportHelper** — Unified `PatchReport` shape for content + code patch results. `reportUnapplied(report, logger, showWarning?)` is the one-call exit point — UI callers inject `vscode.window.showWarningMessage`; headless (MCP/AI) contexts get warn-level logging only. The orchestrator (`executeStorefrontSetupPhases`) creates one shared report per setup that aggregates canonical (Step 1 pin) + block + content patches, so a single toast surfaces every unapplied patch.
 
 `EdsStorefrontMetadata.lkgSource` marks a storefront as thin-layer; when present, `TemplateUpdateChecker` reads the verified canonical SHA from the patches repo's per-ledger LKG file instead of comparing against the template's `main`. Storefronts pin to the LKG SHA at **both create and reset time** via `buildArchiveUrl` (exported from `githubFileOperations`), which routes the SHA-vs-branch URL shape on `https://github.com/{owner}/{repo}/archive/*.zip`.
