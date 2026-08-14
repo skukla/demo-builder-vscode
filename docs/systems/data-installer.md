@@ -377,6 +377,32 @@ Two more import facts from the same run (2026-08-14):
   reverse. The full reset restored the instance byte-identical (categories,
   SKUs, websites all matching the pre-import snapshot).
 
+### Datapacks carry NO product images — by design
+
+Imported products have no imagery, and that is the intended division of labour,
+not a defect to chase. Three independent confirmations (2026-08-14):
+
+- The service's pack-prep tooling strips them. `data-installer-api-b2b`
+  `docs/CONVERT_CSV_EXPORT.md` §6 "Image Path Removal" clears `base_image`,
+  `small_image`, `thumbnail`, `swatch_image`, `additional_images` and their
+  label fields — stated rationale: "to avoid broken references".
+- Image import is an OPEN QUESTION for the service, not a shipped feature —
+  `TODO.md` (Low Priority): "Determine if we need to support image import".
+- **Measured: 11 packs across 4 owners, zero products with
+  `media_gallery_entries`.** Includes `citisignal_new@main` (130 products),
+  `citisignal_original@hold` (125), all four `bodea` versions (56 each),
+  `carvello`, and three third-party dev packs. The `products` JSON schema
+  permits the field; nothing populates it.
+
+**Where images actually come from**: AEM Assets, via the Commerce↔AEM Assets
+integration on the backend. The EDS storefront's `AEM_ASSETS_ENABLED` setting
+renders to `commerce-assets-enabled` in generated `config.json` and tells the
+dropins to resolve product images through Assets. Do not confuse that with
+`aem.repositoryId`, which is written per-site to the DA.live config so da.live's
+*Library* shows an Assets panel to authors — a different mechanism with a
+different consumer. See `.claude/skills/eds-publish-and-config` for the scoping
+rules on the second one.
+
 ### Reset — how a project gets reused
 
 The service takes `operation_mode: 'delete'` on the same `process-datapack-async`
