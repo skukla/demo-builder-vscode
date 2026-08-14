@@ -14,10 +14,9 @@
  * injection, Markdown link injection).
  */
 
-import * as fsPromises from 'fs/promises';
-import * as path from 'path';
 import demoPackagesJson from '../config/demo-packages.json';
 import { projectNeedsAppBuilderTooling } from './aiToolingGate';
+import type { GeneratedFileWriter } from './generatedFileWriter';
 import {
     sanitizeTemplateValue,
     sanitizeGithubSlug,
@@ -105,22 +104,28 @@ const CLAUDE_MD_POINTER = 'see @AGENTS.md\n';
  * project root and in `.claude/`. The pointers defer to AGENTS.md so AI tools
  * that look for CLAUDE.md find the same content via a single import.
  *
+ * All three files land through the ADR-013 GeneratedFileWriter seam
+ * (hash-and-skip): a user-edited file is left in place and reported on
+ * `writer.report()` rather than overwritten. No bundle write outside this
+ * seam — a direct `fsPromises.writeFile` here would revert that file to
+ * blind-overwrite behavior.
+ *
  * @param projectPath - Path to the project root directory
  * @param project - The project manifest
  * @param stacksConfig - Available stacks (used for display name lookup)
+ * @param writer - The ADR-013 hash-and-skip write seam for this refresh run
  */
 export async function writeAgentsMd(
     projectPath: string,
     project: Project,
     stacksConfig: Stack[],
+    writer: GeneratedFileWriter,
 ): Promise<void> {
     const content = generateAgentsMd(project, stacksConfig);
-    const claudeDir = path.join(projectPath, '.claude');
 
-    await fsPromises.writeFile(path.join(projectPath, 'AGENTS.md'), content, 'utf-8');
-    await fsPromises.writeFile(path.join(projectPath, 'CLAUDE.md'), CLAUDE_MD_POINTER, 'utf-8');
-    await fsPromises.mkdir(claudeDir, { recursive: true });
-    await fsPromises.writeFile(path.join(claudeDir, 'CLAUDE.md'), CLAUDE_MD_POINTER, 'utf-8');
+    await writer.write('AGENTS.md', content);
+    await writer.write('CLAUDE.md', CLAUDE_MD_POINTER);
+    await writer.write('.claude/CLAUDE.md', CLAUDE_MD_POINTER);
 }
 
 // ─── Section builders ────────────────────────────────────────────────────────

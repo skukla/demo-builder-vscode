@@ -18,6 +18,16 @@ jest.mock('@/features/project-creation/services/mcpConfigWriter', () => ({
 jest.mock('@/features/project-creation/services/skillsWriter', () => ({
     writeSkillFiles: jest.fn(),
 }));
+// The ADR-013 writer factory needs a logger; jest never calls initializeLogger.
+jest.mock('@/core/logging', () => ({
+    getLogger: jest.fn(() => ({
+        trace: jest.fn(),
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+    })),
+}));
 
 import { generateAIContextFiles } from '@/features/project-creation/services/projectFinalizationService';
 import { writeAgentsMd } from '@/features/project-creation/services/aiContextWriter';

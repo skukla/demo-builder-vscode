@@ -45,6 +45,7 @@ import syncChangesContent from '../templates/skills/sync-changes.md';
 import updateCredentialsContent from '../templates/skills/update-credentials.md';
 import { resolveMcpToolsDir } from './aiDefaultsInstaller';
 import { projectNeedsAppBuilderTooling } from './aiToolingGate';
+import type { GeneratedFileWriter } from './generatedFileWriter';
 import componentsConfig from '@/features/components/config/components.json';
 import { DEMO_BUILDER_ALWAYS_ON_SKILLS } from '@/types/ai';
 import type { Project } from '@/types/base';
@@ -127,10 +128,18 @@ export const DEMO_BUILDER_SKILLS: ReadonlyArray<{ filename: string; content: str
  * Additionally copies any Adobe skill bundles declared by components in
  * `project.componentInstances` (via the `aiSkillBundle` field on the
  * component's definition).
+ *
+ * Every skill file — always-on, conditional, and Adobe bundle copies alike —
+ * lands through the ADR-013 GeneratedFileWriter seam (hash-and-skip): a
+ * user-edited skill is left in place and reported on `writer.report()`
+ * rather than overwritten. No bundle write outside this seam. The `written`
+ * return keeps its pre-ADR contract (the attempted Demo-Builder skill
+ * filenames); skip visibility lives on the writer's report.
  */
 export async function writeSkillFiles(
     projectPath: string,
     project: Project,
+    writer: GeneratedFileWriter,
 ): Promise<{ written: string[] }> {
     const skillsDir = path.join(projectPath, '.claude', 'skills');
     await fsPromises.mkdir(skillsDir, { recursive: true });
@@ -139,7 +148,7 @@ export async function writeSkillFiles(
         if (path.basename(filename) !== filename) {
             throw new Error(`Invalid skill filename: ${filename}`);
         }
-        await fsPromises.writeFile(path.join(skillsDir, filename), content, 'utf-8');
+        await writer.write(`.claude/skills/${filename}`, content);
     };
 
     await Promise.all(
@@ -157,7 +166,7 @@ export async function writeSkillFiles(
             instance.path,
             definition.aiSkillBundle.path,
             definition.aiSkillBundle.prefix,
-            skillsDir,
+            writer,
         );
     }
 
@@ -175,7 +184,7 @@ export async function writeSkillFiles(
             resolveMcpToolsDir(projectPath),
             path.join('integration-starter-kit', 'skills'),
             'appbuilder',
-            skillsDir,
+            writer,
         );
         await writeSkill('extend-app-builder-app.md', extendAppBuilderAppContent);
         written.push('extend-app-builder-app.md');
@@ -207,7 +216,7 @@ async function copyAdobeSkillBundle(
     componentPath: string,
     bundleSubpath: string,
     prefix: string,
-    skillsDir: string,
+    writer: GeneratedFileWriter,
 ): Promise<void> {
     const sourceBundle = path.join(componentPath, ADOBE_PACKAGE_DIST_RELATIVE, bundleSubpath);
 
@@ -229,31 +238,38 @@ async function copyAdobeSkillBundle(
         const skillName = entry.name;
         const newSkillName = `${prefix}-${skillName}`;
         const sourceSkillDir = path.join(sourceBundle, skillName);
-        const targetSkillDir = path.join(skillsDir, newSkillName);
-        await copySkillFolder(sourceSkillDir, targetSkillDir, newSkillName);
+        // Project-relative posix target — the seam resolves it against the
+        // project root and mkdirs on actual writes.
+        const targetRelDir = `.claude/skills/${newSkillName}`;
+        await copySkillFolder(sourceSkillDir, targetRelDir, newSkillName, writer);
     }
 }
 
+/**
+ * Copy one skill folder from an Adobe bundle into the project, file by file
+ * through the ADR-013 seam. `targetRelDir` is a posix project-relative path;
+ * `.md` files get their `name:` frontmatter rewritten to the prefixed folder
+ * name before landing.
+ */
 async function copySkillFolder(
     sourceDir: string,
-    targetDir: string,
+    targetRelDir: string,
     newName: string,
+    writer: GeneratedFileWriter,
 ): Promise<void> {
-    await fsPromises.mkdir(targetDir, { recursive: true });
-
     const entries = await fsPromises.readdir(sourceDir, { withFileTypes: true });
     for (const entry of entries) {
         const sourcePath = path.join(sourceDir, entry.name);
-        const targetPath = path.join(targetDir, entry.name);
+        const targetRelPath = `${targetRelDir}/${entry.name}`;
 
         if (entry.isDirectory()) {
-            await copySkillFolder(sourcePath, targetPath, newName);
+            await copySkillFolder(sourcePath, targetRelPath, newName, writer);
             continue;
         }
 
         const raw = await fsPromises.readFile(sourcePath, 'utf-8');
         const content = entry.name.endsWith('.md') ? rewriteNameFrontmatter(raw, newName) : raw;
-        await fsPromises.writeFile(targetPath, content, 'utf-8');
+        await writer.write(targetRelPath, content);
     }
 }
 

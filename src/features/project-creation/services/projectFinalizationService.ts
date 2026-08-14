@@ -14,9 +14,11 @@ import stacksConfig from '../config/stacks.json';
 import { ProgressTracker } from '../handlers/shared';
 import { writeAgentsMd } from './aiContextWriter';
 import type { ComponentDefinitionEntry } from './componentInstallationOrchestrator';
+import { createGeneratedFileWriter } from './generatedFileWriter';
 import { writeMcpConfigs } from './mcpConfigWriter';
 import { writeSkillFiles } from './skillsWriter';
 import { AI_CONTEXT_VERSION, isMeshComponentId } from '@/core/constants';
+import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     ProjectSetupContext,
@@ -190,10 +192,15 @@ export async function generateAIContextFiles(
     // this stamp to decide whether the project is stale.
     project.aiContextVersion = AI_CONTEXT_VERSION;
 
+    // ONE ADR-013 hash-and-skip writer per refresh run, seeded from the
+    // project's recorded hashes (absent on pre-ADR projects → every bundle
+    // file gets the overwrite-once treatment and a fresh hash).
+    const writer = createGeneratedFileWriter(projectPath, project.aiFileHashes ?? {}, getLogger());
+
     const steps: Array<{ label: string; run: () => Promise<void> }> = [
         {
             label: 'Writing AGENTS.md',
-            run: () => writeAgentsMd(projectPath, project, stacksConfig.stacks as Stack[]),
+            run: () => writeAgentsMd(projectPath, project, stacksConfig.stacks as Stack[], writer),
         },
         {
             label: 'Writing MCP configuration',
@@ -202,7 +209,7 @@ export async function generateAIContextFiles(
         {
             label: 'Writing skills',
             run: async () => {
-                const summary = await writeSkillFiles(projectPath, project);
+                const summary = await writeSkillFiles(projectPath, project, writer);
                 skills = summary?.written ?? [];
             },
         },
@@ -217,6 +224,11 @@ export async function generateAIContextFiles(
             errors.push(err instanceof Error ? err.message : String(err));
         }
     }
+
+    // Persist the FULL updated hash map even when a writer failed — hashes for
+    // files that DID land must survive, or their next refresh would misread
+    // them as pre-ADR. The caller saves the manifest (unchanged contract).
+    project.aiFileHashes = writer.hashes();
 
     if (errors.length > 0) {
         throw new Error(`AI context file generation failed: ${errors.join('; ')}`);

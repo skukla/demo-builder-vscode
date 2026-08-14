@@ -83,6 +83,33 @@ describe('ProjectFileLoader — legacy appBuilderComponent migration', () => {
         expect(project!.aiContextVersion).toBeUndefined();
     });
 
+    // ADR-013: the per-file hash map rides the manifest next to aiContextVersion.
+    it('loads aiFileHashes from the manifest into the project', async () => {
+        primeFsWithManifest({
+            name: 'hashed-demo',
+            aiFileHashes: { 'AGENTS.md': 'abc123', '.claude/skills/add-component.md': 'def456' },
+        });
+
+        const loader = new ProjectFileLoader(makeLogger());
+        const project = await loader.loadProject(PROJECT_PATH, () => []);
+
+        expect(project).not.toBeNull();
+        expect(project!.aiFileHashes).toEqual({
+            'AGENTS.md': 'abc123',
+            '.claude/skills/add-component.md': 'def456',
+        });
+    });
+
+    it('leaves aiFileHashes undefined when the manifest omits it (pre-ADR project)', async () => {
+        primeFsWithManifest({ name: 'unhashed-demo' });
+
+        const loader = new ProjectFileLoader(makeLogger());
+        const project = await loader.loadProject(PROJECT_PATH, () => []);
+
+        expect(project).not.toBeNull();
+        expect(project!.aiFileHashes).toBeUndefined();
+    });
+
     it('does not write the manifest file during load (read-only migration in D1)', async () => {
         primeFsWithManifest({
             name: 'legacy-demo',

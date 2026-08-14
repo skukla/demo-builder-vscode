@@ -195,6 +195,17 @@ export interface Project {
      */
     aiContextVersion?: number;
     /**
+     * Per-file sha-256 hashes of the AI-bundle files last generated into this
+     * project, keyed by posix project-relative path (`AGENTS.md`,
+     * `.claude/skills/add-component.md`). The GeneratedFileWriter compares the
+     * recorded hash against disk to tell "ours" (safe to overwrite/remove)
+     * from "user-edited" (skip and report) — ADR-013 hash-and-skip
+     * (docs/architecture/adr/013-generated-file-edit-survival.md). Absent on
+     * pre-ADR projects: their bundle files are treated as unmodified once,
+     * overwritten, and recorded.
+     */
+    aiFileHashes?: Record<string, string>;
+    /**
      * Pinned projects sort first on the projects dashboard (alphabetical
      * within the pinned and unpinned groups). Set per-project via the
      * Pin/Unpin kebab item.
