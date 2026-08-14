@@ -248,8 +248,14 @@ Across **all 1063 log records** (complete, not a sample) the vocabulary is:
 | `aco` | 34 | 21–22 char base62 nanoid |
 | absent | 26 | mixed |
 
-**There is no `paas` row anywhere in that set**, so no PaaS project has ever run
-through this service.
+**There is no `paas` row anywhere in that set**, so no PaaS project had ever run
+through this service — until 2026-08-14, when the question was answered live:
+**PaaS works, as `site_type: local`.** `get-websites-and-stores` with a PaaS
+storefront base URL as `commerce_instance` plus the admin pair returned 200 with
+the instance's real websites and stores. So the prefill from
+`ADOBE_COMMERCE_URL` is confirmed correct, not just the right shape. (The
+`validate` half was not exercised in that session; pre-flight — the half that
+gated everything on ACCS — was.)
 
 What it means for a PaaS target. For ACCS the service expands a tenant id into a
 base URL from its own configuration — which it can only do for instances it knows
