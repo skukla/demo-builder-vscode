@@ -78,8 +78,23 @@ declined. Remaining, in execution order:
    prices name "Platinum Buyer", needs `customer_groups` imported too);
    recovery run succeeded; 6-type reset restored the instance byte-identical.
    Findings recorded in `docs/systems/data-installer.md`.
-5. **Stage 3 (export)** — capture a pack FROM an instance; must say it skips
-   `giftcards`; needs `create-datapack` + `add-data-item` on the client.
+5. **Stage 3 (export)** — **BLOCKED on the service, 2026-08-14.** Probed live
+   with controls: every export returns 200 / `success: false` / `exported: 0`
+   with no message (3 data types, 3 processors) while pre-flight reports auth
+   and connectivity true, and the control `validate` call in the same script
+   returns 200 `success: true`. `get-export-items` — the selections feed —
+   refuses the tenant id ("must be a full URL") AND the full URL ("pre-flight
+   failed for all site types"). There is no working export contract to build
+   against. Details + the corrected request/response shapes:
+   `docs/systems/data-installer.md` §6b.
+
+   Two plan assumptions were also wrong and should not be carried forward: the
+   documented `base_url` body is rejected (export takes `commerce_instance` like
+   everything else), and there is no separate `create-datapack` step — a
+   successful export would write the pack itself.
+
+   **Next move is a question for Jeff, not code.** Nothing was created by the
+   probe (catalog 40 rows before and after).
 6. **Stage 4 (wizard hook)** — datapack selection in Build Your Project; the
    datapack↔demo-package mapping is an explicit table and a product decision.
 
