@@ -37,10 +37,15 @@ Bodea demo must come from DA.live content or the brand-assets vendor point. (Thi
 product-teaser's unguarded `images[0]` was a real crash risk, fixed in bodea-source `77b9a18`.)
 
 `visibility` is numeric in the pack: **31 products = `4`** ("Catalog, Search"), **25 = `1`**
-("Not Visible Individually" — the configurable children). None use `3`. Our blocks filter
-Catalog Service on the label strings `['Search', 'Catalog, Search']`, which should match the 31
-after import (Catalog Service exposes labels, the pack stores the numeric) — **confirm live
-before trusting it.**
+("Not Visible Individually" — the configurable children). None use `3`.
+
+**SETTLED (measured live 2026-08-14, with controls):** Catalog Service takes **label strings**,
+not the pack's numerics. Against a live ACCS catalog of 39 visible products —
+no filter → 39 · `["Catalog, Search"]` → 39 · `["Search"]` → 0 · `["4"]` → **0** ·
+`["NotAValue"]` (control) → 0. The bogus control proves the filter applies, so `["4"]` is a real
+rejection. **Our blocks' existing `['Search', 'Catalog, Search']` filter is correct — do not
+change it.** The 25 children are correctly excluded. (Scope caveat: measured on a different
+catalog on the same instance — the *layer behaviour* is proven, not anything Bodea-specific.)
 
 Individually-visible non-configurables (SKU · price):
 `vrrack` 7500 · `datacentersystem` 7500 · `primergyrx4770m5` 2150 · `poweredger752` 1850 ·
@@ -67,6 +72,16 @@ Each has ONE option attribute → the configurator's `attribute-groups` must be 
 Jen's `"Materials: Material, Finish; Signature: Hardware, Scale"` to match a real label, e.g.
 `"Configuration: Processor"`. Note `wattage`'s frontend label is lowercase in the pack — it
 renders verbatim.
+
+**All seven are plain dropdowns** (measured): `frontend_input: "select"`, Source\Table model, no
+`swatch_input_type` or swatch fields anywhere in the pack. Option labels equal their values
+(`{"label":"2.4 GHz","value":"2.4 GHz"}`). So `luxury-configurator`'s `image` and `color`
+rendering branches have nothing to bind to — the demo is dropdown-only unless someone seeds
+swatch data by hand.
+
+Hook if we ever want a swatch demo: a **`color` attribute already exists** (`is_filterable: true`,
+applies to simple/virtual/configurable) but is **empty** — its only option is a single blank
+`{"label":" ","value":" "}`. Seeding its options is manual work outside the pack.
 
 ## Categories
 
@@ -102,3 +117,11 @@ strings, not numeric ids** — e.g. `vrrack` → `[bodea, products, racks]` — 
 - **Product images** — see above.
 - **Orders** — no order processor; `commerce-account-hub`'s "Recent Orders" reads 0 until an
   order is placed by hand.
+- **Quotes and requisition lists — impossible via ANY datapack, not just this one.** The
+  service's full vocabulary was pulled live: 21 import types, 18 export, and **zero matches for
+  quote / requisition / negotiable in either direction**. So no pack can ever seed them, and
+  `commerce-account-hub`'s Quotes / Quote Templates / Requisition Lists tiles read 0 on a fresh
+  import regardless of brand. The three companies DO ship `is_quote_enabled: true` and
+  `is_purchase_order_enabled: true` — the features are on, there is simply no seeded instance
+  data behind them. **Permanent runbook line:** create one quote + one requisition list by hand
+  post-import, or the flagship B2B block demos zeros.
