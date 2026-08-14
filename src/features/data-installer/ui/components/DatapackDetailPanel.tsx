@@ -120,7 +120,15 @@ function renderPanelBody(args: {
         return renderDataInstallerFailure(failure, onRetry);
     }
     if (loading || !detail) {
-        return <LoadingDisplay size="M" message="Loading datapack..." />;
+        // Centered in the drawer, not top-aligned. Not CenteredFeedbackContainer:
+        // its height is a fixed DimensionValue (no percentages — the same limit
+        // IntegrationsScreen records), and this needs flex-fill of whatever space
+        // the drawer body has. db-drawer-body is a flex column, so flex:1 centers.
+        return (
+            <div className="datapack-panel-loading">
+                <LoadingDisplay size="M" message="Loading datapack..." />
+            </div>
+        );
     }
     return <DetailRows detail={detail} inventory={inventory} />;
 }

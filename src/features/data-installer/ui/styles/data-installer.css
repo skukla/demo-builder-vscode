@@ -162,6 +162,17 @@
     color: var(--spectrum-global-color-gray-900);
 }
 
+/* The flyout's loading state fills the REMAINING drawer-body space and centers
+   the spinner in it. flex:1 rather than a fixed height, because the drawer is
+   viewport-height and CenteredFeedbackContainer's DimensionValue cannot say
+   "whatever is left". */
+.datapack-panel-loading {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 /* Data types as wrapping chips: a pack can carry 18, and a comma-joined line
    ran to four wrapped rows in an 88px-key row layout. */
 .datapack-panel-types {

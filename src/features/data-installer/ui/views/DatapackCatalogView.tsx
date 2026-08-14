@@ -38,7 +38,7 @@
  * @module features/data-installer/ui/views/DatapackCatalogView
  */
 
-import { Switch } from '@adobe/react-spectrum';
+import { Flex, Switch, View } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     groupDatapacks,
@@ -133,7 +133,16 @@ export function DatapackCatalogView(): React.JSX.Element {
     }, [loadDetail, selected]);
 
     if (loading && !value) {
-        return <LoadingDisplay size="L" message="Loading datapacks..." />;
+        // Centered in the full viewport — IntegrationsScreen's exact gate shape
+        // (its comment records why not CenteredFeedbackContainer: that takes a
+        // FIXED DimensionValue and cannot express "fill this screen").
+        return (
+            <View height="100vh">
+                <Flex justifyContent="center" alignItems="center" height="100%">
+                    <LoadingDisplay size="L" message="Loading datapacks..." />
+                </Flex>
+            </View>
+        );
     }
 
     if (failure) {
