@@ -68,19 +68,18 @@ declined. Remaining, in execution order:
    two declared fields). Every step rehearsed live 2026-08-13.
 2. **PaaS verified live** — the user has an instance to test against. One dry run
    answers whether the service's `local` handler takes a PaaS URL.
-3. **Website targeting instead of a warning** — REFRAMED 2026-08-14: the service
-   source (`data-installer-api-b2b`) rewrites pack `website_ids` with
-   `replaceWebsiteIdsWithSession()` (products, cart_rules; code-based equivalent
-   for product_export/stocks), driven by optional request params `website_code` +
-   `store_code` (validated as a pair; default `base`/id 1). Bodea's hardcoded
-   `[3]` is dead weight, not a landmine — the doc's old warning was corrected.
-   So item 3 is now: (a) confirm the substitution live on the first products
-   import (service logs "Replaced website_ids with [N]"), and (b) decide/build
-   the optional target website/store picker in the import modal — `buildBody`
-   sends no pair today, so every import lands on `base`; the
-   `get-websites-and-stores` pre-flight data already has the choices.
-4. **Exercise `partial` and multi-type** — one multi-type import/reset pass
-   (doubles as the live proof for 3a).
+3. ~~Website targeting~~ **DONE (3a) / SPLIT (3b), 2026-08-14**: substitution
+   confirmed live (bodea `website_ids:[3]` → all 56 products on `base`, REST
+   readback). The picker is now its own feat:
+   `.rptc/plans/datapack-import-targeting/overview.md` — design decisions
+   (picker consumes the extension's OWN store discovery, not
+   `get-websites-and-stores`; single-website invariant; customer_groups
+   dependency guardrail) are recorded there. Building it is DoD item 3.
+4. ~~Exercise `partial` and multi-type~~ **DONE 2026-08-14**: 5-type import →
+   4 success + `products` fail (type-level ATOMIC: zero landed; cause: tier
+   prices name "Platinum Buyer", needs `customer_groups` imported too);
+   recovery run succeeded; 6-type reset restored the instance byte-identical.
+   Findings recorded in `docs/systems/data-installer.md`.
 5. **Stage 3 (export)** — capture a pack FROM an instance; must say it skips
    `giftcards`; needs `create-datapack` + `add-data-item` on the client.
 6. **Stage 4 (wizard hook)** — datapack selection in Build Your Project; the

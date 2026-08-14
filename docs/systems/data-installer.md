@@ -356,9 +356,26 @@ Two operational facts learned the hard way:
   - The extension's `buildBody` (`dataInstallerWriteClient.ts`) does not send
     the pair yet, so every import targets `base`. The `get-websites-and-stores`
     data already fetched for pre-flight could drive a target picker.
-  - Read from the source, not yet observed live — the deployed service logs
-    "Replaced website_ids with [N]" when it fires, so the first live products
-    import confirms or refutes this.
+  - **Observed live 2026-08-14**: a 5-type bodea import put all 56 products on
+    website 1 (`base`) — pack said `[3]`, REST readback said `[1]` — and no
+    phantom website appeared. The substitution is real on the deployed service.
+
+Two more import facts from the same run (2026-08-14):
+
+- **A data type imports atomically.** One bad SKU (`vrrack`) failed the whole
+  `products` type — zero products imported, while the other four types in the
+  same request succeeded independently.
+- **`products` depends on `customer_groups` when tier prices are present.**
+  Bodea's `vrrack` tier prices name the "Platinum Buyer" group; the service's
+  name→id lookup (`customer_group_id: replaceWithLookup(customer_groups_search)`)
+  finds nothing unless `customer_groups` was imported first. Validate cannot
+  catch it (shape-only). Re-running with `customer_groups` + `products`
+  succeeded. The UI's type checkboxes let a user walk straight into this.
+- **Delete order is its own order, observed**: the 6-type reset deleted
+  `customer_groups` first while `products` was still processing — consistent
+  with the earlier finding that delete's processor order is not import's
+  reverse. The full reset restored the instance byte-identical (categories,
+  SKUs, websites all matching the pre-import snapshot).
 
 ### Reset — how a project gets reused
 
