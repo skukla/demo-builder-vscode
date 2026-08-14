@@ -598,10 +598,47 @@ Consequence: **a selections/filter UI cannot be built against ACCS today.** An
 export of everything for a data type may still work — that path was not probed,
 see below.
 
-### The export contract differs from import's in two ways
+### Export runs, authenticates, connects — and exports NOTHING
 
-- **Request**: the export docs use `base_url`, not `commerce_instance`
-  (`EXPORT_GUIDE.md` scenarios 1 and 2).
+The probe the read-only findings could not reach: a real `operation_mode:
+'export'` against a live ACCS instance, to a throwaway datapack name.
+
+| Data type | Processor | Result |
+|---|---|---|
+| `attribute_sets` | `AttributeSetExportProcessor` | 200, `success: false`, `exported: 0`, **no message** |
+| `categories` | `CategoryExportProcessor` | 200, `success: false`, `exported: 0`, **no message** |
+| `customer_groups` | `CustomerGroupExportProcessor` | 200, `success: false`, `exported: 0`, **no message** |
+
+Every run reported `pre_flight_check.authentication.success: true` and
+`commerce_instance_connectivity.success: true`. The instance demonstrably holds
+that data (14 categories, 130 products, the standard customer groups).
+
+**Control, in the same script with the same credentials and instance**:
+`operation_mode: 'validate'` → 200, `success: true`. So the caller, the
+credentials and the instance are all fine; the export processors return nothing
+and say nothing about why.
+
+**Nothing was created.** The catalog held 40 rows before and 40 after, with zero
+`demo-builder-probe-*` rows left behind (filter positive-controlled against
+`bodea`, which it finds). A zero-item export writes no datapack, so there was
+nothing to clean up.
+
+**Verdict: the export capability is non-functional for ACCS on the deployed
+stage service.** Combined with `get-export-items` refusing both instance forms,
+there is no export path that works today — Stage 3 cannot be built against a
+contract nothing has ever satisfied.
+
+### The export contract differs from import's in three ways
+
+- **Request**: the export docs use `base_url` and no `commerce_instance`
+  (`EXPORT_GUIDE.md` scenarios 1 and 2). **The deployed service rejects that
+  body**: `base_url` alone returns 400 "Missing required parameter:
+  commerce_instance". Export takes the same tenant id every other endpoint
+  takes — an eighth doc divergence, and the opposite of what `get-export-items`
+  demands.
+- **`entity_summary`, not `entity_counts`**: live fields are `created, deleted,
+  exported, failed, skipped, updated` — none of the documented `fetched,
+  selected, exported, stored, excluded, filtered_out`.
 - **Response**: `results: [{data_type, success, entity_counts: {fetched,
   selected, exported, stored, excluded, filtered_out}, dependencies, message}]`
   — a different shape from import's `data_types: {<type>: {status}}` map. The
