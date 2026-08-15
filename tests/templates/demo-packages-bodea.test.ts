@@ -119,6 +119,9 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
             expect(sf.contentSource).toEqual({
                 org: 'skukla',
                 site: 'bodea-source',
+                // bodea-source publishes /sitemap.json, not the default
+                // /full-index.json — the index fallback 404s without this.
+                indexPath: '/sitemap.json',
             });
         });
     });

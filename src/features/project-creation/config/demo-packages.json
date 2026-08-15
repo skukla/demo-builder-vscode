@@ -431,7 +431,8 @@
           "templateRepo": "boilerplate-b2b-template",
           "contentSource": {
             "org": "skukla",
-            "site": "bodea-source"
+            "site": "bodea-source",
+            "indexPath": "/sitemap.json"
           },
           "accountContentSource": {
             "org": "adobe-commerce",
@@ -492,7 +493,8 @@
           "templateRepo": "boilerplate-b2b-template",
           "contentSource": {
             "org": "skukla",
-            "site": "bodea-source"
+            "site": "bodea-source",
+            "indexPath": "/sitemap.json"
           },
           "accountContentSource": {
             "org": "adobe-commerce",
