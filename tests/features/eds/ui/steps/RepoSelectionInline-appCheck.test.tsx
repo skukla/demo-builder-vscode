@@ -18,6 +18,7 @@
 import {
     computeRepoValid,
     computeCodeSyncValid,
+    resolveCodeSyncView,
     shouldShowAppStatus,
 } from '@/features/eds/ui/steps/repoSelectionInline.helpers';
 import { isValidRepositoryName } from '@/core/validation/normalizers';
@@ -26,7 +27,7 @@ import type { GitHubRepoItem } from '@/types/webview';
 // Define the GitHubAppStatus interface (same as in component)
 interface GitHubAppStatus {
     isChecking: boolean;
-    isInstalled: boolean | null;  // null = not checked yet
+    isInstalled: boolean | null; // null = not checked yet
     /** The actual code.status from the Helix admin endpoint (200, 400, 404, etc.) */
     codeStatus?: number;
     error?: string;
@@ -39,19 +40,19 @@ describe('computeRepoValid (repo choice, no app gate)', () => {
     describe('new repos', () => {
         it('is valid when created and not mid-creation', () => {
             expect(
-                computeRepoValid('new', { isCreated: true, isCreating: false }, undefined, false),
+                computeRepoValid('new', { isCreated: true, isCreating: false }, undefined, false)
             ).toBe(true);
         });
 
         it('is invalid before creation', () => {
             expect(
-                computeRepoValid('new', { isCreated: false, isCreating: false }, undefined, false),
+                computeRepoValid('new', { isCreated: false, isCreating: false }, undefined, false)
             ).toBe(false);
         });
 
         it('is invalid while still creating', () => {
             expect(
-                computeRepoValid('new', { isCreated: true, isCreating: true }, undefined, false),
+                computeRepoValid('new', { isCreated: true, isCreating: true }, undefined, false)
             ).toBe(false);
         });
     });
@@ -59,19 +60,24 @@ describe('computeRepoValid (repo choice, no app gate)', () => {
     describe('existing repos', () => {
         it('is valid when a repo is selected and not loading', () => {
             expect(
-                computeRepoValid('existing', { isCreated: false, isCreating: false }, repo, false),
+                computeRepoValid('existing', { isCreated: false, isCreating: false }, repo, false)
             ).toBe(true);
         });
 
         it('is invalid when no repo is selected', () => {
             expect(
-                computeRepoValid('existing', { isCreated: false, isCreating: false }, undefined, false),
+                computeRepoValid(
+                    'existing',
+                    { isCreated: false, isCreating: false },
+                    undefined,
+                    false
+                )
             ).toBe(false);
         });
 
         it('is invalid while loading', () => {
             expect(
-                computeRepoValid('existing', { isCreated: false, isCreating: false }, repo, true),
+                computeRepoValid('existing', { isCreated: false, isCreating: false }, repo, true)
             ).toBe(false);
         });
     });
@@ -81,19 +87,19 @@ describe('computeCodeSyncValid (app gate)', () => {
     describe('new repos', () => {
         it('is valid when the app is installed and not mid-check', () => {
             expect(
-                computeCodeSyncValid('new', { isChecking: false, isInstalled: true }, undefined),
+                computeCodeSyncValid('new', { isChecking: false, isInstalled: true }, undefined)
             ).toBe(true);
         });
 
         it('is invalid when the app is not installed', () => {
             expect(
-                computeCodeSyncValid('new', { isChecking: false, isInstalled: false }, undefined),
+                computeCodeSyncValid('new', { isChecking: false, isInstalled: false }, undefined)
             ).toBe(false);
         });
 
         it('is invalid while still checking', () => {
             expect(
-                computeCodeSyncValid('new', { isChecking: true, isInstalled: null }, undefined),
+                computeCodeSyncValid('new', { isChecking: true, isInstalled: null }, undefined)
             ).toBe(false);
         });
     });
@@ -101,13 +107,17 @@ describe('computeCodeSyncValid (app gate)', () => {
     describe('existing repos', () => {
         it('is valid once a repo is SELECTED (no app gate, but follows Repository)', () => {
             expect(
-                computeCodeSyncValid('existing', { isChecking: false, isInstalled: null }, repo),
+                computeCodeSyncValid('existing', { isChecking: false, isInstalled: null }, repo)
             ).toBe(true);
         });
 
         it('is invalid before a repo is selected (must not pass before Repository)', () => {
             expect(
-                computeCodeSyncValid('existing', { isChecking: false, isInstalled: null }, undefined),
+                computeCodeSyncValid(
+                    'existing',
+                    { isChecking: false, isInstalled: null },
+                    undefined
+                )
             ).toBe(false);
         });
     });
@@ -122,7 +132,7 @@ describe('RepoSelectionInline - GitHub App Check', () => {
          */
         it('should NOT trigger check for existing repo selection (deferred to StorefrontSetup)', () => {
             // Given: User selects an existing repository
-            const repoMode = 'existing' as const;
+            const repoMode = 'existing' as 'existing' | 'new';
             const _selectedRepo = { name: 'test-repo', fullName: 'test-user/test-repo' };
 
             // When: Evaluating check conditions at GitHubRepoSelectionStep
@@ -137,10 +147,15 @@ describe('RepoSelectionInline - GitHub App Check', () => {
             // Given: User creates a new repository
             const repoMode = 'new' as const;
             const repoCreationState = { isCreated: true, isCreating: false };
-            const createdRepo = { owner: 'test-user', name: 'new-repo', fullName: 'test-user/new-repo' };
+            const createdRepo = {
+                owner: 'test-user',
+                name: 'new-repo',
+                fullName: 'test-user/new-repo',
+            };
 
             // When: Evaluating check conditions
-            const shouldCheckAtThisStep = repoMode === 'new' && repoCreationState.isCreated && !!createdRepo;
+            const shouldCheckAtThisStep =
+                repoMode === 'new' && repoCreationState.isCreated && !!createdRepo;
 
             // Then: Check should be triggered for new repos after creation
             expect(shouldCheckAtThisStep).toBe(true);
@@ -153,7 +168,8 @@ describe('RepoSelectionInline - GitHub App Check', () => {
             const createdRepo = undefined;
 
             // When: Evaluating check conditions
-            const shouldCheckAtThisStep = repoMode === 'new' && repoCreationState.isCreated && !!createdRepo;
+            const shouldCheckAtThisStep =
+                repoMode === 'new' && repoCreationState.isCreated && !!createdRepo;
 
             // Then: Check should NOT be triggered until repo is created
             expect(shouldCheckAtThisStep).toBe(false);
@@ -163,7 +179,9 @@ describe('RepoSelectionInline - GitHub App Check', () => {
             // Given: No GitHub user authenticated
             const _repoMode = 'existing' as const;
             const _selectedRepo = { name: 'test-repo', fullName: 'test-user/test-repo' };
-            const githubUser = undefined;
+            // `let` without an initializer: a const initialized to undefined is
+            // NARROWED to undefined, and ?.login on that checks against never.
+            let githubUser: { login: string } | undefined;
 
             // When: Evaluating check conditions
             const owner = githubUser?.login;
@@ -258,7 +276,8 @@ describe('RepoSelectionInline - GitHub App Check', () => {
                 const appVerified = githubAppStatus.isInstalled === true;
                 const isCreatingRepo = repoCreationState.isCreating;
                 const isCheckingApp = githubAppStatus.isChecking;
-                const canProceed = isRepoCreated && appVerified && !isCheckingApp && !isCreatingRepo;
+                const canProceed =
+                    isRepoCreated && appVerified && !isCheckingApp && !isCreatingRepo;
 
                 // Then: canProceed should be true
                 expect(canProceed).toBe(true);
@@ -270,7 +289,7 @@ describe('RepoSelectionInline - GitHub App Check', () => {
                 const repoCreationState = { isCreated: true, isCreating: false };
                 const githubAppStatus: GitHubAppStatus = {
                     isChecking: true,
-                    isInstalled: null,  // null = not checked yet
+                    isInstalled: null, // null = not checked yet
                 };
 
                 // When: Calculating canProceed
@@ -312,7 +331,11 @@ describe('RepoSelectionInline - GitHub App Check', () => {
             // Given: New repo created but app not installed
             const repoMode = 'new' as const;
             const repoCreationState = { isCreated: true, isCreating: false };
-            const createdRepo = { owner: 'test-user', name: 'new-repo', fullName: 'test-user/new-repo' };
+            const createdRepo = {
+                owner: 'test-user',
+                name: 'new-repo',
+                fullName: 'test-user/new-repo',
+            };
             const githubAppStatus: GitHubAppStatus = {
                 isChecking: false,
                 isInstalled: false,
@@ -321,11 +344,10 @@ describe('RepoSelectionInline - GitHub App Check', () => {
             const isModalDismissed = false;
 
             // When: Determining if modal should show
-            const isNewWithCreatedRepo = repoMode === 'new' && repoCreationState.isCreated && !!createdRepo;
+            const isNewWithCreatedRepo =
+                repoMode === 'new' && repoCreationState.isCreated && !!createdRepo;
             const shouldShowModal =
-                isNewWithCreatedRepo &&
-                githubAppStatus.isInstalled === false &&
-                !isModalDismissed;
+                isNewWithCreatedRepo && githubAppStatus.isInstalled === false && !isModalDismissed;
 
             // Then: Should show install modal
             expect(shouldShowModal).toBe(true);
@@ -333,11 +355,11 @@ describe('RepoSelectionInline - GitHub App Check', () => {
 
         it('should NOT show modal for EXISTING repos (check deferred to StorefrontSetup)', () => {
             // Given: User selects an existing repo
-            const repoMode = 'existing' as const;
+            const repoMode = 'existing' as 'existing' | 'new';
             const _selectedRepo = { name: 'test-repo', fullName: 'test-user/test-repo' };
             const _githubAppStatus: GitHubAppStatus = {
                 isChecking: false,
-                isInstalled: null,  // Not checked - check deferred
+                isInstalled: null, // Not checked - check deferred
             };
 
             // When: Determining if modal should show
@@ -353,17 +375,20 @@ describe('RepoSelectionInline - GitHub App Check', () => {
             // Given: New repo with app installed
             const repoMode = 'new' as const;
             const repoCreationState = { isCreated: true, isCreating: false };
-            const createdRepo = { owner: 'test-user', name: 'new-repo', fullName: 'test-user/new-repo' };
+            const createdRepo = {
+                owner: 'test-user',
+                name: 'new-repo',
+                fullName: 'test-user/new-repo',
+            };
             const githubAppStatus: GitHubAppStatus = {
                 isChecking: false,
                 isInstalled: true,
             };
 
             // When: Determining what to show
-            const isNewWithCreatedRepo = repoMode === 'new' && repoCreationState.isCreated && !!createdRepo;
-            const shouldShowModal =
-                isNewWithCreatedRepo &&
-                githubAppStatus.isInstalled === false;
+            const isNewWithCreatedRepo =
+                repoMode === 'new' && repoCreationState.isCreated && !!createdRepo;
+            const shouldShowModal = isNewWithCreatedRepo && githubAppStatus.isInstalled === false;
 
             // Then: Should NOT show modal
             expect(shouldShowModal).toBe(false);
@@ -373,7 +398,11 @@ describe('RepoSelectionInline - GitHub App Check', () => {
             // Given: User dismissed the modal
             const repoMode = 'new' as const;
             const repoCreationState = { isCreated: true, isCreating: false };
-            const createdRepo = { owner: 'test-user', name: 'new-repo', fullName: 'test-user/new-repo' };
+            const createdRepo = {
+                owner: 'test-user',
+                name: 'new-repo',
+                fullName: 'test-user/new-repo',
+            };
             const githubAppStatus: GitHubAppStatus = {
                 isChecking: false,
                 isInstalled: false,
@@ -381,11 +410,10 @@ describe('RepoSelectionInline - GitHub App Check', () => {
             const isModalDismissed = true;
 
             // When: Determining if modal should show
-            const isNewWithCreatedRepo = repoMode === 'new' && repoCreationState.isCreated && !!createdRepo;
+            const isNewWithCreatedRepo =
+                repoMode === 'new' && repoCreationState.isCreated && !!createdRepo;
             const shouldShowModal =
-                isNewWithCreatedRepo &&
-                githubAppStatus.isInstalled === false &&
-                !isModalDismissed;
+                isNewWithCreatedRepo && githubAppStatus.isInstalled === false && !isModalDismissed;
 
             // Then: Should NOT show modal (user dismissed)
             expect(shouldShowModal).toBe(false);
@@ -423,7 +451,9 @@ describe('RepoSelectionInline - GitHub App Check', () => {
             };
 
             expect(errorStatus.error).toBe('Network error');
-            expect(errorStatus.installUrl).toBe('https://github.com/apps/aem-code-sync/installations/new');
+            expect(errorStatus.installUrl).toBe(
+                'https://github.com/apps/aem-code-sync/installations/new'
+            );
         });
     });
 
@@ -441,7 +471,9 @@ describe('RepoSelectionInline - GitHub App Check', () => {
             return status.codeStatus === undefined ? 'Registering...' : 'Not installed';
         };
 
-        const getGitHubAppStatusIndicator = (status: GitHubAppStatus): 'completed' | 'empty' | 'pending' | 'error' => {
+        const getGitHubAppStatusIndicator = (
+            status: GitHubAppStatus
+        ): 'completed' | 'empty' | 'pending' | 'error' => {
             if (status.isChecking) return 'pending';
             if (status.isInstalled === true) return 'completed';
             // HTTP 404 (codeStatus undefined) = repo being registered by Helix, show pending
@@ -453,7 +485,7 @@ describe('RepoSelectionInline - GitHub App Check', () => {
 
         it('should only show status for NEW repos after creation', () => {
             // Given: Different repo modes
-            const existingRepoMode = 'existing' as const;
+            const existingRepoMode = 'existing' as 'existing' | 'new';
             const newRepoMode = 'new' as const;
             const repoCreationState = { isCreated: true, isCreating: false };
 
@@ -549,13 +581,21 @@ describe('computeCodeSyncValid — existing repos (2026-08-06)', () => {
 
     it('blocks when Helix definitively reports the App missing', () => {
         expect(
-            computeCodeSyncValid('existing', { isChecking: false, isInstalled: false, codeStatus: 404 }, repo)
+            computeCodeSyncValid(
+                'existing',
+                { isChecking: false, isInstalled: false, codeStatus: 404 },
+                repo
+            )
         ).toBe(false);
     });
 
     it('allows once the App is verified', () => {
         expect(
-            computeCodeSyncValid('existing', { isChecking: false, isInstalled: true, codeStatus: 200 }, repo)
+            computeCodeSyncValid(
+                'existing',
+                { isChecking: false, isInstalled: true, codeStatus: 200 },
+                repo
+            )
         ).toBe(true);
     });
 
@@ -603,3 +643,66 @@ describe('shouldShowAppStatus (the row that explains a block)', () => {
         expect(shouldShowAppStatus('new', false, true)).toBe(false);
     });
 });
+
+/**
+ * Which canonical view the Code Sync sub-step shows.
+ *
+ * The body is a full-width view, so it uses the project's full-view vocabulary —
+ * `LoadingDisplay` while working, `SuccessStateDisplay` when verified,
+ * `StatusDisplay` + `NumberedInstructions` for the install flow — rather than the
+ * single `StatusSection` row it used to render, which left a large empty panel
+ * and, for an EXISTING repo, no install instructions at all.
+ *
+ * Kept a pure mapper so every state is cheap to pin; the renderer just switches.
+ */
+describe('resolveCodeSyncView', () => {
+    const status = (over: Partial<GitHubAppStatus> = {}): GitHubAppStatus => ({
+        isChecking: false,
+        isInstalled: null,
+        ...over,
+    });
+
+    it('shows the loading view while checking', () => {
+        expect(resolveCodeSyncView(status({ isChecking: true }), false).kind).toBe('checking');
+    });
+
+    it('shows the loading view while re-checking after an install', () => {
+        expect(resolveCodeSyncView(status({ isInstalled: false }), true).kind).toBe('checking');
+    });
+
+    it('shows the success view when the app is verified', () => {
+        expect(resolveCodeSyncView(status({ isInstalled: true, codeStatus: 200 }), false).kind).toBe(
+            'verified',
+        );
+    });
+
+    it('shows the install flow when the app is definitively missing', () => {
+        expect(
+            resolveCodeSyncView(status({ isInstalled: false, codeStatus: 404 }), false).kind,
+        ).toBe('needs-install');
+    });
+
+    it('distinguishes "could not verify" from "not installed"', () => {
+        // The 401 case: Adobe refused the credential, which says NOTHING about
+        // whether the app is installed. Rendering it as "missing" sends the user
+        // to reinstall an app that is already there.
+        expect(
+            resolveCodeSyncView(status({ isInstalled: false, codeStatus: undefined }), false).kind,
+        ).toBe('unverifiable');
+    });
+
+    it('treats a not-yet-checked status as checking, never as missing', () => {
+        expect(resolveCodeSyncView(status({ isInstalled: null }), false).kind).toBe('checking');
+    });
+
+    it('is INDEPENDENT of repo mode — an existing repo gets the install flow too', () => {
+        // The old modal rendered only for `repoMode === 'new'`, so an existing
+        // repo missing the app was blocked from continuing with no instructions
+        // anywhere on screen.
+        const view = resolveCodeSyncView(status({ isInstalled: false, codeStatus: 404 }), false);
+
+        expect(view.kind).toBe('needs-install');
+        expect(resolveCodeSyncView).toHaveLength(2); // (status, isRechecking) — no repoMode
+    });
+});
+

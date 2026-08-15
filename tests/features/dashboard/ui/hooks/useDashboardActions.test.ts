@@ -300,7 +300,7 @@ describe('useDashboardActions', () => {
             const { result } = renderActionsHook();
 
             expect(
-                (result.current as Record<string, unknown>).handleSetAuthoringExperience
+                (result.current as unknown as Record<string, unknown>).handleSetAuthoringExperience
             ).toBeUndefined();
         });
     });

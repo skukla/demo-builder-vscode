@@ -305,9 +305,16 @@ export function isEdsProject(project: Project | undefined | null): boolean {
 /**
  * The DA.live org/site pair for an EDS project, or undefined when absent.
  *
- * Sibling of {@link getEdsGithubRepo}. Both halves are required: a site config
- * lives at `/config/{org}/sites/{site}.json`, so a partial pair addresses
- * nothing and callers must treat it as "no target" rather than guess.
+ * This addresses CONTENT — `content.da.live/{org}/{site}` and the DA.live
+ * editor. It is NOT the Configuration Service key: site configs live at
+ * `/config/{owner}/sites/{repo}.json`, keyed by the GITHUB owner/repo, which is
+ * {@link getEdsGithubRepo}. This docstring previously claimed the config path,
+ * and a caller believed it — the diagnostics probe read the wrong site config
+ * and could report a false permissions verdict. `buildSiteConfigParams` carries
+ * the full rule and the silent publish failure it caused.
+ *
+ * Both halves are required: a partial pair addresses nothing, so callers must
+ * treat it as "no target" rather than guess.
  */
 export function getEdsDaLiveTarget(
     project: Project | undefined | null,
@@ -317,6 +324,21 @@ export function getEdsDaLiveTarget(
     const org = edsInstance?.metadata?.daLiveOrg as string | undefined;
     const site = edsInstance?.metadata?.daLiveSite as string | undefined;
     return org && site ? { org, site } : undefined;
+}
+
+/**
+ * The storefront repo as `{ owner, repo }`, or `undefined` when either half is
+ * missing.
+ *
+ * Four call sites were splitting `getEdsGithubRepo` on `/` themselves and only
+ * two of them guarded the result — one built a setup URL with `org=undefined`
+ * if ever reached unguarded.
+ */
+export function getEdsRepoParts(
+    project: Project | undefined | null,
+): { owner: string; repo: string } | undefined {
+    const [owner, repo] = (getEdsGithubRepo(project) ?? '').split('/');
+    return owner && repo ? { owner, repo } : undefined;
 }
 
 /**

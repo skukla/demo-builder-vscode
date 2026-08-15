@@ -136,7 +136,7 @@ describe('projectsListHandlers', () => {
         });
 
         it('should have exactly 21 handlers', () => {
-            const types = getRegisteredTypes(projectsListHandlers);
+            const types = getRegisteredTypes(projectsListHandlers) as Array<keyof typeof projectsListHandlers>;
             expect(types).toHaveLength(21);
         });
 
@@ -144,7 +144,7 @@ describe('projectsListHandlers', () => {
             // Given: projectsListHandlers object
             // When: Checking handler types
             // Then: All handlers should be functions
-            const types = getRegisteredTypes(projectsListHandlers);
+            const types = getRegisteredTypes(projectsListHandlers) as Array<keyof typeof projectsListHandlers>;
             for (const type of types) {
                 expect(typeof projectsListHandlers[type]).toBe('function');
             }

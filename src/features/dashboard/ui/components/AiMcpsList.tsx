@@ -44,7 +44,7 @@ export function AiMcpsList({ mcps, hasError = false, isLoading = false }: AiMcps
         return (
             <Flex gap="size-100" alignItems="center" data-testid="ai-mcps-error">
                 <AlertCircle size="S" UNSAFE_className="text-yellow-600" />
-                <Text UNSAFE_className="text-sm text-gray-700">
+                <Text UNSAFE_className="text-gray-700">
                     Couldn&apos;t read the project&apos;s MCP servers. Try Regenerate AI files.
                 </Text>
             </Flex>
@@ -57,14 +57,14 @@ export function AiMcpsList({ mcps, hasError = false, isLoading = false }: AiMcps
         return (
             <Flex gap="size-100" alignItems="center" data-testid="ai-mcps-loading">
                 <Spinner size="S" aria-label="Checking" />
-                <Text UNSAFE_className="text-sm text-gray-700">Checking the project's MCP servers…</Text>
+                <Text UNSAFE_className="text-gray-700">Checking the project's MCP servers…</Text>
             </Flex>
         );
     }
 
     if (sorted.length === 0) {
         return (
-            <Text UNSAFE_className="text-sm text-gray-700" data-testid="ai-mcps-empty">
+            <Text UNSAFE_className="text-gray-700" data-testid="ai-mcps-empty">
                 No MCP servers wired yet. Regenerate AI files to set them up.
             </Text>
         );
@@ -76,7 +76,7 @@ export function AiMcpsList({ mcps, hasError = false, isLoading = false }: AiMcps
                 <Text
                     key={entry.id}
                     data-testid={`ai-mcp-${entry.id}`}
-                    UNSAFE_className="text-sm text-gray-800"
+                    UNSAFE_className="text-gray-800"
                 >
                     {entry.id} · {summarize(entry)}
                 </Text>

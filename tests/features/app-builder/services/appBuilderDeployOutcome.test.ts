@@ -100,13 +100,13 @@ describe('recordDeployOutcome — create', () => {
             'mesh',
             'commerce-eds-mesh',
             { status: 'deployed', name: 'New Mesh', source: { owner: 'skukla', repo: 'x' } },
-            { create: true },
+            { create: true }
         );
 
         expect(p.appBuilderComponents?.['commerce-eds-mesh']?.name).toBe('New Mesh');
         // The incumbent, untouched.
         expect(p.appBuilderComponents?.mesh?.endpoint).toBe(
-            'https://graph.adobe.io/api/demo/graphql',
+            'https://graph.adobe.io/api/demo/graphql'
         );
     });
 
@@ -132,7 +132,7 @@ describe('recordDeployOutcome — create', () => {
                 name: 'ERP Bridge',
                 source: { owner: 'acme', repo: 'erp-bridge', branch: 'main' },
             },
-            { create: true },
+            { create: true }
         );
 
         const created = p.appBuilderComponents?.['erp-bridge'];
@@ -142,7 +142,7 @@ describe('recordDeployOutcome — create', () => {
                 status: 'deployed',
                 name: 'ERP Bridge',
                 source: { owner: 'acme', repo: 'erp-bridge', branch: 'main' },
-            }),
+            })
         );
     });
 
@@ -161,7 +161,6 @@ describe('recordDeployOutcome — create', () => {
     });
 });
 
-
 // The keyed entry and the COMPONENT INSTANCE both carry a status, and different
 // surfaces read different ones: the integrations grid reads the keyed entry, while
 // `handleRequestStatus` reads `getMeshComponentInstance(project)?.status`.
@@ -175,13 +174,21 @@ describe('recordDeployOutcome — create', () => {
 // Advancing it HERE — in the one keyed deploy-record writer every deploy path
 // lands on — is what makes the two paths agree, instead of adding a third writer.
 describe('recordDeployOutcome also advances the component instance', () => {
-    function projectWithInstance(status = 'ready') {
+    // Typed view of the stub: `as never` let the partial pass as Project but
+    // made every property READ off it type as never too. The intersection keeps
+    // the stub partial while the assertions typecheck against what they read.
+    type ProjectStub = Parameters<typeof recordDeployOutcome>[0] & {
+        componentInstances: Record<string, { id: string; subType: string; status: string }>;
+        appBuilderComponents: Record<string, { status?: string; endpoint?: string }>;
+    };
+
+    function projectWithInstance(status = 'ready'): ProjectStub {
         return {
             componentInstances: {
                 'eds-accs-mesh': { id: 'eds-accs-mesh', subType: 'mesh', status },
             },
             appBuilderComponents: {},
-        } as never;
+        } as unknown as ProjectStub;
     }
 
     it('marks the instance deployed on a successful deploy', () => {
@@ -226,7 +233,7 @@ describe('recordDeployOutcome also advances the component instance', () => {
         const project = { appBuilderComponents: {} } as never;
 
         expect(() =>
-            recordDeployOutcome(project, 'mesh', 'eds-accs-mesh', { status: 'deployed' }),
+            recordDeployOutcome(project, 'mesh', 'eds-accs-mesh', { status: 'deployed' })
         ).not.toThrow();
     });
 });

@@ -17,9 +17,11 @@ jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
         copyContentFromSource: mockCopyContentFromSource,
         createBlockLibraryFromTemplate: mockCreateBlockLibraryFromTemplate,
     })),
-    createDaLiveServiceTokenProvider: jest.fn().mockImplementation((service: { getAccessToken: () => Promise<string> }) => ({
-        getAccessToken: () => service.getAccessToken(),
-    })),
+    createDaLiveServiceTokenProvider: jest
+        .fn()
+        .mockImplementation((service: { getAccessToken: () => Promise<string> }) => ({
+            getAccessToken: () => service.getAccessToken(),
+        })),
 }));
 
 const mockPublishAllSiteContent = jest.fn();
@@ -102,6 +104,7 @@ function makeDeps() {
             warn: jest.fn(),
             debug: jest.fn(),
             error: jest.fn(),
+            trace: jest.fn(),
         },
         secrets: {} as any,
         extensionContext: {} as any,
@@ -158,24 +161,26 @@ describe('ensureEdsContent', () => {
     it('fires the warning toast when an unapplied content patch lands in the report', async () => {
         // Simulate copyContentFromSource recording an unapplied content-patch
         // result by mutating the patchReport arg before resolving.
-        mockCopyContentFromSource.mockImplementation(async (
-            _src: unknown,
-            _destOrg: unknown,
-            _destSite: unknown,
-            _progress: unknown,
-            _ids: unknown,
-            _source: unknown,
-            patchReport: PatchReport | undefined,
-        ) => {
-            patchReport?.results.push({
-                kind: 'content',
-                patchId: 'index-product-teaser-sku',
-                target: '/',
-                applied: false,
-                reason: 'Search pattern not found in content',
-            });
-            return { success: true, totalFiles: 5, failedFiles: [] };
-        });
+        mockCopyContentFromSource.mockImplementation(
+            async (
+                _src: unknown,
+                _destOrg: unknown,
+                _destSite: unknown,
+                _progress: unknown,
+                _ids: unknown,
+                _source: unknown,
+                patchReport: PatchReport | undefined
+            ) => {
+                patchReport?.results.push({
+                    kind: 'content',
+                    patchId: 'index-product-teaser-sku',
+                    target: '/',
+                    applied: false,
+                    reason: 'Search pattern not found in content',
+                });
+                return { success: true, totalFiles: 5, failedFiles: [] };
+            }
+        );
 
         await ensureEdsContent(makeConfig(), makeDeps());
 
@@ -199,7 +204,10 @@ describe('ensureEdsContent', () => {
         expect(mockApplyDaLiveOrgConfigSettings).toHaveBeenCalledTimes(1);
         expect(mockPurgeCacheAll).toHaveBeenCalledWith('test-owner', 'test-repo', 'main');
         expect(mockPublishAllSiteContent).toHaveBeenCalledWith(
-            'test-owner/test-repo', 'main', 'test-org', 'test-site',
+            'test-owner/test-repo',
+            'main',
+            'test-org',
+            'test-site'
         );
         expect(mockBulkPreviewAndPublish).toHaveBeenCalledTimes(1);
     });
@@ -212,7 +220,7 @@ describe('ensureEdsContent', () => {
 
         expect(result).toBe(true);
         expect(deps.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('Permissions setup failed'),
+            expect.stringContaining('Permissions setup failed')
         );
         // Remaining operations still ran
         expect(mockApplyDaLiveOrgConfigSettings).toHaveBeenCalled();
@@ -228,7 +236,7 @@ describe('ensureEdsContent', () => {
 
         expect(result).toBe(true);
         expect(deps.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('Block library setup failed'),
+            expect.stringContaining('Block library setup failed')
         );
         expect(mockApplyDaLiveOrgConfigSettings).toHaveBeenCalled();
         expect(mockPublishAllSiteContent).toHaveBeenCalled();
@@ -242,7 +250,7 @@ describe('ensureEdsContent', () => {
 
         expect(result).toBe(true);
         expect(deps.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('EDS settings failed'),
+            expect.stringContaining('EDS settings failed')
         );
         expect(mockPublishAllSiteContent).toHaveBeenCalled();
     });
@@ -255,7 +263,7 @@ describe('ensureEdsContent', () => {
 
         expect(result).toBe(true);
         expect(deps.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('Cache purge failed'),
+            expect.stringContaining('Cache purge failed')
         );
         expect(mockPublishAllSiteContent).toHaveBeenCalled();
     });
@@ -287,7 +295,7 @@ describe('ensureEdsContent', () => {
 
         expect(result).toBe(false);
         expect(deps.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('Could not parse repo URL'),
+            expect.stringContaining('Could not parse repo URL')
         );
     });
 
@@ -298,7 +306,7 @@ describe('ensureEdsContent', () => {
         await ensureEdsContent(makeConfig(), deps);
 
         expect(deps.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('No user email available'),
+            expect.stringContaining('No user email available')
         );
         expect(mockConfigureDaLivePermissions).not.toHaveBeenCalled();
     });

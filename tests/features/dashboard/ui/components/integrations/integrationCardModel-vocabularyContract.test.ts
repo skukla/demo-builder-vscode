@@ -32,7 +32,7 @@ import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import type { MeshStatus } from '@/features/dashboard/ui/hooks/useDashboardStatus';
 
 jest.mock('@/core/logging', () => ({
-    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
+    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() }),
 }));
 
 /**

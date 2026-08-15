@@ -19,6 +19,7 @@ jest.mock('fs/promises', () => ({
 }));
 
 import { inspectSkills } from '@/features/ai/skillInspector';
+import { DEMO_BUILDER_ALWAYS_ON_SKILLS } from '@/types/ai';
 
 const readFileMock = fsPromises.readFile as jest.Mock;
 const readdirMock = fsPromises.readdir as jest.Mock;
@@ -47,10 +48,11 @@ function setupFs(tree: Record<string, 'dir' | string>): void {
             err.code = 'ENOENT';
             throw err;
         }
-        return Array.from(childNames).map(name => {
+        return Array.from(childNames).map((name) => {
             const childPath = `${prefix}${name}`;
-            const isDir = tree[childPath] === 'dir' ||
-                Object.keys(tree).some(k => k.startsWith(childPath + '/'));
+            const isDir =
+                tree[childPath] === 'dir' ||
+                Object.keys(tree).some((k) => k.startsWith(childPath + '/'));
             return { name, isFile: () => !isDir, isDirectory: () => isDir };
         }) as never;
     });
@@ -98,7 +100,10 @@ describe('inspectSkills', () => {
             setupFs({
                 [`${SKILLS_DIR}/add-component.md`]: frontmatter('add-component', 'Add a component'),
                 [`${SKILLS_DIR}/sync-changes.md`]: frontmatter('sync-changes', 'Sync changes'),
-                [`${SKILLS_DIR}/update-credentials.md`]: frontmatter('update-credentials', 'Update credentials'),
+                [`${SKILLS_DIR}/update-credentials.md`]: frontmatter(
+                    'update-credentials',
+                    'Update credentials'
+                ),
             });
 
             const result = await inspectSkills(PROJECT_PATH);
@@ -107,15 +112,23 @@ describe('inspectSkills', () => {
             for (const entry of result) {
                 expect(entry.source).toBe('demo-builder');
             }
-            expect(result.map(e => e.name).sort()).toEqual(
-                ['add-component', 'sync-changes', 'update-credentials'],
-            );
+            expect(result.map((e) => e.name).sort()).toEqual([
+                'add-component',
+                'sync-changes',
+                'update-credentials',
+            ]);
         });
 
         it('classifies both custom-block skills (register + remove) as demo-builder', async () => {
             setupFs({
-                [`${SKILLS_DIR}/register-custom-block.md`]: frontmatter('register-custom-block', 'Register a block'),
-                [`${SKILLS_DIR}/remove-custom-block.md`]: frontmatter('remove-custom-block', 'Remove a block'),
+                [`${SKILLS_DIR}/register-custom-block.md`]: frontmatter(
+                    'register-custom-block',
+                    'Register a block'
+                ),
+                [`${SKILLS_DIR}/remove-custom-block.md`]: frontmatter(
+                    'remove-custom-block',
+                    'Remove a block'
+                ),
             });
 
             const result = await inspectSkills(PROJECT_PATH);
@@ -128,7 +141,10 @@ describe('inspectSkills', () => {
 
         it('extracts the description field from frontmatter', async () => {
             setupFs({
-                [`${SKILLS_DIR}/add-component.md`]: frontmatter('add-component', 'Add or enable a component'),
+                [`${SKILLS_DIR}/add-component.md`]: frontmatter(
+                    'add-component',
+                    'Add or enable a component'
+                ),
             });
 
             const result = await inspectSkills(PROJECT_PATH);
@@ -140,8 +156,14 @@ describe('inspectSkills', () => {
     describe('adobe skill classification (nested bundle layout)', () => {
         it('classifies any md file under a subdirectory as adobe', async () => {
             setupFs({
-                [`${SKILLS_DIR}/aem-block-developer/SKILL.md`]: frontmatter('aem-block-developer', 'Block dev'),
-                [`${SKILLS_DIR}/aem-content-modeler/SKILL.md`]: frontmatter('aem-content-modeler', 'Content modeler'),
+                [`${SKILLS_DIR}/aem-block-developer/SKILL.md`]: frontmatter(
+                    'aem-block-developer',
+                    'Block dev'
+                ),
+                [`${SKILLS_DIR}/aem-content-modeler/SKILL.md`]: frontmatter(
+                    'aem-content-modeler',
+                    'Content modeler'
+                ),
             });
 
             const result = await inspectSkills(PROJECT_PATH);
@@ -154,8 +176,14 @@ describe('inspectSkills', () => {
 
         it('walks recursively into nested skill subdirectories', async () => {
             setupFs({
-                [`${SKILLS_DIR}/aem-block-developer/SKILL.md`]: frontmatter('aem-block-developer', 'Block dev'),
-                [`${SKILLS_DIR}/aem-block-developer/references/details.md`]: frontmatter('details', 'Details'),
+                [`${SKILLS_DIR}/aem-block-developer/SKILL.md`]: frontmatter(
+                    'aem-block-developer',
+                    'Block dev'
+                ),
+                [`${SKILLS_DIR}/aem-block-developer/references/details.md`]: frontmatter(
+                    'details',
+                    'Details'
+                ),
             });
 
             const result = await inspectSkills(PROJECT_PATH);
@@ -170,7 +198,10 @@ describe('inspectSkills', () => {
     describe('unknown skill classification', () => {
         it('classifies top-level non-Demo-Builder md files as unknown', async () => {
             setupFs({
-                [`${SKILLS_DIR}/promote-blocks.md`]: frontmatter('promote-blocks', 'Promote blocks'),
+                [`${SKILLS_DIR}/promote-blocks.md`]: frontmatter(
+                    'promote-blocks',
+                    'Promote blocks'
+                ),
             });
 
             const result = await inspectSkills(PROJECT_PATH);
@@ -220,7 +251,10 @@ describe('inspectSkills', () => {
             setupFs({
                 [`${SKILLS_DIR}/add-component.md`]: frontmatter('add-component', 'demo builder'),
                 [`${SKILLS_DIR}/sync-changes.md`]: frontmatter('sync-changes', 'demo builder'),
-                [`${SKILLS_DIR}/aem-block-developer/SKILL.md`]: frontmatter('aem-block-developer', 'adobe'),
+                [`${SKILLS_DIR}/aem-block-developer/SKILL.md`]: frontmatter(
+                    'aem-block-developer',
+                    'adobe'
+                ),
                 [`${SKILLS_DIR}/promote-blocks.md`]: frontmatter('promote-blocks', 'unknown'),
             });
 
@@ -231,7 +265,7 @@ describe('inspectSkills', () => {
                 acc[e.source] = (acc[e.source] ?? 0) + 1;
                 return acc;
             }, {});
-            expect(bySource).toEqual({ 'demo-builder': 2, 'adobe': 1, 'unknown': 1 });
+            expect(bySource).toEqual({ 'demo-builder': 2, adobe: 1, unknown: 1 });
         });
     });
 
@@ -257,7 +291,82 @@ describe('inspectSkills', () => {
 
             const result = await inspectSkills(PROJECT_PATH);
 
-            expect(result.map(e => e.name)).toEqual(['add-component']);
+            expect(result.map((e) => e.name)).toEqual(['add-component']);
+        });
+    });
+
+    describe("the demo-builder set is the writer's set, not a copy of it", () => {
+        // Two lists used to describe the same 13 skills: skillsWriter's
+        // DEMO_BUILDER_SKILLS and a hand-maintained set here. They drifted —
+        // diagnose-demo.md shipped in the writer and was never added here, so
+        // the modal filed a first-party skill under "Custom".
+        it.each(DEMO_BUILDER_ALWAYS_ON_SKILLS)(
+            'classifies always-on skill %s as demo-builder',
+            async (filename) => {
+                setupFs({ [`${SKILLS_DIR}/${filename}`]: frontmatter('x', 'y') });
+
+                const result = await inspectSkills(PROJECT_PATH);
+
+                expect(result[0].source).toBe('demo-builder');
+            }
+        );
+
+        it('classifies the conditional extend-app-builder-app skill as demo-builder', async () => {
+            // Written only for App Builder-adjacent projects, but authored here
+            // all the same — "conditional" is not "third-party".
+            setupFs({
+                [`${SKILLS_DIR}/extend-app-builder-app.md`]: frontmatter('extend', 'd'),
+            });
+
+            const result = await inspectSkills(PROJECT_PATH);
+
+            expect(result[0].source).toBe('demo-builder');
+        });
+    });
+
+    describe('bundle identity for nested skills', () => {
+        it('records the bundle prefix so the UI need not guess which Adobe bundle', async () => {
+            // copyAdobeSkillBundle names each directory `<prefix>-<skill>`; the
+            // prefix is the only thing distinguishing an AEM bundle from an App
+            // Builder one, and it was being discarded.
+            setupFs({
+                [`${SKILLS_DIR}/appbuilder-architect/SKILL.md`]: frontmatter('a', 'd'),
+                [`${SKILLS_DIR}/aem-block-builder/SKILL.md`]: frontmatter('b', 'd'),
+            });
+
+            const result = await inspectSkills(PROJECT_PATH);
+            const byName = Object.fromEntries(result.map((e) => [e.name, e]));
+
+            expect(byName.a.source).toBe('adobe');
+            expect(byName.a.bundle).toBe('appbuilder');
+            expect(byName.b.bundle).toBe('aem');
+        });
+
+        it('leaves bundle undefined for a directory with no prefix separator', async () => {
+            setupFs({ [`${SKILLS_DIR}/loose/SKILL.md`]: frontmatter('c', 'd') });
+
+            const result = await inspectSkills(PROJECT_PATH);
+
+            expect(result[0].source).toBe('adobe');
+            expect(result[0].bundle).toBeUndefined();
+        });
+
+        it('keeps the bundle of the top directory when a skill nests deeper', async () => {
+            setupFs({
+                [`${SKILLS_DIR}/appbuilder-tester/refs/deep.md`]: frontmatter('deep', 'd'),
+            });
+
+            const result = await inspectSkills(PROJECT_PATH);
+
+            expect(result[0].bundle).toBe('appbuilder');
+        });
+
+        it('does not set bundle on top-level skills', async () => {
+            setupFs({ [`${SKILLS_DIR}/add-component.md`]: frontmatter('add', 'd') });
+
+            const result = await inspectSkills(PROJECT_PATH);
+
+            expect(result[0].bundle).toBeUndefined();
         });
     });
 

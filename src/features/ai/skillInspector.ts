@@ -4,14 +4,15 @@
  * Walks `<project>/.claude/skills/` and returns a `SkillInventoryEntry[]`.
  * Classifies each skill by where it lives on disk:
  *
- *   - Any top-level filename in `DEMO_BUILDER_SKILL_FILES` → 'demo-builder'
- *     (matches the twelve skills `skillsWriter` writes during project
- *     finalization: four lifecycle skills — including create-eds-project —
- *     plus six EDS site-scraping skills plus the custom-block registration and
- *     removal skills).
- *   - Any `.md` nested under a subdirectory of `skills/` → 'adobe'
- *     (`skillsWriter` only creates subdirectories for Adobe skill bundles
- *     copied from `@adobe-commerce/commerce-extensibility-tools`).
+ *   - Any top-level filename in `DEMO_BUILDER_SKILL_FILES` → 'demo-builder'.
+ *     That set is imported from `@/types/ai`, NOT redeclared here —
+ *     `skillsWriter` builds its write list from the same constant. The two used
+ *     to keep separate copies and drifted (`diagnose-demo.md` was written but
+ *     not recognised, so it showed as a user-authored "Custom" skill).
+ *   - Any `.md` nested under a subdirectory of `skills/` → 'adobe', carrying the
+ *     directory's `<prefix>-` as `bundle` (`aem`, `appbuilder`). The prefix is
+ *     what separates one Adobe bundle from another; discarding it is what made
+ *     App Builder skills render under an "Adobe AEM" heading.
  *   - Anything else at the top level → 'unknown'.
  *
  * Parses YAML frontmatter using the same regex + `yaml.parse` shape as
@@ -24,25 +25,17 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as yaml from 'yaml';
-import type { SkillInventoryEntry, SkillSource } from '@/types/ai';
+import { DEMO_BUILDER_SKILL_FILES, type SkillInventoryEntry, type SkillSource } from '@/types/ai';
 
-const DEMO_BUILDER_SKILL_FILES: ReadonlySet<string> = new Set([
-    // Lifecycle skills
-    'add-component.md',
-    'sync-changes.md',
-    'update-credentials.md',
-    'create-eds-project.md',
-    // EDS site-scraping skills
-    'scrape-reference-site.md',
-    'connect-authenticated-site.md',
-    'commerce-block-mapper.md',
-    'demo-data-injector.md',
-    'header-nav-footer.md',
-    'refine-visual-match.md',
-    // Custom block authoring: registration + removal
-    'register-custom-block.md',
-    'remove-custom-block.md',
-]);
+/**
+ * The bundle prefix `copyAdobeSkillBundle` stamped onto a directory it created,
+ * which names it `<prefix>-<skillName>`. Returns undefined when there is no
+ * separator, so an unprefixed directory reports no bundle rather than a guess.
+ */
+function bundlePrefixOf(dirName: string): string | undefined {
+    const separator = dirName.indexOf('-');
+    return separator > 0 ? dirName.slice(0, separator) : undefined;
+}
 
 /**
  * Walk `<project>/.claude/skills/` and return one entry per `.md` file found.
@@ -69,9 +62,13 @@ export async function inspectSkills(projectPath: string): Promise<SkillInventory
                 : 'unknown';
             results.push(await readSkillFile(entryPath, source));
         } else if (entry.isDirectory()) {
+            // The bundle comes from THIS directory's name, not from wherever the
+            // file sits beneath it — a skill nested two levels deep still belongs
+            // to the bundle whose directory it arrived in.
+            const bundle = bundlePrefixOf(entry.name);
             const nestedMd = await collectMdFiles(entryPath);
             for (const nestedPath of nestedMd) {
-                results.push(await readSkillFile(nestedPath, 'adobe'));
+                results.push(await readSkillFile(nestedPath, 'adobe', bundle));
             }
         }
     }
@@ -94,16 +91,22 @@ async function collectMdFiles(dir: string): Promise<string[]> {
     return out;
 }
 
-async function readSkillFile(filePath: string, source: SkillSource): Promise<SkillInventoryEntry> {
+async function readSkillFile(
+    filePath: string,
+    source: SkillSource,
+    bundle?: string,
+): Promise<SkillInventoryEntry> {
     const content = await fsPromises.readFile(filePath, 'utf-8');
     const frontmatter = parseFrontmatter(content);
     return {
-        name: typeof frontmatter.name === 'string' && frontmatter.name.length > 0
-            ? frontmatter.name
-            : path.basename(filePath, '.md'),
+        name:
+            typeof frontmatter.name === 'string' && frontmatter.name.length > 0
+                ? frontmatter.name
+                : path.basename(filePath, '.md'),
         description: typeof frontmatter.description === 'string' ? frontmatter.description : null,
         path: filePath,
         source,
+        bundle,
     };
 }
 

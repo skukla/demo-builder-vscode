@@ -1,5 +1,6 @@
 import type { CommandExecutor, CommandResult } from '@/core/shell';
-import type { Logger, StepLogger } from '@/core/logging';
+import type { StepLogger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import type { AdobeOrg, AdobeProject, AdobeWorkspace } from '@/features/authentication/services/types';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { EntityServices } from '@/features/authentication/services/adobeEntityService';

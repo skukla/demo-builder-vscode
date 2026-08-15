@@ -27,11 +27,11 @@
 import { ActionButton, Link } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
 import React from 'react';
-import { Drawer } from './Drawer';
-import { IntegrationActionsMenu } from './IntegrationActions';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
 import { InlineRenameField } from '@/core/ui/components/forms';
+import { IntegrationActionsMenu } from '@/core/ui/components/integrations';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
+import { Drawer } from '@/core/ui/components/ui/Drawer';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { cn } from '@/core/ui/utils/classNames';
 
@@ -127,6 +127,7 @@ function PanelContent({
                     {model.canRename ? (
                         <InlineRenameField
                             name={model.name}
+                            label="New integration name"
                             onRename={(newName) => onRename(model.id, newName)}
                         />
                     ) : (

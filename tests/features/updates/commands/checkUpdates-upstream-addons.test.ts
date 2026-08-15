@@ -19,7 +19,7 @@ import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateCheck
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import { TemplateUpdateChecker } from '@/features/updates/services/templateUpdateChecker';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/core/state';
 import type { Project } from '@/types';
 
@@ -181,7 +181,7 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
         const project = makeProject();
 
-        mockStateManager.getAllProjects.mockResolvedValue([{ path: project.path }]);
+        mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
 
         const MockAddonChecker = AddonUpdateChecker as jest.MockedClass<typeof AddonUpdateChecker>;
@@ -211,7 +211,7 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
         const project = makeProject();
 
-        mockStateManager.getAllProjects.mockResolvedValue([{ path: project.path }]);
+        mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
 
         const MockAddonChecker = AddonUpdateChecker as jest.MockedClass<typeof AddonUpdateChecker>;
@@ -243,7 +243,7 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
             installedInspectorSdk: undefined,
         });
 
-        mockStateManager.getAllProjects.mockResolvedValue([{ path: project.path }]);
+        mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
 
         const MockAddonChecker = AddonUpdateChecker as jest.MockedClass<typeof AddonUpdateChecker>;
@@ -262,7 +262,7 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
         const project = makeProject();
 
-        mockStateManager.getAllProjects.mockResolvedValue([{ path: project.path }]);
+        mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
         mockStateManager.getCurrentProject.mockResolvedValue(project);
 
@@ -298,7 +298,7 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
         const project = makeProject();
 
-        mockStateManager.getAllProjects.mockResolvedValue([{ path: project.path }]);
+        mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
         mockStateManager.getCurrentProject.mockResolvedValue(project);
 
@@ -354,7 +354,7 @@ describe('CheckUpdatesCommand — Dedup Logic', () => {
             ],
         });
 
-        mockStateManager.getAllProjects.mockResolvedValue([{ path: project.path }]);
+        mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
         mockStateManager.getCurrentProject.mockResolvedValue(project);
 
@@ -420,7 +420,7 @@ describe('CheckUpdatesCommand — Dedup Logic', () => {
             ],
         });
 
-        mockStateManager.getAllProjects.mockResolvedValue([{ path: project.path }]);
+        mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
         mockStateManager.getCurrentProject.mockResolvedValue(project);
 
@@ -469,7 +469,7 @@ describe('CheckUpdatesCommand — Dedup Logic', () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
         const project = makeProject();
 
-        mockStateManager.getAllProjects.mockResolvedValue([{ path: project.path }]);
+        mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
         mockStateManager.getCurrentProject.mockResolvedValue(project);
 
@@ -512,7 +512,7 @@ describe('CheckUpdatesCommand — Dedup Logic', () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
         const project = makeProject();
 
-        mockStateManager.getAllProjects.mockResolvedValue([{ path: project.path }]);
+        mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
         mockStateManager.getCurrentProject.mockResolvedValue(project);
 

@@ -22,7 +22,7 @@ jest.mock('@/features/project-creation/services/demoPackageLoader', () => ({
 
 const mockLookup = getStorefrontForStack as jest.Mock;
 
-const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
 
 const STOREFRONT = {
     codePatches: ['product-link-sku-encoding', 'aem-assets-sku-sanitization'],
@@ -34,8 +34,18 @@ const STOREFRONT = {
     accountContentSource: { owner: 'demo', repo: 'content' },
 };
 
-/** The edit-mode shape: metadata only, no package-derived fields. */
-const EDIT_MODE_CONFIG = {
+/**
+ * The edit-mode shape: metadata only, no package-derived fields — but TYPED to
+ * admit them. `rehydratePackageDerivedConfig<T>` returns `Promise<T>`, so the
+ * restored fields are only visible to the typechecker if T declares them as
+ * optional; runtime-wise the function fills them regardless (that is its job).
+ */
+const EDIT_MODE_CONFIG: {
+    repoName: string;
+    daLiveOrg: string;
+    daLiveSite: string;
+    githubOwner: string;
+} & Partial<typeof STOREFRONT> = {
     repoName: 'demo-builder-test',
     daLiveOrg: 'skukla',
     daLiveSite: 'demo-builder-test',
@@ -132,9 +142,7 @@ describe('rehydratePackageDerivedConfig', () => {
     it('warns when it cannot resolve, rather than no-opping in silence', async () => {
         // A silent no-op here is what let a missing `selectedStack` disable every
         // patch with no trace in the log — the same failure this function fixes.
-        await rehydratePackageDerivedConfig(
-            EDIT_MODE_CONFIG, 'custom', undefined, logger as never,
-        );
+        await rehydratePackageDerivedConfig(EDIT_MODE_CONFIG, 'custom', undefined, logger as never);
 
         expect(logger.warn).toHaveBeenCalled();
         expect(logger.warn.mock.calls.flat().join(' ')).toContain('stack=missing');

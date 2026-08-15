@@ -33,6 +33,7 @@ describe('meshEndpoint', () => {
         } as any;
 
         mockLogger = {
+            trace: jest.fn(),
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
@@ -40,6 +41,7 @@ describe('meshEndpoint', () => {
         };
 
         mockDebugLogger = {
+            trace: jest.fn(),
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),

@@ -27,6 +27,7 @@ function createAllValidContexts(): SidebarContext[] {
     // in getContextLabel() below.
     return [
         { type: 'projects' },
+        { type: 'projectsList' },
         { type: 'project', project: mockProject },
     ];
 }
@@ -40,6 +41,8 @@ function getContextLabel(context: SidebarContext): string {
     switch (context.type) {
         case 'projects':
             return 'Projects Dashboard';
+        case 'projectsList':
+            return 'Projects List';
         case 'project':
             return `Project: ${context.project.name}`;
         default: {
@@ -115,7 +118,7 @@ describe('Sidebar Types - Type Reduction', () => {
          * Runtime tests below document which types should NOT exist.
          */
 
-        it('should only support 2 context type variants', () => {
+        it('should only support 3 context type variants', () => {
             // Get all valid contexts from our helper
             const contexts = createAllValidContexts();
 
@@ -124,20 +127,19 @@ describe('Sidebar Types - Type Reduction', () => {
 
             // Verify only expected types exist
             expect(typeValues).toContain('projects');
+            expect(typeValues).toContain('projectsList');
             expect(typeValues).toContain('project');
-            expect(typeValues).toHaveLength(2);
+            expect(typeValues).toHaveLength(3);
 
             // Verify removed types are NOT in the list
-            expect(typeValues).not.toContain('projectsList');
             expect(typeValues).not.toContain('wizard');
             expect(typeValues).not.toContain('configure');
         });
 
-        it('should not include projectsList type variant', () => {
-            // 'projectsList' was removed - functionality merged into 'projects'
+        it('includes the projectsList variant (re-added in e28c2431 for the Projects List home grid)', () => {
             const contexts = createAllValidContexts();
             const typeValues = contexts.map((ctx) => ctx.type);
-            expect(typeValues).not.toContain('projectsList');
+            expect(typeValues).toContain('projectsList');
         });
 
         it('should not include wizard type variant', () => {
@@ -162,22 +164,19 @@ describe('Sidebar Types - Type Reduction', () => {
             const labels = contexts.map(getContextLabel);
 
             expect(labels).toContain('Projects Dashboard');
+            expect(labels).toContain('Projects List');
             expect(labels.some((l) => l.startsWith('Project:'))).toBe(true);
-            expect(labels).toHaveLength(2);
+            expect(labels).toHaveLength(3);
         });
     });
 });
 
 describe('Sidebar Types - Supporting Types', () => {
-    describe('NavItem type', () => {
-        it('should exist and be importable', async () => {
-            // NavItem is still used by SidebarNav component
-            const { NavItem: _NavItem } = await import('@/features/sidebar/types');
-            // NavItem is a type, not a value, so we can't directly test it
-            // but we can verify the module exports it by checking no error
-            expect(true).toBe(true);
-        });
-    });
+    // A "NavItem type should exist and be importable" test sat here asserting an
+    // export that no longer exists anywhere in the sidebar feature. It passed
+    // because destructuring a stripped type at runtime just yields undefined —
+    // its only real assertion was expect(true).toBe(true). Deleted 2026-08-13
+    // when the test tree was first typechecked; tsc was what caught it.
 
     describe('WizardStep type removal', () => {
         it('should not export WizardStep type from sidebar types', async () => {
@@ -257,6 +256,8 @@ describe('Type Narrowing', () => {
             switch (context.type) {
                 case 'projects':
                     return 'Projects Dashboard';
+                case 'projectsList':
+                    return 'Projects List';
                 case 'project':
                     return `Project: ${context.project.name}`;
                 default: {

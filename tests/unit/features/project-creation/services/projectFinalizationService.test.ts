@@ -1,6 +1,6 @@
 /**
  * Unit tests for projectFinalizationService
- * 
+ *
  * Tests environment file generation and project finalization with ProjectSetupContext integration.
  */
 
@@ -10,7 +10,7 @@ import {
     type FinalizationContext,
 } from '@/features/project-creation/services/projectFinalizationService';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
-import type { Project, TransformedComponentDefinition } from '@/types';
+import type { Project } from '@/types';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
 
 // Mock dependencies
@@ -28,6 +28,7 @@ describe('projectFinalizationService', () => {
     let mockProgressTracker: jest.Mock;
     let mockSaveProject: jest.Mock;
     let mockSendMessage: jest.Mock;
+    let mockHandlerContext: any;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -35,21 +36,28 @@ describe('projectFinalizationService', () => {
         mockProject = {
             name: 'test-project',
             path: '/test/project',
-            status: 'installing',
-            created: new Date().toISOString(),
+            status: 'configuring',
+            created: new Date(),
+            lastModified: new Date(),
             componentInstances: {
                 'eds-storefront': {
+                    id: 'eds-storefront',
+                    name: 'EDS Storefront',
+                    status: 'ready',
                     path: '/test/project/components/eds-storefront',
                     version: '1.0.0',
                 },
                 'eds-commerce-mesh': {
+                    id: 'eds-commerce-mesh',
+                    name: 'API Mesh',
+                    status: 'ready',
                     path: '/test/project/components/eds-commerce-mesh',
                     version: '1.0.0-beta.2',
                 },
             },
-        } as Project;
+        };
 
-        const mockHandlerContext = {
+        mockHandlerContext = {
             logger: {
                 info: jest.fn(),
                 error: jest.fn(),
@@ -68,8 +76,15 @@ describe('projectFinalizationService', () => {
         } as any;
 
         const mockRegistry = {
+            version: '1.0.0',
             envVars: {},
-            components: { frontends: [], backends: [], dependencies: [], mesh: [], integrations: [] },
+            components: {
+                frontends: [],
+                backends: [],
+                dependencies: [],
+                mesh: [],
+                integrations: [],
+            },
             services: {},
         };
 
@@ -77,7 +92,7 @@ describe('projectFinalizationService', () => {
             mockHandlerContext,
             mockRegistry,
             mockProject,
-            {},
+            {}
         );
 
         mockComponentDefinitions = new Map<string, ComponentDefinitionEntry>();
@@ -89,17 +104,21 @@ describe('projectFinalizationService', () => {
                 configuration: {
                     requiredEnvVars: [],
                 },
-            } as TransformedComponentDefinition,
+            },
+            type: 'frontend',
+            installOptions: {},
         });
         mockComponentDefinitions.set('eds-commerce-mesh', {
             definition: {
                 id: 'eds-commerce-mesh',
                 name: 'API Mesh',
-                type: 'mesh',
+                subType: 'mesh',
                 configuration: {
                     requiredEnvVars: [],
                 },
-            } as TransformedComponentDefinition,
+            },
+            type: 'mesh',
+            installOptions: {},
         });
 
         mockProgressTracker = jest.fn();
@@ -126,7 +145,7 @@ describe('projectFinalizationService', () => {
                 '/test/project/components/eds-storefront',
                 'eds-storefront',
                 mockComponentDefinitions.get('eds-storefront')!.definition,
-                mockSetupContext,
+                mockSetupContext
             );
         });
 
@@ -144,7 +163,7 @@ describe('projectFinalizationService', () => {
 
             // Verify eds-commerce-mesh was NOT processed
             const calls = (helpers.generateComponentConfigFiles as jest.Mock).mock.calls;
-            const meshCalls = calls.filter(call => call[1] === 'eds-commerce-mesh');
+            const meshCalls = calls.filter((call) => call[1] === 'eds-commerce-mesh');
             expect(meshCalls).toHaveLength(0);
         });
 
@@ -153,21 +172,27 @@ describe('projectFinalizationService', () => {
                 ...mockProject,
                 componentInstances: {
                     'eds-storefront': {
+                        id: 'eds-storefront',
+                        name: 'EDS Storefront',
+                        status: 'ready' as const,
                         version: '1.0.0',
                         // path is missing
                     },
                     'eds-commerce-mesh': {
+                        id: 'eds-commerce-mesh',
+                        name: 'API Mesh',
+                        status: 'ready' as const,
                         path: '/test/project/components/eds-commerce-mesh',
                         version: '1.0.0-beta.2',
                     },
                 },
-            } as Project;
+            };
 
             const setupContextWithMissingPath = new ProjectSetupContext(
-                mockSetupContext['handlerContext' as any],
+                mockHandlerContext,
                 mockSetupContext.registry,
                 projectWithMissingPath,
-                {},
+                {}
             );
 
             const context: FinalizationContext = {
@@ -200,7 +225,7 @@ describe('projectFinalizationService', () => {
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Configuring Environment',
                 85,
-                'Generating environment files...',
+                'Generating environment files...'
             );
         });
 
@@ -217,10 +242,10 @@ describe('projectFinalizationService', () => {
             await generateEnvironmentFiles(context);
 
             expect(mockSetupContext.logger.debug).toHaveBeenCalledWith(
-                '[Project Creation] Phase 4: Generating environment configuration...',
+                '[Project Creation] Phase 4: Generating environment configuration...'
             );
             expect(mockSetupContext.logger.debug).toHaveBeenCalledWith(
-                '[Project Creation] Phase 4 complete: Environment configured',
+                '[Project Creation] Phase 4 complete: Environment configured'
             );
         });
 
@@ -229,28 +254,39 @@ describe('projectFinalizationService', () => {
                 ...mockProject,
                 componentInstances: {
                     'eds-storefront': {
+                        id: 'eds-storefront',
+                        name: 'EDS Storefront',
+                        status: 'ready' as const,
                         path: '/test/project/components/eds-storefront',
                         version: '1.0.0',
                     },
                     'nextjs-storefront': {
+                        id: 'nextjs-storefront',
+                        name: 'Next.js Storefront',
+                        status: 'ready' as const,
                         path: '/test/project/components/nextjs-storefront',
                         version: '1.0.0',
                     },
                     'eds-commerce-mesh': {
+                        id: 'eds-commerce-mesh',
+                        name: 'API Mesh',
+                        status: 'ready' as const,
                         path: '/test/project/components/eds-commerce-mesh',
                         version: '1.0.0-beta.2',
                     },
                 },
-            } as Project;
+            };
 
             const setupContextWithMultiple = new ProjectSetupContext(
-                mockSetupContext['handlerContext' as any],
+                mockHandlerContext,
                 mockSetupContext.registry,
                 projectWithMultipleComponents,
-                {},
+                {}
             );
 
-            const multipleComponentDefs = new Map<string, ComponentDefinitionEntry>(mockComponentDefinitions);
+            const multipleComponentDefs = new Map<string, ComponentDefinitionEntry>(
+                mockComponentDefinitions
+            );
             multipleComponentDefs.set('nextjs-storefront', {
                 definition: {
                     id: 'nextjs-storefront',
@@ -259,7 +295,9 @@ describe('projectFinalizationService', () => {
                     configuration: {
                         requiredEnvVars: [],
                     },
-                } as TransformedComponentDefinition,
+                },
+                type: 'frontend',
+                installOptions: {},
             });
 
             const context: FinalizationContext = {
@@ -337,17 +375,20 @@ describe('projectFinalizationService', () => {
                 ...mockProject,
                 componentInstances: {
                     'eds-storefront': {
+                        id: 'eds-storefront',
+                        name: 'EDS Storefront',
+                        status: 'ready' as const,
                         path: '/test/project/components/eds-storefront',
                         // version is missing
                     },
                 },
-            } as Project;
+            };
 
             const setupContextWithoutVersion = new ProjectSetupContext(
-                mockSetupContext['handlerContext' as any],
+                mockHandlerContext,
                 mockSetupContext.registry,
                 projectWithoutVersion,
-                {},
+                {}
             );
 
             const context: FinalizationContext = {
@@ -361,7 +402,9 @@ describe('projectFinalizationService', () => {
 
             await finalizeProject(context);
 
-            expect(setupContextWithoutVersion.project.componentVersions?.['eds-storefront']).toEqual({
+            expect(
+                setupContextWithoutVersion.project.componentVersions?.['eds-storefront']
+            ).toEqual({
                 version: 'unknown',
                 lastUpdated: expect.any(String),
             });
@@ -382,12 +425,12 @@ describe('projectFinalizationService', () => {
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Finalizing Project',
                 95,
-                'Saving project state...',
+                'Saving project state...'
             );
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Project Created',
                 100,
-                'Project creation complete',
+                'Project creation complete'
             );
         });
 
@@ -404,13 +447,13 @@ describe('projectFinalizationService', () => {
             await finalizeProject(context);
 
             expect(mockSetupContext.logger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('Saving project: test-project'),
+                expect.stringContaining('Saving project: test-project')
             );
             expect(mockSetupContext.logger.debug).toHaveBeenCalledWith(
-                '[Project Creation] Project state saved successfully',
+                '[Project Creation] Project state saved successfully'
             );
             expect(mockSetupContext.logger.debug).toHaveBeenCalledWith(
-                '[Project Creation] Phase 5 complete: Project finalized',
+                '[Project Creation] Phase 5 complete: Project finalized'
             );
         });
 
@@ -430,7 +473,7 @@ describe('projectFinalizationService', () => {
             await expect(finalizeProject(context)).rejects.toThrow('Save failed');
             expect(mockSetupContext.logger.error).toHaveBeenCalledWith(
                 '[Project Creation] Failed to save project',
-                saveError,
+                saveError
             );
         });
     });

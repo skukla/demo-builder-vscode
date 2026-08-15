@@ -3,8 +3,14 @@ module.exports = {
 
   // Performance optimizations
   // Note: Heap size configured via package.json test script (--max-old-space-size=4096)
-  cache: true,
-  cacheDirectory: '<rootDir>/.jest-cache',
+  //
+  // `cache` / `cacheDirectory` are NOT set here. Like `roots` and `testPathIgnorePatterns`
+  // below, they do not propagate into `projects` — set at this level they are inert, and
+  // were: `.jest-cache/` has been in .gitignore since the day it was configured and the
+  // directory has never existed. Jest silently used its default cache under $TMPDIR
+  // instead, which is shared with every other checkout on the machine. Both projects now
+  // declare it themselves; verified by the directory actually appearing after a run.
+  //
   // 25% was set in 87db88e7 alongside the fix for OOM kills (exit 137). That commit's
   // actual cure was replacing real setTimeout delays with fake timers; the worker cut
   // was belt-and-braces on top. With the remaining real-timer sleeps now routed through
@@ -25,6 +31,8 @@ module.exports = {
     {
       displayName: 'node',
       testEnvironment: 'node',
+      cache: true,
+      cacheDirectory: '<rootDir>/.jest-cache/node',
       testMatch: [
         '**/tests/**/*.test.ts',
         '!**/tests/webview-ui/**/*.test.ts',
@@ -79,6 +87,8 @@ module.exports = {
     {
       displayName: 'react',
       testEnvironment: 'jsdom',
+      cache: true,
+      cacheDirectory: '<rootDir>/.jest-cache/react',
       testMatch: [
         '**/tests/webview-ui/**/*.test.ts',
         '**/tests/webview-ui/**/*.test.tsx',
@@ -162,6 +172,10 @@ module.exports = {
   resetMocks: true,
   restoreMocks: true,
 
-  // Global teardown to clean up any remaining handles
+  // Global setup/teardown. Unlike `cache` and `roots` above, these DO apply to a
+  // multi-project run — jest runs them once for the whole run, not per project.
+  // globalSetup stamps a per-run id that keeps concurrent runs' MCP sockets apart;
+  // globalTeardown removes that run's tree and sweeps dead ones.
+  globalSetup: '<rootDir>/tests/setup/globalSetup.ts',
   globalTeardown: '<rootDir>/tests/setup/globalTeardown.ts',
 };

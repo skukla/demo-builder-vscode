@@ -55,7 +55,7 @@ describe('lifecycleHandlers', () => {
         it('should have exactly 10 handlers', () => {
             // Given: lifecycleHandlers object
             // When: Getting registered types
-            const types = getRegisteredTypes(lifecycleHandlers);
+            const types = getRegisteredTypes(lifecycleHandlers) as Array<keyof typeof lifecycleHandlers>;
 
             // Then: Exactly 10 handlers
             // (show-logs removed — the Logs toggle moved to the sidebar utility)
@@ -67,7 +67,7 @@ describe('lifecycleHandlers', () => {
             // Given: lifecycleHandlers object
             // When: Checking handler types
             // Then: All handlers should be functions
-            const types = getRegisteredTypes(lifecycleHandlers);
+            const types = getRegisteredTypes(lifecycleHandlers) as Array<keyof typeof lifecycleHandlers>;
             for (const type of types) {
                 expect(typeof lifecycleHandlers[type]).toBe('function');
             }
@@ -95,7 +95,7 @@ describe('handleOpenExternal - Security', () => {
             warn: jest.fn(),
             error: jest.fn(),
         } as any,
-        debugLogger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() } as any,
+        debugLogger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as any,
         context: {} as any,
         panel: undefined,
         stateManager: {} as any,
@@ -181,7 +181,7 @@ describe('handleOpenExternal - Security', () => {
             const context = createMockContext();
 
             // When: Handler is called without URL
-            const result = await handleOpenExternal(context, {});
+            const result = await handleOpenExternal(context, undefined);
 
             // Then: Should return error
             expect(result.success).toBe(false);

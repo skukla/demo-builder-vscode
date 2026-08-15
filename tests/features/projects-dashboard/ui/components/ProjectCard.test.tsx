@@ -171,9 +171,7 @@ describe('ProjectCard', () => {
                 <ProjectCard project={project} onSelect={jest.fn()} />
             );
 
-            expect(
-                container.querySelectorAll('.project-card-spectrum-status')
-            ).toHaveLength(1);
+            expect(container.querySelectorAll('.project-card-spectrum-status')).toHaveLength(1);
             expect(screen.getByText('Attention needed')).toBeInTheDocument();
             expect(screen.queryByText('Republish needed')).not.toBeInTheDocument();
         });
@@ -237,9 +235,7 @@ describe('ProjectCard', () => {
             const start = css.indexOf('.project-card-spectrum-components {');
             // Comments stripped first: the rule's own comment explains why there is
             // no flex-grow, and matching that text would make this pass on prose.
-            const rule = css
-                .slice(start, css.indexOf('}', start))
-                .replace(/\/\*[\s\S]*?\*\//g, '');
+            const rule = css.slice(start, css.indexOf('}', start)).replace(/\/\*[\s\S]*?\*\//g, '');
 
             expect(rule).not.toMatch(/flex:\s*1/);
             expect(rule).not.toMatch(/flex-grow/);
@@ -269,7 +265,6 @@ describe('ProjectCard', () => {
             // is running, which is not what this pins.
             expect(lines[1]).toBe('Deployed');
         });
-
     });
 
     describe('interactions', () => {
@@ -405,7 +400,7 @@ describe('ProjectCard', () => {
                 <ProjectCard
                     project={project}
                     onSelect={jest.fn()}
-                    actions={{ onCopyPath: jest.fn() }}
+                    actions={{ onResetProject: jest.fn() }}
                 />
             );
 

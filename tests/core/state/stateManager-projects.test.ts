@@ -7,7 +7,12 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { setupMocks, mockStateFile, createMockProject, type TestMocks } from './stateManager.testUtils';
+import {
+    setupMocks,
+    mockStateFile,
+    createMockProject,
+    type TestMocks,
+} from './stateManager.testUtils';
 import type { Project } from '@/types';
 
 // Re-declare mocks to ensure proper typing and hoisting
@@ -30,7 +35,7 @@ describe('StateManager - Project Management', () => {
             const project = createMockProject('new-project');
             project.componentSelections = {
                 frontend: 'headless',
-                backend: 'adobe-commerce-paas'
+                backend: 'adobe-commerce-paas',
             };
 
             await stateManager.saveProject(project as Project);
@@ -38,7 +43,7 @@ describe('StateManager - Project Management', () => {
             // Verify state file was written
             expect(fs.writeFile).toHaveBeenCalled();
             const writeCall = (fs.writeFile as jest.Mock).mock.calls.find(
-                call => call[0] === mockStateFile
+                (call) => call[0] === mockStateFile
             );
             expect(writeCall).toBeDefined();
 
@@ -67,14 +72,14 @@ describe('StateManager - Project Management', () => {
                 projectName: 'Test Project',
                 organization: 'Org Name',
                 workspace: 'workspace123',
-                authenticated: true
+                authenticated: true,
             };
 
             await stateManager.saveProject(project as Project);
 
             // Check if any writeFile call includes .demo-builder.json.tmp (atomic write pattern)
             const manifestCall = (fs.writeFile as jest.Mock).mock.calls.find(
-                call => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json.tmp')
+                (call) => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json.tmp')
             );
             expect(manifestCall).toBeDefined();
 
@@ -98,22 +103,15 @@ describe('StateManager - Project Management', () => {
                     environmentId: 'env123',
                     storeView: 'default',
                     websiteCode: 'base',
-                    storeCode: 'default'
+                    storeCode: 'default',
                 },
-                services: {
-                    catalog: {
-                        enabled: true,
-                        endpoint: 'https://catalog.api',
-                        apiKey: 'catalog-key'
-                    }
-                }
             };
 
             await stateManager.saveProject(project as Project);
 
             const envPath = path.join(project.path!, '.env');
             const envCall = (fs.writeFile as jest.Mock).mock.calls.find(
-                call => call[0] === envPath
+                (call) => call[0] === envPath
             );
             expect(envCall).toBeDefined();
             expect(envCall[1]).toContain('PROJECT_NAME=Test Project');
@@ -147,7 +145,9 @@ describe('StateManager - Project Management', () => {
             const project = createMockProject();
 
             // FIXED: Errors should now be propagated (not swallowed)
-            await expect(stateManager.saveProject(project as Project)).rejects.toThrow('Permission denied');
+            await expect(stateManager.saveProject(project as Project)).rejects.toThrow(
+                'Permission denied'
+            );
         });
 
         it('should update lastModified timestamp in manifest', async () => {
@@ -160,7 +160,7 @@ describe('StateManager - Project Management', () => {
             const timeBefore = new Date().toISOString();
 
             // Ensure async operation completes
-            await new Promise(resolve => process.nextTick(resolve));
+            await new Promise((resolve) => process.nextTick(resolve));
 
             await stateManager.saveProject(project as Project);
 
@@ -169,7 +169,7 @@ describe('StateManager - Project Management', () => {
 
             // Verify manifest was written with updated lastModified (atomic write pattern)
             const manifestCall = (fs.writeFile as jest.Mock).mock.calls.find(
-                call => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json.tmp')
+                (call) => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json.tmp')
             );
 
             expect(manifestCall).toBeDefined();
@@ -208,7 +208,7 @@ describe('StateManager - Project Management', () => {
                 port: 3000,
                 startTime: new Date(),
                 command: 'npm start',
-                status: 'running'
+                status: 'running',
             });
 
             await stateManager.clearProject();
@@ -237,7 +237,7 @@ describe('StateManager - Project Management', () => {
 
             expect(fs.writeFile).toHaveBeenCalled();
             const writeCall = (fs.writeFile as jest.Mock).mock.calls.find(
-                call => call[0] === mockStateFile
+                (call) => call[0] === mockStateFile
             );
             expect(writeCall).toBeDefined();
         });

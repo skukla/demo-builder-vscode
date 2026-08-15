@@ -101,14 +101,16 @@ export interface EdsResetResult extends HandlerResponse {
 /**
  * Result of parameter extraction
  */
-export type ExtractParamsResult = {
-    success: true;
-    params: EdsResetParams;
-} | {
-    success: false;
-    error: string;
-    code?: string;
-};
+export type ExtractParamsResult =
+    | {
+          success: true;
+          params: EdsResetParams;
+      }
+    | {
+          success: false;
+          error: string;
+          code?: string;
+      };
 
 // ==========================================================
 // Validation
@@ -117,7 +119,9 @@ export type ExtractParamsResult = {
 /** Validate that a GitHub owner or repo name is safe for URL construction. */
 export function assertValidGitHubSlug(value: string, field: string): void {
     if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
-        throw new Error(`Invalid ${field}: must contain only alphanumeric characters, hyphens, and underscores`);
+        throw new Error(
+            `Invalid ${field}: must contain only alphanumeric characters, hyphens, and underscores`,
+        );
     }
 }
 
@@ -141,9 +145,7 @@ function validateRepoFormat(
  * construction). Returns an error message for the first invalid slug, or null
  * if all are valid.
  */
-function validateGitHubSlugs(
-    slugs: Array<{ value: string; field: string }>,
-): string | null {
+function validateGitHubSlugs(slugs: Array<{ value: string; field: string }>): string | null {
     try {
         for (const { value, field } of slugs) {
             assertValidGitHubSlug(value, field);
@@ -152,6 +154,19 @@ function validateGitHubSlugs(
     } catch (error) {
         return (error as Error).message;
     }
+}
+
+/**
+ * The subset of a demo package this module reads: id + storefronts keyed by
+ * stack. Structural on purpose — typing the injectable param by the bundled
+ * JSON's inferred literal (`typeof demoPackagesConfig.packages`) forced test
+ * fixtures to clone the entire JSON shape.
+ */
+export interface StorefrontConfigSource {
+    id: string;
+    // `| undefined` because the bundled JSON's inferred type unions storefront
+    // keys across packages, so keys absent from one package type as undefined.
+    storefronts?: Record<string, StorefrontConfig | undefined>;
 }
 
 /** Storefront-derived template configuration for a project's selected stack. */
@@ -175,11 +190,15 @@ interface StorefrontConfig {
  */
 export function resolveStorefrontConfig(
     project: Project,
-    packages: typeof demoPackagesConfig.packages,
+    // Same injectable default as `buildEdsResetParams`, so a caller that only
+    // needs the package's storefront config does not have to import and cast the
+    // bundled JSON itself.
+    packages: StorefrontConfigSource[] = demoPackagesConfig.packages as unknown as StorefrontConfigSource[],
 ): StorefrontConfig {
-    const pkg = packages.find((p: { id: string }) => p.id === project.selectedPackage);
-    const storefronts = pkg?.storefronts as Record<string, StorefrontConfig> | undefined;
-    const storefront = project.selectedStack ? storefronts?.[project.selectedStack] : undefined;
+    const pkg = packages.find((p) => p.id === project.selectedPackage);
+    const storefront = project.selectedStack
+        ? pkg?.storefronts?.[project.selectedStack]
+        : undefined;
     return storefront ?? {};
 }
 
@@ -198,7 +217,7 @@ export function resolveStorefrontConfig(
 export function extractResetParams(
     project: Project,
     // Injectable for tests; defaults to the bundled demo-packages config.
-    packages: typeof demoPackagesConfig.packages = demoPackagesConfig.packages,
+    packages: StorefrontConfigSource[] = demoPackagesConfig.packages as unknown as StorefrontConfigSource[],
 ): ExtractParamsResult {
     // Get EDS metadata from component instance (project-specific data)
     const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];

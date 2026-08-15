@@ -33,22 +33,22 @@ describe('Storefront Setup Handlers - Rename Validation', () => {
             // advanced first — so the user watched setup appear to continue and was
             // then told to start over. Implementing resume is a backlog item; until
             // then the honest path is the existing Retry, which re-runs setup.
-            expect(edsHandlers['storefront-setup-resume']).toBeUndefined();
+            expect('storefront-setup-resume' in edsHandlers).toBe(false);
         });
 
         it('should NOT have old eds-preflight-start handler', () => {
             // Old message type should be removed after rename
-            expect(edsHandlers['eds-preflight-start']).toBeUndefined();
+            expect('eds-preflight-start' in edsHandlers).toBe(false);
         });
 
         it('should NOT have old eds-preflight-cancel handler', () => {
             // Old message type should be removed after rename
-            expect(edsHandlers['eds-preflight-cancel']).toBeUndefined();
+            expect('eds-preflight-cancel' in edsHandlers).toBe(false);
         });
 
         it('should NOT have old eds-preflight-resume handler', () => {
             // Old message type should be removed after rename
-            expect(edsHandlers['eds-preflight-resume']).toBeUndefined();
+            expect('eds-preflight-resume' in edsHandlers).toBe(false);
         });
     });
 

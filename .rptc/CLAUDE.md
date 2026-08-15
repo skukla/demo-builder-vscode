@@ -21,8 +21,9 @@ project.
 npm run watch:all        # Watch mode (extension + webviews) — run in background
 npm run compile          # Full production build
 npm run lint             # eslint over ALL of src/ + tests/ (matches CI)
-npx tsc --noEmit         # Typecheck
-npx jest --no-coverage 2>&1 > /tmp/jest-output.txt   # Full suite (3-5 min)
+npx tsc --noEmit         # Typecheck src/ (tsconfig.json excludes tests)
+npm run typecheck:tests  # Typecheck tests/ (tsconfig.test.json) — CI gates on both
+npx jest --no-coverage 2>&1 > /tmp/jest-output.txt   # Full suite (~20s, see below)
 ```
 
 ## Where RPTC Artifacts Live
@@ -89,7 +90,16 @@ Project-specific SOPs override the plugin defaults (resolution order:
 - **Never pipe jest through `tail`/`head`/`grep`** — output buffering makes
   the run look hung. Redirect to a file and read it:
   `npx jest --no-coverage 2>&1 > /tmp/jest-output.txt`
-- The full suite takes **3-5 minutes** — that is normal, don't kill it.
+- The full suite takes **~20 seconds** (996 suites / 12,764 tests, measured over 10
+  consecutive runs on 16 cores, 2026-08-13). It was 3-5 minutes before the worker and
+  transform tuning landed; that figure survived in the docs long after it stopped
+  being true, and it teaches you to walk away from a run that is already finished.
+  `npm test` is the slow one — its `pretest` runs compile + lint first.
+- **Never run two jest runs at once.** Measured 2026-08-13: one at a time failed 0 suites
+  in 10 runs; two concurrently failed 4-6 suites in all 6 runs, on 10s timeouts, in
+  different suites each time. A concurrent result is noise in both directions. A
+  PreToolUse rule (`.claude/hooks/rules/15-jest-concurrent.rule`) blocks the second run;
+  if it fires, wait rather than scoping the run down — a scoped run takes the same cores.
 - **CI lints the whole repo** (`npm run lint` covers all of `src/` +
   `tests/`). A scoped/changed-files lint can pass locally while CI fails on a
   pre-existing error elsewhere. Before pushing: full `npm run lint` +

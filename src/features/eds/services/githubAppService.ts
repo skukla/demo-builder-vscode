@@ -44,8 +44,43 @@ export class GitHubAppService {
     constructor(
         private tokenService: GitHubTokenService,
         logger?: Logger,
+        /**
+         * DA.live IMS token source. Optional so the headless and signed-out paths
+         * keep working; see {@link GitHubAppService.tryAdminBearer}.
+         */
+        private daLiveTokenProvider?: { getAccessToken(): Promise<string | null | undefined> },
     ) {
         this.logger = logger ?? getLogger();
+    }
+
+    /**
+     * The DA.live IMS Bearer as an `Authorization` header, or `{}` when there is
+     * no DA.live session.
+     *
+     * Needed because writing ANY `access.admin` role on a site makes the
+     * Configuration Service set `requireAuth: "auto"`, which closes the whole
+     * admin API — `/status` included — to callers without an accepted admin
+     * identity. The GitHub token is not one. Since storefront setup now pins an
+     * admin at registration, every project the extension creates is protected,
+     * and this check 401s on the next edit: "installed=false, codeStatus=none",
+     * which the wizard shows as a permanent "Registering..." and the pipeline
+     * turns into an aborted setup.
+     *
+     * Measured 2026-08-14 against `GET /status/skukla/demo-builder-test/main`:
+     * 401 with the GitHub token alone, 200 with this Bearer attached, while an
+     * unprotected site answered 200 either way.
+     *
+     * Deliberately swallows every failure. An unprotected site never needed the
+     * Bearer, so a missing or broken DA.live session must not turn a working
+     * check into a hard one — it degrades to exactly today's behaviour.
+     */
+    private async tryAdminBearer(): Promise<Record<string, string>> {
+        try {
+            const token = await this.daLiveTokenProvider?.getAccessToken();
+            return token ? { Authorization: `Bearer ${token}` } : {};
+        } catch {
+            return {};
+        }
     }
 
     /**
@@ -163,7 +198,7 @@ export class GitHubAppService {
 
         const response = await fetch(statusUrl, {
             method: 'GET',
-            headers: { 'x-auth-token': token },
+            headers: { ...(await this.tryAdminBearer()), 'x-auth-token': token },
             signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
         });
 

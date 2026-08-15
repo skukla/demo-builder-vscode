@@ -35,6 +35,7 @@ import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
 import type { StorefrontSetupResult } from './storefrontSetupTypes';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { hasMeshInDependencies } from '@/core/constants';
+import { redactUrlUserParam } from '@/core/utils/maskEmail';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
@@ -429,10 +430,14 @@ export async function handleStartStorefrontSetup(
             // PDPs works, and withholding it would be the opposite lie.
             const caveats = result.pdpCaveats ?? [];
             const hasCaveats = caveats.length > 0;
+            // Redacted for the same reason as the BYOM toast: a 403 caveat embeds
+            // the Code Sync setup link, which carries the signed-in address.
             context.logger.info(
                 hasCaveats
-                    ? `[Storefront Setup] Finished WITH ERRORS: ${result.repoUrl} — ` +
-                          caveats.join(' ')
+                    ? redactUrlUserParam(
+                          `[Storefront Setup] Finished WITH ERRORS: ${result.repoUrl} — ` +
+                              caveats.join(' '),
+                      )
                     : `[Storefront Setup] Complete: ${result.repoUrl}`,
             );
             await context.sendMessage('storefront-setup-complete', {

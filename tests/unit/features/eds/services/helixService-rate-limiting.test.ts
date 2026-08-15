@@ -11,6 +11,8 @@
  * more than 10 pages.
  */
 
+export {};
+
 // Mock vscode module
 jest.mock('vscode');
 

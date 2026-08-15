@@ -1,0 +1,128 @@
+# Make third-party AI tooling visible, optional, and coherently gated
+
+## Provenance
+
+Asked 2026-08-13, after researching what happens when a skill needs an MCP the user does not
+have: "Shouldn't the extension notify and show progress concerning the installation of
+something it requires? And shouldn't installing something third-party be optional — and if
+they opt out, don't we need to know which skills are therefore disabled?"
+
+Both instincts hold up. The second one turns out to rest on a relationship the codebase does
+not currently declare anywhere.
+
+## What already works — do not rebuild it
+
+Researched before scoping, because most of this is handled:
+
+- **Install** — `@playwright/mcp` and `@adobe-commerce/commerce-extensibility-tools` are
+  installed automatically into the project's isolated `.demo-builder-mcp/`, gated by each
+  entry's `requires` in `ai-defaults.json`.
+- **Config** — `.mcp.json` gets the entry. Nothing for the user to wire up by hand.
+- **Install failure is surfaced** — `installAiDefaultsMcpTools` returns a structured
+  `{ success, error }` and the regenerate handler turns it into a user-facing message.
+- **Going missing later is caught** — `detectMcpDrift` stats each declared arg path, so a
+  deleted or half-installed package is found on dashboard open and gated to a visible heal.
+- **A broken server is visible** — `mcpInspector` reports `error` / `timeout` with a
+  diagnostic, rendered by the AI Capabilities modal.
+- **The skill says how to recover** — `scrape-reference-site` tells the agent to run
+  Regenerate AI Files if the package is missing, and specifically NOT `npm install` in the
+  storefront.
+
+## Gap 1 — the biggest download is the invisible one
+
+`@playwright/mcp` is only the server. Playwright fetches a **~150 MB Chromium on first USE**,
+not at install, into `~/Library/Caches/ms-playwright/`.
+
+Nothing in `src/` knows that binary exists — the only mentions are inside two skill files, as
+guidance for the agent to warn the user. So there is no pre-check, no progress, and no
+detection. On a restricted or metered network the failure surfaces to an agent mid-scrape, as
+a runtime error the extension never sees.
+
+It is bounded (once per machine, shared across projects) and usually fine. "Usually fine,
+fails confusingly on a locked-down network" is the shape that costs an afternoon in front of
+a customer.
+
+## Gap 2 — progress is a label, not progress
+
+The regenerate path emits one step: `Installing AI tooling` / "This can take up to a minute."
+`installAiDefaultsMcpTools` takes no progress callback, so npm runs as one opaque block, and
+the minute is a guess presented as fact.
+
+## Gap 3 — there is no opt-out, and adding one needs a link that does not exist
+
+No setting governs third-party installs today; the gate is purely project composition.
+
+**The blocker is not the toggle.** `ai-defaults.json` declares which PACKAGES a project
+needs. `DEMO_BUILDER_ALWAYS_ON_SKILLS` declares which SKILLS get written. **Nothing connects
+them.** The relationship lives only as prose inside skill bodies.
+
+So "if they opt out, which skills are disabled?" has no machine-readable answer today. That
+link must be declared before any gating can be correct — and once declared, the AI
+Capabilities modal can say WHY something is absent instead of silently omitting it.
+
+**And it is not all-or-nothing.** Measured by mentions across the six EDS scraping skills:
+
+| Skill | Playwright mentions | Verdict |
+|---|---|---|
+| `connect-authenticated-site` | 13 | drives it |
+| `scrape-reference-site` | 7 | drives it |
+| `refine-visual-match` | 4 | drives it |
+| `commerce-block-mapper` | 0 | works on already-scraped material |
+| `demo-data-injector` | 0 | same |
+| `header-nav-footer` | 0 | same |
+
+Disabling all six would remove working capability; disabling none would leave three skills
+instructing an agent to use a tool that is not there. Getting this wrong in either direction
+is its own defect, and mention-counting is a starting hypothesis — each of the six needs
+reading before it is classified.
+
+## The state to avoid
+
+**A skill that tells an agent to use a tool that is not installed is worse than no skill.**
+The agent tries, fails, and improvises. Any opt-out must remove the skills with the package,
+atomically, or it has made things worse.
+
+## Execution plan
+
+1. **Declare the skill→tool dependency.** Add it where the skills are declared, so a skill
+   can name the ai-defaults `id` it requires. This is the enabling step; everything else
+   depends on it. Classify the six scraping skills by READING them, not by counting mentions.
+2. **Gate skill writing on it.** `skillsWriter` already writes conditionally; extend the
+   condition from "does the project qualify" to "does it qualify AND is the tool available".
+3. **Add the opt-out setting**, threaded through all four gate seams per
+   `ai-context-authoring` — change all or none. Default ON: this is an escape hatch for
+   restricted environments, not a new decision to put in front of every user.
+4. **Say what is disabled and why** in the AI Capabilities modal. A missing tool with a
+   stated reason is a different user experience from an absence.
+5. **Pre-check the Chromium binary** — a cheap existence check on the cache dir, surfaced the
+   way a missing package already is. Do not download it eagerly; knowing is the win.
+6. **Give the install real progress**, or stop claiming a duration it cannot know.
+7. **Re-enabling must install.** Turning the setting back on has to restore the package AND
+   the skills, or the opt-out is one-way.
+
+## Constraints
+
+- The four gate seams (`mcpConfigWriter.buildMcpConfig`,
+  `aiDefaultsInstaller.installAiDefaultsMcpTools`, `componentInstallationOrchestrator`,
+  `aiHandlers.handleRegenerateAiFiles`) change all or none.
+- Any change to generated content needs an `AI_CONTEXT_VERSION` bump, which re-prompts every
+  existing project — batch this with other bundle changes rather than shipping alone.
+- Do not eagerly download Chromium to make the check easy. The point is to know, not to spend
+  someone's bandwidth on their behalf.
+
+## Related
+
+Shares machinery with
+[`2026-08-13-tier-the-ai-bundle-refresh.md`](2026-08-13-tier-the-ai-bundle-refresh.md) — that
+item makes the freshness check watch project COMPOSITION as a second axis; an opt-out is a
+third input to the same gate. **Do the composition axis first**: this item's step 2 needs a
+check that already knows how to compare "what applies" against "what is installed."
+
+## Kickoff prompt
+
+> Read `.rptc/backlog/2026-08-13-third-party-tooling-visible-and-optional.md`. Start with step
+> 1 — declare which ai-defaults tool each generated skill requires, reading the six EDS
+> scraping skills to classify them rather than trusting the mention counts in the item. That
+> link does not exist today and everything else depends on it. Do not add the opt-out setting
+> before a skill can be gated on it, or you ship skills that tell an agent to use a tool that
+> is not there.

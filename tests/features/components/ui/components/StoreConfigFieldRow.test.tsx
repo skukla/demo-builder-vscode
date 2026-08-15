@@ -45,6 +45,7 @@ const ACCS_WEBSITE_CODE = 'ACCS_WEBSITE_CODE';
 
 const makeField = (key: string): UniqueField => ({
     key,
+    componentIds: ['test-component'],
     label: key,
     type: 'text',
     required: false,

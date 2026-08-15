@@ -10,7 +10,7 @@
 
 Today "Build custom" commits the FIXED catalog id `app-builder-shell`, so id-dedup caps a
 project at ONE AI-built integration. The backlog item
-(`.rptc/backlog/2026-07-16-shell-instancing-named-ai-integrations.md`) makes the shell repo a
+(`.rptc/complete/shell-instancing/item.md`) makes the shell repo a
 **template, not an identity**: the user names the integration ("Firefly Image Gen"), a
 collision-checked instance id derives from the name (`firefly-image-gen`), and the shell clones
 under `components/<instanceId>/`. Everything post-add is already id-generic after ADR-011 D3

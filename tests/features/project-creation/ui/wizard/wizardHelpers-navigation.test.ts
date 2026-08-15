@@ -104,7 +104,6 @@ describe('wizardHelpers - navigation', () => {
         const createState = (): WizardState => ({
             currentStep: 'review',
             projectName: 'test',
-            projectTemplate: 'citisignal',
             adobeAuth: { isAuthenticated: true, isChecking: false },
             adobeProject: { id: 'proj-1', name: 'Project 1' },
             adobeWorkspace: { id: 'ws-1', name: 'Workspace 1' },

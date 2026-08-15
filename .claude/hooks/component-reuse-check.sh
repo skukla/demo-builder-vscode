@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Stop hook — flag markup that reimplements a component instead of importing it.
 #
-# The gap this fills: reuse-first-router fires on NEW .tsx files, so recreation
+# The gap this fills: the 30-reuse-first rule fires on NEW .tsx files, so recreation
 # inside an EXISTING file is invisible to it, and the extraction scan only speaks at
 # 3+ sites. Between them sits the common case — someone hand-rolls a component's
 # innards in a file that already exists, at one or two sites, and nothing notices.

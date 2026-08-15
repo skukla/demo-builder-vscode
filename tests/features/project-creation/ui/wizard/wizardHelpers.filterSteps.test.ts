@@ -21,7 +21,7 @@ describe('filterStepsByComponents', () => {
             const result = filterStepsByComponents(mockSteps, undefined);
 
             expect(result).toHaveLength(3);
-            expect(result.map(s => s.id)).toEqual(['welcome', 'component-selection', 'review']);
+            expect(result.map((s) => s.id)).toEqual(['welcome', 'component-selection', 'review']);
         });
 
         it('should exclude disabled steps', () => {
@@ -33,7 +33,7 @@ describe('filterStepsByComponents', () => {
             const result = filterStepsByComponents(stepsWithDisabled, undefined);
 
             expect(result).toHaveLength(3);
-            expect(result.find(s => s.id === 'hidden')).toBeUndefined();
+            expect(result.map((s) => s.id)).not.toContain('hidden');
         });
 
         it('should handle empty steps array', () => {
@@ -46,7 +46,12 @@ describe('filterStepsByComponents', () => {
     describe('single component requirement', () => {
         const mockSteps: WizardStepConfigWithRequirements[] = [
             { id: 'welcome', name: 'Welcome', enabled: true },
-            { id: 'mesh-config', name: 'Mesh Config', enabled: true, requiredComponents: ['commerce-mesh'] },
+            {
+                id: 'mesh-config',
+                name: 'Mesh Config',
+                enabled: true,
+                requiredComponents: ['commerce-mesh'],
+            },
         ];
 
         it('should show step when required component is in dependencies', () => {
@@ -57,12 +62,17 @@ describe('filterStepsByComponents', () => {
             const result = filterStepsByComponents(mockSteps, selectedComponents);
 
             expect(result).toHaveLength(2);
-            expect(result.find(s => s.id === 'mesh-config')).toBeDefined();
+            expect(result.map((s) => s.id)).toContain('mesh-config');
         });
 
         it('should show step when required component is frontend', () => {
             const stepsWithFrontend: WizardStepConfigWithRequirements[] = [
-                { id: 'storefront-config', name: 'Storefront', enabled: true, requiredComponents: ['headless'] },
+                {
+                    id: 'storefront-config',
+                    name: 'Storefront',
+                    enabled: true,
+                    requiredComponents: ['headless'],
+                },
             ];
             const selectedComponents: ComponentSelection = {
                 frontend: 'headless',
@@ -76,7 +86,12 @@ describe('filterStepsByComponents', () => {
 
         it('should show step when required component is backend', () => {
             const stepsWithBackend: WizardStepConfigWithRequirements[] = [
-                { id: 'backend-config', name: 'Backend', enabled: true, requiredComponents: ['adobe-commerce-paas'] },
+                {
+                    id: 'backend-config',
+                    name: 'Backend',
+                    enabled: true,
+                    requiredComponents: ['adobe-commerce-paas'],
+                },
             ];
             const selectedComponents: ComponentSelection = {
                 backend: 'adobe-commerce-paas',
@@ -95,21 +110,21 @@ describe('filterStepsByComponents', () => {
             const result = filterStepsByComponents(mockSteps, selectedComponents);
 
             expect(result).toHaveLength(1);
-            expect(result.find(s => s.id === 'mesh-config')).toBeUndefined();
+            expect(result.map((s) => s.id)).not.toContain('mesh-config');
         });
 
         it('should hide step when no components selected', () => {
             const result = filterStepsByComponents(mockSteps, undefined);
 
             expect(result).toHaveLength(1);
-            expect(result.find(s => s.id === 'mesh-config')).toBeUndefined();
+            expect(result.map((s) => s.id)).not.toContain('mesh-config');
         });
 
         it('should hide step when components object is empty', () => {
             const result = filterStepsByComponents(mockSteps, {});
 
             expect(result).toHaveLength(1);
-            expect(result.find(s => s.id === 'mesh-config')).toBeUndefined();
+            expect(result.map((s) => s.id)).not.toContain('mesh-config');
         });
     });
 
@@ -159,8 +174,18 @@ describe('filterStepsByComponents', () => {
     describe('mixed scenarios - some steps with requirements, some without', () => {
         const mockSteps: WizardStepConfigWithRequirements[] = [
             { id: 'welcome', name: 'Welcome', enabled: true },
-            { id: 'mesh-config', name: 'Mesh', enabled: true, requiredComponents: ['commerce-mesh'] },
-            { id: 'storefront-config', name: 'Storefront', enabled: true, requiredComponents: ['headless'] },
+            {
+                id: 'mesh-config',
+                name: 'Mesh',
+                enabled: true,
+                requiredComponents: ['commerce-mesh'],
+            },
+            {
+                id: 'storefront-config',
+                name: 'Storefront',
+                enabled: true,
+                requiredComponents: ['headless'],
+            },
             { id: 'review', name: 'Review', enabled: true },
         ];
 
@@ -171,7 +196,7 @@ describe('filterStepsByComponents', () => {
 
             const result = filterStepsByComponents(mockSteps, selectedComponents);
 
-            expect(result.map(s => s.id)).toEqual(['welcome', 'mesh-config', 'review']);
+            expect(result.map((s) => s.id)).toEqual(['welcome', 'mesh-config', 'review']);
         });
 
         it('should show multiple component-specific steps when multiple components selected', () => {
@@ -182,7 +207,7 @@ describe('filterStepsByComponents', () => {
 
             const result = filterStepsByComponents(mockSteps, selectedComponents);
 
-            expect(result.map(s => s.id)).toEqual([
+            expect(result.map((s) => s.id)).toEqual([
                 'welcome',
                 'mesh-config',
                 'storefront-config',
@@ -215,13 +240,23 @@ describe('filterStepsByComponents', () => {
 
             const result = filterStepsByComponents(mockSteps, selectedComponents);
 
-            expect(result.map(s => s.id)).toEqual(['step-a', 'step-b', 'step-c', 'step-d']);
+            expect(result.map((s) => s.id)).toEqual(['step-a', 'step-b', 'step-c', 'step-d']);
         });
 
         it('should filter disabled steps even if component requirements met', () => {
             const mockSteps: WizardStepConfigWithRequirements[] = [
-                { id: 'enabled-config', name: 'Enabled', enabled: true, requiredComponents: ['comp'] },
-                { id: 'disabled-config', name: 'Disabled', enabled: false, requiredComponents: ['comp'] },
+                {
+                    id: 'enabled-config',
+                    name: 'Enabled',
+                    enabled: true,
+                    requiredComponents: ['comp'],
+                },
+                {
+                    id: 'disabled-config',
+                    name: 'Disabled',
+                    enabled: false,
+                    requiredComponents: ['comp'],
+                },
             ];
             const selectedComponents: ComponentSelection = {
                 dependencies: ['comp'],
@@ -254,7 +289,7 @@ describe('requiredAny OR logic', () => {
         const result = filterStepsByComponents(mockSteps, selectedComponents);
 
         expect(result).toHaveLength(2);
-        expect(result.find(s => s.id === 'backend-config')).toBeDefined();
+        expect(result.map((s) => s.id)).toContain('backend-config');
     });
 
     it('should show step when second component in requiredAny is selected', () => {
@@ -265,7 +300,7 @@ describe('requiredAny OR logic', () => {
         const result = filterStepsByComponents(mockSteps, selectedComponents);
 
         expect(result).toHaveLength(2);
-        expect(result.find(s => s.id === 'backend-config')).toBeDefined();
+        expect(result.map((s) => s.id)).toContain('backend-config');
     });
 
     it('should hide step when NONE of requiredAny components are selected', () => {
@@ -276,7 +311,7 @@ describe('requiredAny OR logic', () => {
         const result = filterStepsByComponents(mockSteps, selectedComponents);
 
         expect(result).toHaveLength(1);
-        expect(result.find(s => s.id === 'backend-config')).toBeUndefined();
+        expect(result.map((s) => s.id)).not.toContain('backend-config');
     });
 
     it('should handle empty requiredAny array as always-visible', () => {

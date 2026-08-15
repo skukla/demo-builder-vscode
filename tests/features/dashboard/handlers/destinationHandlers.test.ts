@@ -47,8 +47,8 @@ jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
     postMeshStatus: (...a: unknown[]) => mockPostMeshStatus(...(a as [])),
 }));
 jest.mock('@/features/app-builder/services/appBuilderComponentRunnerDeps', () => ({
-    buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...a),
-    buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...a),
+    buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...(a as [])),
+    buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...(a as [])),
 }));
 
 import { handleSetProjectDestination } from '@/features/dashboard/handlers/destinationHandlers';
@@ -74,7 +74,7 @@ function makeContext(adobe: Record<string, unknown> | undefined = EXISTING_ADOBE
     const project = { name: 'demo', path: '/p/demo', adobe: adobe ? { ...adobe } : undefined };
     const saveProject = jest.fn().mockResolvedValue(undefined);
     const context = {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
         stateManager: {
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject,
@@ -127,7 +127,7 @@ describe('handleSetProjectDestination', () => {
 
         const result = await handleSetProjectDestination(context, NEW_DESTINATION);
 
-        expect(result.data?.previous).toMatchObject({
+        expect((result.data as { previous: unknown })?.previous).toMatchObject({
             projectId: 'old-project-id',
             workspace: 'old-workspace-id',
         });
@@ -135,7 +135,7 @@ describe('handleSetProjectDestination', () => {
 
     it('fails when there is no current project', async () => {
         const context = {
-            logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+            logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
             stateManager: { getCurrentProject: jest.fn().mockResolvedValue(undefined) },
         } as unknown as HandlerContext;
 
@@ -171,7 +171,7 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
         };
         const saveProject = jest.fn().mockResolvedValue(undefined);
         const context = {
-            logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+            logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
             stateManager: {
                 getCurrentProject: jest.fn().mockResolvedValue(project),
                 saveProject,
@@ -230,7 +230,7 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
             appBuilderComponents: { 'eds-accs-mesh': { kind: 'mesh', status: 'deployed' } },
         };
         const context = {
-            logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+            logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
             stateManager: {
                 getCurrentProject: jest.fn().mockResolvedValue(project),
                 saveProject: jest.fn().mockResolvedValue(undefined),

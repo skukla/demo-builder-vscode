@@ -85,7 +85,7 @@ const catalogServiceGroup: MockServiceGroup = {
 // ---------------------------------------------------------------------------
 
 // Track captured config from useStoreDiscovery
-let capturedStoreDiscoveryConfig: UseStoreDiscoveryConfig;
+let capturedStoreDiscoveryConfig: UseStoreDiscoveryConfig | undefined;
 
 const mockUseComponentConfig = {
     isLoading: false,

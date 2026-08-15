@@ -40,7 +40,7 @@ import type { HandlerContext } from '@/types/handlers';
 function ctx(project: unknown): HandlerContext {
     return {
         stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() },
+        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
         context: { extensionPath: '/ext' },
     } as unknown as HandlerContext;
 }

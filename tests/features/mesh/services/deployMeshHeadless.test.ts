@@ -83,7 +83,7 @@ function deps(overrides: Record<string, unknown> = {}) {
     return {
         project: project(),
         stateManager: { saveProject: jest.fn().mockResolvedValue(undefined) } as never,
-        logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() } as never,
+        logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as never,
         extensionPath: '/ext',
         ...overrides,
     };
@@ -237,7 +237,7 @@ describe('deployMeshHeadless', () => {
             'existing-1'
         );
         expect(mockUpdateMeshState).toHaveBeenCalledWith(expect.any(Object), 'https://new/graphql');
-        expect(d.stateManager.saveProject).toHaveBeenCalled();
+        expect((d.stateManager as { saveProject: jest.Mock }).saveProject).toHaveBeenCalled();
         expect(result).toEqual({
             success: true,
             meshId: 'mesh-1',

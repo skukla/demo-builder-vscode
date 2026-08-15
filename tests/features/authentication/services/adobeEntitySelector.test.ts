@@ -52,6 +52,7 @@ describe('AdobeEntitySelector', () => {
                 stdout: '',
                 stderr: '',
                 code: 0,
+                duration: 0,
             });
 
             await selector.clearConsoleContext();

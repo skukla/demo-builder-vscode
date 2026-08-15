@@ -15,7 +15,7 @@ import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/servi
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 
-const mockLogger: Logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+const mockLogger: Logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
 
 function makeCtx(): OnOpenCheckContext {
     return { project: { path: '/proj' } as Project, logger: mockLogger, post: jest.fn() };

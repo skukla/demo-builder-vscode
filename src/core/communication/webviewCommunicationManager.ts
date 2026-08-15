@@ -58,6 +58,7 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // 35.2s catalog fetch reported "Request timeout: listConsoleApis" in the UI
     // while the extension logged a successful 96-service result (2026-07-31).
     'listConsoleApis': TIMEOUTS.LONG,                // 180s - same catalog fetch as list-org-console-apis
+
     'addConsoleApis': TIMEOUTS.LONG,                 // 180s - catalog fetch + union subscribe PUT
     'setConsoleApis': TIMEOUTS.LONG,                 // 180s - catalog fetch + reconcile subscribe PUT
 

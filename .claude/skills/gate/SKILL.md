@@ -39,13 +39,18 @@ PASSES; it's not a failure.
 
 When production code changed, locate and run its complementary tests (test-code sync).
 
-## 3. tsc
+## 3. tsc — both configs
 
 ```bash
-npx tsc --noEmit 2>&1 | tail -15   # tsc output is small; tail is fine here
+npx tsc --noEmit 2>&1 | tail -15          # src/ (tsconfig.json excludes tests)
+npm run typecheck:tests 2>&1 | tail -15   # tests/ (tsconfig.test.json) — CI runs this too
 ```
 
-Whole-project typecheck (project references make per-file impossible). Must be exit 0.
+Whole-project typecheck (project references make per-file impossible). Both must be
+exit 0. The second one exists because `tsconfig.json` excludes test files and
+`@swc/jest` strips types — without it, nothing typechecks the test tree and fixtures
+can invent shapes the suite then agrees with (the 2026-08-13 `prepareImport` bug).
+NOT `test:typecheck` — that older script checks only `src/`.
 
 ## 4. eslint — changed files only
 
@@ -79,6 +84,7 @@ pushing, match CI exactly:
 ```bash
 npm run lint                                  # whole repo — the one that's easy to miss
 npx tsc --noEmit
+npm run typecheck:tests                       # test tree — CI gates on this too
 npx jest --no-coverage 2>&1 > /tmp/gate-jest.txt   # full suite; never pipe through tail
 bash .claude/skills/dead-code-scan/scan.sh src     # ~5s — cruft the compiler cannot see
 ```

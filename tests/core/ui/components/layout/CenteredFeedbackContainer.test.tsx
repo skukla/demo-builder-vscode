@@ -232,7 +232,7 @@ describe('CenteredFeedbackContainer', () => {
             // Given: CenteredFeedbackContainer with focusable elements
             renderWithProvider(
                 <CenteredFeedbackContainer>
-                    <Button data-testid="action-btn">Retry</Button>
+                    <Button variant="primary" data-testid="action-btn">Retry</Button>
                 </CenteredFeedbackContainer>
             );
 

@@ -24,7 +24,7 @@ being fixed properly (write to the backend only, plus a migration). **This item 
 general case: which OTHER facts sit in the same shape.**
 
 Corroborating, from a different angle:
-`.rptc/plans/pdp-prerender-validation/HANDOFF.md:98` — "12 of the detector's 13 watched keys
+`.rptc/complete/pdp-prerender-validation/HANDOFF.md:98` — "12 of the detector's 13 watched keys
 are declared by more than one component."
 
 ## Goal / Scope

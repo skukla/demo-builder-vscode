@@ -283,6 +283,50 @@ describe('migrateStorefrontNamingIfNeeded', () => {
     });
 
     describe('edge cases', () => {
+        it('reports lost admin grants on a SUCCESSFUL migration', async () => {
+            // This path calls updateSiteConfig directly rather than going through
+            // siteConfigRegistrar, so it has to carry the loss itself — and it
+            // runs against pre-164fd251 storefronts, the ones most likely to have
+            // several admins.
+            const configService = makeConfigService(
+                jest.fn().mockResolvedValue({
+                    success: true,
+                    grantsRestored: false,
+                    lostGrants: ['a****@x.test'],
+                }),
+            );
+
+            const result = await migrateStorefrontNamingIfNeeded(
+                makeCtx(), makeProject('b2b-boilerplate-content'), makeDaOps() as any,
+                configService as any, mockLogger as any,
+            );
+
+            expect(result.migrated).toBe(true);
+            expect(result.lostGrants).toEqual(['a****@x.test']);
+        });
+
+        it('reports lost grants even when the re-registration FAILED', async () => {
+            // Computed before the error return: a failure that ALSO lost the
+            // grants used to report only the error string.
+            const configService = makeConfigService(
+                jest.fn().mockResolvedValue({
+                    success: false,
+                    error: 'boom',
+                    grantsRestored: false,
+                    lostGrants: ['a****@x.test'],
+                }),
+            );
+
+            const result = await migrateStorefrontNamingIfNeeded(
+                makeCtx(), makeProject('b2b-boilerplate-content'), makeDaOps() as any,
+                configService as any, mockLogger as any,
+            );
+
+            expect(result.migrated).toBe(false);
+            expect(result.error).toMatch(/re-registration/i);
+            expect(result.lostGrants).toEqual(['a****@x.test']);
+        });
+
         it('tolerates a project missing the eds-storefront instance (no crash, ctx still mutated)', async () => {
             const ctx = makeCtx();
             const project = { name: 'no-eds', componentInstances: {} } as unknown as Project;

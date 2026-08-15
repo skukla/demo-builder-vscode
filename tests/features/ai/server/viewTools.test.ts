@@ -50,7 +50,7 @@ describe('registerViewTools', () => {
         await server.text('open_view', { view: 'configure', confirm: true });
         await server.text('open_view', { view: 'logs', confirm: true });
 
-        expect(runCommand.mock.calls.map((c) => c[0])).toEqual([
+        expect((runCommand.mock.calls as unknown[][]).map((c) => c[0])).toEqual([
             'demoBuilder.showProjectDashboard',
             'demoBuilder.configureProject',
             'demoBuilder.showLogs',

@@ -13,7 +13,9 @@
  */
 
 import { HelixService } from '@/features/eds/services/helixService';
+import type { DaLiveTokenProvider } from '@/features/eds/services/helixService';
 import type { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+
 import type { Logger } from '@/types/logger';
 
 const mockFetch = jest.fn();
@@ -92,7 +94,7 @@ describe('HelixService.previewCode — 400 retry-with-backoff', () => {
         mockFetch.mockResolvedValueOnce(res(401));
 
         await expect(service.previewCode('org', 'site', '/config.json')).rejects.toThrow(
-            /GitHub authentication failed/
+            /Adobe rejected the request \(401\)/
         );
 
         expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -128,5 +130,64 @@ describe('HelixService.previewCode — 400 retry-with-backoff', () => {
 
         // One AbortSignal.timeout per fetch attempt (no reused/aborted signal).
         expect(abortTimeoutSpy).toHaveBeenCalledTimes(2);
+    });
+});
+
+/**
+ * Admin-API auth: the DA.live IMS Bearer must ride along with the GitHub token.
+ *
+ * Measured 2026-08-14 against a throwaway site: writing any `access.admin` role
+ * makes the Configuration Service set `requireAuth: "auto"`, and the whole admin
+ * API then refuses the GitHub token — an identical bulk-preview POST returned 202
+ * before the grant, 401 after, and 202 again once this Bearer was attached. Since
+ * the extension now pins a site admin during setup, every admin-API call it makes
+ * runs against a protected site.
+ */
+describe('HelixService — admin-API authorization', () => {
+    const mockLogger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+    } as unknown as Logger;
+
+    const githubTokenService = {
+        getToken: jest.fn().mockResolvedValue({ token: 'gh-token' }),
+    } as unknown as GitHubTokenService;
+
+    const headersOfLastCall = () => mockFetch.mock.calls.at(-1)?.[1]?.headers ?? {};
+
+    beforeEach(() => {
+        mockFetch.mockReset();
+        mockFetch.mockResolvedValue(res(200));
+    });
+
+    it('sends the DA.live Bearer alongside the GitHub token', async () => {
+        const daLive = {
+            getAccessToken: jest.fn().mockResolvedValue('ims-token'),
+        } as unknown as DaLiveTokenProvider;
+
+        await new HelixService(mockLogger, githubTokenService, daLive).previewCode(
+            'org',
+            'site',
+            '/config.json',
+        );
+
+        expect(headersOfLastCall()).toEqual({
+            Authorization: 'Bearer ims-token',
+            'x-auth-token': 'gh-token',
+        });
+    });
+
+    it('degrades to the GitHub token alone when no DA.live session exists', async () => {
+        // An unprotected site never needed the Bearer, so a missing DA.live
+        // session must not turn a working call into a hard failure.
+        await new HelixService(mockLogger, githubTokenService).previewCode(
+            'org',
+            'site',
+            '/config.json',
+        );
+
+        expect(headersOfLastCall()).toEqual({ 'x-auth-token': 'gh-token' });
     });
 });

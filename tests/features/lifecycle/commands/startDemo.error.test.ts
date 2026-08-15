@@ -14,7 +14,7 @@ import { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { ServiceLocator as _ServiceLocator } from '@/core/di';
 import { StateManager } from '@/core/state';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import * as vscode from 'vscode';
 
 // Mock ProcessCleanup

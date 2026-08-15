@@ -78,7 +78,7 @@ describe('AiCapabilitiesModal', () => {
 
     it('renders the skills summary line', () => {
         renderModal({ skills: SKILLS, mcps: MCPS });
-        expect(screen.getByTestId('ai-skills-summary')).toHaveTextContent(/2 installed/);
+        expect(screen.getByTestId('ai-skills-summary')).toHaveTextContent('Skills · 2');
     });
 
     it('surfaces every skill name at rest (flat list — no accordions to jump the modal)', () => {
@@ -92,8 +92,27 @@ describe('AiCapabilitiesModal', () => {
         // The "What the AI can do…" subtitle was removed (2026-07-09) — the
         // title + section headings carry the framing.
         expect(screen.queryByText(/what the ai can do/i)).not.toBeInTheDocument();
-        expect(screen.getByText('MCP servers')).toBeInTheDocument();
+        expect(screen.getByTestId('ai-mcps-heading')).toBeInTheDocument();
         expect(screen.getByTestId('ai-skills-summary')).toBeInTheDocument();
+    });
+
+    it('counts the MCP section the same way it counts the skills section', () => {
+        // One section said "Skills · N installed" and the other just "MCP
+        // servers", so two parallel lists were labelled by different rules.
+        renderModal({ skills: SKILLS, mcps: MCPS });
+
+        expect(screen.getByTestId('ai-mcps-heading')).toHaveTextContent('MCP servers · 2');
+        expect(screen.getByTestId('ai-skills-summary')).toHaveTextContent('Skills · 2');
+    });
+
+    it('places both sections in the two-column body', () => {
+        // The body was a single tall column that cut its own list off; the
+        // columns element is what the stylesheet test constrains.
+        renderModal({ skills: SKILLS, mcps: MCPS });
+
+        const columns = screen.getByTestId('ai-capabilities-columns');
+        expect(columns).toContainElement(screen.getByTestId('ai-mcps-heading'));
+        expect(columns).toContainElement(screen.getByTestId('ai-skills-summary'));
     });
 
     it('shows a plain-language empty state for skills when none are installed', () => {

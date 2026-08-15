@@ -256,7 +256,7 @@ describe('ConfigurationSummary', () => {
                 <ConfigurationSummary
                     state={stateWithWorkspace}
                     completedSteps={['adobe-project', 'adobe-workspace']}
-                    currentStep="settings"
+                    currentStep="build-your-project"
                 />
             );
 

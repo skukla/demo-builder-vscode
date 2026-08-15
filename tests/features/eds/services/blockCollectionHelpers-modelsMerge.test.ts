@@ -63,18 +63,18 @@ describe('installBlockCollections (single library)', () => {
                 async (owner: string, repo: string, path: string) => {
                     if (owner === 'stephen-garner-adobe' && repo === 'isle5') {
                         if (path === 'component-models.json') {
-                            if (opts.sourceModels === null) return null;
-                            return { content: opts.sourceModels, sha: 'sha-cm' };
+                            if (opts.sourceModels == null) return null;
+                            return { content: opts.sourceModels, sha: 'sha-cm', path, encoding: 'base64' };
                         }
                         return null; // no comp-def or filters for these tests
                     }
                     // destination
                     if (path === 'component-models.json') {
                         if (opts.destModels === null || opts.destModels === undefined) return null;
-                        return { content: opts.destModels, sha: 'dest-sha-cm' };
+                        return { content: opts.destModels, sha: 'dest-sha-cm', path, encoding: 'base64' };
                     }
                     if (path === 'component-definition.json') {
-                        return { content: createDestComponentDef(), sha: 'dest-sha' };
+                        return { content: createDestComponentDef(), sha: 'dest-sha', path, encoding: 'base64' };
                     }
                     return null;
                 },

@@ -358,7 +358,7 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
                 stateRef.current = {
                     ...stateRef.current,
                     adobeAuth: { isAuthenticated: true, isChecking: false },
-                    adobeOrg: { id: 'org-1', name: 'Org One' },
+                    adobeOrg: { id: 'org-1', name: 'Org One', code: 'ORG1' },
                 } as WizardState;
             });
             rerender();
@@ -382,7 +382,7 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
                 stateRef.current = {
                     ...stateRef.current,
                     adobeAuth: { isAuthenticated: true, isChecking: false },
-                    adobeOrg: { id: 'org-1', name: 'Org One' },
+                    adobeOrg: { id: 'org-1', name: 'Org One', code: 'ORG1' },
                 } as WizardState;
             });
             rerender();
@@ -424,7 +424,7 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
                 selectedBackend: ACCS,
                 selectedStack: 'eds-accs',
                 adobeAuth: { isAuthenticated: true, isChecking: false },
-                adobeOrg: { id: 'org-1', name: 'Org One' },
+                adobeOrg: { id: 'org-1', name: 'Org One', code: 'ORG1' },
                 commerceConnectValid: true,
                 activeCommerceStep: 'business-structure',
             });

@@ -10,7 +10,10 @@
  */
 
 import { promises as fsPromises } from 'fs';
-import { generateEnvironmentFiles, FinalizationContext } from '@/features/project-creation/services/projectFinalizationService';
+import {
+    generateEnvironmentFiles,
+    FinalizationContext,
+} from '@/features/project-creation/services/projectFinalizationService';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import type { Project, EnvVarDefinition } from '@/types';
@@ -29,9 +32,11 @@ jest.mock('fs', () => ({
 
 // Mock formatters
 jest.mock('@/features/project-creation/helpers/formatters', () => ({
-    formatGroupName: (group: string) => group.split('-').map(word =>
-        word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' '),
+    formatGroupName: (group: string) =>
+        group
+            .split('-')
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' '),
 }));
 
 // Re-export ProjectSetupContext from the actual module (it's imported from services, not helpers)
@@ -43,6 +48,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
         error: jest.fn(),
         warn: jest.fn(),
         debug: jest.fn(),
+        trace: jest.fn(),
     });
 
     const createSharedEnvVars = (): Record<string, Omit<EnvVarDefinition, 'key'>> => ({
@@ -61,6 +67,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
     });
 
     const createMockRegistry = (): ComponentRegistry => ({
+        version: '1.0.0',
         envVars: createSharedEnvVars(),
         components: {
             frontends: [],
@@ -78,29 +85,29 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             getCurrentProject: jest.fn().mockResolvedValue(null),
             saveProject: jest.fn().mockResolvedValue(undefined),
         } as any,
-        sharedState: {},
+        sharedState: { isAuthenticating: false },
         sendMessage: jest.fn(),
         panel: { visible: false, dispose: jest.fn() } as any,
     });
 
-    const createFrontendComponentDefinition = (): TransformedComponentDefinition => ({
-        id: 'headless',
-        name: 'Headless Frontend',
-        type: 'frontend',
-        configuration: {
-            requiredEnvVars: ['MESH_ENDPOINT', 'COMMERCE_URL'],
-            optionalEnvVars: [],
-        },
-    } as TransformedComponentDefinition);
+    const createFrontendComponentDefinition = (): TransformedComponentDefinition =>
+        ({
+            id: 'headless',
+            name: 'Headless Frontend',
+            type: 'frontend',
+            configuration: {
+                requiredEnvVars: ['MESH_ENDPOINT', 'COMMERCE_URL'],
+                optionalEnvVars: [],
+            },
+        }) as TransformedComponentDefinition;
 
     const createMinimalContext = (projectOverrides: Partial<Project> = {}): FinalizationContext => {
         const componentDefinitions = new Map<string, ComponentDefinitionEntry>();
         componentDefinitions.set('headless', {
             definition: createFrontendComponentDefinition(),
-            selections: { frontend: 'headless' },
-            skipClone: false,
-            skipInstall: false,
-        } as ComponentDefinitionEntry);
+            type: 'frontend',
+            installOptions: {},
+        });
 
         const project: Project = {
             name: 'test-project',
@@ -109,7 +116,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             created: new Date(),
             lastModified: new Date(),
             componentInstances: {
-                'headless': {
+                headless: {
                     id: 'headless',
                     name: 'Headless Frontend',
                     status: 'ready',
@@ -123,7 +130,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             createMockHandlerContext() as HandlerContext,
             createMockRegistry(),
             project,
-            {},
+            {}
         );
 
         return {
@@ -159,7 +166,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
                         subType: 'mesh',
                         status: 'deployed',
                     },
-                    'headless': {
+                    headless: {
                         id: 'headless',
                         name: 'Headless Frontend',
                         status: 'ready',
@@ -176,8 +183,8 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             expect(writeFileCalls.length).toBeGreaterThan(0);
 
             // Find the headless component .env write
-            const headlessEnvCall = writeFileCalls.find(
-                ([filePath]: [string]) => filePath.includes('headless')
+            const headlessEnvCall = writeFileCalls.find(([filePath]: [string]) =>
+                filePath.includes('headless')
             );
             expect(headlessEnvCall).toBeDefined();
 
@@ -204,7 +211,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
                         subType: 'mesh',
                         status: 'deployed',
                     },
-                    'headless': {
+                    headless: {
                         id: 'headless',
                         name: 'Headless Frontend',
                         status: 'ready',
@@ -224,8 +231,8 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
 
             // Then: The .env should have the CORRECT endpoint from componentInstances, NOT the stale one
             const writeFileCalls = (fsPromises.writeFile as jest.Mock).mock.calls;
-            const headlessEnvCall = writeFileCalls.find(
-                ([filePath]: [string]) => filePath.includes('headless')
+            const headlessEnvCall = writeFileCalls.find(([filePath]: [string]) =>
+                filePath.includes('headless')
             );
             expect(headlessEnvCall).toBeDefined();
 
@@ -241,7 +248,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             const context = createMinimalContext({
                 componentInstances: {
                     // No commerce-mesh component
-                    'headless': {
+                    headless: {
                         id: 'headless',
                         name: 'Headless Frontend',
                         status: 'ready',
@@ -255,8 +262,8 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
 
             // Then: Should not throw and MESH_ENDPOINT should be empty
             const writeFileCalls = (fsPromises.writeFile as jest.Mock).mock.calls;
-            const headlessEnvCall = writeFileCalls.find(
-                ([filePath]: [string]) => filePath.includes('headless')
+            const headlessEnvCall = writeFileCalls.find(([filePath]: [string]) =>
+                filePath.includes('headless')
             );
             expect(headlessEnvCall).toBeDefined();
 
@@ -276,7 +283,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
                         status: 'ready',
                         // No endpoint property - mesh not yet deployed
                     },
-                    'headless': {
+                    headless: {
                         id: 'headless',
                         name: 'Headless Frontend',
                         status: 'ready',
@@ -290,8 +297,8 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
 
             // Then: Should not throw, MESH_ENDPOINT should be empty
             const writeFileCalls = (fsPromises.writeFile as jest.Mock).mock.calls;
-            const headlessEnvCall = writeFileCalls.find(
-                ([filePath]: [string]) => filePath.includes('headless')
+            const headlessEnvCall = writeFileCalls.find(([filePath]: [string]) =>
+                filePath.includes('headless')
             );
             expect(headlessEnvCall).toBeDefined();
 
@@ -309,7 +316,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
                         subType: 'mesh',
                         status: 'ready',
                     },
-                    'headless': {
+                    headless: {
                         id: 'headless',
                         name: 'Headless Frontend',
                         status: 'ready',
@@ -323,8 +330,8 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
 
             // Then: Should not throw, MESH_ENDPOINT should be empty
             const writeFileCalls = (fsPromises.writeFile as jest.Mock).mock.calls;
-            const headlessEnvCall = writeFileCalls.find(
-                ([filePath]: [string]) => filePath.includes('headless')
+            const headlessEnvCall = writeFileCalls.find(([filePath]: [string]) =>
+                filePath.includes('headless')
             );
             expect(headlessEnvCall).toBeDefined();
 
@@ -366,7 +373,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
                         subType: 'mesh',
                         status: 'deployed',
                     },
-                    'headless': {
+                    headless: {
                         id: 'headless',
                         name: 'Headless Frontend',
                         status: 'ready',
@@ -391,11 +398,10 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
                         requiredEnvVars: ['MESH_ENDPOINT'],
                         optionalEnvVars: [],
                     },
-                } as TransformedComponentDefinition,
-                selections: { frontend: 'nextjs-starter' },
-                skipClone: false,
-                skipInstall: false,
-            } as ComponentDefinitionEntry);
+                },
+                type: 'frontend',
+                installOptions: {},
+            });
 
             // When: generateEnvironmentFiles is called
             await generateEnvironmentFiles(context);
@@ -403,11 +409,11 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             // Then: Both components should have the correct MESH_ENDPOINT
             const writeFileCalls = (fsPromises.writeFile as jest.Mock).mock.calls;
 
-            const headlessEnvCall = writeFileCalls.find(
-                ([filePath]: [string]) => filePath.includes('headless')
+            const headlessEnvCall = writeFileCalls.find(([filePath]: [string]) =>
+                filePath.includes('headless')
             );
-            const nextjsEnvCall = writeFileCalls.find(
-                ([filePath]: [string]) => filePath.includes('nextjs-starter')
+            const nextjsEnvCall = writeFileCalls.find(([filePath]: [string]) =>
+                filePath.includes('nextjs-starter')
             );
 
             expect(headlessEnvCall).toBeDefined();
@@ -433,7 +439,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
                         status: 'deployed',
                         path: '/test/project/commerce-mesh',
                     },
-                    'headless': {
+                    headless: {
                         id: 'headless',
                         name: 'Headless Frontend',
                         status: 'ready',
@@ -453,11 +459,10 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
                         requiredEnvVars: [],
                         optionalEnvVars: [],
                     },
-                } as TransformedComponentDefinition,
-                selections: {},
-                skipClone: false,
-                skipInstall: false,
-            } as ComponentDefinitionEntry);
+                },
+                type: 'backend',
+                installOptions: {},
+            });
 
             // When: generateEnvironmentFiles is called
             await generateEnvironmentFiles(context);
@@ -465,11 +470,11 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
             // Then: both components should have .env generated
             const writeFileCalls = (fsPromises.writeFile as jest.Mock).mock.calls;
 
-            const meshEnvCall = writeFileCalls.find(
-                ([filePath]: [string]) => filePath.includes('commerce-mesh')
+            const meshEnvCall = writeFileCalls.find(([filePath]: [string]) =>
+                filePath.includes('commerce-mesh')
             );
-            const headlessEnvCall = writeFileCalls.find(
-                ([filePath]: [string]) => filePath.includes('headless')
+            const headlessEnvCall = writeFileCalls.find(([filePath]: [string]) =>
+                filePath.includes('headless')
             );
 
             // Mesh component gets minimal .env (for consistency), but env vars are managed by mesh deployment

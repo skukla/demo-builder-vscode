@@ -1,4 +1,7 @@
-import { getPluginNodeVersions, NodeVersionMapping } from '@/features/prerequisites/handlers/shared';
+import {
+    getPluginNodeVersions,
+    NodeVersionMapping,
+} from '@/features/prerequisites/handlers/shared';
 
 /**
  * Prerequisites Handlers - Plugin Node Version Filtering Test Suite
@@ -25,7 +28,11 @@ describe('Prerequisites Handlers - getPluginNodeVersions', () => {
 
         it('should return multiple Node versions when multiple components match', () => {
             // Given: A mapping with multiple components that are in the requiredFor list
-            const mapping: NodeVersionMapping = { '18': 'eds', '20': 'commerce-paas', '24': 'headless' };
+            const mapping: NodeVersionMapping = {
+                '18': 'eds',
+                '20': 'commerce-paas',
+                '24': 'headless',
+            };
             const requiredFor = ['eds', 'commerce-paas'];
 
             // When: Getting plugin Node versions
@@ -48,15 +55,18 @@ describe('Prerequisites Handlers - getPluginNodeVersions', () => {
         });
     });
 
-    describe('dependency handling', () => {
+    // These cases predate 07bb26b8, when the function took a third `dependencies`
+    // parameter. Every fixture duplicated `requiredFor` into it, so they always
+    // exercised only the requiredFor matching that remains — kept for that
+    // coverage, retitled to stop claiming behaviour the function no longer has.
+    describe('requiredFor matching (formerly dependency handling)', () => {
         it('should return empty when dependency not directly in mapping', () => {
             // Given: A dependency that is in requiredFor but not in the nodeVersionMapping
             const mapping: NodeVersionMapping = { '20': 'commerce-paas' };
             const requiredFor = ['commerce-mesh'];
-            const dependencies = ['commerce-mesh'];
 
             // When: Getting plugin Node versions
-            const result = getPluginNodeVersions(mapping, requiredFor, dependencies);
+            const result = getPluginNodeVersions(mapping, requiredFor);
 
             // Then: Should return empty because the dependency isn't mapped to a Node version
             expect(result).toEqual([]);
@@ -66,10 +76,9 @@ describe('Prerequisites Handlers - getPluginNodeVersions', () => {
             // Given: A dependency that exists in both requiredFor and nodeVersionMapping
             const mapping: NodeVersionMapping = { '18': 'eds', '20': 'commerce-mesh' };
             const requiredFor = ['commerce-mesh'];
-            const dependencies = ['commerce-mesh'];
 
             // When: Getting plugin Node versions
-            const result = getPluginNodeVersions(mapping, requiredFor, dependencies);
+            const result = getPluginNodeVersions(mapping, requiredFor);
 
             // Then: Should return the Node version for the dependency
             expect(result).toEqual(['20']);
@@ -79,10 +88,9 @@ describe('Prerequisites Handlers - getPluginNodeVersions', () => {
             // Given: A component that appears in both nodeVersionMapping and dependencies
             const mapping: NodeVersionMapping = { '20': 'commerce-paas' };
             const requiredFor = ['commerce-paas'];
-            const dependencies = ['commerce-paas'];
 
             // When: Getting plugin Node versions
-            const result = getPluginNodeVersions(mapping, requiredFor, dependencies);
+            const result = getPluginNodeVersions(mapping, requiredFor);
 
             // Then: Should return the version only once (no duplicates)
             expect(result).toEqual(['20']);
@@ -120,7 +128,7 @@ describe('Prerequisites Handlers - getPluginNodeVersions', () => {
             const requiredFor = ['eds'];
 
             // When: Getting plugin Node versions with undefined dependencies
-            const result = getPluginNodeVersions(mapping, requiredFor, undefined);
+            const result = getPluginNodeVersions(mapping, requiredFor);
 
             // Then: Should still work correctly with direct matches
             expect(result).toEqual(['18']);
@@ -132,7 +140,7 @@ describe('Prerequisites Handlers - getPluginNodeVersions', () => {
             const requiredFor = ['eds'];
 
             // When: Getting plugin Node versions with empty dependencies
-            const result = getPluginNodeVersions(mapping, requiredFor, []);
+            const result = getPluginNodeVersions(mapping, requiredFor);
 
             // Then: Should still work correctly with direct matches
             expect(result).toEqual(['18']);
@@ -142,10 +150,9 @@ describe('Prerequisites Handlers - getPluginNodeVersions', () => {
             // Given: A scenario where both direct match and dependency would find same version
             const mapping: NodeVersionMapping = { '20': 'commerce-paas' };
             const requiredFor = ['commerce-paas'];
-            const dependencies = ['commerce-paas'];
 
             // When: Getting plugin Node versions
-            const result = getPluginNodeVersions(mapping, requiredFor, dependencies);
+            const result = getPluginNodeVersions(mapping, requiredFor);
 
             // Then: Should return the version only once
             expect(result).toEqual(['20']);

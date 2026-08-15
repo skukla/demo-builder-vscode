@@ -1,0 +1,43 @@
+{
+  // Typechecks the TEST tree, which `tsconfig.json` deliberately excludes and
+  // `@swc/jest` cannot check (it strips types without diagnostics). Without this,
+  // a fixture can declare a field that does not exist on the interface it claims
+  // and both the typechecker and the suite pass — which shipped a total failure
+  // on 2026-08-13 (`prepareImport` read `project.stack?.backend`, a shape that
+  // exists only in wizard state, so every import on every real project returned
+  // "no Adobe Commerce backend"; the fixtures carried the same invented shape).
+  //
+  // Separate from `tsconfig.json` ON PURPOSE. CI runs `tsc --noEmit` against that
+  // one, so widening its `include` would block every PR on day one. This config
+  // is allowed to be red while the tree is brought up to it; wire it into CI only
+  // once it is clean.
+  //
+  //   npm run typecheck:tests
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Match @swc/jest's `transform.react.runtime: 'automatic'` (jest.config.js).
+    // The base config uses the CLASSIC runtime (`jsx: "react"`), which requires
+    // `React` to be in scope in every .tsx file. Tests do not import it because
+    // swc does not need them to — so the classic setting reported ~60 spurious
+    // TS2686 "refers to a UMD global" errors that say nothing about the tests.
+    // The runtime the tests actually run under is the one to check them against.
+    "jsx": "react-jsx",
+    // The base config's `lib: ["ES2020", "DOM"]` predates the tests' use of
+    // `Array.prototype.at`, which is ES2022. Node 18 has it and the suite passes
+    // on it — only the typechecker's view was behind, which reported ~31 errors
+    // about code that demonstrably runs. Raising `lib` (not `target`) changes
+    // nothing about emit; this config never emits.
+    "lib": ["ES2022", "DOM"],
+    // Jest globals (describe/it/expect) and Node builtins. The base config names
+    // no `types`, so it takes every @types package; being explicit here keeps a
+    // future @types install from silently changing what the test tree sees.
+    "types": ["jest", "node"],
+    // Never emit — this config exists only to typecheck.
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  "include": ["src/**/*", "tests/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

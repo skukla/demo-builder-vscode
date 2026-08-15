@@ -19,6 +19,14 @@ import {
 } from '@/features/project-creation/ui/wizard/wizardHelpers';
 import type { WizardState, ComponentSelection } from '@/types/webview';
 
+const NEUTRAL_AUTH: WizardState['adobeAuth'] = { isAuthenticated: false, isChecking: false };
+
+const REVIEW_BASE = {
+    currentStep: 'review',
+    projectName: 'test-project',
+    adobeAuth: NEUTRAL_AUTH,
+} satisfies Partial<WizardState>;
+
 describe('wizardHelpers - state & config', () => {
     // State Initialization Helpers
     describe('initializeComponentsFromImport', () => {
@@ -203,8 +211,7 @@ describe('wizardHelpers - state & config', () => {
     describe('buildProjectConfig', () => {
         it('should include selectedAddons in the config', () => {
             const state: WizardState = {
-                currentStep: 'review',
-                projectName: 'test-project',
+                ...REVIEW_BASE,
                 selectedAddons: ['adobe-commerce-aco'],
                 components: {
                     frontend: 'headless',
@@ -219,8 +226,7 @@ describe('wizardHelpers - state & config', () => {
 
         it('should default to empty array when no addons selected', () => {
             const state: WizardState = {
-                currentStep: 'review',
-                projectName: 'test-project',
+                ...REVIEW_BASE,
                 // No selectedAddons
             };
 
@@ -231,8 +237,7 @@ describe('wizardHelpers - state & config', () => {
 
         it('should include package and stack selections', () => {
             const state: WizardState = {
-                currentStep: 'review',
-                projectName: 'test-project',
+                ...REVIEW_BASE,
                 selectedPackage: 'citisignal',
                 selectedStack: 'headless-paas',
             };
@@ -245,8 +250,7 @@ describe('wizardHelpers - state & config', () => {
 
         it('should include adobe org/project/workspace IDs', () => {
             const state: WizardState = {
-                currentStep: 'review',
-                projectName: 'test-project',
+                ...REVIEW_BASE,
                 adobeOrg: { id: 'org-123', code: 'ORG', name: 'Test Org' },
                 adobeProject: { id: 'proj-456', name: 'test-proj', title: 'Test Project' },
                 adobeWorkspace: { id: 'ws-789', name: 'Stage' },
@@ -262,8 +266,7 @@ describe('wizardHelpers - state & config', () => {
 
         it('should include editProjectPath for edit flows', () => {
             const state: WizardState = {
-                currentStep: 'review',
-                projectName: 'test-project',
+                ...REVIEW_BASE,
                 wizardMode: 'edit',
                 editProjectPath: '/path/to/project',
             };
@@ -275,8 +278,7 @@ describe('wizardHelpers - state & config', () => {
 
         it('should include edsConfig for EDS stacks', () => {
             const state: WizardState = {
-                currentStep: 'review',
-                projectName: 'test-project',
+                ...REVIEW_BASE,
                 edsConfig: {
                     repoName: 'my-repo',
                     repoMode: 'new',
@@ -284,7 +286,7 @@ describe('wizardHelpers - state & config', () => {
                     daLiveSite: 'mysite',
                     githubAuth: {
                         isAuthenticated: true,
-                        user: { login: 'testuser', name: 'Test User', avatarUrl: '' },
+                        user: { login: 'testuser', avatarUrl: '' },
                     },
                 },
             };
@@ -301,8 +303,7 @@ describe('wizardHelpers - state & config', () => {
 
         it('should include StorefrontSetupStep results when set', () => {
             const state: WizardState = {
-                currentStep: 'review',
-                projectName: 'test-project',
+                ...REVIEW_BASE,
                 edsConfig: {
                     repoName: 'my-repo',
                     repoMode: 'new',
@@ -310,7 +311,7 @@ describe('wizardHelpers - state & config', () => {
                     daLiveSite: 'mysite',
                     githubAuth: {
                         isAuthenticated: true,
-                        user: { login: 'testuser', name: 'Test User', avatarUrl: '' },
+                        user: { login: 'testuser', avatarUrl: '' },
                     },
                     // Results from StorefrontSetupStep
                     repoUrl: 'https://github.com/testuser/my-repo',
@@ -328,8 +329,7 @@ describe('wizardHelpers - state & config', () => {
         it('should use explicit templateOwner/templateRepo and contentSource from storefront config', () => {
             // Template config is derived in WelcomeStep and stored in edsConfig
             const state: WizardState = {
-                currentStep: 'review',
-                projectName: 'test-project',
+                ...REVIEW_BASE,
                 selectedPackage: 'citisignal',
                 selectedStack: 'eds-paas',
                 edsConfig: {
@@ -351,13 +351,17 @@ describe('wizardHelpers - state & config', () => {
                 {
                     id: 'citisignal',
                     name: 'CitiSignal',
+                    description: '',
+                    configDefaults: {},
                     storefronts: {
                         'eds-paas': {
                             name: 'CitiSignal EDS',
+                            description: '',
                             source: {
                                 type: 'git' as const,
                                 url: 'https://github.com/demo-system-stores/accs-citisignal',
                                 branch: 'main',
+                                gitOptions: { shallow: true },
                             },
                         },
                     },
@@ -377,14 +381,13 @@ describe('wizardHelpers - state & config', () => {
 
         it('should include customBlockLibraries in the config', () => {
             const state: WizardState = {
-                currentStep: 'review',
-                projectName: 'test-project',
+                ...REVIEW_BASE,
                 customBlockLibraries: [
                     {
                         name: 'my-blocks',
                         source: {
-                            type: 'git',
-                            url: 'https://github.com/user/blocks',
+                            owner: 'user',
+                            repo: 'blocks',
                             branch: 'main',
                         },
                     },
@@ -396,15 +399,14 @@ describe('wizardHelpers - state & config', () => {
             expect(config.customBlockLibraries).toEqual([
                 {
                     name: 'my-blocks',
-                    source: { type: 'git', url: 'https://github.com/user/blocks', branch: 'main' },
+                    source: { owner: 'user', repo: 'blocks', branch: 'main' },
                 },
             ]);
         });
 
         it('should carry selectedAppBuilderComponents and appBuilderComponentSources through', () => {
             const state: WizardState = {
-                currentStep: 'review',
-                projectName: 'test-project',
+                ...REVIEW_BASE,
                 selectedAppBuilderComponents: ['erp-sync', 'owner-custom-app'],
                 appBuilderComponentSources: {
                     'owner-custom-app': { owner: 'owner', repo: 'custom-app', branch: 'dev' },
@@ -421,8 +423,7 @@ describe('wizardHelpers - state & config', () => {
 
         it('should default selectedAppBuilderComponents and appBuilderComponentSources when absent', () => {
             const state: WizardState = {
-                currentStep: 'review',
-                projectName: 'test-project',
+                ...REVIEW_BASE,
             };
 
             const config = buildProjectConfig(state);
@@ -433,8 +434,7 @@ describe('wizardHelpers - state & config', () => {
 
         it('should default customBlockLibraries to empty array when not set', () => {
             const state: WizardState = {
-                currentStep: 'review',
-                projectName: 'test-project',
+                ...REVIEW_BASE,
                 // No customBlockLibraries
             };
 
@@ -445,8 +445,7 @@ describe('wizardHelpers - state & config', () => {
 
         it('should handle missing frontendSource and contentSource gracefully', () => {
             const state: WizardState = {
-                currentStep: 'review',
-                projectName: 'test-project',
+                ...REVIEW_BASE,
                 selectedPackage: 'citisignal',
                 selectedStack: 'eds-paas',
                 edsConfig: {
@@ -471,6 +470,7 @@ describe('wizardHelpers - state & config', () => {
         const baseState = (selectedConsoleApis?: Record<string, string[]>): WizardState => ({
             currentStep: 'review',
             projectName: 'test-project',
+            adobeAuth: NEUTRAL_AUTH,
             selectedConsoleApis,
         });
 

@@ -7,6 +7,8 @@
  * - unpublishPages retry on auth failure
  */
 
+import type { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+
 // Mock vscode module
 jest.mock('vscode');
 
@@ -81,7 +83,7 @@ describe('HelixService - Auth & Keys', () => {
         global.fetch = mockFetch;
 
         const module = await import('@/features/eds/services/helixService');
-        service = new module.HelixService(undefined, mockGitHubTokenService, mockDaLiveTokenProvider);
+        service = new module.HelixService(undefined, mockGitHubTokenService as unknown as GitHubTokenService, mockDaLiveTokenProvider);
     });
 
     afterEach(() => {
@@ -112,7 +114,7 @@ describe('HelixService - Auth & Keys', () => {
 
         it('should throw error when DA.live token provider not configured', async () => {
             const module = await import('@/features/eds/services/helixService');
-            const serviceWithoutDaLiveProvider = new module.HelixService(undefined, mockGitHubTokenService);
+            const serviceWithoutDaLiveProvider = new module.HelixService(undefined, mockGitHubTokenService as unknown as GitHubTokenService);
             await expect(serviceWithoutDaLiveProvider.previewPage('testuser', 'my-site', '/products')).rejects.toThrow(
                 /DA\.live token provider not configured/i,
             );
@@ -232,7 +234,7 @@ describe('HelixService - Auth & Keys', () => {
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-1', value: 'shared-key', expiration: '2027-01-01T00:00:00Z' }) });
             await service.createAdminApiKey('testorg', 'testsite');
 
-            const service2 = new HelixServiceClass(undefined, mockGitHubTokenService, mockDaLiveTokenProvider);
+            const service2 = new HelixServiceClass(undefined, mockGitHubTokenService as unknown as GitHubTokenService, mockDaLiveTokenProvider);
             const key = await service2.createAdminApiKey('testorg', 'testsite');
             expect(mockFetch).toHaveBeenCalledTimes(1);
             expect(key).toBe('shared-key');

@@ -66,7 +66,7 @@ const ctx = {
     secrets: {},
     extensionPath: '/ext',
     stateManager: { saveProject: jest.fn(async () => undefined) },
-    logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+    logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
 } as never;
 
 const project = { name: 'demo', path: '/p/demo', installedInspectorSdk: { commitSha: 'old' } } as never;

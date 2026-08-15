@@ -27,6 +27,7 @@ import type { Logger } from '@/types';
 import type { CodePatchSource } from '@/types/demoPackages';
 
 const mockLogger: Logger = {
+    trace: jest.fn(),
     info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),

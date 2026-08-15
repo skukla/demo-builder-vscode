@@ -4,7 +4,7 @@ import { useAsyncOperation } from '@/core/ui/hooks/useAsyncOperation';
 describe('useAsyncOperation', () => {
     describe('execution flow', () => {
         it('should set isExecuting true during operation', async () => {
-            const { result } = renderHook(() => useAsyncOperation());
+            const { result } = renderHook(() => useAsyncOperation<string>());
 
             let resolvePromise: (value: string) => void;
             const promise = new Promise<string>((resolve) => {
@@ -26,7 +26,7 @@ describe('useAsyncOperation', () => {
         });
 
         it('should set isExecuting false after success', async () => {
-            const { result } = renderHook(() => useAsyncOperation());
+            const { result } = renderHook(() => useAsyncOperation<string>());
 
             await act(async () => {
                 await result.current.execute(async () => 'result');
@@ -197,7 +197,7 @@ describe('useAsyncOperation', () => {
         });
 
         it('should clear error on new execution', async () => {
-            const { result } = renderHook(() => useAsyncOperation());
+            const { result } = renderHook(() => useAsyncOperation<string>());
 
             // First: fail
             await act(async () => {

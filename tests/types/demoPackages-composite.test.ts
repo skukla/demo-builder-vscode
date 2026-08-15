@@ -60,7 +60,7 @@ describe('DemoPackage type (nested storefronts structure)', () => {
             },
         };
 
-        expect((pkg as Record<string, unknown>).contentSources).toBeUndefined();
+        expect((pkg as unknown as Record<string, unknown>).contentSources).toBeUndefined();
         expect(pkg.storefronts['eds-paas'].contentSource).toBeDefined();
     });
 

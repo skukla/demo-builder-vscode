@@ -81,7 +81,7 @@ function makeContext(project: Record<string, unknown> | null): HandlerContext {
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn().mockResolvedValue(undefined),
         },
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() },
+        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
         sendMessage: jest.fn(),
     } as unknown as HandlerContext;
 }

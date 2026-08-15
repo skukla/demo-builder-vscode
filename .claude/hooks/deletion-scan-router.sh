@@ -8,7 +8,7 @@
 # scoped the work — and a follow-up pass found eleven more handlers of the same
 # shape that had been dead for months.
 #
-# Same reasoning as reuse-first-router.sh: routing that depends on remembering to
+# Same reasoning as rules/30-reuse-first.rule: routing that depends on remembering to
 # look is not routing. The difference is timing — recreation is caught BEFORE a
 # write, orphaning only becomes visible AFTER a delete.
 #

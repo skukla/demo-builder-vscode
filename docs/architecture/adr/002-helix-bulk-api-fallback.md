@@ -31,6 +31,20 @@ The Helix Admin API uses different authentication for different operations:
 | Single-page preview/publish | GitHub token | `x-auth-token: <github-token>` |
 | DA.live content source | IMS token | `x-content-source-authorization: Bearer <ims-token>` |
 | Bulk operations | **Adobe API_KEY** | Requires Adobe provisioning |
+| **Any operation on an access-protected site** | **DA.live IMS Bearer** | `Authorization: Bearer <ims-token>` |
+
+> **Superseding note (2026-08-14).** The rows above describe an *unprotected*
+> site. The moment a site carries any `access.admin` role, the Configuration
+> Service sets `requireAuth: "auto"` and the WHOLE admin API closes to callers
+> without an accepted admin identity — the GitHub token is not one. From then on
+> every admin-API call needs `Authorization: Bearer <daLiveToken>`, not just
+> DELETE. Measured on a throwaway site: an identical bulk-preview POST returned
+> 202 before the admin grant, 401 immediately after, and 202 again once the
+> Bearer was attached. Because storefront setup now pins an admin at
+> registration, this is the normal state of a Demo Builder storefront, not an
+> edge case. Implementation: `tryAdminBearer()` in `helixService.ts`, applied to
+> page preview/publish, bulk preview/publish, code preview, cache purge and job
+> polling; the 401 text is `ADMIN_API_401_MESSAGE`.
 
 #### Adobe Documentation Evidence
 
@@ -224,7 +238,7 @@ The DA.live IMS token (Adobe IMS with client_id "darkalley") **bypasses the "sou
 **Solution**: `HelixService.deleteResource()` uses `Authorization: Bearer ${daLiveToken}` via `getDeleteAuthHeaders()`. No fstab.yaml manipulation, no Configuration Service config changes, no retry loops, no propagation delays needed.
 
 **Implementation**:
-- `helixService.ts`: `getDeleteAuthHeaders()` returns `{ Authorization: Bearer ${daLiveToken} }` for all DELETE operations
+- `helixService.ts`: `getDeleteAuthHeaders()` returns `{ Authorization: Bearer ${daLiveToken} }` for all DELETE operations. Since 2026-08-14 `tryAdminBearer()` attaches the same credential to the NON-delete admin-API calls too (see the superseding note above) — DELETE is no longer the only operation that needs it
 - `edsPipeline.ts`: `pipelineClearContent()` directly calls `unpublishPages()` without any pre-unpublish workarounds
 - `projectDeletionService.ts`: `performDaLiveCleanup()` calls `unpublishCdnContent()` directly
 

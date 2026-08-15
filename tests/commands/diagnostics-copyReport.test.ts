@@ -87,6 +87,76 @@ describe('buildSummaryLines', () => {
         expect(text).not.toContain(TOKEN);
         expect(text).not.toMatch(/gho_[A-Za-z0-9]/);
     });
+
+    it('names the Config Service org admins when the roster is readable', () => {
+        // "Ask an admin" is unactionable without a name. The roster read is the
+        // only thing in the report that can supply one.
+        const report = makeReport({
+            configService: {
+                token: { present: true },
+                configService: { httpStatus: 403 },
+                daLive: { httpStatus: 200 },
+                orgAdmins: { status: 'ok', emails: ['owner@adobe.com'] },
+                verdict: 'refused',
+            },
+        } as Partial<DiagnosticsReport>);
+
+        // MASKED: this report is pasted into tickets, so it must not carry
+        // colleague addresses. Recognisable, not publishable.
+        const text = buildSummaryLines(report).join('\n');
+        expect(text).toContain('Config admins: o****r@adobe.com');
+        expect(text).not.toContain('owner@adobe.com');
+    });
+
+    it('says the roster is UNREADABLE rather than printing an empty admin list', () => {
+        // Leah's shape. An empty list would read as "this org has no admins",
+        // a different and much scarier claim than "you cannot see them".
+        const report = makeReport({
+            configService: {
+                token: { present: true },
+                configService: { httpStatus: 403 },
+                daLive: { httpStatus: 200 },
+                orgAdmins: { status: 'not_authorized' },
+                verdict: 'refused',
+            },
+        } as Partial<DiagnosticsReport>);
+
+        const text = buildSummaryLines(report).join('\n');
+        expect(text).toContain('Config admins: not readable');
+        expect(text).not.toContain('Config admins: \n');
+    });
+
+    it('prints the org COUNT beside "Can List Orgs" when known', () => {
+        // "Can List Orgs: Yes" only means the command ran — `aio console org list`
+        // returning [] still prints Yes. On 2026-08-13 that hid the actual finding
+        // (a token reaching zero orgs) from the person reading the report.
+        const report = makeReport({
+            adobe: {
+                installed: true,
+                version: '11.0.1',
+                authConfigured: true,
+                tokenExpired: false,
+                canListOrgs: true,
+                organizationCount: 0,
+            } as DiagnosticsReport['adobe'],
+        });
+
+        expect(buildSummaryLines(report).join('\n')).toContain('Can List Orgs: Yes (0 orgs)');
+    });
+
+    it('keeps the plain Yes/No line when the count is unknown', () => {
+        const report = makeReport({
+            adobe: {
+                installed: true,
+                version: '11.0.1',
+                authConfigured: true,
+                tokenExpired: false,
+                canListOrgs: true,
+            } as DiagnosticsReport['adobe'],
+        });
+
+        expect(buildSummaryLines(report).join('\n')).toContain('Can List Orgs: Yes\n');
+    });
 });
 
 describe('runDiagnosticsAction', () => {

@@ -39,7 +39,6 @@ describe('ReviewStep', () => {
     const completeState: Partial<WizardState> = {
         currentStep: 'review',
         projectName: 'my-demo-project',
-        projectTemplate: 'citisignal',
         selectedStack: 'headless-paas', // Source of truth for components
         selectedOptionalDependencies: ['headless-commerce-mesh'], // User opted in to mesh
         adobeAuth: {
@@ -320,7 +319,6 @@ describe('ReviewStep', () => {
             const minimalState = {
                 currentStep: 'review',
                 projectName: 'test',
-                projectTemplate: 'citisignal',
                 componentConfigs: {},
                 adobeAuth: { isAuthenticated: false, isChecking: false },
             } as WizardState;

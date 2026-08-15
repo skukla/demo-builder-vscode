@@ -12,6 +12,8 @@
  * - Legacy globalState migration
  */
 
+import type { GitHubTokenService } from '@/features/eds/services/githubTokenService';
+
 // Mock vscode module
 jest.mock('vscode');
 
@@ -98,7 +100,7 @@ describe('HelixService - Persistent Key Store', () => {
         HelixServiceClass.clearApiKeyCache();
         HelixServiceClass.clearKeyStore();
 
-        service = new module.HelixService(undefined, mockGitHubTokenService, mockDaLiveTokenProvider);
+        service = new module.HelixService(undefined, mockGitHubTokenService as unknown as GitHubTokenService, mockDaLiveTokenProvider);
 
         secretStore = {};
         mockSecretStorage = {

@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { CommandManager } from '@/commands/commandManager';
 import { BaseWebviewCommand } from '@/core/base';
+import { registerBuildStamp } from '@/core/build/buildStampUi';
 import { ServiceLocator } from '@/core/di';
 import { initializeLogger, getLogger } from '@/core/logging';
 import { CommandExecutor } from '@/core/shell';
@@ -36,6 +37,7 @@ import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRe
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
+import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/globalMcpRegistration';
 import { ensureHomeAiContext } from '@/features/project-creation/services/homeAiContextWriter';
 import { SidebarProvider } from '@/features/sidebar';
 import type { McpCredentialProvider } from '@/mcp-server';
@@ -95,6 +97,33 @@ export async function activate(context: vscode.ExtensionContext) {
     logger = getLogger();
     const version = context.extension.packageJSON.version || '1.0.0';
     logger.debug(`[Extension] Adobe Demo Builder v${version} starting...`);
+
+    // Name the build BEFORE anything else can fail: with several checkouts on one
+    // machine, F5 binds to whichever window had focus, and "which dist/ is this?"
+    // is the first question worth being able to answer.
+    await registerBuildStamp(context, logger);
+
+    // Correct a global MCP entry left pointing at a previous version. The entry
+    // embeds this directory's path and VS Code names it with the version, so every
+    // update invalidates it; nothing re-wrote it until now, and Claude Code
+    // responds by refusing to add ANY server ("conflicting scopes"). Repairs only
+    // what the user already opted into — an absent entry is never created. The
+    // common path is a read and two comparisons; only a genuine mismatch writes.
+    try {
+        if (await refreshGlobalMcpIfPresent(path.join(context.extensionPath, 'dist'))) {
+            logger.info('[MCP] refreshed the global ~/.claude.json entry for this version');
+        }
+    } catch (error) {
+        // WARN, not debug. If the repair fails, the drift check keeps reporting
+        // user-scope drift on every dashboard open and the heal cannot clear it —
+        // regenerate rewrites project files, never ~/.claude.json. That is the
+        // dead end this whole change exists to remove, so it must be visible when
+        // it happens rather than buried in a channel nobody reads.
+        logger.warn(
+            `[MCP] could not refresh the global ~/.claude.json entry — Claude Code may report ` +
+                `conflicting scopes until it is fixed by hand: ${(error as Error).message}`,
+        );
+    }
 
     try {
         // Initialize state manager FIRST (needed by sidebar)

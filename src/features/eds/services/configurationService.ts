@@ -21,6 +21,7 @@
  */
 
 import type { TokenProvider } from './daLiveContentOperations';
+import { captureSiteGrants, restoreCapturedGrants } from './siteGrantPreservation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -79,8 +80,14 @@ function stripUrlQueryAndFragment(url: string): string {
     }
 }
 
-/** Build the DA.live content source URL for a given org and site */
-function buildContentSourceUrl(daLiveOrg: string, daLiveSite: string): string {
+/**
+ * Build the DA.live content source URL for a given org and site.
+ *
+ * Exported because the Code Sync setup deep link needs the same value — the
+ * tool's Content step reads it from the query string, and rebuilding the URL
+ * at that call site would be a second place for this format to drift.
+ */
+export function buildContentSourceUrl(daLiveOrg: string, daLiveSite: string): string {
     return `https://content.da.live/${daLiveOrg}/${daLiveSite}/`;
 }
 
@@ -132,6 +139,19 @@ export interface ConfigServiceResult {
     error?: string;
     /** HTTP status code from the API */
     statusCode?: number;
+    /**
+     * `false` when the update landed but the site's admin grants could NOT be
+     * handed back afterwards.
+     *
+     * The config write genuinely succeeded, so this is not a failure — but the
+     * grants are gone and nothing in the app can restore them, because the access
+     * endpoint requires the very role that was lost. Silence is what makes that
+     * permanent, so the loss rides out on the success result instead.
+     * Absent means nothing needed restoring.
+     */
+    grantsRestored?: boolean;
+    /** Masked addresses whose grants were lost, for the message that reports it. */
+    lostGrants?: string[];
 }
 
 // ==========================================================
@@ -245,6 +265,16 @@ export class ConfigurationService {
         const { org, site, legacyLookupKey } = params;
         this.logger.info(`[ConfigService] Updating site config: ${org}/${site}`);
 
+        // Capture the access doc BEFORE the delete below destroys it.
+        //
+        // The delete below destroys the site's `access` sub-resource, so the
+        // grants must be read first — and a failed read is indistinguishable from
+        // "no grants", which is why this refuses rather than proceeding blind.
+        const captured = await captureSiteGrants(this.tokenProvider, org, site, this.logger);
+        if (!captured.ok) {
+            return { success: false, statusCode: captured.statusCode, error: captured.error };
+        }
+
         await this.cleanUpLegacyRegistration(legacyLookupKey, { org, site });
 
         const deleteResult = await this.deleteSiteConfig(org, site);
@@ -254,6 +284,10 @@ export class ConfigurationService {
             );
             return {
                 success: false,
+                // Carry the DELETE's status: a 403 here is the same admin-role
+                // refusal as on the PUT, and message selection + the propagation
+                // retry both key off statusCode.
+                statusCode: deleteResult.statusCode,
                 error: `Failed to clear existing config: ${deleteResult.error}`,
             };
         }
@@ -263,7 +297,18 @@ export class ConfigurationService {
             );
         }
 
-        return this.registerSite(params);
+        const registered = await this.registerSite(params);
+
+        // Hand the grants back — including when the re-register failed, since the
+        // delete already happened either way.
+        const restore = await restoreCapturedGrants(
+            this.tokenProvider,
+            org,
+            site,
+            captured.roles,
+            this.logger,
+        );
+        return { ...registered, ...restore };
     }
 
     /**
@@ -314,6 +359,49 @@ export class ConfigurationService {
         this.logger.info(`[ConfigService] Deleting site config: ${org}/${site}`);
 
         return this.makeRequest('DELETE', url);
+    }
+
+    /**
+     * Read back the registered content-overlay URL, or `undefined` when the site
+     * carries none.
+     *
+     * Exists because "the write returned 2xx" and "the overlay is live" are not
+     * the same claim, and only the second one means product pages will load. The
+     * repair path reports them separately for exactly that reason.
+     *
+     * Distinguishes "no overlay" from "could not tell": a transport failure or a
+     * refusal returns `{ readable: false }`, never an absent overlay. Collapsing
+     * those would let a network blip report a healthy site as broken — and, worse,
+     * a repair as unverified when it had in fact worked.
+     */
+    async readSiteOverlayUrl(
+        org: string,
+        site: string,
+    ): Promise<{ readable: boolean; overlayUrl?: string }> {
+        const url = `${ADMIN_API_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
+        try {
+            const token = await this.getImsToken();
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}` },
+                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+            });
+            if (!response.ok) {
+                this.logger.debug(
+                    `[ConfigService] Overlay read for ${org}/${site} -> ${response.status}`,
+                );
+                return { readable: false };
+            }
+            const body = (await response.json()) as {
+                content?: { overlay?: { url?: string } };
+            };
+            return { readable: true, overlayUrl: body?.content?.overlay?.url };
+        } catch (error) {
+            this.logger.debug(
+                `[ConfigService] Overlay read for ${org}/${site} failed: ${(error as Error).message}`,
+            );
+            return { readable: false };
+        }
     }
 
     // ==========================================================

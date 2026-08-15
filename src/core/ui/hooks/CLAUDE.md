@@ -45,6 +45,26 @@ This directory contains custom React hooks that extract and encapsulate reusable
 
 ## Hooks with Gotchas
 
+### useVSCodeRequest — `error` stays null when the handler REFUSES
+
+The hook rejects only when the request rejects, and a request rejects only when the handler
+**throws**. This project's handler convention is the opposite: guards *return*
+`{ success: false, error, code }`. `WebviewCommunicationManager.handleWebviewMessage` puts
+whatever the handler RETURNED into the response `payload` and sets an `error` field only in
+its `catch` — and `WebviewClient`'s message listener (`initialize`) rejects solely when that
+`error` field is present, otherwise resolving the payload. So a refusal arrives resolved and
+the hook reports success.
+
+Consequence: **`useVSCodeRequest<SomeDomainType>` is typed on a lie.** `data` is the envelope,
+not your domain object, and `data.someField` on a refusal is `undefined` — which renders as a
+default, not as an error. (2026-08-12: a connectivity line read `data.reachable` off a refusal
+and showed signed-out users "Connected" for two steps.)
+
+Use `webviewClient.request<{ success: boolean; … }>` and branch on `.success` — the pattern
+already used in `features/eds`, where `GitHubAppCheckResult` declares `success` and
+`pollGitHubAppInstallation` checks it before reading anything else. Reach for this hook only
+against a handler that genuinely throws on failure.
+
 ### useSelectionStep
 
 Composes the entire wizard selection-step pattern: cached items from a VS Code message type, debounced loading, search filtering, auto-select (single item or custom), and selected-item sync. The sync handles hydration (ID-only imports) and refresh (external rename) by comparing `title`/`name` against fresh data.

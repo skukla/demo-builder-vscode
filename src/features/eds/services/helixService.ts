@@ -34,6 +34,22 @@ import type { Logger } from '@/types/logger';
 /** Helix Admin API base URL */
 const HELIX_ADMIN_URL = 'https://admin.hlx.page';
 
+/**
+ * What a 401 from the Helix Admin API actually means.
+ *
+ * It is NOT necessarily a GitHub problem, which is what this message used to
+ * claim. Once a site has any `access.admin` role, the Configuration Service sets
+ * `requireAuth: "auto"` and the whole admin API closes to callers without an
+ * accepted admin identity — the GitHub token is not one. Measured 2026-08-14 on
+ * a throwaway site: an identical bulk-preview POST returned 202 before the admin
+ * grant and 401 immediately after, then 202 again once the DA.live IMS Bearer
+ * was attached.
+ */
+const ADMIN_API_401_MESSAGE =
+    'Adobe rejected the request (401). If this site has site-access admins configured, ' +
+    'it needs a signed-in DA.live session — run "Demo Builder: Manage Site Access" to ' +
+    'check. Otherwise, confirm you have write access to the repository.';
+
 /** Default branch for Helix operations */
 const DEFAULT_BRANCH = 'main';
 
@@ -319,6 +335,22 @@ export class HelixService {
         return { Authorization: `Bearer ${await this.getDaLiveToken()}` };
     }
 
+    /**
+     * The DA.live IMS Bearer as an `Authorization` header, or `{}` when no
+     * DA.live session exists.
+     *
+     * Deliberately swallows the failure. Operations that never needed a DA.live
+     * token before must keep working without one on an UNPROTECTED site; only a
+     * protected site actually requires it, and there the 401 message says so.
+     */
+    private async tryAdminBearer(): Promise<Record<string, string>> {
+        try {
+            return { Authorization: `Bearer ${await this.getDaLiveToken()}` };
+        } catch {
+            return {};
+        }
+    }
+
     /** Capture error response body for diagnostics (403, 401, 5xx). */
     private async captureErrorBody(response: Response): Promise<string | null> {
         try {
@@ -483,7 +515,7 @@ export class HelixService {
         // Use API key auth when provided (unpublish jobs), otherwise GitHub token
         const authHeaders: Record<string, string> = apiKey
             ? { Authorization: `token ${apiKey}` }
-            : { 'x-auth-token': await this.getGitHubToken() };
+            : { ...(await this.tryAdminBearer()), 'x-auth-token': await this.getGitHubToken() };
         // Job status URL format: GET /job/{org}/{site}/{ref}/{topic}/{jobId}
         const url = `${HELIX_ADMIN_URL}/job/${org}/${site}/${branch}/${topic}/${jobName}`;
         const startTime = Date.now();
@@ -588,6 +620,10 @@ export class HelixService {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
+                // Authorization FIRST: once the site has any `access.admin` role the
+                // admin API closes to callers without an accepted admin identity,
+                // and the GitHub token is not one. See ADMIN_API_401_MESSAGE.
+                Authorization: `Bearer ${imsToken}`,
                 'x-auth-token': githubToken,
                 'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
             },
@@ -596,7 +632,7 @@ export class HelixService {
 
         if (response.status === 401) {
             throw new Error(
-                'GitHub authentication failed. Please ensure you have write access to the repository.',
+                ADMIN_API_401_MESSAGE,
             );
         }
 
@@ -639,6 +675,10 @@ export class HelixService {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
+                // Authorization FIRST: once the site has any `access.admin` role the
+                // admin API closes to callers without an accepted admin identity,
+                // and the GitHub token is not one. See ADMIN_API_401_MESSAGE.
+                Authorization: `Bearer ${imsToken}`,
                 'x-auth-token': githubToken,
                 'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
             },
@@ -647,7 +687,7 @@ export class HelixService {
 
         if (response.status === 401) {
             throw new Error(
-                'GitHub authentication failed. Please ensure you have write access to the repository.',
+                ADMIN_API_401_MESSAGE,
             );
         }
 
@@ -1065,6 +1105,10 @@ export class HelixService {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
+                // Authorization FIRST: once the site has any `access.admin` role the
+                // admin API closes to callers without an accepted admin identity,
+                // and the GitHub token is not one. See ADMIN_API_401_MESSAGE.
+                Authorization: `Bearer ${imsToken}`,
                 'x-auth-token': githubToken,
                 'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
                 'Content-Type': 'application/json',
@@ -1078,7 +1122,7 @@ export class HelixService {
 
         if (response.status === 401) {
             throw new Error(
-                'GitHub authentication failed. Please ensure you have write access to the repository.',
+                ADMIN_API_401_MESSAGE,
             );
         }
 
@@ -1169,6 +1213,10 @@ export class HelixService {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
+                // Authorization FIRST: once the site has any `access.admin` role the
+                // admin API closes to callers without an accepted admin identity,
+                // and the GitHub token is not one. See ADMIN_API_401_MESSAGE.
+                Authorization: `Bearer ${imsToken}`,
                 'x-auth-token': githubToken,
                 'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
                 'Content-Type': 'application/json',
@@ -1182,7 +1230,7 @@ export class HelixService {
 
         if (response.status === 401) {
             throw new Error(
-                'GitHub authentication failed. Please ensure you have write access to the repository.',
+                ADMIN_API_401_MESSAGE,
             );
         }
 
@@ -1583,6 +1631,7 @@ export class HelixService {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
+                ...(await this.tryAdminBearer()),
                 'x-auth-token': token,
             },
             signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
@@ -1597,7 +1646,7 @@ export class HelixService {
         // 401 is authentication failure
         if (response.status === 401) {
             throw new Error(
-                'GitHub authentication failed. Please ensure you have write access to the repository.',
+                ADMIN_API_401_MESSAGE,
             );
         }
 
@@ -1655,6 +1704,7 @@ export class HelixService {
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
+                    ...(await this.tryAdminBearer()),
                     'x-auth-token': githubToken,
                 },
                 // Fresh timeout signal per attempt — a reused signal from an
@@ -1664,7 +1714,7 @@ export class HelixService {
 
             if (response.status === 401) {
                 throw new Error(
-                    'GitHub authentication failed. Please ensure you have write access to the repository.',
+                    ADMIN_API_401_MESSAGE,
                 );
             }
 

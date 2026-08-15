@@ -87,7 +87,9 @@ describe('Webview Transition Timeout Safety', () => {
 
             // Most important: final state should be clean (no memory leak)
             expect(BaseWebviewCommand.isWebviewTransitionInProgress()).toBe(false);
-            expect(BaseWebviewCommand['transitionTimeout']).toBeUndefined();
+            expect(
+                (BaseWebviewCommand as unknown as { transitionTimeout?: unknown }).transitionTimeout
+            ).toBeUndefined();
         });
     });
 });

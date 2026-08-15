@@ -26,8 +26,9 @@ config; the loader is a plain cast).
   `AppBuilderComponentsStepContent` (the locked renderer) is mounted nowhere (its caller
   `ProjectBuilderStep` is gone). `WelcomeStep` clears `selectedAppBuilderComponents`
   citing a re-seed that was never implemented. The live surfaces (the
-  `AddIntegrationFlowModal` journey + `resolveIntegrationRows`/`IntegrationResultRow`
-  in `ui/components/integration-flow/` — 2026-07-10 redesign) have no requirement
+  `AddIntegrationFlowModal` journey + `resolveIntegrationRows`/`toIntegrationCards`
+  in `ui/components/integration-flow/`, rendering the shared
+  `core/ui/components/integrations/IntegrationCard` since 2026-08-15) have no requirement
   handling beyond the mesh `requiresMesh` seeding.
 - Summary/Review visibility must be BUILT, not "verified" — see the rewritten
   `2026-06-21-appbuilder-component-first-class-persistence.md` item (ReviewStep bug).
@@ -47,7 +48,7 @@ scaffold-and-author output, or the BuildRight rebuild.
    clear/re-seed contract. `computeSelectedAppBuilderComponents` is exactly this union —
    wire it or delete it.
 3. **Locked UI** in the live integration-flow surfaces (the kind/source stages of
-   `AddIntegrationFlowModal` + the result rows). Design decision:
+   `AddIntegrationFlowModal` + the result cards). Design decision:
    single annotated list (the orphaned `AppBuilderComponentsStepContent` shape) vs block
    libraries' two-list split (`getNativeBlockLibraries` — natives leave the picker).
    Removability: default "shown as included, not removable" (matches native libraries).

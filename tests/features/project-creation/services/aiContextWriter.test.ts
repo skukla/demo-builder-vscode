@@ -271,7 +271,14 @@ describe('aiContextWriter', () => {
         describe('Adobe org-context guidance', () => {
             it('explains per-operation org targeting and that ORG_MISMATCH must not be retried', () => {
                 const project = makeHeadlessProject({
-                    adobe: { organization: 'Acme Org', projectTitle: 'Proj', workspace: 'Stage' },
+                    adobe: {
+                        projectId: 'p1',
+                        projectName: 'proj',
+                        authenticated: true,
+                        organization: 'Acme Org',
+                        projectTitle: 'Proj',
+                        workspace: 'Stage',
+                    },
                 });
                 const result = generateAgentsMd(project, STACKS);
 
@@ -284,7 +291,14 @@ describe('aiContextWriter', () => {
 
             it('tells the agent to set its target before Adobe ops (select_org → … → select_workspace)', () => {
                 const project = makeHeadlessProject({
-                    adobe: { organization: 'Acme Org', projectTitle: 'Proj', workspace: 'Stage' },
+                    adobe: {
+                        projectId: 'p1',
+                        projectName: 'proj',
+                        authenticated: true,
+                        organization: 'Acme Org',
+                        projectTitle: 'Proj',
+                        workspace: 'Stage',
+                    },
                 });
                 const result = generateAgentsMd(project, STACKS);
 
@@ -294,7 +308,14 @@ describe('aiContextWriter', () => {
 
             it('no longer frames org context as a shared global setting', () => {
                 const project = makeHeadlessProject({
-                    adobe: { organization: 'Acme Org', projectTitle: 'Proj', workspace: 'Stage' },
+                    adobe: {
+                        projectId: 'p1',
+                        projectName: 'proj',
+                        authenticated: true,
+                        organization: 'Acme Org',
+                        projectTitle: 'Proj',
+                        workspace: 'Stage',
+                    },
                 });
                 const result = generateAgentsMd(project, STACKS);
 

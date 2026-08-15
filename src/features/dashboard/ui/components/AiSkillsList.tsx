@@ -6,12 +6,16 @@
  *
  *   Skills · N installed                       ← static summary
  *   ┌─────────────────────────────┐
- *   │ DEMO BUILDER · 12           │            ← sticky group header
+ *   │ DEMO BUILDER · 13           │            ← sticky group header
  *   │   add-component             │
  *   │   …                         │            ← every skill visible; the
- *   │ ADOBE AEM · 13              │              LIST scrolls, the modal
+ *   │ ADOBE APP BUILDER · 7       │              LIST scrolls, the modal
  *   │   …                         │              never resizes
  *   └─────────────────────────────┘
+ *
+ * One group per Adobe BUNDLE, not one for "Adobe". Each bundle arrives in its
+ * own `<prefix>-<skill>/` directory, and grouping on `source: 'adobe'` alone
+ * filed App Builder skills under an "Adobe AEM" heading.
  *
  * Flat by design (2026-07-09, replacing the collapsible groups): expanding
  * accordions resized the modal and made it jump. A fixed-height scroll region
@@ -36,36 +40,86 @@ export interface AiSkillsListProps {
     isLoading?: boolean;
 }
 
-/** Display labels for each source, in canonical render order. */
-const SOURCE_GROUPS: ReadonlyArray<{ source: SkillSource; label: string }> = [
-    { source: 'demo-builder', label: 'Demo Builder' },
-    { source: 'adobe', label: 'Adobe AEM' },
-    { source: 'unknown', label: 'Custom' },
-];
+/**
+ * Display labels for the Adobe bundles we ship, keyed by the directory prefix
+ * `skillInspector` reads off disk.
+ *
+ * Every nested skill used to render under one hardcoded "Adobe AEM" heading,
+ * because the group was keyed on `source: 'adobe'` — which only ever meant
+ * "arrived in a bundle". App Builder skills were therefore listed as AEM. An
+ * unrecognised bundle falls back to a plain "Adobe" rather than borrowing a
+ * name that would be wrong.
+ */
+const BUNDLE_LABELS: Readonly<Record<string, string>> = {
+    aem: 'Adobe AEM',
+    appbuilder: 'Adobe App Builder',
+};
 
-export function AiSkillsList({ skills, hasError = false, isLoading = false }: AiSkillsListProps): React.ReactElement {
+/** Rank for the canonical render order: Demo Builder → Adobe bundles → Custom. */
+const SOURCE_ORDER: Readonly<Record<SkillSource, number>> = {
+    'demo-builder': 0,
+    adobe: 1,
+    unknown: 2,
+};
+
+const SOURCE_LABELS: Readonly<Record<SkillSource, string>> = {
+    'demo-builder': 'Demo Builder',
+    adobe: 'Adobe',
+    unknown: 'Custom',
+};
+
+/**
+ * The group a skill belongs to. Adobe skills split per bundle so two bundles
+ * never share a heading; everything else groups by source alone.
+ */
+function groupKeyOf(skill: SkillInventoryEntry): string {
+    return skill.source === 'adobe' && skill.bundle
+        ? `${skill.source}-${skill.bundle}`
+        : skill.source;
+}
+
+function groupLabelOf(skill: SkillInventoryEntry): string {
+    if (skill.source !== 'adobe' || !skill.bundle) return SOURCE_LABELS[skill.source];
+    return BUNDLE_LABELS[skill.bundle] ?? SOURCE_LABELS.adobe;
+}
+
+export function AiSkillsList({
+    skills,
+    hasError = false,
+    isLoading = false,
+}: AiSkillsListProps): React.ReactElement {
     const grouped = useMemo(() => {
-        const bySource = new Map<SkillSource, SkillInventoryEntry[]>();
+        const byKey = new Map<
+            string,
+            { key: string; label: string; source: SkillSource; items: SkillInventoryEntry[] }
+        >();
         for (const skill of skills) {
-            const bucket = bySource.get(skill.source) ?? [];
-            bucket.push(skill);
-            bySource.set(skill.source, bucket);
+            const key = groupKeyOf(skill);
+            const group = byKey.get(key) ?? {
+                key,
+                label: groupLabelOf(skill),
+                source: skill.source,
+                items: [],
+            };
+            group.items.push(skill);
+            byKey.set(key, group);
         }
-        for (const bucket of bySource.values()) {
-            bucket.sort((a, b) => a.name.localeCompare(b.name));
+        for (const group of byKey.values()) {
+            group.items.sort((a, b) => a.name.localeCompare(b.name));
         }
-        return SOURCE_GROUPS.map(({ source, label }) => ({
-            source,
-            label,
-            items: bySource.get(source) ?? [],
-        })).filter((group) => group.items.length > 0);
+        // Source rank first, then label — so two Adobe bundles sit together and
+        // in a stable order rather than in Map insertion order.
+        return Array.from(byKey.values()).sort(
+            (a, b) =>
+                SOURCE_ORDER[a.source] - SOURCE_ORDER[b.source] || a.label.localeCompare(b.label),
+        );
     }, [skills]);
 
     if (hasError) {
         return (
             <Flex gap="size-100" alignItems="center" data-testid="ai-skills-error">
                 <AlertCircle size="S" UNSAFE_className="text-yellow-600" />
-                <Text UNSAFE_className="text-sm text-gray-700">
+                <Text UNSAFE_className="text-gray-700">
                     Couldn&apos;t read the project&apos;s skills. Try Regenerate AI files.
                 </Text>
             </Flex>
@@ -78,14 +132,14 @@ export function AiSkillsList({ skills, hasError = false, isLoading = false }: Ai
         return (
             <Flex gap="size-100" alignItems="center" data-testid="ai-skills-loading">
                 <Spinner size="S" aria-label="Checking" />
-                <Text UNSAFE_className="text-sm text-gray-700">Checking the project's skills…</Text>
+                <Text UNSAFE_className="text-gray-700">Checking the project's skills…</Text>
             </Flex>
         );
     }
 
     if (skills.length === 0) {
         return (
-            <Text UNSAFE_className="text-sm text-gray-700" data-testid="ai-skills-empty">
+            <Text UNSAFE_className="text-gray-700" data-testid="ai-skills-empty">
                 No skills yet. Regenerate AI files to set them up.
             </Text>
         );
@@ -93,28 +147,31 @@ export function AiSkillsList({ skills, hasError = false, isLoading = false }: Ai
 
     return (
         <Flex direction="column" gap="size-100" data-testid="ai-skills-list">
-            <Text
-                data-testid="ai-skills-summary"
-                UNSAFE_className="text-sm font-semibold text-gray-800"
-            >
-                Skills · {skills.length} installed
+            {/* Counted the same way as the MCP section heading. One said
+                "Skills · N installed" and the other just "MCP servers", so two
+                parallel lists were labelled by two different rules. */}
+            <Text data-testid="ai-skills-summary" UNSAFE_className="ai-section-heading">
+                Skills · {skills.length}
             </Text>
             {/* Fixed-height scroll region — the modal frame never resizes. */}
             <div className="ai-skills-scroll">
-                {grouped.map(({ source, label, items }) => (
-                    <div key={source}>
+                {grouped.map(({ key, label, items }) => (
+                    <div key={key}>
                         <div
                             className="ai-skills-group-header"
-                            data-testid={`ai-skills-group-${source}`}
+                            data-testid={`ai-skills-group-${key}`}
                         >
                             {label} · {items.length}
                         </div>
-                        <Flex direction="column" gap="size-50" marginStart="size-150">
+                        {/* Flush with the group header, matching the MCP list.
+                            The skills were indented and the MCP rows were not,
+                            so two lists in one modal read as two systems. */}
+                        <Flex direction="column" gap="size-50">
                             {items.map((skill) => (
                                 <Text
                                     key={skill.path}
                                     data-testid="ai-skill-row"
-                                    UNSAFE_className="text-sm text-gray-800"
+                                    UNSAFE_className="text-gray-800"
                                 >
                                     {skill.name}
                                 </Text>

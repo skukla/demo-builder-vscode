@@ -6,7 +6,10 @@
  */
 
 import * as fs from 'fs/promises';
-import { checkMeshConfigCompleteness, determineMeshStatus } from '@/features/dashboard/handlers/meshStatusHelpers';
+import {
+    checkMeshConfigCompleteness,
+    determineMeshStatus,
+} from '@/features/dashboard/handlers/meshStatusHelpers';
 import { parseEnvFile } from '@/core/utils/envParser';
 import type { ComponentInstance, Project } from '@/types';
 
@@ -149,7 +152,9 @@ ACCS_STORE_VIEW_CODE=citisignal_us
 `);
 
                 const result = await checkMeshConfigCompleteness(
-                    mockMeshPath, mockMeshEndpoint, accsMeshComponentId,
+                    mockMeshPath,
+                    mockMeshEndpoint,
+                    accsMeshComponentId
                 );
 
                 expect(result.isComplete).toBe(true);
@@ -162,7 +167,9 @@ ACCS_GRAPHQL_ENDPOINT=https://na1-sandbox.api.commerce.adobe.com/abc123/graphql
 `);
 
                 const result = await checkMeshConfigCompleteness(
-                    mockMeshPath, mockMeshEndpoint, accsMeshComponentId,
+                    mockMeshPath,
+                    mockMeshEndpoint,
+                    accsMeshComponentId
                 );
 
                 expect(result.isComplete).toBe(false);
@@ -180,7 +187,9 @@ ACCS_STORE_VIEW_CODE=citisignal_us
 `);
 
                 const result = await checkMeshConfigCompleteness(
-                    mockMeshPath, mockMeshEndpoint, accsMeshComponentId,
+                    mockMeshPath,
+                    mockMeshEndpoint,
+                    accsMeshComponentId
                 );
 
                 // Should NOT require PaaS-specific vars
@@ -206,7 +215,8 @@ ACCS_STORE_VIEW_CODE=citisignal_us
         const mockProjectWithMeshEndpoint: Project = {
             name: 'Test Project',
             path: '/projects/demo',
-            createdAt: new Date(),
+            created: new Date(),
+            lastModified: new Date(),
             status: 'ready',
             componentInstances: {
                 'commerce-mesh': {
@@ -230,7 +240,8 @@ ACCS_STORE_VIEW_CODE=citisignal_us
         const mockProjectWithoutMeshEndpoint: Project = {
             name: 'Test Project',
             path: '/projects/demo',
-            createdAt: new Date(),
+            created: new Date(),
+            lastModified: new Date(),
             status: 'ready',
             // No meshState.endpoint means no endpoint
         };
@@ -241,7 +252,7 @@ ACCS_STORE_VIEW_CODE=citisignal_us
             const result = await determineMeshStatus(
                 { hasChanges: false },
                 mockMeshComponent,
-                mockProjectWithMeshEndpoint,
+                mockProjectWithMeshEndpoint
             );
 
             expect(result).toBe('config-incomplete');
@@ -263,7 +274,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
             const result = await determineMeshStatus(
                 { hasChanges: false },
                 mockMeshComponent,
-                mockProjectWithoutMeshEndpoint,
+                mockProjectWithoutMeshEndpoint
             );
 
             expect(result).toBe('config-incomplete');
@@ -286,7 +297,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
             const result = await determineMeshStatus(
                 { hasChanges: false },
                 mockMeshComponent,
-                mockProjectWithoutMeshEndpoint, // No meshState.endpoint
+                mockProjectWithoutMeshEndpoint // No meshState.endpoint
             );
 
             expect(result).toBe('config-incomplete');
@@ -307,7 +318,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
             const result = await determineMeshStatus(
                 { hasChanges: false },
                 mockMeshComponent,
-                mockProjectWithMeshEndpoint, // Has endpoint in componentInstances
+                mockProjectWithMeshEndpoint // Has endpoint in componentInstances
             );
 
             expect(result).toBe('deployed');
@@ -328,7 +339,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
             const result = await determineMeshStatus(
                 { hasChanges: true },
                 mockMeshComponent,
-                mockProjectWithMeshEndpoint,
+                mockProjectWithMeshEndpoint
             );
 
             expect(result).toBe('config-changed');
@@ -365,7 +376,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
             const result = await determineMeshStatus(
                 { hasChanges: true },
                 mockMeshComponent,
-                project,
+                project
             );
 
             expect(result).toBe('update-declined');
@@ -399,7 +410,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
             const result = await determineMeshStatus(
                 { hasChanges: false },
                 mockMeshComponent,
-                project,
+                project
             );
 
             expect(result).toBe('deployed');
@@ -426,7 +437,8 @@ ACCS_STORE_VIEW_CODE=citisignal_us
             const projectWithAccsMesh: Project = {
                 name: 'ACCS Test Project',
                 path: '/projects/demo',
-                createdAt: new Date(),
+                created: new Date(),
+                lastModified: new Date(),
                 status: 'ready',
                 componentInstances: {
                     'eds-accs-mesh': {
@@ -449,7 +461,7 @@ ACCS_STORE_VIEW_CODE=citisignal_us
             const result = await determineMeshStatus(
                 { hasChanges: false },
                 accsMeshComponent,
-                projectWithAccsMesh,
+                projectWithAccsMesh
             );
 
             expect(result).toBe('deployed');
@@ -472,7 +484,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
             const result = await determineMeshStatus(
                 { hasChanges: false },
                 errorComponent,
-                mockProjectWithMeshEndpoint,
+                mockProjectWithMeshEndpoint
             );
 
             expect(result).toBe('error');
@@ -527,7 +539,9 @@ ADOBE_CATALOG_API_KEY=api-key-123
     // report the same deployed status + endpoint.
     describe('sendDemoStatusUpdate (keyed-only project)', () => {
         it('posts deployed status with the keyed endpoint when no meshState exists', async () => {
-            const { sendDemoStatusUpdate } = require('@/features/dashboard/handlers/meshStatusHelpers');
+            const {
+                sendDemoStatusUpdate,
+            } = require('@/features/dashboard/handlers/meshStatusHelpers');
 
             const project = {
                 name: 'demo',
@@ -558,7 +572,13 @@ ADOBE_CATALOG_API_KEY=api-key-123
             const context = {
                 panel: { webview: { postMessage } },
                 stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
-                logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+                logger: {
+                    debug: jest.fn(),
+                    info: jest.fn(),
+                    warn: jest.fn(),
+                    error: jest.fn(),
+                    trace: jest.fn(),
+                },
             } as any;
 
             await sendDemoStatusUpdate(context);
@@ -572,7 +592,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
                             endpoint: 'https://keyed-mesh.adobe.io/graphql',
                         }),
                     }),
-                }),
+                })
             );
         });
     });

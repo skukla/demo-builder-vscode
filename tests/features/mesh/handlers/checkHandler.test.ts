@@ -279,7 +279,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
             });
 
             expect(result.apiEnabled).toBe(false);
-            expect(result.setupInstructions).toBeUndefined();
+            expect('setupInstructions' in result).toBe(false);
         });
 
         it('Layer 2 fallback absent-API returns no setupInstructions', async () => {
@@ -300,7 +300,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
             });
 
             expect(result.apiEnabled).toBe(false);
-            expect(result.setupInstructions).toBeUndefined();
+            expect('setupInstructions' in result).toBe(false);
         });
 
         it('present-API reports apiEnabled true (post-automation verification signal)', async () => {
@@ -320,7 +320,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
             });
 
             expect(result.apiEnabled).toBe(true);
-            expect(result.setupInstructions).toBeUndefined();
+            expect('setupInstructions' in result).toBe(false);
         });
 
         it('already-enabled project is a no-op (no instructions, no re-subscribe in the check)', async () => {
@@ -341,7 +341,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
             expect(result.success).toBe(true);
             expect(result.apiEnabled).toBe(true);
             expect(result.meshExists).toBe(false);
-            expect(result.setupInstructions).toBeUndefined();
+            expect('setupInstructions' in result).toBe(false);
         });
     });
 

@@ -23,7 +23,7 @@ function createContext() {
     };
     return {
         authManager,
-        logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() } as any,
+        logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), trace: jest.fn() } as any,
         debugLogger: { trace: jest.fn(), debug: jest.fn() } as any,
         sendMessage: jest.fn().mockResolvedValue(undefined),
         sharedState: { isAuthenticating: false },

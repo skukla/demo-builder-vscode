@@ -170,7 +170,7 @@ describe('commerceSectionStates — ACCS sign-in gate', () => {
         // The Sign-in sub-step must PERSIST so the footer can land on it to show the
         // "Connected" result and the sub-step walk reaches Connection next.
         const sections = commerceSectionStates(
-            state({ selectedBackend: ACCS, adobeOrg: { id: 'org-1', name: 'Org One' } }),
+            state({ selectedBackend: ACCS, adobeOrg: { id: 'org-1', name: 'Org One', code: 'ORG1' } }),
             { isAccs: true, signedIn: true }
         );
         const signin = sections.find((s) => s.id === 'signin');

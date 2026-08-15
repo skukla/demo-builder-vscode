@@ -40,9 +40,8 @@ jest.mock('@/core/ui/utils/webviewLogger', () => ({
 
 // Default wizard state for hook tests
 const createDefaultState = (overrides?: Partial<EDSConfig>): WizardState => ({
-    currentStep: 'storefront',
+    currentStep: 'storefront-setup',
     projectName: 'test-project',
-    projectTemplate: 'citisignal',
     adobeAuth: { isAuthenticated: true, isChecking: false },
     edsConfig: {
         accsHost: 'https://accs.example.com',

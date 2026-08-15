@@ -102,8 +102,8 @@ describe('PageFooter', () => {
             // Given: PageFooter with constrainWidth={true}
             const { container } = renderWithProvider(
                 <PageFooter
-                    leftContent={<Button>Cancel</Button>}
-                    rightContent={<Button>Continue</Button>}
+                    leftContent={<Button variant="secondary">Cancel</Button>}
+                    rightContent={<Button variant="accent">Continue</Button>}
                     constrainWidth={true}
                 />
             );
@@ -117,7 +117,7 @@ describe('PageFooter', () => {
             // Given: PageFooter without constrainWidth prop (should default to true)
             const { container } = renderWithProvider(
                 <PageFooter
-                    leftContent={<Button>Cancel</Button>}
+                    leftContent={<Button variant="secondary">Cancel</Button>}
                 />
             );
 
@@ -130,7 +130,7 @@ describe('PageFooter', () => {
             // Given: PageFooter with constrainWidth={false}
             const { container } = renderWithProvider(
                 <PageFooter
-                    leftContent={<Button>Cancel</Button>}
+                    leftContent={<Button variant="secondary">Cancel</Button>}
                     constrainWidth={false}
                 />
             );
@@ -146,8 +146,8 @@ describe('PageFooter', () => {
             // Given: PageFooter with both left and right content
             const { container } = renderWithProvider(
                 <PageFooter
-                    leftContent={<Button>Cancel</Button>}
-                    rightContent={<Button>Continue</Button>}
+                    leftContent={<Button variant="secondary">Cancel</Button>}
+                    rightContent={<Button variant="accent">Continue</Button>}
                 />
             );
 
@@ -171,7 +171,7 @@ describe('PageFooter', () => {
             // Given: PageFooter with content
             const { container } = renderWithProvider(
                 <PageFooter
-                    leftContent={<Button>Cancel</Button>}
+                    leftContent={<Button variant="secondary">Cancel</Button>}
                 />
             );
 
@@ -184,7 +184,7 @@ describe('PageFooter', () => {
             // Given: PageFooter with custom className
             const { container } = renderWithProvider(
                 <PageFooter
-                    leftContent={<Button>Cancel</Button>}
+                    leftContent={<Button variant="secondary">Cancel</Button>}
                     className="custom-footer-class"
                 />
             );
@@ -198,7 +198,7 @@ describe('PageFooter', () => {
             // Given: PageFooter with custom className
             const { container } = renderWithProvider(
                 <PageFooter
-                    leftContent={<Button>Cancel</Button>}
+                    leftContent={<Button variant="secondary">Cancel</Button>}
                     className="my-custom-class"
                 />
             );
@@ -245,8 +245,8 @@ describe('PageFooter', () => {
                 <PageFooter
                     centerContent={
                         <Flex gap="size-100">
-                            <Button isQuiet>Action 1</Button>
-                            <Button isQuiet>Action 2</Button>
+                            <Button variant="secondary" isQuiet>Action 1</Button>
+                            <Button variant="secondary" isQuiet>Action 2</Button>
                         </Flex>
                     }
                 />
@@ -308,8 +308,8 @@ describe('PageFooter', () => {
             // Given: PageFooter with buttons
             renderWithProvider(
                 <PageFooter
-                    leftContent={<Button>Cancel</Button>}
-                    rightContent={<Button>Submit</Button>}
+                    leftContent={<Button variant="secondary">Cancel</Button>}
+                    rightContent={<Button variant="secondary">Submit</Button>}
                 />
             );
 
@@ -324,7 +324,7 @@ describe('PageFooter', () => {
             // Given: PageFooter with semantic content
             renderWithProvider(
                 <PageFooter
-                    leftContent={<nav aria-label="Footer navigation"><Button>Home</Button></nav>}
+                    leftContent={<nav aria-label="Footer navigation"><Button variant="secondary">Home</Button></nav>}
                 />
             );
 

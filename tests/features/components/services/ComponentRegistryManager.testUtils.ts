@@ -89,7 +89,8 @@ export const mockRawRegistry: RawComponentRegistry = {
             name: 'Test Tool',
             description: 'Generic test dependency tool',
             type: 'dependency',
-            subType: 'tool',
+            // No subType: 'tool' is not a RawComponentDefinition subType; real
+            // config entries carry none for tools like this.
             // No nodeVersion - test-tool is a browser overlay, not a Node.js tool
         },
     },
@@ -98,7 +99,6 @@ export const mockRawRegistry: RawComponentRegistry = {
             id: 'experience-platform',
             name: 'Experience Platform',
             description: 'Adobe Experience Platform integration',
-            type: 'integration',
         },
     },
     infrastructure: {
@@ -116,12 +116,7 @@ export const mockRawRegistry: RawComponentRegistry = {
 /**
  * Component section names for iteration and validation
  */
-export const COMPONENT_SECTIONS = [
-    'frontends',
-    'backends',
-    'mesh',
-    'dependencies',
-] as const;
+export const COMPONENT_SECTIONS = ['frontends', 'backends', 'mesh', 'dependencies'] as const;
 
 export type ComponentSection = (typeof COMPONENT_SECTIONS)[number];
 
@@ -195,5 +190,7 @@ export function createMaliciousRegistry(
         };
     }
 
-    throw new Error(`Unknown section: ${section}. Valid sections: ${COMPONENT_SECTIONS.join(', ')}, infrastructure`);
+    throw new Error(
+        `Unknown section: ${section}. Valid sections: ${COMPONENT_SECTIONS.join(', ')}, infrastructure`
+    );
 }

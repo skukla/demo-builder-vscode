@@ -20,7 +20,8 @@ import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEnti
 import type { CommandExecutor } from '@/core/shell';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { Logger, StepLogger } from '@/core/logging';
+import type { StepLogger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 
 jest.mock('@/core/logging');
 
@@ -111,7 +112,7 @@ describe('AdobeEntityFetcher — getOrganizationsSdkOnly single-flight', () => {
 
         expect(ra).toHaveLength(1);
         expect(rb).toHaveLength(1);
-        expect(ra[0].id).toBe('org-1');
+        expect(ra?.[0]?.id).toBe('org-1');
     });
 
     // A flight that is never released would wedge the fetcher for the session.
@@ -135,7 +136,7 @@ describe('AdobeEntityFetcher — getOrganizationsSdkOnly single-flight', () => {
         sdk.getOrganizations.mockRejectedValueOnce(new Error('network'));
 
         const first = await fetcher.getOrganizationsSdkOnly();
-        expect(first).toEqual([]);
+        expect(first).toBeUndefined();
 
         // A rejected flight must not be cached NOR left pending.
         sdk.getOrganizations.mockImplementationOnce(

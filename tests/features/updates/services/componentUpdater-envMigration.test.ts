@@ -47,6 +47,9 @@ describe('ComponentUpdater - Env Variable Migration', () => {
         _mockProject = {
             name: 'test-project',
             path: '/test/project',
+            status: 'ready',
+            created: new Date(),
+            lastModified: new Date(),
             componentInstances: {
                 'commerce-mesh': {
                     id: 'commerce-mesh',
@@ -94,7 +97,7 @@ ADOBE_CATALOG_API_KEY=
 
             // Then: CURRENT BEHAVIOR - old variable name is preserved
             // This will cause runtime errors because mesh.json expects ADOBE_CATALOG_SERVICE_ENDPOINT
-            
+
             // EXPECTED RESULT (with current logic):
             // .env after merge:
             //   CATALOG_SERVICE_ENDPOINT=https://catalog-service.adobe.io/graphql (preserved)
@@ -123,7 +126,7 @@ ADOBE_CATALOG_API_KEY=
             `.trim();
 
             // When: Component is updated WITH migration logic (future enhancement)
-            
+
             // Then: DESIRED BEHAVIOR - variable is renamed
             // .env after migration:
             //   ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog-service.adobe.io/graphql (renamed + preserved value)
@@ -139,14 +142,14 @@ ADOBE_CATALOG_API_KEY=
             // Given: Component supports BOTH old and new variable names
             // Example: mesh.json could use:
             //   endpoint: "{env.ADOBE_CATALOG_SERVICE_ENDPOINT || env.CATALOG_SERVICE_ENDPOINT}"
-            
+
             // And: Old .env with old variable name
             const _oldEnvContent = `
 CATALOG_SERVICE_ENDPOINT=https://catalog-service.adobe.io/graphql
             `.trim();
 
             // When: Component is updated (no migration needed)
-            
+
             // Then: Component works with old variable name
             // This is the RECOMMENDED approach for component authors
             // - Simpler update flow
@@ -171,7 +174,7 @@ ADOBE_CATALOG_API_KEY=6534c8452daa49ec93bf1595e2082245
             // - .env.example has old variable name
 
             // When: Update runs and merges .env files
-            
+
             // Then: CURRENT RESULT - deployment fails
             // - .env has CATALOG_SERVICE_ENDPOINT (preserved)
             // - mesh.json expects ADOBE_CATALOG_SERVICE_ENDPOINT (not found)
@@ -193,10 +196,7 @@ ADOBE_CATALOG_API_KEY=6534c8452daa49ec93bf1595e2082245
     describe('Post-Update Validation (Missing Feature)', () => {
         it('should validate required env vars exist after update', async () => {
             // Given: Component declares required env vars in components.json
-            const _requiredEnvVars = [
-                'ADOBE_CATALOG_SERVICE_ENDPOINT',
-                'ADOBE_CATALOG_API_KEY',
-            ];
+            const _requiredEnvVars = ['ADOBE_CATALOG_SERVICE_ENDPOINT', 'ADOBE_CATALOG_API_KEY'];
 
             // And: .env file after update
             const _mergedEnvContent = `
@@ -205,7 +205,7 @@ ADOBE_CATALOG_API_KEY=secret-key
             `.trim();
 
             // When: Post-update validation runs (not yet implemented)
-            
+
             // Then: Should detect missing required variable
             // - ADOBE_CATALOG_SERVICE_ENDPOINT is required
             // - Only CATALOG_SERVICE_ENDPOINT exists
@@ -220,15 +220,12 @@ ADOBE_CATALOG_API_KEY=secret-key
 
         it('should suggest reconfiguration when required vars are missing', async () => {
             // Given: Post-update validation detects missing vars
-            
             // When: User is notified
-            
             // Then: Should provide actionable guidance
             // - "Update completed, but configuration may be incomplete"
             // - "Missing: ADOBE_CATALOG_SERVICE_ENDPOINT"
             // - Button: "Reconfigure Project"
             // - Button: "View Migration Guide"
-
             // TODO: Implement user notification flow for post-update validation failures
         });
     });

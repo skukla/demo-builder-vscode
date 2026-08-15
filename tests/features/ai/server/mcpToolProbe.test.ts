@@ -15,7 +15,7 @@ import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
 import type { Logger } from '@/types/logger';
 
 function makeLogger(): Logger {
-    return { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() } as unknown as Logger;
+    return { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as unknown as Logger;
 }
 
 describe('probeInExtensionMcpTools', () => {

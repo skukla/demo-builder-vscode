@@ -11,7 +11,8 @@ import { AppError } from '@/types/errors';
 import type { CommandExecutor } from '@/core/shell';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { Logger, StepLogger } from '@/core/logging';
+import type { StepLogger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 
 // Mock external dependencies
 jest.mock('@/core/logging');
@@ -98,6 +99,7 @@ describe('AdobeEntityFetcher', () => {
                 stdout: 'not-json',
                 stderr: '403 Forbidden',
                 code: 2,
+                duration: 0,
             });
 
             await expect(fetcher.getProjects()).rejects.toMatchObject({
@@ -113,6 +115,7 @@ describe('AdobeEntityFetcher', () => {
                 stdout: 'not-json',
                 stderr: 'Error: 403 forbidden',
                 code: 2,
+                duration: 0,
             });
 
             let caught: unknown;
@@ -134,6 +137,7 @@ describe('AdobeEntityFetcher', () => {
                 stdout: 'not-json',
                 stderr: '401 Unauthorized',
                 code: 2,
+                duration: 0,
             });
 
             await expect(fetcher.getProjects()).rejects.toThrow('AUTH_EXPIRED');
@@ -151,7 +155,7 @@ describe('AdobeEntityFetcher', () => {
             const { getActiveOrgContext } = require('@/core/shell/orgContextEnv');
             mockCommandExecutor.execute.mockImplementation(async () => {
                 seenOrgIds.push(getActiveOrgContext()?.orgId);
-                return { stdout: JSON.stringify([]), stderr: '', code: 0 };
+                return { stdout: JSON.stringify([]), stderr: '', code: 0, duration: 0 };
             });
 
             await fetcher.getProjects({ orgId: 'org-target' });
@@ -168,7 +172,7 @@ describe('AdobeEntityFetcher', () => {
             const { getActiveOrgContext } = require('@/core/shell/orgContextEnv');
             mockCommandExecutor.execute.mockImplementation(async () => {
                 seenOrgIds.push(getActiveOrgContext()?.orgId);
-                return { stdout: JSON.stringify([]), stderr: '', code: 0 };
+                return { stdout: JSON.stringify([]), stderr: '', code: 0, duration: 0 };
             });
 
             await fetcher.getProjects();
@@ -190,7 +194,7 @@ describe('AdobeEntityFetcher', () => {
             mockCommandExecutor.execute.mockImplementation(async () => {
                 const ctx = getActiveOrgContext();
                 seen.push({ orgId: ctx?.orgId, projectId: ctx?.projectId });
-                return { stdout: JSON.stringify([]), stderr: '', code: 0 };
+                return { stdout: JSON.stringify([]), stderr: '', code: 0, duration: 0 };
             });
 
             await fetcher.getWorkspaces();
@@ -207,7 +211,7 @@ describe('AdobeEntityFetcher', () => {
             const { getActiveOrgContext } = require('@/core/shell/orgContextEnv');
             mockCommandExecutor.execute.mockImplementation(async () => {
                 seen.push(getActiveOrgContext()?.orgId);
-                return { stdout: JSON.stringify([]), stderr: '', code: 0 };
+                return { stdout: JSON.stringify([]), stderr: '', code: 0, duration: 0 };
             });
 
             await fetcher.getWorkspaces();
@@ -227,7 +231,7 @@ describe('AdobeEntityFetcher', () => {
             mockCommandExecutor.execute.mockImplementation(async () => {
                 const ctx = getActiveOrgContext();
                 seen.push({ orgId: ctx?.orgId, projectId: ctx?.projectId });
-                return { stdout: JSON.stringify([]), stderr: '', code: 0 };
+                return { stdout: JSON.stringify([]), stderr: '', code: 0, duration: 0 };
             });
 
             await fetcher.getWorkspaces({ orgId: 'threaded-org', projectId: 'threaded-proj' });
@@ -339,6 +343,7 @@ describe('AdobeEntityFetcher', () => {
                 ]),
                 stderr: '',
                 code: 0,
+                duration: 0,
             });
 
             const result = await fetcher.getWorkspaces();

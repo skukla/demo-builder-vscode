@@ -40,7 +40,7 @@ function makeContext(project: Project | null) {
     const sendMessage = jest.fn().mockResolvedValue(undefined);
     const context = {
         sendMessage,
-        logger: { warn: jest.fn(), error: jest.fn(), info: jest.fn(), debug: jest.fn() },
+        logger: { warn: jest.fn(), error: jest.fn(), info: jest.fn(), debug: jest.fn(), trace: jest.fn() },
         stateManager: {
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject,

@@ -120,7 +120,7 @@ export const Picker: React.FC<any> = ({
     // Find the selected item's label - compare using cleaned keys
     const selectedItem = items.find((child: any) =>
         getOriginalKey(child.key) === selectedKey
-    ) as React.ReactElement | undefined;
+    ) as React.ReactElement<{ textValue?: string; children?: React.ReactNode }> | undefined;
     const selectedLabel = selectedItem?.props?.textValue || selectedItem?.props?.children || placeholder || '';
 
     return (
@@ -277,7 +277,7 @@ export const ProgressBar: React.FC<any> = ({ label, value, ...props }) => (
 
 // Heading mock
 export const Heading: React.FC<any> = ({ children, level = 2, UNSAFE_className, ...props }) => {
-    const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+    const Tag = `h${level}` as keyof React.JSX.IntrinsicElements;
     return <Tag data-testid="spectrum-heading" className={UNSAFE_className} {...filterSpectrumProps(props)}>{children}</Tag>;
 };
 
@@ -765,7 +765,7 @@ export const TabPanels: React.FC<any> = ({ children, selectedKey, ...props }) =>
     const active = panels.find((child: any) => getOriginalKey(child.key) === selectedKey);
     return (
         <div data-testid="spectrum-tabpanels" {...filterSpectrumProps(props)}>
-            {active ? (active as React.ReactElement).props?.children : null}
+            {active ? (active as React.ReactElement<{ children?: React.ReactNode }>).props?.children : null}
         </div>
     );
 };

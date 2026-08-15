@@ -35,7 +35,6 @@ describe('useFocusTrap - Edge Cases', () => {
 
       const { result } = renderHook(() => useFocusTrap({ enabled: true }));
 
-      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       const tabEvent = createTabEvent(false);
@@ -56,7 +55,6 @@ describe('useFocusTrap - Edge Cases', () => {
         { initialProps: { enabled: false } }
       );
 
-      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Force effect to re-run with container now set by toggling enabled

@@ -25,6 +25,7 @@ import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 
 const mockLogger: Logger = {
+    trace: jest.fn(),
     info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),
@@ -140,10 +141,12 @@ it('absent/expired token → unknown; SDK read NOT attempted, no interactive log
     expect(auth.loginAndRestoreProjectContext).not.toHaveBeenCalled();
 });
 
-it('SDK unavailable (empty SDK-only read) → unknown; no CLI fallback fired', async () => {
+it('SDK unavailable (undefined SDK-only read) → unknown; no CLI fallback fired', async () => {
+    // `undefined` means the SDK could not answer (cold, timeout, error) — that is
+    // the only case where "Sign in to check" is honest.
     const auth = makeAuth({
         isAuthenticated: jest.fn().mockResolvedValue(true),
-        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]),
+        getOrganizationsSdkOnly: jest.fn().mockResolvedValue(undefined),
     });
     (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(auth);
     const { ctx } = makeCtx(projectWithOrg('org1'));
@@ -152,6 +155,32 @@ it('SDK unavailable (empty SDK-only read) → unknown; no CLI fallback fired', a
 
     expect(outcome.status).toBe('unknown');
     expect(auth.getOrganizations).not.toHaveBeenCalled();
+});
+
+it('token valid but SDK answers ZERO orgs → warning with the Switch IMS Org recovery', async () => {
+    // Regression (2026-08-13, Leah): a valid token whose landed org exposes no
+    // Developer Console orgs returned `[]` from a SUCCESSFUL SDK read. The check
+    // mapped it to `unknown` ("Sign in to check"), whose recovery is a NON-forced
+    // login — which silently reuses the same browser SSO session and can never
+    // change the outcome. A genuine empty answer must surface the mismatch banner
+    // instead: its forced "Switch IMS Org" login shows the account/org chooser.
+    const auth = makeAuth({
+        isAuthenticated: jest.fn().mockResolvedValue(true),
+        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]),
+    });
+    (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(auth);
+    const { ctx } = makeCtx(projectWithOrg('orgX', { organizationName: 'Expected Org' }));
+
+    const outcome = (await orgContextCheck.run(ctx)) as CheckResult<{
+        orgMismatch?: { expectedOrg: string; expectedOrgName?: string; currentOrg?: string };
+    }>;
+
+    expect(outcome.status).toBe('warning');
+    expect(outcome.data?.orgMismatch?.expectedOrg).toBe('orgX');
+    expect(outcome.data?.orgMismatch?.expectedOrgName).toBe('Expected Org');
+    expect(outcome.data?.orgMismatch?.currentOrg).toBeUndefined();
+    expect(auth.getOrganizations).not.toHaveBeenCalled();
+    expect(auth.loginAndRestoreProjectContext).not.toHaveBeenCalled();
 });
 
 it('reachable + legacy/name data → self-heals project org id + name (one manifest write)', async () => {

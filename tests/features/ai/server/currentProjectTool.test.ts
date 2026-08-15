@@ -24,7 +24,7 @@ const ctxFactory = () =>
     ({
         stateManager: { getCurrentProject },
         context: {},
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() },
+        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
     }) as unknown as HandlerContext;
 
 describe('get_current_project', () => {

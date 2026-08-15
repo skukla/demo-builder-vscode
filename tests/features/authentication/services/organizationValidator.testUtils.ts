@@ -1,6 +1,6 @@
 import type { CommandExecutor } from '@/core/shell';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 
 /**
  * OrganizationValidator Test Utilities

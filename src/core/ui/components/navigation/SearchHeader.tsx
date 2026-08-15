@@ -10,9 +10,27 @@
  * - View mode toggle (cards/rows)
  * - Item count display ("Showing X of Y items")
  * - Configurable visibility and behavior
+ *
+ * `searchThreshold` IS NOT A TUNING KNOB — it changes the header's SHAPE.
+ * `showSearch` (`totalCount > searchThreshold`) decides where the action buttons live:
+ * with no search field they sit beside the count on the count row; with one they move up
+ * into the search row and the count drops to its own line beneath. So a non-zero threshold
+ * makes the header rearrange itself as the list grows past it — the same screen renders two
+ * different layouts depending on how much data came back.
+ *
+ * Page-level surfaces therefore pass 0 (`ProjectsDashboard`, `IntegrationsScreen`) so the
+ * field is present from the first item and the layout never moves. Pick non-zero only for a
+ * bounded in-page list where you have decided both layouts are acceptable.
  */
 
-import { Flex, Text, SearchField, ActionButton, Tooltip, TooltipTrigger } from '@adobe/react-spectrum';
+import {
+    Flex,
+    Text,
+    SearchField,
+    ActionButton,
+    Tooltip,
+    TooltipTrigger,
+} from '@adobe/react-spectrum';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import ViewGrid from '@spectrum-icons/workflow/ViewGrid';
 import ViewList from '@spectrum-icons/workflow/ViewList';
@@ -29,7 +47,11 @@ export interface SearchHeaderProps {
     onSearchQueryChange: (query: string) => void;
     /** Placeholder text for search field */
     searchPlaceholder?: string;
-    /** Show search field when totalCount exceeds this (default: 5) */
+    /**
+     * Show search field when totalCount exceeds this (default: 5).
+     * Changes the header's LAYOUT, not just the field's visibility — see the module
+     * docstring. Page-level surfaces pass 0.
+     */
     searchThreshold?: number;
 
     /** Total number of items (before filtering) */
@@ -110,7 +132,10 @@ function renderViewToggle(
                     aria-pressed={viewMode === 'cards'}
                     UNSAFE_className={`cursor-pointer ${viewMode === 'cards' ? 'is-selected' : ''}`}
                     UNSAFE_style={{
-                        backgroundColor: viewMode === 'cards' ? 'var(--spectrum-global-color-gray-200)' : undefined,
+                        backgroundColor:
+                            viewMode === 'cards'
+                                ? 'var(--spectrum-global-color-gray-200)'
+                                : undefined,
                         borderRadius: '4px',
                     }}
                 >
@@ -126,7 +151,10 @@ function renderViewToggle(
                     aria-pressed={viewMode === 'rows'}
                     UNSAFE_className={`cursor-pointer ${viewMode === 'rows' ? 'is-selected' : ''}`}
                     UNSAFE_style={{
-                        backgroundColor: viewMode === 'rows' ? 'var(--spectrum-global-color-gray-200)' : undefined,
+                        backgroundColor:
+                            viewMode === 'rows'
+                                ? 'var(--spectrum-global-color-gray-200)'
+                                : undefined,
                         borderRadius: '4px',
                     }}
                 >
@@ -204,15 +232,23 @@ function computeDisplayValues(props: SearchHeaderProps) {
 
 export const SearchHeader: React.FC<SearchHeaderProps> = (props) => {
     const {
-        searchQuery, onSearchQueryChange, totalCount, filteredCount,
-        onRefresh, viewMode, onViewModeChange, action, countTrailing,
+        searchQuery,
+        onSearchQueryChange,
+        totalCount,
+        filteredCount,
+        onRefresh,
+        viewMode,
+        onViewModeChange,
+        action,
+        countTrailing,
     } = props;
     const searchPlaceholder = props.searchPlaceholder ?? 'Type to filter...';
     const isRefreshing = props.isRefreshing ?? false;
     const refreshAriaLabel = props.refreshAriaLabel ?? 'Refresh list';
     const autoFocus = props.autoFocus ?? false;
 
-    const { showSearch, showCount, nounPlural, displayNoun, isFiltering } = computeDisplayValues(props);
+    const { showSearch, showCount, nounPlural, displayNoun, isFiltering } =
+        computeDisplayValues(props);
 
     const ActionButtons = renderActionButtons(
         renderViewToggle(viewMode, onViewModeChange),

@@ -11,7 +11,8 @@ import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEnti
 import type { CommandExecutor } from '@/core/shell';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { Logger, StepLogger } from '@/core/logging';
+import type { StepLogger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 
 // Mock external dependencies
 jest.mock('@/core/logging');

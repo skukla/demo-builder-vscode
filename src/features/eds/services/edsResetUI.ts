@@ -179,7 +179,15 @@ async function checkGitHubAppInstallation(
     const { getGitHubServices } = await import('../handlers/edsHelpers');
     const { tokenService: preCheckTokenService } = getGitHubServices(context);
     const { GitHubAppService } = await import('./githubAppService');
-    const appService = new GitHubAppService(preCheckTokenService, context.logger);
+    // The DA.live session rides along: a site carrying any `access.admin` role
+    // refuses the GitHub token outright, and storefront setup now pins one on
+    // every project it registers.
+    const { tryCreateDaLiveTokenProvider } = await import('../handlers/edsHelpers');
+    const appService = new GitHubAppService(
+        preCheckTokenService,
+        context.logger,
+        tryCreateDaLiveTokenProvider(context.context),
+    );
     const { resolveAppInstallation } = await import('./appInstallationResolver');
     const outcome = await resolveAppInstallation(
         appService,
@@ -252,6 +260,13 @@ async function showResetResultNotifications(
             { location: vscode.ProgressLocation.Notification, title: `"${projectName}" reset successfully` },
             async () => sleep(TIMEOUTS.UI.NOTIFICATION),
         );
+
+        if (result.errorType === 'CONFIG_WRITE_FAILED') {
+            // A dialog, not a progress line: `report()` writes to the single-line
+            // notification that steps 8-11 overwrite within seconds, so the
+            // remedy was gone before it could be read.
+            vscode.window.showWarningMessage(result.error ?? 'Site configuration incomplete.');
+        }
 
         if (result.errorType === 'MESH_REDEPLOY_FAILED') {
             vscode.window.showWarningMessage(

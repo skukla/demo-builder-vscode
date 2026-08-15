@@ -62,7 +62,7 @@ export function buildSiteConfigParams(
 ): SiteRegistrationParams
 ```
 
-Each call produces a single Config Service registration body. Setup (`storefrontSetupPhase3.ts`) and reset (`edsResetService.ts`) each call it once per project.
+Each call produces a single Config Service registration body. Setup (`handlers/configServiceRegistration.ts`, invoked from `storefrontSetupPhase3.ts`) and reset (`edsResetService.ts`) each call it once per project — both now via the shared `services/siteConfigRegistrar.ts`.
 
 Multisite needs either:
 
@@ -190,7 +190,7 @@ No code changes in this ADR. When multisite work happens, the implementing PR(s)
 ### Step 2 — Config Service per-env registration
 
 - Add `buildSiteConfigParamsForEnvironments(repoOwner, repoName, environments)` returning `SiteRegistrationParams[]`.
-- Setup flow (`storefrontSetupPhase3.ts::registerConfigurationService`) becomes `Promise.all(envs.map(env => configService.registerSite(...)))`.
+- Setup flow (`handlers/configServiceRegistration.ts::registerConfigurationService`) becomes `Promise.all(envs.map(env => configService.registerSite(...)))`.
 - Reset flow (`edsResetService.ts::publishConfigAndRegisterSite`) same pattern.
 
 ### Step 3 — Mesh per-env deployment

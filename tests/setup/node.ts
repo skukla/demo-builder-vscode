@@ -13,6 +13,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { socketRootForRun } from './mcpTestSocketRoot';
 
 // Ensure the demo-builder projects base directory exists. The real path-safety
 // validator (validateProjectPath → assertPathInsideSync → fs.realpathSync)
@@ -33,11 +34,12 @@ fs.mkdirSync(path.join(os.homedir(), '.demo-builder', 'projects'), { recursive: 
 // a path no client could resolve. A worker leaked from one such run held that
 // path for four days.
 //
-// Per worker, so parallel workers cannot collide either. `globalTeardown.ts`
-// removes the whole tree.
+// Per RUN and then per worker. The run segment is not optional: worker ids
+// restart at 1 every run, so a path keyed only on the worker id gave two
+// concurrent runs the same directories, and globalTeardown then removed a live
+// run's sockets along with its own. See globalSetup.ts for the measurement.
 process.env.DEMO_BUILDER_MCP_SOCKET_DIR = path.join(
-    os.tmpdir(),
-    'demo-builder-mcp-test',
+    socketRootForRun(),
     `w${process.env.JEST_WORKER_ID ?? '0'}`
 );
 

@@ -37,7 +37,11 @@ decide what (if anything) to fix before tagging.
 
 - **`codebase-sweep`** — duplication, extraction, cycles, orphans, doc drift (~30s).
 - **`dream`** — memory / skills / CLAUDE.md staleness across recent sessions.
-
+- **`bash .claude/skills/rptc-hygiene-scan/scan.sh`** — rot in the RPTC record itself
+  (~2s, offline): backlog links that do not resolve, items with no index entry, plans that
+  shipped and never moved, citations naming a deleted file. Read the CONTROL line in each
+  section — a "(none)" from a check that did not run looks identical to a clean one. Findings
+  are for the record, never a blocker on the tag.
 Offer them; do not silently skip. If the user declines, say so in the release notes
 so the next cut knows the interval. These were documented as "runs at release cuts"
 long before anything invoked them — naming the step here is what makes that true.

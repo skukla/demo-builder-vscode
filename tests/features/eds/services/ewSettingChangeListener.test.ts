@@ -12,7 +12,7 @@
 import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/core/state';
 import type { Project } from '@/types';
 

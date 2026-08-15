@@ -30,6 +30,7 @@ import type { Project } from '@/types/base';
 // ----------------------------------------------------------------------------
 
 export interface MockLogger {
+    trace: jest.Mock;
     info: jest.Mock;
     warn: jest.Mock;
     error: jest.Mock;
@@ -37,7 +38,7 @@ export interface MockLogger {
 }
 
 export function makeLogger(): MockLogger {
-    return { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+    return { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
 }
 
 export function makeStateManager(project: Partial<Project> | null): { getCurrentProject: jest.Mock } {

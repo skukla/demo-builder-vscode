@@ -14,13 +14,10 @@ jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
 describe('WelcomeStep', () => {
     const mockUpdateState = jest.fn();
     const mockSetCanProceed = jest.fn();
-    const mockOnNext = jest.fn();
-    const mockOnBack = jest.fn();
 
     const baseState: Partial<WizardState> = {
         currentStep: 'welcome',
         projectName: '',
-        projectTemplate: 'citisignal',
         componentConfigs: {},
         adobeAuth: {
             isAuthenticated: false,
@@ -39,8 +36,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>
@@ -55,8 +50,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>
@@ -76,8 +69,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={validState as WizardState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>
@@ -97,8 +88,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>
@@ -123,8 +112,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={validState as WizardState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>
@@ -144,8 +131,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={invalidState as WizardState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>
@@ -166,8 +151,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={invalidState as WizardState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>
@@ -185,8 +168,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={invalidState as WizardState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>
@@ -204,8 +185,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={invalidState as WizardState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>
@@ -223,8 +202,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={invalidState as WizardState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>
@@ -240,8 +217,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>
@@ -261,8 +236,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={validState as WizardState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>
@@ -279,8 +252,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={validState as WizardState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>
@@ -297,8 +268,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={invalidState as WizardState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>
@@ -317,8 +286,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={validState as WizardState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>
@@ -340,8 +307,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={minimalState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>
@@ -358,8 +323,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>
@@ -383,8 +346,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={baseState as WizardState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>
@@ -402,8 +363,6 @@ describe('WelcomeStep', () => {
                     <WelcomeStep
                         state={invalidState as WizardState}
                         updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
                         setCanProceed={mockSetCanProceed}
                     />
                 </Provider>

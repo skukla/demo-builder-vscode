@@ -12,7 +12,7 @@
 
 import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
 import { StateManager } from '@/core/state';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 
 // Mock VS Code API with proper types
 jest.mock('vscode', () => ({

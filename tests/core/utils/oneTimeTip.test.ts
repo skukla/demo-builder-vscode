@@ -19,7 +19,6 @@ function createMockGlobalState(initial: Record<string, unknown> = {}): vscode.Me
             store[key] = value;
         }),
         keys: jest.fn(() => Object.keys(store)),
-        setKeysForSync: jest.fn(),
     };
 }
 

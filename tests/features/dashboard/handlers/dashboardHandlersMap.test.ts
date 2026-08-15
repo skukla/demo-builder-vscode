@@ -133,7 +133,7 @@ describe('dashboardHandlers', () => {
         it('should have exactly 35 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
-            const types = getRegisteredTypes(dashboardHandlers);
+            const types = getRegisteredTypes(dashboardHandlers) as Array<keyof typeof dashboardHandlers>;
 
             // Then: exactly 35, derived in the map's own declaration order so a
             // reader can check it against the source top to bottom.
@@ -180,7 +180,7 @@ describe('dashboardHandlers', () => {
             // Given: dashboardHandlers object
             // When: Checking handler types
             // Then: All handlers should be functions
-            const types = getRegisteredTypes(dashboardHandlers);
+            const types = getRegisteredTypes(dashboardHandlers) as Array<keyof typeof dashboardHandlers>;
             for (const type of types) {
                 expect(typeof dashboardHandlers[type]).toBe('function');
             }

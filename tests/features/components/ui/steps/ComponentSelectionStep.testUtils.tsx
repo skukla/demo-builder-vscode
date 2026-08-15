@@ -21,14 +21,12 @@ export const mockUpdateState = jest.fn();
 export const mockSetCanProceed = jest.fn();
 
 export const baseState: Partial<WizardState> = {
-    currentStep: 'commerce',
+    currentStep: 'build-your-project',
     components: undefined,
 };
 
 export const mockComponentsData = {
-    frontends: [
-        { id: 'headless', name: 'Headless CitiSignal', description: 'NextJS storefront' }
-    ],
+    frontends: [{ id: 'headless', name: 'Headless CitiSignal', description: 'NextJS storefront' }],
     backends: [
         {
             id: 'adobe-commerce-paas',
@@ -37,21 +35,30 @@ export const mockComponentsData = {
             // Backend requires these services (dynamic service resolution)
             configuration: {
                 requiredServices: ['catalog-service', 'live-search'],
-                providesServices: []
-            }
-        }
+                providesServices: [],
+            },
+        },
     ],
     dependencies: [
-        { id: 'eds-commerce-mesh', name: 'EDS API Mesh', description: 'API Mesh for EDS', subType: 'mesh' },
+        {
+            id: 'eds-commerce-mesh',
+            name: 'EDS API Mesh',
+            description: 'API Mesh for EDS',
+            subType: 'mesh',
+        },
     ],
     // Services registry for mapping IDs to display names
     services: {
         'catalog-service': { id: 'catalog-service', name: 'Catalog Service' },
-        'live-search': { id: 'live-search', name: 'Live Search' }
+        'live-search': { id: 'live-search', name: 'Live Search' },
     },
     integrations: [
-        { id: 'experience-platform', name: 'Experience Platform', description: 'Adobe Experience Platform' }
-    ]
+        {
+            id: 'experience-platform',
+            name: 'Experience Platform',
+            description: 'Adobe Experience Platform',
+        },
+    ],
 };
 
 /**
@@ -65,8 +72,8 @@ export const createStateWithFrontend = () => ({
         backend: '',
         dependencies: ['eds-commerce-mesh'],
         services: [],
-        integrations: []
-    }
+        integrations: [],
+    },
 });
 
 /**
@@ -80,8 +87,8 @@ export const createStateWithBackend = () => ({
         backend: 'adobe-commerce-paas',
         dependencies: [],
         services: ['catalog-service', 'live-search'],
-        integrations: []
-    }
+        integrations: [],
+    },
 });
 
 /**
@@ -95,8 +102,8 @@ export const createStateWithSelections = () => ({
         backend: 'adobe-commerce-paas',
         dependencies: ['eds-commerce-mesh'],
         services: ['catalog-service', 'live-search'],
-        integrations: []
-    }
+        integrations: [],
+    },
 });
 
 /**
@@ -110,8 +117,8 @@ export const createStateNoFrontend = () => ({
         backend: 'adobe-commerce-paas',
         dependencies: [],
         services: ['catalog-service', 'live-search'],
-        integrations: []
-    }
+        integrations: [],
+    },
 });
 
 /**
@@ -125,8 +132,8 @@ export const createStateNoBackend = () => ({
         backend: '',
         dependencies: ['eds-commerce-mesh'],
         services: [],
-        integrations: []
-    }
+        integrations: [],
+    },
 });
 
 /**
@@ -140,8 +147,8 @@ export const createStateWithDefaults = () => ({
         backend: 'adobe-commerce-paas',
         dependencies: ['eds-commerce-mesh'],
         services: ['catalog-service', 'live-search'],
-        integrations: ['experience-platform']
-    }
+        integrations: ['experience-platform'],
+    },
 });
 
 /**
@@ -155,8 +162,8 @@ export const createStateInitial = () => ({
         backend: '',
         dependencies: [],
         services: [],
-        integrations: []
-    }
+        integrations: [],
+    },
 });
 
 /**

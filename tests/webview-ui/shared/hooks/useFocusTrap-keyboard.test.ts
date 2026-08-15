@@ -40,7 +40,6 @@ describe('useFocusTrap - Keyboard Handling', () => {
         { initialProps: { enabled: false } }
       );
 
-      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Force effect to re-run with container now set by toggling enabled
@@ -74,7 +73,6 @@ describe('useFocusTrap - Keyboard Handling', () => {
         { initialProps: { enabled: false } }
       );
 
-      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Force effect to re-run with container now set by toggling enabled
@@ -100,7 +98,6 @@ describe('useFocusTrap - Keyboard Handling', () => {
     it('ignores non-Tab keys', () => {
       const { result } = renderHook(() => useFocusTrap({ enabled: true }));
 
-      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       const enterEvent = new KeyboardEvent('keydown', {
@@ -122,7 +119,6 @@ describe('useFocusTrap - Keyboard Handling', () => {
         { initialProps: { enabled: false } }
       );
 
-      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Force effect to re-run with container now set by toggling enabled
@@ -157,7 +153,6 @@ describe('useFocusTrap - Keyboard Handling', () => {
         { initialProps: { enabled: false } }
       );
 
-      // @ts-expect-error - mocking ref
       result.current.current = container;
 
       // Force effect to re-run with container now set by toggling enabled

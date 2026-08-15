@@ -2106,11 +2106,6 @@ button[class*="spectrum-Button"][disabled],
 
 /* AI badge + its capabilities link on one line. The link was a standalone row
    beneath the badges, which cost the band a whole row to say one thing. */
-.dashboard-status-badge-inline {
-    display: flex !important;
-    align-items: center !important;
-    gap: 12px !important;
-}
 
 /* Match the height of the Projects List search header so content aligns */
 .dashboard-status-header > div {
@@ -2185,6 +2180,24 @@ button[class*="spectrum-Button"][disabled],
    scoped to the masthead stack — other StatusCard uses keep natural widths. */
 .dashboard-status-badges .status-label {
     min-width: 80px !important;
+}
+
+/* "View AI Capabilities" on its own line, indented to the status column so it
+   reads as a continuation of the AI row above it rather than a new fact.
+
+   102px = the dot (6px at StatusCard size="S" — see getSizeInPixels) + the
+   .status-row gap (8) + the reserved label column (80) + gap (8), i.e. exactly
+   where "READY" starts. An earlier 104 used 8px for the dot, which is the size
+   "M" value.
+
+   This replaced a min-width reservation on the AI row's status text. That could
+   not work: the link followed the StatusCard, and the Regenerate remediation
+   renders INSIDE that card, after the status text — so an unhealthy AI badge
+   displaced the link no matter how much room the text was given. Taking the link
+   out of the row removes the coupling instead of padding around it. */
+.dashboard-status-capabilities-link {
+    margin-left: 102px !important;
+    font-size: 12px !important;
 }
 
 /* Dashboard status badges - match card grid style */
@@ -2325,11 +2338,78 @@ button[class*="spectrum-Button"][disabled],
     padding-right: 8px; /* keep the scrollbar off the text */
 }
 
-/* The flat skills list itself just stacks its groups — the BODY scrolls. */
-.ai-skills-scroll {
+/* A PERSISTENT scrollbar. macOS paints overlay scrollbars only while you are
+   scrolling, so a bounded region at rest looks like a complete list — which is
+   how 10 of 21 skills went missing with nothing to suggest more existed.
+   Nothing else in this app styles a scrollbar; this is the first.
+   A bar rather than a bottom fade: a static fade keeps promising more content
+   after you have reached the end, and making it honest needs scroll-position
+   state for something a scrollbar already says. */
+.ai-capabilities-body::-webkit-scrollbar {
+    width: 10px;
+}
+.ai-capabilities-body::-webkit-scrollbar-track {
+    background: var(--spectrum-global-color-gray-100);
+    border-radius: 5px;
+}
+.ai-capabilities-body::-webkit-scrollbar-thumb {
+    background: var(--spectrum-global-color-gray-400);
+    border-radius: 5px;
+}
+.ai-capabilities-body::-webkit-scrollbar-thumb:hover {
+    background: var(--spectrum-global-color-gray-500);
+}
+
+/* Sections stack full-width; the SKILLS GROUPS are what run in two columns
+   (see .ai-skills-scroll). Putting the columns around the two sections was the
+   first attempt and barely helped — skills is the tall section, so a 3-row MCP
+   list beside a 21-row skills list takes the height from 3 + 21 to max(3, 21):
+   three rows saved, not half. */
+.ai-capabilities-columns {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 24px;
+}
+
+/* Section heading (MCP servers / Skills) — the level ABOVE a group header.
+   Both used to be 12px, differing only in colour, so "section > group > names"
+   existed in the comments and not on screen. */
+/* `!important` because this lands on Spectrum `Heading`/`Text`, which ship their
+   own single-class rules — a tie on specificity that source order decides, and
+   Spectrum wins it. The three utilities this replaced (.text-sm,
+   .font-semibold, .text-gray-800) all carried it for the same reason, as do
+   167 of the 238 font declarations in this file. Dropping it silently reverted
+   the heading to Spectrum's own size, which is how this shipped looking
+   unchanged the first time. */
+.ai-section-heading {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+    /* Mirrors `.config-section-header` — the app's section convention, used by
+       ConfigureScreen: a title over a hairline rule. Matching it is what makes
+       this modal read as part of the same application.
+       (Ideally this would REUSE ConfigSection rather than restate its look, but
+       that component takes no test id and this list is queried by one; worth
+       doing when ConfigSection next earns a `data-testid` prop.) */
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important;
+    padding-bottom: 4px !important;
+    margin: 0 0 4px 0 !important;
+}
+
+/* The skills GROUPS run in two columns — this is what stops the list cutting
+   itself off. With 21 skills a single column ended mid-group at `sync-changes`
+   and everything after it sat below a fold that macOS overlay scrollbars never
+   advertise: the heading said 21, the eye saw 11.
+
+   Whole groups are the unit, so a header never separates from its own skills.
+   `minmax(0, 1fr)` rather than `1fr` so a long name shrinks its track instead of
+   pushing the grid wider than the dialog; `align-items: start` keeps a short
+   group from stretching to match a tall neighbour. */
+.ai-skills-scroll {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px 24px;
+    align-items: start;
 }
 
 /* Sticky group headers — deliberately QUIETER than the "Skills · N installed"
@@ -2339,7 +2419,10 @@ button[class*="spectrum-Button"][disabled],
 .ai-skills-group-header {
     position: sticky;
     top: 0;
-    font-size: 12px;
+    /* 13px: still clearly subordinate to the 16px section heading, but the names
+       beneath it now sit at the Spectrum default rather than a forced 12px, so a
+       12px group header had stopped reading as a header at all. */
+    font-size: 13px;
     font-weight: 600;
     color: var(--spectrum-global-color-gray-600);
     background: var(--spectrum-global-color-gray-100);
@@ -4603,7 +4686,8 @@ div[class*="spectrum"] input[type="search"] {
     overflow: hidden !important;
 }
 /* --------------------------------------------------------------------------
- * Integrations — results-only center column (.int-results / .int-row-*)
+ * Integrations — results-only center column (.int-results / .int-destination /
+ *   the shared .integration-card)
  * + the one-modal Add Integration journey (.intflow-*).
  *
  * Dark-minimal wizard language: plain divs, gray-50 surfaces, quiet gray-300
@@ -4653,105 +4737,47 @@ div[class*="spectrum"] input[type="search"] {
     margin-top: 4px;
 }
 
-/* ---- One collapsed result row (card family: gray-50, gray-300, radius 8) ---- */
-.int-row {
-    background: var(--spectrum-global-color-gray-50);
-    border: 1px solid var(--spectrum-global-color-gray-300);
-    border-radius: 8px;
-    padding: 14px 18px;
-}
-.int-row-header {
+/* ---- The surface's ONE destination line, above the cards ---- */
+/* Was repeated on every row while always printing the same project/workspace.
+   `DestinationContext` supplies the value + Change; this rule only lays the
+   label beside it. */
+.int-destination {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-.int-row-name {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--spectrum-global-color-gray-900);
-    line-height: 1.3;
-}
-.int-row-source {
-    font-size: 12px;
-    color: var(--spectrum-global-color-gray-600);
-    line-height: 1.4;
-    margin-top: 2px;
-}
-/* The destination line: reference text left, the quiet Set up / Change right. */
-.int-row-destination {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid var(--spectrum-global-color-gray-200);
-}
-.int-row-dest-text {
-    flex: 1 1 auto;
-    min-width: 0;
-    font-size: 13px;
-    color: var(--spectrum-global-color-gray-800);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-/* The "APIs in use" section (every kind): a collapsible header (caret + label +
-   count) over a read-only STACKED list of the provisioned API names. The quiet
-   Change sits right on editable custom/import rows only. Expanded by default;
-   collapsing hides the list so a long provisioned set stays compact. */
-.int-row-apis {
-    display: flex;
-    flex-direction: column;
     gap: 6px;
-    margin-top: 8px;
-}
-.int-row-apis-head {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-/* The header IS the collapse toggle (caret + label + count) — a plain button so
-   the whole row is clickable; the Change action stays outside it, on the right. */
-.int-row-apis-toggle {
-    flex: 1 1 auto;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    appearance: none;
-    border: none;
-    background: none;
-    padding: 0;
-    cursor: pointer;
-    text-align: left;
-    color: var(--spectrum-global-color-gray-500);
-}
-.int-row-apis-label {
-    font-size: 12px;
-    color: var(--spectrum-global-color-gray-600);
-}
-.int-row-apis-count {
-    font-size: 11px;
-    line-height: 1.6;
-    padding: 0 7px;
-    border-radius: 999px;
-    background: var(--spectrum-global-color-gray-100);
-    color: var(--spectrum-global-color-gray-600);
-}
-/* The stacked API-name list (one per line), indented under the caret. */
-.int-row-apis-list {
-    list-style: none;
-    margin: 0;
-    padding: 0 0 0 22px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-.int-row-api-item {
+    padding: 0 2px 4px;
     font-size: var(--spectrum-global-dimension-font-size-75);
-    line-height: 1.35;
-    color: var(--spectrum-global-color-gray-700);
+    color: var(--spectrum-global-color-gray-600);
+}
+.int-destination-label {
+    color: var(--spectrum-global-color-gray-600);
+}
+.int-destination-unset {
+    color: var(--spectrum-global-color-gray-500);
+    font-style: italic;
+}
+
+/* ---- The wizard's integration cards ----
+   The card itself is `.integration-card`, shared with the dashboard's
+   integrations page (core/ui/components/integrations) — do NOT restyle it here,
+   or the two surfaces drift apart again. This column only stacks them: the
+   dashboard lays the same cards out on a grid, which does not fit inside
+   `.int-results`' 720px cap. */
+.int-results > .integration-card {
+    width: 100%;
+    /* Drop the grid's reserved height. `--card-min-height` (128px) exists so
+       cells in `.integrations-grid` share a baseline with their NEIGHBOURS —
+       a card with a short status line stays as tall as one carrying a message.
+       A single column has no neighbour to match, so the reservation is just
+       ~90px of empty card under two lines of text. Height comes from content
+       plus `--card-padding`. */
+    min-height: 0;
+}
+/* The subline is prose here, not a status pair, so it keeps the muted
+   statusline metrics without the dot's leading gap. */
+.int-results > .integration-card .integration-card-statusline {
+    font-size: var(--spectrum-global-dimension-font-size-75);
+    color: var(--spectrum-global-color-gray-600);
 }
 
 /* ---- Flow modal: stage body + per-stage layouts ---- */
@@ -5307,18 +5333,31 @@ div[class*="spectrum"] input[type="search"] {
     gap: var(--card-gap);
     min-height: var(--card-min-height);
     min-width: var(--card-min-width);
-    cursor: pointer;
     transition: all 0.3s ease;
 }
-.integration-card:hover,
-.integration-card:focus {
+/* Pointer + hover lift only where a press DOES something. A card renders without
+   `role="button"` when its host passed no `onOpen` (the wizard's mesh and catalog
+   cards have no editable detail), and a cursor and a lift on something inert
+   promise a click that never lands. Dashboard cards always pass `onOpen`, so this
+   scoping leaves them exactly as they were. */
+.integration-card[role='button'] {
+    cursor: pointer;
+}
+.integration-card[role='button']:hover,
+.integration-card[role='button']:focus {
     background: var(--spectrum-global-color-gray-75);
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     border-color: var(--spectrum-global-color-gray-400);
     outline: none;
 }
-.integration-card:focus-visible {
+/* Scoped to `[role='button']` for the SAME reason as the lift above, but also to
+   keep specificity level with it. `:focus` there sets `outline: none`; if only
+   that rule carried the attribute selector it would score (0,3,0) against this
+   rule's (0,2,0) and win outright, silently removing the keyboard focus ring
+   from every card — dashboard included, since those always carry the role.
+   Matched specificity puts source order back in charge, and this comes second. */
+.integration-card[role='button']:focus-visible {
     outline: 2px solid var(--spectrum-global-color-blue-400);
     outline-offset: 2px;
 }
@@ -5416,12 +5455,6 @@ div[class*="spectrum"] input[type="search"] {
 /* Footer pinned to the card bottom; hosts the at-most-one face affordance. */
 /* Only pushed to the bottom when the card HAS a face affordance — an empty foot
    was reserving a row on every deployed card. */
-.integration-card-foot:not(:empty) {
-    margin-top: auto;
-    padding-top: 8px;
-    display: flex;
-    align-items: center;
-}
 /* The deploying pulse lives in StatusDot now (`status-dot--pulse`, index.css) —
    it is a property of the `info` status, not of this card. */
 /* ---- Detail FLYOUT (over the grid) ----

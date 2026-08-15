@@ -10,7 +10,7 @@
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import * as vscode from 'vscode';
 import { StateManager } from '@/core/state';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import type { Project } from '@/types';
 
 // Mock VS Code API

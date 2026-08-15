@@ -2,7 +2,7 @@
   "name": "adobe-demo-builder",
   "displayName": "Adobe Demo Builder",
   "description": "Create and manage Adobe Commerce demos with ease",
-  "version": "1.0.0-beta.128",
+  "version": "1.0.0-beta.129",
   "publisher": "skukla",
   "engines": {
     "vscode": "^1.84.0"
@@ -55,6 +55,16 @@
       {
         "command": "demoBuilder.diagnostics",
         "title": "Diagnostics",
+        "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.manageSiteAccess",
+        "title": "Manage Site Access",
+        "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.repairSiteConfiguration",
+        "title": "Repair Site Configuration",
         "category": "Demo Builder"
       },
       {
@@ -408,6 +418,7 @@
     "test:integration": "node --max-old-space-size=4096 node_modules/.bin/jest --testPathPattern='integration'",
     "test:ui": "node --max-old-space-size=4096 node_modules/.bin/jest --selectProjects react",
     "test:typecheck": "tsc --noEmit",
+    "typecheck:tests": "tsc -p tsconfig.test.json",
     "metrics:baseline": "node scripts/capture-baseline-metrics.js",
     "validate:jest-config": "node scripts/validate-jest-config.js",
     "validate:eslint-rules": "node scripts/validate-eslint-rules.js",

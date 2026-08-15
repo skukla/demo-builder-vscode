@@ -11,7 +11,7 @@
 import { applyAuthoringExperienceFlip } from '@/features/eds/services/authoringExperienceFlip';
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 import type { AuthoringExperience, Project } from '@/types';
 
 jest.mock('vscode');
@@ -98,6 +98,7 @@ describe('applyAuthoringExperienceFlip', () => {
         return applyAuthoringExperienceFlip(project, experience, {
             context: mockContext,
             logger: mockLogger,
+            saveProject: jest.fn().mockResolvedValue(undefined),
         });
     }
 

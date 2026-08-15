@@ -43,6 +43,7 @@ function createEdsComponentInstance(metadata?: Record<string, unknown>): Compone
 
 function createMockLogger(): Logger {
     return {
+        trace: jest.fn(),
         info: jest.fn(),
         debug: jest.fn(),
         warn: jest.fn(),

@@ -1,0 +1,34 @@
+# Interrupts creating a NEW UI component so the shared vocabulary gets checked first.
+#
+# Write only, and only for a path that does not exist yet: editing an existing
+# component is not the reflex being guarded.
+rule_id=reuse-first
+rule_once=1
+
+rule_match() {
+    [ "$1" = "Write" ] || return 1
+    [ -n "$3" ] || return 1
+    case "$3" in
+        */tests/*) return 1 ;;
+        */src/*/ui/*.tsx) ;;
+        *) return 1 ;;
+    esac
+    # Already exists → this is an edit, not a new component.
+    [ -e "$3" ] && return 1
+    return 0
+}
+
+rule_message() {
+    cat <<'MSG'
+You are creating a NEW UI component. Invoke the `reuse-first` skill (Skill tool,
+skill: "reuse-first") before writing it.
+
+The extension already has a full visual language — loading, empty, error, status,
+sign-in, kebab menus, modals, layouts, rename, search — in src/core/ui/components/
+(job->component table: src/core/ui/components/CLAUDE.md). The wizard solved most
+screen patterns first. Rebuilding one does not produce a neutral copy; it produces
+a copy that drifts, because the next fix lands on only one of the two.
+
+Check the vocabulary, then write. This hook fires only once per session.
+MSG
+}

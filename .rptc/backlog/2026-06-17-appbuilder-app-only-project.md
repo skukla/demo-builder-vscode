@@ -1,6 +1,6 @@
 # App Builder app — app-only / no-storefront project
 
-> **Status: PARTIAL dependency on slice 1** ([spine](2026-06-17-appbuilder-app-deploy-spine.md)) —
+> **Status: PARTIAL dependency on slice 1** ([spine](../complete/2026-06-17-appbuilder-app-deploy-spine.md)) —
 > can be designed in parallel, but needs the `app-builder` category the spine introduces. Slice 5 of 5.
 > The heaviest, least-coupled slice (schema work).
 

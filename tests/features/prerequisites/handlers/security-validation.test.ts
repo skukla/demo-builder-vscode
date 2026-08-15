@@ -91,8 +91,8 @@ describe('Prerequisites Security - Command Injection Prevention', () => {
 
             // Should execute check command for each node version
             expect(nodeVersionExecuteCalls).toHaveLength(2);
-            expect(nodeVersionExecuteCalls[0][1].useNodeVersion).toBe('18');
-            expect(nodeVersionExecuteCalls[1][1].useNodeVersion).toBe('20');
+            expect(nodeVersionExecuteCalls[0][1]!.useNodeVersion).toBe('18');
+            expect(nodeVersionExecuteCalls[1][1]!.useNodeVersion).toBe('20');
         });
 
         it('should reject command injection attempts in Node versions', async () => {

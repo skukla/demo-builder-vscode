@@ -25,7 +25,13 @@ import { getStorefrontEnvVars } from '@/features/eds/services/storefrontStalenes
 import * as ENV from '@/features/components/config/envVarKeys';
 
 jest.mock('@/core/logging', () => ({
-    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
+    getLogger: () => ({
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        trace: jest.fn(),
+    }),
 }));
 
 /**
@@ -37,11 +43,13 @@ function watchedSubsetOfEverything(): Record<string, string> {
     const everything: Record<string, string> = {};
     for (const [name, key] of Object.entries(ENV)) {
         if (typeof key === 'string') {
-            // 'true' so the boolean AEM_ASSETS_ENABLED read is exercised too;
-            // the string params only care that the value is non-empty.
-            everything[key] = key === 'AEM_ASSETS_ENABLED' ? 'true' : `sentinel:${name}`;
+            everything[key] = `sentinel:${name}`;
         }
     }
+    // AEM_ASSETS_ENABLED has no envVarKeys constant (it is watched by the
+    // detector and read as a boolean by the generator), so set it directly —
+    // 'true' so the boolean read is exercised too.
+    everything.AEM_ASSETS_ENABLED = 'true';
     return getStorefrontEnvVars(everything);
 }
 

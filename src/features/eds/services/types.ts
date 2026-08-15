@@ -256,6 +256,16 @@ export class DaLiveError extends Error {
  * Authentication error for DA.live operations
  */
 export class DaLiveAuthError extends DaLiveError {
+    /**
+     * Masked admin addresses whose grants were lost by the same write that then
+     * failed to authenticate.
+     *
+     * Carried on the ERROR because a throw is the only way out of that path, and
+     * dropping them made the worst outcome — site config gone AND admin list gone
+     * — the silent one, with the user told only that their session expired.
+     */
+    lostGrants?: string[];
+
     constructor(message: string) {
         super(message, 'AUTH_ERROR', 401);
         this.name = 'DaLiveAuthError';

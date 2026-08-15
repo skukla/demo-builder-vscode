@@ -13,7 +13,7 @@ export const mockLogger = {
     error: jest.fn(),
     debug: jest.fn(),
     info: jest.fn(),
-    warn: jest.fn()
+    warn: jest.fn(),
 };
 
 /**
@@ -27,10 +27,10 @@ export function setupMocks() {
     }));
     jest.mock('vscode');
     jest.mock('child_process', () => ({
-        execSync: jest.fn()
+        execSync: jest.fn(),
     }));
     jest.mock('@/core/logging/debugLogger', () => ({
-        getLogger: () => mockLogger
+        getLogger: () => mockLogger,
     }));
 }
 
@@ -40,7 +40,7 @@ export function setupMocks() {
 export function createEnvironmentSetup(mockHomeDir: string = '/mock/home'): EnvironmentSetup {
     // Mock vscode.extensions API
     (vscode as any).extensions = {
-        getExtension: jest.fn()
+        getExtension: jest.fn(),
     };
 
     // Mock os.homedir
@@ -66,13 +66,20 @@ export function createEnvironmentSetup(mockHomeDir: string = '/mock/home'): Envi
  */
 export function mockVSCodeExtension(componentConfig?: any) {
     const mockExtension = {
-        extensionPath: '/path/to/extension'
+        extensionPath: '/path/to/extension',
     };
 
     (vscode.extensions.getExtension as jest.Mock).mockReturnValue(mockExtension);
 
     if (componentConfig !== undefined) {
-        const componentsPath = require('path').join(mockExtension.extensionPath, 'src', 'features', 'components', 'config', 'components.json');
+        const componentsPath = require('path').join(
+            mockExtension.extensionPath,
+            'src',
+            'features',
+            'components',
+            'config',
+            'components.json'
+        );
         (fsSync.existsSync as jest.Mock).mockImplementation((p) => p === componentsPath);
         (fsSync.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(componentConfig));
     }
@@ -108,8 +115,14 @@ export function mockFnmVersions(config: FnmVersionMock) {
 
         // Version-specific paths
         for (const version of versions) {
-            const installationBinPath = require('path').join(baseDir, `${version}/installation/bin`);
-            const nodeModulesBinPath = require('path').join(baseDir, `${version}/installation/lib/node_modules/.bin`);
+            const installationBinPath = require('path').join(
+                baseDir,
+                `${version}/installation/bin`
+            );
+            const nodeModulesBinPath = require('path').join(
+                baseDir,
+                `${version}/installation/lib/node_modules/.bin`
+            );
 
             if (checkPath === installationBinPath || checkPath === nodeModulesBinPath) {
                 return true;
@@ -178,15 +191,20 @@ export function createMockExecuteCommand(config: MockExecuteConfig = {}) {
         fnmVersion = 'fnm 1.38.1',
         currentNodeVersion = 'v20.19.5',
         useNodeVersion = '',
-        telemetryResult = { stdout: '', stderr: '', code: 0, duration: 100 }
+        telemetryResult = { stdout: '', stderr: '', code: 0, duration: 100 },
     } = config;
 
-    return jest.fn((command: string) => {
+    return jest.fn((command: string, _options?: unknown) => {
         if (command.includes('fnm --version')) {
             return Promise.resolve({ stdout: fnmVersion, stderr: '', code: 0, duration: 100 });
         }
         if (command.includes('fnm current')) {
-            return Promise.resolve({ stdout: currentNodeVersion, stderr: '', code: 0, duration: 100 });
+            return Promise.resolve({
+                stdout: currentNodeVersion,
+                stderr: '',
+                code: 0,
+                duration: 100,
+            });
         }
         if (command.includes('fnm use')) {
             return Promise.resolve({ stdout: useNodeVersion, stderr: '', code: 0, duration: 100 });

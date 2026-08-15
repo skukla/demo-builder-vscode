@@ -74,7 +74,7 @@ jest.mock('@adobe/react-spectrum', () => ({
     View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     Flex: ({ children, ...props }: any) => <div style={{ display: 'flex' }} {...props}>{children}</div>,
     Heading: ({ children, level, ...props }: any) => {
-        const Tag = `h${level || 1}` as keyof JSX.IntrinsicElements;
+        const Tag = `h${level || 1}` as keyof React.JSX.IntrinsicElements;
         return <Tag {...props}>{children}</Tag>;
     },
     Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
@@ -106,7 +106,6 @@ jest.mock('@adobe/react-spectrum', () => ({
     TooltipTrigger: ({ children }: any) => <>{children}</>,
     Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
     Divider: () => <hr />,
-    ProgressCircle: () => <div data-testid="progress-circle" />,
     Link: ({ children, onPress, _isQuiet, ...props }: any) => (
         <a onClick={onPress} data-testid="sign-in-link" {...props}>{children}</a>
     ),
@@ -115,7 +114,6 @@ jest.mock('@adobe/react-spectrum', () => ({
         <input aria-label={label} value={value ?? ''} onChange={(e) => onChange?.(e.target.value)} {...props} />
     ),
     ProgressCircle: ({ ...props }: any) => <div data-testid="progress-circle" {...props} />,
-    Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
 }));
 
 // Stub the capabilities modal — its real implementation renders the shared

@@ -153,7 +153,7 @@ describe('Executor - App Builder Component Loading', () => {
             saveProject: jest.fn().mockResolvedValue(undefined),
             addRecentProject: jest.fn().mockResolvedValue(undefined),
         } as any,
-        sharedState: {},
+        sharedState: { isAuthenticating: false },
         sendMessage: jest.fn(),
         panel: { visible: false, dispose: jest.fn() } as any,
     });

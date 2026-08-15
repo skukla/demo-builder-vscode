@@ -11,7 +11,7 @@
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import * as vscode from 'vscode';
 import { StateManager } from '@/core/state';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 
 // Mock dependencies
 jest.mock('vscode');

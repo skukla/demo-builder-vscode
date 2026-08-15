@@ -2,7 +2,7 @@ import { DaLiveApiClient } from '@/features/eds/services/daLiveApiClient';
 import { DaLiveError, DaLiveAuthError, DaLiveNetworkError } from '@/features/eds/services/types';
 
 const makeLogger = () =>
-    ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }) as never;
+    ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() }) as never;
 
 const makeClient = (token: string | null) =>
     new DaLiveApiClient({ getAccessToken: jest.fn().mockResolvedValue(token) }, makeLogger());

@@ -35,6 +35,7 @@ import {
 } from './diagnosticsReport';
 import { ServiceLocator } from '@/core/di';
 import { getLogger, type DebugLogger } from '@/core/logging';
+import { maskEmail } from '@/core/utils/maskEmail';
 import { mcpSocketBindings } from '@/features/ai/server/mcpSocketPath';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
 import { getDaLiveAuthService, resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
@@ -53,7 +54,7 @@ import {
     probeStorefrontDelivery,
     type StorefrontProbeResult,
 } from '@/features/eds/services/storefrontProbe';
-import { getEdsDaLiveTarget, getEdsGithubRepo } from '@/types/typeGuards';
+import { getEdsGithubRepo } from '@/types/typeGuards';
 
 export { browserProbeCommand, buildSummaryLines } from './diagnosticsReport';
 export type { DiagnosticsReport } from './diagnosticsReport';
@@ -94,6 +95,24 @@ export async function runDiagnosticsAction(
     } else if (action === 'Export Log') {
         await logger.exportDebugLog();
     }
+}
+
+/**
+ * Copy the report with admin addresses masked, for the exportable log buffer.
+ *
+ * Shallow by design: `orgAdmins.emails` is the only PII the report carries, and
+ * a deep clone of a large object on every diagnostics run buys nothing.
+ */
+function redactReportPii(report: DiagnosticsReport): DiagnosticsReport {
+    const emails = report.configService?.orgAdmins?.emails;
+    if (!emails) return report;
+    return {
+        ...report,
+        configService: {
+            ...report.configService,
+            orgAdmins: { ...report.configService!.orgAdmins!, emails: emails.map(maskEmail) },
+        },
+    } as DiagnosticsReport;
 }
 
 export class DiagnosticsCommand {
@@ -176,8 +195,11 @@ export class DiagnosticsCommand {
             report.storefront = storefront?.probe;
             report.storefrontScope = storefront?.scope;
 
-            // Log the full report
-            this.logger.debug('DIAGNOSTIC REPORT', report);
+            // Log the full report, with admin addresses redacted. This buffer is
+            // exportable, so dumping the object verbatim would put colleague PII
+            // into a file users attach to tickets — the same egress the rendered
+            // report masks, one layer down and easy to miss.
+            this.logger.debug('DIAGNOSTIC REPORT', redactReportPii(report));
 
             // Show summary in main output, keeping the text for the clipboard
             // so a copy is exactly what the user was shown.
@@ -300,12 +322,20 @@ export class DiagnosticsCommand {
 
     private async checkConfigService(): Promise<ConfigServiceProbeResult | undefined> {
         const project = await ServiceLocator.getStateManager()?.getCurrentProject();
-        const target = getEdsDaLiveTarget(project);
-        if (!target) return undefined;
+        // GitHub owner/repo — NOT the DA.live org/site. The Config Service keys
+        // site configs at /config/{owner}/sites/{repo}.json; `buildSiteConfigParams`
+        // documents the rule and the silent publish failure that keying by the
+        // DA.live name caused. Probing under the DA.live pair reads a different
+        // (or nonexistent) site config, so on any project where the two names
+        // differ — the case `migrateStorefrontNames` exists for — the report
+        // could tell a user "you hold no admin role" about a site that is fine.
+        const githubRepo = getEdsGithubRepo(project);
+        const [owner, repo] = (githubRepo ?? '').split('/');
+        if (!owner || !repo) return undefined;
 
         const daLiveAuthService = getDaLiveAuthService(this.context);
         const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
-        return probeConfigService(tokenProvider, target.org, target.site, this.logger);
+        return probeConfigService(tokenProvider, owner, repo, this.logger);
     }
 
     /**

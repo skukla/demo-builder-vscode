@@ -20,7 +20,7 @@
 
 import { probeConfigService } from '@/features/eds/services/configServiceProbe';
 
-const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
 const TOKEN = 'ims-token-value-never-logged';
 
 function tokenProvider() {
@@ -210,3 +210,76 @@ describe('probeConfigService', () => {
         expect(result.verdict.length).toBeLessThan(400);
     });
 });
+
+/**
+ * The org-roster leg. It exists to turn "ask an admin" into a NAME, and its
+ * absence is itself the finding — a roster you cannot read means there is nobody
+ * to ask, which is what makes the Code Sync setup flow the only way in.
+ *
+ * Restored after a `git checkout` during the 2026-08-14 verify loop discarded
+ * this session's uncommitted additions to this file.
+ */
+describe('probeConfigService — org roster leg', () => {
+    const org = 'skukla';
+    const site = 'b2b-tester';
+    let originalFetch: typeof globalThis.fetch;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        originalFetch = globalThis.fetch;
+    });
+    afterEach(() => {
+        globalThis.fetch = originalFetch;
+    });
+
+    /** Config read 403, DA.live 200 (so the credential is provably valid), roster configurable. */
+    function stubWithRoster(roster: { status: number; body?: unknown }) {
+        globalThis.fetch = jest.fn().mockImplementation((url: string) => {
+            const reply = (status: number, body?: unknown) =>
+                Promise.resolve({
+                    ok: status >= 200 && status < 300,
+                    status,
+                    headers: { get: () => null },
+                    json: async () => body,
+                });
+            if (url.includes('admin.da.live')) return reply(200);
+            if (url.includes(`/config/${org}.json`)) return reply(roster.status, roster.body);
+            return reply(403);
+        }) as unknown as typeof globalThis.fetch;
+    }
+
+    it('names the org admins in the verdict, MASKED', async () => {
+        stubWithRoster({
+            status: 200,
+            body: { users: [{ email: 'owner@example.test', roles: ['admin'] }] },
+        });
+
+        const result = await probeConfigService(
+            { getAccessToken: jest.fn().mockResolvedValue(TOKEN) },
+            org,
+            site,
+            logger as never,
+        );
+
+        expect(result.orgAdmins?.status).toBe('ok');
+        // Recognisable, not published — the report is pasted into tickets.
+        expect(result.verdict).toContain('o****r@example.test');
+        expect(result.verdict).not.toContain('owner@example.test');
+    });
+
+    it('treats an unreadable roster as the finding, not a gap', async () => {
+        stubWithRoster({ status: 403 });
+
+        const result = await probeConfigService(
+            { getAccessToken: jest.fn().mockResolvedValue(TOKEN) },
+            org,
+            site,
+            logger as never,
+        );
+
+        expect(result.orgAdmins?.status).toBe('not_authorized');
+        expect(result.verdict).toMatch(/No org admin is visible/i);
+        expect(result.verdict).toContain('tools.aem.live/bot/setup');
+    });
+});
+

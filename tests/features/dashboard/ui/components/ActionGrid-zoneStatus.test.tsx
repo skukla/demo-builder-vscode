@@ -287,7 +287,7 @@ describe('ActionGrid — every dot has words', () => {
     ];
 
     it.each(cases)('leaves no undocumented dot on a project %s', (_name, props) => {
-        const { container } = render(<ActionGrid {...(props as never)} />);
+        const { container } = render(<ActionGrid {...(props as unknown as React.ComponentProps<typeof ActionGrid>)} />);
 
         const dots = Array.from(container.querySelectorAll('.tile-status-dot'));
         // Positive control: at least one case must actually produce a dot, or
@@ -341,7 +341,7 @@ describe('Edit tile / Sync Storefront demotion', () => {
         expect(edit).toBeInTheDocument();
         expect(republish).toBeInTheDocument();
         // Node.compareDocumentPosition: 4 === edit precedes republish.
-        expect(edit.compareDocumentPosition(republish)).toBe(
+        expect(edit!.compareDocumentPosition(republish!)).toBe(
             Node.DOCUMENT_POSITION_FOLLOWING
         );
     });

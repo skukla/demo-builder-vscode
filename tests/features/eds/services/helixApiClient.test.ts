@@ -29,7 +29,6 @@ describe('helixApiClient', () => {
     beforeEach(() => {
         originalFetch = global.fetch;
         mockFetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
-        // @ts-expect-error overriding for tests
         global.fetch = mockFetch;
     });
 

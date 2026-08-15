@@ -40,6 +40,7 @@ import { readLkgSha } from '@/features/eds/services/lkgReader';
 const mockReadLkgSha = readLkgSha as jest.Mock;
 
 const mockLogger: Logger = {
+    trace: jest.fn(),
     info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),

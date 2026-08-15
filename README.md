@@ -45,24 +45,38 @@ See [build documentation](docs/build.md) for detailed build instructions.
    - Follow the guided setup wizard
 
 2. **Start Your Demo**
-   - Click the Demo Builder status bar item
-   - Or run: `Demo Builder: Start`
+   - Open the Projects dashboard from the Demo Builder sidebar
+   - Press **Start** on the project card
 
 3. **View Status**
    - Check the status bar for real-time updates
-   - Run: `Demo Builder: View Status` for details
+   - The project card and dashboard show whether the demo is running and whether
+     what is published matches your configuration
 
 ## Commands
 
+Available from the Command Palette (all prefixed **Demo Builder:**):
+
 - `Demo Builder: Create Project` - Create a new demo project
-- `Demo Builder: Start` - Start the frontend application
-- `Demo Builder: Stop` - Stop the running demo
-- `Demo Builder: Configure` - Modify project settings
-- `Demo Builder: Delete Project` - Remove the current project
-- `Demo Builder: View Status` - Display detailed project status
 - `Demo Builder: Check for Updates` - Manually check for extension updates
 - `Demo Builder: Diagnostics` - Run comprehensive system diagnostics
-- `Demo Builder: Open in Claude Code` - Launch Claude Code on the current project (URI handler if the extension is installed, terminal otherwise)
+- `Demo Builder: Manage Site Access` - View, add or remove the Configuration Service admins on the project's storefront
+- `Demo Builder: Repair Site Configuration` - Re-run a refused Configuration Service registration, then republish
+- `Demo Builder: Register Global MCP` - Register the Demo Builder MCP server for agents outside a project
+- `Demo Builder: Migrate Storefront Names` - One-shot fix for projects whose DA.live site name differs from the GitHub repo
+- `Demo Builder: Sync Storefront` - Push local storefront changes and publish them
+- `Demo Builder: Open in Claude Code` - Launch Claude Code on the current project
+- `Demo Builder: Manage AI Prompts` - Edit the prompt library offered to Claude Code
+- `Demo Builder: Open AEM Modernization Agent` - Open the AEM Experience Modernization Agent console
+- `Demo Builder: Set Recommended Zoom (120%)` - Apply the recommended webview zoom level
+- `Demo Builder: Reset Zoom (100%)` - Reset the webview zoom level
+- `Demo Builder: DA.live Bookmarklet Setup` - Install the DA.live authoring bookmarklet
+- `Demo Builder: Manage DA.live Sites` - Review and clean up DA.live content sites
+- `Demo Builder: Manage GitHub Repositories` - Review and clean up storefront repositories
+- `Demo Builder: Open Data Installer` - Open the Commerce sample-data installer
+
+Project actions — start, stop, configure, delete, view status — live on the
+**Projects dashboard**, not the palette.
 
 ## AI Configuration & Claude Code Integration
 

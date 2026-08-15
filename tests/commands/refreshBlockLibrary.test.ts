@@ -197,7 +197,7 @@ describe('RefreshBlockLibraryCommand', () => {
     it('retries the pipeline once after DaLiveAuthError (auth recovery)', async () => {
         // First call throws DaLiveAuthError; second succeeds.
         executePipelineMock
-            .mockRejectedValueOnce(new DaLiveAuthError())
+            .mockRejectedValueOnce(new DaLiveAuthError('DA.live authentication expired'))
             .mockResolvedValueOnce({
                 success: true,
                 contentFilesCopied: 0,

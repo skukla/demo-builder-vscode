@@ -46,6 +46,7 @@ import updateCredentialsContent from '../templates/skills/update-credentials.md'
 import { resolveMcpToolsDir } from './aiDefaultsInstaller';
 import { projectNeedsAppBuilderTooling } from './aiToolingGate';
 import componentsConfig from '@/features/components/config/components.json';
+import { DEMO_BUILDER_ALWAYS_ON_SKILLS } from '@/types/ai';
 import type { Project } from '@/types/base';
 import type { RawComponentDefinition, RawComponentRegistry } from '@/types/components';
 
@@ -75,26 +76,33 @@ const components = componentsConfig as unknown as RawComponentRegistry;
  * (`homeAiContextWriter`) — can write the exact same set without duplicating
  * the import list. Order is not significant.
  */
-export const DEMO_BUILDER_SKILLS: ReadonlyArray<{ filename: string; content: string }> = [
-    // Demo Builder lifecycle skills
-    { filename: 'add-component.md', content: addComponentContent },
-    { filename: 'sync-changes.md', content: syncChangesContent },
-    { filename: 'update-credentials.md', content: updateCredentialsContent },
-    { filename: 'create-eds-project.md', content: createEdsProjectContent },
-    // Diagnosis: routes a symptom to the check that answers it. Always-on — every
-    // project can break, and the bundle had no skill for looking, only for doing.
-    { filename: 'diagnose-demo.md', content: diagnoseDemoContent },
-    // EDS site-scraping skills
-    { filename: 'scrape-reference-site.md', content: scrapeReferenceSiteContent },
-    { filename: 'connect-authenticated-site.md', content: connectAuthenticatedSiteContent },
-    { filename: 'commerce-block-mapper.md', content: commerceBlockMapperContent },
-    { filename: 'demo-data-injector.md', content: demoDataInjectorContent },
-    { filename: 'header-nav-footer.md', content: headerNavFooterContent },
-    { filename: 'refine-visual-match.md', content: refineVisualMatchContent },
-    // Custom block authoring registration
-    { filename: 'register-custom-block.md', content: registerCustomBlockContent },
-    { filename: 'remove-custom-block.md', content: removeCustomBlockContent },
-];
+/**
+ * Content for each always-on skill. The LIST of filenames is not defined here —
+ * it lives in `DEMO_BUILDER_ALWAYS_ON_SKILLS` (`@/types/ai`), which the skill
+ * inspector also reads, so the writer and the classifier cannot disagree about
+ * what counts as first-party. A missing key here is a compile error.
+ */
+const SKILL_CONTENT: Record<(typeof DEMO_BUILDER_ALWAYS_ON_SKILLS)[number], string> = {
+    'add-component.md': addComponentContent,
+    'sync-changes.md': syncChangesContent,
+    'update-credentials.md': updateCredentialsContent,
+    'create-eds-project.md': createEdsProjectContent,
+    'diagnose-demo.md': diagnoseDemoContent,
+    'scrape-reference-site.md': scrapeReferenceSiteContent,
+    'connect-authenticated-site.md': connectAuthenticatedSiteContent,
+    'commerce-block-mapper.md': commerceBlockMapperContent,
+    'demo-data-injector.md': demoDataInjectorContent,
+    'header-nav-footer.md': headerNavFooterContent,
+    'refine-visual-match.md': refineVisualMatchContent,
+    'register-custom-block.md': registerCustomBlockContent,
+    'remove-custom-block.md': removeCustomBlockContent,
+};
+
+export const DEMO_BUILDER_SKILLS: ReadonlyArray<{ filename: string; content: string }> =
+    DEMO_BUILDER_ALWAYS_ON_SKILLS.map((filename) => ({
+        filename,
+        content: SKILL_CONTENT[filename],
+    }));
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 

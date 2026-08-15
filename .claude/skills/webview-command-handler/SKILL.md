@@ -89,6 +89,23 @@ gates read, and for the fields its JSX renders. Three different lists.
 - Handler works from the dashboard but the wizard reports an unknown message → it's missing from `ProjectCreationHandlerRegistry.ts` (step 5).
 - Unvalidated payload ids flowing into `aio` commands = command injection. Mirror `subscribeHandler.ts`'s `validateOrgId/validateProjectId/validateWorkspaceId` block verbatim.
 - Throwing instead of returning `{ success: false, error }` breaks every caller that branches on `result.success` (`.rptc/sop/consistency-patterns.md` §2).
+- **A refusal that RETURNS `{ success: false }` does NOT reject on the webview side — it
+  arrives looking exactly like a success.** `WebviewCommunicationManager.handleWebviewMessage`
+  puts whatever the handler returned into the response `payload`; only its `catch` sets an
+  `error` field, so only a THROW produces one. `WebviewClient`'s message listener (in
+  `initialize`) rejects solely when that `error` field is present, and otherwise resolves the
+  payload. So `useVSCodeRequest`'s `error` stays `null` and its `data` holds
+  `{ success: false, error, code }` — meaning **any `useVSCodeRequest<SomeDomainType>` is
+  typed on a lie**, and reading a domain field off it renders a refusal as a success.
+  (2026-08-12, Data Installer: a connectivity line read `data.reachable` off a guard refusal
+  and told signed-out users "Connected to the Data Installer service" for two steps.)
+  - **Type the ENVELOPE and branch on `.success`** — the pattern EDS already uses:
+    `webviewClient.request<GitHubAppCheckResult>(…)`, where that interface declares
+    `success: boolean` and `pollGitHubAppInstallation` checks it before reading any other
+    field (`repoSelectionInline.helpers.tsx`; same shape in `RepoSelectionInline.tsx`).
+  - `useVSCodeRequest` is only safe against a handler that THROWS on failure. Since this
+    project's convention is the opposite (bullet above), treat the hook's domain-typed
+    generic as the exception, not the default.
 
 ## Verify
 Round-trip the message — do not stop at compilation:

@@ -43,7 +43,7 @@ const ctxFactory = () =>
     ({
         stateManager: { getCurrentProject },
         context: { secrets: {}, extensionPath: '/ext' },
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() },
+        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
     }) as unknown as HandlerContext;
 
 describe('apply_updates', () => {

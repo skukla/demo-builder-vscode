@@ -1,7 +1,7 @@
 import { DaLiveConfigOperations } from '@/features/eds/services/daLiveConfigOperations';
 
 const makeLogger = () =>
-    ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }) as never;
+    ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() }) as never;
 
 const makeApiClient = () =>
     ({

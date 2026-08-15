@@ -110,7 +110,7 @@ describe('handleGetProjects — org targeting', () => {
 
             const project = createMockProject({
                 componentConfigs: { 'api-mesh': { SOME_VAR: 'value' } },
-                adobe: { organization: 'org-A', projectId: 'p1', workspace: 'w1' },
+                adobe: { organization: 'org-A', projectId: 'p1', projectName: 'p1', workspace: 'w1', authenticated: true },
             });
             const context = createMockHandlerContext([project]);
 
@@ -140,13 +140,13 @@ describe('handleGetProjects — org targeting', () => {
                 name: 'a',
                 path: path.join(os.homedir(), '.demo-builder', 'projects', 'a'),
                 componentConfigs: { 'api-mesh': { V: '1' } },
-                adobe: { organization: 'org-A', projectId: 'p1', workspace: 'w1' },
+                adobe: { organization: 'org-A', projectId: 'p1', projectName: 'p1', workspace: 'w1', authenticated: true },
             });
             const projectB = createMockProject({
                 name: 'b',
                 path: path.join(os.homedir(), '.demo-builder', 'projects', 'b'),
                 componentConfigs: { 'api-mesh': { V: '2' } },
-                adobe: { organization: 'org-B', projectId: 'p2', workspace: 'w2' },
+                adobe: { organization: 'org-B', projectId: 'p2', projectName: 'p2', workspace: 'w2', authenticated: true },
             });
             const context = createMockHandlerContext([projectA, projectB]);
 

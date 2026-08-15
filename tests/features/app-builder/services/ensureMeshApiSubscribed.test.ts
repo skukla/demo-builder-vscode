@@ -46,6 +46,7 @@ function createProject(): Project {
         adobe: {
             organization: 'org-1',
             projectId: 'proj-1',
+            projectName: 'proj-1',
             workspace: 'ws-1',
             authenticated: true,
         },
@@ -224,7 +225,9 @@ describe('ensureMeshApiSubscribed', () => {
             project: createProject(),
             authService: authService as any,
             logger,
-            onProgress: (event) => events.push(event),
+            onProgress: (event) => {
+                events.push(event);
+            },
         });
 
         expect(events).toContainEqual({ code: MGMT, done: true });

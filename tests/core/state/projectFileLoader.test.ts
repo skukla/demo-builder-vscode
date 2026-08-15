@@ -483,7 +483,7 @@ describe('§E edit-mode round-trip — keyed instances → manifest → edit set
         const loader = new ProjectFileLoader(makeLogger());
         const reloaded = await loader.loadProject(PROJECT_PATH, () => []);
 
-        const settings = extractSettingsFromProject(reloaded!);
+        const settings = extractSettingsFromProject(reloaded!, false);
 
         expect(settings.appBuilderComponentSources).toEqual({
             'firefly-image-gen': {

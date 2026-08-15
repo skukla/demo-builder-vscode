@@ -11,7 +11,7 @@
 import * as vscode from 'vscode';
 import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
 import { StateManager } from '@/core/state';
-import { Logger } from '@/core/logging';
+import type { Logger } from '@/types/logger';
 
 // Mock dependencies
 jest.mock('@/core/logging/debugLogger');

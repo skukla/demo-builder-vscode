@@ -2,6 +2,7 @@
  * Tests for Projects Dashboard handlers
  */
 
+import type { Project } from '@/types';
 import * as os from 'os';
 import * as path from 'path';
 import {

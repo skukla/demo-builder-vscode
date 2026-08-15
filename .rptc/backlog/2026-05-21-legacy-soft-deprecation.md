@@ -1,5 +1,33 @@
 # Legacy / Soft-Deprecation Cleanup — Cycle Plan
 
+> ## ⚠️ RE-MEASURED 2026-08-13 — almost all of this is done
+>
+> The backlog index described this as *"~30 inventoried items across `src/`… 3 zero-caller
+> deletions are ready any time for a small trim task."* **That was ~2.5 months stale.** The
+> body of this file already recorded the L1–L5 execution (Cycle 4, 2026-05-31, PR #8), and
+> three of the four follow-ups have shipped since. Measured against `src/` on 2026-08-13:
+>
+> | Sub-item | Then | Now |
+> |---|---|---|
+> | L1 `getProjectDirectory` | zero-caller, ready to delete | **gone** (0 files) |
+> | L1 `getWebviewHTMLWithBundles` alias | ready to delete | **gone** — the module exports `getWebviewHTML` only |
+> | Follow-up 1 — pre-existing lint warnings | 15 warnings, 0 errors | **0 warnings, 0 errors** (`npx eslint src tests`, exit 0; verified with a positive control that exits 1) |
+> | Follow-up 3 — `componentHandler` untangle | `@deprecated` but live-wired | **file deleted** |
+> | Category-A `checkMeshAccess` alias | kept | **gone** |
+> | `@deprecated` count in `src/` | 3 | **1** — only `envFileGenerator.ts` (Category-A keep, active path) |
+>
+> ### What actually remains
+>
+> 1. **Follow-up 2, half of it.** `src/features/mesh/handlers/index.ts` is clean (exports the
+>    canonical map only). But `stalenessDetector.ts` still carries the dual surface — a
+>    `StalenessDetectorService` class *and* ten standalone function exports, with a comment at
+>    `:173` naming them "shared between service and backward-compatible exports". The static
+>    method is already gone.
+> 2. **`demoPackageLoader` test seam** — never scheduled; unverified in this pass.
+>
+> **Do not execute the batch plan below.** It is history. Scope any pickup from the two items
+> above, and re-measure before starting — this entry has now been wrong once.
+
 ## Provenance
 
 This plan was produced during the post-Cycle-C audit (commit `5cfb4539` on `feature/ai-layer-cycle-c`, 2026-05-21). The audit inventoried every `@deprecated`, `legacy`, `backward compatibility`, and `Kept for compatibility` reference in `src/`. The findings were **deferred** from that audit because the scope spans many features outside the AI Layer Pivot. This document captures the deferred work so it survives until a future cycle picks it up.
@@ -290,11 +318,14 @@ Not yet scheduled:
 
 ### Category-A kept (verified NOT soft deprecation — do not remove)
 
-- `src/features/project-creation/helpers/envFileGenerator.ts:52` — points at
-  `ProjectSetupContext`; the generator is still an active code path.
-- `src/features/project-creation/ui/steps/ProjectCreationStep.tsx:459`
-  `checkMeshAccess` — internal-only alias delegating to `runPreFlightChecks`;
-  zero external callers, harmless.
+- `envFileGenerator.ts` — the `@deprecated` tag on the generator points at
+  `ProjectSetupContext`; the generator is still an active code path. **Still true
+  2026-08-13, and now the only `@deprecated` left in `src/`.**
+- ~~`ProjectCreationStep.checkMeshAccess`~~ — internal-only alias delegating to
+  `runPreFlightChecks`. **Deleted since; zero hits in `src/` on 2026-08-13.** The
+  `file:line` citation that stood here is removed rather than corrected: leaving the
+  literal path keeps the hygiene scan's §4 reporting a known-false hit forever, and a
+  scan with a permanent false entry is one people stop reading.
 - All 2026-05-21 Category-A entries above (stateManager/stepLogger/typeGuards
   migration paths, spectrumTokens polymorphism, Helix/fstab external-system
   comments) remain legitimate.

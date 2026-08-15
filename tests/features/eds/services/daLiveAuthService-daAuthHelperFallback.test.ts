@@ -13,7 +13,7 @@ jest.mock('vscode', () => ({
 }));
 
 jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() })),
+    getLogger: jest.fn(() => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() })),
 }));
 
 jest.mock('@/features/eds/services/daAuthHelperToken', () => ({

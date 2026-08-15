@@ -196,7 +196,7 @@ describe('WebviewApp', () => {
     describe('render props pattern', () => {
         it('supports function children (render props)', async () => {
             render(
-                <WebviewApp>{(data) => <div>Data: {data?.customProp || 'none'}</div>}</WebviewApp>
+                <WebviewApp>{(data) => <div>Data: {String((data as { customProp?: string } | null)?.customProp ?? 'none')}</div>}</WebviewApp>
             );
 
             triggerMessage('init', { customProp: 'test-value' });

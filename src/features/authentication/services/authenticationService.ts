@@ -412,7 +412,7 @@ export class AuthenticationService {
         // on a cache miss, getOrganizationsSdkOnly()[0] — SDK-only so the quick
         // check never stalls on `aio console org list`. ID-only targeting is a
         // fine fallback (buildAioConsoleEnv tolerates the missing code/name).
-        const org = this.getCachedOrganization() ?? (await this.getOrganizationsSdkOnly())[0];
+        const org = this.getCachedOrganization() ?? (await this.getOrganizationsSdkOnly())?.[0];
         if (!org?.id) {
             return this.organizationValidator.testDeveloperPermissions();
         }
@@ -437,10 +437,12 @@ export class AuthenticationService {
      *
      * Non-interactive org read for on-open probes (P1): unlike
      * {@link getOrganizations} it never runs `aio console org list` (which can
-     * stall ~14.5s and launch a browser), degrading to `[]` instead. Used by the
-     * dashboard org-context check so opening a project can't surprise the user.
+     * stall ~14.5s and launch a browser). Returns `undefined` when the SDK could
+     * not answer; an empty array is a REAL answer (the token reaches no Console
+     * orgs). Used by the dashboard org-context check so opening a project can't
+     * surprise the user.
      */
-    async getOrganizationsSdkOnly(): Promise<AdobeOrg[]> {
+    async getOrganizationsSdkOnly(): Promise<AdobeOrg[] | undefined> {
         return withTiming('getOrganizationsSdkOnly', async () => {
             const { fetcher } = await this.ensureEntities();
             return fetcher.getOrganizationsSdkOnly();

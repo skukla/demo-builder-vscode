@@ -23,7 +23,10 @@ export class FileWatcher {
     async waitForFileSystem(
         path: string,
         expectedCondition?: () => Promise<boolean>,
-        timeout = TIMEOUTS.FILE_WATCH_TIMEOUT,
+        // Annotated because TIMEOUTS is `as const`: without it the param's type
+        // is inferred as the LITERAL 10000, so any caller passing a different
+        // number fails to typecheck. Callers may pass any timeout.
+        timeout: number = TIMEOUTS.FILE_WATCH_TIMEOUT,
     ): Promise<void> {
         this.logger.debug(`[File Watcher] Waiting for file system change: ${path}`);
 
@@ -35,15 +38,18 @@ export class FileWatcher {
                     reject(new Error(`File system wait timeout: ${path}`));
                 }, timeout);
 
-                this.pollingService.pollUntilCondition(expectedCondition, {
-                    timeout,
-                    name: `file system: ${path}`,
-                    initialDelay: TIMEOUTS.FILE_WATCH_INITIAL,
-                    maxDelay: TIMEOUTS.FILE_WATCH_MAX,
-                }).then(() => {
-                    clearTimeout(timeoutHandle);
-                    resolve();
-                }).catch(reject);
+                this.pollingService
+                    .pollUntilCondition(expectedCondition, {
+                        timeout,
+                        name: `file system: ${path}`,
+                        initialDelay: TIMEOUTS.FILE_WATCH_INITIAL,
+                        maxDelay: TIMEOUTS.FILE_WATCH_MAX,
+                    })
+                    .then(() => {
+                        clearTimeout(timeoutHandle);
+                        resolve();
+                    })
+                    .catch(reject);
                 return;
             }
 
@@ -123,7 +129,7 @@ export class FileWatcher {
      * Dispose all watchers
      */
     disposeAll(): void {
-        this.watchers.forEach(watcher => watcher.dispose());
+        this.watchers.forEach((watcher) => watcher.dispose());
         this.watchers.clear();
         this.logger.debug('[File Watcher] Disposed all watchers');
     }

@@ -54,7 +54,7 @@ const mockRepublish = jest.fn(async () => undefined);
 function makeDeps(calls: string[]) {
     return {
         catalog: [],
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
         subscribeRequiredApis: jest.fn(async () => {
             calls.push('subscribe');
         }),

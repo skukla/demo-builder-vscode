@@ -20,3 +20,6 @@ export type { ModalProps } from './Modal';
 
 export { NumberedInstructions } from './NumberedInstructions';
 export type { NumberedInstructionsProps } from './NumberedInstructions';
+
+export { Drawer } from './Drawer';
+export type { DrawerProps } from './Drawer';

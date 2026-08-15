@@ -1,6 +1,6 @@
 /**
  * Unit tests for meshSetupService
- * 
+ *
  * Tests mesh deployment logic with ProjectSetupContext integration.
  * Focuses on context passing and .env generation.
  */
@@ -40,6 +40,7 @@ describe('meshSetupService', () => {
     let mockMeshDefinition: TransformedComponentDefinition;
     let mockProgressTracker: jest.Mock;
     let mockCommandExecutor: any;
+    let mockHandlerContext: any;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -57,7 +58,8 @@ describe('meshSetupService', () => {
             name: 'test-project',
             path: '/test/project',
             status: 'ready',
-            created: new Date().toISOString(),
+            created: new Date(),
+            lastModified: new Date(),
             componentInstances: {
                 'commerce-mesh': {
                     id: 'commerce-mesh',
@@ -68,19 +70,19 @@ describe('meshSetupService', () => {
                     status: 'ready',
                 },
             },
-        } as Project;
+        };
 
         mockMeshDefinition = {
             id: 'commerce-mesh',
             name: 'Adobe Commerce API Mesh',
-            type: 'mesh',
+            subType: 'mesh',
             configuration: {
                 requiredEnvVars: ['ADOBE_COMMERCE_GRAPHQL_ENDPOINT'],
             },
-        } as TransformedComponentDefinition;
+        };
 
         // Create a real ProjectSetupContext with mock dependencies
-        const mockHandlerContext = {
+        mockHandlerContext = {
             logger: {
                 info: jest.fn(),
                 error: jest.fn(),
@@ -99,8 +101,15 @@ describe('meshSetupService', () => {
         } as any;
 
         const mockRegistry = {
+            version: '1.0.0',
             envVars: {},
-            components: { frontends: [], backends: [], dependencies: [], mesh: [], integrations: [] },
+            components: {
+                frontends: [],
+                backends: [],
+                dependencies: [],
+                mesh: [],
+                integrations: [],
+            },
             services: {},
         };
 
@@ -108,7 +117,7 @@ describe('meshSetupService', () => {
             mockHandlerContext,
             mockRegistry,
             mockProject,
-            {},
+            {}
         );
 
         mockProgressTracker = jest.fn();
@@ -117,7 +126,9 @@ describe('meshSetupService', () => {
             execute: jest.fn(),
         };
 
-        (ServiceLocator.getCommandExecutor as jest.Mock) = jest.fn().mockReturnValue(mockCommandExecutor);
+        (ServiceLocator.getCommandExecutor as jest.Mock) = jest
+            .fn()
+            .mockReturnValue(mockCommandExecutor);
         (ServiceLocator.getAuthenticationService as jest.Mock) = jest.fn().mockReturnValue({
             getCachedOrganization: jest.fn().mockReturnValue(undefined),
         });
@@ -141,7 +152,10 @@ describe('meshSetupService', () => {
                 endpoint: 'https://mesh.adobe.io/graphql',
             };
 
-            const result = shouldConfigureExistingMesh(meshConfig, 'https://existing.adobe.io/graphql');
+            const result = shouldConfigureExistingMesh(
+                meshConfig,
+                'https://existing.adobe.io/graphql'
+            );
             expect(result).toBe(false);
         });
 
@@ -168,13 +182,15 @@ describe('meshSetupService', () => {
                 '/test/project/components/commerce-mesh',
                 'commerce-mesh',
                 mockMeshDefinition,
-                mockSetupContext,
+                mockSetupContext
             );
         });
 
         it('should call ensureMeshApiSubscribed BEFORE deployMeshComponent (create-time)', async () => {
             const order: string[] = [];
-            mockEnsureSubscribed.mockImplementation(async () => { order.push('subscribe'); });
+            mockEnsureSubscribed.mockImplementation(async () => {
+                order.push('subscribe');
+            });
             (helpers.deployMeshComponent as jest.Mock).mockImplementation(async () => {
                 order.push('deploy');
                 return { success: true, data: { meshId: 'm', endpoint: 'e' } };
@@ -198,17 +214,20 @@ describe('meshSetupService', () => {
                 ...mockProject,
                 componentInstances: {
                     'commerce-mesh': {
+                        id: 'commerce-mesh',
+                        name: 'API Mesh',
+                        status: 'ready' as const,
                         version: '1.0.0',
                         // path is missing
                     },
                 },
-            } as Project;
+            };
 
             const mockSetupContextWithoutPath = new ProjectSetupContext(
-                mockSetupContext['handlerContext' as any],
+                mockHandlerContext,
                 mockSetupContext.registry,
                 projectWithoutMeshPath,
-                {},
+                {}
             );
 
             const context: MeshSetupContext = {
@@ -248,18 +267,18 @@ describe('meshSetupService', () => {
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Configuring API Mesh',
                 70,
-                'Generating mesh configuration...',
+                'Generating mesh configuration...'
             );
             // The pre-deploy API subscribe must be communicated to the user.
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Configuring API Mesh',
                 72,
-                'Enabling API access...',
+                'Enabling API access...'
             );
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Deploying API Mesh',
                 75,
-                'Deploying mesh to Adobe I/O...',
+                'Deploying mesh to Adobe I/O...'
             );
         });
 
@@ -275,7 +294,7 @@ describe('meshSetupService', () => {
             await deployNewMesh(context, undefined);
 
             expect(mockSetupContext.logger.debug).toHaveBeenCalledWith(
-                '[Project Creation] Mesh .env generated',
+                '[Project Creation] Mesh .env generated'
             );
         });
 
@@ -350,7 +369,7 @@ describe('meshSetupService', () => {
                 '/test/project/components/commerce-mesh',
                 'commerce-mesh',
                 mockMeshDefinition,
-                mockSetupContext,
+                mockSetupContext
             );
         });
 
@@ -359,16 +378,20 @@ describe('meshSetupService', () => {
                 ...mockProject,
                 componentInstances: {
                     'commerce-mesh': {
+                        id: 'commerce-mesh',
+                        name: 'API Mesh',
+                        status: 'ready' as const,
                         version: '1.0.0',
+                        // path is missing
                     },
                 },
-            } as Project;
+            };
 
             const mockSetupContextWithoutPath = new ProjectSetupContext(
-                mockSetupContext['handlerContext' as any],
+                mockHandlerContext,
                 mockSetupContext.registry,
                 projectWithoutMeshPath,
-                {},
+                {}
             );
 
             const context: MeshSetupContext = {
@@ -404,7 +427,7 @@ describe('meshSetupService', () => {
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Configuring API Mesh',
                 75,
-                'Updating existing mesh configuration...',
+                'Updating existing mesh configuration...'
             );
         });
 
@@ -424,7 +447,7 @@ describe('meshSetupService', () => {
             await linkExistingMesh(context, meshConfig);
 
             expect(mockSetupContext.logger.info).toHaveBeenCalledWith(
-                '[Project Creation] Phase 3: Configuring and deploying API Mesh...',
+                '[Project Creation] Phase 3: Configuring and deploying API Mesh...'
             );
         });
     });

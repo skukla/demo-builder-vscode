@@ -22,8 +22,11 @@ describe('dashboardStatusService', () => {
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
+                created: new Date(),
+                lastModified: new Date(),
                 status: 'running',
                 adobe: {
+                    authenticated: true,
                     organization: 'Test Org',
                     projectName: 'Adobe Project',
                     projectId: 'proj-123',
@@ -62,6 +65,8 @@ describe('dashboardStatusService', () => {
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
+                created: new Date(),
+                lastModified: new Date(),
                 status: 'running',
             };
             const meshInfo = {
@@ -82,6 +87,9 @@ describe('dashboardStatusService', () => {
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
+                created: new Date(),
+                lastModified: new Date(),
+                status: 'ready',
             };
 
             // When: Building the status payload
@@ -96,6 +104,8 @@ describe('dashboardStatusService', () => {
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
+                created: new Date(),
+                lastModified: new Date(),
                 status: 'stopped',
             };
 
@@ -112,6 +122,8 @@ describe('dashboardStatusService', () => {
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
+                created: new Date(),
+                lastModified: new Date(),
                 status: 'ready',
             };
 
@@ -129,6 +141,9 @@ describe('dashboardStatusService', () => {
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
+                created: new Date(),
+                lastModified: new Date(),
+                status: 'ready',
                 meshState: {
                     envVars: {
                         MESH_ENDPOINT: 'https://mesh.adobe.io/graphql',
@@ -213,6 +228,9 @@ describe('dashboardStatusService', () => {
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
+                created: new Date(),
+                lastModified: new Date(),
+                status: 'ready',
             };
 
             // When: Checking for mesh deployment record
@@ -227,6 +245,9 @@ describe('dashboardStatusService', () => {
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
+                created: new Date(),
+                lastModified: new Date(),
+                status: 'ready',
                 meshState: {
                     envVars: {},
                     sourceHash: null,
@@ -285,6 +306,9 @@ describe('dashboardStatusService', () => {
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
+                created: new Date(),
+                lastModified: new Date(),
+                status: 'ready',
                 meshState: {
                     envVars: {},
                     sourceHash: null,
@@ -305,6 +329,9 @@ describe('dashboardStatusService', () => {
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
+                created: new Date(),
+                lastModified: new Date(),
+                status: 'ready',
             };
 
             // When: Getting mesh endpoint
@@ -319,6 +346,9 @@ describe('dashboardStatusService', () => {
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
+                created: new Date(),
+                lastModified: new Date(),
+                status: 'ready',
                 meshState: {
                     envVars: {},
                     sourceHash: null,
@@ -338,6 +368,9 @@ describe('dashboardStatusService', () => {
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
+                created: new Date(),
+                lastModified: new Date(),
+                status: 'ready',
                 meshState: {
                     envVars: {},
                     sourceHash: null,
@@ -358,6 +391,9 @@ describe('dashboardStatusService', () => {
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
+                created: new Date(),
+                lastModified: new Date(),
+                status: 'ready',
                 meshState: {
                     envVars: {},
                     sourceHash: null,
@@ -379,6 +415,9 @@ describe('dashboardStatusService', () => {
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
+                created: new Date(),
+                lastModified: new Date(),
+                status: 'ready',
                 componentConfigs: {
                     frontend: {
                         MESH_ENDPOINT: 'https://old-mesh.adobe.io/graphql',
@@ -401,6 +440,9 @@ describe('dashboardStatusService', () => {
             const project: Project = {
                 name: 'test-project',
                 path: '/path/to/project',
+                created: new Date(),
+                lastModified: new Date(),
+                status: 'ready',
                 componentConfigs: {
                     frontend: {
                         MESH_ENDPOINT: 'https://old-stale-endpoint.adobe.io/graphql',

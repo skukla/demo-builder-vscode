@@ -44,6 +44,14 @@ export interface StorefrontMigrationResult {
     migrated: boolean;
     /** Error message when the migration started but failed before re-registration succeeded. */
     error?: string;
+    /**
+     * Masked addresses whose site-admin grants the re-registration could not hand
+     * back. This path calls `updateSiteConfig` directly rather than going through
+     * `siteConfigRegistrar`, so it has to carry the loss out itself — and it runs
+     * against pre-`164fd251` storefronts, the ones most likely to have several
+     * admins.
+     */
+    lostGrants?: string[];
 }
 
 /**
@@ -112,6 +120,11 @@ export async function migrateStorefrontNamingIfNeeded(
     // URL and shake off the stale primary-site stamp tied to the old bus.
     const newParams = buildSiteConfigParams(repoOwner, repoName, daLiveOrg, repoName, byomOverlayUrl);
     const updateResult = await configService.updateSiteConfig(newParams);
+    // Computed BEFORE the failure return: a re-registration that failed AND lost
+    // the grants used to report only the error string, dropping the half nothing
+    // in the app can undo.
+    const lostGrants =
+        updateResult.grantsRestored === false ? updateResult.lostGrants : undefined;
     if (!updateResult.success) {
         logger.error(
             `[StorefrontMigration] Helix re-registration failed: ${updateResult.error ?? 'unknown'}`,
@@ -120,6 +133,7 @@ export async function migrateStorefrontNamingIfNeeded(
             skipped: false,
             migrated: false,
             error: `Storefront name migration failed during Helix re-registration: ${updateResult.error ?? 'unknown'}`,
+            ...(lostGrants?.length && { lostGrants }),
         };
     }
 
@@ -148,5 +162,9 @@ export async function migrateStorefrontNamingIfNeeded(
         `[StorefrontMigration] Storefront migrated to ${daLiveOrg}/${repoName}; ` +
         `daLiveSite now matches repoName and bus has a fresh contentBusId.`,
     );
-    return { skipped: false, migrated: true };
+    return {
+        skipped: false,
+        migrated: true,
+        ...(lostGrants?.length && { lostGrants }),
+    };
 }
