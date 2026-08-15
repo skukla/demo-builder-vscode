@@ -165,6 +165,22 @@ function hasLegacyKeys(legacyKeys?: Record<string, PersistedHelixKey>): boolean 
     return Boolean(legacyKeys && Object.keys(legacyKeys).length > 0);
 }
 
+/**
+ * Convert an Admin API key id into the form the config API accepts as a URL
+ * path segment: standard base64 → base64url (`+`→`-`, `/`→`_`).
+ *
+ * The create response returns the RAW id and the listing endpoint keys the same
+ * key by its URL-safe form, so a key id containing `/` splits the DELETE path
+ * and Helix answers 400. Measured 2026-08-15 on a live site: raw id → 400,
+ * URL-safe id → 204. Percent-encoding does NOT work here; the server wants the
+ * substituted characters. `/` was measured directly; `+` follows from the same
+ * base64url mapping and is included so the other half of the alphabet cannot
+ * bite later.
+ */
+function toUrlSafeKeyId(id: string): string {
+    return id.replace(/\+/g, '-').replace(/\//g, '_');
+}
+
 /** Explicit paths when provided, otherwise the site root (`/`) for a bulk operation. */
 function getPathsOrDefault(paths?: string[]): string[] {
     return paths && paths.length > 0 ? paths : ['/'];
@@ -631,9 +647,7 @@ export class HelixService {
         });
 
         if (response.status === 401) {
-            throw new Error(
-                ADMIN_API_401_MESSAGE,
-            );
+            throw new Error(ADMIN_API_401_MESSAGE);
         }
 
         if (response.status === 403) {
@@ -686,9 +700,7 @@ export class HelixService {
         });
 
         if (response.status === 401) {
-            throw new Error(
-                ADMIN_API_401_MESSAGE,
-            );
+            throw new Error(ADMIN_API_401_MESSAGE);
         }
 
         if (response.status === 403) {
@@ -750,8 +762,11 @@ export class HelixService {
                     'content-type': 'application/json',
                 },
                 body: JSON.stringify({
-                    description: 'Demo Builder publish/unpublish key',
-                    roles: ['admin'],
+                    // Shown in the site's apiKeys listing, so name what it can
+                    // actually do. Unpublish is NOT in scope: DELETE /live
+                    // authenticates with the DA.live bearer, not this key.
+                    description: 'Demo Builder publish key',
+                    roles: ['publish'],
                 }),
                 signal: AbortSignal.timeout(TIMEOUTS.LONG),
             });
@@ -823,7 +838,7 @@ export class HelixService {
             return { success: true };
         }
 
-        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${persisted.id}.json`;
+        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${toUrlSafeKeyId(persisted.id)}.json`;
         try {
             const imsToken = await this.getDaLiveToken();
             const response = await fetch(url, {
@@ -862,7 +877,7 @@ export class HelixService {
         // Remove from persistent store first (even if API call fails)
         await HelixService.deletePersistedKey(cacheKey);
 
-        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${persisted.id}.json`;
+        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${toUrlSafeKeyId(persisted.id)}.json`;
         try {
             const imsToken = await this.getDaLiveToken();
             const response = await fetch(url, {
@@ -1121,9 +1136,7 @@ export class HelixService {
         });
 
         if (response.status === 401) {
-            throw new Error(
-                ADMIN_API_401_MESSAGE,
-            );
+            throw new Error(ADMIN_API_401_MESSAGE);
         }
 
         if (response.status === 403) {
@@ -1229,9 +1242,7 @@ export class HelixService {
         });
 
         if (response.status === 401) {
-            throw new Error(
-                ADMIN_API_401_MESSAGE,
-            );
+            throw new Error(ADMIN_API_401_MESSAGE);
         }
 
         if (response.status === 403) {
@@ -1645,9 +1656,7 @@ export class HelixService {
 
         // 401 is authentication failure
         if (response.status === 401) {
-            throw new Error(
-                ADMIN_API_401_MESSAGE,
-            );
+            throw new Error(ADMIN_API_401_MESSAGE);
         }
 
         // 403 is access denied
@@ -1713,9 +1722,7 @@ export class HelixService {
             });
 
             if (response.status === 401) {
-                throw new Error(
-                    ADMIN_API_401_MESSAGE,
-                );
+                throw new Error(ADMIN_API_401_MESSAGE);
             }
 
             if (response.status === 403) {
