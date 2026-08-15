@@ -1,5 +1,34 @@
 # EDS reset sends the whole template in one create-tree, and GitHub times out
 
+> **SHIPPED AND VERIFIED LIVE 2026-08-15 — `6a258b96`.** A real reset of
+> `skukla/demo-builder-test` (on the very template that was failing) logged
+> `Creating tree with 3344 entries in 14 request(s)` and completed the tree in
+> ~14 seconds, where it previously timed out at ~12. Commit `8107a42`, 3,378
+> files, whole pipeline green through mesh redeploy.
+>
+> **Two corrections to what this item proposed:**
+>
+> 1. *"First batch bases on the target branch's current tree"* would have been
+>    WRONG. A reset REPLACES the repo, so files the template no longer contains
+>    would have survived it. The first batch carries NO `base_tree`; each later
+>    batch chains on the previous, making the final tree exactly the union. A
+>    test pins this explicitly.
+> 2. Batching is by **BYTES, never entry count**, and an entry is never split.
+>    Measured on `boilerplate-b2b-template`: 3,340 files, 13.13 MB of content, a
+>    **13.55 MB** single request body (this item's "4.74 MB" was the COMPRESSED
+>    archive), median entry ~1 KB — and **one entry 3.5 MB on its own**, which
+>    is why an oversized entry must become its own request.
+>
+> **Bonus: a latent data-loss path closed.** Zero entries used to reach
+> `createTree` unguarded, producing an EMPTY tree, committing it, and moving the
+> branch ref — which empties the repository. A silently failed template download
+> was one step from destroying a storefront. It now refuses before any commit.
+>
+> **Still open, and NOT what this item thought:** the same verified reset did
+> NOT install `placeholders/*.json` or `enrichment.json`. The theory that the
+> project simply had not been reset is DISPROVED — a full successful reset
+> leaves them absent, and the logs never mention them. Tracked separately.
+
 **Filed:** 2026-08-15, from a live reset failure on a B2B storefront.
 **Severity:** breaks reset outright for any project on a large template. Not
 intermittent, not size-dependent-on-luck — the same template fails every time.
