@@ -312,7 +312,12 @@ wizard re-run is not available and an expiry takes down PDP publishing for
 everyone at once — silently, surfacing as "PDPs 404", which is precisely the
 failure this item started as.
 
-### DESIGN DECIDED 2026-08-15: the extension registers its org's key
+### DESIGN DECIDED 2026-08-15: the extension registers its SITE's key
+
+> **Revised later the same day: SITE-scoped, not org-scoped.** The section below
+> was written for org scope; the correction and its reasoning are in
+> "SCOPE CORRECTED" at the end of this item. Everything else — the registration
+> flow, the storage constraints, `ac36fc7`'s constraint — holds unchanged.
 
 Full research: `.rptc/research/pdp-credential-rotation/research.md`.
 
@@ -390,6 +395,62 @@ where `/` is written `_` — not the `id` field; using the `id` field returns 40
 A first cleanup check reported success wrongly by comparing the wrong field.
 
 Fix A stands on its own and is why this stopped being urgent.
+
+### SCOPE CORRECTED 2026-08-15: SITE-scoped keys, and don't delete the minter
+
+Org scope was chosen for a reason that turned out to be false — that it saved
+the action a per-site lookup. It does not: **every request already carries both
+`org` and `site`** (`pdp404Snippet.ts` builds `?org=&site=&path=`, and
+`appendOverlayParams` requires both), so `org/site` is exactly as cheap to key
+on as `org`. With that gone, site scope wins on every remaining axis:
+
+| | org-scoped | site-scoped |
+|---|---|---|
+| Blast radius if leaked | every AEM site in that GitHub owner, demo or not | one storefront |
+| Revoke on project delete | impossible — would break sibling projects | correct, and already wired |
+| Lookup cost in the action | same | same |
+| Keys to mint | fewer | more, but minting is automatic |
+
+Consequence worth noting: **the "do SCs use distinct GitHub namespaces?" question
+is now MOOT.** It only mattered for keying an org-wide param map.
+
+**And `createAdminApiKey` should NOT be deleted** — an earlier draft of this item
+said it should. Under site scope it is already the right shape: the right
+endpoint (`/config/{org}/sites/{site}/apiKeys.json`), keyed `org/site`,
+SecretStorage-persisted, delete-old-before-mint, with teardown revocation
+already wired at `projectDeletionService.ts:408`. Two real bugs were fixed
+instead (see below). Deleting it would also have stranded the pre-`beta.106`
+`admin` keys permanently, because the id fix is what makes revoking them work
+at all.
+
+**Two bugs fixed in that code, both measured live:**
+
+1. It requested `roles: ['admin']` while its own docstring claimed publish. Now
+   `['publish']` — least privilege, and confirmed sufficient.
+2. Both DELETE paths interpolated the RAW key id. Helix returns a base64 id, so
+   roughly half contain `/`, which splits the URL path. Now converted to
+   base64url (`toUrlSafeKeyId`). Only `/`→`_` was measured; `+`→`-` is included
+   from the same mapping.
+
+Neither was visible to the suite: every fixture used a clean id like
+`old-key-id`, so the encoding was never exercised. The new tests use a real
+Helix id.
+
+**End-to-end probe, 2026-08-15**, against locked `skukla/demo-builder-test`,
+issuing the same request shapes the patched code now sends:
+
+| Step | Result |
+|---|---|
+| mint `roles: ['publish']` | 200 (id contained `/`) |
+| publish a PDP with that key ALONE | **200** — publish scope suffices |
+| no-auth control | 401 — site genuinely locked |
+| revoke with URL-safe id | 204 |
+| revoke with raw id | **400** — the old bug, reproduced in the same run |
+| cleanup | 0 probe keys remaining |
+
+So the EXTENSION half of Fix B is proven end to end. What remains unproven is
+the ACTION half: the `register-publish-key` endpoint does not exist, and
+`validateCallerToken` has not been exercised with a `darkalley` DA.live token.
 
 ### Decide deliberately before building — SUPERSEDED, kept for the reasoning
 

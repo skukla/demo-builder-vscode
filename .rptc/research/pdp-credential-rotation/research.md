@@ -79,12 +79,12 @@ extension.
 
 ## The design
 
-1. **Extension mints an org-scoped key** with `roles: ['publish']`.
-   `createAdminApiKey` already implements site-scoped minting, SecretStorage persistence,
-   and delete-old-before-mint. It needs org scope and the narrower role. Two caveats: it
-   currently requests `roles: ['admin']`, and it has **no production caller** — the
-   minting path is dead code, live only in tests. Only `deleteAdminApiKey` runs today, on
-   project teardown.
+1. **Extension mints a SITE-scoped key** with `roles: ['publish']` — see "Scope
+   corrected" below; this originally said org-scoped. `createAdminApiKey` already does
+   exactly this: right endpoint, keyed `org/site`, SecretStorage-persisted,
+   delete-old-before-mint, with teardown revocation wired at
+   `projectDeletionService.ts:408`. Two bugs were fixed in it rather than replacing it
+   (`roles: ['admin']` → `['publish']`, and raw→URL-safe key ids in both DELETE paths).
 2. **Extension registers the key** with a new `register-publish-key` action, presenting
    the DA.live IMS bearer it already holds.
 3. **The action authenticates the caller** with the existing `validateCallerToken` +
@@ -116,11 +116,33 @@ extension.
 - **`aio-lib-files` is US-only** (East/West US). State has an EU region; Files does not.
   Weigh only if demos must run in-region for EU.
 
+## Scope corrected: SITE-scoped, not org-scoped
+
+Org scope was chosen on a false premise — that it spared the action a per-site lookup.
+It does not. Every request already carries both `org` and `site` (`pdp404Snippet.ts`
+builds `?org=&site=&path=`; `appendOverlayParams` requires both), so keying on
+`org/site` costs exactly what keying on `org` costs. With that gone:
+
+| | org-scoped | site-scoped |
+|---|---|---|
+| Blast radius if leaked | every AEM site under that GitHub owner | one storefront |
+| Revoke on project delete | impossible without breaking siblings | correct, already wired |
+| Lookup cost | same | same |
+| Keys to mint | fewer | more, but automatic |
+
+**This also makes the GitHub-namespace question moot** — it was only load-bearing for
+keying an org-wide param map, which site scope does not use.
+
+**Measured end to end 2026-08-15** on locked `skukla/demo-builder-test`, issuing the same
+shapes the patched code sends: mint `roles:['publish']` → 200 (id contained `/`); publish
+a PDP with that key alone → **200**; no-auth control → 401; revoke with URL-safe id → 204;
+revoke with raw id → **400** (the old bug, reproduced in the same run); cleanup left 0
+probe keys. The extension half of Fix B is therefore proven; the action half is not.
+
 ## Verify before building
 
-1. **That SCs use distinct GitHub namespaces.** Inferred from the DA.live org model; it is
-   the single assumption that rules out the much simpler param map. If SCs in fact share
-   one org, revisit design 1.
+1. ~~That SCs use distinct GitHub namespaces.~~ **Moot** under site scope — it only
+   mattered for keying an org-wide param map.
 2. **That `validateCallerToken` accepts a `darkalley` DA.live token.** It introspects
    against the token's own `client_id`, so it should — but it has only been exercised with
    CLI tokens, and `discover-stores` has no test for its guard chain (only the lib beneath
