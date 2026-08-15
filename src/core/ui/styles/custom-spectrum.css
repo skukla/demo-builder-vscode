@@ -746,8 +746,8 @@ button[class*="spectrum-Button"][disabled],
    Added for the Data Installer's export type list — 18 names, the longest 38
    characters, which cannot be broken and do not fit at `size="L"`. */
 .modal-wide {
-    width: min(1100px, 92vw) !important;
-    max-width: min(1100px, 92vw) !important;
+    width: min(980px, 92vw) !important;
+    max-width: min(980px, 92vw) !important;
 }
 
 .modal-fit-content .modal-content {

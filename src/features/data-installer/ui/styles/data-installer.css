@@ -450,19 +450,27 @@
 }
 
 /* Export's type list, deliberately NOT the import grid.
+
    The import grid is two fixed columns that break long names mid-word — a
    documented trade-off there, where a pack ships at most 14 types. Export offers
-   all 18, including b2b_shared_catalog_company_assignments at 38 characters, so
-   fixed tracks either wrap it or scroll the list.
-   Flex-wrap instead: every item takes the width of its own text and the rows
-   pack themselves. No name is ever broken, and the list fits without scrolling. */
+   all 18, including b2b_shared_catalog_company_assignments at 38 characters.
+
+   A previous attempt used flex-wrap so each item took the width of its own text.
+   Nothing wrapped, but nothing lined up either: every row started its columns at
+   a different x, which reads as noise in a list you scan down.
+
+   So: a real grid, with every column as wide as the LONGEST name needs. That
+   buys uniform rows at the cost of column count — two columns rather than three
+   — which is the right trade for a list you read down rather than across. */
 .datapack-export-type-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 28px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 10px 28px;
 }
 
+/* Sized by the track, never by the text: a name is never broken. */
 .datapack-export-type-grid > * {
+    min-width: 0;
     white-space: nowrap;
 }
 
