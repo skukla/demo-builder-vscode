@@ -195,6 +195,52 @@ describe('DatapackDetailPanel', () => {
 
             expect(screen.queryByText('Commerce instance')).not.toBeInTheDocument();
         });
+
+        /**
+         * Not cosmetic, though it looks it.
+         *
+         * `useVSCodeRequest.execute` sets `loading` and clears `error` but never
+         * clears `data` — read at src/core/ui/hooks/useVSCodeRequest.ts:62-74. So
+         * selecting a SECOND pack leaves the first pack's detail in place until
+         * the response lands: the body shows a spinner while the footer still
+         * offers Import, and `onImport` would carry the id of the pack the user
+         * just navigated away from. Hiding the button while loading closes the
+         * window in which the wrong pack can be imported.
+         */
+        it('withholds Import while a detail is loading, stale detail and all', () => {
+            renderPanel({ loading: true });
+
+            expect(screen.queryByRole('button', { name: /import/i })).not.toBeInTheDocument();
+        });
+
+        it('imports the pack on screen, never the one still loading', () => {
+            const onImport = jest.fn();
+            renderPanel({ loading: true, onImport });
+
+            expect(screen.queryByRole('button', { name: /import/i })).toBeNull();
+            expect(onImport).not.toHaveBeenCalled();
+        });
+
+        /** Same stale-data window, reached through a failure instead of a load. */
+        it('withholds Import when the panel is showing a failure', () => {
+            renderPanel({ failure: { message: 'The service did not answer.' } });
+
+            expect(screen.queryByRole('button', { name: /import/i })).not.toBeInTheDocument();
+        });
+
+        /**
+         * The ellipsis convention — a command that needs more input before it
+         * completes — is real, but this button was the only place in the whole
+         * extension using it. One instance is not a convention; it is a stray
+         * mark that invites exactly the question it got.
+         */
+        it('labels the button Import, with no trailing ellipsis', () => {
+            renderPanel();
+
+            const button = screen.getByRole('button', { name: /import/i });
+
+            expect(button).toHaveTextContent(/^Import$/);
+        });
     });
 
     describe('states', () => {

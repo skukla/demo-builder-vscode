@@ -5541,6 +5541,11 @@ div[class*="spectrum"] input[type="search"] {
 }
 .db-drawer-actions {
     display: flex;
+    /* Right, not centred and not the flex-start this defaulted to before: it is
+       what .modal-footer-actions above already does, and what Spectrum specifies
+       for a dialog footer. A drawer footer that centred its action would be the
+       only surface here doing so. */
+    justify-content: flex-end;
     flex-wrap: wrap;
     gap: 7px;
     padding: 13px 18px 16px;

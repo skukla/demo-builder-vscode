@@ -93,10 +93,10 @@ export function DatapackDetailPanel({
                     </div>
                     <div className="db-drawer-body">
                         {renderPanelBody({ detail, inventory, loading, failure, onRetry })}
-                        {detail && importable.length > 0 ? (
+                        {canImport({ detail, importable, loading, failure }) && detail ? (
                             <div className="db-drawer-actions">
                                 <Button variant="accent" onPress={() => onImport(detail.id)}>
-                                    Import…
+                                    Import
                                 </Button>
                             </div>
                         ) : null}
@@ -105,6 +105,30 @@ export function DatapackDetailPanel({
             ) : null}
         </Drawer>
     );
+}
+
+/**
+ * Whether the footer may offer Import.
+ *
+ * The `loading` and `failure` terms are the load-bearing ones, and they guard a
+ * real window rather than a cosmetic one. `useVSCodeRequest.execute` sets
+ * `loading` and clears `error` but never clears `data`
+ * (src/core/ui/hooks/useVSCodeRequest.ts:62-74), so selecting a second pack
+ * leaves the FIRST pack's detail on the props until the response lands. Without
+ * these terms the body shows a spinner while the footer offers Import — and the
+ * id it would raise belongs to the pack the user just navigated away from.
+ *
+ * `importable` stays the third term: what the service HOLDS, never what the
+ * pack declares.
+ */
+function canImport(args: {
+    detail: DatapackDetail | null;
+    importable: string[];
+    loading: boolean;
+    failure: DataInstallerFailure | null;
+}): boolean {
+    const { detail, importable, loading, failure } = args;
+    return !loading && !failure && detail !== null && importable.length > 0;
 }
 
 /** Pick the one body state to show. */
