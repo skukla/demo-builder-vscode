@@ -467,6 +467,10 @@
               {
                 "from": "scripts/bodea-customer-group.js",
                 "to": "scripts/bodea-customer-group.js"
+              },
+              {
+                "from": "data/guided-selling/bodea-rack-finder.json",
+                "to": "data/guided-selling/bodea-rack-finder.json"
               }
             ],
             "headSnippet": "<link rel=\"stylesheet\" href=\"/styles/bodea-theme.css\">\n<script type=\"module\" src=\"/scripts/bodea-customer-group.js\"></script>"
@@ -529,6 +533,10 @@
               {
                 "from": "scripts/bodea-customer-group.js",
                 "to": "scripts/bodea-customer-group.js"
+              },
+              {
+                "from": "data/guided-selling/bodea-rack-finder.json",
+                "to": "data/guided-selling/bodea-rack-finder.json"
               }
             ],
             "headSnippet": "<link rel=\"stylesheet\" href=\"/styles/bodea-theme.css\">\n<script type=\"module\" src=\"/scripts/bodea-customer-group.js\"></script>"

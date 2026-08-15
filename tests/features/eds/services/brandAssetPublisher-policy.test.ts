@@ -44,14 +44,19 @@ describe('publishBrandAssets policy', () => {
             return { source: CONFIG.source, files };
         }
 
-        it('allows styles/*.css and scripts/*.js targets', async () => {
-            mockSourceFetch({ 'src/theme.css': THEME_CSS, 'src/mod.js': GROUP_JS });
+        it('allows styles/*.css, scripts/*.js and data/*.json targets', async () => {
+            mockSourceFetch({
+                'src/theme.css': THEME_CSS,
+                'src/mod.js': GROUP_JS,
+                'src/schema.json': '{"id":"x"}',
+            });
             const github = makeMockGithub();
 
             const result = await publishBrandAssets(
                 configWithFiles([
                     { from: 'src/theme.css', to: 'styles/x.css' },
                     { from: 'src/mod.js', to: 'scripts/y.js' },
+                    { from: 'src/schema.json', to: 'data/guided-selling/z.json' },
                 ]),
                 asOps(github), repoOwner, repoName, logger,
             );
@@ -61,6 +66,9 @@ describe('publishBrandAssets policy', () => {
             );
             expect(result.files[1]).toEqual(
                 expect.objectContaining({ path: 'scripts/y.js', installed: true }),
+            );
+            expect(result.files[2]).toEqual(
+                expect.objectContaining({ path: 'data/guided-selling/z.json', installed: true }),
             );
             expect(result.success).toBe(true);
         });
@@ -73,6 +81,9 @@ describe('publishBrandAssets policy', () => {
             'head.html',
             'scripts\\evil.js',
             'scripts/../.github/x.js',
+            // data/ is allowlisted only for .json — not as a general escape hatch
+            'data/x.js',
+            'data/../.github/x.json',
         ])('refuses target %s with a per-file non-fatal failure', async (to) => {
             // Source fetch WOULD succeed — only the target policy stands in the way.
             mockSourceFetch({ 'styles/bodea-theme.css': THEME_CSS });

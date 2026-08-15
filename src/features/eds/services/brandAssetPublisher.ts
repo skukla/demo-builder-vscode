@@ -60,11 +60,19 @@ interface PublishContext {
  * arbitrary `files[].to` targets, and until this check nothing stopped an
  * entry from landing in `.github/workflows/` (write access to secrets) or
  * `package.json` (arbitrary code at install time). The allowlist matches
- * actual usage: theme CSS under `styles/`, brand modules under `scripts/`.
+ * actual usage: theme CSS under `styles/`, brand modules under `scripts/`,
+ * and block data files under `data/`.
+ *
+ * `data/` is JSON-only on purpose. Schema-driven blocks fetch their data from
+ * the code bus (EDS serves repo files verbatim; the content bus rejects
+ * non-sheet JSON with "error from content-bus"), so the file has to be
+ * vendored into the generated repo — but the directory must not become a
+ * general escape hatch for shipping executable content.
  */
 const ALLOWED_TARGETS = [
     { prefix: 'styles/', extension: '.css' },
     { prefix: 'scripts/', extension: '.js' },
+    { prefix: 'data/', extension: '.json' },
 ] as const;
 
 /**

@@ -136,7 +136,7 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
         });
     });
 
-    it('should carry brandAssets sourcing theme + customer-group files from skukla/bodea-source@main', () => {
+    it('should carry brandAssets sourcing theme, customer-group and rack-finder schema from skukla/bodea-source@main', () => {
         const pkg = getBodea();
         Object.values(pkg.storefronts).forEach(sf => {
             const brandAssets = sf.brandAssets as {
@@ -149,9 +149,16 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
                 repo: 'bodea-source',
                 branch: 'main',
             });
+            // The rack-finder schema rides here rather than in DA content because
+            // the content bus rejects non-sheet JSON ("error from content-bus") —
+            // guided-selling-luxe fetches it from the code bus at site root.
             expect(brandAssets!.files).toEqual([
                 { from: 'styles/bodea-theme.css', to: 'styles/bodea-theme.css' },
                 { from: 'scripts/bodea-customer-group.js', to: 'scripts/bodea-customer-group.js' },
+                {
+                    from: 'data/guided-selling/bodea-rack-finder.json',
+                    to: 'data/guided-selling/bodea-rack-finder.json',
+                },
             ]);
         });
     });
