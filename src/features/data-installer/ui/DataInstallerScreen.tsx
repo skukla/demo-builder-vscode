@@ -25,7 +25,6 @@ import React, { useState } from 'react';
 import { ViewSwitcher, type SwitchableView } from './components/ViewSwitcher';
 import { DatapackActivityView } from './views/DatapackActivityView';
 import { DatapackCatalogView } from './views/DatapackCatalogView';
-import { InstalledDatapacksView } from './views/InstalledDatapacksView';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 
@@ -41,12 +40,19 @@ export interface DataInstallerScreenProps {
  * Module-level so the reference is stable across renders — an inline array is a
  * new reference every render and would re-fire any effect depending on it.
  *
- * Order is browse → what happened → the full log: the catalog is what the panel
- * is FOR, and the activity log is the diagnostic you reach for last.
+ * Order is browse → what happened: the catalog is what the panel is FOR, and
+ * the activity log is the diagnostic you reach for after.
+ *
+ * There was an Installed view between them. It listed what the SERVICE records
+ * as installed, globally, across every instance anyone has used — and that
+ * tracking is self-reported: `DELETE get-installed-datapacks` clears it without
+ * uninstalling anything, so it can call a pack absent while its data sits on the
+ * instance. A confident list that can be wrong in that direction is worse than
+ * no list. What it uniquely answered — "has this pack been run here" — the
+ * scoped activity log answers from the request log instead.
  */
 const VIEWS: SwitchableView[] = [
     { id: 'catalog', label: 'Catalog' },
-    { id: 'installed', label: 'Installed' },
     { id: 'activity', label: 'Activity' },
 ];
 
@@ -82,9 +88,6 @@ export function DataInstallerScreen(_props: DataInstallerScreenProps): React.JSX
 
 /** The body for the active view id. */
 function renderView(activeView: string): React.JSX.Element | null {
-    if (activeView === 'installed') {
-        return <InstalledDatapacksView />;
-    }
     if (activeView === 'activity') {
         return <DatapackActivityView />;
     }

@@ -26,9 +26,19 @@ import { DataInstallerScreen } from '@/features/data-installer/ui/DataInstallerS
 
 const mockRequest = webviewClient.request as jest.Mock;
 
-/** Every list handler answers with an empty page, whatever is asked. */
+/**
+ * Every list handler answers with an empty page — plus a project target, which
+ * the activity view now asks for FIRST. Without an instance it scopes to nothing
+ * and never requests the log at all, which is the correct behaviour and would
+ * make the swap test look broken.
+ */
 function resolveEmpty(): void {
-    mockRequest.mockResolvedValue({ success: true, data: { items: [], count: 0, total: 0 } });
+    mockRequest.mockImplementation(async (type: string) => {
+        if (type === 'get-datapack-import-target') {
+            return { success: true, data: { instance: 'TENANT123', projectName: 'demo-1' } };
+        }
+        return { success: true, data: { items: [], count: 0, total: 0 } };
+    });
 }
 
 /** The message types requested so far, in order. */
@@ -67,13 +77,26 @@ describe('DataInstallerScreen', () => {
     });
 
     describe('view switcher', () => {
-        it('offers all three views', async () => {
+        it('offers the two views', async () => {
             render(<DataInstallerScreen />);
             await waitFor(() => expect(mockRequest).toHaveBeenCalled());
 
             expect(screen.getByRole('button', { name: 'Catalog' })).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: 'Installed' })).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Activity' })).toBeInTheDocument();
+        });
+
+        /**
+         * Installed is GONE, not hidden. It listed the service's global,
+         * self-reported tracking — which `DELETE get-installed-datapacks` clears
+         * without uninstalling, so it could call a pack absent while its data sat
+         * on the instance. The scoped activity log answers the same question from
+         * the request log.
+         */
+        it('no longer offers Installed', async () => {
+            render(<DataInstallerScreen />);
+            await waitFor(() => expect(mockRequest).toHaveBeenCalled());
+
+            expect(screen.queryByRole('button', { name: 'Installed' })).not.toBeInTheDocument();
         });
 
         it('marks the catalog active on open', async () => {
@@ -81,21 +104,6 @@ describe('DataInstallerScreen', () => {
             await waitFor(() => expect(mockRequest).toHaveBeenCalled());
 
             expect(screen.getByRole('button', { name: 'Catalog' })).toHaveAttribute(
-                'aria-pressed',
-                'true',
-            );
-        });
-
-        it('swaps to the installed view, which fetches its own data', async () => {
-            render(<DataInstallerScreen />);
-            await waitFor(() => expect(mockRequest).toHaveBeenCalled());
-
-            fireEvent.click(screen.getByRole('button', { name: 'Installed' }));
-
-            await waitFor(() =>
-                expect(requestedTypes()).toContain('list-installed-datapacks'),
-            );
-            expect(screen.getByRole('button', { name: 'Installed' })).toHaveAttribute(
                 'aria-pressed',
                 'true',
             );

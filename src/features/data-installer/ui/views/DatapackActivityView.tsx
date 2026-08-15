@@ -85,6 +85,26 @@ export function DatapackActivityView(): React.JSX.Element {
      */
     const requestedSkipRef = useRef(0);
 
+    /**
+     * The project's Commerce instance — what this log is scoped TO.
+     *
+     * Unscoped, this view is the SERVICE's log: every run against every instance
+     * anyone has used (121 `bodea` runs across 10 instances in one 1,000-row
+     * sample). A fine diagnostic for the service, useless for "did MY import
+     * work". Nothing new was needed — `logs` has always accepted
+     * `commerce_instance`, and the panel already resolves this for its banner.
+     */
+    const target = useDataInstallerRequest<{ instance?: string }>(
+        'get-datapack-import-target',
+    );
+    const loadTarget = target.load;
+    useEffect(() => {
+        loadTarget({});
+    }, [loadTarget]);
+
+    const commerceInstance = target.value?.instance;
+    const targetSettled = target.settled;
+
     // Accumulate. `value` is the LAST page, so appending on each new page is what
     // turns a sequence of pages into the feed the user sees.
     useEffect(() => {
@@ -100,14 +120,18 @@ export function DatapackActivityView(): React.JSX.Element {
 
     const query = useCallback(
         (skip: number, operationMode: string): void => {
+            if (!commerceInstance) {
+                return;
+            }
             requestedSkipRef.current = skip;
             load({
                 limit: PAGE_SIZE,
                 skip,
+                commerceInstance,
                 ...(operationMode === ALL_MODES ? {} : { operationMode }),
             });
         },
-        [load],
+        [load, commerceInstance],
     );
 
     // First page, and a fresh first page whenever the filter changes. The reset
@@ -120,11 +144,32 @@ export function DatapackActivityView(): React.JSX.Element {
     useEffect(() => {
         setEntries([]);
         query(0, mode);
-    }, [query, mode]);
+    }, [query, mode, commerceInstance]);
 
     const loadMore = useCallback((): void => query(entries.length, mode), [query, entries, mode]);
 
-    if (loading && !hasLoaded) {
+    // A target lookup that FAILED is not "no project open" — it is the same
+    // refusal every other request can hit (signed out, not configured), and
+    // saying "open a project" would send the user to fix the wrong thing.
+    if (target.failure) {
+        return renderDataInstallerFailure(target.failure, () => loadTarget({}));
+    }
+
+    // No instance, nothing to scope to. Falling back to the global log would hand
+    // back exactly the surface this scoping removes, so it says so instead.
+    if (targetSettled && !commerceInstance) {
+        return (
+            <EmptyState
+                title="No project open"
+                description="Open a project to see the sample-data runs on its Commerce instance."
+            />
+        );
+    }
+
+    // `!targetSettled` counts as loading. Without it the view renders "No
+    // activity yet" for the length of the target lookup — a false empty, and the
+    // exact failure mode this feature exists to remove.
+    if ((loading || !targetSettled) && !hasLoaded) {
         // Centered in the full viewport — IntegrationsScreen's exact gate shape
         // (its comment records why not CenteredFeedbackContainer: that takes a
         // FIXED DimensionValue and cannot express "fill this screen").
