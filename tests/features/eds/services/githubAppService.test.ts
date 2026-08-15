@@ -438,3 +438,82 @@ describe('GitHub App Service', () => {
         });
     });
 });
+
+/**
+ * Admin-API authorization on an ACCESS-PROTECTED site.
+ *
+ * Reproduces the failure observed 2026-08-14 while editing `demo-builder-test`:
+ *
+ *   [GitHub App] Using gho_ credential for skukla/demo-builder-test
+ *   [GitHub App] Status endpoint returned transient HTTP 401 — [admin] not authenticated
+ *   [GitHub App Check] ...: installed=false, codeStatus=none
+ *
+ * Cause: writing any `access.admin` role makes Adobe set `requireAuth: "auto"`,
+ * which closes the WHOLE admin API to callers without an accepted admin identity.
+ * The GitHub token is not one. Measured against this exact URL — 401 with the
+ * GitHub token alone, 200 with the DA.live Bearer attached, while an unprotected
+ * site answered 200 either way.
+ *
+ * It matters because storefront setup now PINS an admin at registration, so every
+ * project the extension creates ends up protected — and the resulting
+ * "undetermined" verdict aborts setup on a later edit.
+ */
+describe('GitHubAppService — access-protected sites', () => {
+    // Same dynamic-import setup the suite above uses: the module is loaded after
+    // `jest.resetModules()` so the mocked logger/timeouts take effect.
+    let GitHubAppService: any;
+    const tokenService = { getToken: jest.fn() } as never;
+    const daLive = { getAccessToken: jest.fn() };
+
+    const headersOfLastCall = () => mockFetch.mock.calls.at(-1)?.[1]?.headers ?? {};
+
+    beforeEach(async () => {
+        jest.clearAllMocks();
+        jest.resetModules();
+        GitHubAppService = (await import('@/features/eds/services/githubAppService'))
+            .GitHubAppService;
+        (tokenService as unknown as { getToken: jest.Mock }).getToken.mockResolvedValue({
+            token: 'gho_xxx',
+            tokenType: 'bearer',
+            scopes: ['repo'],
+        });
+        daLive.getAccessToken.mockResolvedValue('ims-token');
+        mockFetch.mockResolvedValue({
+            ok: true,
+            json: jest.fn().mockResolvedValue({ code: { status: 200 } }),
+        });
+    });
+
+    it('sends the DA.live Bearer alongside the GitHub token', async () => {
+        const service = new GitHubAppService(tokenService, undefined, daLive as never);
+
+        await service.isAppInstalled('skukla', 'demo-builder-test');
+
+        expect(headersOfLastCall()).toEqual({
+            Authorization: 'Bearer ims-token',
+            'x-auth-token': 'gho_xxx',
+        });
+    });
+
+    it('degrades to the GitHub token alone when no DA.live session exists', async () => {
+        // An unprotected site never needed the Bearer, and a signed-out user must
+        // not have a working check turned into a hard failure.
+        daLive.getAccessToken.mockResolvedValue(undefined);
+        const service = new GitHubAppService(tokenService, undefined, daLive as never);
+
+        await service.isAppInstalled('skukla', 'foobar');
+
+        expect(headersOfLastCall()).toEqual({ 'x-auth-token': 'gho_xxx' });
+    });
+
+    it('degrades when the DA.live provider itself throws', async () => {
+        daLive.getAccessToken.mockRejectedValue(new Error('keychain unavailable'));
+        const service = new GitHubAppService(tokenService, undefined, daLive as never);
+
+        const result = await service.isAppInstalled('skukla', 'foobar');
+
+        expect(headersOfLastCall()).toEqual({ 'x-auth-token': 'gho_xxx' });
+        expect(result.isInstalled).toBe(true);
+    });
+});
+
