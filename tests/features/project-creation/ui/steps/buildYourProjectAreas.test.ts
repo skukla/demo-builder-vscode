@@ -54,7 +54,7 @@ function ids(state: WizardState, stacks: Stack[] = STACKS): string[] {
 
 describe('buildYourProjectAreas — visibility', () => {
     it('shows [commerce, integrations] (storefront hidden) when no stack is selected', () => {
-        expect(ids(state())).toEqual(['commerce', 'integrations', 'sample-data']);
+        expect(ids(state())).toEqual(['commerce', 'integrations']);
     });
 
     it('shows [commerce, storefront, integrations] for an EDS stack', () => {
@@ -62,7 +62,6 @@ describe('buildYourProjectAreas — visibility', () => {
             'commerce',
             'storefront',
             'integrations',
-            'sample-data',
         ]);
     });
 
@@ -70,7 +69,6 @@ describe('buildYourProjectAreas — visibility', () => {
         expect(ids(state({ selectedStack: 'headless-paas' }))).toEqual([
             'commerce',
             'integrations',
-            'sample-data',
         ]);
     });
 
@@ -178,41 +176,32 @@ describe('buildYourProjectAreas — status', () => {
 });
 
 /**
- * Sample Data — the Stage 4 seam.
+ * Sample data is NOT an area of its own.
  *
- * The area RECORDS which datapack this project should be seeded with; it does not
- * import. An import needs a reachable instance with working credentials and takes
- * minutes on a full pack, so it belongs on the dashboard after creation, not
- * inside the creation path (decided 2026-08-14).
+ * It was one, and it never worked: the body asked the Data Installer's
+ * `find-datapacks`, which is registered only by the Data Installer panel's own
+ * command. The wizard's composite map had no data-installer entry at all, so the
+ * request had no handler and the area could render nothing but its own apology.
  *
- * It sits LAST because it describes what goes into the backend, which only makes
- * sense once the backend and storefront are chosen — and it is always OPTIONAL,
- * so it can never block Continue.
+ * Fixing the handler is half the answer. The other half is placement — sample
+ * data seeds the COMMERCE backend, so it belongs beside the backend it targets
+ * rather than in a rail slot of its own, where it was one optional radio list in
+ * an otherwise empty full-width body.
  */
-describe('buildYourProjectAreas — the sample data area', () => {
-    it('appears for every stack, after integrations', () => {
-        expect(ids(state({ selectedStack: 'eds-paas' }))).toEqual([
-            'commerce',
-            'storefront',
-            'integrations',
-            'sample-data',
-        ]);
-        expect(ids(state({ selectedStack: 'headless-paas' }))).toEqual([
-            'commerce',
-            'integrations',
-            'sample-data',
-        ]);
+describe('buildYourProjectAreas — sample data lives in Commerce', () => {
+    it('is no longer an area of its own, on any stack', () => {
+        expect(ids(state({ selectedStack: 'eds-paas' }))).not.toContain('sample-data');
+        expect(ids(state({ selectedStack: 'headless-paas' }))).not.toContain('sample-data');
+        expect(ids(state())).not.toContain('sample-data');
     });
 
-    /** Optional means complete-by-default: picking nothing must not gate Continue. */
-    it('is complete whether or not a datapack was chosen', () => {
-        const without = buildYourProjectAreas(state({ selectedStack: 'eds-paas' }), STACKS);
-        expect(without.find((a) => a.id === 'sample-data')?.status).toBe('completed');
-
-        const chosen = buildYourProjectAreas(
+    /** Choosing a pack must not change which areas exist, nor gate Continue. */
+    it('leaves the area list unchanged whether or not a datapack was chosen', () => {
+        const without = ids(state({ selectedStack: 'eds-paas' }));
+        const chosen = ids(
             state({ selectedStack: 'eds-paas', datapack: { name: 'bodea', version: 'main' } }),
-            STACKS,
         );
-        expect(chosen.find((a) => a.id === 'sample-data')?.status).toBe('completed');
+
+        expect(chosen).toEqual(without);
     });
 });

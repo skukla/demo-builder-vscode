@@ -36,6 +36,18 @@ export {
     type DatapackGroup,
 } from './services/datapackCatalog';
 
+/**
+ * The catalog card, exported for the wizard's sample-data sub-step.
+ *
+ * A deliberate addition, per the note above. The wizard shows the same grid this
+ * feature's panel does: a pack is a demo — brand art, a version, a count of what
+ * it carries — and a list of names asks the user to pick one they cannot see.
+ * The alternative was a second, poorer card living in project-creation; one
+ * component with an optional `selected` is the cheaper truth. Presentational
+ * only, so it pulls no extension-host module into a webview bundle.
+ */
+export { DatapackCard } from './ui/components/DatapackCard';
+
 export type {
     DatapackId,
     DatapackSummary,

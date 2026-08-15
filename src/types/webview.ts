@@ -22,7 +22,9 @@ export type WizardStep =
  * Distinct concept from the retired standalone wizard-step ids — these identify
  * the area the nested builder is currently focused on.
  */
-export type BuildAreaId = 'commerce' | 'storefront' | 'integrations' | 'sample-data';
+// `sample-data` was an area here; it is a Commerce sub-step now — a pack seeds
+// the Commerce backend, so it belongs with the sub-steps that configure it.
+export type BuildAreaId = 'commerce' | 'storefront' | 'integrations';
 
 /**
  * The ordered Commerce sub-step ids within the `build-your-project` step's
@@ -36,7 +38,12 @@ export type CommerceSectionId =
     | 'signin'
     | 'connection'
     | 'business-structure'
-    | 'catalog';
+    | 'catalog'
+    // Seeds the backend the sub-steps above configure, so it belongs with them
+    // rather than in an area of its own. Unlike every other config sub-step it is
+    // never locked: the pack list comes from the Data Installer service, not
+    // through the Commerce connection, and nothing is installed during the wizard.
+    | 'sample-data';
 
 /**
  * The ordered Storefront sub-step ids within the build step's Storefront area:

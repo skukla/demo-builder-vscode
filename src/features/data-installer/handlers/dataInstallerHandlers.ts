@@ -183,7 +183,9 @@ async function withClient(
  * declared and silently ignored — a lie the MCP tool would have advertised.
  * Filtering is the caller's, over the page it holds.
  */
-interface FindDatapacksPayload {
+// Exported because the wizard's composite map registers `find-datapacks`, and
+// TypeScript cannot NAME the map's inferred type while this stays local.
+export interface FindDatapacksPayload {
     includeCommunity?: boolean;
     limit?: number;
     skip?: number;

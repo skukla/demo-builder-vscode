@@ -125,6 +125,8 @@ describe('commerceSectionStates — ordering and base (PaaS, no sign-in)', () =>
             'connection',
             'business-structure',
             'catalog',
+            // Last, and never gated — it seeds the backend the rest configure.
+            'sample-data',
         ] as CommerceSectionId[]);
     });
 
@@ -344,8 +346,12 @@ describe('nextSubStep / prevSubStep — linear walk over the displayed sections'
         expect(nextSubStep(paasSections, 'connection')).toBe('business-structure');
     });
 
-    it('returns null at the last display step (catalog)', () => {
-        expect(nextSubStep(paasSections, 'catalog')).toBeNull();
+    it('walks past catalog into sample data', () => {
+        expect(nextSubStep(paasSections, 'catalog')).toBe('sample-data');
+    });
+
+    it('returns null at the last display step (sample-data)', () => {
+        expect(nextSubStep(paasSections, 'sample-data')).toBeNull();
     });
 
     it('walks through the ACCS sign-in step (backend → signin → connection)', () => {
@@ -517,6 +523,81 @@ describe('commerceSectionStates — Catalog is reachable while its own fields ar
                 state({ selectedBackend: PAAS, commerceConnectValid: true }),
                 'catalog',
                 { isAccs: false, signedIn: false },
+            ),
+        ).toBe(true);
+    });
+});
+
+/**
+ * Sample data is a Commerce sub-step, not an area of its own.
+ *
+ * It had its own rail slot and full-width body, and the body could never load:
+ * it asks the Data Installer's `find-datapacks`, registered only by the Data
+ * Installer panel's command, so in the wizard the request had no handler and the
+ * area rendered nothing but an apology.
+ *
+ * Placement follows the data. A pack seeds the COMMERCE backend, so the choice
+ * belongs beside the backend it targets.
+ *
+ * The one rule worth pinning: it is NEVER LOCKED. Every other config sub-step
+ * chains — Business Structure needs Connection, Catalog needs a store view —
+ * because each reads through the live connection. This one does not. The catalog
+ * of packs comes from the Data Installer service, not from the instance, and
+ * nothing is installed during the wizard at all. Locking it behind a reachable
+ * backend would gate a choice that has no dependency on one.
+ */
+describe('commerceSectionStates — the sample data sub-step', () => {
+    const ctx = { isAccs: false, signedIn: false };
+
+    function sampleOf(over: Partial<WizardState> = {}) {
+        return commerceSectionStates(
+            state({ selectedBackend: PAAS, ...over }),
+            ctx,
+        ).find((s) => s.id === 'sample-data');
+    }
+
+    it('comes last, after catalog', () => {
+        const ids = commerceSectionStates(state({ selectedBackend: PAAS }), ctx).map((s) => s.id);
+
+        expect(ids[ids.length - 1]).toBe('sample-data');
+        expect(ids.indexOf('sample-data')).toBeGreaterThan(ids.indexOf('catalog'));
+    });
+
+    /** The rule this section exists to keep. */
+    it('is never locked, even with nothing connected', () => {
+        expect(sampleOf()?.status).not.toBe('locked');
+    });
+
+    it('is not locked behind an Adobe sign-in either', () => {
+        const sample = commerceSectionStates(state({ selectedBackend: ACCS }), {
+            isAccs: true,
+            signedIn: false,
+        }).find((s) => s.id === 'sample-data');
+
+        expect(sample?.status).not.toBe('locked');
+    });
+
+    it('carries the chosen pack as its summary value', () => {
+        expect(sampleOf({ datapack: { name: 'bodea', version: 'main' } })).toMatchObject({
+            status: 'done',
+            value: 'bodea',
+        });
+    });
+
+    /** Choosing nothing is a real answer, not an unfinished one. */
+    it('reads as None rather than empty when no pack is chosen', () => {
+        expect(sampleOf()).toMatchObject({ value: 'None' });
+    });
+
+    it('never blocks Continue, chosen or not', () => {
+        expect(isCommerceStepComplete(state({ selectedBackend: PAAS }), 'sample-data', ctx)).toBe(
+            true,
+        );
+        expect(
+            isCommerceStepComplete(
+                state({ selectedBackend: PAAS, datapack: { name: 'bodea', version: 'main' } }),
+                'sample-data',
+                ctx,
             ),
         ).toBe(true);
     });
