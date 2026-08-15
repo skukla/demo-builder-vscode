@@ -29,6 +29,7 @@ import {
     type ImportRequest,
     type ImportTarget,
 } from '../services/dataInstallerWriteClient';
+import { deriveImportInstance } from '../services/importInstance';
 import { watchImportJob } from '../services/importJobRunner';
 import {
     buildScopeDiscoveryParams,
@@ -41,11 +42,6 @@ import { exportHandlers } from './exportHandlers';
 import { ServiceLocator } from '@/core/di';
 import { PollingService } from '@/core/shell/pollingService';
 import { TransientStateManager } from '@/core/state/transientStateManager';
-import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/features/components/config/envVarKeys';
-import {
-    deriveAccsTenantId,
-    lookupComponentConfigValue,
-} from '@/features/components/services/envVarHelpers';
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -223,22 +219,12 @@ export const importHandlers = defineHandlers({
         // in a 25-name catalog.
         const datapack = project?.datapack;
 
-        const accs = deriveAccsTenantId(lookupComponentConfigValue(configs, ACCS_GRAPHQL_ENDPOINT));
-        if (accs) {
-            return { success: true, data: { instance: accs, projectName, datapack } };
-        }
-
-        // PaaS gets the project's Commerce URL. The service DERIVES the site type
-        // (nothing in `buildBody` sends one) and a URL-shaped instance IS accepted:
-        // across all 1063 log records the vocabulary is `accs`, `aco` and `local`,
-        // and the `local` rows carry a full URL. So a URL is the right shape for an
-        // instance the service cannot look up, which is what a PaaS instance is.
-        //
-        // Unproven for PaaS specifically: no `paas` row exists anywhere in that
-        // sample. See docs/systems/data-installer.md.
-        const paas = lookupComponentConfigValue(configs, PAAS_URL);
-        if (paas) {
-            return { success: true, data: { instance: paas, projectName, datapack } };
+        // Shared with the build's sample-data phase — see `deriveImportInstance`.
+        // Two derivations would let the same pack land in different places
+        // depending on which surface asked, with nothing to report the difference.
+        const instance = deriveImportInstance(configs);
+        if (instance) {
+            return { success: true, data: { instance, projectName, datapack } };
         }
 
         return { success: true, data: { datapack } };
