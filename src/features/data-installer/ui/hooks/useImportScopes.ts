@@ -14,7 +14,7 @@
  * @module features/data-installer/ui/hooks/useImportScopes
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDataInstallerRequest } from './useDataInstallerRequest';
 
 /** One website and the store views that belong to it. */
@@ -36,6 +36,21 @@ export interface ImportScopes {
     targetFields: () => Partial<{ websiteCode: string; storeCode: string }>;
 }
 
+/** Stable empty list, so an undiscovered instance does not remake deps. */
+const EMPTY_WEBSITES: TargetWebsite[] = [];
+
+/** The service's own default website code when the pair is omitted. */
+const DEFAULT_WEBSITE_CODE = 'base';
+/** …and its default store view code. */
+const DEFAULT_STORE_VIEW_CODE = 'default';
+
+/** A website's default store view: the one named `default`, else its first. */
+function defaultStoreViewCode(websites: TargetWebsite[], websiteCode: string): string {
+    const views = websites.find((site) => site.code === websiteCode)?.storeViews ?? [];
+    const preferred = views.find((view) => view.code === DEFAULT_STORE_VIEW_CODE);
+    return (preferred ?? views[0])?.code ?? '';
+}
+
 export function useImportScopes(): ImportScopes {
     const [websiteCode, setWebsiteCode] = useState('');
     const [storeCode, setStoreCode] = useState('');
@@ -48,14 +63,43 @@ export function useImportScopes(): ImportScopes {
         loadScopes({});
     }, [loadScopes]);
 
+    // Memoised, not `?? []` inline: a fresh array every render would change the
+    // deps of the callback and effect below on every render — the inline-empty-
+    // array trap the project's CLAUDE.md records as an infinite-loop risk.
+    const websites = useMemo(() => scopes.value?.websites ?? EMPTY_WEBSITES, [scopes.value]);
+
     /**
-     * Picking a website clears the store view: a view belongs to exactly one
-     * website, so keeping the previous one would send a pair the service rejects.
+     * Picking a website also picks its default store view.
+     *
+     * A view belongs to exactly one website, so the previous one cannot be kept
+     * — and leaving it blank would present one scope as answered and the other
+     * as not, which are the same decision.
      */
-    const chooseWebsite = useCallback((code: string): void => {
-        setWebsiteCode(code);
-        setStoreCode('');
-    }, []);
+    const chooseWebsite = useCallback(
+        (code: string): void => {
+            setWebsiteCode(code);
+            setStoreCode(defaultStoreViewCode(websites, code));
+        },
+        [websites],
+    );
+
+    /**
+     * Seed both scopes once discovery lands.
+     *
+     * The service defaults to `base`/`default` when the pair is absent, and the
+     * pickers used to SAY so while selecting nothing. Selecting them for real
+     * means what the dialog shows is what the request carries — at the cost of
+     * always sending the pair explicitly, which is equivalent since the codes
+     * come from the instance's own structure.
+     */
+    useEffect(() => {
+        if (websites.length === 0 || websiteCode) {
+            return;
+        }
+        const site = websites.find((w) => w.code === DEFAULT_WEBSITE_CODE) ?? websites[0];
+        setWebsiteCode(site.code);
+        setStoreCode(defaultStoreViewCode(websites, site.code));
+    }, [websites, websiteCode]);
 
     /**
      * Both keys or neither. The service defaults to `base` when the pair is
@@ -68,7 +112,7 @@ export function useImportScopes(): ImportScopes {
     );
 
     return {
-        websites: scopes.value?.websites ?? [],
+        websites,
         loading: scopes.loading,
         websiteCode,
         storeCode,

@@ -38,7 +38,7 @@ import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import type { DatapackId, ImportJobRecord } from '../../types';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
-import { useImportScopes } from '../hooks/useImportScopes';
+import { useImportScopes, type ImportScopes } from '../hooks/useImportScopes';
 import { ImportForm } from './ImportForm';
 import {
     resolveResult,
@@ -252,6 +252,21 @@ export function ImportDatapackModal({
             : null;
     const canStart = commerceInstance.length > 0 && selected.length > 0 && !busy;
 
+    const bodyContext: BodyContext = {
+        displayName,
+        commerceInstance,
+        availableTypes,
+        selected,
+        allSelected,
+        record,
+        watching,
+        result,
+        busyMessage: busyMessage(start.loading, reset.loading, provision.loading),
+        scope,
+        toggle,
+        toggleAll,
+    };
+
     const view = resolveView({
         busy,
         resetArmed,
@@ -289,53 +304,7 @@ export function ImportDatapackModal({
                     goBack,
                 })}
             >
-            <div className="datapack-import-body">
-                    {view === 'busy' ? (
-                        // Size L on purpose: LoadingDisplay keys the wizard
-                        // treatment off it — M left-aligns and shrinks the text.
-                        <LoadingDisplay
-                            size="L"
-                            message={busyMessage(start.loading, reset.loading, provision.loading)}
-                        />
-                    ) : null}
-
-                    {view === 'confirm-reset' ? (
-                        <div className="datapack-import-danger">
-                            {`Remove ${displayName}'s ${selected.join(', ')} from ${commerceInstance}. This cannot be undone — the Data Installer has no restore.`}
-                </div>
-                    ) : null}
-
-                    {view === 'watching' && record ? (
-                        <WatchProgress record={record} watching={watching} />
-                    ) : null}
-
-                    {view === 'result' && result ? (
-                        <StatusDisplay
-                            variant={result.variant}
-                            title={result.title}
-                            message={result.message}
-                            details={result.details}
-                        />
-                    ) : null}
-
-                    {view === 'no-instance' ? <NoInstanceNotice /> : null}
-
-                    {view === 'form' ? (
-                        <ImportForm
-                            availableTypes={availableTypes}
-                            selected={selected}
-                            allSelected={allSelected}
-                            onToggle={toggle}
-                            onToggleAll={toggleAll}
-                            websites={scope.websites}
-                            websiteCode={scope.websiteCode}
-                            storeCode={scope.storeCode}
-                            onWebsiteChange={scope.chooseWebsite}
-                            onStoreChange={scope.chooseStore}
-                            scopesLoading={scope.loading}
-                        />
-                    ) : null}
-                </div>
+                <ModalBody view={view} ctx={bodyContext} />
             </Modal>
         </DialogContainer>
     );
@@ -387,6 +356,82 @@ function NoInstanceNotice(): React.JSX.Element {
             title="This project has no Commerce instance"
             message="Connect a Commerce backend on the project dashboard, then import from here."
         />
+    );
+}
+
+/** Everything the one visible view needs, gathered once. */
+interface BodyContext {
+    displayName: string;
+    commerceInstance: string;
+    availableTypes: string[];
+    selected: string[];
+    allSelected: boolean;
+    record: ImportJobRecord | null;
+    watching: boolean;
+    result: ResultContent | null;
+    busyMessage: string;
+    scope: ImportScopes;
+    toggle: (type: string, isSelected: boolean) => void;
+    toggleAll: () => void;
+}
+
+/**
+ * The one view the state machine chose.
+ *
+ * Extracted so `ImportDatapackModal` stays under the complexity ceiling: every
+ * view is a branch, and six of them had accumulated in the one function. The
+ * precedence still belongs to {@link resolveView} — this only renders what it
+ * decided.
+ */
+function ModalBody({ view, ctx }: { view: ModalView; ctx: BodyContext }): React.JSX.Element {
+    return (
+        <div className="datapack-import-body">
+                    {view === 'busy' ? (
+                        // Size L on purpose: LoadingDisplay keys the wizard
+                        // treatment off it — M left-aligns and shrinks the text.
+                        <LoadingDisplay
+                            size="L"
+                            message={ctx.busyMessage}
+                        />
+                    ) : null}
+
+                    {view === 'confirm-reset' ? (
+                        <div className="datapack-import-danger">
+                            {`Remove ${ctx.displayName}'s ${ctx.selected.join(', ')} from ${ctx.commerceInstance}. This cannot be undone — the Data Installer has no restore.`}
+                </div>
+                    ) : null}
+
+                    {view === 'watching' && ctx.record ? (
+                        <WatchProgress record={ctx.record} watching={ctx.watching} />
+                    ) : null}
+
+                    {view === 'result' && ctx.result ? (
+                        <StatusDisplay
+                            variant={ctx.result.variant}
+                            title={ctx.result.title}
+                            message={ctx.result.message}
+                            details={ctx.result.details}
+                        />
+                    ) : null}
+
+                    {view === 'no-instance' ? <NoInstanceNotice /> : null}
+
+                    {view === 'form' ? (
+                        <ImportForm
+                            availableTypes={ctx.availableTypes}
+                            selected={ctx.selected}
+                            allSelected={ctx.allSelected}
+                            onToggle={ctx.toggle}
+                            onToggleAll={ctx.toggleAll}
+                            websites={ctx.scope.websites}
+                            websiteCode={ctx.scope.websiteCode}
+                            storeCode={ctx.scope.storeCode}
+                            onWebsiteChange={ctx.scope.chooseWebsite}
+                            onStoreChange={ctx.scope.chooseStore}
+                            scopesLoading={ctx.scope.loading}
+                        />
+                    ) : null}
+        </div>
     );
 }
 

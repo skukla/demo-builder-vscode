@@ -88,10 +88,16 @@ describe('import targeting', () => {
     });
 
     /**
-     * Omitted, not empty. The service defaults to `base` when the pair is absent,
-     * and treats `""` as a value to validate.
+     * SUPERSEDED 2026-08-15. This asserted that picking nothing sent no target,
+     * because the service defaults to `base`/`default` on absence. The scopes
+     * are now really selected when discovery lands, so the pair always ships —
+     * equivalent, since the codes come from the instance's own structure, and
+     * honest, since the dialog shows what it sends.
+     *
+     * The client still omits both keys when no target is set; that contract is
+     * pinned in the write client's own suite, which is where it matters.
      */
-    it('sends no target when the user picks nothing', async () => {
+    it('ships the pair rather than relying on the service default', async () => {
         renderModal();
         await awaitScopes();
 
@@ -100,8 +106,8 @@ describe('import targeting', () => {
 
         await waitFor(() => {
             const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
-            expect(call?.[1]).not.toHaveProperty('websiteCode');
-            expect(call?.[1]).not.toHaveProperty('storeCode');
+            expect(call?.[1]).toHaveProperty('websiteCode');
+            expect(call?.[1]).toHaveProperty('storeCode');
         });
     });
 
@@ -275,5 +281,51 @@ describe('the redesigned target section', () => {
         renderModal();
 
         expect(await screen.findByText(/no commerce instance/i)).toBeInTheDocument();
+    });
+});
+
+/**
+ * Defaults are SELECTED, not merely described.
+ *
+ * The website picker read "Main Website (default)" while the store view still
+ * said "Choose a website first" — the modal presented one scope as defaulted and
+ * the other as unanswered, which are the same decision. Both are now really
+ * selected, so what the dialog shows is what the request carries.
+ */
+describe('default scope selection', () => {
+    beforeEach(() => {
+        resetModalMocks();
+        withScopes();
+    });
+
+    it('selects the default website AND its store view', async () => {
+        renderModal();
+        await awaitScopes();
+
+        expect(pickerFor(/target website/i)).toHaveValue('base');
+        expect(pickerFor(/store view/i)).toHaveValue('default');
+    });
+
+    /** Consequence: the pair now ships explicitly rather than being omitted. */
+    it('sends the defaulted pair with the import', async () => {
+        renderModal();
+        await awaitScopes();
+        fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+        fireEvent.click(screen.getByRole('button', { name: /start import/i }));
+
+        await waitFor(() => {
+            const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
+            expect(call?.[1]).toMatchObject({ websiteCode: 'base', storeCode: 'default' });
+        });
+    });
+
+    /** Choosing another website re-defaults its own store view, not the old one. */
+    it('re-defaults the store view when the website changes', async () => {
+        renderModal();
+        await awaitScopes();
+
+        fireEvent.change(pickerFor(/target website/i), { target: { value: 'bodea' } });
+
+        await waitFor(() => expect(pickerFor(/store view/i)).toHaveValue('bodea_view'));
     });
 });

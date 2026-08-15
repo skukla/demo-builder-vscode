@@ -183,6 +183,9 @@ export function ImportForm({
                 isLoading={scopesLoading}
             />
             <div className="datapack-import-types">
+                {/* Beside the label, not pushed to the far right: at the wide
+                    modal width it sat a screen away from the heading it acts on
+                    and was easy to miss entirely. */}
                 <div className="datapack-import-types-head">
                     <span className="datapack-import-label">Data types</span>
                     <ActionButton isQuiet onPress={onToggleAll}>

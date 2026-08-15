@@ -345,11 +345,12 @@
     gap: 4px;
 }
 
-/* Label on the left, the bulk toggle on the right of the same row. */
+/* Label and bulk toggle sit TOGETHER on the left. They used to be pushed apart
+   by space-between, which at the wide modal width left the toggle a screen away
+   from the heading it acts on — easy to miss entirely. */
 .datapack-import-types-head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 12px;
 }
 
