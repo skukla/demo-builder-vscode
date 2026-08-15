@@ -31,10 +31,17 @@ import { ExportDatapackModal } from '@/features/data-installer/ui/components/Exp
 
 const mockRequest = webviewClient.request as jest.Mock;
 
-/** The export type catalog, as `list-datapack-data-types` answers it. */
+/**
+ * The export type catalog, as `list-datapack-data-types` really answers it.
+ *
+ * `dataTypes` is a STRING ARRAY — `getProcessorOrder` returns names. An earlier
+ * fixture here used `[{dataType: '…'}]`, which matched the component's wrong
+ * assumption and let an empty Data Types section ship. Caught only in the
+ * Extension Dev Host.
+ */
 const EXPORT_TYPES = {
     mode: 'export',
-    dataTypes: [{ dataType: 'attribute_sets' }, { dataType: 'categories' }],
+    dataTypes: ['attribute_sets', 'categories'],
 };
 
 function withService(over: Record<string, unknown> = {}) {

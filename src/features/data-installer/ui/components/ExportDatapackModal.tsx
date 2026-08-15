@@ -63,9 +63,11 @@ export function ExportDatapackModal({ onClose }: ExportDatapackModalProps): Reac
     /** Back was pressed — the outcome was seen; show the form again. */
     const [dismissed, setDismissed] = useState(false);
 
-    const types = useDataInstallerRequest<{ dataTypes?: Array<{ dataType: string }> }>(
-        'list-datapack-data-types',
-    );
+    // `dataTypes` is a STRING ARRAY — `getProcessorOrder` returns names, not
+    // objects. An earlier version read `entry.dataType` off each, which yielded
+    // undefined for every one and rendered an empty Data Types section. The
+    // fixture agreed with the bug; the Extension Dev Host is what caught it.
+    const types = useDataInstallerRequest<{ dataTypes?: string[] }>('list-datapack-data-types');
     const target = useDataInstallerRequest<ProjectTarget>('get-datapack-import-target');
     const run = useDataInstallerRequest<ExportOutcome>('start-datapack-export');
 
@@ -81,7 +83,7 @@ export function ExportDatapackModal({ onClose }: ExportDatapackModalProps): Reac
     }, [loadTarget]);
 
     const available = useMemo(
-        () => (types.value?.dataTypes ?? []).map((entry) => entry.dataType).filter(Boolean),
+        () => (types.value?.dataTypes ?? []).filter(Boolean),
         [types.value],
     );
 

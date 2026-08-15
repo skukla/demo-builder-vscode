@@ -435,11 +435,12 @@
 
 /* Export modal. Reuses the import modal's type grid — the two forms ask the
    same question about data types and a second grid would drift from the first. */
+/* No min-width: one on this body pushed the intro text past the dialog's right
+   edge, clipping it. The import body sets none and flows correctly. */
 .datapack-export-body {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    min-width: 480px;
 }
 
 .datapack-export-intro {
