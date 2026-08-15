@@ -45,8 +45,19 @@ const EXPORT_TYPES = {
 };
 
 function withService(over: Record<string, unknown> = {}) {
-    mockRequest.mockImplementation(async (type: string) => {
-        if (type === 'list-datapack-data-types') return { success: true, data: EXPORT_TYPES };
+    mockRequest.mockImplementation(async (type: string, payload?: Record<string, unknown>) => {
+        if (type === 'list-datapack-data-types') {
+            // HONOURS the payload, exactly as the handler does. A mock that
+            // answers regardless of the key let `mode` instead of
+            // `operationMode` ship — the section rendered empty in the Dev Host
+            // while all seven tests passed.
+            return payload?.operationMode
+                ? { success: true, data: EXPORT_TYPES }
+                : {
+                      success: false,
+                      error: 'An operation mode is required (import, export, delete or validate).',
+                  };
+        }
         if (type === 'get-datapack-import-target') {
             return { success: true, data: { instance: 'inst-1', projectName: 'demo-1' } };
         }
@@ -91,7 +102,8 @@ describe('ExportDatapackModal', () => {
             expect(screen.getByRole('checkbox', { name: 'attribute_sets' })).toBeInTheDocument(),
         );
         const call = mockRequest.mock.calls.find((c) => c[0] === 'list-datapack-data-types');
-        expect(call?.[1]).toMatchObject({ mode: 'export' });
+        // `operationMode` is the handler's key; `mode` is refused.
+        expect(call?.[1]).toMatchObject({ operationMode: 'export' });
     });
 
     /** Naming the target is the user's job — nothing here guesses it. */
@@ -209,5 +221,21 @@ describe('ExportDatapackModal', () => {
         await waitFor(() =>
             expect(screen.getByRole('button', { name: /^export$/i })).toBeInTheDocument(),
         );
+    });
+
+    /**
+     * The section must never sit empty and unexplained — that is the silence
+     * this whole feature was built through.
+     */
+    it('says why when the type list cannot be loaded', async () => {
+        mockRequest.mockImplementation(async (type: string) =>
+            type === 'list-datapack-data-types'
+                ? { success: false, error: 'An operation mode is required.' }
+                : { success: true, data: null },
+        );
+        render(<ExportDatapackModal onClose={jest.fn()} />);
+
+        expect(await screen.findByText(/could not be loaded/i)).toBeInTheDocument();
+        expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     });
 });

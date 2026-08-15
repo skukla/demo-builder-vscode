@@ -73,8 +73,10 @@ export function ExportDatapackModal({ onClose }: ExportDatapackModalProps): Reac
 
     const loadTypes = types.load;
     useEffect(() => {
-        // The EXPORT set, which is not the import set — see the module docstring.
-        loadTypes({ mode: 'export' });
+        // `operationMode`, NOT `mode`: the handler refuses anything else, and a
+        // refusal here used to render as an empty Data Types section with no
+        // explanation. The EXPORT set is not the import set — see the docstring.
+        loadTypes({ operationMode: 'export' });
     }, [loadTypes]);
 
     const loadTarget = target.load;
@@ -145,6 +147,7 @@ export function ExportDatapackModal({ onClose }: ExportDatapackModalProps): Reac
                             selected={selected}
                             onToggle={toggle}
                             loadingTypes={types.loading}
+                            typesError={types.failure?.message}
                         />
                     )}
                 </div>
@@ -164,6 +167,7 @@ function ExportForm({
     selected,
     onToggle,
     loadingTypes,
+    typesError,
 }: {
     projectName?: string;
     name: string;
@@ -174,6 +178,7 @@ function ExportForm({
     selected: string[];
     onToggle: (dataType: string, isSelected: boolean) => void;
     loadingTypes: boolean;
+    typesError?: string;
 }): React.JSX.Element {
     return (
         <>
@@ -206,23 +211,55 @@ function ExportForm({
 
             <div className="datapack-import-types">
                 <span className="datapack-import-label">Data types</span>
-                {loadingTypes ? (
-                    <p className="datapack-export-note">Loading what can be exported…</p>
-                ) : (
-                    <div className="datapack-import-type-grid">
-                        {available.map((dataType) => (
-                            <Checkbox
-                                key={dataType}
-                                isSelected={selected.includes(dataType)}
-                                onChange={(isSelected) => onToggle(dataType, isSelected)}
-                            >
-                                {dataType}
-                            </Checkbox>
-                        ))}
-                    </div>
-                )}
+                {renderTypeChoices({ typesError, loadingTypes, available, selected, onToggle })}
             </div>
         </>
+    );
+}
+
+/**
+ * The data-type choices, or why there are none.
+ *
+ * A helper rather than chained ternaries in JSX — nested ternaries are on the
+ * project's avoid list, and its sibling views solve this the same way. The
+ * failure branch matters: an empty section with no reason is precisely the
+ * silence this feature spent a day diagnosing in the service itself.
+ */
+function renderTypeChoices({
+    typesError,
+    loadingTypes,
+    available,
+    selected,
+    onToggle,
+}: {
+    typesError?: string;
+    loadingTypes: boolean;
+    available: string[];
+    selected: string[];
+    onToggle: (dataType: string, isSelected: boolean) => void;
+}): React.JSX.Element {
+    if (typesError) {
+        return (
+            <p className="datapack-export-note">
+                The exportable data types could not be loaded — {typesError}
+            </p>
+        );
+    }
+    if (loadingTypes) {
+        return <p className="datapack-export-note">Loading what can be exported…</p>;
+    }
+    return (
+        <div className="datapack-import-type-grid">
+            {available.map((dataType) => (
+                <Checkbox
+                    key={dataType}
+                    isSelected={selected.includes(dataType)}
+                    onChange={(isSelected) => onToggle(dataType, isSelected)}
+                >
+                    {dataType}
+                </Checkbox>
+            ))}
+        </div>
     );
 }
 
