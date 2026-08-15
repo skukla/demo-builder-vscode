@@ -748,41 +748,53 @@ two actions resolve the instance differently. Its documented shape is also wrong
 in the drop: it is a GET with `data_type` as a QUERY parameter (the path segment
 is not read) and an `x-commerce-instance` header (not `x-base-url`).
 
-**The pattern, established across all 18 types at once.** Omitting `data_types`
-runs every processor (the request 504s on the sync endpoint, but the run
-completes and the log records it). Cross-referencing each type's outcome against
-how many items the instance actually holds:
+### ROOT CAUSE, measured: the export path has no `MONGO_URI` on stage
 
-| Outcome | Types | Items on the instance |
-|---|---|---|
-| `success` | `cart_rules`, `coupons`, `b2b_shared_catalogs` | **0** |
-| `success` | `sources`, `stocks` | 1 each — the Default, which `export_exclusions.json` drops |
-| `success` | `customer_groups` | 5 — all five are on the exclusion list |
-| `fail` | `attribute_sets` | 9 |
-| `fail` | `categories` | 14 |
-| `fail` | `products` | 130 |
-| `fail` | `customers` | 3 |
-| `fail` | `product_attributes`, `b2b_companies`, `b2b_shared_catalog_*`, `stock_source_links` | non-zero |
-| `fail` | `source_items` | distinct error: `network UNKNOWN_ERROR: Unknown error occurred` |
+`process-datapack` accepts an optional **`verbose`** field (`true`, `"full"`,
+`"errors"`, `false`) — documented in the Quick Start Guide under Step 5, and in
+its troubleshooting section. The default response omits the per-endpoint error.
+Sending `verbose: "full"` returns it:
 
-**Success correlates exactly with having nothing to export.** Every type with at
-least one item that survives exclusions fails; every "success" is an empty run.
-So this deployment has never exported a single item from this ACCS instance, for
-any data type — while the same credentials read all five search endpoints
-directly at 200.
+```json
+"responses": {
+  "attribute_sets_export": {
+    "error": "Failed to store exported data: MongoDB connection URI required.
+              Provide MONGO_URI in params or environment variable.",
+    "statusCode": 500,
+    "success": false
+  }
+}
+```
 
-That is as far as outside evidence reaches. It is not a payload the docs
-describe: nine variants were eliminated (table above), and the failure is uniform
-across types whose payloads differ completely. The `COMMERCE_INSTANCE_URL_TEMPLATE`
-hint from `get-export-items` points the same way — at ACCS configuration on the
-stage deployment rather than at the request.
+**The export processor cannot write to MongoDB.** `MONGO_URI` is not configured
+for that path on the stage deployment. That single fact explains every
+observation:
 
-The lesson worth keeping: an all-zero result on an instance you have just emptied
-is not evidence about the capability. The control that would have caught this —
-export a type the instance demonstrably still holds — is the one I did not run
-before writing a verdict.
+- **Fetch works** — no database involved, which is why `get-export-items` (a
+  pure read) returns items normally.
+- **Types with zero items "succeed"** — they never reach the store step. That is
+  the exact correlation measured across all 18 types: `cart_rules`, `coupons`,
+  `b2b_shared_catalogs` (0 items), `sources`/`stocks` (1 each, both excluded),
+  `customer_groups` (5, all excluded).
+- **Types with items fail** — they reach the store step and get a 500.
+- **`add-data-item` works** — a different action, which does have `MONGO_URI`.
+- **Nothing is ever created** — the failing step IS the write, so a failed export
+  leaves no datapack row behind (confirmed: 404 on every cleanup attempt).
 
-### The export contract differs from import's in three ways
+**This is a service deployment gap, not a payload error and not an ACCS
+quirk.** The request shape was correct for most of the attempts above; the
+service simply cannot store what it fetches. It will work unchanged once
+`MONGO_URI` is set for the export path.
+
+**Design consequence for Stage 3**: the client MUST send `verbose` on export.
+Without it the service reports a bare `success: false` with an all-zero
+`entity_summary` and no reason — which is what cost this investigation a day.
+Note also that `MONGO_URI` can be supplied "in params" per that error text: the
+extension must NEVER do that. It is the service's own secret, we do not hold it,
+and putting a database URI in a request body is not something this client will
+ever do.
+
+### The export contract differs from import's in three ways### The export contract differs from import's in three ways
 
 - **Request**: the export docs use `base_url` and no `commerce_instance`
   (`EXPORT_GUIDE.md` scenarios 1 and 2). **The deployed service rejects that
