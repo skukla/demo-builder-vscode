@@ -255,16 +255,18 @@ describe('AdobeEntityFetcher', () => {
             const result = await fetcher.getOrganizationsSdkOnly();
 
             expect(result).toHaveLength(1);
-            expect(result[0].id).toBe('org1');
+            expect(result?.[0]?.id).toBe('org1');
             expect(mockCacheManager.setCachedOrgList).toHaveBeenCalledWith(result);
             // P1: never the CLI fallback.
             expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
         });
 
         it('returns [] WITHOUT the CLI fallback when the SDK call fails', async () => {
-            // The whole point of the SDK-only path: a failed/empty SDK read must
-            // degrade to [] (→ "unknown") and must NEVER run `aio console org list`
-            // (which can stall ~14.5s and launch a browser on open). P1.
+            // The whole point of the SDK-only path: a failed SDK read must degrade
+            // to `undefined` ("could not answer" → "unknown") and must NEVER run
+            // `aio console org list` (which can stall ~14.5s and launch a browser
+            // on open). P1. NOT [] — an empty array is a real answer (the token
+            // reaches no Console orgs) and drives the org-switch recovery instead.
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(true);
             mockSDKClient.getClient.mockReturnValue({
@@ -273,22 +275,39 @@ describe('AdobeEntityFetcher', () => {
 
             const result = await fetcher.getOrganizationsSdkOnly();
 
-            expect(result).toEqual([]);
+            expect(result).toBeUndefined();
             expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
-            // Must not poison the shared org-list cache with an empty result.
+            // Must not poison the shared org-list cache with a degraded result.
             expect(mockCacheManager.setCachedOrgList).not.toHaveBeenCalled();
         });
 
-        it('returns [] WITHOUT the CLI fallback when the SDK is not initialized', async () => {
+        it('returns undefined WITHOUT the CLI fallback when the SDK is not initialized', async () => {
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(false);
             mockSDKClient.ensureInitialized.mockResolvedValue(false);
 
             const result = await fetcher.getOrganizationsSdkOnly();
 
-            expect(result).toEqual([]);
+            expect(result).toBeUndefined();
             expect(mockSDKClient.ensureInitialized).toHaveBeenCalled();
             expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+        });
+
+        it('returns a REAL empty list as [] (distinguishable from a failed read)', async () => {
+            // Leah's case (2026-08-13): the SDK answered successfully with zero
+            // orgs. That must come back as [], not undefined — the dashboard
+            // check maps [] to the org-mismatch warning (forced Switch IMS Org).
+            mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getOrganizations: jest.fn().mockResolvedValue({ body: [] }),
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            const result = await fetcher.getOrganizationsSdkOnly();
+
+            expect(result).toEqual([]);
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+            expect(mockCacheManager.setCachedOrgList).not.toHaveBeenCalled();
         });
 
         it('does not call onNoOrgsAccessible on an empty SDK read', async () => {

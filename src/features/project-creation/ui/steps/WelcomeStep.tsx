@@ -6,6 +6,7 @@ import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayo
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { normalizeProjectName, getProjectNameError } from '@/core/validation/normalizers';
+import { removeKeysFromComponents } from '@/features/components/services/componentConfigWrites';
 import { DemoPackage } from '@/types/demoPackages';
 import { Stack } from '@/types/stacks';
 import { BaseStepProps } from '@/types/wizard';
@@ -86,7 +87,22 @@ export function WelcomeStep({
             if (packageId !== state.selectedPackage) {
                 // Find the package to get its configDefaults
                 const pkg = packages?.find((p) => p.id === packageId);
+                // Package configDefaults are FILL-only in useComponentConfig (they
+                // never override a stored value — overriding is what stomped a saved
+                // Business Structure scope on every wizard load, 2026-08-13). A real
+                // package change is therefore the one place brand-owned keys reset:
+                // clear the outgoing AND incoming packages' keys so the new package's
+                // defaults can fill, and the old brand's codes cannot leak through.
+                const previousPkg = packages?.find((p) => p.id === state.selectedPackage);
+                const brandOwnedKeys = [
+                    ...Object.keys(previousPkg?.configDefaults ?? {}),
+                    ...Object.keys(pkg?.configDefaults ?? {}),
+                ];
                 updateState({
+                    componentConfigs: removeKeysFromComponents(
+                        state.componentConfigs ?? {},
+                        brandOwnedKeys,
+                    ),
                     selectedPackage: packageId,
                     // Clear ALL architecture-derived selections so a new package never
                     // inherits the previous package's stack/backend/mesh deps/block
@@ -114,7 +130,7 @@ export function WelcomeStep({
                 });
             }
         },
-        [updateState, state.selectedPackage, packages],
+        [updateState, state.selectedPackage, state.componentConfigs, packages],
     );
 
     useEffect(() => {

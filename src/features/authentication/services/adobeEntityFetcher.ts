@@ -69,7 +69,7 @@ export class AdobeEntityFetcher {
      * Shared in-flight org-list fetch. Distinct from the org-list CACHE, which can
      * only help callers arriving after a fetch has completed.
      */
-    private readonly orgListFlight = new SingleFlight<AdobeOrg[]>();
+    private readonly orgListFlight = new SingleFlight<AdobeOrg[] | undefined>();
     /** Cached credential from createWorkspaceCredential — avoids re-query issues */
     private cachedCredential: WorkspaceCredential | undefined;
     /**
@@ -100,16 +100,21 @@ export class AdobeEntityFetcher {
     }
 
     /**
-     * Try SDK fetch with automatic fallback
-     * @returns Mapped results or empty array if SDK not available/failed
+     * Try SDK fetch with automatic fallback.
+     *
+     * @returns the mapped results, or `undefined` when the SDK could not answer
+     *   (not initialized, failed, timed out, or returned an invalid shape). An
+     *   EMPTY ARRAY is a real answer — "the API says there are none" — and the
+     *   two must stay distinguishable: conflating them is what made a token that
+     *   reaches zero orgs read as "SDK unavailable" on the dashboard (2026-08-13).
      */
     private async trySDKFetch<TRaw, TMapped>(
         sdkCall: () => Promise<SDKResponse<TRaw[]>>,
         mapper: (raw: TRaw[]) => TMapped[],
         entityName: string,
         startTime: number,
-    ): Promise<TMapped[]> {
-        if (!this.sdkClient.isInitialized()) return [];
+    ): Promise<TMapped[] | undefined> {
+        if (!this.sdkClient.isInitialized()) return undefined;
 
         // Bound the SDK attempt. SDK-first is justified only by "faster than the CLI, or
         // fail fast": without a deadline a stalled Adobe endpoint (observed: the org-list
@@ -125,7 +130,7 @@ export class AdobeEntityFetcher {
                 `[Entity Fetcher] SDK ${entityName} fetch exceeded ` +
                     `${formatDuration(TIMEOUTS.SDK_ENTITY_FETCH)}, falling back to CLI`,
             );
-            return [];
+            return undefined;
         }
 
         if (outcome.error || !outcome.result) {
@@ -136,7 +141,7 @@ export class AdobeEntityFetcher {
             this.debugLogger.warn(
                 `[Entity Fetcher] SDK unavailable, using slower CLI fallback for ${entityName}`,
             );
-            return [];
+            return undefined;
         }
 
         const sdkResult = outcome.result;
@@ -144,7 +149,7 @@ export class AdobeEntityFetcher {
             this.debugLogger.warn(
                 `[Entity Fetcher] SDK returned an invalid ${entityName} response, falling back to CLI`,
             );
-            return [];
+            return undefined;
         }
 
         const mapped = mapper(sdkResult.body);
@@ -289,12 +294,13 @@ export class AdobeEntityFetcher {
             const client = this.sdkClient.getClient() as {
                 getOrganizations: () => Promise<SDKResponse<RawAdobeOrg[]>>;
             };
-            let mappedOrgs = await this.trySDKFetch(
-                () => client.getOrganizations(),
-                mapOrganizations,
-                'organizations',
-                startTime,
-            );
+            let mappedOrgs =
+                (await this.trySDKFetch(
+                    () => client.getOrganizations(),
+                    mapOrganizations,
+                    'organizations',
+                    startTime,
+                )) ?? [];
 
             if (mappedOrgs.length === 0) {
                 mappedOrgs = await this.executeCLIFallback<RawAdobeOrg, AdobeOrg>(
@@ -310,7 +316,15 @@ export class AdobeEntityFetcher {
                 await this.config.onNoOrgsAccessible();
             }
 
-            this.cacheManager.setCachedOrgList(mappedOrgs);
+            // Cache only a non-empty result. executeCLIFallback returns [] for a
+            // FAILED probe (bad exit, unparseable output) as well as a real empty
+            // answer, and the SDK-only reader is cache-first — a cached failed-[]
+            // would read as "the token reaches no orgs" and flip the dashboard to
+            // the org-mismatch warning until the TTL expired. Same rule as
+            // fetchOrganizationsSdkOnly below.
+            if (mappedOrgs.length > 0) {
+                this.cacheManager.setCachedOrgList(mappedOrgs);
+            }
             this.stepLogger.logTemplate('adobe-auth', 'found', {
                 count: mappedOrgs.length,
                 item: mappedOrgs.length === 1 ? 'organization' : 'organizations',
@@ -329,12 +343,14 @@ export class AdobeEntityFetcher {
      * For non-interactive on-open probes (P1): the CLI path
      * (`aio console org list`) can stall ~14.5s and trigger interactive browser
      * auth, which must never happen automatically when a dashboard opens. A
-     * failed/empty/timed-out SDK read returns `[]` (callers treat that as
-     * "unknown / sign in to check"), and we deliberately do NOT cache an empty
-     * result (that would poison the shared org-list cache for the real
-     * {@link getOrganizations}) or fire `onNoOrgsAccessible` (a state mutation).
+     * failed/timed-out SDK read returns `undefined` ("could not answer" — callers
+     * show "sign in to check"); an EMPTY ARRAY is a real answer (the token
+     * reaches no Console orgs) and callers surface the org-switch recovery. We
+     * deliberately do NOT cache a degraded result (that would poison the shared
+     * org-list cache for the real {@link getOrganizations}) or fire
+     * `onNoOrgsAccessible` (a state mutation).
      */
-    async getOrganizationsSdkOnly(): Promise<AdobeOrg[]> {
+    async getOrganizationsSdkOnly(): Promise<AdobeOrg[] | undefined> {
         const cachedOrgs = this.cacheManager.getCachedOrgList();
         if (cachedOrgs) return cachedOrgs;
 
@@ -347,11 +363,11 @@ export class AdobeEntityFetcher {
     }
 
     /** The uncached fetch behind {@link getOrganizationsSdkOnly}'s single-flight. */
-    private async fetchOrganizationsSdkOnly(): Promise<AdobeOrg[]> {
+    private async fetchOrganizationsSdkOnly(): Promise<AdobeOrg[] | undefined> {
         const startTime = Date.now();
 
         await this.ensureSDKReady();
-        if (!this.sdkClient.isInitialized()) return [];
+        if (!this.sdkClient.isInitialized()) return undefined;
 
         const client = this.sdkClient.getClient() as {
             getOrganizations: () => Promise<SDKResponse<RawAdobeOrg[]>>;
@@ -363,8 +379,8 @@ export class AdobeEntityFetcher {
             startTime,
         );
 
-        // Cache only a real (non-empty) result — never the degraded empty case.
-        if (mappedOrgs.length > 0) {
+        // Cache only a real (non-empty) result — never the degraded/empty cases.
+        if (mappedOrgs && mappedOrgs.length > 0) {
             this.cacheManager.setCachedOrgList(mappedOrgs);
         }
         return mappedOrgs;
@@ -381,10 +397,10 @@ export class AdobeEntityFetcher {
      * of dropping to the CLI fallback, which targets the STALE `aio console` org
      * and 403s -> ORG_MISMATCH (a slow, noisy failure).
      *
-     * `getOrganizationsSdkOnly` is self-guarding: it returns [] (→ this returns
-     * undefined) when the SDK isn't initialized, so the caller then keeps its
-     * existing return-[] → CLI path. Deliberately SDK-only to avoid a circular
-     * CLI dependency.
+     * `getOrganizationsSdkOnly` is self-guarding: it returns undefined (→ this
+     * returns undefined) when the SDK isn't initialized, so the caller then keeps
+     * its existing return-[] → CLI path. Deliberately SDK-only to avoid a
+     * circular CLI dependency.
      */
     private async resolveEffectiveOrgId(preferredOrgId?: string): Promise<string | undefined> {
         if (preferredOrgId && preferredOrgId.length > 0) return preferredOrgId;
@@ -419,11 +435,13 @@ export class AdobeEntityFetcher {
         const client = this.sdkClient.getClient() as {
             getProjectsForOrg: (orgId: string) => Promise<SDKResponse<RawAdobeProject[]>>;
         };
-        return this.trySDKFetch(
-            () => client.getProjectsForOrg(effectiveOrgId),
-            mapProjects,
-            'projects',
-            startTime,
+        return (
+            (await this.trySDKFetch(
+                () => client.getProjectsForOrg(effectiveOrgId),
+                mapProjects,
+                'projects',
+                startTime,
+            )) ?? []
         );
     }
 
@@ -597,12 +615,13 @@ export class AdobeEntityFetcher {
                         projectId: string
                     ) => Promise<SDKResponse<RawAdobeWorkspace[]>>;
                 };
-                mappedWorkspaces = await this.trySDKFetch(
-                    () => client.getWorkspacesForProject(orgId, projectId),
-                    mapWorkspaces,
-                    'workspaces',
-                    startTime,
-                );
+                mappedWorkspaces =
+                    (await this.trySDKFetch(
+                        () => client.getWorkspacesForProject(orgId, projectId),
+                        mapWorkspaces,
+                        'workspaces',
+                        startTime,
+                    )) ?? [];
             } else if (this.sdkClient.isInitialized()) {
                 this.debugLogger.debug(
                     '[Entity Fetcher] SDK available but org ID or project ID is missing, using CLI',

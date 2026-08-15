@@ -11,6 +11,7 @@
 
 import {
     findFieldValue,
+    removeKeysFromComponents,
     resolveWriteTargets,
     writeFieldValue,
     writeToComponents,
@@ -146,5 +147,35 @@ describe('resolveWriteTargets', () => {
 
         expect(next[BACKEND].ACCS_WEBSITE_CODE).toBe('citisignal');
         expect(next['eds-accs-mesh']).toBeUndefined();
+    });
+});
+
+describe('removeKeysFromComponents', () => {
+    it('removes the named keys from every component, keeping the rest', () => {
+        const configs = {
+            backend: { ACCS_WEBSITE_CODE: 'citisignal', COMMERCE_URL: 'https://a.test' },
+            headless: { ACCS_WEBSITE_CODE: 'citisignal' },
+        };
+
+        const next = removeKeysFromComponents(configs, ['ACCS_WEBSITE_CODE']);
+
+        expect(next).toEqual({
+            backend: { COMMERCE_URL: 'https://a.test' },
+            headless: {},
+        });
+    });
+
+    it('returns the SAME object when nothing matches (no spurious re-renders)', () => {
+        const configs = { backend: { COMMERCE_URL: 'https://a.test' } };
+
+        expect(removeKeysFromComponents(configs, ['ACCS_WEBSITE_CODE'])).toBe(configs);
+    });
+
+    it('does not mutate the input configs', () => {
+        const configs = { backend: { ACCS_WEBSITE_CODE: 'citisignal' } };
+
+        removeKeysFromComponents(configs, ['ACCS_WEBSITE_CODE']);
+
+        expect(configs.backend.ACCS_WEBSITE_CODE).toBe('citisignal');
     });
 });

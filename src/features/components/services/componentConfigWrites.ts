@@ -119,3 +119,31 @@ export function writeFieldValue(
         [field.key]: value,
     });
 }
+
+/**
+ * Remove the named keys from every component's config.
+ *
+ * Exists for package switching: package configDefaults are FILL-only (they never
+ * override a stored value — that is what stomped a user's saved store scope on
+ * wizard load, 2026-08-13), so a real package change clears the outgoing and
+ * incoming packages' keys here and lets the fill re-apply the new package's
+ * values.
+ *
+ * @param configs - Current component configs
+ * @param keys - Env-var keys to remove wherever they appear
+ * @returns A new configs object, or the SAME object when no key was present
+ */
+export function removeKeysFromComponents(
+    configs: ComponentConfigs,
+    keys: readonly string[],
+): ComponentConfigs {
+    let next = configs;
+    for (const [componentId, values] of Object.entries(configs)) {
+        if (!values || !keys.some((key) => key in values)) continue;
+        if (next === configs) next = { ...configs };
+        const stripped = { ...values };
+        for (const key of keys) delete stripped[key];
+        next[componentId] = stripped;
+    }
+    return next;
+}

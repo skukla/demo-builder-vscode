@@ -114,13 +114,19 @@ function applyFieldDefaults(
             const defaultValue = packageValue ?? field.default;
             if (defaultValue === undefined || defaultValue === '') return;
 
-            // A package default overrides whatever is there; a field default only fills a
-            // blank. The blank check is per component because STORAGE is per component —
-            // not because divergent values are wanted. Every write path fans one field's
-            // value to all its components, so two copies disagreeing is a defect, never a
-            // feature (see resolveWriteTargets).
+            // Both package and field defaults only fill a BLANK — neither may override
+            // a stored value. Package defaults used to override, which stomped the
+            // user's saved Business Structure scope (e.g. their selected website) back
+            // to the brand's codes every time the wizard loaded a project (2026-08-13,
+            // leah-b2b-demo). Restamping brand codes on a real package SWITCH is
+            // WelcomeStep's handlePackageSelect, which clears the old package's keys
+            // so this fill applies the new ones. The blank check is per component
+            // because STORAGE is per component — not because divergent values are
+            // wanted. Every write path fans one field's value to all its components,
+            // so two copies disagreeing is a defect, never a feature (see
+            // resolveWriteTargets).
             const targets = resolveWriteTargets(field, backendId).filter(
-                (componentId) => packageValue || !newConfigs[componentId]?.[field.key],
+                (componentId) => !newConfigs[componentId]?.[field.key],
             );
             if (targets.length === 0) return;
 

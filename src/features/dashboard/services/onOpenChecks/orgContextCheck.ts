@@ -10,8 +10,11 @@
  *
  * and maps to:
  *   - `ok`      — token valid, project's org reachable (self-heals legacy data),
- *   - `warning` — reachable list doesn't include the project's org (banner +
- *                 user-initiated "Switch IMS Org"),
+ *   - `warning` — the reachable list doesn't include the project's org — INCLUDING
+ *                 the list being empty (a valid token that reaches no Console orgs
+ *                 is a real answer, and only the forced "Switch IMS Org" login with
+ *                 its account/org chooser can change it; a non-forced sign-in
+ *                 silently reuses the same browser SSO session — 2026-08-13),
  *   - `unknown` — no valid token OR the SDK couldn't answer ("sign in to check").
  *
  * The browser only ever opens from a USER action (Switch IMS Org / Sign in) —
@@ -116,9 +119,15 @@ export const orgContextCheck: OnOpenCheck = {
             return unknownOutcome();
         }
 
-        // P1: SDK-only org read — never the CLI fallback. Empty → unknown.
+        // P1: SDK-only org read — never the CLI fallback. `undefined` means the
+        // SDK could not answer → unknown ("sign in to check"). An EMPTY list is a
+        // real answer — the token reaches no Console orgs — and flows into the
+        // detector below, which resolves it as unreachable → the mismatch warning
+        // whose forced "Switch IMS Org" login (account/org chooser) is the only
+        // recovery that can change the landed org (2026-08-13: the non-forced
+        // sign-in offered by `unknown` reuses the browser SSO session and loops).
         const orgs = await authManager.getOrganizationsSdkOnly();
-        if (orgs.length === 0) {
+        if (orgs === undefined) {
             return unknownOutcome();
         }
 
@@ -132,7 +141,8 @@ export const orgContextCheck: OnOpenCheck = {
             logger,
         );
         if (!result) {
-            // Defensive: detector couldn't resolve despite a non-empty org list.
+            // The detector saw the org list — possibly EMPTY, which is the point of this
+            // change — and still could not resolve a mismatch.
             return unknownOutcome();
         }
 
