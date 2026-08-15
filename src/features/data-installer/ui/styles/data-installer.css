@@ -354,28 +354,34 @@
     gap: 12px;
 }
 
-/* Two columns, because a pack ships up to 14 data types (Bodea does) and one
-   column turns a glanceable choice into a scroll inside the modal. Fixed at two
-   rather than auto-fill: the modal has a known width, and auto-fill would reflow
-   to three narrow columns that wrap the longer type names
-   (b2b_shared_catalog_company_assignments) mid-word. */
-/* Three uniform columns at the wide modal width. Two forced a scroll on a
-   14-type pack; the target block's removal plus the extra width buys the third.
-   Tracks are equal and sized for the longest name, so rows line up — a list read
-   down wants alignment more than density. */
-.datapack-import-type-grid {
+/* The data-type checkbox list, shared by BOTH modals — import and export.
+
+   It was two classes. The export copy set minmax(420px, 1fr), sized back when a
+   type was a raw underscore code held on one unbroken line, and at the wide
+   modal's ~685px content box auto-fill fits floor(685/420) = 1 track: eighteen
+   exportable types in a single scrolling column. The import copy had already
+   been tuned away from that and the export one could not inherit it, because
+   nothing linked them. One class now, so they cannot drift apart again.
+
+   260px tracks give two columns at that same width, which halves the export
+   list from eighteen rows to nine — shorter, not necessarily scroll-free. Equal
+   tracks keep the rows aligned; a list read downward wants alignment more than
+   density. */
+.datapack-type-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 8px 24px;
-    /* Type names are underscore-joined with no spaces to break at, so a long one
-       (b2b_shared_catalog_company_assignments) overruns its track and collides
-       with the next column. `anywhere` is the only value that breaks a word with
-       no break opportunity; `break-word` leaves it overflowing. Inherited, so it
-       reaches the Spectrum label text without naming a Spectrum class. */
+    /* A safety net rather than the rule it once was. Labels now carry spaces
+       ("B2B shared catalog company assignments") and break on their own, but a
+       code still reaches this grid whenever the service adds a type the label
+       derivation has not been taught. `anywhere` is the only value that breaks a
+       word with no break opportunity; `break-word` leaves it overflowing.
+       Inherited, so it reaches the Spectrum label without naming a Spectrum
+       class. */
     overflow-wrap: anywhere;
 }
 
-.datapack-import-type-grid > * {
+.datapack-type-grid > * {
     min-width: 0;
 }
 
@@ -463,31 +469,6 @@
     margin: 0;
     line-height: 1.5;
     color: var(--spectrum-global-color-gray-700);
-}
-
-/* Export's type list, deliberately NOT the import grid.
-
-   The import grid is two fixed columns that break long names mid-word — a
-   documented trade-off there, where a pack ships at most 14 types. Export offers
-   all 18, including b2b_shared_catalog_company_assignments at 38 characters.
-
-   A previous attempt used flex-wrap so each item took the width of its own text.
-   Nothing wrapped, but nothing lined up either: every row started its columns at
-   a different x, which reads as noise in a list you scan down.
-
-   So: a real grid, with every column as wide as the LONGEST name needs. That
-   buys uniform rows at the cost of column count — two columns rather than three
-   — which is the right trade for a list you read down rather than across. */
-.datapack-export-type-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-    gap: 10px 28px;
-}
-
-/* Sized by the track, never by the text: a name is never broken. */
-.datapack-export-type-grid > * {
-    min-width: 0;
-    white-space: nowrap;
 }
 
 .datapack-export-note {

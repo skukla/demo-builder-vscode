@@ -25,7 +25,7 @@
  * @module features/data-installer/ui/components/ExportDatapackModal
  */
 
-import { Checkbox, DialogContainer } from '@adobe/react-spectrum';
+import { ActionButton, Checkbox, DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
@@ -51,6 +51,23 @@ interface ExportOutcome {
 interface ProjectTarget {
     instance?: string;
     projectName?: string;
+}
+
+/**
+ * The data-type list and everything that acts on it.
+ *
+ * One object rather than seven loose props: the form is otherwise five fields
+ * wide, and threading the list through as separate arguments pushed it past the
+ * prop ceiling the moment Select all arrived.
+ */
+interface TypeChoices {
+    available: string[];
+    selected: string[];
+    allSelected: boolean;
+    loading: boolean;
+    error?: string;
+    onToggle: (dataType: string, isSelected: boolean) => void;
+    onToggleAll: () => void;
 }
 
 export interface ExportDatapackModalProps {
@@ -95,6 +112,14 @@ export function ExportDatapackModal({ onClose }: ExportDatapackModalProps): Reac
             isSelected ? [...current, dataType] : current.filter((t) => t !== dataType),
         );
     }, []);
+
+    const allSelected = available.length > 0 && selected.length === available.length;
+
+    // Selecting all takes the service's own order, so the request carries the
+    // types in the sequence the processors run rather than in click order.
+    const toggleAll = useCallback((): void => {
+        setSelected(allSelected ? [] : [...available]);
+    }, [allSelected, available]);
 
     const canExport =
         name.trim().length > 0 && version.trim().length > 0 && selected.length > 0 && !run.loading;
@@ -149,11 +174,15 @@ export function ExportDatapackModal({ onClose }: ExportDatapackModalProps): Reac
                             version={version}
                             onNameChange={setName}
                             onVersionChange={setVersion}
-                            available={available}
-                            selected={selected}
-                            onToggle={toggle}
-                            loadingTypes={types.loading}
-                            typesError={types.failure?.message}
+                            types={{
+                                available,
+                                selected,
+                                allSelected,
+                                loading: types.loading,
+                                error: types.failure?.message,
+                                onToggle: toggle,
+                                onToggleAll: toggleAll,
+                            }}
                         />
                     )}
                 </div>
@@ -169,22 +198,14 @@ function ExportForm({
     version,
     onNameChange,
     onVersionChange,
-    available,
-    selected,
-    onToggle,
-    loadingTypes,
-    typesError,
+    types,
 }: {
     projectName?: string;
     name: string;
     version: string;
     onNameChange: (value: string) => void;
     onVersionChange: (value: string) => void;
-    available: string[];
-    selected: string[];
-    onToggle: (dataType: string, isSelected: boolean) => void;
-    loadingTypes: boolean;
-    typesError?: string;
+    types: TypeChoices;
 }): React.JSX.Element {
     return (
         <>
@@ -216,8 +237,17 @@ function ExportForm({
             />
 
             <div className="datapack-import-types">
-                <span className="datapack-import-label">Data types</span>
-                {renderTypeChoices({ typesError, loadingTypes, available, selected, onToggle })}
+                {/* Label and bulk toggle side by side, matching the import list.
+                    The toggle appears only once there is a list to act on. */}
+                <div className="datapack-import-types-head">
+                    <span className="datapack-import-label">Data types</span>
+                    {types.available.length > 0 ? (
+                        <ActionButton isQuiet onPress={types.onToggleAll}>
+                            {types.allSelected ? 'Clear all' : 'Select all'}
+                        </ActionButton>
+                    ) : null}
+                </div>
+                {renderTypeChoices(types)}
             </div>
         </>
     );
@@ -232,30 +262,24 @@ function ExportForm({
  * silence this feature spent a day diagnosing in the service itself.
  */
 function renderTypeChoices({
-    typesError,
-    loadingTypes,
+    error,
+    loading,
     available,
     selected,
     onToggle,
-}: {
-    typesError?: string;
-    loadingTypes: boolean;
-    available: string[];
-    selected: string[];
-    onToggle: (dataType: string, isSelected: boolean) => void;
-}): React.JSX.Element {
-    if (typesError) {
+}: TypeChoices): React.JSX.Element {
+    if (error) {
         return (
             <p className="datapack-export-note">
-                The exportable data types could not be loaded — {typesError}
+                The exportable data types could not be loaded — {error}
             </p>
         );
     }
-    if (loadingTypes) {
+    if (loading) {
         return <p className="datapack-export-note">Loading what can be exported…</p>;
     }
     return (
-        <div className="datapack-export-type-grid">
+        <div className="datapack-type-grid">
             {available.map((dataType) => (
                 <Checkbox
                     key={dataType}

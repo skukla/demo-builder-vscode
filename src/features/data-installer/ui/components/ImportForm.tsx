@@ -193,9 +193,9 @@ export function ImportForm({
                         {allSelected ? 'Clear all' : 'Select all'}
                     </ActionButton>
                 </div>
-                {/* Two columns: a pack ships up to 14 types, and one column
-                    turns a glance into a scroll. */}
-                <div className="datapack-import-type-grid">
+                {/* The grid is shared with the export modal — see
+                    .datapack-type-grid for why they are one class. */}
+                <div className="datapack-type-grid">
                     {availableTypes.map((type) => (
                         <Checkbox
                             key={type}

@@ -224,6 +224,80 @@ describe('ExportDatapackModal', () => {
     });
 
     /**
+     * The bug these pin, and why it is a divergence rather than a number.
+     *
+     * The export modal was built with its OWN copy of the type-list styles:
+     * `.datapack-export-type-grid`, tracks of `minmax(420px, 1fr)`, sized back
+     * when a type was a raw underscore code held on one unbroken line. The wide
+     * modal's content box is about 685px, so auto-fill fits floor(685/420) = 1
+     * track — eighteen exportable types stacked in a single scrolling column.
+     *
+     * The import list had already been fixed for exactly this (260px tracks, two
+     * columns, a Select all beside the label) and the export copy could inherit
+     * none of it, because nothing linked the two. So the fix is one shared grid,
+     * and these are the tests that they cannot drift apart again.
+     */
+    describe('type list, shared with the import modal', () => {
+        it('lays the types out in the shared grid, not a private copy', async () => {
+            const { container } = renderModal();
+            await screen.findByRole('checkbox', { name: 'Attribute sets' });
+
+            expect(container.querySelector('.datapack-type-grid')).toBeInTheDocument();
+            expect(container.querySelector('.datapack-export-type-grid')).toBeNull();
+        });
+
+        it('offers Select all, the way the import list does', async () => {
+            renderModal();
+            await screen.findByRole('checkbox', { name: 'Attribute sets' });
+
+            fireEvent.click(screen.getByRole('button', { name: /select all/i }));
+
+            expect(screen.getByRole('checkbox', { name: 'Attribute sets' })).toBeChecked();
+            expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeChecked();
+        });
+
+        it('turns into Clear all once everything is selected', async () => {
+            renderModal();
+            await screen.findByRole('checkbox', { name: 'Attribute sets' });
+
+            fireEvent.click(screen.getByRole('button', { name: /select all/i }));
+            fireEvent.click(screen.getByRole('button', { name: /clear all/i }));
+
+            expect(screen.getByRole('checkbox', { name: 'Attribute sets' })).not.toBeChecked();
+            expect(screen.getByRole('checkbox', { name: 'Categories' })).not.toBeChecked();
+        });
+
+        /** Selecting all must send CODES — the labels are presentation only. */
+        it('sends the codes it selected, never the names it showed', async () => {
+            renderModal();
+            await screen.findByRole('checkbox', { name: 'Attribute sets' });
+
+            fireEvent.click(screen.getByRole('button', { name: /select all/i }));
+            fireEvent.change(screen.getByRole('textbox', { name: /datapack name/i }), {
+                target: { value: 'captured-pack' },
+            });
+            fireEvent.change(screen.getByRole('textbox', { name: /version/i }), {
+                target: { value: 'v1' },
+            });
+            fireEvent.click(screen.getByRole('button', { name: /^export$/i }));
+
+            await waitFor(() => {
+                const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-export');
+                expect(call?.[1]).toMatchObject({
+                    dataTypes: ['attribute_sets', 'categories'],
+                });
+            });
+        });
+
+        /** No list yet, nothing to act on — a bulk toggle over zero types is noise. */
+        it('withholds Select all while the types are still loading', () => {
+            renderModal();
+
+            expect(screen.queryByRole('button', { name: /select all/i })).not.toBeInTheDocument();
+        });
+    });
+
+    /**
      * The section must never sit empty and unexplained — that is the silence
      * this whole feature was built through.
      */
