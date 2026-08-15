@@ -104,6 +104,19 @@ their data differs — the wizard is pre-deploy identity, the dashboard is live 
 The one REAL wizard gap the prototype names: destination is shown **once at the top with a
 Change link**, not repeated per row as it is today. Track that separately; it is not this plan.
 
+> **Followed up 2026-08-15** (`fix/wizard-integrations-parity`). The destination gap is closed
+> — the wizard now renders one `DestinationContext` line above the list. The wizard ALSO
+> adopted the card itself, which this section's "What carries over" already classed as
+> surface-agnostic: `IntegrationCard` + `IntegrationActionsMenu` + the model TYPES moved to
+> `core/ui/components/integrations/`, and the dashboard imports them from there. The
+> derivations did not move and must not — they read `useDashboardStatus` and
+> `@/features/app-builder/*`.
+>
+> **The rejection above still stands and was re-measured before the work started:** no grid
+> and no drawer in the wizard. Where the dashboard card shows deploy status, the wizard passes
+> a `subline` (origin · API count) instead, because pre-deploy there is no status that differs
+> between cards.
+
 ## What carries over
 
 **Unchanged:** `integrationCardModel.ts` (the whole derivation + both matrices),

@@ -96,27 +96,41 @@ to `adobeEntityFetcher` (org-guarded) + update `project.adobe.projectTitle`. One
 does the local demo rename ALSO rename the remote project, or is it a separate action? Independent
 of D3; own small `/rptc:fix`.
 
-### 6. Integrations management UX — two surfaces, one language (prototyped + user-confirmed 2026-07-15)
+### 6. Integrations management UX — two surfaces, one language — ✅ BOTH HALVES SHIPPED
 Direction confirmed via two interactive prototypes in
-[`../research/app-builder-integration-model/`](../research/app-builder-integration-model/):
-- **Wizard (primary, now)** — `prototype-integrations-wizard.html`. A **calm single-column list**
-  in the Build-Your-Project two-column frame (center column beside the "Your project" summary),
-  reused in edit mode. Pre-deploy → identity only (name · kind · APIs-it-will-provision ·
-  edit/remove); shared destination shown once; add/edit via the **existing** modal. NOT a grid — the
-  narrow column rules it out. This is the current `IntegrationResultRow` list, calmed + named.
-- **Dashboard (later, post-deploy)** — `prototype-integrations-grid.html`. The **live-management
-  grid + detail drawer** (calm cards: dot status, one attention action; detail-on-click for URL/APIs/
-  redeploy/verify/remove). **Built-but-unwired today** (`AppBuilderCard`/`AppBuilderComponentsList`
-  never rendered — `showDashboard` passes the data, the screen drops it). Reuses keyed data + status
-  maps + 4-state machine + `.projects-grid` CSS; net-new = a card-shell + grid composition + (#4)
-  name. **Gated on D3** (a grid of N cards collapses to 1 on reload without it).
+[`../research/app-builder-integration-model/`](../research/app-builder-integration-model/).
 
-Both frame each integration as a **co-tenant card in the ONE shared workspace**, not a nested project
-with its own destination (load-bearing). `ProjectCard`/`ProjectsGrid`/`ProjectActionsMenu` are
-Project-coupled — mirror, don't import; there is no generic `Card` primitive today. The prototypes are
-the working spec: their card/row contract defines what D3 must persist and surface. **Build order:
-the wizard calm list can ship largely independently (it's the existing list, calmed + named); the
-dashboard grid follows D3.**
+- **Dashboard — ✅ SHIPPED.** The card grid + detail drawer landed as
+  [`../complete/integrations-grid/`](../complete/integrations-grid/overview.md), then moved to
+  its own page via [`../complete/integrations-surface/`](../complete/integrations-surface/overview.md).
+  The "built-but-unwired" wording this item used to carry was true when written and is not now.
+- **Wizard — ✅ SHIPPED 2026-08-15** (`fix/wizard-integrations-parity`, plan
+  [`../complete/wizard-integrations-card-parity/overview.md`](../complete/wizard-integrations-card-parity/overview.md)).
+  The area renders the SHARED `IntegrationCard`, extracted to
+  `core/ui/components/integrations/` so neither feature imports the other. The destination
+  moved to one `DestinationContext` line above the list. Rename became the card's inline
+  pencil, retiring `RenameIntegrationModal`; `IntegrationResultRow` is deleted.
+
+**Two things this item got wrong, recorded so nobody rebuilds them:**
+
+1. It described the wizard list as already showing the "shared destination once". It did not
+   — the destination was repeated on EVERY row, always printing the same project·workspace.
+   The row never matched this item's own spec, and no test caught it because each assertion
+   scoped itself to a single row.
+2. It framed the two surfaces as needing the same LANGUAGE but separate components. What they
+   needed was the same COMPONENT over different data. The card was always surface-agnostic —
+   `integrations-surface/overview.md` says exactly that in "What carries over" — and only the
+   DERIVATION is per-surface.
+
+**What stays deliberately different:** the wizard uses no grid and no detail drawer.
+`integrations-surface/overview.md:97-105` rejects those on three grounds that re-measured true
+in 2026-08-15 — `.int-results` is capped at `max-width: 720px`, where the dashboard's
+`minmax(240px, 1fr)` grid falls to 2–3 columns; pre-deploy there is no status, URL or redeploy
+to show; and edit belongs in the Add-Integration modal that already exists. The wizard card
+therefore passes its own `subline` (origin · API count) where the dashboard puts deploy status.
+
+Both surfaces frame each integration as a **co-tenant card in the ONE shared workspace**, not a
+nested project with its own destination (load-bearing).
 
 ## Cross-references (do not fork these)
 - **Deep research (read first):**
@@ -142,6 +156,7 @@ dashboard grid follows D3.**
 > (`.rptc/backlog/2026-07-15-custom-integration-language-and-model.md`; read
 > `.rptc/research/app-builder-integration-model/research.md` first). Language (item 1), `appState`
 > persistence (item 2), and **item 3 (ADR-011 D3, incl. item 4's display name)** shipped — D3 is
-> implemented on branch `feature/appbuilder-deployables-d3` (pending merge). Remaining: item 5
-> (remote Adobe I/O project rename) — a small independent `/rptc:fix` — and item 6 (integrations
-> grid UX), which was gated on D3 and is now unblocked once the branch merges.
+> implemented on branch `feature/appbuilder-deployables-d3` (pending merge). Item 6
+> (integrations UX) shipped on BOTH surfaces — dashboard grid, then the wizard's shared card
+> on 2026-08-15. **The only thing left in this file is item 5** (remote Adobe I/O project
+> rename) — a small independent `/rptc:fix`. When that lands, archive the whole item.
