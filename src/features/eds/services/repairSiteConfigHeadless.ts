@@ -32,6 +32,7 @@
 import { pinSiteAdmin } from './configAccessRecovery';
 import { buildCodeSyncSetupUrl } from './configServiceAccess';
 import { buildSiteConfigParams, type ConfigurationService } from './configurationService';
+import { registerPublishKey } from './publishKeyRegistrar';
 import { registerSiteConfig } from './siteConfigRegistrar';
 import { extractRepublishParams } from './storefrontRepublishService';
 import { DaLiveAuthError } from './types';
@@ -174,6 +175,12 @@ export async function repairSiteConfig(
     // Same merge-not-replace pin the wizard does, so a repair cannot silently
     // drop the site's other admins.
     await pinSiteAdmin(tokenProvider, { owner: repoOwner, repo: repoName }, userEmail, logger);
+
+    // The write above was delete-then-re-register, which destroyed the site's
+    // publish key along with its access doc — `apiKeys` lives inside the site
+    // config. Re-mint and re-register, or the runtime PDP publisher silently
+    // 401s from here on.
+    await registerPublishKey(tokenProvider, { owner: repoOwner, repo: repoName }, logger);
 
     await onProgress?.('Confirming the overlay is registered...');
     const readBack = await configurationService.readSiteOverlayUrl(repoOwner, repoName);

@@ -310,6 +310,31 @@ function configServiceLines(probe: ConfigServiceProbeResult): string[] {
     if (da?.error) lines.push(`  Same credential vs DA.live: unreachable (${da.error})`);
     else if (da) lines.push(`  Same credential vs DA.live: HTTP ${da.httpStatus}`);
 
+    // Runtime PDP self-heal. Stated as a plain verdict, not two raw numbers: the
+    // broken combination (locked, no key) is silent in every other surface and
+    // shows up days later as "some product pages don't work".
+    const pdp = probe.pdpPublishing;
+    if (pdp?.error) {
+        lines.push(`  Runtime PDP publishing: could not determine (${pdp.error})`);
+    } else if (pdp) {
+        const keys = pdp.keyCount;
+        if (!pdp.locked) {
+            lines.push('  Runtime PDP publishing: OK (site admin API is open)');
+        } else if (keys === undefined) {
+            lines.push('  Runtime PDP publishing: site is admin-locked; key count unreadable');
+        } else if (keys > 0) {
+            lines.push(`  Runtime PDP publishing: OK (admin-locked, ${keys} publish key(s) registered)`);
+        } else {
+            lines.push(
+                '  Runtime PDP publishing: BROKEN — site is admin-locked with no publish key.',
+            );
+            lines.push(
+                '    Products added after setup will 404 on first visit. Fix: run ' +
+                    '"Demo Builder: Repair Site Configuration" to re-register a key.',
+            );
+        }
+    }
+
     // Who can grant. "Ask an admin" is unactionable without a name, and the
     // roster's own refusal is the more useful answer when it comes: it means
     // nobody is visible to ask, so the Code Sync setup flow is the only path.

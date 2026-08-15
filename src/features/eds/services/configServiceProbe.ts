@@ -67,6 +67,28 @@ export interface ConfigServiceProbeResult {
      * only remaining path (observed on `leahrayard`, 2026-08-14).
      */
     orgAdmins?: { status: 'ok' | 'not_authorized' | 'failed'; emails?: string[] };
+    /**
+     * Whether runtime PDP self-heal can work on this site.
+     *
+     * A site with any `access.admin` role closes the Helix admin API to
+     * anonymous callers — and the smart-404 publisher that rescues an
+     * unpublished PDP runs in the VISITOR's browser, which holds no credential.
+     * It works only because the extension registers a publish key on the site
+     * for the shared action to use.
+     *
+     * So `locked && keyCount === 0` means: every product added to the catalog
+     * after setup will 404 on first visit. That failure is otherwise completely
+     * silent — it surfaces as "some product pages don't work", days later, with
+     * nothing connecting it to the admin grant that caused it. This leg exists
+     * to make it visible on demand.
+     */
+    pdpPublishing?: {
+        /** Site has an `access.admin` role, so the admin API needs credentials. */
+        locked: boolean;
+        /** Publish keys registered on the site. Undefined when unreadable. */
+        keyCount?: number;
+        error?: string;
+    };
     /** One-line interpretation of the legs together. */
     verdict: string;
 }
@@ -246,6 +268,36 @@ export async function probeConfigService(
                 : { status: roster.status === 'not_authorized' ? 'not_authorized' : 'failed' };
     } catch {
         result.orgAdmins = { status: 'failed' };
+    }
+
+    // Runtime-PDP leg. Two cheap reads that together answer "can a product
+    // added after setup publish itself on first visit?" — the question this
+    // whole feature turns on, and the one nothing else in the report asks.
+    try {
+        const access = await get(
+            `${HELIX_ADMIN_BASE_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}/access/admin.json`,
+            token,
+        );
+        // 404 means no grants yet, which is "not locked" — NOT an error.
+        const locked = access.status === 200;
+
+        let keyCount: number | undefined;
+        const keys = await get(
+            `${HELIX_ADMIN_BASE_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}/apiKeys.json`,
+            token,
+        );
+        if (keys.status === 200) {
+            const body = (await (keys as unknown as { json(): Promise<unknown> }).json()) as
+                | Record<string, unknown>
+                | undefined;
+            keyCount = Object.keys(body ?? {}).length;
+        } else if (keys.status === 404) {
+            keyCount = 0; // same convention as the access doc: absent = none
+        }
+
+        result.pdpPublishing = { locked, keyCount };
+    } catch (error) {
+        result.pdpPublishing = { locked: false, error: (error as Error).message };
     }
 
     result.verdict = interpret(result);

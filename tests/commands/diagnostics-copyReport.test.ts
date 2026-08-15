@@ -88,6 +88,58 @@ describe('buildSummaryLines', () => {
         expect(text).not.toMatch(/gho_[A-Za-z0-9]/);
     });
 
+    // The combination "admin-locked with no publish key" is silent everywhere
+    // else: it surfaces days later as "some product pages don't work", with
+    // nothing tying it back to the admin grant that caused it. The report is
+    // where that becomes visible on demand, so pin the verdict AND the remedy.
+    it('calls runtime PDP publishing BROKEN when the site is locked with no key', () => {
+        const report = makeReport({
+            configService: {
+                token: { present: true },
+                configService: { httpStatus: 200 },
+                pdpPublishing: { locked: true, keyCount: 0 },
+                verdict: 'ok',
+            },
+        } as Partial<DiagnosticsReport>);
+
+        const text = buildSummaryLines(report).join('\n');
+        expect(text).toContain('Runtime PDP publishing: BROKEN');
+        expect(text).toMatch(/404 on first visit/);
+        expect(text).toContain('Repair Site Configuration');
+    });
+
+    it('calls runtime PDP publishing OK when a key is registered', () => {
+        const report = makeReport({
+            configService: {
+                token: { present: true },
+                configService: { httpStatus: 200 },
+                pdpPublishing: { locked: true, keyCount: 1 },
+                verdict: 'ok',
+            },
+        } as Partial<DiagnosticsReport>);
+
+        const text = buildSummaryLines(report).join('\n');
+        expect(text).toContain('Runtime PDP publishing: OK');
+        expect(text).not.toContain('BROKEN');
+    });
+
+    // An unlocked site publishes anonymously, so no key is needed and its
+    // absence is not a finding.
+    it('does not report a problem when the site is not admin-locked', () => {
+        const report = makeReport({
+            configService: {
+                token: { present: true },
+                configService: { httpStatus: 200 },
+                pdpPublishing: { locked: false, keyCount: 0 },
+                verdict: 'ok',
+            },
+        } as Partial<DiagnosticsReport>);
+
+        const text = buildSummaryLines(report).join('\n');
+        expect(text).toContain('Runtime PDP publishing: OK (site admin API is open)');
+        expect(text).not.toContain('BROKEN');
+    });
+
     it('names the Config Service org admins when the roster is readable', () => {
         // "Ask an admin" is unactionable without a name. The roster read is the
         // only thing in the report that can supply one.
@@ -273,7 +325,8 @@ describe('storefront delivery section', () => {
         smart404Snippet: { installed: true, status: 200 },
         eagerRedirect: { installed: true, status: 200 },
         authoredTemplate: { path: '/products/default', status: 200, published: true },
-        verdict: 'Storefront delivery looks correct (fallback installed, template published). No SKU was checked.',
+        verdict:
+            'Storefront delivery looks correct (fallback installed, template published). No SKU was checked.',
     };
 
     const linesFor = (storefront: unknown): string =>
@@ -296,7 +349,8 @@ describe('storefront delivery section', () => {
         const out = linesFor({
             ...healthyProbe,
             authoredTemplate: { path: '/products/default', status: 404, published: false },
-            verdict: "PDP fallback installed, but the overlay's source template /products/default returned 404. Publish it or reset the storefront — every PDP renders from this page.",
+            verdict:
+                "PDP fallback installed, but the overlay's source template /products/default returned 404. Publish it or reset the storefront — every PDP renders from this page.",
         });
 
         expect(out).toContain('NOT PUBLISHED');

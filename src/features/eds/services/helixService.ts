@@ -241,6 +241,24 @@ export class HelixService {
         HelixService.secretStorage = null;
     }
 
+    /**
+     * Forget a locally cached/persisted key WITHOUT calling the server.
+     *
+     * Use after a site config write. `apiKeys` lives inside the site config
+     * document, so `updateSiteConfig`'s delete-then-re-register destroys the key
+     * server-side (measured 2026-08-15: 1 key → delete → re-register → 0). The
+     * local copy survives for up to 7 days, so without this the next publish
+     * would authenticate with a key that no longer exists and 401.
+     *
+     * Deliberately not `deleteAdminApiKey`: there is nothing left to delete
+     * remotely, and that call would spend a round trip to be told 404.
+     */
+    static async forgetApiKey(org: string, site: string): Promise<void> {
+        const cacheKey = `${org}/${site}`;
+        HelixService.apiKeyCache.delete(cacheKey);
+        await HelixService.deletePersistedKey(cacheKey);
+    }
+
     /** Read all persisted keys from SecretStorage. */
     private static async getAllPersistedKeys(): Promise<Record<string, PersistedHelixKey>> {
         const raw = await HelixService.secretStorage?.get(HELIX_KEYS_STATE_KEY);

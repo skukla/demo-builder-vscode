@@ -22,6 +22,7 @@ import { announceConfigAccess, pinSiteAdmin } from '../services/configAccessReco
 import { buildCodeSyncSetupUrl } from '../services/configServiceAccess';
 import { buildSiteConfigParams } from '../services/configurationService';
 import { lostGrantsMessage } from '../services/lostGrantsMessage';
+import { registerPublishKey } from '../services/publishKeyRegistrar';
 import { registerSiteConfig } from '../services/siteConfigRegistrar';
 import { DaLiveAuthError } from '../services/types';
 import {
@@ -116,6 +117,15 @@ export async function registerConfigurationService(
                 services.daLiveTokenProvider,
                 { owner: repoInfo.repoOwner, repo: repoInfo.repoName },
                 setupUserEmail,
+                logger,
+            );
+            // Pinning an admin closes the admin API to anonymous callers, which
+            // is what the browser-side smart-404 publisher is. Hand the shared
+            // action a key in the same breath, or PDPs added after setup can
+            // never self-heal. Non-fatal, like the pin above.
+            await registerPublishKey(
+                services.daLiveTokenProvider,
+                { owner: repoInfo.repoOwner, repo: repoInfo.repoName },
                 logger,
             );
         } else {
