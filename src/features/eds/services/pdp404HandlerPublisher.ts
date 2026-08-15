@@ -107,8 +107,10 @@ async function writeDelayedJsWithStaleShaRetry(
  * Both run before the surrounding pipeline's bulk Helix code preview,
  * which picks up the committed change and makes it live.
  *
- * Non-fatal at every step: any failure is logged and the function
- * returns `{ installed: false, reason }`. The storefront still works
+ * Non-fatal at every step: any genuine failure is logged and the function
+ * returns `{ installed: false, reason }`. An ALREADY-installed handler is a
+ * success and returns `{ installed: true, reason: 'already installed' }`. The
+ * storefront still works
  * without the smart 404 — visitors hitting cold PDPs just get the
  * default Helix 404 page. We never want this step to break a create,
  * edit, or reset.
@@ -171,7 +173,15 @@ export async function installSmart404Handler(
         );
         if (replaced === null || replaced === existing.content) {
             logger.info('[PDP404] Smart 404 snippet already current in delayed.js — skipping');
-            return { installed: false, reason: 'already installed' };
+            // installed: TRUE. The flag means "the handler is in place after this
+            // call", not "I wrote it this run" — every consumer gates on
+            // `!installed` to decide whether the storefront is MISSING recovery.
+            // Reporting false here made a healthy storefront print "the smart-404
+            // handler was not installed (already installed)" and a clean run
+            // finish WITH ERRORS (observed 2026-08-14 on skukla/demo-builder-test).
+            // The reason is kept so a caller can still tell the two ways of being
+            // installed apart.
+            return { installed: true, reason: 'already installed' };
         }
         newContent = replaced;
         logger.info('[PDP404] Re-vendoring updated smart 404 snippet into delayed.js');

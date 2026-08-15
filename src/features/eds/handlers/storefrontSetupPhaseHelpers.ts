@@ -70,8 +70,15 @@ export async function checkGitHubAppForExistingRepo(
         };
     }
 
+    // Says only what was checked. This used to read "AEM Code Sync verified",
+    // which a reader takes as "the AEM side is fine" — but it proves ONLY that
+    // the GitHub App is installed and the repo is code-synced. It says nothing
+    // about the Configuration Service admin role, which is a separate grant.
+    // On 2026-08-13 this exact line printed immediately before a 403 on
+    // leah-b2b-demo, and the false reassurance is why the real blocker went
+    // unexamined. `logConfigAccessState` reports the role separately.
     logger.info(
-        `[Storefront Setup] AEM Code Sync verified on ${repoInfo.repoOwner}/${repoInfo.repoName} ` +
+        `[Storefront Setup] AEM Code Sync app installed on ${repoInfo.repoOwner}/${repoInfo.repoName} ` +
             `(${formatAdminDiagnostics(outcome)})`,
     );
     return null;

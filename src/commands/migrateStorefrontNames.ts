@@ -43,6 +43,7 @@ import {
     resolveStorefrontConfig,
     type StorefrontConfigSource,
 } from '@/features/eds/services/edsResetParams';
+import { lostGrantsMessage } from '@/features/eds/services/lostGrantsMessage';
 import {
     migrateStorefrontNamingIfNeeded,
     type StorefrontMigrationContext,
@@ -263,6 +264,19 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
                             configService,
                             logger,
                         );
+
+                        // Reported on BOTH paths: this command runs against the
+                        // pre-164fd251 storefronts, which the migration module
+                        // itself calls "the ones most likely to have several
+                        // admins". Nothing in the app can restore them.
+                        if (result.lostGrants?.length) {
+                            vscode.window.showWarningMessage(
+                                lostGrantsMessage(
+                                    result.lostGrants,
+                                    `${candidate.projectName}: the storefront was migrated`,
+                                ),
+                            );
+                        }
 
                         if (result.error) {
                             outcomes.push({

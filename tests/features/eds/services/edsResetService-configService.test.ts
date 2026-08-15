@@ -20,9 +20,11 @@ jest.setTimeout(5000);
 // =============================================================================
 
 const mockUpdateSiteConfig = jest.fn();
+const mockRegisterSite = jest.fn();
 
 jest.mock('@/features/eds/services/configurationService', () => ({
     ConfigurationService: jest.fn().mockImplementation(() => ({
+        registerSite: mockRegisterSite,
         updateSiteConfig: mockUpdateSiteConfig,
     })),
     buildSiteConfigParams: (owner: string, repo: string, org: string, site: string, overlayUrl?: string) => ({
@@ -237,7 +239,38 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         context = createContext();
+        // Reset targets an EXISTING site, so the shared registrar's opening PUT
+        // gets the 409 the real service returns and falls through to the update.
+        // Before this suite went through `registerSiteConfig`, the reset path
+        // called updateSiteConfig directly and had no 409/401 handling at all.
+        mockRegisterSite.mockResolvedValue({ success: false, statusCode: 409, error: 'Conflict' });
         mockUpdateSiteConfig.mockResolvedValue({ success: true });
+    });
+
+    it('reports a SKIPPED config write on the successful result', async () => {
+        // Observed risk: the reset rewrites the repo at step 1, fails the config
+        // write at step 7, and still ends with '"<project>" reset successfully'.
+        // The step-7 message goes out on the single-line progress notification,
+        // which steps 8-11 overwrite within seconds — so the one sentence naming
+        // the remedy is gone before it can be read. PDPs will not load and the
+        // user is told the run worked.
+        //
+        // Rides out on a SUCCESSFUL result, the same way MESH_REDEPLOY_FAILED
+        // does: the reset genuinely did the rest of its work.
+        mockUpdateSiteConfig.mockResolvedValue({ success: false, statusCode: 500, error: 'boom' });
+
+        const result = await executeEdsReset(createParams(), context, mockTokenProvider);
+
+        expect(result.success).toBe(true);
+        expect(result.errorType).toBe('CONFIG_WRITE_FAILED');
+        expect(result.error).toMatch(/Repair Site Configuration/i);
+    });
+
+    it('leaves errorType unset when the config write lands', async () => {
+        const result = await executeEdsReset(createParams(), context, mockTokenProvider);
+
+        expect(result.success).toBe(true);
+        expect(result.errorType).toBeUndefined();
     });
 
     it('calls updateSiteConfig on successful reset', async () => {
