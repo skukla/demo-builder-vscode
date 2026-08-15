@@ -443,9 +443,16 @@ describe('ImportDatapackModal — job lifecycle', () => {
             });
         }
 
-        // Per-type progress rides in LoadingDisplay's subMessage slot — the
-        // house component's own place for it, not a parallel row list.
-        it('shows per-type progress while running', async () => {
+        /**
+         * Progress rides in LoadingDisplay's subMessage slot — the house
+         * component's own place for it, not a parallel row list.
+         *
+         * The WORDING changed deliberately. This used to dump every type and its
+         * raw state ("categories: success · products: processing"), a line that
+         * grew as the job ran and answered neither "how far along" nor "what is
+         * happening now". It is a count and the type in hand instead.
+         */
+        it('shows a count and the type being worked on while running', async () => {
             withStatus({
                 activationId: 'act-1',
                 dataTypes: ['categories', 'products'],
@@ -454,8 +461,21 @@ describe('ImportDatapackModal — job lifecycle', () => {
             });
             renderModal();
 
-            expect(await screen.findByText(/categories: success/i)).toBeInTheDocument();
-            expect(screen.getByText(/products: processing/i)).toBeInTheDocument();
+            expect(await screen.findByText(/Importing Products… 1 of 2 done/i)).toBeInTheDocument();
+        });
+
+        /** Before any type reports there is no honest count, so the line stays away. */
+        it('says nothing about progress before the first poll lands', async () => {
+            withStatus({
+                activationId: 'act-1',
+                dataTypes: ['categories', 'products'],
+                outcome: 'watching',
+                perType: {},
+            });
+            renderModal();
+
+            await screen.findByRole('button', { name: /stop watching/i });
+            expect(screen.queryByText(/of 2 done/i)).not.toBeInTheDocument();
         });
 
         // There is NO cancel endpoint. Both strings are pinned, because softening
@@ -504,11 +524,34 @@ describe('ImportDatapackModal — job lifecycle', () => {
             fireEvent.click(startButton());
         }
 
-        it('shows the per-type result in the message slot, not a row list', async () => {
-            finished('success', { categories: 'success' });
+        /**
+         * A clean success says so once and shows the check.
+         *
+         * This used to list every type with "success" beside it. Measured against
+         * the live modal, a fourteen-type pack overran StatusDisplay's fixed
+         * 350px box, which centres its content and so clipped BOTH ends — the
+         * tick off the top and the last type off the bottom. The check had been
+         * there all along, pushed out of frame by detail that only repeated the
+         * title in longhand.
+         */
+        it('summarises a clean success instead of listing every type', async () => {
+            finished('success', { categories: 'success', products: 'success' });
             await startAJob();
 
-            expect(await screen.findByText(/categories: success/i)).toBeInTheDocument();
+            expect(await screen.findByText(/All 2 data types succeeded/i)).toBeInTheDocument();
+            expect(screen.queryByText(/categories: success/i)).not.toBeInTheDocument();
+        });
+
+        /**
+         * A partial run is the opposite case: the successes are the noise and the
+         * failures are the answer, so only the troubled types are named.
+         */
+        it('names only the types that need attention when the run is partial', async () => {
+            finished('partial', { categories: 'success', products: 'error' });
+            await startAJob();
+
+            expect(await screen.findByText(/products: error/i)).toBeInTheDocument();
+            expect(screen.queryByText(/categories: success/i)).not.toBeInTheDocument();
         });
 
         // Superseded contract, recorded: an earlier version restored the form

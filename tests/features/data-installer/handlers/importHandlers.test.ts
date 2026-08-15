@@ -145,6 +145,78 @@ describe('start-datapack-import', () => {
         );
     });
 
+    /**
+     * The push that turns a bare "Importing…" into live progress.
+     *
+     * The runner already saw every poll; nothing forwarded them. These pin the
+     * forwarding rather than the polling — the runner's own suite covers when
+     * the callback fires, this covers what reaches the webview when it does.
+     */
+    describe('progress push', () => {
+        /**
+         * The handler returns as soon as the job is REGISTERED; the watch runs
+         * fire-and-forget behind it and awaits access resolution first. So the
+         * call to watchImportJob has not happened yet when the handler's promise
+         * settles, and asserting straight away reads an empty mock.
+         */
+        const settleWatch = (): Promise<void> =>
+            new Promise((resolve) => setImmediate(resolve));
+
+        it('forwards each poll to the webview as it arrives', async () => {
+            happyClient();
+            const { context } = makeContext();
+
+            await importHandlers['start-datapack-import'](context, PAYLOAD);
+            await settleWatch();
+
+            const onProgress = mockedWatch.mock.calls[0]?.[0]?.onProgress;
+            expect(onProgress).toBeInstanceOf(Function);
+
+            onProgress?.({ categories: 'processing' });
+
+            expect(context.sendMessage).toHaveBeenCalledWith(
+                'datapack-import-progress',
+                expect.objectContaining({ perType: { categories: 'processing' } }),
+            );
+        });
+
+        /**
+         * The modal must be able to tell ITS job's progress from another's. The
+         * activation id is the only thing that distinguishes them, and a reset
+         * started while an import watches would otherwise drive the wrong ring.
+         */
+        it('stamps the push with the activation it belongs to', async () => {
+            happyClient();
+            const { context } = makeContext();
+
+            await importHandlers['start-datapack-import'](context, PAYLOAD);
+            await settleWatch();
+            mockedWatch.mock.calls[0]?.[0]?.onProgress?.({ categories: 'success' });
+
+            expect(context.sendMessage).toHaveBeenCalledWith(
+                'datapack-import-progress',
+                expect.objectContaining({ activationId: 'act-1' }),
+            );
+        });
+
+        /** A reset watches the same way and must say so, for the wording. */
+        it('names the operation, so a reset is not worded as an import', async () => {
+            happyClient();
+            const { context } = makeContext();
+
+            // `confirm` is the destructive-action guard; without it the reset
+            // refuses before it ever reaches the watch.
+            await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: true });
+            await settleWatch();
+            mockedWatch.mock.calls[0]?.[0]?.onProgress?.({ categories: 'success' });
+
+            expect(context.sendMessage).toHaveBeenCalledWith(
+                'datapack-import-progress',
+                expect.objectContaining({ operation: 'reset' }),
+            );
+        });
+    });
+
     it('validates BEFORE starting', async () => {
         const { validateImport, startImport } = happyClient();
         const { context } = makeContext();

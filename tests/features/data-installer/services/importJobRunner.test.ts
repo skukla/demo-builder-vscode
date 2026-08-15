@@ -57,6 +57,7 @@ function runWith(
         failureReason?: { error: string };
         graceMs?: number;
         abortSignal?: AbortSignal;
+        onProgress?: (perType: JobStatusSnapshot['perType']) => void;
     } = {},
 ) {
     let call = 0;
@@ -74,6 +75,7 @@ function runWith(
         now: () => (clock.now += 40_000),
         ...(opts.graceMs !== undefined ? { graceMs: opts.graceMs } : {}),
         ...(opts.abortSignal ? { abortSignal: opts.abortSignal } : {}),
+        ...(opts.onProgress ? { onProgress: opts.onProgress } : {}),
     });
 
     return { promise, getJobStatus, getJobFailureReason };
@@ -132,6 +134,86 @@ describe('the poll task name', () => {
 
 describe('watchImportJob', () => {
     beforeEach(() => jest.clearAllMocks());
+
+    /**
+     * The runner already had the data the modal needed and kept it to itself.
+     *
+     * It builds a partial per-type map on EVERY poll — `classify` depends on
+     * that, since the map must cover the requested types before the job counts
+     * as terminal — but it returned once, at the end. So the modal showed a bare
+     * "Importing…" for the whole run, sometimes minutes. This callback is the
+     * only new thing needed: the push and the render hang off it.
+     */
+    describe('progress reporting', () => {
+        it('reports each poll as it happens, not once at the end', async () => {
+            const seen: Array<Record<string, string>> = [];
+            const { promise } = runWith(
+                [
+                    snap({ categories: 'processing' }),
+                    snap({ categories: 'success', products: 'processing' }),
+                    snap({ categories: 'success', products: 'success' }),
+                ],
+                { onProgress: (perType) => seen.push({ ...perType }) },
+            );
+
+            await promise;
+
+            expect(seen.length).toBeGreaterThan(1);
+            expect(seen[0]).toEqual({ categories: 'processing' });
+        });
+
+        it('reports the terminal map too, so the last frame is not stale', async () => {
+            const seen: Array<Record<string, string>> = [];
+            const { promise } = runWith(
+                [
+                    snap({ categories: 'processing' }),
+                    snap({ categories: 'success', products: 'success' }),
+                ],
+                { onProgress: (perType) => seen.push({ ...perType }) },
+            );
+
+            await promise;
+
+            expect(seen[seen.length - 1]).toEqual({
+                categories: 'success',
+                products: 'success',
+            });
+        });
+
+        /** An empty map is "not started", not progress. Reporting it would blank the line. */
+        it('stays quiet while the job has no record yet', async () => {
+            const onProgress = jest.fn();
+            const { promise } = runWith([snap({}), snap({ categories: 'success', products: 'success' })], {
+                onProgress,
+            });
+
+            await promise;
+
+            for (const call of onProgress.mock.calls) {
+                expect(Object.keys(call[0]).length).toBeGreaterThan(0);
+            }
+        });
+
+        /** Watching must survive a bad listener — a render error cannot fail an import. */
+        it('finishes the job even when the callback throws', async () => {
+            const { promise } = runWith(
+                [snap({ categories: 'success', products: 'success' })],
+                {
+                    onProgress: () => {
+                        throw new Error('render blew up');
+                    },
+                },
+            );
+
+            await expect(promise).resolves.toMatchObject({ outcome: 'success' });
+        });
+
+        it('needs no callback at all', async () => {
+            const { promise } = runWith([snap({ categories: 'success', products: 'success' })]);
+
+            await expect(promise).resolves.toMatchObject({ outcome: 'success' });
+        });
+    });
 
     describe('the covering-set rule', () => {
         it('does NOT finish when only some requested types have reported', async () => {

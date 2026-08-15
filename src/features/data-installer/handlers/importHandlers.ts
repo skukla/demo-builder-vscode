@@ -35,7 +35,7 @@ import {
     groupStoreViewsByWebsite,
 } from '../services/importScopeDiscovery';
 import { downloadWorkspaceConfigJson } from '../services/workspaceConfigDownload';
-import type { ImportJobRecord } from '../types';
+import { IMPORT_PROGRESS_MESSAGE, type ImportJobRecord } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { exportHandlers } from './exportHandlers';
 import { ServiceLocator } from '@/core/di';
@@ -470,6 +470,16 @@ async function watchAndRecord(
             requestedTypes: record.dataTypes,
             polling: new PollingService(),
             ...(record.operation ? { operation: record.operation } : {}),
+            // Each poll goes straight to the modal. Without this the webview
+            // learns nothing until the job ends, which on a fourteen-type pack
+            // is minutes of an unexplained spinner.
+            onProgress: (perType) => {
+                void context.sendMessage(IMPORT_PROGRESS_MESSAGE, {
+                    activationId: record.activationId,
+                    operation: record.operation,
+                    perType,
+                });
+            },
         });
         await transient.set(JOB_KEY, {
             ...record,

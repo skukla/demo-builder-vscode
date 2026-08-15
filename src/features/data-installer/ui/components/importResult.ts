@@ -27,8 +27,13 @@ import type { DataInstallerRequest } from '../hooks/useDataInstallerRequest';
  * codes became labels, the copy that got missed would have shown the raw code
  * for the whole duration of the import and the finished name only at the end.
  */
-export function describePerType(perType: ImportJobRecord['perType']): string[] {
-    return Object.entries(perType).map(([type, state]) => `${dataTypeLabel(type)}: ${state}`);
+export function describePerType(
+    perType: ImportJobRecord['perType'],
+    options: { troubledOnly?: boolean } = {},
+): string[] {
+    return Object.entries(perType)
+        .filter(([, state]) => !options.troubledOnly || state !== 'success')
+        .map(([type, state]) => `${dataTypeLabel(type)}: ${state}`);
 }
 
 /** The operation whose outcome the result view should show. */
@@ -142,21 +147,30 @@ function failureResult(
 /** A finished job, worded for ITS operation — a reset must not say "Import". */
 function terminalResult(record: ImportJobRecord): ResultContent {
     const op = record.operation === 'reset' ? 'Reset' : 'Import';
-    const perType = describePerType(record.perType);
 
+    // Success says it once and shows the check. Listing fourteen lines of
+    // "success" repeats the title in longhand, and — measured against the live
+    // modal — overran StatusDisplay's fixed 350px box, which centres its
+    // content and so clipped BOTH ends: the tick off the top, the last type off
+    // the bottom. The big check was there the whole time, pushed out of frame by
+    // detail that added nothing.
     if (record.outcome === 'success') {
+        const count = Object.keys(record.perType).length;
         return {
             variant: 'success',
             title: `${op} finished`,
-            message: 'All requested data types succeeded.',
-            details: perType,
+            message: `All ${count} data types succeeded.`,
         };
     }
+
+    // Anything else keeps its detail, narrowed to the types that need attention.
+    // On a partial run the successes are the noise and the failures are the
+    // answer — and the short list stays inside the box.
     return {
         variant: OUTCOME_VARIANT[record.outcome] ?? 'info',
         title: describeOutcome(record, op),
         message: record.reason,
-        details: perType,
+        details: describePerType(record.perType, { troubledOnly: true }),
     };
 }
 

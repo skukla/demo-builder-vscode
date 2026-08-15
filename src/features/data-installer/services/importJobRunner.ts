@@ -81,6 +81,24 @@ interface JobStatusSource {
     getJobFailureReason: (activationId: string) => Promise<JobFailureReason | undefined>;
 }
 
+/**
+ * Hand a poll's map to the watcher, and never let the watcher break the watch.
+ *
+ * The listener ends up rendering a modal. A render that throws must not fail an
+ * import that is running correctly on the server — the job continues either way,
+ * and the only thing a propagated error would achieve is a wrong verdict.
+ */
+function report(
+    onProgress: ((perType: Record<string, DataTypeStatus>) => void) | undefined,
+    perType: Record<string, DataTypeStatus>,
+): void {
+    try {
+        onProgress?.(perType);
+    } catch {
+        // Deliberately swallowed — see above.
+    }
+}
+
 export async function watchImportJob(args: {
     client: JobStatusSource;
     activationId: string;
@@ -97,6 +115,16 @@ export async function watchImportJob(args: {
     graceMs?: number;
     /** Injectable clock, so the grace window is testable without wall time. */
     now?: () => number;
+    /**
+     * Called with each poll's per-type map, so a watcher can show progress while
+     * it happens rather than only once the job ends.
+     *
+     * The map was always built here — `isTerminal` needs it — and simply never
+     * left, which is why the modal sat on a bare "Importing…" for minutes.
+     * Never called with an empty map: that shape means "no record yet", not
+     * progress.
+     */
+    onProgress?: (perType: Record<string, DataTypeStatus>) => void;
 }): Promise<ImportJobResult> {
     const { client, activationId, requestedTypes, polling, abortSignal } = args;
     const graceMs = args.graceMs ?? DEFAULT_GRACE_MS;
@@ -118,6 +146,8 @@ export async function watchImportJob(args: {
             neverRegistered = true;
             return true;
         }
+
+        report(args.onProgress, latest.perType);
         return isTerminal(latest, requestedTypes);
     };
 

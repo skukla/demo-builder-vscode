@@ -119,6 +119,23 @@ export interface Page<T> {
 /** Per-data-type progress state reported by the durable status endpoint. */
 export type DataTypeStatus = 'pending' | 'processing' | 'success' | 'error';
 
+/**
+ * The extension→webview push carrying one poll of a running job.
+ *
+ * Declared here rather than beside the handler because both sides need it and
+ * the webview cannot import from the extension host. The handler sends it; the
+ * modal's hook subscribes to it.
+ */
+export const IMPORT_PROGRESS_MESSAGE = 'datapack-import-progress';
+
+/** One poll, as it reaches the webview. */
+export interface ImportProgressMessage {
+    /** Which job this belongs to — the modal ignores every other one. */
+    activationId: string;
+    operation?: 'import' | 'reset';
+    perType: Record<string, DataTypeStatus>;
+}
+
 /** A snapshot of one async job's progress. */
 export interface JobStatusSnapshot {
     activationId: string;

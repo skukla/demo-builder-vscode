@@ -11,7 +11,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { request: jest.fn() },
+    webviewClient: { request: jest.fn(), onMessage: jest.fn(() => jest.fn()) },
 }));
 
 // Below the mock on purpose — see the module docstring.

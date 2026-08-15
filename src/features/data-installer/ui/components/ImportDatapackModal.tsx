@@ -38,10 +38,11 @@ import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import type { DatapackId, ImportJobRecord } from '../../types';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
+import { useImportProgress } from '../hooks/useImportProgress';
 import { useImportScopes, type ImportScopes } from '../hooks/useImportScopes';
+import { progressLabel, summarizeProgress } from '../importProgress';
 import { ImportForm } from './ImportForm';
 import {
-    describePerType,
     resolveResult,
     type LastAction,
     type ResultContent,
@@ -532,13 +533,22 @@ function WatchProgress({
 }): React.JSX.Element {
     const op = record.operation === 'reset' ? 'reset' : 'import';
     const active = record.operation === 'reset' ? 'Resetting…' : 'Importing…';
-    const perType = describePerType(record.perType);
+
+    // The LIVE map, pushed each poll. `record.perType` is empty for the whole
+    // run — it is only written when the watch settles — so reading it here is
+    // what left the spinner saying nothing for minutes at a time.
+    const live = useImportProgress(record.activationId);
+    const progress = summarizeProgress(live?.perType ?? record.perType, record.dataTypes);
+    const label = progressLabel(progress, op);
 
     return (
         <LoadingDisplay
             size="L"
             message={watching ? active : 'Stopped watching.'}
-            subMessage={perType.join(' · ') || undefined}
+            subMessage={label}
+            // Determinate only once something has reported. A ring pinned at 0
+            // reads as stalled, where the indeterminate spinner reads as starting.
+            {...(label ? { progress: progress.percent } : {})}
             helperText={
                 watching
                     ? 'This can take several minutes. Closing this or stopping the watch continues on the server.'
