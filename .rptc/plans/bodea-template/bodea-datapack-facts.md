@@ -312,3 +312,33 @@ an SC who wants it gets a working example).
 Measured directionality of the `personaOrder` requirement, now corrected in the block's
 README (which documented neither): a persona in `personas[]` missing from `personaOrder`
 throws `TypeError: ... (reading 'total')`; a surplus id in `personaOrder` is harmless.
+
+## B2B contract pricing IS live — on customer groups 6 and 7 (2026-08-15)
+
+Measured against the seeded instance via `Magento-Customer-Group` (the header is
+`sha1(base64decode(uid))` in lowercase hex; uid is base64 of the group id):
+
+| Group | vrrack | switchlite24 | indoorpatchcable |
+|---|---|---|---|
+| 0 (guest) | 7500.00 | 999.00 | 4.00 |
+| 6 | 7500.00 | 999.00 | **3.28** |
+| 7 | **6750.00** | **899.10** | 4.00 |
+
+Group 7 reads as a blanket ~10% contract discount (almost certainly "Platinum Buyer");
+group 6 is a narrower cable-only tier. Groups 0–5 and 8–20 are identical to guest.
+
+**A sweep of groups 0–4 finds nothing and reads exactly like "tier pricing was never
+imported."** That wrong all-clear was stated out loud before the range was widened. The
+real ids are simply higher than the default-group range. Sweep 0–20 before concluding
+anything about group pricing here.
+
+**Consequence for guided-selling-luxe:** no persona→group mapping is needed or wanted.
+`bodea-customer-group.js` sets the header on `CS_FETCH_GRAPHQL`, the shared Catalog
+Service fetch instance that the block's `search()` also uses, so a signed-in buyer's
+contract pricing already flows into the result tiles for free.
+
+**Known limitation if that beat gets demoed:** `hydrateModuleProducts` memoizes results in
+`runtime.productCache` keyed by module, and nothing invalidates it on the auth event — so
+signing in mid-quiz will NOT reprice the tiles already rendered. It needs a page reload
+today. Clearing that cache in the existing `authenticated`/`auth change` handler would make
+"take the quiz as a guest, sign in, watch it reprice" work live; not done yet.
