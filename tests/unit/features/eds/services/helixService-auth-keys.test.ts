@@ -318,3 +318,47 @@ describe('HelixService - Auth & Keys', () => {
         });
     });
 });
+
+// The DA.live session is a per-host singleton. Two construction sites once
+// omitted the provider, so a Helix code publish went out with only the GitHub
+// token and 401'd on any admin-locked site — silently leaving the CDN serving a
+// stale config.json (2026-08-15). Registering ONE default at activation fixes
+// every construction site at once, including future ones.
+describe('HelixService - default DA.live token provider', () => {
+    let HelixSvc: typeof import('@/features/eds/services/helixService').HelixService;
+    // previewPage needs BOTH credentials; only the DA.live one is under test.
+    const githubTokens = {
+        getToken: jest.fn().mockResolvedValue({ token: 'gh', tokenType: 'bearer', scopes: ['repo'] }),
+    } as never;
+
+    beforeEach(async () => {
+        jest.clearAllMocks();
+        HelixSvc = (await import('@/features/eds/services/helixService')).HelixService;
+        global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, text: async () => '' });
+    });
+
+    afterEach(() => HelixSvc.clearDefaultDaLiveTokenProvider());
+
+    it('falls back to the registered default when constructed without a provider', async () => {
+        const getAccessToken = jest.fn().mockResolvedValue('default-da-live-token');
+        HelixSvc.setDefaultDaLiveTokenProvider({ getAccessToken });
+
+        await new HelixSvc(undefined, githubTokens).previewPage('org', 'site', '/x');
+
+        expect(getAccessToken).toHaveBeenCalled();
+        const [, opts] = (global.fetch as jest.Mock).mock.calls[0];
+        expect(opts.headers.Authorization).toBe('Bearer default-da-live-token');
+    });
+
+    it('prefers an explicitly constructed provider over the default', async () => {
+        HelixSvc.setDefaultDaLiveTokenProvider({
+            getAccessToken: jest.fn().mockResolvedValue('default-token'),
+        });
+        const explicit = { getAccessToken: jest.fn().mockResolvedValue('explicit-token') };
+
+        await new HelixSvc(undefined, githubTokens, explicit).previewPage('org', 'site', '/x');
+
+        const [, opts] = (global.fetch as jest.Mock).mock.calls[0];
+        expect(opts.headers.Authorization).toBe('Bearer explicit-token');
+    });
+});

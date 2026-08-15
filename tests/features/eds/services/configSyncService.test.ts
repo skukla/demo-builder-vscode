@@ -104,13 +104,15 @@ describe('syncConfigToRemote', () => {
         // Mock successful CDN verification response by default
         mockFetch.mockResolvedValue({
             ok: true,
-            text: jest.fn().mockResolvedValue(JSON.stringify({
-                public: {
-                    default: {
-                        'commerce-endpoint': 'https://example.com/graphql',
+            text: jest.fn().mockResolvedValue(
+                JSON.stringify({
+                    public: {
+                        default: {
+                            'commerce-endpoint': 'https://example.com/graphql',
+                        },
                     },
-                },
-            })),
+                })
+            ),
         });
     });
 
@@ -120,7 +122,9 @@ describe('syncConfigToRemote', () => {
             (fsPromises.readFile as jest.Mock).mockResolvedValue('{"public": {}}');
 
             // Mock GitHub operations
-            const { GitHubFileOperations } = require('@/features/eds/services/githubFileOperations');
+            const {
+                GitHubFileOperations,
+            } = require('@/features/eds/services/githubFileOperations');
             const mockGitHubFileOps = GitHubFileOperations.mock.results[0]?.value || {
                 getFileContent: jest.fn().mockResolvedValue({ sha: 'existing-sha' }),
                 createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
@@ -147,10 +151,10 @@ describe('syncConfigToRemote', () => {
             expect(result.githubPushed).toBe(true);
             expect(fsPromises.readFile).toHaveBeenCalledWith(
                 '/path/to/eds-storefront/config.json',
-                'utf-8',
+                'utf-8'
             );
             expect(mockLogger.info).toHaveBeenCalledWith(
-                expect.stringContaining('config.json pushed to GitHub'),
+                expect.stringContaining('config.json pushed to GitHub')
             );
         });
 
@@ -165,7 +169,7 @@ describe('syncConfigToRemote', () => {
             expect(result.success).toBe(true);
             expect(result.cdnPublished).toBe(true);
             expect(mockLogger.info).toHaveBeenCalledWith(
-                expect.stringContaining('config.json published to Helix CDN'),
+                expect.stringContaining('config.json published to Helix CDN')
             );
         });
     });
@@ -189,7 +193,9 @@ describe('syncConfigToRemote', () => {
             // Arrange
             (fsPromises.readFile as jest.Mock).mockResolvedValue('{"public": {}}');
 
-            const { GitHubFileOperations } = require('@/features/eds/services/githubFileOperations');
+            const {
+                GitHubFileOperations,
+            } = require('@/features/eds/services/githubFileOperations');
             GitHubFileOperations.mockImplementation(() => ({
                 getFileContent: jest.fn().mockResolvedValue(null),
                 createOrUpdateFile: jest.fn().mockRejectedValue(new Error('GitHub API error')),
@@ -208,7 +214,9 @@ describe('syncConfigToRemote', () => {
             // Arrange
             (fsPromises.readFile as jest.Mock).mockResolvedValue('{"public": {}}');
 
-            const { GitHubFileOperations } = require('@/features/eds/services/githubFileOperations');
+            const {
+                GitHubFileOperations,
+            } = require('@/features/eds/services/githubFileOperations');
             GitHubFileOperations.mockImplementation(() => ({
                 getFileContent: jest.fn().mockResolvedValue({ sha: 'existing-sha' }),
                 createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
@@ -236,7 +244,9 @@ describe('syncConfigToRemote', () => {
             // Arrange
             (fsPromises.readFile as jest.Mock).mockResolvedValue('{"public": {}}');
 
-            const { GitHubFileOperations } = require('@/features/eds/services/githubFileOperations');
+            const {
+                GitHubFileOperations,
+            } = require('@/features/eds/services/githubFileOperations');
             GitHubFileOperations.mockImplementation(() => ({
                 getFileContent: jest.fn().mockResolvedValue(null),
                 createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
@@ -252,13 +262,13 @@ describe('syncConfigToRemote', () => {
 
             // Assert - verify debug logs for key steps
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('Read local config.json'),
+                expect.stringContaining('Read local config.json')
             );
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('Checking for existing config.json on GitHub'),
+                expect.stringContaining('Checking for existing config.json on GitHub')
             );
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('Pushing config.json to GitHub'),
+                expect.stringContaining('Pushing config.json to GitHub')
             );
         });
     });
@@ -276,7 +286,9 @@ describe('syncConfigToRemote', () => {
         beforeEach(() => {
             (fsPromises.readFile as jest.Mock).mockResolvedValue('{"public": {}}');
 
-            const { GitHubFileOperations } = require('@/features/eds/services/githubFileOperations');
+            const {
+                GitHubFileOperations,
+            } = require('@/features/eds/services/githubFileOperations');
             GitHubFileOperations.mockImplementation(() => ({
                 getFileContent: jest.fn().mockResolvedValue({ sha: 'existing-sha' }),
                 createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
@@ -293,9 +305,11 @@ describe('syncConfigToRemote', () => {
             // CDN returns valid config immediately
             mockFetch.mockResolvedValue({
                 ok: true,
-                text: jest.fn().mockResolvedValue(JSON.stringify({
-                    public: { default: { 'commerce-endpoint': 'https://example.com/graphql' } },
-                })),
+                text: jest.fn().mockResolvedValue(
+                    JSON.stringify({
+                        public: { default: { 'commerce-endpoint': 'https://example.com/graphql' } },
+                    })
+                ),
             });
 
             // Act
@@ -305,7 +319,7 @@ describe('syncConfigToRemote', () => {
             expect(result.cdnVerified).toBe(true);
             expect(mockFetch).toHaveBeenCalledWith(
                 expect.stringContaining('aem.live/config.json'),
-                expect.any(Object),
+                expect.any(Object)
             );
         });
 
@@ -318,9 +332,11 @@ describe('syncConfigToRemote', () => {
 
             mockFetch.mockResolvedValue({
                 ok: true,
-                text: jest.fn().mockResolvedValue(JSON.stringify({
-                    public: { default: { 'commerce-endpoint': 'https://example.com/graphql' } },
-                })),
+                text: jest.fn().mockResolvedValue(
+                    JSON.stringify({
+                        public: { default: { 'commerce-endpoint': 'https://example.com/graphql' } },
+                    })
+                ),
             });
 
             // Act
@@ -329,7 +345,7 @@ describe('syncConfigToRemote', () => {
             // Assert - URL should be https://main--{repo}--{owner}.aem.live/config.json
             expect(mockFetch).toHaveBeenCalledWith(
                 'https://main--test-repo--test-owner.aem.live/config.json',
-                expect.any(Object),
+                expect.any(Object)
             );
         });
     });

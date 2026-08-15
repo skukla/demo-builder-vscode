@@ -211,6 +211,35 @@ export class HelixService {
     private static secretStorage: vscode.SecretStorage | null = null;
 
     /**
+     * Fallback DA.live token source, registered once at activation.
+     *
+     * There is exactly ONE DA.live session per extension host — `edsHelpers`
+     * caches a single `DaLiveAuthService`. Threading that singleton through
+     * every layer that happens to build a HelixService modelled a plurality
+     * that does not exist, and the cost was real: two construction sites were
+     * missing it, so a Helix code publish went out with only the GitHub token
+     * and 401'd on any site with an `access.admin` role — silently, leaving the
+     * CDN serving a stale config.json (seen live 2026-08-15).
+     *
+     * A constructor-supplied provider still wins; this is the default, not an
+     * override.
+     */
+    private static defaultDaLiveTokenProvider: DaLiveTokenProvider | null = null;
+
+    /**
+     * Register the DA.live token source every HelixService should fall back to.
+     * Called once from `activate()`. Idempotent; last registration wins.
+     */
+    static setDefaultDaLiveTokenProvider(provider: DaLiveTokenProvider): void {
+        HelixService.defaultDaLiveTokenProvider = provider;
+    }
+
+    /** Drop the registered default (tests). */
+    static clearDefaultDaLiveTokenProvider(): void {
+        HelixService.defaultDaLiveTokenProvider = null;
+    }
+
+    /**
      * Initialize persistent key storage with encrypted SecretStorage.
      * Idempotent — safe to call multiple times (first caller wins).
      *
@@ -443,14 +472,16 @@ export class HelixService {
      * @throws Error if DA.live token provider not configured or token expired
      */
     private async getDaLiveToken(): Promise<string> {
-        if (!this.daLiveTokenProvider) {
+        // Explicit provider wins; otherwise the one registered at activation.
+        const provider = this.daLiveTokenProvider ?? HelixService.defaultDaLiveTokenProvider;
+        if (!provider) {
             throw new Error(
                 'DA.live token provider not configured. ' +
                     'HelixService requires a DA.live token provider for content source operations.',
             );
         }
 
-        const token = await this.daLiveTokenProvider.getAccessToken();
+        const token = await provider.getAccessToken();
         if (!token) {
             throw new Error('DA.live session expired. Please sign in to DA.live.');
         }

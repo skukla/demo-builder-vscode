@@ -36,7 +36,9 @@ import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLive
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
+import { HelixService } from '@/features/eds/services/helixService';
 import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/globalMcpRegistration';
 import { ensureHomeAiContext } from '@/features/project-creation/services/homeAiContextWriter';
 import { SidebarProvider } from '@/features/sidebar';
@@ -219,6 +221,17 @@ export async function activate(context: vscode.ExtensionContext) {
         // Initialize command manager
         const commandManager = new CommandManager(context, stateManager, logger);
         commandManager.registerCommands();
+
+        // Register the ONE DA.live token source every HelixService falls back
+        // to. There is a single DA.live session per host, so threading it
+        // through each layer that builds a HelixService modelled a plurality
+        // that does not exist — and two construction sites were missing it,
+        // which made a Helix code publish 401 on any admin-locked site and
+        // leave the CDN serving a stale config.json. Registered before anything
+        // can construct one.
+        HelixService.setDefaultDaLiveTokenProvider(
+            createDaLiveServiceTokenProvider(getDaLiveAuthService(context)),
+        );
 
         // Start the in-extension MCP server (serves Claude Code via the
         // stdio→UDS proxy). Bound to the open workspace folder; restarted when
