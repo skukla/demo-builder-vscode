@@ -4,9 +4,20 @@
  * Eliminates the cold-path UX visible to demo audiences by pre-publishing
  * every catalog SKU's PDP URL during storefront create/reset. After this
  * step runs, every product click is instant — no smart-404 trigger,
- * no spinner, no 1-2 second wait. The smart-404 + prepublish-pdp
- * mechanism stays in place as a fallback for SKUs added to Commerce
- * after setup, or for pre-warming failures.
+ * no spinner, no 1-2 second wait.
+ *
+ * Publishes through the extension's AUTHENTICATED Helix path
+ * (`previewAndPublishPage`, which sends the DA.live bearer), NOT the external
+ * `prepublish-pdp` action. Storefront setup pins a site admin, and any
+ * `access.admin` role closes the whole Helix admin API to anonymous callers —
+ * the anonymous POST this used to make returned 401 for every SKU (0/39 in the
+ * field on beta.129). Do not route this back through the action unless the
+ * action itself gains credentials.
+ *
+ * The smart-404 + prepublish-pdp fallback still exists for SKUs added to
+ * Commerce after setup, but note it is subject to the SAME 401 on a site with a
+ * pinned admin — it runs in the visitor's browser and cannot hold a credential.
+ * Backlog: `pdp-prewarm-401-after-admin-pinning.md`.
  *
  * v1 covers ACCS storefronts only. PaaS auth requirements for the
  * direct /graphql endpoint (vs. mesh-routed) are unverified; PaaS
@@ -122,11 +133,23 @@ export interface PrewarmResult {
 
 /**
  * One (urlKey, sku) pair from the catalog. Combined to form a path
- * `/products/<urlKey>/<sku>` for prepublish-pdp.
+ * `/products/<urlKey>/<sku>` to publish.
  */
 interface SkuPath {
     urlKey: string;
     sku: string;
+}
+
+/**
+ * The single Helix capability pre-warming needs. `HelixService` satisfies this
+ * structurally, so callers just pass their existing instance.
+ *
+ * Declared as a narrow interface rather than importing `HelixService` because
+ * pre-warming needs exactly one method of it, and a narrow contract keeps the
+ * test doubles honest.
+ */
+export interface PdpPublisher {
+    previewAndPublishPage(org: string, site: string, path: string, branch?: string): Promise<void>;
 }
 
 /**
@@ -150,6 +173,7 @@ export async function prewarmCatalog(
     overlayUrl: string | undefined,
     daLiveOrg: string,
     daLiveSite: string,
+    publisher: PdpPublisher,
     logger: Logger,
     onProgress?: EdsPipelineProgressCallback,
 ): Promise<PrewarmResult> {
@@ -158,8 +182,11 @@ export async function prewarmCatalog(
         return makeSkipped('BYOM disabled');
     }
 
-    const prepublishUrl = derivePrepublishUrl(overlayUrl);
-    if (!prepublishUrl) {
+    // The overlay URL no longer carries the publish call — we publish through
+    // the authenticated Helix path below — but a malformed one still means BYOM
+    // PDP rendering is misconfigured, and publishing paths that would render
+    // nothing helps no one. Keep it as a gate.
+    if (!derivePrepublishUrl(overlayUrl)) {
         logger.warn('[Catalog Prewarm] Invalid overlay URL — skipping');
         return makeSkipped('invalid overlay URL');
     }
@@ -201,7 +228,7 @@ export async function prewarmCatalog(
 
     let completed = 0;
     const results = await runInBatches(skuPaths, BATCH_SIZE, async (skuPath: SkuPath) => {
-        const ok = await prewarmOne(prepublishUrl, daLiveOrg, daLiveSite, skuPath);
+        const ok = await publishOne(publisher, daLiveOrg, daLiveSite, skuPath, logger);
         completed += 1;
         onProgress?.({
             operation: 'catalog-prewarm',
@@ -216,8 +243,13 @@ export async function prewarmCatalog(
     const failed = skuPaths.length - succeeded;
 
     if (failed > 0) {
+        // Deliberately does NOT promise a smart-404 rescue. The runtime fallback
+        // POSTs to the same external action from the visitor's browser with no
+        // credentials, so on a site with a pinned admin it 401s exactly as this
+        // step used to. Telling the user a failed path self-heals would be a
+        // false all-clear — worse than the failure itself.
         logger.warn(
-            `[Catalog Prewarm] Complete: ${succeeded}/${skuPaths.length} succeeded, ${failed} failed (failed paths fall back to smart-404 at runtime)`,
+            `[Catalog Prewarm] Complete: ${succeeded}/${skuPaths.length} succeeded, ${failed} failed — those PDPs will 404 until re-published`,
         );
     } else {
         logger.info(`[Catalog Prewarm] Complete: ${succeeded}/${skuPaths.length} succeeded`);
@@ -326,33 +358,38 @@ async function enumerateAccsCatalog(
 }
 
 /**
- * POST to prepublish-pdp for one (urlKey, sku). Builds the path with the
- * SAME transforms the storefront's `getProductLink` applies — `sanitizeUrlKey`
- * for the urlKey and `encodeSkuForUrl` (reversible `_HH` escaping) for the
- * sku — so the prewarmed/published path is byte-identical to the link the
- * browser later requests. Both produce lowercase, Helix-safe `[a-z0-9_-]`
+ * Publish one (urlKey, sku) through the AUTHENTICATED Helix path. Builds the
+ * path with the SAME transforms the storefront's `getProductLink` applies —
+ * `sanitizeUrlKey` for the urlKey and `encodeSkuForUrl` (reversible `_HH`
+ * escaping) for the sku — so the published path is byte-identical to the link
+ * the browser later requests. Both produce lowercase, Helix-safe `[a-z0-9_-]`
  * output (raw spaces/percent-encoding would be CDN-rejected by aem.live; see
- * ADR-007). For clean SKUs this is identical to the old `.toLowerCase()` form.
+ * ADR-007).
  *
- * Returns true on 2xx, false on non-2xx or thrown error. Errors
- * are swallowed because per-SKU failures are non-fatal — the
- * caller counts failures and reports them in the summary.
+ * This used to POST anonymously to the external `prepublish-pdp` action. Once
+ * storefront setup began pinning a site admin, any `access.admin` role closed
+ * the whole Helix admin API to anonymous callers and every SKU 401'd — 0/39 in
+ * the field on beta.129. `previewAndPublishPage` sends the DA.live bearer, and
+ * issues the same preview-then-live pair the action issued on our behalf, so
+ * the Helix request rate per SKU is unchanged.
+ *
+ * Returns true on success, false when the publish throws. Errors are swallowed
+ * and logged at debug because per-SKU failures are non-fatal — the caller
+ * counts them and reports the total in the summary.
  */
-async function prewarmOne(
-    prepublishUrl: string,
+async function publishOne(
+    publisher: PdpPublisher,
     org: string,
     site: string,
     skuPath: SkuPath,
+    logger: Logger,
 ): Promise<boolean> {
     const path = `/products/${sanitizeUrlKey(skuPath.urlKey)}/${encodeSkuForUrl(skuPath.sku)}`;
-    const url = `${prepublishUrl}?org=${encodeURIComponent(org)}&site=${encodeURIComponent(site)}&path=${encodeURIComponent(path)}`;
     try {
-        const response = await fetch(url, {
-            method: 'POST',
-            signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-        });
-        return response.ok;
-    } catch {
+        await publisher.previewAndPublishPage(org, site, path);
+        return true;
+    } catch (error) {
+        logger.debug(`[Catalog Prewarm] ${path} failed: ${(error as Error).message}`);
         return false;
     }
 }

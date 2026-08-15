@@ -18,6 +18,19 @@ export const mockLogger = {
     error: jest.fn(),
 };
 
+/**
+ * A `PdpPublisher` double that succeeds. Pre-warming publishes through the
+ * extension's AUTHENTICATED Helix path (`previewAndPublishPage`) rather than an
+ * anonymous POST to the external action, so every call site needs one — the
+ * anonymous form 401s on any site with a pinned admin.
+ *
+ * Returns a fresh mock per call so suites cannot leak call counts into one
+ * another (`clearAllMocks` does not reset implementations).
+ */
+export function makePublisher() {
+    return { previewAndPublishPage: jest.fn().mockResolvedValue(undefined) };
+}
+
 /** Minimal ACCS project shape that satisfies extractConfigParams. */
 export function makeAccsProject(overrides: Partial<Project> = {}): Project {
     return {
