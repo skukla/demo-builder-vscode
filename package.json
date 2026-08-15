@@ -58,6 +58,11 @@
         "category": "Demo Builder"
       },
       {
+        "command": "demoBuilder.showDataInstaller",
+        "title": "Open Data Installer",
+        "category": "Demo Builder"
+      },
+      {
         "command": "demoBuilder.manageSiteAccess",
         "title": "Manage Site Access",
         "category": "Demo Builder"

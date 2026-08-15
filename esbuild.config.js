@@ -203,6 +203,8 @@ const WEBVIEW_ENTRIES = {
     aiOverview:   'src/features/dashboard/ui/aiSurface/index.tsx',
     // Dedicated integrations surface — webview behind `demoBuilder.showIntegrations`.
     integrations: 'src/features/dashboard/ui/integrationsSurface/index.tsx',
+    // Standalone Data Installer surface — webview behind `demoBuilder.showDataInstaller`.
+    dataInstaller: 'src/features/data-installer/ui/index.tsx',
 };
 
 function runWebviewBuild() {
