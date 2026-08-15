@@ -67,6 +67,22 @@ src/utils/
   not a scope or permission problem, and not a missing GitHub App. The credential
   itself is never printed.
 
+- **Configuration Service (site config)**:
+  - What `GET /config/{owner}/sites/{repo}.json` returned (HTTP status, `x-error`,
+    and Adobe's `x-invocation-id` for a support ticket)
+  - The same credential against DA.live, which is what makes a 403 interpretable:
+    DA.live accepting what the Configuration Service refuses is an authorization
+    problem, not a broken session
+  - The org's configuration admins — the people who can grant you the role
+
+  Reach for this when product detail pages do not load. The admin role is minted
+  for whoever installs the AEM Code Sync GitHub App, so an older site can refuse
+  even its own owner. A roster that is itself unreadable is the finding, not a
+  gap: it means there is nobody visible to ask, and the AEM setup flow is the way
+  in. **Addresses are masked here and in the exportable debug log**, because both
+  are meant to be pasted into tickets; `Demo Builder: Manage Site Access` shows
+  them in full and can add or remove admins.
+
 ### Diagnostic Report Structure
 
 ```json

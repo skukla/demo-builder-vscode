@@ -11,7 +11,9 @@ The commands module contains all VS Code command implementations for the Demo Bu
 | `commandManager.ts` | Central registry — instantiates local and feature-owned commands and registers all `demoBuilder.*` command IDs |
 | `claudeSessionStore.ts` | Probe for Claude Code's per-cwd conversation store (`~/.claude/projects/<encoded-cwd>/`); decides whether `claude --continue` is safe at launch |
 | `configure.ts` | `demoBuilder.configure` — QuickPick to edit .env, redeploy mesh, and related project configuration actions |
-| `diagnostics.ts` | System diagnostics report (system/VS Code/tool info, Adobe CLI auth, MCP socket/tool probe, GitHub↔AEM credential probe) logged to the debug channel |
+| `diagnostics.ts` | System diagnostics report (system/VS Code/tool info, Adobe CLI auth, MCP socket/tool probe, GitHub↔AEM credential probe, Configuration Service site-config probe incl. the org admin roster — addresses masked) logged to the debug channel |
+| `manageSiteAccess.ts` | `demoBuilder.manageSiteAccess` — QuickPick over who holds the Configuration Service admin role on the project's storefront; add/remove admins. UX only; logic + post-write verification live in `siteAccessManagerHeadless` |
+| `repairSiteConfiguration.ts` | `demoBuilder.repairSiteConfiguration` — re-runs the Configuration Service write that was refused, then republishes (the same republish a configuration save performs). Step 2 runs only when step 1 reports `repaired`. Logic in `repairSiteConfigHeadless` |
 | `migrateStorefrontNames.ts` | One-shot palette command migrating projects whose DA.live site name doesn't match the GitHub repo name (pre-`164fd251` builds) |
 | `openInClaude.ts` | Launches the single "home" Claude Code chat terminal (see below) |
 | `openModernizationAgent.ts` | Opens the AEM Experience Modernization Agent web console (`aemcoder.adobe.io`) with a tip about the current project's repo |

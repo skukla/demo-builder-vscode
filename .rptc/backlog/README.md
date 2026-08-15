@@ -127,6 +127,24 @@ Also resolved since last index (now archived to `../complete/`): **oversized tes
 
 ### A. Active front (nearest to actionable — nothing here is in progress)
 
+#### `delete_mesh` deletes whatever the CLI last selected ([`mesh-delete-untargeted.md`](mesh-delete-untargeted.md))
+
+**Destructive, cloud-side, both surfaces.** `handleDeleteApiMesh` validates `workspaceId` then runs `aio api-mesh delete --autoConfirmAction` without passing it, and targets no org — so the CLI falls back to its process-global `aio console where` selection, which this codebase deliberately stopped maintaining. Mesh check and deploy ARE targeted; delete is the odd one out. The safety-net guard cannot warn because `ORG_SCOPED_AIO` matches the colon form (`api-mesh:`) while the command uses the space form — and the guard's tests pin only colon spellings, so they share the blind spot. Reachable from the dashboard AND `delete_mesh`. Not reproduced live; reproduce before fixing. Filed 2026-08-14.
+
+#### MCP: which window serves, and which project it acts on ([`mcp-window-and-project-binding.md`](mcp-window-and-project-binding.md))
+
+Two independent last-writer-wins races. The socket name is `sha256(projects-root)` — identical in every window — and a second window `rename`s over the first's bind silently, so the LAST window to start serves. Separately, `StateManager` reads `state.json` once at `initialize()` with no watcher, so that serving window never learns about a project selected in another window. Net: `get_current_project` can report the wrong project, and `reset_eds_project` (confirm-only, pointer-resolved, rewrites repo + DA.live content) acts on it. `delete_project` is safe — it demands an explicit name. Not reproduced live; preconditions stated from code. Filed 2026-08-14.
+
+Note: `2026-05-30-decouple-project-from-workspace.md` looks adjacent but its headline premise shipped fixed on 2026-06-02 — re-scope it, do not pick it up as written.
+
+#### Two EDS services sit over the god-file threshold ([`eds-services-over-size-threshold.md`](eds-services-over-size-threshold.md))
+
+`configurationService.ts` (532) and `edsResetService.ts` (463) exceed the 400-line services threshold — both were already over at `develop` (444 / 430), so this is pre-existing debt, not new. A guideline, not a gate: eslint does not flag them and CI does not fail. The model for the split is in the item — three extractions on `fix/leah-128-bugs` (`siteGrantPreservation`, `edsResetConfigStep`, `siteConfigRegistrar`) each proved behaviour-preserving by leaving the existing suites UNTOUCHED. `configServiceAccess.ts` (493) is explicitly NOT a candidate: 207 of those lines are comments and its exports are one coherent contract. Pick up at a release cut via `codebase-sweep`. Filed 2026-08-15.
+
+#### MCP tools for Configuration Service site access ([`mcp-site-access-tools.md`](mcp-site-access-tools.md))
+
+Give an agent the same 403 repair a human now gets from `Demo Builder: Manage Site Access` — `get_site_access` / `grant_site_admin` / `revoke_site_admin` over the existing `siteAccessManagerHeadless` core, which was built UI-free for exactly this. No new logic; the constraints (report `verified` separately from `status`, treat `not_authorized` as non-retryable, never remove the last admin, mask emails) are measured rather than assumed and are listed in the item. Filed 2026-08-14 from the `config-service-admin-grant` verify loop.
+
 #### App Builder app family — attach a deployable app to a demo ([`2026-06-17-appbuilder-app-deploy-spine.md`](../complete/2026-06-17-appbuilder-app-deploy-spine.md))
 
 Add a custom Adobe App Builder app to a demo project as a first-class, deployable component — the App Builder analog of the component-first direction. **Decided model** (from [`../research/app-builder-app-structure/research.md`](../research/app-builder-app-structure/research.md)): one workspace per demo = the API Mesh (separate artifact) + **one** custom app, with multiple integration domains as **packages inside that one app** — so the singleton `meshState` shape fits and no keyed app array is needed. **Build principle:** reuse existing primitives (org targeting, command plumbing, clone/install, the block-library additive pattern), share the mesh deploy scaffold where duplication is real, and hold off on a generalized deployable framework until a 3rd deployable type appears (Rule of Three). Effort 1 (remove the dormant `integration-service` + `appBuilderApps` mechanism) shipped earlier (`c98e5125`); Effort 2 (discovery least-privilege token) **DECLINED 2026-06-15** (no attacker exposure it closes; VS Code Secret Storage is the cheap fix if at-rest plaintext ever matters).
