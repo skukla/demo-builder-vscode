@@ -45,7 +45,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
         it('is offered once an instance and types are chosen', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
 
             expect(resetButton()).not.toHaveAttribute('aria-disabled', 'true');
         });
@@ -60,7 +60,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
         it('sends NOTHING on the first press — it arms a confirmation', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
 
             fireEvent.click(resetButton());
 
@@ -70,7 +70,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
         it('names the instance the data will be removed from, and says there is no undo', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
 
             fireEvent.click(resetButton());
 
@@ -81,7 +81,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
         it('can be backed out of without removing anything', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
 
             fireEvent.click(resetButton());
             fireEvent.click(screen.getByRole('button', { name: /keep the data/i }));
@@ -95,7 +95,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
         it('sends confirm with the same body a start would, only from the confirmation', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
 
             fireEvent.click(resetButton());
             fireEvent.click(screen.getByRole('button', { name: /remove the data/i }));
@@ -130,7 +130,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             neverResolve('validate-datapack-import');
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
 
             fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
 
@@ -141,7 +141,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             neverResolve('start-datapack-import');
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
 
             fireEvent.click(startButton());
 
@@ -156,20 +156,20 @@ describe('ImportDatapackModal — job lifecycle', () => {
             neverResolve('validate-datapack-import');
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
 
             fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
 
             expect(await screen.findByText(/checking with the service/i)).toBeInTheDocument();
-            expect(screen.queryByRole('checkbox', { name: 'categories' })).not.toBeInTheDocument();
-            expect(screen.queryByRole('checkbox', { name: 'categories' })).not.toBeInTheDocument();
+            expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
+            expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
         });
 
         it('disables every action while one is in flight', async () => {
             neverResolve('validate-datapack-import');
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
 
             fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
             await screen.findByRole('button', { name: /checking…/i });
@@ -211,7 +211,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
         async function dryRun() {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
             fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
         }
 
@@ -220,7 +220,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await dryRun();
 
             expect(await screen.findByText(/dry run failed/i)).toBeInTheDocument();
-            expect(screen.queryByRole('checkbox', { name: 'categories' })).not.toBeInTheDocument();
+            expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
         });
 
         it('offers Back, which returns to the form with selections intact', async () => {
@@ -230,7 +230,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
             fireEvent.click(screen.getByRole('button', { name: /back/i }));
 
-            expect(screen.getByRole('checkbox', { name: 'categories' })).toBeChecked();
+            expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeChecked();
             expect(screen.queryByText(/dry run failed/i)).not.toBeInTheDocument();
         });
 
@@ -243,7 +243,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await dryRun();
 
             expect(await screen.findByText(/dry run passed/i)).toBeInTheDocument();
-            expect(screen.queryByRole('checkbox', { name: 'categories' })).not.toBeInTheDocument();
+            expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
             expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
         });
 
@@ -275,13 +275,13 @@ describe('ImportDatapackModal — job lifecycle', () => {
             });
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
             fireEvent.click(screen.getByRole('button', { name: /^reset/i }));
             fireEvent.click(screen.getByRole('button', { name: /remove the data/i }));
 
             expect(await screen.findByText(/reset finished/i)).toBeInTheDocument();
             fireEvent.click(screen.getByRole('button', { name: /back/i }));
-            expect(screen.getByRole('checkbox', { name: 'categories' })).toBeInTheDocument();
+            expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeInTheDocument();
         });
     });
 
@@ -315,7 +315,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
                 screen.findByText(/import finished/i, undefined, { timeout: 1500 }),
             ).rejects.toThrow();
             // The form is what greets a fresh modal.
-            expect(screen.getByRole('checkbox', { name: 'categories' })).toBeInTheDocument();
+            expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeInTheDocument();
         });
     });
 
@@ -342,7 +342,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
         async function refuse() {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
             fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
         }
 
@@ -500,7 +500,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
         async function startAJob() {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
             fireEvent.click(startButton());
         }
 
@@ -520,11 +520,11 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await startAJob();
 
             expect(await screen.findByText(/import finished/i)).toBeInTheDocument();
-            expect(screen.queryByRole('checkbox', { name: 'categories' })).not.toBeInTheDocument();
+            expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
 
             fireEvent.click(screen.getByRole('button', { name: /back/i }));
 
-            expect(screen.getByRole('checkbox', { name: 'categories' })).toBeChecked();
+            expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeChecked();
             expect(screen.getByRole('button', { name: /start import/i })).toBeInTheDocument();
         });
 
@@ -547,7 +547,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             );
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
             fireEvent.click(screen.getByRole('button', { name: /^reset/i }));
             fireEvent.click(screen.getByRole('button', { name: /remove the data/i }));
 

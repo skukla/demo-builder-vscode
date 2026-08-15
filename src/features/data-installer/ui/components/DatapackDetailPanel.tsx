@@ -31,6 +31,7 @@ import Close from '@spectrum-icons/workflow/Close';
 import React from 'react';
 import type { DataItemInventory, DatapackDetail, DatapackId } from '../../types';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
+import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { Drawer } from '@/core/ui/components/ui/Drawer';
@@ -161,7 +162,7 @@ function DetailRows({
                 <span className="datapack-panel-types">
                     {present.map((dataType) => (
                         <span key={dataType} className="datapack-panel-type">
-                            {dataType}
+                            {dataTypeLabel(dataType)}
                         </span>
                     ))}
                 </span>
@@ -171,7 +172,7 @@ function DetailRows({
                     <span className="datapack-panel-types" data-testid="datapack-detail-missing">
                         {missing.map((dataType) => (
                             <span key={dataType} className="datapack-panel-type is-missing">
-                                {dataType}
+                                {dataTypeLabel(dataType)}
                             </span>
                         ))}
                     </span>

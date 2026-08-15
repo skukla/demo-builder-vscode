@@ -70,5 +70,5 @@ export async function defaultResponse(type: string): Promise<unknown> {
  * there is nothing to type, and readiness means the seeded instance has landed.
  */
 export async function awaitForm(): Promise<void> {
-    await screen.findByRole('checkbox', { name: 'categories' });
+    await screen.findByRole('checkbox', { name: 'Categories' });
 }

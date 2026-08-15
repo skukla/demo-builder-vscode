@@ -363,8 +363,8 @@ describe('DatapackCatalogView', () => {
             await openImport();
             await screen.findByText(/there is no undo/i);
 
-            expect(screen.getByRole('checkbox', { name: 'products' })).toBeInTheDocument();
-            expect(screen.queryByRole('checkbox', { name: 'giftcards' })).not.toBeInTheDocument();
+            expect(screen.getByRole('checkbox', { name: 'Products' })).toBeInTheDocument();
+            expect(screen.queryByRole('checkbox', { name: 'Giftcards' })).not.toBeInTheDocument();
         });
 
         it('closes without closing the flyout behind it', async () => {

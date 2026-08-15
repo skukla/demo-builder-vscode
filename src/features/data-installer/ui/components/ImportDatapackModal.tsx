@@ -41,6 +41,7 @@ import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useImportScopes, type ImportScopes } from '../hooks/useImportScopes';
 import { ImportForm } from './ImportForm';
 import {
+    describePerType,
     resolveResult,
     type LastAction,
     type ResultContent,
@@ -531,7 +532,7 @@ function WatchProgress({
 }): React.JSX.Element {
     const op = record.operation === 'reset' ? 'reset' : 'import';
     const active = record.operation === 'reset' ? 'Resetting…' : 'Importing…';
-    const perType = Object.entries(record.perType).map(([type, state]) => `${type}: ${state}`);
+    const perType = describePerType(record.perType);
 
     return (
         <LoadingDisplay

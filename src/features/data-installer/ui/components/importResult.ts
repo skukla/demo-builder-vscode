@@ -16,7 +16,20 @@
  */
 
 import type { ImportJobRecord } from '../../types';
+import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerRequest } from '../hooks/useDataInstallerRequest';
+
+/**
+ * One line per data type: its human name and what the service says it did.
+ *
+ * Shared with the modal's in-flight `WatchProgress`, which had built this list
+ * with a byte-identical expression. Two copies of one job — and the moment the
+ * codes became labels, the copy that got missed would have shown the raw code
+ * for the whole duration of the import and the finished name only at the end.
+ */
+export function describePerType(perType: ImportJobRecord['perType']): string[] {
+    return Object.entries(perType).map(([type, state]) => `${dataTypeLabel(type)}: ${state}`);
+}
 
 /** The operation whose outcome the result view should show. */
 export type LastAction = 'dryRun' | 'start' | 'reset' | 'provision';
@@ -129,7 +142,7 @@ function failureResult(
 /** A finished job, worded for ITS operation — a reset must not say "Import". */
 function terminalResult(record: ImportJobRecord): ResultContent {
     const op = record.operation === 'reset' ? 'Reset' : 'Import';
-    const perType = Object.entries(record.perType).map(([type, state]) => `${type}: ${state}`);
+    const perType = describePerType(record.perType);
 
     if (record.outcome === 'success') {
         return {

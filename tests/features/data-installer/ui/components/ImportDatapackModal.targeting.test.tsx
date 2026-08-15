@@ -78,7 +78,7 @@ describe('import targeting', () => {
         fireEvent.change(pickerFor(/store view/i), { target: { value: 'bodea_view' } });
 
         // canStart also needs a data type; without one the button is disabled.
-        fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
         fireEvent.click(screen.getByRole('button', { name: /start import/i }));
 
         await waitFor(() => {
@@ -101,7 +101,7 @@ describe('import targeting', () => {
         renderModal();
         await awaitScopes();
 
-        fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
         fireEvent.click(screen.getByRole('button', { name: /start import/i }));
 
         await waitFor(() => {
@@ -164,7 +164,7 @@ describe('the products/customer_groups dependency', () => {
     it('warns when products is selected without customer_groups', async () => {
         renderModal({ availableTypes: ['categories', 'customer_groups', 'products'] });
 
-        fireEvent.click(screen.getByRole('checkbox', { name: 'products' }));
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Products' }));
 
         await waitFor(() =>
             // 'tier prices' — NOT /customer_groups/, which is also a checkbox
@@ -178,10 +178,10 @@ describe('the products/customer_groups dependency', () => {
     it('drops the warning once customer_groups is selected too', async () => {
         renderModal({ availableTypes: ['categories', 'customer_groups', 'products'] });
 
-        fireEvent.click(screen.getByRole('checkbox', { name: 'products' }));
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Products' }));
         await waitFor(() => expect(screen.getByText(/tier prices/i)).toBeInTheDocument());
 
-        fireEvent.click(screen.getByRole('checkbox', { name: 'customer_groups' }));
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Customer groups' }));
 
         await waitFor(() =>
             expect(screen.queryByText(/tier prices/i)).not.toBeInTheDocument(),
@@ -191,7 +191,7 @@ describe('the products/customer_groups dependency', () => {
     it('says nothing when the pack has no customer_groups to offer', async () => {
         renderModal({ availableTypes: ['categories', 'products'] });
 
-        fireEvent.click(screen.getByRole('checkbox', { name: 'products' }));
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Products' }));
 
         await waitFor(() =>
             expect(screen.getByRole('button', { name: /start import/i })).toBeInTheDocument(),
@@ -310,7 +310,7 @@ describe('default scope selection', () => {
     it('sends the defaulted pair with the import', async () => {
         renderModal();
         await awaitScopes();
-        fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
         fireEvent.click(screen.getByRole('button', { name: /start import/i }));
 
         await waitFor(() => {

@@ -27,6 +27,7 @@
 
 import { Checkbox, DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { dataTypeLabel } from '../dataTypeLabel';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { FormField } from '@/core/ui/components/forms/FormField';
@@ -261,7 +262,7 @@ function renderTypeChoices({
                     isSelected={selected.includes(dataType)}
                     onChange={(isSelected) => onToggle(dataType, isSelected)}
                 >
-                    {dataType}
+                    {dataTypeLabel(dataType)}
                 </Checkbox>
             ))}
         </div>
@@ -302,9 +303,10 @@ function ExportResult({
 
 /** One line per type: what it captured, or why it did not. */
 function describeType(row: ExportTypeOutcome): string {
+    const label = dataTypeLabel(row.dataType);
     if (!row.success) {
-        return `${row.dataType}: failed — ${row.reason ?? 'the service gave no reason'}`;
+        return `${label}: failed — ${row.reason ?? 'the service gave no reason'}`;
     }
     const excluded = row.excluded > 0 ? ` (${row.excluded} excluded by the service)` : '';
-    return `${row.dataType}: ${row.exported} exported${excluded}`;
+    return `${label}: ${row.exported} exported${excluded}`;
 }

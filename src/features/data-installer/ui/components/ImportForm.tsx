@@ -14,6 +14,7 @@
 
 import { ActionButton, Checkbox, Item, Picker } from '@adobe/react-spectrum';
 import React from 'react';
+import { dataTypeLabel } from '../dataTypeLabel';
 import type { TargetWebsite } from '../hooks/useImportScopes';
 
 /**
@@ -201,15 +202,15 @@ export function ImportForm({
                             isSelected={selected.includes(type)}
                             onChange={(isSelected) => onToggle(type, isSelected)}
                         >
-                            {type}
+                            {dataTypeLabel(type)}
                         </Checkbox>
                     ))}
                 </div>
                 {needsCustomerGroups(availableTypes, selected) ? (
                     <p className="datapack-import-type-warning">
                         Products whose tier prices name a customer group fail to import without
-                        it — and one failure fails the whole type. Add customer_groups unless you
-                        know this pack has no tier prices.
+                        it — and one failure fails the whole type. Add {dataTypeLabel('customer_groups')}{' '}
+                        unless you know this pack has no tier prices.
                     </p>
                 ) : null}
             </div>

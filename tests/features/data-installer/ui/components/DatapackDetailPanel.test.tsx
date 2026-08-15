@@ -115,8 +115,8 @@ describe('DatapackDetailPanel', () => {
         it('lists the data types the service actually holds', () => {
             renderPanel();
 
-            expect(screen.getByText('categories')).toBeInTheDocument();
-            expect(screen.getByText('products')).toBeInTheDocument();
+            expect(screen.getByText('Categories')).toBeInTheDocument();
+            expect(screen.getByText('Products')).toBeInTheDocument();
         });
 
         // A pack can DECLARE a type it holds no item for. That gap is the whole
@@ -124,7 +124,7 @@ describe('DatapackDetailPanel', () => {
         it('calls out declared types the service has no item for', () => {
             renderPanel();
 
-            expect(screen.getByTestId('datapack-detail-missing')).toHaveTextContent('giftcards');
+            expect(screen.getByTestId('datapack-detail-missing')).toHaveTextContent('Giftcards');
         });
 
         it('renders no missing section when the pack holds everything it declares', () => {

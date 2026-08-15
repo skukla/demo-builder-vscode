@@ -85,7 +85,7 @@ function expectExportDisabled(disabled: boolean): void {
 async function exportAs(name: string, version: string) {
     fireEvent.change(screen.getByRole('textbox', { name: /datapack name/i }), { target: { value: name } });
     fireEvent.change(screen.getByRole('textbox', { name: /version/i }), { target: { value: version } });
-    fireEvent.click(await screen.findByRole('checkbox', { name: 'attribute_sets' }));
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Attribute sets' }));
     fireEvent.click(screen.getByRole('button', { name: /^export$/i }));
 }
 
@@ -99,7 +99,7 @@ describe('ExportDatapackModal', () => {
         renderModal();
 
         await waitFor(() =>
-            expect(screen.getByRole('checkbox', { name: 'attribute_sets' })).toBeInTheDocument(),
+            expect(screen.getByRole('checkbox', { name: 'Attribute sets' })).toBeInTheDocument(),
         );
         const call = mockRequest.mock.calls.find((c) => c[0] === 'list-datapack-data-types');
         // `operationMode` is the handler's key; `mode` is refused.
@@ -109,7 +109,7 @@ describe('ExportDatapackModal', () => {
     /** Naming the target is the user's job — nothing here guesses it. */
     it('cannot export until a name, a version and a type are given', async () => {
         renderModal();
-        await screen.findByRole('checkbox', { name: 'attribute_sets' });
+        await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
         expectExportDisabled(true);
 
@@ -119,13 +119,13 @@ describe('ExportDatapackModal', () => {
         fireEvent.change(screen.getByRole('textbox', { name: /version/i }), { target: { value: 'v1' } });
         expectExportDisabled(true);
 
-        fireEvent.click(screen.getByRole('checkbox', { name: 'attribute_sets' }));
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Attribute sets' }));
         expectExportDisabled(false);
     });
 
     it('sends the typed identity and the chosen types', async () => {
         renderModal();
-        await screen.findByRole('checkbox', { name: 'attribute_sets' });
+        await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
         await exportAs('captured-pack', 'v1');
 
@@ -152,11 +152,11 @@ describe('ExportDatapackModal', () => {
             },
         });
         renderModal();
-        await screen.findByRole('checkbox', { name: 'attribute_sets' });
+        await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
         await exportAs('captured-pack', 'v1');
 
-        expect(await screen.findByText(/attribute_sets/)).toBeInTheDocument();
+        expect(await screen.findByText(/Attribute sets/)).toBeInTheDocument();
         expect(await screen.findByText(/8/)).toBeInTheDocument();
     });
 
@@ -184,7 +184,7 @@ describe('ExportDatapackModal', () => {
             },
         });
         renderModal();
-        await screen.findByRole('checkbox', { name: 'attribute_sets' });
+        await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
         await exportAs('captured-pack', 'v1');
 
@@ -196,7 +196,7 @@ describe('ExportDatapackModal', () => {
             'start-datapack-export': { success: false, error: 'Open a project before exporting.' },
         });
         renderModal();
-        await screen.findByRole('checkbox', { name: 'attribute_sets' });
+        await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
         await exportAs('captured-pack', 'v1');
 
@@ -211,7 +211,7 @@ describe('ExportDatapackModal', () => {
             },
         });
         renderModal();
-        await screen.findByRole('checkbox', { name: 'attribute_sets' });
+        await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
         await exportAs('captured-pack', 'v1');
 

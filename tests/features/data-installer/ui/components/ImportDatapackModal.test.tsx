@@ -79,7 +79,7 @@ describe('ImportDatapackModal', () => {
         it('sends the project instance without showing or asking for it', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
             fireEvent.click(screen.getByRole('button', { name: /start import/i }));
 
             await waitFor(() => {
@@ -105,8 +105,8 @@ describe('ImportDatapackModal', () => {
 
             fireEvent.click(screen.getByRole('button', { name: /select all/i }));
 
-            expect(screen.getByRole('checkbox', { name: 'categories' })).toBeChecked();
-            expect(screen.getByRole('checkbox', { name: 'products' })).toBeChecked();
+            expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeChecked();
+            expect(screen.getByRole('checkbox', { name: 'Products' })).toBeChecked();
         });
 
         it('turns into a clear-all once everything is selected', async () => {
@@ -116,8 +116,8 @@ describe('ImportDatapackModal', () => {
             fireEvent.click(screen.getByRole('button', { name: /select all/i }));
             fireEvent.click(screen.getByRole('button', { name: /clear all/i }));
 
-            expect(screen.getByRole('checkbox', { name: 'categories' })).not.toBeChecked();
-            expect(screen.getByRole('checkbox', { name: 'products' })).not.toBeChecked();
+            expect(screen.getByRole('checkbox', { name: 'Categories' })).not.toBeChecked();
+            expect(screen.getByRole('checkbox', { name: 'Products' })).not.toBeChecked();
         });
 
         it('sends every type when all are selected', async () => {
@@ -138,8 +138,8 @@ describe('ImportDatapackModal', () => {
             renderModal();
             await awaitForm();
 
-            expect(screen.getByRole('checkbox', { name: 'categories' })).not.toBeChecked();
-            expect(screen.getByRole('checkbox', { name: 'products' })).not.toBeChecked();
+            expect(screen.getByRole('checkbox', { name: 'Categories' })).not.toBeChecked();
+            expect(screen.getByRole('checkbox', { name: 'Products' })).not.toBeChecked();
         });
 
         it('will not start with none selected', async () => {
@@ -152,7 +152,7 @@ describe('ImportDatapackModal', () => {
         it('sends only the selected types', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'products' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Products' }));
 
             fireEvent.click(startButton());
 
@@ -164,7 +164,7 @@ describe('ImportDatapackModal', () => {
         it('sends the datapack identity', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
 
             fireEvent.click(startButton());
 
@@ -181,7 +181,7 @@ describe('ImportDatapackModal', () => {
             );
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
 
             fireEvent.click(startButton());
 
@@ -206,7 +206,7 @@ describe('ImportDatapackModal', () => {
         it('checks WITHOUT starting an import', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
 
             fireEvent.click(validateButton());
 
@@ -221,7 +221,7 @@ describe('ImportDatapackModal', () => {
         it('sends the same body a start would', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
 
             fireEvent.click(validateButton());
 
@@ -244,7 +244,7 @@ describe('ImportDatapackModal', () => {
             );
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
 
             fireEvent.click(validateButton());
 
@@ -261,7 +261,7 @@ describe('ImportDatapackModal', () => {
             );
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
 
             fireEvent.click(validateButton());
 
