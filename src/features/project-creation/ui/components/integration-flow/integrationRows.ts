@@ -38,7 +38,7 @@ export interface IntegrationRow {
      * the always-provided baseline (I/O Management), then the integration's
      * deterministic `requiredApis` (e.g. a mesh's API Mesh SDK), then the user's
      * free picks. Every row carries at least the baseline, so this is never empty —
-     * it is the card's uniform "APIs in use" list, rendered by name for every kind.
+     * its LENGTH is what the card's subline reports ("· 2 APIs") for every kind.
      */
     apis: string[];
     /**

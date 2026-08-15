@@ -24,11 +24,15 @@
  */
 
 import type { StatusDisplay, MeshStatus } from '../../hooks/useDashboardStatus';
-import type { StatusDotVariant } from '@/core/ui/components/ui/StatusDot';
+import type {
+    CardAction,
+    CardStatus,
+    CommerceScopePart,
+    IntegrationCardModel,
+} from '@/core/ui/components/integrations';
 import {
     getStatusDisplay,
     severityToDot,
-    type DisplayStatus,
 } from '@/core/ui/utils/statusVocabulary';
 import type { IdentifiedAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import {
@@ -48,22 +52,21 @@ import type { AppBuilderComponentState } from '@/types/base';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 
 /**
- * Card status vocabulary — the shared one. Re-exported under the grid's own name
- * because every consumer in this feature already spells it `CardStatus`; there is
- * no second vocabulary behind it.
+ * The card's shape and vocabulary now live in `core/ui` so the wizard can
+ * render the same card without importing this feature. Re-exported here under
+ * the names every dashboard consumer already uses — there is no second
+ * vocabulary behind the alias.
+ *
+ * What stays: every DERIVATION below. It reads `useDashboardStatus` and
+ * `@/features/app-builder/*` — live-project concerns with no meaning before a
+ * project is built.
  */
-export type CardStatus = DisplayStatus;
-
-/** Action identifiers dispatched by the grid's single handleAction switch. */
-export type CardAction =
-    | 'deploy'
-    | 'redeploy'
-    | 'update'
-    | 'retry'
-    | 'manage-apis'
-    | 'remove'
-    | 'sign-in'
-    | 'open';
+export type {
+    CardAction,
+    CardStatus,
+    CommerceScopePart,
+    IntegrationCardModel,
+} from '@/core/ui/components/integrations';
 
 /**
  * The verb a status is ASKING for, or undefined when the card is idle.
@@ -92,77 +95,6 @@ export interface RowStatusOverride {
     status: string;
     message?: string;
     /** Update-borne display name (rename pushes it; deploy pushes omit it). */
-    name?: string;
-}
-
-/** Everything a card face, drawer body, and drawer action bar render. */
-export interface IntegrationCardModel {
-    id: string;
-    isMesh: boolean;
-    name: string;
-    kindLabel: string;
-    /**
-     * `owner/repo` — an identifier you can go look up, which is why the card
-     * typesets it in mono.
-     *
-     * Absent on the mesh, which has no source repo. The hardcoded prose that
-     * used to fill the slot ('GraphQL bridge · Adobe I/O') was a constant wearing
-     * the identifier styling: it never varied by project or state, so it carried
-     * no information, and the same string had already been cut from the detail
-     * panel as decoration. Optional rather than a placeholder — a card with
-     * nothing to say here renders no line at all.
-     */
-    sourceLine?: string;
-    sourceIsAi: boolean;
-    status: CardStatus;
-    statusLabel: string;
-    dotVariant: StatusDotVariant;
-    message?: string;
-    url?: string;
-    urlLabel: 'Endpoint' | 'App URL';
-    deployedUrls?: Record<string, string>;
-    apis?: string[];
-    /** Preformatted locale display string (already display-ready). */
-    lastDeployed?: string;
-    /**
-     * The card's own kebab menu. Kept OFF the face so the at-most-one-affordance
-     * rule survives: the face carries the urgent verb (Deploy / Update / Retry),
-     * the menu carries the deliberate ones. Empty on the mesh (nothing about it
-     * is editable) and while deploying.
-     */
-    menuActions: CardAction[];
-    /**
-     * The keyed `appBuilderComponents` id to act on, when it differs from `id`.
-     *
-     * Only the mesh sets it. The mesh card's `id` is the literal `'mesh'` — a
-     * stable grid identity that exists before any mesh is deployed — while the
-     * component it removes is keyed by its real id (`eds-accs-mesh`). Removal
-     * must address the latter; everything else addresses `id`.
-     */
-    componentId?: string;
-    canRename: boolean;
-    /**
-     * The Commerce scope the mesh is DEPLOYED against, in display order.
-     *
-     * An attribute of the deployment, not a difference — which is why it is a
-     * permanent row rather than a stale-only diff. Mesh cards only; integrations
-     * have no Commerce scope. Absent when the deployed snapshot carries no codes
-     * (a mesh deployed before this shipped, or never deployed at all).
-     */
-    commerceScope?: CommerceScopePart[];
-}
-
-/** One sub-labelled line of the Commerce scope row. */
-export interface CommerceScopePart {
-    label: string;
-    code: string;
-    /**
-     * The name the scope was CHOSEN by, when the deployment captured one.
-     *
-     * Absent on every mesh deployed before names were captured, and on any part
-     * the user has not re-picked since. Consumers render the bare code then —
-     * that is the correct rendering, not a degraded one.
-     */
     name?: string;
 }
 

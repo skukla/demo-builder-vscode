@@ -654,9 +654,15 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
 
 /**
  * validateInput for the rename input box: reject empty/whitespace-only names
- * and (wizard-parity with RenameIntegrationModal) case-insensitive trimmed
- * duplicates of the OTHER integration entries' display names (`name ?? id`).
- * The entry's own current name stays allowed (a no-op rename).
+ * and case-insensitive trimmed duplicates of the OTHER integration entries'
+ * display names (`name ?? id`). The entry's own current name stays allowed
+ * (a no-op rename).
+ *
+ * The wizard applies the same duplicate rule in `IntegrationsStep.commitRename`
+ * — it used to live in a `RenameIntegrationModal`, which the shared card's
+ * inline pencil replaced. It does NOT share the empty-name branch:
+ * `InlineRenameField` cancels an empty value before any host commit runs, so
+ * only THIS path — a VS Code input box, with no such guard — must reject it.
  */
 function validateRenameInput(value: string, takenNames: string[]): string | undefined {
     const trimmed = value.trim();

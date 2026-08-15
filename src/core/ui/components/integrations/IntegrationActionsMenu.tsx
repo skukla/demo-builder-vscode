@@ -8,22 +8,22 @@
  * on the project card. What lives here is only the integration's own label/icon
  * mapping.
  *
- * It sits beside its consumers rather than in `core/ui` because both of them —
- * {@link IntegrationCard} and {@link IntegrationDetailPanel} — are in this
- * folder. Extracted when the flyout's button BAR became a kebab (2026-08-03):
- * the bar was the same actions as the card's menu wearing a different control,
- * and two lists of the same thing drift.
+ * Extracted when the flyout's button BAR became a kebab (2026-08-03): the bar
+ * was the same actions as the card's menu wearing a different control, and two
+ * lists of the same thing drift. It moved here from the dashboard folder when
+ * the wizard became a second consumer of {@link IntegrationCard} — the card
+ * renders this menu, so the two travel together.
  *
  * Renders nothing when the model offers nothing — mid-deploy every item would
  * race the runner, so the model returns an empty list and this disappears rather
  * than presenting a menu of things you cannot do.
  *
- * @module features/dashboard/ui/components/integrations/IntegrationActions
+ * @module core/ui/components/integrations/IntegrationActionsMenu
  */
 
 import { Item, Text } from '@adobe/react-spectrum';
 import React from 'react';
-import type { CardAction, IntegrationCardModel } from './integrationCardModel';
+import type { CardAction, IntegrationCardModel } from './integrationCardModel.types';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 

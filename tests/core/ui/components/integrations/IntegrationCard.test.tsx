@@ -1,20 +1,24 @@
 /**
- * IntegrationCard Tests (integrations grid — Step 4)
+ * IntegrationCard Tests (shared card — `core/ui/components/integrations`)
  *
- * The grid's calm card face: name, status dot + label, a source line when the
- * card has one, its kebab (`model.menuActions`) carrying EVERY verb, and
- * the overflow menu carrying `model.menuActions`. A healthy card shows NO face
- * button — Open lives in the menu — so a visible one always means the card needs
- * you. The card is dumb: clicks open the drawer via `onOpen(id)`, and every
+ * The calm card face: name, status dot + label, and its kebab
+ * (`model.menuActions`) carrying EVERY verb. A healthy card shows NO face button
+ * — Open lives in the menu — so a visible one always means the card needs you.
+ * The card is dumb: clicks open the host's detail via `onOpen(id)`, and every
  * affordance routes through `onAction(model, kind)` WITHOUT triggering `onOpen`.
  *
- * Strict TDD: written BEFORE the component exists.
+ * Moved here from `features/dashboard/…` when the WIZARD's Integrations area
+ * became a second consumer (features must not import one another —
+ * `reuse-first`). Every assertion below arrived with the file and is unchanged
+ * apart from the import path: a behaviour-preserving move proves itself by not
+ * moving its tests. The `subline` block is the one addition — the slot the wizard
+ * needs, having no deploy status to show before the project is built.
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { IntegrationCard } from '@/features/dashboard/ui/components/integrations/IntegrationCard';
-import type { IntegrationCardModel } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
+import { render, screen, fireEvent, within } from '@testing-library/react';
+import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
+import type { IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
 import '@testing-library/jest-dom';
 
 // The Menu mock renders items EAGERLY (no popup) — the directory convention;
@@ -84,12 +88,18 @@ function makeModel(overrides: Partial<IntegrationCardModel> = {}): IntegrationCa
     };
 }
 
-function renderCard(model: IntegrationCardModel) {
+function renderCard(model: IntegrationCardModel, subline?: React.ReactNode) {
     const onOpen = jest.fn();
     const onAction = jest.fn();
     const onRename = jest.fn();
     const view = render(
-        <IntegrationCard model={model} onOpen={onOpen} onAction={onAction} onRename={onRename} />
+        <IntegrationCard
+            model={model}
+            onOpen={onOpen}
+            onAction={onAction}
+            onRename={onRename}
+            subline={subline}
+        />
     );
     const card = view.container.querySelector('.integration-card') as HTMLElement;
     return { onOpen, onAction, onRename, card, container: view.container };
@@ -109,6 +119,25 @@ describe('IntegrationCard', () => {
 
         expect(card).toHaveAttribute('role', 'button');
         expect(card).toHaveAttribute('tabindex', '0');
+    });
+
+    it('names itself by name and status', () => {
+        const { card } = renderCard(makeModel());
+
+        expect(card).toHaveAttribute('aria-label', 'ERP Sync, Deployed');
+    });
+
+    // A host with no status (the wizard) leaves `statusLabel` empty. Joining it
+    // anyway announced "ERP Sync, " — a dangling comma naming half a thing. And
+    // `aria-label` REPLACES the element's text, so the subline is not read as a
+    // fallback; the name is all a screen reader gets, and it must be clean.
+    it('names itself by name alone when there is no status', () => {
+        const { card } = renderCard(
+            makeModel({ statusLabel: '' }),
+            <span>Custom integration · built with AI · 2 APIs</span>
+        );
+
+        expect(card).toHaveAttribute('aria-label', 'ERP Sync');
     });
 
     it('opens the drawer on click', () => {
@@ -167,11 +196,18 @@ describe('IntegrationCard', () => {
     });
 
     it('shows the pulsing dot and NO affordance while deploying', () => {
+        // Mid-deploy the producers hand over an EMPTY menu — every verb would race
+        // the runner. That empty list is what makes the card offer nothing, so the
+        // model has to carry it here or the test proves nothing.
+        //
+        // This assertion used to query `.integration-card-foot`, a class no
+        // component renders: it could not fail, in either direction.
         const { card } = renderCard(
             makeModel({
                 status: 'deploying',
                 statusLabel: 'Deploying…',
                 dotVariant: 'info',
+                menuActions: [],
             }),
         );
 
@@ -179,8 +215,15 @@ describe('IntegrationCard', () => {
         // mock. The card's own responsibility is handing over the right variant;
         // that `info` pulses is StatusDot's contract, pinned in its suite.
         expect(screen.getByTestId('status-dot')).toHaveAttribute('data-variant', 'info');
-        expect(card.querySelector('.integration-card-foot button')).toBeNull();
-        expect(card.querySelector('.integration-card-foot [role="link"]')).toBeNull();
+        // The empty menu IS the whole "no affordance" claim. Not a blanket "no
+        // buttons": the rename pencil sits on a separate axis (`canRename`, which
+        // both producers compute from kind, never from status) and stays reachable
+        // while a deploy runs. A blanket assertion failed on that pencil — the
+        // assertion was wrong, not the card.
+        expect(screen.queryByTestId('card-menu')).not.toBeInTheDocument();
+        expect(
+            within(card).queryByRole('button', { name: /deploy|redeploy|retry|remove/i })
+        ).toBeNull();
     });
 
     it('does not pulse the dot outside deploying', () => {
@@ -204,10 +247,12 @@ describe('IntegrationCard', () => {
         ['an owner/repo identifier', { sourceLine: 'acme/erp-sync', sourceIsAi: false }],
         ['the blank-starter caption', { sourceLine: 'Blank starter — build it out', sourceIsAi: true }],
     ])('never renders the source line on the face (%s)', (_label, over) => {
-        const { container } = renderCard(makeModel(over));
+        renderCard(makeModel(over));
 
+        // Only the TEXT assertion is load-bearing. A companion check for a
+        // `.integration-card-src` container was removed: no component renders that
+        // class, so it passed no matter what the card did.
         expect(screen.queryByText(over.sourceLine)).not.toBeInTheDocument();
-        expect(container.querySelector('.integration-card-src')).toBeNull();
     });
 
     it('marks an error status label with the error modifier', () => {
@@ -247,6 +292,98 @@ describe('IntegrationCard', () => {
             renderCard(makeModel({ menuActions: [] }));
 
             expect(screen.queryByTestId('card-menu')).not.toBeInTheDocument();
+        });
+    });
+
+    // The card carries exactly ONE quiet line under the name. The dashboard fills
+    // it with deploy status; the wizard has no deploy status to fill it with (it
+    // runs before anything is built), so it passes its own content instead. An
+    // explicit slot rather than "render status only when statusLabel is non-empty"
+    // — that rule would make the dashboard's rendering depend on a string never
+    // being empty, which nothing guarantees.
+    describe('subline slot', () => {
+        it('renders the subline in place of the status line', () => {
+            renderCard(makeModel(), <span>Custom integration · built with AI · 2 APIs</span>);
+
+            expect(
+                screen.getByText('Custom integration · built with AI · 2 APIs')
+            ).toBeInTheDocument();
+        });
+
+        it('suppresses the status dot and label while a subline is shown', () => {
+            renderCard(makeModel(), <span>Pre-built · 1 API</span>);
+
+            expect(screen.queryByTestId('status-dot')).not.toBeInTheDocument();
+            expect(screen.queryByText('Deployed')).not.toBeInTheDocument();
+        });
+
+        it('falls back to the status line when no subline is given (dashboard default)', () => {
+            renderCard(makeModel());
+
+            expect(screen.getByTestId('status-dot')).toHaveAttribute('data-variant', 'success');
+            expect(screen.getByText('Deployed')).toBeInTheDocument();
+        });
+
+        it('keeps the name and kebab regardless of which line is shown', () => {
+            renderCard(makeModel(), <span>Pre-built · 1 API</span>);
+
+            expect(screen.getByText('ERP Sync')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument();
+        });
+    });
+
+    // A host without a detail view has nothing for a card press to open. Claiming
+    // `role="button"` and a tab stop anyway advertises an affordance that does
+    // nothing — it reaches keyboard and screen-reader users first, who get a
+    // focusable control that never responds. The wizard has exactly this case:
+    // mesh and catalog rows have no editable detail before the build.
+    describe('without onOpen', () => {
+        function renderInert(model: IntegrationCardModel) {
+            const onAction = jest.fn();
+            const onRename = jest.fn();
+            const view = render(
+                <IntegrationCard
+                    model={model}
+                    onAction={onAction}
+                    onRename={onRename}
+                    subline={<span>Pre-built · 1 API</span>}
+                />
+            );
+            return {
+                onAction,
+                card: view.container.querySelector('.integration-card') as HTMLElement,
+            };
+        }
+
+        it('claims no button role', () => {
+            const { card } = renderInert(makeModel());
+
+            expect(card).not.toHaveAttribute('role');
+        });
+
+        it('takes no tab stop', () => {
+            const { card } = renderInert(makeModel());
+
+            expect(card).not.toHaveAttribute('tabindex');
+        });
+
+        it('still renders its name, subline and kebab', () => {
+            renderInert(makeModel());
+
+            expect(screen.getByText('ERP Sync')).toBeInTheDocument();
+            expect(screen.getByText('Pre-built · 1 API')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument();
+        });
+
+        it('still routes menu picks to onAction', () => {
+            const { onAction } = renderInert(makeModel());
+
+            fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+
+            expect(onAction).toHaveBeenCalledWith(
+                expect.objectContaining({ id: 'erp-sync' }),
+                'remove'
+            );
         });
     });
 });

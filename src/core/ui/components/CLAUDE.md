@@ -23,6 +23,8 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | Adobe API catalog fetch states | `feedback/ApiCatalogFeedback` | re-deriving loading/sign-in/error |
 | Card overflow (kebab) menu | `ui/CardActionsMenu` + `ui/menuIcons` | a bespoke `MenuTrigger` |
 | A menu row's icon | `renderMenuIcon('<concept>')` | importing a Spectrum icon per menu |
+| One integration in a list or grid | `integrations/IntegrationCard` | a per-surface integration row |
+| The deploy destination, once per surface | `ui/DestinationContext` | a per-card "Deploys to" line |
 | Rename in place | `forms/InlineRenameField` | a bespoke pencil + TextField |
 | Any modal | `ui/Modal` | `DialogContainer` assembled by hand |
 | Slide-in right panel for detail beside a list or grid | `ui/Drawer` | Spectrum `Tray` (mobile-only, unmocked in the test stack) or a bespoke scrim + panel |

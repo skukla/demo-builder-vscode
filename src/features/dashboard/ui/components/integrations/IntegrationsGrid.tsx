@@ -24,9 +24,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppBuilderComponentRemoveDialog } from '../AppBuilderComponentRemoveDialog';
 import { ManageApisModal } from '../ManageApisModal';
-import { IntegrationCard } from './IntegrationCard';
 import { type CardAction, type IntegrationCardModel } from './integrationCardModel';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel';
+import { IntegrationCard } from '@/core/ui/components/integrations';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 export interface IntegrationsGridProps {
