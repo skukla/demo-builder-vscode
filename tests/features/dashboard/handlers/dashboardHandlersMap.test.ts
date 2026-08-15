@@ -144,10 +144,11 @@ describe('dashboardHandlers', () => {
             //
             //   1  init            requestStatus (no 'ready')
             //   3  lifecycle       startDemo, stopDemo, restartDemo
-            //  10  navigation      openBrowser, openLiveSite, openDaLive,
+            //  11  navigation      openBrowser, openLiveSite, openDaLive,
             //                      openAdminPanel, configure, openDevConsole,
             //                      getProjectUrls, navigateBack,
-            //                      openIntegrations, showProjectDashboard
+            //                      openIntegrations, showProjectDashboard,
+            //                      openDataInstaller
             //   1  mesh            deployMesh
             //   5  integrations    add/deploy/redeploy/remove/rename
             //                      AppBuilderComponent
@@ -162,7 +163,7 @@ describe('dashboardHandlers', () => {
             //   1  reset           resetProject
             //   1  destination     setProjectDestination
             //  ==
-            //  35
+            //  36
             //
             // Retired, so they are absent by design: verifyAppBuilderComponent
             // (2026-08-03); the 4 singular App Builder actions (addApp,
@@ -171,9 +172,11 @@ describe('dashboardHandlers', () => {
             // project-card kebab. setAuthoringExperience belongs to the
             // Configure webview, not this map.
             //
-            // restartDemo is the newest: the dashboard reported "Restart needed"
-            // for a config change and offered no way to act on it.
-            expect(types).toHaveLength(35);
+            // openDataInstaller is the newest: the Build zone gained a Sample
+            // Data tile. It sits in navigation but is the one entry there that
+            // does NOT replace the tab — the datapack catalog is global to the
+            // service, so opening it leaves the dashboard where it was.
+            expect(types).toHaveLength(36);
         });
 
         it('should have handlers as functions', () => {
