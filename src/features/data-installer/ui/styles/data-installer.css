@@ -449,6 +449,23 @@
     color: var(--spectrum-global-color-gray-700);
 }
 
+/* Export's type list, deliberately NOT the import grid.
+   The import grid is two fixed columns that break long names mid-word — a
+   documented trade-off there, where a pack ships at most 14 types. Export offers
+   all 18, including b2b_shared_catalog_company_assignments at 38 characters, so
+   fixed tracks either wrap it or scroll the list.
+   Flex-wrap instead: every item takes the width of its own text and the rows
+   pack themselves. No name is ever broken, and the list fits without scrolling. */
+.datapack-export-type-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 28px;
+}
+
+.datapack-export-type-grid > * {
+    white-space: nowrap;
+}
+
 .datapack-export-note {
     margin: 0;
     font-size: 12px;

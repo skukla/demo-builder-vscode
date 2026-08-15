@@ -117,6 +117,10 @@ export function ExportDatapackModal({ onClose }: ExportDatapackModalProps): Reac
     return (
         <DialogContainer onDismiss={onClose}>
             <Modal
+                // L, not the default M: there are 18 exportable types and the
+                // longest (b2b_shared_catalog_company_assignments) is 38
+                // characters. At M they either wrap mid-name or scroll.
+                size="L"
                 title="Export a datapack"
                 onClose={onClose}
                 closeLabel="Close"
@@ -249,7 +253,7 @@ function renderTypeChoices({
         return <p className="datapack-export-note">Loading what can be exported…</p>;
     }
     return (
-        <div className="datapack-import-type-grid">
+        <div className="datapack-export-type-grid">
             {available.map((dataType) => (
                 <Checkbox
                     key={dataType}
