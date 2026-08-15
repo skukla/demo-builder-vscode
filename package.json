@@ -58,6 +58,16 @@
         "category": "Demo Builder"
       },
       {
+        "command": "demoBuilder.manageSiteAccess",
+        "title": "Manage Site Access",
+        "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.repairSiteConfiguration",
+        "title": "Repair Site Configuration",
+        "category": "Demo Builder"
+      },
+      {
         "command": "demoBuilder.registerGlobalMcp",
         "title": "Register Global MCP",
         "category": "Demo Builder"
