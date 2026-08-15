@@ -472,6 +472,46 @@ Stage deploy. Once deployed the same approach finishes the chain in two calls �
 POST a key to the register endpoint with the DA.live bearer, then hit
 `prepublish-pdp` anonymously as the browser does and expect 200 on a locked site.
 
+### ACTION HALF BUILT, DEPLOYED AND PROVEN 2026-08-15
+
+Shipped in `accs-discovery-service` as `ac1190b`, deployed to Stage. 95 tests
+green there (9 suites).
+
+- **`register-publish-key`** — new action. Receives `{org, site, key}` behind
+  the same guard chain `discover-stores` uses (IMS token → email-domain
+  allowlist, fail-closed when the allowlist is unset).
+- **`lib/key-store`** — AES-256-GCM, **random IV per write** stored beside the
+  ciphertext (Adobe's own sample reuses one IV; GCM key+IV reuse is a real
+  break). Blobs live outside `public/`, which Files serves unauthenticated.
+  Files rather than State, per the storage constraints above.
+- **`prepublish-pdp`** — prefers the registered key, then
+  `HELIX_ADMIN_API_KEY`, then no auth; a key-store outage degrades to
+  unauthenticated publish rather than failing, and `buildHeaders` owns that
+  guarantee rather than inheriting it.
+
+**End-to-end probe, bug and fix in one run**, against locked
+`skukla/demo-builder-test` using a REAL catalog SKU:
+
+| Step | Result |
+|---|---|
+| anon prepublish, no key registered | **502 `Preview failed (401)`** — the production bug |
+| mint publish key | ok |
+| register with the DA.live bearer | 200, stored |
+| **anon prepublish WITH key** (the browser's exact call shape) | **200 published** (preview 200, live 200) |
+| live tier serves the PDP | **200** |
+| register with no auth (control) | 401 |
+| cleanup | key deleted, 0 remaining |
+
+**Probe trap worth remembering:** the SKU-existence gate runs BEFORE auth, so a
+first attempt with a made-up SKU returned `404 Product does not exist` and
+proved nothing — it looked like a clean run. Any probe of this action must use a
+SKU that exists in that storefront's catalog.
+
+**What remains is the EXTENSION side**, and it is now the only unbuilt piece:
+mint a site-scoped publish key, POST it to `register-publish-key`, and re-do
+both on the two rotation triggers below (schedule, and after any site config
+write). `createAdminApiKey` is the minter — kept and fixed, see above.
+
 ### A SITE CONFIG WRITE DESTROYS THE KEY — measured 2026-08-15
 
 **This is a required part of the design, not an optimization.**
