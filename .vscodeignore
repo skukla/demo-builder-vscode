@@ -14,6 +14,14 @@ node_modules/**
 # Development tool caches — never part of the extension
 .serena/**
 .playwright-mcp/**
+# Added 2026-08-15: jest's transform cache moved in-repo on 2026-08-13
+# (`cacheDirectory: '<rootDir>/.jest-cache/...'`) and nothing here excluded it, so
+# beta.129 packaged 5,027 cache files — 58.6 MB, 98% of the VSIX by file count.
+# `.gitignore` lists it, which does NOT help: vsce reads .vscodeignore INSTEAD of
+# .gitignore whenever this file exists.
+.jest-cache/**
+# Editor config, same reasoning.
+.cursor/**
 
 # TypeScript-compiled individual JS files are redundant: esbuild bundles
 # everything into dist/extension.js. Only the esbuild outputs are needed.
