@@ -46,6 +46,11 @@ function envelope(data: unknown) {
     return { loading: false, error: null, data: { success: true, data } };
 }
 
+/** In flight: no envelope yet, which is what the first render really sees. */
+function pending() {
+    return { loading: true, error: null, data: null };
+}
+
 /** A guard refusal — `success:false` with a reason. It does NOT reject. */
 function refusal(message: string) {
     return { loading: false, error: null, data: { success: false, error: message } };
@@ -77,14 +82,14 @@ const CATALOG = {
 
 function renderStep(state: Partial<WizardState> = {}) {
     const updateState = jest.fn();
-    render(
+    const view = render(
         <SampleDataStep
             state={state as WizardState}
             updateState={updateState}
             setCanProceed={jest.fn()}
         />,
     );
-    return { updateState };
+    return { ...view, updateState };
 }
 
 /** The card for one pack, found by the name it displays. */
@@ -300,5 +305,63 @@ describe('SampleDataStep — filtering', () => {
         await typeQuery('citi');
 
         expect(updateState).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * While the catalog is in flight the grid is not "empty", it is unknown.
+ *
+ * Rendering the None card and an empty grid during the fetch says "there is no
+ * sample data" for as long as the request takes — the same false-empty the step
+ * showed for its whole broken life. A spinner says "not yet".
+ */
+describe('SampleDataStep — loading', () => {
+    it('shows a spinner instead of the grid while the catalog loads', () => {
+        mockState = pending();
+        renderStep();
+
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+        expect(screen.queryByTestId('datapack-card')).not.toBeInTheDocument();
+        expect(screen.queryByRole('radio', { name: 'None' })).not.toBeInTheDocument();
+    });
+
+    /** The filter cannot act on a list that has not arrived. */
+    it('withholds the filter until there is something to filter', () => {
+        mockState = pending();
+        renderStep();
+
+        expect(screen.queryByRole('searchbox', { name: /filter sample data/i })).not.toBeInTheDocument();
+    });
+
+    it('replaces the spinner with the grid once the catalog lands', async () => {
+        renderStep();
+
+        await waitFor(() => expect(cardFor('Bodea')).toBeInTheDocument());
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    });
+
+    /** A failure is not a permanent spinner. */
+    it('shows the reason rather than spinning forever when the catalog fails', () => {
+        mockState = refusal('The Data Installer is not configured.');
+        renderStep();
+
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+        expect(screen.getByText(/could not be loaded/i)).toBeInTheDocument();
+    });
+});
+
+describe('SampleDataStep — copy', () => {
+    /**
+     * The intro explained the wizard's own mechanics — that nothing installs
+     * now, that the dashboard does it later. The sub-step is titled Sample Data
+     * and sits in the Commerce rail; the paragraph restated what the surface
+     * already says and pushed the grid below the fold.
+     */
+    it('carries no explanatory intro paragraph', async () => {
+        renderStep();
+        await waitFor(() => expect(cardFor('Bodea')).toBeInTheDocument());
+
+        expect(screen.queryByText(/nothing is installed now/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/seed this project/i)).not.toBeInTheDocument();
     });
 });

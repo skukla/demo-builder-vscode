@@ -30,6 +30,8 @@
 
 import { SearchField } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import {
@@ -126,17 +128,23 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
 
     return (
         <div className="sample-data-area">
-            <p className="sample-data-intro">
-                Choose sample data to seed this project’s Commerce backend. Nothing is installed
-                now — the dashboard offers it once the backend is reachable, because a full pack
-                takes several minutes to import.
-            </p>
-
             {failure ? (
                 <p className="sample-data-note">
                     The sample data catalog could not be loaded — {failure.message} You can still
                     create this project and choose sample data later from the dashboard.
                 </p>
+            ) : loading ? (
+                // Not an empty grid. A None card over an empty grid states "there
+                // is no sample data" for as long as the fetch takes — the same
+                // false-empty this step showed for its whole broken life.
+                //
+                // CenteredFeedbackContainer is how every other footer'd wizard
+                // body centres a loader (see SelectionStepContent). LoadingDisplay
+                // alone top-aligns here: it centres via height:100%, and .step-view
+                // above this is a padded block with no height for that to measure.
+                <CenteredFeedbackContainer>
+                    <LoadingDisplay size="L" message="Loading sample data..." />
+                </CenteredFeedbackContainer>
             ) : (
                 <>
                     <SearchField
@@ -151,7 +159,6 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                             hides it — filtering it away would leave the group with
                             nothing selectable exactly when the user wants nothing. */}
                         <NoSampleData isSelected={!chosen} onSelect={clear} />
-                        {loading ? <p className="sample-data-note">Loading sample data…</p> : null}
                         {visible.map((group) => (
                         <DatapackCard
                             key={group.name}
@@ -165,7 +172,7 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                         />
                     ))}
                     </div>
-                    {query && visible.length === 0 && !loading ? (
+                    {query && visible.length === 0 ? (
                         <p className="sample-data-note">
                             No sample data matches “{query}”.
                         </p>
