@@ -137,3 +137,46 @@ blocks reinstalled, patches re-applied.
 
 _Record pass/fail per check, with the date and instance type. A failure here is a finding,
 not a setback — it is exactly what this test is for._
+
+### Run 1 — 2026-08-15, ACCS (`na1-sandbox`), repo `skukla/bodea-template-test`
+
+**Outcome: stages 1 and 3 PASS; stage 2 not reached. Blocked on an unmet prerequisite (empty
+DA content), not a defect.**
+
+| Stage | Result |
+|---|---|
+| 1a package visible | ✅ |
+| 1b repo from template | ✅ `skukla/bodea-template-test`, 3342 files |
+| 1c LKG pin | ✅ pinned to `37b7a64` |
+| 1d patches | ✅ **4 of 6** applied (canonical phase). The other 2 target `blocks/` and run post-install — never reached, see below |
+| 1e store picker | ✅ discovery returned 3 websites / 3 store groups / 3 store views |
+| 3a–3c block library | ✅ **29 blocks installed**; 75 bodea-source and 52 demo-team duplicates correctly skipped (dedup firewall works) |
+| 2a–2e brand assets | ⛔ **NOT REACHED** |
+| 4–6 | ⛔ not reached |
+
+Also verified working along the way: fstab push, inspector tagging, PDP404 vendoring (incl. a
+stale-SHA retry that self-healed), Quick Edit wiring, code sync + CDN publish, DA.live permission
+grant, and Config Service registration recovering from a 409 via delete → re-PUT (201).
+
+**Failure:**
+```
+[EdsPipeline] Copying content from skukla/bodea-source to skukla/bodea-template-test
+[DA.live] List API returned 0 files, falling back to content index
+[EdsPipeline] Failed: Failed to fetch content index from skukla/bodea-source
+```
+The `bodea-source` DA site has no content — Step 04 has not been done. Predictable and
+pre-verified (`main--bodea-source--skukla.aem.live/` 404s); should have been called out as a
+blocker before this run.
+
+**Architectural characteristic worth knowing (not fixed, deliberately):** content copy runs at
+`edsPipeline.ts:554`, block-phase patches at `:579`, brand assets at `:588`. So a content failure
+aborts code-side steps that do not depend on content — which is why 2 patches and the entire
+brand-assets vendor point went untested. Reordering to work around an empty `contentSource` would
+mask our own Step 04 gap; the fix is content, not order. Revisit only if a real content outage
+ever costs a storefront its brand assets.
+
+**To finish the test**, either seed `bodea-source` DA with minimal content, or temporarily point
+`contentSource` at `adobe-commerce/boilerplate-b2b` (local, uncommitted) purely to exercise
+stages 2 and 4–6.
+
+**Cleanup owed:** `skukla/bodea-template-test` repo + its DA site + its Config Service entry.
