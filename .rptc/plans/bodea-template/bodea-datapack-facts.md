@@ -277,3 +277,38 @@ url_key: `products/racks`, `products/switching`, `products/wi-fi`, `products/cab
 pointed at the Bodea root — packs bring their own root and do not merge into the existing tree.
 Before that change, `categories` returned only "Default Category" and every PLP was empty.
 Manual Admin step, belongs in the runbook next to "create the website".
+
+## guided-selling-luxe — the custom-data check (2026-08-15)
+
+Flagged as a possible "Jen custom data" dependency. Investigated; the smell was real, and
+it sat **entirely in her authored JSON**, not in the block code or the backend.
+
+**Her deployed schema** (`/data/guided-selling/bodea-rack-finder.json` on
+`jenhankib2bbodea`, 23,870 bytes) is built on data that does not exist here:
+
+| She referenced | Status against our catalog |
+|---|---|
+| personas → `BD-NE-06U-1`, `BD-NE-12U-GLASS-{6U,12U,24U,42U}` | none resolve (positive control `vrrack` resolves) |
+| `server-racks`, `network-enclosures`, `power-cooling`, `cable-management`, `accessories` | the dead nav links removed in Step 04 |
+
+**Her own quiz is broken upstream.** Her deployed `guided-selling-luxe.utils.mjs` (18,185
+bytes, fetched with `--compressed`) dereferences `schema.personaOrder` in three places;
+her deployed schema has no such key. Intro and questions render; the results step throws.
+
+**The block code is clean.** The only Commerce attributes it ever queries are
+`categoryPath`, `sku` and `visibility` — all native Catalog Service. No custom attribute,
+no custom segment, nothing requiring a backend she built. Our replacement schema uses only
+categories verified to return products, and was validated by running the block's real
+`resolveResultState` over all 1,024 answer combinations.
+
+**What it actually demonstrates**, stated plainly so nobody oversells it: the questions,
+personas, weights and tie-breaks are hand-authored JSON. No Commerce feature drives any of
+it. The only native moment is the `productSearch` that hydrates the result tiles. It is a
+merchandising/content experience that ends in a real catalog query — not Commerce doing
+guided selling. The on-thesis native equivalents (Live Search, Product Recommendations)
+are unused. **Decision: keep it, library-only** (it is on no page, so it costs nothing and
+an SC who wants it gets a working example).
+
+Measured directionality of the `personaOrder` requirement, now corrected in the block's
+README (which documented neither): a persona in `personas[]` missing from `personaOrder`
+throws `TypeError: ... (reading 'total')`; a surplus id in `personaOrder` is harmless.
