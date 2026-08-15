@@ -125,12 +125,50 @@ Observe in devtools → Network → the Catalog Service request headers.
 Reset the project. Everything above should hold identically — brand assets re-vendored once,
 blocks reinstalled, patches re-applied.
 
+### 7. NEW since run 1 — none of this has been through a create
+
+Run 1 predates the step-04 content work, the rack-finder schema, and the repricing fix.
+These checks are the delta; everything above still applies.
+
+| Check | Pass looks like | Fails if |
+|---|---|---|
+| 7a Schema vendored | `data/guided-selling/bodea-rack-finder.json` exists in the generated repo | brandAssets refused the target — the `data/` + `.json` allowlist rule did not ship |
+| 7b Schema served | `https://main--<repo>--<owner>.aem.live/data/guided-selling/bodea-rack-finder.json` returns 200 and parses | it was written to DA instead of the repo (DA rejects non-sheet JSON) |
+| 7c Block doc pages | DA Library lists the 28 Bodea blocks with real examples, not one-cell stubs | `copyBlockDocPagesFromSources` could not reach `bodea-source` on the CDN |
+| 7d Nav | Every nav link resolves; no `/apparel`, `/shop`, `/order-status` | content copy pulled a stale nav |
+| 7e Category pages | `/racks`, `/switching`, `/wi-fi`, `/cables`, `/cooling`, `/critical-power` each render products | the store group root category is not the Bodea root |
+| 7f Rack finder | Author a page with `guided-selling-luxe` (`schema-url` `/data/guided-selling/bodea-rack-finder.json`); complete the quiz; result tiles show real products | a wrong `categoryPath` renders empty tiles, and the block cannot tell that from an empty category |
+| 7g **Repricing — the unproven one** | With results on screen, sign in as a **group 7** buyer. Tiles repaint **without a reload**: a rack goes 7,500 -> 6,750 | `bodea/customer-group-changed` never fired, or the old vendored script shipped |
+
+7g is the only check here that exercises code verified statically but never at runtime.
+Measured group pricing to compare against (`bodea-datapack-facts.md` has the full table):
+
+| Group | vrrack | switchlite24 | indoorpatchcable |
+|---|---|---|---|
+| 0 guest | 7500.00 | 999.00 | 4.00 |
+| 6 | 7500.00 | 999.00 | 3.28 |
+| 7 | 6750.00 | 899.10 | 4.00 |
+
+### 8. Unhide — do this LAST, only once 1-7 pass
+
+`hidden: true` is the gate marker for exactly this run, so flipping it early makes it
+meaningless. Three edits, then `gate`:
+
+- `demo-packages.json` -> `"hidden": false`
+- `tests/templates/demo-packages-bodea.test.ts:53` — "should exist and be hidden"
+- `tests/features/project-creation/ui/helpers/demoPackageLoader.test.ts:191` — the
+  selectable-set pin asserts `not.toContain('bodea')`
+
 ---
 
 ## Cleanup
 
-- [ ] Revert the local `hidden: false` flip (`git checkout src/features/project-creation/config/demo-packages.json`)
-- [ ] Delete the throwaway GitHub repo and DA site if not being kept
+- [ ] Revert the local `hidden: false` flip if 1-7 did NOT all pass
+- Nothing here needs deleting. The throwaway repo/DA site/Config Service entry from an
+  earlier run are **reusable — a create or reset overwrites them**, and `brandAssets`
+  re-vendors from `bodea-source@main`, so the fixed customer-group script and the schema
+  land on the way through. The only stale-script trap is inspecting an OLD project without
+  re-running create; a run that starts from the wizard is always current.
 - [ ] Optionally reset the datapack off the test instance (`operation_mode: 'delete'` restores it byte-identical — proven 2026-08-13)
 
 ## Results
