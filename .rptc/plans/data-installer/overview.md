@@ -1,3 +1,23 @@
+> ⛔ **PULLED FROM `develop` 2026-08-15, before v1.0.0-beta.129.**
+>
+> Stage 1 had been merged to `develop`, so the palette command, the webview, the six
+> MCP reads and the drift script would all have shipped to every beta user in `.129`.
+> The feature is not ready for that, so the shipped artefacts were removed from
+> `develop` in one commit: `src/features/data-installer/`, its tests and fixtures,
+> `scripts/dataInstallerDrift.*`, `docs/systems/data-installer.md`, the probe hook
+> rule, and the four integration points (commandManager, the `package.json` command
+> and settings, the esbuild webview entry, and the MCP read descriptors).
+>
+> **Nothing is lost.** The code lives on `feature/data-installer` (ahead of what
+> develop had), and in develop's history — the removal commit reverts cleanly. THIS
+> PLAN AND ITS RESEARCH WERE DELIBERATELY KEPT: they are repo-only, never shipped in
+> the VSIX, and they are how Stage 2 resumes.
+>
+> **Before resuming**, note the removal also deleted a `package.json` default that
+> should not return as-is: a stage Adobe I/O Runtime endpoint, in a public repo.
+> `.rptc/CLAUDE.md` forbids exactly that. Re-introduce it as a required setting with
+> no default, or a non-internal one.
+
 # Data Installer integration — plan + handoff
 
 **Branch**: `feature/data-installer` (worktree at

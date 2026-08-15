@@ -1,4 +1,0 @@
-{
-  "error": "Failed to retrieve data types for datapack: Collection name required. Provide <collection env var> in environment variable.",
-  "success": false
-}

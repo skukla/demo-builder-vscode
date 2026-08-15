@@ -214,29 +214,6 @@ describe('jest-concurrent rule — blocks a run while another is in flight', () 
     });
 });
 
-describe('data-installer probe rule — once per session', () => {
-    it('interrupts a datapack curl and names the checker', () => {
-        const r = run(bash('curl "$BASE/get-installed-datapacks"'), fresh());
-        expect(r.code).toBe(2);
-        expect(r.stderr).toMatch(/data-installer:drift/);
-    });
-
-    it('stays quiet on the second attempt in the same session', () => {
-        const s = fresh();
-        expect(run(bash('curl "$BASE/get-installed-datapacks"'), s).code).toBe(2);
-        expect(run(bash('curl "$BASE/get-installed-datapacks"'), s).code).toBe(0);
-    });
-
-    it('never trips on the checker itself', () => {
-        expect(run(bash('npm run data-installer:drift'), fresh()).code).toBe(0);
-        expect(run(bash('node scripts/dataInstallerDrift.js'), fresh()).code).toBe(0);
-    });
-
-    it('ignores a curl that is not aimed at this API', () => {
-        expect(run(bash('curl https://example.com/health'), fresh()).code).toBe(0);
-    });
-});
-
 describe('reuse-first rule — new UI components only', () => {
     it('interrupts creating a component that does not exist yet', () => {
         const r = run(write('/repo/src/features/x/ui/BrandNewThing.tsx'), fresh());
@@ -347,9 +324,9 @@ describe('rules do not bleed into each other', () => {
     // dispatcher, a loose pattern silently steals another rule's calls.
     it('a Bash rule never fires on a file-path payload, and vice versa', () => {
         expect(run(write('/repo/src/features/x/ui/New.tsx'), fresh()).stderr).not.toMatch(
-            /data-installer:drift|never pipe jest/
+            /never pipe jest/
         );
-        expect(run(bash('curl "$BASE/get-installed-datapacks"'), fresh()).stderr).not.toMatch(
+        expect(run(bash('npx jest --no-coverage | tail -5'), fresh()).stderr).not.toMatch(
             /reuse-first|webview-test-authoring/
         );
     });

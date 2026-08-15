@@ -59,12 +59,6 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // while the extension logged a successful 96-service result (2026-07-31).
     'listConsoleApis': TIMEOUTS.LONG,                // 180s - same catalog fetch as list-org-console-apis
 
-    // Data Installer: the detail read is TWO sequential upstream calls (metadata,
-    // then a batch inventory over every data type the datapack declares), against
-    // a service whose whole-datapack work is measured in minutes. The other five
-    // Data Installer reads were measured fast and keep the 30s default — listing
-    // them here would make this table claim a budget nothing needs.
-    'get-datapack-detail': TIMEOUTS.LONG,            // 180s - metadata + batch inventory
     'addConsoleApis': TIMEOUTS.LONG,                 // 180s - catalog fetch + union subscribe PUT
     'setConsoleApis': TIMEOUTS.LONG,                 // 180s - catalog fetch + reconcile subscribe PUT
 

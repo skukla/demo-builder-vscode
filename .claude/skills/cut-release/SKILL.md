@@ -42,13 +42,6 @@ decide what (if anything) to fix before tagging.
   shipped and never moved, citations naming a deleted file. Read the CONTROL line in each
   section — a "(none)" from a check that did not run looks identical to a clean one. Findings
   are for the record, never a blocker on the tag.
-- **`npm run data-installer:drift`** — the Data Installer fixtures vs the live
-  service (~5s, needs `aio login`). The only check that can catch that API moving:
-  the feature's tests are fully offline against committed fixtures, so they stay
-  green while the client mis-parses real responses. A non-200 exits non-zero and
-  says "unreachable" — it never reports clean when it could not reach the service.
-  Drift is a finding for the feature owner, not a blocker on the tag.
-
 Offer them; do not silently skip. If the user declines, say so in the release notes
 so the next cut knows the interval. These were documented as "runs at release cuts"
 long before anything invoked them — naming the step here is what makes that true.

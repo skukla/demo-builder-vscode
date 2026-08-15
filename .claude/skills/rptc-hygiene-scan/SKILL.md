@@ -29,8 +29,8 @@ catch:
 | **This skill, on demand** | When the backlog stops feeling trustworthy, or after a bulk edit the hook's scoping would miss. |
 
 The hook is scoped narrowly on purpose. Attaching the same pre-existing §3/§4 list to every
-plan move is how a hook stops being read — the trade named in `rules/20-data-installer-probe`:
-partial coverage that stays trusted beats total coverage that gets switched off.
+plan move is how a hook stops being read. The trade: partial coverage that stays trusted
+beats total coverage that gets switched off.
 
 ## When NOT to use
 - To find dead CODE — that is `dead-code-scan`.
@@ -93,9 +93,9 @@ Neither proves a citation is right; a line that MOVED still resolves and still m
 catches the confidently-wrong cases only.
 
 **The fix is a symbol, not a corrected number.** Line numbers in this repo have a half-life of
-about a day: a citation written as `DatapackActivityView.tsx:132` pointed at `:145` the same
-afternoon, and two sessions independently reached this conclusion within minutes of each other
-on 2026-08-12. Cite `MODE_OPTIONS`, or the behaviour, not the line.
+about a day: a citation written against one afternoon's line numbers pointed thirteen lines
+wrong by the same evening, and two sessions independently reached this conclusion within
+minutes of each other on 2026-08-12. Cite the symbol, or the behaviour, not the line.
 
 ## Scope, and what is deliberately NOT scanned
 
