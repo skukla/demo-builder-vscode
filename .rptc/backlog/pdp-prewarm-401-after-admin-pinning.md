@@ -97,7 +97,18 @@ storefront created since admin pinning landed.
 - `derivePrepublishUrl` in `pdp404HandlerPublisher.ts`
 - The action itself lives in the separate `accs-discovery-service` repo
 
-## Direction CHOSEN 2026-08-15: Fix A now, Fix B behind an Adobe answer
+## Direction CHOSEN 2026-08-15: Fix A shipped, Fix B designed
+
+**Read the last two sections first — the ones dated latest.** What follows is a
+working log, so the early sections record dead ends (S2S refused, "Fix B does
+not work") that LATER sections overturn. Current state:
+
+- **Fix A — SHIPPED** (`3d73419b`). Prewarm publishes through the extension's
+  authenticated Helix path. Covers every SKU in the catalog at setup.
+- **Fix B — designed, not built.** An Admin API Key DOES clear the lock; the
+  design is "the extension registers its org's key with the action". See
+  "DESIGN DECIDED" below and
+  `.rptc/research/pdp-credential-rotation/research.md`.
 
 User decision: **the admin grant stays** — it is what the site-access repair
 story rests on — so direction 3 (stop pinning) is off the table.
@@ -189,7 +200,7 @@ Two ways to resolve it, cheapest first:
 If S2S is refused, Fix B needs a different shape entirely — do NOT reach for a
 stored long-lived user token, which expires and belongs to a person.
 
-### The open question that sizes the work
+### The open question that sizes the work — ANSWERED below, see the probe
 
 Does *any* valid DA.live bearer clear the lock, or must the identity be on that
 site's `access.admin` roster? The 2026-08-14 measurement used the extension's
@@ -276,6 +287,103 @@ site key and should be a deliberate decision. Test it before designing storage.
 Whatever the scope, the key is a publish-capable secret: it belongs in
 settings/env, never in the public repo, and never in the browser snippet.
 
+### ORG SCOPE CONFIRMED + the canonical project does the same thing
+
+**Org-scoped keys work** (measured 2026-08-15). One key created at
+`POST /config/{org}/apiKeys.json` with `{"roles":["publish"]}` published a PDP
+path to BOTH `skukla/demo-builder-test` and `skukla/bodea-template-test` (200
+each; no-auth control 401 on both). So the shared action needs ONE key PER ORG,
+not a site→key lookup. Deleted after the probe, verified by re-listing.
+
+**Adobe's canonical implementation takes the same approach.**
+`adobe-rnd/aem-commerce-prerender` declares `AEM_ADMIN_API_AUTH_TOKEN` as an
+action input in its `app.config.yaml`, and its README describes it as a
+"Long-lived authentication token for AEM Admin API (valid for 1 year)",
+obtained by a setup wizard that exchanges a temporary 24-hour admin.hlx.page
+token. So "the publishing service holds a long-lived admin credential" is the
+canonical pattern, not a workaround — our API-key expiry was also 1 year,
+matching.
+
+**But their rotation story does not transfer.** Prerender is ONE DEPLOYMENT PER
+STOREFRONT (the exact property ADR-005 rejected for multi-tenancy), so its
+credential is per-deployment and rotating means re-running the setup wizard for
+that one storefront. Our action is shared across every storefront, so a manual
+wizard re-run is not available and an expiry takes down PDP publishing for
+everyone at once — silently, surfacing as "PDPs 404", which is precisely the
+failure this item started as.
+
+### DESIGN DECIDED 2026-08-15: the extension registers its org's key
+
+Full research: `.rptc/research/pdp-credential-rotation/research.md`.
+
+**The fact that drives it, and that an earlier draft of this item got wrong:
+SCs routinely add products to a demo AFTER setup.** The runtime smart-404
+fallback is therefore a MAIN path, not a rare tail — closing the gap with
+"re-run prewarm from the extension" is not good enough, because the SC adds a
+product minutes before (or during) a demo and clicks it.
+
+**Two tempting designs are both ruled out:**
+
+1. *Long-lived org key as an action input.* The Helix org IS the GitHub owner
+   (`skukla/demo-builder-test` → org `skukla`), and SCs use their own GitHub
+   namespaces, so orgs are per-SC. A `{org: key}` param map needs an entry per
+   SC and a param update per new SC.
+2. *Any scheme where a human supplies the secret.* Already built and deleted
+   here: `ebd795e` added a shared secret (via query param, because Helix does
+   not reliably forward custom headers to overlay actions but DOES preserve the
+   overlay URL's query string), and `ac36fc7` removed it because it "coupled
+   enabling BYOM to out-of-band coordination (admin generates a secret, every
+   SC pastes it)." Do not reintroduce that coupling.
+
+Both failures point the same way: the credential must be provisioned
+automatically, per org, by software that already holds admin — the extension.
+
+**The design:**
+
+1. Extension mints an **org-scoped** key with `roles: ['publish']`.
+   `createAdminApiKey` already implements site-scoped minting with
+   SecretStorage persistence and delete-old-before-mint; it needs org scope and
+   the narrower role. NOTE it currently requests `['admin']` and has **no
+   production caller at all** — the minting path is dead code today, live only
+   in tests. `deleteAdminApiKey` IS live, on project teardown.
+2. Extension POSTs the key to a new `register-publish-key` action, presenting
+   the DA.live IMS bearer it already holds.
+3. That action authenticates the caller with the EXISTING `validateCallerToken`
+   + `validateCallerEmailDomain` chain (`actions/lib/ims.js`, 10 pinned tests,
+   already guarding `discover-stores`). Fail-closed when the allowlist is
+   absent, as `discover-stores` does.
+4. It encrypts and stores the key per org in `aio-lib-files`, then
+   `prepublish-pdp` reads its org's key at request time instead of finding
+   `HELIX_ADMIN_API_KEY` undefined.
+5. **Rotation falls out for free.** The extension already re-mints every
+   ≤7 days against a ~1-year key; it re-registers on the same cycle. No human,
+   no paste, no redeploy — which is exactly what `ac36fc7` demanded.
+
+**Storage constraints (measured against Adobe docs, see the research file):**
+- NOT `aio-lib-state`: Adobe "strongly discourage[s]" it for secrets, and its
+  TTL is capped at 365 days with infinite TTL explicitly rejected.
+- `aio-lib-files` persists indefinitely, but encrypt before writing (Adobe
+  requires this for app submission) and store a **per-write IV alongside each
+  ciphertext** — Adobe's own sample threads one shared IV, which is a real
+  GCM break, not a nitpick.
+- Master key as an action default param: encrypted at rest by Runtime, shown
+  as a hash by `aio rt action get`, and rotatable via
+  `aio runtime action update --param` without a code redeploy. Our actions set
+  `require-adobe-auth: false` + `final: true`, so `final` genuinely blocks
+  invoke-time override (it does NOT when `require-adobe-auth: true`).
+- `aio-lib-files` is **US-only**; State has an EU region, Files does not. Weigh
+  if demos ever run in-region for EU.
+
+**Verify before building:**
+- That SCs really do use distinct GitHub namespaces (inferred from the DA.live
+  org model — it is what makes the param map unworkable).
+- That `validateCallerToken` accepts a `darkalley` DA.live token. It
+  introspects against the token's OWN client_id so it should, but has only been
+  exercised with CLI tokens.
+- That `aio runtime action update --param` without a source file preserves
+  deployed code. Undocumented; and Adobe warns twice that ALL params must be
+  passed in one call or the omitted ones disappear.
+
 Probe hygiene note: the probe key was deleted afterwards (204, verified by
 re-listing). The DELETE path needs the URL-SAFE id — the listing's dict key,
 where `/` is written `_` — not the `id` field; using the `id` field returns 400.
@@ -283,12 +391,14 @@ A first cleanup check reported success wrongly by comparing the wrong field.
 
 Fix A stands on its own and is why this stopped being urgent.
 
-### Decide deliberately before building
+### Decide deliberately before building — SUPERSEDED, kept for the reasoning
 
-One shared action serves every storefront, so giving it a publishing credential
-means one identity with admin rights on every customer's site. Reasonable for a
-demo tool, but it should be a decision rather than a side effect — and the
-credential must not land in the public repo (settings/env only).
+This section worried that one shared action holding a publishing credential
+means one identity with admin on every customer's site. The DESIGN DECIDED
+section answers it: keys are minted PER ORG by that org's own SC and scoped to
+`roles: ['publish']`, so no single identity spans customers and no key exceeds
+publish. The standing rule stands — the credential lives in settings/env or the
+encrypted per-org store, never in this public repo.
 
 ## Also fix regardless of direction
 
