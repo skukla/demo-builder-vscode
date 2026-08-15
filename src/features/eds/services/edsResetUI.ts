@@ -349,6 +349,17 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
         return { success: false, cancelled: true };
     }
 
+    // Sample data is a SEPARATE question, asked only when there is something to
+    // remove. Reset has always meant "put the storefront back" — repo, CDN,
+    // DA.live content. This target is different: products, categories and
+    // customers on a live Commerce instance. Folding it into the first modal
+    // would widen what an existing button destroys without saying so.
+    //
+    // Gated on the project's recorded pack rather than on asking the service
+    // what is installed: a network call in front of a modal adds a failure mode
+    // to a dialog, and the removal itself reports when there was nothing there.
+    const removeData = await confirmSampleDataRemoval(project, vscode);
+
     const originalStatus = project.status;
     project.status = 'resetting';
     await context.stateManager.saveProject(project);
@@ -410,6 +421,13 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
                     (p) => { progress.report({ message: `Step ${p.step}/${p.totalSteps}: ${p.message}` }); },
                 );
 
+                // After the storefront reset, and never allowed to fail it — the
+                // reset is what was asked for. A removal that refuses is
+                // reported and the reset still stands.
+                if (removeData) {
+                    await removeProjectSampleData(project, context, progress);
+                }
+
                 await showResetResultNotifications(vscode, result, project.name, showLogsOnError);
                 return result;
             },
@@ -417,5 +435,75 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
     } finally {
         project.status = originalStatus;
         await context.stateManager.saveProject(project);
+    }
+}
+
+
+/**
+ * Ask whether to remove the imported sample data, when there is any to remove.
+ *
+ * Opt IN: anything other than the explicit button keeps the data. Someone
+ * resetting code must not lose a catalog by pressing Escape, which is why the
+ * dismissal path and the "Keep" path are the same path.
+ *
+ * The duration is in the prompt because it is the surprising part — a six-type
+ * reset was measured at 470 seconds, and a modal that says "this is quick"
+ * by omission would be lying.
+ */
+async function confirmSampleDataRemoval(
+    project: Project,
+    vscode: typeof import('vscode'),
+): Promise<boolean> {
+    const datapack = (project as { datapack?: { name: string; version: string } }).datapack;
+    if (!datapack) {
+        return false;
+    }
+
+    const removeButton = 'Remove Sample Data';
+    const answer = await vscode.window.showWarningMessage(
+        `Also remove the sample data this project imported (${datapack.name}@${datapack.version})? ` +
+            'This deletes it from the Commerce instance and can take several minutes. ' +
+            'Resetting the storefront does not require it.',
+        { modal: true },
+        removeButton,
+    );
+    return answer === removeButton;
+}
+
+/**
+ * Remove it, reporting rather than throwing.
+ *
+ * The storefront reset has already happened by the time this runs and is the
+ * thing the user asked for; a failed data removal must not turn a good reset
+ * into a failed one.
+ */
+async function removeProjectSampleData(
+    project: Project,
+    context: HandlerContext,
+    progress: { report: (value: { message: string }) => void },
+): Promise<void> {
+    try {
+        progress.report({ message: 'Removing sample data...' });
+
+        const { removeSampleData } = await import(
+            '@/features/data-installer/services/sampleDataInstall'
+        );
+        const { buildSampleDataDeps } = await import(
+            '@/features/data-installer/services/sampleDataInstallDeps'
+        );
+
+        const result = await removeSampleData(
+            project as never,
+            buildSampleDataDeps(context, project, (message) => progress.report({ message })),
+        );
+
+        if (!result.ran) {
+            context.logger.warn(
+                `[EdsReset] Sample data was not removed: ${result.reason ?? 'no reason given'}`,
+            );
+        }
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        context.logger.warn(`[EdsReset] Sample data removal failed, reset stands: ${reason}`);
     }
 }

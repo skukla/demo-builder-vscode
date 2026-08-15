@@ -56,6 +56,12 @@ export function buildSampleDataDeps(
             return client.startImport(request as never);
         },
 
+        // The Reset workflow's half. Same request, same client, different verb.
+        startDelete: async (request) => {
+            const client = await writeClient(context);
+            return client.startDelete(request as never);
+        },
+
         watch: async ({ activationId, requestedTypes, onProgress }) => {
             const client = await writeClient(context);
             const result = await watchImportJob({

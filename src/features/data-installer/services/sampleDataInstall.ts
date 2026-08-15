@@ -119,6 +119,8 @@ export interface SampleDataDeps {
     /** The types the service actually stores for this pack. */
     inventory: (id: { name: string; version: string }) => Promise<string[]>;
     startImport: (request: unknown) => Promise<{ activationId: string }>;
+    /** Removes it again, for Reset. Same request, different verb. */
+    startDelete?: (request: unknown) => Promise<{ activationId: string }>;
     watch: (args: {
         activationId: string;
         requestedTypes: string[];
@@ -128,9 +130,37 @@ export interface SampleDataDeps {
     onProgress?: (perType: Record<string, DataTypeStatus>) => void;
 }
 
-export async function installSampleData(
+/**
+ * Install the recorded pack. See the module docstring for why it cannot throw.
+ */
+export function installSampleData(
     project: ProjectLike,
     deps: SampleDataDeps,
+): Promise<SampleDataResult> {
+    return runSampleDataJob(project, deps, 'install');
+}
+
+/**
+ * Remove it again, for the Reset workflow.
+ *
+ * The same job as installing with a different verb — same target, same
+ * instance, same inventory-derived type list — so it runs through the same
+ * runner. A near-copy would drift the moment one side gained a guard, and this
+ * is the side that DELETES from a live Commerce instance.
+ *
+ * The caller is responsible for having confirmed. This does not ask.
+ */
+export function removeSampleData(
+    project: ProjectLike,
+    deps: SampleDataDeps,
+): Promise<SampleDataResult> {
+    return runSampleDataJob(project, deps, 'remove');
+}
+
+async function runSampleDataJob(
+    project: ProjectLike,
+    deps: SampleDataDeps,
+    mode: 'install' | 'remove',
 ): Promise<SampleDataResult> {
     const id = project.datapack;
     if (!id) {
@@ -153,7 +183,7 @@ export async function installSampleData(
         return {
             ran: false,
             skipped: true,
-            reason: 'This project names no Commerce instance to import into.',
+            reason: 'This project names no Commerce instance to act on.',
         };
     }
 
@@ -181,13 +211,18 @@ export async function installSampleData(
         // along. An earlier version flattened websiteCode/storeCode to the top
         // level — a shape the client does not accept, which the test agreed with
         // because the test invented it too.
-        const started = await deps.startImport({
+        const request = {
             id,
             commerceInstance,
             dataTypes,
             credentials: credentials.credentials,
             target,
-        });
+        };
+        const start = mode === 'remove' ? deps.startDelete : deps.startImport;
+        if (!start) {
+            return { ran: false, reason: 'This caller cannot remove sample data.' };
+        }
+        const started = await start(request);
         const watched = await deps.watch({
             activationId: started.activationId,
             requestedTypes: dataTypes,

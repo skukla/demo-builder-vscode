@@ -33,6 +33,7 @@ import {
     resolveInstallTarget,
     typesToInstall,
     installSampleData,
+    removeSampleData,
 } from '@/features/data-installer/services/sampleDataInstall';
 
 const ACCS = 'adobe-commerce-accs';
@@ -278,6 +279,100 @@ describe('installSampleData', () => {
 
     it('never puts the credential pair in its result', async () => {
         const result = await installSampleData(project(), deps() as never);
+
+        expect(JSON.stringify(result)).not.toContain('fake-test-secret-not-a-secret');
+    });
+});
+
+/**
+ * Removing a pack, for the Reset workflow.
+ *
+ * The same job as installing with a different verb — same target, same instance,
+ * same inventory-derived type list — so it runs through the same runner rather
+ * than a near-copy that would drift the moment one side gained a guard.
+ *
+ * The rules that DIFFER are the ones worth pinning: this deletes data from a
+ * live Commerce instance, so it starts a delete rather than an import, and the
+ * caller must have confirmed. Everything else about it is install's contract.
+ */
+describe('removeSampleData', () => {
+    function deps(over: Record<string, unknown> = {}) {
+        return {
+            startImport: jest.fn().mockResolvedValue({ activationId: 'act-import' }),
+            startDelete: jest.fn().mockResolvedValue({ activationId: 'act-delete' }),
+            watch: jest.fn().mockResolvedValue({
+                outcome: 'success',
+                perType: { categories: 'success' },
+            }),
+            inventory: jest.fn().mockResolvedValue(['categories', 'products']),
+            credentials: jest.fn().mockResolvedValue({
+                ok: true,
+                credentials: { kind: 'accs', clientId: 'cid', clientSecret: 'fake-test-secret-not-a-secret' },
+            }),
+            onProgress: jest.fn(),
+            ...over,
+        };
+    }
+
+    it('starts a DELETE, never an import', async () => {
+        const d = deps();
+
+        await removeSampleData(project(), d as never);
+
+        expect(d.startDelete).toHaveBeenCalled();
+        expect(d.startImport).not.toHaveBeenCalled();
+    });
+
+    it('removes from the same scope the pack was installed into', async () => {
+        const d = deps();
+
+        await removeSampleData(project(), d as never);
+
+        expect(d.startDelete).toHaveBeenCalledWith(
+            expect.objectContaining({
+                id: { name: 'bodea', version: 'main' },
+                commerceInstance: 'TENANT123',
+                target: { websiteCode: 'base', storeCode: 'default' },
+            }),
+        );
+    });
+
+    it('watches the delete it started, not some other job', async () => {
+        const d = deps();
+
+        await removeSampleData(project(), d as never);
+
+        expect(d.watch).toHaveBeenCalledWith(
+            expect.objectContaining({ activationId: 'act-delete' }),
+        );
+    });
+
+    it('reports the outcome', async () => {
+        const result = await removeSampleData(project(), deps() as never);
+
+        expect(result).toMatchObject({ ran: true, outcome: 'success' });
+    });
+
+    /** A reset must not be failed by the optional half of it. */
+    it('never throws when the delete refuses', async () => {
+        const d = deps({ startDelete: jest.fn().mockRejectedValue(new Error('service down')) });
+
+        await expect(removeSampleData(project(), d as never)).resolves.toMatchObject({
+            ran: false,
+        });
+    });
+
+    it('skips a project that recorded no pack', async () => {
+        const d = deps();
+
+        const result = await removeSampleData(project({ datapack: undefined }), d as never);
+
+        expect(result).toMatchObject({ skipped: true });
+        expect(d.startDelete).not.toHaveBeenCalled();
+    });
+
+    it('never puts the credential pair in its result', async () => {
+        const result = await removeSampleData(project(), deps() as never);
 
         expect(JSON.stringify(result)).not.toContain('fake-test-secret-not-a-secret');
     });
