@@ -786,6 +786,30 @@ quirk.** The request shape was correct for most of the attempts above; the
 service simply cannot store what it fetches. It will work unchanged once
 `MONGO_URI` is set for the export path.
 
+**Where `MONGO_URI` is set, and why this is a code gap rather than a missing
+setting.** It is an action input in the service's `app.config.yaml`
+(`MONGO_URI: $MONGO_URI`), resolved at deploy time from the deployer's own
+config — `aio app config set MONGO_URI "mongodb+srv://…"` per their
+`docs/DEPLOYMENT.md`. Thirteen actions declare it, `process-datapack` among
+them. **It is the service's secret, in the service's repo and deployment. We
+neither hold it nor set it, and the extension must never send it.**
+
+And it is evidently already configured on stage, which narrows the fault
+precisely:
+
+- `add-data-item`, `create-datapack` and `delete-datapack` all write to Mongo
+  successfully (measured — 201, 201, 200).
+- **`process-datapack` itself writes to Mongo on every one of these failed
+  export runs**: the request log is a Mongo collection, and every probe appears
+  in `GET /logs`.
+
+So the very same action, in the very same invocation, completes one Mongo write
+(the request log) and fails another (the exported data) claiming the URI is
+missing. That is not a deployment setting that someone forgot — the URI is there.
+It is the export storage path not receiving the params the rest of the action
+has. A code fix in `data-installer-api-b2b`, not a config change, and not
+something this repo can do.
+
 **Design consequence for Stage 3**: the client MUST send `verbose` on export.
 Without it the service reports a bare `success: false` with an all-zero
 `entity_summary` and no reason — which is what cost this investigation a day.
