@@ -9,6 +9,11 @@ import { Text } from '@adobe/react-spectrum';
 import LinkOut from '@spectrum-icons/workflow/LinkOut';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import React, { useState } from 'react';
+import {
+    CODE_SYNC_INSTALL_ACTION,
+    CODE_SYNC_RECHECK_ACTION,
+    buildCodeSyncInstallSteps,
+} from '../helpers/codeSyncInstallContent';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
@@ -89,15 +94,15 @@ export function GitHubAppInstallDialog({
             height="auto"
             actions={[
                 {
-                    label: 'Open Installation Page',
+                    label: CODE_SYNC_INSTALL_ACTION,
                     icon: <LinkOut />,
-                    variant: 'secondary',
+                    variant: 'accent',
                     onPress: handleOpenInstallPage,
                 },
                 {
-                    label: 'Check Installation',
+                    label: CODE_SYNC_RECHECK_ACTION,
                     icon: <Refresh />,
-                    variant: 'accent',
+                    variant: 'secondary',
                     onPress: handleCheckInstallation,
                 },
             ]}
@@ -106,26 +111,7 @@ export function GitHubAppInstallDialog({
                 Code sync requires the AEM Code Sync GitHub App to be installed on <Text UNSAFE_className="font-mono font-semibold">{owner}/{repo}</Text>.
             </Text>
             
-            <NumberedInstructions
-                instructions={[
-                    {
-                        step: 'Click "Open Installation Page" below',
-                        details: 'The GitHub app installation page will open in your browser.',
-                    },
-                    {
-                        step: `Select "${owner}/${repo}" from the repository list`,
-                        details: 'Choose which repositories the AEM Code Sync app can access.',
-                    },
-                    {
-                        step: 'Click "Install" or "Save" to authorize the app',
-                        details: 'The app needs read access to your repository code for content synchronization.',
-                    },
-                    {
-                        step: 'Click "Check Installation" when complete',
-                        details: 'We\'ll verify the app is installed and continue with project creation.',
-                    },
-                ]}
-            />
+            <NumberedInstructions instructions={buildCodeSyncInstallSteps(owner, repo)} />
             
             {hasError && (
                 <Text UNSAFE_className="text-sm text-orange-700 text-center" marginTop="size-200">

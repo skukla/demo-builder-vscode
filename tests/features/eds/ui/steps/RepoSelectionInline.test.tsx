@@ -213,7 +213,43 @@ describe('RepoSelectionInline', () => {
             });
         });
 
-        it('should render the "AEM Code Sync App" status for a created new repo', async () => {
+        it('shows the INSTALL FLOW when the app is definitively missing', async () => {
+            // Helix's 404 is the definitive "not installed" answer. The steps used
+            // to live in a modal gated on `repoMode === 'new'`; they now render in
+            // the sub-step body for either mode.
+            mockRequest.mockResolvedValue({ success: true, isInstalled: false, codeStatus: 404 });
+            const state = createDefaultState({
+                repoMode: 'new',
+                repoName: 'my-repo',
+                createdRepo: { owner: 'testuser', name: 'my-repo', url: '', fullName: 'testuser/my-repo' },
+            });
+
+            await renderInline(state, 'code-sync');
+
+            await waitFor(() => {
+                expect(screen.getByText(/Install the AEM Code Sync App/i)).toBeInTheDocument();
+            });
+            expect(screen.getByText(/Only select repositories/i)).toBeInTheDocument();
+        });
+
+        it('shows the SUCCESS view when the app is verified', async () => {
+            mockRequest.mockResolvedValue({ success: true, isInstalled: true, codeStatus: 200 });
+            const state = createDefaultState({
+                repoMode: 'new',
+                repoName: 'my-repo',
+                createdRepo: { owner: 'testuser', name: 'my-repo', url: '', fullName: 'testuser/my-repo' },
+            });
+
+            await renderInline(state, 'code-sync');
+
+            await waitFor(() => {
+                expect(screen.getByText(/AEM Code Sync Verified/i)).toBeInTheDocument();
+            });
+        });
+
+        it('distinguishes "could not verify" from "not installed"', async () => {
+            // The 401 case observed 2026-08-14: no codeStatus at all. Telling the
+            // user to install an app that is already there is the wrong remedy.
             mockRequest.mockResolvedValue({ success: true, isInstalled: false });
             const state = createDefaultState({
                 repoMode: 'new',
@@ -224,7 +260,25 @@ describe('RepoSelectionInline', () => {
             await renderInline(state, 'code-sync');
 
             await waitFor(() => {
-                expect(screen.getByText(/AEM Code Sync App/i)).toBeInTheDocument();
+                expect(screen.getByText(/Couldn't verify AEM Code Sync/i)).toBeInTheDocument();
+            });
+            expect(screen.queryByText(/Install the AEM Code Sync App/i)).not.toBeInTheDocument();
+        });
+
+        it('shows the install flow for an EXISTING repo too (the old dead end)', async () => {
+            // Previously the modal returned null unless `repoMode === 'new'`, so a
+            // selected repo missing the app was blocked by computeCodeSyncValid
+            // with no instructions anywhere on screen.
+            mockRequest.mockResolvedValue({ success: true, isInstalled: false, codeStatus: 404 });
+            const state = createDefaultState({
+                repoMode: 'existing',
+                selectedRepo: { id: 'r1', name: 'my-repo', fullName: 'testuser/my-repo' },
+            });
+
+            await renderInline(state, 'code-sync');
+
+            await waitFor(() => {
+                expect(screen.getByText(/Install the AEM Code Sync App/i)).toBeInTheDocument();
             });
         });
     });

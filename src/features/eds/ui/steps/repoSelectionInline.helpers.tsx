@@ -10,10 +10,8 @@
  */
 
 import {
-    ActionButton,
     Button,
     Checkbox,
-    DialogTrigger,
     Flex,
     Heading,
     Text,
@@ -22,9 +20,16 @@ import {
 } from '@adobe/react-spectrum';
 import Alert from '@spectrum-icons/workflow/Alert';
 import React from 'react';
+import {
+    CODE_SYNC_INSTALL_ACTION,
+    CODE_SYNC_RECHECK_ACTION,
+    buildCodeSyncInstallSteps,
+} from '../helpers/codeSyncInstallContent';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { LoadingOverlay } from '@/core/ui/components/feedback/LoadingOverlay';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
+import { SuccessStateDisplay } from '@/core/ui/components/feedback/SuccessStateDisplay';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout';
 import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { sleep } from '@/core/utils/sleep';
@@ -223,6 +228,41 @@ export function shouldShowAppStatus(
     return repoMode === 'new' ? repoCreated : hasSelectedRepo;
 }
 
+/**
+ * Which canonical view the Code Sync sub-step should render.
+ *
+ * The sub-step body is a full-width view, so it speaks the project's full-view
+ * vocabulary — `LoadingDisplay`, `SuccessStateDisplay`, `StatusDisplay` — rather
+ * than the single `StatusSection` row it used to show, which left a large empty
+ * panel and no way to read the outcome.
+ *
+ * Deliberately takes NO repoMode. The install instructions used to render only
+ * for `repoMode === 'new'`, so an existing repo whose app was missing was blocked
+ * from continuing (`computeCodeSyncValid` refuses a definitive 404) with no
+ * instructions anywhere on screen — a dead end. Every mode gets the same flow.
+ *
+ * @param status - the last app-check result
+ * @param isRechecking - a user-triggered re-check is in flight
+ */
+export function resolveCodeSyncView(
+    status: GitHubAppStatus,
+    isRechecking: boolean,
+): { kind: 'checking' | 'verified' | 'needs-install' | 'unverifiable' } {
+    if (status.isChecking || isRechecking) return { kind: 'checking' };
+    if (status.isInstalled === true) return { kind: 'verified' };
+
+    // Not yet asked. Never "missing" — we have no answer to report.
+    if (status.isInstalled === null) return { kind: 'checking' };
+
+    // A refusal (401) or an unreachable service leaves `codeStatus` undefined, and
+    // that says NOTHING about whether the app is installed. Reporting it as
+    // missing sends the user to reinstall an app that is already there — which is
+    // exactly what the old "Registering..." row did.
+    if (status.codeStatus === undefined) return { kind: 'unverifiable' };
+
+    return { kind: 'needs-install' };
+}
+
 export function computeCodeSyncValid(
     repoMode: string,
     githubAppStatus: GitHubAppStatus,
@@ -278,116 +318,103 @@ export function buildAppStatusFromResult(result: GitHubAppCheckResult): GitHubAp
 }
 
 /**
- * GitHubAppInstallModal - Shows the GitHub App installation modal for new repos.
- * Returns null when the modal should not be shown.
+ * The Code Sync sub-step BODY — one canonical view per state.
+ *
+ * Replaces a lone `StatusSection` row (plus a modal that only ever opened for a
+ * newly created repo) with the project's full-view vocabulary, so this sub-step
+ * reads like its siblings instead of an almost-empty panel:
+ *
+ * | state         | component                                     |
+ * |---------------|-----------------------------------------------|
+ * | checking      | `LoadingDisplay` (the webview spinner)        |
+ * | verified      | `SuccessStateDisplay` (large green check)     |
+ * | needs-install | `StatusDisplay` info + `NumberedInstructions` |
+ * | unverifiable  | `StatusDisplay` warning                       |
+ *
+ * The install flow renders for BOTH repo modes. It previously required
+ * `repoMode === 'new'`, so an existing repo missing the app was blocked by
+ * `computeCodeSyncValid` with no instructions anywhere on screen — a dead end.
  */
-export function GitHubAppInstallModal({
-    repoMode,
-    repoCreationState,
+export function CodeSyncStatusView({
     createdRepo,
-    githubAppStatus,
+    selectedRepoFullName,
+    status,
     isRechecking,
-    isModalDismissed,
     recheckMessage,
-    hasRecheckFailed,
     onCheckAgain,
     onOpenInstallPage,
-    onDismiss,
 }: {
-    repoMode: string;
-    repoCreationState: RepoCreationState;
+    /** Set in `new` mode once the repo exists. */
     createdRepo?: { owner: string; name: string };
-    githubAppStatus: GitHubAppStatus;
+    /** Set in `existing` mode — `owner/repo`. */
+    selectedRepoFullName?: string;
+    status: GitHubAppStatus;
     isRechecking: boolean;
-    isModalDismissed: boolean;
     recheckMessage: string;
-    hasRecheckFailed: boolean;
     onCheckAgain: () => void;
     onOpenInstallPage: () => void;
-    onDismiss: () => void;
-}): React.ReactElement | null {
-    const isNewWithCreatedRepo = repoMode === 'new' && repoCreationState.isCreated && !!createdRepo;
-    if (!isNewWithCreatedRepo) return null;
-    if (githubAppStatus.isInstalled === true) return null;
+}): React.ReactElement {
+    const view = resolveCodeSyncView(status, isRechecking);
+    const [fallbackOwner, fallbackRepo] = (selectedRepoFullName ?? '/').split('/');
+    const owner = createdRepo?.owner ?? fallbackOwner;
+    const repo = createdRepo?.name ?? fallbackRepo;
 
-    const shouldShowModal =
-        (githubAppStatus.isInstalled === false || isRechecking) && !isModalDismissed;
-    if (!shouldShowModal || !createdRepo) return null;
+    if (view.kind === 'checking') {
+        return (
+            <CenteredFeedbackContainer>
+                <LoadingDisplay
+                    size="L"
+                    message="Checking AEM Code Sync"
+                    subMessage={recheckMessage || `Verifying ${owner}/${repo}...`}
+                />
+            </CenteredFeedbackContainer>
+        );
+    }
 
-    const { owner, name: repo } = createdRepo;
+    if (view.kind === 'verified') {
+        return (
+            <SuccessStateDisplay
+                title="AEM Code Sync Verified"
+                message={`${owner}/${repo} is connected and ready to publish.`}
+            />
+        );
+    }
+
+    if (view.kind === 'unverifiable') {
+        // Distinct from "not installed" ON PURPOSE. Adobe refusing the credential
+        // says nothing about the app, and telling someone to install one that is
+        // already there is the wrong remedy.
+        return (
+            <StatusDisplay
+                variant="warning"
+                title="Couldn't verify AEM Code Sync"
+                height="auto"
+                actions={[{ label: CODE_SYNC_RECHECK_ACTION, variant: 'accent', onPress: onCheckAgain }]}
+            >
+                <Text UNSAFE_className="text-sm text-gray-600">
+                    Adobe did not answer for {owner}/{repo}. This does not mean the app is
+                    missing — a new repository can take a few minutes to register.
+                </Text>
+            </StatusDisplay>
+        );
+    }
 
     return (
-        <DialogTrigger
-            type="modal"
-            isOpen={true}
-            onOpenChange={(isOpen) => {
-                if (!isOpen) onDismiss();
-            }}
+        <StatusDisplay
+            variant="info"
+            title="Install the AEM Code Sync App"
+            height="auto"
+            actions={[
+                {
+                    label: CODE_SYNC_INSTALL_ACTION,
+                    variant: 'accent',
+                    onPress: onOpenInstallPage,
+                },
+                { label: CODE_SYNC_RECHECK_ACTION, variant: 'secondary', onPress: onCheckAgain },
+            ]}
         >
-            <ActionButton isHidden>Open</ActionButton>
-            {() => (
-                <Modal
-                    title="Install GitHub App"
-                    actionButtons={
-                        isRechecking
-                            ? []
-                            : [
-                                  {
-                                      label: 'Check Again',
-                                      variant: 'secondary',
-                                      onPress: onCheckAgain,
-                                  },
-                                  {
-                                      label: 'Install App',
-                                      variant: 'accent',
-                                      onPress: onOpenInstallPage,
-                                  },
-                              ]
-                    }
-                    onClose={onDismiss}
-                >
-                    <div
-                        style={{
-                            minHeight: '220px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                        }}
-                    >
-                        {isRechecking ? (
-                            <LoadingDisplay message={recheckMessage} />
-                        ) : hasRecheckFailed ? (
-                            <Text UNSAFE_className="text-sm text-orange-700">
-                                {githubAppStatus.codeStatus === undefined
-                                    ? 'Your repository is still being registered. This can take a few minutes for new repositories. Please wait and try again.'
-                                    : 'App not detected. Please verify the app is installed for this repository.'}
-                            </Text>
-                        ) : (
-                            <NumberedInstructions
-                                instructions={[
-                                    {
-                                        step: 'Click "Install App"',
-                                        details: 'Opens the AEM Code Sync GitHub App page',
-                                    },
-                                    {
-                                        step: 'Configure the app',
-                                        details: `Click "Configure", sign in if prompted, then click "Configure" next to "${owner}"`,
-                                    },
-                                    {
-                                        step: 'Grant repository access',
-                                        details: `Select "Only select repositories", search for "${repo}", and click the green "Save" button`,
-                                    },
-                                    {
-                                        step: 'Return here and click "Check Again"',
-                                        details: "We'll verify the installation completed",
-                                    },
-                                ]}
-                            />
-                        )}
-                    </div>
-                </Modal>
-            )}
-        </DialogTrigger>
+            <NumberedInstructions instructions={buildCodeSyncInstallSteps(owner, repo)} />
+        </StatusDisplay>
     );
 }
 
