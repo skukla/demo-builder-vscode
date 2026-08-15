@@ -26,6 +26,8 @@ export interface TargetWebsite {
 
 export interface ImportScopes {
     websites: TargetWebsite[];
+    /** Discovery in flight — the pickers hold their space, disabled. */
+    loading: boolean;
     websiteCode: string;
     storeCode: string;
     chooseWebsite: (code: string) => void;
@@ -67,6 +69,7 @@ export function useImportScopes(): ImportScopes {
 
     return {
         websites: scopes.value?.websites ?? [],
+        loading: scopes.loading,
         websiteCode,
         storeCode,
         chooseWebsite,

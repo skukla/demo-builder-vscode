@@ -12,10 +12,26 @@ import {
     mockRequest,
     renderModal,
     resetModalMocks,
+    awaitForm,
+    defaultResponse,
 } from './ImportDatapackModal.testUtils';
 
 const startButton = () => screen.getByRole('button', { name: /start import/i });
-const instanceField = () => screen.findByRole('textbox', { name: /commerce instance/i });
+
+
+/**
+ * An activation id for the write calls, but the real target for the target call.
+ *
+ * The modal derives its Commerce instance from the open project, so a fallback
+ * that answers EVERY non-status request with an activation id leaves it with no
+ * instance — and the modal then shows its no-instance notice instead of the job.
+ */
+async function activationOrTarget(type: string): Promise<unknown> {
+    if (type === 'get-datapack-import-target') {
+        return defaultResponse(type);
+    }
+    return { success: true, data: { activationId: 'act-1' } };
+}
 
 describe('ImportDatapackModal — job lifecycle', () => {
     beforeEach(() => {
@@ -28,7 +44,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
         it('is offered once an instance and types are chosen', async () => {
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
 
             expect(resetButton()).not.toHaveAttribute('aria-disabled', 'true');
@@ -36,14 +52,14 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
         it('needs the same instance and types a start does', async () => {
             renderModal();
-            await instanceField();
+            await awaitForm();
 
             expect(resetButton()).toHaveAttribute('aria-disabled', 'true');
         });
 
         it('sends NOTHING on the first press — it arms a confirmation', async () => {
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
 
             fireEvent.click(resetButton());
@@ -53,7 +69,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
         it('names the instance the data will be removed from, and says there is no undo', async () => {
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
 
             fireEvent.click(resetButton());
@@ -64,7 +80,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
         it('can be backed out of without removing anything', async () => {
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
 
             fireEvent.click(resetButton());
@@ -78,7 +94,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
         // is the ONLY thing that may send it.
         it('sends confirm with the same body a start would, only from the confirmation', async () => {
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: '  Weird Value  ' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
 
             fireEvent.click(resetButton());
@@ -88,7 +104,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             expect(resetCalls()[0][1]).toMatchObject({
                 datapackName: 'bodea',
                 version: 'main',
-                commerceInstance: '  Weird Value  ',
+                commerceInstance: 'inst',
                 dataTypes: ['categories'],
                 confirm: true,
             });
@@ -106,14 +122,14 @@ describe('ImportDatapackModal — job lifecycle', () => {
         /** A request for `type` that never resolves, so loading stays true. */
         function neverResolve(type: string) {
             mockRequest.mockImplementation((t: string) =>
-                t === type ? new Promise(() => undefined) : Promise.resolve({ success: true, data: null }),
+                t === type ? new Promise(() => undefined) : defaultResponse(t),
             );
         }
 
         it('shows a busy Dry run button while the check is in flight', async () => {
             neverResolve('validate-datapack-import');
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
 
             fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
@@ -124,7 +140,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
         it('shows a spinner while an import is starting', async () => {
             neverResolve('start-datapack-import');
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
 
             fireEvent.click(startButton());
@@ -139,20 +155,20 @@ describe('ImportDatapackModal — job lifecycle', () => {
         it('replaces the form with the spinner while checking, like Start does', async () => {
             neverResolve('validate-datapack-import');
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
 
             fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
 
             expect(await screen.findByText(/checking with the service/i)).toBeInTheDocument();
-            expect(screen.queryByRole('textbox', { name: /commerce instance/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('checkbox', { name: 'categories' })).not.toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'categories' })).not.toBeInTheDocument();
         });
 
         it('disables every action while one is in flight', async () => {
             neverResolve('validate-datapack-import');
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
 
             fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
@@ -188,13 +204,13 @@ describe('ImportDatapackModal — job lifecycle', () => {
                           code: 'INVALID_OPERATION',
                           data: { needsAccsCredentials: true },
                       }
-                    : { success: true, data: null },
+                    : defaultResponse(type),
             );
         }
 
         async function dryRun() {
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
             fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
         }
@@ -222,7 +238,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             mockRequest.mockImplementation(async (type: string) =>
                 type === 'validate-datapack-import'
                     ? { success: true, data: { valid: true } }
-                    : { success: true, data: null },
+                    : defaultResponse(type),
             );
             await dryRun();
 
@@ -255,10 +271,10 @@ describe('ImportDatapackModal — job lifecycle', () => {
                         },
                     };
                 }
-                return { success: true, data: { activationId: 'act-1' } };
+                return activationOrTarget(type);
             });
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
             fireEvent.click(screen.getByRole('button', { name: /^reset/i }));
             fireEvent.click(screen.getByRole('button', { name: /remove the data/i }));
@@ -274,7 +290,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             mockRequest.mockImplementation(async (type: string) =>
                 type === 'get-datapack-import-status'
                     ? { success: true, data: { activationId: 'old', dataTypes: ['categories'], outcome: 'watching', perType: {} } }
-                    : { success: true, data: null },
+                    : defaultResponse(type),
             );
             renderModal();
 
@@ -285,7 +301,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             mockRequest.mockImplementation(async (type: string) =>
                 type === 'get-datapack-import-status'
                     ? { success: true, data: { activationId: 'old', dataTypes: ['categories'], outcome: 'success', perType: { categories: 'success' } } }
-                    : { success: true, data: null },
+                    : defaultResponse(type),
             );
             renderModal();
 
@@ -299,7 +315,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
                 screen.findByText(/import finished/i, undefined, { timeout: 1500 }),
             ).rejects.toThrow();
             // The form is what greets a fresh modal.
-            expect(screen.getByRole('textbox', { name: /commerce instance/i })).toBeInTheDocument();
+            expect(screen.getByRole('checkbox', { name: 'categories' })).toBeInTheDocument();
         });
     });
 
@@ -319,13 +335,13 @@ describe('ImportDatapackModal — job lifecycle', () => {
                           code: 'INVALID_OPERATION',
                           data: { needsAccsCredentials: true },
                       }
-                    : { success: true, data: null },
+                    : defaultResponse(type),
             );
         }
 
         async function refuse() {
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
             fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
         }
@@ -343,7 +359,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             mockRequest.mockImplementation(async (type: string) =>
                 type === 'validate-datapack-import'
                     ? { success: false, error: 'The Data Installer is turned off.', code: 'INVALID_OPERATION' }
-                    : { success: true, data: null },
+                    : defaultResponse(type),
             );
             await refuse();
 
@@ -401,7 +417,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
                 if (type === 'provision-accs-credentials') {
                     return { success: true };
                 }
-                return { success: true, data: null };
+                return defaultResponse(type);
             });
             await refuse();
 
@@ -415,11 +431,16 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
     describe('watching', () => {
         function withStatus(record: unknown) {
-            mockRequest.mockImplementation(async (type: string) =>
-                type === 'get-datapack-import-status'
+            mockRequest.mockImplementation(async (type: string) => {
+                if (type === 'get-datapack-import-target') {
+                    // The instance is derived now; without it the modal shows
+                    // its no-instance notice instead of the job.
+                    return defaultResponse(type);
+                }
+                return type === 'get-datapack-import-status'
                     ? { success: true, data: record }
-                    : { success: true, data: { activationId: 'act-1' } },
-            );
+                    : { success: true, data: { activationId: 'act-1' } };
+            });
         }
 
         // Per-type progress rides in LoadingDisplay's subMessage slot — the
@@ -471,14 +492,14 @@ describe('ImportDatapackModal — job lifecycle', () => {
                               ...extra,
                           },
                       }
-                    : { success: true, data: { activationId: 'act-1' } },
+                    : await activationOrTarget(type),
             );
         }
 
         /** Outcomes show for THIS session's job, so start one. */
         async function startAJob() {
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
             fireEvent.click(startButton());
         }
@@ -522,10 +543,10 @@ describe('ImportDatapackModal — job lifecycle', () => {
                               operation: 'reset',
                           },
                       }
-                    : { success: true, data: { activationId: 'act-1' } },
+                    : await activationOrTarget(type),
             );
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
             fireEvent.click(screen.getByRole('button', { name: /^reset/i }));
             fireEvent.click(screen.getByRole('button', { name: /remove the data/i }));

@@ -25,13 +25,18 @@
 
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { mockRequest, renderModal, resetModalMocks } from './ImportDatapackModal.testUtils';
+import {
+    mockRequest,
+    renderModal,
+    resetModalMocks,
+    awaitForm,
+    defaultResponse,
+} from './ImportDatapackModal.testUtils';
 
 // The shared Modal renders its actions as div[role="button"][aria-disabled],
 // not <button disabled> — so jest-dom's toBeDisabled() does not apply.
 const startButton = () => screen.getByRole('button', { name: /start import/i });
 const expectStartDisabled = () => expect(startButton()).toHaveAttribute('aria-disabled', 'true');
-const instanceField = () => screen.findByRole('textbox', { name: /commerce instance/i });
 
 /** The payload of the start request, once one has been sent. */
 function startPayload(): Record<string, unknown> | undefined {
@@ -61,147 +66,42 @@ describe('ImportDatapackModal', () => {
         expect(await screen.findByTestId('spectrum-dialog-container')).toBeInTheDocument();
     });
 
-    describe('the instance field', () => {
-        // The default mock answers `get-datapack-import-target` with null, i.e. a
-        // project that implies nothing — so this pins the no-project case, not a
-        // "never derive" rule. The derivation has its own describe below.
-        it('is empty when there is nothing to derive', async () => {
-            renderModal();
-
-            expect(await instanceField()).toHaveValue('');
-        });
-
-        it('will not start without one', async () => {
-            renderModal();
-            await instanceField();
-
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
-
-            expectStartDisabled();
-        });
-
-        it('sends exactly what was typed, untrimmed and unformatted', async () => {
-            renderModal();
-            fireEvent.change(await instanceField(), { target: { value: '  Weird Value  ' } });
-            fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
-
-            fireEvent.click(startButton());
-
-            await waitFor(() =>
-                expect(startPayload()).toMatchObject({ commerceInstance: '  Weird Value  ' }),
-            );
-        });
-    });
-
     /**
-     * The target is DERIVED from the open project, and says so.
+     * The instance is DERIVED and no longer shown or editable.
      *
-     * It used to start empty on the reasoning that a prefilled write target with no
-     * undo would be a guess. That held while the derivation was unproven — but the
-     * tenant id has been extracted from `ACCS_GRAPHQL_ENDPOINT` all along to build
-     * the admin URL, and `checkCredentials` can now check a value read-only before
-     * anything is written. So it is offered, sourced, and still editable.
+     * It used to be a text field with a Change override. Both are gone: the
+     * project fixes where data lands, and changing that means changing the
+     * project on the dashboard rather than typing over it here. The verbatim
+     * pass-through this block used to prove now lives in the write client's own
+     * suite, which is where the string actually crosses the wire.
      */
     describe('the derived target', () => {
-        function withTarget(target: unknown) {
-            mockRequest.mockImplementation(async (type: string) =>
-                type === 'get-datapack-import-target'
-                    ? { success: true, data: target }
-                    : { success: true, data: null },
-            );
-        }
-
-        // The id is what gets WRITTEN to and what nobody can read. Leading with the
-        // project name gives the user something they can actually confirm, without
-        // hiding the value that decides where the data lands.
-        it('leads with the project name, keeping the id visible', async () => {
-            withTarget({ instance: 'UoGYsHrcxMyeoVd2zUktZi', projectName: 'bodea-demo' });
+        it('sends the project instance without showing or asking for it', async () => {
             renderModal();
-
-            expect(await screen.findByText('bodea-demo')).toBeInTheDocument();
-            expect(screen.getByText(/UoGYsHrcxMyeoVd2zUktZi/)).toBeInTheDocument();
-        });
-
-        // Hand-typing a 22-character nanoid into a field with no undo is all risk
-        // and no benefit when the project already knows the answer.
-        it('is read-only once the project has supplied one', async () => {
-            withTarget({ instance: 'UoGYsHrcxMyeoVd2zUktZi', projectName: 'bodea-demo' });
-            renderModal();
-            await screen.findByText('bodea-demo');
-
-            expect(screen.queryByRole('textbox', { name: /commerce instance/i })).not.toBeInTheDocument();
-        });
-
-        it('opens an editable field on Change, carrying the derived value in', async () => {
-            withTarget({ instance: 'UoGYsHrcxMyeoVd2zUktZi', projectName: 'bodea-demo' });
-            renderModal();
-            fireEvent.click(await screen.findByRole('button', { name: /change/i }));
-
-            expect(await screen.findByDisplayValue('UoGYsHrcxMyeoVd2zUktZi')).toBeInTheDocument();
-        });
-
-        // A project that derives nothing — PaaS with no URL, or misconfigured —
-        // must still be importable, so the fallback is the editable field.
-        it('falls back to an editable field when nothing is derived', async () => {
-            withTarget({});
-            renderModal();
-
-            expect(await instanceField()).toBeInTheDocument();
-        });
-
-        it('sends the derived instance without the user touching it', async () => {
-            withTarget({ instance: 'UoGYsHrcxMyeoVd2zUktZi', projectName: 'bodea-demo' });
-            renderModal();
-            await screen.findByText('bodea-demo');
-
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
-            fireEvent.click(startButton());
+            fireEvent.click(screen.getByRole('button', { name: /start import/i }));
 
-            await waitFor(() =>
-                expect(startPayload()).toMatchObject({ commerceInstance: 'UoGYsHrcxMyeoVd2zUktZi' }),
-            );
-        });
-
-        it('prefills the instance the project implies', async () => {
-            withTarget({ instance: 'UoGYsHrcxMyeoVd2zUktZi' });
-            renderModal();
-
-            // No projectName, so there is nothing human to lead with and the
-            // editable field is what shows — still seeded.
-            expect(await screen.findByDisplayValue('UoGYsHrcxMyeoVd2zUktZi')).toBeInTheDocument();
-        });
-
-        it('stays empty when the project implies nothing', async () => {
-            withTarget({});
-            renderModal();
-
-            expect(await instanceField()).toHaveValue('');
-        });
-
-        // Derived, not imposed. The whole reason it is a field and not a label.
-        it('lets the user replace the derived value', async () => {
-            withTarget({ instance: 'UoGYsHrcxMyeoVd2zUktZi' });
-            renderModal();
-            const field = await screen.findByDisplayValue('UoGYsHrcxMyeoVd2zUktZi');
-
-            fireEvent.change(field, { target: { value: 'something-else' } });
-
-            expect(field).toHaveValue('something-else');
+            await waitFor(() => {
+                const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
+                expect(call?.[1]).toMatchObject({ commerceInstance: 'inst' });
+            });
+            expect(screen.queryByRole('textbox', { name: /commerce instance/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /change/i })).not.toBeInTheDocument();
         });
     });
 
-    /** 14 types is the real cardinality — Bodea ships 14 — so bulk selection is not a nicety. */
     describe('selecting every type', () => {
         it('offers a select-all affordance', async () => {
             renderModal();
-            await instanceField();
+            await awaitForm();
 
             expect(screen.getByRole('button', { name: /select all/i })).toBeInTheDocument();
         });
 
         it('selects every available type at once', async () => {
             renderModal();
-            await instanceField();
+            await awaitForm();
 
             fireEvent.click(screen.getByRole('button', { name: /select all/i }));
 
@@ -211,7 +111,7 @@ describe('ImportDatapackModal', () => {
 
         it('turns into a clear-all once everything is selected', async () => {
             renderModal();
-            await instanceField();
+            await awaitForm();
 
             fireEvent.click(screen.getByRole('button', { name: /select all/i }));
             fireEvent.click(screen.getByRole('button', { name: /clear all/i }));
@@ -222,7 +122,7 @@ describe('ImportDatapackModal', () => {
 
         it('sends every type when all are selected', async () => {
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
 
             fireEvent.click(screen.getByRole('button', { name: /select all/i }));
             fireEvent.click(startButton());
@@ -236,7 +136,7 @@ describe('ImportDatapackModal', () => {
     describe('data types', () => {
         it('starts with none selected — an import is opt-in per type', async () => {
             renderModal();
-            await instanceField();
+            await awaitForm();
 
             expect(screen.getByRole('checkbox', { name: 'categories' })).not.toBeChecked();
             expect(screen.getByRole('checkbox', { name: 'products' })).not.toBeChecked();
@@ -244,14 +144,14 @@ describe('ImportDatapackModal', () => {
 
         it('will not start with none selected', async () => {
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
 
             expectStartDisabled();
         });
 
         it('sends only the selected types', async () => {
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'products' }));
 
             fireEvent.click(startButton());
@@ -263,7 +163,7 @@ describe('ImportDatapackModal', () => {
     describe('starting', () => {
         it('sends the datapack identity', async () => {
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
 
             fireEvent.click(startButton());
@@ -277,10 +177,10 @@ describe('ImportDatapackModal', () => {
             mockRequest.mockImplementation(async (type: string) =>
                 type === 'start-datapack-import'
                     ? { success: false, error: 'Invalid input. Must provide one of: (datapack_name)' }
-                    : { success: true, data: null },
+                    : defaultResponse(type),
             );
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
 
             fireEvent.click(startButton());
@@ -298,14 +198,14 @@ describe('ImportDatapackModal', () => {
 
         it('is offered beside Start import, with the same requirements', async () => {
             renderModal();
-            await instanceField();
+            await awaitForm();
 
             expect(validateButton()).toHaveAttribute('aria-disabled', 'true');
         });
 
         it('checks WITHOUT starting an import', async () => {
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
 
             fireEvent.click(validateButton());
@@ -320,7 +220,7 @@ describe('ImportDatapackModal', () => {
 
         it('sends the same body a start would', async () => {
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: '  Weird Value  ' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
 
             fireEvent.click(validateButton());
@@ -330,7 +230,7 @@ describe('ImportDatapackModal', () => {
                 expect(call?.[1]).toMatchObject({
                     datapackName: 'bodea',
                     version: 'main',
-                    commerceInstance: '  Weird Value  ',
+                    commerceInstance: 'inst',
                     dataTypes: ['categories'],
                 });
             });
@@ -340,10 +240,10 @@ describe('ImportDatapackModal', () => {
             mockRequest.mockImplementation(async (type: string) =>
                 type === 'validate-datapack-import'
                     ? { success: true, data: { valid: true } }
-                    : { success: true, data: null },
+                    : defaultResponse(type),
             );
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
 
             fireEvent.click(validateButton());
@@ -357,10 +257,10 @@ describe('ImportDatapackModal', () => {
             mockRequest.mockImplementation(async (type: string) =>
                 type === 'validate-datapack-import'
                     ? { success: true, data: { valid: false, reason: 'Invalid input. Must provide one of: (datapack_name)' } }
-                    : { success: true, data: null },
+                    : defaultResponse(type),
             );
             renderModal();
-            fireEvent.change(await instanceField(), { target: { value: 'inst' } });
+            await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
 
             fireEvent.click(validateButton());

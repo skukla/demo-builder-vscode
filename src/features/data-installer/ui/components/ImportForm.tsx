@@ -13,9 +13,8 @@
  */
 
 import { ActionButton, Checkbox, Item, Picker } from '@adobe/react-spectrum';
-import React, { useState } from 'react';
+import React from 'react';
 import type { TargetWebsite } from '../hooks/useImportScopes';
-import { FormField } from '@/core/ui/components/forms/FormField';
 
 /**
  * Whether to warn that `products` was chosen without `customer_groups`.
@@ -49,29 +48,55 @@ function needsCustomerGroups(availableTypes: string[], selected: string[]): bool
  * "the one I want is missing" — which reads as a bug unless the missing step is
  * named. Per the service author: create it in Commerce first, then name it here.
  */
+/** The service's own default website code, when the user picks nothing. */
+const DEFAULT_WEBSITE_CODE = 'base';
+
+/**
+ * Where the pack lands.
+ *
+ * **Holds its space while discovery runs.** These used to appear only once the
+ * scopes arrived, so the dialog jumped. `StoreSelectionRow` solves this by
+ * disabling its pickers rather than hiding them, and this follows it.
+ *
+ * **Placeholders name the default WEBSITE.** They previously read "Default
+ * (base)", which mixed the `base` website up with the `default` store view —
+ * two different scopes that happen to share the idea of a default. Now the
+ * website picker names whatever the instance calls its base website, and the
+ * store view picker names its own default.
+ *
+ * Not `StoreStructureSelector`, though the conventions here are lifted from it
+ * (name as the label, code as the value): that component renders nothing when
+ * its item list is empty, which is exactly the loading state this has to fill.
+ */
 function TargetScopeFields({
     websites,
     websiteCode,
     storeCode,
     onWebsiteChange,
     onStoreChange,
+    isLoading,
 }: {
     websites: TargetWebsite[];
     websiteCode: string;
     storeCode: string;
     onWebsiteChange: (code: string) => void;
     onStoreChange: (code: string) => void;
+    isLoading: boolean;
 }): React.JSX.Element | null {
-    if (websites.length === 0) {
+    // Nothing discovered and nothing pending: this instance offers no choice.
+    if (websites.length === 0 && !isLoading) {
         return null;
     }
-    const storeViews = websites.find((site) => site.code === websiteCode)?.storeViews ?? [];
+    const chosen = websites.find((site) => site.code === websiteCode);
+    const storeViews = chosen?.storeViews ?? [];
+    const defaultSite = websites.find((site) => site.code === DEFAULT_WEBSITE_CODE);
 
     return (
         <div className="datapack-import-scope">
             <Picker
                 label="Target website"
-                placeholder="Default (base)"
+                placeholder={websitePlaceholder(isLoading, defaultSite?.name)}
+                isDisabled={isLoading}
                 selectedKey={websiteCode || null}
                 onSelectionChange={(key) => onWebsiteChange(String(key ?? ''))}
             >
@@ -83,8 +108,8 @@ function TargetScopeFields({
             </Picker>
             <Picker
                 label="Store view"
-                placeholder={websiteCode ? 'Choose a store view' : 'Choose a website first'}
-                isDisabled={!websiteCode}
+                placeholder={storePlaceholder(isLoading, chosen ? storeViews[0]?.name : undefined)}
+                isDisabled={isLoading || !websiteCode}
                 selectedKey={storeCode || null}
                 onSelectionChange={(key) => onStoreChange(String(key ?? ''))}
             >
@@ -94,19 +119,27 @@ function TargetScopeFields({
                     </Item>
                 ))}
             </Picker>
-            <p className="datapack-import-scope-hint">
-                Only websites that already exist on this instance appear here. To land this pack
-                on its own website, create it in Commerce first, then choose it.
-            </p>
         </div>
     );
 }
 
+/** Names the default WEBSITE, never "base" and never the default store view. */
+function websitePlaceholder(isLoading: boolean, defaultName?: string): string {
+    if (isLoading) {
+        return 'Loading websites…';
+    }
+    return defaultName ? `${defaultName} (default)` : 'Instance default';
+}
+
+function storePlaceholder(isLoading: boolean, firstViewName?: string): string {
+    if (isLoading) {
+        return 'Loading…';
+    }
+    return firstViewName ? `${firstViewName} (default)` : 'Choose a website first';
+}
+
 /** The form view: the derived target plus the type checkboxes. */
 export function ImportForm({
-    projectName,
-    instance,
-    onInstanceChange,
     availableTypes,
     selected,
     allSelected,
@@ -117,10 +150,8 @@ export function ImportForm({
     storeCode,
     onWebsiteChange,
     onStoreChange,
+    scopesLoading,
 }: {
-    projectName?: string;
-    instance: string;
-    onInstanceChange: (value: string) => void;
     availableTypes: string[];
     selected: string[];
     allSelected: boolean;
@@ -131,20 +162,25 @@ export function ImportForm({
     storeCode: string;
     onWebsiteChange: (code: string) => void;
     onStoreChange: (code: string) => void;
+    scopesLoading: boolean;
 }): React.JSX.Element {
     return (
         <>
-            <ImportTargetField
-                projectName={projectName}
-                instance={instance}
-                onChange={onInstanceChange}
-            />
+            {/* No target block and no Change escape. The project already fixes
+                where data lands; changing that means changing the project, which
+                belongs on the dashboard rather than behind a link in here. The
+                22-character instance id it used to print was not something
+                anyone could verify by eye either. */}
+            <p className="datapack-import-warning">
+                There is no undo — check with whoever owns this instance before importing.
+            </p>
             <TargetScopeFields
                 websites={websites}
                 websiteCode={websiteCode}
                 storeCode={storeCode}
                 onWebsiteChange={onWebsiteChange}
                 onStoreChange={onStoreChange}
+                isLoading={scopesLoading}
             />
             <div className="datapack-import-types">
                 <div className="datapack-import-types-head">
@@ -178,55 +214,3 @@ export function ImportForm({
     );
 }
 
-/**
- * Where the import will be written — shown, not typed, when the project knows.
- *
- * The summary leads with the project NAME because a 22-character nanoid is not
- * something anyone can confirm is right, and keeps the id underneath (monospace
- * — checked character by character against the console) because the id is what
- * actually decides where data lands. `Change` swaps in the editable field; a
- * project that derives nothing gets the field directly, or it could not be
- * imported into at all. The typed value is sent verbatim — never trimmed or
- * reformatted on the way out.
- */
-function ImportTargetField({
-    projectName,
-    instance,
-    onChange,
-}: {
-    projectName?: string;
-    instance: string;
-    onChange: (value: string) => void;
-}): React.JSX.Element {
-    const [overriding, setOverriding] = useState(false);
-
-    if (!projectName || !instance || overriding) {
-        return (
-            <FormField
-                fieldKey="commerceInstance"
-                label="Commerce instance"
-                type="text"
-                value={instance}
-                onChange={onChange}
-                required
-                description="Where this data will be written. There is no undo — check it with whoever owns the target."
-            />
-        );
-    }
-
-    return (
-        <div className="datapack-import-target">
-            <div className="datapack-import-types-head">
-                <span className="datapack-import-label">Target</span>
-                <ActionButton isQuiet onPress={() => setOverriding(true)}>
-                    Change
-                </ActionButton>
-            </div>
-            <div className="datapack-import-target-name">{projectName}</div>
-            <div className="datapack-import-target-id">Commerce instance {instance}</div>
-            <div className="datapack-import-target-warning">
-                There is no undo — check the target with whoever owns it.
-            </div>
-        </div>
-    );
-}

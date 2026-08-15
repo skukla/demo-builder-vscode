@@ -110,7 +110,6 @@ export function ImportDatapackModal({
     availableTypes,
     onClose,
 }: ImportDatapackModalProps): React.JSX.Element {
-    const [commerceInstance, setCommerceInstance] = useState('');
     const [selected, setSelected] = useState<string[]>([]);
     const [watching, setWatching] = useState(true);
     const [resetArmed, setResetArmed] = useState(false);
@@ -145,23 +144,12 @@ export function ImportDatapackModal({
         loadTarget({});
     }, [loadTarget]);
 
-    // Seed ONCE, and only into a field the user has not touched: the target
-    // request is async and can answer AFTER typing starts, and seeding on
-    // arrival would silently replace a typed value in a field that names a
-    // write target with no undo. A seeded-once flag alone does not prevent
-    // that — a test caught it clobbering input.
-    const derived = target.value?.instance;
-    const [touched, setTouched] = useState(false);
-    useEffect(() => {
-        if (derived && !touched) {
-            setCommerceInstance(derived);
-        }
-    }, [derived, touched]);
+    // Simply derived. This used to be seeded into an editable field behind a
+    // "touched" guard, so an async answer could not clobber what the user had
+    // typed. The field is gone — the project decides the instance — so the guard,
+    // the state and the effect went with it.
+    const commerceInstance = target.value?.instance ?? '';
 
-    const editInstance = useCallback((value: string): void => {
-        setTouched(true);
-        setCommerceInstance(value);
-    }, []);
 
     const record = status.value ?? null;
     const running = record?.outcome === 'watching';
@@ -264,11 +252,20 @@ export function ImportDatapackModal({
             : null;
     const canStart = commerceInstance.length > 0 && selected.length > 0 && !busy;
 
-    const view = resolveView({ busy, resetArmed, running, result });
+    const view = resolveView({
+        busy,
+        resetArmed,
+        running,
+        result,
+        noInstance: !commerceInstance && target.settled,
+    });
 
     return (
         <DialogContainer type="modal" onDismiss={onClose}>
             <Modal
+                // Wide, so the type list fits three uniform columns instead of
+                // two scrolling ones. The target block's removal freed the rest.
+                wide
                 title={`Import ${displayName}`}
                 size="L"
                 fitContent
@@ -292,7 +289,7 @@ export function ImportDatapackModal({
                     goBack,
                 })}
             >
-                <div className="datapack-import-body">
+            <div className="datapack-import-body">
                     {view === 'busy' ? (
                         // Size L on purpose: LoadingDisplay keys the wizard
                         // treatment off it — M left-aligns and shrinks the text.
@@ -305,7 +302,7 @@ export function ImportDatapackModal({
                     {view === 'confirm-reset' ? (
                         <div className="datapack-import-danger">
                             {`Remove ${displayName}'s ${selected.join(', ')} from ${commerceInstance}. This cannot be undone — the Data Installer has no restore.`}
-                        </div>
+                </div>
                     ) : null}
 
                     {view === 'watching' && record ? (
@@ -321,11 +318,10 @@ export function ImportDatapackModal({
                         />
                     ) : null}
 
+                    {view === 'no-instance' ? <NoInstanceNotice /> : null}
+
                     {view === 'form' ? (
                         <ImportForm
-                            projectName={target.value?.projectName}
-                            instance={commerceInstance}
-                            onInstanceChange={editInstance}
                             availableTypes={availableTypes}
                             selected={selected}
                             allSelected={allSelected}
@@ -336,6 +332,7 @@ export function ImportDatapackModal({
                             storeCode={scope.storeCode}
                             onWebsiteChange={scope.chooseWebsite}
                             onStoreChange={scope.chooseStore}
+                            scopesLoading={scope.loading}
                         />
                     ) : null}
                 </div>
@@ -344,7 +341,7 @@ export function ImportDatapackModal({
     );
 }
 
-type ModalView = 'form' | 'busy' | 'confirm-reset' | 'watching' | 'result';
+type ModalView = 'form' | 'busy' | 'confirm-reset' | 'watching' | 'result' | 'no-instance';
 
 /** One view at a time; this precedence IS the state machine. */
 function resolveView(state: {
@@ -352,6 +349,8 @@ function resolveView(state: {
     resetArmed: boolean;
     running: boolean;
     result: ResultContent | null;
+    /** The project named no Commerce instance, and the target request settled. */
+    noInstance: boolean;
 }): ModalView {
     if (state.busy) {
         return 'busy';
@@ -365,7 +364,30 @@ function resolveView(state: {
     if (state.result) {
         return 'result';
     }
+    // Last, so a job or an outcome still shows: the instance only matters when
+    // the user is about to choose something. It is no longer typeable, so a
+    // project without one would otherwise get a form it cannot submit.
+    if (state.noInstance) {
+        return 'no-instance';
+    }
     return 'form';
+}
+
+/**
+ * The project names no Commerce instance.
+ *
+ * A view rather than a disabled form: the instance is no longer typeable, so
+ * there is nothing the user could do here to proceed, and a form that cannot be
+ * submitted and never says why is the worst of both.
+ */
+function NoInstanceNotice(): React.JSX.Element {
+    return (
+        <StatusDisplay
+            variant="error"
+            title="This project has no Commerce instance"
+            message="Connect a Commerce backend on the project dashboard, then import from here."
+        />
+    );
 }
 
 /** Which in-flight operation the one busy spinner is narrating. */

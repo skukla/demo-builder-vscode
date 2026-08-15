@@ -296,10 +296,23 @@
 
 /* Where the pack lands. Two pickers side by side — they are one decision, and
    stacking them reads as two unrelated fields. */
+/* Side by side: website and store view are one decision, and the hint that used
+   to sit under them (explaining a rule the picker already enforces) is gone. */
 .datapack-import-scope {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    gap: 16px;
+}
+
+.datapack-import-scope > * {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* The no-undo line, which is a caution rather than target metadata. */
+.datapack-import-warning {
+    margin: 0;
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
 }
 
 .datapack-import-scope > [data-testid='spectrum-picker-wrapper'],
@@ -345,10 +358,14 @@
    rather than auto-fill: the modal has a known width, and auto-fill would reflow
    to three narrow columns that wrap the longer type names
    (b2b_shared_catalog_company_assignments) mid-word. */
+/* Three uniform columns at the wide modal width. Two forced a scroll on a
+   14-type pack; the target block's removal plus the extra width buys the third.
+   Tracks are equal and sized for the longest name, so rows line up — a list read
+   down wants alignment more than density. */
 .datapack-import-type-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4px 16px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 8px 24px;
     /* Type names are underscore-joined with no spaces to break at, so a long one
        (b2b_shared_catalog_company_assignments) overruns its track and collides
        with the next column. `anywhere` is the only value that breaks a word with
@@ -357,8 +374,6 @@
     overflow-wrap: anywhere;
 }
 
-/* Grid items default to min-width:auto, which refuses to shrink below their
-   content — so the minmax(0, 1fr) above cannot take effect without this. */
 .datapack-import-type-grid > * {
     min-width: 0;
 }

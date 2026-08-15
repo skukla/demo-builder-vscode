@@ -44,6 +44,11 @@ function withScopes(scopes: unknown = SCOPES) {
  * picker's placeholder is "Choose a store view", so a bare text query for
  * /store view/ matches the label and the placeholder both.
  */
+/** Wait until discovery has settled: the picker exists AND is enabled. */
+async function awaitScopes(): Promise<void> {
+    await waitFor(() => expect(pickerFor(/target website/i)).not.toBeDisabled());
+}
+
 function pickerFor(label: RegExp): HTMLSelectElement {
     const labels = screen.getAllByTestId('spectrum-picker-label');
     const match = labels.find((node) => label.test(node.textContent ?? ''));
@@ -60,16 +65,16 @@ describe('import targeting', () => {
     it('offers the discovered websites', async () => {
         renderModal();
 
-        await waitFor(() => expect(pickerFor(/target website/i)).toBeDefined());
+        await awaitScopes();
         expect(pickerFor(/target website/i)).toHaveTextContent('Bodea');
     });
 
     it('sends the chosen pair with the import', async () => {
         renderModal();
-        await waitFor(() => expect(pickerFor(/target website/i)).toBeDefined());
+        await awaitScopes();
 
         fireEvent.change(pickerFor(/target website/i), { target: { value: 'bodea' } });
-        await waitFor(() => expect(pickerFor(/store view/i)).toBeDefined());
+        await waitFor(() => expect(pickerFor(/store view/i)).not.toBeDisabled());
         fireEvent.change(pickerFor(/store view/i), { target: { value: 'bodea_view' } });
 
         // canStart also needs a data type; without one the button is disabled.
@@ -88,7 +93,7 @@ describe('import targeting', () => {
      */
     it('sends no target when the user picks nothing', async () => {
         renderModal();
-        await waitFor(() => expect(pickerFor(/target website/i)).toBeDefined());
+        await awaitScopes();
 
         fireEvent.click(screen.getByRole('checkbox', { name: 'categories' }));
         fireEvent.click(screen.getByRole('button', { name: /start import/i }));
@@ -103,26 +108,14 @@ describe('import targeting', () => {
     /** Choosing a website narrows the store views to that website's own. */
     it('offers only the chosen website’s store views', async () => {
         renderModal();
-        await waitFor(() => expect(pickerFor(/target website/i)).toBeDefined());
+        await awaitScopes();
 
         fireEvent.change(pickerFor(/target website/i), { target: { value: 'bodea' } });
 
-        await waitFor(() => expect(pickerFor(/store view/i)).toBeDefined());
+        await waitFor(() => expect(pickerFor(/store view/i)).not.toBeDisabled());
         const options = Array.from(pickerFor(/store view/i).options).map((o) => o.value);
         expect(options).toContain('bodea_view');
         expect(options).not.toContain('default');
-    });
-
-    /**
-     * The precondition, stated. `websites` is not an importable type, so a website
-     * the user wants but has not created cannot appear — and a short dropdown with
-     * no explanation reads as a bug rather than a missing step.
-     */
-    it('says the website must already exist in Commerce', async () => {
-        renderModal();
-
-        await waitFor(() => expect(pickerFor(/target website/i)).toBeDefined());
-        expect(screen.getByText(/create it in commerce/i)).toBeInTheDocument();
     });
 
     /** Discovery is optional: its failure must not block an untargeted import. */
@@ -137,7 +130,10 @@ describe('import targeting', () => {
         await waitFor(() =>
             expect(screen.getByRole('button', { name: /start import/i })).toBeInTheDocument(),
         );
-        expect(screen.queryByText(/target website/i)).not.toBeInTheDocument();
+        // The pickers hold space WHILE loading, so wait for the failure to settle.
+        await waitFor(() =>
+            expect(screen.queryByTestId('spectrum-picker-label')).not.toBeInTheDocument(),
+        );
     });
 });
 
@@ -195,5 +191,89 @@ describe('the products/customer_groups dependency', () => {
             expect(screen.getByRole('button', { name: /start import/i })).toBeInTheDocument(),
         );
         expect(screen.queryByText(/tier prices/i)).not.toBeInTheDocument();
+    });
+});
+
+/**
+ * The 2026-08-15 redesign, from a live pass over the modal.
+ *
+ * Six findings, each a decision rather than a defect:
+ *
+ * 1. The scope pickers appeared out of nowhere when discovery finished. They now
+ *    hold their space, disabled, the way `StoreSelectionRow` does — the house
+ *    convention for exactly this.
+ * 2. No "Change" escape on the target. Changing where data lands means changing
+ *    the project, and that belongs on the dashboard, not behind a link in an
+ *    import dialog.
+ * 3. No target block. The project name is already the panel's context and the
+ *    22-character instance id is not something anyone can verify by eye.
+ * 4. Placeholders name the DEFAULT WEBSITE, not "Default (base)" — which read as
+ *    the default store view and confused the two scopes.
+ * 5. No precondition hint. It explained a rule the picker already enforces.
+ */
+describe('the redesigned target section', () => {
+    /** 1. Space is held while discovery runs, rather than appearing late. */
+    it('shows the pickers disabled while scopes are still loading', async () => {
+        mockRequest.mockImplementation(async (type: string) => {
+            if (type === 'list-datapack-import-scopes') {
+                return new Promise(() => {}); // never settles
+            }
+            if (type === 'get-datapack-import-target') {
+                return { success: true, data: { instance: 'inst-1', projectName: 'demo-1' } };
+            }
+            return { success: true, data: null };
+        });
+        renderModal();
+
+        // Two pickers render (website and store view); the first is the website.
+        const pickers = await screen.findAllByTestId('spectrum-picker-select');
+        expect(pickers[0]).toBeDisabled();
+    });
+
+    /** 2 and 3. */
+    it('shows no target block and no Change escape', async () => {
+        withScopes();
+        renderModal();
+        await awaitScopes();
+
+        expect(screen.queryByRole('button', { name: /change/i })).not.toBeInTheDocument();
+        expect(screen.queryByText(/commerce instance/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/inst-1/)).not.toBeInTheDocument();
+    });
+
+    /** 4. The default is named, and named as a WEBSITE. */
+    it('names the default website instead of saying "Default (base)"', async () => {
+        withScopes();
+        renderModal();
+        await awaitScopes();
+
+        expect(screen.queryByText(/default \(base\)/i)).not.toBeInTheDocument();
+        // Appears in the picker button AND its option list; either proves the
+        // default is named rather than labelled 'Default (base)'.
+        expect(screen.getAllByText(/main website/i).length).toBeGreaterThan(0);
+    });
+
+    /** 5. */
+    it('drops the precondition hint the picker already enforces', async () => {
+        withScopes();
+        renderModal();
+        await awaitScopes();
+
+        expect(screen.queryByText(/create it in commerce/i)).not.toBeInTheDocument();
+    });
+
+    /**
+     * Removing the editable instance field must not create a dead end: a project
+     * with no reachable instance previously let the user type one.
+     */
+    it('says so when the project names no instance, instead of a dead form', async () => {
+        mockRequest.mockImplementation(async (type: string) =>
+            type === 'get-datapack-import-target'
+                ? { success: true, data: { projectName: 'demo-1' } }
+                : { success: true, data: null },
+        );
+        renderModal();
+
+        expect(await screen.findByText(/no commerce instance/i)).toBeInTheDocument();
     });
 });
