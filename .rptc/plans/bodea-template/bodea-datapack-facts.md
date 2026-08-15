@@ -224,3 +224,56 @@ the placeholder), not a permanent condition to design around.
   `is_purchase_order_enabled: true` — the features are on, there is simply no seeded instance
   data behind them. **Permanent runbook line:** create one quote + one requisition list by hand
   post-import, or the flagship B2B block demos zeros.
+
+## Product images — MEASURED on a live storefront (2026-08-15)
+
+AEM Assets coverage for Bodea is **partial, and thin**: only 3 of 26 categorized products
+carry assets — `bodea-vr-rack` (3 images), `bodea-racker-blade-server` (2),
+`bodea-blade-server-model-xz`. Their URLs are real AEM delivery URLs
+(`delivery-p158081-e1683323.adobeaemcloud.com/adobe/assets/urn:aaid:aem:…`) and serve valid
+images (verified 200 `image/jpeg`).
+
+Everything else has none:
+
+| Category | Products | Without images |
+|---|---|---|
+| products/racks | 9 | 7 |
+| products/switching | 4 | 4 |
+| products/wi-fi | 5 | 5 |
+| products/cables | 5 | 5 |
+| products/cooling-equipment | 1 | 1 |
+| products/critical-power-equipment | 2 | 1 |
+
+**Consequence, and why `AEM_ASSETS_ENABLED` defaults to `false` for this package.** The
+boilerplate PLP's `ProductImage` slot calls `tryRenderAemAssetsImage` unguarded. Its logic
+(read from the vendored `tools/lib/aem/assets.js`):
+
+```
+if (!isAemAssetsEnabled()) { renderPlain(); return; }   // disabled → safe
+if (!imageProps.src) throw new Error('An image source is required…');  // enabled + no src → THROWS
+if (!isAemAssetsUrl(src)) { renderPlain(); return; }
+```
+
+So with assets enabled, ONE image-less product throws inside the slot and the entire product
+grid fails to render — every category page came back blank. Disabled, the plain-render path
+still shows the three products that have assets (unoptimized) and renders an empty slot for
+the rest.
+
+Not patched deliberately: a patch would buy image optimization for three products at the cost
+of a permanent entry in a ledger the project keeps single-digit. The unguarded throw is a
+genuine boilerplate defect and belongs upstream.
+
+**Open with CoreTech:** asset coverage for the remaining 23 SKUs. That is what actually makes
+the demo look good; the toggle only stops it being broken.
+
+## Category binding — VERIFIED
+
+`product-list-page` authors as `urlPath`, and Catalog Service expects the **full path**, not the
+url_key: `products/racks`, `products/switching`, `products/wi-fi`, `products/cables`,
+`products/cooling-equipment`, `products/critical-power-equipment`, `software`, `services`.
+(`racks` alone returns 0; `bodea/products/racks` returns 0.)
+
+⚠️ The Bodea tree is only visible to Catalog Service once the **store group's root category** is
+pointed at the Bodea root — packs bring their own root and do not merge into the existing tree.
+Before that change, `categories` returned only "Default Category" and every PLP was empty.
+Manual Admin step, belongs in the runbook next to "create the website".
