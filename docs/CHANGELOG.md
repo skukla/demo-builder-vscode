@@ -65,6 +65,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **A stale global MCP entry no longer blocks adding any MCP server.** Claude Code showed `[Conflicting scopes]` and refused, because the global entry still pointed at a retired server path from an older extension version while the project entry pointed at the current one — with sign-in stored per endpoint, so authenticating to one did not carry to the other. Drift detection now checks and repairs the global entry instead of skipping it.
 
+- **The extension download is 7 MB instead of 24 MB.** A test-tooling cache moved inside the repository three days ago and nothing excluded it from packaging, so the build carried 5,027 cache files — 98% of the extension by file count — with no effect except size. The package now contains 82 files.
+
 ## [1.0.0-beta.128] - 2026-08-11
 
 ### Added
