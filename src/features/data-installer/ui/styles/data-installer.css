@@ -432,3 +432,24 @@
     border-radius: 4px;
     box-sizing: border-box;
 }
+
+/* Export modal. Reuses the import modal's type grid — the two forms ask the
+   same question about data types and a second grid would drift from the first. */
+.datapack-export-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 480px;
+}
+
+.datapack-export-intro {
+    margin: 0;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+.datapack-export-note {
+    margin: 0;
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+}

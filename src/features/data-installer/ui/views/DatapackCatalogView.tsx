@@ -54,6 +54,7 @@ import type {
 } from '../../types';
 import { DatapackCard } from '../components/DatapackCard';
 import { DatapackDetailPanel } from '../components/DatapackDetailPanel';
+import { ExportDatapackModal } from '../components/ExportDatapackModal';
 import { ImportDatapackModal } from '../components/ImportDatapackModal';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
@@ -86,6 +87,8 @@ export function DatapackCatalogView(): React.JSX.Element {
     const [versions, setVersions] = useState<Record<string, string>>({});
     const [selected, setSelected] = useState<DatapackId | undefined>(undefined);
     const [importing, setImporting] = useState<DatapackId | undefined>(undefined);
+    /** Stage 3: capture a NEW pack from the connected instance. */
+    const [exporting, setExporting] = useState(false);
 
     const { load, loading, value, failure } = useDataInstallerRequest<Page<DatapackSummary>>(
         'find-datapacks',
@@ -184,12 +187,17 @@ export function DatapackCatalogView(): React.JSX.Element {
                         // curated catalog is exactly when it must be reachable.
                         alwaysShowCount
                         countTrailing={
-                            <Switch
-                                isSelected={includeCommunity}
-                                onChange={setIncludeCommunity}
-                            >
-                                Include community datapacks
-                            </Switch>
+                            <Flex gap="size-200" alignItems="center">
+                                <Switch
+                                    isSelected={includeCommunity}
+                                    onChange={setIncludeCommunity}
+                                >
+                                    Include community datapacks
+                                </Switch>
+                                <Link isQuiet onPress={() => setExporting(true)}>
+                                    Export from this instance
+                                </Link>
+                            </Flex>
                         }
                     />
                 </div>
@@ -214,6 +222,8 @@ export function DatapackCatalogView(): React.JSX.Element {
                 onRetry={retryDetail}
                 onImport={openImport}
             />
+
+            {exporting ? <ExportDatapackModal onClose={() => setExporting(false)} /> : null}
 
             {/* Only what the service HOLDS is importable — the inventory, never
                 the pack's declared types. Mounted while `importing` is set, so

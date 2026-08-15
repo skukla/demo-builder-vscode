@@ -80,24 +80,18 @@ declined. Remaining, in execution order:
    prices name "Platinum Buyer", needs `customer_groups` imported too);
    recovery run succeeded; 6-type reset restored the instance byte-identical.
    Findings recorded in `docs/systems/data-installer.md`.
-5. **Stage 3 (export)** — **NOT blocked; the payload is wrong.** An earlier note
-   here called export non-functional; that was corrected the same day.
-   `customer_groups` exports with `status: success` — it returned zero only
-   because the exclusion rules drop all five stock groups and the instance had
-   been reset to baseline first. `categories`/`products`/`attribute_sets` still
-   fail with a generic "Processing failed"; ruled out by measurement: missing
-   `version`, missing `root_category` (by id and by name), and store scope.
-   The remaining lead is the wiki's root-category guidance, which the service
-   author named and which is not in the repo doc set. `get-export-items` is
-   separately unusable for ACCS. Details: `docs/systems/data-installer.md` §6b.
+5. ~~Stage 3 (export)~~ **BUILT 2026-08-15** (`439c4f0d` client+handlers,
+   plus the modal). Two-step flow: `list-datapack-export-items` then
+   `start-datapack-export`, surfaced by `ExportDatapackModal` from the catalog's
+   "Export from this instance" action.
 
-   Two plan assumptions were also wrong and should not be carried forward: the
-   documented `base_url` body is rejected (export takes `commerce_instance` like
-   everything else), and there is no separate `create-datapack` step — a
-   successful export would write the pack itself.
+   **The one thing not verified end to end**: the service's own store step. It
+   500s with "MongoDB connection URI required" because `MONGO_URI` does not reach
+   the export path on the stage deployment — proven by `verbose: 'full'`, and NOT
+   ours to fix. Everything up to that point is exercised, and the client is
+   correct for the moment their fix lands. Root cause and the nine eliminated
+   payload hypotheses: `docs/systems/data-installer.md` §6b.
 
-   **Next move is a question for Jeff, not code.** Nothing was created by the
-   probe (catalog 40 rows before and after).
 6. ~~Stage 4 (wizard hook)~~ **DONE 2026-08-14** (`f2564d2e` wizard area,
    `2752c7bd` panel loop). The product decision was made: **record in the
    wizard, install from the panel afterwards** — an import needs a reachable
