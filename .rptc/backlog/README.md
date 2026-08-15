@@ -127,6 +127,10 @@ Also resolved since last index (now archived to `../complete/`): **oversized tes
 
 ### A. Active front (nearest to actionable — nothing here is in progress)
 
+#### Catalog prewarm 401s on every new storefront ([`pdp-prewarm-401-after-admin-pinning.md`](pdp-prewarm-401-after-admin-pinning.md))
+
+**We close the door ourselves.** `prewarmOne` POSTs to the `prepublish-pdp` action with no headers at all (verified: `catalogPrewarmService.ts:341-358` passes only a method and a timeout signal), while storefront setup pins an admin at registration two minutes earlier — and any `access.admin` role closes the whole Helix admin API to anonymous callers, a rule the `eds-publish-and-config` skill already documents. Result: `0/39 succeeded`, systemic. The larger question is UNPROVEN and decides the severity: the runtime smart-404 fallback derives its trigger from the same action (`pdp404HandlerPublisher.ts:141`), so BYOM PDP routing may be broken end to end rather than merely cold — the item names the one probe that would settle it. Affects every package with `byomOverlayUrl`. Fix may belong in `accs-discovery-service`. Filed 2026-08-15.
+
 #### `delete_mesh` deletes whatever the CLI last selected ([`mesh-delete-untargeted.md`](mesh-delete-untargeted.md))
 
 **Destructive, cloud-side, both surfaces.** `handleDeleteApiMesh` validates `workspaceId` then runs `aio api-mesh delete --autoConfirmAction` without passing it, and targets no org — so the CLI falls back to its process-global `aio console where` selection, which this codebase deliberately stopped maintaining. Mesh check and deploy ARE targeted; delete is the odd one out. The safety-net guard cannot warn because `ORG_SCOPED_AIO` matches the colon form (`api-mesh:`) while the command uses the space form — and the guard's tests pin only colon spellings, so they share the blind spot. Reachable from the dashboard AND `delete_mesh`. Not reproduced live; reproduce before fixing. Filed 2026-08-14.
