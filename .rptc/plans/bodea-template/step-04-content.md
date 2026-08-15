@@ -43,15 +43,26 @@ removed dashboards · 8 Razer pages · ~12 `index-2`/`index-3-copy`/`-copy-copy`
 `/customer/*` (the `accountContentSource` overlay supplies these) · apparel pages ·
 medal-rack + uniform material · `/quiz-router` (block dropped).
 
-## Mechanism
+## Mechanism — and the framing that matters
 
-`DaLiveContentCopy.copyContentFromSource(source, destOrg, destSite, progress, contentPatchIds,
-contentPatchSource, …)` already takes an arbitrary source and destination **and applies content
-patches (per-page HTML search/replace) during the copy** — exactly the re-pointing tool needed.
+**`bodea-source` is OUR content repo, and after the migration its content is canonical.** That is
+the whole point of owning it. Patches are a copy-time adaptation for a source someone *else*
+controls (citisignal patches `demo-system-stores` content because we cannot edit it). We can edit
+ours, so nothing about Bodea should be patch-shaped in steady state.
 
-**Bake the corrected content into `bodea-source` once**, rather than patching on every project
-creation: content patches exist for sources we do not own, and we own this one. Project creation
-then copies clean content with no per-create rewriting.
+Concretely:
+- The Jen → `bodea-source` migration is a **one-time transform**, not a mechanism. Any tool is
+  fine (a script, or `copyContentFromSource` with its patch hook used as a convenient transform);
+  it runs once and is then done.
+- **`contentPatches` / `contentPatchSource` stay ABSENT from the bodea package** — verified in
+  `demo-packages.json` for both storefronts. Project creation copies our content verbatim, with
+  no per-create rewriting and nothing to keep in sync.
+- Any later catalog change is edited **directly in `bodea-source`**, where it is visible and
+  reviewable — never re-derived from Jen's site or layered as a patch. Her site is an ancestor,
+  not an upstream: after the migration we never read from it again.
+
+(Contrast `codePatchSource`, which stays and *should* — that patches `boilerplate-b2b-template`,
+which we genuinely do not own.)
 
 ## Sequence
 
