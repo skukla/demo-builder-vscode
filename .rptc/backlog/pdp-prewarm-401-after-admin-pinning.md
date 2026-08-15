@@ -448,9 +448,78 @@ issuing the same request shapes the patched code now sends:
 | revoke with raw id | **400** — the old bug, reproduced in the same run |
 | cleanup | 0 probe keys remaining |
 
-So the EXTENSION half of Fix B is proven end to end. What remains unproven is
-the ACTION half: the `register-publish-key` endpoint does not exist, and
-`validateCallerToken` has not been exercised with a `darkalley` DA.live token.
+So the EXTENSION half of Fix B is proven end to end.
+
+### ACTION-HALF AUTH PROVEN 2026-08-15
+
+`validateCallerToken` accepts the `darkalley` DA.live token the extension
+already holds. Probed against the DEPLOYED `discover-stores` on Stage:
+
+| Request | Result |
+|---|---|
+| no auth | 401 `Missing Authorization header` (control) |
+| **DA.live bearer** | **400 `Missing required parameter: accsEndpoint`** |
+| garbage bearer | 401 `Token is invalid or expired` (control) |
+
+A 400 is the parameter check, which sits AFTER token validation, the
+allowlist-present gate and the email-domain check — so the token cleared every
+auth gate. `register-publish-key` can reuse that chain verbatim, and the
+extension needs no new credential.
+
+Still unproven, and unreachable by probe: the endpoint itself, the encrypted
+per-site store, and `prepublish-pdp` reading the key. Those need code and a
+Stage deploy. Once deployed the same approach finishes the chain in two calls —
+POST a key to the register endpoint with the DA.live bearer, then hit
+`prepublish-pdp` anonymously as the browser does and expect 200 on a locked site.
+
+### A SITE CONFIG WRITE DESTROYS THE KEY — measured 2026-08-15
+
+**This is a required part of the design, not an optimization.**
+
+`apiKeys` is a top-level key INSIDE the site config document, beside `access`.
+`updateSiteConfig` is delete-then-re-register and runs on EVERY project edit, so
+it takes the key with it — the same mechanism that ate the admin roster.
+
+Measured on `skukla/demo-builder-test` (full backup taken first; config and
+roster restored and verified by re-read afterwards):
+
+| Step | Result |
+|---|---|
+| mint publish key | id `uKC2O/Sn+AM/…` — contained BOTH `/` and `+` |
+| keys before delete | 1 |
+| `DELETE` site config | 204 |
+| re-register | 201 |
+| **keys after** | **0 — WIPED** |
+| `access/admin` after | 404 — wiped, as already known |
+
+Two consequences, one of them not obvious:
+
+1. **You cannot capture-and-restore a key the way `captureSiteGrants` restores
+   the roster.** An email list is readable; a key value is not — per
+   `aem.live/docs/admin-apikeys` it "is never stored in our system and can not
+   be retrieved at a later time", and the listing returns metadata only. There
+   is nothing to restore. The only workable shape is **re-mint and re-register
+   after any site config write.**
+2. **There is a latent cache bug in TODAY's code.** `createAdminApiKey` persists
+   the key in SecretStorage for `min(7 days, server expiry)`, but a config write
+   destroys it server-side. The extension would serve a cached value for a key
+   that no longer exists and publish with it → 401. Any config write must
+   invalidate the local entry too (`HelixService.apiKeyCache` + the persisted
+   store), not just re-mint.
+
+Incidental but useful: that key id carried `+` as well as `/`, which MEASURES
+the `+`→`-` half of `toUrlSafeKeyId` that was previously only inferred.
+
+### Manage Site Access QuickPick — needs updating
+
+`manageSiteAccess.ts` answers "who can administer this storefront" with the
+email roster only. Once publish keys exist on sites, a credential that can write
+to the site is invisible there and revocable through no UI. Worth listing keys
+alongside admins — `deleteAdminApiKey` already exists to do the removing.
+
+The sharper reason: given the wipe above, a key shown in that picker can vanish
+on the next project edit while the extension still believes it holds one. Any
+key surface must read through to the server rather than trusting local state.
 
 ### Decide deliberately before building — SUPERSEDED, kept for the reasoning
 

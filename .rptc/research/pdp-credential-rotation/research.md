@@ -139,14 +139,49 @@ a PDP with that key alone → **200**; no-auth control → 401; revoke with URL-
 revoke with raw id → **400** (the old bug, reproduced in the same run); cleanup left 0
 probe keys. The extension half of Fix B is therefore proven; the action half is not.
 
+## The rotation trigger is not just time — it is any site config write
+
+Measured 2026-08-15. `apiKeys` lives INSIDE the site config document, beside
+`access`. `updateSiteConfig` is delete-then-re-register and runs on every project edit,
+so it destroys the key: keys before delete 1 → `DELETE` 204 → re-register 201 → keys
+after **0**. `access/admin` went to 404 in the same run, which is the already-known
+mechanism.
+
+**Restore is impossible, so this is not the grants bug again.** `captureSiteGrants` works
+because an email roster is readable. A key value is not — per `admin-apikeys` it "is never
+stored in our system and can not be retrieved at a later time", and the listing returns
+metadata only. The only workable shape is **re-mint and re-register after any site config
+write**, which the extension can do with the DA.live bearer it already holds.
+
+**And it exposes a latent bug in today's code.** `createAdminApiKey` persists for
+`min(7 days, server expiry)`, but a config write destroys the key server-side. The
+extension would serve a cached value for a key that no longer exists and publish with it →
+401. A config write must invalidate `HelixService.apiKeyCache` and the persisted entry, not
+merely schedule a re-mint.
+
+So the rotation design has two triggers, not one:
+1. time — the existing ≤7-day re-mint, well inside the ~1-year server expiry
+2. **event — any site config write** (create, reset, edit, repair)
+
+## The action half: authentication is proven
+
+`validateCallerToken` accepts the `darkalley` DA.live token, probed against the DEPLOYED
+`discover-stores`: no auth → 401 `Missing Authorization header`; DA.live bearer → **400
+`Missing required parameter: accsEndpoint`**; garbage bearer → 401 `Token is invalid or
+expired`. The 400 is the parameter gate, which sits after token validation, the
+allowlist-present check and the email-domain check — so the token cleared them all. The
+register endpoint can reuse that chain verbatim.
+
+Unreachable by probe until built: the endpoint, the encrypted per-site store, and
+`prepublish-pdp` reading the key.
+
 ## Verify before building
 
 1. ~~That SCs use distinct GitHub namespaces.~~ **Moot** under site scope — it only
    mattered for keying an org-wide param map.
-2. **That `validateCallerToken` accepts a `darkalley` DA.live token.** It introspects
-   against the token's own `client_id`, so it should — but it has only been exercised with
-   CLI tokens, and `discover-stores` has no test for its guard chain (only the lib beneath
-   it is covered).
+2. ~~That `validateCallerToken` accepts a `darkalley` DA.live token.~~ **PROVEN** — see
+   "The action half" above. (`discover-stores` still has no test for its guard chain; only
+   the lib beneath it is covered.)
 3. **That `aio runtime action update --param` without a source file preserves deployed
    code.** Undocumented. And Adobe warns twice that **all** params must be passed in one
    call — omitted ones silently disappear.
