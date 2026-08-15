@@ -48,6 +48,23 @@ export {
  */
 export { DatapackCard } from './ui/components/DatapackCard';
 
+/**
+ * The request hook — exported for that same caller, and for the reason the hook
+ * exists at all.
+ *
+ * A handler's reply reaches the webview WHOLE: `{success, data, error}`, because
+ * the communication manager sends the entire `HandlerResponse` as the payload.
+ * A consumer reaching for `data.items` off the raw `useVSCodeRequest` therefore
+ * reads a field the envelope does not have, and a guard refusal
+ * (`success:false`) arrives looking exactly like a success. The wizard hit both
+ * at once: its sample-data list was empty forever and said nothing about why.
+ * Anything calling a Data Installer handler goes through this.
+ */
+export {
+    useDataInstallerRequest,
+    type DataInstallerFailure,
+} from './ui/hooks/useDataInstallerRequest';
+
 export type {
     DatapackId,
     DatapackSummary,

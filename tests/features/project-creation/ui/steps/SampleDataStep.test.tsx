@@ -14,6 +14,14 @@
  * it does not reuse is the flyout: opening detail needs `get-datapack-detail`
  * registered too, and the wizard keeps its handler surface at the one read it
  * needs. Here a card press CHOOSES.
+ *
+ * **The mock returns the ENVELOPE, and that is load-bearing.** A handler's reply
+ * reaches the webview whole — `{success, data, error}` — because the
+ * communication manager sends the entire `HandlerResponse` as the payload
+ * (`webviewCommunicationManager.ts:383`). An earlier fixture here returned the
+ * unwrapped page, so `data.items` read true in tests and `undefined` in the Dev
+ * Host: the step rendered "None" and nothing else, every time, while eight green
+ * tests said otherwise. Mocking the envelope makes the real unwrapping run.
  */
 
 import React from 'react';
@@ -32,6 +40,16 @@ jest.mock('@/core/ui/hooks/useVSCodeRequest', () => ({
         return { execute: mockExecute, reset: jest.fn(), ...mockState };
     },
 }));
+
+/** A handler reply as it really arrives: the whole envelope, not the payload. */
+function envelope(data: unknown) {
+    return { loading: false, error: null, data: { success: true, data } };
+}
+
+/** A guard refusal — `success:false` with a reason. It does NOT reject. */
+function refusal(message: string) {
+    return { loading: false, error: null, data: { success: false, error: message } };
+}
 
 const mockTypes: string[] = [];
 
@@ -82,8 +100,12 @@ function cardFor(displayName: string): HTMLElement {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    // The real hook awaits `execute` and attaches `.catch` — a bare jest.fn()
+    // returns undefined and blows up inside it. The mock has to be shaped like
+    // the thing it stands in for.
+    mockExecute.mockResolvedValue(undefined);
     mockTypes.length = 0;
-    mockState = { loading: false, error: null, data: CATALOG };
+    mockState = envelope(CATALOG);
 });
 
 describe('SampleDataStep', () => {
@@ -178,10 +200,105 @@ describe('SampleDataStep', () => {
 
     /** A catalog that cannot load must not block creating the project. */
     it('explains a failed catalog without offering a broken list', async () => {
-        mockState = { loading: false, error: new Error('offline'), data: null };
+        mockState = refusal('The Data Installer is not configured.');
         renderStep();
 
         await waitFor(() => expect(screen.getByText(/could not be loaded/i)).toBeInTheDocument());
         expect(screen.queryByTestId('datapack-card')).not.toBeInTheDocument();
+    });
+});
+
+/**
+ * Filtering, the same way the panel's catalog does it.
+ *
+ * `matchesSearchFields` rather than a local includes(): the panel's catalog
+ * already matches on `name` + `displayName` and nothing else, and a second
+ * matching rule here would be a second answer to "does this pack match".
+ *
+ * The service cannot help. Its `datapack_name` is half of an IDENTITY —
+ * `(datapack_name, version)`, and the docs are explicit that "a lookup by name
+ * alone has no answer" — so there is no server-side search to call. The whole
+ * catalog is 40 rows for 25 names and is already fetched, so the filter is local
+ * and instant.
+ */
+describe('SampleDataStep — filtering', () => {
+    async function typeQuery(text: string) {
+        const field = screen.getByRole('searchbox', { name: /filter sample data/i });
+        fireEvent.change(field, { target: { value: text } });
+    }
+
+    it('narrows the packs to the ones that match', async () => {
+        renderStep();
+        await waitFor(() => expect(cardFor('Bodea')).toBeInTheDocument());
+
+        await typeQuery('citi');
+
+        expect(screen.getAllByTestId('datapack-card')).toHaveLength(1);
+        expect(cardFor('CitiSignal')).toBeInTheDocument();
+    });
+
+    /** The label is what the user reads; the id is what they may have been told. */
+    it('matches the id as well as the display name', async () => {
+        renderStep();
+        await waitFor(() => expect(cardFor('Bodea')).toBeInTheDocument());
+
+        await typeQuery('citisignal_new');
+
+        expect(screen.getAllByTestId('datapack-card')).toHaveLength(1);
+    });
+
+    it('ignores case', async () => {
+        renderStep();
+        await waitFor(() => expect(cardFor('Bodea')).toBeInTheDocument());
+
+        await typeQuery('BODEA');
+
+        expect(cardFor('Bodea')).toBeInTheDocument();
+    });
+
+    it('restores every pack when the query is cleared', async () => {
+        renderStep();
+        await waitFor(() => expect(cardFor('Bodea')).toBeInTheDocument());
+
+        await typeQuery('citi');
+        await typeQuery('');
+
+        expect(screen.getAllByTestId('datapack-card')).toHaveLength(2);
+    });
+
+    /**
+     * None is the opt-out, not a catalog entry, so a query never hides it.
+     * Filtering it away would leave a radio group with nothing selectable at the
+     * moment the user has decided they want nothing.
+     */
+    it('keeps None visible under any query', async () => {
+        renderStep();
+        await waitFor(() => expect(cardFor('Bodea')).toBeInTheDocument());
+
+        await typeQuery('zzzz-no-such-pack');
+
+        expect(screen.getByRole('radio', { name: 'None' })).toBeInTheDocument();
+        expect(screen.queryByTestId('datapack-card')).not.toBeInTheDocument();
+    });
+
+    it('says so when nothing matches, rather than showing a bare empty grid', async () => {
+        renderStep();
+        await waitFor(() => expect(cardFor('Bodea')).toBeInTheDocument());
+
+        await typeQuery('zzzz-no-such-pack');
+
+        expect(screen.getByText(/no sample data matches/i)).toBeInTheDocument();
+    });
+
+    /** A choice already made must survive a query that hides its card. */
+    it('keeps the recorded choice when a query hides it', async () => {
+        const { updateState } = renderStep({
+            datapack: { name: 'bodea', version: 'main' },
+        } as Partial<WizardState>);
+        await waitFor(() => expect(cardFor('Bodea')).toBeInTheDocument());
+
+        await typeQuery('citi');
+
+        expect(updateState).not.toHaveBeenCalled();
     });
 });

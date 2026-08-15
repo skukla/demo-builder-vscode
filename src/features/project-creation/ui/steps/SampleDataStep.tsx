@@ -28,29 +28,59 @@
  * @module features/project-creation/ui/steps/SampleDataStep
  */
 
+import { SearchField } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
-import { useVSCodeRequest } from '@/core/ui/hooks/useVSCodeRequest';
+import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import {
     DatapackCard,
     groupDatapacks,
     pickDefaultVersion,
+    useDataInstallerRequest,
     type DatapackGroup,
     type DatapackSummary,
     type Page,
 } from '@/features/data-installer';
 import type { BaseStepProps } from '@/types/wizard';
 
+/**
+ * What a query is matched against — the id and the label, nothing else.
+ *
+ * The same two fields the panel's catalog uses. A second matching rule here
+ * would be a second answer to "does this pack match".
+ */
+const SEARCH_FIELDS: ReadonlyArray<keyof DatapackGroup> = ['name', 'displayName'];
+
 export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX.Element {
-    const { execute, error, data } = useVSCodeRequest<Page<DatapackSummary>>('find-datapacks');
+    // `useDataInstallerRequest`, never the raw `useVSCodeRequest`. A handler's
+    // reply arrives WHOLE — `{success, data, error}` — so `data.items` off the raw
+    // hook reads a field the envelope has not got, and a guard refusal comes back
+    // looking exactly like a success. This step had both bugs: an empty list
+    // forever, with no reason shown.
+    const { load, loading, value, failure } = useDataInstallerRequest<Page<DatapackSummary>>(
+        'find-datapacks',
+    );
 
     useEffect(() => {
         // Curated only: the community half of the catalog is developer scratch,
         // and this is a first-run choice, not a browsing surface.
-        void execute({ includeCommunity: false });
-    }, [execute]);
+        load({ includeCommunity: false });
+    }, [load]);
 
-    const groups = useMemo(() => groupDatapacks(data?.items ?? []), [data]);
+    const groups = useMemo(() => groupDatapacks(value?.items ?? []), [value]);
+
+    /**
+     * Filtered locally, because the service offers nothing else. Its
+     * `datapack_name` is half of an IDENTITY — `(datapack_name, version)`, and
+     * the docs are explicit that "a lookup by name alone has no answer" — so
+     * there is no search endpoint to call. The catalog is 40 rows for 25 names
+     * and already fetched whole, so a local filter is both possible and instant.
+     */
+    const [query, setQuery] = useState('');
+    const visible = useMemo(
+        () => groups.filter((group) => matchesSearchFields(group, SEARCH_FIELDS, query)),
+        [groups, query],
+    );
     const chosen = state.datapack;
 
     /**
@@ -102,15 +132,27 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                 takes several minutes to import.
             </p>
 
-            {error ? (
+            {failure ? (
                 <p className="sample-data-note">
-                    The sample data catalog could not be loaded. You can still create this project
-                    and choose sample data later from the dashboard.
+                    The sample data catalog could not be loaded — {failure.message} You can still
+                    create this project and choose sample data later from the dashboard.
                 </p>
             ) : (
-                <div className="sample-data-grid" role="radiogroup" aria-label="Sample data">
-                    <NoSampleData isSelected={!chosen} onSelect={clear} />
-                    {groups.map((group) => (
+                <>
+                    <SearchField
+                        aria-label="Filter sample data"
+                        placeholder="Filter sample data..."
+                        value={query}
+                        onChange={setQuery}
+                        width="100%"
+                    />
+                    <div className="sample-data-grid" role="radiogroup" aria-label="Sample data">
+                        {/* None is the opt-out, not a catalog entry, so no query
+                            hides it — filtering it away would leave the group with
+                            nothing selectable exactly when the user wants nothing. */}
+                        <NoSampleData isSelected={!chosen} onSelect={clear} />
+                        {loading ? <p className="sample-data-note">Loading sample data…</p> : null}
+                        {visible.map((group) => (
                         <DatapackCard
                             key={group.name}
                             group={group}
@@ -122,7 +164,13 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                             selected={chosen?.name === group.name}
                         />
                     ))}
-                </div>
+                    </div>
+                    {query && visible.length === 0 && !loading ? (
+                        <p className="sample-data-note">
+                            No sample data matches “{query}”.
+                        </p>
+                    ) : null}
+                </>
             )}
         </div>
     );
