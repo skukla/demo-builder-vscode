@@ -37,6 +37,7 @@ import {
 import { downloadWorkspaceConfigJson } from '../services/workspaceConfigDownload';
 import type { ImportJobRecord } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
+import { exportHandlers } from './exportHandlers';
 import { ServiceLocator } from '@/core/di';
 import { PollingService } from '@/core/shell/pollingService';
 import { TransientStateManager } from '@/core/state/transientStateManager';
@@ -80,6 +81,9 @@ interface StartImportPayload {
 }
 
 export const importHandlers = defineHandlers({
+    // Stage 3 lives in its own module; merged here so the panel and the tests
+    // keep ONE handler map to reach for.
+    ...exportHandlers,
     'start-datapack-import': async (
         context: HandlerContext,
         payload?: StartImportPayload,
@@ -558,6 +562,7 @@ async function runAndWatch(
         };
     }
 }
+
 
 /** Validate the payload, returning either usable input or the reason it is not. */
 function readInput(
