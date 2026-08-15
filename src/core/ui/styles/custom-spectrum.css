@@ -738,6 +738,18 @@ button[class*="spectrum-Button"][disabled],
     align-self: center !important;
     flex: 0 0 auto !important;
 }
+/* A dialog wider than Spectrum's largest `size`.
+   Same shape of problem as `.modal-fit-content` above, on the other axis: the
+   width is enforced by Spectrum's modal wrapper, not by the dialog's own box, so
+   both `width` and `max-width` have to be overridden on the element the wrapper
+   sizes. Capped against the viewport so a narrow editor pane still fits.
+   Added for the Data Installer's export type list — 18 names, the longest 38
+   characters, which cannot be broken and do not fit at `size="L"`. */
+.modal-wide {
+    width: min(1100px, 92vw) !important;
+    max-width: min(1100px, 92vw) !important;
+}
+
 .modal-fit-content .modal-content {
     /* No leftover height to claim, so the body must not stretch. */
     flex: 0 1 auto !important;

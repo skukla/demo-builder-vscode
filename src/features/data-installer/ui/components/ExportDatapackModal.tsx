@@ -121,6 +121,7 @@ export function ExportDatapackModal({ onClose }: ExportDatapackModalProps): Reac
                 // longest (b2b_shared_catalog_company_assignments) is 38
                 // characters. At M they either wrap mid-name or scroll.
                 size="L"
+                wide
                 title="Export a datapack"
                 onClose={onClose}
                 closeLabel="Close"
