@@ -10,8 +10,11 @@
  * @module commands/diagnosticsReport
  */
 
+import { maskEmail } from '@/core/utils/maskEmail';
 import type { SamplePdp } from '@/features/eds/services/catalogPrewarmService';
-import type { ConfigServiceProbeResult } from '@/features/eds/services/configServiceProbe';
+import {
+    type ConfigServiceProbeResult,
+} from '@/features/eds/services/configServiceProbe';
 import type { CredentialProbeResult } from '@/features/eds/services/githubCredentialProbe';
 import { describeScope } from '@/features/eds/services/servedStorefrontConfig';
 import type { StorefrontProbeResult } from '@/features/eds/services/storefrontProbe';
@@ -307,6 +310,27 @@ function configServiceLines(probe: ConfigServiceProbeResult): string[] {
     if (da?.error) lines.push(`  Same credential vs DA.live: unreachable (${da.error})`);
     else if (da) lines.push(`  Same credential vs DA.live: HTTP ${da.httpStatus}`);
 
+    // Who can grant. "Ask an admin" is unactionable without a name, and the
+    // roster's own refusal is the more useful answer when it comes: it means
+    // nobody is visible to ask, so the Code Sync setup flow is the only path.
+    // Never print an empty list \u2014 that reads as "this org has no admins", a
+    // different and much scarier claim than "you cannot see them".
+    // MASKED — this report is written to be pasted into tickets. Full addresses
+    // stay in the interactive surfaces (Manage Site Access, the wizard message),
+    // which are transient and never exported.
+    const admins = probe.orgAdmins;
+    if (admins?.status === 'ok') {
+        lines.push(
+            admins.emails && admins.emails.length > 0
+                ? `  Config admins: ${admins.emails.map(maskEmail).join(', ')}`
+                : '  Config admins: none listed on this org',
+        );
+    } else if (admins?.status === 'not_authorized') {
+        lines.push('  Config admins: not readable (403) \u2014 no admin is visible to ask');
+    } else if (admins?.status === 'failed') {
+        lines.push('  Config admins: roster read failed');
+    }
+
     lines.push(`  \u2192 ${probe.verdict}`);
     return lines;
 }
@@ -356,7 +380,14 @@ export function buildSummaryLines(report: DiagnosticsReport): string[] {
         lines.push(`  Authenticated: ${report.adobe.authConfigured ? 'Yes' : 'No'}`);
         if (report.adobe.authConfigured) {
             lines.push(`  Token Valid: ${!report.adobe.tokenExpired ? 'Yes' : 'No'}`);
-            lines.push(`  Can List Orgs: ${report.adobe.canListOrgs ? 'Yes' : 'No'}`);
+            // "Yes" only proves the command ran — an empty org list still prints
+            // Yes. The count is the finding (a token reaching 0 orgs is exactly
+            // what the org badge greys out on), so print it whenever it's known.
+            const orgCount =
+                report.adobe.canListOrgs && report.adobe.organizationCount !== undefined
+                    ? ` (${report.adobe.organizationCount} org${report.adobe.organizationCount === 1 ? '' : 's'})`
+                    : '';
+            lines.push(`  Can List Orgs: ${report.adobe.canListOrgs ? 'Yes' : 'No'}${orgCount}`);
         }
     }
 

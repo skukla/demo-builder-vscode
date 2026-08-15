@@ -32,6 +32,8 @@
  * @module features/eds/services/configServiceProbe
  */
 
+import { readOrgAdmins } from './configServiceAccess';
+import { maskEmail } from '@/core/utils/maskEmail';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -56,6 +58,15 @@ export interface ConfigServiceProbeResult {
      * Service refuses is the signature of an authorization problem.
      */
     daLive?: { httpStatus?: number; error?: string };
+    /**
+     * Who holds the admin role on the org — the leg that turns "ask an admin"
+     * into a name.
+     *
+     * Its own refusal is a finding, not a gap: a roster you cannot read means no
+     * admin is visible to ask, which is what makes the Code Sync setup flow the
+     * only remaining path (observed on `leahrayard`, 2026-08-14).
+     */
+    orgAdmins?: { status: 'ok' | 'not_authorized' | 'failed'; emails?: string[] };
     /** One-line interpretation of the legs together. */
     verdict: string;
 }
@@ -123,12 +134,27 @@ function interpret(result: ConfigServiceProbeResult): string {
 
     if (status === 403) {
         if (daLiveOk) {
-            return (
+            // Kept tight on purpose — a test caps the verdict at 400 chars so it
+            // stays pasteable into a ticket.
+            const base =
                 'The credential is valid — DA.live accepted it in the same run — but the ' +
-                'Configuration Service refused it. Not a token problem: the admin role is ' +
-                'granted to whoever installs the AEM Code Sync GitHub App on the repo. If a ' +
-                'teammate or an org admin installed it, you hold no role on this site. ' +
-                'Have the installing user re-install it under your account.'
+                'Configuration Service refused it. The admin role is minted for whoever ' +
+                'installs AEM Code Sync, so an older site can refuse its own owner. ';
+
+            // Naming a person beats naming a mechanism. Only possible when the
+            // roster is readable — and when it is NOT, that absence is the more
+            // useful finding, because it means there is nobody to ask.
+            const emails = result.orgAdmins?.emails ?? [];
+            if (result.orgAdmins?.status === 'ok' && emails.length > 0) {
+                // Cap the list: a large org would blow the length budget and
+                // bury the instruction under names.
+                const named = emails.slice(0, 3).map(maskEmail).join(', ');
+                const more = emails.length > 3 ? ` (+${emails.length - 3} more)` : '';
+                return `${base}Ask an org admin to add you under Site users: ${named}${more}.`;
+            }
+            return (
+                `${base}No org admin is visible either — open tools.aem.live/bot/setup for ` +
+                'this site and add your email under Site users, then re-run this probe.'
             );
         }
         return (
@@ -180,7 +206,7 @@ export async function probeConfigService(
 
     try {
         const response = await get(
-            `${HELIX_ADMIN_BASE_URL}/config/${org}/sites/${site}.json`,
+            `${HELIX_ADMIN_BASE_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`,
             token,
         );
         result.configService = {
@@ -196,7 +222,7 @@ export async function probeConfigService(
     // accepted ANYWHERE, which is what turns a bare 403 into a diagnosis.
     try {
         const response = await get(
-            `${DA_LIVE_ADMIN_BASE_URL}/source/${org}/${site}/index.html`,
+            `${DA_LIVE_ADMIN_BASE_URL}/source/${encodeURIComponent(org)}/${encodeURIComponent(site)}/index.html`,
             token,
         );
         result.daLive = { httpStatus: response.status };
@@ -204,10 +230,29 @@ export async function probeConfigService(
         result.daLive = { error: (error as Error).message };
     }
 
+    // Roster leg. Delegates to `readOrgAdmins` rather than re-implementing the
+    // same endpoint, filter and status mapping — both were added in the same
+    // batch, so a second copy would be duplication created, not inherited.
+    // Best-effort and never fatal: it only ADDS names to a verdict the other
+    // legs already produce, so a failure here must not cost the report its
+    // diagnosis.
+    try {
+        // Hand it the token this probe already fetched: satisfies the access
+        // module's narrower TokenProvider and avoids a second keychain read.
+        const roster = await readOrgAdmins({ getAccessToken: async () => token }, org, logger);
+        result.orgAdmins =
+            roster.status === 'ok'
+                ? { status: 'ok', emails: roster.admins ?? [] }
+                : { status: roster.status === 'not_authorized' ? 'not_authorized' : 'failed' };
+    } catch {
+        result.orgAdmins = { status: 'failed' };
+    }
+
     result.verdict = interpret(result);
     logger.debug(
         `[ConfigProbe] ${org}/${site}: config=${result.configService?.httpStatus ?? 'err'}, ` +
-            `da.live=${result.daLive?.httpStatus ?? 'err'}`,
+            `da.live=${result.daLive?.httpStatus ?? 'err'}, ` +
+            `orgAdmins=${result.orgAdmins?.emails?.length ?? result.orgAdmins?.status}`,
     );
     return result;
 }
