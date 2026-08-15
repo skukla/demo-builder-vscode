@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.129] - 2026-08-15
+
 ### Added
 
 - **You can now see and fix who administers a storefront's configuration.** A new command, **Demo Builder: Manage Site Access**, lists the people holding the Configuration Service admin role on the current project's site, and lets anyone who already holds it add or remove others. Every change is confirmed by reading the list back — a change that does not show up is reported as unverified, never as success. Removing the last admin is refused outright, because nobody could grant it back. When you hold no role yourself the command says so, names the org admins who can grant it when that list is readable, and otherwise opens the AEM setup flow and waits for access to actually change hands — reporting "still refused" if it never does.
@@ -54,6 +56,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A 401 from Adobe no longer blames GitHub.** Every one of these refusals told you to check your write access to the repository, which sent people to the one place that could not explain it. The message now names the likelier cause — a site whose access is restricted to named admins, which needs a signed-in DA.live session — and points at **Demo Builder: Manage Site Access**. Bulk preview and bulk publish are also reported separately now; a preview failure used to be logged as a publish failure.
 
 - **A storefront with the PDP handler already installed no longer reports an error.** The installer reported "not installed" when it found its work already done, so a healthy storefront printed "the smart-404 handler was not installed" and an otherwise clean run finished *with errors*.
+
+- **The wizard's Integrations step now shows the same cards as the Integrations page.** It rendered its own row layout, which repeated the deploy destination on every row — always the same Adobe project and workspace — and reached rename through a separate dialog. It now uses the card the dashboard uses: the destination is stated once above the list, and a name is edited in place. Pre-deploy the card shows where the integration came from and how many APIs it will provision, since there is no deploy status to report yet; the names of those APIs are behind Manage APIs, one click away.
+
+- **The AI Capabilities modal stops cutting its list off.** With 21 skills the list ended mid-group and the rest sat below a fold that macOS overlay scrollbars never advertise — the heading said 21 and you could see 11. The skill groups now run in two columns and the scroll region paints a persistent scrollbar. The "View Skills" link also stops moving as the badge beside it changes.
+
+- **Skills are grouped by who wrote them, not where they sit on disk.** The modal filed `diagnose-demo` under "Custom" as though you had written it, and listed App Builder skills under "Adobe AEM". Two lists described the same filenames and had drifted apart; there is now one list, and a filename without matching content is a build error rather than a silent misfile.
+
+- **A stale global MCP entry no longer blocks adding any MCP server.** Claude Code showed `[Conflicting scopes]` and refused, because the global entry still pointed at a retired server path from an older extension version while the project entry pointed at the current one — with sign-in stored per endpoint, so authenticating to one did not carry to the other. Drift detection now checks and repairs the global entry instead of skipping it.
 
 ## [1.0.0-beta.128] - 2026-08-11
 
