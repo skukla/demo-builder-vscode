@@ -256,6 +256,29 @@ authentication has 8 tools and no skill, mesh has 3 and none dedicated, prerequi
 surface at all. Step 01 is mechanical and the worklist of all 41 is written; backing research
 is `.rptc/research/ai-surface-coverage/research.md`. **Not blocked.**
 
+#### Data Installer — MCP write tools ([`2026-08-16-data-installer-mcp-write-tools.md`](2026-08-16-data-installer-mcp-write-tools.md)) — **fast-follow to phase 4**
+
+Filed 2026-08-16 during phase 4, whose plan puts `src/features/data-installer/` out of scope —
+the largest single hole in the agent surface, so the exclusion is now a scheduled decision
+rather than a permanent one. Six datapack READS are exposed and were all optimised in phase 2
+(`get_datapack_activity` 25,056 → 5,709; `list_installed_datapacks` 16,611 → 4,055). **Zero
+writes are**, though `OPERATION_MODE` has always been typed `import | export | delete |
+validate`. Nine real unexposed handlers, read from the maps: import start/validate/status/
+target/scopes/reset, credential provisioning, export start/list.
+
+Two things changed since the exclusion was written. The credential blocker moved — develop
+landed the shared-credential broker (ADR-014) and research established one Commerce credential
+reaches every instance in its org. And phase 2 produced six concrete optimisations (page-size
+defaults, no dashboard-only fields, index/detail, never fabricate an envelope field, a recorded
+ceiling per tool, pollable progress) that should go in from day one rather than as a later pass.
+
+**Also records a measurement defect worth its own item:** `ai-coverage-scan` reported 31
+unexposed data-installer handlers; reading the maps gives 9. Its extractor matches handler keys
+by regex across a whole file and counts nested object keys (`auth: context.authManager`, and
+`success`/`data`/`context` inside handler bodies). A depth-aware parser written to check it also
+failed its control. The same inflation applies to every map the scan reports, so no phase-4
+number should be sized from it without reading. **Not blocked.**
+
 #### App Builder deployable model — the unresolved gaps ([`appbuilder-deployable-model/`](appbuilder-deployable-model/overview.md))
 
 Moved from `plans/` 2026-08-13. **Corrected the same day: an earlier version of this entry said
