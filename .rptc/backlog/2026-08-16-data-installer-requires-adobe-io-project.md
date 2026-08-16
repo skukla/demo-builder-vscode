@@ -3,15 +3,19 @@
 > **DECIDED 2026-08-16 — read this first.** This item is now the RECORD of how the decision
 > was reached, not an open question. The work split in two:
 >
-> - **Option 1 (active):** `.rptc/complete/data-installer-credential-broker/overview.md` — one
->   shared `demo-builder-s2s` pair served from the discovery service's project in the org
->   where the Commerce instances live.
+> - **Option 1 (SHIPPED to develop 2026-08-16):**
+>   `.rptc/complete/data-installer-credential-broker/overview.md` — one shared
+>   `demo-builder-s2s` pair served from the discovery service's project in the org where the
+>   Commerce instances live. Proven end to end, including a write.
 > - **Option 2 (backlog):** `.rptc/backlog/per-sc-io-project.md` — per-SC Adobe I/O project
 >   for discovery, prerender, mesh and integration packages.
 >
 > The credential stays behind when everything else moves, because reach follows the org where
-> the COMMERCE INSTANCES live rather than where the SC works. Whether that is escapable is
-> `step-05` of the Option 1 plan, scheduled after it ships.
+> the COMMERCE INSTANCES live rather than where the SC works. **`step-05` has since answered
+> whether that is escapable: it is not**, and for a sharper reason than reach — a credential
+> in the SC org cannot be subscribed to `ACCS-REST-API` at all, because that org carries no
+> ACCS product profile. The subscription IS the entitlement, so the credential never gains
+> `commerce.accs`.
 >
 > Sections below record the reasoning, including two framings that turned out wrong. Kept
 > deliberately: the wrong turns are why the constraint is now stated precisely.
