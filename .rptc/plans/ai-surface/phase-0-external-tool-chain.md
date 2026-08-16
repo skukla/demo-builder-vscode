@@ -108,15 +108,58 @@ than failing, because *"some call sites legitimately have no project yet"*
 (`commandExecutor.ts:107-119`). The real defect is that its pattern list misses commands, not that
 it warns. Do not propose failing until someone has counted how often it would fire.
 
-## Runtime half — NOT DONE
+### Live probe — ground truth, 2026-08-16
 
-Needs a running extension host:
+Connected to the running extension's UDS socket directly (same JSON-RPC the
+`mcpToolProbe` uses: `initialize` → `tools/list`). No pasting, no test harness.
 
-- **Playwright's tool list is unmeasured.** Read it; do not estimate.
-- **Reconcile the declaration against `verify_ai_setup`'s `inventory.mcps[]`**, which spawns each
-  server and lists what it really exposes.
-- **The true surface size.** The measured ~1,175 tokens of descriptions covers demo-builder only.
-  Until the real figure exists, the withdrawn tool-scoping argument stays withdrawn but unsettled.
+| | |
+|---|---|
+| Tools exposed | **52** — matches the source sweep exactly, validating the inventory |
+| name + description | **7,348 chars ≈ 1,837 tokens** |
+| datapack tools present | **0** — confirms this host is a develop baseline, not the integration build |
+
+The datapack check is the tree-provenance test: `>0` means the running host has
+`feature/data-installer` merged and its numbers must not be mixed with develop's. Run it before
+trusting any live measurement.
+
+### The real surface is ~129 tools, not 52
+
+| Server | Tools | Source |
+|---|---|---|
+| demo-builder | 52 | live probe |
+| commerce-extensibility | 11 | `src/tools/` in the installed 3.5.0 package |
+| playwright | 66 | its README's tool list |
+| **Total** | **~129** | |
+
+**Playwright alone ships more tools than the extension does.** These are three separate MCP
+servers the client loads together; only demo-builder comes through the socket above.
+
+### REOPENED: "tool-surface size is not a cost"
+
+That claim was withdrawn earlier on a measurement of ~1,175 tokens. **Both halves of it were
+wrong:**
+
+1. The figure was low. Grepping `description:` literals in source missed tool names and parameter
+   descriptions — the live schema is **1,837 tokens**, not 1,175.
+2. It counted demo-builder only, which is **40% of the surface an agent actually carries**.
+
+So the withdrawal is itself withdrawn. Per-task tool scoping is **undecided again**, and the
+honest number is unknown until the Playwright subset question below is answered. Do not cite
+either the 1,175 or the "not a cost" conclusion.
+
+### Still unmeasured
+
+**Whether Playwright exposes all 66 tools or a configured subset.** 66 is its README's full list;
+the count depends on config. This does not come through the demo-builder socket — it needs the
+client's view, which `verify_ai_setup` provides by spawning each server and inventorying it.
+That is the last open item in this phase.
+
+## Runtime half — mostly done
+
+Done via the live probe and package sources above. **One item remains**: reconcile against
+`verify_ai_setup`'s `inventory.mcps[]` to learn whether Playwright's 66 are all exposed. Until
+then the ~129 figure is an upper bound.
 
 ## What the audit must answer
 

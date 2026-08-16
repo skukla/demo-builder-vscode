@@ -15,7 +15,7 @@ files; this sequences them and holds what is known about each.
 | **Guidance** | Does it know when and how? | 21 skills, all task- or reference-shaped; no open-ended design skill |
 | **Enforcement** | Does it get things wrong anyway? | 11 of 24 documented conventions are prose only; one hook, and it syncs rather than guards |
 | **Roles** | Who does the work? | No agent definitions ship at all |
-| **The chain** | What ELSE is in the agent's surface? | Two external MCPs ship into projects; one writes state the extension deliberately stopped writing |
+| **The chain** | What ELSE is in the agent's surface? | **~129 tools, not 52** — 52 ours + 11 commerce-extensibility + 66 playwright; one external tool writes state the extension deliberately stopped writing |
 
 Evidence: seven parallel research agents, 2026-08-16, all cited in the phase files. Earlier
 research at `.rptc/research/ai-surface-coverage/research.md` (2026-08-12).
@@ -42,8 +42,11 @@ the notes say what each ordering buys.
 - **No new generated skills unless multi-step-with-traps** (2026-07-11, shipped work).
 - **Do not add agents to save tokens.** Measured: a ~121,000-token derivation was performed BY a
   subagent. Isolation moves where cost is paid; it does not reduce it.
-- **Tool-surface size is NOT a cost** — 52 descriptions ≈ 1,175 tokens/session. The contrary claim
-  was measured and withdrawn; do not re-propose per-task tool scoping on it.
+- **Tool-surface size is UNDECIDED — the earlier "not a cost" ruling is reopened.** It rested on
+  ~1,175 tokens measured by grepping source; the live probe says **1,837** for demo-builder, and
+  demo-builder is only 52 of a **~129-tool** surface (11 commerce-extensibility + 66 playwright).
+  Playwright alone ships more tools than the extension. Do not cite the 1,175 figure or the
+  "not a cost" conclusion; both were measured against 40% of the real surface.
 - **Never call a destructive tool to measure it**, and never enumerate-and-call with `{}`:
   19 tools mutate state ungated and 8 take no required arguments.
 - **Two org-targeting models coexist in one project.** The extension targets `aio` per-operation
