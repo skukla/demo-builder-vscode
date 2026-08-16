@@ -19,6 +19,7 @@ import {
     connectAndInit,
     listToolsOverSocket,
     makeLogger,
+    serverInfoOverSocket,
 } from './inExtensionMcpServer.testUtils';
 
 describe('InExtensionMcpServer', () => {
@@ -49,6 +50,62 @@ describe('InExtensionMcpServer', () => {
                 fs.rmSync(path.join(os.tmpdir(), name), { force: true });
             }
         }
+    });
+
+    // Every window computes the same socket name (sha256 of the projects root)
+    // and the last to bind silently owns it, so a client has no way to tell WHICH
+    // extension host answered — reproduced 2026-08-16, two probes of one path
+    // minutes apart returning 52 then 58 tools. serverInfo.version is the field
+    // every MCP client already reads, and it was a hardcoded '1.0.0' doing no
+    // work. This does not fix the binding race; it makes it visible.
+    describe('serverInfo names the serving host', () => {
+        it('reports the build label when one is supplied', async () => {
+            server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
+                buildLabel: 'develop@9895a6a6 built 2026-08-16T00:00:00Z from /checkout',
+            });
+            await server.start();
+
+            const info = await serverInfoOverSocket(socketPath);
+
+            expect(info.name).toBe('demo-builder');
+            expect(info.version).toBe('develop@9895a6a6 built 2026-08-16T00:00:00Z from /checkout');
+        });
+
+        it('falls back to the static version when the stamp is unreadable', async () => {
+            server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
+            await server.start();
+
+            const info = await serverInfoOverSocket(socketPath);
+
+            expect(info.version).toBe('1.0.0');
+        });
+
+        it('distinguishes two hosts that serve identical tool sets', async () => {
+            // The failure mode the peer could only spot because one build had
+            // datapack tools and the other did not. On two hosts of the same
+            // branch it was undetectable; here both serve the same catalogue.
+            const otherSocket = path.join(os.tmpdir(), `dbmcp-test-other-${Date.now()}.sock`);
+            server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
+                buildLabel: 'develop@aaaaaaa built X from /checkout-a',
+            });
+            const other = new InExtensionMcpServer(otherSocket, projectsDir, makeLogger(), {
+                buildLabel: 'develop@bbbbbbb built X from /checkout-b',
+            });
+            await server.start();
+            await other.start();
+
+            try {
+                expect(await listToolsOverSocket(socketPath)).toEqual(
+                    await listToolsOverSocket(otherSocket)
+                );
+                const a = await serverInfoOverSocket(socketPath);
+                const b = await serverInfoOverSocket(otherSocket);
+                expect(a.version).not.toBe(b.version);
+            } finally {
+                other.dispose();
+                fs.rmSync(otherSocket, { force: true });
+            }
+        });
     });
 
     it('serves the nine project tools over the socket', async () => {
@@ -82,7 +139,9 @@ describe('InExtensionMcpServer', () => {
                 [{ tool: 'ping_tool', description: 'test', map: extraMap, type: 'ping' }],
                 () => ({}) as HandlerContext
             );
-        server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), registerExtra);
+        server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
+            registerExtraTools: registerExtra,
+        });
         await server.start();
 
         const names = await listToolsOverSocket(socketPath);
@@ -248,14 +307,9 @@ describe('InExtensionMcpServer', () => {
         // leaves the socket file behind (see inExtensionMcpServer.socketOwnership
         // .test.ts), so file absence would no longer measure the leak.
         const unbindable = path.join(socketPath + '-no-such-dir', 'x.sock');
-        const half = new InExtensionMcpServer(
-            socketPath,
-            projectsDir,
-            makeLogger(),
-            undefined,
-            undefined,
-            unbindable
-        );
+        const half = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
+            secondarySocketPath: unbindable,
+        });
 
         await expect(half.start()).rejects.toThrow();
         await new Promise((r) => setTimeout(r, 50));
@@ -287,14 +341,9 @@ describe('InExtensionMcpServer', () => {
     it('binds the secondary socket when it differs from the primary (workspace = project folder)', async () => {
         const id = Math.random().toString(16).slice(2, 10);
         const secondarySocketPath = path.join(os.tmpdir(), `dbmcp-test-secondary-${id}.sock`);
-        server = new InExtensionMcpServer(
-            socketPath,
-            projectsDir,
-            makeLogger(),
-            undefined,
-            undefined,
-            secondarySocketPath
-        );
+        server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
+            secondarySocketPath: secondarySocketPath,
+        });
         await server.start();
 
         // Both sockets should accept connections and return the same tool list.
@@ -313,14 +362,9 @@ describe('InExtensionMcpServer', () => {
         // When the always-root model holds, secondarySocketPath collapses to
         // the primary. The server should detect this and bind once, not twice.
         const logger = makeLogger();
-        server = new InExtensionMcpServer(
-            socketPath,
-            projectsDir,
-            logger,
-            undefined,
-            undefined,
-            socketPath // same path as primary — dedup expected
-        );
+        server = new InExtensionMcpServer(socketPath, projectsDir, logger, {
+            secondarySocketPath: socketPath, // same path as primary — dedup expected
+        });
         await server.start();
 
         // "in-extension server listening on" log should fire exactly once.
@@ -338,14 +382,9 @@ describe('InExtensionMcpServer', () => {
     it('dispose() closes BOTH sockets when dual-listen is active', async () => {
         const id = Math.random().toString(16).slice(2, 10);
         const secondarySocketPath = path.join(os.tmpdir(), `dbmcp-test-secondary-${id}.sock`);
-        server = new InExtensionMcpServer(
-            socketPath,
-            projectsDir,
-            makeLogger(),
-            undefined,
-            undefined,
-            secondarySocketPath
-        );
+        server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
+            secondarySocketPath: secondarySocketPath,
+        });
         await server.start();
         server.dispose();
         await new Promise((r) => setTimeout(r, 50));
