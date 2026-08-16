@@ -113,10 +113,10 @@ subagent — isolation does not make the work cheap, it only moves where it is p
 - **Visual feedback is one step from existing.** `get_project_urls` already knows the storefront
   URLs and the Playwright MCP is already wired into generated projects. Nothing closes the loop
   ("render my storefront and show me"), so every agent reinvents it.
-- **Tool-surface size is itself a cost.** `toolDescriptors.ts` notes descriptions are "kept terse
-  — it rides in context every session". At 58 tools that is a standing tax, and an SC doing
-  design needs perhaps a dozen. `add_console_apis`, `list_console_apis` and `delete_mesh` sit in
-  context for a task that will never call them.
+- ~~**Tool-surface size is itself a cost.**~~ **WITHDRAWN — measured and wrong.** 52 descriptions
+  total 4,700 chars (~1,175 tokens per session). The surface is not the tax; unshaped OUTPUT is
+  (see "Response efficiency" below). This claim was the main argument for per-task tool scoping,
+  so scoping loses most of its rationale.
 - **Every design skill assumes a reference site.** `scrape-reference-site` → `refine-visual-match`
   measures against captured screenshots. There is no open-ended "improve this" path, which is the
   request that started this item.
@@ -364,6 +364,80 @@ tools instead.
 4. **Auth and prerequisites tools** — where an agent gets stuck first.
 5. **Adobe I/O provisioning** — sequence with the sibling Data Installer decision.
 6. **Agents, if at all** — only once there is evidence a role boundary is needed.
+
+## Response efficiency — reshaping what tools return (2026-08-16)
+
+### Measured, not assumed
+
+**Tool descriptions are NOT the problem.** An earlier draft of this item called 58 tools "a
+standing tax". Measured: 52 descriptions, 4,700 characters, **~1,175 tokens per session**. Modest.
+That claim is withdrawn — and it matters, because it was the argument for per-task tool scoping.
+
+**Output shaping IS the problem, and nothing does it.** `ToolDescriptor` has an optional
+`shape?` projector, documented as "custom response projector". **Zero tools use it.** Every
+descriptor tool returns `JSON.stringify` of whatever the handler produced — and handlers were
+written to feed React components, so they carry ids, flags and flat arrays a UI needs.
+
+Measured on `get_store_structure` against a real project:
+
+| | |
+|---|---|
+| As returned today | 701 chars (~175 tokens) |
+| Same information, LLM-shaped | 186 chars (~46 tokens) |
+| **Reduction** | **73%** |
+
+```
+as-is  : {"storeGroups":[{"code":"main_website_store","default_store_id":1,"id":1,
+          "name":"Main Website Store","root_category_id":51,"website_id":1}, …
+shaped : [{"website":"base","stores":[{"store":"main_website_store",
+          "views":["default"]}]}, …]
+```
+
+**The shaped form is not merely smaller — it is more useful.** The raw form is three flat arrays
+joined by numeric ids (`website_id`, `store_group_id`), so the LLM must perform the join before
+it can answer "which store views exist under `base`?". The shaped form expresses the hierarchy
+directly. **Reshaping removes work, not just bytes.**
+
+### How to work on this systematically
+
+Output size depends on runtime data, so it cannot be measured statically like coverage. Two
+steps, in order:
+
+1. **Static pass, available now:** every descriptor row lacking `shape:` is a candidate. That is
+   currently all of them, so the finding is "start with the highest-traffic tools".
+2. **Runtime pass:** instrument the MCP server to log response byte counts per tool, run a
+   representative session, then rank by *bytes × call frequency*. That ranking is the work list.
+   Cheap to add and it turns a guess into a measurement, exactly as `ai-coverage-scan` did.
+
+Shaping rules worth applying as each tool is reshaped:
+
+- **Resolve joins server-side.** If the payload has ids the LLM must correlate, correlate them.
+- **Drop UI-only fields** — display strings, icons, panel ids, `lastUpdated` nobody reads.
+- **Prefer the answer over the record.** `get_project` returning a whole manifest makes the LLM
+  parse; returning the three fields the question needs does not.
+- **Keep errors terse and actionable** — `defaultShape` already does this well.
+
+### Do skills need guarding hooks?
+
+Yes, for mechanically-detectable traps — see the routing framework above. Worth adding: this
+repo enforces skill-loading with `router.sh` (`PreToolUse`, blocks the first doc-lookup call
+until the skill is loaded). **A generated project has no equivalent**, so a project-side skill is
+advisory only. If a trap silently destroys work — the vendored-theme case — advisory is the wrong
+strength.
+
+### Do feature flows need dedicated agents?
+
+**Unproven, and the obvious argument for them does not survive measurement.** The case is usually
+"a curated tool subset reduces what the agent reasons over" — but the whole tool surface costs
+~1,175 tokens, so there is little to reclaim. And subagent isolation does not reduce cost: this
+session's ~121k block-shape derivation was performed BY a subagent.
+
+The argument that might hold is **sequencing**, not context: a flow like "scrape → map chrome →
+map commerce blocks → refine" has an order, and today that order lives in prose across four
+skills. Whether that needs an agent or just a better skill is an open question — decide it after
+the knowledge tools land, since a cheaper flow may not need orchestration at all.
+
+**Do not add agents to save tokens. Add them when a role or an order genuinely needs an owner.**
 
 ## Still open
 
