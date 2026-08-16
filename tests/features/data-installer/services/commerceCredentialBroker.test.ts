@@ -15,6 +15,7 @@ jest.mock('@/features/eds/services/accsDiscoveryConfig', () => ({
 }));
 
 import {
+    clearSharedCredentialCache,
     createProjectCredentialBroker,
     fetchSharedCommerceCredentials,
 } from '@/features/data-installer/services/commerceCredentialBroker';
@@ -36,6 +37,18 @@ function respondWith(body: unknown, status = 200): jest.Mock {
 }
 
 const OK_BODY = { success: true, data: { clientId: CLIENT_ID, clientSecret: CLIENT_SECRET } };
+
+/**
+ * A stand-in for the auth service, at module scope so both describes share one.
+ *
+ * NO DEFAULT PARAMETER: written as `auth(token = 'ims-token')`, calling it with an
+ * explicit `undefined` re-triggers the default and hands back a token — which is
+ * exactly how the no-token case first passed while asserting the opposite.
+ */
+const authWith = (token?: string) => ({
+    getTokenManager: () => ({ inspectToken: jest.fn().mockResolvedValue({ token }) }),
+});
+const auth = () => authWith('ims-token');
 
 function deps(overrides: Partial<Parameters<typeof fetchSharedCommerceCredentials>[0]> = {}) {
     return {
@@ -180,16 +193,13 @@ describe('fetchSharedCommerceCredentials', () => {
  * fix must not read the same as a service that refused them.
  */
 describe('createProjectCredentialBroker', () => {
-    // NOT a default parameter: `auth(undefined)` would re-trigger a default and
-    // hand back a token, which is exactly how the no-token case first passed
-    // while asserting the opposite of what it claimed.
-    const authWith = (token?: string) => ({
-        getTokenManager: () => ({ inspectToken: jest.fn().mockResolvedValue({ token }) }),
-    });
-    const auth = () => authWith('ims-token');
-
+    // The cache is module-level, so it outlives a test. Without this, a test that
+    // fetches successfully hands the NEXT one a cached pair and every refusal
+    // case starts passing back credentials — which is how three of these first
+    // failed after the cache landed.
     beforeEach(() => {
         jest.clearAllMocks();
+        clearSharedCredentialCache();
         mockedSelect.mockReturnValue({ ok: true, serviceUrl: SERVICE_URL });
     });
 
@@ -260,5 +270,121 @@ describe('createProjectCredentialBroker', () => {
         });
 
         await expect(broker()).resolves.toEqual({ ok: false, reason: 'unavailable' });
+    });
+});
+
+/**
+ * The short-lived cache.
+ *
+ * MEASURED, not assumed: one dry run on a real project resolved credentials
+ * twice, eight seconds apart, so the endpoint saw two GETs for one user action.
+ * That is the whole justification — the cache was deliberately left out until
+ * there was a number.
+ *
+ * It is bounded by a TTL rather than living for the session, because the shared
+ * pair CAN be rotated in the service, and a session-long copy would keep failing
+ * until the window was reloaded with nothing to say why. A few minutes collapses
+ * the burst and bounds the stale window to something a retry outlives.
+ */
+describe('the shared credential cache', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        clearSharedCredentialCache();
+        mockedSelect.mockReturnValue({ ok: true, serviceUrl: SERVICE_URL });
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('serves a second resolution without a second request', async () => {
+        const fetchImpl = respondWith(OK_BODY);
+        const broker = createProjectCredentialBroker({
+            auth: auth(),
+            fetchImpl: fetchImpl as unknown as typeof fetch,
+        });
+
+        await broker();
+        await broker();
+
+        expect(fetchImpl).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns the same pair from the cache as from the wire', async () => {
+        const broker = createProjectCredentialBroker({
+            auth: auth(),
+            fetchImpl: respondWith(OK_BODY) as unknown as typeof fetch,
+        });
+
+        const first = await broker();
+        const second = await broker();
+
+        expect(second).toEqual(first);
+    });
+
+    // A rotated credential must not be served indefinitely.
+    it('refetches once the entry expires', async () => {
+        jest.useFakeTimers();
+        const fetchImpl = respondWith(OK_BODY);
+        const broker = createProjectCredentialBroker({
+            auth: auth(),
+            fetchImpl: fetchImpl as unknown as typeof fetch,
+        });
+
+        await broker();
+        jest.setSystemTime(Date.now() + 31 * 60 * 1000);
+        await broker();
+
+        expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    // Two configured services are two different credentials.
+    it('does not serve one service\'s pair for another', async () => {
+        const fetchImpl = respondWith(OK_BODY);
+        const broker = createProjectCredentialBroker({
+            auth: auth(),
+            fetchImpl: fetchImpl as unknown as typeof fetch,
+        });
+
+        await broker();
+        mockedSelect.mockReturnValue({ ok: true, serviceUrl: `${SERVICE_URL}-other` });
+        await broker();
+
+        expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it('never caches a refusal', async () => {
+        const fetchImpl = respondWith({ success: false, error: 'nope' }, 403);
+        const broker = createProjectCredentialBroker({
+            auth: auth(),
+            fetchImpl: fetchImpl as unknown as typeof fetch,
+        });
+
+        await broker();
+        await broker();
+
+        expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    /**
+     * The reason this is not a test-only export.
+     *
+     * The cached pair was fetched under ONE user's authorization — the service
+     * checks their IMS token and email domain. If they sign out and someone else
+     * signs in, the second user must not inherit a credential the first was
+     * cleared for. Signing out drops it.
+     */
+    it('is dropped by clearSharedCredentialCache', async () => {
+        const fetchImpl = respondWith(OK_BODY);
+        const broker = createProjectCredentialBroker({
+            auth: auth(),
+            fetchImpl: fetchImpl as unknown as typeof fetch,
+        });
+
+        await broker();
+        clearSharedCredentialCache();
+        await broker();
+
+        expect(fetchImpl).toHaveBeenCalledTimes(2);
     });
 });

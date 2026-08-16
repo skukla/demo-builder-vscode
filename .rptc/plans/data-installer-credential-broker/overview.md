@@ -57,9 +57,49 @@ fewer copies of the same power, not more power.
 | `step-04` — docs + the security note this endpoint deserves | this repo | No | **done** — ADR-014 |
 | `step-05` — **after ship**: probe cross-org reach | probe | No | open |
 
-**Not covered by any step, and not yet done: an actual import through the broker.**
-The unit tests pass and the deployed endpoint answers, but the two have never met
-on a real project. Nothing above should be read as saying otherwise.
+## Verified live — the credential path, 2026-08-16
+
+A dry run on `bodea-template-test` (ACCS, `eds-accs` stack), against the branch
+build stamped `92c26e6c`, with the log level at Debug:
+
+```
+shared credential: obtained from the discovery service
+shared credential: obtained from the discovery service
+get-websites-and-stores → 200 (credentials usable)
+process-datapack (validate) → 200
+```
+
+**The broker supplied the pair, and that pair authenticated against the
+instance.** The first line is the load-bearing one: without it a passing dry run
+would have proved nothing, since a declared pair produces an identical result.
+The channel had to be at Debug to see it — an earlier info-level dump showed no
+`[Data Installer]` lines at all and could not answer the question either way.
+
+**Still not proven: a WRITE with the brokered pair.** A dry run resolves and
+authenticates; `process-datapack (validate)` deliberately writes nothing. The
+credential-reach research measured a read too. One real import, somewhere it is
+safe to write, closes that.
+
+**The cache skipped in step 02 now exists, because this run measured the reason.**
+The broker ran TWICE in that dry run, ~8s apart — two resolutions, two GETs for
+one user action. Step 02 left the cache out on the grounds that the benefit was
+unmeasured; it is measured now, so it landed.
+
+The two objections that justified skipping it were addressed rather than waived:
+
+- **Staleness** — bounded by a 30-minute TTL over `core/cache`, not session-long.
+  The shared pair can be rotated in the service, and a copy that outlived the
+  window would keep failing with nothing to say why. Refusals are never cached, so
+  a 403 fixed by an allowlist change is retryable immediately.
+- **A test-only export** — `clearSharedCredentialCache()` is called by
+  `AuthenticationService.logout()`. The cached pair was fetched under ONE user's
+  authorization; whoever signs in next must not inherit it. A negative control
+  confirms the test fails when that call is removed.
+
+**Its real cost, found immediately:** a module-level cache outlives a test. Three
+existing suites started failing because one test's successful fetch handed the
+next a cached pair. Each now clears it in `beforeEach`, and the reason is written
+where the next person will hit it.
 
 Step 01 deploys before step 02 can be exercised live. Steps 02 and 03 are this repo's and
 share a seam. Step 05 is deliberately last: it decides whether Option 2 can absorb the

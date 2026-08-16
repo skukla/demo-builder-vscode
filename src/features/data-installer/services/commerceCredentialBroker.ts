@@ -25,9 +25,40 @@
  */
 
 import type { BrokerOutcome, CredentialBroker } from './commerceCredentials';
+import { createCacheEntry, isExpired, type CacheEntry } from '@/core/cache';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { selectCredentialService } from '@/features/eds/services/accsDiscoveryConfig';
 import type { HandlerContext } from '@/types/handlers';
+
+/**
+ * How long a fetched pair is reused, keyed by the service that served it.
+ *
+ * MEASURED, not guessed: one dry run on a real project resolved credentials
+ * twice, eight seconds apart, so the endpoint saw two GETs for one user action.
+ * The cache was deliberately left out until there was a number.
+ *
+ * Bounded rather than session-long because the shared pair CAN be rotated in the
+ * service, and a copy that outlives the window would keep failing with nothing
+ * to say why — the user's only recourse being a window reload they have no
+ * reason to try. Thirty minutes collapses every burst within a working session
+ * while keeping the stale window shorter than the time it takes to notice.
+ */
+const CREDENTIAL_CACHE_TTL_MS = 30 * 60 * 1000;
+
+/** Keyed by resolved service URL — two configured services are two credentials. */
+const credentialCache = new Map<string, CacheEntry<SharedCommerceCredentials>>();
+
+/**
+ * Drop every cached pair.
+ *
+ * NOT a test-only export. The cached pair was fetched under ONE user's
+ * authorization — the service validates their IMS token and checks their email
+ * domain — so if they sign out, a later user must not inherit a credential they
+ * were never cleared for. Sign-out calls this.
+ */
+export function clearSharedCredentialCache(): void {
+    credentialCache.clear();
+}
 
 /** The pair, exactly as the ACCS credential shape elsewhere in this feature. */
 export interface SharedCommerceCredentials {
@@ -165,6 +196,14 @@ export function createProjectCredentialBroker(deps: ProjectBrokerDeps): Credenti
             return { ok: false, reason: 'unavailable' };
         }
 
+        // One user action resolves credentials more than once — a dry run does it
+        // twice — and each miss is a network round trip in front of a modal.
+        const cached = credentialCache.get(selection.serviceUrl);
+        if (cached && !isExpired(cached)) {
+            deps.log?.('shared credential: reusing the one already fetched this session');
+            return { ok: true, credentials: cached.value };
+        }
+
         const credentials = await fetchSharedCommerceCredentials({
             serviceUrl: selection.serviceUrl,
             getToken: async () => (await deps.auth?.getTokenManager().inspectToken())?.token,
@@ -172,7 +211,18 @@ export function createProjectCredentialBroker(deps: ProjectBrokerDeps): Credenti
             ...(deps.log ? { log: deps.log } : {}),
         });
 
-        return credentials ? { ok: true, credentials } : { ok: false, reason: 'unavailable' };
+        if (!credentials) {
+            // Refusals are never cached. A 403 that gets fixed by an allowlist
+            // change, or a timeout during an outage, must be retryable on the
+            // next attempt rather than sticky for the rest of the window.
+            return { ok: false, reason: 'unavailable' };
+        }
+
+        credentialCache.set(
+            selection.serviceUrl,
+            createCacheEntry(credentials, CREDENTIAL_CACHE_TTL_MS),
+        );
+        return { ok: true, credentials };
     };
 }
 

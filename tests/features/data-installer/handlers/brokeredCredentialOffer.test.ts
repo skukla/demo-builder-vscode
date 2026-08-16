@@ -17,6 +17,7 @@
 
 import * as vscode from 'vscode';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
+import { clearSharedCredentialCache } from '@/features/data-installer/services/commerceCredentialBroker';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -130,6 +131,10 @@ afterEach(() => {
 describe('a project the broker can serve', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        // The broker caches per service URL and the cache is module-level, so
+        // without this a test that fetches successfully hands the next one a
+        // cached pair and its fetch mock is never called.
+        clearSharedCredentialCache();
         seedSettings([{ orgName: 'Demo', orgId: '285361', serviceUrl: DISCOVERY_URL }]);
         global.fetch = jest.fn().mockResolvedValue({
             ok: true,
@@ -185,6 +190,10 @@ describe('a project the broker can serve', () => {
 describe('when the broker cannot serve', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        // The broker caches per service URL and the cache is module-level, so
+        // without this a test that fetches successfully hands the next one a
+        // cached pair and its fetch mock is never called.
+        clearSharedCredentialCache();
     });
 
     /**
