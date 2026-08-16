@@ -38,18 +38,24 @@
 import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { asText } from './mcpToolResult';
-import { COMPONENT_IDS } from '@/core/constants';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import { DA_LIVE_BASE_URL } from '@/features/eds/services/daLiveConstants';
-import { resolveDaPath } from '@/features/eds/services/daLiveContentHelpers';
+import { buildSourceUrl, resolveDaPath } from '@/features/eds/services/daLiveContentHelpers';
 import {
     DaLiveContentOperations,
     createDaLiveServiceTokenProvider,
 } from '@/features/eds/services/daLiveContentOperations';
 import { HelixService } from '@/features/eds/services/helixService';
+import { aemLiveBaseUrl } from '@/features/eds/services/storefrontProbe';
 import type { Project } from '@/types';
 import type { HandlerContext } from '@/types/handlers';
-import { isEdsProject } from '@/types/typeGuards';
+import { getEdsDaLiveTarget, getEdsRepoParts, isEdsProject } from '@/types/typeGuards';
+
+/**
+ * Cap for the published-CDN read. Same reasoning as the DA source cap: the body
+ * is shipped to a model that pays for it as context.
+ */
+const MAX_PUBLISHED_READ_BYTES = 30_000;
 
 const NEEDS_DALIVE = {
     needsAuth: 'dalive',
@@ -71,42 +77,115 @@ interface StorefrontTarget {
     repoName: string;
 }
 
-/** Pull the DA.live + GitHub coordinates off the project's storefront metadata. */
+/**
+ * Coordinate segments are interpolated into a URL AUTHORITY
+ * (`main--{repo}--{owner}.aem.live`) and into admin API paths, so they are
+ * restricted to characters that cannot restructure a URL.
+ *
+ * Without this, `githubRepo: "a@internal.example?/b"` yields
+ * `https://main--b--a@internal.example?.aem.live`, which parses as userinfo
+ * `main--b--a` and host `internal.example` — turning read_published_page into an
+ * SSRF probe fired from the extension host. The manifest is writable through
+ * `update_project_config`, which validates content only for `.env`, and
+ * `getCurrentProject()` re-reads it from disk on every call.
+ *
+ * Must START alphanumeric, which is what rules out `..` — `githubRepo: "../../x/y"`
+ * splits to owner `..` / repo `..`, and a dots-anywhere class accepts both,
+ * putting the traversal back into the DA source path. Caught by its own test.
+ */
+const SAFE_COORDINATE = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
+
+/**
+ * Pull the DA.live + GitHub coordinates off the project's storefront metadata,
+ * reusing the shared getters rather than re-splitting `githubRepo` — that split
+ * already had four hand-rolled copies before `getEdsRepoParts` existed.
+ *
+ * Returns null when anything is missing OR fails {@link SAFE_COORDINATE}.
+ */
 function storefrontTarget(project: Project): StorefrontTarget | null {
-    const meta = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata as
-        | { githubRepo?: string; daLiveOrg?: string; daLiveSite?: string }
-        | undefined;
-    const [repoOwner, repoName] = (meta?.githubRepo ?? '').split('/');
-    if (!repoOwner || !repoName) return null;
-    return {
-        repoOwner,
-        repoName,
-        daLiveOrg: meta?.daLiveOrg || repoOwner,
-        daLiveSite: meta?.daLiveSite || repoName,
+    const repo = getEdsRepoParts(project);
+    if (!repo) return null;
+    const da = getEdsDaLiveTarget(project);
+    const target = {
+        repoOwner: repo.owner,
+        repoName: repo.repo,
+        daLiveOrg: da?.org || repo.owner,
+        daLiveSite: da?.site || repo.repo,
     };
+    return Object.values(target).every((v) => SAFE_COORDINATE.test(v)) ? target : null;
 }
 
 /**
- * Canonical WEB path: leading slash, no `.html`, no trailing slash.
+ * Canonical WEB path, or `null` when the input is not a safe page path.
  *
- * This is the spelling Helix wants and the one every tool takes as input.
- * Accepts a caller's `.html` and strips it rather than rejecting — an agent that
- * has just read a DA listing will naturally have the source spelling in hand.
+ * **This is a security boundary, not a formatter.** These tools deliberately
+ * expose no `org`/`site` arguments so an agent cannot reach another site — but
+ * that control is only as strong as the path. `..` segments defeat it entirely:
+ * the WHATWG URL parser collapses them, so
+ * `/source/skukla/bodea/../../victim/site/index.html` resolves to
+ * `/source/victim/site/index.html` and is sent with the user's DA.live bearer.
+ * Verified by execution, 2026-08-16. The same escape reaches Helix
+ * preview/publish and the unpublish DELETE, whose `normalizeWebPath` also leaves
+ * `..` intact.
+ *
+ * Rejects rather than normalizes: silently rewriting a hostile path would let an
+ * agent believe it wrote where it asked.
+ *
+ * Accepts a caller's `.html` and strips it — an agent that has just read a DA
+ * listing naturally holds the source spelling.
  */
-function toWebPath(raw: string): string {
-    let p = raw.trim();
+function toWebPath(raw: string): string | null {
+    const p0 = raw.trim();
+    // A scheme, a protocol-relative prefix, a backslash or any control character
+    // can all restructure the URL once interpolated.
+    if (/^[a-z][a-z0-9+.-]*:/i.test(p0) || p0.startsWith('//')) return null;
+    // eslint-disable-next-line no-control-regex
+    if (/[\\\u0000-\u001f\u007f]/.test(p0)) return null;
+
+    let p = p0;
     if (!p.startsWith('/')) p = `/${p}`;
     if (p.endsWith('.html')) p = p.slice(0, -'.html'.length);
     if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);
-    return p || '/';
+    p = p || '/';
+
+    // Reject traversal AND percent-encoded traversal — decode first, since the
+    // URL parser will. A bare `%` that is not valid encoding is also refused.
+    let decoded: string;
+    try {
+        decoded = decodeURIComponent(p);
+    } catch {
+        return null;
+    }
+    if (decoded.split('/').some((seg) => seg === '..' || seg === '.')) return null;
+    return p;
+}
+
+const INVALID_PATH = {
+    error:
+        'path must be a simple page path such as "/about" or "/products/shoes" — no "." or ".." segments, ' +
+        'no scheme, no backslashes. These tools only reach the current project\'s storefront.',
+};
+
+/**
+ * Final containment check before a request leaves: the built URL must still
+ * address the intended site. Belt-and-braces behind {@link toWebPath}, because
+ * this is the assertion that survives someone "simplifying" the path rules.
+ */
+function urlStaysWithin(url: string, prefix: string): boolean {
+    try {
+        return new URL(url).href.startsWith(prefix);
+    } catch {
+        return false;
+    }
 }
 
 /**
  * DA source path for a web path — `/about` → `about.html`, `/` → `index.html`.
- * Delegates to the content pipeline's own helper so the two cannot drift.
+ * Delegates to the content pipeline's own helper so the two cannot drift;
+ * `resolveDaPath` already maps the root to `index.html`.
  */
 function toSourcePath(webPath: string): string {
-    return resolveDaPath(webPath === '/' ? '/' : webPath, true);
+    return resolveDaPath(webPath, true);
 }
 
 /**
@@ -135,7 +214,7 @@ type Resolved =
  */
 async function resolveTarget(
     ctxFactory: () => HandlerContext,
-    opts: { needsGitHub?: boolean } = {},
+    opts: { needsGitHub?: boolean; needsDaLive?: boolean } = {},
 ): Promise<Resolved> {
     const ctx = ctxFactory();
     const project = await ctx.stateManager.getCurrentProject();
@@ -147,9 +226,10 @@ async function resolveTarget(
     }
     const target = storefrontTarget(project);
     if (!target) {
-        return { ok: false, body: { error: 'Project is missing GitHub repo metadata' } };
+        return { ok: false, body: { error: 'Project is missing or has malformed GitHub repo metadata' } };
     }
-    if (!(await getDaLiveAuthService(ctx.context).isAuthenticated())) {
+    // read_published_page reads public CDN content and needs no DA.live session.
+    if (opts.needsDaLive !== false && !(await getDaLiveAuthService(ctx.context).isAuthenticated())) {
         return { ok: false, body: NEEDS_DALIVE };
     }
     if (opts.needsGitHub) {
@@ -197,6 +277,10 @@ const pathField = z
  * from, any DA.live site the user's token can reach — with no confirmation on
  * the non-destructive paths. `list_dalive_sites` already covers cross-site reads.
  *
+ * That control lives or dies on {@link toWebPath}: a `..` segment in `path`
+ * escapes the org/site entirely once the URL parser collapses it, which is why
+ * the path is REJECTED rather than normalized.
+ *
  * @param server     McpServer (typed `any`; see registerProjectTools docstring).
  * @param ctxFactory Builds a headless HandlerContext for each invocation.
  */
@@ -206,8 +290,6 @@ export function registerContentAuthoringTools(
     ctxFactory: () => HandlerContext,
 ): void {
     // ─── read_page ───────────────────────────────────────────────────────────
-    // The only genuinely new transport here: nothing in the codebase read DA
-    // source before this. GET /source/{org}/{site}/{path} per the DA Admin API.
     server.registerTool(
         'read_page',
         {
@@ -218,31 +300,38 @@ export function registerContentAuthoringTools(
         async (args: any) => {
             const raw = String(args?.path ?? '').trim();
             if (!raw) return asText({ error: 'path is required' });
+            const webPath = toWebPath(raw);
+            if (!webPath) return asText(INVALID_PATH);
             const r = await resolveTarget(ctxFactory);
             if (!r.ok) return asText(r.body);
 
-            const webPath = toWebPath(raw);
             const sourcePath = toSourcePath(webPath);
-            const token = await getDaLiveAuthService(r.ctx.context).getAccessToken();
-            const url = `${DA_LIVE_BASE_URL}/source/${r.target.daLiveOrg}/${r.target.daLiveSite}/${sourcePath}`;
-
             try {
-                const response = await fetch(url, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                if (response.status === 404) {
+                // Through the service, not a hand-rolled fetch: it carries the
+                // retry/429 handling, the timeout, and the size cap this response
+                // needs because a model pays for the body as context.
+                const res = await runWithAdobeTarget(() =>
+                    daLiveOps(r.ctx).readSource(r.target.daLiveOrg, r.target.daLiveSite, sourcePath),
+                );
+                if (res.status === 404) {
                     return asText({
                         error: `Page not found in DA.live source: ${webPath} (looked for ${sourcePath})`,
                         path: webPath,
                     });
                 }
-                if (!response.ok) {
+                if (res.status < 200 || res.status >= 300) {
                     return asText({
-                        error: `Failed to read page: ${response.status} ${response.statusText}`,
+                        error: `Failed to read page: HTTP ${res.status}`,
                         path: webPath,
                     });
                 }
-                return asText({ path: webPath, sourcePath, content: await response.text() });
+                return asText({
+                    path: webPath,
+                    sourcePath,
+                    bytes: res.bytes,
+                    ...(res.truncated ? { truncated: true } : {}),
+                    content: res.body,
+                });
             } catch (err) {
                 return asText({ error: message(err), path: webPath });
             }
@@ -273,10 +362,11 @@ export function registerContentAuthoringTools(
                 return asText({ error: 'content is required' });
             }
             const publish = args?.publish === true;
+            const webPath = toWebPath(raw);
+            if (!webPath) return asText(INVALID_PATH);
             const r = await resolveTarget(ctxFactory, { needsGitHub: publish });
             if (!r.ok) return asText(r.body);
 
-            const webPath = toWebPath(raw);
             const sourcePath = toSourcePath(webPath);
             const { daLiveOrg, daLiveSite } = r.target;
 
@@ -327,10 +417,11 @@ export function registerContentAuthoringTools(
         async (args: any) => {
             const raw = String(args?.path ?? '').trim();
             if (!raw) return asText({ error: 'path is required' });
+            const webPath = toWebPath(raw);
+            if (!webPath) return asText(INVALID_PATH);
             const r = await resolveTarget(ctxFactory, { needsGitHub: true });
             if (!r.ok) return asText(r.body);
 
-            const webPath = toWebPath(raw);
             try {
                 await runWithAdobeTarget(() =>
                     helixFor(r.ctx).previewAndPublishPage(
@@ -361,10 +452,14 @@ export function registerContentAuthoringTools(
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
+            // The directory goes into the same /list/{org}/{site}/… URL a page
+            // path goes into, so it needs the same traversal guard — it is not
+            // exempt for being a "read".
+            const dir = toWebPath(String(args?.path ?? '/').trim() || '/');
+            if (!dir) return asText(INVALID_PATH);
             const r = await resolveTarget(ctxFactory);
             if (!r.ok) return asText(r.body);
 
-            const dir = String(args?.path ?? '/').trim() || '/';
             try {
                 const entries = await runWithAdobeTarget(() =>
                     daLiveOps(r.ctx).listDirectory(r.target.daLiveOrg, r.target.daLiveSite, dir),
@@ -383,7 +478,7 @@ export function registerContentAuthoringTools(
                         );
                         if (!e.ext) return { name: e.name, type: 'folder', path: withinSite };
                         return e.ext === 'html'
-                            ? { name: e.name, type: 'page', path: toWebPath(withinSite) }
+                            ? { name: e.name, type: 'page', path: toWebPath(withinSite) ?? withinSite }
                             : { name: e.name, type: 'file', path: withinSite };
                     }),
                 });
@@ -408,23 +503,32 @@ export function registerContentAuthoringTools(
         async (args: any) => {
             const raw = String(args?.path ?? '').trim();
             if (!raw) return asText({ error: 'path is required' });
+            const webPath = toWebPath(raw);
+            if (!webPath) return asText(INVALID_PATH);
             if (args?.confirm !== true) {
                 return asText({
-                    error: `delete_page permanently removes ${toWebPath(raw)} from DA.live and unpublishes it. To proceed, call again with confirm:true.`,
+                    error: `delete_page permanently removes ${webPath} from DA.live and unpublishes it. To proceed, call again with confirm:true.`,
                     irreversible: true,
                 });
             }
             const r = await resolveTarget(ctxFactory, { needsGitHub: true });
             if (!r.ok) return asText(r.body);
 
-            const webPath = toWebPath(raw);
             const sourcePath = toSourcePath(webPath);
             const { daLiveOrg, daLiveSite } = r.target;
 
-            // Unpublish FIRST. The Helix admin API refuses `DELETE /live` with
-            // "delete not allowed while source exists" once the source is gone
-            // from under it, so the reverse order strands a published page with
-            // no source to remove it by (ADR-002).
+            // Unpublish FIRST, and ABORT if it fails, because only this order
+            // fails recoverably: source still present, page still live, retry
+            // works. Deleting first and then failing to unpublish leaves a live
+            // page whose content is gone.
+            //
+            // NOT an auth constraint. An earlier version of this comment claimed
+            // ADR-002's "delete not allowed while source exists" 403 forced the
+            // order; that reads the ADR backwards — the 403 fires while the
+            // source EXISTS, and `unpublishPage` sends the DA.live Bearer, which
+            // ADR-002 measured as bypassing the restriction entirely
+            // (`getDeleteAuthHeaders`). Auth does not care about the order; the
+            // failure mode does.
             let unpublished = false;
             let unpublishError: string | undefined;
             try {
@@ -433,6 +537,16 @@ export function registerContentAuthoringTools(
                 );
             } catch (err) {
                 unpublishError = message(err);
+            }
+            if (!unpublished) {
+                return asText({
+                    deleted: false,
+                    unpublished: false,
+                    path: webPath,
+                    error:
+                        unpublishError ??
+                        'Unpublish failed. The DA.live source was left in place so the page can still be removed — retry, or check site access.',
+                });
             }
 
             try {
@@ -472,22 +586,27 @@ export function registerContentAuthoringTools(
         async (args: any) => {
             const raw = String(args?.path ?? '').trim();
             if (!raw) return asText({ error: 'path is required' });
-            const ctx = ctxFactory();
-            const project = await ctx.stateManager.getCurrentProject();
-            if (!project) return asText({ error: 'No current project is open' });
-            if (!isEdsProject(project)) {
-                return asText({ error: 'Content authoring applies only to EDS storefront projects' });
-            }
-            const target = storefrontTarget(project);
-            if (!target) return asText({ error: 'Project is missing GitHub repo metadata' });
-
             const webPath = toWebPath(raw);
-            const base = `https://main--${target.repoName}--${target.repoOwner}.aem.live`;
-            const url = webPath === '/' ? `${base}/index.plain.html` : `${base}${webPath}.plain.html`;
+            if (!webPath) return asText(INVALID_PATH);
+            // Same guards as its siblings, minus the DA.live session: this reads
+            // public CDN content.
+            const r = await resolveTarget(ctxFactory, { needsDaLive: false });
+            if (!r.ok) return asText(r.body);
+
+            const base = aemLiveBaseUrl(r.target.repoOwner, r.target.repoName);
+            const url = buildSourceUrl(base, webPath, true);
+            // The host is built from project metadata, so re-assert where the
+            // request is going before it leaves (see SAFE_COORDINATE).
+            if (!urlStaysWithin(url, `${base}/`)) {
+                return asText({ path: webPath, error: 'Refusing to fetch outside the storefront host' });
+            }
 
             try {
-                const response = await fetch(url);
+                const response = await fetch(url, {
+                    signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+                });
                 const body = await response.text();
+                const bytes = Buffer.byteLength(body, 'utf8');
                 return asText({
                     path: webPath,
                     url,
@@ -502,8 +621,16 @@ export function registerContentAuthoringTools(
                     // under-reports. Measured against curl on a real storefront
                     // 404 — 5039 by .length, 5043 actual — which is the kind of
                     // quiet mismatch a field named "bytes" must not have.
-                    bytes: Buffer.byteLength(body, 'utf8'),
-                    ...(response.ok ? { content: body } : {}),
+                    bytes,
+                    ...(response.ok
+                        ? {
+                              content:
+                                  bytes > MAX_PUBLISHED_READ_BYTES
+                                      ? body.slice(0, MAX_PUBLISHED_READ_BYTES)
+                                      : body,
+                              ...(bytes > MAX_PUBLISHED_READ_BYTES ? { truncated: true } : {}),
+                          }
+                        : {}),
                 });
             } catch (err) {
                 return asText({ path: webPath, url, published: false, error: message(err) });

@@ -1,10 +1,12 @@
 /**
  * Demo Builder MCP — shared project-tool registration.
  *
- * Defines the seven project-scoped MCP tools (list_projects, get_project,
- * get_component_config, update_project_config, sync_storefront, list_blocks,
- * get_block_source) and the security helpers they use, then exposes them via
- * `registerProjectTools(server, projectsDir)`.
+ * Defines the project-scoped MCP tools — the ones that need only the filesystem,
+ * not the extension host — and the security helpers they use, then exposes them
+ * via `registerProjectTools(server, projectsDir)`. The authoritative list is the
+ * `server.registerTool(...)` calls in that function and the name-by-name pin in
+ * `tests/features/ai/server/inExtensionMcpServer.test.ts`; an enumeration here
+ * only rots (it said "seven" while the function registered ten).
  *
  * This module is NOT a server process. The in-extension MCP server
  * (`@/features/ai/server/inExtensionMcpServer`) imports `registerProjectTools`
@@ -396,7 +398,8 @@ function authoringConvention(
  * and return the entry with the given id.
  *
  * Both files are OPTIONAL and a miss is normal, not an error: a storefront may
- * ship neither, and 38 of 78 real components name a model that has no entry.
+ * ship neither, and 38 of 78 real components resolve no model fields (27 name a
+ * model id with no entry; 11 name none at all).
  * Every failure — absent file, bad JSON, unexpected top-level shape, no match —
  * collapses to `undefined`, because the caller's answer is still useful without it.
  */
@@ -515,7 +518,7 @@ interface ComponentDefinitionEntry {
     id: string;
     title?: string;
     description?: string;
-    /** Names an entry in `component-models.json`; 38 of 78 real entries name one that does not exist. */
+    /** Names an entry in `component-models.json`; 27 of 78 real entries name one that does not exist, and 11 more name none. */
     model?: string;
     /** Names an entry in `component-filters.json` — which components may nest inside. */
     filter?: string;
@@ -1007,16 +1010,20 @@ export const toolHandlers = {
      * during the Bodea build. This answers for one block in roughly two hundred.
      *
      * Three conventions coexist, and which one a block uses is itself the
-     * answer (measured across 78 real components):
-     *   - `rows`/`columns`         — a positional table (51 of 78)
-     *   - `name`/`type`/`fields`   — key-value cells with CSS selectors (~21)
+     * answer. Counts are what {@link authoringConvention} REPORTS across 78 real
+     * components, not raw key presence — 51 entries carry `rows`/`columns`, but
+     * 15 of those also carry `fields` and are classified by it:
+     *   - `rows`/`columns`         — a positional table (36 of 78)
+     *   - `name`/`type`/`fields`   — key-value cells with CSS selectors (35)
      *   - `unsafeHTML`             — literal markup (4; what promotion writes)
+     *   - nothing at all           — (3)
      *
      * `plugins.da` alone is not enough for nested blocks: `cards` reports two
      * columns, but its real content is `card` children, which only
      * `component-filters.json` knows. `component-models.json` names the fields.
-     * Both are best-effort — 38 of 78 real components name a model with no
-     * entry, and a storefront may ship neither file.
+     * Both are best-effort — 38 of 78 real components resolve no model fields
+     * (27 name a model id that has no entry, 11 name none at all), and a
+     * storefront may ship neither file.
      *
      * Omit `blockName` for the registry index (ids, titles, which convention);
      * pass it for the full shape. Mirrors `getBlockSource`'s index/detail split.

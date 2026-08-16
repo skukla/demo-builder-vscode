@@ -31,7 +31,7 @@ node $P call <tool> '<json args>'     # call it; prints byte size and ~token cos
 ```
 
 Flags: `--socket <path>` (when discovery is ambiguous), `--full` (don't truncate), `--force`
-(permit a destructive call).
+(permit a non-read-only call).
 
 ## Read `info` FIRST, every time
 
@@ -72,18 +72,31 @@ the check itself was wrong, not the build.
 A fresh worktree has an **empty `dist/`** — nothing is built until `npm run compile` or F5's
 `preLaunchTask`. See `worktree-setup`.
 
-## Destructive tools are refused by default
+## Only read-only tools run without `--force`
 
-`call` refuses any tool whose NAME matches the destructive pattern (`delete_*`, `cleanup_*`,
-`remove_*`, `reset_*`, `refresh_block_library`, `promote_block_to_library`, …) unless you pass
-`--force`. `info` lists them.
+`call` runs a tool unprompted only when its name reads as a query — `list_*`, `get_*`, `read_*`,
+`check_*`, `find_*`, `verify_*`, `inspect_*`, `show_*`, `describe_*`. Everything else needs
+`--force`. `info` prints which tools are gated.
 
-This guard exists because two standing rules collide badly: **never call a destructive tool
+This guard exists because two standing rules collide badly: **never call a state-changing tool
 merely to measure it**, and **8 tools take no required arguments** — so an enumerate-and-call
-sweep with `{}` fires them against live resources. Matching is deliberately broad; a false
-positive costs one flag, a false negative costs a GitHub repo or a DA.live site.
+sweep with `{}` fires them against live resources.
+
+**It began as a denylist of destructive-sounding names, and that was wrong.** A review found it
+let `sync_content` and `republish` straight through: both take zero arguments and both push to
+the live public CDN, which is precisely the accident the guard existed to stop. `write_page`,
+`publish_page` and `update_project_config` were open too. A denylist has to enumerate every
+dangerous tool correctly, forever, including ones not written yet; an allowlist fails closed when
+a new tool appears. Prefer the allowlist even though it is blunter — a false positive costs one
+flag, a false negative costs a GitHub repo or a live storefront.
 
 Before any `--force` call, confirm with the user and use a resource you can afford to lose.
+
+**Flags never consume the argument after them.** `--full` and `--force` are booleans;
+`--socket` requires a value and errors without one. The first version consumed the next token
+whenever it did not start with `--`, so `call delete_page --force '{"path":…}'` dropped the JSON
+and called the tool with `{}`. A probe whose own parser silently changes what you called is worse
+than no probe.
 
 ## Measuring response cost (this is phase 2's whole job)
 

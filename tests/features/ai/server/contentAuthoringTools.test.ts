@@ -61,9 +61,14 @@ function fakeServer() {
     };
 }
 
+// `selectedStack` must start with "eds-": the module now uses the shared
+// getEdsRepoParts/getEdsDaLiveTarget getters, whose INTERNAL isEdsProject call
+// resolves to the real implementation even though the SUT's own call is mocked.
+// Mocking the getters instead would stop testing the coordinate extraction.
 const EDS_PROJECT = {
     name: 'bodea',
     path: '/p/bodea',
+    selectedStack: 'eds-commerce',
     componentInstances: {
         [COMPONENT_IDS.EDS_STOREFRONT]: {
             metadata: { githubRepo: 'skukla/bodea', daLiveOrg: 'skukla', daLiveSite: 'bodea' },
@@ -85,6 +90,7 @@ let daOps: {
     listDirectory: jest.Mock;
     createSource: jest.Mock;
     deleteSource: jest.Mock;
+    readSource: jest.Mock;
 };
 let helix: {
     previewAndPublishPage: jest.Mock;
@@ -122,6 +128,12 @@ beforeEach(() => {
         listDirectory: jest.fn(async () => []),
         createSource: jest.fn(async () => ({ success: true, path: '/about.html' })),
         deleteSource: jest.fn(async () => ({ success: true })),
+        readSource: jest.fn(async () => ({
+            status: 200,
+            body: '<body><main>hi</main></body>',
+            bytes: 28,
+            truncated: false,
+        })),
     };
     DaLiveContentOperationsMock.mockImplementation(() => daOps);
 
@@ -184,36 +196,146 @@ describe.each([
     });
 });
 
+// ─── path containment (the control the whole module rests on) ────────────────
+
+// These tools expose no org/site arguments SPECIFICALLY so an agent cannot reach
+// another site. A `..` segment defeats that entirely: the URL parser collapses
+// it, so /source/skukla/bodea/../../victim/site/index.html resolves to
+// /source/victim/site/index.html and is sent with the user's DA.live bearer.
+// Verified by execution 2026-08-16, and missed by the first version of this suite.
+describe('path containment', () => {
+    const ESCAPES = [
+        '../../victimorg/victimsite/index.html',
+        '/../../victimorg/victimsite/index',
+        '/products/../../../other/site/page',
+        '/./../../elsewhere',
+        '/%2e%2e/%2e%2e/victim/site', // percent-encoded traversal
+        'https://evil.example/page', // absolute URL
+        '//evil.example/page', // protocol-relative
+        '\\..\\..\\victim', // backslash separators
+    ];
+
+    it.each(ESCAPES)('read_page refuses %s and makes no request', async (bad) => {
+        const res = await register().call('read_page', { path: bad });
+        expect(res.error).toMatch(/simple page path/i);
+        expect(daOps.listDirectory).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it.each(ESCAPES)('write_page refuses %s and writes nothing', async (bad) => {
+        const res = await register().call('write_page', { path: bad, content: '<p>x</p>' });
+        expect(res.error).toMatch(/simple page path/i);
+        expect(daOps.createSource).not.toHaveBeenCalled();
+    });
+
+    it.each(ESCAPES)('publish_page refuses %s and publishes nothing', async (bad) => {
+        const res = await register().call('publish_page', { path: bad });
+        expect(res.error).toMatch(/simple page path/i);
+        expect(helix.previewAndPublishPage).not.toHaveBeenCalled();
+    });
+
+    it.each(ESCAPES)('delete_page refuses %s before the confirm gate', async (bad) => {
+        const res = await register().call('delete_page', { path: bad, confirm: true });
+        expect(res.error).toMatch(/simple page path/i);
+        expect(helix.unpublishPage).not.toHaveBeenCalled();
+        expect(daOps.deleteSource).not.toHaveBeenCalled();
+    });
+
+    // list_content took its directory straight into the /list/{org}/{site}/ URL
+    // with no guard at all — a read is not exempt.
+    it.each(ESCAPES)('list_content refuses %s', async (bad) => {
+        const res = await register().call('list_content', { path: bad });
+        expect(res.error).toMatch(/simple page path/i);
+        expect(daOps.listDirectory).not.toHaveBeenCalled();
+    });
+
+    it('still accepts ordinary paths, including a legitimate dot in a filename', async () => {
+        expect(await register().call('read_page', { path: '/about' })).not.toHaveProperty('error');
+        expect(await register().call('list_content', { path: '/products' })).not.toHaveProperty('error');
+    });
+});
+
+// ─── coordinate validation (SSRF) ────────────────────────────────────────────
+
+describe('storefront coordinate validation', () => {
+    // .demo-builder.json is writable through update_project_config, which
+    // validates content only for .env, and getCurrentProject() re-reads it from
+    // disk on every call — so a tampered value takes effect on the next call.
+    // `a@internal.example?/b` would otherwise yield
+    // https://main--b--a@internal.example?.aem.live → host internal.example.
+    it.each([
+        ['a@internal.example?/b', 'userinfo/host injection'],
+        ['../../x/y', 'traversal'],
+        ['a b/c', 'space'],
+        ['a/b#frag', 'fragment'],
+    ])('refuses githubRepo %s (%s)', async (githubRepo) => {
+        getCurrentProject.mockResolvedValue({
+            ...EDS_PROJECT,
+            componentInstances: {
+                [COMPONENT_IDS.EDS_STOREFRONT]: { metadata: { githubRepo } },
+            },
+        });
+
+        const res = await register().call('read_published_page', { path: '/about' });
+
+        expect(res.error).toMatch(/metadata/i);
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('refuses a malformed daLiveOrg even when the repo is fine', async () => {
+        getCurrentProject.mockResolvedValue({
+            ...EDS_PROJECT,
+            componentInstances: {
+                [COMPONENT_IDS.EDS_STOREFRONT]: {
+                    metadata: { githubRepo: 'skukla/bodea', daLiveOrg: '../evil', daLiveSite: 'x' },
+                },
+            },
+        });
+
+        expect(await register().call('read_page', { path: '/about' })).toMatchObject({
+            error: expect.stringMatching(/metadata/i),
+        });
+    });
+});
+
 // ─── read_page ───────────────────────────────────────────────────────────────
 
 describe('read_page', () => {
-    it('GETs the DA source URL with the .html extension and the DA.live bearer', async () => {
+    // Goes through the service rather than a hand-rolled fetch, so it inherits
+    // the retry/429 handling, the timeout and the size cap. `sourceExists` was
+    // already making this exact GET.
+    it('reads through DaLiveContentOperations with the .html source path', async () => {
         const res = await register().call('read_page', { path: '/about' });
 
-        expect(fetchMock).toHaveBeenCalledTimes(1);
-        const [url, init] = fetchMock.mock.calls[0];
-        expect(url).toBe('https://admin.da.live/source/skukla/bodea/about.html');
-        expect((init as { headers: Record<string, string> }).headers.Authorization).toBe(
-            'Bearer da-token',
-        );
+        expect(daOps.readSource).toHaveBeenCalledWith('skukla', 'bodea', 'about.html');
+        expect(fetchMock).not.toHaveBeenCalled();
         expect(res).toMatchObject({ path: '/about', content: '<body><main>hi</main></body>' });
     });
 
     // The site root is a page too, and its source file is index.html.
     it('maps the site root to index.html', async () => {
         await register().call('read_page', { path: '/' });
-        expect(fetchMock.mock.calls[0][0]).toBe('https://admin.da.live/source/skukla/bodea/index.html');
+        expect(daOps.readSource).toHaveBeenCalledWith('skukla', 'bodea', 'index.html');
     });
 
     it('does not double-append .html when the caller already supplied it', async () => {
         await register().call('read_page', { path: '/about.html' });
-        expect(fetchMock.mock.calls[0][0]).toBe('https://admin.da.live/source/skukla/bodea/about.html');
+        expect(daOps.readSource).toHaveBeenCalledWith('skukla', 'bodea', 'about.html');
     });
 
     it('reports a 404 as a missing page rather than throwing', async () => {
-        fetchMock.mockResolvedValueOnce(okResponse('', 404));
+        daOps.readSource.mockResolvedValueOnce({ status: 404, body: '', bytes: 0, truncated: false });
         expect(await register().call('read_page', { path: '/nope' })).toMatchObject({
             error: expect.stringMatching(/not found/i),
+        });
+    });
+
+    it('surfaces truncation so an agent knows the body is partial', async () => {
+        daOps.readSource.mockResolvedValueOnce({
+            status: 200, body: 'x'.repeat(100), bytes: 999_999, truncated: true,
+        });
+        expect(await register().call('read_page', { path: '/big' })).toMatchObject({
+            truncated: true, bytes: 999_999,
         });
     });
 
@@ -449,23 +571,40 @@ describe('delete_page', () => {
         expect(order).toEqual(['unpublish', 'delete']);
     });
 
-    it('still deletes the source when the unpublish fails', async () => {
-        helix.unpublishPage.mockRejectedValueOnce(new Error('already gone'));
+    // Deleting the source after a FAILED unpublish leaves a page live on the CDN
+    // with its content gone — the one unrecoverable outcome. Abort instead.
+    it('does NOT delete the source when the unpublish throws', async () => {
+        helix.unpublishPage.mockRejectedValueOnce(new Error('403 denied'));
 
         const res = await register().call('delete_page', { path: '/about', confirm: true });
 
-        expect(daOps.deleteSource).toHaveBeenCalled();
-        expect(res).toMatchObject({ deleted: true, unpublished: false });
+        expect(daOps.deleteSource).not.toHaveBeenCalled();
+        expect(res).toMatchObject({ deleted: false, unpublished: false, error: expect.stringMatching(/403/) });
+    });
+
+    // unpublishPage returns false (not throws) on 401/403, so the falsy result
+    // needs the same treatment as the throw.
+    it('does NOT delete the source when the unpublish returns false', async () => {
+        helix.unpublishPage.mockResolvedValueOnce(false);
+
+        const res = await register().call('delete_page', { path: '/about', confirm: true });
+
+        expect(daOps.deleteSource).not.toHaveBeenCalled();
+        expect(res).toMatchObject({ deleted: false, unpublished: false });
+        expect(res.error).toMatch(/left in place/i);
     });
 });
 
 // ─── read_published_page ─────────────────────────────────────────────────────
 
 describe('read_published_page', () => {
-    it('fetches .plain.html from the live CDN', async () => {
+    it('fetches .plain.html from the live CDN, with a timeout', async () => {
         const res = await register().call('read_published_page', { path: '/about' });
 
         expect(fetchMock.mock.calls[0][0]).toBe('https://main--bodea--skukla.aem.live/about.plain.html');
+        // Every other CDN read in the codebase bounds itself; an MCP call has no
+        // client-side cancel, so a hung socket would hang the agent's turn.
+        expect(fetchMock.mock.calls[0][1]).toMatchObject({ signal: expect.anything() });
         expect(res).toMatchObject({ path: '/about', status: 200 });
     });
 

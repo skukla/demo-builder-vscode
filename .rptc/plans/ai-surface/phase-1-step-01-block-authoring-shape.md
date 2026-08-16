@@ -32,8 +32,8 @@ Two sibling files complete the picture, and neither is optional in practice:
 
 - `component-filters.json` — what may nest inside. `cards` reports two columns; its real content is
   `card` children. Without this an agent authors flat cells and the block renders empty.
-- `component-models.json` — the field names/labels. Best-effort: 38 of 78 components name a model
-  that has no entry, which is normal, not an error.
+- `component-models.json` — the field names/labels. Best-effort: 38 of 78 components resolve no
+  model fields (27 name a model id with no entry, 11 name none), which is normal, not an error.
 
 ## Shape
 

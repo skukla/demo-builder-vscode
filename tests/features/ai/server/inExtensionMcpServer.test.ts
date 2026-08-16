@@ -147,7 +147,7 @@ describe('InExtensionMcpServer', () => {
 
         const names = await listToolsOverSocket(socketPath);
         expect(names).toContain('ping_tool');
-        expect(names).toContain('list_projects'); // the 7 project tools still present
+        expect(names).toContain('list_projects'); // the file-based project tools still present
 
         const result = await callToolOverSocket(socketPath, 'ping_tool', {});
         expect(result).toBe('{"pong":true}');

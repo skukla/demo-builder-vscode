@@ -25,6 +25,14 @@ import type { Logger } from '@/types/logger';
  */
 const CONTENT_COPY_BATCH_SIZE = 5;
 
+/**
+ * Default cap for {@link DaLiveSourceOperations.readSource}. A DA source path
+ * can hold an arbitrarily large document, and the MCP `read_page` tool ships the
+ * body to a model that pays for it as context — the same reason `get_block_source`
+ * caps its reads.
+ */
+const MAX_SOURCE_READ_BYTES = 30_000;
+
 /** DA.live source-tree CRUD operations. */
 export class DaLiveSourceOperations {
     constructor(
@@ -287,6 +295,41 @@ export class DaLiveSourceOperations {
                 error: (error as Error).message,
             };
         }
+    }
+
+    /**
+     * Read a source document's raw body.
+     *
+     * The read half of {@link createSource}, and the same GET `sourceExists`
+     * makes — that one just discards the body. Returns the status alongside the
+     * body so callers can distinguish "absent" (404) from "failed", and caps the
+     * body because MCP callers pay for it as context tokens.
+     *
+     * @param maxBytes Truncate beyond this; the returned `bytes` is still the
+     *                 true size, so a caller's size checks stay honest.
+     */
+    async readSource(
+        org: string,
+        site: string,
+        path: string,
+        maxBytes = MAX_SOURCE_READ_BYTES,
+    ): Promise<{ status: number; body: string; bytes: number; truncated: boolean }> {
+        const token = await this.apiClient.getImsToken();
+        const url = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${normalizePath(path)}`;
+
+        const response = await this.apiClient.fetchWithRetry(url, {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) {
+            return { status: response.status, body: '', bytes: 0, truncated: false };
+        }
+
+        const body = await response.text();
+        const bytes = Buffer.byteLength(body, 'utf8');
+        return bytes > maxBytes
+            ? { status: response.status, body: body.slice(0, maxBytes), bytes, truncated: true }
+            : { status: response.status, body, bytes, truncated: false };
     }
 
     /**

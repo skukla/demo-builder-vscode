@@ -17,7 +17,7 @@
  * Flags:
  *   --socket <path>   explicit socket (default: auto-discover, error if ambiguous)
  *   --full            do not truncate call output
- *   --force           permit a destructive tool call (refused otherwise)
+ *   --force           permit a NON-read-only tool call (refused otherwise)
  */
 
 import net from 'net';
@@ -25,24 +25,44 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-// ── destructive denylist ─────────────────────────────────────────────────────
-// The standing constraint is "never call a destructive tool to measure it", and
-// 8 tools take NO required arguments — so an enumerate-and-call sweep with `{}`
-// would fire them. Matching is on the NAME, deliberately broad: a false positive
-// costs one --force flag, a false negative costs a live resource.
-const DESTRUCTIVE = /^(delete|remove|cleanup|reset|unpublish|destroy)_|_(delete|reset)$|^refresh_block_library$|^promote_block_to_library$/;
+// ── which tools are safe to call unprompted ──────────────────────────────────
+// An ALLOWLIST, not a denylist. The first version matched destructive-sounding
+// NAMES and let `sync_content` and `republish` straight through — both take zero
+// arguments and both push to the live public CDN, which is exactly the
+// enumerate-and-call accident the guard exists to stop. A name-denylist has to
+// enumerate every dangerous tool correctly forever; an allowlist fails closed
+// when a new tool appears.
+//
+// Read-only verbs, matched case-insensitively and anchored.
+const READ_ONLY = /^(list|get|read|check|find|verify|inspect|show|describe)[_-]/i;
+const READ_ONLY_EXACT = /^(list_projects|get_current_project|verify_ai_setup)$/i;
+
+/** A tool is safe without --force only if its name reads as a query. */
+function isReadOnly(name) {
+    return READ_ONLY.test(name) || READ_ONLY_EXACT.test(name);
+}
 
 const argv = process.argv.slice(2);
-const flag = (name) => {
+/** Boolean flag: present or absent, never consumes the following token. */
+const boolFlag = (name) => {
+    const i = argv.indexOf(name);
+    if (i < 0) return false;
+    argv.splice(i, 1);
+    return true;
+};
+/** Value flag: requires a following token that is not itself a flag. */
+const valueFlag = (name) => {
     const i = argv.indexOf(name);
     if (i < 0) return undefined;
     const v = argv[i + 1];
-    argv.splice(i, v && !v.startsWith('--') ? 2 : 1);
-    return v ?? true;
+    if (v === undefined || v.startsWith('--')) die(`${name} requires a value`);
+    argv.splice(i, 2);
+    return v;
 };
-const socketFlag = flag('--socket');
-const full = Boolean(flag('--full'));
-const force = Boolean(flag('--force'));
+// Booleans first: otherwise `--socket --full` would take "--full" as the path.
+const full = boolFlag('--full');
+const force = boolFlag('--force');
+const socketFlag = valueFlag('--socket');
 const [cmd, ...rest] = argv;
 
 // ── socket discovery ─────────────────────────────────────────────────────────
@@ -178,8 +198,9 @@ const commands = {
                     ? `data-installer merged (${datapack.length} datapack tools)`
                     : 'no datapack tools — develop baseline',
             );
-            const destructive = names.filter((n) => DESTRUCTIVE.test(n));
-            console.log('destructive (need --force):', destructive.length, destructive.join(', ') || '(none)');
+            const gated = names.filter((n) => !isReadOnly(n));
+            console.log(`callable without --force: ${names.length - gated.length} of ${names.length}`);
+            console.log('need --force:', gated.join(', ') || '(none)');
         });
     },
 
@@ -192,7 +213,7 @@ const commands = {
             }
             tools.sort((a, b) => a.name.localeCompare(b.name));
             for (const t of tools) {
-                const mark = DESTRUCTIVE.test(t.name) ? ' [destructive]' : '';
+                const mark = isReadOnly(t.name) ? '' : ' [needs --force]';
                 console.log(`${t.name}${mark}\n    ${t.description ?? ''}`);
             }
             console.log(`\n${tools.length} tool(s)${pattern ? ` matching /${pattern}/i` : ''}`);
@@ -210,11 +231,13 @@ const commands = {
 
     async call([tool, argsJson]) {
         if (!tool) die("usage: probe.mjs call <tool> ['<json args>']");
-        if (DESTRUCTIVE.test(tool) && !force) {
+        if (!isReadOnly(tool) && !force) {
             die(
-                `"${tool}" looks destructive and was NOT called.\n` +
+                `"${tool}" is not a read-only tool and was NOT called.\n` +
                     `  Re-run with --force if you intend it, and only against a resource you can lose.\n` +
-                    `  Standing rule: never call a destructive tool merely to measure it.`,
+                    `  Standing rule: never call a state-changing tool merely to measure it.\n` +
+                    `  (This is an allowlist: anything not named list_/get_/read_/check_/... is gated,\n` +
+                    `   because a denylist let sync_content and republish through to the live CDN.)`,
             );
         }
         let args = {};

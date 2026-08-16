@@ -140,7 +140,7 @@ What survived the retirement, and why it matters when reading the code:
 
 - **`src/mcp-server.ts` still exists**, but only as a **shared, `vscode`-free
   tool-registration module.** Its `registerProjectTools(server, projectsDir)`
-  registers the original seven file-based tools, and the in-extension server
+  registers the file-based tools (ten today), and the in-extension server
   calls it (see §6). The standalone *bootstrap* (the `StdioServerTransport`
   process entry) is gone.
 - Only **`dist/mcp-proxy.js`** is built as a standalone artifact now (see
@@ -213,7 +213,7 @@ Wiring lives in `src/extension.ts`:
 
 Tool registration on each connection happens in two layers:
 
-1. `registerProjectTools(server, projectsDir)` — the seven shared file-based
+1. `registerProjectTools(server, projectsDir)` — the ten shared file-based
    tools from `src/mcp-server.ts`.
 2. A `registerExtraTools` callback (injected by `extension.ts` so the server
    module stays free of `vscode`/handler imports) that calls every other
@@ -284,6 +284,8 @@ These are `vscode`-free and operate on files under `~/.demo-builder/projects`.
 | `list_blocks` | List EDS blocks in the storefront. |
 | `get_block_source` | Read a block's files (manifest or one file, size-capped). |
 | `get_block_authoring_shape` | Read a block's DA.live authoring shape from `component-definition.json` + the models/filters siblings (registry index when `blockName` is omitted). |
+| `promote_block_to_library` | Add a local block to the DA.live authoring library. Destructive (commits, pushes, publishes); confirm-gated. |
+| `remove_block_from_library` | The inverse. Destructive; confirm-gated. |
 
 ### Discovery & catalog — `discoveryTools.ts`
 `list_components`, `list_demo_packages`, `list_stacks` — read-only catalog lookups
@@ -367,7 +369,7 @@ agent could list and destroy DA.live sites but could not write a page to one.
 
 | Tool | Notes |
 |---|---|
-| `read_page` | Reads DA.live source HTML. The only new transport here — nothing read `GET /source` before. |
+| `read_page` | Reads DA.live source HTML. Delegates to `DaLiveSourceOperations.readSource`, which sits beside the `sourceExists` GET that already hit this endpoint — what was new is reading the BODY, not reaching the URL. |
 | `write_page` | Writes source; `publish:true` previews+publishes in the same call. |
 | `publish_page` | Preview + publish an existing page. |
 | `list_content` | Directory listing, projected to web paths with a page/file/folder type. |
@@ -383,13 +385,28 @@ would move the trap to the caller rather than remove it:
 | Helix preview/publish | `/about` | `normalizeWebPath` never strips `.html`, so the suffixed form publishes the wrong path |
 | `da.live/canvas` | `about` | extensionless, or the path double-appends to `index.html.html` |
 
-Every tool takes ONE canonical web path and derives the rest via `resolveDaPath`
-— the same helper the content-copy pipeline uses, so the two cannot drift.
+Every tool takes ONE canonical web path; the three that need a source path derive
+it via `resolveDaPath`, and `read_published_page` builds its CDN URL with
+`buildSourceUrl` + `aemLiveBaseUrl` — the same helpers the content-copy pipeline
+and storefront probe use, so none of them can drift apart.
 
 **No `org`/`site` arguments.** All six target the current project. An override
 would let an agent write into, and unpublish from, any DA.live site the user's
 token reaches, with no confirmation on the non-destructive paths;
 `list_dalive_sites` already covers cross-site reads.
+
+**That control lives or dies on the path.** Omitting `org`/`site` means nothing if
+`path` can walk out of the site: the URL parser collapses `..`, so
+`/source/{org}/{site}/../../victim/site/index.html` resolves to
+`/source/victim/site/index.html` and is sent with the user's DA.live bearer —
+reaching Helix preview/publish and the unpublish DELETE the same way, since
+`normalizeWebPath` also leaves `..` intact. Paths are therefore **rejected, not
+normalized**: no `.`/`..` segments, no scheme, no protocol-relative prefix, no
+backslashes, no control characters, and percent-encoded traversal is decoded
+before the check. The storefront coordinates are validated too (must start
+alphanumeric), because `githubRepo: "../../x/y"` otherwise puts the traversal
+back via the metadata. Both are covered by tests named for the escape they
+block.
 
 **Auth: the DA.live token, not the Adobe one.** Two IMS tokens can reach DA.live
 — `DaLiveAuthService`'s (its own sign-in and storage, used by the production
@@ -398,8 +415,15 @@ content path) and the extension's Adobe token (used for org-level reads like
 a 401 at runtime, not a type error. Preview/publish also sends
 `x-auth-token: <github>`, so those paths pre-flight both credentials.
 
-`delete_page` unpublishes **before** deleting the source: the reverse order
-strands a published page whose source is already gone (ADR-002).
+`delete_page` unpublishes **before** deleting the source, and **aborts if the
+unpublish fails** — only that order fails recoverably. Deleting first and then
+failing to unpublish leaves a live page whose content is gone.
+
+This is a failure-mode argument, not an auth one. An earlier version of this
+section cited ADR-002's `delete not allowed while source exists` 403; that reads
+the ADR backwards. The 403 fires while the source EXISTS, and `unpublishPage`
+sends the DA.live Bearer that ADR-002 measured as bypassing the restriction
+entirely. Auth is indifferent to the order.
 
 ### View — `viewTools.ts`
 `open_view` — surface a specific VS Code view/screen for the user.
@@ -446,9 +470,15 @@ nothing. `apply_updates` is the one that reports what *would* happen: no
 `confirm` = a read-only "here's what's available". Don't assume the dry-run
 behavior generalizes.
 
-**Extra-strict gating for irreversible ops.** `delete_project` additionally
-requires `confirmName` to exactly echo the project name, so an agent can't delete
-the wrong project on a fuzzy match.
+**Extra-strict gating for irreversible ops.** Three tools require a `confirmName`
+that exactly echoes the resource, so an agent can't destroy the wrong one on a
+fuzzy match: `delete_project` (project name), `delete_github_repo` (`owner/repo`),
+and `cleanup_dalive_site` (`org/site`).
+
+`delete_page` deliberately uses the plain `confirm: true` gate instead — it removes
+one page from the current project's own storefront, not a whole repository or site.
+That proportionality holds only because the page path is confined to the current
+site; see the traversal note in the content-authoring section.
 
 <a name="auth-handoff"></a>**Auth handoff instead of silent failure.** Tools that
 need credentials pre-flight the relevant provider and, if not signed in, return a
@@ -501,8 +531,8 @@ The agent surface is powerful, so it's deliberately constrained:
   `promote_block_to_library` writes, and the rarest form in a real storefront).
   `component-filters.json` supplies nested children, without which `cards` reads
   as two flat columns rather than a list of `card`s; `component-models.json`
-  supplies field labels. Both are best-effort — 38 of 78 components name a model
-  that has no entry.
+  supplies field labels. Both are best-effort — 38 of 78 components resolve no
+  model fields (27 name a model id with no entry, 11 name none at all).
 - **No secret leakage to child processes.** Where the extension spawns other MCP
   servers to introspect them, it uses an env allowlist.
 
@@ -583,7 +613,7 @@ in a map, plus a `call(args)` that invokes the handler and JSON-parses the text
 result. The underlying service is mocked; the test asserts the tool's gating
 (confirm, auth handoff), argument shaping, and result. See
 `tests/features/ai/server/*.test.ts` (e.g. `applyUpdatesTool.test.ts`,
-`deleteProjectTool.test.ts`). The shared seven tools have their own suites under
+`deleteProjectTool.test.ts`). The shared file-based tools have their own suites under
 `tests/features/ai/mcpServer-*.test.ts`, and the socket server has
 `tests/features/ai/server/inExtensionMcpServer.test.ts`.
 

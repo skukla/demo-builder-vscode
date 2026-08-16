@@ -185,6 +185,22 @@ export class DaLiveContentOperations {
     }
 
     /**
+     * Read source content (raw body + status, size-capped).
+     * @param org - Organization name
+     * @param site - Site name
+     * @param path - Content path
+     * @param maxBytes - Optional cap; `bytes` still reports the true size
+     */
+    async readSource(
+        org: string,
+        site: string,
+        path: string,
+        maxBytes?: number,
+    ): Promise<{ status: number; body: string; bytes: number; truncated: boolean }> {
+        return this.sourceOps.readSource(org, site, path, maxBytes);
+    }
+
+    /**
      * Delete source content
      * @param org - Organization name
      * @param site - Site name
