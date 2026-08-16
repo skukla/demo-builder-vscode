@@ -49,13 +49,17 @@ fewer copies of the same power, not more power.
 
 ## Steps
 
-| Step | Repo | Blocks release? |
-|---|---|---|
-| `step-01` — `get-commerce-credentials` action behind the existing guard chain | `accs-discovery-service` | Yes |
-| `step-02` — `resolveCommerceCredentials` gains a broker fallback | this repo | Yes |
-| `step-03` — reconcile the provisioning UI with the new path | this repo | Yes |
-| `step-04` — docs + the security note this endpoint deserves | this repo | No |
-| `step-05` — **after ship**: probe cross-org reach | probe | No |
+| Step | Repo | Blocks release? | State |
+|---|---|---|---|
+| `step-01` — `get-commerce-credentials` action behind the existing guard chain | `accs-discovery-service` | Yes | **shipped** — `cbeb51b`, deployed to Stage, live check 11/11 |
+| `step-02` — `resolveCommerceCredentials` gains a broker fallback | this repo | Yes | **done** — `b076a751` + `70ac8a1e` (Diagnostics) |
+| `step-03` — reconcile the provisioning UI with the new path | this repo | Yes | **done** — `6b446d99` |
+| `step-04` — docs + the security note this endpoint deserves | this repo | No | **done** — ADR-014 |
+| `step-05` — **after ship**: probe cross-org reach | probe | No | open |
+
+**Not covered by any step, and not yet done: an actual import through the broker.**
+The unit tests pass and the deployed endpoint answers, but the two have never met
+on a real project. Nothing above should be read as saying otherwise.
 
 Step 01 deploys before step 02 can be exercised live. Steps 02 and 03 are this repo's and
 share a seam. Step 05 is deliberately last: it decides whether Option 2 can absorb the

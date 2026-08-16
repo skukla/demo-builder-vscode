@@ -21,10 +21,41 @@ Two settings, read in exactly one place — `services/dataInstallerConfig.ts`:
 | `demoBuilder.dataInstaller.enabled` | `true` | A corrupted non-boolean reads as `true`: a broken `settings.json` should not look like a deliberate opt-out. |
 | `demoBuilder.dataInstaller.apiBaseUrl` | the team's stage deployment | `https` only, ≤2048 chars, trailing slash stripped. |
 
-**There are no credentials to configure.** The client sends the extension's
+**Reading** the service needs no credentials. The client sends the extension's
 existing Adobe IMS token as `Bearer` — verified byte-identical to the token a
 successful probe used — so no dedicated integration is needed. `health-check` is
 the one call that sends no `Authorization` header.
+
+**Writing does.** A datapack import, export or reset authenticates to the
+Commerce instance itself, and for ACCS that means an OAuth Server-to-Server pair.
+This document previously said "there are no credentials to configure" full stop,
+which was true of reads and never of writes.
+
+### Where the ACCS pair comes from — three sources, in precedence
+
+| | Source | Configured by |
+|---|---|---|
+| 1 | the pair declared on the `adobe-commerce-accs` component | the user, by hand or via the "Set up credentials automatically" button |
+| 2 | the shared credential service (`get-commerce-credentials`) | nobody, per project — it follows `demoBuilder.accsDiscovery.services`, already set for store discovery |
+| 3 | — | nothing: the operation refuses, and offers Console provisioning only where that could succeed |
+
+**A declared pair always wins**, so a project that has one behaves exactly as it
+did before source 2 existed.
+
+Source 2 exists because the pair can only be CREATED inside an Adobe I/O project
+workspace, and a demo project that selects no App Builder components never gets
+one — so before the broker it could browse the catalog and never import. The
+shared pair lives in the org where the Commerce instances are and is handed out
+over the guard chain that already protects `discover-stores`.
+
+**The brokered pair is never persisted** — not to `componentConfigs`, not to
+SecretStorage. It is shared rather than per-project, and it is re-fetchable, so a
+stored copy would multiply one org-wide credential across project files and go
+stale on rotation. See ADR-014 for the reasoning and the measured blast radius.
+
+An unconfigured or refusing service is reported by **Diagnostics** ("Commerce
+credential service"), not left as silence — the four states need three different
+people to fix and otherwise arrive as one message.
 
 A rejected URL never reaches a log verbatim: `fingerprintUrl()` reports scheme and
 host only, because a URL can carry a secret in its query string. The same
@@ -869,6 +900,10 @@ read only from that drop as a hypothesis needing a live check.
 ## 7. See also
 
 - [MCP Server](./mcp-server.md) — §9 lists the six read tools
+- [ADR-014](../architecture/adr/014-data-installer-shared-credential.md) — why the
+  ACCS pair is served from a shared service, and what one such credential reaches
 - `.rptc/plans/data-installer/overview.md` — the plan and its staging
+- `.rptc/plans/data-installer-credential-broker/overview.md` — the credential
+  decision, its steps, and the cross-org question still open
 - `.rptc/research/data-installer/spike-01-live-api.md` — the live-API probe the
   contract above came from
