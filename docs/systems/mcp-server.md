@@ -296,11 +296,28 @@ used while assembling a `create_project` call.
 `select_project`, `list_workspaces`, `select_workspace`. These back the
 [auth handoff](#auth-handoff) other tools rely on.
 
-`list_adobe_projects` returns `who_created` when the Console reports one. That
-field alone decides whether a project offers a delete affordance — the ownership
-gate compares it to the token's `user_id` claim and fails closed — so exposing it
-is what makes "why can I not delete this project?" answerable. The comparison
-stays extension-side; only the field travels.
+`list_adobe_projects` is **paged and searchable**, and each row carries
+`deletable` — the ownership verdict, not the raw creator id.
+
+That answers "why can I not delete this project?", which is the question the
+field exists for. It replaced shipping `who_created` itself, which was wrong two
+ways, both measured live 2026-08-16 against a real org:
+
+- **Size.** The org has **725 projects**; the unpaged response was **111,748
+  bytes** (~28,000 tokens), and `who_created` alone was **46%** of it — 35KB of
+  other people's technical-account addresses in a model's context.
+- **Usefulness.** The agent could not act on it. The comparison is against the
+  token's `user_id` claim, which only the extension can read, so the field was
+  inert at the receiving end.
+
+`deletable` is that comparison already made — ~40x smaller and directly
+actionable. The fail-closed rule is preserved: no recorded creator resolves to
+`false` (`isProjectOwnedBy`).
+
+`select_project` no longer enumerates on a bad id. It used to return every
+project in the org as `validOptions`, so one mistyped id cost more than the
+entire tool catalogue; it now reports the count and points at
+`list_adobe_projects`'s `search`.
 
 ### Descriptor-driven tools — `readDescriptors.ts` / `actionDescriptors.ts` (via `toolDescriptors.ts`)
 Thin tools declared as data and dispatched to existing handler maps:

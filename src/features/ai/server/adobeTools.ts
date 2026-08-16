@@ -22,6 +22,10 @@ import { z } from 'zod';
 import { getAdobeTarget, runWithAdobeTarget, setAdobeTarget } from './adobeTargetStore';
 import { asText } from './mcpToolResult';
 import { withOrgContext } from '@/core/shell';
+import {
+    isProjectOwnedBy,
+    resolveCurrentImsUserId,
+} from '@/features/authentication/services/projectOwnership';
 import { ErrorCode } from '@/types/errorCodes';
 import { hasErrorCode } from '@/types/errors';
 import type { HandlerContext } from '@/types/handlers';
@@ -68,27 +72,57 @@ async function authedManager(ctx: HandlerContext): Promise<HandlerContext['authM
     return (await mgr.isAuthenticated()) ? mgr : null;
 }
 
-/**
- * Trim a Console entity to what an agent needs.
- *
- * `who_created` rides along when present (projects have it; orgs and workspaces
- * do not). It is the ONLY field that decides whether a project offers a delete
- * affordance — `projectOwnership.stampProjectsDeletable` compares it against the
- * token's `user_id` claim and fails closed. The list already fetched it and this
- * function used to discard it, so when a user asked why two projects they had
- * created were not deletable, the value that answers could be read from nowhere.
- *
- * Exposing it is safe: it is a creator id the Adobe Console UI already shows, and
- * the ownership COMPARISON still happens extension-side. Absent stays absent —
- * the fail-closed path treats a missing creator as not-deletable, and an
- * explicit `undefined` would blur that.
- */
-const lean = (e: { id: string; name: string; title?: string; who_created?: string }) => ({
+/** Trim a Console entity to what an agent needs. */
+const lean = (e: { id: string; name: string; title?: string }) => ({
     id: e.id,
     name: e.name,
     ...(e.title ? { title: e.title } : {}),
-    ...(e.who_created ? { who_created: e.who_created } : {}),
 });
+
+/**
+ * A project row: {@link lean} plus the ownership ANSWER, not the raw input to it.
+ *
+ * `who_created` used to ride along, so an agent could see why a project offered
+ * no delete affordance. Measured live 2026-08-16, that was the wrong shape twice
+ * over. In a real org the list is **725 projects / 111,748 bytes**, and
+ * `who_created` was **46% of it** — 35KB of other people's technical-account
+ * addresses shipped into a model's context.
+ *
+ * And the agent could not use it: the comparison is against the token's
+ * `user_id` claim, which only the extension can read. So it was 35KB of a field
+ * whose recipient had no way to act on it.
+ *
+ * `deletable` is that comparison already made — strictly more useful, ~40x
+ * smaller, and it keeps other users' account ids out of the transcript. The
+ * fail-closed rule is preserved: a missing creator resolves to `false`, exactly
+ * as `isProjectOwnedBy` specifies.
+ */
+const leanProject = (
+    e: { id: string; name: string; title?: string; who_created?: string },
+    userId: string | undefined,
+) => ({
+    ...lean(e),
+    deletable: isProjectOwnedBy(e.who_created, userId),
+});
+
+/**
+ * Page size for Console listings.
+ *
+ * `list_adobe_projects` had no paging at all and returned every project in the
+ * org — 725 of them in a real Adobe org, 111,748 bytes, ~28,000 tokens for one
+ * call. That is not a list an agent can read; it is one it must search.
+ */
+const CONSOLE_PAGE_SIZE = 20;
+
+/** Case-insensitive substring match over the fields an agent would search by. */
+function matchesSearch(e: { id: string; name: string; title?: string }, term: string): boolean {
+    const t = term.toLowerCase();
+    return (
+        e.name.toLowerCase().includes(t) ||
+        (e.title ?? '').toLowerCase().includes(t) ||
+        e.id.toLowerCase().includes(t)
+    );
+}
 
 /**
  * Register list_orgs / list_adobe_projects / list_workspaces and
@@ -112,17 +146,52 @@ export function registerAdobeTools(server: any, ctxFactory: () => HandlerContext
 
     server.registerTool(
         'list_adobe_projects',
-        { title: 'List Adobe Projects', description: 'List Adobe Console projects in the currently selected org', inputSchema: {} },
-        async () => {
-            const mgr = await authedManager(ctxFactory());
+        {
+            title: 'List Adobe Projects',
+            description:
+                'List Adobe Console projects in the currently selected org. Paged — a real org ' +
+                'has hundreds. Pass search to find one by name, title or id; `deletable` says ' +
+                'whether you created it and may delete it.',
+            inputSchema: {
+                search: z
+                    .string()
+                    .optional()
+                    .describe('Case-insensitive substring match on name, title or id'),
+                limit: z
+                    .number()
+                    .default(CONSOLE_PAGE_SIZE)
+                    .describe(`Maximum rows to return (default ${CONSOLE_PAGE_SIZE})`),
+                skip: z.number().optional().describe('Rows to skip, for paging'),
+            },
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        async (args: any) => {
+            const ctx = ctxFactory();
+            const mgr = await authedManager(ctx);
             if (!mgr) return NEEDS_ADOBE_AUTH;
             // Honor the session-selected org so the list reflects select_org,
             // not the ambient global cache. Untargeted when nothing is stored.
             const stored = getAdobeTarget();
-            const projects = stored?.orgId
+            const all = stored?.orgId
                 ? await mgr.getProjects({ orgId: stored.orgId })
                 : await mgr.getProjects();
-            return asText(projects.map(lean));
+
+            const search = typeof args?.search === 'string' ? args.search.trim() : '';
+            const matched = search ? all.filter((p) => matchesSearch(p, search)) : all;
+            const skip = Math.max(0, Math.trunc(args?.skip ?? 0));
+            const limit = Math.max(1, Math.trunc(args?.limit ?? CONSOLE_PAGE_SIZE));
+            const page = matched.slice(skip, skip + limit);
+
+            // One token read for the whole page, not one per row.
+            const userId = await resolveCurrentImsUserId(ctx.authManager);
+            return asText({
+                items: page.map((p) => leanProject(p, userId)),
+                count: page.length,
+                total: matched.length,
+                ...(search ? { search, totalUnfiltered: all.length } : {}),
+                limit,
+                skip,
+            });
         },
     );
 
@@ -180,7 +249,14 @@ export function registerAdobeTools(server: any, ctxFactory: () => HandlerContext
             const projects = await mgr.getProjects({ orgId: stored.orgId });
             const project = projects.find((p) => p.id === args.projectId);
             if (!project) {
-                return asText({ error: `Unknown projectId: ${args.projectId}`, validOptions: projects.map(lean) });
+                // NEVER enumerate here. This path used to return every project in
+                // the org as `validOptions` — 725 rows / 111,748 bytes measured in
+                // a real org, so a single mistyped id cost more than the entire
+                // tool catalogue. Name the tool that can search instead.
+                return asText({
+                    error: `Unknown projectId: ${args.projectId}. Use list_adobe_projects with a search term to find the right id.`,
+                    projectsInOrg: projects.length,
+                });
             }
             // Merge the project into the stored target; switching projects drops
             // any prior workspace.

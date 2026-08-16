@@ -34,6 +34,26 @@ function fakeServer() {
     };
 }
 
+
+/**
+ * A token the REAL `decodeImsUserId` accepts — header.payload.signature with a
+ * base64url payload carrying `user_id`. Built rather than mocked so the
+ * ownership path under test is the production one.
+ */
+function tokenFor(userId: string): string {
+    const payload = Buffer.from(JSON.stringify({ user_id: userId }), 'utf8').toString('base64url');
+    return `hdr.${payload}.sig`;
+}
+
+/** Auth stub whose token names `userId`; omit for the no-token (fail-closed) case. */
+function withToken(userId?: string) {
+    return {
+        getTokenManager: () => ({
+            inspectToken: async () => ({ valid: Boolean(userId), expiresIn: 3600, token: userId ? tokenFor(userId) : undefined }),
+        }),
+    };
+}
+
 function makeAuth(overrides: Record<string, unknown> = {}) {
     return {
         isAuthenticated: jest.fn(async () => true),
@@ -170,42 +190,111 @@ describe('registerAdobeTools', () => {
     });
 
     /**
-     * `who_created` is the ONLY thing that decides whether a project shows a
-     * delete affordance — `projectOwnership.stampProjectsDeletable` compares it
-     * against the token's `user_id` claim and fails closed on any mismatch.
+     * An agent must be able to tell WHY a project offers no delete affordance —
+     * that question came from a real user with two projects they had created and
+     * could not delete, and nothing (picker, diagnostic, agent) could answer it.
      *
-     * The list already fetches it and `lean()` threw it away, so when a user
-     * asked why two projects they had created were not deletable, the value that
-     * answers the question could not be read from anywhere: not the picker, not
-     * a diagnostic, not an agent. Four competing explanations, no way to tell
-     * them apart. Keeping the field is the difference between a guess and a fact.
+     * The first fix shipped the raw `who_created` to the agent. Measured live
+     * 2026-08-16 that was wrong twice over: a real org returns 725 projects /
+     * 111,748 bytes and `who_created` was 46% of it — 35KB of other people's
+     * technical-account addresses — and the agent could not act on it anyway,
+     * because the comparison is against the token's `user_id` claim, which only
+     * the extension can read.
      *
-     * It is not sensitive: it is a creator id already visible in the Adobe
-     * Console UI, and the ownership STAMP still happens extension-side — this
-     * exposes the field to the agent, not the comparison.
+     * So the row now carries the ANSWER. Same question served, ~40x cheaper, and
+     * no third-party account ids in the transcript.
      */
-    it('list_adobe_projects keeps who_created, the field that decides deletability', async () => {
+    it('reports deletable=true for a project the signed-in user created', async () => {
         const server = fakeServer();
-        registerAdobeTools(server, ctxFactoryWith(makeAuth()));
+        registerAdobeTools(
+            server,
+            ctxFactoryWith(makeAuth(withToken('ABC123@AdobeID.e'))),
+        );
 
-        expect(await server.call('list_adobe_projects')).toEqual([
-            { id: 'proj-1', name: 'Proj One', title: 'P1', who_created: 'ABC123@AdobeID.e' },
+        const res = await server.call('list_adobe_projects');
+
+        expect(res.items).toEqual([
+            { id: 'proj-1', name: 'Proj One', title: 'P1', deletable: true },
         ]);
+        // The creator id itself must NOT travel.
+        expect(JSON.stringify(res)).not.toContain('@AdobeID');
     });
 
-    it('omits who_created when the Console did not return one', async () => {
-        // Absent is meaningful: `stampProjectsDeletable` fails closed on it, so
-        // a project with no creator recorded is never deletable. The key must
-        // stay absent rather than appear as undefined.
+    it('reports deletable=false when another user created the project', async () => {
+        const auth = makeAuth({
+            getProjects: jest.fn(async () => [
+                { id: 'p', name: 'N', title: 'T', who_created: 'SOMEONE-ELSE@AdobeID.e' },
+            ]),
+            ...withToken('ABC123@AdobeID.e'),
+        });
+        const server = fakeServer();
+        registerAdobeTools(server, ctxFactoryWith(auth));
+
+        const res = await server.call('list_adobe_projects');
+
+        expect(res.items[0]).toEqual({ id: 'p', name: 'N', title: 'T', deletable: false });
+    });
+
+    // Fail closed: `isProjectOwnedBy` treats a missing creator as NOT owned, and
+    // the agent-facing answer has to inherit that rather than blur it.
+    it('reports deletable=false when the Console recorded no creator', async () => {
         const auth = makeAuth({
             getProjects: jest.fn(async () => [{ id: 'p', name: 'N', title: 'T' }]),
         });
         const server = fakeServer();
         registerAdobeTools(server, ctxFactoryWith(auth));
 
-        expect(await server.call('list_adobe_projects')).toEqual([
-            { id: 'p', name: 'N', title: 'T' },
+        expect((await server.call('list_adobe_projects')).items[0].deletable).toBe(false);
+    });
+
+    // 725 projects in one response is not a list an agent reads; it is one it
+    // must search.
+    it('pages by default and reports the true total', async () => {
+        const many = Array.from({ length: 50 }, (_, i) => ({
+            id: `id-${i}`,
+            name: `name-${i}`,
+            title: `Title ${i}`,
+        }));
+        const server = fakeServer();
+        registerAdobeTools(server, ctxFactoryWith(makeAuth({ getProjects: jest.fn(async () => many) })));
+
+        const res = await server.call('list_adobe_projects', {});
+
+        expect(res.count).toBe(20);
+        expect(res.total).toBe(50);
+        expect(res.items).toHaveLength(20);
+    });
+
+    it('honours skip for paging', async () => {
+        const many = Array.from({ length: 50 }, (_, i) => ({ id: `id-${i}`, name: `n-${i}` }));
+        const server = fakeServer();
+        registerAdobeTools(server, ctxFactoryWith(makeAuth({ getProjects: jest.fn(async () => many) })));
+
+        const res = await server.call('list_adobe_projects', { limit: 5, skip: 10 });
+
+        expect(res.items.map((p: { id: string }) => p.id)).toEqual([
+            'id-10', 'id-11', 'id-12', 'id-13', 'id-14',
         ]);
+        expect(res.total).toBe(50);
+    });
+
+    it('searches by name, title or id and reports the unfiltered total', async () => {
+        const projects = [
+            { id: 'aaa', name: 'alpha', title: 'Alpha One' },
+            { id: 'bbb', name: 'beta', title: 'Beta Two' },
+            { id: 'ccc', name: 'gamma', title: 'Alpha Three' },
+        ];
+        const server = fakeServer();
+        registerAdobeTools(
+            server,
+            ctxFactoryWith(makeAuth({ getProjects: jest.fn(async () => projects) })),
+        );
+
+        const res = await server.call('list_adobe_projects', { search: 'alpha' });
+
+        expect(res.items.map((p: { id: string }) => p.id)).toEqual(['aaa', 'ccc']);
+        expect(res.total).toBe(2);
+        expect(res.totalUnfiltered).toBe(3);
     });
 
     it('list_adobe_projects passes the stored org to getProjects when a target is set', async () => {
