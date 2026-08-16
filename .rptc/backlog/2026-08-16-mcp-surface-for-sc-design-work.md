@@ -19,7 +19,9 @@ descriptors dispatch into the SAME maps, so handler types are the extension's fe
 a type no agent can reach is a missing AI feature. Written up as a repeatable scan skill
 (`.claude/skills/ai-coverage-scan/`), sibling to `dead-code-scan`.
 
-**Baseline 2026-08-16, develop @ beta.130:**
+**Baseline 2026-08-16, develop @ beta.131** (re-measured after the release; unchanged from
+beta.130 — `2568dd78` decomposed `dashboardHandlers` using verbatim re-exports, so the handler
+map stayed byte-equivalent and the scan correctly reported no movement):
 
 | | |
 |---|---|
@@ -42,7 +44,15 @@ finds missing features; the judgement question finds expensive ones.
 
 ## The finding
 
-**58 MCP tools. Zero for authoring content, zero for design.**
+**52 MCP tools on develop. Zero for authoring content, zero for design.**
+
+> **Scope correction (2026-08-16, at the beta.131 rebase).** An earlier draft said 58. That
+> figure was measured in the `test/bodea-on-data-installer` worktree, which has the Data
+> Installer merged in, while the coverage numbers below were measured on develop — **the item
+> mixed two trees.** On develop it is 52; the six extra are the datapack tools
+> (`find_datapacks`, `get_datapack`, `check_datapack_service`, `list_datapack_data_types`,
+> `list_installed_datapacks`, `get_datapack_activity`), which live on `feature/data-installer`.
+> Every number in this item is now develop-only. Measure one tree, and say which.
 
 | SC journey stage | Tools | Verdict |
 |---|---|---|

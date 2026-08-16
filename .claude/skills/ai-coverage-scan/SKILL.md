@@ -15,7 +15,7 @@ bash .claude/skills/ai-coverage-scan/scan.sh          # summary
 bash .claude/skills/ai-coverage-scan/scan.sh --list   # + every uncovered feature
 ```
 
-## Baseline — 2026-08-16, `develop` @ beta.130
+## Baseline — 2026-08-16, `develop` @ beta.131
 
 | | |
 |---|---|
@@ -30,6 +30,16 @@ what an SC does.
 
 **Re-measure before trusting this table.** Backlog entries in this repo rot precisely because
 nobody re-runs the number; that is what the scan is for.
+
+**And say which tree you measured.** The numbers above are develop-only. Running this in a
+worktree with a feature branch merged in gives different totals — the first draft of the sibling
+backlog item reported a tool count from an integration worktree next to coverage numbers from
+develop, and the mismatch was invisible until a release forced a re-measure. Feature branches add
+handlers AND tools, so both halves move.
+
+**Held stable across a decomposition refactor**, which is the useful proof that it measures the
+map rather than the files: `2568dd78` split `dashboardHandlers` 1,213 -> 220 lines into five
+sibling modules with verbatim re-exports, and the scan correctly reported no change.
 
 ## Three traps, each of which produced a wrong number before the scan was trusted
 
