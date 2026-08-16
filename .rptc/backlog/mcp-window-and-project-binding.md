@@ -1,8 +1,8 @@
 # MCP: which window serves, and which project it acts on
 
 **Filed:** 2026-08-14, from a `/rptc:research` pass on MCP scoping.
-**Status:** ready — race 1 is REPRODUCED (2026-08-16), race 2 is still
-code-stated. The remedy needs a decision.
+**Status:** race 2 FIXED on the agent surface (2026-08-16). Race 1 is reproduced
+and still open — the remedy needs a decision.
 
 ## The question that started it
 
@@ -78,9 +78,30 @@ session, not in this repo's test suite.
 This confirms the mechanism above exactly as written: one socket name, last
 writer wins, no conflict logged.
 
-**Race 2 — which project the serving window thinks is current: still NOT
-reproduced.** The preconditions (selection made in A, read through B) remain
-stated from code. That half is still step 1.
+**Race 2 — which project the serving window thinks is current: FIXED on the
+agent surface, 2026-08-16.** Never reproduced live, and deliberately fixed
+without reproducing: the chain is true by construction (verified — the path
+comes from in-memory state at `stateManager.ts:172-180`, `saveProject` updates
+memory and disk at `:208-209`, the MCP context shares the window's instance at
+`headlessHandlerContext.ts`, and `reload()` had zero callers, confirmed with a
+control), and the user confirmed running multiple hosts with different
+selections **often**, which was the only unknown.
+
+`StateManager.readCurrentProjectFromDisk()` reads the pointer from
+`state.json` and loads that project, touching neither `this.state` nor
+`_onProjectChanged`. `createHeadlessHandlerContext` wraps the window's state
+manager so `getCurrentProject()` routes there; everything else delegates
+unchanged.
+
+Deliberately NOT done, and still open if you want it:
+
+- **The UI is unchanged.** Window B's dashboard still shows the project B loaded
+  at startup. Making the UI disk-authoritative would silently switch a window's
+  visible project mid-session, which needs its own decision.
+- `reload()` still has no callers. It fires `_onProjectChanged` into UI
+  subscribers, which is exactly why the fix avoided it — but that leaves a public
+  method nothing uses. Wire it or delete it (`dead-code-scan` will keep
+  flagging it).
 
 ### What the reproduction added
 
@@ -99,9 +120,12 @@ answered.
 
 ## Options (decision needed — do not just pick one)
 
-1. **Make the pointer authoritative per read.** Watch `state.json`, or have the
-   headless MCP context read it fresh rather than trusting in-memory state. Small,
-   and it fixes the wrong-project half without touching the socket model.
+1. ~~**Make the pointer authoritative per read.**~~ **DONE for the MCP path**
+   (2026-08-16) — the headless context reads it fresh; see Reproduction status.
+   Still open for the UI, where a window's visible project remains whatever it
+   loaded at startup. Note the watcher variant was rejected: `reload()` fires
+   `_onProjectChanged` into UI subscribers, so it cannot be used for a
+   read-side refresh without moving the UI too.
 2. **Make the serving window explicit.** Refuse the second bind instead of
    renaming over it, or include window identity in the socket name and have
    discovery report ambiguity. Bigger, and it changes multi-window behaviour.
@@ -145,12 +169,12 @@ Re-scope or archive it; do not pick it up as written.
 
 ## Kickoff prompt
 
-> Race 1 (which window serves) is already reproduced — do not redo it; the
-> measurement is in the Reproduction status section. Race 2 is the open one:
-> open two extension windows, select different projects in each, then call
-> `get_current_project` through a globally-registered MCP client and check which
-> project answers. `serverInfo.version` now names the serving host, so you can
-> tell which window replied. Read
+> Race 2 is FIXED on the agent surface and race 1 is reproduced — do not redo
+> either; both are recorded in the Reproduction status section. What remains is
+> race 1's remedy: two windows still bind one socket name, last writer wins, and
+> a client still cannot choose which host it reaches. `serverInfo.version` now
+> names the host that answered, so start by confirming which window serves.
+> Options 2 and 3 below are the live ones; option 1 is done for the MCP path and
+> open for the UI. Read
 > `.rptc/backlog/mcp-window-and-project-binding.md` — the mechanisms are measured
-> and cited; the options are not yet decided, so bring the reproduction to the
-> user before choosing one.
+> and cited; bring a recommendation to the user rather than picking one.
