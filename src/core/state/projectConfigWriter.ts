@@ -67,6 +67,12 @@ function addOptionalManifestFields(manifest: Record<string, unknown>, project: P
     if (project.appBuilderComponents && Object.keys(project.appBuilderComponents).length) {
         manifest.appBuilderComponents = project.appBuilderComponents;
     }
+    // Written by the publish-key renewal sweep only. Omitted when absent so an
+    // un-swept project stays "never stamped" and renews on the next activation
+    // rather than reading as freshly registered.
+    if (project.publishKeyRegisteredAt) {
+        manifest.publishKeyRegisteredAt = project.publishKeyRegisteredAt;
+    }
     if (project.pinned) {
         manifest.pinned = true;
     }

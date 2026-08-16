@@ -66,6 +66,7 @@ export interface ProjectManifest {
     customBlockLibraries?: CustomBlockLibrary[];
     aiPrompts?: AiPrompt[];
     aiContextVersion?: number;
+    publishKeyRegisteredAt?: string;
     pinned?: boolean;
 }
 
@@ -136,6 +137,7 @@ export class ProjectFileLoader {
                 additionalConsoleApis: manifest.additionalConsoleApis,
                 componentApiPicks: manifest.componentApiPicks,
                 aiContextVersion: manifest.aiContextVersion,
+                publishKeyRegisteredAt: manifest.publishKeyRegisteredAt,
                 pinned: manifest.pinned,
             };
 

@@ -39,10 +39,12 @@ import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
 import { HelixService } from '@/features/eds/services/helixService';
+import { renewPublishKeys } from '@/features/eds/services/publishKeyRenewalSweep';
 import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/globalMcpRegistration';
 import { ensureHomeAiContext } from '@/features/project-creation/services/homeAiContextWriter';
 import { SidebarProvider } from '@/features/sidebar';
 import type { McpCredentialProvider } from '@/mcp-server';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { getProjectFrontendPort } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
@@ -251,6 +253,12 @@ export async function activate(context: vscode.ExtensionContext) {
             process.env.DEMO_BUILDER_PROJECTS_DIR ??
             path.join(os.homedir(), '.demo-builder', 'projects');
         void ensureHomeAiContext(projectsDir, path.join(context.extensionPath, 'dist'));
+
+        // Keep every storefront's runtime publish key alive. Helix keys expire in
+        // about a year and were only ever minted by a site config WRITE, so a
+        // storefront that simply ran lost PDP self-heal roughly a year in —
+        // silently, as PDPs that 404. Fire-and-forget like the two sweeps above.
+        void sweepPublishKeyRenewals(context);
 
         // Register file watchers early (before loading projects)
         // This ensures the initializeFileHashes command exists when we need it
@@ -473,6 +481,33 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             'Failed to start in-extension MCP server',
             err instanceof Error ? err : undefined,
         );
+    }
+}
+
+/**
+ * Load every project and hand them to the publish-key renewal sweep.
+ *
+ * Glue only — the decision of what is due lives in `renewPublishKeys`, which
+ * stays UI-free and testable. Swallows its own errors: a renewal that cannot run
+ * must cost the renewal and nothing else on the activation path.
+ */
+async function sweepPublishKeyRenewals(context: vscode.ExtensionContext): Promise<void> {
+    try {
+        const summaries = await stateManager.getAllProjects();
+        const projects: Project[] = [];
+        for (const summary of summaries) {
+            const project = await stateManager.loadProjectFromPath(summary.path);
+            if (project) projects.push(project);
+        }
+
+        await renewPublishKeys({
+            projects,
+            tokenProvider: createDaLiveServiceTokenProvider(getDaLiveAuthService(context)),
+            saveProject: (project) => stateManager.saveProjectConfigOnly(project),
+            logger,
+        });
+    } catch (error) {
+        logger.debug(`[PublishKey] Renewal sweep skipped: ${(error as Error).message}`);
     }
 }
 
