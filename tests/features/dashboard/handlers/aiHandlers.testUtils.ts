@@ -58,6 +58,12 @@ jest.mock('@/features/project-creation/services', () => ({
     projectNeedsAppBuilderTooling: jest.requireActual(
         '@/features/project-creation/services/aiToolingGate'
     ).projectNeedsAppBuilderTooling,
+    // Real resolver: pure function over the bundled ai-defaults.json, so the
+    // "Downloading AI tool packages" prompt names the ACTUAL packages the
+    // fixtures qualify for (e.g. @playwright/mcp for the storefront fixture).
+    applicableMcpPackages: jest.requireActual(
+        '@/features/project-creation/services/aiDefaultsInstaller'
+    ).applicableMcpPackages,
 }));
 
 // Mock vscode

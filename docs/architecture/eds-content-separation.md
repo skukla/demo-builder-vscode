@@ -484,7 +484,7 @@ Since DA.live can't programmatically create spreadsheets, we commit JSON files d
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Implementation** (`dashboardHandlers.ts`):
+**Implementation** (fetch in `src/features/eds/services/edsResetRepoHelper.ts`; the path list is derived in `src/features/eds/services/runtimeSurfaceInventory.ts`):
 ```typescript
 const placeholderPaths = [
     'placeholders/global',
@@ -525,7 +525,7 @@ Helix has a **Content overrides Code** rule:
 
 ### Related Files
 
-- `src/features/projects-dashboard/handlers/dashboardHandlers.ts` - GitHub code file approach (placeholder JSON fetch)
+- `src/features/eds/services/edsResetRepoHelper.ts` - GitHub code file approach (placeholder JSON fetch; path list from `runtimeSurfaceInventory.ts`)
 - `src/features/eds/services/daLiveContentOperations.ts` - HTML content copy (spreadsheet copy code removed)
 
 ## Comparison with Other Architectures

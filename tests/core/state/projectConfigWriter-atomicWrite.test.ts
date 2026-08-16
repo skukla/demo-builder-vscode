@@ -284,6 +284,47 @@ describe('ProjectConfigWriter atomic writes', () => {
             expect(parsed.aiContextVersion).toBe(3);
         });
 
+        // ADR-013 hash-and-skip: per-file sha-256 hashes of the last generated
+        // AI bundle, keyed by posix project-relative path. Persisted so the
+        // GeneratedFileWriter can tell "ours" from "user-edited" across sessions.
+        it('should include aiFileHashes in manifest when non-empty', async () => {
+            const project = createTestProject({
+                name: 'hashed',
+                aiFileHashes: { 'AGENTS.md': 'abc123', '.mcp.json': 'def456' },
+            });
+            await writer.saveProjectConfig(project, project.path);
+
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
+            );
+            const parsed = JSON.parse(writeCall![1] as string);
+            expect(parsed.aiFileHashes).toEqual({ 'AGENTS.md': 'abc123', '.mcp.json': 'def456' });
+        });
+
+        it('should omit aiFileHashes from manifest when undefined', async () => {
+            const project = createTestProject({ name: 'no-hashes' });
+            await writer.saveProjectConfig(project, project.path);
+
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
+            );
+            const parsed = JSON.parse(writeCall![1] as string);
+            expect(parsed.aiFileHashes).toBeUndefined();
+        });
+
+        // Present-but-empty is not the same as absent: the loader's legacy
+        // migrations key off absence — match the omit-when-empty siblings.
+        it('should omit aiFileHashes from manifest when empty object', async () => {
+            const project = createTestProject({ name: 'empty-hashes', aiFileHashes: {} });
+            await writer.saveProjectConfig(project, project.path);
+
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
+            );
+            const parsed = JSON.parse(writeCall![1] as string);
+            expect(parsed.aiFileHashes).toBeUndefined();
+        });
+
         // Publish-key renewal stamp. Helix keys expire in ~1 year and the
         // activation sweep decides what is due from this field alone — if it does
         // not survive the write, every storefront looks "never registered" on

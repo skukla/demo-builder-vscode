@@ -117,12 +117,37 @@ describe('aiHandlers — setup & verification', () => {
 
             expect(verifyAiSetup).toHaveBeenCalledWith(
                 '/projects/test',
-                expect.stringContaining('mock/extension/path')
+                expect.stringContaining('mock/extension/path'),
+                undefined
             );
             expect(result).toMatchObject({
                 success: true,
                 ...mockResult,
             });
+        });
+
+        it('forwards the project\'s recorded hashes so the inventory can flag edited files (ADR-013)', async () => {
+            (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
+            const aiFileHashes = { 'AGENTS.md': 'abc123' };
+            const context = createMockContext({
+                stateManager: {
+                    getCurrentProject: jest.fn().mockResolvedValue({
+                        name: 'Test Project',
+                        path: '/projects/test',
+                        stack: 'paas',
+                        aiFileHashes,
+                    }),
+                    saveProjectConfigOnly: jest.fn(),
+                } as unknown as HandlerContext['stateManager'],
+            });
+
+            await handleVerifyAiSetup(context);
+
+            expect(verifyAiSetup).toHaveBeenCalledWith(
+                '/projects/test',
+                expect.stringContaining('mock/extension/path'),
+                aiFileHashes
+            );
         });
 
         it('returns error when stateManager has no current project', async () => {
@@ -268,6 +293,30 @@ describe('aiHandlers — setup & verification', () => {
 
 
     describe('handleRegenerateAiFiles', () => {
+        it('persists landed hashes even when generation throws (no permanent skip-poisoning)', async () => {
+            // Phase-4 review: a partial run leaves new content on disk; without
+            // this save the manifest keeps the OLD hash and every future
+            // refresh misreads those files as user-edited, forever.
+            const saveProjectConfigOnly = jest.fn().mockResolvedValue(undefined);
+            (generateAIContextFiles as jest.Mock).mockImplementation(
+                async (_path: string, project: { aiFileHashes?: Record<string, string> }) => {
+                    project.aiFileHashes = { 'AGENTS.md': 'landed-hash' };
+                    throw new Error('step 2 failed');
+                }
+            );
+            const context = createMockContext({
+                stateManager: {
+                    getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                    saveProjectConfigOnly,
+                } as unknown as HandlerContext['stateManager'],
+            });
+
+            await expect(handleRegenerateAiFiles(context)).rejects.toThrow('step 2 failed');
+
+            expect(saveProjectConfigOnly).toHaveBeenCalledTimes(1);
+        });
+
+
         it('calls generateAIContextFiles using server-side project.path (ignores payload)', async () => {
             (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
 
@@ -290,7 +339,60 @@ describe('aiHandlers — setup & verification', () => {
                 '/mock/extension/path',
                 expect.any(Function)
             );
-            expect(result).toEqual({ success: true });
+            expect(result).toEqual({ success: true, skippedFiles: [], removedFiles: [] });
+        });
+
+        it('carries the refresh report\'s skipped/removed files on the response (ADR-013 "event, not silence")', async () => {
+            (generateAIContextFiles as jest.Mock).mockResolvedValue({
+                skills: ['add-component.md'],
+                report: {
+                    written: ['.claude/mcp.json'],
+                    skipped: ['AGENTS.md'],
+                    removed: ['.claude/skills/refine-visual-match.md'],
+                },
+            });
+
+            const context = createMockContext({
+                stateManager: {
+                    getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                    saveProjectConfigOnly: jest.fn(),
+                } as unknown as HandlerContext['stateManager'],
+            });
+
+            const result = await handleRegenerateAiFiles(context);
+
+            // Full-object assertion: a loose success check would pass even if the
+            // new report fields never made it onto the response.
+            expect(result).toEqual({
+                success: true,
+                skippedFiles: ['AGENTS.md'],
+                removedFiles: ['.claude/skills/refine-visual-match.md'],
+            });
+        });
+
+        it('logs the kept (user-edited, skipped) files at info', async () => {
+            (generateAIContextFiles as jest.Mock).mockResolvedValue({
+                skills: [],
+                report: {
+                    written: [],
+                    skipped: ['AGENTS.md', '.mcp.json'],
+                    removed: [],
+                },
+            });
+
+            const context = createMockContext({
+                stateManager: {
+                    getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                    saveProjectConfigOnly: jest.fn(),
+                } as unknown as HandlerContext['stateManager'],
+            });
+
+            await handleRegenerateAiFiles(context);
+
+            const infoArgs = (context.logger.info as jest.Mock).mock.calls.flat().join('\n');
+            expect(infoArgs).toContain('AGENTS.md');
+            expect(infoArgs).toContain('.mcp.json');
+            expect(infoArgs).toMatch(/kept|skipped/i);
         });
 
         it('persists the (stamped) project via saveProjectConfigOnly after regenerating', async () => {
@@ -314,7 +416,7 @@ describe('aiHandlers — setup & verification', () => {
             const generateOrder = (generateAIContextFiles as jest.Mock).mock.invocationCallOrder[0];
             const saveOrder = saveProjectConfigOnly.mock.invocationCallOrder[0];
             expect(generateOrder).toBeLessThan(saveOrder);
-            expect(result).toEqual({ success: true });
+            expect(result).toEqual({ success: true, skippedFiles: [], removedFiles: [] });
         });
 
         it('returns error when project is not found', async () => {
@@ -357,7 +459,7 @@ describe('aiHandlers — setup & verification', () => {
             const generateCallOrder = (generateAIContextFiles as jest.Mock).mock
                 .invocationCallOrder[0];
             expect(installCallOrder).toBeLessThan(generateCallOrder);
-            expect(result).toEqual({ success: true });
+            expect(result).toEqual({ success: true, skippedFiles: [], removedFiles: [] });
         });
 
         it('does NOT run the tooling install for bare projects (no storefront, mesh, or app-builder component)', async () => {
@@ -423,7 +525,7 @@ describe('aiHandlers — setup & verification', () => {
         // finalize step directly; the three writer steps are emitted from inside
         // generateAIContextFiles via an `onProgress` tracker the handler supplies.
         describe('progress reporting', () => {
-            it('emits an install-tooling creationProgress message before installing (EDS)', async () => {
+            it('emits a download-packages creationProgress step naming the ACTUAL packages (EDS)', async () => {
                 (installAiDefaultsMcpTools as jest.Mock).mockResolvedValue({ success: true });
                 (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
 
@@ -440,8 +542,12 @@ describe('aiHandlers — setup & verification', () => {
                     ([type]) => type === 'creationProgress'
                 );
                 expect(installCalls.length).toBeGreaterThan(0);
+                // The step says WHAT it downloads (requirement 5): the storefront
+                // fixture qualifies for the Playwright MCP per the real
+                // ai-defaults.json gate (applicableMcpPackages is unmocked).
                 expect(installCalls[0][1]).toMatchObject({
-                    currentOperation: 'Installing AI tooling',
+                    currentOperation: 'Downloading AI tool packages',
+                    message: expect.stringContaining('@playwright/mcp'),
                 });
             });
 

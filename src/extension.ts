@@ -9,6 +9,7 @@ import { ServiceLocator } from '@/core/di';
 import { initializeLogger, getLogger } from '@/core/logging';
 import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
+import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
@@ -40,6 +41,7 @@ import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive
 import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
 import { HelixService } from '@/features/eds/services/helixService';
 import { renewPublishKeys } from '@/features/eds/services/publishKeyRenewalSweep';
+import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundleActivationRefresh';
 import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/globalMcpRegistration';
 import { ensureHomeAiContext } from '@/features/project-creation/services/homeAiContextWriter';
 import { SidebarProvider } from '@/features/sidebar';
@@ -136,6 +138,33 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Register StateManager with ServiceLocator (for commands without handler context)
         ServiceLocator.setStateManager(stateManager);
+
+        // The two per-project upkeep sweeps, run ONE AFTER THE OTHER.
+        //
+        // 1. Silent AI-bundle upkeep for every known project (ADR-013): tier-1
+        //    config repair always; tier-1+2 refresh + stamp when a project's
+        //    aiContextVersion is stale.
+        // 2. Publish-key renewal (Helix keys expire in ~1 year).
+        //
+        // SEQUENCED, NOT CONCURRENT — do not split these back into two `void`
+        // calls. Each loads its OWN copy of every project, mutates a different
+        // field (aiContextVersion + aiFileHashes vs publishKeyRegisteredAt), and
+        // saves the WHOLE `.demo-builder.json`. Run in parallel, whichever
+        // finishes second was built from a copy loaded before the first one
+        // wrote, so its save silently drops the other's field. Losing
+        // aiFileHashes is the bad one: the ADR-013 hash baseline never
+        // establishes, so the treat-as-unmodified-ONCE overwrite fires on EVERY
+        // activation and destroys the user's edits to AGENTS.md repeatedly
+        // instead of once. Running the second only after the first has saved
+        // means it loads a manifest that already carries the other's field.
+        //
+        // Still fire-and-forget as a pair: activation never waits on either.
+        void (async () => {
+            await refreshAiBundlesOnActivation(context.extensionPath, logger);
+            await sweepPublishKeyRenewals(context);
+        })().catch((error) => {
+            logger.warn(`[Activation] Project upkeep sweep failed: ${(error as Error).message}`);
+        });
 
         // Seed built-in AI prompts into the global store once (starter recipes that
         // surface in every project's prompt library). Idempotent and non-fatal.
@@ -249,23 +278,21 @@ export async function activate(context: vscode.ExtensionContext) {
         // there reaches the in-extension MCP server on the ROOT socket and can do
         // global / by-name work. Best-effort and additive — never blocks or
         // breaks activation, and changes no navigation/workspace behavior.
-        const projectsDir =
-            process.env.DEMO_BUILDER_PROJECTS_DIR ??
-            path.join(os.homedir(), '.demo-builder', 'projects');
-        void ensureHomeAiContext(projectsDir, path.join(context.extensionPath, 'dist'));
+        const projectsRoot = resolveProjectsRoot();
+        void ensureHomeAiContext(projectsRoot, path.join(context.extensionPath, 'dist'));
 
-        // Keep every storefront's runtime publish key alive. Helix keys expire in
-        // about a year and were only ever minted by a site config WRITE, so a
-        // storefront that simply ran lost PDP self-heal roughly a year in —
-        // silently, as PDPs that 404. Fire-and-forget like the two sweeps above.
+        // The publish key's SECOND trigger. The activation run happens above,
+        // sequenced behind the AI-bundle sweep; this one fires on sign-in.
         //
-        // TWO triggers, because activation alone does not work. The sweep needs a
+        // Both exist because activation alone does not work: the sweep needs a
         // DA.live session, and activation is the moment one is LEAST likely to
-        // exist: measured 2026-08-15, the stored token was already expired at
+        // exist. Measured 2026-08-15 — the stored token was already expired at
         // startup and only refreshed 54s later when the user started a reset. So
-        // sign-in is the trigger that actually fires, and activation is the one
+        // sign-in is the trigger that reliably fires, and activation is the one
         // that catches a session already valid from a previous window.
-        void sweepPublishKeyRenewals(context);
+        //
+        // Safe to leave un-sequenced here: by the time a user signs in to DA.live,
+        // the activation pair has long since finished, so there is nothing to race.
         context.subscriptions.push(
             getDaLiveAuthService(context).onDidSignIn(() => {
                 void sweepPublishKeyRenewals(context);
@@ -366,9 +393,6 @@ export async function activate(context: vscode.ExtensionContext) {
         // anchored to a project SUBDIR (e.g. a leftover anchor from an older
         // build), re-home it to the projects root and bail — the post-reopen
         // activation runs the cold-start path below.
-        const projectsRoot =
-            process.env.DEMO_BUILDER_PROJECTS_DIR ??
-            path.join(os.homedir(), '.demo-builder', 'projects');
         const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
         if (shouldReHomeToRoot(ws, projectsRoot)) {
             await fs.mkdir(projectsRoot, { recursive: true }).catch(() => {});
@@ -432,9 +456,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         // launches at the root. Refusing to start without a folder left anyone
         // driving the extension from the sidebar with no MCP server at all.
         const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        const projectsDir =
-            process.env.DEMO_BUILDER_PROJECTS_DIR ??
-            path.join(os.homedir(), '.demo-builder', 'projects');
+        const projectsDir = resolveProjectsRoot();
         // Handler-backed read/status tools dispatch through the existing handler
         // maps with a fresh headless context per call.
         const ctxFactory = () => createHeadlessHandlerContext(context, stateManager, logger);

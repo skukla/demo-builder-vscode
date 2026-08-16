@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.131] - 2026-08-16
+
+Your project's AI files stop nagging you, and stop overwriting your edits. Until now every
+extension update that changed the AI bundle raised a dashboard warning asking you to
+regenerate, and regenerating rewrote every generated file including ones you had
+customized.
+
+### Changed
+
+- **Routine AI-bundle updates now repair themselves silently.** When an update changes the generated skills or `AGENTS.md`, the extension refreshes them in the background at startup — no badge, no prompt. The only remaining interruption is a tool package that genuinely needs downloading, and that message now names the packages.
+- **Your edits to generated files survive a refresh.** The extension records what it wrote, so it can tell its own output from something you changed. An edited file is kept, and the AI Capabilities panel marks which files were left alone. **One-time exception:** the first launch after installing this version has no record to compare against, so it refreshes the existing files and starts recording from there — back up hand-edits to `AGENTS.md` or skill files before updating. Protected from the second launch onward.
+- **Skills now match the tools you actually have.** Three skills instructed the agent to drive a Playwright browser that is not guaranteed to be installed; those are written only when the tool is present.
+
+### Fixed
+
+- **Two background startup passes no longer overwrite each other's work.** The AI-bundle refresh and the storefront publish-key renewal both run at startup and both rewrite the same project file. Running concurrently, whichever finished second worked from a copy loaded before the first one saved and silently discarded its changes. Left unfixed this would have defeated the edit protection above entirely — the record of what the extension wrote would never have persisted, so every launch would have overwritten your edits rather than just the first. They now run one after the other.
+- **A failed regeneration says so.** Errors during "Regenerate AI files" were swallowed; the modal now surfaces them, and a partial failure is recorded rather than reported as success.
+- **The freshness check watches project composition, not just a version number.** Adding a component that qualifies your project for extra AI tooling now flags the missing packages instead of going unnoticed until something fails.
+
 ## [1.0.0-beta.130] - 2026-08-15
 
 Repairs product-page publishing on Edge Delivery storefronts. Pinning a site

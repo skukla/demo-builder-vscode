@@ -8,8 +8,14 @@
  */
 
 import * as vscode from 'vscode';
-import { applyUpdatesHeadless, type UpdateSelections } from '@/features/updates/services/updateApplyService';
-import { applyBlockLibraryUpdateResolved, updateCommitShaWithRollback } from '@/features/updates/commands/updateExecutor';
+import {
+    applyUpdatesHeadless,
+    type UpdateSelections,
+} from '@/features/updates/services/updateApplyService';
+import {
+    applyBlockLibraryUpdateResolved,
+    updateCommitShaWithRollback,
+} from '@/features/updates/services/updateCore';
 import { shouldSkipBlockLibrary } from '@/features/updates/commands/updateTypes';
 
 const syncForkMock = jest.fn();
@@ -18,15 +24,22 @@ const updateLastSyncedCommitMock = jest.fn();
 const updateComponentMock = jest.fn();
 const executeMock = jest.fn();
 
-jest.mock('vscode', () => ({
-    workspace: { getConfiguration: jest.fn() },
-}), { virtual: true });
+jest.mock(
+    'vscode',
+    () => ({
+        workspace: { getConfiguration: jest.fn() },
+    }),
+    { virtual: true }
+);
 
 jest.mock('@/features/updates/services/forkSyncService', () => ({
     ForkSyncService: jest.fn(() => ({ syncFork: syncForkMock })),
 }));
 jest.mock('@/features/updates/services/templateSyncService', () => ({
-    TemplateSyncService: jest.fn(() => ({ syncWithTemplate: syncWithTemplateMock, updateLastSyncedCommit: updateLastSyncedCommitMock })),
+    TemplateSyncService: jest.fn(() => ({
+        syncWithTemplate: syncWithTemplateMock,
+        updateLastSyncedCommit: updateLastSyncedCommitMock,
+    })),
 }));
 jest.mock('@/features/updates/services/componentUpdater', () => ({
     ComponentUpdater: jest.fn(() => ({ updateComponent: updateComponentMock })),
@@ -38,8 +51,10 @@ jest.mock('@/features/project-creation/services', () => ({
     // "the single source of truth" for that location.
     resolveMcpToolsDir: (projectPath: string) => `${projectPath}/.demo-builder-mcp`,
 }));
-jest.mock('@/core/di', () => ({ ServiceLocator: { getCommandExecutor: () => ({ execute: executeMock }) } }));
-jest.mock('@/features/updates/commands/updateExecutor', () => ({
+jest.mock('@/core/di', () => ({
+    ServiceLocator: { getCommandExecutor: () => ({ execute: executeMock }) },
+}));
+jest.mock('@/features/updates/services/updateCore', () => ({
     applyBlockLibraryUpdateResolved: jest.fn(),
     updateCommitShaWithRollback: jest.fn(),
 }));
@@ -48,9 +63,15 @@ jest.mock('@/features/updates/commands/updateTypes', () => ({
     shouldSkipBlockLibrary: jest.fn(() => false),
 }));
 // Checkers are imported at module top (used by computeProjectUpdateSelections).
-jest.mock('@/features/updates/services/templateUpdateChecker', () => ({ TemplateUpdateChecker: jest.fn() }));
-jest.mock('@/features/updates/services/addonUpdateChecker', () => ({ AddonUpdateChecker: jest.fn() }));
-jest.mock('@/features/updates/services/adobeMcpUpdateChecker', () => ({ AdobeMcpUpdateChecker: jest.fn() }));
+jest.mock('@/features/updates/services/templateUpdateChecker', () => ({
+    TemplateUpdateChecker: jest.fn(),
+}));
+jest.mock('@/features/updates/services/addonUpdateChecker', () => ({
+    AddonUpdateChecker: jest.fn(),
+}));
+jest.mock('@/features/updates/services/adobeMcpUpdateChecker', () => ({
+    AdobeMcpUpdateChecker: jest.fn(),
+}));
 jest.mock('@/features/updates/services/updateManager', () => ({ UpdateManager: jest.fn() }));
 
 const applyBlockResolvedMock = applyBlockLibraryUpdateResolved as jest.Mock;
@@ -66,13 +87,30 @@ const ctx = {
     secrets: {},
     extensionPath: '/ext',
     stateManager: { saveProject: jest.fn(async () => undefined) },
-    logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
+    logger: {
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        debug: jest.fn(),
+        trace: jest.fn(),
+    },
 } as never;
 
-const project = { name: 'demo', path: '/p/demo', installedInspectorSdk: { commitSha: 'old' } } as never;
+const project = {
+    name: 'demo',
+    path: '/p/demo',
+    installedInspectorSdk: { commitSha: 'old' },
+} as never;
 
 function emptySelections(): UpdateSelections {
-    return { forkSync: [], template: [], component: [], adobeMcp: [], blockLibrary: [], inspector: [] };
+    return {
+        forkSync: [],
+        template: [],
+        component: [],
+        adobeMcp: [],
+        blockLibrary: [],
+        inspector: [],
+    };
 }
 
 describe('applyUpdatesHeadless', () => {
@@ -80,7 +118,11 @@ describe('applyUpdatesHeadless', () => {
         jest.clearAllMocks();
         setSyncBehavior('enabled');
         syncForkMock.mockResolvedValue({ success: true });
-        syncWithTemplateMock.mockResolvedValue({ success: true, syncedCommit: 'c1', strategy: 'merge' });
+        syncWithTemplateMock.mockResolvedValue({
+            success: true,
+            syncedCommit: 'c1',
+            strategy: 'merge',
+        });
         updateComponentMock.mockResolvedValue(undefined);
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
         applyBlockResolvedMock.mockResolvedValue(undefined);
@@ -112,11 +154,25 @@ describe('applyUpdatesHeadless', () => {
 
     it('updates components and saves the project once', async () => {
         const sel = emptySelections();
-        sel.component = [{ project, componentId: 'mesh', latestVersion: '2.0.0', downloadUrl: 'http://x/mesh.zip' }];
+        sel.component = [
+            {
+                project,
+                componentId: 'mesh',
+                latestVersion: '2.0.0',
+                downloadUrl: 'http://x/mesh.zip',
+            },
+        ];
         const res = await applyUpdatesHeadless(sel, ctx);
         expect(res.component.successCount).toBe(1);
-        expect(updateComponentMock).toHaveBeenCalledWith(project, 'mesh', 'http://x/mesh.zip', '2.0.0');
-        expect((ctx as never as { stateManager: { saveProject: jest.Mock } }).stateManager.saveProject).toHaveBeenCalledTimes(1);
+        expect(updateComponentMock).toHaveBeenCalledWith(
+            project,
+            'mesh',
+            'http://x/mesh.zip',
+            '2.0.0'
+        );
+        expect(
+            (ctx as never as { stateManager: { saveProject: jest.Mock } }).stateManager.saveProject
+        ).toHaveBeenCalledTimes(1);
     });
 
     it('applies a block library with the resolved behavior when syncBehavior is enabled', async () => {
@@ -124,7 +180,11 @@ describe('applyUpdatesHeadless', () => {
         const sel = emptySelections();
         sel.blockLibrary = [{ project, library: { name: 'Lib A' } as never, latestCommit: 'bbb' }];
         const res = await applyUpdatesHeadless(sel, ctx);
-        expect(applyBlockResolvedMock).toHaveBeenCalledWith(expect.objectContaining({ latestCommit: 'bbb' }), 'enabled', ctx);
+        expect(applyBlockResolvedMock).toHaveBeenCalledWith(
+            expect.objectContaining({ latestCommit: 'bbb' }),
+            'enabled',
+            ctx
+        );
         expect(res.addon.successCount).toBe(1);
         expect(res.addon.deferred).toBeUndefined();
     });
@@ -155,7 +215,11 @@ describe('applyUpdatesHeadless', () => {
         const sel = emptySelections();
         sel.inspector = [{ project, latestCommit: 'newsha' }];
         const res = await applyUpdatesHeadless(sel, ctx);
-        expect(updateShaRollbackMock).toHaveBeenCalledWith({ commitSha: 'old' }, 'newsha', expect.any(Function));
+        expect(updateShaRollbackMock).toHaveBeenCalledWith(
+            { commitSha: 'old' },
+            'newsha',
+            expect.any(Function)
+        );
         expect(res.addon.successCount).toBe(1);
     });
 
@@ -192,7 +256,9 @@ describe('applyUpdatesHeadless — Adobe MCP update location', () => {
                 project: {
                     name: 'demo',
                     path: '/p/demo',
-                    componentInstances: { 'eds-storefront': { path: '/p/demo/components/eds-storefront' } },
+                    componentInstances: {
+                        'eds-storefront': { path: '/p/demo/components/eds-storefront' },
+                    },
                 } as never,
                 packageName: '@adobe-commerce/commerce-extensibility-tools',
                 latestVersion: '2.0.0',
@@ -205,7 +271,7 @@ describe('applyUpdatesHeadless — Adobe MCP update location', () => {
         await applyUpdatesHeadless(mcpSelection(), ctx);
 
         const call = executeMock.mock.calls.find((c: unknown[]) =>
-            String(c[0]).startsWith('npm update'),
+            String(c[0]).startsWith('npm update')
         );
         expect(call).toBeDefined();
         expect((call?.[1] as { cwd?: string })?.cwd).toBe('/p/demo/.demo-builder-mcp');

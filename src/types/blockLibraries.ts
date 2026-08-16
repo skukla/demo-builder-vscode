@@ -54,7 +54,7 @@ export interface InstalledBlockLibrary extends LibraryVersionInfo {
      * Set when `demoBuilder.blockLibraries.syncBehavior` is `disabled` (or `ask`
      * + user chose Skip) and update detection found newer upstream commits.
      * Files in the storefront stay at `commitSha`; this records what we know
-     * about upstream so the AI Configuration tab can show "Sync disabled —
+     * about upstream so the AI Overview screen can show "Sync disabled —
      * N commits behind upstream" without lying about which files are present.
      *
      * Cleared when the user re-enables sync and a successful update runs.

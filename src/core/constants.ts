@@ -19,10 +19,13 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
  * config, settings) the extension generates into each project.
  *
  * Hand-bump this integer whenever any AI-context template/skill changes — see
- * skillsWriter / aiContextWriter / mcpConfigWriter. It is stamped into the
- * project manifest (`Project.aiContextVersion`) each time the bundle is
- * generated; the dashboard's on-open freshness check flags a project stale when
- * its stamp is older than this constant and offers to regenerate.
+ * skillsWriter / aiContextWriter / mcpConfigWriter (all writing through the
+ * GeneratedFileWriter seam, ADR-013). It is stamped into the project manifest
+ * (`Project.aiContextVersion`) each time the bundle is generated. Since v8 a
+ * stale stamp no longer prompts anyone: the activation sweep
+ * (aiBundleActivationRefresh) silently refreshes tiers 1+2 with hash-and-skip
+ * protection; only the freshness check's COMPOSITION axis (a package download
+ * genuinely needed) still surfaces the badge + Regenerate.
  */
 // v2: Developer Agent tooling (commerce-extensibility MCP + integration-starter-kit
 // skills) un-gated from EDS-only to all App Builder-adjacent projects — existing
@@ -49,7 +52,23 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // scope when product pages come back empty. Routes symptom → check, and carries
 // the two traps that read as false negatives: pushed is not published, and
 // deploy_mesh does not regenerate `.env` (only a Configure save does).
-export const AI_CONTEXT_VERSION = 7;
+// v8: hash-and-skip edit survival (ADR-013) + tiered refresh + Playwright-skill
+// gating. Every bundle file flows through GeneratedFileWriter (sha-256 recorded
+// in the manifest's aiFileHashes; user-edited files are skipped and reported,
+// never overwritten). The activation sweep repairs config paths silently on
+// every start and refreshes content when this stamp is stale — so this is the
+// last bump that touches every project uninvited, and from v8 on version
+// staleness never flips the badge (only a genuinely-needed package download
+// does, via the composition axis). The three Playwright-driven skills are
+// written only when @playwright/mcp is actually installed. This bump triggers
+// the first silent tier-2 sweep on next activation; pre-v8 files get
+// overwrite-once + hash recording (ADR-013 grandfather rule).
+// v9: the AGENTS.md generated-file banner told users "hand edits are
+// overwritten" — the exact opposite of v8's hash-and-skip behavior. Reworded
+// to state the real trade: edits are kept but freeze the file at your version
+// until you delete it and regenerate. First bump under the silent-sweep model:
+// nobody is prompted; the activation sweep folds it in.
+export const AI_CONTEXT_VERSION = 9;
 
 /**
  * Component IDs for standardized component instance access

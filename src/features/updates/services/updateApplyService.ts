@@ -19,27 +19,24 @@
  */
 
 import * as vscode from 'vscode';
-import { ServiceLocator } from '@/core/di';
-import { TIMEOUTS } from '@/core/utils';
 import { sanitizeErrorForLogging } from '@/core/validation';
-import { generateAIContextFiles, resolveMcpToolsDir } from '@/features/project-creation/services';
-import {
-    applyBlockLibraryUpdateResolved,
-    updateCommitShaWithRollback,
-    type UpdateContext,
-} from '@/features/updates/commands/updateExecutor';
 import { getTemplateSource, shouldSkipBlockLibrary } from '@/features/updates/commands/updateTypes';
 import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
 import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
+import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import { TemplateUpdateChecker } from '@/features/updates/services/templateUpdateChecker';
+import {
+    applyBlockLibraryUpdateResolved,
+    updateCommitShaWithRollback,
+    type UpdateContext,
+} from '@/features/updates/services/updateCore';
 import { UpdateManager } from '@/features/updates/services/updateManager';
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext } from '@/types/handlers';
-import { DEFAULT_SHELL } from '@/types/shell';
 
 // ==========================================================
 // Types
@@ -49,7 +46,12 @@ import { DEFAULT_SHELL } from '@/types/shell';
 export interface UpdateSelections {
     forkSync: Array<{ owner: string; repo: string; branch: string }>;
     template: Array<{ project: Project }>;
-    component: Array<{ project: Project; componentId: string; latestVersion: string; downloadUrl?: string }>;
+    component: Array<{
+        project: Project;
+        componentId: string;
+        latestVersion: string;
+        downloadUrl?: string;
+    }>;
     adobeMcp: Array<{ project: Project; packageName: string; latestVersion: string }>;
     blockLibrary: Array<{ project: Project; library: InstalledBlockLibrary; latestCommit: string }>;
     inspector: Array<{ project: Project; latestCommit: string }>;
@@ -109,8 +111,13 @@ async function applyForkSync(
             }
         } catch (error) {
             result.failCount++;
-            result.errors.push(`${item.owner}/${item.repo}: ${sanitizeErrorForLogging(error as Error)}`);
-            ctx.logger.error(`[Updates] Fork sync error: ${item.owner}/${item.repo}`, error as Error);
+            result.errors.push(
+                `${item.owner}/${item.repo}: ${sanitizeErrorForLogging(error as Error)}`,
+            );
+            ctx.logger.error(
+                `[Updates] Fork sync error: ${item.owner}/${item.repo}`,
+                error as Error,
+            );
         }
     }
     return result;
@@ -133,7 +140,9 @@ async function applyTemplate(
                 await svc.updateLastSyncedCommit(project, r.syncedCommit, ctx.stateManager);
                 succeededPaths.add(project.path);
                 result.successCount++;
-                ctx.logger.info(`[Updates] Template synced for ${project.name} (${r.strategy}${r.fallbackOccurred ? ', fallback' : ''})`);
+                ctx.logger.info(
+                    `[Updates] Template synced for ${project.name} (${r.strategy}${r.fallbackOccurred ? ', fallback' : ''})`,
+                );
             } else {
                 throw new Error(r.error || 'Unknown error');
             }
@@ -168,13 +177,23 @@ async function applyComponents(
             if (!update.downloadUrl) continue;
             onProgress?.(`Updating ${update.componentId} in ${project.name}...`);
             try {
-                await updater.updateComponent(project, update.componentId, update.downloadUrl, update.latestVersion);
+                await updater.updateComponent(
+                    project,
+                    update.componentId,
+                    update.downloadUrl,
+                    update.latestVersion,
+                );
                 result.successCount++;
                 ctx.logger.info(`[Updates] Updated ${update.componentId} in ${project.name}`);
             } catch (error) {
                 result.failCount++;
-                result.errors.push(`${update.componentId} in ${project.name}: ${sanitizeErrorForLogging(error as Error)}`);
-                ctx.logger.error(`[Updates] Failed to update ${update.componentId} in ${project.name}`, error as Error);
+                result.errors.push(
+                    `${update.componentId} in ${project.name}: ${sanitizeErrorForLogging(error as Error)}`,
+                );
+                ctx.logger.error(
+                    `[Updates] Failed to update ${update.componentId} in ${project.name}`,
+                    error as Error,
+                );
             }
         }
         await ctx.stateManager.saveProject(project);
@@ -189,38 +208,24 @@ async function applyAdobeMcp(
 ): Promise<CategoryResult> {
     const result = emptyResult();
     if (items.length === 0) return result;
-    const commandManager = ServiceLocator.getCommandExecutor();
+    // The npm-update → regenerate → persist sequence lives in the ONE shared
+    // core (adobeMcpUpdateCore.ts), which the interactive sibling
+    // `performAdobeMcpUpdates` also calls. This loop only shapes results.
+    // (Until 2026-08-04 this path carried its own copy that ran `npm update`
+    // in the STOREFRONT dir — a silent no-op that re-offered the same update
+    // forever. The shared core is what makes that drift impossible now.)
     for (const { project, packageName, latestVersion } of items) {
-        // The MCP packages live in the per-project ISOLATED tools dir, not the
-        // storefront's node_modules — run the update there, exactly as the
-        // interactive sibling `performAdobeMcpUpdates` does.
-        //
-        // This ran in the storefront path until 2026-08-04. npm updates nothing
-        // there and still exits 0, so `apply_updates` reported success while
-        // changing nothing, and AdobeMcpUpdateChecker — which reads the version
-        // FROM the tools dir — re-offered the same update forever.
-        const toolsDir = resolveMcpToolsDir(project.path);
         onProgress?.(`Updating ${packageName} → ${latestVersion} in ${project.name}...`);
         try {
-            const r = await commandManager.execute(`npm update ${packageName} --no-fund`, {
-                cwd: toolsDir,
-                timeout: TIMEOUTS.VERY_LONG,
-                shell: DEFAULT_SHELL,
-                enhancePath: true,
-            });
-            if (r.code !== 0) {
-                throw new Error(`npm update failed: ${r.stderr || r.stdout}`);
-            }
-            await generateAIContextFiles(project.path, project, ctx.extensionPath);
-            // Persist the freshness stamp generateAIContextFiles set on `project`
-            // (aiContextVersion), else the on-open freshness check re-fires forever.
-            await ctx.stateManager.saveProjectConfigOnly(project);
+            await applyAdobeMcpUpdate(project, packageName, latestVersion, ctx);
             result.successCount++;
-            ctx.logger.info(`[Updates] Updated ${packageName} in ${project.name} → ${latestVersion}`);
         } catch (error) {
             result.failCount++;
             result.errors.push(`${project.name}: ${sanitizeErrorForLogging(error as Error)}`);
-            ctx.logger.error(`[Updates] Failed to update ${packageName} in ${project.name}`, error as Error);
+            ctx.logger.error(
+                `[Updates] Failed to update ${packageName} in ${project.name}`,
+                error as Error,
+            );
         }
     }
     return result;
@@ -239,11 +244,14 @@ async function applyAddons(
     const setting = vscode.workspace
         .getConfiguration('demoBuilder.blockLibraries')
         .get<'ask' | 'enabled' | 'disabled'>('syncBehavior', 'ask');
-    const effectiveBehavior: 'enabled' | 'disabled' = setting === 'enabled' ? 'enabled' : 'disabled';
+    const effectiveBehavior: 'enabled' | 'disabled' =
+        setting === 'enabled' ? 'enabled' : 'disabled';
 
     for (const item of blockLibraries) {
         if (shouldSkipBlockLibrary(item.library, item.project, succeededTemplatePaths)) {
-            ctx.logger.info(`[Updates] Add-on dedup: skipping "${item.library.name}" — covered by template sync`);
+            ctx.logger.info(
+                `[Updates] Add-on dedup: skipping "${item.library.name}" — covered by template sync`,
+            );
             continue;
         }
         onProgress?.(`Updating block library ${item.library.name}...`);
@@ -257,7 +265,10 @@ async function applyAddons(
         } catch (error) {
             result.failCount++;
             result.errors.push(`${item.library.name}: ${sanitizeErrorForLogging(error as Error)}`);
-            ctx.logger.error(`[Updates] Failed to update block library "${item.library.name}"`, error as Error);
+            ctx.logger.error(
+                `[Updates] Failed to update block library "${item.library.name}"`,
+                error as Error,
+            );
         }
     }
 
@@ -273,8 +284,13 @@ async function applyAddons(
             ctx.logger.info(`[Updates] Updated Inspector SDK in ${item.project.name}`);
         } catch (error) {
             result.failCount++;
-            result.errors.push(`Inspector SDK in ${item.project.name}: ${sanitizeErrorForLogging(error as Error)}`);
-            ctx.logger.error(`[Updates] Failed to update Inspector SDK in ${item.project.name}`, error as Error);
+            result.errors.push(
+                `Inspector SDK in ${item.project.name}: ${sanitizeErrorForLogging(error as Error)}`,
+            );
+            ctx.logger.error(
+                `[Updates] Failed to update Inspector SDK in ${item.project.name}`,
+                error as Error,
+            );
         }
     }
 
@@ -296,10 +312,20 @@ export async function applyUpdatesHeadless(
     onProgress?: OnProgress,
 ): Promise<ApplyUpdatesResult> {
     const forkSync = await applyForkSync(selections.forkSync, ctx, onProgress);
-    const { result: template, succeededPaths } = await applyTemplate(selections.template, ctx, onProgress);
+    const { result: template, succeededPaths } = await applyTemplate(
+        selections.template,
+        ctx,
+        onProgress,
+    );
     const component = await applyComponents(selections.component, ctx, onProgress);
     const adobeMcp = await applyAdobeMcp(selections.adobeMcp, ctx, onProgress);
-    const addon = await applyAddons(selections.blockLibrary, selections.inspector, succeededPaths, ctx, onProgress);
+    const addon = await applyAddons(
+        selections.blockLibrary,
+        selections.inspector,
+        succeededPaths,
+        ctx,
+        onProgress,
+    );
 
     const cats = [forkSync, template, component, adobeMcp, addon];
     return {
@@ -342,9 +368,16 @@ export async function computeProjectUpdateSelections(
     try {
         const source = getTemplateSource(project);
         if (source) {
-            const status = await new ForkSyncService(secrets, logger).checkForkStatus(source.owner, source.repo);
+            const status = await new ForkSyncService(secrets, logger).checkForkStatus(
+                source.owner,
+                source.repo,
+            );
             if (status?.isFork && status.behindBy > 0) {
-                selections.forkSync.push({ owner: source.owner, repo: source.repo, branch: status.defaultBranch || 'main' });
+                selections.forkSync.push({
+                    owner: source.owner,
+                    repo: source.repo,
+                    branch: status.defaultBranch || 'main',
+                });
             }
         }
     } catch (error) {
@@ -361,7 +394,10 @@ export async function computeProjectUpdateSelections(
 
     // Components
     try {
-        const results = await new UpdateManager(handlerCtx.context, logger).checkAllProjectsForUpdates([project]);
+        const results = await new UpdateManager(
+            handlerCtx.context,
+            logger,
+        ).checkAllProjectsForUpdates([project]);
         for (const r of results) {
             const outdated = r.outdatedProjects.some((o) => o.project.path === project.path);
             if (outdated && r.releaseInfo?.downloadUrl) {
@@ -380,7 +416,12 @@ export async function computeProjectUpdateSelections(
     // Adobe MCP
     try {
         const a = await new AdobeMcpUpdateChecker(secrets, logger).checkForUpdates(project);
-        if (a?.hasUpdate) selections.adobeMcp.push({ project, packageName: a.packageName, latestVersion: a.latestVersion });
+        if (a?.hasUpdate)
+            selections.adobeMcp.push({
+                project,
+                packageName: a.packageName,
+                latestVersion: a.latestVersion,
+            });
     } catch (error) {
         logger.warn(`[Updates] Adobe MCP check failed: ${sanitizeErrorForLogging(error as Error)}`);
     }
@@ -389,10 +430,15 @@ export async function computeProjectUpdateSelections(
     try {
         const checker = new AddonUpdateChecker(secrets, logger);
         for (const u of await checker.checkBlockLibraries(project)) {
-            selections.blockLibrary.push({ project, library: u.library, latestCommit: u.latestCommit });
+            selections.blockLibrary.push({
+                project,
+                library: u.library,
+                latestCommit: u.latestCommit,
+            });
         }
         const insp = await checker.checkInspectorSdk(project);
-        if (insp?.hasUpdate) selections.inspector.push({ project, latestCommit: insp.latestCommit });
+        if (insp?.hasUpdate)
+            selections.inspector.push({ project, latestCommit: insp.latestCommit });
     } catch (error) {
         logger.warn(`[Updates] Add-on check failed: ${sanitizeErrorForLogging(error as Error)}`);
     }

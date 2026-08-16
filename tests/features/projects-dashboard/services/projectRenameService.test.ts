@@ -31,7 +31,7 @@ jest.mock('@/core/validation', () => ({
 // Rename must re-run this so the MCP configs (which bake the absolute project path)
 // point at the new path instead of the old one.
 const mockGenerateAIContextFiles = jest.fn().mockResolvedValue({ skills: [] });
-jest.mock('@/features/project-creation/services/projectFinalizationService', () => ({
+jest.mock('@/features/project-creation/services', () => ({
     generateAIContextFiles: (...args: unknown[]) => mockGenerateAIContextFiles(...args),
 }));
 
@@ -58,6 +58,7 @@ function createMockContext(): HandlerContext {
     return {
         stateManager: {
             saveProject: jest.fn().mockResolvedValue(undefined),
+            saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
             removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
         } as unknown as HandlerContext['stateManager'],
         logger: {

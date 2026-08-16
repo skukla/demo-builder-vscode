@@ -22,6 +22,8 @@ import { ensureHomeAiContext } from '@/features/project-creation/services/homeAi
 import { resolveMcpSocketPath } from '@/features/ai/server/mcpSocketPath';
 
 jest.mock('fs/promises', () => ({
+    lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
+    realpath: jest.fn(async (p: string) => p),
     mkdir: jest.fn().mockResolvedValue(undefined),
     writeFile: jest.fn().mockResolvedValue(undefined),
 }));

@@ -7,8 +7,10 @@
  * Covers EDS projects, headless projects, block libraries, and conditional sections.
  */
 
+import { createHash } from 'crypto';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
+import { enoentError, makeTestWriter } from './generatedFileWriter.testUtils';
 import {
     generateAgentsMd,
     writeAgentsMd,
@@ -16,10 +18,34 @@ import {
 import type { Project, ComponentInstance } from '@/types/base';
 import type { Stack } from '@/types/stacks';
 
-jest.mock('fs/promises', () => ({
-    mkdir: jest.fn().mockResolvedValue(undefined),
-    writeFile: jest.fn().mockResolvedValue(undefined),
-}));
+jest.mock('fs/promises', () => {
+    const writeFile = jest.fn().mockResolvedValue(undefined);
+    return {
+        lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
+        realpath: jest.fn(async (p: string) => p),
+        mkdir: jest.fn().mockResolvedValue(undefined),
+        writeFile,
+        readFile: jest.fn(),
+        // O_NOFOLLOW writes go through open(); the returned handle delegates to
+        // the writeFile mock WITH the path, so path-based assertions keep working.
+        open: jest.fn(async (p: unknown) => ({
+            writeFile: jest.fn(async (d: unknown, e: unknown) => writeFile(p as string, d, e)),
+            close: jest.fn(async () => undefined),
+        })),
+    };
+});
+
+function sha256(content: string): string {
+    return createHash('sha256').update(content, 'utf-8').digest('hex');
+}
+
+/** Prime the mocked fs: listed absolute paths exist; everything else ENOENTs. */
+function primeDisk(files: Record<string, string>): void {
+    (fsPromises.readFile as jest.Mock).mockImplementation(async (absPath: string) => {
+        if (absPath in files) return files[absPath];
+        throw enoentError();
+    });
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -420,9 +446,16 @@ describe('aiContextWriter', () => {
     });
 
     describe('writeAgentsMd', () => {
+        const PROJECT_PATH = '/projects/test-project';
+
         beforeEach(() => {
             jest.clearAllMocks();
+            primeDisk({});
         });
+
+        function makeWriter(recorded: Record<string, string> = {}) {
+            return makeTestWriter(PROJECT_PATH, recorded);
+        }
 
         function captureWritten(filePath: string): string {
             const writeFileMock = fsPromises.writeFile as jest.Mock;
@@ -435,37 +468,35 @@ describe('aiContextWriter', () => {
 
         it('writes AGENTS.md at the project root with the generated content', async () => {
             const project = makeEdsProject();
-            await writeAgentsMd('/projects/test-project', project, STACKS);
+            await writeAgentsMd(PROJECT_PATH, project, STACKS, makeWriter());
 
-            const content = captureWritten(path.join('/projects/test-project', 'AGENTS.md'));
+            const content = captureWritten(path.join(PROJECT_PATH, 'AGENTS.md'));
             expect(content).toContain('Demo Builder Project: test-project');
             expect(content).toContain('Project Overview');
         });
 
         it('writes a CLAUDE.md pointer at the project root', async () => {
             const project = makeEdsProject();
-            await writeAgentsMd('/projects/test-project', project, STACKS);
+            await writeAgentsMd(PROJECT_PATH, project, STACKS, makeWriter());
 
-            const content = captureWritten(path.join('/projects/test-project', 'CLAUDE.md'));
+            const content = captureWritten(path.join(PROJECT_PATH, 'CLAUDE.md'));
             expect(content.trim()).toBe('see @AGENTS.md');
         });
 
         it('writes a .claude/CLAUDE.md pointer', async () => {
             const project = makeEdsProject();
-            await writeAgentsMd('/projects/test-project', project, STACKS);
+            await writeAgentsMd(PROJECT_PATH, project, STACKS, makeWriter());
 
-            const content = captureWritten(
-                path.join('/projects/test-project', '.claude', 'CLAUDE.md')
-            );
+            const content = captureWritten(path.join(PROJECT_PATH, '.claude', 'CLAUDE.md'));
             expect(content.trim()).toBe('see @AGENTS.md');
         });
 
         it('creates the .claude directory before writing the pointer', async () => {
             const project = makeEdsProject();
-            await writeAgentsMd('/projects/test-project', project, STACKS);
+            await writeAgentsMd(PROJECT_PATH, project, STACKS, makeWriter());
 
             const mkdirMock = fsPromises.mkdir as jest.Mock;
-            const claudeDir = path.join('/projects/test-project', '.claude');
+            const claudeDir = path.join(PROJECT_PATH, '.claude');
             const mkdirCall = mkdirMock.mock.calls.find(([dir]: [string]) => dir === claudeDir);
             expect(mkdirCall).toBeDefined();
         });
@@ -474,10 +505,69 @@ describe('aiContextWriter', () => {
             const project = makeEdsProject();
             const generated = generateAgentsMd(project, STACKS);
 
-            await writeAgentsMd('/projects/test-project', project, STACKS);
+            await writeAgentsMd(PROJECT_PATH, project, STACKS, makeWriter());
 
-            const content = captureWritten(path.join('/projects/test-project', 'AGENTS.md'));
+            const content = captureWritten(path.join(PROJECT_PATH, 'AGENTS.md'));
             expect(content).toBe(generated);
+        });
+
+        // ADR-013: every bundle file goes through the GeneratedFileWriter seam —
+        // a write that bypasses it reverts that file to blind-overwrite behavior.
+        describe('hash-and-skip routing (ADR-013)', () => {
+            it('reports AGENTS.md and both pointers as written through the seam', async () => {
+                const writer = makeWriter();
+
+                await writeAgentsMd(PROJECT_PATH, makeEdsProject(), STACKS, writer);
+
+                expect(writer.report().written).toEqual([
+                    'AGENTS.md',
+                    'CLAUDE.md',
+                    '.claude/CLAUDE.md',
+                ]);
+            });
+
+            it('records project-relative posix hash keys for all three files', async () => {
+                const writer = makeWriter();
+
+                await writeAgentsMd(PROJECT_PATH, makeEdsProject(), STACKS, writer);
+
+                expect(Object.keys(writer.hashes()).sort()).toEqual([
+                    '.claude/CLAUDE.md',
+                    'AGENTS.md',
+                    'CLAUDE.md',
+                ]);
+            });
+
+            it('skips a user-edited AGENTS.md while the pointers still refresh', async () => {
+                primeDisk({
+                    [path.join(PROJECT_PATH, 'AGENTS.md')]: '# my own notes',
+                });
+                const writer = makeWriter({
+                    'AGENTS.md': sha256('what we generated last time'),
+                });
+
+                await writeAgentsMd(PROJECT_PATH, makeEdsProject(), STACKS, writer);
+
+                const writtenPaths = (fsPromises.writeFile as jest.Mock).mock.calls.map(
+                    ([p]: [string]) => p
+                );
+                expect(writtenPaths).not.toContain(path.join(PROJECT_PATH, 'AGENTS.md'));
+                expect(writtenPaths).toContain(path.join(PROJECT_PATH, 'CLAUDE.md'));
+                expect(writtenPaths).toContain(path.join(PROJECT_PATH, '.claude', 'CLAUDE.md'));
+                expect(writer.report().skipped).toEqual(['AGENTS.md']);
+            });
+
+            it('overwrites a pre-ADR AGENTS.md once when no hash is recorded', async () => {
+                primeDisk({
+                    [path.join(PROJECT_PATH, 'AGENTS.md')]: '# pre-ADR content, maybe edited',
+                });
+                const writer = makeWriter({});
+
+                await writeAgentsMd(PROJECT_PATH, makeEdsProject(), STACKS, writer);
+
+                expect(writer.report().written).toContain('AGENTS.md');
+                expect(writer.report().skipped).toEqual([]);
+            });
         });
     });
     describe('How to Change Things — the skills pointer', () => {

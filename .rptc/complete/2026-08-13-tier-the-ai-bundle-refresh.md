@@ -1,5 +1,38 @@
 # Watch both staleness axes, then refresh proportionately
 
+> ## ✅ SHIPPED — merged to develop 2026-08-14 (fast-forward to `d2cb8e85`)
+>
+> **Step 0 (reproduce)**: done as a RED test, not a Dev Host session — with the real
+> check, a project with a FRESH version stamp and a qualifying component whose package
+> was never installed returned `ok` and logged nothing (the exact silent under-fire).
+> `tests/features/dashboard/services/onOpenChecks/aiContextFreshnessCheck.test.ts`,
+> "composition axis" describe, holds the reproduction; it now passes against the fix.
+>
+> **Step 1 (second axis)**: `aiContextFreshnessCheck` now compares
+> `applicableMcpPackages(project)` (new, in `aiDefaultsInstaller.ts`, built on
+> `aiDefaultsEntryApplies`) against `readInstalledMcpPackages(projectPath)` (new,
+> reads the `.demo-builder-mcp/package.json` manifest; absent/unparseable reads as
+> "nothing installed" — can only cause a warning, never mask one). Either axis stale →
+> the existing badge + "Regenerate AI files" surface. A parity test pins that
+> `applicableMcpPackages` and the installer's own dependency set cannot drift.
+> No `AI_CONTEXT_VERSION` bump — generated content is unchanged; only the check grew.
+>
+> **Step 7 (partial — the check only)**: every run now logs its decision, both axes,
+> including the healthy verdict (`debug`); either stale branch logs the WHY at `info`,
+> naming the missing packages. A test pins that the healthy path logs.
+>
+> **REMAINING STEPS SHIPPED 2026-08-14 on `feature/tiered-ai-refresh`** (policy =
+> option 1 hash-and-skip, [ADR-013](../../docs/architecture/adr/013-generated-file-edit-survival.md),
+> now Implemented): step 3 → `aiBundleService.ts` tier split; step 4 →
+> `aiBundleActivationRefresh.ts` silent tier-1 repair every activation; step 5 →
+> `generatedFileWriter.ts` seam, hashes in the manifest's `aiFileHashes`, edited
+> files kept + reported in the AI Capabilities modal; step 6 → the Regenerate step
+> names the packages it downloads; step 8 → the update paths flow through the same
+> tiered+hashed function (barrel). Step 2 (per-tier version detail) was dropped as
+> YAGNI — with tier 2 silent, a single stamp + the composition axis covers every
+> case. Version staleness no longer prompts; only a needed download does.
+> Merged; archived per this line's own instruction.
+
 *(Filed as "tier the AI-bundle refresh". Renamed after research widened it — see
 "The check is also under-firing".)*
 

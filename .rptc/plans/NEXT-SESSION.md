@@ -22,10 +22,16 @@ four test files that were silently scripts sharing one global scope), not delibe
 partials. The `src/`-side cast-removal partial (127 `as {` casts, ~121 needing reading)
 was deliberately NOT swept — it stays a cheap independent follow-up.
 
-**Queued behind it, both validated accurate 2026-08-13, neither started:**
-`tier-the-ai-bundle-refresh` (step 0 = REPRODUCE the silent under-fire before any fix) and
-`third-party-tooling-visible-and-optional` (real remaining gap: no machine-readable link
-between `ai-defaults.json` packages and the skills they power; shares the other item's gate).
+**Both queued items advanced 2026-08-14 — the first one all the way:**
+`tier-the-ai-bundle-refresh` — **SHIPPED end to end.** Under-fire reproduced and fixed
+(`ba8480d8`), policy recorded as **ADR-013** (`b762432f`), and the full tiered build
+(`generatedFileWriter` hash-and-skip seam, `aiBundleService` tier functions, activation
+sweep, Playwright skill gating, modal edited-files surface, `AI_CONTEXT_VERSION` → 9)
+merged to develop as `86cb302d` with verify-loop hardening commits on top; plan archived
+to `.rptc/complete/tiered-ai-refresh/`. `third-party-tooling-visible-and-optional` —
+steps 1–2 shipped (`SKILL_MCP_TOOL_DEPENDENCIES` + gating in `writeSkillFiles`, batched
+into the same version bump); steps 3–7 (opt-out setting, modal absence reasons, Chromium
+pre-check, install progress, re-enable-must-install) remain.
 
 **The old caveat on that number is retired and replaced by a sharper one.** This line used to
 read "at `--maxWorkers=25%` … a default-workers green is one sample of a noisy process." The
@@ -388,9 +394,9 @@ was caught only because a fallback printed nothing where it should have printed 
   `[MCP] refreshed the global ~/.claude.json entry` line in Debug Logs, which appears
   only when the repair fired.
 
-**The test-typecheck sweep FINISHED 2026-08-14 (see the section at the top).** The user's
-chosen order for what's next: `tier-the-ai-bundle-refresh` (step 0 = REPRODUCE the silent
-under-fire before any fix) then `third-party-tooling-visible-and-optional`.
+**The test-typecheck sweep FINISHED 2026-08-14 (see the section at the top), and
+`tier-the-ai-bundle-refresh` SHIPPED the same day (see above).** Next in the user's chosen
+order: `third-party-tooling-visible-and-optional` steps 3–7.
 
 **Paused, ready to resume:**
 
@@ -414,8 +420,8 @@ being worked; five shipped plans were sitting there too, one of which said so in
   against a real B2B backend.
 - **`backlog/per-integration-api-attribution`** — steps 01–05 shipped, 06 withdrawn, 07 is
   RELEASE-gated: retiring the flat write loses picks for anyone still on `v1.0.0-beta.123`.
-- **One visual check outstanding:** the AI modal was confirmed readable 2026-08-13, but the
-  two-column skill groups and the persistent scrollbar specifically were never eyeballed.
+- ~~One visual check outstanding~~ **CLOSED 2026-08-14**: the user eyeballed the AI modal's
+  two-column skill groups and the persistent scrollbar on a live window — both look good.
 
 **Real work, not started:**
 
