@@ -5,7 +5,7 @@
 **Decision Maker**: Project Owner
 **Implementer**: Implemented on `feature/data-installer-credential-broker` (steps 01-03, TDD)
 
-Related: [ADR-011 App Builder deployables](011-app-builder-deployables.md) (the per-project I/O project model this decision deliberately does not depend on). The plan is `.rptc/plans/data-installer-credential-broker/overview.md`; the sibling backlog item is `.rptc/backlog/per-sc-io-project.md`.
+Related: [ADR-011 App Builder deployables](011-app-builder-deployables.md) (the per-project I/O project model this decision deliberately does not depend on). The plan is `.rptc/complete/data-installer-credential-broker/overview.md`; the sibling backlog item is `.rptc/backlog/per-sc-io-project.md`.
 
 **This ADR reverses a recommendation.** `.rptc/research/data-installer-credential-home/research.md` argued that brokering "gets worse, not better" and recommended a shared per-org Adobe I/O project instead. That research is still worth reading and its measurements still hold; what changed is a fact it did not have. The reversal is recorded here because the research file will otherwise keep arguing the other way to the next reader.
 

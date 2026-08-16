@@ -3,7 +3,7 @@
 > **DECIDED 2026-08-16 — read this first.** This item is now the RECORD of how the decision
 > was reached, not an open question. The work split in two:
 >
-> - **Option 1 (active):** `.rptc/plans/data-installer-credential-broker/overview.md` — one
+> - **Option 1 (active):** `.rptc/complete/data-installer-credential-broker/overview.md` — one
 >   shared `demo-builder-s2s` pair served from the discovery service's project in the org
 >   where the Commerce instances live.
 > - **Option 2 (backlog):** `.rptc/backlog/per-sc-io-project.md` — per-SC Adobe I/O project
@@ -69,7 +69,7 @@ manual Console work. **Answered.** The work is now two plans:
 
 | | Where | What |
 |---|---|---|
-| **Option 1** | `.rptc/plans/data-installer-credential-broker/` | One shared `demo-builder-s2s` pair, served from the discovery service's project in the org where the Commerce instances live. **This is the credential answer.** |
+| **Option 1** | `.rptc/complete/data-installer-credential-broker/` | One shared `demo-builder-s2s` pair, served from the discovery service's project in the org where the Commerce instances live. **This is the credential answer.** |
 | **Option 2** | `.rptc/backlog/per-sc-io-project.md` | Per-SC Adobe I/O project for discovery, prerender, mesh and integration packages. The credential is gated out of it until cross-org reach is measured. |
 
 The question that turned out to decide it was NOT "is the workspace also wanted for deploying

@@ -1,7 +1,7 @@
 # Move deliberately to a per-SC Adobe I/O project (Option 2)
 
 **Filed:** 2026-08-16, from the Data Installer credential decision.
-**Sibling:** `.rptc/plans/data-installer-credential-broker/overview.md` (Option 1), which is
+**Sibling:** `.rptc/complete/data-installer-credential-broker/overview.md` (Option 1), which is
 the active work. These are not competing answers to one question — Option 1 handles the
 credential, this handles everything else.
 **Research:** `.rptc/research/data-installer-credential-home/research.md`.
@@ -41,7 +41,7 @@ credential succeeds, so it is an entitlement boundary, not a permissions one.
 The subscription IS the entitlement, so a credential minted there never gains
 `commerce.accs` and could not reach an ACCS instance anywhere. **Plan this item for
 (b)–(e) only.** Full measurement:
-`.rptc/plans/data-installer-credential-broker/step-05.md`.
+`.rptc/complete/data-installer-credential-broker/step-05.md`.
 
 ## (c) is explicitly out of scope here
 
@@ -103,7 +103,7 @@ placeholder — needs real design" (`.rptc/backlog/appbuilder-deployable-model/o
 > `.rptc/research/data-installer-credential-home/research.md`. Plan the move of store
 > discovery (b) into a per-SC Adobe I/O project, treating (d) mesh and (e) integration
 > packages as already built and (a) the credential as gated on
-> `.rptc/plans/data-installer-credential-broker/step-05.md`. Prerender (c) is a SEPARATE
+> `.rptc/complete/data-installer-credential-broker/step-05.md`. Prerender (c) is a SEPARATE
 > research item — do not decide it here. Three things must exist first: a required-deployable
 > concept in the catalog schema, an upgrade path for deployed integrations (today mesh-only),
 > and dedup so two demo projects sharing a workspace cannot overwrite each other.

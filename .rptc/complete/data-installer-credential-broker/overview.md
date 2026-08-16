@@ -173,7 +173,7 @@ Two fixes landed before this plan and must stay coherent with it:
 
 ## Kickoff prompt
 
-> Read `.rptc/plans/data-installer-credential-broker/overview.md` and its step files. Build
+> Read `.rptc/complete/data-installer-credential-broker/overview.md` and its step files. Build
 > Option 1: a `get-commerce-credentials` action in `accs-discovery-service` behind the same
 > IMS + email-domain guard chain as `discover-stores` (fail-closed), serving one
 > `demo-builder-s2s` pair from action default params; then a broker fallback in this repo's
