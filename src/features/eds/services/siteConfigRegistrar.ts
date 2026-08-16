@@ -28,6 +28,7 @@
  */
 
 import type { buildSiteConfigParams, ConfigurationService } from './configurationService';
+import { registerPublishKey, type PublishKeyTokenProvider } from './publishKeyRegistrar';
 import { DaLiveAuthError } from './types';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -64,6 +65,15 @@ export interface SiteRegistrationOutcome {
 export interface RegisterSiteConfigParams {
     configurationService: ConfigurationService;
     siteParams: SiteParams;
+    /**
+     * DA.live token source, used to re-mint the site's publish key after the write.
+     *
+     * Required, not optional: every caller already holds one (it is what they
+     * construct `configurationService` with), and an optional parameter is how the
+     * two callers that forgot this call went unnoticed. The compiler should be the
+     * thing that remembers.
+     */
+    tokenProvider: PublishKeyTokenProvider;
     logger: Logger;
     /**
      * Retry a 403 on the propagation backoff (~135s total).
@@ -78,7 +88,17 @@ export interface RegisterSiteConfigParams {
 }
 
 /**
- * Register a site, resolving the 409/401/403 cases.
+ * Register a site and leave it with a working publish key.
+ *
+ * The key re-mint lives HERE rather than beside each caller because the write
+ * this function performs is what destroys it: `apiKeys` lives inside the site
+ * config document, and every path below is a delete-then-re-register. Of the four
+ * callers that write the config, two re-minted and two did not (reset and rename,
+ * measured 2026-08-15) — so a reset, the thing people run to REPAIR a storefront,
+ * silently killed runtime PDP self-heal instead.
+ *
+ * `registerPublishKey` never throws and reports its own failures, so a key that
+ * cannot be minted costs PDP self-heal and never the registration itself.
  *
  * @throws DaLiveAuthError on 401 — the session must be re-established before any
  *   retry could mean anything, and that is the caller's job.
@@ -86,6 +106,24 @@ export interface RegisterSiteConfigParams {
 export async function registerSiteConfig(
     params: RegisterSiteConfigParams,
 ): Promise<SiteRegistrationOutcome> {
+    const outcome = await writeSiteConfig(params);
+    if (outcome.registered) {
+        // Keyed by the GitHub pair: Helix API keys are per code repo, and
+        // `codeOwner`/`codeRepo` say so unambiguously where `org`/`site` do not.
+        await registerPublishKey(
+            params.tokenProvider,
+            { owner: params.siteParams.codeOwner, repo: params.siteParams.codeRepo },
+            params.logger,
+        );
+    }
+    return outcome;
+}
+
+/**
+ * The registration protocol itself — 409 becomes an update, 401 throws, 403 may
+ * be admin-role propagation worth waiting out.
+ */
+async function writeSiteConfig(params: RegisterSiteConfigParams): Promise<SiteRegistrationOutcome> {
     const { configurationService, siteParams, logger, retryOn403, onProgress } = params;
 
     const first = await configurationService.registerSite(siteParams);

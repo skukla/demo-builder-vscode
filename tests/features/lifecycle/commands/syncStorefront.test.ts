@@ -4,149 +4,36 @@
  * Coverage:
  *  - Happy path: storefront present + .git exists + user supplies commit message →
  *    syncAndPublish called with token from GitHubTokenService + Helix tokens
+ *  - DA.live token sourcing: comes from DaLiveAuthService, never SecretStorage
  *  - User cancels commit prompt → no service call
  *  - No EDS storefront on project → error message, no service call
  *  - Storefront missing .git → error message, no service call
  *  - PushRejectedError → user is offered Continue / Cancel and Reset
  *  - "Cancel and Reset" branch runs git rebase --abort
+ *
+ * The mock preamble and fixtures live in `./syncStorefront.testUtils`, which
+ * also re-exports the SUT — importing `SyncStorefrontCommand` directly here
+ * would bind it to the real services, because `jest.mock` hoists per module.
  */
 
-// Delays in this path are real wall-clock waits on the node project's real timers.
-// Mocking the shared sleep keeps the orchestration under test and drops the waiting.
-// Assertions here pin the SEQUENCE of attempts, never elapsed duration.
-jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
-
-import * as childProcess from 'child_process';
-import * as fsPromises from 'fs/promises';
 import * as vscode from 'vscode';
-
-// The global vscode mock doesn't include showInputBox / withProgress overrides
-// we need for these tests. Patch them on first import.
-(vscode.window as unknown as { showInputBox?: jest.Mock }).showInputBox =
-    (vscode.window as unknown as { showInputBox?: jest.Mock }).showInputBox ?? jest.fn();
-(vscode.commands as unknown as { executeCommand?: jest.Mock }).executeCommand =
-    (vscode.commands as unknown as { executeCommand?: jest.Mock }).executeCommand ?? jest.fn();
-(vscode.env as unknown as { openExternal?: jest.Mock }).openExternal =
-    (vscode.env as unknown as { openExternal?: jest.Mock }).openExternal ?? jest.fn();
-(vscode.window as unknown as { showTextDocument?: jest.Mock }).showTextDocument =
-    (vscode.window as unknown as { showTextDocument?: jest.Mock }).showTextDocument ?? jest.fn();
-(vscode.workspace as unknown as { openTextDocument?: jest.Mock }).openTextDocument =
-    (vscode.workspace as unknown as { openTextDocument?: jest.Mock }).openTextDocument ?? jest.fn();
-
-// Make the conflict-resolution poll resolve immediately — the condition is
-// driven by git state we mock per-test, not by real timers.
-jest.mock('@/core/shell/pollingService', () => ({
-    PollingService: jest.fn().mockImplementation(() => ({
-        pollUntilCondition: jest.fn(async (checkFn: () => Promise<boolean>) => {
-            await checkFn();
-        }),
-    })),
-}));
-
-import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
-import { PushRejectedError, syncAndPublish } from '@/features/eds/services/storefrontSyncService';
-import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefront';
-
-jest.mock('child_process', () => ({
-    execFile: jest.fn(),
-    exec: jest.fn(),
-    spawn: jest.fn(),
-}));
-
-jest.mock('fs/promises', () => ({
-    stat: jest.fn(),
-    readFile: jest.fn(),
-}));
-
-jest.mock('@/features/eds/services/storefrontSyncService', () => ({
-    PushRejectedError: class PushRejectedError extends Error {
-        constructor(
-            message: string,
-            public stderr?: string
-        ) {
-            super(message);
-            this.name = 'PushRejectedError';
-        }
-    },
-    syncAndPublish: jest.fn(),
-}));
-
-jest.mock('@/features/eds/services/githubTokenService', () => ({
-    GitHubTokenService: jest.fn(),
-}));
-
-jest.mock('@/features/eds/services/helixApiClient', () => ({
-    previewAndPublishPage: jest.fn(),
-}));
-
-const syncAndPublishMock = syncAndPublish as jest.Mock;
-const execFileMock = childProcess.execFile as unknown as jest.Mock;
-const statMock = fsPromises.stat as jest.Mock;
-
-function makeContext(daLiveSecret?: string): vscode.ExtensionContext {
-    const secrets: vscode.SecretStorage = {
-        get: jest.fn(async (key: string) =>
-            key === 'demoBuilder.daLive.imsToken' ? daLiveSecret : undefined
-        ),
-        store: jest.fn(),
-        delete: jest.fn(),
-        onDidChange: jest.fn(),
-    } as never;
-    return { secrets } as never;
-}
-
-function makeStateManager(project: Record<string, unknown> | null): {
-    getCurrentProject: jest.Mock;
-} {
-    return {
-        getCurrentProject: jest.fn().mockResolvedValue(project),
-    };
-}
-
-function makeLogger(): {
-    info: jest.Mock;
-    warn: jest.Mock;
-    error: jest.Mock;
-    debug: jest.Mock;
-    trace: jest.Mock;
-} {
-    return { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
-}
-
-function makeEdsProject(): Record<string, unknown> {
-    return {
-        name: 'demo',
-        path: '/projects/demo',
-        componentInstances: {
-            'eds-storefront': {
-                id: 'eds-storefront',
-                name: 'EDS Storefront',
-                status: 'ready',
-                path: '/projects/demo/components/eds-storefront',
-                metadata: { githubRepo: 'demo-org/demo-repo', liveUrl: 'https://live.example' },
-            },
-        },
-    };
-}
-
-function setGitHubTokenServiceReturns(token: string | undefined): void {
-    const instance = { getToken: jest.fn().mockResolvedValue(token ? { token } : undefined) };
-    (GitHubTokenService as unknown as jest.Mock).mockImplementation(() => instance);
-}
+import {
+    execFileMock,
+    readFileMock,
+    makeContext,
+    makeEdsProject,
+    makeLogger,
+    makeStateManager,
+    mockGetAccessToken,
+    PushRejectedError,
+    resetSyncStorefrontMocks,
+    statMock,
+    syncAndPublishMock,
+    SyncStorefrontCommand,
+} from './syncStorefront.testUtils';
 
 beforeEach(() => {
-    jest.clearAllMocks();
-    statMock.mockResolvedValue({} as never);
-    // Default: input box returns the supplied default value; user picks "Continue".
-    (vscode.window.showInputBox as jest.Mock).mockResolvedValue('Demo Builder: sync local changes');
-    (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
-    (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
-    (vscode.window.withProgress as jest.Mock).mockImplementation(
-        async (_opts, task: (p: { report: jest.Mock }) => Promise<unknown>) => {
-            return task({ report: jest.fn() });
-        }
-    );
-    setGitHubTokenServiceReturns('gh-token-from-service');
+    resetSyncStorefrontMocks();
 });
 
 describe('SyncStorefrontCommand', () => {
@@ -217,9 +104,10 @@ describe('SyncStorefrontCommand', () => {
             helixPublished: true,
             summary: '',
         });
+        mockGetAccessToken.mockResolvedValue('dalive-ims-from-auth-service');
 
         const command = new SyncStorefrontCommand(
-            makeContext('dalive-ims-from-secrets'),
+            makeContext(),
             makeStateManager(makeEdsProject()) as never,
             makeLogger() as never
         );
@@ -231,7 +119,7 @@ describe('SyncStorefrontCommand', () => {
         expect(input.storefrontPath).toBe('/projects/demo/components/eds-storefront');
         expect(input.commitMessage).toBe('Demo Builder: sync local changes');
         expect(input.githubToken).toBe('gh-token-from-service');
-        expect(input.daLiveToken).toBe('dalive-ims-from-secrets');
+        expect(input.daLiveToken).toBe('dalive-ims-from-auth-service');
         expect(input.githubRepo).toEqual({
             owner: 'demo-org',
             site: 'demo-repo',
@@ -239,16 +127,46 @@ describe('SyncStorefrontCommand', () => {
         });
     });
 
-    it('skips Helix when the DA.live secret is missing (githubToken still forwarded)', async () => {
+    // REGRESSION: the token was read from `context.secrets` under a key nothing
+    // writes, so the Helix publish leg silently skipped on every sync while the
+    // command still reported "Storefront synced." Pin the real source.
+    it('reads the DA.live token from the auth service, never from SecretStorage', async () => {
+        syncAndPublishMock.mockResolvedValue({
+            committed: true,
+            pushed: true,
+            helixPublished: true,
+            summary: '',
+        });
+        mockGetAccessToken.mockResolvedValue('dalive-ims-from-auth-service');
+
+        const context = makeContext();
+        const command = new SyncStorefrontCommand(
+            context,
+            makeStateManager(makeEdsProject()) as never,
+            makeLogger() as never
+        );
+
+        await command.execute();
+
+        expect(mockGetAccessToken).toHaveBeenCalled();
+        const secretKeysRead = (context.secrets.get as jest.Mock).mock.calls.map((c) => c[0]);
+        expect(secretKeysRead).not.toContain('demoBuilder.daLive.imsToken');
+        expect(syncAndPublishMock.mock.calls[0][0].daLiveToken).toBe(
+            'dalive-ims-from-auth-service'
+        );
+    });
+
+    it('skips Helix when the auth service has no token (githubToken still forwarded)', async () => {
         syncAndPublishMock.mockResolvedValue({
             committed: true,
             pushed: true,
             helixPublished: false,
             summary: '',
         });
+        mockGetAccessToken.mockResolvedValue(null);
 
         const command = new SyncStorefrontCommand(
-            makeContext(/* no DA.live secret */),
+            makeContext(),
             makeStateManager(makeEdsProject()) as never,
             makeLogger() as never
         );
@@ -258,6 +176,26 @@ describe('SyncStorefrontCommand', () => {
         const input = syncAndPublishMock.mock.calls[0][0];
         expect(input.githubToken).toBe('gh-token-from-service');
         expect(input.daLiveToken).toBeUndefined();
+    });
+
+    it('skips Helix without throwing when the auth service itself fails', async () => {
+        syncAndPublishMock.mockResolvedValue({
+            committed: true,
+            pushed: true,
+            helixPublished: false,
+            summary: '',
+        });
+        mockGetAccessToken.mockRejectedValue(new Error('token store unavailable'));
+
+        const command = new SyncStorefrontCommand(
+            makeContext(),
+            makeStateManager(makeEdsProject()) as never,
+            makeLogger() as never
+        );
+
+        await command.execute();
+
+        expect(syncAndPublishMock.mock.calls[0][0].daLiveToken).toBeUndefined();
     });
 
     it('on PushRejectedError + "Cancel and Reset", runs git rebase --abort and shows info', async () => {
@@ -360,7 +298,7 @@ describe('SyncStorefrontCommand', () => {
             }
         );
         // The conflicted file has been resolved (no markers) so the poll passes at once.
-        (fsPromises.readFile as jest.Mock).mockResolvedValue('resolved content, no markers');
+        readFileMock.mockResolvedValue('resolved content, no markers');
         (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce('Continue');
 
         const command = new SyncStorefrontCommand(
@@ -515,7 +453,7 @@ describe('SyncStorefrontCommand', () => {
                     summary: '',
                 });
             mockConflictFlow({ conflicted: ['config.json', 'index.html'] });
-            (fsPromises.readFile as jest.Mock).mockResolvedValue('resolved content, no markers');
+            readFileMock.mockResolvedValue('resolved content, no markers');
             (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce('Continue');
 
             const command = new SyncStorefrontCommand(
@@ -540,7 +478,7 @@ describe('SyncStorefrontCommand', () => {
                     summary: '',
                 });
             mockConflictFlow({ conflicted: ['blocks/foo.js'] });
-            (fsPromises.readFile as jest.Mock).mockResolvedValue('resolved content, no markers');
+            readFileMock.mockResolvedValue('resolved content, no markers');
             (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce('Continue');
 
             const command = new SyncStorefrontCommand(

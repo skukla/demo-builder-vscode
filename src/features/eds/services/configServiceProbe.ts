@@ -33,8 +33,10 @@
  */
 
 import { readOrgAdmins } from './configServiceAccess';
+import { deriveRegisterKeyUrl } from './pdp404Snippet';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
 import type { Logger } from '@/types/logger';
 
 const HELIX_ADMIN_BASE_URL = 'https://admin.hlx.page';
@@ -67,6 +69,38 @@ export interface ConfigServiceProbeResult {
      * only remaining path (observed on `leahrayard`, 2026-08-14).
      */
     orgAdmins?: { status: 'ok' | 'not_authorized' | 'failed'; emails?: string[] };
+    /**
+     * Whether runtime PDP self-heal can work on this site.
+     *
+     * A site with any `access.admin` role closes the Helix admin API to
+     * anonymous callers — and the smart-404 publisher that rescues an
+     * unpublished PDP runs in the VISITOR's browser, which holds no credential.
+     * It works only because the extension registers a publish key on the site
+     * for the shared action to use.
+     *
+     * So `locked && keyCount === 0` means: every product added to the catalog
+     * after setup will 404 on first visit. That failure is otherwise completely
+     * silent — it surfaces as "some product pages don't work", days later, with
+     * nothing connecting it to the admin grant that caused it. This leg exists
+     * to make it visible on demand.
+     */
+    pdpPublishing?: {
+        /** Site has an `access.admin` role, so the admin API needs credentials. */
+        locked: boolean;
+        /** Publish keys registered on the site. Undefined when unreadable. */
+        keyCount?: number;
+        /**
+         * Whether the shared PDP action can actually READ a key for this site.
+         *
+         * `keyCount` above counts keys on the SITE; this asks the action whether
+         * its own stored copy decrypts. The two disagree in exactly the cases
+         * nothing else catches: a registration that never landed, and an
+         * `ENCRYPTION_KEY` that no longer matches the one the blob was written
+         * with. Absent when BYOM is off — there is no action to ask.
+         */
+        actionKey?: { registered?: boolean; error?: string };
+        error?: string;
+    };
     /** One-line interpretation of the legs together. */
     verdict: string;
 }
@@ -188,6 +222,40 @@ function interpret(result: ConfigServiceProbeResult): string {
  * @param site - Site name, matching the GitHub repo
  * @param logger - Receives non-secret breadcrumbs
  */
+/**
+ * Ask the shared PDP action whether it can read this site's publish key.
+ *
+ * A GET, like every other leg — the action's status endpoint reads and never
+ * writes, so this does not weaken the read-only guarantee above.
+ *
+ * Returns `undefined` when BYOM is off or the overlay URL is not a shape we can
+ * derive the status endpoint from: there is nothing to ask, which is not a fault.
+ */
+async function probeActionKey(
+    org: string,
+    site: string,
+    token: string,
+): Promise<{ registered?: boolean; error?: string } | undefined> {
+    const overlayUrl = resolveByomOverlayUrl();
+    if (!overlayUrl) return undefined;
+
+    const registerUrl = deriveRegisterKeyUrl(overlayUrl);
+    if (!registerUrl) return undefined;
+
+    try {
+        const url = `${registerUrl}?org=${encodeURIComponent(org)}&site=${encodeURIComponent(site)}`;
+        const response = await get(url, token);
+        if (!response.ok) return { error: `HTTP ${response.status}` };
+
+        const body = (await (response as unknown as { json(): Promise<unknown> }).json()) as
+            | { registered?: boolean }
+            | undefined;
+        return { registered: body?.registered === true };
+    } catch (error) {
+        return { error: (error as Error).message };
+    }
+}
+
 export async function probeConfigService(
     tokenProvider: TokenSource,
     org: string,
@@ -246,6 +314,40 @@ export async function probeConfigService(
                 : { status: roster.status === 'not_authorized' ? 'not_authorized' : 'failed' };
     } catch {
         result.orgAdmins = { status: 'failed' };
+    }
+
+    // Runtime-PDP leg. Two cheap reads that together answer "can a product
+    // added after setup publish itself on first visit?" — the question this
+    // whole feature turns on, and the one nothing else in the report asks.
+    try {
+        const access = await get(
+            `${HELIX_ADMIN_BASE_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}/access/admin.json`,
+            token,
+        );
+        // 404 means no grants yet, which is "not locked" — NOT an error.
+        const locked = access.status === 200;
+
+        let keyCount: number | undefined;
+        const keys = await get(
+            `${HELIX_ADMIN_BASE_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}/apiKeys.json`,
+            token,
+        );
+        if (keys.status === 200) {
+            const body = (await (keys as unknown as { json(): Promise<unknown> }).json()) as
+                | Record<string, unknown>
+                | undefined;
+            keyCount = Object.keys(body ?? {}).length;
+        } else if (keys.status === 404) {
+            keyCount = 0; // same convention as the access doc: absent = none
+        }
+
+        result.pdpPublishing = {
+            locked,
+            keyCount,
+            actionKey: await probeActionKey(org, site, token),
+        };
+    } catch (error) {
+        result.pdpPublishing = { locked: false, error: (error as Error).message };
     }
 
     result.verdict = interpret(result);

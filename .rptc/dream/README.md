@@ -4,7 +4,7 @@ Out-of-band curation passes over memory, skills, and CLAUDE.md (the `dream` skil
 One file per run: `<YYYY-MM-DD>.md`, holding accepted AND rejected proposals — the
 rejection record is what stops a later run re-litigating settled items.
 
-Last dream run: 2026-08-11 (4 sessions / ~11,700 turns — **5 proposals, all accepted and applied**:
+Last dream run: 2026-08-15
 `spectrum-webview-ui` §Verify rewritten around "you cannot see this UI" after 16 screenshot-bearing
 user turns in 3/4 sessions; 9 shipped plans moved out of `.rptc/plans/`; quote-your-globs; the
 `project_appbuilder_app_family` memory pruned ~45 lines -> ~30 after every branch-state claim in it

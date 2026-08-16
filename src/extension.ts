@@ -36,11 +36,15 @@ import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLive
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
+import { HelixService } from '@/features/eds/services/helixService';
+import { renewPublishKeys } from '@/features/eds/services/publishKeyRenewalSweep';
 import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/globalMcpRegistration';
 import { ensureHomeAiContext } from '@/features/project-creation/services/homeAiContextWriter';
 import { SidebarProvider } from '@/features/sidebar';
 import type { McpCredentialProvider } from '@/mcp-server';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { getProjectFrontendPort } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
@@ -220,6 +224,17 @@ export async function activate(context: vscode.ExtensionContext) {
         const commandManager = new CommandManager(context, stateManager, logger);
         commandManager.registerCommands();
 
+        // Register the ONE DA.live token source every HelixService falls back
+        // to. There is a single DA.live session per host, so threading it
+        // through each layer that builds a HelixService modelled a plurality
+        // that does not exist — and two construction sites were missing it,
+        // which made a Helix code publish 401 on any admin-locked site and
+        // leave the CDN serving a stale config.json. Registered before anything
+        // can construct one.
+        HelixService.setDefaultDaLiveTokenProvider(
+            createDaLiveServiceTokenProvider(getDaLiveAuthService(context)),
+        );
+
         // Start the in-extension MCP server (serves Claude Code via the
         // stdio→UDS proxy). Bound to the open workspace folder; restarted when
         // the folder changes. Failure here must never abort activation.
@@ -238,6 +253,24 @@ export async function activate(context: vscode.ExtensionContext) {
             process.env.DEMO_BUILDER_PROJECTS_DIR ??
             path.join(os.homedir(), '.demo-builder', 'projects');
         void ensureHomeAiContext(projectsDir, path.join(context.extensionPath, 'dist'));
+
+        // Keep every storefront's runtime publish key alive. Helix keys expire in
+        // about a year and were only ever minted by a site config WRITE, so a
+        // storefront that simply ran lost PDP self-heal roughly a year in —
+        // silently, as PDPs that 404. Fire-and-forget like the two sweeps above.
+        //
+        // TWO triggers, because activation alone does not work. The sweep needs a
+        // DA.live session, and activation is the moment one is LEAST likely to
+        // exist: measured 2026-08-15, the stored token was already expired at
+        // startup and only refreshed 54s later when the user started a reset. So
+        // sign-in is the trigger that actually fires, and activation is the one
+        // that catches a session already valid from a previous window.
+        void sweepPublishKeyRenewals(context);
+        context.subscriptions.push(
+            getDaLiveAuthService(context).onDidSignIn(() => {
+                void sweepPublishKeyRenewals(context);
+            }),
+        );
 
         // Register file watchers early (before loading projects)
         // This ensures the initializeFileHashes command exists when we need it
@@ -460,6 +493,33 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             'Failed to start in-extension MCP server',
             err instanceof Error ? err : undefined,
         );
+    }
+}
+
+/**
+ * Load every project and hand them to the publish-key renewal sweep.
+ *
+ * Glue only — the decision of what is due lives in `renewPublishKeys`, which
+ * stays UI-free and testable. Swallows its own errors: a renewal that cannot run
+ * must cost the renewal and nothing else on the activation path.
+ */
+async function sweepPublishKeyRenewals(context: vscode.ExtensionContext): Promise<void> {
+    try {
+        const summaries = await stateManager.getAllProjects();
+        const projects: Project[] = [];
+        for (const summary of summaries) {
+            const project = await stateManager.loadProjectFromPath(summary.path);
+            if (project) projects.push(project);
+        }
+
+        await renewPublishKeys({
+            projects,
+            tokenProvider: createDaLiveServiceTokenProvider(getDaLiveAuthService(context)),
+            saveProject: (project) => stateManager.saveProjectConfigOnly(project),
+            logger,
+        });
+    } catch (error) {
+        logger.debug(`[PublishKey] Renewal sweep skipped: ${(error as Error).message}`);
     }
 }
 

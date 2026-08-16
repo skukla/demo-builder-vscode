@@ -90,6 +90,7 @@ export async function registerConfigurationService(
         const registration = await registerSiteConfig({
             configurationService,
             siteParams,
+            tokenProvider: services.daLiveTokenProvider,
             logger,
             // New repos only: the Code Sync install just happened, so a 403 is
             // probably propagation. On an existing repo it is a real refusal and
@@ -112,6 +113,10 @@ export async function registerConfigurationService(
         }
 
         if (registration.registered) {
+            // Pinning an admin closes the admin API to anonymous callers, which is
+            // what the browser-side smart-404 publisher is. The publish key that
+            // keeps it working is re-minted by `registerSiteConfig` itself — the
+            // write destroys it, so the re-mint belongs with the write.
             await pinSiteAdmin(
                 services.daLiveTokenProvider,
                 { owner: repoInfo.repoOwner, repo: repoInfo.repoName },

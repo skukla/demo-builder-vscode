@@ -123,7 +123,11 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
         const getBranchInfoSpy = jest.spyOn(service, 'getBranchInfo')
             .mockResolvedValue({ commitSha: 'parent-sha', treeSha: 'parent-tree' });
          
-        (service as any).downloadRepoContents = jest.fn().mockResolvedValue(new Map());
+        // One file, not an empty Map: an empty template now throws rather than
+        // committing a tree that would empty the repository.
+        (service as any).downloadRepoContents = jest
+            .fn()
+            .mockResolvedValue(new Map([['index.html', '<html></html>']]));
          
         (service as any).createTree = jest.fn().mockResolvedValue('new-tree-sha');
          
@@ -147,7 +151,8 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
         jest.spyOn(service, 'getBranchInfo')
             .mockResolvedValue({ commitSha: 'parent-sha', treeSha: 'parent-tree' });
          
-        const downloadSpy = jest.fn().mockResolvedValue(new Map());
+        // Non-empty: an empty template now refuses rather than emptying the repo.
+        const downloadSpy = jest.fn().mockResolvedValue(new Map([['index.html', '<html></html>']]));
          
         (service as any).downloadRepoContents = downloadSpy;
          
@@ -172,7 +177,11 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
         jest.spyOn(service, 'getBranchInfo')
             .mockResolvedValue({ commitSha: 'parent-sha', treeSha: 'parent-tree' });
          
-        (service as any).downloadRepoContents = jest.fn().mockResolvedValue(new Map());
+        // One file, not an empty Map: an empty template now throws rather than
+        // committing a tree that would empty the repository.
+        (service as any).downloadRepoContents = jest
+            .fn()
+            .mockResolvedValue(new Map([['index.html', '<html></html>']]));
          
         (service as any).createTree = jest.fn().mockResolvedValue('new-tree-sha');
          
@@ -403,5 +412,153 @@ describe('GitHub File Operations', () => {
                 expect.objectContaining({ sha: 'existingsha' })
             );
         });
+    });
+});
+
+/**
+ * Chunked tree creation.
+ *
+ * `resetRepoToTemplate` sent every file's content inline in ONE create-tree.
+ * Measured on `adobe-commerce/boilerplate-b2b-template`: 3,340 files and a
+ * 13.55 MB request body, which GitHub times out on with its own error naming
+ * the remedy ("Consider building the tree incrementally"). Reset was broken
+ * outright for any project on a template that size, every time.
+ */
+describe('resetRepoToTemplate — chunked tree creation', () => {
+    let GitHubFileOperations: any;
+    let mockTokenService: any;
+
+    /** An entry whose JSON weighs roughly `kb` kilobytes. */
+    const bigFile = (name: string, kb: number): [string, string] => [name, 'x'.repeat(kb * 1024)];
+
+    async function runReset(contents: Map<string, string>) {
+        const service = new GitHubFileOperations(mockTokenService);
+        jest.spyOn(service, 'getBranchInfo').mockResolvedValue({
+            commitSha: 'parent-sha',
+            treeSha: 'parent-tree',
+        });
+        (service as any).downloadRepoContents = jest.fn().mockResolvedValue(contents);
+        const createTree = jest
+            .fn()
+            .mockImplementation(async (_o: string, _r: string, entries: unknown[], base?: string) =>
+                `tree-after-${entries.length}-${base ?? 'none'}`,
+            );
+        (service as any).createTree = createTree;
+        const createCommit = jest.fn().mockResolvedValue('new-commit-sha');
+        (service as any).createCommit = createCommit;
+        (service as any).updateBranchRef = jest.fn().mockResolvedValue(undefined);
+
+        await service.resetRepoToTemplate('t-owner', 't-repo', 'u', 'u-repo', new Map(), 'main');
+        return { createTree, createCommit };
+    }
+
+    beforeEach(async () => {
+        jest.clearAllMocks();
+        jest.resetModules();
+        mockTokenService = {
+            getToken: jest.fn().mockResolvedValue({ token: 'ghp_test' }),
+            clearToken: jest.fn(),
+        };
+        GitHubFileOperations = (await import('@/features/eds/services/githubFileOperations'))
+            .GitHubFileOperations;
+    });
+
+    it('splits a large template across several create-tree requests', async () => {
+        // ~6 MB of content: one request would be the shape that times out.
+        const contents = new Map(Array.from({ length: 12 }, (_, i) => bigFile(`f${i}.js`, 512)));
+
+        const { createTree } = await runReset(contents);
+
+        expect(createTree.mock.calls.length).toBeGreaterThan(1);
+        // Every entry still ships exactly once — chunking must not drop files.
+        const shipped = createTree.mock.calls.flatMap((c: any[]) => c[2]).map((e: any) => e.path);
+        expect(new Set(shipped).size).toBe(12);
+    });
+
+    /**
+     * The load-bearing one. A reset REPLACES the repo, so the first batch must
+     * carry NO base_tree — basing it on the branch's existing tree would let
+     * files the template deleted survive the reset. Later batches chain on the
+     * previous batch so the final tree is the union of all of them.
+     */
+    it('bases the FIRST batch on nothing, then chains each batch on the previous', async () => {
+        const contents = new Map(Array.from({ length: 12 }, (_, i) => bigFile(`f${i}.js`, 512)));
+
+        const { createTree, createCommit } = await runReset(contents);
+
+        const bases = createTree.mock.calls.map((c: any[]) => c[3]);
+        expect(bases[0]).toBeUndefined();
+        expect(bases[0]).not.toBe('parent-tree'); // never the existing tree
+        for (let i = 1; i < bases.length; i++) {
+            expect(bases[i]).toBe(await createTree.mock.results[i - 1].value);
+        }
+        // The commit uses the LAST tree, not the first.
+        const finalTree = await createTree.mock.results[createTree.mock.calls.length - 1].value;
+        expect(createCommit).toHaveBeenCalledWith('u', 'u-repo', expect.any(String), finalTree, 'parent-sha');
+    });
+
+    it('still issues a single request for a small template', async () => {
+        const { createTree } = await runReset(new Map([['a.js', 'hello'], ['b.js', 'world']]));
+
+        expect(createTree).toHaveBeenCalledTimes(1);
+        expect(createTree.mock.calls[0][3]).toBeUndefined();
+    });
+
+    // Measured: one file in this template is 3.5 MB on its own. A budget-based
+    // batcher must never split an entry — an oversized one becomes its own batch.
+    it('gives an entry larger than the budget its own request rather than splitting it', async () => {
+        const contents = new Map([bigFile('huge.js', 4096), bigFile('small.js', 1)]);
+
+        const { createTree } = await runReset(contents);
+
+        const perCall = createTree.mock.calls.map((c: any[]) => c[2].length);
+        expect(perCall).toEqual([1, 1]);
+        const huge = createTree.mock.calls[0][2][0];
+        expect(huge.path).toBe('huge.js');
+        expect(huge.content.length).toBe(4096 * 1024); // intact, not truncated
+    });
+});
+
+/**
+ * Empty-template guard.
+ *
+ * Before chunking, zero entries went to `createTree` unguarded — producing an
+ * EMPTY tree, committing it, and moving the branch ref, which empties the
+ * repository. A silently failed template download was one step from destroying
+ * a user's storefront. Refuse instead.
+ */
+describe('resetRepoToTemplate — empty template', () => {
+    let GitHubFileOperations: any;
+
+    beforeEach(async () => {
+        jest.clearAllMocks();
+        jest.resetModules();
+        GitHubFileOperations = (await import('@/features/eds/services/githubFileOperations'))
+            .GitHubFileOperations;
+    });
+
+    it('refuses to commit when the template produced no files', async () => {
+        const service = new GitHubFileOperations({
+            getToken: jest.fn().mockResolvedValue({ token: 'ghp_test' }),
+            clearToken: jest.fn(),
+        } as any);
+        jest.spyOn(service, 'getBranchInfo').mockResolvedValue({
+            commitSha: 'parent-sha',
+            treeSha: 'parent-tree',
+        });
+        (service as any).downloadRepoContents = jest.fn().mockResolvedValue(new Map());
+        const createCommit = jest.fn();
+        const updateBranchRef = jest.fn();
+        (service as any).createTree = jest.fn().mockResolvedValue('t');
+        (service as any).createCommit = createCommit;
+        (service as any).updateBranchRef = updateBranchRef;
+
+        await expect(
+            service.resetRepoToTemplate('t-o', 't-r', 'u', 'u-r', new Map(), 'main'),
+        ).rejects.toThrow(/no files/i);
+
+        // The branch must be untouched — this is the data-loss path.
+        expect(createCommit).not.toHaveBeenCalled();
+        expect(updateBranchRef).not.toHaveBeenCalled();
     });
 });

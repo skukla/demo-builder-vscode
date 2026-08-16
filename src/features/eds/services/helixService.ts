@@ -165,6 +165,22 @@ function hasLegacyKeys(legacyKeys?: Record<string, PersistedHelixKey>): boolean 
     return Boolean(legacyKeys && Object.keys(legacyKeys).length > 0);
 }
 
+/**
+ * Convert an Admin API key id into the form the config API accepts as a URL
+ * path segment: standard base64 → base64url (`+`→`-`, `/`→`_`).
+ *
+ * The create response returns the RAW id and the listing endpoint keys the same
+ * key by its URL-safe form, so a key id containing `/` splits the DELETE path
+ * and Helix answers 400. Measured 2026-08-15 on a live site: raw id → 400,
+ * URL-safe id → 204. Percent-encoding does NOT work here; the server wants the
+ * substituted characters. `/` was measured directly; `+` follows from the same
+ * base64url mapping and is included so the other half of the alphabet cannot
+ * bite later.
+ */
+function toUrlSafeKeyId(id: string): string {
+    return id.replace(/\+/g, '-').replace(/\//g, '_');
+}
+
 /** Explicit paths when provided, otherwise the site root (`/`) for a bulk operation. */
 function getPathsOrDefault(paths?: string[]): string[] {
     return paths && paths.length > 0 ? paths : ['/'];
@@ -195,6 +211,35 @@ export class HelixService {
     private static secretStorage: vscode.SecretStorage | null = null;
 
     /**
+     * Fallback DA.live token source, registered once at activation.
+     *
+     * There is exactly ONE DA.live session per extension host — `edsHelpers`
+     * caches a single `DaLiveAuthService`. Threading that singleton through
+     * every layer that happens to build a HelixService modelled a plurality
+     * that does not exist, and the cost was real: two construction sites were
+     * missing it, so a Helix code publish went out with only the GitHub token
+     * and 401'd on any site with an `access.admin` role — silently, leaving the
+     * CDN serving a stale config.json (seen live 2026-08-15).
+     *
+     * A constructor-supplied provider still wins; this is the default, not an
+     * override.
+     */
+    private static defaultDaLiveTokenProvider: DaLiveTokenProvider | null = null;
+
+    /**
+     * Register the DA.live token source every HelixService should fall back to.
+     * Called once from `activate()`. Idempotent; last registration wins.
+     */
+    static setDefaultDaLiveTokenProvider(provider: DaLiveTokenProvider): void {
+        HelixService.defaultDaLiveTokenProvider = provider;
+    }
+
+    /** Drop the registered default (tests). */
+    static clearDefaultDaLiveTokenProvider(): void {
+        HelixService.defaultDaLiveTokenProvider = null;
+    }
+
+    /**
      * Initialize persistent key storage with encrypted SecretStorage.
      * Idempotent — safe to call multiple times (first caller wins).
      *
@@ -223,6 +268,24 @@ export class HelixService {
     /** Clear persistent key store (for testing). */
     static clearKeyStore(): void {
         HelixService.secretStorage = null;
+    }
+
+    /**
+     * Forget a locally cached/persisted key WITHOUT calling the server.
+     *
+     * Use after a site config write. `apiKeys` lives inside the site config
+     * document, so `updateSiteConfig`'s delete-then-re-register destroys the key
+     * server-side (measured 2026-08-15: 1 key → delete → re-register → 0). The
+     * local copy survives for up to 7 days, so without this the next publish
+     * would authenticate with a key that no longer exists and 401.
+     *
+     * Deliberately not `deleteAdminApiKey`: there is nothing left to delete
+     * remotely, and that call would spend a round trip to be told 404.
+     */
+    static async forgetApiKey(org: string, site: string): Promise<void> {
+        const cacheKey = `${org}/${site}`;
+        HelixService.apiKeyCache.delete(cacheKey);
+        await HelixService.deletePersistedKey(cacheKey);
     }
 
     /** Read all persisted keys from SecretStorage. */
@@ -409,14 +472,16 @@ export class HelixService {
      * @throws Error if DA.live token provider not configured or token expired
      */
     private async getDaLiveToken(): Promise<string> {
-        if (!this.daLiveTokenProvider) {
+        // Explicit provider wins; otherwise the one registered at activation.
+        const provider = this.daLiveTokenProvider ?? HelixService.defaultDaLiveTokenProvider;
+        if (!provider) {
             throw new Error(
                 'DA.live token provider not configured. ' +
                     'HelixService requires a DA.live token provider for content source operations.',
             );
         }
 
-        const token = await this.daLiveTokenProvider.getAccessToken();
+        const token = await provider.getAccessToken();
         if (!token) {
             throw new Error('DA.live session expired. Please sign in to DA.live.');
         }
@@ -631,9 +696,7 @@ export class HelixService {
         });
 
         if (response.status === 401) {
-            throw new Error(
-                ADMIN_API_401_MESSAGE,
-            );
+            throw new Error(ADMIN_API_401_MESSAGE);
         }
 
         if (response.status === 403) {
@@ -686,9 +749,7 @@ export class HelixService {
         });
 
         if (response.status === 401) {
-            throw new Error(
-                ADMIN_API_401_MESSAGE,
-            );
+            throw new Error(ADMIN_API_401_MESSAGE);
         }
 
         if (response.status === 403) {
@@ -750,8 +811,11 @@ export class HelixService {
                     'content-type': 'application/json',
                 },
                 body: JSON.stringify({
-                    description: 'Demo Builder publish/unpublish key',
-                    roles: ['admin'],
+                    // Shown in the site's apiKeys listing, so name what it can
+                    // actually do. Unpublish is NOT in scope: DELETE /live
+                    // authenticates with the DA.live bearer, not this key.
+                    description: 'Demo Builder publish key',
+                    roles: ['publish'],
                 }),
                 signal: AbortSignal.timeout(TIMEOUTS.LONG),
             });
@@ -823,7 +887,7 @@ export class HelixService {
             return { success: true };
         }
 
-        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${persisted.id}.json`;
+        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${toUrlSafeKeyId(persisted.id)}.json`;
         try {
             const imsToken = await this.getDaLiveToken();
             const response = await fetch(url, {
@@ -862,7 +926,7 @@ export class HelixService {
         // Remove from persistent store first (even if API call fails)
         await HelixService.deletePersistedKey(cacheKey);
 
-        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${persisted.id}.json`;
+        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${toUrlSafeKeyId(persisted.id)}.json`;
         try {
             const imsToken = await this.getDaLiveToken();
             const response = await fetch(url, {
@@ -1121,9 +1185,7 @@ export class HelixService {
         });
 
         if (response.status === 401) {
-            throw new Error(
-                ADMIN_API_401_MESSAGE,
-            );
+            throw new Error(ADMIN_API_401_MESSAGE);
         }
 
         if (response.status === 403) {
@@ -1229,9 +1291,7 @@ export class HelixService {
         });
 
         if (response.status === 401) {
-            throw new Error(
-                ADMIN_API_401_MESSAGE,
-            );
+            throw new Error(ADMIN_API_401_MESSAGE);
         }
 
         if (response.status === 403) {
@@ -1645,9 +1705,7 @@ export class HelixService {
 
         // 401 is authentication failure
         if (response.status === 401) {
-            throw new Error(
-                ADMIN_API_401_MESSAGE,
-            );
+            throw new Error(ADMIN_API_401_MESSAGE);
         }
 
         // 403 is access denied
@@ -1713,9 +1771,7 @@ export class HelixService {
             });
 
             if (response.status === 401) {
-                throw new Error(
-                    ADMIN_API_401_MESSAGE,
-                );
+                throw new Error(ADMIN_API_401_MESSAGE);
             }
 
             if (response.status === 403) {

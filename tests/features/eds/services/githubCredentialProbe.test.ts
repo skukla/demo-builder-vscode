@@ -94,7 +94,13 @@ describe('probeGitHubCredential', () => {
     beforeEach(() => jest.clearAllMocks());
 
     describe('the decisive case', () => {
-        it('reports that AEM rejects a credential GitHub accepts', async () => {
+        // A GitHub token being refused by the admin API used to mean the
+        // credential was bad. Since storefront setup pins a site admin —
+        // which sets requireAuth:"auto" and closes the admin API to everything
+        // but the DA.live session — it is the EXPECTED state on a current
+        // storefront. The verdict must not send someone chasing a credential
+        // problem the same report contradicts two sections later.
+        it('reads an AEM 401 as the expected admin-lock state, not a bad credential', async () => {
             routeFetch({
                 user: okUser(),
                 repo: okRepo(true),
@@ -105,8 +111,23 @@ describe('probeGitHubCredential', () => {
 
             expect(result.repo?.canPush).toBe(true);
             expect(result.adminApi?.httpStatus).toBe(401);
-            expect(result.adminApi?.xError).toBe('[admin] not authenticated');
-            // The whole point of asking all three: this rules out scope/permission.
+            expect(result.verdict).toMatch(/expected/i);
+            expect(result.verdict).toMatch(/site-access admins|admin-locked/i);
+            // Must NOT assert the credential is at fault.
+            expect(result.verdict).not.toMatch(/refusing the credential itself/i);
+        });
+
+        // Any OTHER non-200 keeps the original reading: the lock explains 401,
+        // not a 403 or a 500.
+        it('still blames the credential for a non-401 AEM rejection', async () => {
+            routeFetch({
+                user: okUser(),
+                repo: okRepo(true),
+                admin: adminResponse(403, '[admin] forbidden'),
+            });
+
+            const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
+
             expect(result.verdict).toMatch(/not a (scope|permission)/i);
         });
     });

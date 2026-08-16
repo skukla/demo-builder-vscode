@@ -83,6 +83,31 @@ describe('ProjectFileLoader — legacy appBuilderComponent migration', () => {
         expect(project!.aiContextVersion).toBeUndefined();
     });
 
+    it('loads publishKeyRegisteredAt from the manifest into the project', async () => {
+        primeFsWithManifest({
+            name: 'keyed-demo',
+            publishKeyRegisteredAt: '2026-08-15T12:00:00.000Z',
+        });
+
+        const loader = new ProjectFileLoader(makeLogger());
+        const project = await loader.loadProject(PROJECT_PATH, () => []);
+
+        expect(project).not.toBeNull();
+        expect(project!.publishKeyRegisteredAt).toBe('2026-08-15T12:00:00.000Z');
+    });
+
+    it('leaves publishKeyRegisteredAt undefined for a storefront created before the sweep', async () => {
+        // The renewal sweep reads absence as "due", which is how every existing
+        // storefront gets its first key refresh after upgrading.
+        primeFsWithManifest({ name: 'pre-sweep-demo' });
+
+        const loader = new ProjectFileLoader(makeLogger());
+        const project = await loader.loadProject(PROJECT_PATH, () => []);
+
+        expect(project).not.toBeNull();
+        expect(project!.publishKeyRegisteredAt).toBeUndefined();
+    });
+
     it('does not write the manifest file during load (read-only migration in D1)', async () => {
         primeFsWithManifest({
             name: 'legacy-demo',
@@ -255,7 +280,7 @@ describe('ProjectFileLoader — persisted appBuilderComponents (ADR-011 D3 Step 
         await writer.saveProjectConfig(project!, PROJECT_PATH);
 
         const manifestWrite = mockedFs.writeFile.mock.calls.find((call) =>
-            call[0].toString().endsWith('.tmp'),
+            call[0].toString().endsWith('.tmp')
         );
         expect(manifestWrite).toBeDefined();
         const written = JSON.parse(manifestWrite![1] as string);
@@ -265,7 +290,7 @@ describe('ProjectFileLoader — persisted appBuilderComponents (ADR-011 D3 Step 
             ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://commerce/graphql',
         });
         expect(written.appBuilderComponents?.['acme-widget']?.url).toBe(
-            'https://acme.adobeio-static.net',
+            'https://acme.adobeio-static.net'
         );
 
         // ADR-011 D3 Step 07: the singular write-side is retired — the rewritten
@@ -312,7 +337,7 @@ describe('additionalConsoleApis — manifest persistence (§E)', () => {
         await writer.saveProjectConfig(project, PROJECT_PATH);
 
         const manifestWrite = mockedFs.writeFile.mock.calls.find((call) =>
-            call[0].toString().endsWith('.tmp'),
+            call[0].toString().endsWith('.tmp')
         );
         expect(manifestWrite).toBeDefined();
         return JSON.parse(manifestWrite![1] as string) as Record<string, unknown>;
@@ -320,7 +345,7 @@ describe('additionalConsoleApis — manifest persistence (§E)', () => {
 
     it('persists additionalConsoleApis in the manifest when non-empty', async () => {
         const written = await writeAndCaptureManifest(
-            baseProject({ additionalConsoleApis: ['AssetComputeSDK', 'CCAPI'] }),
+            baseProject({ additionalConsoleApis: ['AssetComputeSDK', 'CCAPI'] })
         );
 
         expect(written.additionalConsoleApis).toEqual(['AssetComputeSDK', 'CCAPI']);
@@ -362,7 +387,7 @@ describe('additionalConsoleApis — manifest persistence (§E)', () => {
 
     it('round-trips picks through the real writer and loader', async () => {
         const written = await writeAndCaptureManifest(
-            baseProject({ additionalConsoleApis: ['CCAPI'] }),
+            baseProject({ additionalConsoleApis: ['CCAPI'] })
         );
 
         mockedFs.readFile.mockResolvedValue(JSON.stringify(written));
@@ -383,7 +408,7 @@ describe('additionalConsoleApis — manifest persistence (§E)', () => {
             baseProject({
                 componentApiPicks: { 'erp-sync': ['CCAPI'] },
                 additionalConsoleApis: ['CCAPI'],
-            }),
+            })
         );
 
         expect(written.componentApiPicks).toEqual({ 'erp-sync': ['CCAPI'] });
@@ -475,7 +500,7 @@ describe('§E edit-mode round-trip — keyed instances → manifest → edit set
         await writer.saveProjectConfig(project, PROJECT_PATH);
 
         const manifestWrite = mockedFs.writeFile.mock.calls.find((call) =>
-            call[0].toString().endsWith('.tmp'),
+            call[0].toString().endsWith('.tmp')
         );
         mockedFs.readFile.mockResolvedValue(manifestWrite![1] as string);
         mockedFs.readdir.mockRejectedValue(new Error('no components dir'));

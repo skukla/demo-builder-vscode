@@ -121,6 +121,7 @@ export async function repairSiteConfig(
         outcome = await registerSiteConfig({
             configurationService,
             siteParams,
+            tokenProvider,
             logger,
             retryOn403: true,
             onProgress,
@@ -172,7 +173,8 @@ export async function repairSiteConfig(
     }
 
     // Same merge-not-replace pin the wizard does, so a repair cannot silently
-    // drop the site's other admins.
+    // drop the site's other admins. The publish key the write destroyed was
+    // already re-minted inside `registerSiteConfig`.
     await pinSiteAdmin(tokenProvider, { owner: repoOwner, repo: repoName }, userEmail, logger);
 
     await onProgress?.('Confirming the overlay is registered...');

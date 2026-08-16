@@ -55,11 +55,15 @@ export async function publishConfigAndRegisterSite(
     // '"<project>" reset successfully' — repo rewritten, PDPs dead, user misled.
     let configWritten = true;
 
-    // Step 6: Publish config.json to CDN
-    // No tokenProvider: publishing config.json only needs GitHub token (no DA.live auth)
+    // Step 6: Publish config.json to CDN.
+    // The tokenProvider IS required. A comment here used to claim the GitHub
+    // token sufficed; that stopped being true once storefront setup began
+    // pinning a site admin, which sets `requireAuth: "auto"` and makes Helix
+    // admin refuse anything but the DA.live bearer. Without it this 401s and
+    // the CDN keeps serving a stale config.json (seen live 2026-08-15).
     report(6, 'Publishing config.json to CDN...');
     logger.info(`[EdsReset] Publishing config.json to CDN for ${repoOwner}/${repoName}`);
-    const helixServiceForCode = new HelixService(logger, githubTokenService);
+    const helixServiceForCode = new HelixService(logger, githubTokenService, tokenProvider);
     try {
         await helixServiceForCode.previewCode(repoOwner, repoName, '/config.json');
         logger.info('[EdsReset] config.json published to CDN');
@@ -91,6 +95,10 @@ export async function publishConfigAndRegisterSite(
                 daLiveSite,
                 byomOverlayUrl,
             ),
+            // Carries the publish-key re-mint. Before it moved into the registrar
+            // this path wrote the config — destroying the key — and never minted a
+            // new one, so every reset silently killed runtime PDP self-heal.
+            tokenProvider,
             logger,
             retryOn403: true,
             onProgress: (message) => report(7, message),

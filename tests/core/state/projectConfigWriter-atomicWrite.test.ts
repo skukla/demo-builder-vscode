@@ -284,6 +284,38 @@ describe('ProjectConfigWriter atomic writes', () => {
             expect(parsed.aiContextVersion).toBe(3);
         });
 
+        // Publish-key renewal stamp. Helix keys expire in ~1 year and the
+        // activation sweep decides what is due from this field alone — if it does
+        // not survive the write, every storefront looks "never registered" on
+        // every launch and re-mints a key each time.
+        it('should include publishKeyRegisteredAt in manifest when set', async () => {
+            const project = createTestProject({
+                name: 'keyed',
+                publishKeyRegisteredAt: '2026-08-15T12:00:00.000Z',
+            });
+            await writer.saveProjectConfig(project, project.path);
+
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
+            );
+            const parsed = JSON.parse(writeCall![1] as string);
+            expect(parsed.publishKeyRegisteredAt).toBe('2026-08-15T12:00:00.000Z');
+        });
+
+        it('should OMIT publishKeyRegisteredAt when the project has never been stamped', async () => {
+            // Absent must stay absent: a present-but-empty value would read back as
+            // an unparseable stamp rather than "never", and the sweep's "renew when
+            // absent" branch is what covers every pre-feature storefront.
+            const project = createTestProject({ name: 'unkeyed' });
+            await writer.saveProjectConfig(project, project.path);
+
+            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
+                call[0].toString().endsWith('.tmp')
+            );
+            const parsed = JSON.parse(writeCall![1] as string);
+            expect(parsed.publishKeyRegisteredAt).toBeUndefined();
+        });
+
         // ADR-011 D3 Step 07: the singular meshState/appState write-side is
         // retired — the keyed appBuilderComponents map is the single persisted
         // authority. Legacy manifests stay READABLE (loader + migration), but

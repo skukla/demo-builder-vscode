@@ -59,6 +59,49 @@ export function buildArchiveUrl(
 /**
  * GitHub File Operations Service
  */
+/**
+ * Byte budget for one create-tree request.
+ *
+ * The ceiling GitHub enforces is request SIZE, not entry count — one 3.5 MB
+ * file behaves nothing like a thousand 1 KB ones. Measured on
+ * `adobe-commerce/boilerplate-b2b-template` (2026-08-15): 3,340 files, 13.13 MB
+ * of content, a 13.55 MB single request body, median entry ~1 KB and the
+ * largest entry 3.5 MB on its own. GitHub timed out on that single request with
+ * its own error naming the remedy. At 1 MB this template needs 13 requests;
+ * 2 MB would need 7. 1 MB is the conservative pick — the requests are cheap and
+ * the real ceiling is undocumented.
+ */
+const TREE_REQUEST_BUDGET_BYTES = 1_048_576;
+
+/**
+ * Split tree entries into batches that each stay under the byte budget.
+ *
+ * An entry is NEVER split: one larger than the whole budget becomes its own
+ * batch. That case is real — this template contains a single 3.5 MB file — and
+ * splitting an entry would corrupt the file rather than shrink the request.
+ */
+export function batchTreeEntries(
+    entries: GitHubTreeInput[],
+    budgetBytes: number = TREE_REQUEST_BUDGET_BYTES,
+): GitHubTreeInput[][] {
+    const batches: GitHubTreeInput[][] = [];
+    let current: GitHubTreeInput[] = [];
+    let currentBytes = 0;
+
+    for (const entry of entries) {
+        const size = JSON.stringify(entry).length;
+        if (current.length > 0 && currentBytes + size > budgetBytes) {
+            batches.push(current);
+            current = [];
+            currentBytes = 0;
+        }
+        current.push(entry);
+        currentBytes += size;
+    }
+    if (current.length > 0) batches.push(current);
+    return batches;
+}
+
 export class GitHubFileOperations {
     private logger: Logger;
     private tokenService: GitHubTokenService;
@@ -640,10 +683,36 @@ export class GitHubFileOperations {
             }
         }
 
-        this.logger.info(`[GitHub] Creating tree with ${treeEntries.length} entries`);
+        // Step 4: Create the tree INCREMENTALLY.
+        //
+        // Sending every file's content in one request is what broke reset for
+        // large templates: GitHub timed out on a 13.55 MB body and said so
+        // explicitly ("Consider building the tree incrementally").
+        //
+        // The FIRST batch deliberately passes no base_tree. A reset REPLACES
+        // the repository, and basing it on the branch's existing tree would let
+        // files the template no longer contains survive the reset. Each later
+        // batch chains on the previous batch's tree, so the final tree is the
+        // union of all batches — exactly the template, nothing stale.
+        const batches = batchTreeEntries(treeEntries);
+        this.logger.info(
+            `[GitHub] Creating tree with ${treeEntries.length} entries ` +
+                `in ${batches.length} request(s)`,
+        );
 
-        // Step 4: Create new tree
-        const newTreeSha = await this.createTree(targetOwner, targetRepo, treeEntries);
+        let newTreeSha: string | undefined;
+        for (const [index, batch] of batches.entries()) {
+            newTreeSha = await this.createTree(targetOwner, targetRepo, batch, newTreeSha);
+            if (batches.length > 1) {
+                this.logger.debug(
+                    `[GitHub] Tree batch ${index + 1}/${batches.length} ` +
+                        `(${batch.length} entries) -> ${newTreeSha.substring(0, 7)}`,
+                );
+            }
+        }
+        if (!newTreeSha) {
+            throw new Error('Template produced no files to commit');
+        }
         this.logger.info(`[GitHub] Created tree: ${newTreeSha.substring(0, 7)}`);
 
         // Step 5: Create commit

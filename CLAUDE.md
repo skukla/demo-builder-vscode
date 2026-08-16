@@ -205,6 +205,29 @@ wrong; the real key is `demoBuilder.daLive.defaultOrg`. Caught only by diffing
 `package.json` against the previous tag. Setting keys, env vars, command ids, file paths
 and function names are cheap to grep and expensive to get wrong in something users read.
 
+**A comment describing what ANOTHER module does is a claim, not documentation.** Nothing
+keeps it true — not the compiler, not the tests, not a scan — and it reads to the next
+person as verified fact. Before writing one, name the code that makes it true and cite it;
+if you cannot, write what you actually verified instead. Before RELYING on one, check it.
+On 2026-08-15 two comments in the action repo asserted that the extension "re-registers
+[publish keys] on a schedule". No schedule existed. They were false the day they were
+written, and they suppressed the question that would have found a shipped bug: reset and
+rename destroyed each site's publish key and never re-minted it. Chasing the claim is what
+found the defect; believing it is what had already let it ship.
+
+**Seeing a file's contents is not the same as having Read it.** `grep`, `awk`, `sed`, a
+`git show`, and a previous session's context all put the text in front of you without
+satisfying Edit's precondition — and the error arrives only after you have composed the
+edit. Read the file, or the specific range, before editing anything you located with a
+shell command. This is the single most common tool error in this repo: 71 occurrences
+across 6 of 12 sessions in the window ending 2026-08-15.
+
+**The format-on-edit hook can invalidate your own read.** It rewrites files after each
+edit — trailing commas, line wrapping — so a second edit against a region you read
+*before* the first one may no longer match. When an edit fails on a string you are certain
+is present, re-Read rather than re-deriving the string from memory (12 occurrences,
+4 sessions, same window).
+
 ## Gotchas (verified, load-bearing)
 
 - **Adobe Spectrum Flex constrains width** (450px): use a standard HTML div with flex styles for critical wizard layouts.

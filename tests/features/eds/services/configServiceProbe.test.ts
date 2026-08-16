@@ -18,9 +18,26 @@
  * moment Adobe changes it to an upsert.
  */
 
-import { probeConfigService } from '@/features/eds/services/configServiceProbe';
+// BYOM is a user setting, so the action leg is off unless a test turns it on.
+// Only `resolveByomOverlayUrl` is imported from this module by the probe.
+jest.mock('@/features/eds/handlers/edsHelpers', () => ({
+    resolveByomOverlayUrl: jest.fn(() => undefined),
+}));
 
-const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
+import { probeConfigService } from '@/features/eds/services/configServiceProbe';
+import { resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
+
+const mockResolveOverlayUrl = resolveByomOverlayUrl as jest.MockedFunction<
+    typeof resolveByomOverlayUrl
+>;
+
+const logger = {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+    trace: jest.fn(),
+};
 const TOKEN = 'ims-token-value-never-logged';
 
 function tokenProvider() {
@@ -258,7 +275,7 @@ describe('probeConfigService — org roster leg', () => {
             { getAccessToken: jest.fn().mockResolvedValue(TOKEN) },
             org,
             site,
-            logger as never,
+            logger as never
         );
 
         expect(result.orgAdmins?.status).toBe('ok');
@@ -274,7 +291,7 @@ describe('probeConfigService — org roster leg', () => {
             { getAccessToken: jest.fn().mockResolvedValue(TOKEN) },
             org,
             site,
-            logger as never,
+            logger as never
         );
 
         expect(result.orgAdmins?.status).toBe('not_authorized');
@@ -283,3 +300,127 @@ describe('probeConfigService — org roster leg', () => {
     });
 });
 
+/**
+ * The action-key leg.
+ *
+ * `keyCount` counts keys on the SITE. This leg asks the shared PDP action
+ * whether its own stored copy still decrypts — the only check that catches an
+ * `ENCRYPTION_KEY` mismatch, since it is the only one reading a blob written by
+ * an earlier deploy. A write-then-read inside the register call would use the
+ * same master key both ways and round-trip cleanly while every older key rotted.
+ */
+describe('probeConfigService — action key leg', () => {
+    const org = 'skukla';
+    const site = 'b2b-tester';
+    const OVERLAY = 'https://ns.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp';
+    let originalFetch: typeof globalThis.fetch;
+
+    /** Config-service hosts answer 200; the action answers whatever is passed. */
+    function stub(action: { status: number; body?: unknown } | 'reject') {
+        return jest.fn().mockImplementation((url: string) => {
+            if (url.includes('register-publish-key')) {
+                if (action === 'reject') return Promise.reject(new Error('socket hang up'));
+                return Promise.resolve({
+                    ok: action.status >= 200 && action.status < 300,
+                    status: action.status,
+                    headers: { get: () => null },
+                    json: () => Promise.resolve(action.body),
+                });
+            }
+            return Promise.resolve({
+                ok: true,
+                status: 200,
+                headers: { get: () => null },
+                json: () => Promise.resolve({}),
+            });
+        });
+    }
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        originalFetch = globalThis.fetch;
+        mockResolveOverlayUrl.mockReturnValue(OVERLAY);
+    });
+
+    afterEach(() => {
+        globalThis.fetch = originalFetch;
+    });
+
+    const run = () =>
+        probeConfigService(
+            { getAccessToken: jest.fn().mockResolvedValue(TOKEN) },
+            org,
+            site,
+            logger as never
+        );
+
+    it('reports the action holding a readable key', async () => {
+        globalThis.fetch = stub({ status: 200, body: { registered: true } }) as never;
+
+        const result = await run();
+
+        expect(result.pdpPublishing?.actionKey).toEqual({ registered: true });
+    });
+
+    it('reports the action holding NO readable key', async () => {
+        globalThis.fetch = stub({ status: 200, body: { registered: false } }) as never;
+
+        const result = await run();
+
+        expect(result.pdpPublishing?.actionKey).toEqual({ registered: false });
+    });
+
+    it('asks about the right site', async () => {
+        const fetchMock = stub({ status: 200, body: { registered: true } });
+        globalThis.fetch = fetchMock as never;
+
+        await run();
+
+        const called = fetchMock.mock.calls.map((c) => String(c[0]));
+        expect(called.some((u) => u.includes(`org=${org}`) && u.includes(`site=${site}`))).toBe(
+            true
+        );
+    });
+
+    it('reads with a GET, never a write', async () => {
+        const fetchMock = stub({ status: 200, body: { registered: true } });
+        globalThis.fetch = fetchMock as never;
+
+        await run();
+
+        for (const [, init] of fetchMock.mock.calls) {
+            expect((init?.method ?? 'GET').toUpperCase()).toBe('GET');
+        }
+    });
+
+    it('records an unreachable action as an error, not as "no key"', async () => {
+        // Reporting `registered: false` here would send someone to re-register a
+        // key that is probably fine, and hide that the action never answered.
+        globalThis.fetch = stub('reject') as never;
+
+        const result = await run();
+
+        expect(result.pdpPublishing?.actionKey?.registered).toBeUndefined();
+        expect(result.pdpPublishing?.actionKey?.error).toMatch(/socket hang up/);
+    });
+
+    it('records a non-2xx from the action as an error', async () => {
+        globalThis.fetch = stub({ status: 401 }) as never;
+
+        const result = await run();
+
+        expect(result.pdpPublishing?.actionKey?.error).toBe('HTTP 401');
+    });
+
+    it('skips the leg entirely when BYOM is off', async () => {
+        mockResolveOverlayUrl.mockReturnValue(undefined);
+        const fetchMock = stub({ status: 200, body: { registered: true } });
+        globalThis.fetch = fetchMock as never;
+
+        const result = await run();
+
+        expect(result.pdpPublishing?.actionKey).toBeUndefined();
+        const called = fetchMock.mock.calls.map((c) => String(c[0]));
+        expect(called.some((u) => u.includes('register-publish-key'))).toBe(false);
+    });
+});

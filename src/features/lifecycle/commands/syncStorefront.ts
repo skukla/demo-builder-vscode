@@ -27,6 +27,7 @@ import { BaseCommand } from '@/core/base';
 import { COMPONENT_IDS } from '@/core/constants';
 import { PollingService } from '@/core/shell/pollingService';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
 import { HelixApiError } from '@/features/eds/services/helixApiClient';
 import {
@@ -497,12 +498,15 @@ export class SyncStorefrontCommand extends BaseCommand {
     }
 
     private async readDaLiveToken(): Promise<string | undefined> {
-        // The DA.live IMS token is stored in VS Code secrets by the EDS auth
-        // flow (`daLiveAuthService`). Read it on demand; if absent we skip
-        // the Helix step (and the result message reflects that).
+        // Source of truth is `DaLiveAuthService` — globalState-backed, with the
+        // `~/.aem/da-token.json` helper cache as a fallback. It is NOT in
+        // SecretStorage: this used to read a `demoBuilder.daLive.imsToken`
+        // secret that nothing in the codebase ever wrote, so the Helix publish
+        // leg silently skipped on every sync while the command still reported
+        // "Storefront synced." Absent token = skip Helix, which the result
+        // message reflects.
         try {
-            const value = await this.context.secrets.get('demoBuilder.daLive.imsToken');
-            return value || undefined;
+            return (await getDaLiveAuthService(this.context).getAccessToken()) ?? undefined;
         } catch {
             return undefined;
         }
