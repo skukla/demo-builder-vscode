@@ -59,9 +59,36 @@ claim carrying product entitlements — but the mechanism is not the measurement
 
 **Limits of the claim, stated so they are not lost:**
 
-- Two instances, **same org**. Cross-org reach is **untested** — see
-  `.rptc/plans/data-installer-credential-broker/step-05.md`.
+- Two instances, **same org**. Cross-org reach is **untested** — see below.
 - This measured a **read**. A write conclusion needs a write.
+
+## The per-SC alternative is closed — measured 2026-08-16
+
+The open question was whether a credential minted where SCs work could reach the
+instances. It cannot, and it fails one step earlier than expected: **such a
+credential cannot be created in a usable state at all.**
+
+In the Solution Led Commerce SC org, `ACCS-REST-API` is present in the service
+catalog but `enabled: false` with **zero** product profiles, and subscribing with
+`licenseConfigs: null` returns HTTP 200 carrying
+`"Service ACCS-REST-API requires selection of a product"`. A control confirms the
+empty product list is specific to ACCS: twelve other services in the same org do
+offer products. S2S credential creation itself succeeds, so this is an entitlement
+boundary rather than a permissions one.
+
+Since the subscription IS the entitlement — it is what moves a credential's scopes
+from `AdobeID,openid` to `commerce.accs` — a credential there can never reach any
+ACCS instance.
+
+**So the credential stays in the shared service permanently, by physics rather
+than by preference.** `.rptc/backlog/per-sc-io-project.md` may still move store
+discovery, prerender, mesh and integration packages to a per-SC project; the
+credential is the one item that cannot follow.
+
+**Still untested, and this section is not evidence for it:** whether an
+ACCS-*subscribed* credential in one org can read an instance in another. The
+experiment stopped before that could be asked. A different org pair might answer
+differently; nothing here says otherwise.
 
 ## Decision
 

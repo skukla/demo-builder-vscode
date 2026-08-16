@@ -1,5 +1,60 @@
 # Step 05 — After ship: does a credential reach ACROSS Adobe orgs?
 
+> ## ANSWERED 2026-08-16 — but not the way this step expected
+>
+> **The question cannot arise.** A credential in the SC org cannot be subscribed to
+> `ACCS-REST-API` at all, so one capable of *attempting* cross-org reach cannot be
+> created. The experiment below never got to its four legs.
+>
+> Measured in **Solution Led Commerce SC** (`3397333`), against an existing project
+> there, with the CLI re-authenticated to that org:
+>
+> | Check | Result |
+> |---|---|
+> | S2S credential creation | **succeeds** — so this is not a permissions wall |
+> | `ACCS-REST-API` in the org's service list | present, `enabled: false`, **0 licenseConfigs** — on both catalog entries |
+> | Subscribe with `licenseConfigs: null` | **HTTP 200** carrying `error: ["ACCS-REST-API"]`, `"Service ACCS-REST-API requires selection of a product"` |
+> | **Control** — other services in the SAME org | **12 do offer products**, so the empty list is specific to ACCS, not a blanket empty response |
+>
+> Confirmed independently by the owner: ACCS instances live in Adobe Demo System;
+> SCs use the SC org only for their integration I/O projects.
+>
+> **The subscription IS the entitlement** (`accsCredentialProvisioner` records this:
+> it moves scopes from `AdobeID,openid` to `commerce.accs` + `additional_info.*`).
+> No subscription, no `commerce.accs`, so the credential could never reach any ACCS
+> instance — in its own org or anywhere else.
+>
+> ### What this does and does not settle
+>
+> **Settled:** the credential stays in the shared service permanently, by physics
+> rather than preference. `.rptc/backlog/per-sc-io-project.md` ships items (b)–(e)
+> and leaves (a) where Option 1 put it.
+>
+> **NOT settled, and do not cite this for it:** whether an ACCS-subscribed
+> credential in org A can read an instance in org B. That is still untested. It
+> stopped being a question worth answering *for this decision*, because the org
+> where SCs hold projects cannot produce such a credential — but a different org
+> pair could, and this writeup says nothing about that case.
+>
+> ### Found on the way — a defect in shipped code
+>
+> `adobeEntityFetcher.subscribeOAuthServerToServerIntegrationToServices` returns
+> `Promise<void>` and **discards the response**. The failure above is an HTTP
+> **200** with the error in the BODY, so the extension currently treats a refused
+> subscription as a success: `provisionAccsCredentials` logs "subscribing", reads
+> the pair, and returns ok — handing back a credential with `AdobeID,openid` scopes
+> whose only symptom is a Data Installer pre-flight 400 much later, with nothing
+> connecting the two. Filed separately; not fixed here.
+>
+> **Probe hygiene:** the credential was deleted and both workspaces re-listed at 0,
+> matching the pre-probe state.
+>
+> The original method is kept below unchanged — if the cross-org question is ever
+> revived for a different org pair, this is still how to run it.
+
+---
+
+
 **Run this only once Option 1 has shipped.** It changes nothing about Option 1; it decides
 whether `.rptc/backlog/per-sc-io-project.md` can absorb the credential later, or whether the
 credential stays behind in the shared service permanently.

@@ -14,7 +14,7 @@ maintains by hand.
 
 | | What it holds | State today |
 |---|---|---|
-| **(a)** | the `demo-builder-s2s` credential | **GATED — may not be able to move; see below** |
+| **(a)** | the `demo-builder-s2s` credential | **CANNOT MOVE — settled 2026-08-16; see below** |
 | **(b)** | store discovery (`discover-stores`) | in the shared service |
 | **(c)** | prerender | **separate research item — do not decide here** |
 | **(d)** | a single mesh built by the SC | **already built** |
@@ -31,9 +31,17 @@ credential read two instances, with two failing controls. SCs may hold I/O proje
 Solution Led Commerce SC org while the instances sit in Adobe Demo System, in which case a
 per-SC credential reaches nothing.
 
-**Cross-org reach is untested.** `.rptc/plans/data-installer-credential-broker/step-05.md`
-is the experiment, scheduled after Option 1 ships. Until it returns, plan this item for
-(b)–(e) and leave (a) where Option 1 puts it.
+**RESOLVED 2026-08-16 — (a) cannot move, and the reason is not reach.** A credential
+in the SC org cannot be subscribed to `ACCS-REST-API` at all: the service is present
+but `enabled: false` with zero product profiles, and subscribing returns HTTP 200
+carrying "requires selection of a product". A control confirms twelve other services
+in that org DO offer products, so this is specific to ACCS. Creating the S2S
+credential succeeds, so it is an entitlement boundary, not a permissions one.
+
+The subscription IS the entitlement, so a credential minted there never gains
+`commerce.accs` and could not reach an ACCS instance anywhere. **Plan this item for
+(b)–(e) only.** Full measurement:
+`.rptc/plans/data-installer-credential-broker/step-05.md`.
 
 ## (c) is explicitly out of scope here
 

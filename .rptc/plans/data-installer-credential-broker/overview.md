@@ -17,17 +17,22 @@ cannot import. Measured live 2026-08-16 on `bodea-template-test`.
 ## Why the credential stays behind when everything else moves
 
 Option 2 moves discovery, prerender, mesh and integration packages into a per-SC Adobe I/O
-project. The credential is the one item on that list that may not be able to move, and the
-reason is not preference:
+project. The credential is the one item on that list that **cannot** move, and the reason is
+not preference:
 
 **A credential's reach follows the technical account's product entitlement in the org where
 the COMMERCE INSTANCES live** — not the org where the SC works. Measured within
 `285361` (Adobe Demo System): one credential provisioned against instance A read instance B,
 with a nonsense-instance control at 400 and a bad-secret control at 401. Same org only.
 
-SCs may hold I/O projects in the Solution Led Commerce SC org while the instances sit in
-Adobe Demo System. A credential minted per-SC in the wrong org therefore plausibly reaches
-nothing. **This is untested and is the plan's one open question** — see step 05.
+SCs hold their I/O projects in the Solution Led Commerce SC org while the instances sit in
+Adobe Demo System. **Settled 2026-08-16 (step 05):** a credential there cannot even be
+subscribed to `ACCS-REST-API` — the service is present but carries no product profile in
+that org, and the subscribe is refused inside an HTTP 200. Since the subscription IS the
+entitlement, such a credential never gains `commerce.accs` and could reach nothing.
+
+This was written as "plausibly reaches nothing… untested". It is now measured, and it fails
+one step earlier than predicted: not a reach problem, an entitlement one.
 
 So: put the credential where the instances are, and hand it out.
 
@@ -55,7 +60,7 @@ fewer copies of the same power, not more power.
 | `step-02` — `resolveCommerceCredentials` gains a broker fallback | this repo | Yes | **done** — `b076a751` + `70ac8a1e` (Diagnostics) |
 | `step-03` — reconcile the provisioning UI with the new path | this repo | Yes | **done** — `6b446d99` |
 | `step-04` — docs + the security note this endpoint deserves | this repo | No | **done** — ADR-014 |
-| `step-05` — **after ship**: probe cross-org reach | probe | No | open |
+| `step-05` — **after ship**: probe cross-org reach | probe | No | **answered** — the per-SC credential cannot be entitled at all |
 
 ## Verified live — the credential path, 2026-08-16
 
@@ -102,8 +107,8 @@ next a cached pair. Each now clears it in `beforeEach`, and the reason is writte
 where the next person will hit it.
 
 Step 01 deploys before step 02 can be exercised live. Steps 02 and 03 are this repo's and
-share a seam. Step 05 is deliberately last: it decides whether Option 2 can absorb the
-credential later, and it is cheaper to answer once the pieces exist.
+share a seam. Step 05 was deliberately last: it decided whether Option 2 can absorb the
+credential later. It cannot — see the step file.
 
 ## Constraints
 
