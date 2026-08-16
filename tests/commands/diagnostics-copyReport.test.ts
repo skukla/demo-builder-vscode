@@ -140,6 +140,78 @@ describe('buildSummaryLines', () => {
         expect(text).not.toContain('BROKEN');
     });
 
+    // The site half and the action half can disagree, and the disagreement IS the
+    // diagnosis. A site holding a key that the action cannot read means either the
+    // registration never landed or the action was redeployed with a different
+    // ENCRYPTION_KEY — the one failure mode no other check in this report sees.
+    it('reports the action separately from the site, and names the encryption-key cause', () => {
+        const report = makeReport({
+            configService: {
+                token: { present: true },
+                configService: { httpStatus: 200 },
+                pdpPublishing: { locked: true, keyCount: 1, actionKey: { registered: false } },
+                verdict: 'ok',
+            },
+        } as Partial<DiagnosticsReport>);
+
+        const text = buildSummaryLines(report).join('\n');
+        // The site half still reads OK — one key IS registered on the site.
+        expect(text).toContain('Runtime PDP publishing: OK');
+        expect(text).toContain('Shared PDP action: BROKEN');
+        expect(text).toContain('ENCRYPTION_KEY');
+        expect(text).toContain('Repair Site Configuration');
+    });
+
+    it('reports the action OK when it holds a readable key', () => {
+        const report = makeReport({
+            configService: {
+                token: { present: true },
+                configService: { httpStatus: 200 },
+                pdpPublishing: { locked: true, keyCount: 1, actionKey: { registered: true } },
+                verdict: 'ok',
+            },
+        } as Partial<DiagnosticsReport>);
+
+        const text = buildSummaryLines(report).join('\n');
+        expect(text).toContain('Shared PDP action: OK');
+        expect(text).not.toContain('BROKEN');
+    });
+
+    it('does NOT call an unreachable action "no key"', () => {
+        // Saying "not registered" would send someone to re-register a key that is
+        // probably fine, and bury the fact that the service never answered.
+        const report = makeReport({
+            configService: {
+                token: { present: true },
+                configService: { httpStatus: 200 },
+                pdpPublishing: {
+                    locked: true,
+                    keyCount: 1,
+                    actionKey: { error: 'HTTP 503' },
+                },
+                verdict: 'ok',
+            },
+        } as Partial<DiagnosticsReport>);
+
+        const text = buildSummaryLines(report).join('\n');
+        expect(text).toContain('Shared PDP action: could not be reached (HTTP 503)');
+        expect(text).not.toContain('Shared PDP action: BROKEN');
+    });
+
+    it('says nothing about the action when BYOM is off', () => {
+        const report = makeReport({
+            configService: {
+                token: { present: true },
+                configService: { httpStatus: 200 },
+                pdpPublishing: { locked: true, keyCount: 1 },
+                verdict: 'ok',
+            },
+        } as Partial<DiagnosticsReport>);
+
+        const text = buildSummaryLines(report).join('\n');
+        expect(text).not.toContain('Shared PDP action');
+    });
+
     it('names the Config Service org admins when the roster is readable', () => {
         // "Ask an admin" is unactionable without a name. The roster read is the
         // only thing in the report that can supply one.

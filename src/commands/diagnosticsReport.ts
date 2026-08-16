@@ -12,9 +12,7 @@
 
 import { maskEmail } from '@/core/utils/maskEmail';
 import type { SamplePdp } from '@/features/eds/services/catalogPrewarmService';
-import {
-    type ConfigServiceProbeResult,
-} from '@/features/eds/services/configServiceProbe';
+import { type ConfigServiceProbeResult } from '@/features/eds/services/configServiceProbe';
 import type { CredentialProbeResult } from '@/features/eds/services/githubCredentialProbe';
 import { describeScope } from '@/features/eds/services/servedStorefrontConfig';
 import type { StorefrontProbeResult } from '@/features/eds/services/storefrontProbe';
@@ -288,6 +286,37 @@ function storefrontLines(probe: StorefrontProbeResult, scope?: StorefrontScopeRe
     return lines;
 }
 
+/**
+ * Report whether the shared PDP action can read this site's key.
+ *
+ * Silent when BYOM is off — there is no action to ask, and a line about a
+ * feature the user has not enabled is noise in a report meant for tickets.
+ */
+function describeActionKey(
+    actionKey: NonNullable<ConfigServiceProbeResult['pdpPublishing']>['actionKey'],
+): string[] {
+    if (!actionKey) return [];
+
+    if (actionKey.error !== undefined) {
+        // NOT "no key" — the action never answered, so its key is unknown.
+        // Saying "not registered" here would send someone to re-register a key
+        // that is probably fine and hide that the service is unreachable.
+        return [`  Shared PDP action: could not be reached (${actionKey.error})`];
+    }
+
+    if (actionKey.registered) {
+        return ['  Shared PDP action: OK (holds a readable key for this site)'];
+    }
+
+    return [
+        '  Shared PDP action: BROKEN — it holds no readable key for this site.',
+        '    Either the registration never landed, or the action was redeployed with a ' +
+            'different ENCRYPTION_KEY, which makes every previously stored key unreadable.',
+        '    Fix: run "Demo Builder: Repair Site Configuration". If that does not help, ' +
+            'the deployed ENCRYPTION_KEY no longer matches the one the keys were written with.',
+    ];
+}
+
 function configServiceLines(probe: ConfigServiceProbeResult): string[] {
     const lines = ['', 'Configuration Service (site config):'];
 
@@ -313,6 +342,12 @@ function configServiceLines(probe: ConfigServiceProbeResult): string[] {
     // Runtime PDP self-heal. Stated as a plain verdict, not two raw numbers: the
     // broken combination (locked, no key) is silent in every other surface and
     // shows up days later as "some product pages don't work".
+    //
+    // The site half and the ACTION half are reported separately on purpose. They
+    // can disagree, and the disagreement is the diagnosis: a key on the site that
+    // the action cannot read means the registration never landed, or the action
+    // was redeployed with a different ENCRYPTION_KEY. Collapsing them into one
+    // "OK" would hide the only case nothing else in this report can see.
     const pdp = probe.pdpPublishing;
     if (pdp?.error) {
         lines.push(`  Runtime PDP publishing: could not determine (${pdp.error})`);
@@ -323,7 +358,9 @@ function configServiceLines(probe: ConfigServiceProbeResult): string[] {
         } else if (keys === undefined) {
             lines.push('  Runtime PDP publishing: site is admin-locked; key count unreadable');
         } else if (keys > 0) {
-            lines.push(`  Runtime PDP publishing: OK (admin-locked, ${keys} publish key(s) registered)`);
+            lines.push(
+                `  Runtime PDP publishing: OK (admin-locked, ${keys} publish key(s) registered)`,
+            );
         } else {
             lines.push(
                 '  Runtime PDP publishing: BROKEN — site is admin-locked with no publish key.',
@@ -333,6 +370,7 @@ function configServiceLines(probe: ConfigServiceProbeResult): string[] {
                     '"Demo Builder: Repair Site Configuration" to re-register a key.',
             );
         }
+        lines.push(...describeActionKey(pdp.actionKey));
     }
 
     // Who can grant. "Ask an admin" is unactionable without a name, and the

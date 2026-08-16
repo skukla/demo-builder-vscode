@@ -33,8 +33,10 @@
  */
 
 import { readOrgAdmins } from './configServiceAccess';
+import { deriveRegisterKeyUrl } from './pdp404Snippet';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
 import type { Logger } from '@/types/logger';
 
 const HELIX_ADMIN_BASE_URL = 'https://admin.hlx.page';
@@ -87,6 +89,16 @@ export interface ConfigServiceProbeResult {
         locked: boolean;
         /** Publish keys registered on the site. Undefined when unreadable. */
         keyCount?: number;
+        /**
+         * Whether the shared PDP action can actually READ a key for this site.
+         *
+         * `keyCount` above counts keys on the SITE; this asks the action whether
+         * its own stored copy decrypts. The two disagree in exactly the cases
+         * nothing else catches: a registration that never landed, and an
+         * `ENCRYPTION_KEY` that no longer matches the one the blob was written
+         * with. Absent when BYOM is off — there is no action to ask.
+         */
+        actionKey?: { registered?: boolean; error?: string };
         error?: string;
     };
     /** One-line interpretation of the legs together. */
@@ -210,6 +222,40 @@ function interpret(result: ConfigServiceProbeResult): string {
  * @param site - Site name, matching the GitHub repo
  * @param logger - Receives non-secret breadcrumbs
  */
+/**
+ * Ask the shared PDP action whether it can read this site's publish key.
+ *
+ * A GET, like every other leg — the action's status endpoint reads and never
+ * writes, so this does not weaken the read-only guarantee above.
+ *
+ * Returns `undefined` when BYOM is off or the overlay URL is not a shape we can
+ * derive the status endpoint from: there is nothing to ask, which is not a fault.
+ */
+async function probeActionKey(
+    org: string,
+    site: string,
+    token: string,
+): Promise<{ registered?: boolean; error?: string } | undefined> {
+    const overlayUrl = resolveByomOverlayUrl();
+    if (!overlayUrl) return undefined;
+
+    const registerUrl = deriveRegisterKeyUrl(overlayUrl);
+    if (!registerUrl) return undefined;
+
+    try {
+        const url = `${registerUrl}?org=${encodeURIComponent(org)}&site=${encodeURIComponent(site)}`;
+        const response = await get(url, token);
+        if (!response.ok) return { error: `HTTP ${response.status}` };
+
+        const body = (await (response as unknown as { json(): Promise<unknown> }).json()) as
+            | { registered?: boolean }
+            | undefined;
+        return { registered: body?.registered === true };
+    } catch (error) {
+        return { error: (error as Error).message };
+    }
+}
+
 export async function probeConfigService(
     tokenProvider: TokenSource,
     org: string,
@@ -295,7 +341,11 @@ export async function probeConfigService(
             keyCount = 0; // same convention as the access doc: absent = none
         }
 
-        result.pdpPublishing = { locked, keyCount };
+        result.pdpPublishing = {
+            locked,
+            keyCount,
+            actionKey: await probeActionKey(org, site, token),
+        };
     } catch (error) {
         result.pdpPublishing = { locked: false, error: (error as Error).message };
     }
