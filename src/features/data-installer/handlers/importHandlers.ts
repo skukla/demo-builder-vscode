@@ -56,8 +56,13 @@ const JOB_KEY = 'dataInstaller.import.current';
 const CREDENTIAL_MESSAGES: Record<string, string> = {
     'missing-paas-admin':
         'This project has no Commerce admin username and password saved, so an import cannot authenticate.',
+    // "Add them" was the whole story when the user was the only source. There
+    // are now two, and on a project with no Adobe workspace the OTHER one
+    // failing is the likelier cause — so the message says both what did not
+    // happen and the two ways forward. The service is never named: this repo is
+    // public and the string ships in the VSIX.
     'needs-accs-credentials':
-        'ACCS imports need an Adobe OAuth Server-to-Server client id and secret. Add them before importing.',
+        'ACCS imports need an Adobe OAuth Server-to-Server client id and secret, and the shared credential service did not supply one. Add the pair to this project, or ask an administrator for access to the shared credential.',
     'unsupported-backend':
         'This project has no Adobe Commerce backend, so there is nothing to import into.',
     // Distinct from the gap above because the remedy is: the extension has no

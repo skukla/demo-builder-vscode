@@ -44,7 +44,7 @@ const CREDENTIAL_MESSAGES: Record<string, string> = {
     'missing-paas-admin':
         'This project has no Commerce admin username and password saved, so an export cannot authenticate.',
     'needs-accs-credentials':
-        'ACCS exports need an Adobe OAuth Server-to-Server client id and secret. Add them before exporting.',
+        'ACCS exports need an Adobe OAuth Server-to-Server client id and secret, and the shared credential service did not supply one. Add the pair to this project, or ask an administrator for access to the shared credential.',
     'unsupported-backend':
         'This project has no Adobe Commerce backend, so there is nothing to export from.',
     'no-credential-service':
