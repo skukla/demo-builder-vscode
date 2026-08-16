@@ -7,6 +7,7 @@
 import {
     projectNeedsAppBuilderTooling,
     aiDefaultsEntryApplies,
+    resolveAvailableMcpToolIds,
 } from '@/features/project-creation/services/aiToolingGate';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { AiDefaultsMcpServer } from '@/types/aiDefaults';
@@ -116,5 +117,71 @@ describe('aiDefaultsEntryApplies', () => {
         expect(aiDefaultsEntryApplies(entry, edsProject)).toBe(true);
         expect(aiDefaultsEntryApplies(entry, meshOnlyProject)).toBe(true);
         expect(aiDefaultsEntryApplies(entry, bareProject)).toBe(false);
+    });
+});
+
+describe('resolveAvailableMcpToolIds', () => {
+    // Bound to the REAL ai-defaults.json entries — these tests double as pins
+    // on the entry ids and package names the gating contract depends on.
+    const ALL_PACKAGES = [
+        '@adobe-commerce/commerce-extensibility-tools',
+        '@playwright/mcp',
+    ];
+
+    const edsProject = makeProject({
+        componentInstances: {
+            [COMPONENT_IDS.EDS_STOREFRONT]: {
+                id: COMPONENT_IDS.EDS_STOREFRONT,
+                name: 'EDS Storefront',
+                status: 'ready',
+                path: '/projects/demo/storefront',
+            },
+        },
+    });
+    const meshOnlyProject = makeProject({
+        componentInstances: {
+            [COMPONENT_IDS.HEADLESS_COMMERCE_MESH]: {
+                id: COMPONENT_IDS.HEADLESS_COMMERCE_MESH,
+                name: 'API Mesh',
+                status: 'ready',
+                path: '/projects/demo/mesh',
+            },
+        },
+    });
+
+    it('contains both tool ids for an EDS project with both packages installed', () => {
+        const available = resolveAvailableMcpToolIds(edsProject, ALL_PACKAGES);
+
+        expect(available.has('playwright')).toBe(true);
+        expect(available.has('commerce-extensibility')).toBe(true);
+    });
+
+    it('omits playwright for an EDS project when @playwright/mcp is not installed', () => {
+        const available = resolveAvailableMcpToolIds(edsProject, [
+            '@adobe-commerce/commerce-extensibility-tools',
+        ]);
+
+        expect(available.has('playwright')).toBe(false);
+        expect(available.has('commerce-extensibility')).toBe(true);
+    });
+
+    it('is empty for an EDS project with nothing installed', () => {
+        expect(resolveAvailableMcpToolIds(edsProject, []).size).toBe(0);
+    });
+
+    it('omits playwright for a mesh-only project even when installed (requires eds-storefront)', () => {
+        const available = resolveAvailableMcpToolIds(meshOnlyProject, ALL_PACKAGES);
+
+        expect(available.has('playwright')).toBe(false);
+        expect(available.has('commerce-extensibility')).toBe(true);
+    });
+
+    it('is empty for a bare project even with every package installed (no entry applies)', () => {
+        expect(resolveAvailableMcpToolIds(makeProject(), ALL_PACKAGES).size).toBe(0);
+    });
+
+    it('matches on package names, not entry ids', () => {
+        // A package literally named "playwright" is not @playwright/mcp.
+        expect(resolveAvailableMcpToolIds(edsProject, ['playwright']).size).toBe(0);
     });
 });

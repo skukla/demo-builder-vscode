@@ -16,21 +16,23 @@ import {
     type ProjectUpdateItem,
     type TemplateUpdateItem,
 } from './updateTypes';
-import { COMPONENT_IDS } from '@/core/constants';
-import type { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils';
 import { sleep } from '@/core/utils/sleep';
 import { sanitizeErrorForLogging } from '@/core/validation';
-import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
-import { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
-import { GitHubTokenService } from '@/features/eds/services/githubTokenService';
-import { generateAIContextFiles, resolveMcpToolsDir } from '@/features/project-creation/services';
+import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
-import type { InstalledBlockLibrary } from '@/types/blockLibraries';
-import type { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
+import {
+    applyBlockLibraryUpdateResolved,
+    updateCommitShaWithRollback,
+    type UpdateContext,
+} from '@/features/updates/services/updateCore';
+
+// Re-exported verbatim for existing importers (checkUpdates, tests); the
+// definitions moved to services/updateCore.ts so the headless apply service
+// stops importing from a commands module.
+export { applyBlockLibraryUpdateResolved, updateCommitShaWithRollback, type UpdateContext };
 
 /**
  * User preference for two-way block library sync. Mirrors the
@@ -42,17 +44,6 @@ function readSyncBehavior(): BlockLibrarySyncBehavior {
     return vscode.workspace
         .getConfiguration('demoBuilder.blockLibraries')
         .get<BlockLibrarySyncBehavior>('syncBehavior', 'ask');
-}
-
-// ---------------------------------------------------------------------------
-// Context passed from the command to executor functions
-// ---------------------------------------------------------------------------
-
-export interface UpdateContext {
-    secrets: vscode.SecretStorage;
-    extensionPath: string;
-    stateManager: StateManager;
-    logger: Logger;
 }
 
 // ---------------------------------------------------------------------------
@@ -111,11 +102,16 @@ export async function performForkSyncUpdates(
                 );
                 ctx.logger.warn(`[Updates] Fork sync conflict: ${item.owner}/${item.repo}`);
             } else {
-                ctx.logger.warn(`[Updates] Fork sync failed: ${item.owner}/${item.repo} — ${result.message}`);
+                ctx.logger.warn(
+                    `[Updates] Fork sync failed: ${item.owner}/${item.repo} — ${result.message}`,
+                );
             }
         } catch (error) {
             const sanitizedError = sanitizeErrorForLogging(error as Error);
-            ctx.logger.error(`[Updates] Fork sync error: ${item.owner}/${item.repo}`, error as Error);
+            ctx.logger.error(
+                `[Updates] Fork sync error: ${item.owner}/${item.repo}`,
+                error as Error,
+            );
             vscode.window.showErrorMessage(
                 `Failed to sync fork ${item.owner}/${item.repo}: ${sanitizedError}`,
             );
@@ -138,7 +134,7 @@ export async function performTemplateUpdates(
     for (const selection of filtered) {
         const canProceed = await ensureProjectStopped(selection.project, 'Sync', ctx);
         if (!canProceed) {
-            filtered = filtered.filter(s => s.project.path !== selection.project.path);
+            filtered = filtered.filter((s) => s.project.path !== selection.project.path);
         }
     }
 
@@ -162,7 +158,7 @@ export async function performTemplateUpdates(
 
                 progress.report({
                     message: `${project.name}...`,
-                    increment: (100 / filtered.length),
+                    increment: 100 / filtered.length,
                 });
 
                 try {
@@ -179,7 +175,9 @@ export async function performTemplateUpdates(
 
                         successCount++;
                         succeededPaths.add(project.path);
-                        ctx.logger.info(`[Updates] Template synced for ${project.name} (${result.strategy}${result.fallbackOccurred ? ', fallback' : ''})`);
+                        ctx.logger.info(
+                            `[Updates] Template synced for ${project.name} (${result.strategy}${result.fallbackOccurred ? ', fallback' : ''})`,
+                        );
 
                         if (result.fallbackOccurred && result.conflicts) {
                             vscode.window.showWarningMessage(
@@ -192,7 +190,10 @@ export async function performTemplateUpdates(
                 } catch (error) {
                     failCount++;
                     const sanitizedError = sanitizeErrorForLogging(error as Error);
-                    ctx.logger.error(`[Updates] Template sync failed for ${project.name}`, error as Error);
+                    ctx.logger.error(
+                        `[Updates] Template sync failed for ${project.name}`,
+                        error as Error,
+                    );
                     vscode.window.showErrorMessage(
                         `Failed to sync template for ${project.name}: ${sanitizedError}`,
                     );
@@ -204,9 +205,10 @@ export async function performTemplateUpdates(
     );
 
     if (successCount > 0) {
-        const message = failCount > 0
-            ? `Synced ${successCount} template(s), ${failCount} failed.`
-            : `Successfully synced ${successCount} template(s).`;
+        const message =
+            failCount > 0
+                ? `Synced ${successCount} template(s), ${failCount} failed.`
+                : `Successfully synced ${successCount} template(s).`;
         vscode.window.showInformationMessage(message);
     }
 
@@ -264,7 +266,7 @@ export async function performComponentUpdates(
 
                     progress.report({
                         message: `${update.componentId} in ${project.name}...`,
-                        increment: (100 / totalUpdates),
+                        increment: 100 / totalUpdates,
                     });
 
                     try {
@@ -275,11 +277,16 @@ export async function performComponentUpdates(
                             update.latestVersion,
                         );
                         successCount++;
-                        ctx.logger.info(`[Updates] Updated ${update.componentId} in ${project.name}`);
+                        ctx.logger.info(
+                            `[Updates] Updated ${update.componentId} in ${project.name}`,
+                        );
                     } catch (error) {
                         failCount++;
                         const sanitizedError = sanitizeErrorForLogging(error as Error);
-                        ctx.logger.error(`[Updates] Failed to update ${update.componentId} in ${project.name}`, error as Error);
+                        ctx.logger.error(
+                            `[Updates] Failed to update ${update.componentId} in ${project.name}`,
+                            error as Error,
+                        );
                         vscode.window.showErrorMessage(
                             `Failed to update ${update.componentId} in ${project.name}: ${sanitizedError}`,
                         );
@@ -306,14 +313,16 @@ export async function performComponentUpdates(
 // ---------------------------------------------------------------------------
 
 /**
- * Apply `npm update @adobe-commerce/commerce-extensibility-tools` in each
- * selected project's isolated MCP tools dir (`<project>/.demo-builder-mcp/`),
- * then regenerate AI context files so the skill bundles re-namespace against
- * the new version. The MCP packages live there, not in the storefront's
- * node_modules (see resolveMcpToolsDir / installAiDefaultsMcpTools).
+ * Apply the Adobe MCP package update in each selected project via the shared
+ * `applyAdobeMcpUpdate` core (npm update in the isolated tools dir →
+ * regenerate AI context files → persist the freshness stamp). This function
+ * owns only the UI shell — running-demo guard per project,
+ * `vscode.window.withProgress`, per-project error isolation — mirroring
+ * `performComponentUpdates`.
  *
- * Mirrors `performComponentUpdates` shape — running-demo guard per project,
- * `vscode.window.withProgress`, per-project error isolation.
+ * No storefront-path guard here: `AdobeMcpUpdateItem`s only exist because
+ * `AdobeMcpUpdateChecker.checkForUpdates` passed its own EDS gate (it returns
+ * null without a storefront path), so the checker is the contract.
  */
 export async function performAdobeMcpUpdates(
     selections: AdobeMcpUpdateItem[],
@@ -341,23 +350,11 @@ export async function performAdobeMcpUpdates(
             cancellable: false,
         },
         async (progress) => {
-            const { ServiceLocator } = await import('@/core/di');
-            const commandManager = ServiceLocator.getCommandExecutor();
             let successCount = 0;
             let failCount = 0;
 
             for (const [, item] of byProject.entries()) {
                 const { project, packageName, latestVersion } = item;
-                const storefrontPath = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path;
-                if (!storefrontPath) {
-                    ctx.logger.warn(`[Updates] No storefront path for ${project.name}; skipping Adobe MCP update`);
-                    failCount++;
-                    continue;
-                }
-
-                // The MCP packages live in the per-project isolated tools dir, not
-                // the storefront's node_modules — run the update there.
-                const toolsDir = resolveMcpToolsDir(project.path);
 
                 progress.report({
                     message: `${packageName} → ${latestVersion} in ${project.name}...`,
@@ -365,28 +362,15 @@ export async function performAdobeMcpUpdates(
                 });
 
                 try {
-                    const result = await commandManager.execute(
-                        `npm update ${packageName} --no-fund`,
-                        {
-                            cwd: toolsDir,
-                            timeout: TIMEOUTS.VERY_LONG,
-                            shell: DEFAULT_SHELL,
-                            enhancePath: true,
-                        },
-                    );
-                    if (result.code !== 0) {
-                        throw new Error(`npm update failed: ${result.stderr || result.stdout}`);
-                    }
-                    await generateAIContextFiles(project.path, project, ctx.extensionPath);
-                    // Persist the freshness stamp generateAIContextFiles set on `project`
-                    // (aiContextVersion), else the on-open freshness check re-fires forever.
-                    await ctx.stateManager.saveProjectConfigOnly(project);
+                    await applyAdobeMcpUpdate(project, packageName, latestVersion, ctx);
                     successCount++;
-                    ctx.logger.info(`[Updates] Updated ${packageName} in ${project.name} → ${latestVersion}`);
                 } catch (error) {
                     failCount++;
                     const sanitizedError = sanitizeErrorForLogging(error as Error);
-                    ctx.logger.error(`[Updates] Failed to update ${packageName} in ${project.name}`, error as Error);
+                    ctx.logger.error(
+                        `[Updates] Failed to update ${packageName} in ${project.name}`,
+                        error as Error,
+                    );
                     vscode.window.showErrorMessage(
                         `Failed to update Adobe MCP in ${project.name}: ${sanitizedError}`,
                     );
@@ -419,7 +403,9 @@ export async function performAddonUpdates(
 
     for (const item of blockLibrarySelections) {
         if (shouldSkipBlockLibrary(item.library, item.project, templateSyncSucceeded)) {
-            ctx.logger.info(`[Updates] Add-on dedup: skipping "${item.library.name}" — covered by template sync`);
+            ctx.logger.info(
+                `[Updates] Add-on dedup: skipping "${item.library.name}" — covered by template sync`,
+            );
             continue;
         }
 
@@ -427,7 +413,10 @@ export async function performAddonUpdates(
             await applyBlockLibraryUpdate(item, syncBehavior, ctx);
         } catch (error) {
             const sanitizedError = sanitizeErrorForLogging(error as Error);
-            ctx.logger.error(`[Updates] Failed to update block library "${item.library.name}"`, error as Error);
+            ctx.logger.error(
+                `[Updates] Failed to update block library "${item.library.name}"`,
+                error as Error,
+            );
             vscode.window.showErrorMessage(
                 `Failed to update ${item.library.name}: ${sanitizedError}`,
             );
@@ -437,41 +426,19 @@ export async function performAddonUpdates(
     for (const item of inspectorSelections) {
         try {
             await updateCommitShaWithRollback(
-                item.project.installedInspectorSdk, item.latestCommit,
+                item.project.installedInspectorSdk,
+                item.latestCommit,
                 () => ctx.stateManager.saveProject(item.project),
             );
             ctx.logger.info(`[Updates] Updated Inspector SDK in ${item.project.name}`);
         } catch (error) {
             const sanitizedError = sanitizeErrorForLogging(error as Error);
-            ctx.logger.error(`[Updates] Failed to update Inspector SDK in ${item.project.name}`, error as Error);
-            vscode.window.showErrorMessage(
-                `Failed to update Inspector SDK: ${sanitizedError}`,
+            ctx.logger.error(
+                `[Updates] Failed to update Inspector SDK in ${item.project.name}`,
+                error as Error,
             );
+            vscode.window.showErrorMessage(`Failed to update Inspector SDK: ${sanitizedError}`);
         }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Shared helper
-// ---------------------------------------------------------------------------
-
-/**
- * Mutate a commitSha, save, and rollback on failure.
- * Prevents in-memory state poisoning when save throws.
- */
-export async function updateCommitShaWithRollback(
-    target: { commitSha: string } | undefined,
-    newSha: string,
-    save: () => Promise<void>,
-): Promise<void> {
-    if (!target) return;
-    const original = target.commitSha;
-    target.commitSha = newSha;
-    try {
-        await save();
-    } catch (error) {
-        target.commitSha = original;
-        throw error;
     }
 }
 
@@ -480,7 +447,7 @@ export async function updateCommitShaWithRollback(
  *
  * - `disabled`: record the upstream SHA in `syncDisabledMarker` and skip both
  *   the file re-install and the `commitSha` bump. The storefront stays at the
- *   install-time commit; the AI Configuration tab interprets the
+ *   install-time commit; the AI Overview screen interprets the
  *   marker as "Sync disabled — N commits behind upstream".
  * - `ask`: prompt the user. "Update" continues as if `enabled`; "Skip"
  *   continues as if `disabled`; dialog dismissal aborts the per-library
@@ -500,9 +467,11 @@ async function applyBlockLibraryUpdate(
     syncBehavior: BlockLibrarySyncBehavior,
     ctx: UpdateContext,
 ): Promise<void> {
-    const lib = item.project.installedBlockLibraries?.find(l => l.name === item.library.name);
+    const lib = item.project.installedBlockLibraries?.find((l) => l.name === item.library.name);
     if (!lib) {
-        ctx.logger.warn(`[Updates] Block library "${item.library.name}" not in installedBlockLibraries; skipping`);
+        ctx.logger.warn(
+            `[Updates] Block library "${item.library.name}" not in installedBlockLibraries; skipping`,
+        );
         return;
     }
 
@@ -510,7 +479,7 @@ async function applyBlockLibraryUpdate(
     if (syncBehavior === 'ask') {
         const choice = await vscode.window.showInformationMessage(
             `Library "${item.library.name}" has new commits upstream. ` +
-            `Apply the update? This will overwrite any local edits to block files in this library.`,
+                `Apply the update? This will overwrite any local edits to block files in this library.`,
             'Update',
             'Skip',
         );
@@ -522,91 +491,4 @@ async function applyBlockLibraryUpdate(
     }
 
     await applyBlockLibraryUpdateResolved(item, effectiveBehavior as 'enabled' | 'disabled', ctx);
-}
-
-/**
- * Apply a block library update with the sync behavior ALREADY resolved to a
- * concrete action ('enabled' | 'disabled') — no 'ask', no modal. Shared by the
- * UI `applyBlockLibraryUpdate` (which resolves 'ask' via a prompt) and the
- * headless `updateApplyService` (which resolves 'ask' to the safe 'disabled'
- * default). Keeps the snapshot/marker logic in one place.
- */
-export async function applyBlockLibraryUpdateResolved(
-    item: Pick<BlockLibraryUpdateItem, 'project' | 'library' | 'latestCommit'>,
-    effectiveBehavior: 'enabled' | 'disabled',
-    ctx: UpdateContext,
-): Promise<void> {
-    const lib = item.project.installedBlockLibraries?.find(l => l.name === item.library.name);
-    if (!lib) {
-        ctx.logger.warn(`[Updates] Block library "${item.library.name}" not in installedBlockLibraries; skipping`);
-        return;
-    }
-
-    if (effectiveBehavior === 'disabled') {
-        await applyDisabledMarker(lib, item.latestCommit, item.project, ctx);
-        ctx.logger.info(`[Updates] Sync disabled — recorded marker for "${item.library.name}" at ${item.latestCommit.substring(0, 7)}`);
-        return;
-    }
-
-    // effectiveBehavior === 'enabled'
-    await reinstallBlockLibraryFiles(item, ctx);
-    await updateCommitShaWithRollback(
-        lib, item.latestCommit,
-        () => ctx.stateManager.saveProject(item.project),
-    );
-    if (lib.syncDisabledMarker) {
-        delete lib.syncDisabledMarker;
-        await ctx.stateManager.saveProject(item.project);
-    }
-    ctx.logger.info(`[Updates] Updated block library "${item.library.name}" in ${item.project.name}`);
-}
-
-async function applyDisabledMarker(
-    lib: InstalledBlockLibrary,
-    upstreamSha: string,
-    project: { name: string; path: string },
-    ctx: UpdateContext,
-): Promise<void> {
-    const previous = lib.syncDisabledMarker;
-    lib.syncDisabledMarker = {
-        upstreamSha,
-        lastCheckedAt: new Date().toISOString(),
-    };
-    try {
-        await ctx.stateManager.saveProject(project as never);
-    } catch (err) {
-        // Restore previous state to avoid poisoning in-memory.
-        if (previous) {
-            lib.syncDisabledMarker = previous;
-        } else {
-            delete lib.syncDisabledMarker;
-        }
-        throw err;
-    }
-}
-
-async function reinstallBlockLibraryFiles(
-    item: Pick<BlockLibraryUpdateItem, 'project' | 'library'>,
-    ctx: UpdateContext,
-): Promise<void> {
-    const storefront = item.project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    const githubRepo = storefront?.metadata?.githubRepo;
-    if (!storefront || typeof githubRepo !== 'string' || !githubRepo.includes('/')) {
-        throw new Error(`Cannot re-install block library: storefront has no GitHub repo`);
-    }
-    const [destOwner, destRepo] = githubRepo.split('/');
-
-    const tokenService = new GitHubTokenService(ctx.secrets, ctx.logger);
-    const fileOps = new GitHubFileOperations(tokenService, ctx.logger);
-
-    const result = await installBlockCollections(
-        fileOps,
-        destOwner,
-        destRepo,
-        [{ source: item.library.source, name: item.library.name }],
-        ctx.logger,
-    );
-    if (!result.success) {
-        throw new Error(result.error ?? 'Block library re-install failed');
-    }
 }

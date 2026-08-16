@@ -1,9 +1,9 @@
 /**
  * Shared sanitization helpers for AI context file generation.
  *
- * Used by aiContextWriter.ts and skillsWriter.ts to prevent Markdown heading
- * injection, link injection, and URL-scheme injection when interpolating
- * project data into generated Markdown files.
+ * Used by the AGENTS.md section builders (agentsMdSections.ts) to prevent
+ * Markdown heading injection, link injection, and URL-scheme injection when
+ * interpolating project data into generated Markdown files.
  */
 
 /**

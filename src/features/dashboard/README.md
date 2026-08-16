@@ -159,17 +159,30 @@ These back the dashboard "More" overflow items. All resolve the project via
 **Directory Structure**:
 ```
 features/dashboard/
-├── index.ts                     # Public API exports
+├── index.ts                          # Public API exports
 ├── commands/
-│   ├── showDashboard.ts        # Project dashboard webview command
-│   └── configure.ts            # Configure project webview command
+│   ├── showDashboard.ts             # Project dashboard webview command
+│   └── configure.ts                 # Configure project webview command
 ├── handlers/
-│   ├── index.ts                # Handler exports
-│   ├── dashboardHandlers.ts    # Dashboard message handlers
-│   ├── configureHandlers.ts    # Configure screen handler map
-│   └── meshStatusHelpers.ts    # Mesh status helper functions
-└── README.md                   # This file
+│   ├── index.ts                     # Handler exports
+│   ├── dashboardHandlers.ts         # Composes the dashboard handler map; re-exports the siblings
+│   ├── statusHandlers.ts            # requestStatus + on-open checks + reAuthenticate/switchOrg (extracted sibling)
+│   ├── openUrlHandlers.ts           # Open-in-browser handlers + getProjectUrls (extracted sibling)
+│   ├── panelNavigationHandlers.ts   # Webview surface swaps (extracted sibling)
+│   ├── projectManagementHandlers.ts # Edit/delete/reset/rename + settings exports (extracted sibling)
+│   ├── edsContentHandlers.ts        # Sync storefront, rebuild block library, republish (extracted sibling)
+│   ├── aiHandlers.ts                # AI surface handler map (+ aiPromptHandlers.ts)
+│   ├── appBuilderComponentHandlers.ts # Per-integration App Builder handlers (+ appBuilderComponentSecrets.ts)
+│   ├── consoleApiHandlers.ts        # Console API list/add handlers
+│   ├── destinationHandlers.ts       # Deploy-destination persistence (project.adobe writes)
+│   ├── configureHandlers.ts         # Configure screen handler map
+│   └── meshStatusHelpers.ts         # Mesh status helper functions
+└── README.md                        # This file
 ```
+
+The five "extracted sibling" modules were split out of `dashboardHandlers.ts`
+(2026-08-14) for the 500-line handler cap; the parent composes the handler map
+and re-exports everything verbatim, so import sites are unchanged.
 
 **Handler Flow**:
 ```
@@ -179,7 +192,7 @@ Dashboard Webview (React)
     ↓
 dashboardHandlers (handler map)
     ↓
-handleRequestStatus()
+handleRequestStatus()   (lives in statusHandlers.ts, re-exported by the parent)
     ├─→ Get project
     ├─→ Detect frontend changes
     ├─→ Check mesh status (async)

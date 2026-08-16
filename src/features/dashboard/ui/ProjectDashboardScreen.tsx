@@ -128,9 +128,11 @@ export function ProjectDashboardScreen({
         aiSkillsError,
         aiMcps,
         aiMcpsError,
+        aiEditedFiles,
         aiInventoryLoading,
         aiBusy,
         aiRegenProgress,
+        aiRegenError,
         regenerateAiFiles,
     } = useDashboardStatus(
         { hasMesh, initialMeshStatus, initialEdsStorefrontStatus, hasAdobeContext },
@@ -310,11 +312,13 @@ export function ProjectDashboardScreen({
                         mcps={aiMcps}
                         hasSkillsError={aiSkillsError}
                         hasMcpsError={aiMcpsError}
+                        editedFiles={aiEditedFiles}
                         isLoading={aiInventoryLoading}
                         onClose={() => setShowCapabilities(false)}
                         onRegenerate={regenerateAiFiles}
                         isBusy={aiBusy}
                         progress={aiRegenProgress ?? undefined}
+                        errorMessage={aiRegenError}
                     />
                 </DialogContainer>
             )}

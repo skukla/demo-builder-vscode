@@ -11,7 +11,7 @@ Create and manage Adobe Commerce demos with ease directly from Visual Studio Cod
 - 🎯 **Guided Setup** - Step-by-step wizard for configuration
 - 🔧 **Prerequisites Management** - Automatic detection and installation guidance
 - ☁️ **API Mesh Integration** - Deploy and manage Adobe API Mesh
-- 🤖 **Claude Code (CLI) Harness** - Open any project in Claude Code with one click; AI Configuration tab introspects skills, project MCP servers, and session MCPs
+- 🤖 **Claude Code (CLI) Harness** - Open any project in Claude Code with one click; the AI Overview screen shows installed skills, saved prompts, and AI setup health
 
 ## Requirements
 
@@ -126,24 +126,24 @@ Clicking it launches Claude Code based on these settings:
 | `claude --continue` | "Open last session" (extension default for prompt clicks) |
 | `claude --resume` | Sessions browser (visual picker) |
 
-### Prompt clicks anchor the project as the VS Code workspace
+### Prompt clicks go to the single home chat
 
-When you click a prompt from the AI surface, Demo Builder checks whether VS Code's workspace is already the project. If not, it briefly reloads the window with the project as the workspace before launching Claude Code — so the chat panel sees per-project skills, `.mcp.json` MCPs, and `AGENTS.md`. This happens automatically; you click once and the prompt is delivered with full project context.
+When you click a prompt from the AI surface, Demo Builder opens (or reuses) the single "Claude Code" home terminal at the projects root and delivers the prompt there. The home chat addresses any project by name through the Demo Builder MCP tools — no window reload or workspace switch.
 
-### AI Configuration tab
+### AI Overview screen
 
-The **AI Configuration** tab in `Demo Builder: Configure` shows live inventory for the open project:
+The **AI Overview** screen (the dashboard's "View Skills" link, or `Demo Builder: Manage AI Prompts`) shows what the project's AI setup can do:
 
-- **Skills** — every file in `.claude/skills/`, classified as `demo-builder` (lifecycle), `adobe` (from `@adobe-commerce/commerce-extensibility-tools`), or `unknown`
-- **Project MCP Servers** — each server declared in `.mcp.json`, expanded to show the tools it exposes
-- **Session MCP Servers** — Adobe MCPs the user has connected via Claude Code's catalog (read from `~/.claude.json::claudeAiMcpEverConnected`)
-- **Global MCP Registration** — whether the Demo Builder MCP is registered in `~/.claude.json` so Claude Code can find it from any project
+- **Status strip** — the same health signal as the dashboard's "AI Ready" badge, with detail on what's missing when it isn't ready
+- **Installed skills** — every file in `.claude/skills/`, classified as Demo Builder, Adobe bundle, or custom, with a drill-down per skill
+- **Prompt cards** — saved prompts (per-project, or pinned to appear in every project) that launch straight into the chat
+- **Edited files** — generated files you've customized are kept, not overwritten, and listed as "Edited — kept your version"
 
-The tab includes actions to **Refresh** the inventory (re-runs `inspect-mcp`), **Regenerate AI Files** (re-runs `aiContextWriter`, `mcpConfigWriter`, and `skillsWriter`), and **Register** the global MCP if it isn't already.
+**Regenerate AI Files** rewrites the generated bundle (AGENTS.md, skills, MCP configs) through a hash-and-skip refresh: files you've edited are skipped and reported, never clobbered.
 
 ### Adobe MCP updates
 
-`Demo Builder: Check for Updates` includes the `@adobe-commerce/commerce-extensibility-tools` package alongside the existing fork, template, component, and add-on update sources. Applying the update runs `npm update` in the storefront and regenerates AI files so the skills bundle stays in sync.
+`Demo Builder: Check for Updates` includes the `@adobe-commerce/commerce-extensibility-tools` package alongside the existing fork, template, component, and add-on update sources. Applying the update runs `npm update` in the project's isolated `.demo-builder-mcp/` tools directory and regenerates AI files so the skills bundle stays in sync.
 
 For architecture and rationale, see [ADR-004: Claude Code (CLI) as the AI Harness](docs/architecture/adr/004-claude-code-harness.md).
 

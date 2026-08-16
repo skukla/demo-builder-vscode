@@ -26,7 +26,6 @@
  * be validated against a real GitHub/DA.live/Adobe environment.
  */
 
-import * as os from 'os';
 import * as path from 'path';
 import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
@@ -39,6 +38,7 @@ import {
     type CapturedEvent,
 } from './progressCapture';
 import { dispatchHandler } from '@/core/handlers';
+import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
@@ -61,7 +61,7 @@ function leanOrg(org: WizardState['adobeOrg'] | undefined): { id: string; name?:
 }
 
 function projectsDir(): string {
-    return process.env.DEMO_BUILDER_PROJECTS_DIR ?? path.join(os.homedir(), '.demo-builder', 'projects');
+    return resolveProjectsRoot();
 }
 
 const NEEDS_ADOBE = {

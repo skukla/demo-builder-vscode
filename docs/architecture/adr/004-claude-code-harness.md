@@ -73,7 +73,7 @@ The harness setting (`demoBuilder.ai.harness`) lets users force one path:
 
 ### Negative
 
-- **Users without `claude` installed see a friction step.** The first time they invoke "Open in Claude Code" with `harness='terminal'` and no binary on PATH, the terminal opens but `claude` fails. Mitigated by the dashboard tile copy and by the AI Configuration tab's status panel, but not eliminated.
+- **Users without `claude` installed see a friction step.** The first time they invoke "Open in Claude Code" with `harness='terminal'` and no binary on PATH, the terminal opens but `claude` fails. Mitigated by the dashboard tile copy and by the AI Overview screen's status strip, but not eliminated.
 - **Two MCP file paths to maintain.** `<project>/.mcp.json` (canonical, read by Claude Code) and `<project>/.claude/mcp.json` (defensive mirror). One write, two files. If Anthropic ever drops the mirror, we delete one branch in `mcpConfigWriter.ts` and move on. (See research notes 2026-05-20 Impact C.)
 - **No control over the extension's panel location.** When the URI handler opens the extension, it lands wherever the user previously docked it. The one-time placement tip (gated by `globalState.demoBuilder.ai.firstClaudeOpenTipShown`) is the only nudge we can give.
 - **URI handler depends on extension version ≥ 2.1.72.** Older installations no-op silently. Mitigated by the rolling-extension-update channel; not directly detected at runtime.
@@ -139,7 +139,7 @@ Only the terminal harness was anchored correctly.
   the workspace already matches the project, no reload happens — the dashboard
   webview just surfaces.
 - **Wizard finish** (`openProjectAsWorkspace` from
-  `projectFinalizationService.ts`) opens the freshly-created project as the
+  `projectFinalizationService.ts`; the AI-bundle generation it triggered now lives in `aiBundleService.ts`) opens the freshly-created project as the
   current window's workspace right after AI context files and global MCP
   registration. The user flows from "creating a demo" into "working on the
   demo" without an extra gesture.
@@ -183,8 +183,10 @@ true by construction.
   `ProjectRow.tsx` — shift/cmd-click modifier passthrough
 - `src/features/dashboard/commands/showDashboard.ts` —
   `shouldAutoReopenProjectsList` helper + `dispose()` override
-- `src/features/project-creation/services/projectFinalizationService.ts` —
-  `openProjectAsWorkspace`, wired into `executor.ts` as Phase 7
+- `src/features/project-creation/services/aiBundleService.ts` —
+  `generateAIContextFiles`, wired into `handlers/executor.ts` as Phase 6 (moved
+  here from projectFinalizationService 2026-08-14; the `openProjectAsWorkspace`
+  anchoring this bullet once named was retired with the workspace-anchoring model)
 - `src/commands/openInClaude.ts` — workspace-aware `auto` mode, mismatch
   warning for `extension` mode
 

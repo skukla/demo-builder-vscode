@@ -66,6 +66,7 @@ export interface ProjectManifest {
     customBlockLibraries?: CustomBlockLibrary[];
     aiPrompts?: AiPrompt[];
     aiContextVersion?: number;
+    aiFileHashes?: Record<string, string>;
     publishKeyRegisteredAt?: string;
     pinned?: boolean;
 }
@@ -137,6 +138,8 @@ export class ProjectFileLoader {
                 additionalConsoleApis: manifest.additionalConsoleApis,
                 componentApiPicks: manifest.componentApiPicks,
                 aiContextVersion: manifest.aiContextVersion,
+                // ADR-013 hash-and-skip map — absent on pre-ADR manifests.
+                aiFileHashes: manifest.aiFileHashes,
                 publishKeyRegisteredAt: manifest.publishKeyRegisteredAt,
                 pinned: manifest.pinned,
             };

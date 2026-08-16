@@ -14,6 +14,7 @@
  */
 
 import { Flex, Heading, Text, View } from '@adobe/react-spectrum';
+import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import React from 'react';
 import { AiMcpsList } from './AiMcpsList';
 import { AiSkillsList } from './AiSkillsList';
@@ -59,7 +60,24 @@ export interface AiCapabilitiesModalProps {
      * live step instead of the static "Reinstalling…" fallback.
      */
     progress?: AiRegenerateProgress;
+    /**
+     * ADR-013: user-edited bundle files (project-relative posix paths, from
+     * `inventory.editedFiles`). Skill files flag their row in `AiSkillsList`;
+     * the rest ("AGENTS.md", ".mcp.json", …) render as a compact
+     * "Edited — kept your version" note. Nothing renders when empty.
+     */
+    editedFiles?: string[];
+    /**
+     * Error from the last regenerate (forwarded from the hook's
+     * `aiRegenError`) — the handler's failure message or a rejected request.
+     * Renders as a compact inline line above the lists; absent when the last
+     * regenerate succeeded.
+     */
+    errorMessage?: string | null;
 }
+
+/** Bundle prefix that routes an edited file to the skills list instead of the note. */
+const SKILLS_PREFIX = '.claude/skills/';
 
 export function AiCapabilitiesModal({
     skills,
@@ -71,7 +89,10 @@ export function AiCapabilitiesModal({
     onRegenerate,
     isBusy = false,
     progress,
+    editedFiles,
+    errorMessage,
 }: AiCapabilitiesModalProps): React.ReactElement {
+    const editedNonSkillFiles = (editedFiles ?? []).filter((f) => !f.startsWith(SKILLS_PREFIX));
     return (
         <Modal
             title="AI Capabilities"
@@ -133,9 +154,7 @@ export function AiCapabilitiesModal({
                             // common case 1. Use neutral copy that fits both.
                             <>
                                 <Spinner size="L" aria-label="Checking AI setup" />
-                                <Text UNSAFE_className="text-gray-700">
-                                    Checking AI setup…
-                                </Text>
+                                <Text UNSAFE_className="text-gray-700">Checking AI setup…</Text>
                             </>
                         )}
                     </Flex>
@@ -145,6 +164,28 @@ export function AiCapabilitiesModal({
                        A plain div, not Spectrum Flex, for the columns: Flex caps
                        width at ~450px (see the spectrum-webview-ui skill). */
                     <div className="ai-capabilities-body">
+                        {/* The last regenerate failed — say so inline (the
+                            handler's message, or the rejection). Without this
+                            the modal returned to idle with no signal. Cleared
+                            by the next successful regenerate. */}
+                        {errorMessage && (
+                            <Flex gap="size-100" alignItems="center" data-testid="ai-regen-error">
+                                <AlertCircle size="S" UNSAFE_className="text-red-600" />
+                                <Text UNSAFE_className="text-gray-700">{errorMessage}</Text>
+                            </Flex>
+                        )}
+                        {/* ADR-013: user-edited non-skill bundle files were kept
+                            on the last refresh — say so, compactly, above the
+                            lists. Edited SKILL files flag their row in
+                            AiSkillsList instead. Absent when nothing is edited. */}
+                        {editedNonSkillFiles.length > 0 && (
+                            <Text
+                                data-testid="ai-edited-files-note"
+                                UNSAFE_className="text-gray-700"
+                            >
+                                Edited — kept your version: {editedNonSkillFiles.join(', ')}
+                            </Text>
+                        )}
                         <div
                             className="ai-capabilities-columns"
                             data-testid="ai-capabilities-columns"
@@ -168,6 +209,7 @@ export function AiCapabilitiesModal({
                                 skills={skills}
                                 hasError={hasSkillsError}
                                 isLoading={isLoading}
+                                editedFiles={editedFiles}
                             />
                         </div>
                     </div>

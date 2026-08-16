@@ -18,7 +18,12 @@
  *
  * Idempotent: re-running rewrites the tools `package.json` (the declared
  * versions) and re-runs `npm install`, which is a fast no-op when nothing is
- * missing. Used both at project creation and by the dashboard's
+ * missing.
+ *
+ * Deliberately OUTSIDE the ADR-013 `GeneratedFileWriter` seam: npm itself
+ * rewrites this tree on every install, so hash-and-skip semantics would break
+ * the install loop — the tools manifest is machine state, not user-editable
+ * bundle content. Used both at project creation and by the dashboard's
  * "Regenerate AI files" action.
  */
 
@@ -133,6 +138,38 @@ export async function installAiDefaultsMcpTools(
     }
 
     return { success: true };
+}
+
+/**
+ * The ai-defaults packages that apply to this project RIGHT NOW, per each
+ * entry's `requires` gate. The composition axis of the AI-context freshness
+ * check compares this against {@link readInstalledMcpPackages} — a project
+ * that gained a qualifying component after creation (dashboard add, storefront
+ * setup) is exactly the case where the two diverge.
+ */
+export function applicableMcpPackages(project: Project): string[] {
+    return aiDefaults.mcpServers
+        .filter((entry) => aiDefaultsEntryApplies(entry, project))
+        .map((entry) => entry.package);
+}
+
+/**
+ * The packages actually declared in the isolated tools manifest
+ * (`<project>/.demo-builder-mcp/package.json`). Empty when the manifest is
+ * absent or unreadable — which reads as "nothing installed", the safe
+ * direction for a staleness check (it can only cause a warning, never mask one).
+ */
+export async function readInstalledMcpPackages(projectPath: string): Promise<string[]> {
+    try {
+        const raw = await fsPromises.readFile(
+            path.join(resolveMcpToolsDir(projectPath), 'package.json'),
+            'utf-8',
+        );
+        const parsed = JSON.parse(raw) as { dependencies?: Record<string, string> };
+        return Object.keys(parsed.dependencies ?? {});
+    } catch {
+        return [];
+    }
 }
 
 /** One-line description of an installer failure, safe to show to the user. */

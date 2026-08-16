@@ -181,9 +181,22 @@ features/updates/
 │   ├── componentRepositoryResolver.ts  # Dynamic repo resolution from components.json
 │   ├── componentUpdater.ts             # Component updates with rollback
 │   ├── extensionUpdater.ts             # Extension VSIX updates
+│   ├── updateCore.ts                   # Shared apply core: UpdateContext, commit-sha rollback, block-library apply
+│   ├── adobeMcpUpdateCore.ts           # Shared Adobe-MCP update core (npm update + AI-bundle regen)
+│   ├── updateApplyService.ts           # Headless update apply (MCP apply_updates path)
+│   ├── addonUpdateChecker.ts           # Block library + Inspector SDK update checks
+│   ├── adobeMcpUpdateChecker.ts        # commerce-extensibility-tools version check
+│   ├── templateUpdateChecker.ts        # EDS template update checks
+│   ├── templateSyncService.ts          # Applies upstream template updates
+│   ├── forkSyncService.ts              # Fork behind-upstream checks + fast-forward sync
+│   ├── githubApiClient.ts              # Shared GitHub API utilities for the checkers
+│   ├── collaboratorGate.ts             # GitHub collaborator gating for update sources
+│   ├── releaseTrack.ts                 # Release track derivation (stable/beta)
 │   └── types.ts                        # Type definitions
 ├── commands/
-│   └── checkUpdates.ts                 # Manual update check command
+│   ├── checkUpdates.ts                 # Manual update check command (QuickPick)
+│   ├── updateExecutor.ts               # QuickPick apply shells (perform* functions)
+│   └── updateTypes.ts                  # QuickPick item shapes + pure helpers
 └── README.md                           # This file
 ```
 

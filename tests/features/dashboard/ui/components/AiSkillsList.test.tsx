@@ -188,6 +188,43 @@ describe('AiSkillsList', () => {
         });
     });
 
+    // ADR-013: files the user edited are kept (not overwritten) on regenerate;
+    // the list flags them so "my customization survived" is visible, not silent.
+    describe('edited flags — "kept your version" (ADR-013)', () => {
+        it('flags a skill whose bundle file appears in editedFiles', () => {
+            renderList({
+                skills: [
+                    makeSkill('add-component', 'demo-builder'),
+                    makeSkill('sync-changes', 'demo-builder'),
+                ],
+                editedFiles: ['.claude/skills/add-component.md'],
+            });
+
+            const flags = screen.getAllByTestId('ai-skill-edited-flag');
+            expect(flags).toHaveLength(1);
+            const rows = screen.getAllByTestId('ai-skill-row');
+            const flagged = rows.find((r) => r.textContent?.includes('add-component'));
+            expect(flagged?.textContent).toMatch(/edited/i);
+        });
+
+        it('renders no flags when editedFiles is absent (pre-ADR project)', () => {
+            renderList({
+                skills: [makeSkill('add-component', 'demo-builder')],
+            });
+
+            expect(screen.queryByTestId('ai-skill-edited-flag')).not.toBeInTheDocument();
+        });
+
+        it("ignores edited entries that match no skill (non-skill files are the modal note's job)", () => {
+            renderList({
+                skills: [makeSkill('add-component', 'demo-builder')],
+                editedFiles: ['AGENTS.md'],
+            });
+
+            expect(screen.queryByTestId('ai-skill-edited-flag')).not.toBeInTheDocument();
+        });
+    });
+
     describe('Empty / error states', () => {
         it('shows a plain-language empty state when there are no skills', () => {
             renderList({ skills: [] });

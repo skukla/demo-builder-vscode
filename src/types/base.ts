@@ -189,11 +189,23 @@ export interface Project {
     aiPrompts?: AiPrompt[];
     /**
      * Version of the AI context bundle last generated into this project (stamped
-     * from the `AI_CONTEXT_VERSION` constant on generate). The dashboard's
-     * on-open freshness check flags the project stale when this is older than
-     * the current constant (or absent, catching pre-feature projects).
+     * from the `AI_CONTEXT_VERSION` constant on generate). Since v8 a stale (or
+     * absent) stamp no longer flags the project in the UI — the activation sweep
+     * (`aiBundleActivationRefresh`) silently refreshes tiers 1+2 on the next
+     * extension start; the freshness check only logs it as a support trail.
      */
     aiContextVersion?: number;
+    /**
+     * Per-file sha-256 hashes of the AI-bundle files last generated into this
+     * project, keyed by posix project-relative path (`AGENTS.md`,
+     * `.claude/skills/add-component.md`). The GeneratedFileWriter compares the
+     * recorded hash against disk to tell "ours" (safe to overwrite/remove)
+     * from "user-edited" (skip and report) — ADR-013 hash-and-skip
+     * (docs/architecture/adr/013-generated-file-edit-survival.md). Absent on
+     * pre-ADR projects: their bundle files are treated as unmodified once,
+     * overwritten, and recorded.
+     */
+    aiFileHashes?: Record<string, string>;
     /**
      * When this storefront's runtime publish key was last registered with the
      * shared PDP action (ISO 8601).

@@ -10,13 +10,13 @@ import { AI_CONTEXT_VERSION, COMPONENT_IDS, ComponentId } from '@/core/constants
 describe('AI_CONTEXT_VERSION', () => {
     // Pin the current bundle version. Bump this pin ONLY together with a real
     // generated-content change (see the ai-context-authoring discipline): the
-    // constant re-gates every existing project for a bundle refresh.
-    // v7: the always-on `diagnose-demo` skill. None of the twelve generated skills
-    // covered diagnosis — every one told the agent how to DO something — so a read
-    // like get_store_structure had no home and nothing told an agent to check store
-    // scope when product pages come back empty.
-    it('is 7 (diagnose-demo skill)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(7);
+    // constant re-gates every existing project for a bundle refresh — since v8
+    // via the silent activation sweep rather than a prompt.
+    // v9: AGENTS.md banner reworded to match ADR-013 reality (edits are kept,
+    // not overwritten — but freeze the file until delete + regenerate). First
+    // bump under the silent-sweep model: no prompt, the sweep folds it in.
+    it('is 9 (honest ADR-013 banner)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(9);
     });
 });
 

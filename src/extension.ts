@@ -9,6 +9,7 @@ import { ServiceLocator } from '@/core/di';
 import { initializeLogger, getLogger } from '@/core/logging';
 import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
+import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
@@ -38,6 +39,7 @@ import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
+import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundleActivationRefresh';
 import { HelixService } from '@/features/eds/services/helixService';
 import { renewPublishKeys } from '@/features/eds/services/publishKeyRenewalSweep';
 import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/globalMcpRegistration';
@@ -136,6 +138,18 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Register StateManager with ServiceLocator (for commands without handler context)
         ServiceLocator.setStateManager(stateManager);
+
+        // Silent AI-bundle upkeep for every known project (ADR-013): tier-1
+        // config repair always; tier-1+2 refresh + stamp when a project's
+        // aiContextVersion is stale. Fire-and-forget like the global-MCP
+        // repair above — never awaited, internally never throws, and the
+        // healthy path makes zero disk writes; runs after the state manager
+        // only to keep activation-critical work first (it does not use it).
+        void refreshAiBundlesOnActivation(context.extensionPath, logger).catch((error) => {
+            logger.warn(
+                `[AI Bundle] Activation sweep failed to start: ${(error as Error).message}`,
+            );
+        });
 
         // Seed built-in AI prompts into the global store once (starter recipes that
         // surface in every project's prompt library). Idempotent and non-fatal.
@@ -249,10 +263,8 @@ export async function activate(context: vscode.ExtensionContext) {
         // there reaches the in-extension MCP server on the ROOT socket and can do
         // global / by-name work. Best-effort and additive — never blocks or
         // breaks activation, and changes no navigation/workspace behavior.
-        const projectsDir =
-            process.env.DEMO_BUILDER_PROJECTS_DIR ??
-            path.join(os.homedir(), '.demo-builder', 'projects');
-        void ensureHomeAiContext(projectsDir, path.join(context.extensionPath, 'dist'));
+        const projectsRoot = resolveProjectsRoot();
+        void ensureHomeAiContext(projectsRoot, path.join(context.extensionPath, 'dist'));
 
         // Keep every storefront's runtime publish key alive. Helix keys expire in
         // about a year and were only ever minted by a site config WRITE, so a
@@ -366,9 +378,6 @@ export async function activate(context: vscode.ExtensionContext) {
         // anchored to a project SUBDIR (e.g. a leftover anchor from an older
         // build), re-home it to the projects root and bail — the post-reopen
         // activation runs the cold-start path below.
-        const projectsRoot =
-            process.env.DEMO_BUILDER_PROJECTS_DIR ??
-            path.join(os.homedir(), '.demo-builder', 'projects');
         const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
         if (shouldReHomeToRoot(ws, projectsRoot)) {
             await fs.mkdir(projectsRoot, { recursive: true }).catch(() => {});
@@ -432,9 +441,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         // launches at the root. Refusing to start without a folder left anyone
         // driving the extension from the sidebar with no MCP server at all.
         const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        const projectsDir =
-            process.env.DEMO_BUILDER_PROJECTS_DIR ??
-            path.join(os.homedir(), '.demo-builder', 'projects');
+        const projectsDir = resolveProjectsRoot();
         // Handler-backed read/status tools dispatch through the existing handler
         // maps with a fresh headless context per call.
         const ctxFactory = () => createHeadlessHandlerContext(context, stateManager, logger);

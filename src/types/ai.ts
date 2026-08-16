@@ -51,6 +51,39 @@ export const DEMO_BUILDER_ALWAYS_ON_SKILLS = [
  */
 export const DEMO_BUILDER_CONDITIONAL_SKILLS = ['extend-app-builder-app.md'] as const;
 
+/**
+ * Which ai-defaults MCP tool a generated skill DRIVES — the machine-readable
+ * form of a relationship that previously lived only as prose inside skill
+ * bodies. Values are `ai-defaults.json` entry `id`s (pinned by test; the JSON
+ * is not imported here because this module also reaches webview bundles).
+ *
+ * Classified by READING each skill (2026-08-14), not by counting mentions:
+ * `scrape-reference-site` routes between two workflows but actively instructs
+ * Playwright use in workflow B; `connect-authenticated-site` is entirely the
+ * Playwright `storageState` flow; `refine-visual-match` declares itself
+ * Playwright-workflow-only. The other three scraping skills
+ * (`commerce-block-mapper`, `demo-data-injector`, `header-nav-footer`) work on
+ * already-scraped material and never touch the tool — an opt-out that removed
+ * them would delete working capability.
+ *
+ * A skill missing from this map depends on no MCP tool. A guard test holds the
+ * map against the template bodies in both directions, so a skill that starts
+ * (or stops) instructing a tool fails until this map says so.
+ *
+ * The code ACTS on this map: `writeSkillFiles` gates delivery on it — a skill
+ * whose tool is not usable by the project (entry doesn't apply, or its package
+ * isn't installed in `.demo-builder-mcp`, per `resolveAvailableMcpToolIds`) is
+ * not written, and a previously-delivered copy is reconciled through the
+ * ADR-013 removal matrix. Gating filters DELIVERY only —
+ * `DEMO_BUILDER_ALWAYS_ON_SKILLS` stays the classifier list, so a gated-out
+ * skill found on disk still classifies as first-party.
+ */
+export const SKILL_MCP_TOOL_DEPENDENCIES = {
+    'scrape-reference-site.md': 'playwright',
+    'connect-authenticated-site.md': 'playwright',
+    'refine-visual-match.md': 'playwright',
+} as const satisfies Partial<Record<(typeof DEMO_BUILDER_ALWAYS_ON_SKILLS)[number], string>>;
+
 /** Every filename that identifies a first-party skill, however it was delivered. */
 export const DEMO_BUILDER_SKILL_FILES: ReadonlySet<string> = new Set<string>([
     ...DEMO_BUILDER_ALWAYS_ON_SKILLS,
@@ -150,4 +183,13 @@ export interface AiInventory {
     sessionMcps: SessionMcpEntry[];
     /** Set when `sessionMcpDetector` rejected; the corresponding `sessionMcps` list is empty. */
     sessionMcpsError?: string;
+    /**
+     * ADR-013: bundle files the user has edited — project-relative posix paths
+     * whose current disk sha-256 differs from the hash recorded at the last
+     * generate (`project.aiFileHashes`). Derived fresh on every verify, so it
+     * stays current without persisting a skip log; the modal renders it as
+     * "Edited — kept your version". Absent/empty when no hashes are recorded
+     * (pre-ADR projects must show zero false "edited" flags).
+     */
+    editedFiles?: string[];
 }

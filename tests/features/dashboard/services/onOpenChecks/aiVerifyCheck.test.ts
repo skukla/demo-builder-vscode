@@ -90,3 +90,26 @@ it('an mcpsError (whole inspector failed) → warning naming the inspector failu
     expect(outcome.status).toBe('warning');
     expect(outcome.message).toMatch(/spawn EACCES/);
 });
+
+it('forwards the project\'s recorded hashes to verify (drives inventory.editedFiles on open)', async () => {
+    // ADR-013: without this, the "Edited — kept your version" flags only appear
+    // after an explicit re-verify — the on-open inventory would always read clean.
+    const verify = jest
+        .fn()
+        .mockResolvedValue({ status: 'ok', checks: okChecks, inventory: emptyInventory });
+    const check = createAiVerifyCheck({ verify });
+    const aiFileHashes = { 'AGENTS.md': 'abc123' };
+    const project: Project = {
+        name: 'p',
+        path: '/proj',
+        created: new Date(),
+        lastModified: new Date(),
+        status: 'created',
+        aiFileHashes,
+    };
+    const ctx: OnOpenCheckContext = { project, logger: mockLogger, post: jest.fn() };
+
+    await check.run(ctx);
+
+    expect(verify).toHaveBeenCalledWith('/proj', aiFileHashes);
+});

@@ -488,7 +488,7 @@ written.
 4. Register it from the `registerExtraTools` callback in `src/extension.ts`.
 5. Add a test using the `fakeServer` pattern (§14).
 6. If agents should know about it, mention it in the generated `AGENTS.md`
-   (`aiContextWriter.ts`).
+   (section text in `agentsMdSections.ts`; `aiContextWriter.ts` orchestrates).
 
 ---
 

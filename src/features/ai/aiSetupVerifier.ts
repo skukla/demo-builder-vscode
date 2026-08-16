@@ -1,5 +1,5 @@
 /**
- * AI Setup Verifier — backs the Configure screen's AI Configuration tab.
+ * AI Setup Verifier — backs the standalone AI Overview screen.
  *
  * Verifies that a project's AI context files are present and valid:
  * - AGENTS.md: exists and non-empty (the real AI context file; `CLAUDE.md`
@@ -15,6 +15,7 @@
  * Pure fs/promises — no VS Code imports, easily unit-tested.
  */
 
+import { createHash } from 'crypto';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { inspectAllServers } from './mcpInspector';
@@ -45,11 +46,22 @@ export interface AiVerificationResult {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
+/**
+ * Verify a project's AI setup: file-presence checks + capability inventory.
+ *
+ * `recordedHashes` (optional) is the project's ADR-013 `aiFileHashes` map —
+ * when supplied, `inventory.editedFiles` lists the bundle files whose current
+ * disk sha-256 differs from the recorded one (user edits the hash-and-skip
+ * writer keeps). Omitted (pre-ADR projects) → `editedFiles` is empty: no
+ * false "edited" flags. Pure fs — the caller passes the hashes in; the
+ * verifier never reads VS Code state.
+ */
 export async function verifyAiSetup(
     projectPath: string,
     extensionDistPath: string,
+    recordedHashes?: Record<string, string>,
 ): Promise<AiVerificationResult> {
-    const [checks, inventory] = await Promise.all([
+    const [checks, inventory, editedFiles] = await Promise.all([
         Promise.all([
             checkAgentsMd(projectPath),
             checkMcpConfig(projectPath),
@@ -57,9 +69,61 @@ export async function verifyAiSetup(
             checkSkillFiles(projectPath),
         ]),
         gatherInventory(projectPath),
+        detectEditedFiles(projectPath, recordedHashes),
     ]);
 
-    return { status: aggregateStatus(checks), checks, inventory };
+    return { status: aggregateStatus(checks), checks, inventory: { ...inventory, editedFiles } };
+}
+
+/**
+ * `.claude/settings.json` is MERGED on every refresh (user hooks/permissions
+ * incorporated, hash re-recorded), never kept-as-is — so a hash mismatch there
+ * means "the user customized it and the merge will fold it in", not
+ * "we kept your version". Flagging it would be false for the one file users
+ * are explicitly invited to edit.
+ */
+const MERGED_NOT_KEPT = new Set(['.claude/settings.json']);
+
+/**
+ * ADR-013 derived list: recorded files whose disk content no longer matches
+ * the hash taken at the last generate (sha-256 over utf-8 content — the same
+ * hashing the `GeneratedFileWriter` seam records). A missing file is NOT
+ * "edited" (it was removed; the presence checks / regenerate flow own that
+ * case), and merged-path files (see {@link MERGED_NOT_KEPT}) are excluded.
+ * Sorted for a stable render/log order.
+ */
+async function detectEditedFiles(
+    projectPath: string,
+    recordedHashes?: Record<string, string>,
+): Promise<string[]> {
+    if (!recordedHashes) return [];
+    const flags = await Promise.all(
+        Object.entries(recordedHashes).map(async ([relPath, recorded]) => {
+            if (MERGED_NOT_KEPT.has(relPath)) return null;
+            // Containment (2026-08-14 review): these keys come verbatim from the
+            // project manifest — a crafted key must never make this read outside
+            // the project (or leak the key into the modal as "edited"). Lexical
+            // rejection of traversal/absolute keys, then a realpath check so a
+            // symlinked file cannot smuggle the read out either.
+            if (path.isAbsolute(relPath) || relPath.split(/[\\/]/).includes('..')) return null;
+            try {
+                const absolute = path.join(projectPath, relPath);
+                const [realRoot, realFile] = await Promise.all([
+                    fsPromises.realpath(projectPath),
+                    fsPromises.realpath(absolute),
+                ]);
+                if (realFile !== realRoot && !realFile.startsWith(realRoot + path.sep)) {
+                    return null;
+                }
+                const content = await fsPromises.readFile(absolute, 'utf-8');
+                const current = createHash('sha256').update(content, 'utf-8').digest('hex');
+                return current !== recorded ? relPath : null;
+            } catch {
+                return null; // absent/unreadable = not edited
+            }
+        }),
+    );
+    return flags.filter((p): p is string => p !== null).sort();
 }
 
 /**

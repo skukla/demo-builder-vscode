@@ -83,7 +83,7 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         expect(result.current.aiReady.text).not.toBe('Updating AI configuration…');
     });
 
-    it('flips the AI badge to yellow "AI files out of date" when the freshness check reports stale', () => {
+    it('flips the AI badge to yellow "AI tooling missing" when the freshness check warns (composition axis)', () => {
         const { result } = renderHook(() => useDashboardStatus());
 
         // Files verify healthy → green Ready.
@@ -92,20 +92,21 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         });
         expect(result.current.aiReady).toEqual({ label: 'AI', color: 'green', text: 'Ready' });
 
-        // Freshness check reports the bundle is older than the extension → yellow
-        // "AI files out of date" (which surfaces the Regenerate action). No prompt,
-        // no "Updating" state — this is detect-only.
+        // Freshness check reports staleness (since ADR-013 only the COMPOSITION
+        // axis warns — version-stale is repaired silently by the activation sweep)
+        // → yellow "AI tooling missing" (which surfaces the Regenerate action).
+        // No prompt, no "Updating" state — this is detect-only.
         act(() => {
             mocks.state.orgHandler?.({
                 checkId: 'ai-context-freshness',
                 status: 'warning',
-                message: 'AI files out of date',
+                message: "AI tooling missing for this project's components",
             });
         });
         expect(result.current.aiReady).toEqual({
             label: 'AI',
             color: 'yellow',
-            text: 'AI files out of date',
+            text: 'AI tooling missing',
         });
 
         // reRunnable: after Regenerate persists a fresh stamp, the next run reports
@@ -125,10 +126,10 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
             mocks.state.orgHandler?.({
                 checkId: 'ai-context-freshness',
                 status: 'warning',
-                message: 'AI files out of date',
+                message: "AI tooling missing for this project's components",
             });
         });
-        expect(result.current.aiReady.text).toBe('AI files out of date');
+        expect(result.current.aiReady.text).toBe('AI tooling missing');
 
         // Click "Regenerate AI files": the badge telegraphs the in-flight run
         // (otherwise the click reads as a dead link for up to a minute) …
@@ -157,7 +158,7 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
             resolveRegen({ success: true });
             await done;
         });
-        expect(result.current.aiReady.text).not.toBe('AI files out of date');
+        expect(result.current.aiReady.text).not.toBe('AI tooling missing');
     });
 
     it('returns green Ready when all signals pass', () => {
@@ -283,6 +284,26 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         expect(result.current.aiSkillsError).toBe(false);
     });
 
+    it('exposes inventory.editedFiles via aiEditedFiles (ADR-013 "kept your version" flags)', () => {
+        const { result } = renderHook(() => useDashboardStatus());
+        deliverAiVerify(
+            mocks,
+            buildVerifyResponse({
+                inventory: { editedFiles: ['AGENTS.md', '.claude/skills/add-component.md'] },
+            })
+        );
+        expect(result.current.aiEditedFiles).toEqual([
+            'AGENTS.md',
+            '.claude/skills/add-component.md',
+        ]);
+    });
+
+    it('degrades aiEditedFiles to an empty array when the inventory omits it (pre-ADR)', () => {
+        const { result } = renderHook(() => useDashboardStatus());
+        deliverAiVerify(mocks, buildVerifyResponse());
+        expect(result.current.aiEditedFiles).toEqual([]);
+    });
+
     it('flags aiSkillsError when the skill inspector errored', () => {
         const { result } = renderHook(() => useDashboardStatus());
         deliverAiVerify(
@@ -341,5 +362,101 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         const types = mocks.mockRequest.mock.calls.map((c) => c[0]);
         expect(types).toContain('regenerate-ai-files');
         expect(types).toContain('verify-ai-setup');
+    });
+
+    // ─── Regenerate failure surfacing (aiRegenError) ─────────────────────────
+    // The handler builds `{ success: false, error }` precisely so callers can
+    // surface it (e.g. the tooling-install failure message); the hook used to
+    // discard it — and a rejected request escaped into a void'ed promise — so
+    // the modal returned to idle with no signal either way.
+
+    it('starts with no regenerate error', () => {
+        const { result } = renderHook(() => useDashboardStatus());
+        expect(result.current.aiRegenError).toBeNull();
+    });
+
+    it('captures the handler error on {success:false} and still re-verifies', async () => {
+        mocks.mockRequest.mockImplementation((type: string) =>
+            type === 'regenerate-ai-files'
+                ? Promise.resolve({
+                      success: false,
+                      error: 'Failed to install AI tooling dependencies: npm exploded',
+                  })
+                : Promise.resolve(buildVerifyResponse())
+        );
+        const { result } = renderHook(() => useDashboardStatus());
+
+        await act(async () => {
+            await result.current.regenerateAiFiles();
+        });
+
+        expect(result.current.aiRegenError).toBe(
+            'Failed to install AI tooling dependencies: npm exploded'
+        );
+        // Existing semantics preserved: a {success:false} response still
+        // re-verifies (the verify sat after the success check, unconditionally).
+        const types = mocks.mockRequest.mock.calls.map((c) => c[0]);
+        expect(types).toContain('verify-ai-setup');
+    });
+
+    it('falls back to a generic message when {success:false} carries no error string', async () => {
+        mocks.mockRequest.mockImplementation((type: string) =>
+            type === 'regenerate-ai-files'
+                ? Promise.resolve({ success: false })
+                : Promise.resolve(buildVerifyResponse())
+        );
+        const { result } = renderHook(() => useDashboardStatus());
+
+        await act(async () => {
+            await result.current.regenerateAiFiles();
+        });
+
+        expect(result.current.aiRegenError).toMatch(/failed/i);
+    });
+
+    it('captures a rejected request instead of letting it escape, and clears the busy state', async () => {
+        mocks.mockRequest.mockImplementation((type: string) =>
+            type === 'regenerate-ai-files'
+                ? Promise.reject(new Error('request timed out'))
+                : Promise.resolve(buildVerifyResponse())
+        );
+        const { result } = renderHook(() => useDashboardStatus());
+
+        // Must resolve (not reject) — the rejection is captured into state.
+        await act(async () => {
+            await result.current.regenerateAiFiles();
+        });
+
+        expect(result.current.aiRegenError).toBe('request timed out');
+        expect(result.current.aiBusy).toBe(false);
+        expect(result.current.aiReady.text).not.toBe('Regenerating AI files…');
+        // Existing semantics preserved: a rejected request never reached the
+        // re-verify, and still doesn't.
+        const types = mocks.mockRequest.mock.calls.map((c) => c[0]);
+        expect(types).not.toContain('verify-ai-setup');
+    });
+
+    it('clears the error on the next successful regenerate', async () => {
+        mocks.mockRequest.mockImplementation((type: string) =>
+            type === 'regenerate-ai-files'
+                ? Promise.resolve({ success: false, error: 'first run failed' })
+                : Promise.resolve(buildVerifyResponse())
+        );
+        const { result } = renderHook(() => useDashboardStatus());
+
+        await act(async () => {
+            await result.current.regenerateAiFiles();
+        });
+        expect(result.current.aiRegenError).toBe('first run failed');
+
+        mocks.mockRequest.mockImplementation((type: string) =>
+            type === 'regenerate-ai-files'
+                ? Promise.resolve({ success: true })
+                : Promise.resolve(buildVerifyResponse())
+        );
+        await act(async () => {
+            await result.current.regenerateAiFiles();
+        });
+        expect(result.current.aiRegenError).toBeNull();
     });
 });

@@ -24,15 +24,26 @@ export {
     generateEnvironmentFiles,
     finalizeProject,
     sendCompletionAndCleanup,
-    generateAIContextFiles,
     type FinalizationContext,
 } from './projectFinalizationService';
+
+// Tiered AI-bundle refresh (ADR-013). `generateAIContextFiles` moved here from
+// projectFinalizationService — the barrel preserves the name for all callers.
+export {
+    generateAIContextFiles,
+    // Tier functions: plan-mandated public API for future per-tier callers —
+    // the activation sweep currently imports them directly, not via the barrel.
+    refreshMcpConfigs,
+    refreshContextAndSkills,
+    type AiBundleRefreshResult,
+} from './aiBundleService';
 
 export { ensureEdsContent } from './edsContentSetup';
 
 export {
     resolveMcpToolsDir,
     installAiDefaultsMcpTools,
+    applicableMcpPackages,
     type InstallAiDefaultsResult,
 } from './aiDefaultsInstaller';
 

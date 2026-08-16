@@ -1,5 +1,31 @@
 # Make third-party AI tooling visible, optional, and coherently gated
 
+> ## ⏳ PARTIAL — step 1 (the enabling declaration) SHIPPED 2026-08-14
+>
+> `SKILL_MCP_TOOL_DEPENDENCIES` in `src/types/ai.ts` (beside
+> `DEMO_BUILDER_ALWAYS_ON_SKILLS`, the one home for skill identity) maps skill
+> filename → ai-defaults entry id. Classified by READING all six scraping skills,
+> confirming the mention-count hypothesis: `scrape-reference-site` (instructs
+> Playwright in its workflow B), `connect-authenticated-site` (entirely the
+> Playwright storageState flow) and `refine-visual-match` (declares itself
+> Playwright-workflow-only) depend on `playwright`; `commerce-block-mapper`,
+> `demo-data-injector` and `header-nav-footer` work on already-scraped material
+> and depend on nothing. `tests/types/skillMcpToolDependencies.test.ts` holds the
+> map against reality in BOTH directions — declared ids must exist in
+> ai-defaults.json, and a template that starts (or stops) instructing Playwright
+> fails the sweep until the map agrees. No `AI_CONTEXT_VERSION` bump: generated
+> content is unchanged; only the declaration and its guards were added.
+>
+> **Step 2 SHIPPED 2026-08-14 on `feature/tiered-ai-refresh`** (with the ADR-013
+> batch, sharing its v8 `AI_CONTEXT_VERSION` bump): `writeSkillFiles` gates the
+> three Playwright skills on `resolveAvailableMcpToolIds` (entry applies AND
+> package installed) and removes stale copies only on positive proof of
+> ownership; the AI Capabilities modal flags edited/kept files.
+> **NOT done**: steps 3–7 — the opt-out setting
+> threaded through all four gate seams, the AI Capabilities modal saying why a
+> skill is absent, the Chromium cache pre-check, real install progress, and
+> re-enable-must-install.
+
 ## Provenance
 
 Asked 2026-08-13, after researching what happens when a skill needs an MCP the user does not
@@ -44,7 +70,7 @@ a customer.
 
 ## Gap 2 — progress is a label, not progress
 
-The regenerate path emits one step: `Installing AI tooling` / "This can take up to a minute."
+~~The regenerate path emits one step: `Installing AI tooling`~~ *(2026-08-14: the step now reads `Downloading AI tool packages` and names the packages — but it is still ONE opaque npm block with a guessed duration; the remaining gap below stands.)*
 `installAiDefaultsMcpTools` takes no progress callback, so npm runs as one opaque block, and
 the minute is a guess presented as fact.
 

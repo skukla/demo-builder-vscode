@@ -67,6 +67,12 @@ function addOptionalManifestFields(manifest: Record<string, unknown>, project: P
     if (project.appBuilderComponents && Object.keys(project.appBuilderComponents).length) {
         manifest.appBuilderComponents = project.appBuilderComponents;
     }
+    // ADR-013 hash-and-skip: per-file sha-256 of the last generated AI bundle,
+    // keyed by posix project-relative path. Omitted when empty so pre-ADR
+    // manifests stay byte-stable until the first hashed generation runs.
+    if (project.aiFileHashes && Object.keys(project.aiFileHashes).length > 0) {
+        manifest.aiFileHashes = project.aiFileHashes;
+    }
     // Written by the publish-key renewal sweep only. Omitted when absent so an
     // un-swept project stays "never stamped" and renews on the next activation
     // rather than reading as freshly registered.

@@ -20,7 +20,7 @@
  *
  * If the Adobe package isn't installed yet (e.g., npm install hasn't run, or
  * the component lacks a `node_modules`), the bundle copy step is skipped
- * silently — the three Demo-Builder skills always succeed.
+ * silently — the first-party Demo-Builder skills always succeed.
  *
  * Content sourcing for Demo-Builder skills: static .md files imported at build
  * time (esbuild text loader).
@@ -43,10 +43,11 @@ import removeCustomBlockContent from '../templates/skills/remove-custom-block.md
 import scrapeReferenceSiteContent from '../templates/skills/scrape-reference-site.md';
 import syncChangesContent from '../templates/skills/sync-changes.md';
 import updateCredentialsContent from '../templates/skills/update-credentials.md';
-import { resolveMcpToolsDir } from './aiDefaultsInstaller';
-import { projectNeedsAppBuilderTooling } from './aiToolingGate';
+import { readInstalledMcpPackages, resolveMcpToolsDir } from './aiDefaultsInstaller';
+import { projectNeedsAppBuilderTooling, resolveAvailableMcpToolIds } from './aiToolingGate';
+import type { GeneratedFileWriter } from './generatedFileWriter';
 import componentsConfig from '@/features/components/config/components.json';
-import { DEMO_BUILDER_ALWAYS_ON_SKILLS } from '@/types/ai';
+import { DEMO_BUILDER_ALWAYS_ON_SKILLS, SKILL_MCP_TOOL_DEPENDENCIES } from '@/types/ai';
 import type { Project } from '@/types/base';
 import type { RawComponentDefinition, RawComponentRegistry } from '@/types/components';
 
@@ -70,11 +71,12 @@ const COMPONENT_CATEGORIES = [
 const components = componentsConfig as unknown as RawComponentRegistry;
 
 /**
- * The twelve Demo-Builder skills written into every project's
- * `.claude/skills/` directory (filename → static content imported at build
- * time). Exported so other writers — notably the single home Chat
- * (`homeAiContextWriter`) — can write the exact same set without duplicating
- * the import list. Order is not significant.
+ * The 13 first-party Demo-Builder skill contents (filename → static content
+ * imported at build time), keyed by `DEMO_BUILDER_ALWAYS_ON_SKILLS`. Delivery
+ * of the three Playwright-driven ones is gated per `SKILL_MCP_TOOL_DEPENDENCIES`
+ * — they are NOT written into every project. Exported so other writers —
+ * notably the single home Chat (`homeAiContextWriter`) — can consume the same
+ * set without duplicating the import list. Order is not significant.
  */
 /**
  * Content for each always-on skill. The LIST of filenames is not defined here —
@@ -109,28 +111,38 @@ export const DEMO_BUILDER_SKILLS: ReadonlyArray<{ filename: string; content: str
 /**
  * Write skill files to `{projectPath}/.claude/skills/`.
  *
- * Always writes:
- *   - Four Demo-Builder lifecycle skills (add-component, sync-changes,
- *     update-credentials, create-eds-project) — operating against the Demo
- *     Builder MCP server.
- *   - Six EDS site-scraping skills (scrape-reference-site,
- *     connect-authenticated-site, commerce-block-mapper, demo-data-injector,
- *     header-nav-footer, refine-visual-match). They sit alongside the
- *     lifecycle skills because they're invoked from any project state; the
- *     `scrape-reference-site` orchestrator routes between Mod Agent and
- *     Playwright MCP based on user choice.
- *   - Two custom-block authoring skills: register-custom-block (calls
- *     `promote_block_to_library` to make a new block show up in DA.live's
- *     authoring picker) and remove-custom-block (calls
- *     `remove_block_from_library` to unregister it again).
+ * Writes the first-party set declared in `DEMO_BUILDER_ALWAYS_ON_SKILLS`
+ * (`@/types/ai` — the ONE home for the filenames; do not restate counts here,
+ * they rot). Three of those skills drive Playwright and are delivery-gated
+ * per `SKILL_MCP_TOOL_DEPENDENCIES` — see the gating paragraph below.
  *
  * Additionally copies any Adobe skill bundles declared by components in
  * `project.componentInstances` (via the `aiSkillBundle` field on the
  * component's definition).
+ *
+ * Every skill file — always-on, conditional, and Adobe bundle copies alike —
+ * lands through the ADR-013 GeneratedFileWriter seam (hash-and-skip): a
+ * user-edited skill is left in place and reported on `writer.report()`
+ * rather than overwritten. No bundle write outside this seam. The `written`
+ * return keeps its pre-ADR contract (the attempted Demo-Builder skill
+ * filenames); skip/remove visibility lives on the writer's report.
+ *
+ * Tool-availability gating: a skill in `SKILL_MCP_TOOL_DEPENDENCIES` whose
+ * MCP tool is not usable by this project — the ai-defaults entry doesn't
+ * apply, or its package isn't in the isolated `.demo-builder-mcp` manifest
+ * (installed by `installAiDefaultsMcpTools` BEFORE this writer runs, on both
+ * the creation and regenerate paths — that ordering is load-bearing) — is
+ * not written and does not appear in `written`. A previously-delivered copy
+ * is reconciled via `writer.remove` with today's template as the ownership
+ * proof (ADR-013 removal matrix: recorded-hash match or byte-equal only; a
+ * user-edited copy is left and reported). `DEMO_BUILDER_ALWAYS_ON_SKILLS`
+ * stays the classifier list — a gated-out skill found on disk still
+ * classifies as first-party in the inspector; only delivery is filtered.
  */
 export async function writeSkillFiles(
     projectPath: string,
     project: Project,
+    writer: GeneratedFileWriter,
 ): Promise<{ written: string[] }> {
     const skillsDir = path.join(projectPath, '.claude', 'skills');
     await fsPromises.mkdir(skillsDir, { recursive: true });
@@ -139,11 +151,21 @@ export async function writeSkillFiles(
         if (path.basename(filename) !== filename) {
             throw new Error(`Invalid skill filename: ${filename}`);
         }
-        await fsPromises.writeFile(path.join(skillsDir, filename), content, 'utf-8');
+        await writer.write(`.claude/skills/${filename}`, content);
     };
 
+    const installedPackages = await readInstalledMcpPackages(projectPath);
+    const gatedOut = gatedOutSkills(resolveAvailableMcpToolIds(project, installedPackages));
+
     await Promise.all(
-        DEMO_BUILDER_SKILLS.map(({ filename, content }) => writeSkill(filename, content)),
+        DEMO_BUILDER_SKILLS.map(({ filename, content }) =>
+            gatedOut.has(filename)
+                ? // Reconcile any previously-delivered copy. `content` is the
+                  // exact template we'd write today, so a pre-ADR unhashed
+                  // copy is removed only when byte-equal (provably ours).
+                  writer.remove(`.claude/skills/${filename}`, content)
+                : writeSkill(filename, content),
+        ),
     );
 
     // Copy Adobe skill bundles for components that declare aiSkillBundle.
@@ -157,7 +179,7 @@ export async function writeSkillFiles(
             instance.path,
             definition.aiSkillBundle.path,
             definition.aiSkillBundle.prefix,
-            skillsDir,
+            writer,
         );
     }
 
@@ -169,13 +191,15 @@ export async function writeSkillFiles(
     // extend-app-builder-app skill teaching the runtime API-access loop
     // (list_console_apis → confirm → add_console_apis → build → deploy).
     // copyAdobeSkillBundle skips silently when the package isn't there.
-    const written = DEMO_BUILDER_SKILLS.map(({ filename }) => filename);
+    const written = DEMO_BUILDER_SKILLS.filter(({ filename }) => !gatedOut.has(filename)).map(
+        ({ filename }) => filename,
+    );
     if (projectNeedsAppBuilderTooling(project)) {
         await copyAdobeSkillBundle(
             resolveMcpToolsDir(projectPath),
             path.join('integration-starter-kit', 'skills'),
             'appbuilder',
-            skillsDir,
+            writer,
         );
         await writeSkill('extend-app-builder-app.md', extendAppBuilderAppContent);
         written.push('extend-app-builder-app.md');
@@ -188,6 +212,20 @@ export async function writeSkillFiles(
 }
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Always-on skill filenames whose declared MCP tool is not in the available
+ * set — gated OUT of delivery (not written; existing copies reconciled via
+ * the ADR-013 removal matrix). A skill absent from
+ * `SKILL_MCP_TOOL_DEPENDENCIES` depends on no tool and is never gated.
+ */
+function gatedOutSkills(availableToolIds: Set<string>): Set<string> {
+    return new Set(
+        Object.entries(SKILL_MCP_TOOL_DEPENDENCIES)
+            .filter(([, toolId]) => !availableToolIds.has(toolId))
+            .map(([filename]) => filename),
+    );
+}
 
 function lookupComponentDefinition(compId: string): RawComponentDefinition | undefined {
     const registry = components as unknown as Record<
@@ -207,7 +245,7 @@ async function copyAdobeSkillBundle(
     componentPath: string,
     bundleSubpath: string,
     prefix: string,
-    skillsDir: string,
+    writer: GeneratedFileWriter,
 ): Promise<void> {
     const sourceBundle = path.join(componentPath, ADOBE_PACKAGE_DIST_RELATIVE, bundleSubpath);
 
@@ -229,31 +267,38 @@ async function copyAdobeSkillBundle(
         const skillName = entry.name;
         const newSkillName = `${prefix}-${skillName}`;
         const sourceSkillDir = path.join(sourceBundle, skillName);
-        const targetSkillDir = path.join(skillsDir, newSkillName);
-        await copySkillFolder(sourceSkillDir, targetSkillDir, newSkillName);
+        // Project-relative posix target — the seam resolves it against the
+        // project root and mkdirs on actual writes.
+        const targetRelDir = `.claude/skills/${newSkillName}`;
+        await copySkillFolder(sourceSkillDir, targetRelDir, newSkillName, writer);
     }
 }
 
+/**
+ * Copy one skill folder from an Adobe bundle into the project, file by file
+ * through the ADR-013 seam. `targetRelDir` is a posix project-relative path;
+ * `.md` files get their `name:` frontmatter rewritten to the prefixed folder
+ * name before landing.
+ */
 async function copySkillFolder(
     sourceDir: string,
-    targetDir: string,
+    targetRelDir: string,
     newName: string,
+    writer: GeneratedFileWriter,
 ): Promise<void> {
-    await fsPromises.mkdir(targetDir, { recursive: true });
-
     const entries = await fsPromises.readdir(sourceDir, { withFileTypes: true });
     for (const entry of entries) {
         const sourcePath = path.join(sourceDir, entry.name);
-        const targetPath = path.join(targetDir, entry.name);
+        const targetRelPath = `${targetRelDir}/${entry.name}`;
 
         if (entry.isDirectory()) {
-            await copySkillFolder(sourcePath, targetPath, newName);
+            await copySkillFolder(sourcePath, targetRelPath, newName, writer);
             continue;
         }
 
         const raw = await fsPromises.readFile(sourcePath, 'utf-8');
         const content = entry.name.endsWith('.md') ? rewriteNameFrontmatter(raw, newName) : raw;
-        await fsPromises.writeFile(targetPath, content, 'utf-8');
+        await writer.write(targetRelPath, content);
     }
 }
 
