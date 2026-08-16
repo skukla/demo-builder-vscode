@@ -108,7 +108,7 @@ describe('InExtensionMcpServer', () => {
         });
     });
 
-    it('serves the nine project tools over the socket', async () => {
+    it('serves the ten project tools over the socket', async () => {
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
         await server.start();
 
@@ -116,6 +116,7 @@ describe('InExtensionMcpServer', () => {
 
         expect(names.sort()).toEqual(
             [
+                'get_block_authoring_shape',
                 'get_block_source',
                 'get_component_config',
                 'get_project',

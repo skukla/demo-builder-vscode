@@ -283,6 +283,7 @@ These are `vscode`-free and operate on files under `~/.demo-builder/projects`.
 | `sync_storefront` | Git add/commit/push the storefront. |
 | `list_blocks` | List EDS blocks in the storefront. |
 | `get_block_source` | Read a block's files (manifest or one file, size-capped). |
+| `get_block_authoring_shape` | Read a block's DA.live authoring shape from `component-definition.json` + the models/filters siblings (registry index when `blockName` is omitted). |
 
 ### Discovery & catalog — `discoveryTools.ts`
 `list_components`, `list_demo_packages`, `list_stacks` — read-only catalog lookups
@@ -446,7 +447,21 @@ The agent surface is powerful, so it's deliberately constrained:
 - **`.env` content is allowlist-validated** (`validateEnvContent`) before being
   written — defense-in-depth against injecting executable content.
 - **Bounded responses.** `get_block_source` caps at 50 files / 30 KB each, since
-  the output is paid for as context tokens.
+  the output is paid for as context tokens. `get_block_authoring_shape` splits
+  index from detail for the same reason: the index carries ids, titles and which
+  authoring convention each block uses, but never the markup, selectors or field
+  lists. Measured on a real 78-block storefront: whole index 5,577 bytes, one
+  block's detail 92–432 bytes. It exists because deriving those shapes from block
+  JS instead measured ~121,000 tokens for eight blocks.
+
+  Three authoring conventions coexist in `plugins.da` and the tool reports which
+  one applies: positional (`rows`/`columns`, 36 of 78), key-value
+  (`name`/`type`/`fields`, 35), and literal `unsafeHTML` (4 — what
+  `promote_block_to_library` writes, and the rarest form in a real storefront).
+  `component-filters.json` supplies nested children, without which `cards` reads
+  as two flat columns rather than a list of `card`s; `component-models.json`
+  supplies field labels. Both are best-effort — 38 of 78 components name a model
+  that has no entry.
 - **No secret leakage to child processes.** Where the extension spawns other MCP
   servers to introspect them, it uses an env allowlist.
 

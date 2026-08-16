@@ -342,6 +342,105 @@ async function readPromoteBlockContext(projectPath: string): Promise<PromoteBloc
     return { storefrontPath, daLiveOrg, daLiveSite, githubRepo };
 }
 
+/** Parsed shape of `component-definition.json` — a groups[]-nested registry. */
+interface ComponentDefinition {
+    groups?: Array<{ components?: ComponentDefinitionEntry[] }>;
+}
+
+/**
+ * Read and parse `<storefrontPath>/component-definition.json`.
+ *
+ * Both failure modes (missing file, malformed JSON) are reported against the
+ * file's name — a bare ENOENT or SyntaxError says nothing about which file, and
+ * three callers now depend on telling them apart.
+ */
+async function readComponentDefinition(
+    storefrontPath: string,
+): Promise<{ compDefPath: string; parsed: ComponentDefinition }> {
+    const compDefPath = path.join(storefrontPath, 'component-definition.json');
+    let raw: string;
+    try {
+        raw = await fsPromises.readFile(compDefPath, 'utf-8');
+    } catch (err) {
+        throw new Error(
+            `Could not read component-definition.json at ${compDefPath}: ${(err as Error).message}`,
+        );
+    }
+    try {
+        return { compDefPath, parsed: JSON.parse(raw) as ComponentDefinition };
+    } catch (err) {
+        throw new Error(
+            `component-definition.json is not valid JSON (${compDefPath}): ${(err as Error).message}`,
+        );
+    }
+}
+
+/**
+ * Which of the three authoring conventions an entry uses. Reported in the index
+ * so an agent knows what kind of shape the detail call will return — and so
+ * "registered but shapeless" is visible without a call per block.
+ */
+function authoringConvention(
+    entry: ComponentDefinitionEntry,
+): 'table' | 'fields' | 'html' | 'none' {
+    const da = entry.plugins?.da;
+    if (!da) return 'none';
+    if (da.unsafeHTML) return 'html';
+    if (da.fields || da.type) return 'fields';
+    if (da.rows !== undefined || da.columns !== undefined) return 'table';
+    return 'none';
+}
+
+/**
+ * Read a sibling registry file (`component-models.json` / `component-filters.json`)
+ * and return the entry with the given id.
+ *
+ * Both files are OPTIONAL and a miss is normal, not an error: a storefront may
+ * ship neither, and 38 of 78 real components name a model that has no entry.
+ * Every failure — absent file, bad JSON, unexpected top-level shape, no match —
+ * collapses to `undefined`, because the caller's answer is still useful without it.
+ */
+async function readRegistryEntry(
+    storefrontPath: string,
+    fileName: string,
+    id: string | undefined,
+): Promise<Record<string, unknown> | undefined> {
+    if (!id) return undefined;
+    try {
+        const raw = await fsPromises.readFile(path.join(storefrontPath, fileName), 'utf-8');
+        const parsed: unknown = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return undefined;
+        return (parsed as Array<Record<string, unknown>>).find((e) => e?.id === id);
+    } catch {
+        return undefined;
+    }
+}
+
+/** Model fields projected to what an author needs: what to type, where, called what. */
+async function resolveModelFields(
+    storefrontPath: string,
+    modelId: string | undefined,
+): Promise<Array<{ name: unknown; label: unknown; component: unknown }> | undefined> {
+    const model = await readRegistryEntry(storefrontPath, 'component-models.json', modelId);
+    const fields = model?.fields;
+    if (!Array.isArray(fields) || fields.length === 0) return undefined;
+    return (fields as Array<Record<string, unknown>>).map((f) => ({
+        name: f.name,
+        label: f.label,
+        component: f.component,
+    }));
+}
+
+/** The component ids allowed to nest inside this block, per component-filters.json. */
+async function resolveFilterChildren(
+    storefrontPath: string,
+    filterId: string | undefined,
+): Promise<string[] | undefined> {
+    const filter = await readRegistryEntry(storefrontPath, 'component-filters.json', filterId);
+    const components = filter?.components;
+    return Array.isArray(components) && components.length > 0 ? (components as string[]) : undefined;
+}
+
 /**
  * Read component-definition.json, append the new entry to the first group's
  * components if missing, write it back, and return whether a change was made.
@@ -356,11 +455,7 @@ async function applyComponentDefinitionEntry(
     unsafeHTML: string,
     description: string | undefined,
 ): Promise<'added' | 'unchanged'> {
-    const compDefPath = path.join(storefrontPath, 'component-definition.json');
-    const raw = await fsPromises.readFile(compDefPath, 'utf-8');
-    const parsed = JSON.parse(raw) as {
-        groups?: Array<{ components?: ComponentDefinitionEntry[] }>;
-    };
+    const { compDefPath, parsed } = await readComponentDefinition(storefrontPath);
     const groups = parsed.groups ?? [];
     const allComponents = groups.flatMap((g) => g.components ?? []);
     if (allComponents.some((c) => c.id === blockId)) {
@@ -393,11 +488,7 @@ async function removeComponentDefinitionEntry(
     storefrontPath: string,
     blockId: string,
 ): Promise<'removed' | 'absent'> {
-    const compDefPath = path.join(storefrontPath, 'component-definition.json');
-    const raw = await fsPromises.readFile(compDefPath, 'utf-8');
-    const parsed = JSON.parse(raw) as {
-        groups?: Array<{ components?: ComponentDefinitionEntry[] }>;
-    };
+    const { compDefPath, parsed } = await readComponentDefinition(storefrontPath);
     const groups = parsed.groups ?? [];
     let changed = false;
     for (const group of groups) {
@@ -424,7 +515,17 @@ interface ComponentDefinitionEntry {
     id: string;
     title?: string;
     description?: string;
-    plugins?: { da?: { unsafeHTML?: string } };
+    /** Names an entry in `component-models.json`; 38 of 78 real entries name one that does not exist. */
+    model?: string;
+    /** Names an entry in `component-filters.json` — which components may nest inside. */
+    filter?: string;
+    /**
+     * The authoring shape. `unsafeHTML` is what the promote flow writes, but it
+     * is the RAREST form in a real storefront (4 of 78) — template-shipped
+     * blocks describe themselves with `rows`/`columns` or `name`/`type`/`fields`.
+     * Left open-ended because the EDS authoring runtime owns this schema.
+     */
+    plugins?: { da?: Record<string, unknown> & { unsafeHTML?: string } };
 }
 
 /**
@@ -897,6 +998,92 @@ export const toolHandlers = {
     },
 
     /**
+     * Read a block's AUTHORING shape — how a DA.live author fills the block in,
+     * as opposed to how its JS consumes what they filled in.
+     *
+     * The answer already sits in the storefront's three registry files and is
+     * read back by nothing. Deriving it instead — reading a block's JS and
+     * inferring the table it expects — measured ~121,000 tokens for eight blocks
+     * during the Bodea build. This answers for one block in roughly two hundred.
+     *
+     * Three conventions coexist, and which one a block uses is itself the
+     * answer (measured across 78 real components):
+     *   - `rows`/`columns`         — a positional table (51 of 78)
+     *   - `name`/`type`/`fields`   — key-value cells with CSS selectors (~21)
+     *   - `unsafeHTML`             — literal markup (4; what promotion writes)
+     *
+     * `plugins.da` alone is not enough for nested blocks: `cards` reports two
+     * columns, but its real content is `card` children, which only
+     * `component-filters.json` knows. `component-models.json` names the fields.
+     * Both are best-effort — 38 of 78 real components name a model with no
+     * entry, and a storefront may ship neither file.
+     *
+     * Omit `blockName` for the registry index (ids, titles, which convention);
+     * pass it for the full shape. Mirrors `getBlockSource`'s index/detail split.
+     */
+    async getBlockAuthoringShape(
+        projectsDir: string,
+        projectName: string,
+        blockName?: string,
+    ): Promise<string> {
+        const projectPath = resolveProjectPath(projectsDir, projectName);
+        const storefrontPath = await resolveStorefrontPath(projectPath);
+        await assertInsideProject(projectPath, storefrontPath);
+        const { parsed } = await readComponentDefinition(storefrontPath);
+
+        // The registry is groups[]-nested: a flat components[] scan sees only the
+        // first group. Measured on a real storefront, 76 of 78 components live
+        // outside group 0, so that mistake would hide almost everything.
+        const entries = (parsed.groups ?? []).flatMap((g) => g.components ?? []);
+
+        if (!blockName) {
+            // Index: which blocks exist and which convention each uses. Deliberately
+            // carries no markup, selectors or field lists — that is the whole point
+            // of splitting it from the detail call.
+            return JSON.stringify({
+                blocks: entries.map((e) => ({
+                    id: e.id,
+                    title: e.title,
+                    authoring: authoringConvention(e),
+                })),
+            });
+        }
+
+        const entry = entries.find((e) => e.id === blockName);
+        if (!entry) {
+            // A block can exist under blocks/ and never have been registered. That
+            // is a different problem from a typo, so name the tool that tells the
+            // two apart rather than reporting a flat "not found".
+            throw new Error(
+                `Block "${blockName}" is not registered in the authoring library. ` +
+                    `Call get_block_authoring_shape with no blockName for the registered ids, ` +
+                    `or get_block_source to check whether the block exists on disk unregistered.`,
+            );
+        }
+        const authoring = entry.plugins?.da;
+        if (!authoring || Object.keys(authoring).length === 0) {
+            throw new Error(
+                `Block "${blockName}" is registered but declares no authoring shape ` +
+                    `(no plugins.da). Read its source with get_block_source instead.`,
+            );
+        }
+
+        const [fields, childComponents] = await Promise.all([
+            resolveModelFields(storefrontPath, entry.model),
+            resolveFilterChildren(storefrontPath, entry.filter),
+        ]);
+
+        return JSON.stringify({
+            id: entry.id,
+            title: entry.title,
+            ...(entry.description ? { description: entry.description } : {}),
+            authoring,
+            ...(childComponents ? { childComponents } : {}),
+            ...(fields ? { fields } : {}),
+        });
+    },
+
+    /**
      * Promote a local block to the DA.live authoring library.
      *
      * Adds the block to `component-definition.json`, writes the doc page in
@@ -1294,6 +1481,37 @@ export function registerProjectTools(
                         args.projectName,
                         args.blockName as string,
                         args.fileName as string | undefined,
+                    ),
+                },
+            ],
+        }),
+    );
+
+    server.registerTool(
+        'get_block_authoring_shape',
+        {
+            title: 'Get Block Authoring Shape',
+            description:
+                "Get the DA.live authoring markup for a block — the table structure an author fills in. Omit blockName to list the blocks registered in the authoring library. Use this instead of reading a block's JS to infer its shape.",
+            inputSchema: {
+                projectName: projectNameSchema,
+                blockName: z
+                    .string()
+                    .regex(/^[a-zA-Z0-9_-]+$/)
+                    .optional()
+                    .describe(
+                        'Block id as registered in component-definition.json; omit to list registered blocks',
+                    ),
+            },
+        },
+        async (args: any) => ({
+            content: [
+                {
+                    type: 'text' as const,
+                    text: await toolHandlers.getBlockAuthoringShape(
+                        projectsDir,
+                        args.projectName,
+                        args.blockName as string | undefined,
                     ),
                 },
             ],
