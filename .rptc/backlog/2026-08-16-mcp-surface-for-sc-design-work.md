@@ -1,9 +1,16 @@
-# Optimize the MCP tools and skills for SC design work
+# AI-surface coverage: do the MCP tools, skills and agents empower an agent to USE the extension?
 
 **Filed:** 2026-08-16 · **Status:** draft, being designed interactively
-**Origin:** Bodea storefront session. The owner asked how to optimize the MCP surface for an SC
-*designing and creating* a storefront, having noticed the extension already ships project-scoped
-skills and MCP servers worth dogfooding.
+**Origin:** Bodea storefront session, dogfooding what a real SC gets.
+
+**Scope, stated precisely because an earlier draft got it too narrow:** this is about whether
+the extension's AI surface — **tools, skills AND agents** — gives an agent the coverage to use
+the extension's own features efficiently. It is NOT a design project. The storefront redesign is
+the *driving use case*, and it happens inside the extension using the extension's MCP tools; this
+item is about making sure that surface is good enough for an agent to do it well.
+
+The question to keep asking of every gap below: *can an agent do this through the extension, and
+does it cost what it should?*
 
 ## The finding
 
@@ -44,6 +51,31 @@ The concrete operations used, as a requirements list:
 | List content | `GET admin.da.live/list/{org}/{site}/{dir}` |
 | Delete a page | `DELETE admin.da.live/source/…` (destructive) |
 | Verify what published | `GET main--{site}--{org}.aem.live/{path}.plain.html` |
+
+## The agent layer — there isn't one
+
+A generated project ships `.claude/` containing `CLAUDE.md`, `mcp.json`, `settings.json` and
+`skills/`. **There is no `agents/` directory. The extension ships zero agent definitions.**
+
+The seven `appbuilder-*` entries look like agents but are SKILLS with persona names —
+`appbuilder-architect`, `-developer`, `-devops-engineer`, `-product-manager`,
+`-technical-writer`, `-tester`, `-tutor`, each a `SKILL.md` with a role description.
+
+That exposes a coverage asymmetry worth deciding about deliberately:
+
+| Domain | What ships |
+|---|---|
+| App Builder | 7 role-shaped skills — effectively a team |
+| **Storefront / EDS** | 14 task-shaped skills, **zero roles**, nothing for design |
+
+App Builder — which comparatively few demos use — gets a full cast. The EDS storefront, which is
+what an SC actually builds, gets a toolbox of individual tasks. Open questions: should the
+storefront have role-shaped coverage too; and should any of these be real subagents (isolated
+context, parallelisable) rather than skills the main agent loads.
+
+The token argument cuts both ways here and is worth measuring rather than assuming: a subagent
+isolates context, but this session's own ~121k-token block-shape derivation was performed BY a
+subagent — isolation does not make the work cheap, it only moves where it is paid.
 
 ## Secondary gaps
 
