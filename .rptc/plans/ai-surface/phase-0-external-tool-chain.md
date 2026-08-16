@@ -129,11 +129,11 @@ trusting any live measurement.
 |---|---|---|
 | demo-builder | 52 | live probe |
 | commerce-extensibility | 11 | `src/tools/` in the installed 3.5.0 package |
-| playwright | 66 | its README's tool list |
-| **Total** | **~129** | |
+| playwright | 66 declared, **23 exposed** | README vs live probe |
+| **Total** | see the measured table under "Runtime half" — 86 or 92 by build | |
 
-**Playwright alone ships more tools than the extension does.** These are three separate MCP
-servers the client loads together; only demo-builder comes through the socket above.
+These are three separate MCP servers the client loads together; only demo-builder comes through
+the socket above. **The 66 figure below was superseded by the live probe — Playwright exposes 23.**
 
 ### REOPENED: "tool-surface size is not a cost"
 
@@ -155,11 +155,50 @@ the count depends on config. This does not come through the demo-builder socket 
 client's view, which `verify_ai_setup` provides by spawning each server and inventorying it.
 That is the last open item in this phase.
 
-## Runtime half — mostly done
+## Runtime half — DONE 2026-08-16
 
-Done via the live probe and package sources above. **One item remains**: reconcile against
-`verify_ai_setup`'s `inventory.mcps[]` to learn whether Playwright's 66 are all exposed. Until
-then the ~129 figure is an upper bound.
+Called `verify_ai_setup` over the socket and diffed it against `tools/list`.
+
+### Playwright exposes 23, not 66
+
+66 is its README's full catalog; **23 are actually enabled**. The ~129 upper bound was wrong.
+
+### The two ground-truth sources agree
+
+`tools/list` and `verify_ai_setup`'s `inventory.mcps[]` returned identical demo-builder tool
+sets — same count, zero name differences. Either can be trusted for the demo-builder half.
+
+### The real surface, by build
+
+| Server | develop baseline | integration build |
+|---|---|---|
+| demo-builder | 52 | 58 (+6 datapack) |
+| commerce-extensibility | 11 | 11 |
+| playwright | 23 | 23 |
+| **Total** | **86** | **92** |
+
+`verify_ai_setup`'s own response is **18,778 chars ≈ 4,695 tokens** — confirming it as the single
+largest response on the surface, and the top target for phase 2.
+
+### MEASUREMENT HAZARD: the socket is last-writer-wins, and it moved mid-audit
+
+**Two probes of the same socket path, two minutes apart, returned different tool sets** — 52 with
+no datapack tools at 15:42, then 58 with six at 15:44, after the socket was rebound at 15:44 by a
+different extension host.
+
+This is `.rptc/backlog/mcp-window-and-project-binding.md` reproduced live. That item records
+*"Not reproduced live; preconditions stated from code"* — **it can now be marked reproduced**: the
+socket name is `sha256(projects-root)`, identical across windows, and the last host to start
+silently rebinds it.
+
+**Consequence for anyone measuring this surface:** always run the tree-provenance check in the
+same probe as the measurement, never before or after it. A number and its provenance must come
+from one connection, because the host can change between two.
+
+```
+datapack tools present  →  integration build (feature/data-installer merged)
+datapack tools absent   →  develop baseline
+```
 
 ## What the audit must answer
 
