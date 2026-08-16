@@ -6,6 +6,11 @@
 
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
+import {
+    buildOrgTargetFromProjectAdobe,
+    withOrgContext,
+    type OrgContextTarget,
+} from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateWorkspaceId } from '@/core/validation';
 import { ensureAuthenticated } from '@/features/mesh/handlers/shared';
@@ -53,15 +58,33 @@ export async function handleDeleteApiMesh(
             };
         }
 
-        const commandManager = ServiceLocator.getCommandExecutor();
-        const result = await commandManager.execute(
-            'aio api-mesh delete --autoConfirmAction',
+        // Target the workspace the caller asked for. `aio api-mesh delete` takes no
+        // --workspaceId, so without this the command resolves against the CLI's
+        // process-global selection — whatever an earlier session or another tool
+        // left there — and deletes THAT mesh. workspaceId was validated above and
+        // then never used, which made the argument look load-bearing while the
+        // delete went wherever. Same wrapper checkHandler uses, for the same
+        // reason; the difference is that this one is destructive and runs with
+        // --autoConfirmAction, so there is no prompt to catch a wrong target.
+        const project = await context.stateManager.getCurrentProject();
+        const cachedOrg = ServiceLocator.getAuthenticationService().getCachedOrganization();
+        const target: OrgContextTarget = buildOrgTargetFromProjectAdobe(
             {
+                organization: project?.adobe?.organization,
+                projectId: project?.adobe?.projectId,
+                workspace: workspaceId,
+            },
+            cachedOrg,
+        );
+
+        const commandManager = ServiceLocator.getCommandExecutor();
+        const result = await withOrgContext(target, () =>
+            commandManager.execute('aio api-mesh delete --autoConfirmAction', {
                 timeout: TIMEOUTS.NORMAL,
                 configureTelemetry: false,
                 useNodeVersion: getMeshNodeVersion(),
                 enhancePath: true,
-            },
+            }),
         );
 
         if (result.code === 0) {
@@ -69,7 +92,9 @@ export async function handleDeleteApiMesh(
             // Clear the pre-existing mesh flag since user explicitly deleted it
             // Any new mesh created after this is NOT pre-existing
             context.sharedState.meshExistedBeforeSession = undefined;
-            context.logger.debug('[API Mesh] Cleared pre-existing mesh flag after explicit deletion');
+            context.logger.debug(
+                '[API Mesh] Cleared pre-existing mesh flag after explicit deletion',
+            );
             return { success: true };
         } else {
             const errorMsg = result.stderr || 'Failed to delete mesh';
