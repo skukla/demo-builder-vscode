@@ -63,8 +63,55 @@ owner was weighing a pivot away from the shared PDP pre-render + store discovery
 toward per-project Adobe I/O projects. If that pivot happens on its own merits,
 per-project wins regardless and the credential rides along.
 
-**This decision is untouched.** Neither fix below depends on it, which is why they went
-first.
+### RESEARCHED 2026-08-16 — the blocking unknown is MEASURED, and it favours shared
+
+Full writeup: `.rptc/research/data-installer-credential-home/research.md`.
+
+**One credential reaches multiple Commerce instances.** The constraint below said this
+could not be settled from outside; a second instance made it one call. Measured with
+`get-websites-and-stores`, run twice, using a credential provisioned against instance A:
+
+| Leg | Credential | Result |
+|---|---|---|
+| instance A (its own) | good | 200, websites `[base, citisignal]` |
+| **instance B, same org, never provisioned against** | good | **200**, websites `[base]` |
+| nonsense instance id | good | 400 pre-flight failure |
+| instance B | **bad secret** | 401 `invalid_client` |
+
+The differing store structures prove it really queried B; the two failing controls prove
+the endpoint checks both the instance and the credential, so B's 200 carries information.
+Consistent with the scopes an `ACCS-REST-API` subscription grants —
+`additional_info.projectedProductContext` makes reach a property of the technical account's
+entitlement in the IMS **org**. Same-org only; cross-org untested.
+
+**What it does to the two shapes:**
+
+- **Per-project loses its rationale for the credential.** One credential per demo, each
+  already reaching every instance in the org: N credentials, N revocation surfaces, no
+  isolation gained. Per-project survives only on the App Builder deployment question.
+- **Shared per-org is the shape the evidence points at**, and the code already assumes it.
+
+**A third shape was proposed and researched: fold credential brokering into the shared
+`accs-discovery-service`. It does not work.** `dataInstallerWriteClient.ts:448,463` sends
+`client_id`/`client_secret` to `data-installer-api-b2b` — a service this repo cannot change.
+A broker could only hand the pair back to the extension to forward, adding a stored
+long-lived secret without taking it off the client. It pays off only as a full PROXY of the
+write surface, mirroring a service we do not own. The publish-key precedent does not
+transfer: a publish key is site-scoped and publish-only; this pair has no narrowing below
+the org and writes catalog data.
+
+**Separable security finding, true on shipped code:** a demo project's credential can write
+catalog data to every ACCS instance in its org, not only its own. An independent argument
+for fewer copies of it.
+
+**Two gaps in the per-project shape, both verified:** demo deletion does not delete the
+Console project (`projects-dashboard/services/projectDeletionService.ts` never touches it),
+and `create-adobe-project` returns `AUTH_FORBIDDEN` for a user without developer permission
+— so a *mandated* per-project integration would hard-fail for SCs who are not developers in
+their org.
+
+**The decision is now informed but NOT made.** The research recommends shared per-org; the
+owner has not chosen. What is settled is the fact that was blocking the choice.
 
 ## Two smaller defects, independent of the above — BOTH SHIPPED 2026-08-16 (`11dea998`)
 
@@ -95,13 +142,11 @@ deliver on the way there.
 
 ## Constraints
 
-- **Do not assume a credential reaches multiple Commerce instances.**
-  `docs/systems/data-installer.md` records that pre-flight "fails IDENTICALLY for a real
-  instance and a nonsense string", so it cannot be settled from outside — it needs the
-  service owner or an instance already known to work. An architecture decision was nearly
-  rested on "it's probably org-scoped"; that is not established.
-  Not blocking today: the owner's projects all target one sandbox instance, so a single
-  credential is demonstrably sufficient for them. It becomes real at the second instance.
+- ~~**Do not assume a credential reaches multiple Commerce instances.**~~ **RESOLVED
+  2026-08-16 — it does, within an org.** Measured, not assumed: see the research section
+  above. The original constraint stood because there was one instance to test with, and it
+  was right to hold until a second one existed. Cross-ORG reach remains untested, so the
+  narrower form of the caution survives: do not assume one credential spans Adobe orgs.
 - Provisioning creates real Adobe org resources. Doing it silently from a reset dialog
   widens what a familiar button does — the same reasoning that made sample-data removal a
   separate opt-in prompt rather than part of the reset modal.
@@ -110,9 +155,13 @@ deliver on the way there.
 
 ## Kickoff prompt
 
-> Read `.rptc/backlog/2026-08-16-data-installer-requires-adobe-io-project.md`. Decide
-> between per-project and shared-org Adobe I/O workspace for Data Installer credential
-> provisioning — the deciding question is whether the workspace is also needed for
-> deploying per-project actions. Then implement the chosen shape. The two smaller defects
-> the item also listed are already shipped (`11dea998`); do not redo them. Do not assume
-> credentials are org-scoped across instances — that is explicitly unresolved.
+> Read `.rptc/backlog/2026-08-16-data-installer-requires-adobe-io-project.md` and
+> `.rptc/research/data-installer-credential-home/research.md`. The research recommends ONE
+> shared "Demo Builder" I/O project + workspace per Adobe org, on measured evidence that a
+> single credential already reaches every Commerce instance in its org — so per-project
+> copies buy no isolation, and brokering through `accs-discovery-service` cannot take the
+> secret off the client. Confirm that recommendation with the owner, then implement it:
+> auto-create the shared project/workspace on first need and point
+> `provision-accs-credentials` at it instead of `project.adobe`. The two smaller defects the
+> item listed are already shipped (`11dea998`); do not redo them. Do not extend the reach
+> finding across Adobe ORGS — that half is still untested.
