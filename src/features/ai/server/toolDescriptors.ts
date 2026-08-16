@@ -26,8 +26,17 @@ export interface ToolDescriptor {
     inputSchema?: Record<string, z.ZodTypeAny>;
     /** When true, the tool refuses unless called with `confirm: true`. */
     confirm?: boolean;
-    /** Custom response projector; defaults to {@link defaultShape}. */
-    shape?: (res: HandlerResponse) => string;
+    /**
+     * Custom response projector; defaults to {@link defaultShape}.
+     *
+     * Receives the validated call arguments as well as the response, so a row
+     * can vary its projection by request — the `inventory: 'counts' | 'full'`
+     * pattern, where the lean shape is the default and the full payload is
+     * opt-in. Without the arguments a row could only ever pick one size, and
+     * the choice between "cheap by default" and "complete when asked" is
+     * exactly what response quality turns on.
+     */
+    shape?: (res: HandlerResponse, args: Record<string, unknown>) => string;
 }
 
 /**
@@ -81,7 +90,7 @@ export function registerDescriptorTools(
                 };
             }
             const res = await dispatchHandler(d.map, ctxFactory(), d.type, args ?? {});
-            return { content: [{ type: 'text' as const, text: shape(res) }] };
+            return { content: [{ type: 'text' as const, text: shape(res, args ?? {}) }] };
         });
     }
 }

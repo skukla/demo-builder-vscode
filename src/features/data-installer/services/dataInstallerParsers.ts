@@ -114,7 +114,10 @@ function page<T>(body: Record<string, unknown>, items: T[]): Page<T> {
     return {
         items,
         count: num(body.count) ?? items.length,
-        total: num(body.total) ?? items.length,
+        // No `?? items.length` fallback: see Page.total. The catalog endpoint
+        // reports no total, and substituting the page size fabricates a wrong
+        // answer that looks right.
+        ...(num(body.total) !== undefined ? { total: num(body.total) } : {}),
         ...(num(body.limit) !== undefined ? { limit: num(body.limit) } : {}),
         ...(num(body.skip) !== undefined ? { skip: num(body.skip) } : {}),
     };

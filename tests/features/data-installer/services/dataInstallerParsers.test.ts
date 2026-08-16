@@ -320,3 +320,49 @@ describe('dataInstallerParsers', () => {
         });
     });
 });
+
+// ─── the pagination envelope must not invent a total ─────────────────────────
+//
+// `total` used to fall back to `items.length`. That is invisible while callers
+// fetch everything, and wrong the moment a page size applies: measured live
+// 2026-08-16, `find_datapacks` answered `total: 20` for a 23-row catalog at
+// limit=20, and `total: 5` at limit=5 — a number that reads as authoritative
+// while silently hiding rows. The activity endpoint DOES send a total (1,099),
+// which is why the bug survived: one of the two paged endpoints looked right.
+describe('paged envelope — total is reported, never fabricated', () => {
+    // Row shape copied from the captured fixture, whose top-level keys are
+    // ['count','datapacks','duration','success'] — the catalog endpoint sends
+    // no total at all, which is the whole point.
+    const WIRE_ROW = {
+        _id: 'objectid-03',
+        datapack_name: 'AFREEN-LG',
+        version: 'dev',
+        display_name: 'My Test Datapack',
+        data_types: ['products'],
+        shared: false,
+    };
+
+    it('omits total when the service does not send one', () => {
+        const page = parseDatapackList({
+            datapacks: [WIRE_ROW, { ...WIRE_ROW, datapack_name: 'OTHER' }],
+            count: 2,
+            limit: 2,
+        });
+
+        expect(page.items).toHaveLength(2);
+        expect(page.count).toBe(2);
+        // Absent, NOT 2. An agent seeing count === limit and no total knows to page.
+        expect(page.total).toBeUndefined();
+        expect('total' in page).toBe(false);
+    });
+
+    it('passes through a real total when the service sends one', () => {
+        const page = parseDatapackList({ datapacks: [WIRE_ROW], count: 1, total: 23, limit: 1 });
+        expect(page.total).toBe(23);
+    });
+
+    // The captured catalog fixture is the proof this was never a hypothetical.
+    it('the real catalog fixture carries no total', () => {
+        expect(parseDatapackList(load('find-datapacks.json')).total).toBeUndefined();
+    });
+});

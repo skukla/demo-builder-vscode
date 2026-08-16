@@ -111,7 +111,7 @@ export function DatapackActivityView(): React.JSX.Element {
         if (!value) {
             return;
         }
-        setTotal(value.total);
+        setTotal(value.total ?? value.count);
         setHasLoaded(true);
         setEntries((current) =>
             requestedSkipRef.current > 0 ? [...current, ...value.items] : value.items,

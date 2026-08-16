@@ -11,18 +11,120 @@
  */
 
 import { z } from 'zod';
-import type { ToolDescriptor } from './toolDescriptors';
+import { defaultShape, type ToolDescriptor } from './toolDescriptors';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { dataInstallerHandlers } from '@/features/data-installer/handlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { meshHandlers } from '@/features/mesh/handlers';
+import type { HandlerResponse } from '@/types/handlers';
+
+/**
+ * Default page size for list reads.
+ *
+ * The Data Installer service defaults to 100 rows — a sensible UI page and a
+ * terrible agent one. Measured 2026-08-16 against a live service:
+ * `get_datapack_activity` with no arguments returned 100 of 1,099 rows and cost
+ * **25,056 bytes (~6,264 tokens)**, more than 2.5x the entire 65-tool catalogue
+ * of descriptions. An agent's first call is almost always `{}`, so the default
+ * IS the cost.
+ *
+ * 20 is enough to answer "what happened recently" or "what is installed" in one
+ * call; `skip` pages for the rest, and `total` in the envelope says how much is
+ * there. The zod default is applied by the MCP SDK before our handler runs
+ * (`validateToolInput` → `parseResult.data`), so it needs no handler change.
+ */
+const AGENT_PAGE_SIZE = 20;
 
 /** Paging, shared by the Data Installer's list reads. */
 const PAGING = {
-    limit: z.number().optional().describe('Maximum rows to return'),
+    limit: z
+        .number()
+        .default(AGENT_PAGE_SIZE)
+        .describe(`Maximum rows to return (default ${AGENT_PAGE_SIZE})`),
     skip: z.number().optional().describe('Rows to skip, for paging'),
 };
+
+/** Shape of the Data Installer's paged list envelope. */
+interface PagedItems {
+    items?: Array<Record<string, unknown>>;
+    [key: string]: unknown;
+}
+
+/**
+ * Project each row of a paged list, preserving the envelope
+ * (`count`/`total`/`limit`/`skip`) that tells an agent whether to page.
+ *
+ * Falls through to {@link defaultShape} when the response is an error or has no
+ * `items`, so a projector can never turn a failure into a confusing success.
+ */
+function shapeRows(
+    res: HandlerResponse,
+    project: (row: Record<string, unknown>) => Record<string, unknown>,
+): string {
+    if (!res.success) return defaultShape(res);
+    const { success: _s, ...rest } = res as HandlerResponse & Record<string, unknown>;
+    const keys = Object.keys(rest);
+    const payload = (
+        keys.length === 1 && keys[0] === 'data' ? (rest as { data: unknown }).data : rest
+    ) as PagedItems;
+    if (!payload || !Array.isArray(payload.items)) return defaultShape(res);
+    return JSON.stringify({ ...payload, items: payload.items.map(project) });
+}
+
+/**
+ * Drop the fields a datapack row carries for the DASHBOARD, not for an agent.
+ *
+ * Measured on the live service: `art` (a thumbnail URL) and the full
+ * `dataTypes` array were 69% of `list_installed_datapacks` and 64% of a
+ * `find_datapacks` row. `dataTypes` is replaced by its count because
+ * `get_datapack` already answers the detailed question BETTER — it reports
+ * which declared types the service actually holds, which the list cannot.
+ * That is the index/detail split, applied to a payload that had none.
+ */
+function leanDatapackRow(row: Record<string, unknown>): Record<string, unknown> {
+    const { art: _art, dataTypes, ...keep } = row;
+    return {
+        ...keep,
+        ...(Array.isArray(dataTypes) ? { dataTypeCount: dataTypes.length } : {}),
+    };
+}
+
+/**
+ * `verify_ai_setup` answers "is my AI setup healthy?" — and used to spend 99% of
+ * its response not answering it.
+ *
+ * Measured live 2026-08-16: 19,856 bytes total, of which `status` + `checks` —
+ * the actual verdict — were **170**. The remaining 19,647 were inventory:
+ * `skills` 9,451 (21 full descriptions), `mcps` 7,797 (every server's whole tool
+ * list), `sessionMcps` 2,267. One call cost more than the entire 65-tool
+ * catalogue of descriptions, to deliver a four-item checklist.
+ *
+ * So the verdict is always returned and the inventory collapses to counts. It is
+ * NOT dropped: `inventory:"full"` restores it, because the full listing is a
+ * genuine capability — it is the runtime source of truth for what MCP servers a
+ * project actually loads, which is how the external-tool audit established that
+ * Playwright exposes 23 tools and not the 66 its README lists.
+ */
+function shapeAiSetup(res: HandlerResponse, args: Record<string, unknown>): string {
+    if (!res.success || args.inventory === 'full') return defaultShape(res);
+    const { success: _s, ...rest } = res as HandlerResponse & Record<string, unknown>;
+    const keys = Object.keys(rest);
+    const payload = (
+        keys.length === 1 && keys[0] === 'data' ? (rest as { data: unknown }).data : rest
+    ) as { inventory?: Record<string, unknown> } & Record<string, unknown>;
+    if (!payload?.inventory || typeof payload.inventory !== 'object') return defaultShape(res);
+
+    const counts: Record<string, number> = {};
+    for (const [key, value] of Object.entries(payload.inventory)) {
+        if (Array.isArray(value)) counts[key] = value.length;
+    }
+    return JSON.stringify({
+        ...payload,
+        inventory: counts,
+        inventoryDetail: 'call with inventory:"full" for the listing',
+    });
+}
 
 /** The four things `process-datapack` can be asked to do. */
 const OPERATION_MODE = z.enum(['import', 'export', 'delete', 'validate']);
@@ -31,9 +133,18 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     {
         tool: 'verify_ai_setup',
         description:
-            "Check the project's AI setup (context files, MCP config, skills) and report status",
+            "Check the project's AI setup (context files, MCP config, skills) and report status. " +
+            'Returns the verdict plus inventory counts; pass inventory:"full" for the complete ' +
+            'skill and MCP-server listing.',
         map: aiHandlers,
         type: 'verify-ai-setup',
+        inputSchema: {
+            inventory: z
+                .enum(['counts', 'full'])
+                .default('counts')
+                .describe('How much inventory detail to include (default: counts)'),
+        },
+        shape: shapeAiSetup,
     },
     {
         tool: 'list_ai_prompts',
@@ -100,11 +211,22 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     // effect is to make the tracking lie, and `async-process-status`, which
     // reports `in_progress` for jobs that finished hours ago.
     //
-    // None of these needs a custom `shape`. Measured against the captured
-    // fixtures: the whole 40-row catalog is ~17KB of JSON, one datapack's
-    // metadata ~0.5KB, and an activity row ~360 bytes. The megabyte payload is a
-    // data ITEM, which no handler here returns — `limit`/`skip` is the lever for
-    // the rest, and it is the service's own.
+    // CORRECTED 2026-08-16. This block used to read "None of these needs a
+    // custom `shape`", on the strength of the CAPTURED FIXTURES: a 40-row
+    // catalog, ~17KB, one activity row ~360 bytes. Sound arithmetic, wrong
+    // input. Measured against the live service the same day:
+    //
+    //   get_datapack_activity     25,056 bytes   100 of 1,099 rows
+    //   list_installed_datapacks  16,611 bytes    38 rows
+    //   find_datapacks            10,456 bytes    23 rows
+    //
+    // Two causes, neither visible in a fixture. The service's own `limit`
+    // defaults to 100 — a UI page, not an agent one — and an agent's first call
+    // is `{}`, so that default IS the cost. And `art` (a dashboard thumbnail)
+    // plus the repeated `dataTypes` array were 69% / 64% of a row.
+    //
+    // Hence AGENT_PAGE_SIZE and `leanDatapackRow` above. The lesson generalises:
+    // a fixture says what the shape is, never what the VOLUME will be.
     {
         tool: 'check_datapack_service',
         description:
@@ -118,9 +240,11 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'List Adobe Commerce sample-data datapacks the Data Installer holds. Returns one row ' +
             'per (name, version) pair — the same pack appears once per version. Curated packs ' +
-            'only unless includeCommunity is set.',
+            'only unless includeCommunity is set. This endpoint reports no total, so ' +
+            'count === limit means there may be more — page with skip.',
         map: dataInstallerHandlers,
         type: 'find-datapacks',
+        shape: (res) => shapeRows(res, leanDatapackRow),
         inputSchema: {
             includeCommunity: z
                 .boolean()
@@ -162,6 +286,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             "went into. This is the service's own tracking, not a live check of the instance.",
         map: dataInstallerHandlers,
         type: 'list-installed-datapacks',
+        shape: (res) => shapeRows(res, leanDatapackRow),
         inputSchema: {
             commerceInstance: z.string().optional().describe('Filter to one ACCS instance id'),
             datapackName: z.string().optional().describe('Filter to one datapack name'),
