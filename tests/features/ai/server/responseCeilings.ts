@@ -1,0 +1,139 @@
+/**
+ * Response-size ceilings for the MCP tool surface — the audit's record.
+ *
+ * Phase 2 measured every reachable tool against a live extension and shrank the
+ * seven that dominated the surface. This table is what stops that regressing:
+ * one number per tool, asserted where the tool is already driven by a test.
+ *
+ * ## Why ceilings and not one rule
+ *
+ * "Responses must be small" is wrong, and the harness proved it. `read_page`
+ * returning a 12KB page is the tool WORKING — the page is the answer.
+ * `list_console_apis` flattens a repeated field and saves 16%, which a blanket
+ * 60%-reduction rule called a failure. What each tool should cost depends on
+ * what it is for, so the number is recorded per tool with the reason.
+ *
+ * ## How the numbers were chosen
+ *
+ * Each is the LIVE measurement (2026-08-16, against a real Adobe org, a real
+ * Data Installer and a real storefront) plus headroom, or — for tools driven
+ * only by fixtures — the fixture size plus headroom. A ceiling is a regression
+ * alarm, not a target: it should fire when a payload changes shape, not when a
+ * project has one more block in it.
+ *
+ * ## The two shapes that produced every finding
+ *
+ * Worth knowing before adding a tool here, because both are invisible in a
+ * fixture and obvious in production:
+ *
+ *   1. A LIST WITH NO PAGE SIZE. get_datapack_activity returned 100 of 1,099
+ *      rows (25KB); list_adobe_projects returned all 725 (111KB).
+ *   2. A FIELD CARRIED FOR THE DASHBOARD. `art` thumbnails, the repeated
+ *      `dataTypes` array, `who_created` — 46% of one response was creator ids
+ *      the agent could not even act on.
+ */
+
+/** Bytes a tool's response must stay under, with the reason it is that number. */
+export interface Ceiling {
+    /** Maximum response size in bytes. */
+    bytes: number;
+    /** Why this number — measurement, or the shape that justifies the size. */
+    why: string;
+}
+
+export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
+    // ── file-based tools (mcp-server.ts) ────────────────────────────────────
+    list_projects: {
+        bytes: 8_000,
+        why: 'bounded by DEFAULT_LIST_LIMIT (100 rows ≈ 6,000 bytes), not by how many projects exist — 227 live with 2, 18,191 with 300 before the cap',
+    },
+    get_project: {
+        bytes: 12_000,
+        why: 'summary with aiPrompts/aiFileHashes/blockLibraries collapsed; 5,179 live (was 9,532 before the aiFileHashes collapse)',
+    },
+    get_component_config: { bytes: 40_000, why: 'returns a config file verbatim — the file IS the answer' },
+    update_project_config: { bytes: 2_000, why: 'write confirmation' },
+    sync_storefront: { bytes: 2_000, why: 'git result summary' },
+    list_blocks: {
+        bytes: 8_000,
+        why: 'bounded by DEFAULT_LIST_LIMIT (100 rows), not by storefront size; 2,781 live on a 53-block storefront',
+    },
+    get_block_source: {
+        bytes: 32_000,
+        why: 'file manifest, or ONE file capped at MAX_FILE_BYTES (30KB) — the source is the answer',
+    },
+    get_block_authoring_shape: {
+        bytes: 10_000,
+        why: 'index bounded by MAX_AUTHORING_INDEX_ROWS (100); a 78-block catalog is 5,577 and one block is 92 — a 300-component registry was 21,992 before the cap',
+    },
+    promote_block_to_library: { bytes: 2_000, why: 'per-step status of one promotion' },
+    remove_block_from_library: { bytes: 2_000, why: 'per-step status of one removal' },
+
+    // ── content authoring ───────────────────────────────────────────────────
+    read_page: {
+        bytes: 32_000,
+        why: 'the page source IS the answer; capped by readSource at MAX_SOURCE_READ_BYTES (30KB)',
+    },
+    read_published_page: { bytes: 32_000, why: 'same — published body, capped at 30KB' },
+    write_page: { bytes: 1_000, why: 'write + optional publish outcome' },
+    publish_page: { bytes: 1_000, why: 'publish outcome' },
+    delete_page: { bytes: 1_000, why: 'delete outcome, or the confirm refusal' },
+    list_content: { bytes: 12_000, why: 'one row per entry; 1,664 live at a site root' },
+
+    // ── cloud resources ─────────────────────────────────────────────────────
+    list_github_repos: { bytes: 6_000, why: 'paged at 30; 2,835 live across 173 repos' },
+    list_dalive_sites: { bytes: 8_000, why: 'paged summary; 204 live' },
+    delete_github_repo: { bytes: 1_000, why: 'delete outcome or refusal' },
+    cleanup_dalive_site: { bytes: 1_000, why: 'delete outcome or refusal' },
+
+    // ── Adobe console ───────────────────────────────────────────────────────
+    list_orgs: { bytes: 4_000, why: 'org list is short; 44 live' },
+    list_adobe_projects: {
+        bytes: 6_000,
+        why: 'paged at 20 with `deletable` instead of who_created; 1,987 live against 725 projects (was 111,748)',
+    },
+    list_workspaces: { bytes: 4_000, why: 'workspaces per project are few; 34 live' },
+    select_org: { bytes: 6_000, why: 'selection, or valid options — orgs are a short list' },
+    select_project: {
+        bytes: 2_000,
+        why: 'selection; on a bad id it reports a COUNT, never the 725-row list it used to enumerate',
+    },
+    select_workspace: { bytes: 6_000, why: 'selection, or valid options — workspaces are few' },
+
+    // ── storefront ──────────────────────────────────────────────────────────
+    republish: { bytes: 1_000, why: 'per-step publish outcome' },
+    sync_content: { bytes: 1_000, why: 'per-step publish outcome' },
+
+    // ── discovery / status ──────────────────────────────────────────────────
+    list_components: { bytes: 4_000, why: 'catalog summary; 581 live' },
+    list_demo_packages: { bytes: 4_000, why: 'catalog summary; 369 live' },
+    list_stacks: { bytes: 4_000, why: 'catalog summary; 601 live' },
+    get_auth_status: { bytes: 2_000, why: 'per-provider status flags; 120 live' },
+    get_current_project: { bytes: 2_000, why: 'name + path; 110 live' },
+};
+
+/**
+ * Assert a tool's response is within its recorded ceiling.
+ *
+ * Fails with the measurement and the recorded reason, because a ceiling breach
+ * is usually a payload changing SHAPE — a new field, or a list that lost its
+ * page size — and the reason is what tells the next person which.
+ */
+export function expectWithinCeiling(tool: string, response: string): void {
+    const ceiling = RESPONSE_CEILINGS[tool];
+    if (!ceiling) {
+        throw new Error(
+            `No response ceiling recorded for "${tool}". Add one to responseCeilings.ts — ` +
+                `a tool with no recorded size is one nobody is watching.`,
+        );
+    }
+    const bytes = Buffer.byteLength(response, 'utf8');
+    if (bytes > ceiling.bytes) {
+        throw new Error(
+            `${tool} returned ${bytes.toLocaleString()} bytes, over its ${ceiling.bytes.toLocaleString()}-byte ceiling.\n` +
+                `  Recorded basis: ${ceiling.why}\n` +
+                `  Usually this means a list lost its page size, or a field meant for the dashboard ` +
+                `entered the payload. Fix the response, or raise the ceiling WITH a new measurement.`,
+        );
+    }
+}

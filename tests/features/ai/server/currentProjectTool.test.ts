@@ -6,6 +6,7 @@
 
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
 import type { HandlerContext } from '@/types/handlers';
+import { expectWithinCeiling } from './responseCeilings';
 
 function fakeServer() {
     const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
@@ -68,5 +69,14 @@ describe('get_current_project', () => {
         };
         registerCurrentProjectTool(s as any, ctxFactory);
         expect(registered).toEqual(['get_current_project']);
+    });
+});
+
+// ─── response-size ceiling (phase 2 audit) ───────────────────────────────────
+describe('response-size ceiling', () => {
+    it('get_current_project stays tiny — it returns a name and a path', async () => {
+        const s = fakeServer();
+        registerCurrentProjectTool(s, ctxFactory);
+        expectWithinCeiling('get_current_project', JSON.stringify(await s.call('get_current_project')));
     });
 });

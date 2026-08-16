@@ -22,6 +22,7 @@ import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { registerDescriptorTools, type ToolDescriptor } from '@/features/ai/server/toolDescriptors';
 import type { HandlerContext, HandlerMap, HandlerResponse } from '@/types/handlers';
+import { RESPONSE_CEILINGS } from './responseCeilings';
 
 /** Registers the rows and invokes them exactly as the MCP server does. */
 function harness(descriptors: ToolDescriptor[], response: HandlerResponse) {
@@ -195,5 +196,54 @@ describe('descriptor tools — response size', () => {
         // None of them projects, so all must behave identically. A divergence
         // means a row is shaping without declaring a projector.
         expect(new Set(sizes).size).toBe(1);
+    });
+});
+
+// ─── audit coverage ──────────────────────────────────────────────────────────
+//
+// The table is only a guard while it keeps up with the surface. This asserts the
+// relationship in both directions, because either drift is a silent hole: a new
+// tool with no recorded size is one nobody is watching, and a stale entry is a
+// ceiling defending a tool that no longer exists.
+describe('the ceiling table tracks the tool surface', () => {
+    const descriptorTools = ALL.map((d) => d.tool);
+
+    it('records a ceiling for every DESCRIPTOR tool that is not deliberately exempt', () => {
+        // Exempt: rows whose response is a fixed short status by construction and
+        // which no measurement has ever found large. Listed rather than inferred,
+        // so adding a tool cannot silently join them.
+        const EXEMPT = new Set([
+            'regenerate_ai_files', 'start_demo', 'stop_demo', 'rename_project',
+            'deploy_integration', 'redeploy_integration', 'remove_integration',
+            'deploy_mesh', 'delete_mesh', 'save_ai_prompt', 'delete_ai_prompt',
+            'export_project_settings', 'refresh_block_library', 'add_console_apis',
+            'apply_updates', 'check_mesh', 'check_datapack_service', 'get_store_structure',
+            'get_project_urls', 'get_datapack', 'list_datapack_data_types',
+            'find_datapacks', 'list_installed_datapacks', 'get_datapack_activity',
+            'verify_ai_setup', 'list_ai_prompts', 'list_console_apis',
+        ]);
+        const missing = descriptorTools.filter(
+            (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t),
+        );
+        expect(missing).toEqual([]);
+    });
+
+    it('has no ceiling for a tool that no longer exists', async () => {
+        // Every recorded name must still be a real tool somewhere in the surface.
+        // Descriptor rows are checked here; the bespoke ones are asserted by the
+        // suites that drive them, which fail on an unknown name.
+        const { readdirSync, readFileSync } = await import('fs');
+        const dir = 'src/features/ai/server';
+        const sources = readdirSync(dir)
+            .filter((f) => f.endsWith('.ts'))
+            .map((f) => readFileSync(`${dir}/${f}`, 'utf8'))
+            .join('\n');
+        const mcpServer = readFileSync('src/mcp-server.ts', 'utf8');
+        const blob = sources + mcpServer;
+
+        const orphans = Object.keys(RESPONSE_CEILINGS).filter(
+            (t) => !blob.includes(`'${t}'`),
+        );
+        expect(orphans).toEqual([]);
     });
 });

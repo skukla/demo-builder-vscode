@@ -37,6 +37,7 @@ import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { ErrorCode } from '@/types/errorCodes';
 import { AuthError } from '@/types/errors';
 import type { HandlerContext } from '@/types/handlers';
+import { expectWithinCeiling } from './responseCeilings';
 
 const getGitHubServicesMock = getGitHubServices as jest.Mock;
 
@@ -305,5 +306,40 @@ describe('cloud-resource tools (DA.live)', () => {
             await s.call('cleanup_dalive_site', { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/shop' });
             expect(runWithAdobeTarget).toHaveBeenCalled();
         });
+    });
+});
+
+// ─── response-size ceilings (phase 2 audit) ──────────────────────────────────
+//
+// Driven with an oversized payload: 400 repos, 400 sites. Both tools page, and
+// the ceiling is what proves the paging is doing the work rather than the
+// fixture being small.
+describe('response-size ceilings', () => {
+    it('list_github_repos — 400 repos', async () => {
+        const s = fakeServer();
+        getGitHubServicesMock.mockReturnValue({
+            tokenService: { validateToken: jest.fn(async () => ({ valid: true })) },
+            repoOperations: {
+                listUserRepositories: jest.fn(async () =>
+                    Array.from({ length: 400 }, (_, i) => ({
+                        fullName: `owner-name/repository-number-${i}`,
+                        isPrivate: false,
+                        updatedAt: '2026-08-16T18:05:45Z',
+                    })),
+                ),
+            },
+        });
+        registerCloudResourceTools(s, ctxFactory);
+
+        expectWithinCeiling('list_github_repos', JSON.stringify(await s.call('list_github_repos', {})));
+    });
+
+    it.each([
+        ['delete_github_repo', {}],
+        ['cleanup_dalive_site', {}],
+    ])('%s — its refusal stays tiny', async (tool, args) => {
+        const s = fakeServer();
+        registerCloudResourceTools(s, ctxFactory);
+        expectWithinCeiling(tool, JSON.stringify(await s.call(tool, args)));
     });
 });

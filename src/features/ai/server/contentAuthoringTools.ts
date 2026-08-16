@@ -57,6 +57,15 @@ import { getEdsDaLiveTarget, getEdsRepoParts, isEdsProject } from '@/types/typeG
  */
 const MAX_PUBLISHED_READ_BYTES = 30_000;
 
+/**
+ * Page size for `list_content`.
+ *
+ * It had none. A normal site root measured 1,664 bytes live, which hid it — a
+ * 900-entry directory is 67,304. Same shape as every other bloat finding in this
+ * audit: a list whose size is the data's, not the tool's.
+ */
+const CONTENT_PAGE_SIZE = 100;
+
 const NEEDS_DALIVE = {
     needsAuth: 'dalive',
     message:
@@ -442,12 +451,18 @@ export function registerContentAuthoringTools(
         'list_content',
         {
             description:
-                "List pages and folders in the current project's DA.live storefront (defaults to the site root)",
+                "List pages and folders in the current project's DA.live storefront (defaults to " +
+                'the site root). Paged — a content-heavy directory has hundreds of entries.',
             inputSchema: {
                 path: z
                     .string()
                     .optional()
                     .describe('Directory to list, e.g. "/products"; defaults to the site root'),
+                limit: z
+                    .number()
+                    .default(CONTENT_PAGE_SIZE)
+                    .describe(`Maximum entries to return (default ${CONTENT_PAGE_SIZE})`),
+                skip: z.number().optional().describe('Entries to skip, for paging'),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -464,13 +479,20 @@ export function registerContentAuthoringTools(
                 const entries = await runWithAdobeTarget(() =>
                     daLiveOps(r.ctx).listDirectory(r.target.daLiveOrg, r.target.daLiveSite, dir),
                 );
+                const skip = Math.max(0, Math.trunc(args?.skip ?? 0));
+                const limit = Math.max(1, Math.trunc(args?.limit ?? CONTENT_PAGE_SIZE));
+                const page = entries.slice(skip, skip + limit);
                 return asText({
                     path: dir,
+                    count: page.length,
+                    total: entries.length,
+                    limit,
+                    skip,
                     // Report each entry as the WEB path, since that is what every
                     // other tool here takes. A non-html file keeps its extension:
                     // publishing a JSON as a page is a content-bus error, so the
                     // type has to be visible.
-                    entries: entries.map((e) => {
+                    entries: page.map((e) => {
                         const withinSite = stripSitePrefix(
                             e.path,
                             r.target.daLiveOrg,

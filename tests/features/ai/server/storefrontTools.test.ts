@@ -32,6 +32,7 @@ import { isEdsProject } from '@/types/typeGuards';
 import { ErrorCode } from '@/types/errorCodes';
 import { AuthError } from '@/types/errors';
 import type { HandlerContext } from '@/types/handlers';
+import { expectWithinCeiling } from './responseCeilings';
 
 const republishMock = republishStorefrontConfig as jest.Mock;
 const republishContentMock = republishStorefrontContent as jest.Mock;
@@ -219,5 +220,14 @@ describe('sync_content', () => {
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
         expect(await s.call('sync_content')).toMatchObject({ error_type: 'ORG_MISMATCH', non_retryable: true });
+    });
+});
+
+// ─── response-size ceilings (phase 2 audit) ──────────────────────────────────
+describe('response-size ceilings', () => {
+    it.each(['republish', 'sync_content'])('%s returns a per-step outcome, not a payload', async (tool) => {
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        expectWithinCeiling(tool, JSON.stringify(await s.call(tool)));
     });
 });

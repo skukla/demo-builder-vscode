@@ -8,6 +8,7 @@
  */
 
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
+import { expectWithinCeiling } from './responseCeilings';
 
 /** Fake McpServer capturing registrations. */
 function fakeServer() {
@@ -76,4 +77,16 @@ describe('registerDiscoveryTools', () => {
         const text = (await handler()).content[0].text;
         expect(text).not.toContain('\n');
     });
+});
+
+// ─── response-size ceilings (phase 2 audit) ──────────────────────────────────
+describe('response-size ceilings', () => {
+    it.each(['list_components', 'list_demo_packages', 'list_stacks'])(
+        '%s stays within its ceiling',
+        async (tool) => {
+            const s = fakeServer();
+            registerDiscoveryTools(s);
+            expectWithinCeiling(tool, JSON.stringify(await s.call(tool)));
+        },
+    );
 });

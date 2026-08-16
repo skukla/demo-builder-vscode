@@ -42,6 +42,15 @@ const MAX_BLOCK_FILES = 50;
 // because the response is consumed as LLM context tokens, not by a human — large
 // vendored/minified assets should be read from disk directly, not through MCP.
 const MAX_FILE_BYTES = 30_000; // 30 KB
+// Rows in a get_block_authoring_shape INDEX. A 78-block catalog is 5,577 bytes;
+// a 300-component one measured 21,992. The index/detail split bounds the detail
+// call, not a catalog that keeps growing.
+const MAX_AUTHORING_INDEX_ROWS = 100;
+// Default page size for the file-based list tools. 100 rather than the 20 used
+// for the Data Installer's lists: these rows are terse (a name and a path) and
+// seeing the whole catalog is usually the point, so 100 changes nothing for a
+// real project while capping the tail.
+const DEFAULT_LIST_LIMIT = 100;
 
 // ─── Security helpers ─────────────────────────────────────────────────────────
 
@@ -785,7 +794,14 @@ export interface McpCredentialProvider {
 
 /** @internal — exported only for unit tests; not part of the public API */
 export const toolHandlers = {
-    async listProjects(projectsDir: string, offset?: number, limit?: number): Promise<string> {
+    async listProjects(
+        projectsDir: string,
+        offset?: number,
+        // Defaulted HERE, not only in the tool's zod schema. The schema default
+        // is applied by the MCP SDK, so a direct call — a test, or any non-MCP
+        // caller — still got the whole list. 300 projects measured 18,191 bytes.
+        limit: number = DEFAULT_LIST_LIMIT,
+    ): Promise<string> {
         let entries: Array<{ name: string; isDirectory: () => boolean }>;
         try {
             entries = await fsPromises.readdir(projectsDir, { withFileTypes: true });
@@ -921,7 +937,8 @@ export const toolHandlers = {
         projectsDir: string,
         projectName: string,
         offset?: number,
-        limit?: number,
+        // See listProjects: the cap belongs in the handler, not only the schema.
+        limit: number = DEFAULT_LIST_LIMIT,
     ): Promise<string> {
         const projectPath = resolveProjectPath(projectsDir, projectName);
         const storefrontPath = await resolveStorefrontPath(projectPath);
@@ -1044,6 +1061,7 @@ export const toolHandlers = {
         projectsDir: string,
         projectName: string,
         blockName?: string,
+        search?: string,
     ): Promise<string> {
         const projectPath = resolveProjectPath(projectsDir, projectName);
         const storefrontPath = await resolveStorefrontPath(projectPath);
@@ -1059,12 +1077,33 @@ export const toolHandlers = {
             // Index: which blocks exist and which convention each uses. Deliberately
             // carries no markup, selectors or field lists — that is the whole point
             // of splitting it from the detail call.
+            //
+            // `search` and a page size because the index alone was still
+            // unbounded: 78 blocks is 5,577 bytes, but a 300-component registry
+            // measured 21,992. Splitting index from detail bounds the DETAIL
+            // call; it does nothing for a catalog that keeps growing.
+            const all = entries.map((e) => ({
+                id: e.id,
+                title: e.title,
+                authoring: authoringConvention(e),
+            }));
+            const term = search?.trim().toLowerCase();
+            const matched = term
+                ? all.filter(
+                      (b) =>
+                          b.id.toLowerCase().includes(term) ||
+                          (b.title ?? '').toLowerCase().includes(term),
+                  )
+                : all;
+            const page = matched.slice(0, MAX_AUTHORING_INDEX_ROWS);
             return JSON.stringify({
-                blocks: entries.map((e) => ({
-                    id: e.id,
-                    title: e.title,
-                    authoring: authoringConvention(e),
-                })),
+                blocks: page,
+                count: page.length,
+                total: matched.length,
+                ...(term ? { search: term, totalUnfiltered: all.length } : {}),
+                ...(matched.length > page.length
+                    ? { more: `${matched.length - page.length} more — narrow with search` }
+                    : {}),
             });
         }
 
@@ -1315,12 +1354,17 @@ export function registerProjectTools(
         .min(0)
         .optional()
         .describe('Number of items to skip (pagination)');
+    // `paginate` returns EVERYTHING when no limit is given, so an agent's first
+    // call — always `{}` — got the whole list. Invisible on a developer's
+    // machine (2 projects, 227 bytes) and not on a real one: 300 projects
+    // measured 18,191 bytes, and a 300-component authoring index 21,992.
+    //
     const limitSchema = z
         .number()
         .int()
         .min(0)
-        .optional()
-        .describe('Maximum number of items to return (pagination)');
+        .default(DEFAULT_LIST_LIMIT)
+        .describe(`Maximum number of items to return (default ${DEFAULT_LIST_LIMIT})`);
 
     server.registerTool(
         'list_projects',
@@ -1521,6 +1565,10 @@ export function registerProjectTools(
                     .describe(
                         'Block id as registered in component-definition.json; omit to list registered blocks',
                     ),
+                search: z
+                    .string()
+                    .optional()
+                    .describe('Filter the index by id or title (ignored when blockName is given)'),
             },
         },
         async (args: any) => ({
@@ -1531,6 +1579,7 @@ export function registerProjectTools(
                         projectsDir,
                         args.projectName,
                         args.blockName as string | undefined,
+                        args.search as string | undefined,
                     ),
                 },
             ],

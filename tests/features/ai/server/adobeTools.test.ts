@@ -17,6 +17,7 @@ import { getActiveOrgContext } from '@/core/shell';
 import { ErrorCode } from '@/types/errorCodes';
 import { AuthError } from '@/types/errors';
 import type { HandlerContext } from '@/types/handlers';
+import { expectWithinCeiling } from './responseCeilings';
 
 function fakeServer() {
      
@@ -415,5 +416,48 @@ describe('isOrgMismatchError', () => {
     it('returns false for a non-error value', () => {
         expect(isOrgMismatchError('ORG_MISMATCH')).toBe(false);
         expect(isOrgMismatchError(undefined)).toBe(false);
+    });
+});
+
+// ─── response-size ceilings (phase 2 audit) ──────────────────────────────────
+//
+// list_adobe_projects is the reason this whole audit widened: a real org
+// returned 725 projects / 111,748 bytes, 46% of it creator ids the agent could
+// not act on. Driven here with 800 projects so the paging, not the fixture, is
+// what keeps it small.
+describe('response-size ceilings', () => {
+    const many = Array.from({ length: 800 }, (_, i) => ({
+        id: `456620608834451${i}`,
+        name: `ProjectName${i}`,
+        title: `Demo System Project Number ${i}`,
+        who_created: `DBDD297D5EA98C090A495FA${i}@techacct.adobe.com`,
+    }));
+
+    it('list_adobe_projects — 800 projects', async () => {
+        const s = fakeServer();
+        registerAdobeTools(s, ctxFactoryWith(makeAuth({ getProjects: jest.fn(async () => many) })));
+
+        const out = JSON.stringify(await s.call('list_adobe_projects', {}));
+
+        expectWithinCeiling('list_adobe_projects', out);
+        // The creator ids must not ride along at any scale.
+        expect(out).not.toContain('@techacct');
+    });
+
+    it('select_project — a bad id reports a count, never the catalog', async () => {
+        const s = fakeServer();
+        registerAdobeTools(s, ctxFactoryWith(makeAuth({ getProjects: jest.fn(async () => many) })));
+        setAdobeTarget({ orgId: 'org-1', orgCode: 'C@AdobeOrg', orgName: 'Org' });
+
+        const out = JSON.stringify(await s.call('select_project', { projectId: 'nope' }));
+
+        expectWithinCeiling('select_project', out);
+        expect(out).not.toContain('ProjectName1');
+    });
+
+    it.each(['list_orgs', 'list_workspaces'])('%s stays within its ceiling', async (tool) => {
+        const s = fakeServer();
+        registerAdobeTools(s, ctxFactoryWith(makeAuth()));
+        expectWithinCeiling(tool, JSON.stringify(await s.call(tool)));
     });
 });

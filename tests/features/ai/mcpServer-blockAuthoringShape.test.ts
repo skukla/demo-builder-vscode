@@ -295,7 +295,7 @@ describe('toolHandlers.getBlockAuthoringShape', () => {
     it('returns an empty list for a definition with no groups', async () => {
         mockRegistry({ definition: {} });
 
-        expect(JSON.parse(await shape())).toEqual({ blocks: [] });
+        expect(JSON.parse(await shape())).toEqual({ blocks: [], count: 0, total: 0 });
     });
 
     it('tolerates a group with no components array', async () => {
