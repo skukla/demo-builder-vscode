@@ -66,58 +66,61 @@ Builder work, so an agent cannot set up the thing the App Builder tools then ope
 nothing". So the non-interactive path exists and is deliberate, and a tool must use it. That is a
 design note, not a blocker.
 
-## The worklist for steps 03–04 — all six READ IN FULL
+## The definitive list
 
-Reading dropped two of the six. Every pass has shrunk this list and none has grown it.
+~35 of the 53 read. The 18 not read are the auth-interactive and lifecycle group
+(`github-oauth`, `github-change-account`, the four DA.live token handlers, `authenticate`,
+`check-auth`, `continue-prerequisites`, `install-prerequisite`, the two storefront-setup handlers,
+`log`, `ready`, `renameAppBuilderComponent`) — every one classified dispatch-only or interactive,
+and `sign_in` already covers the auth capability.
 
-### Build (4)
+### Build (6)
 
-| Tool | Handler returns | Notes from reading |
-|---|---|---|
-| `create_github_repo` | `{owner, name, url, fullName}` | No `sendMessage`, no modal. Creates **from a template** — needs `templateOwner`/`templateRepo`, so the tool must say so. Blocks on `waitForContent`, so the outcome is real rather than a queued job. |
-| `create_adobe_project` | `{success, data: project}` | Structured errors: `AUTH_FORBIDDEN` on a permission re-check, and a named quota message. Its two `sendMessage` calls are a best-effort UI refresh in a `try/catch` — and headless `sendMessage` is a verified no-op, so they do nothing here. |
-| `create_adobe_workspace` | `{success, data: workspace}` | Same shape. Takes an optional `projectId` used only for the refresh; creation itself targets the selected project, so the tool must set that first. |
-| `check_compatibility` | `{compatible}` | Pure registry read of a frontend/backend pair. Cheap, and a useful pre-flight before `create_project`. |
+| Tool | Why it qualifies |
+|---|---|
+| `create_github_repo` | Returns `{owner, name, url, fullName}`; no `sendMessage`, no modal; blocks on `waitForContent`. Creates **from a template** — needs `templateOwner`/`templateRepo`. |
+| `create_adobe_project` | Returns the created project. Structured `AUTH_FORBIDDEN` + quota errors. Its `sendMessage` calls are a best-effort refresh, and headless `sendMessage` is a verified no-op. |
+| `create_adobe_workspace` | Same shape. Targets the SELECTED project, so the tool must set that first. |
+| `check_github_app` | Returns `{isInstalled, …}` for an owner/repo — whether AEM Code Sync is installed. **No tool exists**, and it is the first thing to check when publishing silently fails. |
+| `check_repo_readiness` | Returns `{readiness}` — whether a repo can serve as a storefront. **No tool exists.** Pairs with `create_github_repo`. |
+| `check_compatibility` | Pure registry read of a frontend/backend pair. Cheap pre-flight before `create_project`. |
 
-The three create tools want the **confirm gate** — they provision real cloud resources — and the
-two Adobe ones must go through `requireAdobeAuth`'s `quiet` path so no modal appears.
+The three create tools take a **confirm gate**; the two Adobe ones must use `requireAdobeAuth`'s
+`quiet` path so no modal appears.
 
-### Dropped by reading (2)
+**Consider merging three into one.** `check_compatibility`, `validateSelection` and
+`loadDependencies` all answer "will this combination work?" — one `validate_component_selection`
+tool is likelier right than three near-identical ones.
 
-**`check-project-apis` — disqualified.** Its return shape (`{hasMesh}`) looked fine and hid the
-problem: it shells out to `aio plugins`, `aio console projects get` and `aio api-mesh:get`, which
-read the CLI's **process-global console selection**. That is the exact conflict phase 0
-documented — the extension deliberately stopped writing that selection, so it holds whatever
-another process last left there. As a tool it would answer about the wrong project, confidently.
-`check_mesh` already covers the question properly.
+### Decide before building (4)
 
-**`ensure-mesh-api-subscribed` — overlaps, decide before building.** It reads well (explicit
-`orgId`/`projectId`/`workspaceId`, ids validated against injection, structured auth pre-flight),
-but `add_console_apis` already subscribes Adobe APIs on the workspace credential. Whether the
-mesh API is reachable that way depends on credential type — see the `appbuilder-api-subscription`
-skill, which records that mesh needs a specific one. **Answer that before writing a second tool
-for the same job.**
+| Handler | The question |
+|---|---|
+| `ensure-mesh-api-subscribed` | Does `add_console_apis` already cover it? Depends on credential type — `appbuilder-api-subscription` has the answer. |
+| `addAppBuilderComponent` | Substantive (id/source/name/apis) and no tool exists, but not read in full. |
+| `check-prerequisites` | `prerequisites` has NO agent surface at all. Worth a deliberate decision, not a default no. |
+| `get-components-data` | The components half duplicates `list_components`; the `envVars`/`services` half answers "what does this component need?", which nothing does. A narrow tool may be right. |
+
+### Disqualified, by reason
+
+| Reason | Handlers |
+|---|---|
+| **Needs `context.panel`** — returns an error without one | `requestStatus`, and `switchOrg` / `reAuthenticate` which chain into it |
+| **Opens a modal / browser on the happy path** | `republishContent` (`withProgress` + `showErrorMessage`), `resetProject` (`*WithUI`), `delete-adobe-project` (`confirmDeletion`), `storefront-setup-cancel`, `reAuthenticate` |
+| **UI navigation** — runs a VS Code command, returns success | `editProject`, `configure`, `restartDemo` |
+| **Writes only to `sharedState`** — per-webview, invisible to an agent | `update-component-selection`, `update-components-data` |
+| **Reads the `aio` CLI's process-global selection** | `check-project-apis` — would answer about whatever project another process last selected (phase 0's conflict) |
+| **Capability already reachable** | `getProjects`/`get-workspaces` (`list_adobe_projects`, `list_workspaces`), `exportProject` (`export_project_settings`), `loadComponents`/`loadPreset` (`list_components`, `list_demo_packages`), `discover-store-structure` (`get_store_structure`), `list-org-console-apis` (`list_console_apis`) |
+| **Dispatch-only** — result goes out by `sendMessage`, return is bare | the auth group above, plus `check-github-auth`, `get-github-repos`, `re-detect-context` |
 
 ## Honest limits of this pass
 
-**Nine of 53 handlers have been read in full**: the six on the build list, plus
-`handleGetGitHubRepos` and `handleCheckGitHubAuth` (both dispatch-only) and `handleLoadComponents`
-(a duplicate of `list_components`). Reading the six dropped two of them.
+**~35 of 53 read.** The 18 unread are the auth/lifecycle group described above; each was
+classified by signal extraction, and `sign_in` already covers what an agent needs from them. A
+misclassification there costs a missed opportunity, not a bad tool.
 
-Everything else rests on scripts:
-
-| Depth | Count | What it proves |
-|---|---|---|
-| Read in full | 9 | the verdict |
-| Return shape extracted | 9 | what a success path returns, and whether `sendMessage` appears in a 2,600-char window |
-| Signal extraction only | 35 | a pattern matched, nothing more |
-
-The build list has now been read, which is what that instruction asked for — and it removed two
-of six, one of them for a reason no return-shape check could see (`check-project-apis` shells to
-the `aio` CLI's global selection). Treat the 35 signal-only exclusions as maybes rather than a
-settled result. The cost of a wrong exclusion is a missed
-opportunity; the cost of a wrong inclusion is a tool that cannot fail.
-- The `addIntegrationFlowHandlers` entries resolved to their `requireAdobeAuth` wrapper rather
-  than the inner handler. Read since: the wrapper prompts unless `quiet`, and two of the five
-  (`get-projects`, `get-workspaces`) duplicate existing tools. The three create/delete handlers
-  have not been read in full — do that before building them.
+**Reading promoted two handlers no script had flagged** — `check_github_app` and
+`check_repo_readiness` were both sitting in BARE-STATUS because their payload rides on the
+response type rather than a `data:` key. That falsifies the earlier claim in this file that "no
+pass has ever promoted one", and it is the clearest argument for reading: the scripts only ever
+subtracted.
