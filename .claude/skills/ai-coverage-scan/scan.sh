@@ -10,31 +10,36 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 python3 - "${1:-}" <<'PY'
-import re, glob, os, sys
+import re, glob, os, sys, subprocess
 from collections import Counter
+SKILL_DIR = os.path.join('.claude', 'skills', 'ai-coverage-scan')
 show_list = sys.argv[1] == '--list' if len(sys.argv) > 1 else False
 
-def blocks(s):
-    """Body of every `export const X = defineHandlers({...})`, brace-matched."""
-    for m in re.finditer(r'export const (\w+) = defineHandlers\(\{', s):
-        st = m.end() - 1; d = 0
-        for i, ch in enumerate(s[st:], st):
-            if ch == '{': d += 1
-            elif ch == '}':
-                d -= 1
-                if d == 0:
-                    yield s[st:i]; break
+# Handler keys come from handler-keys.mjs — a character-level parser that tracks
+# brace depth and skips strings, template literals and comments.
+#
+# This replaced an in-file regex on 2026-08-16. That regex brace-matched the MAP
+# correctly and then matched `^\s+key:` across the whole block, so it also
+# counted object properties inside handler BODIES — `auth: context.authManager`,
+# and `success`/`data`/`context`/`error` in returned objects. Measured: it
+# reported 23 handlers in importHandlers where the map has 7, and inflated the
+# agent-relevant gap from 68 to 83. A line-based depth counter was tried as the
+# fix and failed its own control, because handler bodies span lines.
+def handler_keys(path):
+    out = subprocess.run(
+        ['node', os.path.join(SKILL_DIR, 'handler-keys.mjs'), path],
+        capture_output=True, text=True,
+    )
+    if out.returncode != 0:
+        sys.exit(f'handler-keys.mjs failed on {path}: {out.stderr.strip()}')
+    return [l.split('\t', 1)[1] for l in out.stdout.splitlines() if '\t' in l]
 
-# Handler keys use BOTH conventions: unquoted camelCase and quoted kebab-case.
-# Matching only one silently halves the count.
-KEY = re.compile(r"^\s+(?:'([a-z][a-zA-Z0-9-]*)'|([a-z][a-zA-Z0-9]*))\s*:", re.M)
 norm = lambda x: re.sub(r'[-_]', '', x).lower()
 
 human = {}
 for f in sorted(set(glob.glob('src/**/handlers/*.ts', recursive=True))):
-    for blk in blocks(open(f).read()):
-        for m in KEY.finditer(blk):
-            human.setdefault(m.group(1) or m.group(2), os.path.basename(f))
+    for k in handler_keys(f):
+        human.setdefault(k, os.path.basename(f))
 
 # Agent-reachable names come from BOTH descriptor rows AND directly-registered
 # tools. Counting only descriptors overstates the gap by ~30 points.

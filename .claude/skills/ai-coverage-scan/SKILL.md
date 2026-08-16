@@ -15,38 +15,32 @@ bash .claude/skills/ai-coverage-scan/scan.sh          # summary
 bash .claude/skills/ai-coverage-scan/scan.sh --list   # + every uncovered feature
 ```
 
-## Baseline — 2026-08-16, `develop` @ beta.131 **after the data-installer credential broker**
+## Baseline — 2026-08-16, `develop` @ beta.131, **after the extractor was fixed**
 
 | | |
 |---|---|
-| UI-reachable handler types | 143 |
+| Handler types | 122 |
 | Reachable by an MCP tool | 35 |
-| Uncovered | 108 (25 UI-only, **83 agent-relevant**) |
-| **Agent-relevant gap** | **83 — 58% of the surface** |
+| Uncovered | 87 (25 UI-only, **62 agent-relevant**) |
+| **Agent-relevant gap** | **62 — 51% of the surface** |
 
-Measured twice hours apart: 142/35/82 before a develop rebase, 143/35/83 after. The rebase
-is not optional before quoting this — 15 commits had landed in between.
+**The previous readings were wrong, and by more than drift.** This scan reported 143 / 35 / 83
+until its handler extractor was replaced on 2026-08-16. It brace-matched the MAP correctly and
+then matched `^\s+key:` across the whole block, so it counted object properties inside handler
+BODIES — `auth: context.authManager`, and `success`/`data`/`context`/`error` in returned objects.
 
-Concentrated in `importHandlers` (22), `ProjectCreationHandlerRegistry` (13),
-`dashboardHandlers` (11) and `edsHandlers` (11) — data import, project creation, dashboard
-actions and storefront work, which is most of what an SC does.
+The error was not uniform, which is what made it survive. It **inflated** files with fat handler
+bodies (23 reported in `importHandlers`, which has 7) and **deflated** the total by deduping
+names across maps. Two errors partly cancelling produce a plausible number, and 83 was quoted
+into a program plan before anyone checked it.
 
-**The previous baseline (106 / 29 / 53, 50%) rotted within hours** when `7c7fcc43` merged the
-data installer, which added 36 handler types and 6 tools at once. Both halves move on a feature
-merge; that is why the re-measure warning below is not boilerplate.
+Extraction now runs through `handler-keys.mjs`, a character-level parser that tracks brace depth
+and skips strings, template literals and comments. It carries a `--self-test`. **A line-based
+depth counter was tried as the fix first and failed its own control** — handler bodies span
+lines, so depth at the newline says nothing about depth where the key sits.
 
-**Re-measure before trusting this table.** Backlog entries in this repo rot precisely because
-nobody re-runs the number; that is what the scan is for.
-
-**And say which tree you measured.** The numbers above are develop-only. Running this in a
-worktree with a feature branch merged in gives different totals — the first draft of the sibling
-backlog item reported a tool count from an integration worktree next to coverage numbers from
-develop, and the mismatch was invisible until a release forced a re-measure. Feature branches add
-handlers AND tools, so both halves move.
-
-**Held stable across a decomposition refactor**, which is the useful proof that it measures the
-map rather than the files: `2568dd78` split `dashboardHandlers` 1,213 -> 220 lines into five
-sibling modules with verbatim re-exports, and the scan correctly reported no change.
+Verified against a hand-read of the three data-installer maps: scan and reading now agree on all
+9 unexposed handlers, name for name.
 
 ## Three traps, each of which produced a wrong number before the scan was trusted
 
