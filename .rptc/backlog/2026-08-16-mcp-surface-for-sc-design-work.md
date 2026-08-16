@@ -207,6 +207,65 @@ considering once transport exists.
   were absent from its sitemap, so a sitemap-driven copy dropped them silently.
 - Theme edits in-project are destroyed on reset (see the `brandAssets` trap above).
 
+## Triage of the 53 — the actual work list (2026-08-16)
+
+Ran `--list` and sorted every entry by hand. **The 53 is not 53 pieces of work.**
+
+### A. Wizard and webview internals — correctly NOT tools (~18)
+
+`ready` · `log` · `requestStatus` · `loadComponents` · `loadDependencies` · `loadPreset` ·
+`get-components-data` · `update-component-selection` · `update-components-data` · `validate` ·
+`validateSelection` · `checkCompatibility` · `re-detect-context` · `ensure-org-selected` ·
+`storefront-setup-start` · `storefront-setup-cancel` · `configure` · `editProject`
+
+These are steps INSIDE the creation wizard or pure webview protocol. An agent reaches the whole
+flow through `create_project`; exposing the steps individually would expose UI internals, not
+capability. (`storefront-setup-start` is the exception that proves it — the MCP `create_project`
+tool already dispatches it internally.)
+
+### B. Covered under a different name — false positives the scan cannot see (~5)
+
+| Flagged | Actually reachable via |
+|---|---|
+| `resetProject` | `reset_eds_project` |
+| `republishContent` | `republish` |
+| `exportProject` | `export_project_settings` |
+| `getProjects` | `list_projects` |
+| `restartDemo` | `start_demo` + `stop_demo` (partial — no single restart) |
+
+**Why the scan misses these:** these tools are registered DIRECTLY and reimplement the handler's
+job rather than dispatching to it, so there is no `type:` link for the scan to follow. Confirmed
+by tracing: `get_store_structure` DOES carry `type: 'get-store-structure'`, while `republish`
+carries none. A future scan pass could flag same-verb near-matches for human review; it cannot
+resolve them automatically.
+
+### C. Real gaps — ~29, in eight clusters
+
+| Cluster | Handlers | Why it matters |
+|---|---|---|
+| **Adobe I/O provisioning** | `create-adobe-project`, `create-adobe-workspace`, `delete-adobe-project`, `get-projects`, `get-workspaces`, `check-project-apis`, `list-org-console-apis` | 7 — **an agent cannot create an I/O project or workspace at all.** Directly blocks the Data Installer credential decision in the sibling backlog item. |
+| **GitHub** | `create-github-repo`, `get-github-repos`, `github-oauth`, `github-change-account`, `check-github-app`, `check-repo-readiness` | 6 — no repo creation or GitHub auth recovery |
+| **DA.live auth** | `check-dalive-auth`, `clear-dalive-auth`, `store-dalive-token`, `store-dalive-token-with-org` | 4 — an agent cannot check or repair the auth every content operation depends on |
+| **Auth recovery** | `authenticate`, `check-auth`, `reAuthenticate`, `switchOrg` | 4 — cannot recover from the org-mismatch state the extension is built to self-heal |
+| **Prerequisites** | `check-prerequisites`, `install-prerequisite`, `continue-prerequisites` | 3 — cannot check or install what a demo needs to run |
+| **App Builder components** | `addAppBuilderComponent`, `renameAppBuilderComponent` | 2 |
+| **Store discovery** | `discover-store-structure` | 1 — distinct from `get-store-structure`, which IS covered |
+| **Mesh / import** | `ensure-mesh-api-subscribed`, `importFromFile` | 2 |
+
+### What the triage changes
+
+The headline moves from "50% uncovered" to **~29 real gaps in eight clusters** — a work list, not
+a percentage. Two things stand out:
+
+1. **The Adobe I/O cluster is the largest and it is load-bearing.** The Data Installer item's
+   whole problem is that a project has no workspace to provision credentials into — and an agent
+   cannot create one either. Whichever architecture wins there, the AI surface needs this cluster.
+2. **Auth and prerequisites are entirely absent**, which is where an agent gets stuck first and
+   has the least ability to recover. `check-dalive-auth` matters disproportionately: every content
+   operation depends on that token, and an agent cannot even test it.
+
+**Re-run `ai-coverage-scan` before using this list** — it is a snapshot of develop @ beta.130.
+
 ## Still open
 
 1. Whether tools should be scoped/filtered per task so a design session does not carry the
