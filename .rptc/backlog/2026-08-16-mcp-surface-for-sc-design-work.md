@@ -266,6 +266,105 @@ a percentage. Two things stand out:
 
 **Re-run `ai-coverage-scan` before using this list** — it is a snapshot of develop @ beta.130.
 
+## How to decide WHAT TO BUILD — routing a finding to a layer
+
+Four layers, four different jobs. The mistake to avoid is fixing a capability gap with a skill
+(the agent still cannot do it) or a correctness gap with a tool (it still gets it wrong).
+
+**Route by the SYMPTOM, not by the topic:**
+
+| Symptom observed | Layer | Why that layer |
+|---|---|---|
+| The agent literally cannot do it | **Tool — transport** | Capability. No amount of documentation adds a verb. |
+| It can, but re-derives what the extension already knows | **Tool — knowledge** | Cost. Cheapest code, biggest token win. |
+| It can, but does the right things in the wrong order or skips a step | **Skill** | Sequence. |
+| It does something detectably wrong, and keeps doing it | **Hook** | Enforcement — the only layer that works WITHOUT the agent's cooperation. |
+| The work needs isolated context or a standing role | **Agent** | Context and persona. |
+
+Two rules from this repo's own history:
+
+- **A hook that enforces a skill must travel with the skill** (root `CLAUDE.md`). They pair:
+  the skill teaches, the hook catches the case where teaching failed.
+- **Prefer a hook over a skill when the cost of being wrong is high**, because a skill can be
+  ignored and a hook cannot. Prefer a skill when the right action needs judgement.
+
+### Priority = frequency × cost-when-wrong
+
+Not "how many handlers are in the cluster". A single missing `check-dalive-auth` outranks six
+GitHub handlers, because every content operation depends on that token and an agent currently
+cannot even test it.
+
+## Applying it to the findings
+
+### Tools — transport (capability)
+
+The 8 clusters from the triage, ordered by frequency × cost:
+
+1. **DA.live content authoring** (`read_page`, `write_page`, `publish_page`, `list_content`,
+   `delete_page`) — not in the handler triage at all, because *no handler exists either*. Highest
+   priority: it is the storefront's substance and the whole reason this item exists.
+2. **DA.live auth** (4) — every content operation depends on it; an agent cannot test it.
+3. **Adobe I/O provisioning** (7) — load-bearing for the sibling Data Installer decision.
+4. **Auth recovery** (4) · **Prerequisites** (3) · **GitHub** (6) · **App Builder** (2) ·
+   **mesh/import/store-discovery** (4).
+
+### Tools — knowledge (cost)
+
+- `get_block_authoring_shape` — the ~121k-token measurement. Highest single-tool ROI in the item.
+- `get_catalog_scope` — real category `urlPath`s and store codes.
+- Fold into existing tools: block `origin` into `list_blocks`, LKG pin into `get_project`,
+  published state into `list_content`.
+
+### Skills (sequence and judgement)
+
+- **An EDS authoring skill** — the block markup shape, the body/main/div wrapper, that DA is
+  authored content while `data/*.json` is code-bus. Pairs with the transport tools.
+- **An open-ended design skill** — the gap that started this item. Every existing design skill
+  assumes a reference site to match; nothing supports "improve this".
+- **Role-shaped storefront skills**, if the App Builder persona set is judged to have earned its
+  keep. Decide deliberately rather than by inheritance.
+
+### Hooks (enforcement) — the layer with NOTHING in it today
+
+A generated project ships exactly one hook, a `PostToolUse` auto-commit-and-push on
+`Write|Edit` under the storefront. It is a SYNC mechanism, not a guard — it makes an edit
+visible on the CDN, which visual iteration needs. **There are zero guard hooks**, while the
+extension repo itself runs eight.
+
+Each trap below cost this session real time and is mechanically detectable, which is exactly the
+hook profile:
+
+| Trap | Hook that would catch it |
+|---|---|
+| Theme edits in-project are destroyed on the next reset (`brandAssets` re-vendors) | `PreToolUse` on Write to a vendored path — warn, name the brand source |
+| Non-sheet JSON written to DA silently fails at preview | `PreToolUse` on a DA write of `.json` — route to the code bus |
+| Checking `aem.live` for library doc pages (the Library reads `content.da.live`) | Hard to hook; belongs in a skill |
+| Auto-commit fires per edit, pushing broken intermediate states | Reconsider the existing hook's granularity |
+
+**Also worth questioning: that auto-push hook.** One commit per edit is noisy, and an agent
+iterating on design will push intermediate states. It exists because EDS serves from the repo,
+so the alternative is an explicit `publish` step the agent controls — which the transport tools
+would provide anyway.
+
+### Agents
+
+Deliberately last. **Do not add agents to save tokens** — this session's own ~121k derivation was
+performed BY a subagent, so isolation moved where the cost was paid without reducing it. Add an
+agent when work needs a standing role or genuinely isolated context; fix cost with knowledge
+tools instead.
+
+## Suggested build order
+
+1. **Knowledge tools first.** Cheapest, highest measured ROI, and they make everything after
+   cheaper. `get_block_authoring_shape` alone is a ~121k → ~200 token change.
+2. **Content transport + its authoring skill together.** Capability plus the sequence knowledge
+   to use it; neither is much use alone.
+3. **The two guard hooks** (vendored-path write, DA JSON write) — small, and they stop the two
+   traps that silently destroy work.
+4. **Auth and prerequisites tools** — where an agent gets stuck first.
+5. **Adobe I/O provisioning** — sequence with the sibling Data Installer decision.
+6. **Agents, if at all** — only once there is evidence a role boundary is needed.
+
 ## Still open
 
 1. Whether tools should be scoped/filtered per task so a design session does not carry the
