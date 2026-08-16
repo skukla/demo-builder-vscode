@@ -241,7 +241,7 @@ Core self-heal **shipped** (see Recently shipped). Residual scope from the origi
 
 `componentConfigs` is keyed by who CONSUMES a value, not by what the value IS, so one fact is stored once per declaring component. Measured 2026-08-11: **17 of 25** declared env vars have more than one owner; 6 are the Commerce scope keys (single-sourced 2026-08-11), leaving **11**. The drift mechanism is NOT a second writer — there is none; it is that Configure's fan-out targets come from `selectedComponents`, so a component holding a copy but missing from the selection lists never gets updated (the same gap `reconcileComponentSelections` exists for). That is **key-agnostic**, so all 11 are exposed. Two candidate fixes: widen the fan-out target set (one change, every key) or single-source per key (what scope got). **Do the fan-out audit first** — it may make most of the per-key work unnecessary. **Not blocked.**
 
-#### AI surface coverage — tools and skills vs features ([`ai-surface-coverage/`](ai-surface-coverage/))
+#### AI surface coverage — tools and skills vs features ([`ai-surface-coverage/`](ai-surface-coverage/)) — **now phase 4 of `.rptc/plans/ai-surface/`**
 
 Paused 2026-08-13 with the research done and seven steps written; deferred so a live defect
 could go first. Measured: **58 tools, 14 skills, 67 handlers** across five feature maps, 26

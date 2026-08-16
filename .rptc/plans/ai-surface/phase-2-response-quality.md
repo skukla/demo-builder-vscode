@@ -1,9 +1,7 @@
-# AI response quality — make what an agent gets back usable
+# Phase 2 — Response quality
 
-**Slug note:** this is the **quality** axis. `.rptc/backlog/ai-surface-coverage/` (paused
-2026-08-13) is the **coverage** axis — exposing unexposed handlers as tools. They are
-complementary, not competing, and an earlier version of this file duplicated its slug by
-mistake. See "Reconciliation" below; this plan should be renamed before it lands.
+**Part of `.rptc/plans/ai-surface/` — read `overview.md` first.** Runs after phase 1 and before
+coverage breadth: fixing the envelope before exposing more tools avoids multiplying the work.
 
 **Research:** seven parallel agents, 2026-08-16, all findings cited in-repo. The prior research
 lives at `.rptc/research/ai-surface-coverage/research.md` (2026-08-12).
@@ -91,16 +89,3 @@ stays in the cheap regime.** The canaries are `toolDescriptors.test.ts:33-48` an
 - A PM-approved **4-tier policy** already classifies AI-reachable tools
   (`docs/research/2026-05-30-ai-first-experience.md` §1a). This plan's 3-class read/mutate/destroy
   split is unreconciled with it — reconcile before relying on either.
-
-## Reconciliation with the paused coverage plan
-
-`.rptc/backlog/ai-surface-coverage/` steps 01–04 expose qualifying handlers as tools; 05–07 add
-an org-context skill, a mesh skill, and routing. Nothing in it conflicts with this plan — it adds
-tools, this improves what tools return.
-
-**Sequencing:** quality first is cheaper. Exposing more handlers before fixing the envelope
-convention multiplies the number of tools that need reshaping later. But that is a
-recommendation, not a decision — the owner has not chosen between them.
-
-**Before either lands:** rename this plan's slug, and either retire the paused plan or restate it
-as the coverage phase.
