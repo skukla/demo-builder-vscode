@@ -47,6 +47,18 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         description: "Report whether the current project's API mesh is deployed and up to date",
         map: meshHandlers,
         type: 'check-api-mesh',
+        inputSchema: {
+            // Optional, and normally omitted: no agent knows an Adobe workspace
+            // id, so the handler falls back to the current project's. Declared
+            // anyway because the wizard's create/edit mode targets a workspace
+            // the project has not stored yet, and an agent mid-setup may need
+            // the same. Omitting the field entirely is what broke this tool: the
+            // registration loop dispatches `{}` and the handler rejected it.
+            workspaceId: z
+                .string()
+                .optional()
+                .describe("Adobe workspace id; defaults to the current project's workspace"),
+        },
     },
     {
         tool: 'list_console_apis',
@@ -147,7 +159,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         tool: 'list_installed_datapacks',
         description:
             'Datapacks the Data Installer records as installed, and the Commerce instance each ' +
-            'went into. This is the service\'s own tracking, not a live check of the instance.',
+            "went into. This is the service's own tracking, not a live check of the instance.",
         map: dataInstallerHandlers,
         type: 'list-installed-datapacks',
         inputSchema: {

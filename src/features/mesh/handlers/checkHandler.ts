@@ -9,10 +9,18 @@
 
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
-import { checkApiMeshEnabled, checkMeshExistence, fallbackMeshCheck } from '../services/meshCheckHelpers';
+import {
+    checkApiMeshEnabled,
+    checkMeshExistence,
+    fallbackMeshCheck,
+} from '../services/meshCheckHelpers';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
-import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell';
+import {
+    buildOrgTargetFromProjectAdobe,
+    withOrgContext,
+    type OrgContextTarget,
+} from '@/core/shell';
 import { validateWorkspaceId } from '@/core/validation';
 import { ensureAuthenticated, getEndpoint } from '@/features/mesh/handlers/shared';
 import { ErrorCode } from '@/types/errorCodes';
@@ -60,7 +68,8 @@ function getWorkspaceServices(config: WorkspaceConfig | null): unknown[] {
  * malicious input like $(rm -rf /) from being executed in the shell.
  *
  * @param context - Handler context with logger and extension context
- * @param payload - Request payload containing workspaceId (validated) and optional projectId
+ * @param payload - Optional workspaceId (validated; defaults to the current
+ *                  project's workspace) and optional projectId
  * @returns Result object with mesh availability status and details
  */
 type MeshCheckResult = {
@@ -76,9 +85,30 @@ type MeshCheckResult = {
 
 export async function handleCheckApiMesh(
     context: HandlerContext,
-    payload: { workspaceId: string; projectId?: string },
+    payload: { workspaceId?: string; projectId?: string },
 ): Promise<MeshCheckResult> {
-    const { workspaceId, projectId } = payload;
+    const { projectId } = payload;
+
+    // The wizard supplies the workspace explicitly — create/edit mode can target a
+    // workspace that is not (yet) the one stored on the project — so the payload
+    // always wins. Agents reach this through the no-arg `check_mesh` MCP tool and
+    // supply nothing; without this fallback that tool could only ever return
+    // "Invalid workspace ID: must be a non-empty string". An explicit empty string
+    // stays a caller bug: `??` leaves it in place and the guard below rejects it.
+    const project = await context.stateManager.getCurrentProject();
+    const workspaceId = payload.workspaceId ?? project?.adobe?.workspace;
+
+    if (!workspaceId) {
+        return {
+            success: false,
+            apiEnabled: false,
+            meshExists: false,
+            error:
+                'No workspace ID to check: pass workspaceId, or open a project that has an ' +
+                'Adobe workspace configured.',
+            code: ErrorCode.MESH_CONFIG_INVALID,
+        };
+    }
 
     // SECURITY: Validate workspaceId to prevent command injection
     try {
@@ -118,26 +148,27 @@ export async function handleCheckApiMesh(
     // Resolve targeting context. projectId may come from the payload (wizard
     // edit/create mode); the org is only known from the current project, so we
     // always read it from there (falling back to the project for projectId too).
-    const project = await context.stateManager.getCurrentProject();
+    // `project` was already read above to resolve the workspace.
     const effectiveProjectId = projectId ?? project?.adobe?.projectId;
     const effectiveOrgId = project?.adobe?.organization;
 
     if (!effectiveProjectId) {
-        context.logger.warn('[Mesh Setup] Missing projectId - cannot target workspace context, check may fail');
+        context.logger.warn(
+            '[Mesh Setup] Missing projectId - cannot target workspace context, check may fail',
+        );
     }
 
     // Build the target via the shared builder so org code/name are enriched from
     // the cached org on an id match (less leaky than ID-only). The workspace is
-    // the payload's, not project.adobe.workspace, so it's supplied explicitly.
+    // the one resolved above (payload first), so it's supplied explicitly rather
+    // than left to the builder's own project.adobe.workspace read.
     const cachedOrg = ServiceLocator.getAuthenticationService().getCachedOrganization();
     const target: OrgContextTarget = buildOrgTargetFromProjectAdobe(
         { organization: effectiveOrgId, projectId: effectiveProjectId, workspace: workspaceId },
         cachedOrg,
     );
 
-    return withOrgContext(target, () =>
-        runMeshCheck(context, workspaceId),
-    );
+    return withOrgContext(target, () => runMeshCheck(context, workspaceId));
 }
 
 /**
@@ -178,14 +209,21 @@ async function runMeshCheck(
             context.debugLogger.trace('[API Mesh] Workspace services', { services });
 
             // Check if API Mesh service is enabled (extracted helper)
-            const { enabled: apiEnabled } = checkApiMeshEnabled(services, context.sharedState.apiServicesConfig);
+            const { enabled: apiEnabled } = checkApiMeshEnabled(
+                services,
+                context.sharedState.apiServicesConfig,
+            );
 
             // Cleanup temp directory
             await fsPromises.rm(tempDir, { recursive: true, force: true });
 
             if (!apiEnabled) {
                 context.logger.warn('[API Mesh] API Mesh API not found in workspace services');
-                context.debugLogger.debug('[API Mesh] Available services', { serviceNames: (services as { name?: string; code?: string }[]).map((s) => s.name || s.code) });
+                context.debugLogger.debug('[API Mesh] Available services', {
+                    serviceNames: (services as { name?: string; code?: string }[]).map(
+                        (s) => s.name || s.code,
+                    ),
+                });
                 // API absent: the deploy path auto-subscribes the API Mesh API
                 // (subscribeRequiredApis); no manual Console-UI remediation needed.
                 return {
@@ -210,7 +248,9 @@ async function runMeshCheck(
             }
 
             // Mesh exists - fetch endpoint and track state
-            const endpoint = meshCheck.meshId ? await getEndpoint(context, meshCheck.meshId) : undefined;
+            const endpoint = meshCheck.meshId
+                ? await getEndpoint(context, meshCheck.meshId)
+                : undefined;
 
             // Track that mesh existed before this session (prevent deletion on cancel)
             context.sharedState.meshExistedBeforeSession = workspaceId;
@@ -229,9 +269,14 @@ async function runMeshCheck(
                     };
 
                 case 'error':
-                    context.logger.warn('[API Mesh] Existing mesh is in error state - will attempt recovery via update');
+                    context.logger.warn(
+                        '[API Mesh] Existing mesh is in error state - will attempt recovery via update',
+                    );
                     if (meshCheck.error) {
-                        context.debugLogger.trace('[API Mesh] Error details:', meshCheck.error.substring(0, 500));
+                        context.debugLogger.trace(
+                            '[API Mesh] Error details:',
+                            meshCheck.error.substring(0, 500),
+                        );
                     }
                     return {
                         success: true,
@@ -265,9 +310,10 @@ async function runMeshCheck(
                         error: 'Unable to determine mesh status. Try refreshing or check Adobe Console.',
                     };
             }
-
         } catch (configError) {
-            context.debugLogger.debug('[API Mesh] Layer 1 failed, falling back to Layer 2', { error: String(configError) });
+            context.debugLogger.debug('[API Mesh] Layer 1 failed, falling back to Layer 2', {
+                error: String(configError),
+            });
             // Cleanup temp directory on error
             try {
                 await fsPromises.rm(tempDir, { recursive: true, force: true });
@@ -292,7 +338,9 @@ async function runMeshCheck(
                 }
 
                 if (!fallbackResult.meshExists) {
-                    context.logger.debug('[API Mesh] API enabled, no mesh exists yet (fallback check)');
+                    context.logger.debug(
+                        '[API Mesh] API enabled, no mesh exists yet (fallback check)',
+                    );
                     return {
                         success: true,
                         apiEnabled: true,
@@ -301,7 +349,9 @@ async function runMeshCheck(
                 }
 
                 // Mesh exists
-                context.logger.debug('[API Mesh] Existing mesh found (fallback check)', { meshId: fallbackResult.meshId });
+                context.logger.debug('[API Mesh] Existing mesh found (fallback check)', {
+                    meshId: fallbackResult.meshId,
+                });
                 return {
                     success: true,
                     apiEnabled: true,
@@ -312,11 +362,13 @@ async function runMeshCheck(
                 };
             } catch (meshError) {
                 // Unknown error from fallback - log and continue to outer catch
-                context.logger.warn('[API Mesh] Fallback check failed with unknown error', meshError as Error);
+                context.logger.warn(
+                    '[API Mesh] Fallback check failed with unknown error',
+                    meshError as Error,
+                );
                 throw meshError;
             }
         }
-
     } catch (error) {
         context.logger.error('[API Mesh] Check failed', error as Error);
         return {
