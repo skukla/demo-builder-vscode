@@ -48,6 +48,76 @@ global state is the same bug with a wider entrance.
 **This is not a claim that the external MCP is wrong.** Its model is the normal `aio` one. The
 conflict is that two models coexist in one project with nothing reconciling them.
 
+## Static half — DONE 2026-08-16
+
+Read from a real generated project's `.demo-builder-mcp/node_modules/`, not from the declaration.
+
+### Inventory: 11 tools, and the version already drifted
+
+`@adobe-commerce/commerce-extensibility-tools` — declared `^3.4.0`, **installed 3.5.0**. The
+range floats, so the tool list is not pinned and can change without us.
+
+`src/tools/`: `aio-app-deploy` · `aio-app-dev` · `aio-app-use` · `aio-configure-global` ·
+`aio-dev-invoke` · `aio-login` · `aio-where` · `commerce-event-subscribe` · `onboard` ·
+`search-commerce-docs` · `upload-chat-history`. Matches the declared description exactly.
+
+### The conflict, confirmed at the command level
+
+`aio-configure-global` builds and runs exactly the commands the extension abandoned:
+
+```
+select-org       → aio console org select <org>
+select-project   → aio console project select <project>
+select-workspace → aio console workspace select <workspace>
+```
+
+And its command runner sets **zero** `AIO_CONSOLE_*` env vars — so it uses the global model
+exclusively, while the extension uses per-operation env targeting exclusively. The two models are
+mutually invisible: neither can see what the other did.
+
+### Overlap map
+
+| External | Ours | Relationship |
+|---|---|---|
+| `aio-configure-global` | `select_org` / `select_project` / `select_workspace` | **Conflict** — writes global config vs sets an in-process store |
+| `aio-where` | `get_current_project` | Reports the global selection; an agent may read it as truth |
+| `aio-app-deploy` | `deploy_integration` | Same operation, different targeting model |
+| `search-commerce-docs` | — | **Gap-filler.** May already answer what a docs knowledge-tool would; check before building one |
+
+### Gating is NOT the lever
+
+`projectNeedsAppBuilderTooling` returns true when the project has an **EDS storefront**
+(`aiToolingGate.ts`), which is essentially every demo project. The gate reads as narrow and is
+near-universal. Excluding the package would also remove `search-commerce-docs` and the whole
+App Builder loop.
+
+### What the fix is, and where it lives
+
+The problem has two halves: Adobe's tool **writes** the shared setting, and the extension's own
+commands **read** it when a caller forgets to pass a target. **We cannot stop the writing** — it
+is Adobe's package on a floating range. The writing is only harmful because of the reading.
+
+So the durable fix is on the reading side, and it is **NOT in this program** — it is extension
+code. It was reported to the owning session as a defect (see below). Guidance is worth adding but
+cannot be the primary fix: skills are advisory and nothing routes to them, so it reduces how
+often the situation arises without making it impossible.
+
+**A recommendation made here and withdrawn, recorded so it is not re-proposed:** "make untargeted
+commands fail loudly". A guard already exists at the command seam and deliberately warns rather
+than failing, because *"some call sites legitimately have no project yet"*
+(`commandExecutor.ts:107-119`). The real defect is that its pattern list misses commands, not that
+it warns. Do not propose failing until someone has counted how often it would fire.
+
+## Runtime half — NOT DONE
+
+Needs a running extension host:
+
+- **Playwright's tool list is unmeasured.** Read it; do not estimate.
+- **Reconcile the declaration against `verify_ai_setup`'s `inventory.mcps[]`**, which spawns each
+  server and lists what it really exposes.
+- **The true surface size.** The measured ~1,175 tokens of descriptions covers demo-builder only.
+  Until the real figure exists, the withdrawn tool-scoping argument stays withdrawn but unsettled.
+
 ## What the audit must answer
 
 1. **Overlap** — which external tools duplicate a demo-builder tool? Candidates by name:
