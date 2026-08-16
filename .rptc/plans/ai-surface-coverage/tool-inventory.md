@@ -16,6 +16,23 @@ never remove the row.
 Reconcile against `probeInExtensionMcpTools` when an extension host is running — that is ground
 truth for what the agent SEES, and a difference from this source sweep is itself a finding.
 
+## Corrections from the 2026-08-16 research fan-out
+
+- **"only 4 descriptor rows set `confirm`" was wrong — it is 3** (`actionDescriptors.ts:60,110,162`).
+- **The classification understated the risk.** 19 tools change state with NO gate, and **eight
+  take no required arguments** (`deploy_mesh`, `export_project_settings`, `refresh_block_library`,
+  `regenerate_ai_files`, `republish`, `start_demo`, `stop_demo`, `sync_content`). Never build a
+  harness that enumerates tools and calls each with `{}`.
+- **Two `read` tools can seize the UI** — `get_store_structure` and `list_console_apis` route
+  through an auth guard that can open a modal and a browser.
+- **Two `read` tools emit secrets** — `get_component_config` returns raw `.env`;
+  `get_project full=true` returns an unredacted manifest. This repo is public.
+- **`promote_block_to_library` is misclassified.** Classed `mutate`, it commits, pushes and
+  publishes to a live site ungated — while its literal inverse `remove_block_from_library` is
+  classed `destroy` and IS gated. Same blast radius, opposite protection.
+- The `destroy` set is the **best**-guarded part of the surface; the risk lives in `mutate`,
+  where the heuristic's warning is mildest.
+
 ## Classification
 
 Verb-prefix heuristic, spot-checked — **NOT reviewed tool by tool.** An earlier version of this

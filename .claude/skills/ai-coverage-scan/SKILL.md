@@ -67,7 +67,7 @@ gap is invisible to this scan: `list_blocks` exists, so blocks read as "covered"
 
 So pair it with the judgement question the count cannot answer: *for each covered feature, does
 using it cost what it should?* See
-`.rptc/backlog/2026-08-16-mcp-surface-for-sc-design-work.md` for the tool-class framing
+`.rptc/plans/ai-surface-coverage/overview.md` for the tool-class framing
 (transport / knowledge / composite / verification) that came out of asking it.
 
 It also says nothing about **skills or agents** — the other two layers of the AI surface. A

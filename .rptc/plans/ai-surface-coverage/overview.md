@@ -1,59 +1,106 @@
-# AI-surface coverage — make the extension usable BY an agent
+# AI response quality — make what an agent gets back usable
 
-**Promoted from** `.rptc/backlog/2026-08-16-mcp-surface-for-sc-design-work.md` on 2026-08-16.
-That file holds the research; this holds the execution. Do not duplicate findings here — cite it.
+**Slug note:** this is the **quality** axis. `.rptc/backlog/ai-surface-coverage/` (paused
+2026-08-13) is the **coverage** axis — exposing unexposed handlers as tools. They are
+complementary, not competing, and an earlier version of this file duplicated its slug by
+mistake. See "Reconciliation" below; this plan should be renamed before it lands.
 
-## Goal
+**Research:** seven parallel agents, 2026-08-16, all findings cited in-repo. The prior research
+lives at `.rptc/research/ai-surface-coverage/research.md` (2026-08-12).
 
-An agent working inside the extension should be able to do what a human can, at a cost
-proportional to the task. Today it cannot do the central thing (author storefront content) and
-pays to rediscover what the extension already knows.
+## What the research changed
 
-## Why, in one measurement each
+An earlier draft of this plan proposed six steps to score and reshape all 52 tool responses,
+including a live capture harness and frequency instrumentation. **The research retired most of
+it.** Recorded because the reasoning matters more than the conclusion:
 
-| Finding | Evidence |
+| Assumption | What was measured |
 |---|---|
-| Capability gap | 53 agent-relevant handler types unreachable; **zero** tools author content |
-| Cost gap | a subagent spent **~121,000 tokens** deriving block shapes that sit in `component-definition.json` |
-| Shaping gap | `get_store_structure` returns 701 chars where 186 carries the same information — **73%** — and **no tool overrides `defaultShape`** |
-| Enforcement gap | a generated project ships **one** hook, a sync hook; **zero** guards |
-| Agent layer | does not exist — no `.claude/agents/` at all |
+| Output bloat is systemic | **False. 47 of 52 tools are already lean** — someone did this work for most of the surface |
+| No tool shapes its output | **False.** Zero *descriptor rows* use `shape:`; the ~32 bespoke tools already project by hand |
+| Need a live capture harness | **Unnecessary.** Static derivation traced all 52 with measured sizes; nothing had to be called |
+| Need frequency instrumentation to rank | **Unnecessary.** Concentration is stark enough that ranking is obvious |
+| 52 tools to reshape | **Five**, plus six returning `{}` |
 
-## Phases
+**The harness being unnecessary is the most valuable deletion.** It was the riskiest step:
+19 tools mutate state ungated and **eight take no required arguments**, so an
+enumerate-and-call-with-`{}` harness would have deployed a mesh, published to the CDN,
+overwritten the AI bundle and written a secrets-bearing export.
 
-Strictly sequential; each is the next one's denominator. **Phase 1 only in this plan** — later
-phases get their own plans once their denominator exists.
+## What is actually wrong
 
-1. **Tools** — response analysis, all 52, then reshape by impact ← *this plan*
-2. Skills — coverage against the post-Phase-1 tool surface
-3. Agents — only where a flow spans 3+ skills with a required order
-4. Hooks — enforcement for traps the first three surfaced
+**Five tools carry the bloat** (measured, not estimated):
 
-## Steps in this plan
+| Tool | Size | The waste |
+|---|---|---|
+| `verify_ai_setup` | ~15–25 KB | Re-serializes all 52 tool names+descriptions into a model that already has them |
+| `get_project` | 6,523 / 9,530 chars | `aiFileHashes` = 4,402 chars of SHA-256 — 46% of payload, zero model value |
+| `get_component_config` | up to 13 KB | Raw bytes; can read the manifest `get_project` summarizes |
+| `list_console_apis` | large | Three picker-only fields per row + a join; its one useful field is unreachable |
+| `get_store_structure` | 755 → 274 | Smallest, worst ratio — 64% |
+
+**Six tools return the literal string `{}`** — `start_demo`, `stop_demo`,
+`deploy_integration`, `redeploy_integration`, `remove_integration`, `delete_mesh`.
+`defaultShape` strips `success`, the handler carries no payload, and the model cannot tell
+success from a no-op. This is the one *systemic* defect, and it is the opposite of bloat.
+
+**The root cause of variance is the untyped contract.** `AnyMessageHandler` returns
+`Promise<any>`; `defineHandlers` is an identity function; `HandlerResponse` has
+`[key: string]: unknown`. So `defaultShape` must guess, and three different envelope
+conventions reach the agent depending on which field name each author picked.
+
+**And nothing enforces any of it.** Of 24 documented conventions, 6 are enforced, 7 partially,
+**11 are prose only**. No test pins the tool count — an entire `register…Tools()` line could be
+deleted from `extension.ts` and every test would pass.
+
+## Two shipped-code defects found on the way
+
+Independent of this plan, and worth raising separately:
+
+1. **19 tools change state with no confirmation**, against a documented rule that says they must.
+   `refresh_block_library` is called "destructive" in §9 of the same doc and is ungated.
+   `promote_block_to_library` commits, pushes and publishes ungated while its literal inverse
+   *is* gated.
+2. **`check_mesh` can never succeed.** Its descriptor declares no `inputSchema`; its handler
+   requires `workspaceId`. Every MCP invocation dies at validation. Confirmed twice, independently.
+
+## Steps
 
 | Step | What | Kind |
 |---|---|---|
-| 01 | Inventory + safety classification, all 52 | analysis |
-| 02 | Capture harness (`tools/call` on the probe pattern, allowlist-gated) | TDD |
-| 03 | Live capture + scoring — read-only tools | analysis |
-| 04 | Static derivation + scoring — mutating and destructive | analysis |
-| 05 | Frequency instrumentation, then rank by size × frequency | TDD |
-| 06 | Reshape by rank, each with a pinned-shape test | TDD |
+| 01 | Inventory + safety classification | **done** — see `tool-inventory.md` |
+| 02 | The six `{}` returns, and `check_mesh` | TDD |
+| 03 | Reshape the five concentrated tools | TDD |
+| 04 | Enforcement: pin the catalog, test the envelope convention | TDD |
 
-## Constraints
+Blast radius is known: reshaping one tool costs 2–8 assertions in one test file; changing the
+envelope for all costs 16 files and ~150 mostly-exact assertions. **Step 03 is per-tool, so it
+stays in the cheap regime.** The canaries are `toolDescriptors.test.ts:33-48` and
+`inExtensionMcpServer.test.ts:93` — run those two first to know if a change is contained.
 
-- **Never call a destructive tool to measure it.** Step 02's harness is allowlist-gated so a
-  newly added `delete_*` is excluded by default rather than by anyone remembering.
-- **Rank by size × frequency, never size alone.** A large response called once matters less than
-  a small one called forty times.
-- **Ground truth is `probeInExtensionMcpTools`**, not a grep. A grep already produced a wrong
-  count in this research by reading the wrong worktree.
-- **Say which tree every number came from.** The same error mixed a 58-tool count from an
-  integration worktree with coverage numbers from develop.
-- Reshaping must not change what a tool CAN do — only what it returns. Each gets a test pinning
-  the projected shape so it cannot regress to the raw payload.
+## Constraints (from the record, not invented here)
 
-## Done when
+- **Do not expose fire-and-forget handlers.** The disqualifier from the 2026-08-12 research:
+  *"Does the return value carry the OUTCOME, or only the dispatch?"* Directly relevant to the
+  six `{}` tools — fixing their return is what makes them honest.
+- **No new generated skills unless multi-step-with-traps** (2026-07-11, shipped).
+- **Do not add agents to save tokens** — measured: a ~121k-token derivation was performed *by* a
+  subagent.
+- **Tool-surface size is NOT a cost** — 52 descriptions ≈ 1,175 tokens/session. Do not
+  re-propose per-task tool scoping on that basis; the claim was measured and withdrawn.
+- A PM-approved **4-tier policy** already classifies AI-reachable tools
+  (`docs/research/2026-05-30-ai-first-experience.md` §1a). This plan's 3-class read/mutate/destroy
+  split is unreconciled with it — reconcile before relying on either.
 
-All 52 tools have a scored row and a ranked work list exists; the highest-impact reshapes are
-applied with pinned tests. Phase 2 can then start against a stable tool surface.
+## Reconciliation with the paused coverage plan
+
+`.rptc/backlog/ai-surface-coverage/` steps 01–04 expose qualifying handlers as tools; 05–07 add
+an org-context skill, a mesh skill, and routing. Nothing in it conflicts with this plan — it adds
+tools, this improves what tools return.
+
+**Sequencing:** quality first is cheaper. Exposing more handlers before fixing the envelope
+convention multiplies the number of tools that need reshaping later. But that is a
+recommendation, not a decision — the owner has not chosen between them.
+
+**Before either lands:** rename this plan's slug, and either retire the paused plan or restate it
+as the coverage phase.
