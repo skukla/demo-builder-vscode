@@ -141,6 +141,9 @@ jest.mock('@/features/data-installer/services/sampleDataInstall', () => ({
     ...jest.requireActual('@/features/data-installer/services/sampleDataInstall'),
     removeSampleData: jest.fn(),
 }));
+jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
+    resolveCommerceCredentials: jest.fn(),
+}));
 
 // =============================================================================
 // Imports (after mocks)
@@ -148,9 +151,13 @@ jest.mock('@/features/data-installer/services/sampleDataInstall', () => ({
 
 import * as vscode from 'vscode';
 import { removeSampleData } from '@/features/data-installer/services/sampleDataInstall';
+import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
 import { resetEdsProjectWithUI } from '@/features/eds/services/edsResetUI';
 
 const mockedRemove = removeSampleData as jest.MockedFunction<typeof removeSampleData>;
+const mockedCredentials = resolveCommerceCredentials as jest.MockedFunction<
+    typeof resolveCommerceCredentials
+>;
 const RESET = 'Reset Project';
 const REMOVE = 'Remove Sample Data';
 
@@ -219,6 +226,7 @@ beforeEach(() => {
     mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
     mockEnsureProjectOrgContext.mockResolvedValue({ reachable: true });
     mockedRemove.mockResolvedValue({ ran: true, outcome: 'success' });
+    mockedCredentials.mockResolvedValue({ ok: true, credentials: { kind: 'accs' } } as never);
 });
 
 describe('resetEdsProjectWithUI — sample data', () => {
@@ -286,5 +294,65 @@ describe('resetEdsProjectWithUI — sample data', () => {
         await expect(run(createProject({ name: 'bodea', version: 'main' }))).resolves.toMatchObject(
             { success: true },
         );
+    });
+});
+
+/**
+ * Do not ask for something we cannot deliver.
+ *
+ * Measured live 2026-08-16: reset offered sample-data removal, ran the full
+ * ~3-minute storefront reset, and only THEN reported "This project has no usable
+ * Commerce credentials." The prompt should never have appeared.
+ *
+ * The gate was `project.datapack` alone, justified by "a network call in front of
+ * a modal adds a failure mode to a dialog". That reasoning was mine and it is
+ * wrong here: `resolveCommerceCredentials` makes no network call at all — it is
+ * `resolvePaas`/`resolveAccs` reading componentConfigs. There is no failure mode
+ * to add.
+ *
+ * The credential requirement is not incidental. A Data Installer write needs an
+ * OAuth S2S pair, which exists only inside an Adobe I/O project and workspace, so
+ * a package that selects no App Builder components has nowhere for one to live.
+ * Until that is resolved, such a project simply cannot remove sample data — and
+ * the honest surface is silence, not an offer.
+ */
+describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
+    it('does not ask when the project has no usable Commerce credentials', async () => {
+        mockedCredentials.mockResolvedValue({ ok: false, reason: 'needs-accs-credentials' } as never);
+        answers(RESET);
+
+        await run(createProject({ name: 'bodea', version: 'main' }));
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+        expect(mockedRemove).not.toHaveBeenCalled();
+    });
+
+    it('still asks when the credentials resolve', async () => {
+        answers(RESET, REMOVE);
+
+        await run(createProject({ name: 'bodea', version: 'main' }));
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(2);
+        expect(mockedRemove).toHaveBeenCalled();
+    });
+
+    /** Checked BEFORE the prompt, not during the reset it would follow. */
+    it('resolves credentials before asking, not after resetting', async () => {
+        answers(RESET, REMOVE);
+
+        await run(createProject({ name: 'bodea', version: 'main' }));
+
+        const askedAt = (vscode.window.showWarningMessage as jest.Mock).mock.invocationCallOrder[1];
+        const checkedAt = mockedCredentials.mock.invocationCallOrder[0];
+        expect(checkedAt).toBeLessThan(askedAt);
+    });
+
+    /** No pack, no credential lookup — nothing to spend it on. */
+    it('does not even look when the project chose no pack', async () => {
+        answers(RESET);
+
+        await run(createProject());
+
+        expect(mockedCredentials).not.toHaveBeenCalled();
     });
 });

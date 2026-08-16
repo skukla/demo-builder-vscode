@@ -459,6 +459,25 @@ async function confirmSampleDataRemoval(
         return false;
     }
 
+    // Credentials BEFORE the prompt. Measured live 2026-08-16: this asked, ran
+    // the full ~3-minute storefront reset, and only then reported "no usable
+    // Commerce credentials" — three minutes spent on a question that could not
+    // be honoured.
+    //
+    // The original gate was `datapack` alone, justified by "no network call in
+    // front of a modal". That reasoning does not apply here: this call makes no
+    // network request at all, it reads componentConfigs. A write needs an OAuth
+    // S2S pair, which lives only inside an Adobe I/O workspace, so a package
+    // with no App Builder components has nowhere to keep one — and the honest
+    // surface for that is silence rather than an offer.
+    const { resolveCommerceCredentials } = await import(
+        '@/features/data-installer/services/commerceCredentials'
+    );
+    const credentials = await resolveCommerceCredentials({ project: project as never });
+    if (!credentials.ok) {
+        return false;
+    }
+
     const removeButton = 'Remove Sample Data';
     const answer = await vscode.window.showWarningMessage(
         `Also remove the sample data this project imported (${datapack.name}@${datapack.version})? ` +

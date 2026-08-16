@@ -44,6 +44,7 @@ import { PollingService } from '@/core/shell/pollingService';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import type { Project } from '@/types/base';
+import { canProvisionAccsCredentials } from '../services/accsProvisionEligibility';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -304,7 +305,10 @@ export const importHandlers = defineHandlers({
             };
         }
         const adobe = project.adobe;
-        if (!adobe?.organization || !adobe.projectId || !adobe.workspace) {
+        // Same predicate the OFFER uses. Kept shared so the button and the
+        // guard behind it cannot disagree — they did, and the disagreement was
+        // a button that could only ever refuse.
+        if (!canProvisionAccsCredentials(adobe)) {
             return {
                 success: false,
                 error: 'This project has no Adobe project binding, so there is no workspace to provision in.',
@@ -397,8 +401,15 @@ async function prepareImport(
                 error: CREDENTIAL_MESSAGES[credentials.reason] ?? 'Commerce credentials are missing.',
                 code: ErrorCode.INVALID_OPERATION,
                 // The UI offers console-free provisioning on exactly this gap —
-                // matching a message string would be the brittle version of this.
-                data: { needsAccsCredentials: credentials.reason === 'needs-accs-credentials' },
+                // matching a message string would be the brittle version of
+                // this. The Adobe-binding half is what makes the offer
+                // honourable: without a workspace the button has nowhere to
+                // create the pair and can only refuse a second time.
+                data: {
+                    needsAccsCredentials:
+                        credentials.reason === 'needs-accs-credentials' &&
+                        canProvisionAccsCredentials(project.adobe),
+                },
             },
         };
     }

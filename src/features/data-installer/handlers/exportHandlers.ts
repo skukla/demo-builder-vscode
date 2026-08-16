@@ -34,6 +34,7 @@ import {
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/features/components/config/envVarKeys';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
+import { canProvisionAccsCredentials } from '../services/accsProvisionEligibility';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -178,7 +179,13 @@ async function prepareExport(
                 success: false,
                 error: CREDENTIAL_MESSAGES[credentials.reason] ?? 'Commerce credentials are missing.',
                 code: ErrorCode.INVALID_OPERATION,
-                data: { needsAccsCredentials: credentials.reason === 'needs-accs-credentials' },
+                // Gated on the Adobe binding for the same reason the import
+                // spine is: the offer must lead somewhere.
+                data: {
+                    needsAccsCredentials:
+                        credentials.reason === 'needs-accs-credentials' &&
+                        canProvisionAccsCredentials(project.adobe),
+                },
             },
         };
     }

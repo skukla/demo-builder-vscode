@@ -201,3 +201,82 @@ describe('the needs-accs-credentials refusal carries its flag', () => {
         expect(result.data).toMatchObject({ needsAccsCredentials: true });
     });
 });
+
+/**
+ * The flag is an OFFER, and an offer must be honourable.
+ *
+ * `needsAccsCredentials: true` is the only thing that puts "Set up credentials
+ * automatically" in front of the user. The button calls
+ * `provision-accs-credentials`, which refuses without
+ * `adobe.organization`/`projectId`/`workspace` — so on a project with no Adobe
+ * binding the modal offered a button whose only possible outcome was a second
+ * refusal.
+ *
+ * A datapack write needs an OAuth S2S pair, and one can exist only inside an
+ * Adobe I/O workspace. A project that selected no App Builder components has no
+ * workspace to create it in. That is a real limitation, not a UI bug, and the
+ * honest surface for it is the plain "credentials are missing" message with no
+ * button — not a button that cannot work.
+ *
+ * The predicate is now shared with the guard it has to agree with, so the two
+ * cannot drift apart.
+ */
+describe('the offer appears only where provisioning could actually run', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+            get: jest.fn((key: string) =>
+                key === 'apiBaseUrl'
+                    ? 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api'
+                    : true,
+            ),
+        });
+    });
+
+    async function refusalFor(project: unknown) {
+        const { context } = makeContext(project);
+        return importHandlers['validate-datapack-import'](context, {
+            datapackName: 'bodea',
+            version: 'main',
+            commerceInstance: 'inst',
+            dataTypes: ['categories'],
+        });
+    }
+
+    it('still refuses when the project has no Adobe binding — positive control', async () => {
+        const result = await refusalFor({ ...accsProject(), adobe: undefined });
+
+        expect(result.success).toBe(false);
+    });
+
+    it('withholds the offer when there is no Adobe project binding at all', async () => {
+        const result = await refusalFor({ ...accsProject(), adobe: undefined });
+
+        expect(result.data).toMatchObject({ needsAccsCredentials: false });
+    });
+
+    it('withholds the offer when the binding names no workspace', async () => {
+        const result = await refusalFor({
+            ...accsProject(),
+            adobe: { organization: '285361', projectId: 'proj-1', authenticated: true },
+        });
+
+        expect(result.data).toMatchObject({ needsAccsCredentials: false });
+    });
+
+    it('withholds the offer when the binding names no project', async () => {
+        const result = await refusalFor({
+            ...accsProject(),
+            adobe: { organization: '285361', workspace: 'ws-1', authenticated: true },
+        });
+
+        expect(result.data).toMatchObject({ needsAccsCredentials: false });
+    });
+
+    /** The full binding is exactly what the provisioning guard demands. */
+    it('offers when the binding is complete', async () => {
+        const result = await refusalFor(accsProject());
+
+        expect(result.data).toMatchObject({ needsAccsCredentials: true });
+    });
+});
