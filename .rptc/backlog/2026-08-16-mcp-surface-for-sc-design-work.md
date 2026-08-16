@@ -449,6 +449,116 @@ the knowledge tools land, since a cheaper flow may not need orchestration at all
 
 **Do not add agents to save tokens. Add them when a role or an order genuinely needs an owner.**
 
+## Execution plan — full coverage, one layer at a time
+
+Four phases, strictly sequential: **tools → skills → agents → hooks.** Each phase completes
+only when EVERY item in it has a row in its table. Partial coverage is what lets a gap survive
+an audit, so "we looked at the interesting ones" does not count as done.
+
+Each phase produces the same three artifacts: an **inventory** (what exists), a **scored table**
+(one row per item), and a **ranked work list** (what to change, in order).
+
+---
+
+### Phase 1 — Tools: response analysis, all 52
+
+**Why first:** tools are the capability floor, and their responses are what every other layer
+spends tokens on. Reshaping is also the cheapest change with the largest measured effect (73%
+on the one tool sampled).
+
+**Step 1.1 — Ground-truth inventory.** `probeInExtensionMcpTools` already does `initialize` +
+`tools/list` over the UDS socket and is the authority on what the agent actually sees (vs. what
+the source appears to register). Use it, not a grep, so the list cannot drift from reality.
+
+**Step 1.2 — Classify by safety, because it decides the method.**
+
+| Class | Method | Why |
+|---|---|---|
+| Read-only (`list_*`, `get_*`, `check_*`) | **Live capture** against the test project | Real payloads, real sizes |
+| Mutating (`deploy_*`, `sync_*`, `republish`) | Live capture where a throwaway target exists; otherwise static | Safe on a scratch project only |
+| Destructive (`delete_*`, `cleanup_*`, `reset_*`) | **Static derivation** from the handler's return type | Never call to measure |
+
+**Step 1.3 — Build the capture harness.** Extend the `mcpToolProbe` pattern with `tools/call`.
+It is ~40 lines on top of proven code: same socket, same JSON-RPC framing, dump
+`{tool, args, response, bytes}` to a file. Read-only tools only, by an allowlist — not a
+denylist, so a newly added destructive tool is excluded by default.
+
+**Step 1.4 — Score every tool on fixed criteria.** One row each, so the table is comparable:
+
+| Criterion | Question |
+|---|---|
+| Size | bytes, and approximate tokens |
+| Join required | does the payload carry ids the LLM must correlate itself? |
+| UI-only fields | display strings, icons, panel ids, unread timestamps |
+| Answer vs record | does it return the answer, or a dump the model must parse? |
+| Error quality | is a failure terse and actionable? |
+| Shape present | does it override `defaultShape`? (today: none do) |
+
+**Step 1.5 — Rank by impact = size × call frequency.** Size is measured in 1.4. Frequency needs
+instrumentation: log `{tool, bytes}` per call in the server, run representative sessions
+(create a project, author content, reset), and count. **Do not rank on size alone** — a large
+response called once matters less than a small one called forty times.
+
+**Step 1.6 — Reshape, highest impact first**, applying the rules already recorded above (resolve
+joins server-side, drop UI-only fields, prefer the answer over the record). Each reshape gets a
+test pinning the projected shape, so it cannot silently regress to the raw payload.
+
+**Done when:** all 52 tools have a scored row, and the ranked list exists. Reshaping can then
+proceed incrementally against that list without re-deriving it.
+
+---
+
+### Phase 2 — Skills: coverage against the same feature spine
+
+**Method:** the `ai-coverage-scan` output is the denominator. For every feature an agent CAN
+reach (post-Phase-1), ask whether a skill teaches the sequence and the traps.
+
+Score each existing skill on: does it name its preconditions; does it state its failure modes;
+is it reachable (does anything route to it); and is it enforceable (does a hook back it, or is
+it advisory).
+
+**Known inputs already gathered:** 14 task-shaped EDS skills, 7 role-shaped App Builder skills,
+zero open-ended design skill, and five traps this session hit that no skill records.
+
+**Done when:** every reachable feature maps to a skill or an explicit "needs none".
+
+---
+
+### Phase 3 — Agents: only where a role or an order needs an owner
+
+**Method:** from the Phase-2 table, find flows spanning three or more skills with a required
+order. Those are agent candidates; nothing else is.
+
+**Guard rail, from this session's measurement:** do NOT add agents to reduce tokens. The whole
+tool surface costs ~1,175 tokens, and this session's ~121k derivation was performed BY a
+subagent. Isolation moves where cost is paid; it does not reduce it.
+
+**Done when:** each candidate flow has a decision — agent, or skill with better sequencing —
+with the reason recorded.
+
+---
+
+### Phase 4 — Hooks: enforcement for what the earlier phases could not guarantee
+
+**Method:** collect every trap surfaced in Phases 1–3, then filter to the mechanically
+detectable. A hook needs a decidable predicate on a tool call; anything needing judgement stays
+a skill.
+
+**Also in scope:** the ONE hook a generated project already ships (`PostToolUse` auto-commit-
+and-push on `Write|Edit`), whose per-edit granularity should be re-evaluated once tools give the
+agent an explicit publish.
+
+**Done when:** every mechanically-detectable trap has a hook or a recorded decision not to.
+
+---
+
+### Sequencing rule
+
+**Do not start a phase before the previous one has full coverage.** Each phase's output is the
+next phase's denominator: skills are scored against the tool surface, agents against the skill
+map, hooks against the traps the first three surfaced. Starting late-phase work early means
+guessing at a denominator that is about to change.
+
 ## Still open
 
 1. Whether tools should be scoped/filtered per task so a design session does not carry the
