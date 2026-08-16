@@ -62,6 +62,10 @@ fewer copies of the same power, not more power.
 | `step-04` — docs + the security note this endpoint deserves | this repo | No | **done** — ADR-014 |
 | `step-05` — **after ship**: probe cross-org reach | probe | No | **answered** — the per-SC credential cannot be entitled at all |
 
+**Every step is done and every claim is measured**, including a real import
+through the brokered credential (see "The write" below). What remains is release,
+not verification.
+
 ## Verified live — the credential path, 2026-08-16
 
 A dry run on `bodea-template-test` (ACCS, `eds-accs` stack), against the branch
@@ -80,10 +84,33 @@ would have proved nothing, since a declared pair produces an identical result.
 The channel had to be at Debug to see it — an earlier info-level dump showed no
 `[Data Installer]` lines at all and could not answer the question either way.
 
-**Still not proven: a WRITE with the brokered pair.** A dry run resolves and
-authenticates; `process-datapack (validate)` deliberately writes nothing. The
-credential-reach research measured a read too. One real import, somewhere it is
-safe to write, closes that.
+## The write — proven 2026-08-16
+
+The last untested link. A real import on `bodea-template-test`, against the merged
+build `develop@4374a61d`:
+
+```
+shared credential: obtained from the discovery service
+shared credential: reusing the one already fetched this session
+process-datapack (validate) → 200
+process-datapack-async (import) → 202
+Poll succeeded … import af48…
+```
+
+Terminal outcome: **success**, reported by the modal.
+
+**Why the 202 alone would NOT have been enough**, recorded because it is the
+trap this feature's own docs warn about: `process-datapack-async` returns 202 with
+an activation id even for an empty body — validation happens in the worker, which
+is exactly why validate-before-start exists. The `200` on validate is the real
+guard, and the per-type terminal outcome is the real answer. All three had to line
+up, and did.
+
+So the brokered pair is now proven to **authenticate a write**, not merely a read.
+Every claim this plan makes has been measured end to end.
+
+**Confirmed live at the same time: the cache.** One fetch, then a reuse twenty
+seconds later — where the pre-cache run showed two fetches ~8s apart.
 
 **The cache skipped in step 02 now exists, because this run measured the reason.**
 The broker ran TWICE in that dry run, ~8s apart — two resolutions, two GETs for
