@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.130] - 2026-08-15
+
+Repairs product-page publishing on Edge Delivery storefronts. Pinning a site
+administrator during storefront setup closed the AEM admin API to anonymous callers,
+which silently broke catalog pre-warming, the self-healing that publishes a product page
+on first visit, and the reset of large storefronts. All verified against live storefronts.
+
+### Added
+
+- **Diagnostics reports whether the shared publishing service can read your site's key.** It already counted the keys on the site, which cannot see whether the service holds a working copy. The two are now reported separately, because their disagreement is the diagnosis: a registration that never arrived, or a service redeployed with a different encryption key, which makes every stored key unreadable. Both previously surfaced only as product pages returning 404, days later.
+
+### Fixed
+
+- **Catalog pre-warming works again on new storefronts.** Pre-warming published anonymously, so every storefront created after site-admin pinning landed reported `0/39 succeeded` and left every product page unpublished. It now publishes through the authenticated path, and a real reset pre-warms all 39 of 39.
+- **Product pages added after setup can publish themselves again.** A product added after a storefront was built used to 404 forever: the page was never pre-published, and the browser-side fallback that would have published it had no credentials. The shared publishing service now holds a per-site key, so a first visit publishes the page and it resolves. Sales consultants add products to demos routinely, so this is a main path rather than an edge case.
+- **Resetting a storefront no longer breaks that self-healing.** Every reset, repair, edit and rename rewrites the site configuration, and the publishing key lives inside that document — so the write destroyed it. Two of the four paths re-created it and two did not, meaning a reset, the very thing you run to REPAIR a storefront, quietly left product pages unable to publish. Re-creating the key now happens as part of the write itself, so no path can skip it.
+- **Publish keys no longer expire without warning.** They carry roughly a one-year lifetime and nothing renewed them, so a storefront that simply ran would lose product-page publishing about a year after it was created — staggered per site, with no symptom beyond pages returning 404. Keys are now refreshed on a 30-day cycle.
+- **Resetting a large storefront no longer times out.** The reset sent every file in one request, which exceeded GitHub's limit on big templates (notably B2B) and failed outright. It now sends the tree in batches — 3,344 files across 14 requests in about 17 seconds.
+- **Storefront sync reads your DA.live sign-in properly.** It was looking for a stored credential that nothing ever wrote, so it behaved as though you were signed out.
+- **Diagnostics no longer blames your GitHub credential for the admin lock.** On a storefront with a site administrator configured, AEM returning 401 to a GitHub token is the expected state. The report said the credential was being refused, sending people to fix something that was not broken.
+- **Publish keys are created with the right role, and can be revoked.** They were requested with administrator rather than publish rights, and their identifiers were not URL-encoded, so revoking the previous key failed.
+- **Placeholder-sheet failures are reported instead of dropped.** A reset attempted 17 fetches that could all fail silently; the log now says so once, names the host, and states the consequence — dropin labels fall back to their defaults and the storefront still renders.
+
+### Changed
+
+- **The DA.live sign-in is registered once at startup** rather than passed down through each layer that needs it. Two places were constructing services without it, which made publishing fail on any storefront with a site administrator configured and left the CDN serving a stale configuration.
+
 ## [1.0.0-beta.129] - 2026-08-15
 
 ### Added
