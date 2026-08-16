@@ -360,6 +360,47 @@ Thin tools declared as data and dispatched to existing handler maps:
 | `republish` | `storefrontTools.ts` | Regenerate + push storefront config. |
 | `sync_content` | `storefrontTools.ts` | Full content publish (config + code + DA.live pages). |
 
+### Content authoring — `contentAuthoringTools.ts`
+
+Page-level authoring against the CURRENT project's storefront. Before these, an
+agent could list and destroy DA.live sites but could not write a page to one.
+
+| Tool | Notes |
+|---|---|
+| `read_page` | Reads DA.live source HTML. The only new transport here — nothing read `GET /source` before. |
+| `write_page` | Writes source; `publish:true` previews+publishes in the same call. |
+| `publish_page` | Preview + publish an existing page. |
+| `list_content` | Directory listing, projected to web paths with a page/file/folder type. |
+| `delete_page` | Unpublish + delete. Destructive; confirm-gated. |
+| `read_published_page` | Fetches `.plain.html` off the CDN — the verification primitive. |
+
+**One page, three path spellings.** This is what the tools are for; raw transport
+would move the trap to the caller rather than remove it:
+
+| Surface | Spelling | Why |
+|---|---|---|
+| DA source API | `about.html` | extension REQUIRED for files (DA Admin API) |
+| Helix preview/publish | `/about` | `normalizeWebPath` never strips `.html`, so the suffixed form publishes the wrong path |
+| `da.live/canvas` | `about` | extensionless, or the path double-appends to `index.html.html` |
+
+Every tool takes ONE canonical web path and derives the rest via `resolveDaPath`
+— the same helper the content-copy pipeline uses, so the two cannot drift.
+
+**No `org`/`site` arguments.** All six target the current project. An override
+would let an agent write into, and unpublish from, any DA.live site the user's
+token reaches, with no confirmation on the non-destructive paths;
+`list_dalive_sites` already covers cross-site reads.
+
+**Auth: the DA.live token, not the Adobe one.** Two IMS tokens can reach DA.live
+— `DaLiveAuthService`'s (its own sign-in and storage, used by the production
+content path) and the extension's Adobe token (used for org-level reads like
+`list_dalive_sites`). Content operations need the former; picking wrong fails as
+a 401 at runtime, not a type error. Preview/publish also sends
+`x-auth-token: <github>`, so those paths pre-flight both credentials.
+
+`delete_page` unpublishes **before** deleting the source: the reverse order
+strands a published page whose source is already gone (ADR-002).
+
 ### View — `viewTools.ts`
 `open_view` — surface a specific VS Code view/screen for the user.
 

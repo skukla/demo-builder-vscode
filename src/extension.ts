@@ -19,6 +19,7 @@ import { registerAdobeTools } from '@/features/ai/server/adobeTools';
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { registerAuthTools } from '@/features/ai/server/authTools';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
+import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
@@ -506,6 +507,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerCurrentProjectTool(mcpServer, ctxFactory);
                 registerCloudResourceTools(mcpServer, ctxFactory);
                 registerStorefrontTools(mcpServer, ctxFactory);
+                registerContentAuthoringTools(mcpServer, ctxFactory);
                 registerEdsResetTool(mcpServer, ctxFactory);
                 registerDeleteProjectTool(mcpServer, ctxFactory);
                 registerApplyUpdatesTool(mcpServer, ctxFactory);
