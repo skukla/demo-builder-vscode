@@ -273,14 +273,29 @@ function readToken() {
     return token;
 }
 
-/** The configured base URL, read from the shipped setting's default. */
+/**
+ * The base URL to probe, from `DATA_INSTALLER_API_BASE_URL`.
+ *
+ * This read the SHIPPED DEFAULT of `demoBuilder.dataInstaller.apiBaseUrl` until
+ * 2026-08-16. That default is now permanently empty — the bundled value was a
+ * stage Runtime endpoint and this repository is public, so
+ * `dataInstallerSettingsSchema.test.ts` pins it to `''`. Reading it produced an
+ * empty base, every fetch got a relative URL, and all six endpoints died with
+ * "Failed to parse URL": loudly, but for the wrong reason, and with no way to
+ * ever pass.
+ *
+ * So the endpoint comes from the environment, which is where a value that must
+ * not live in the repo belongs. Empty is refused rather than returned — an empty
+ * base is exactly the failure this replaced.
+ */
 function readBaseUrl() {
-    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
-    for (const section of pkg.contributes.configuration) {
-        const setting = section.properties?.['demoBuilder.dataInstaller.apiBaseUrl'];
-        if (setting) return setting.default.replace(/\/$/, '');
+    const configured = (process.env.DATA_INSTALLER_API_BASE_URL ?? '').trim();
+    if (!configured) {
+        throw new Error(
+            'no endpoint to probe: set DATA_INSTALLER_API_BASE_URL to the Data Installer API base URL',
+        );
     }
-    throw new Error('demoBuilder.dataInstaller.apiBaseUrl is not declared in package.json');
+    return configured.replace(/\/$/, '');
 }
 
 async function main() {
@@ -378,6 +393,7 @@ async function countProcessors({ baseUrl, token, fetchImpl, mode }) {
 }
 
 module.exports = {
+    readBaseUrl,
     shapeDrift,
     checkEndpoint,
     modeFindings,

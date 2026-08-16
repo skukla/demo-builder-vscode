@@ -244,12 +244,24 @@ enumerated ACTION names and decided each one, but `operation_mode` is a paramete
 whose values were *used* (`validate`, `export`) without ever being *enumerated* —
 and `delete`, the reset, lived there. Coverage has to be `action × mode`.
 
-**This is re-checked, not trusted.** `npm run data-installer:drift` walks the four
-decided modes, seven undecided candidates and the control on every run, and **exits
-non-zero** when a decided mode goes empty, a candidate turns real, or the control
-stops behaving. A capability the service adds later surfaces there instead of
-waiting to be noticed by hand. Adding a mode to `DECIDED_MODES` requires writing the
-decision here first — that coupling is the point.
+**This is re-checked, not trusted.** `DATA_INSTALLER_API_BASE_URL=<endpoint> npm run
+data-installer:drift` walks the four decided modes, seven undecided candidates and the
+control on every run, and **exits non-zero** when a decided mode goes empty, a candidate
+turns real, or the control stops behaving. A capability the service adds later surfaces
+there instead of waiting to be noticed by hand. Adding a mode to `DECIDED_MODES` requires
+writing the decision here first — that coupling is the point.
+
+**The endpoint comes from the environment, and both halves of that sentence were broken
+until 2026-08-16.** This line named `npm run data-installer:drift`, which was not a script
+in `package.json` at all — every other reference in the repo calls the checker by its path.
+And `readBaseUrl` read the SHIPPED DEFAULT of `demoBuilder.dataInstaller.apiBaseUrl`, which
+was deliberately emptied when the feature was pulled before beta.129 (a stage Runtime
+endpoint in a public repo). Nothing connected the two, so the checker read an empty base and
+all six endpoints failed with "Failed to parse URL" — loudly, but for the wrong reason and
+with no way to pass. Both are fixed: the npm script exists, and the endpoint is read from
+`DATA_INSTALLER_API_BASE_URL`, which refuses to be empty. Verified live the same day —
+`6 endpoints match their fixtures`, and exit 2 with a named remedy when the variable is
+unset.
 
 **Limit, stated plainly:** this enumerates modes `get-processor-order` knows about.
 A mode that exists on `process-datapack-async` but has no processor list would be
@@ -577,7 +589,9 @@ anything**: the synchronous twin with `operation_mode: 'validate'`. It is the sa
 body the client builds (`services/dataInstallerWriteClient.ts`, `buildBody`).
 
 ```bash
-BASE=$(python3 -c "import json;print([s['properties']['demoBuilder.dataInstaller.apiBaseUrl']['default'] for s in json.load(open('package.json'))['contributes']['configuration'] if 'demoBuilder.dataInstaller.apiBaseUrl' in s.get('properties',{})][0])")
+# The shipped default is EMPTY on purpose (public repo — see the settings-schema
+# guard), so read the endpoint from your own VS Code settings, not package.json.
+BASE=$(python3 -c "import json,re,os;s=re.sub(r'^\s*//.*$','',open(os.path.expanduser('~/Library/Application Support/Code/User/settings.json')).read(),flags=re.M);print(json.loads(s)['demoBuilder.dataInstaller.apiBaseUrl'].rstrip('/'))")
 TOK=$(aio config get ims.contexts.cli.access_token --json | python3 -c "import sys,json;print(json.load(sys.stdin)['token'])")
 
 curl -sS -X POST "$BASE/process-datapack" \

@@ -13,7 +13,7 @@
  * Strict TDD: written BEFORE the script exists.
  */
 
-import { shapeDrift, checkEndpoint, modeFindings } from '../../scripts/dataInstallerDrift';
+import { shapeDrift, checkEndpoint, modeFindings, readBaseUrl } from '../../scripts/dataInstallerDrift';
 
 describe('shapeDrift', () => {
     it('reports nothing for identical shapes', () => {
@@ -321,5 +321,61 @@ describe('modeFindings', () => {
         const findings = modeFindings({ ...HEALTHY, export: 0, reset: 12 });
 
         expect(findings.map((f) => f.mode).sort()).toEqual(['export', 'reset']);
+    });
+});
+
+/**
+ * Where the endpoint comes from — and why it stopped being package.json.
+ *
+ * `readBaseUrl` read the SHIPPED DEFAULT of `demoBuilder.dataInstaller.apiBaseUrl`.
+ * That worked until the feature was pulled from develop before beta.129 and the
+ * default was emptied, because the bundled value was a stage Adobe I/O Runtime
+ * endpoint and this repository is public (`dataInstallerSettingsSchema.test.ts`
+ * pins the default to `''` and is the reason it can never come back).
+ *
+ * Nothing connected the two. The checker kept reading a default that is now
+ * permanently empty, so every endpoint fetch got a relative URL and died with
+ * "Failed to parse URL". It fails loudly — exit 1, which is the design — but it
+ * fails for the wrong reason and can never pass. Measured 2026-08-16: 6 of 6
+ * endpoints failed and the control mode was unreachable.
+ *
+ * `readBaseUrl` had NO test of its own, which is how a function could be broken
+ * by an unrelated security fix and stay broken silently.
+ *
+ * The env var is the fix because the value must not live in the repo. It is the
+ * same place a local operator or CI already puts an endpoint.
+ */
+describe('readBaseUrl', () => {
+    const KEY = 'DATA_INSTALLER_API_BASE_URL';
+    const original = process.env[KEY];
+
+    afterEach(() => {
+        if (original === undefined) delete process.env[KEY];
+        else process.env[KEY] = original;
+    });
+
+    it('reads the endpoint from the environment', () => {
+        process.env[KEY] = 'https://example.test/api/v1/web/data-installer-api';
+
+        expect(readBaseUrl()).toBe('https://example.test/api/v1/web/data-installer-api');
+    });
+
+    it('strips a trailing slash, so callers can join with one', () => {
+        process.env[KEY] = 'https://example.test/api/';
+
+        expect(readBaseUrl()).toBe('https://example.test/api');
+    });
+
+    /** The whole point: an empty shipped default must not read as a usable URL. */
+    it('refuses when nothing is set, rather than returning an empty string', () => {
+        delete process.env[KEY];
+
+        expect(() => readBaseUrl()).toThrow(/DATA_INSTALLER_API_BASE_URL/);
+    });
+
+    it('refuses an empty env var too', () => {
+        process.env[KEY] = '';
+
+        expect(() => readBaseUrl()).toThrow(/DATA_INSTALLER_API_BASE_URL/);
     });
 });

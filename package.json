@@ -458,7 +458,8 @@
     "mesh:delete": "aio api-mesh delete --autoConfirmAction",
     "mesh:status": "aio api-mesh get --active",
     "hooks": "node scripts/hooks.js",
-    "docs:check": "node scripts/hooks.js coverage"
+    "docs:check": "node scripts/hooks.js coverage",
+    "data-installer:drift": "node scripts/dataInstallerDrift.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
