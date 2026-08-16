@@ -93,15 +93,33 @@ selections **often**, which was the only unknown.
 manager so `getCurrentProject()` routes there; everything else delegates
 unchanged.
 
-Deliberately NOT done, and still open if you want it:
+**Extended to the whole extension later the same day**, at the user's request —
+the agent-surface-only wrapper was removed rather than kept alongside, so there
+is ONE mechanism. `getCurrentProject()` now takes the project PATH from
+`state.json` and the DATA from that project's manifest, falling back to the
+in-memory path when disk has no pointer (a project can be held in memory and
+never persisted). `saveState()` was switched to `writeFileAtomic` in the same
+change: the file is now read on every call from every window, and a plain
+`writeFile` leaves a window where a concurrent reader sees a truncated file —
+which the reader would treat as "no pointer" and answer with the wrong project.
 
-- **The UI is unchanged.** Window B's dashboard still shows the project B loaded
-  at startup. Making the UI disk-authoritative would silently switch a window's
-  visible project mid-session, which needs its own decision.
-- `reload()` still has no callers. It fires `_onProjectChanged` into UI
-  subscribers, which is exactly why the fix avoided it — but that leaves a public
-  method nothing uses. Wire it or delete it (`dead-code-scan` will keep
-  flagging it).
+It turned out not to be a cross-window-only bug. `loadProjectFromPath` with
+`persistAfterLoad: false` assigns `state.currentProject`, and the home-screen
+kebab calls it with whatever project the row belongs to
+(`projects-dashboard/handlers/dashboardHandlers.ts`, ~10 sites) — so pinning or
+renaming an unrelated project reassigned the window's in-memory pointer. Reading
+the pointer from disk fixes that too, and makes the read self-healing: in-memory
+converges on the next call.
+
+Still open:
+
+- `reload()` STILL has no callers. It fires `_onProjectChanged`, which has **zero
+  real subscribers** — the only match in `src/` is a doc-comment example in
+  `disposableStore.ts`. So the UI is entirely pull-based: nothing pushes a
+  repaint, and a window updates on its next read. If you want a live repaint
+  rather than read-triggered convergence, that needs a subscriber first, and
+  `reload()` is the natural trigger. Otherwise delete it — `dead-code-scan` will
+  keep flagging it.
 
 ### What the reproduction added
 
@@ -120,12 +138,10 @@ answered.
 
 ## Options (decision needed — do not just pick one)
 
-1. ~~**Make the pointer authoritative per read.**~~ **DONE for the MCP path**
-   (2026-08-16) — the headless context reads it fresh; see Reproduction status.
-   Still open for the UI, where a window's visible project remains whatever it
-   loaded at startup. Note the watcher variant was rejected: `reload()` fires
-   `_onProjectChanged` into UI subscribers, so it cannot be used for a
-   read-side refresh without moving the UI too.
+1. ~~**Make the pointer authoritative per read.**~~ **DONE, extension-wide**
+   (2026-08-16) — `getCurrentProject()` reads the pointer from `state.json`; see
+   Reproduction status. The watcher variant was not needed: `_onProjectChanged`
+   has no subscribers, so the UI is pull-based and converges on its next read.
 2. **Make the serving window explicit.** Refuse the second bind instead of
    renaming over it, or include window identity in the socket name and have
    discovery report ambiguity. Bigger, and it changes multi-window behaviour.
