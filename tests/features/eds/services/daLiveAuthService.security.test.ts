@@ -18,6 +18,7 @@ jest.mock('vscode', () => ({
     Uri: {
         parse: jest.fn((s: string) => s),
     },
+    EventEmitter: require('../../../helpers/vscodeEventEmitter').VscodeEventEmitter,
 }));
 
 // Mock logger
@@ -79,7 +80,8 @@ describe('DaLiveAuthService Security Tests', () => {
             // should be done via grep/code review
             // Full JWT pattern: header.payload.signature
             const tokenPattern = /eyJ[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+/;
-            const fullToken = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U';
+            const fullToken =
+                'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U';
 
             // Verify token pattern recognition works
             expect(tokenPattern.test(fullToken)).toBe(true);
@@ -96,7 +98,7 @@ describe('DaLiveAuthService Security Tests', () => {
                 'daLive.setupComplete',
             ];
 
-            stateKeys.forEach(key => {
+            stateKeys.forEach((key) => {
                 expect(typeof key).toBe('string');
             });
         });
@@ -118,7 +120,7 @@ describe('DaLiveAuthService Security Tests', () => {
 
             expect(mockContext.globalState.update).toHaveBeenCalledWith(
                 'daLive.accessToken',
-                token,
+                token
             );
         });
 
@@ -134,7 +136,7 @@ describe('DaLiveAuthService Security Tests', () => {
 
             expect(mockContext.globalState.update).toHaveBeenCalledWith(
                 'daLive.tokenExpiration',
-                createdAt + expiresIn,
+                createdAt + expiresIn
             );
         });
 
@@ -147,7 +149,7 @@ describe('DaLiveAuthService Security Tests', () => {
 
             expect(mockContext.globalState.update).toHaveBeenCalledWith(
                 'daLive.userEmail',
-                'user@example.com',
+                'user@example.com'
             );
         });
 
@@ -160,7 +162,7 @@ describe('DaLiveAuthService Security Tests', () => {
 
             expect(mockContext.globalState.update).toHaveBeenCalledWith(
                 'daLive.userEmail',
-                'fallback@example.com',
+                'fallback@example.com'
             );
         });
 
@@ -174,7 +176,7 @@ describe('DaLiveAuthService Security Tests', () => {
 
             expect(mockContext.globalState.update).toHaveBeenCalledWith(
                 'daLive.userEmail',
-                'primary@example.com',
+                'primary@example.com'
             );
         });
 
@@ -188,7 +190,7 @@ describe('DaLiveAuthService Security Tests', () => {
             // Should still store the access token
             expect(mockContext.globalState.update).toHaveBeenCalledWith(
                 'daLive.accessToken',
-                token,
+                token
             );
         });
     });
@@ -205,10 +207,22 @@ describe('DaLiveAuthService Security Tests', () => {
             await service.logout();
 
             // Then: All sensitive data should be cleared
-            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.accessToken', undefined);
-            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.tokenExpiration', undefined);
-            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.userEmail', undefined);
-            expect(mockContext.globalState.update).toHaveBeenCalledWith('daLive.orgName', undefined);
+            expect(mockContext.globalState.update).toHaveBeenCalledWith(
+                'daLive.accessToken',
+                undefined
+            );
+            expect(mockContext.globalState.update).toHaveBeenCalledWith(
+                'daLive.tokenExpiration',
+                undefined
+            );
+            expect(mockContext.globalState.update).toHaveBeenCalledWith(
+                'daLive.userEmail',
+                undefined
+            );
+            expect(mockContext.globalState.update).toHaveBeenCalledWith(
+                'daLive.orgName',
+                undefined
+            );
         });
     });
 });

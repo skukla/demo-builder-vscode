@@ -258,7 +258,19 @@ export async function activate(context: vscode.ExtensionContext) {
         // about a year and were only ever minted by a site config WRITE, so a
         // storefront that simply ran lost PDP self-heal roughly a year in —
         // silently, as PDPs that 404. Fire-and-forget like the two sweeps above.
+        //
+        // TWO triggers, because activation alone does not work. The sweep needs a
+        // DA.live session, and activation is the moment one is LEAST likely to
+        // exist: measured 2026-08-15, the stored token was already expired at
+        // startup and only refreshed 54s later when the user started a reset. So
+        // sign-in is the trigger that actually fires, and activation is the one
+        // that catches a session already valid from a previous window.
         void sweepPublishKeyRenewals(context);
+        context.subscriptions.push(
+            getDaLiveAuthService(context).onDidSignIn(() => {
+                void sweepPublishKeyRenewals(context);
+            }),
+        );
 
         // Register file watchers early (before loading projects)
         // This ensures the initializeFileHashes command exists when we need it
