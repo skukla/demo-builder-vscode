@@ -18,7 +18,17 @@ truth for what the agent SEES, and a difference from this source sweep is itself
 
 ## Classification
 
-Verb-prefix heuristic, then reviewed by hand. It decides the capture METHOD in step 02.
+Verb-prefix heuristic, spot-checked — **NOT reviewed tool by tool.** An earlier version of this
+line claimed "reviewed by hand", which was an overclaim; the classification is a heuristic that
+has been sampled, not verified.
+
+**It also rests on an unverified assumption.** `docs/systems/mcp-server.md` §10 says any tool
+changing cloud or local state requires `confirm: true` and otherwise returns a description of
+what WOULD happen. If that holds universally, most `mutate` tools are safe to probe live and
+step 02's scope widens. But only **4 descriptor rows** set `confirm` in code; directly-registered
+tools implement their own. **Verify per tool before probing any of them.**
+
+It decides the capture METHOD in step 02.
 
 | Class | Count | Capture method |
 |---|---|---|
