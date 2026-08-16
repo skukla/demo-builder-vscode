@@ -51,6 +51,31 @@ export interface UnifiedPatchResult {
  */
 export interface PatchReport {
     results: UnifiedPatchResult[];
+    /**
+     * Path prefixes whose references a LATER stage of the same run is
+     * configured to supply, so the completeness audit must not report them as
+     * dropped.
+     *
+     * Hybrid packages copy brand content first and then overlay `/customer/*`
+     * from the canonical B2B content site. The brand source legitimately has
+     * none of those pages, so auditing them during the copy names a gap the
+     * very next pipeline step fills — six warnings on every correct create and
+     * reset, which is exactly how a warning channel stops being read.
+     *
+     * Set by the caller that knows the later stage is configured; absent means
+     * audit everything, so the default stays loud.
+     */
+    deferredReferencePrefixes?: string[];
+}
+
+/**
+ * True when `target` falls under a prefix a later stage will supply.
+ *
+ * @param report - The run's report; an absent prefix list defers nothing.
+ * @param target - Site-relative path of the referenced document.
+ */
+export function isDeferredReference(report: PatchReport | undefined, target: string): boolean {
+    return (report?.deferredReferencePrefixes ?? []).some(prefix => target.startsWith(prefix));
 }
 
 /** Create a fresh empty report. Callers pass this to the patch-applying functions. */

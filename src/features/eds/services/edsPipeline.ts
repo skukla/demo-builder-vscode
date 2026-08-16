@@ -37,6 +37,21 @@ import type { Logger } from '@/types/logger';
 // catalogPrewarmService import cycle); re-exported here for existing consumers.
 export type { EdsPipelineProgressCallback };
 
+/**
+ * Path prefix the account-chrome overlay supplies, so references under it are
+ * not gaps during the brand-content copy that runs first.
+ *
+ * Verified rather than assumed: `overlayAccountChrome`
+ * (`daLiveContentCopy.ts:761`) seeds its entry points from
+ * `RUNTIME_SURFACES.authPages` (`runtimeSurfaceInventory.ts`), every one of
+ * which is under `/customer/`, then follows references out from those pages.
+ *
+ * Deliberately one-directional: anything the overlay supplies OUTSIDE this
+ * prefix is still audited, so a narrow prefix only ever keeps the channel
+ * louder than necessary — never quieter.
+ */
+const ACCOUNT_CHROME_PATH_PREFIX = '/customer/';
+
 /** Pipeline parameters — encompasses both setup and reset use cases */
 export interface EdsPipelineParams {
     repoOwner: string;
@@ -290,6 +305,16 @@ async function pipelineCopyContent(
         operation: 'content-copy',
         message: 'Populating DA.live content...',
     });
+
+    // The brand source has no /customer/* pages by design when an account
+    // overlay is configured — the overlay below supplies them. Tell the
+    // completeness audit so it does not report a gap this run then fills.
+    if (accountContentSource) {
+        patchReport.deferredReferencePrefixes = [
+            ...(patchReport.deferredReferencePrefixes ?? []),
+            ACCOUNT_CHROME_PATH_PREFIX,
+        ];
+    }
 
     const indexPath = contentSource.indexPath || '/full-index.json';
     const fullContentSource = {
