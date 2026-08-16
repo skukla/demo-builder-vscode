@@ -23,8 +23,9 @@ Of the 62, **9 are data-installer** — out of this phase's scope and filed as
 
 ## What the 53 are
 
-Signals extracted mechanically, then the candidates READ — because static classification was wrong
-three separate times in the session that produced this file, twice with a passing control.
+Signals extracted mechanically. **Nothing here was fully read except three handlers** — see the
+limits section; the earlier version of this line claimed the candidates were read and that was an
+overstatement of a script's output.
 
 | Class | Count | Why it is not a tool |
 |---|---|---|
@@ -34,9 +35,10 @@ three separate times in the session that produced this file, twice with a passin
 | **Candidates** | 15 | Return an outcome. Read individually below. |
 | **Unresolved** | 1 | `ready` — a lifecycle hook, not a feature. |
 
-Reading the 15 candidates moved four of them: `getProjects` and `re-detect-context` push through
-`sendMessage`, and `update-component-selection` / `update-components-data` return bare success.
-The signal extractor over-called them, which is the expected failure and the reason for reading.
+Extracting return SHAPES for the 15 candidates moved four of them: `getProjects` and
+`re-detect-context` push through `sendMessage`, and `update-component-selection` /
+`update-components-data` return bare success. The first classifier over-called them — which is
+the point: each successive pass demoted candidates, and none has yet promoted one.
 
 ## The finding: an agent cannot CREATE a cloud resource. Any of them.
 
@@ -74,8 +76,8 @@ design note, not a blocker.
 | `check-project-apis` | `{hasMesh}` | narrow, but answers "is a mesh already provisioned" |
 | `ensure-mesh-api-subscribed` | `{apis}` | check first whether `add_console_apis` already covers it |
 | `checkCompatibility` | `{compatible}` | pre-flight before `create_project` |
-| `create-adobe-project` | — | via the `quiet` path; prerequisite for all App Builder work |
-| `create-adobe-workspace` | — | same |
+| `create-adobe-project` | **not examined** | via the `quiet` path; prerequisite for all App Builder work |
+| `create-adobe-workspace` | **not examined** | same |
 
 **Do not build (capability already reachable):** `loadComponents`, `get-components-data` and
 `loadDependencies` return the component catalog, which `list_components` / `list_demo_packages` /
@@ -90,10 +92,22 @@ as a sweep.
 
 ## Honest limits of this pass
 
-- The 15 candidates were read. The 36 dispatch-only / bare-status were classified by signal
-  extraction with two verified by reading (`handleGetGitHubRepos`, `handleCheckGitHubAuth`, both
-  confirmed dispatch-only). **A handler in that group could be misclassified**; the cost is a
-  missed opportunity, not a bad tool.
+**Three of 53 handlers were actually read**: `handleGetGitHubRepos`, `handleCheckGitHubAuth` (both
+confirmed dispatch-only) and `handleLoadComponents` (confirmed a duplicate of `list_components`).
+
+Everything else rests on scripts:
+
+| Depth | Count | What it proves |
+|---|---|---|
+| Read in full | 3 | the verdict |
+| Return shape extracted | 15 | what a success path returns, and whether `sendMessage` appears in a 2,600-char window |
+| Signal extraction only | 35 | a pattern matched, nothing more |
+
+That is thin for a phase that decides what to build, and the session producing it had three
+static classifiers give confident wrong answers — one of which ran `republish` against a live
+storefront. **Read each handler on the build list before building it**, and treat the 35 as a
+list of maybes rather than a settled exclusion. The cost of a wrong exclusion is a missed
+opportunity; the cost of a wrong inclusion is a tool that cannot fail.
 - The `addIntegrationFlowHandlers` entries resolved to their `requireAdobeAuth` wrapper rather
   than the inner handler. Read since: the wrapper prompts unless `quiet`, and two of the five
   (`get-projects`, `get-workspaces`) duplicate existing tools. The three create/delete handlers
