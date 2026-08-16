@@ -68,13 +68,38 @@ The open question was whether a credential minted where SCs work could reach the
 instances. It cannot, and it fails one step earlier than expected: **such a
 credential cannot be created in a usable state at all.**
 
-In the Solution Led Commerce SC org, `ACCS-REST-API` is present in the service
-catalog but `enabled: false` with **zero** product profiles, and subscribing with
-`licenseConfigs: null` returns HTTP 200 carrying
-`"Service ACCS-REST-API requires selection of a product"`. A control confirms the
-empty product list is specific to ACCS: twelve other services in the same org do
-offer products. S2S credential creation itself succeeds, so this is an entitlement
-boundary rather than a permissions one.
+In the Solution Led Commerce SC org, subscribing an S2S credential to
+`ACCS-REST-API` with `licenseConfigs: null` returns HTTP 200 carrying
+`"Service ACCS-REST-API requires selection of a product"`. Creating the credential
+itself **succeeds**, so this is an entitlement boundary rather than a permissions
+one.
+
+The same read against both orgs isolates exactly which row differs:
+
+| | Adobe Demo System (`285361`) | Solution Led Commerce SC (`3397333`) |
+|---|---|---|
+| `ACCS-REST-API`, `adobeid` entry | enabled **true**, 0 products | enabled false, 0 products |
+| `ACCS-REST-API`, **`entp`** entry | enabled **true**, **1 product** | enabled false, **0 products** |
+| Control — a service disabled in the same org | `CommercePartnersSDK` false | — |
+| Control — services that DO offer products | 17 | 12 |
+
+Both controls matter. `enabled` is not uniformly true even in Demo System, so the
+SC org's `false` is a real difference rather than an artifact of the read; and
+both orgs return non-empty product lists for other services, so the zero is
+specific to ACCS rather than a blanket empty response.
+
+**The missing thing is one row of licensing, not anything about the project.** The
+`entp` entry is what carries the product profile, and only Demo System has one.
+That is what `"requires selection of a product"` means literally: there was
+nothing to select. Granting it is an administrative act on the org, not a
+developer action — nothing about how an Adobe I/O project or workspace is
+configured can substitute for it.
+
+**Untested, and worth knowing before this is relied on:** Demo System has exactly
+ONE ACCS product, and the extension subscribes with `licenseConfigs: null`
+successfully. Whether null works because there is exactly one to auto-select, or
+for some other reason, has not been measured — it would start to matter if that
+org ever gained a second product.
 
 Since the subscription IS the entitlement — it is what moves a credential's scopes
 from `AdobeID,openid` to `commerce.accs` — a credential there can never reach any

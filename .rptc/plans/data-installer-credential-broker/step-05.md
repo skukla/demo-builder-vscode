@@ -12,12 +12,34 @@
 > | Check | Result |
 > |---|---|
 > | S2S credential creation | **succeeds** — so this is not a permissions wall |
-> | `ACCS-REST-API` in the org's service list | present, `enabled: false`, **0 licenseConfigs** — on both catalog entries |
 > | Subscribe with `licenseConfigs: null` | **HTTP 200** carrying `error: ["ACCS-REST-API"]`, `"Service ACCS-REST-API requires selection of a product"` |
-> | **Control** — other services in the SAME org | **12 do offer products**, so the empty list is specific to ACCS, not a blanket empty response |
+>
+> The same read against BOTH orgs isolates the single differing row:
+>
+> | | Adobe Demo System (`285361`) | Solution Led Commerce SC (`3397333`) |
+> |---|---|---|
+> | `ACCS-REST-API`, `adobeid` entry | enabled **true**, 0 products | enabled false, 0 products |
+> | `ACCS-REST-API`, **`entp`** entry | enabled **true**, **1 product** | enabled false, **0 products** |
+> | Control — a service disabled in the same org | `CommercePartnersSDK` false | — |
+> | Control — services that DO offer products | 17 | 12 |
+>
+> Both controls are load-bearing. `enabled` is not uniformly true even in Demo
+> System, so the SC org's `false` is a real difference and not an artifact of the
+> read. And both orgs return non-empty product lists for other services, so the
+> zero is specific to ACCS rather than a blanket empty response.
+>
+> **The `entp` entry is what carries the product profile**, and only Demo System
+> has one — which is what `"requires selection of a product"` means literally.
+> The missing thing is a row of licensing on the ORG. No Adobe I/O project or
+> workspace configuration can substitute for it.
 >
 > Confirmed independently by the owner: ACCS instances live in Adobe Demo System;
 > SCs use the SC org only for their integration I/O projects.
+>
+> **Also untested:** Demo System has exactly ONE ACCS product and the extension
+> subscribes with `licenseConfigs: null` successfully. Whether null works because
+> there is exactly one to auto-select is unmeasured, and would start to matter if
+> that org gained a second.
 >
 > **The subscription IS the entitlement** (`accsCredentialProvisioner` records this:
 > it moves scopes from `AdobeID,openid` to `commerce.accs` + `additional_info.*`).
