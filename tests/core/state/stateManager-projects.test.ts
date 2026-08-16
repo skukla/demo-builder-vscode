@@ -40,12 +40,15 @@ describe('StateManager - Project Management', () => {
 
             await stateManager.saveProject(project as Project);
 
-            // Verify state file was written
+            // Verify state file was written. saveState writes atomically, so the
+            // write lands on `<stateFile>.tmp` and is renamed into place —
+            // asserting on the final path alone would miss it.
             expect(fs.writeFile).toHaveBeenCalled();
             const writeCall = (fs.writeFile as jest.Mock).mock.calls.find(
-                (call) => call[0] === mockStateFile
+                (call) => call[0] === `${mockStateFile}.tmp`
             );
             expect(writeCall).toBeDefined();
+            expect(fs.rename).toHaveBeenCalledWith(`${mockStateFile}.tmp`, mockStateFile);
 
             // Verify project was saved
             const savedProject = await stateManager.getCurrentProject();
@@ -235,11 +238,14 @@ describe('StateManager - Project Management', () => {
 
             await stateManager.clearProject();
 
+            // Written atomically — the write lands on `<stateFile>.tmp` and is
+            // renamed into place.
             expect(fs.writeFile).toHaveBeenCalled();
             const writeCall = (fs.writeFile as jest.Mock).mock.calls.find(
-                (call) => call[0] === mockStateFile
+                (call) => call[0] === `${mockStateFile}.tmp`
             );
             expect(writeCall).toBeDefined();
+            expect(fs.rename).toHaveBeenCalledWith(`${mockStateFile}.tmp`, mockStateFile);
         });
     });
 
