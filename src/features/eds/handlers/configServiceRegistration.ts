@@ -22,7 +22,6 @@ import { announceConfigAccess, pinSiteAdmin } from '../services/configAccessReco
 import { buildCodeSyncSetupUrl } from '../services/configServiceAccess';
 import { buildSiteConfigParams } from '../services/configurationService';
 import { lostGrantsMessage } from '../services/lostGrantsMessage';
-import { registerPublishKey } from '../services/publishKeyRegistrar';
 import { registerSiteConfig } from '../services/siteConfigRegistrar';
 import { DaLiveAuthError } from '../services/types';
 import {
@@ -91,6 +90,7 @@ export async function registerConfigurationService(
         const registration = await registerSiteConfig({
             configurationService,
             siteParams,
+            tokenProvider: services.daLiveTokenProvider,
             logger,
             // New repos only: the Code Sync install just happened, so a 403 is
             // probably propagation. On an existing repo it is a real refusal and
@@ -113,19 +113,14 @@ export async function registerConfigurationService(
         }
 
         if (registration.registered) {
+            // Pinning an admin closes the admin API to anonymous callers, which is
+            // what the browser-side smart-404 publisher is. The publish key that
+            // keeps it working is re-minted by `registerSiteConfig` itself — the
+            // write destroys it, so the re-mint belongs with the write.
             await pinSiteAdmin(
                 services.daLiveTokenProvider,
                 { owner: repoInfo.repoOwner, repo: repoInfo.repoName },
                 setupUserEmail,
-                logger,
-            );
-            // Pinning an admin closes the admin API to anonymous callers, which
-            // is what the browser-side smart-404 publisher is. Hand the shared
-            // action a key in the same breath, or PDPs added after setup can
-            // never self-heal. Non-fatal, like the pin above.
-            await registerPublishKey(
-                services.daLiveTokenProvider,
-                { owner: repoInfo.repoOwner, repo: repoInfo.repoName },
                 logger,
             );
         } else {

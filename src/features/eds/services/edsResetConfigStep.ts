@@ -95,6 +95,10 @@ export async function publishConfigAndRegisterSite(
                 daLiveSite,
                 byomOverlayUrl,
             ),
+            // Carries the publish-key re-mint. Before it moved into the registrar
+            // this path wrote the config — destroying the key — and never minted a
+            // new one, so every reset silently killed runtime PDP self-heal.
+            tokenProvider,
             logger,
             retryOn403: true,
             onProgress: (message) => report(7, message),

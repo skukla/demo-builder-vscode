@@ -14,14 +14,26 @@
  * Both are pinned below.
  */
 
+jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
+
+// The site config write DESTROYS the site's publish key (`apiKeys` lives inside
+// the site config document), so re-minting is part of completing the write.
+// Mocked here; its own behaviour is pinned in publishKeyRegistrar.test.ts.
+jest.mock('@/features/eds/services/publishKeyRegistrar', () => ({
+    registerPublishKey: jest.fn().mockResolvedValue({ registered: true }),
+}));
+
 import {
     registerSiteConfig,
     CONFIG_SERVICE_PROPAGATION_DELAYS_MS,
 } from '@/features/eds/services/siteConfigRegistrar';
+import { registerPublishKey } from '@/features/eds/services/publishKeyRegistrar';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
 
-jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
+const mockRegisterPublishKey = registerPublishKey as jest.MockedFunction<typeof registerPublishKey>;
+
+const tokenProvider = { getAccessToken: jest.fn().mockResolvedValue('da-live-token') } as never;
 
 const logger = {
     debug: jest.fn(),
@@ -46,6 +58,7 @@ const run = (svc: never, retryOn403 = false, onProgress?: (m: string) => void | 
     registerSiteConfig({
         configurationService: svc,
         siteParams,
+        tokenProvider,
         logger,
         retryOn403,
         onProgress,
@@ -64,7 +77,7 @@ describe('registerSiteConfig', () => {
         const update = jest.fn().mockResolvedValue({ success: true });
 
         const result = await run(
-            service(jest.fn().mockResolvedValue({ success: false, statusCode: 409 }), update),
+            service(jest.fn().mockResolvedValue({ success: false, statusCode: 409 }), update)
         );
 
         expect(update).toHaveBeenCalledTimes(1);
@@ -80,11 +93,13 @@ describe('registerSiteConfig', () => {
 
         const result = await run(
             service(
-                jest
-                    .fn()
-                    .mockResolvedValue({ success: false, statusCode: 409, error: 'already exists' }),
-                update,
-            ),
+                jest.fn().mockResolvedValue({
+                    success: false,
+                    statusCode: 409,
+                    error: 'already exists',
+                }),
+                update
+            )
         );
 
         expect(result.statusCode).toBe(500);
@@ -93,7 +108,7 @@ describe('registerSiteConfig', () => {
 
     it('throws DaLiveAuthError on 401 rather than retrying a dead session', async () => {
         await expect(
-            run(service(jest.fn().mockResolvedValue({ success: false, statusCode: 401 }))),
+            run(service(jest.fn().mockResolvedValue({ success: false, statusCode: 401 })))
         ).rejects.toThrow(DaLiveAuthError);
     });
 
@@ -242,7 +257,7 @@ describe('registerSiteConfig', () => {
 
         expect(onProgress).toHaveBeenCalledTimes(CONFIG_SERVICE_PROPAGATION_DELAYS_MS.length);
         expect(onProgress).toHaveBeenCalledWith(
-            expect.stringContaining('Waiting for Configuration Service access'),
+            expect.stringContaining('Waiting for Configuration Service access')
         );
     });
 
@@ -256,9 +271,96 @@ describe('registerSiteConfig', () => {
         await run(
             service(jest.fn().mockResolvedValue({ success: false, statusCode: 403 })),
             true,
-            onProgress,
+            onProgress
         );
 
         expect(resolved).toBe(true);
+    });
+});
+
+/**
+ * The publish key rides with the write that destroys it.
+ *
+ * `apiKeys` lives INSIDE the site config document, and every path here performs a
+ * delete-then-re-register, so a successful registration always leaves the site
+ * with NO publish key until one is re-minted. Two of the four callers forgot to
+ * do that (reset and rename, measured 2026-08-15), which silently killed runtime
+ * PDP self-heal on the exact flow people run to REPAIR a storefront.
+ *
+ * Living inside the registrar is what makes the next caller correct by default.
+ */
+describe('registerSiteConfig — publish key', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('re-mints the publish key after a site registers outright', async () => {
+        await run(service(jest.fn().mockResolvedValue({ success: true })));
+
+        expect(mockRegisterPublishKey).toHaveBeenCalledTimes(1);
+    });
+
+    it('re-mints after a 409 falls through to a successful update', async () => {
+        // The common case by far: every reset and every edit answers 409 first.
+        await run(
+            service(
+                jest.fn().mockResolvedValue({ success: false, statusCode: 409 }),
+                jest.fn().mockResolvedValue({ success: true })
+            )
+        );
+
+        expect(mockRegisterPublishKey).toHaveBeenCalledTimes(1);
+    });
+
+    it('re-mints after a success that arrived on the 403 retry path', async () => {
+        const register = jest
+            .fn()
+            .mockResolvedValueOnce({ success: false, statusCode: 403 })
+            .mockResolvedValue({ success: true });
+
+        await run(service(register), true);
+
+        expect(mockRegisterPublishKey).toHaveBeenCalledTimes(1);
+    });
+
+    it('keys the registration by GitHub owner/repo, not the config lookup pair', async () => {
+        // `codeOwner`/`codeRepo` are unambiguous; `org`/`site` carry a stale doc
+        // comment claiming they are the DA.live pair. Helix keys are per GitHub repo.
+        await run(service(jest.fn().mockResolvedValue({ success: true })));
+
+        expect(mockRegisterPublishKey).toHaveBeenCalledWith(
+            tokenProvider,
+            { owner: 'owner', repo: 'repo' },
+            logger
+        );
+    });
+
+    it('does NOT mint a key when the registration failed', async () => {
+        // Nothing was written, so nothing was destroyed. Minting here would burn a
+        // key against a site whose config is not in place.
+        await run(service(jest.fn().mockResolvedValue({ success: false, statusCode: 500 })));
+
+        expect(mockRegisterPublishKey).not.toHaveBeenCalled();
+    });
+
+    it('does NOT mint a key when a dead session throws out of the update', async () => {
+        const register = jest.fn().mockResolvedValue({ success: false, statusCode: 409 });
+        const update = jest.fn().mockResolvedValue({ statusCode: 401, error: 'expired' });
+
+        await expect(run(service(register, update))).rejects.toThrow(DaLiveAuthError);
+
+        expect(mockRegisterPublishKey).not.toHaveBeenCalled();
+    });
+
+    it('reports the registration outcome even when the key could not be minted', async () => {
+        // `registerPublishKey` never throws, but it does fail. A storefront whose
+        // config wrote successfully is registered whether or not the key landed —
+        // reporting otherwise would send people to re-run a write that worked.
+        mockRegisterPublishKey.mockResolvedValueOnce({
+            registered: false,
+            reason: 'no DA.live session',
+        });
+
+        const result = await run(service(jest.fn().mockResolvedValue({ success: true })));
+
+        expect(result.registered).toBe(true);
     });
 });

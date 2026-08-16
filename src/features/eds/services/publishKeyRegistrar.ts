@@ -33,8 +33,13 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
 import type { Logger } from '@/types/logger';
 
-/** Minimal DA.live token source — the same shape `pinSiteAdmin` takes. */
-interface TokenProvider {
+/**
+ * Minimal DA.live token source — the same shape `pinSiteAdmin` takes.
+ *
+ * Exported so `siteConfigRegistrar` can name what it forwards. Keeping one type
+ * means the registrar cannot drift from what this function accepts.
+ */
+export interface PublishKeyTokenProvider {
     getAccessToken(): Promise<string | null>;
 }
 
@@ -55,7 +60,7 @@ export interface RegisterPublishKeyResult {
  * @param logger        pipeline logger; failures land here, never as a throw
  */
 export async function registerPublishKey(
-    tokenProvider: TokenProvider,
+    tokenProvider: PublishKeyTokenProvider,
     site: { owner: string; repo: string },
     logger: Logger,
 ): Promise<RegisterPublishKeyResult> {
