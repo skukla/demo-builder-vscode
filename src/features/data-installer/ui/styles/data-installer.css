@@ -14,19 +14,54 @@
 /* ===========================================
    View switcher
    =========================================== */
+/* Tabs anchored to a rule, not pills floating on the page.
+
+   As filled pills they belonged to neither neighbour: the page header above has
+   a border and the controls band below has a fill, so two loose buttons sat in
+   the gap between them looking like a leftover of the three-tab design this
+   surface used to have.
+
+   Not StepRail, which is the shared horizontal navigation — that is a STEP rail,
+   where only `done` and `current` are actionable. These two views are peers,
+   always reachable, in no sequence; borrowing the progress vocabulary would mean
+   calling Activity "done" to make it clickable. The switcher stays feature-local
+   for that reason, and only its treatment changes. */
 .view-switcher {
     display: flex;
-    gap: 4px;
+    gap: var(--spectrum-global-dimension-size-300, 24px);
+    /* The rule the tabs sit on. The active tab's underline overlaps it, which is
+       what makes them read as tabs rather than as buttons with a line beneath. */
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+    /* Off the header's own rule. Without it the tabs sat tight under the header
+       band while their rule had ~24px of air beneath it — top-heavy, and it read
+       as the tabs belonging to the header rather than to the content. */
+    margin-top: var(--spectrum-global-dimension-size-200, 16px);
     margin-bottom: var(--spectrum-global-dimension-size-200, 16px);
 }
 
 .view-switcher-button {
-    border-radius: 4px !important;
+    /* Square, transparent, and carrying the underline slot on every tab so the
+       active one does not shift its neighbours by 2px when it gains one. */
+    border-radius: 0 !important;
+    background-color: transparent !important;
+    border-bottom: 2px solid transparent !important;
+    /* Pull the underline down onto the container's rule. */
+    margin-bottom: -1px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+}
+
+.view-switcher-button:hover {
+    background-color: transparent !important;
+    color: var(--spectrum-global-color-gray-900) !important;
 }
 
 .view-switcher-button.is-active {
-    background-color: var(--spectrum-global-color-gray-200) !important;
+    background-color: transparent !important;
     font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+    border-bottom-color: var(--spectrum-global-color-blue-500) !important;
 }
 
 /* ===========================================
