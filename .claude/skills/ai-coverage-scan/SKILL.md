@@ -1,0 +1,71 @@
+---
+name: ai-coverage-scan
+description: Measure which of the extension's features an AI AGENT can actually reach. Computes the gap between the human surface (handler types behind every webview button) and the agent surface (MCP tools), since both dispatch into the same handler maps. Use when auditing AI coverage, before adding MCP tools, or when asked "can an agent do X through the extension?" — the sibling of dead-code-scan for the AI surface.
+---
+
+# AI-Surface Coverage Scan
+
+**The coverage gap is computable, not estimable.** Every webview button dispatches into a
+handler map, and MCP descriptors dispatch into the *same* maps via
+`dispatchHandler(map, ctx, type, args)`. So the handler types ARE the extension's feature
+spine, and a type no agent can reach is a feature the AI surface does not have.
+
+```bash
+bash .claude/skills/ai-coverage-scan/scan.sh          # summary
+bash .claude/skills/ai-coverage-scan/scan.sh --list   # + every uncovered feature
+```
+
+## Baseline — 2026-08-16, `develop` @ beta.130
+
+| | |
+|---|---|
+| UI-reachable handler types | 106 |
+| Reachable by an MCP tool | 29 |
+| Uncovered | 77 (24 UI-only, **53 agent-relevant**) |
+| **Agent-relevant gap** | **53 — 50% of the surface** |
+
+Concentrated in `ProjectCreationHandlerRegistry` (13), `dashboardHandlers` (11) and
+`edsHandlers` (11) — project creation, dashboard actions and storefront work, which is most of
+what an SC does.
+
+**Re-measure before trusting this table.** Backlog entries in this repo rot precisely because
+nobody re-runs the number; that is what the scan is for.
+
+## Three traps, each of which produced a wrong number before the scan was trusted
+
+1. **Handler keys use TWO conventions.** Unquoted camelCase (`requestStatus:`) and quoted
+   kebab-case (`'provision-accs-credentials':`). Matching one gives ~50 types instead of 106 —
+   and the resulting figure looks plausible, which is what makes it dangerous.
+2. **Not every MCP tool is a descriptor row.** Many are registered directly
+   (`createProjectTool.ts`, `edsResetTool.ts`). Counting only descriptor `type:` values reports
+   **81%** uncovered against a true **50%** — a 30-point overstatement, because
+   `create-project` looks uncovered while the `create_project` tool exists. The scan normalizes
+   (strip `-`/`_`, lowercase) and matches against every tool name it can find.
+3. **A raw count overstates the gap.** Roughly a quarter of uncovered types are UI-only —
+   `navigateBack`, `openBrowser`, `showDashboard` — which an agent has no business calling. The
+   scan separates them with a verb-prefix heuristic. **The heuristic is crude:** it will
+   misfile anything whose name starts with a UI verb but does real work. Read `--list` before
+   quoting the number.
+
+## What the scan CANNOT tell you
+
+It measures **reachability, not usability**. A feature reachable through a tool may still be
+expensive to use — the tool may return too little, forcing the agent to derive what the
+extension already knows. This session measured a subagent spending **~121,000 tokens** deriving
+block authoring shapes that sit in `component-definition.json`, a file no tool exposes. That
+gap is invisible to this scan: `list_blocks` exists, so blocks read as "covered".
+
+So pair it with the judgement question the count cannot answer: *for each covered feature, does
+using it cost what it should?* See
+`.rptc/backlog/2026-08-16-mcp-surface-for-sc-design-work.md` for the tool-class framing
+(transport / knowledge / composite / verification) that came out of asking it.
+
+It also says nothing about **skills or agents** — the other two layers of the AI surface. A
+generated project ships no `.claude/agents/` at all, and its skills cover App Builder with seven
+role-shaped personas while the EDS storefront gets task-shaped skills only.
+
+## Verify
+
+The scan aborts if it finds zero handler types, because an empty result from a broken extractor
+is indistinguishable from a codebase with no handlers. Beyond that: run `--list` and confirm a
+handful of entries by opening the named file. The count is only as good as the two regexes.

@@ -12,6 +12,34 @@ item is about making sure that surface is good enough for an agent to do it well
 The question to keep asking of every gap below: *can an agent do this through the extension, and
 does it cost what it should?*
 
+## How to audit this systematically — `ai-coverage-scan`
+
+**The coverage gap is computable.** Every webview button dispatches into a handler map, and MCP
+descriptors dispatch into the SAME maps, so handler types are the extension's feature spine and
+a type no agent can reach is a missing AI feature. Written up as a repeatable scan skill
+(`.claude/skills/ai-coverage-scan/`), sibling to `dead-code-scan`.
+
+**Baseline 2026-08-16, develop @ beta.130:**
+
+| | |
+|---|---|
+| UI-reachable handler types | 106 |
+| Reachable by an MCP tool | 29 |
+| Uncovered | 77 (24 UI-only, **53 agent-relevant**) |
+| **Agent-relevant gap** | **53 — 50% of the surface** |
+
+Concentrated where an SC actually works: `ProjectCreationHandlerRegistry` (13),
+`dashboardHandlers` (11), `edsHandlers` (11).
+
+**The measurement was wrong twice before it was right**, and both errors are recorded in the
+skill because they will recur: matching one key convention gave 50 types instead of 106, and
+counting only descriptor rows reported 81% uncovered against a true 50%.
+
+**What the count cannot see:** it measures REACHABILITY, not usability. A feature reachable
+through a tool may still be expensive — see the ~121k-token block-shape derivation below, which
+is invisible to the scan because `list_blocks` exists, so blocks read as "covered". The count
+finds missing features; the judgement question finds expensive ones.
+
 ## The finding
 
 **58 MCP tools. Zero for authoring content, zero for design.**
