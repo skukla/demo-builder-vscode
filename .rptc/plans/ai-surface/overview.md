@@ -10,15 +10,20 @@ files; this sequences them and holds what is known about each.
 
 | Axis | Question | Measured state |
 |---|---|---|
-| **Coverage** | Can an agent reach the feature? | 53 agent-relevant handler types unreachable; **zero content-authoring tools** |
-| **Quality** | Is what comes back usable? | 47 of 52 tools lean; 5 bloated; 6 return the string `{}` |
+| **Coverage** | Can an agent reach the feature? | **82** agent-relevant handler types unreachable (58% of 142); **zero content-authoring tools** |
+| **Quality** | Is what comes back usable? | 5 bloated, 6 return the string `{}` — measured at 52 tools; baseline is now 58 |
 | **Guidance** | Does it know when and how? | 21 skills, all task- or reference-shaped; no open-ended design skill |
 | **Enforcement** | Does it get things wrong anyway? | 11 of 24 documented conventions are prose only; one hook, and it syncs rather than guards |
 | **Roles** | Who does the work? | No agent definitions ship at all |
-| **The chain** | What ELSE is in the agent's surface? | **86 tools on a develop baseline** — 52 ours + 11 commerce-extensibility + 23 playwright (measured live); one external tool writes state the extension deliberately stopped writing |
+| **The chain** | What ELSE is in the agent's surface? | **92 tools** — 58 ours + 11 commerce-extensibility + 23 playwright (measured live). One external tool writes state the extension deliberately stopped writing; the reading side is now fixed, the conflict is not |
 
 Evidence: seven parallel research agents, 2026-08-16, all cited in the phase files. Earlier
 research at `.rptc/research/ai-surface-coverage/research.md` (2026-08-12).
+
+> **Every number here rotted within hours of being measured.** `feature/data-installer` merged to
+> develop (`7c7fcc43`) the same day: handler types went 106 → 142, the agent-relevant gap 53 → 82,
+> tools 52 → 58. **Re-run `ai-coverage-scan` before citing any figure in this program.** The
+> phase files record what was true at measurement time and say so; they are not live state.
 
 ## Phases, in dependency order
 
@@ -57,6 +62,10 @@ the notes say what each ordering buys.
   The measured failure mode already happened once from a single unwrapped internal call —
   `deployMeshHeadless` deployed into a DELETED project for two days. Do not add tools or guidance
   that assume the global selection is meaningful.
+- ~~**Do not assume a credential reaches multiple Commerce instances.**~~ **RESOLVED
+  2026-08-16** — `669cfd2a docs(research): one Commerce credential reaches every instance in its
+  org`. This program recorded it as unresolvable from outside ("needs the service owner"); it was
+  measured instead. See `.rptc/research/data-installer-credential-home/`.
 - A PM-approved **4-tier policy** already classifies AI-reachable tools
   (`docs/research/2026-05-30-ai-first-experience.md` §1a). The 3-class split in
   `tool-inventory.md` is unreconciled with it — reconcile before relying on either.

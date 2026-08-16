@@ -48,6 +48,22 @@ global state is the same bug with a wider entrance.
 **This is not a claim that the external MCP is wrong.** Its model is the normal `aio` one. The
 conflict is that two models coexist in one project with nothing reconciling them.
 
+## FIXED ON DEVELOP, same day
+
+Every defect this phase surfaced was fixed within hours of being reported:
+
+| Finding | Fix |
+|---|---|
+| Guard matched only the colon spelling | `9895a6a6 fix(shell): match both aio api-mesh spellings in the untargeted-call guard` |
+| `check_mesh` could never succeed | `18e16d48 fix(mcp): make check_mesh callable` |
+| `promote_block_to_library` published ungated | `8cf9674d fix(mcp): gate the tools that publish to a live site` |
+| The socket race was invisible in responses | `06ffe079 feat(mcp): name the serving extension host in serverInfo` — the mitigation suggested with the evidence |
+| Race 2 (stale project pointer) | `925d9589` + `c8c72565` |
+
+**The org-targeting CONFLICT itself is not fixed and cannot be** — Adobe's package still writes
+the global selection. What changed is that the extension's own reading side now warns correctly
+on both spellings, which was the half we could fix.
+
 ## Static half — DONE 2026-08-16
 
 Read from a real generated project's `.demo-builder-mcp/node_modules/`, not from the declaration.

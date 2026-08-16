@@ -1,7 +1,13 @@
 # Tool inventory and safety classification — step 01
 
-**Measured:** 2026-08-16, `feature/ai-surface-coverage` @ develop/beta.131. **52 tools.**
-Develop-only — a worktree with `feature/data-installer` merged adds six datapack tools.
+**SUPERSEDED 2026-08-16 (same day).** Measured at develop/beta.131 as **52 tools**; develop has
+since merged `feature/data-installer` (`7c7fcc43`), so the baseline is now **58** and the six
+datapack tools are no longer a mixed-tree signal — they are develop. Re-run before using any
+number here.
+
+**The tree-provenance test in this file is now obsolete.** "Datapack tools present = integration
+build" was true for about four hours. `06ffe079 feat(mcp): name the serving extension host in
+serverInfo` replaces it with a real answer: the host identifies itself.
 
 ## How this was built, and the trap it hit
 
