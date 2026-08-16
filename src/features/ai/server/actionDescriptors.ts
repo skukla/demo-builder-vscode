@@ -150,9 +150,15 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             "Rebuild the current EDS project's DA.live authoring block library from its " +
             'component-definition.json (destructive full re-sync — use after hand-editing ' +
             'component-definition.json outside the promote flow). EDS projects only; returns the ' +
-            'rebuilt library paths.',
+            'rebuilt library paths. Republishes the library to the live site, so it requires ' +
+            'confirm:true.',
         map: edsHandlers,
         type: 'refresh-block-library',
+        // Gated on the same rule as promote/remove_block_from_library: it runs
+        // with skipPublish: false (refreshBlockLibraryHeadless.ts:109), so a full
+        // re-sync reaches the live site. The dashboard kebab path is unaffected —
+        // this gate lives in the descriptor row, not the handler.
+        confirm: true,
     },
     {
         tool: 'delete_mesh',
