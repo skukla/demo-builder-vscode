@@ -23,6 +23,8 @@
  */
 
 import { provisionAccsCredentials } from '../services/accsCredentialProvisioner';
+import { canProvisionAccsCredentials } from '../services/accsProvisionEligibility';
+import { brokerForContext } from '../services/commerceCredentialBroker';
 import { resolveCommerceCredentials } from '../services/commerceCredentials';
 import {
     DataInstallerWriteClient,
@@ -44,7 +46,6 @@ import { PollingService } from '@/core/shell/pollingService';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import type { Project } from '@/types/base';
-import { canProvisionAccsCredentials } from '../services/accsProvisionEligibility';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -59,6 +60,11 @@ const CREDENTIAL_MESSAGES: Record<string, string> = {
         'ACCS imports need an Adobe OAuth Server-to-Server client id and secret. Add them before importing.',
     'unsupported-backend':
         'This project has no Adobe Commerce backend, so there is nothing to import into.',
+    // Distinct from the gap above because the remedy is: the extension has no
+    // shared credential service to fall back on, and that is a setting the user
+    // can add. Naming the setting is safe; naming its value would not be.
+    'no-credential-service':
+        'ACCS imports need an Adobe OAuth Server-to-Server client id and secret, and no shared credential service is configured to supply one. Add a service under demoBuilder.accsDiscovery.services, or add the pair to this project.',
 };
 
 /** Payload for a start request. */
@@ -262,6 +268,7 @@ export const importHandlers = defineHandlers({
             },
             secrets: context.context.secrets,
             projectName: project.name,
+            broker: brokerForContext(context, project),
         });
         if (!credentials.ok) {
             // Not an error: the import still works, it just lands on the default.
@@ -393,6 +400,7 @@ async function prepareImport(
         },
         secrets: context.context.secrets,
         projectName: project.name,
+        broker: brokerForContext(context, project),
     });
     if (!credentials.ok) {
         return {

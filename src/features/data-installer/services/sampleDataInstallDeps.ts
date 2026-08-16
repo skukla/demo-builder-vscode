@@ -11,6 +11,7 @@
  */
 
 import { resolveDataInstallerAccess } from '../handlers/dataInstallerHandlers';
+import { brokerForContext } from './commerceCredentialBroker';
 import { resolveCommerceCredentials } from './commerceCredentials';
 import { DataInstallerWriteClient } from './dataInstallerWriteClient';
 import { watchImportJob } from './importJobRunner';
@@ -26,7 +27,15 @@ export function buildSampleDataDeps(
 ): SampleDataDeps {
     return {
         credentials: async () => {
-            const resolution = await resolveCommerceCredentials({ project: project as never });
+            // The broker matters MORE here than anywhere else: this runs during
+            // project creation, and a project that selected no App Builder
+            // components is exactly the one with no workspace to mint a pair in.
+            // Omitting it would leave every unit test green and the feature inert
+            // on its main path.
+            const resolution = await resolveCommerceCredentials({
+                project: project as never,
+                broker: brokerForContext(context, project as { adobe?: { organization?: string } }),
+            });
             // The pair goes into the REQUEST and nowhere else — never into the
             // result, never into a log line.
             return resolution.ok

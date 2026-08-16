@@ -59,11 +59,29 @@ export interface SecretStore {
 }
 
 /** Why credentials could not be resolved — a reason, never a message. */
-export type CredentialGap = 'missing-paas-admin' | 'needs-accs-credentials' | 'unsupported-backend';
+export type CredentialGap =
+    | 'missing-paas-admin'
+    | 'needs-accs-credentials'
+    | 'unsupported-backend'
+    | 'no-credential-service';
 
 export type CredentialResolution =
     | { ok: true; credentials: CommerceCredentials }
     | { ok: false; reason: CredentialGap };
+
+/**
+ * What the shared-credential broker came back with.
+ *
+ * Two distinct failures, because they need different people to act. Deciding
+ * WHICH is the wiring's job — it is the part that knows whether a discovery
+ * service is configured — so this module stays a pure reader.
+ */
+export type BrokerOutcome =
+    | { ok: true; credentials: { clientId: string; clientSecret: string } }
+    | { ok: false; reason: 'not-configured' | 'unavailable' };
+
+/** Ask the shared service for a pair. Supplied by the caller, never constructed here. */
+export type CredentialBroker = () => Promise<BrokerOutcome>;
 
 /**
  * Resolve what this project would authenticate an import with.
@@ -81,6 +99,12 @@ export async function resolveCommerceCredentials(args: {
      */
     secrets?: SecretStore;
     projectName?: string;
+    /**
+     * The shared-credential fallback, for ACCS projects that declare no pair of
+     * their own. Optional so a caller that has no way to build one — no settings
+     * access, no Adobe session — behaves exactly as it did before this existed.
+     */
+    broker?: CredentialBroker;
 }): Promise<CredentialResolution> {
     const { project } = args;
 
@@ -88,7 +112,7 @@ export async function resolveCommerceCredentials(args: {
         return resolvePaas(project);
     }
     if (project.stackBackend === ACCS_BACKEND) {
-        return resolveAccs(project);
+        return resolveAccs(project, args.broker);
     }
     return { ok: false, reason: 'unsupported-backend' };
 }
@@ -114,11 +138,30 @@ function resolvePaas(project: CredentialProject): CredentialResolution {
  * model for SaaS. Accepting both here would quietly make the worse credential the
  * easy one.
  */
-function resolveAccs(project: CredentialProject): CredentialResolution {
+async function resolveAccs(
+    project: CredentialProject,
+    broker?: CredentialBroker,
+): Promise<CredentialResolution> {
     const pair = readAccsOAuthPair(project.componentConfigs);
-    if (!pair) {
+    if (pair) {
+        return { ok: true, credentials: { kind: 'accs', ...pair } };
+    }
+    if (!broker) {
         return { ok: false, reason: 'needs-accs-credentials' };
     }
-    return { ok: true, credentials: { kind: 'accs', ...pair } };
+
+    // A broker failure is never fatal: this runs in front of a modal and inside
+    // project creation, and both already handle "no credentials". Anything the
+    // broker throws collapses to the gap it was asked to fill.
+    const outcome = await broker().catch(
+        () => ({ ok: false, reason: 'unavailable' }) as BrokerOutcome,
+    );
+    if (outcome.ok) {
+        return { ok: true, credentials: { kind: 'accs', ...outcome.credentials } };
+    }
+    return {
+        ok: false,
+        reason: outcome.reason === 'not-configured' ? 'no-credential-service' : 'needs-accs-credentials',
+    };
 }
 

@@ -209,4 +209,131 @@ describe('resolveCommerceCredentials', () => {
             expect(result.ok === false && result.reason).toBe('unsupported-backend');
         });
     });
+
+    /**
+     * The shared-credential fallback.
+     *
+     * A demo project that selected no App Builder components has no Adobe I/O
+     * workspace, so it can never hold an OAuth pair of its own. The broker asks
+     * the shared discovery service for one instead.
+     *
+     * PRECEDENCE IS THE CONTRACT: a locally-configured pair always wins. Existing
+     * projects stay on exactly the path they are on today, and a user who wants
+     * their own credential gets it by supplying one.
+     */
+    describe('ACCS — the shared-credential broker', () => {
+        const SHARED = { clientId: 'shared-id', clientSecret: 'fake-shared-secret-not-a-secret' };
+        const served = () => jest.fn().mockResolvedValue({ ok: true, credentials: SHARED });
+        const notConfigured = () => jest.fn().mockResolvedValue({ ok: false, reason: 'not-configured' });
+        const unavailable = () => jest.fn().mockResolvedValue({ ok: false, reason: 'unavailable' });
+
+        it('uses the shared pair when the project declares none', async () => {
+            const result = await resolveCommerceCredentials({
+                project: ACCS_PROJECT_NO_CREDS,
+                broker: served(),
+            });
+
+            expect(result).toEqual({ ok: true, credentials: { kind: 'accs', ...SHARED } });
+        });
+
+        // The rule the whole design rests on.
+        it('prefers a declared pair and never asks the broker', async () => {
+            const broker = served();
+
+            const result = await resolveCommerceCredentials({ project: ACCS_PROJECT, broker });
+
+            expect(result).toEqual({
+                ok: true,
+                credentials: {
+                    kind: 'accs',
+                    clientId: 'client-id-value',
+                    clientSecret: 'fake-test-secret-not-a-secret',
+                },
+            });
+            expect(broker).not.toHaveBeenCalled();
+        });
+
+        // Half a declared pair is still "declared nothing usable", so the broker
+        // gets its turn rather than the user being stuck behind a typo.
+        it('falls through to the broker on half a declared pair', async () => {
+            const broker = served();
+            const half = {
+                stackBackend: 'adobe-commerce-accs',
+                componentConfigs: { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_ID: 'only-the-id' } },
+            };
+
+            const result = await resolveCommerceCredentials({ project: half, broker });
+
+            expect(result.ok).toBe(true);
+            expect(broker).toHaveBeenCalled();
+        });
+
+        // No service configured is the user's to fix, and it is invisible
+        // otherwise — riding on demoBuilder.accsDiscovery.services means someone
+        // who never set up store discovery gets no broker and no hint one exists.
+        it('reports no-credential-service when nothing is configured', async () => {
+            const result = await resolveCommerceCredentials({
+                project: ACCS_PROJECT_NO_CREDS,
+                broker: notConfigured(),
+            });
+
+            expect(result).toEqual({ ok: false, reason: 'no-credential-service' });
+        });
+
+        // A service that answered and gave nothing (403, 503, timeout) leaves the
+        // user the same remedy as before: supply a pair. Same reason, so the UI
+        // branches on one thing and the HTTP detail stays in Debug Logs.
+        it('reports needs-accs-credentials when the service had nothing', async () => {
+            const result = await resolveCommerceCredentials({
+                project: ACCS_PROJECT_NO_CREDS,
+                broker: unavailable(),
+            });
+
+            expect(result).toEqual({ ok: false, reason: 'needs-accs-credentials' });
+        });
+
+        // The four callers that have not been given a broker must behave exactly
+        // as they did before this existed.
+        it('is unchanged when no broker is supplied', async () => {
+            const result = await resolveCommerceCredentials({ project: ACCS_PROJECT_NO_CREDS });
+
+            expect(result).toEqual({ ok: false, reason: 'needs-accs-credentials' });
+        });
+
+        it('never asks the broker for a PaaS project', async () => {
+            const broker = served();
+
+            const result = await resolveCommerceCredentials({
+                project: { stackBackend: 'adobe-commerce-paas', componentConfigs: {} },
+                broker,
+            });
+
+            expect(result).toEqual({ ok: false, reason: 'missing-paas-admin' });
+            expect(broker).not.toHaveBeenCalled();
+        });
+
+        it('never asks the broker for an unknown backend', async () => {
+            const broker = served();
+
+            await resolveCommerceCredentials({
+                project: { stackBackend: 'something-else', componentConfigs: {} },
+                broker,
+            });
+
+            expect(broker).not.toHaveBeenCalled();
+        });
+
+        // Resolution runs in front of a modal and inside project creation. A
+        // broker that throws must not take either down.
+        it('degrades to needs-accs-credentials when the broker throws', async () => {
+            const broker = jest.fn().mockRejectedValue(new Error('boom'));
+
+            const result = await resolveCommerceCredentials({
+                project: ACCS_PROJECT_NO_CREDS,
+                broker,
+            });
+
+            expect(result).toEqual({ ok: false, reason: 'needs-accs-credentials' });
+        });
+    });
 });

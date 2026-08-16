@@ -26,6 +26,8 @@
  * @module features/data-installer/handlers/exportHandlers
  */
 
+import { canProvisionAccsCredentials } from '../services/accsProvisionEligibility';
+import { brokerForContext } from '../services/commerceCredentialBroker';
 import { resolveCommerceCredentials } from '../services/commerceCredentials';
 import {
     DataInstallerWriteClient,
@@ -34,7 +36,6 @@ import {
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/features/components/config/envVarKeys';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
-import { canProvisionAccsCredentials } from '../services/accsProvisionEligibility';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -46,6 +47,8 @@ const CREDENTIAL_MESSAGES: Record<string, string> = {
         'ACCS exports need an Adobe OAuth Server-to-Server client id and secret. Add them before exporting.',
     'unsupported-backend':
         'This project has no Adobe Commerce backend, so there is nothing to export from.',
+    'no-credential-service':
+        'ACCS exports need an Adobe OAuth Server-to-Server client id and secret, and no shared credential service is configured to supply one. Add a service under demoBuilder.accsDiscovery.services, or add the pair to this project.',
 };
 
 export const exportHandlers = defineHandlers({
@@ -172,6 +175,7 @@ async function prepareExport(
         },
         secrets: context.context.secrets,
         projectName: project.name,
+        broker: brokerForContext(context, project),
     });
     if (!credentials.ok) {
         return {

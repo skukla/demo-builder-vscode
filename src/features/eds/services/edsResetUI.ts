@@ -21,6 +21,7 @@ import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
+import type { Logger } from '@/types/logger';
 
 // ==========================================================
 // Types
@@ -355,10 +356,13 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
     // customers on a live Commerce instance. Folding it into the first modal
     // would widen what an existing button destroys without saying so.
     //
-    // Gated on the project's recorded pack rather than on asking the service
-    // what is installed: a network call in front of a modal adds a failure mode
-    // to a dialog, and the removal itself reports when there was nothing there.
-    const removeData = await confirmSampleDataRemoval(project, vscode);
+    // Gated on the project's recorded pack rather than on asking the service what
+    // is installed — that is a per-datapack lookup this dialog does not need, and
+    // the removal itself reports when there was nothing there. It DOES now make
+    // one short credential call (see the function), which is bounded and silent
+    // on failure; the older "no network call in front of a modal" phrasing here
+    // overstated a rule that was really about not adding failure modes.
+    const removeData = await confirmSampleDataRemoval(project, vscode, context.logger);
 
     const originalStatus = project.status;
     project.status = 'resetting';
@@ -453,6 +457,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
 async function confirmSampleDataRemoval(
     project: Project,
     vscode: typeof import('vscode'),
+    logger: Logger,
 ): Promise<boolean> {
     const datapack = (project as { datapack?: { name: string; version: string } }).datapack;
     if (!datapack) {
@@ -465,15 +470,30 @@ async function confirmSampleDataRemoval(
     // be honoured.
     //
     // The original gate was `datapack` alone, justified by "no network call in
-    // front of a modal". That reasoning does not apply here: this call makes no
-    // network request at all, it reads componentConfigs. A write needs an OAuth
-    // S2S pair, which lives only inside an Adobe I/O workspace, so a package
-    // with no App Builder components has nowhere to keep one — and the honest
-    // surface for that is silence rather than an offer.
+    // front of a modal". THIS CALL NOW MAKES ONE: a project with no declared pair
+    // asks the shared discovery service for the credential it cannot mint itself.
+    // The earlier version of this comment said the opposite, and it was true when
+    // written — do not restore it.
+    //
+    // Keeping the call ahead of the prompt is still right, on three conditions the
+    // broker holds: one short GET on a QUICK timeout, every failure degrading
+    // silently to "no credentials", and no dialog of its own. Weighed against a
+    // three-minute reset the user cannot undo, a sub-second check is cheap.
     const { resolveCommerceCredentials } = await import(
         '@/features/data-installer/services/commerceCredentials'
     );
-    const credentials = await resolveCommerceCredentials({ project: project as never });
+    const { createProjectCredentialBroker } = await import(
+        '@/features/data-installer/services/commerceCredentialBroker'
+    );
+    const { ServiceLocator } = await import('@/core/di');
+    const credentials = await resolveCommerceCredentials({
+        project: project as never,
+        broker: createProjectCredentialBroker({
+            auth: ServiceLocator.getAuthenticationService(),
+            ...(project.adobe?.organization ? { orgId: project.adobe.organization } : {}),
+            log: (line) => logger.debug(`[Reset] ${line}`),
+        }),
+    });
     if (!credentials.ok) {
         return false;
     }

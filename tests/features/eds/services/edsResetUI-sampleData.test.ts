@@ -305,16 +305,20 @@ describe('resetEdsProjectWithUI — sample data', () => {
  * Commerce credentials." The prompt should never have appeared.
  *
  * The gate was `project.datapack` alone, justified by "a network call in front of
- * a modal adds a failure mode to a dialog". That reasoning was mine and it is
- * wrong here: `resolveCommerceCredentials` makes no network call at all — it is
- * `resolvePaas`/`resolveAccs` reading componentConfigs. There is no failure mode
- * to add.
+ * a modal adds a failure mode to a dialog".
+ *
+ * **That justification has since half come true, and the conclusion still holds.**
+ * `resolveCommerceCredentials` now DOES make a network call for an ACCS project
+ * with no declared pair: it asks the shared discovery service for the credential
+ * such a project cannot mint itself. What made the original reasoning wrong was
+ * never the absence of a network call — it was that the alternative is three
+ * minutes of irreversible reset behind a question that could not be honoured. A
+ * bounded GET that degrades silently does not add a failure mode; it removes one.
  *
  * The credential requirement is not incidental. A Data Installer write needs an
  * OAuth S2S pair, which exists only inside an Adobe I/O project and workspace, so
- * a package that selects no App Builder components has nowhere for one to live.
- * Until that is resolved, such a project simply cannot remove sample data — and
- * the honest surface is silence, not an offer.
+ * a package that selects no App Builder components has nowhere for one to live —
+ * which is exactly the gap the broker fills.
  */
 describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
     it('does not ask when the project has no usable Commerce credentials', async () => {
@@ -334,6 +338,30 @@ describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
 
         expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(2);
         expect(mockedRemove).toHaveBeenCalled();
+    });
+
+    /**
+     * THE TRAP THIS TEST EXISTS FOR.
+     *
+     * This call site passed `{ project }` and nothing else for its whole life.
+     * Adding the broker parameter to `resolveCommerceCredentials` does not force
+     * it to be supplied — the parameter is optional so the callers that cannot
+     * build one keep working — so forgetting it here leaves every other test in
+     * this repo green while the feature is inert on the path it was built for: a
+     * project with no App Builder components, which is the only kind that has no
+     * pair of its own.
+     *
+     * Asserted on the ARGUMENT rather than on any resulting behaviour, because
+     * the resolver is mocked here and would report success either way.
+     */
+    it('supplies a broker, so a project with no workspace can still be offered removal', async () => {
+        answers(RESET, REMOVE);
+
+        await run(createProject({ name: 'bodea', version: 'main' }));
+
+        expect(mockedCredentials).toHaveBeenCalledWith(
+            expect.objectContaining({ broker: expect.any(Function) }),
+        );
     });
 
     /** Checked BEFORE the prompt, not during the reset it would follow. */
