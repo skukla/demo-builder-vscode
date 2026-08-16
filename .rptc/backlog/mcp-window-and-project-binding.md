@@ -111,15 +111,18 @@ renaming an unrelated project reassigned the window's in-memory pointer. Reading
 the pointer from disk fixes that too, and makes the read self-healing: in-memory
 converges on the next call.
 
-Still open:
+`reload()` was **deleted** in the same pass (method, its `StateManagerLike`
+declaration, and its four tests). It had no callers before this work and could
+not gain one after it: its whole job was to re-read `state.json` into memory, and
+`getCurrentProject()` now reads the pointer directly. Deleted rather than left as
+an extension point, per the no-soft-deprecation rule.
 
-- `reload()` STILL has no callers. It fires `_onProjectChanged`, which has **zero
-  real subscribers** — the only match in `src/` is a doc-comment example in
-  `disposableStore.ts`. So the UI is entirely pull-based: nothing pushes a
-  repaint, and a window updates on its next read. If you want a live repaint
-  rather than read-triggered convergence, that needs a subscriber first, and
-  `reload()` is the natural trigger. Otherwise delete it — `dead-code-scan` will
-  keep flagging it.
+The UI is **pull-based**: `_onProjectChanged` has zero real subscribers (the only
+match in `src/` is a doc-comment example in `disposableStore.ts`), so nothing
+pushes a repaint and a window converges on its next read. That is deliberate, not
+an omission — but it does mean a window showing a stale project refreshes when
+something asks it to, not the instant another window selects. Making it live
+would mean adding a subscriber and a trigger, which is a feature, not a fix.
 
 ### What the reproduction added
 
