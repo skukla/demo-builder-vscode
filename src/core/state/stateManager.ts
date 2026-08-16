@@ -383,12 +383,6 @@ export class StateManager {
         return this.state.processes.get(name);
     }
 
-    public async reload(): Promise<void> {
-        await this.loadState();
-        await this.recentProjectsManager.load();
-        this._onProjectChanged.fire(this.state.currentProject);
-    }
-
     // Recent Projects Management (delegated)
 
     public async getRecentProjects(): Promise<RecentProject[]> {

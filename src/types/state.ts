@@ -104,7 +104,6 @@ export interface StateManager {
     /**
      * Reload state from disk
      */
-    reload(): Promise<void>;
 
     /**
      * Get recent projects list
