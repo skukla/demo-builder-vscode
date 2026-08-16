@@ -61,6 +61,61 @@ export interface AdobeEntityFetcherConfig {
 }
 
 /**
+ * The subscribe response, only as deep as the refusal check reads.
+ *
+ * `error` is the list of sdkCodes that were refused; `errorDetails` carries the
+ * reason for each. Both are absent on success.
+ */
+interface SubscribeResponseBody {
+    error?: string[];
+    errorDetails?: Array<{ sdkCode?: string; code?: number; message?: string }>;
+}
+
+/**
+ * Throw when Adobe refused a subscription **inside an HTTP 200**.
+ *
+ * Adobe does not signal a refused subscribe with a status code or a rejected
+ * promise. It answers 200 and puts the failure in the body:
+ *
+ * ```json
+ * { "error": ["ACCS-REST-API"],
+ *   "errorDetails": [{ "sdkCode": "ACCS-REST-API", "domain": "JIL", "code": 400,
+ *                      "message": "Service ACCS-REST-API requires selection of a product" }] }
+ * ```
+ *
+ * Both subscribe wrappers used to discard the response entirely, so this read as
+ * success. That mattered because **the subscription IS the entitlement** — it is
+ * what moves an S2S credential's scopes from `AdobeID,openid` to `commerce.accs`
+ * — so `provisionAccsCredentials` went on to return a scope-less credential whose
+ * only symptom was a Data Installer pre-flight 400 minutes later, in a different
+ * feature, with nothing connecting the two. Measured 2026-08-16 against an org
+ * holding no ACCS product (`.rptc/plans/data-installer-credential-broker/step-05.md`).
+ *
+ * **Only positive evidence fails.** The SDK does not always return a body, and an
+ * absent one cannot be distinguished from a success — so a missing body, a missing
+ * `error` key, and an empty `error` list all pass. Requiring a body would turn
+ * every real success into a throw.
+ *
+ * The service's own message is carried through verbatim: "requires selection of a
+ * product" names the missing entitlement, where "provisioning failed" would send
+ * someone to look at the wrong thing.
+ */
+function assertSubscribeAccepted(response: SDKResponse<unknown> | undefined): void {
+    const body = response?.body as SubscribeResponseBody | undefined;
+    const refusedCodes = body?.error ?? [];
+    const details = body?.errorDetails ?? [];
+    if (refusedCodes.length === 0 && details.length === 0) {
+        return;
+    }
+
+    const reasons = details
+        .map((d) => (d.sdkCode ? `${d.sdkCode}: ${d.message ?? `HTTP ${d.code}`}` : d.message))
+        .filter(Boolean);
+    const named = reasons.length > 0 ? reasons.join('; ') : refusedCodes.join(', ');
+    throw new Error(`Adobe refused the API subscription — ${named}`);
+}
+
+/**
  * Fetches Adobe entities with SDK-first strategy and CLI fallback
  */
 export class AdobeEntityFetcher {
@@ -1367,13 +1422,22 @@ export class AdobeEntityFetcher {
                 serviceInfo: ServiceSubscriptionInfo[]
             ) => Promise<SDKResponse<unknown>>;
         };
-        await client.subscribeAdobeIdIntegrationToServices(orgId, idIntegration, serviceInfo);
+        const response = await client.subscribeAdobeIdIntegrationToServices(
+            orgId,
+            idIntegration,
+            serviceInfo,
+        );
+        assertSubscribeAccepted(response);
     }
 
     /**
      * Subscribe OAuth-S2S services onto an S2S credential. `idIntegration` is the
      * credential's `id_integration`. serviceInfo: `[{ sdkCode, licenseConfigs,
      * roles }]`.
+     *
+     * **Throws when the subscribe is refused** — see {@link assertSubscribeAccepted}.
+     * A refusal is an HTTP 200, so this is the only thing standing between a
+     * refused subscription and a caller believing it worked.
      */
     async subscribeOAuthServerToServerIntegrationToServices(
         orgId: string,
@@ -1388,11 +1452,12 @@ export class AdobeEntityFetcher {
                 serviceInfo: ServiceSubscriptionInfo[]
             ) => Promise<SDKResponse<unknown>>;
         };
-        await client.subscribeOAuthServerToServerIntegrationToServices(
+        const response = await client.subscribeOAuthServerToServerIntegrationToServices(
             orgId,
             idIntegration,
             serviceInfo,
         );
+        assertSubscribeAccepted(response);
     }
 
     /**
