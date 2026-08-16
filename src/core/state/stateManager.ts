@@ -68,7 +68,10 @@ export class StateManager {
         try {
             await fs.mkdir(dir, { recursive: true });
         } catch (error) {
-            this.logger.error('Failed to create state directory', error instanceof Error ? error : undefined);
+            this.logger.error(
+                'Failed to create state directory',
+                error instanceof Error ? error : undefined,
+            );
         }
 
         // Load existing state
@@ -108,15 +111,19 @@ export class StateManager {
                     if (freshProject) {
                         this.logger.debug(
                             `[StateManager] Loaded project from manifest: ` +
-                            `selectedPackage=${freshProject.selectedPackage}, selectedStack=${freshProject.selectedStack}`,
+                                `selectedPackage=${freshProject.selectedPackage}, selectedStack=${freshProject.selectedStack}`,
                         );
                         validProject = freshProject;
                     } else {
-                        this.logger.warn(`[StateManager] Failed to load project from manifest at ${projectPath}`);
+                        this.logger.warn(
+                            `[StateManager] Failed to load project from manifest at ${projectPath}`,
+                        );
                     }
                 } catch {
                     // Project path doesn't exist, clear it
-                    this.logger.warn(`Project path ${projectPath} does not exist, clearing project`);
+                    this.logger.warn(
+                        `Project path ${projectPath} does not exist, clearing project`,
+                    );
                 }
             }
 
@@ -194,7 +201,9 @@ export class StateManager {
 
     public async saveProject(project: Project): Promise<void> {
         const stack = new Error().stack?.split('\n').slice(2, 5).join(' <- ') || 'unknown';
-        this.logger.trace(`[StateManager] saveProject called for ${project.name}, caller: ${stack}`);
+        this.logger.trace(
+            `[StateManager] saveProject called for ${project.name}, caller: ${stack}`,
+        );
 
         // Serialize save operations to prevent concurrent writes racing on temp file
         return StateManager.saveLock.run(async () => {
@@ -209,7 +218,10 @@ export class StateManager {
             await this.saveState();
 
             // Save project-specific config via delegated service
-            await this.projectConfigWriter.saveProjectConfig(project, this.state.currentProject?.path);
+            await this.projectConfigWriter.saveProjectConfig(
+                project,
+                this.state.currentProject?.path,
+            );
 
             // Clear dirty state after successful save
             this.dirtyFields.clear();
@@ -230,7 +242,10 @@ export class StateManager {
      */
     public async saveProjectConfigOnly(project: Project): Promise<void> {
         return StateManager.saveLock.run(async () => {
-            await this.projectConfigWriter.saveProjectConfig(project, this.state.currentProject?.path);
+            await this.projectConfigWriter.saveProjectConfig(
+                project,
+                this.state.currentProject?.path,
+            );
         });
     }
 
@@ -316,6 +331,47 @@ export class StateManager {
 
     public async getProcess(name: string): Promise<ProcessInfo | undefined> {
         return this.state.processes.get(name);
+    }
+
+    /**
+     * The current-project pointer as it stands ON DISK, loaded fresh.
+     *
+     * `getCurrentProject()` re-reads the project MANIFEST every call, but takes
+     * the project PATH from in-memory state loaded once at `initialize()` —
+     * there is no watcher on the state file. So a second extension host answers
+     * with whatever project it held at ITS startup: fresh data about the wrong
+     * project, which reads as correct because the manifest really is current.
+     * That is what the MCP surface hits, since every window binds the same
+     * socket name and the last to bind serves.
+     *
+     * Deliberately does NOT touch `this.state`, and does not fire
+     * `_onProjectChanged`. Both would push one window's selection into another
+     * window's UI, which is a different (and much larger) change than making the
+     * agent surface read the truth. `loadProjectFromPath` is avoided for the same
+     * reason — with `persistAfterLoad: false` it still assigns
+     * `this.state.currentProject` (`:377`).
+     */
+    public async readCurrentProjectFromDisk(): Promise<Project | undefined> {
+        try {
+            const data = await fs.readFile(this.stateFile, 'utf-8');
+            const parsed = parseJSON<{
+                currentProjectPath?: string;
+                currentProject?: Project; // legacy format, same as loadState()
+            }>(data);
+            const projectPath = parsed?.currentProjectPath ?? parsed?.currentProject?.path;
+            if (!projectPath) return undefined;
+
+            const project = await this.projectFileLoader.loadProject(
+                projectPath,
+                () => vscode.window.terminals,
+            );
+            return project ?? undefined;
+        } catch {
+            // No state file, unreadable, or the project directory is gone. The
+            // caller treats undefined as "no current project", which is the same
+            // answer loadState() lands on for an unreadable pointer.
+            return undefined;
+        }
     }
 
     public async reload(): Promise<void> {
