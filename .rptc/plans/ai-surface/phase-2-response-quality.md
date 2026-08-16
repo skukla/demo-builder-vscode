@@ -1,91 +1,106 @@
-# Phase 2 — Response quality
+# Phase 2 — Response quality — **COMPLETE 2026-08-16**
 
-**Part of `.rptc/plans/ai-surface/` — read `overview.md` first.** Runs after phase 1 and before
-coverage breadth: fixing the envelope before exposing more tools avoids multiplying the work.
+**Part of `.rptc/plans/ai-surface/` — read `overview.md` first.**
 
-**Research:** seven parallel agents, 2026-08-16, all findings cited in-repo. The prior research
-lives at `.rptc/research/ai-surface-coverage/research.md` (2026-08-12).
+Rewritten after the work. What it replaced was a set of predictions derived from reading source;
+about half held. **The half that did not is the more useful record**, so it is kept below rather
+than deleted.
 
-## What the research changed
+## What shipped
 
-An earlier draft of this plan proposed six steps to score and reshape all 52 tool responses,
-including a live capture harness and frequency instrumentation. **The research retired most of
-it.** Recorded because the reasoning matters more than the conclusion:
+| Tool | Before | After | How |
+|---|---|---|---|
+| `list_adobe_projects` | 111,748 | 1,987 | paging + search; `deletable` replaces `who_created` |
+| `get_datapack_activity` | 25,056 | 5,709 | agent-sized page default |
+| `verify_ai_setup` | 19,091 | 309 | inventory → counts; `inventory:"full"` restores it |
+| `list_installed_datapacks` | 16,611 | 4,055 | drop `art`, `dataTypes` → count |
+| `find_datapacks` | 10,456 | 4,207 | same |
+| `get_project` | 9,532 | 5,179 | `aiFileHashes` collapsed |
+| `list_console_apis` | 8,693 | 7,284 (1,530 searched) | group legend once + `search` |
+| `list_ai_prompts` | 4,848 | 511 | index + `promptId` detail |
 
-| Assumption | What was measured |
+Plus three unbounded lists capped that no measurement had flagged, because they are only large on
+data bigger than a developer's machine: `list_projects` (18,191 at 300 projects),
+`get_block_authoring_shape` (21,992 at 300 components), `list_content` (67,304 at 900 entries).
+
+Enforcement landed with it — `tests/features/ai/server/responseCeilings.ts` records a ceiling and
+a REASON for 33 tools, asserted by the suite that drives each, with two-way coverage assertions so
+a new tool without a ceiling fails and a ceiling for a deleted tool fails.
+
+## The predictions, scored
+
+| Prediction | Outcome |
 |---|---|
-| Output bloat is systemic | **False. 47 of 52 tools are already lean** — someone did this work for most of the surface |
-| No tool shapes its output | **False.** Zero *descriptor rows* use `shape:`; the ~32 bespoke tools already project by hand |
-| Need a live capture harness | **Unnecessary.** Static derivation traced all 52 with measured sizes; nothing had to be called |
-| Need frequency instrumentation to rank | **Unnecessary.** Concentration is stark enough that ranking is obvious |
-| 52 tools to reshape | **Five**, plus six returning `{}` |
+| `get_project`'s `aiFileHashes` is ~46% of the payload | **Right** — 45% measured live |
+| `verify_ai_setup` is 15–25KB of low-value inventory | **Right** — 19,091, of which the verdict was 170 |
+| `list_console_apis` carries picker-only fields | **Right**, though flattening them saved 16%, not a large cut |
+| Bloat is concentrated, not systemic | **Right** — four tools were 78% of the read surface |
+| Six tools return the literal `{}` | **No longer true.** Zero do — fixed on develop, or belonging to tools since gated |
+| A live harness is unnecessary; static derivation traced all 52 | **Wrong, and the costly one** |
 
-**The harness being unnecessary is the most valuable deletion.** It was the riskiest step:
-19 tools mutate state ungated and **eight take no required arguments**, so an
-enumerate-and-call-with-`{}` harness would have deployed a mesh, published to the CDN,
-overwritten the AI bundle and written a secrets-bearing export.
+## The lesson: static derivation kept producing confident wrong answers
 
-## What is actually wrong
+The retired plan concluded a live harness was unnecessary because static reading had "traced all
+52 with measured sizes". Every large finding here came from calling the running server, and
+several were invisible to any amount of reading:
 
-**Five tools carry the bloat** (measured, not estimated):
+- **`list_adobe_projects`, 111,748 bytes** — bigger than the four tools the plan did identify,
+  combined. Static never flagged it. An earlier live sweep read it at 4,767 because Adobe auth was
+  not active; only a signed-in call against a 725-project org showed it.
+- **The Data Installer's 25KB** — that file's own comment said these tools needed no shaping,
+  reasoning correctly over a 40-row FIXTURE. Live had 1,099 rows.
+- **The three unbounded lists** — surfaced only by driving tools with deliberately oversized
+  payloads.
 
-| Tool | Size | The waste |
-|---|---|---|
-| `verify_ai_setup` | ~15–25 KB | Re-serializes all 52 tool names+descriptions into a model that already has them |
-| `get_project` | 6,523 / 9,530 chars | `aiFileHashes` = 4,402 chars of SHA-256 — 46% of payload, zero model value |
-| `get_component_config` | up to 13 KB | Raw bytes; can read the manifest `get_project` summarizes |
-| `list_console_apis` | large | Three picker-only fields per row + a join; its one useful field is unreachable |
-| `get_store_structure` | 755 → 274 | Smallest, worst ratio — 64% |
+Static reading also misclassified tools three times in one session answering a single question
+("which tools are gated?"), and the third attempt ran `republish` against a live storefront. The
+`mcp-live-probe` skill carries the details.
 
-**Six tools return the literal string `{}`** — `start_demo`, `stop_demo`,
-`deploy_integration`, `redeploy_integration`, `remove_integration`, `delete_mesh`.
-`defaultShape` strips `success`, the handler carries no payload, and the model cannot tell
-success from a no-op. This is the one *systemic* defect, and it is the opposite of bloat.
+**The rule this earns:** a fixture tells you a payload's SHAPE, never its VOLUME. Measure against
+live data, or against a payload deliberately larger than production.
 
-**The root cause of variance is the untyped contract.** `AnyMessageHandler` returns
-`Promise<any>`; `defineHandlers` is an identity function; `HandlerResponse` has
-`[key: string]: unknown`. So `defaultShape` must guess, and three different envelope
-conventions reach the agent depending on which field name each author picked.
+## The harness risk was real; the answer was to bound it, not skip it
 
-**And nothing enforces any of it.** Of 24 documented conventions, 6 are enforced, 7 partially,
-**11 are prose only**. No test pins the tool count — an entire `register…Tools()` line could be
-deleted from `extension.ts` and every test would pass.
+The retired plan was right that an enumerate-and-call harness is dangerous — 8 tools take no
+required arguments. Skipping measurement was the wrong conclusion. What made it safe:
 
-## Two shipped-code defects found on the way
+- an **allowlist** of read-only names in the probe, refusing everything else (a denylist was tried
+  first and let `sync_content` and `republish` straight through);
+- **`--force` that names its one tool**, never a blanket override;
+- a **stub-handler harness** for state-changing tools: the confirm gate protects the handler, the
+  handler is a stub, so a destructive tool's SUCCESS response is measurable with no side effect.
 
-Independent of this plan, and worth raising separately:
+## The two shapes behind every finding
 
-1. **19 tools change state with no confirmation**, against a documented rule that says they must.
-   `refresh_block_library` is called "destructive" in §9 of the same doc and is ungated.
-   `promote_block_to_library` commits, pushes and publishes ungated while its literal inverse
-   *is* gated.
-2. **`check_mesh` can never succeed.** Its descriptor declares no `inputSchema`; its handler
-   requires `workspaceId`. Every MCP invocation dies at validation. Confirmed twice, independently.
+1. **A list with no page size** — the size is the data's, not the tool's, and an agent's first
+   call is always `{}`, so the default IS the cost.
+2. **A field carried for the dashboard** — `art` thumbnails, repeated `dataTypes`, `who_created`.
+   The last was 46% of one response and unusable by its recipient: the comparison it feeds needs a
+   token claim only the extension can read.
 
-## Steps
+Both are invisible in a fixture and obvious in production.
 
-| Step | What | Kind |
-|---|---|---|
-| 01 | Inventory + safety classification | **done** — see `tool-inventory.md` |
-| 02 | The six `{}` returns, and `check_mesh` | TDD |
-| 03 | Reshape the five concentrated tools | TDD |
-| 04 | Enforcement: pin the catalog, test the envelope convention | TDD |
+## Two shipped-code defects found on the way — both FIXED on develop
 
-Blast radius is known: reshaping one tool costs 2–8 assertions in one test file; changing the
-envelope for all costs 16 files and ~150 mostly-exact assertions. **Step 03 is per-tool, so it
-stays in the cheap regime.** The canaries are `toolDescriptors.test.ts:33-48` and
-`inExtensionMcpServer.test.ts:93` — run those two first to know if a change is contained.
+1. 19 tools changed state with no confirmation; the gating was corrected (`8cf9674d`).
+2. `check_mesh` could never succeed — no `inputSchema`, handler required `workspaceId` (`18e16d48`).
 
-## Constraints (from the record, not invented here)
+## Not done, deliberately
 
-- **Do not expose fire-and-forget handlers.** The disqualifier from the 2026-08-12 research:
-  *"Does the return value carry the OUTCOME, or only the dispatch?"* Directly relevant to the
-  six `{}` tools — fixing their return is what makes them honest.
-- **No new generated skills unless multi-step-with-traps** (2026-07-11, shipped).
-- **Do not add agents to save tokens** — measured: a ~121k-token derivation was performed *by* a
-  subagent.
-- **Tool-surface size is NOT a cost** — 52 descriptions ≈ 1,175 tokens/session. Do not
-  re-propose per-task tool scoping on that basis; the claim was measured and withdrawn.
-- A PM-approved **4-tier policy** already classifies AI-reachable tools
-  (`docs/research/2026-05-30-ai-first-experience.md` §1a). This plan's 3-class read/mutate/destroy
-  split is unreconciled with it — reconcile before relying on either.
+Bespoke state-changing tools with no driving test — `create_project`, `delete_project`,
+`reset_eds_project`, `apply_updates` and similar — carry no recorded ceiling. They return a
+verdict about one operation rather than a list, the one shape this audit never found bloat in.
+Building service mocks to prove a one-line response is small is the wrong trade. Recorded so the
+gap is a decision, not an oversight.
+
+**Phase 3 is substantially delivered here** (the ceiling table and its coverage assertions). What
+remains of it: pin the tool catalog itself, and test the response-envelope convention.
+
+## Corrections to the constraints this plan used to carry
+
+- **"Tool-surface size is NOT a cost — 52 descriptions ≈ 1,175 tokens."** Withdrawn twice over:
+  the live catalog for 65 tools is 9,656 bytes, and demo-builder is one of three servers an agent
+  loads. See `overview.md`, which holds the current version of this constraint.
+- The 3-class read/mutate/destroy split in `tool-inventory.md` is still unreconciled with the
+  PM-approved 4-tier policy (`docs/research/2026-05-30-ai-first-experience.md` §1a). Unchanged by
+  this phase; reconcile before relying on either.

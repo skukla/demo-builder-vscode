@@ -10,8 +10,8 @@ files; this sequences them and holds what is known about each.
 
 | Axis | Question | Measured state |
 |---|---|---|
-| **Coverage** | Can an agent reach the feature? | **82** agent-relevant handler types unreachable (58% of 142); **zero content-authoring tools** |
-| **Quality** | Is what comes back usable? | 5 bloated, 6 return the string `{}` — measured at 52 tools; baseline is now 58 |
+| **Coverage** | Can an agent reach the feature? | **82** agent-relevant handler types unreachable (58% of 142) — RE-MEASURE before use. Content authoring shipped in phase 1 |
+| **Quality** | Is what comes back usable? | ✅ **Phase 2 complete.** 8 tools reshaped, 3 unbounded lists capped, 33 ceilings enforced. `list_adobe_projects` alone 111,748 → 1,987 |
 | **Guidance** | Does it know when and how? | 21 skills, all task- or reference-shaped; no open-ended design skill |
 | **Enforcement** | Does it get things wrong anyway? | 11 of 24 documented conventions are prose only; one hook, and it syncs rather than guards |
 | **Roles** | Who does the work? | No agent definitions ship at all |
@@ -32,10 +32,10 @@ the notes say what each ordering buys.
 
 | # | Phase | Why here | File |
 |---|---|---|---|
-| 0 | **External tool chain** | Changes the DENOMINATOR of every other phase. An agent sees demo-builder tools plus whatever else the extension installs. If an external tool covers a gap, phase 1 builds something redundant; if one conflicts, phase 2 polishes one side of a contradiction. Reading, not building. | `phase-0-external-tool-chain.md` |
-| 1 | **Content-authoring tools** | The only gap that changes what is POSSIBLE rather than what is pleasant. An agent cannot write a page today, so it cannot build a demo. 5 of 6 tools just expose existing service methods. | `phase-1-content-authoring.md` |
-| 2 | **Response quality** | Six tools return `{}` — actively misleading. Five carry real bloat. Fixing before exposing more tools avoids multiplying the reshaping work. | `phase-2-response-quality.md` |
-| 3 | **Enforcement** | What stops the surface degrading again. The "keep JSON small" rule has been unenforced since day one, which is why phase 2 exists. Pin the catalog; test the envelope convention. | not written — after phase 2 |
+| 0 | ✅ **External tool chain** | Changes the DENOMINATOR of every other phase. An agent sees demo-builder tools plus whatever else the extension installs. If an external tool covers a gap, phase 1 builds something redundant; if one conflicts, phase 2 polishes one side of a contradiction. Reading, not building. | `phase-0-external-tool-chain.md` |
+| 1 | ✅ **Content-authoring tools** | The only gap that changes what is POSSIBLE rather than what is pleasant. An agent cannot write a page today, so it cannot build a demo. 5 of 6 tools just expose existing service methods. | `phase-1-content-authoring.md` |
+| 2 | ✅ **Response quality** | Ran on the premise that six tools returned `{}` and five carried bloat. Zero returned `{}` by the time it ran, and the real problem was concentration: four tools were 78% of the read surface, and the biggest (111,748 bytes) was invisible to the static analysis that planned the phase. | `phase-2-response-quality.md` |
+| 3 | 🟡 **Enforcement** (ceiling table shipped with phase 2; catalog pin + envelope test remain) | What stops the surface degrading again. The "keep JSON small" rule has been unenforced since day one, which is why phase 2 exists. Pin the catalog; test the envelope convention. | not written — after phase 2 |
 | 4 | **Coverage breadth** | Expose the qualifying unexposed handlers. Deliberately AFTER quality and enforcement, so new tools land against a convention that is tested. | `.rptc/backlog/ai-surface-coverage/` (paused; adopt as this phase) |
 | 5 | **Skills** | Scored against the post-phase-4 tool surface — that is its denominator, so it cannot start earlier. | not written |
 | 6 | **Hooks, then agents** | Hooks enforce traps the earlier phases surfaced. Agents only where a flow spans 3+ skills with a required order. | not written |
