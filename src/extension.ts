@@ -39,9 +39,9 @@ import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
 import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
-import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundleActivationRefresh';
 import { HelixService } from '@/features/eds/services/helixService';
 import { renewPublishKeys } from '@/features/eds/services/publishKeyRenewalSweep';
+import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundleActivationRefresh';
 import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/globalMcpRegistration';
 import { ensureHomeAiContext } from '@/features/project-creation/services/homeAiContextWriter';
 import { SidebarProvider } from '@/features/sidebar';
@@ -139,16 +139,31 @@ export async function activate(context: vscode.ExtensionContext) {
         // Register StateManager with ServiceLocator (for commands without handler context)
         ServiceLocator.setStateManager(stateManager);
 
-        // Silent AI-bundle upkeep for every known project (ADR-013): tier-1
-        // config repair always; tier-1+2 refresh + stamp when a project's
-        // aiContextVersion is stale. Fire-and-forget like the global-MCP
-        // repair above — never awaited, internally never throws, and the
-        // healthy path makes zero disk writes; runs after the state manager
-        // only to keep activation-critical work first (it does not use it).
-        void refreshAiBundlesOnActivation(context.extensionPath, logger).catch((error) => {
-            logger.warn(
-                `[AI Bundle] Activation sweep failed to start: ${(error as Error).message}`,
-            );
+        // The two per-project upkeep sweeps, run ONE AFTER THE OTHER.
+        //
+        // 1. Silent AI-bundle upkeep for every known project (ADR-013): tier-1
+        //    config repair always; tier-1+2 refresh + stamp when a project's
+        //    aiContextVersion is stale.
+        // 2. Publish-key renewal (Helix keys expire in ~1 year).
+        //
+        // SEQUENCED, NOT CONCURRENT — do not split these back into two `void`
+        // calls. Each loads its OWN copy of every project, mutates a different
+        // field (aiContextVersion + aiFileHashes vs publishKeyRegisteredAt), and
+        // saves the WHOLE `.demo-builder.json`. Run in parallel, whichever
+        // finishes second was built from a copy loaded before the first one
+        // wrote, so its save silently drops the other's field. Losing
+        // aiFileHashes is the bad one: the ADR-013 hash baseline never
+        // establishes, so the treat-as-unmodified-ONCE overwrite fires on EVERY
+        // activation and destroys the user's edits to AGENTS.md repeatedly
+        // instead of once. Running the second only after the first has saved
+        // means it loads a manifest that already carries the other's field.
+        //
+        // Still fire-and-forget as a pair: activation never waits on either.
+        void (async () => {
+            await refreshAiBundlesOnActivation(context.extensionPath, logger);
+            await sweepPublishKeyRenewals(context);
+        })().catch((error) => {
+            logger.warn(`[Activation] Project upkeep sweep failed: ${(error as Error).message}`);
         });
 
         // Seed built-in AI prompts into the global store once (starter recipes that
@@ -266,18 +281,18 @@ export async function activate(context: vscode.ExtensionContext) {
         const projectsRoot = resolveProjectsRoot();
         void ensureHomeAiContext(projectsRoot, path.join(context.extensionPath, 'dist'));
 
-        // Keep every storefront's runtime publish key alive. Helix keys expire in
-        // about a year and were only ever minted by a site config WRITE, so a
-        // storefront that simply ran lost PDP self-heal roughly a year in —
-        // silently, as PDPs that 404. Fire-and-forget like the two sweeps above.
+        // The publish key's SECOND trigger. The activation run happens above,
+        // sequenced behind the AI-bundle sweep; this one fires on sign-in.
         //
-        // TWO triggers, because activation alone does not work. The sweep needs a
+        // Both exist because activation alone does not work: the sweep needs a
         // DA.live session, and activation is the moment one is LEAST likely to
-        // exist: measured 2026-08-15, the stored token was already expired at
+        // exist. Measured 2026-08-15 — the stored token was already expired at
         // startup and only refreshed 54s later when the user started a reset. So
-        // sign-in is the trigger that actually fires, and activation is the one
+        // sign-in is the trigger that reliably fires, and activation is the one
         // that catches a session already valid from a previous window.
-        void sweepPublishKeyRenewals(context);
+        //
+        // Safe to leave un-sequenced here: by the time a user signs in to DA.live,
+        // the activation pair has long since finished, so there is nothing to race.
         context.subscriptions.push(
             getDaLiveAuthService(context).onDidSignIn(() => {
                 void sweepPublishKeyRenewals(context);
