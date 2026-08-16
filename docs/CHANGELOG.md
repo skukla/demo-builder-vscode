@@ -7,6 +7,93 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.130] - 2026-08-15
+
+Repairs product-page publishing on Edge Delivery storefronts. Pinning a site
+administrator during storefront setup closed the AEM admin API to anonymous callers,
+which silently broke catalog pre-warming, the self-healing that publishes a product page
+on first visit, and the reset of large storefronts. All verified against live storefronts.
+
+### Added
+
+- **Diagnostics reports whether the shared publishing service can read your site's key.** It already counted the keys on the site, which cannot see whether the service holds a working copy. The two are now reported separately, because their disagreement is the diagnosis: a registration that never arrived, or a service redeployed with a different encryption key, which makes every stored key unreadable. Both previously surfaced only as product pages returning 404, days later.
+
+### Fixed
+
+- **Catalog pre-warming works again on new storefronts.** Pre-warming published anonymously, so every storefront created after site-admin pinning landed reported `0/39 succeeded` and left every product page unpublished. It now publishes through the authenticated path, and a real reset pre-warms all 39 of 39.
+- **Product pages added after setup can publish themselves again.** A product added after a storefront was built used to 404 forever: the page was never pre-published, and the browser-side fallback that would have published it had no credentials. The shared publishing service now holds a per-site key, so a first visit publishes the page and it resolves. Sales consultants add products to demos routinely, so this is a main path rather than an edge case.
+- **Resetting a storefront no longer breaks that self-healing.** Every reset, repair, edit and rename rewrites the site configuration, and the publishing key lives inside that document — so the write destroyed it. Two of the four paths re-created it and two did not, meaning a reset, the very thing you run to REPAIR a storefront, quietly left product pages unable to publish. Re-creating the key now happens as part of the write itself, so no path can skip it.
+- **Publish keys no longer expire without warning.** They carry roughly a one-year lifetime and nothing renewed them, so a storefront that simply ran would lose product-page publishing about a year after it was created — staggered per site, with no symptom beyond pages returning 404. Keys are now refreshed on a 30-day cycle.
+- **Resetting a large storefront no longer times out.** The reset sent every file in one request, which exceeded GitHub's limit on big templates (notably B2B) and failed outright. It now sends the tree in batches — 3,344 files across 14 requests in about 17 seconds.
+- **Storefront sync reads your DA.live sign-in properly.** It was looking for a stored credential that nothing ever wrote, so it behaved as though you were signed out.
+- **Diagnostics no longer blames your GitHub credential for the admin lock.** On a storefront with a site administrator configured, AEM returning 401 to a GitHub token is the expected state. The report said the credential was being refused, sending people to fix something that was not broken.
+- **Publish keys are created with the right role, and can be revoked.** They were requested with administrator rather than publish rights, and their identifiers were not URL-encoded, so revoking the previous key failed.
+- **Placeholder-sheet failures are reported instead of dropped.** A reset attempted 17 fetches that could all fail silently; the log now says so once, names the host, and states the consequence — dropin labels fall back to their defaults and the storefront still renders.
+
+### Changed
+
+- **The DA.live sign-in is registered once at startup** rather than passed down through each layer that needs it. Two places were constructing services without it, which made publishing fail on any storefront with a site administrator configured and left the CDN serving a stale configuration.
+
+## [1.0.0-beta.129] - 2026-08-15
+
+### Added
+
+- **You can now see and fix who administers a storefront's configuration.** A new command, **Demo Builder: Manage Site Access**, lists the people holding the Configuration Service admin role on the current project's site, and lets anyone who already holds it add or remove others. Every change is confirmed by reading the list back — a change that does not show up is reported as unverified, never as success. Removing the last admin is refused outright, because nobody could grant it back. When you hold no role yourself the command says so, names the org admins who can grant it when that list is readable, and otherwise opens the AEM setup flow and waits for access to actually change hands — reporting "still refused" if it never does.
+
+- **New storefronts pin their admin role instead of inheriting it.** The role used to exist only as a side effect of whoever installed the AEM Code Sync GitHub App — which is why an older site can refuse its own owner. Registration now records it explicitly, merging into any existing admins rather than replacing them.
+
+  Recording an admin also restricts the site's administrative API to named admins, so every publish, preview and cache purge now presents your DA.live session. Storefronts that already had admins — set up through the AEM tool before this release — were affected by the same rule and work again. Your public storefront was never involved; this applies to the administrative API only.
+
+- **Setup, edit, and reset state your access position up front.** Whether the Configuration Service accepts your identity was previously discovered only when a write failed late in the run, so a debug log sent for help was silent about the one fact that explained it. Each run now says so early, and a refusal names the consequence: product pages will not load until access is granted.
+
+- **Diagnostics names who can grant access.** The report lists the org's configuration admins, and says plainly when the roster itself is unreadable — which means there is nobody to ask, and the AEM setup flow is the way in. Addresses are masked there and in the exportable debug log, since both are meant to be pasted into tickets; **Manage Site Access** shows them in full.
+
+- **You can now retry a refused site registration on its own.** A new command, **Demo Builder: Repair Site Configuration**, re-runs the one write that failed and then republishes the storefront, the same republish saving a configuration performs. Previously the only routes back were a full setup run or a storefront reset, which rewrites the repository and the DA.live content to the template — both far more than one failed write deserves, and Sync Storefront never touched the Configuration Service at all. So the natural sequence — get the admin role, then finish the job — had no path through the app. Whether the fix actually took is read back from Adobe rather than assumed: a write Adobe accepted that leaves no overlay in place is reported as unverified, not as success. When you still hold no role, the command says so and offers **Manage Site Access** or the AEM setup flow instead of failing.
+
+### Fixed
+
+- **Editing a project no longer resets its Commerce store scope to the demo package's codes.** Opening the edit wizard applied the selected package's default store codes *over* the project's saved website/store/store view, so a project configured for its own website republished a `config.json` querying a scope its Commerce instance does not have — Catalog Service answers "No index was found" and no product renders anywhere. Package defaults now only fill blanks; your saved Business Structure selection survives every edit. Switching demo packages still adopts the new package's codes — that reset now happens only on the switch itself.
+
+- **The IMS Org badge no longer dead-ends when your account reaches no organization.** A valid token whose org exposes no Developer Console access returned an empty org list, which the dashboard read as "couldn't check" — a gray badge whose "Sign in to check" action runs a *non-forced* login that silently reuses the same browser session and changes nothing, forever. An empty list is a real answer: the badge now shows the org-mismatch warning, whose forced "Switch IMS Org" sign-in opens the account/org chooser — the only login that can actually land you somewhere else.
+
+- **A Configuration Service 403 now says what actually fixes it.** When the BYOM overlay registration is refused with "not authorized", the warning used to prescribe a storefront reset — which repeats the same request with the same identity and is refused identically. The role is minted when the AEM Code Sync GitHub App is first installed, so an older site can refuse even its own owner. The message now names **Manage Site Access** — which shows who holds the role and opens the AEM setup tool — and **Repair Site Configuration** for retrying the write once you have it, and says plainly that resetting will fail again. The warning carries both as buttons.
+
+- **Diagnostics now prints the org count beside "Can List Orgs".** "Yes" only proves the command ran — an empty org list still printed Yes, hiding exactly the finding that explains a gray IMS Org badge. The line now reads "Yes (N orgs)".
+
+- **Editing a storefront no longer wipes everyone's site-access grants.** Saving a changed configuration deletes the site registration and writes it back, and the access list is stored underneath it — so every admin on the site disappeared, silently, on an ordinary edit. Verified against a throwaway site: two grants in, delete, re-register, and the access list came back empty. Grants are now captured before the delete and handed back after.
+
+  Both ways this can still go wrong now say so instead of failing quietly. If the current administrators cannot be read, the save is refused rather than risking them. If they are read but cannot be written back, the save — and a storefront reset, and **Repair Site Configuration** — reports which grants were lost — they have to be re-added by someone who still holds the role, because the same role is required to grant it.
+
+- **The Code Sync step now looks like the rest of the wizard, and can be completed from it.** It showed a single line of status text in an otherwise empty panel, using neither of the conventions the other steps use. It now shows the standard spinner while checking, a large green confirmation once verified, and the install instructions with **Install App** and **Check Again** when the app is missing — and it distinguishes "we couldn't check" from "it isn't installed", which are different problems with different fixes.
+
+  Those instructions previously appeared only for a repository the extension had just created. If you picked an existing repository that lacked the app, the step refused to let you continue and offered no way to fix it. The instructions and both buttons now work for either kind of repository.
+
+  The instructions are also written once now. The wizard step and the recovery panel shown when a run stops mid-way had drifted into two different scripts with two different button names for the same GitHub screens — so following one and then meeting the other told you to press buttons that were not there. Both read from the same source.
+
+- **Editing a project no longer reports AEM Code Sync as unverified.** Recording a site administrator — which setup now does for every project — restricts that site's administrative API to named admins, and the Code Sync check was still identifying itself with only its GitHub credential. Adobe refused it, and because a refusal says nothing about whether the app is installed, the wizard showed "Registering…" indefinitely on a repository that had been registered for months. Worse, saving that edit aborted storefront setup with "Couldn't verify AEM Code Sync". The check now presents your DA.live session, and falls back to the previous behaviour when there isn't one.
+
+- **The Configuration Service retry now actually runs.** beta.127 announced that a storefront reset retries this write when Adobe is still propagating a newly granted admin role. It never did for a site that already exists — which is every reset and every edit — because the retry was decided from the first response, and an existing site always answers "already exists" before the real refusal arrives on the follow-up write. The retry now judges the outcome it actually got.
+
+- **A storefront reset that could not write the site configuration no longer reports success.** The reset replaces your repository early and writes the site configuration near the end. When that write failed, the explanation went out on the progress line — which the remaining steps overwrote within seconds — and the run finished by announcing that the reset succeeded. Your repository had been rewritten, product pages would not load, and nothing said so. The reset still completes its other work, but now ends with a warning that stays on screen and names **Repair Site Configuration**.
+
+- **Your email address no longer reaches the debug log.** When registering a storefront was refused, the message carried a setup link with your Adobe address in it, and that whole link was written to the log — the one people export and paste into support tickets. The address was percent-encoded inside the URL, so it slipped past the masking that covers addresses everywhere else. The link still works in the notification and in your browser; only the logged copy is masked.
+
+- **An expired DA.live session no longer tells you to reset the storefront.** When the session died just before the site configuration was written, a storefront reset reported the generic "reset to register it" advice — repeating the same write with the same dead session. It now says the session expired, finishes the reset rather than abandoning a storefront whose files have already been replaced, and points at **Repair Site Configuration** for the one step that was missed.
+
+- **A 401 from Adobe no longer blames GitHub.** Every one of these refusals told you to check your write access to the repository, which sent people to the one place that could not explain it. The message now names the likelier cause — a site whose access is restricted to named admins, which needs a signed-in DA.live session — and points at **Demo Builder: Manage Site Access**. Bulk preview and bulk publish are also reported separately now; a preview failure used to be logged as a publish failure.
+
+- **A storefront with the PDP handler already installed no longer reports an error.** The installer reported "not installed" when it found its work already done, so a healthy storefront printed "the smart-404 handler was not installed" and an otherwise clean run finished *with errors*.
+
+- **The wizard's Integrations step now shows the same cards as the Integrations page.** It rendered its own row layout, which repeated the deploy destination on every row — always the same Adobe project and workspace — and reached rename through a separate dialog. It now uses the card the dashboard uses: the destination is stated once above the list, and a name is edited in place. Pre-deploy the card shows where the integration came from and how many APIs it will provision, since there is no deploy status to report yet; the names of those APIs are behind Manage APIs, one click away.
+
+- **The AI Capabilities modal stops cutting its list off.** With 21 skills the list ended mid-group and the rest sat below a fold that macOS overlay scrollbars never advertise — the heading said 21 and you could see 11. The skill groups now run in two columns and the scroll region paints a persistent scrollbar. The "View Skills" link also stops moving as the badge beside it changes.
+
+- **Skills are grouped by who wrote them, not where they sit on disk.** The modal filed `diagnose-demo` under "Custom" as though you had written it, and listed App Builder skills under "Adobe AEM". Two lists described the same filenames and had drifted apart; there is now one list, and a filename without matching content is a build error rather than a silent misfile.
+
+- **A stale global MCP entry no longer blocks adding any MCP server.** Claude Code showed `[Conflicting scopes]` and refused, because the global entry still pointed at a retired server path from an older extension version while the project entry pointed at the current one — with sign-in stored per endpoint, so authenticating to one did not carry to the other. Drift detection now checks and repairs the global entry instead of skipping it.
+
+- **The extension download is 7 MB instead of 24 MB.** A test-tooling cache moved inside the repository three days ago and nothing excluded it from packaging, so the build carried 5,027 cache files — 98% of the extension by file count — with no effect except size. The package now contains 82 files.
+
 ## [1.0.0-beta.128] - 2026-08-11
 
 ### Added

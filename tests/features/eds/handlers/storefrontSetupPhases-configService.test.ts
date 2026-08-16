@@ -66,6 +66,18 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE: jest.requireActual(
         '@/features/eds/handlers/edsHelpers'
     ).BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE,
+    // Omitting these made the suite LIE. `registerConfigurationService` calls
+    // `byomRegistrationFailureMessage`; with it absent the call threw, execution
+    // fell through to the catch block, and the assertions still passed because
+    // `surfaceOverlayRegistrationFailure` fires on that path too — so the
+    // registration-failure tests reported green while never entering the branch
+    // they name. Real, not stubbed: message SELECTION is the behaviour here.
+    byomRegistrationFailureMessage: jest.requireActual(
+        '@/features/eds/handlers/edsHelpers'
+    ).byomRegistrationFailureMessage,
+    BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE: jest.requireActual(
+        '@/features/eds/handlers/edsHelpers'
+    ).BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE,
 }));
 
 jest.mock('@/features/eds/services/edsPipeline', () => ({
@@ -477,6 +489,34 @@ describe('registerConfigurationService - overlay registration failure is surface
 
         expect(mockSurfaceOverlayFailure).toHaveBeenCalled();
     });
+
+    it.each([
+        [403, true],
+        [500, false],
+    ])(
+        'a 409 then an update failing with %i selects the message for THAT status',
+        async (updateStatus, expectsAuthMessage) => {
+            // The rule this pins already caused one bug: reporting the handled 409
+            // instead of the update's own status made a 500 print the
+            // "not authorized" message and a Code Sync deep link.
+            const config = { ...createEdsConfig(), byomOverlayUrl: 'https://byom.example.com' };
+            mockRegisterSite.mockResolvedValue({ success: false, statusCode: 409, error: 'Conflict' });
+            mockUpdateSiteConfig.mockResolvedValue({
+                success: false,
+                statusCode: updateStatus,
+                error: 'API rejected',
+            });
+
+            await executeStorefrontSetupPhases(context, config, new AbortController().signal);
+
+            expect(mockSurfaceOverlayFailure).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.anything(),
+                updateStatus,
+                expectsAuthMessage ? expect.any(String) : undefined,
+            );
+        },
+    );
 
     it('does NOT surface the overlay failure when registration succeeds', async () => {
         const config = { ...createEdsConfig(), byomOverlayUrl: 'https://byom.example.com' };

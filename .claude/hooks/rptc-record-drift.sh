@@ -11,7 +11,7 @@
 #
 # STRUCTURAL changes only: a plan/backlog directory added, removed or moved, or the
 # index itself edited. Editing an item's BODY does not fire it — that happens dozens of
-# times a session and noise is how a hook gets switched off (see rules/20-data-installer-probe).
+# times a session and noise is how a hook gets switched off.
 #
 # Advisory (always exits 0) and silent when clean. A rotted index is worth fixing, never
 # worth halting a turn over.

@@ -26,6 +26,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
         getAccessToken: jest.fn().mockResolvedValue('mock-dalive-token'),
     }),
     getGitHubServices: jest.fn().mockReturnValue({ tokenService: {} }),
+    tryCreateDaLiveTokenProvider: jest.fn(() => undefined),
     showDaLiveAuthQuickPick: jest.fn(),
     resolveByomOverlayConfig: jest.fn(
         (fromConfigUrl: string | undefined, org: string, site: string) =>

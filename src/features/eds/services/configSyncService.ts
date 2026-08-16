@@ -62,6 +62,12 @@ export interface ConfigSyncResult {
     cdnPublished: boolean;
     /** Whether config.json was verified accessible on CDN */
     cdnVerified: boolean;
+    /**
+     * Why the CDN publish failed, when it did. The GitHub push can succeed
+     * while this fails, which leaves the CDN serving a STALE config.json —
+     * a real degradation that used to be reported as a clean success.
+     */
+    cdnError?: string;
     /** Whether block library CDN was verified (if verifyBlockLibrary was true) */
     blockLibraryVerified?: boolean;
 }
@@ -158,6 +164,9 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
 
             // HelixService needs GitHub token for admin API auth
             // Note: Code preview/publish only requires GitHub auth (no DA.live token)
+            // No provider passed: HelixService falls back to the one registered at
+            // activation. The DA.live session is a per-host singleton, so threading
+            // it through every caller would model a plurality that does not exist.
             const helixService = new HelixService(logger, githubTokenService);
 
             await helixService.previewCode(repoOwner, repoName, '/config.json');
@@ -182,7 +191,10 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
             // Site may work with stale config until CDN is updated manually
             const message = `Failed to publish config.json to CDN: ${(error as Error).message}`;
             logger.warn(`[ConfigSync] ${message}`);
-            // Don't set result.error - GitHub push succeeded, which is the critical part
+            // Surfaced, not swallowed. `success` still tracks the GitHub push —
+            // callers depend on that — but the caller can no longer report a
+            // clean republish while the CDN keeps serving the old config.
+            result.cdnError = (error as Error).message;
         }
 
         // Success if GitHub push succeeded (CDN publish is optional)

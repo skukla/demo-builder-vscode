@@ -34,6 +34,22 @@ import type { Logger } from '@/types/logger';
 /** Helix Admin API base URL */
 const HELIX_ADMIN_URL = 'https://admin.hlx.page';
 
+/**
+ * What a 401 from the Helix Admin API actually means.
+ *
+ * It is NOT necessarily a GitHub problem, which is what this message used to
+ * claim. Once a site has any `access.admin` role, the Configuration Service sets
+ * `requireAuth: "auto"` and the whole admin API closes to callers without an
+ * accepted admin identity — the GitHub token is not one. Measured 2026-08-14 on
+ * a throwaway site: an identical bulk-preview POST returned 202 before the admin
+ * grant and 401 immediately after, then 202 again once the DA.live IMS Bearer
+ * was attached.
+ */
+const ADMIN_API_401_MESSAGE =
+    'Adobe rejected the request (401). If this site has site-access admins configured, ' +
+    'it needs a signed-in DA.live session — run "Demo Builder: Manage Site Access" to ' +
+    'check. Otherwise, confirm you have write access to the repository.';
+
 /** Default branch for Helix operations */
 const DEFAULT_BRANCH = 'main';
 
@@ -149,6 +165,22 @@ function hasLegacyKeys(legacyKeys?: Record<string, PersistedHelixKey>): boolean 
     return Boolean(legacyKeys && Object.keys(legacyKeys).length > 0);
 }
 
+/**
+ * Convert an Admin API key id into the form the config API accepts as a URL
+ * path segment: standard base64 → base64url (`+`→`-`, `/`→`_`).
+ *
+ * The create response returns the RAW id and the listing endpoint keys the same
+ * key by its URL-safe form, so a key id containing `/` splits the DELETE path
+ * and Helix answers 400. Measured 2026-08-15 on a live site: raw id → 400,
+ * URL-safe id → 204. Percent-encoding does NOT work here; the server wants the
+ * substituted characters. `/` was measured directly; `+` follows from the same
+ * base64url mapping and is included so the other half of the alphabet cannot
+ * bite later.
+ */
+function toUrlSafeKeyId(id: string): string {
+    return id.replace(/\+/g, '-').replace(/\//g, '_');
+}
+
 /** Explicit paths when provided, otherwise the site root (`/`) for a bulk operation. */
 function getPathsOrDefault(paths?: string[]): string[] {
     return paths && paths.length > 0 ? paths : ['/'];
@@ -179,6 +211,35 @@ export class HelixService {
     private static secretStorage: vscode.SecretStorage | null = null;
 
     /**
+     * Fallback DA.live token source, registered once at activation.
+     *
+     * There is exactly ONE DA.live session per extension host — `edsHelpers`
+     * caches a single `DaLiveAuthService`. Threading that singleton through
+     * every layer that happens to build a HelixService modelled a plurality
+     * that does not exist, and the cost was real: two construction sites were
+     * missing it, so a Helix code publish went out with only the GitHub token
+     * and 401'd on any site with an `access.admin` role — silently, leaving the
+     * CDN serving a stale config.json (seen live 2026-08-15).
+     *
+     * A constructor-supplied provider still wins; this is the default, not an
+     * override.
+     */
+    private static defaultDaLiveTokenProvider: DaLiveTokenProvider | null = null;
+
+    /**
+     * Register the DA.live token source every HelixService should fall back to.
+     * Called once from `activate()`. Idempotent; last registration wins.
+     */
+    static setDefaultDaLiveTokenProvider(provider: DaLiveTokenProvider): void {
+        HelixService.defaultDaLiveTokenProvider = provider;
+    }
+
+    /** Drop the registered default (tests). */
+    static clearDefaultDaLiveTokenProvider(): void {
+        HelixService.defaultDaLiveTokenProvider = null;
+    }
+
+    /**
      * Initialize persistent key storage with encrypted SecretStorage.
      * Idempotent — safe to call multiple times (first caller wins).
      *
@@ -207,6 +268,24 @@ export class HelixService {
     /** Clear persistent key store (for testing). */
     static clearKeyStore(): void {
         HelixService.secretStorage = null;
+    }
+
+    /**
+     * Forget a locally cached/persisted key WITHOUT calling the server.
+     *
+     * Use after a site config write. `apiKeys` lives inside the site config
+     * document, so `updateSiteConfig`'s delete-then-re-register destroys the key
+     * server-side (measured 2026-08-15: 1 key → delete → re-register → 0). The
+     * local copy survives for up to 7 days, so without this the next publish
+     * would authenticate with a key that no longer exists and 401.
+     *
+     * Deliberately not `deleteAdminApiKey`: there is nothing left to delete
+     * remotely, and that call would spend a round trip to be told 404.
+     */
+    static async forgetApiKey(org: string, site: string): Promise<void> {
+        const cacheKey = `${org}/${site}`;
+        HelixService.apiKeyCache.delete(cacheKey);
+        await HelixService.deletePersistedKey(cacheKey);
     }
 
     /** Read all persisted keys from SecretStorage. */
@@ -319,6 +398,22 @@ export class HelixService {
         return { Authorization: `Bearer ${await this.getDaLiveToken()}` };
     }
 
+    /**
+     * The DA.live IMS Bearer as an `Authorization` header, or `{}` when no
+     * DA.live session exists.
+     *
+     * Deliberately swallows the failure. Operations that never needed a DA.live
+     * token before must keep working without one on an UNPROTECTED site; only a
+     * protected site actually requires it, and there the 401 message says so.
+     */
+    private async tryAdminBearer(): Promise<Record<string, string>> {
+        try {
+            return { Authorization: `Bearer ${await this.getDaLiveToken()}` };
+        } catch {
+            return {};
+        }
+    }
+
     /** Capture error response body for diagnostics (403, 401, 5xx). */
     private async captureErrorBody(response: Response): Promise<string | null> {
         try {
@@ -377,14 +472,16 @@ export class HelixService {
      * @throws Error if DA.live token provider not configured or token expired
      */
     private async getDaLiveToken(): Promise<string> {
-        if (!this.daLiveTokenProvider) {
+        // Explicit provider wins; otherwise the one registered at activation.
+        const provider = this.daLiveTokenProvider ?? HelixService.defaultDaLiveTokenProvider;
+        if (!provider) {
             throw new Error(
                 'DA.live token provider not configured. ' +
                     'HelixService requires a DA.live token provider for content source operations.',
             );
         }
 
-        const token = await this.daLiveTokenProvider.getAccessToken();
+        const token = await provider.getAccessToken();
         if (!token) {
             throw new Error('DA.live session expired. Please sign in to DA.live.');
         }
@@ -483,7 +580,7 @@ export class HelixService {
         // Use API key auth when provided (unpublish jobs), otherwise GitHub token
         const authHeaders: Record<string, string> = apiKey
             ? { Authorization: `token ${apiKey}` }
-            : { 'x-auth-token': await this.getGitHubToken() };
+            : { ...(await this.tryAdminBearer()), 'x-auth-token': await this.getGitHubToken() };
         // Job status URL format: GET /job/{org}/{site}/{ref}/{topic}/{jobId}
         const url = `${HELIX_ADMIN_URL}/job/${org}/${site}/${branch}/${topic}/${jobName}`;
         const startTime = Date.now();
@@ -588,6 +685,10 @@ export class HelixService {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
+                // Authorization FIRST: once the site has any `access.admin` role the
+                // admin API closes to callers without an accepted admin identity,
+                // and the GitHub token is not one. See ADMIN_API_401_MESSAGE.
+                Authorization: `Bearer ${imsToken}`,
                 'x-auth-token': githubToken,
                 'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
             },
@@ -595,9 +696,7 @@ export class HelixService {
         });
 
         if (response.status === 401) {
-            throw new Error(
-                'GitHub authentication failed. Please ensure you have write access to the repository.',
-            );
+            throw new Error(ADMIN_API_401_MESSAGE);
         }
 
         if (response.status === 403) {
@@ -639,6 +738,10 @@ export class HelixService {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
+                // Authorization FIRST: once the site has any `access.admin` role the
+                // admin API closes to callers without an accepted admin identity,
+                // and the GitHub token is not one. See ADMIN_API_401_MESSAGE.
+                Authorization: `Bearer ${imsToken}`,
                 'x-auth-token': githubToken,
                 'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
             },
@@ -646,9 +749,7 @@ export class HelixService {
         });
 
         if (response.status === 401) {
-            throw new Error(
-                'GitHub authentication failed. Please ensure you have write access to the repository.',
-            );
+            throw new Error(ADMIN_API_401_MESSAGE);
         }
 
         if (response.status === 403) {
@@ -710,8 +811,11 @@ export class HelixService {
                     'content-type': 'application/json',
                 },
                 body: JSON.stringify({
-                    description: 'Demo Builder publish/unpublish key',
-                    roles: ['admin'],
+                    // Shown in the site's apiKeys listing, so name what it can
+                    // actually do. Unpublish is NOT in scope: DELETE /live
+                    // authenticates with the DA.live bearer, not this key.
+                    description: 'Demo Builder publish key',
+                    roles: ['publish'],
                 }),
                 signal: AbortSignal.timeout(TIMEOUTS.LONG),
             });
@@ -783,7 +887,7 @@ export class HelixService {
             return { success: true };
         }
 
-        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${persisted.id}.json`;
+        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${toUrlSafeKeyId(persisted.id)}.json`;
         try {
             const imsToken = await this.getDaLiveToken();
             const response = await fetch(url, {
@@ -822,7 +926,7 @@ export class HelixService {
         // Remove from persistent store first (even if API call fails)
         await HelixService.deletePersistedKey(cacheKey);
 
-        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${persisted.id}.json`;
+        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${toUrlSafeKeyId(persisted.id)}.json`;
         try {
             const imsToken = await this.getDaLiveToken();
             const response = await fetch(url, {
@@ -1065,6 +1169,10 @@ export class HelixService {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
+                // Authorization FIRST: once the site has any `access.admin` role the
+                // admin API closes to callers without an accepted admin identity,
+                // and the GitHub token is not one. See ADMIN_API_401_MESSAGE.
+                Authorization: `Bearer ${imsToken}`,
                 'x-auth-token': githubToken,
                 'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
                 'Content-Type': 'application/json',
@@ -1077,9 +1185,7 @@ export class HelixService {
         });
 
         if (response.status === 401) {
-            throw new Error(
-                'GitHub authentication failed. Please ensure you have write access to the repository.',
-            );
+            throw new Error(ADMIN_API_401_MESSAGE);
         }
 
         if (response.status === 403) {
@@ -1169,6 +1275,10 @@ export class HelixService {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
+                // Authorization FIRST: once the site has any `access.admin` role the
+                // admin API closes to callers without an accepted admin identity,
+                // and the GitHub token is not one. See ADMIN_API_401_MESSAGE.
+                Authorization: `Bearer ${imsToken}`,
                 'x-auth-token': githubToken,
                 'x-content-source-authorization': `Bearer ${imsToken}`, // Required for DA.live content source
                 'Content-Type': 'application/json',
@@ -1181,9 +1291,7 @@ export class HelixService {
         });
 
         if (response.status === 401) {
-            throw new Error(
-                'GitHub authentication failed. Please ensure you have write access to the repository.',
-            );
+            throw new Error(ADMIN_API_401_MESSAGE);
         }
 
         if (response.status === 403) {
@@ -1583,6 +1691,7 @@ export class HelixService {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
+                ...(await this.tryAdminBearer()),
                 'x-auth-token': token,
             },
             signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
@@ -1596,9 +1705,7 @@ export class HelixService {
 
         // 401 is authentication failure
         if (response.status === 401) {
-            throw new Error(
-                'GitHub authentication failed. Please ensure you have write access to the repository.',
-            );
+            throw new Error(ADMIN_API_401_MESSAGE);
         }
 
         // 403 is access denied
@@ -1655,6 +1762,7 @@ export class HelixService {
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
+                    ...(await this.tryAdminBearer()),
                     'x-auth-token': githubToken,
                 },
                 // Fresh timeout signal per attempt — a reused signal from an
@@ -1663,9 +1771,7 @@ export class HelixService {
             });
 
             if (response.status === 401) {
-                throw new Error(
-                    'GitHub authentication failed. Please ensure you have write access to the repository.',
-                );
+                throw new Error(ADMIN_API_401_MESSAGE);
             }
 
             if (response.status === 403) {

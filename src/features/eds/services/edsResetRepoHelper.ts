@@ -54,23 +54,59 @@ async function fetchPlaceholderFiles(
     const inventory = await getRuntimeSurfaces(surfaceSource, logger);
     const placeholderPaths = inventory.placeholderSheets;
 
+    // A non-ok response used to be dropped on the floor — no log, no counter.
+    // On 2026-08-15 that meant SEVENTEEN consecutive 404s produced zero output,
+    // because the template repo has no live site at all: every sheet 404s at
+    // source and the reset said nothing. The gap only surfaced as nine console
+    // 404s per page load in a browser, days later. Count the outcomes and say
+    // so once.
+    const sourceHost = `https://main--${templateRepo}--${templateOwner}.aem.live`;
+    let added = 0;
+    const missing: string[] = [];
+    const failed: string[] = [];
+
     await Promise.allSettled(
         placeholderPaths.map(async (placeholderPath) => {
             try {
-                const sourceUrl = `https://main--${templateRepo}--${templateOwner}.aem.live/${placeholderPath}.json`;
-                const response = await fetch(sourceUrl, {
+                const response = await fetch(`${sourceHost}/${placeholderPath}.json`, {
                     signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK),
                 });
                 if (response.ok) {
-                    const jsonContent = await response.text();
-                    fileOverrides.set(`${placeholderPath}.json`, jsonContent);
-                    logger.info(`[EdsReset] Added ${placeholderPath}.json to code files`);
+                    fileOverrides.set(`${placeholderPath}.json`, await response.text());
+                    added += 1;
+                    logger.debug(`[EdsReset] Added ${placeholderPath}.json to code files`);
+                    return;
                 }
-            } catch {
-                logger.warn(`[EdsReset] Failed to fetch ${placeholderPath}.json from source`);
+                missing.push(`${placeholderPath} (${response.status})`);
+            } catch (error) {
+                failed.push(`${placeholderPath} (${(error as Error).message})`);
             }
         }),
     );
+
+    const attempted = placeholderPaths.length;
+    if (added === attempted) {
+        logger.info(`[EdsReset] Added ${added} placeholder sheet(s) to code files`);
+        return;
+    }
+
+    // NONE landing is the signature of a source that serves nothing — a
+    // template repo with no live site, say — not of individually absent sheets.
+    if (added === 0) {
+        logger.warn(
+            `[EdsReset] No placeholder sheets available from ${sourceHost} ` +
+                `(${attempted} attempted). Dropin UI labels fall back to their built-in ` +
+                `defaults; the storefront still renders. This is expected for a template ` +
+                `with no published site.`,
+        );
+    } else {
+        logger.warn(
+            `[EdsReset] Added ${added}/${attempted} placeholder sheet(s); ` +
+                `the rest are unavailable at ${sourceHost}`,
+        );
+    }
+    if (missing.length) logger.debug(`[EdsReset] Placeholder sheets not found: ${missing.join(', ')}`);
+    if (failed.length) logger.debug(`[EdsReset] Placeholder fetch errors: ${failed.join(', ')}`);
 }
 
 /**

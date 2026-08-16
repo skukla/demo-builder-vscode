@@ -15,6 +15,7 @@ Running `aio` CLI commands against a specific org/project/workspace in a termina
 Consequences:
 - **There is no in-app org picker.** Sign-in owns org selection. The picker was removed deliberately — do not bring it back.
 - **The token is the truth**, never the stale CLI console selection (`aio config get console.org` can disagree with the token; the token wins).
+- **A token can also reach ZERO orgs** (account has no Developer Console access in the landed org). `getOrganizationsSdkOnly()` returns `[]` for that — a REAL answer, treated as unreachable → the forced "Switch IMS Org" recovery — vs `undefined` when the SDK could not answer at all → "sign in to check". Never collapse the two: mapping `[]` to "couldn't check" offers a non-forced sign-in that reuses the browser SSO session and loops forever (2026-08-13, Leah's gray badge).
 
 ## Canonical pieces (single implementations — never hand-roll)
 

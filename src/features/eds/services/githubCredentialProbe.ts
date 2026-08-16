@@ -203,6 +203,25 @@ function interpret(
         return `Couldn't reach AEM (${adminApi.error}). GitHub access looks fine; retry when back online.`;
     }
 
+    // 401 gets its own reading. Storefront setup pins a site admin, which makes
+    // the Configuration Service set `requireAuth: "auto"` and closes the admin
+    // API to everything but the DA.live bearer — so a GitHub token being
+    // refused is the EXPECTED state on a current storefront, not a broken
+    // credential. The old wording ("AEM is refusing the credential itself") was
+    // written before pinning existed and now sends people chasing a credential
+    // problem that is not there. The same report says `admin-locked` in its
+    // Configuration Service section; this line must not contradict it.
+    if (adminApi.httpStatus === 401 && repo.canPush === true) {
+        return (
+            `GitHub accepts this credential and reports write access to ${repo.fullName}, ` +
+            `but AEM returned 401${adminApi.xError ? ` (${adminApi.xError})` : ''}. ` +
+            `On a storefront with site-access admins configured this is EXPECTED — the admin ` +
+            `API then requires the DA.live session, not a GitHub token. Check the ` +
+            `Configuration Service section below: if it reports admin-locked, nothing is wrong ` +
+            `with this credential. If it does not, the credential itself is being refused.`
+        );
+    }
+
     if (adminApi.httpStatus !== undefined && adminApi.httpStatus !== 200) {
         if (repo.canPush === true) {
             return (

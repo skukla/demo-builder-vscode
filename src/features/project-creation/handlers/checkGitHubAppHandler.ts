@@ -19,7 +19,7 @@
 
 import { PollingService } from '@/core/shell/pollingService';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import { getGitHubServices, tryCreateDaLiveTokenProvider } from '@/features/eds/handlers/edsHelpers';
 import { buildUndeterminedAppCheckError } from '@/features/eds/services/appInstallationResolver';
 import { HelixService } from '@/features/eds/services/helixService';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -161,7 +161,15 @@ export async function checkGitHubApp(
 
         // Lazy-load GitHubAppService
         const { GitHubAppService } = await import('@/features/eds/services/githubAppService');
-        const githubAppService = new GitHubAppService(tokenService);
+        // Pass the DA.live session. Without it this check 401s on any site
+        // carrying an `access.admin` role — which storefront setup now pins on
+        // every project — and reports "installed=false, codeStatus=none", which
+        // the wizard renders as a permanent "Registering...".
+        const githubAppService = new GitHubAppService(
+            tokenService,
+            context.logger,
+            tryCreateDaLiveTokenProvider(context.context),
+        );
 
         // Check if app is installed
         // - Strict mode (default): Requires code.status === 200

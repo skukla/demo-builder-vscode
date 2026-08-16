@@ -25,6 +25,15 @@ src/features/eds/
 │   ├── helixService.ts             # Helix Admin API (preview/publish/unpublish, API key management)
 │   ├── inspectorHelpers.ts         # Demo Inspector SDK vendoring and tagging
 │   ├── configurationService.ts     # AEM Configuration Service (site registration)
+│   ├── configServiceAccess.ts      # Admin-role reads/grants (org roster, site access, 403→200 oracle)
+│   ├── configServiceProbe.ts       # Read-only credential/role diagnosis for Diagnostics
+│   ├── siteConfigRegistrar.ts      # 409/401/403 registration protocol (wizard + reset + repair)
+│   ├── siteGrantPreservation.ts    # capture/restore admin grants across the delete+re-register
+│   ├── lostGrantsMessage.ts        # the one sentence reporting grants a write could not restore
+│   ├── edsResetConfigStep.ts       # reset steps 6-7 (config.json publish + site registration)
+│   ├── repairSiteConfigHeadless.ts # UI-free re-registration + read-back verification
+│   ├── configAccessRecovery.ts     # Recovery plan, access telegraph, verification poll
+│   ├── siteAccessManagerHeadless.ts # UI-free list/add/remove behind Manage Site Access
 │   ├── configGenerator.ts          # config.json generation for storefronts
 │   ├── configSyncService.ts        # Config.json sync between DA.live and repo
 │   ├── commerceStoreDiscovery.ts   # Commerce REST API store hierarchy discovery (PaaS + ACCS)
@@ -45,7 +54,6 @@ src/features/eds/
 │   ├── edsResetService.ts          # Core reset orchestration (pipeline, CDN sync, finalization)
 │   ├── edsResetUI.ts               # Reset UI orchestration (auth, progress, notifications)
 │   ├── edsPipeline.ts              # EDS setup pipeline orchestration
-│   ├── featurePackInstaller.ts     # Feature pack artifact installation
 │   ├── fstabGenerator.ts           # fstab.yaml generation
 │   ├── storefrontRepublishService.ts # Storefront config republish
 │   ├── storefrontStalenessDetector.ts # Config.json staleness detection
@@ -69,7 +77,6 @@ src/features/eds/
 │   │   └── index.ts                     # Component exports
 │   ├── helpers/
 │   │   ├── bookmarkletSetupPage.ts  # Bookmarklet setup HTML
-│   │   └── validationHelpers.ts     # Form validation helpers
 │   ├── hooks/
 │   │   ├── useGitHubAuth.ts         # GitHub authentication hook
 │   │   └── useDaLiveAuth.ts         # DA.live authentication hook
@@ -87,12 +94,12 @@ src/features/eds/
 │   ├── edsGitHubHandlers.ts        # GitHub-specific handlers
 │   ├── edsDaLiveHandlers.ts        # DA.live content handlers
 │   ├── edsDaLiveAuthHandlers.ts    # DA.live auth handlers
-│   ├── edsDaLiveOrgHandlers.ts     # DA.live org handlers
 │   ├── storefrontSetupHandlers.ts  # Storefront setup orchestration + cleanup
 │   ├── storefrontSetupTypes.ts     # Shared types: StorefrontSetupResult, SetupServices, RepoInfo
 │   ├── storefrontSetupPhase1.ts    # Phase 1: GitHub repo creation/selection
 │   ├── storefrontSetupPhase2.ts    # Phase 2: Helix config (fstab, block collections, inspector)
-│   ├── storefrontSetupPhase3.ts    # Phase 3: code sync + config service registration
+│   ├── storefrontSetupPhase3.ts    # Phase 3: code sync + CDN publish + DA.live permissions
+│   ├── configServiceRegistration.ts # Wizard wiring for registration: progress, admin pin, PDP caveats
 │   ├── storefrontSetupPhaseHelpers.ts # Shared phase helpers (GitHub App check)
 │   ├── storefrontSetupPhases.ts    # Main orchestrator (delegates to phase1/2/3 files)
 │   ├── edsHelpers.ts               # Shared handler utilities (ensureDaLiveAuth, service cache)
@@ -133,6 +140,13 @@ Three paths keep the DA.live authoring library in sync with the user's blocks:
 
 If the DA.live token expires during content pipeline execution (phases 4-5), the pipeline catches `DaLiveAuthError` and pauses to prompt re-authentication via `ensureDaLiveAuth()`. Up to 2 re-auth attempts are allowed before failing. The UI receives an `auth-recovery` phase progress message during re-authentication.
 
+Step 7 (Configuration Service registration) sits BEFORE that recovery and has no
+re-auth of its own, so a `DaLiveAuthError` there is reported and the reset
+**continues** rather than aborting. Aborting would strand a storefront whose repo
+`resetRepoToTemplate` has already wiped and whose content the pipeline has not
+yet copied back. The pipeline then re-authenticates as usual, and the one write
+that was missed is completed by `Demo Builder: Repair Site Configuration`.
+
 ### GitHub Services (extracted modules)
 
 - **GitHubTokenService** - Token storage via VS Code SecretStorage
@@ -147,6 +161,18 @@ If the DA.live token expires during content pipeline execution (phases 4-5), the
 - **DaLiveContentOperations** - Content copy with progress tracking
 - **DaLiveOrgOperations** - Organization access verification
 - **DaLiveConfigService** - Config/permissions spreadsheet management
+
+### Configuration Service access (who may administer a site)
+
+The admin role that `/config/*` writes require is minted for whoever installs the
+AEM Code Sync App, so it can be missing on an older site — which refuses even its
+own owner and leaves PDPs unservable. These make that state visible and fixable.
+
+- **configServiceAccess** - org roster (`config/{org}.json`) and site grants (`config/{org}/sites/{site}/access/admin.json`); `probeConfigWriteAccess` is the 403→200 oracle; `buildCodeSyncSetupUrl` is the bootstrap deep link. Go through `ensureSiteAdmin`/`revokeSiteAdmin` — `grantSiteAdmin` is module-private precisely BECAUSE it REPLACES the role list and would drop other admins. `restoreSiteRoles` re-applies grants captured before a delete/re-register cycle (an edit deletes the site registration, and the access list is stored underneath it). An edit REFUSES to save when the current admin list cannot be read, and reports which grants were lost when they cannot be handed back
+- **configAccessRecovery** - `logConfigAccessState`/`announceConfigAccess` telegraph access before the write that depends on it; `pinSiteAdmin` records the creating user's role at registration; `waitForConfigAccess` VERIFIES a recovery rather than assuming it worked
+- **siteAccessManagerHeadless** - UI-free list/add/remove behind `demoBuilder.manageSiteAccess`; every mutation is confirmed by re-reading, and removing the last admin is refused
+- **siteConfigRegistrar** - the 409→update / 401→re-auth / 403→propagation-retry protocol, shared by the wizard, the reset path and the repair command so the rules live in one place
+- **repairSiteConfigHeadless** - UI-free re-registration behind `demoBuilder.repairSiteConfiguration`; reports `verified` from a read-back rather than inferring it from the write
 
 ### EDS Reset (edsResetService + edsResetUI)
 

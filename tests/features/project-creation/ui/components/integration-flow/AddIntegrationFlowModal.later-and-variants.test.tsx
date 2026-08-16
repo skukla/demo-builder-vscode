@@ -524,24 +524,28 @@ describe('integration-flow module index', () => {
         // the former MeshApiEnableRow export is gone; EnsureResult is a type-only export.
         // buildReservedIds joined the surface for shell instancing: the HOST composes
         // the blank-naming collision domain and threads it to the modal.
-        // RenameIntegrationModal joined for Step 10 (wizard rename): the host
-        // (IntegrationsStep) mounts the rename surface for AI-built instance rows.
         // RESERVED_EXISTING_KEY joined when the '__existing__' literal was
         // deduplicated into flowStages: useWizardState (an OUTSIDE consumer)
         // seeds edit-mode selectedConsoleApis with it via this surface.
+        // IntegrationResultRow and RenameIntegrationModal LEFT when the area
+        // adopted the shared IntegrationCard: the card replaced the row, and the
+        // card's inline pencil replaced the rename modal. toIntegrationCards and
+        // sublineFor took their place — the pure producer feeding that card.
         expect(Object.keys(index).sort()).toEqual([
             'AddIntegrationFlowModal',
-            'IntegrationResultRow',
             'RESERVED_EXISTING_KEY',
-            'RenameIntegrationModal',
             'buildReservedIds',
+            'isApiEditable',
             'resolveIntegrationRows',
+            'sublineFor',
+            'toIntegrationCards',
         ]);
         expect(typeof index.AddIntegrationFlowModal).toBe('function');
-        expect(typeof index.IntegrationResultRow).toBe('function');
-        expect(typeof index.RenameIntegrationModal).toBe('function');
         expect(typeof index.buildReservedIds).toBe('function');
         expect(typeof index.resolveIntegrationRows).toBe('function');
+        expect(typeof index.toIntegrationCards).toBe('function');
+        expect(typeof index.sublineFor).toBe('function');
+        expect(typeof index.isApiEditable).toBe('function');
         expect(index.RESERVED_EXISTING_KEY).toBe('__existing__');
     });
 });

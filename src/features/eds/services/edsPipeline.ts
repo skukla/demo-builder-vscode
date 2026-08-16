@@ -22,11 +22,7 @@ import { applyBlockCodePatches } from './codePatchPipelineHelpers';
 import type { DaLiveContentOperations } from './daLiveContentOperations';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { HelixService } from './helixService';
-import {
-    createPatchReport,
-    addCodeResult,
-    type PatchReport,
-} from './patchReportHelper';
+import { createPatchReport, addCodeResult, type PatchReport } from './patchReportHelper';
 import { DaLiveAuthError, DaLiveError, type EdsPipelineProgressCallback } from './types';
 import type { Project } from '@/types/base';
 import type { ContentPatchSource, CodePatchSource } from '@/types/demoPackages';
@@ -147,7 +143,12 @@ async function pipelineApplyBlockCodePatches(
 ): Promise<void> {
     if (!codePatches || codePatches.length === 0 || !codePatchSource) return;
     const blockResults = await applyBlockCodePatches(
-        githubFileOps, repoOwner, repoName, codePatches, codePatchSource, logger,
+        githubFileOps,
+        repoOwner,
+        repoName,
+        codePatches,
+        codePatchSource,
+        logger,
     );
     for (const r of blockResults) addCodeResult(patchReport, r);
 }
@@ -158,7 +159,7 @@ async function pipelineApplyBlockCodePatches(
  * Non-HTML: kept as-is (e.g. /media_abc.png, /config.json)
  */
 function toWebPaths(daLivePaths: string[]): string[] {
-    return daLivePaths.map(p => {
+    return daLivePaths.map((p) => {
         if (!p.endsWith('.html')) {
             return p;
         }
@@ -194,7 +195,8 @@ async function pipelineClearContent(
     logger.info(`[EdsPipeline] Clearing all DA.live content for ${daLiveOrg}/${daLiveSite}`);
 
     const clearResult = await daLiveContentOps.deleteAllSiteContent(
-        daLiveOrg, daLiveSite,
+        daLiveOrg,
+        daLiveSite,
         (info) => {
             onProgress?.({
                 operation: 'content-clear',
@@ -222,11 +224,16 @@ async function pipelineClearContent(
         try {
             await helixService.unpublishPages(repoOwner, repoName, 'main', webPaths);
         } catch (error) {
-            logger.warn(`[EdsPipeline] CDN unpublish failed (non-fatal): ${(error as Error).message}`);
+            logger.warn(
+                `[EdsPipeline] CDN unpublish failed (non-fatal): ${(error as Error).message}`,
+            );
         }
     }
 
-    onProgress?.({ operation: 'content-clear', message: `Cleared ${clearResult.deletedCount} files` });
+    onProgress?.({
+        operation: 'content-clear',
+        message: `Cleared ${clearResult.deletedCount} files`,
+    });
 }
 
 /**
@@ -258,14 +265,17 @@ async function pipelineCopyContent(
         indexUrl: `https://main--${contentSource.site}--${contentSource.org}.aem.live${indexPath}`,
     };
 
-    logger.info(`[EdsPipeline] Copying content from ${contentSource.org}/${contentSource.site} to ${daLiveOrg}/${daLiveSite}`);
+    logger.info(
+        `[EdsPipeline] Copying content from ${contentSource.org}/${contentSource.site} to ${daLiveOrg}/${daLiveSite}`,
+    );
 
     const contentResult = await daLiveContentOps.copyContentFromSource(
         fullContentSource,
         daLiveOrg,
         daLiveSite,
         (progress) => {
-            const statusMessage = progress.message || `Copying content (${progress.processed}/${progress.total})`;
+            const statusMessage =
+                progress.message || `Copying content (${progress.processed}/${progress.total})`;
             onProgress?.({
                 operation: 'content-copy',
                 message: statusMessage,
@@ -291,9 +301,16 @@ async function pipelineCopyContent(
     // from the canonical B2B content site on top of the brand content.
     let overlaidFiles = 0;
     if (accountContentSource) {
-        const overlay = await daLiveContentOps.overlayAccountChrome(accountContentSource, daLiveOrg, daLiveSite, patchReport);
+        const overlay = await daLiveContentOps.overlayAccountChrome(
+            accountContentSource,
+            daLiveOrg,
+            daLiveSite,
+            patchReport,
+        );
         overlaidFiles = overlay.totalFiles;
-        logger.info(`[EdsPipeline] Account-chrome overlay: ${overlaidFiles} file(s) from ${accountContentSource.org}/${accountContentSource.site}`);
+        logger.info(
+            `[EdsPipeline] Account-chrome overlay: ${overlaidFiles} file(s) from ${accountContentSource.org}/${accountContentSource.site}`,
+        );
     }
 
     onProgress?.({
@@ -345,7 +362,9 @@ async function pipelinePublishContent(
         // No publishable pages is non-fatal (e.g. Custom package with no content source)
         const msg = (publishError as Error).message;
         if (msg.includes('No publishable pages')) {
-            logger.info('[EdsPipeline] No content pages to publish (site has no publishable content)');
+            logger.info(
+                '[EdsPipeline] No content pages to publish (site has no publishable content)',
+            );
         } else {
             throw publishError;
         }
@@ -387,7 +406,11 @@ async function pipelineConfigureBlockLibrary(
     // copy inside createBlockLibraryFromTemplate.
     if (libraryContentSources?.length) {
         await copyLibraryDocPages(
-            daLiveContentOps, libraryContentSources, daLiveOrg, daLiveSite, logger,
+            daLiveContentOps,
+            libraryContentSources,
+            daLiveOrg,
+            daLiveSite,
+            logger,
         );
     }
 
@@ -402,7 +425,10 @@ async function pipelineConfigureBlockLibrary(
     const compDefRepo = blockCollectionIds ? repoName : templateRepo;
 
     const libResult = await daLiveContentOps.createBlockLibraryFromTemplate(
-        daLiveOrg, daLiveSite, compDefOwner, compDefRepo,
+        daLiveOrg,
+        daLiveSite,
+        compDefOwner,
+        compDefRepo,
         (owner, repo, path) => githubFileOps.getFileContent(owner, repo, path),
         libraryContentSources,
         blockCollectionIds,
@@ -436,7 +462,9 @@ async function copyLibraryDocPages(
 ): Promise<void> {
     for (const libSource of libraryContentSources) {
         try {
-            logger.info(`[EdsPipeline] Copying block doc pages from ${libSource.org}/${libSource.site}`);
+            logger.info(
+                `[EdsPipeline] Copying block doc pages from ${libSource.org}/${libSource.site}`,
+            );
             await daLiveContentOps.copyContent(
                 { org: libSource.org, site: libSource.site, path: '.da/library/blocks' },
                 { org: daLiveOrg, site: daLiveSite, path: '.da/library/blocks' },
@@ -445,7 +473,9 @@ async function copyLibraryDocPages(
         } catch (error) {
             // 403 = no auth on source org — CDN fallback will handle it
             if (error instanceof DaLiveError && error.statusCode === 403) {
-                logger.info(`[EdsPipeline] No DA.live access to ${libSource.org}/${libSource.site}, will use CDN fallback`);
+                logger.info(
+                    `[EdsPipeline] No DA.live access to ${libSource.org}/${libSource.site}, will use CDN fallback`,
+                );
             } else {
                 throw error; // Unexpected error — propagate
             }
@@ -519,8 +549,15 @@ export async function executeEdsPipeline(
                 throw new Error('Content source is required when skipContent is false');
             }
             contentFilesCopied = await pipelineCopyContent(
-                daLiveContentOps, contentSource, daLiveOrg, daLiveSite,
-                contentPatches, contentPatchSource, patchReport, logger, onProgress,
+                daLiveContentOps,
+                contentSource,
+                daLiveOrg,
+                daLiveSite,
+                contentPatches,
+                contentPatchSource,
+                patchReport,
+                logger,
+                onProgress,
                 accountContentSource,
                 // ADR-008 consumer: locate this ledger's generated runtime-surfaces.json
                 // (codePatchSource carries owner/repo/path = the patches-repo ledger).
@@ -544,7 +581,13 @@ export async function executeEdsPipeline(
         // Non-fatal per ADR-006 D1: results go to `patchReport`; the caller
         // surfaces unapplied patches via the one-toast helper.
         await pipelineApplyBlockCodePatches(
-            githubFileOps, repoOwner, repoName, codePatches, codePatchSource, patchReport, logger,
+            githubFileOps,
+            repoOwner,
+            repoName,
+            codePatches,
+            codePatchSource,
+            patchReport,
+            logger,
         );
 
         // Step 3: EDS Settings
@@ -570,7 +613,13 @@ export async function executeEdsPipeline(
         // Step 5: Content Publish
         if (!skipPublish) {
             await pipelinePublishContent(
-                helixService, repoOwner, repoName, daLiveOrg, daLiveSite, logger, onProgress,
+                helixService,
+                repoOwner,
+                repoName,
+                daLiveOrg,
+                daLiveSite,
+                logger,
+                onProgress,
             );
         } else {
             logger.info('[EdsPipeline] Skipping content publish (skipPublish=true)');
@@ -585,11 +634,19 @@ export async function executeEdsPipeline(
 
             try {
                 const { bulkPreviewAndPublish } = await import('../handlers/edsHelpers');
-                await bulkPreviewAndPublish(helixService, repoOwner, repoName, libraryPaths, logger);
+                await bulkPreviewAndPublish(
+                    helixService,
+                    repoOwner,
+                    repoName,
+                    libraryPaths,
+                    logger,
+                );
                 logger.info('[EdsPipeline] Block library published');
             } catch (libPublishError) {
                 // Non-fatal -- library config was created, publishing can be retried
-                logger.warn(`[EdsPipeline] Block library publish failed: ${(libPublishError as Error).message}`);
+                logger.warn(
+                    `[EdsPipeline] Block library publish failed: ${(libPublishError as Error).message}`,
+                );
             }
         }
 
@@ -619,17 +676,22 @@ export async function executeEdsPipeline(
                     params.byomOverlayUrl,
                     daLiveOrg,
                     daLiveSite,
+                    helixService,
                     logger,
                     onProgress,
                 );
                 if (!result.skipped) {
-                    logger.info(`[EdsPipeline] Catalog pre-warming: ${result.succeeded}/${result.attempted} SKUs pre-published`);
+                    logger.info(
+                        `[EdsPipeline] Catalog pre-warming: ${result.succeeded}/${result.attempted} SKUs pre-published`,
+                    );
                 }
             } catch (prewarmError) {
                 // Defense in depth — prewarmCatalog is already non-fatal
                 // internally, but a thrown exception here must not abort
                 // the pipeline. Smart-404 fallback handles uncovered SKUs.
-                logger.warn(`[EdsPipeline] Catalog pre-warming threw unexpectedly: ${(prewarmError as Error).message}`);
+                logger.warn(
+                    `[EdsPipeline] Catalog pre-warming threw unexpectedly: ${(prewarmError as Error).message}`,
+                );
             }
         }
 

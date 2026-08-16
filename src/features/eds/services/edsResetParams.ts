@@ -190,7 +190,10 @@ interface StorefrontConfig {
  */
 export function resolveStorefrontConfig(
     project: Project,
-    packages: StorefrontConfigSource[],
+    // Same injectable default as `buildEdsResetParams`, so a caller that only
+    // needs the package's storefront config does not have to import and cast the
+    // bundled JSON itself.
+    packages: StorefrontConfigSource[] = demoPackagesConfig.packages as unknown as StorefrontConfigSource[],
 ): StorefrontConfig {
     const pkg = packages.find((p) => p.id === project.selectedPackage);
     const storefront = project.selectedStack

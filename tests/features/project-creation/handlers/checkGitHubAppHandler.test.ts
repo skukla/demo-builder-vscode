@@ -22,6 +22,9 @@ const mockPreviewCode = jest.fn();
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn(() => ({ tokenService: { getToken: jest.fn() } })),
+    // The handler passes a DA.live provider so the status check survives a site
+    // with an `access.admin` role; `undefined` mirrors the degraded path.
+    tryCreateDaLiveTokenProvider: jest.fn(() => undefined),
 }));
 
 jest.mock('@/features/eds/services/githubAppService', () => ({
@@ -246,3 +249,39 @@ describe('checkGitHubApp handler', () => {
         });
     });
 });
+
+/**
+ * The DA.live session must reach the status check.
+ *
+ * Observed 2026-08-14 editing `demo-builder-test`: the check sent only the GitHub
+ * token, admin.hlx.page answered 401 "[admin] not authenticated", and the wizard
+ * showed a permanent "Registering...". Cause: writing any `access.admin` role
+ * makes Adobe set `requireAuth: "auto"`, closing the whole admin API to callers
+ * without an accepted admin identity — and storefront setup now pins such a role
+ * on every project it registers, so this is the normal state, not an edge case.
+ *
+ * Without this assertion the wiring is invisible: the service-level tests pass a
+ * provider directly, so the handler could stop supplying one and nothing would fail.
+ */
+describe('checkGitHubApp handler — DA.live session wiring', () => {
+    it('constructs the service WITH the DA.live token provider', async () => {
+        const { GitHubAppService } = jest.requireMock(
+            '@/features/eds/services/githubAppService',
+        ) as { GitHubAppService: jest.Mock };
+        const { tryCreateDaLiveTokenProvider } = jest.requireMock(
+            '@/features/eds/handlers/edsHelpers',
+        ) as { tryCreateDaLiveTokenProvider: jest.Mock };
+        const provider = { getAccessToken: jest.fn() };
+        tryCreateDaLiveTokenProvider.mockReturnValue(provider);
+        mockIsAppInstalled.mockResolvedValue({ isInstalled: true, codeStatus: 200 });
+
+        await checkGitHubApp(makeContext(), REQUEST);
+
+        expect(GitHubAppService).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.anything(),
+            provider,
+        );
+    });
+});
+

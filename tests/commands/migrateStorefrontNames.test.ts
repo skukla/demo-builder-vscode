@@ -26,6 +26,10 @@ jest.mock('@/features/eds/services/storefrontNameMigration', () => ({
     migrateStorefrontNamingIfNeeded: jest.fn(),
 }));
 
+jest.mock('@/features/eds/services/publishKeyRegistrar', () => ({
+    registerPublishKey: jest.fn().mockResolvedValue({ registered: true }),
+}));
+
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ensureDaLiveAuth: jest.fn().mockResolvedValue({ authenticated: true }),
     getDaLiveAuthService: jest.fn(() => ({
@@ -65,6 +69,7 @@ jest.mock('@/features/eds/services/edsResetParams', () => ({
 import { MigrateStorefrontNamesCommand } from '@/commands/migrateStorefrontNames';
 import { migrateStorefrontNamingIfNeeded } from '@/features/eds/services/storefrontNameMigration';
 import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
+import { registerPublishKey } from '@/features/eds/services/publishKeyRegistrar';
 import type { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
@@ -72,6 +77,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 
 const migrateMock = migrateStorefrontNamingIfNeeded as jest.Mock;
 const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
+const registerPublishKeyMock = registerPublishKey as jest.Mock;
 
 function makeLogger(): Logger {
     return {
@@ -85,7 +91,7 @@ function makeLogger(): Logger {
 
 function makeProject(
     name: string,
-    overrides: { daLiveSite?: string; daLiveOrg?: string; githubRepo?: string } = {},
+    overrides: { daLiveSite?: string; daLiveOrg?: string; githubRepo?: string } = {}
 ): Project {
     const {
         daLiveSite = `${name}-content`, // legacy mismatched default
@@ -109,10 +115,10 @@ function makeStateManager(projectsByPath: Record<string, Project>): StateManager
                 name: projectsByPath[path].name,
                 path,
                 lastModified: new Date(),
-            })),
+            }))
         ),
         loadProjectFromPath: jest.fn((path: string) =>
-            Promise.resolve(projectsByPath[path] ?? null),
+            Promise.resolve(projectsByPath[path] ?? null)
         ),
         saveProject: jest.fn().mockResolvedValue(undefined),
     } as unknown as StateManager;
@@ -139,7 +145,7 @@ describe('MigrateStorefrontNamesCommand', () => {
         // withProgress: run the callback with a stub progress reporter.
         (vscode.window.withProgress as jest.Mock).mockImplementation(
             async (_opts: unknown, task: (progress: { report: jest.Mock }) => Promise<unknown>) =>
-                task({ report: jest.fn() }),
+                task({ report: jest.fn() })
         );
 
         ensureAuthMock.mockResolvedValue({ authenticated: true });
@@ -155,7 +161,7 @@ describe('MigrateStorefrontNamesCommand', () => {
             // BaseCommand.showInfo appends an 'OK' button arg.
             expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
                 expect.stringContaining('No storefronts need migration'),
-                'OK',
+                'OK'
             );
         });
 
@@ -287,6 +293,37 @@ describe('MigrateStorefrontNamesCommand', () => {
             const summary = calls.at(-1)?.[0] ?? '';
             expect(summary).toMatch(/Migrated 1 storefront/);
         });
+
+        // The migration re-registers the site config, and `apiKeys` lives inside
+        // that document — so the write destroys the site's publish key. The reset
+        // pipeline gets away with not repairing it here because its own config
+        // step follows and re-mints; this command has no such follow-up, so it
+        // must repair what it broke or leave runtime PDP self-heal dead.
+        it('re-mints the publish key that the migration write destroyed', async () => {
+            const sm = makeStateManager({ '/a': makeProject('a-store') });
+
+            await makeCommand(sm).execute();
+
+            expect(registerPublishKeyMock).toHaveBeenCalledTimes(1);
+            expect(registerPublishKeyMock).toHaveBeenCalledWith(
+                expect.anything(),
+                { owner: 'skukla', repo: 'a-store' },
+                expect.anything()
+            );
+        });
+
+        it('does NOT mint a key for a project whose migration failed', async () => {
+            migrateMock.mockResolvedValue({
+                skipped: false,
+                migrated: false,
+                error: 'Helix re-registration failed',
+            });
+            const sm = makeStateManager({ '/a': makeProject('a-store') });
+
+            await makeCommand(sm).execute();
+
+            expect(registerPublishKeyMock).not.toHaveBeenCalled();
+        });
     });
 
     describe('partial failure', () => {
@@ -297,7 +334,11 @@ describe('MigrateStorefrontNamesCommand', () => {
 
             // First call fails, second succeeds.
             migrateMock
-                .mockResolvedValueOnce({ skipped: false, migrated: false, error: 'DA copy timeout' })
+                .mockResolvedValueOnce({
+                    skipped: false,
+                    migrated: false,
+                    error: 'DA copy timeout',
+                })
                 .mockResolvedValueOnce({ skipped: false, migrated: true });
 
             await makeCommand(sm).execute();
@@ -321,7 +362,7 @@ describe('MigrateStorefrontNamesCommand', () => {
 
             expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
                 expect.stringContaining('failed'),
-                'OK',
+                'OK'
             );
         });
 

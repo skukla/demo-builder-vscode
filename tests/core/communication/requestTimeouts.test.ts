@@ -60,13 +60,6 @@ describe('REQUEST_TIMEOUTS', () => {
         expect([...budgetedTypes()]).toContain(type);
     });
 
-    // Two sequential upstream calls against a service whose whole-datapack work
-    // runs for minutes; the other five Data Installer reads are fast and are
-    // deliberately NOT budgeted, so this table does not claim budgets nothing needs.
-    it('budgets the Data Installer detail read', () => {
-        expect([...budgetedTypes()]).toContain('get-datapack-detail');
-    });
-
     // Every Adobe-console call routes through getServicesForOrg or a subscribe PUT,
     // both measured well past the 30s default. If a twin exists for one, it exists
     // for the other.

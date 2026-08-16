@@ -2,7 +2,7 @@
   "name": "adobe-demo-builder",
   "displayName": "Adobe Demo Builder",
   "description": "Create and manage Adobe Commerce demos with ease",
-  "version": "1.0.0-beta.128",
+  "version": "1.0.0-beta.130",
   "publisher": "skukla",
   "engines": {
     "vscode": "^1.84.0"
@@ -55,6 +55,16 @@
       {
         "command": "demoBuilder.diagnostics",
         "title": "Diagnostics",
+        "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.manageSiteAccess",
+        "title": "Manage Site Access",
+        "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.repairSiteConfiguration",
+        "title": "Repair Site Configuration",
         "category": "Demo Builder"
       },
       {
@@ -120,11 +130,6 @@
       {
         "command": "demoBuilder.manageGitHubRepos",
         "title": "Manage GitHub Repositories",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.showDataInstaller",
-        "title": "Open Data Installer",
         "category": "Demo Builder"
       }
     ],
@@ -362,22 +367,6 @@
             "description": "Which AI tool Demo Builder launches. Currently only Claude Code is supported; reserved for future engines (e.g. Codex)."
           }
         }
-      },
-      {
-        "title": "Data Installer",
-        "properties": {
-          "demoBuilder.dataInstaller.enabled": {
-            "type": "boolean",
-            "default": true,
-            "description": "Enable the Data Installer surface for browsing and installing Adobe Commerce sample-data datapacks. When off, the panel and its AI tools report the feature as unavailable."
-          },
-          "demoBuilder.dataInstaller.apiBaseUrl": {
-            "type": "string",
-            "default": "https://285361-datainstallerapi-stage.adobeioruntime.net/api/v1/web/data-installer-api",
-            "format": "uri",
-            "description": "Data Installer API base URL, without a trailing action segment. Defaults to the team's deployed stage instance; override to point at a different deployment. Must be https."
-          }
-        }
       }
     ],
     "viewsContainers": {
@@ -413,7 +402,6 @@
     "watch:all": "node esbuild.config.js --watch",
     "vscode:prepublish": "npm run compile",
     "pretest": "npm run compile && npm run lint",
-    "data-installer:drift": "node scripts/dataInstallerDrift.js",
     "lint": "eslint \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",

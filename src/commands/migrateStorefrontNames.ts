@@ -43,6 +43,8 @@ import {
     resolveStorefrontConfig,
     type StorefrontConfigSource,
 } from '@/features/eds/services/edsResetParams';
+import { lostGrantsMessage } from '@/features/eds/services/lostGrantsMessage';
+import { registerPublishKey } from '@/features/eds/services/publishKeyRegistrar';
 import {
     migrateStorefrontNamingIfNeeded,
     type StorefrontMigrationContext,
@@ -264,6 +266,19 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
                             logger,
                         );
 
+                        // Reported on BOTH paths: this command runs against the
+                        // pre-164fd251 storefronts, which the migration module
+                        // itself calls "the ones most likely to have several
+                        // admins". Nothing in the app can restore them.
+                        if (result.lostGrants?.length) {
+                            vscode.window.showWarningMessage(
+                                lostGrantsMessage(
+                                    result.lostGrants,
+                                    `${candidate.projectName}: the storefront was migrated`,
+                                ),
+                            );
+                        }
+
                         if (result.error) {
                             outcomes.push({
                                 projectName: candidate.projectName,
@@ -278,6 +293,19 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
 
                         // Persist the manifest now that metadata.daLiveSite has been mutated.
                         await this.stateManager.saveProject(candidate.project);
+
+                        // The migration re-registered the site config, and `apiKeys`
+                        // lives inside that document — so the site's publish key is
+                        // gone. The reset pipeline gets away with not repairing it
+                        // here because its own config step follows and re-mints;
+                        // this command has no follow-up, so it repairs what it
+                        // broke. Without this, runtime PDP self-heal stays dead
+                        // until someone runs Repair Site Configuration by hand.
+                        await registerPublishKey(
+                            tokenProvider,
+                            { owner: candidate.repoOwner, repo: candidate.repoName },
+                            logger,
+                        );
                         outcomes.push({ projectName: candidate.projectName, success: true });
                         logger.info(
                             `${LOG_PREFIX} ${candidate.projectName} migrated to ${candidate.daLiveOrg}/${candidate.repoName}`,

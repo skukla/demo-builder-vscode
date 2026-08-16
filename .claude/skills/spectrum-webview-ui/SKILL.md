@@ -83,8 +83,8 @@ keys the same way is **unverified**; the only observed breakage was through the 
 mixed children list is a guaranteed TEST failure and a suspected runtime one. If you hit an
 empty/garbled key at runtime, treat this as a lead, not a diagnosis.
 
-Fix either way: put every option in one array and map it once — `DatapackActivityView.tsx`'s
-`MODE_OPTIONS` is the reference. A test catches this **only if it asserts the payload**
+Fix either way: put every option in one array and map it once, so the key and the label
+cannot drift apart. A test catches this **only if it asserts the payload**
 `onSelectionChange` received; asserting that a request merely fired passes with a mangled key.
 
 ### Layout width & box model

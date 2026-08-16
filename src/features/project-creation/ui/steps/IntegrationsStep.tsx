@@ -1,44 +1,65 @@
 /**
  * IntegrationsStep — the Integrations area body: RESULTS ONLY.
  *
- * The center column is one collapsed {@link IntegrationResultRow} per configured
- * integration (resolved purely from wizard state by {@link resolveIntegrationRows},
- * so a PACKAGE-SEEDED mesh — selected via the dependency mirror key only — surfaces
- * automatically as a needs-setup row), an empty state when nothing is configured,
- * and one accent "Add Integration" launchpad. ALL configuration lives in the
- * {@link AddIntegrationFlowModal} journey: the Add button opens it in `add` mode;
- * a row's Set up / Change opens it in `destination` mode. There is NO sub-step
- * rail — the Build step's footer owns the Continue gate.
+ * The center column is the shared {@link IntegrationCard} — the same card the
+ * dashboard's integrations page renders — one per configured integration
+ * (resolved purely from wizard state by {@link resolveIntegrationRows}, so a
+ * PACKAGE-SEEDED mesh, selected via the dependency mirror key only, surfaces
+ * automatically), an empty state when nothing is configured, and one accent
+ * "Add Integration" launchpad. There is NO sub-step rail — the Build step's
+ * footer owns the Continue gate.
+ *
+ * What the wizard does NOT take from the dashboard, and why: the card GRID and
+ * its detail drawer. Pre-deploy there is no status, URL, or redeploy to show,
+ * and this column is capped at 720px, where a grid falls to two columns and
+ * reads as a second dashboard. That call is recorded in
+ * `.rptc/complete/integrations-surface/overview.md` and holds; the card itself
+ * is listed there as surface-agnostic, which is what this step reuses.
+ *
+ * ALL configuration lives in the {@link AddIntegrationFlowModal} journey: the Add
+ * button opens it in `add` mode; the destination line's Set up / Change opens it
+ * in `destination` mode; a card press or its Manage APIs opens it in `api-edit`
+ * mode. Rename is the card's own inline pencil (the dashboard's treatment), which
+ * is why there is no rename modal here any more.
+ *
+ * The destination is rendered ONCE above the list rather than on every card —
+ * it is one project and one workspace for the whole build.
  *
  * Remove routing: a mesh row routes through the mesh dual-flow toggle
  * ({@link useProjectBuilder.onAppBuilderComponentToggle}, clearing BOTH selection
  * keys); every other row routes through `onRemoveAppBuilderComponent` (selection +
  * source + API picks). The modal provisions NOTHING — a mesh commits on the
  * modal's destination step, and every integration's APIs (mesh included) are
- * subscribed at the build, not in-modal — so this step is PURELY VISUAL: every row
- * just lists its provisioned APIs by name via the row's uniform "APIs in use"
- * line, and never triggers a subscribe.
+ * subscribed at the build, not in-modal — so this step is PURELY VISUAL: a card
+ * states how MANY APIs it will provision (the names live behind Manage APIs, in
+ * the picker), and never triggers a subscribe.
  *
  * @module features/project-creation/ui/steps/IntegrationsStep
  */
 
-import { Button } from '@adobe/react-spectrum';
+import { ActionButton, Button } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useState } from 'react';
 import { getAvailableAppBuilderComponents } from '../../services/appBuilderComponentCatalogLoader';
 import {
     AddIntegrationFlowModal,
     buildReservedIds,
-    IntegrationResultRow,
-    RenameIntegrationModal,
+    isApiEditable,
     resolveIntegrationRows,
+    sublineFor,
+    toIntegrationCards,
     type ApiEditTarget,
-    type BlankInstance,
     type FlowMode,
     type IntegrationRow,
 } from '../components/integration-flow';
 import { meshComponentForStack } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
+import {
+    IntegrationCard,
+    type CardAction,
+    type IntegrationCardModel,
+} from '@/core/ui/components/integrations';
 import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
+import { DestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -59,12 +80,60 @@ export interface IntegrationsStepProps extends BaseStepProps {
     stacks?: Stack[];
 }
 
-/** The committed "Project · Workspace" reference, or undefined until both commit. */
-function destinationLabelFor(state: WizardState): string | undefined {
+/** Case-insensitive, whitespace-trimmed name comparison. */
+function sameName(a: string, b: string): boolean {
+    return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+/**
+ * The destination for the whole surface, shown ONCE above the list.
+ *
+ * It used to repeat on every card, always printing the same string — there is one
+ * Adobe project and one workspace for the entire build, so three integrations
+ * printed it three times. `DestinationContext`
+ * says so in its own docstring ("one line for the whole surface, never per
+ * card") and is the same control the Add-Integration modal and the dashboard's
+ * integrations page already use.
+ *
+ * It renders nothing when either half is missing, so the uncommitted case keeps
+ * its own branch rather than silently disappearing.
+ */
+function DestinationLine({
+    state,
+    needsSetup,
+    onOpenDestination,
+}: {
+    state: WizardState;
+    /**
+     * From the resolver (`IntegrationRow.needsSetup`) — NOT recomputed here.
+     * `integrationRows.destinationCommitted` already answers this for every row,
+     * and `buildSummary` reads the same field; a second copy of the rule in this
+     * component would be a third place for it to drift.
+     */
+    needsSetup: boolean;
+    onOpenDestination: () => void;
+}): React.ReactElement {
     const project = state.adobeProject;
     const workspace = state.adobeWorkspace;
-    if (!project?.id || !workspace?.id) return undefined;
-    return `${project.title ?? project.name} · ${workspace.title ?? workspace.name}`;
+    return (
+        <div className="int-destination">
+            <span className="int-destination-label">Deploys to</span>
+            {!needsSetup ? (
+                <DestinationContext
+                    project={project?.title ?? project?.name}
+                    workspace={workspace?.title ?? workspace?.name}
+                    onChange={onOpenDestination}
+                />
+            ) : (
+                <>
+                    <span className="int-destination-unset">Not set</span>
+                    <ActionButton isQuiet onPress={onOpenDestination}>
+                        Set up
+                    </ActionButton>
+                </>
+            )}
+        </div>
+    );
 }
 
 /** The zero-rows empty state (copy only; the Add button renders regardless). */
@@ -208,7 +277,14 @@ export function IntegrationsStep({
         () => resolveIntegrationRows(state, meshComponent, integrationEntries),
         [state, meshComponent, integrationEntries],
     );
-    const destinationLabel = destinationLabelFor(state);
+    // The same card the dashboard renders, over what the wizard can actually
+    // know: identity, origin and API count. No deploy status — nothing is
+    // deployed yet, so a status would read the same on every card.
+    const cards = useMemo(() => toIntegrationCards(rows), [rows]);
+    const rowsById = useMemo(
+        () => new Map(rows.map((row) => [row.id, row])),
+        [rows],
+    );
 
     const onRemoveRow = useCallback(
         (row: IntegrationRow): void => {
@@ -223,17 +299,45 @@ export function IntegrationsStep({
         [meshComponent, onAppBuilderComponentToggle, onRemoveAppBuilderComponent],
     );
 
-    // The row being renamed (AI-built instance rows only). The rename modal is
-    // display-name only: commit updates sources[id].name in place — id, picks,
-    // and selection are immutable.
-    const [renameTarget, setRenameTarget] = useState<BlankInstance | null>(null);
-    const closeRename = useCallback((): void => setRenameTarget(null), []);
-    const commitRename = useCallback(
-        (name: string): void => {
-            if (renameTarget) onRenameAppBuilderComponent(renameTarget.id, name);
-            setRenameTarget(null);
+    /**
+     * The card's single action switch — the wizard's answer to the dashboard
+     * grid's `handleAction`. Only two verbs reach it: nothing is deployed, so
+     * there is no Deploy, Open, or Retry to offer (see `menuActionsFor`).
+     */
+    const handleCardAction = useCallback(
+        (model: IntegrationCardModel, action: CardAction): void => {
+            const row = rowsById.get(model.id);
+            if (!row) return;
+            if (action === 'remove') {
+                onRemoveRow(row);
+                return;
+            }
+            if (action === 'manage-apis') {
+                openEditApis(row);
+            }
         },
-        [renameTarget, onRenameAppBuilderComponent],
+        [rowsById, onRemoveRow, openEditApis],
+    );
+
+    /**
+     * Commit an inline rename — the card's own pencil, matching the dashboard.
+     *
+     * Replaces the wizard's `RenameIntegrationModal`. Only the duplicate check
+     * lives here: `InlineRenameField` already cancels an empty or unchanged name
+     * before calling this, so an "enter a name" branch would be unreachable.
+     * Display name only — the id, its API picks, and the selection are immutable.
+     */
+    const commitRename = useCallback(
+        async (id: string, raw: string): Promise<string | null> => {
+            const trimmed = raw.trim();
+            const taken = rows.filter((row) => row.id !== id).map((row) => row.name);
+            if (taken.some((name) => sameName(name, trimmed))) {
+                return 'That name is already used by another integration.';
+            }
+            onRenameAppBuilderComponent(id, trimmed);
+            return null;
+        },
+        [rows, onRenameAppBuilderComponent],
     );
 
     return (
@@ -247,24 +351,44 @@ export function IntegrationsStep({
                     rows.length === 0 ? 'int-results int-results--empty' : 'int-results'
                 }
             >
-                {rows.length === 0 && <EmptyState onAdd={openAdd} />}
-                {rows.map((row) => (
-                    <IntegrationResultRow
-                        key={row.id}
-                        row={row}
-                        destinationLabel={destinationLabel}
-                        onSetUpDestination={openDestination}
-                        onChangeDestination={openDestination}
-                        onRemove={() => onRemoveRow(row)}
-                        onChangeApis={() => openEditApis(row)}
-                        onRename={
-                            row.renamable
-                                ? () => setRenameTarget({ id: row.id, name: row.name })
-                                : undefined
-                        }
+                {cards.length === 0 && <EmptyState onAdd={openAdd} />}
+                {cards.length > 0 && (
+                    <DestinationLine
+                        state={state}
+                        // Shared across every row by construction, so the first
+                        // one speaks for the surface.
+                        needsSetup={rows[0]?.needsSetup ?? true}
+                        onOpenDestination={openDestination}
                     />
-                ))}
-                {rows.length > 0 && (
+                )}
+                {cards.map((card) => {
+                    // A press opens the only detail the wizard has: the API
+                    // picker. Cards with no editable APIs (mesh, catalog) get no
+                    // handler, so they render inert rather than offering a control
+                    // that would do nothing.
+                    //
+                    // Asks `isApiEditable` — the same rule that builds the menu —
+                    // rather than reading the menu it produced; those two answers
+                    // must never disagree. Guarded on the ROW rather than a
+                    // sentinel kind, so "no row" means "not pressable" outright
+                    // instead of depending on which kinds happen to be editable.
+                    const row = rowsById.get(card.id);
+                    return (
+                        <IntegrationCard
+                            key={card.id}
+                            model={card}
+                            onAction={handleCardAction}
+                            onRename={commitRename}
+                            subline={sublineFor(card)}
+                            onOpen={
+                                row && isApiEditable(row.kind)
+                                    ? () => handleCardAction(card, 'manage-apis')
+                                    : undefined
+                            }
+                        />
+                    );
+                })}
+                {cards.length > 0 && (
                     <div className="int-results-add">
                         <Button variant="accent" onPress={openAdd}>
                             Add Integration
@@ -285,16 +409,6 @@ export function IntegrationsStep({
                 reservedIds={reservedIds}
                 builder={builder}
                 onSignIn={signIn}
-            />
-            <RenameIntegrationModal
-                isOpen={renameTarget !== null}
-                currentName={renameTarget?.name ?? ''}
-                // Every OTHER row's display name is taken (mesh/catalog names included).
-                takenNames={rows
-                    .filter((row) => row.id !== renameTarget?.id)
-                    .map((row) => row.name)}
-                onClose={closeRename}
-                onRename={commitRename}
             />
         </>
     );

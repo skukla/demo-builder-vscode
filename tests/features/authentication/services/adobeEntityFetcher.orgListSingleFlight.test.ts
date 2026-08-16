@@ -112,7 +112,7 @@ describe('AdobeEntityFetcher — getOrganizationsSdkOnly single-flight', () => {
 
         expect(ra).toHaveLength(1);
         expect(rb).toHaveLength(1);
-        expect(ra[0].id).toBe('org-1');
+        expect(ra?.[0]?.id).toBe('org-1');
     });
 
     // A flight that is never released would wedge the fetcher for the session.
@@ -136,7 +136,7 @@ describe('AdobeEntityFetcher — getOrganizationsSdkOnly single-flight', () => {
         sdk.getOrganizations.mockRejectedValueOnce(new Error('network'));
 
         const first = await fetcher.getOrganizationsSdkOnly();
-        expect(first).toEqual([]);
+        expect(first).toBeUndefined();
 
         // A rejected flight must not be cached NOR left pending.
         sdk.getOrganizations.mockImplementationOnce(

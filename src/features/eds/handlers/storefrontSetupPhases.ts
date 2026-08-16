@@ -57,7 +57,7 @@ function createSetupServices(context: HandlerContext): SetupServices {
     return {
         githubRepoOps: new GitHubRepoOperations(githubTokenService, context.logger),
         githubFileOps: new GitHubFileOperations(githubTokenService, context.logger),
-        githubAppService: new GitHubAppService(githubTokenService, context.logger),
+        githubAppService: new GitHubAppService(githubTokenService, context.logger, daLiveTokenProvider),
         daLiveContentOps: new DaLiveContentOperations(daLiveTokenProvider, context.logger),
         helixService: new HelixService(context.logger, githubTokenService, daLiveTokenProvider),
         daLiveAuthService,

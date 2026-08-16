@@ -38,6 +38,7 @@ import type { Logger } from '@/types/logger';
  * Parameters for republishing storefront config.json
  */
 export interface RepublishParams {
+
     /** Project to republish config for */
     project: Project;
     /** VS Code secret storage for GitHub token */
@@ -75,6 +76,12 @@ export interface RepublishResult {
     cdnPublished?: boolean;
     /** Whether config.json was verified on CDN */
     cdnVerified?: boolean;
+    /**
+     * Why the CDN publish failed, when the GitHub push still succeeded. A
+     * caller that reports a bare "republished successfully" while this is set
+     * is telling the user the storefront is current when it is not.
+     */
+    cdnError?: string;
 }
 
 // ==========================================================
@@ -248,13 +255,21 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
         // To DISK, not just memory — see `persist` on RepublishParams.
         await persist(project);
 
-        logger.info('[StorefrontRepublish] Storefront config republished successfully');
+        if (syncResult.cdnError) {
+            logger.warn(
+                '[StorefrontRepublish] Republished to GitHub, but the CDN still serves the ' +
+                    `previous config.json: ${syncResult.cdnError}`,
+            );
+        } else {
+            logger.info('[StorefrontRepublish] Storefront config republished successfully');
+        }
 
         return {
             success: true,
             githubPushed: syncResult.githubPushed,
             cdnPublished: syncResult.cdnPublished,
             cdnVerified: syncResult.cdnVerified,
+            cdnError: syncResult.cdnError,
         };
     } catch (error) {
         const errorMessage = (error as Error).message;

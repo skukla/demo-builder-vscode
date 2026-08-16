@@ -207,6 +207,16 @@ export interface Project {
      */
     aiFileHashes?: Record<string, string>;
     /**
+     * When this storefront's runtime publish key was last registered with the
+     * shared PDP action (ISO 8601).
+     *
+     * Written ONLY by the activation renewal sweep, which uses it to decide
+     * whether a key is old enough to refresh. Helix keys expire in about a year;
+     * absent here means "never stamped", which the sweep treats as due — so every
+     * storefront created before the sweep existed renews on first activation.
+     */
+    publishKeyRegisteredAt?: string;
+    /**
      * Pinned projects sort first on the projects dashboard (alphabetical
      * within the pinned and unpinned groups). Set per-project via the
      * Pin/Unpin kebab item.

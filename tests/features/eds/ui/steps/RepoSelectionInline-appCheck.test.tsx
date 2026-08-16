@@ -18,6 +18,7 @@
 import {
     computeRepoValid,
     computeCodeSyncValid,
+    resolveCodeSyncView,
     shouldShowAppStatus,
 } from '@/features/eds/ui/steps/repoSelectionInline.helpers';
 import { isValidRepositoryName } from '@/core/validation/normalizers';
@@ -642,3 +643,66 @@ describe('shouldShowAppStatus (the row that explains a block)', () => {
         expect(shouldShowAppStatus('new', false, true)).toBe(false);
     });
 });
+
+/**
+ * Which canonical view the Code Sync sub-step shows.
+ *
+ * The body is a full-width view, so it uses the project's full-view vocabulary —
+ * `LoadingDisplay` while working, `SuccessStateDisplay` when verified,
+ * `StatusDisplay` + `NumberedInstructions` for the install flow — rather than the
+ * single `StatusSection` row it used to render, which left a large empty panel
+ * and, for an EXISTING repo, no install instructions at all.
+ *
+ * Kept a pure mapper so every state is cheap to pin; the renderer just switches.
+ */
+describe('resolveCodeSyncView', () => {
+    const status = (over: Partial<GitHubAppStatus> = {}): GitHubAppStatus => ({
+        isChecking: false,
+        isInstalled: null,
+        ...over,
+    });
+
+    it('shows the loading view while checking', () => {
+        expect(resolveCodeSyncView(status({ isChecking: true }), false).kind).toBe('checking');
+    });
+
+    it('shows the loading view while re-checking after an install', () => {
+        expect(resolveCodeSyncView(status({ isInstalled: false }), true).kind).toBe('checking');
+    });
+
+    it('shows the success view when the app is verified', () => {
+        expect(resolveCodeSyncView(status({ isInstalled: true, codeStatus: 200 }), false).kind).toBe(
+            'verified',
+        );
+    });
+
+    it('shows the install flow when the app is definitively missing', () => {
+        expect(
+            resolveCodeSyncView(status({ isInstalled: false, codeStatus: 404 }), false).kind,
+        ).toBe('needs-install');
+    });
+
+    it('distinguishes "could not verify" from "not installed"', () => {
+        // The 401 case: Adobe refused the credential, which says NOTHING about
+        // whether the app is installed. Rendering it as "missing" sends the user
+        // to reinstall an app that is already there.
+        expect(
+            resolveCodeSyncView(status({ isInstalled: false, codeStatus: undefined }), false).kind,
+        ).toBe('unverifiable');
+    });
+
+    it('treats a not-yet-checked status as checking, never as missing', () => {
+        expect(resolveCodeSyncView(status({ isInstalled: null }), false).kind).toBe('checking');
+    });
+
+    it('is INDEPENDENT of repo mode — an existing repo gets the install flow too', () => {
+        // The old modal rendered only for `repoMode === 'new'`, so an existing
+        // repo missing the app was blocked from continuing with no instructions
+        // anywhere on screen.
+        const view = resolveCodeSyncView(status({ isInstalled: false, codeStatus: 404 }), false);
+
+        expect(view.kind).toBe('needs-install');
+        expect(resolveCodeSyncView).toHaveLength(2); // (status, isRechecking) — no repoMode
+    });
+});
+

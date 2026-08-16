@@ -21,19 +21,31 @@
  * @module features/eds/services/edsResetService
  */
 
-import { getGitHubServices, configureDaLivePermissions, getDaLiveAuthService, ensureDaLiveAuth, surfaceOverlayRegistrationFailure } from '../handlers/edsHelpers';
-import { retryConfigWriteOnPropagation } from './configServiceRetry';
+import {
+    getGitHubServices,
+    configureDaLivePermissions,
+    getDaLiveAuthService,
+    ensureDaLiveAuth,
+} from '../handlers/edsHelpers';
 import { verifyCdnResources } from './configSyncService';
-import { buildSiteConfigParams, ConfigurationService } from './configurationService';
+import { ConfigurationService } from './configurationService';
 import { DaLiveContentOperations } from './daLiveContentOperations';
 import type { TokenProvider } from './daLiveOrgOperations';
 import { executeEdsPipeline } from './edsPipeline';
+import { publishConfigAndRegisterSite } from './edsResetConfigStep';
 import { redeployApiMesh } from './edsResetMeshHelper';
-import { extractResetParams, type EdsResetParams, type EdsResetProgress, type EdsResetResult, type ExtractParamsResult } from './edsResetParams';
+import {
+    extractResetParams,
+    type EdsResetParams,
+    type EdsResetProgress,
+    type EdsResetResult,
+    type ExtractParamsResult,
+} from './edsResetParams';
 import { resetRepoToTemplate } from './edsResetRepoHelper';
 import type { GitHubFileOperations } from './githubFileOperations';
 import type { GitHubTokenService } from './githubTokenService';
 import { HelixService } from './helixService';
+import { lostGrantsMessage } from './lostGrantsMessage';
 import { createPatchReport, addCodeResult, reportUnapplied } from './patchReportHelper';
 import { migrateStorefrontNamingIfNeeded } from './storefrontNameMigration';
 import { updateStorefrontState } from './storefrontStalenessDetector';
@@ -60,8 +72,13 @@ const MAX_REAUTH_ATTEMPTS = 2;
 
 /** Maps EDS pipeline operation names to wizard step numbers for progress reporting. */
 const PIPELINE_STEP_MAP: Record<string, number> = {
-    'content-clear': 8, 'content-copy': 8, 'block-library': 9,
-    'eds-settings': 10, 'cache-purge': 11, 'content-publish': 11, 'library-publish': 11,
+    'content-clear': 8,
+    'content-copy': 8,
+    'block-library': 9,
+    'eds-settings': 10,
+    'cache-purge': 11,
+    'content-publish': 11,
+    'library-publish': 11,
     'catalog-prewarm': 11,
 };
 
@@ -83,13 +100,19 @@ async function syncCodeAndPermissions(
     // Step 4: Sync code to CDN
     report(4, 'Syncing code to CDN...');
     // tokenProvider required: DA.live auth headers needed for unpublish during bulk sync
-    const helixServiceForCodeSync = new HelixService(context.logger, githubTokenService, tokenProvider);
+    const helixServiceForCodeSync = new HelixService(
+        context.logger,
+        githubTokenService,
+        tokenProvider,
+    );
     try {
         await helixServiceForCodeSync.previewCode(repoOwner, repoName, '/*');
         context.logger.info('[EdsReset] Code synced to CDN');
         report(4, 'Code synchronized');
     } catch (codeSyncError) {
-        context.logger.warn(`[EdsReset] Code sync request failed: ${(codeSyncError as Error).message}, continuing anyway`);
+        context.logger.warn(
+            `[EdsReset] Code sync request failed: ${(codeSyncError as Error).message}, continuing anyway`,
+        );
         report(4, 'Code sync pending...');
     }
 
@@ -98,79 +121,15 @@ async function syncCodeAndPermissions(
     const daLiveAuthService = getDaLiveAuthService(context.context);
     const userEmail = await daLiveAuthService.getUserEmail();
     if (userEmail) {
-        await configureDaLivePermissions(tokenProvider, daLiveOrg, daLiveSite, userEmail, context.logger);
+        await configureDaLivePermissions(
+            tokenProvider,
+            daLiveOrg,
+            daLiveSite,
+            userEmail,
+            context.logger,
+        );
     } else {
         context.logger.warn('[EdsReset] No user email available for permissions');
-    }
-}
-
-/**
- * Steps 6-7: Publish config.json to CDN and register site with Configuration Service.
- *
- * Step 6 (config.json publish) runs before Config Service registration so the bulk
- * code sync (previewCode '/*') has fully settled before we write to the Config Service.
- * The bulk sync is async on Helix's side and can race with a Config Service write if
- * we register immediately after.
- *
- * Step 7 (Config Service registration) runs after all code sync operations to avoid
- * a race where Helix's async bulk processing overwrites or clears the Config Service entry.
- */
-async function publishConfigAndRegisterSite(
-    { repoOwner, repoName, daLiveOrg, daLiveSite, byomOverlayUrl }: Pick<EdsResetParams, 'repoOwner' | 'repoName' | 'daLiveOrg' | 'daLiveSite' | 'byomOverlayUrl'>,
-    githubTokenService: GitHubTokenService,
-    tokenProvider: TokenProvider,
-    logger: Logger,
-    report: (step: number, message: string) => void,
-): Promise<void> {
-    // Step 6: Publish config.json to CDN
-    // No tokenProvider: publishing config.json only needs GitHub token (no DA.live auth)
-    report(6, 'Publishing config.json to CDN...');
-    logger.info(`[EdsReset] Publishing config.json to CDN for ${repoOwner}/${repoName}`);
-    const helixServiceForCode = new HelixService(logger, githubTokenService);
-    try {
-        await helixServiceForCode.previewCode(repoOwner, repoName, '/config.json');
-        logger.info('[EdsReset] config.json published to CDN');
-        report(6, 'config.json published');
-    } catch (configError) {
-        logger.warn(`[EdsReset] Failed to publish config.json: ${(configError as Error).message}`);
-        report(6, 'config.json publish failed, continuing...');
-    }
-
-    // Step 7: Update Configuration Service with current content source.
-    // Folder mapping is intentionally NOT configured — deprecated by Adobe
-    // (see aem.live/developer/byom). CitiSignal handles /products/{sku} via client-side routing.
-    report(7, 'Updating Configuration Service...');
-    const configService = new ConfigurationService(tokenProvider, logger);
-    try {
-        // Retry on 403 to ride out AEM Code Sync admin-role propagation, matching
-        // the create path. Without this, a transient propagation 403 on reset —
-        // the path used to REPAIR a broken storefront — silently drops the overlay.
-        const configResult = await retryConfigWriteOnPropagation(
-            () => configService.updateSiteConfig(
-                buildSiteConfigParams(repoOwner, repoName, daLiveOrg, daLiveSite, byomOverlayUrl),
-            ),
-            (attempt, total) => report(7, `Waiting for Configuration Service access (${attempt}/${total})...`),
-        );
-        if (configResult.success) {
-            logger.info('[EdsReset] Configuration Service updated');
-            report(7, 'Configuration Service updated');
-        } else if (byomOverlayUrl) {
-            // The overlay rides in this same config write. A failure here leaves
-            // PDPs resolving against da.live (404) — surface it so the user resets.
-            // Log-only helper (headless-safe); report() is the context-appropriate
-            // surface (UI progress or MCP tool output).
-            surfaceOverlayRegistrationFailure(logger);
-            report(7, '⚠️ Product pages not registered — reset again to enable product detail pages');
-        } else {
-            logger.warn(`[EdsReset] Configuration Service update warning: ${configResult.error}`);
-        }
-    } catch (configError) {
-        if (byomOverlayUrl) {
-            surfaceOverlayRegistrationFailure(logger);
-            report(7, '⚠️ Product pages not registered — reset again to enable product detail pages');
-        } else {
-            logger.warn(`[EdsReset] Configuration Service update skipped: ${(configError as Error).message}`);
-        }
     }
 }
 
@@ -230,12 +189,21 @@ async function runContentPipeline(
     report: (step: number, message: string) => void,
 ): Promise<number> {
     const {
-        repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
-        contentSource: contentSourceConfig, accountContentSource: accountContentSourceConfig,
+        repoOwner,
+        repoName,
+        daLiveOrg,
+        daLiveSite,
+        templateOwner,
+        templateRepo,
+        contentSource: contentSourceConfig,
+        accountContentSource: accountContentSourceConfig,
         includeBlockLibrary = false,
-        contentPatches, contentPatchSource,
-        codePatches, codePatchSource,
-        byomOverlayUrl, project,
+        contentPatches,
+        contentPatchSource,
+        codePatches,
+        codePatchSource,
+        byomOverlayUrl,
+        project,
     } = params;
 
     // Seed the pipeline's patch report with the canonical-phase code-patch
@@ -255,14 +223,26 @@ async function runContentPipeline(
         try {
             const pipelineResult = await executeEdsPipeline(
                 {
-                    repoOwner, repoName, daLiveOrg, daLiveSite, templateOwner, templateRepo,
-                    clearExistingContent: true, skipContent: !contentSourceConfig,
-                    contentSource: contentSourceConfig, accountContentSource: accountContentSourceConfig,
-                    contentPatches, contentPatchSource, includeBlockLibrary,
-                    codePatches, codePatchSource, patchReport,
+                    repoOwner,
+                    repoName,
+                    daLiveOrg,
+                    daLiveSite,
+                    templateOwner,
+                    templateRepo,
+                    clearExistingContent: true,
+                    skipContent: !contentSourceConfig,
+                    contentSource: contentSourceConfig,
+                    accountContentSource: accountContentSourceConfig,
+                    contentPatches,
+                    contentPatchSource,
+                    includeBlockLibrary,
+                    codePatches,
+                    codePatchSource,
+                    patchReport,
                     blockCollectionIds: repoResetResult.blockCollectionIds,
                     libraryContentSources: repoResetResult.libraryContentSources,
-                    purgeCache: true, skipPublish: false,
+                    purgeCache: true,
+                    skipPublish: false,
                     byomOverlayUrl,
                     project,
                 },
@@ -304,6 +284,8 @@ async function finalizeReset(
     report: (step: number, message: string) => void,
     filesReset: number,
     contentCopied: number,
+    /** False when step 7 could not write the site config — see below. */
+    configWritten = true,
 ): Promise<EdsResetResult> {
     const { repoOwner, repoName, project, verifyCdn = false, redeployMesh = false } = params;
 
@@ -315,12 +297,22 @@ async function finalizeReset(
             context.logger.info('[EdsReset] config.json verified on CDN');
         } else {
             report(11, 'Configuration propagating...');
-            context.logger.warn('[EdsReset] config.json CDN verification timed out - may need more time to propagate');
+            context.logger.warn(
+                '[EdsReset] config.json CDN verification timed out - may need more time to propagate',
+            );
         }
     }
 
     if (redeployMesh) {
-        const meshResult = await redeployApiMesh(project, repoOwner, repoName, context, report, filesReset, contentCopied);
+        const meshResult = await redeployApiMesh(
+            project,
+            repoOwner,
+            repoName,
+            context,
+            report,
+            filesReset,
+            contentCopied,
+        );
         if (meshResult) return meshResult; // Partial success
     }
 
@@ -333,7 +325,24 @@ async function finalizeReset(
     project.edsStorefrontStatusSummary = 'published';
     await context.stateManager.saveProject(project);
     context.logger.info('[EdsReset] EDS project reset successfully');
-    return { success: true, filesReset, contentCopied, meshRedeployed: redeployMesh };
+    // Rides out on a SUCCESSFUL result, like MESH_REDEPLOY_FAILED: the reset did
+    // the rest of its work, and calling it a failure would send the user to re-run
+    // something that mostly worked. But it must not be silent — the storefront
+    // cannot serve product pages until this one write lands.
+    return {
+        success: true,
+        filesReset,
+        contentCopied,
+        meshRedeployed: redeployMesh,
+        ...(configWritten
+            ? {}
+            : {
+                  errorType: 'CONFIG_WRITE_FAILED',
+                  error:
+                      'The site configuration could not be written, so product detail pages ' +
+                      'will not load. Run "Demo Builder: Repair Site Configuration" to finish it.',
+              }),
+    };
 }
 
 /** Map an unknown caught error to a structured EdsResetResult. */
@@ -378,7 +387,8 @@ export async function executeEdsReset(
         onProgress?.({ step, totalSteps, message });
     };
 
-    const { tokenService: githubTokenService, fileOperations: githubFileOps } = getGitHubServices(context);
+    const { tokenService: githubTokenService, fileOperations: githubFileOps } =
+        getGitHubServices(context);
     const daLiveContentOps = new DaLiveContentOperations(tokenProvider, context.logger);
 
     let filesReset = 0;
@@ -404,6 +414,12 @@ export async function executeEdsReset(
                 error: migrationResult.error,
             };
         }
+        if (migrationResult.lostGrants?.length) {
+            report(
+                0,
+                `⚠️ ${lostGrantsMessage(migrationResult.lostGrants, 'Storefront name migration completed')}`,
+            );
+        }
 
         // Step 1: Reset repo to template
         const repoResetResult = await resetRepoToTemplate(params, context, githubFileOps, report);
@@ -412,18 +428,35 @@ export async function executeEdsReset(
         // Steps 4-5: Sync code to CDN + configure permissions
         await syncCodeAndPermissions(params, context, githubTokenService, tokenProvider, report);
 
-        await publishConfigAndRegisterSite(
-            params, githubTokenService, tokenProvider, context.logger, report,
+        const { configWritten } = await publishConfigAndRegisterSite(
+            params,
+            githubTokenService,
+            tokenProvider,
+            context.logger,
+            report,
         );
 
         // Steps 8-11: Content Pipeline (with DA.live re-auth retry)
         contentCopied = await runContentPipeline(
-            params, repoResetResult, daLiveContentOps, githubFileOps,
-            githubTokenService, tokenProvider, context, report,
+            params,
+            repoResetResult,
+            daLiveContentOps,
+            githubFileOps,
+            githubTokenService,
+            tokenProvider,
+            context,
+            report,
         );
 
         // Steps 11-12: CDN verification + optional mesh redeploy + state persistence
-        return await finalizeReset(params, context, report, filesReset, contentCopied);
+        return await finalizeReset(
+            params,
+            context,
+            report,
+            filesReset,
+            contentCopied,
+            configWritten,
+        );
     } catch (error) {
         return handleResetError(error, context.logger);
     }

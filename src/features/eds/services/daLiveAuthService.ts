@@ -72,6 +72,20 @@ export class DaLiveAuthService {
     private logger = getLogger();
     private context: vscode.ExtensionContext;
 
+    private readonly signInEmitter = new vscode.EventEmitter<void>();
+
+    /**
+     * Fires once a token has been stored — the one moment a DA.live session is
+     * known to be good.
+     *
+     * Exists because work that NEEDS a session cannot reliably hang off
+     * activation. Measured 2026-08-15: the stored token was already expired at
+     * activation and was only refreshed 54 seconds later when the user began a
+     * reset, so the publish-key renewal sweep found no session and skipped every
+     * cold start.
+     */
+    readonly onDidSignIn = this.signInEmitter.event;
+
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
     }
@@ -144,13 +158,21 @@ export class DaLiveAuthService {
                 expiresAt: helperToken.expiresAt,
                 email: helperToken.email,
             });
-            this.logger.info('[DA.live Auth] Adopted token from da-auth-helper cache (~/.aem/da-token.json)');
+            this.logger.info(
+                '[DA.live Auth] Adopted token from da-auth-helper cache (~/.aem/da-token.json)',
+            );
         } catch (error) {
             // Caching is best-effort; the token is still usable for this call.
-            this.logger.warn(`[DA.live Auth] Could not cache da-auth-helper token: ${(error as Error).message}`);
+            this.logger.warn(
+                `[DA.live Auth] Could not cache da-auth-helper token: ${(error as Error).message}`,
+            );
         }
 
-        return { accessToken: helperToken.accessToken, expiresAt: helperToken.expiresAt, email: helperToken.email };
+        return {
+            accessToken: helperToken.accessToken,
+            expiresAt: helperToken.expiresAt,
+            email: helperToken.email,
+        };
     }
 
     /**
@@ -192,14 +214,18 @@ export class DaLiveAuthService {
                 if (email) {
                     // Cache the email for future use
                     await this.context.globalState.update(STATE_KEYS.userEmail, email);
-                    this.logger.debug(`[DA.live Auth] Fetched user email from IMS profile: ${email}`);
+                    this.logger.debug(
+                        `[DA.live Auth] Fetched user email from IMS profile: ${email}`,
+                    );
                     return email;
                 }
             } else {
                 this.logger.warn(`[DA.live Auth] IMS profile fetch failed: ${response.status}`);
             }
         } catch (error) {
-            this.logger.warn(`[DA.live Auth] Failed to fetch user email from IMS: ${(error as Error).message}`);
+            this.logger.warn(
+                `[DA.live Auth] Failed to fetch user email from IMS: ${(error as Error).message}`,
+            );
         }
 
         return null;
@@ -265,7 +291,9 @@ export class DaLiveAuthService {
                     }
                 }
             } else if (!opts?.expiresAt && !opts?.email) {
-                this.logger.warn('[DA.live Auth] Could not parse token payload for expiration/email');
+                this.logger.warn(
+                    '[DA.live Auth] Could not parse token payload for expiration/email',
+                );
             }
         }
 
@@ -280,6 +308,10 @@ export class DaLiveAuthService {
         this.logger.info('[DA.live Auth] Token stored successfully');
 
         this.mirrorToDaAuthHelper(token);
+
+        // Last, and deliberately after the mirror: listeners run work that needs
+        // a live session, and firing earlier would race the state they read.
+        this.signInEmitter.fire();
     }
 
     /**
@@ -294,7 +326,9 @@ export class DaLiveAuthService {
             return;
         }
         if (writeDaAuthHelperToken({ accessToken: token, expiresAt })) {
-            this.logger.debug('[DA.live Auth] Mirrored token to da-auth-helper cache (~/.aem/da-token.json)');
+            this.logger.debug(
+                '[DA.live Auth] Mirrored token to da-auth-helper cache (~/.aem/da-token.json)',
+            );
         }
     }
 
@@ -337,12 +371,8 @@ export class DaLiveAuthService {
         return this.context.globalState.get<boolean>(STATE_KEYS.setupComplete) || false;
     }
 
-    /**
-     * Dispose resources
-     *
-     * No resources to clean up after PKCE removal.
-     */
+    /** Dispose resources. */
     dispose(): void {
-        // No resources to clean up
+        this.signInEmitter.dispose();
     }
 }

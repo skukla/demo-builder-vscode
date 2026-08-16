@@ -22,7 +22,8 @@ export const SMART_404_MARKER_END = '// === end Smart 404 PDP rebuild ===';
  * are no-ops. Two distinct markers because the two snippets live in
  * different files and the idempotency check has to be per-file.
  */
-export const SMART_404_HEAD_MARKER_START = '<!-- === Smart 404 PDP eager redirect (Demo Builder) === -->';
+export const SMART_404_HEAD_MARKER_START =
+    '<!-- === Smart 404 PDP eager redirect (Demo Builder) === -->';
 export const SMART_404_HEAD_MARKER_END = '<!-- === end Smart 404 PDP eager redirect === -->';
 
 /**
@@ -260,6 +261,28 @@ export function replaceMarkedBlock(
  * rather than ship a broken page.
  */
 export function derivePrepublishUrl(overlayUrl: string): string | undefined {
+    return deriveSiblingActionUrl(overlayUrl, 'prepublish-pdp');
+}
+
+/**
+ * URL of the `register-publish-key` action, derived from the overlay URL the
+ * same way `derivePrepublishUrl` derives its sibling.
+ *
+ * The extension POSTs a site-scoped publish key here so `prepublish-pdp` can
+ * publish on a site whose admin API is locked — see
+ * `.rptc/backlog/pdp-prewarm-401-after-admin-pinning.md`.
+ */
+export function deriveRegisterKeyUrl(overlayUrl: string): string | undefined {
+    return deriveSiblingActionUrl(overlayUrl, 'register-publish-key');
+}
+
+/**
+ * Swap the overlay URL's trailing `/render-pdp` for a sibling action in the
+ * same package, dropping the query. Returns undefined for anything that is not
+ * a plausible overlay URL, so a misconfigured setting cannot build a request to
+ * an arbitrary host.
+ */
+function deriveSiblingActionUrl(overlayUrl: string, action: string): string | undefined {
     if (overlayUrl.length > TRIGGER_URL_MAX_LENGTH) return undefined;
     let parsed: URL;
     try {
@@ -269,6 +292,6 @@ export function derivePrepublishUrl(overlayUrl: string): string | undefined {
     }
     if (!/\/render-pdp\/?$/.test(parsed.pathname)) return undefined;
     parsed.search = '';
-    parsed.pathname = parsed.pathname.replace(/\/render-pdp\/?$/, '/prepublish-pdp');
+    parsed.pathname = parsed.pathname.replace(/\/render-pdp\/?$/, `/${action}`);
     return parsed.toString();
 }

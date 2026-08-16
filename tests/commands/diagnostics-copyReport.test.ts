@@ -87,6 +87,200 @@ describe('buildSummaryLines', () => {
         expect(text).not.toContain(TOKEN);
         expect(text).not.toMatch(/gho_[A-Za-z0-9]/);
     });
+
+    // The combination "admin-locked with no publish key" is silent everywhere
+    // else: it surfaces days later as "some product pages don't work", with
+    // nothing tying it back to the admin grant that caused it. The report is
+    // where that becomes visible on demand, so pin the verdict AND the remedy.
+    it('calls runtime PDP publishing BROKEN when the site is locked with no key', () => {
+        const report = makeReport({
+            configService: {
+                token: { present: true },
+                configService: { httpStatus: 200 },
+                pdpPublishing: { locked: true, keyCount: 0 },
+                verdict: 'ok',
+            },
+        } as Partial<DiagnosticsReport>);
+
+        const text = buildSummaryLines(report).join('\n');
+        expect(text).toContain('Runtime PDP publishing: BROKEN');
+        expect(text).toMatch(/404 on first visit/);
+        expect(text).toContain('Repair Site Configuration');
+    });
+
+    it('calls runtime PDP publishing OK when a key is registered', () => {
+        const report = makeReport({
+            configService: {
+                token: { present: true },
+                configService: { httpStatus: 200 },
+                pdpPublishing: { locked: true, keyCount: 1 },
+                verdict: 'ok',
+            },
+        } as Partial<DiagnosticsReport>);
+
+        const text = buildSummaryLines(report).join('\n');
+        expect(text).toContain('Runtime PDP publishing: OK');
+        expect(text).not.toContain('BROKEN');
+    });
+
+    // An unlocked site publishes anonymously, so no key is needed and its
+    // absence is not a finding.
+    it('does not report a problem when the site is not admin-locked', () => {
+        const report = makeReport({
+            configService: {
+                token: { present: true },
+                configService: { httpStatus: 200 },
+                pdpPublishing: { locked: false, keyCount: 0 },
+                verdict: 'ok',
+            },
+        } as Partial<DiagnosticsReport>);
+
+        const text = buildSummaryLines(report).join('\n');
+        expect(text).toContain('Runtime PDP publishing: OK (site admin API is open)');
+        expect(text).not.toContain('BROKEN');
+    });
+
+    // The site half and the action half can disagree, and the disagreement IS the
+    // diagnosis. A site holding a key that the action cannot read means either the
+    // registration never landed or the action was redeployed with a different
+    // ENCRYPTION_KEY — the one failure mode no other check in this report sees.
+    it('reports the action separately from the site, and names the encryption-key cause', () => {
+        const report = makeReport({
+            configService: {
+                token: { present: true },
+                configService: { httpStatus: 200 },
+                pdpPublishing: { locked: true, keyCount: 1, actionKey: { registered: false } },
+                verdict: 'ok',
+            },
+        } as Partial<DiagnosticsReport>);
+
+        const text = buildSummaryLines(report).join('\n');
+        // The site half still reads OK — one key IS registered on the site.
+        expect(text).toContain('Runtime PDP publishing: OK');
+        expect(text).toContain('Shared PDP action: BROKEN');
+        expect(text).toContain('ENCRYPTION_KEY');
+        expect(text).toContain('Repair Site Configuration');
+    });
+
+    it('reports the action OK when it holds a readable key', () => {
+        const report = makeReport({
+            configService: {
+                token: { present: true },
+                configService: { httpStatus: 200 },
+                pdpPublishing: { locked: true, keyCount: 1, actionKey: { registered: true } },
+                verdict: 'ok',
+            },
+        } as Partial<DiagnosticsReport>);
+
+        const text = buildSummaryLines(report).join('\n');
+        expect(text).toContain('Shared PDP action: OK');
+        expect(text).not.toContain('BROKEN');
+    });
+
+    it('does NOT call an unreachable action "no key"', () => {
+        // Saying "not registered" would send someone to re-register a key that is
+        // probably fine, and bury the fact that the service never answered.
+        const report = makeReport({
+            configService: {
+                token: { present: true },
+                configService: { httpStatus: 200 },
+                pdpPublishing: {
+                    locked: true,
+                    keyCount: 1,
+                    actionKey: { error: 'HTTP 503' },
+                },
+                verdict: 'ok',
+            },
+        } as Partial<DiagnosticsReport>);
+
+        const text = buildSummaryLines(report).join('\n');
+        expect(text).toContain('Shared PDP action: could not be reached (HTTP 503)');
+        expect(text).not.toContain('Shared PDP action: BROKEN');
+    });
+
+    it('says nothing about the action when BYOM is off', () => {
+        const report = makeReport({
+            configService: {
+                token: { present: true },
+                configService: { httpStatus: 200 },
+                pdpPublishing: { locked: true, keyCount: 1 },
+                verdict: 'ok',
+            },
+        } as Partial<DiagnosticsReport>);
+
+        const text = buildSummaryLines(report).join('\n');
+        expect(text).not.toContain('Shared PDP action');
+    });
+
+    it('names the Config Service org admins when the roster is readable', () => {
+        // "Ask an admin" is unactionable without a name. The roster read is the
+        // only thing in the report that can supply one.
+        const report = makeReport({
+            configService: {
+                token: { present: true },
+                configService: { httpStatus: 403 },
+                daLive: { httpStatus: 200 },
+                orgAdmins: { status: 'ok', emails: ['owner@adobe.com'] },
+                verdict: 'refused',
+            },
+        } as Partial<DiagnosticsReport>);
+
+        // MASKED: this report is pasted into tickets, so it must not carry
+        // colleague addresses. Recognisable, not publishable.
+        const text = buildSummaryLines(report).join('\n');
+        expect(text).toContain('Config admins: o****r@adobe.com');
+        expect(text).not.toContain('owner@adobe.com');
+    });
+
+    it('says the roster is UNREADABLE rather than printing an empty admin list', () => {
+        // Leah's shape. An empty list would read as "this org has no admins",
+        // a different and much scarier claim than "you cannot see them".
+        const report = makeReport({
+            configService: {
+                token: { present: true },
+                configService: { httpStatus: 403 },
+                daLive: { httpStatus: 200 },
+                orgAdmins: { status: 'not_authorized' },
+                verdict: 'refused',
+            },
+        } as Partial<DiagnosticsReport>);
+
+        const text = buildSummaryLines(report).join('\n');
+        expect(text).toContain('Config admins: not readable');
+        expect(text).not.toContain('Config admins: \n');
+    });
+
+    it('prints the org COUNT beside "Can List Orgs" when known', () => {
+        // "Can List Orgs: Yes" only means the command ran — `aio console org list`
+        // returning [] still prints Yes. On 2026-08-13 that hid the actual finding
+        // (a token reaching zero orgs) from the person reading the report.
+        const report = makeReport({
+            adobe: {
+                installed: true,
+                version: '11.0.1',
+                authConfigured: true,
+                tokenExpired: false,
+                canListOrgs: true,
+                organizationCount: 0,
+            } as DiagnosticsReport['adobe'],
+        });
+
+        expect(buildSummaryLines(report).join('\n')).toContain('Can List Orgs: Yes (0 orgs)');
+    });
+
+    it('keeps the plain Yes/No line when the count is unknown', () => {
+        const report = makeReport({
+            adobe: {
+                installed: true,
+                version: '11.0.1',
+                authConfigured: true,
+                tokenExpired: false,
+                canListOrgs: true,
+            } as DiagnosticsReport['adobe'],
+        });
+
+        expect(buildSummaryLines(report).join('\n')).toContain('Can List Orgs: Yes\n');
+    });
 });
 
 describe('runDiagnosticsAction', () => {
@@ -203,7 +397,8 @@ describe('storefront delivery section', () => {
         smart404Snippet: { installed: true, status: 200 },
         eagerRedirect: { installed: true, status: 200 },
         authoredTemplate: { path: '/products/default', status: 200, published: true },
-        verdict: 'Storefront delivery looks correct (fallback installed, template published). No SKU was checked.',
+        verdict:
+            'Storefront delivery looks correct (fallback installed, template published). No SKU was checked.',
     };
 
     const linesFor = (storefront: unknown): string =>
@@ -226,7 +421,8 @@ describe('storefront delivery section', () => {
         const out = linesFor({
             ...healthyProbe,
             authoredTemplate: { path: '/products/default', status: 404, published: false },
-            verdict: "PDP fallback installed, but the overlay's source template /products/default returned 404. Publish it or reset the storefront — every PDP renders from this page.",
+            verdict:
+                "PDP fallback installed, but the overlay's source template /products/default returned 404. Publish it or reset the storefront — every PDP renders from this page.",
         });
 
         expect(out).toContain('NOT PUBLISHED');

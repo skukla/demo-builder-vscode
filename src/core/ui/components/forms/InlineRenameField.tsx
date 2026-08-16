@@ -1,10 +1,23 @@
 /**
  * InlineRenameField — rename-in-place for a displayed name.
  *
- * SHARED by the projects-list card and the project dashboard title (two
- * consumers → core placement, like ApiAccessPicker). Display mode renders the
- * name (caller-supplied typography class) plus a hover/focus-revealed quiet
- * pencil; clicking the pencil swaps in a prefilled, focused, selected input.
+ * Display mode renders the name (caller-supplied typography class) plus a
+ * hover/focus-revealed quiet pencil; clicking the pencil swaps in a prefilled,
+ * focused, selected input.
+ *
+ * FIVE consumers render it → core placement, like ApiAccessPicker:
+ *   - `projects-dashboard/ui/components/ProjectCard`
+ *   - `projects-dashboard/ui/components/ProjectRow`
+ *   - `dashboard/ui/ProjectDashboardScreen` (the project title)
+ *   - `core/ui/components/integrations/IntegrationCard` (itself rendered on BOTH
+ *     the wizard's Integrations area and the dashboard's integrations page)
+ *   - `dashboard/ui/components/integrations/IntegrationDetailPanel`
+ *
+ * That list is enumerated rather than counted on purpose. It read "two
+ * consumers" until 2026-08-15, and the staleness was not cosmetic: it is what
+ * made a single hardcoded `aria-label` in here everyone's problem, unnoticed for
+ * as long as it was, because the label is invisible to sighted users. See
+ * `label` below.
  *
  * Enter and blur COMMIT through the async `onRename` (resolve null = success →
  * back to display mode, the parent's refreshed state supplies the new name;
@@ -38,6 +51,16 @@ export interface InlineRenameFieldProps {
     /** Class applied to the display-mode text (caller owns typography). */
     textClassName?: string;
     /**
+     * Accessible name for the editor input.
+     *
+     * Defaults to the project wording this field shipped with, so every existing
+     * consumer is unchanged. Pass your own when the thing being renamed is not a
+     * project — an integration card that announces "New project name" is telling
+     * a screen-reader user about the wrong object, and nothing on screen reveals
+     * it, because the label is invisible.
+     */
+    label?: string;
+    /**
      * Transform each keystroke as it's typed (e.g. project renames pass
      * `normalizeProjectName` so spaces → hyphens live, matching the create flow).
      * Omitted ⇒ raw input (the component stays name-agnostic).
@@ -53,6 +76,7 @@ export interface InlineRenameFieldProps {
  */
 export function InlineRenameField({
     name,
+    label = 'New project name',
     onRename,
     disabled = false,
     textClassName,
@@ -167,7 +191,7 @@ export function InlineRenameField({
             <input
                 ref={inputRef}
                 className="inline-rename-input"
-                aria-label="New project name"
+                aria-label={label}
                 value={value}
                 disabled={busy}
                 onChange={(event) => setValue(normalize(event.target.value))}

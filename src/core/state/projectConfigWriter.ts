@@ -73,6 +73,12 @@ function addOptionalManifestFields(manifest: Record<string, unknown>, project: P
     if (project.aiFileHashes && Object.keys(project.aiFileHashes).length > 0) {
         manifest.aiFileHashes = project.aiFileHashes;
     }
+    // Written by the publish-key renewal sweep only. Omitted when absent so an
+    // un-swept project stays "never stamped" and renews on the next activation
+    // rather than reading as freshly registered.
+    if (project.publishKeyRegisteredAt) {
+        manifest.publishKeyRegisteredAt = project.publishKeyRegisteredAt;
+    }
     if (project.pinned) {
         manifest.pinned = true;
     }

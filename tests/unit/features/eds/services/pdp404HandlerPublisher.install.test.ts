@@ -11,8 +11,10 @@
  * `scripts/delayed.js` rather than published as a DA.live `/404.html` page —
  * EDS strips `<script>` tags from authored content, which silently broke v1.
  *
- * The installer MUST be non-fatal at every step: any failure logs and returns
- * `{ installed: false, reason }`. These tests enforce that.
+ * The installer MUST be non-fatal at every step: any genuine failure logs and
+ * returns `{ installed: false, reason }`. An already-installed handler is a
+ * SUCCESS (`installed: true`) — consumers gate on `!installed` to mean "this
+ * storefront is missing PDP recovery". These tests enforce both.
  */
 
 import {
@@ -159,7 +161,9 @@ describe('installSmart404Handler', () => {
             daLiveSite
         );
 
-        expect(result.installed).toBe(false);
+        // Idempotent AND successful: nothing was written, and the handler is in
+        // place — which is what `installed` reports.
+        expect(result.installed).toBe(true);
         expect(result.reason).toBe('already installed');
         expect(mockGithub.createOrUpdateFile).not.toHaveBeenCalled();
     });
@@ -224,7 +228,10 @@ describe('installSmart404Handler', () => {
             daLiveSite
         );
 
-        expect(result).toEqual({ installed: false, reason: 'already installed' });
+        // installed: TRUE — the handler IS in place. Reporting false made a
+        // healthy storefront report "was not installed (already installed)"
+        // and finish WITH ERRORS.
+        expect(result).toEqual({ installed: true, reason: 'already installed' });
         const delayedCommits = mockGithub.createOrUpdateFile.mock.calls.filter(
             (c) => c[2] === 'scripts/delayed.js'
         );

@@ -229,6 +229,11 @@ multi-workspace.
 - `GitHubTokenService`, `GitHubRepoOperations`, `GitHubFileOperations`, `GitHubOAuthService` - GitHub integration (extracted modules)
 - `DaLiveAuthService`, `DaLiveContentOperations`, `DaLiveOrgOperations` - DA.live integration (extracted modules)
 - `ConfigurationService` - AEM Configuration Service (site registration)
+- `configServiceAccess` - the ADMIN-ROLE side of the Configuration Service: org roster read (`config/{org}.json`), site grant read/write (`config/{org}/sites/{site}/access/admin.json`), `probeConfigWriteAccess` (the 403→200 oracle), and the Code Sync setup deep link. Use `ensureSiteAdmin`/`revokeSiteAdmin` (read-merge-write); `grantSiteAdmin` is module-private BECAUSE it REPLACES the role list. `restoreSiteRoles` re-applies grants captured before a delete/re-register cycle; an edit refuses to save when the current list cannot be read, and reports masked `lostGrants` when they cannot be handed back
+- `configAccessRecovery` - `announceConfigAccess` (telegraphs access to log AND wizard before the write that depends on it), `pinSiteAdmin`, and `waitForConfigAccess` (the post-bootstrap verification poll)
+- `siteAccessManagerHeadless` - UI-free list/add/remove behind the Manage Site Access command; every mutation confirmed by a re-read
+- `siteConfigRegistrar` - the 409/401/403 site-registration protocol, shared by the setup wizard, the reset path and the repair command
+- `repairSiteConfigHeadless` - UI-free re-registration behind the Repair Site Configuration command; `verified` comes from a read-back, never from the write's status
 - `HelixService` - Helix Admin API (preview/publish/unpublish, API key management)
 - `CleanupService` - External resource cleanup on project deletion
 - `ToolManager` - Commerce demo ingestion tool management

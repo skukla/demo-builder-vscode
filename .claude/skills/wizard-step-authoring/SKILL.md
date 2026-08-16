@@ -23,6 +23,12 @@ description: Add or modify a wizard step, a Build-Your-Project area, or a sub-st
 
 ## Gotchas
 - Inline `[]`/`{}` defaults passed into hooks with effect deps create new references every render → infinite re-render loop. Use module-level constants (`EMPTY_PACKAGES`/`EMPTY_STACKS` in `IntegrationsStep.tsx`).
+- **The Integrations area renders the SHARED card**, `core/ui/components/integrations/IntegrationCard`
+  — the same one the dashboard's integrations page uses. Build a wizard-specific integration row
+  and you have rebuilt what drifted last time: the old `IntegrationResultRow` printed the shared
+  destination on EVERY row and grew its own rename modal. Give the card a `subline` (the wizard has
+  no deploy status) and derive its model with `toIntegrationCards`. The grid and detail drawer are
+  deliberately NOT reused — see `.rptc/complete/integrations-surface/overview.md`.
 - Adobe Spectrum `Flex` constrains width to 450px — use a plain `div` with flex styles for full-width wizard layouts (root `CLAUDE.md` gotcha).
 - An area not appearing for a stack is usually its `StepCondition` working, not a bug — `buildYourProjectAreas.ts` hides non-matching areas exactly like `filterStepsForStack` hides steps (no stack selected hides conditional areas too).
 - Never redesign `useProjectBuilder.onAppBuilderComponentToggle`'s mirror-write to `selectedOptionalDependencies` — the Adobe-auth/IO gating depends on it; its removal is owned elsewhere (see the hook's header).

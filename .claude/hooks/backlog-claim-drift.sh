@@ -35,7 +35,7 @@ cd "$DIR" || exit 0
 
 # A file cited by many items is a hub (dashboardHandlers.ts, constants.ts). Reporting
 # every item that name-drops it is how a hook stops being read — the trade named in
-# rules/20-data-installer-probe. Above this, the mention is vocabulary, not a claim.
+# a narrowly-scoped rule. Above this, the mention is vocabulary, not a claim.
 MAX_ITEMS_PER_FILE=3
 # Total lines of output. A wall of text is a wall people scroll past.
 MAX_REPORTED=6

@@ -3,10 +3,12 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ConfigureCommand } from './configure';
 import { DiagnosticsCommand } from './diagnostics';
+import { ManageSiteAccessCommand } from './manageSiteAccess';
 import { MigrateStorefrontNamesCommand } from './migrateStorefrontNames';
 import { OpenInClaudeCommand } from './openInClaude';
 import { OpenModernizationAgentCommand } from './openModernizationAgent';
 import { RefreshBlockLibraryCommand } from './refreshBlockLibrary';
+import { RepairSiteConfigurationCommand } from './repairSiteConfiguration';
 import { ShowPromptsPickerCommand } from './showPromptsPicker';
 import { BaseWebviewCommand } from '@/core/base';
 import { ResetAiOnboardingCommand } from '@/core/commands/ResetAiOnboardingCommand';
@@ -18,7 +20,6 @@ import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/co
 import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { ShowIntegrationsCommand } from '@/features/dashboard/commands/showIntegrations';
-import { ShowDataInstallerCommand } from '@/features/data-installer/commands/showDataInstaller';
 import { getBookmarkletSetupPageUrl } from '@/features/eds/ui/helpers/bookmarkletSetupPage';
 import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
 import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
@@ -126,19 +127,6 @@ export class CommandManager {
             await integrations.execute();
         });
 
-        // Data Installer surface (palette-opened). Deliberately NOT a tab
-        // replacement: the datapack catalog is global to the service rather than
-        // project-scoped, so browsing it should not close whatever the user was
-        // looking at.
-        const dataInstaller = new ShowDataInstallerCommand(
-            this.context,
-            this.stateManager,
-            this.logger,
-        );
-        this.registerCommand('demoBuilder.showDataInstaller', async () => {
-            await dataInstaller.execute();
-        });
-
         // Load Project (from tree view click)
         this.registerCommand('demoBuilder.loadProject', async (...args: unknown[]) => {
             const projectPath = args[0] as string;
@@ -234,6 +222,32 @@ export class CommandManager {
         );
         this.registerCommand('demoBuilder.refreshBlockLibrary', () =>
             refreshBlockLibrary.execute(),
+        );
+
+        // Manage Site Access — who administers the storefront's Configuration
+        // Service entry. Palette-visible on purpose: the person who needs to run
+        // it is often NOT the person whose project is broken (a teammate grants
+        // the role on someone else's behalf), so it cannot live only on a
+        // project-scoped surface.
+        const manageSiteAccess = new ManageSiteAccessCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.manageSiteAccess', () => manageSiteAccess.execute());
+
+        // Repair Site Configuration — the retry for a refused overlay
+        // registration. Separate from Manage Site Access because they are
+        // different jobs: that one changes WHO may write, this one performs the
+        // write that was refused, then republishes so the fix reaches the live
+        // storefront.
+        const repairSiteConfiguration = new RepairSiteConfigurationCommand(
+            this.context,
+            this.stateManager,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.repairSiteConfiguration', () =>
+            repairSiteConfiguration.execute(),
         );
 
         // Check Updates

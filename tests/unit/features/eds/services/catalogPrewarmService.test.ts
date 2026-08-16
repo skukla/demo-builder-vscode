@@ -11,7 +11,12 @@
 
 import { pickSampleSku, prewarmCatalog } from '@/features/eds/services/catalogPrewarmService';
 import type { Project } from '@/types/base';
-import { catalogPage, makeAccsProject, mockLogger } from './catalogPrewarmService.testUtils';
+import {
+    catalogPage,
+    makeAccsProject,
+    makePublisher,
+    mockLogger,
+} from './catalogPrewarmService.testUtils';
 
 const ACCS_OVERLAY =
     'https://example.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp?org=skukla&site=citisignal-b2b';
@@ -30,6 +35,7 @@ describe('prewarmCatalog — gate / skip cases', () => {
             undefined,
             DA_ORG,
             DA_SITE,
+            makePublisher(),
             mockLogger as never
         );
         expect(result).toEqual({
@@ -48,6 +54,7 @@ describe('prewarmCatalog — gate / skip cases', () => {
             'not-a-url',
             DA_ORG,
             DA_SITE,
+            makePublisher(),
             mockLogger as never
         );
         expect(result.skipped).toBe(true);
@@ -65,6 +72,7 @@ describe('prewarmCatalog — gate / skip cases', () => {
             ACCS_OVERLAY,
             DA_ORG,
             DA_SITE,
+            makePublisher(),
             mockLogger as never
         );
 
@@ -87,10 +95,76 @@ describe('prewarmCatalog — gate / skip cases', () => {
             ACCS_OVERLAY,
             DA_ORG,
             DA_SITE,
+            makePublisher(),
             mockLogger as never
         );
         expect(result.skipped).toBe(true);
         expect(result.skipReason).toContain('no commerce endpoint');
+    });
+});
+
+describe('prewarmCatalog — authenticated publish path', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        global.fetch = jest.fn();
+    });
+
+    // Storefront setup pins a site admin, and any `access.admin` role closes the
+    // whole Helix admin API to anonymous callers. Prewarm used to POST to the
+    // external prepublish-pdp action with no headers at all, so every SKU 401'd
+    // (0/39 in the field, beta.129). It must publish through the extension's
+    // own authenticated Helix path, which already sends the DA.live bearer.
+    it('publishes each SKU through the authenticated publisher, never an anonymous POST', async () => {
+        (global.fetch as jest.Mock).mockResolvedValueOnce(
+            catalogPage([{ sku: 'SKU1', urlKey: 'orchard-2' }])
+        );
+        const publisher = { previewAndPublishPage: jest.fn().mockResolvedValue(undefined) };
+
+        const result = await prewarmCatalog(
+            makeAccsProject(),
+            ACCS_OVERLAY,
+            DA_ORG,
+            DA_SITE,
+            publisher,
+            mockLogger as never
+        );
+
+        expect(publisher.previewAndPublishPage).toHaveBeenCalledWith(
+            DA_ORG,
+            DA_SITE,
+            '/products/orchard-2/sku1'
+        );
+        // The ONLY network call is the catalog enumeration — no unauthenticated
+        // publish POST may survive this change.
+        expect((global.fetch as jest.Mock).mock.calls).toHaveLength(1);
+        expect(result).toEqual({ attempted: 1, succeeded: 1, failed: 0, skipped: false });
+    });
+
+    it('counts a thrown publish as failed without aborting the rest', async () => {
+        (global.fetch as jest.Mock).mockResolvedValueOnce(
+            catalogPage([
+                { sku: 'SKU1', urlKey: 'a' },
+                { sku: 'SKU2', urlKey: 'b' },
+            ])
+        );
+        const publisher = {
+            previewAndPublishPage: jest
+                .fn()
+                .mockRejectedValueOnce(new Error('401 Unauthorized'))
+                .mockResolvedValueOnce(undefined),
+        };
+
+        const result = await prewarmCatalog(
+            makeAccsProject(),
+            ACCS_OVERLAY,
+            DA_ORG,
+            DA_SITE,
+            publisher,
+            mockLogger as never
+        );
+
+        expect(publisher.previewAndPublishPage).toHaveBeenCalledTimes(2);
+        expect(result).toEqual({ attempted: 2, succeeded: 1, failed: 1, skipped: false });
     });
 });
 
@@ -121,16 +195,19 @@ describe('prewarmCatalog — happy path', () => {
             })
             .mockResolvedValue({ ok: true });
 
+        const publisher = makePublisher();
         const result = await prewarmCatalog(
             makeAccsProject(),
             ACCS_OVERLAY,
             DA_ORG,
             DA_SITE,
+            publisher,
             mockLogger as never
         );
 
         expect(result).toEqual({ attempted: 3, succeeded: 3, failed: 0, skipped: false });
-        expect(global.fetch).toHaveBeenCalledTimes(4); // 1 enumeration + 3 prewarm
+        expect(global.fetch).toHaveBeenCalledTimes(1); // enumeration only
+        expect(publisher.previewAndPublishPage).toHaveBeenCalledTimes(3);
     });
 
     it('lowercases urlKey and sku in the pre-warm path (Helix content-bus normalizes lowercase)', async () => {
@@ -152,12 +229,22 @@ describe('prewarmCatalog — happy path', () => {
             })
             .mockResolvedValue({ ok: true });
 
-        await prewarmCatalog(makeAccsProject(), ACCS_OVERLAY, DA_ORG, DA_SITE, mockLogger as never);
+        const publisher = makePublisher();
+        await prewarmCatalog(
+            makeAccsProject(),
+            ACCS_OVERLAY,
+            DA_ORG,
+            DA_SITE,
+            publisher,
+            mockLogger as never
+        );
 
-        // Second call is the prewarm POST. URL should encode the lowercase path.
-        const prewarmCall = (global.fetch as jest.Mock).mock.calls[1];
-        const url = prewarmCall[0] as string;
-        expect(url).toContain('path=%2Fproducts%2Forchard-2%2Forchard2');
+        // The published path must be lowercase in both segments.
+        expect(publisher.previewAndPublishPage).toHaveBeenCalledWith(
+            DA_ORG,
+            DA_SITE,
+            '/products/orchard-2/orchard2'
+        );
     });
 
     it('underscore-escapes SKUs with spaces/special chars so the path matches getProductLink (ADR-007)', async () => {
@@ -186,11 +273,18 @@ describe('prewarmCatalog — happy path', () => {
             })
             .mockResolvedValue({ ok: true });
 
-        await prewarmCatalog(makeAccsProject(), ACCS_OVERLAY, DA_ORG, DA_SITE, mockLogger as never);
+        const publisher = makePublisher();
+        await prewarmCatalog(
+            makeAccsProject(),
+            ACCS_OVERLAY,
+            DA_ORG,
+            DA_SITE,
+            publisher,
+            mockLogger as never
+        );
 
-        const url = (global.fetch as jest.Mock).mock.calls[1][0] as string;
         const expectedPath = '/products/cmlodestar/yale_20unoplus-series_20a';
-        expect(url).toContain(`path=${encodeURIComponent(expectedPath)}`);
+        expect(publisher.previewAndPublishPage).toHaveBeenCalledWith(DA_ORG, DA_SITE, expectedPath);
     });
 
     it('paginates through multiple pages of catalog results', async () => {
@@ -228,18 +322,20 @@ describe('prewarmCatalog — happy path', () => {
             })
             .mockResolvedValue({ ok: true });
 
+        const publisher = makePublisher();
         const result = await prewarmCatalog(
             makeAccsProject(),
             ACCS_OVERLAY,
             DA_ORG,
             DA_SITE,
+            publisher,
             mockLogger as never
         );
 
         expect(result.attempted).toBe(4);
         expect(result.succeeded).toBe(4);
-        // 2 enumeration pages + 4 prewarm
-        expect(global.fetch).toHaveBeenCalledTimes(6);
+        expect(global.fetch).toHaveBeenCalledTimes(2); // 2 enumeration pages
+        expect(publisher.previewAndPublishPage).toHaveBeenCalledTimes(4);
     });
 
     it('reports progress via onProgress callback as each SKU completes', async () => {
@@ -266,6 +362,7 @@ describe('prewarmCatalog — happy path', () => {
             ACCS_OVERLAY,
             DA_ORG,
             DA_SITE,
+            makePublisher(),
             mockLogger as never,
             onProgress
         );
@@ -295,6 +392,7 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
             ACCS_OVERLAY,
             DA_ORG,
             DA_SITE,
+            makePublisher(),
             mockLogger as never
         );
 
@@ -313,6 +411,7 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
             ACCS_OVERLAY,
             DA_ORG,
             DA_SITE,
+            makePublisher(),
             mockLogger as never
         );
 
@@ -338,6 +437,7 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
             ACCS_OVERLAY,
             DA_ORG,
             DA_SITE,
+            makePublisher(),
             mockLogger as never
         );
 
@@ -346,25 +446,21 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
     });
 
     it('counts per-SKU failures without aborting the pipeline', async () => {
-        // 3 SKUs: prewarm 1 succeeds, 2 fails (500), 3 throws
-        (global.fetch as jest.Mock)
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({
-                    data: {
-                        productSearch: {
-                            items: [
-                                { productView: { sku: 'S1', urlKey: 'p1' } },
-                                { productView: { sku: 'S2', urlKey: 'p2' } },
-                                { productView: { sku: 'S3', urlKey: 'p3' } },
-                            ],
-                            page_info: { total_pages: 1, current_page: 1 },
-                        },
-                    },
-                }),
-            })
-            .mockResolvedValueOnce({ ok: true }) // S1
-            .mockResolvedValueOnce({ ok: false, status: 500 }) // S2
+        // 3 SKUs: publish 1 succeeds, 2 and 3 throw (401 from a pinned-admin
+        // site, and a transport error). `previewAndPublishPage` signals failure
+        // by throwing rather than by a falsy return.
+        (global.fetch as jest.Mock).mockResolvedValueOnce(
+            catalogPage([
+                { sku: 'S1', urlKey: 'p1' },
+                { sku: 'S2', urlKey: 'p2' },
+                { sku: 'S3', urlKey: 'p3' },
+            ])
+        );
+
+        const publisher = makePublisher();
+        publisher.previewAndPublishPage
+            .mockResolvedValueOnce(undefined) // S1
+            .mockRejectedValueOnce(new Error('401 Unauthorized')) // S2
             .mockRejectedValueOnce(new Error('network')); // S3
 
         const result = await prewarmCatalog(
@@ -372,6 +468,7 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
             ACCS_OVERLAY,
             DA_ORG,
             DA_SITE,
+            publisher,
             mockLogger as never
         );
 
@@ -409,6 +506,7 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
             ACCS_OVERLAY,
             DA_ORG,
             DA_SITE,
+            makePublisher(),
             mockLogger as never
         );
 

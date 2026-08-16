@@ -10,10 +10,17 @@
 jest.mock('vscode', () => ({
     env: { openExternal: jest.fn().mockResolvedValue(true) },
     Uri: { parse: jest.fn((s: string) => s) },
+    EventEmitter: require('../../../helpers/vscodeEventEmitter').VscodeEventEmitter,
 }));
 
 jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() })),
+    getLogger: jest.fn(() => ({
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        trace: jest.fn(),
+    })),
 }));
 
 jest.mock('@/features/eds/services/daAuthHelperToken', () => ({
@@ -22,7 +29,10 @@ jest.mock('@/features/eds/services/daAuthHelperToken', () => ({
 }));
 
 import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
-import { readDaAuthHelperToken, writeDaAuthHelperToken } from '@/features/eds/services/daAuthHelperToken';
+import {
+    readDaAuthHelperToken,
+    writeDaAuthHelperToken,
+} from '@/features/eds/services/daAuthHelperToken';
 import type { ExtensionContext } from 'vscode';
 
 const readMock = readDaAuthHelperToken as jest.Mock;

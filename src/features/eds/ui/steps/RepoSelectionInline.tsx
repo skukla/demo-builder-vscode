@@ -18,11 +18,11 @@
  * @module features/eds/ui/steps/RepoSelectionInline
  */
 
-import { Button, Divider, Text } from '@adobe/react-spectrum';
+import { Button, Text } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 import React, { useEffect, useCallback, useState, useRef } from 'react';
 import {
-    GitHubAppInstallModal,
+    CodeSyncStatusView,
     NewRepoForm,
     ResetToTemplateOption,
     buildAppStatusFromResult,
@@ -37,7 +37,6 @@ import {
     type RepoCreationState,
 } from './repoSelectionInline.helpers';
 import { SelectionStepContent } from '@/core/ui/components/selection';
-import { StatusSection } from '@/core/ui/components/wizard';
 import { useSelectionStep } from '@/core/ui/hooks';
 import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
 import {
@@ -62,22 +61,12 @@ export interface RepoSelectionInlineProps extends Pick<BaseStepProps, 'state' | 
     onCodeSyncValidChange: (valid: boolean) => void;
 }
 
-/** Get GitHub App status text for the inline (new-repo) status badge. */
-function getGitHubAppStatusText(status: GitHubAppStatus): string {
-    if (status.isInstalled === null) return 'Not checked';
-    if (status.isInstalled) return 'Verified';
-    return status.codeStatus === undefined ? 'Registering...' : 'Not installed';
-}
 
-/** Get GitHub App status indicator for the inline (new-repo) status badge. */
-function getGitHubAppStatusIndicator(
-    status: GitHubAppStatus,
-): 'completed' | 'empty' | 'pending' | 'error' {
-    if (status.isChecking) return 'pending';
-    if (status.isInstalled === true) return 'completed';
-    if (status.isInstalled === false && status.codeStatus === undefined) return 'pending';
-    if (status.isInstalled === false) return 'error';
-    return 'empty';
+
+/** Split `owner/repo`, or undefined when either half is missing. */
+function parseRepoFullName(fullName?: string): { owner: string; name: string } | undefined {
+    const [owner, name] = (fullName ?? '').split('/');
+    return owner && name ? { owner, name } : undefined;
 }
 
 /** True when an existing repo is selected against a loaded, non-empty repo list. */
@@ -121,8 +110,6 @@ export function RepoSelectionInline({
     });
     const [isRechecking, setIsRechecking] = useState(false);
     const [recheckMessage, setRecheckMessage] = useState('Checking installation status...');
-    const [hasRecheckFailed, setHasRecheckFailed] = useState(false);
-    const [isModalDismissed, setIsModalDismissed] = useState(false);
     const lastCheckedRepo = useRef<string | null>(null);
 
     const {
@@ -199,7 +186,6 @@ export function RepoSelectionInline({
     const resetLocalState = useCallback(() => {
         setRepoCreationState({ isCreating: false, isCreated: false });
         setGitHubAppStatus({ isChecking: false, isInstalled: null });
-        setIsModalDismissed(false);
         lastCheckedRepo.current = null;
     }, []);
 
@@ -330,23 +316,28 @@ export function RepoSelectionInline({
     }, [repoName, edsConfig?.templateOwner, edsConfig?.templateRepo, updateEdsConfig]);
 
     const handleCheckAgain = useCallback(async () => {
-        if (repoMode !== 'new' || !edsConfig?.createdRepo) return;
+        // Both repo modes. This gate used to require a freshly CREATED repo, so
+        // the only re-check affordance was inert for an existing one — which,
+        // with the install flow also gated on `new`, left a selected repo whose
+        // app was missing blocked with nothing to press.
+        const target = edsConfig?.createdRepo
+            ? { owner: edsConfig.createdRepo.owner, name: edsConfig.createdRepo.name }
+            : parseRepoFullName(selectedRepo?.fullName);
+        if (!target) return;
 
         setIsRechecking(true);
-        setHasRecheckFailed(false);
         setRecheckMessage('Checking installation status...');
         setGitHubAppStatus({ isChecking: true, isInstalled: null });
 
-        const { status, failed } = await pollGitHubAppInstallation(
-            edsConfig.createdRepo.owner,
-            edsConfig.createdRepo.name,
+        const { status } = await pollGitHubAppInstallation(
+            target.owner,
+            target.name,
             setRecheckMessage,
         );
 
         setGitHubAppStatus(status);
-        setHasRecheckFailed(failed);
         setIsRechecking(false);
-    }, [repoMode, edsConfig?.createdRepo]);
+    }, [edsConfig?.createdRepo, selectedRepo?.fullName]);
 
     const handleOpenInstallPage = useCallback(() => {
         if (githubAppStatus.installUrl) {
@@ -371,7 +362,6 @@ export function RepoSelectionInline({
     // Reset GitHub App status when repo mode changes.
     useEffect(() => {
         setGitHubAppStatus({ isChecking: false, isInstalled: null });
-        setIsModalDismissed(false);
         lastCheckedRepo.current = null;
     }, [repoMode, selectedRepo]);
 
@@ -549,33 +539,20 @@ export function RepoSelectionInline({
     // Present for BOTH repo modes since 2026-08-06 (see storefrontSectionOrder). The
     // existing-repo gate used to be deferred to StorefrontSetup, after the pipeline
     // had written to the repo; it now runs at selection.
+
     return (
         <div className="w-full relative">
             {showAppStatus && (
-                <>
-                    <Divider size="S" marginTop="size-300" marginBottom="size-200" />
-                    <StatusSection
-                        label="AEM Code Sync App"
-                        value={getGitHubAppStatusText(githubAppStatus)}
-                        status={getGitHubAppStatusIndicator(githubAppStatus)}
-                        emptyText="Installation required"
-                    />
-                </>
+                <CodeSyncStatusView
+                    createdRepo={edsConfig?.createdRepo}
+                    selectedRepoFullName={selectedRepo?.fullName}
+                    status={githubAppStatus}
+                    isRechecking={isRechecking}
+                    recheckMessage={recheckMessage}
+                    onCheckAgain={handleCheckAgain}
+                    onOpenInstallPage={handleOpenInstallPage}
+                />
             )}
-
-            <GitHubAppInstallModal
-                repoMode={repoMode}
-                repoCreationState={repoCreationState}
-                createdRepo={edsConfig?.createdRepo}
-                githubAppStatus={githubAppStatus}
-                isRechecking={isRechecking}
-                isModalDismissed={isModalDismissed}
-                recheckMessage={recheckMessage}
-                hasRecheckFailed={hasRecheckFailed}
-                onCheckAgain={handleCheckAgain}
-                onOpenInstallPage={handleOpenInstallPage}
-                onDismiss={() => setIsModalDismissed(true)}
-            />
         </div>
     );
 }

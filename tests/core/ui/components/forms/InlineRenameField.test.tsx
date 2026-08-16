@@ -35,12 +35,15 @@ function renderField(props: Partial<Props> = {}): {
         <Provider theme={defaultTheme} colorScheme="light">
             {/* Simulates the hosting click-to-open card tile. */}
             <div onClick={outerClick} onKeyDown={outerKeyDown} data-testid="host-tile">
+                {/* Spread AFTER the defaults so a new prop reaches the component
+                    without editing this helper. The list used to be enumerated by
+                    hand, which meant a prop added to the component silently never
+                    arrived here — the test then failed as "element not found",
+                    pointing at the component rather than at this line. */}
                 <InlineRenameField
                     name={props.name ?? 'My Project'}
+                    {...props}
                     onRename={onRename}
-                    disabled={props.disabled}
-                    textClassName={props.textClassName}
-                    normalize={props.normalize}
                 />
             </div>
         </Provider>
@@ -301,6 +304,29 @@ describe('InlineRenameField', () => {
                 expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
             });
             expect(onRename).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    // The editor input hardcoded `aria-label="New project name"` for every
+    // consumer. By the time this was caught the field had FIVE — including both
+    // integration cards, where renaming an integration announced "New project
+    // name". Sighted users never saw it; the label is invisible.
+    describe('accessible name of the editor', () => {
+        it('defaults to the project wording, so existing consumers are unchanged', () => {
+            renderField();
+            enterEditMode();
+
+            expect(screen.getByRole('textbox', { name: 'New project name' })).toBeInTheDocument();
+        });
+
+        it('uses the caller’s label when given one', () => {
+            renderField({ label: 'New integration name' });
+            enterEditMode();
+
+            expect(
+                screen.getByRole('textbox', { name: 'New integration name' })
+            ).toBeInTheDocument();
+            expect(screen.queryByRole('textbox', { name: 'New project name' })).toBeNull();
         });
     });
 

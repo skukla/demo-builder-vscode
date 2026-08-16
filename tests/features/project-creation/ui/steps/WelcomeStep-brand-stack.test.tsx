@@ -330,6 +330,49 @@ describe('WelcomeStep - Package + Stack Selection', () => {
             );
         });
 
+        it('clears both packages’ configDefault keys from componentConfigs on a package change', () => {
+            // Regression (2026-08-13, leah-b2b-demo): package defaults are FILL-only in
+            // useComponentConfig, so a package change must clear the outgoing and
+            // incoming packages' configDefault keys here — otherwise the old brand's
+            // store codes survive the switch and the new brand's never apply. Keys the
+            // packages don't own are untouched.
+            const stateWithConfigs = {
+                ...baseState,
+                projectName: 'valid-project',
+                selectedPackage: 'citisignal',
+                componentConfigs: {
+                    'adobe-commerce-paas': {
+                        ADOBE_COMMERCE_WEBSITE_CODE: 'citisignal',
+                        ADOBE_COMMERCE_STORE_CODE: 'citisignal_store',
+                        COMMERCE_URL: 'https://example.test',
+                    },
+                },
+            };
+
+            renderWithProvider(
+                <WelcomeStep
+                    state={stateWithConfigs as WizardState}
+                    updateState={mockUpdateState}
+                    setCanProceed={mockSetCanProceed}
+                    packages={mockPackages}
+                    stacks={mockStacks}
+                />
+            );
+
+            const packageCards = screen.getAllByTestId('package-card');
+            const defaultCard = packageCards.find((card) => card.textContent?.includes('Default'));
+            defaultCard?.click();
+
+            expect(mockUpdateState).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    selectedPackage: 'default',
+                    componentConfigs: {
+                        'adobe-commerce-paas': { COMMERCE_URL: 'https://example.test' },
+                    },
+                })
+            );
+        });
+
         it('should NOT open a modal when a package card is clicked (mark-and-Continue)', () => {
             // Given: A WelcomeStep — clicking a package selects it; no architecture modal
             const stateWithNoSelection = {
