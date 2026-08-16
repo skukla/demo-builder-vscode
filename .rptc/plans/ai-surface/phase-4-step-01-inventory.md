@@ -66,47 +66,56 @@ Builder work, so an agent cannot set up the thing the App Builder tools then ope
 nothing". So the non-interactive path exists and is deliberate, and a tool must use it. That is a
 design note, not a blocker.
 
-## The worklist for steps 03–04
+## The worklist for steps 03–04 — all six READ IN FULL
 
-**Build (returns an outcome, capability not otherwise reachable):**
+Reading dropped two of the six. Every pass has shrunk this list and none has grown it.
 
-| Handler | Returns | Note |
+### Build (4)
+
+| Tool | Handler returns | Notes from reading |
 |---|---|---|
-| `create-github-repo` | `{owner, name, url, fullName}` | closes the create/delete asymmetry |
-| `check-project-apis` | `{hasMesh}` | narrow, but answers "is a mesh already provisioned" |
-| `ensure-mesh-api-subscribed` | `{apis}` | check first whether `add_console_apis` already covers it |
-| `checkCompatibility` | `{compatible}` | pre-flight before `create_project` |
-| `create-adobe-project` | **not examined** | via the `quiet` path; prerequisite for all App Builder work |
-| `create-adobe-workspace` | **not examined** | same |
+| `create_github_repo` | `{owner, name, url, fullName}` | No `sendMessage`, no modal. Creates **from a template** — needs `templateOwner`/`templateRepo`, so the tool must say so. Blocks on `waitForContent`, so the outcome is real rather than a queued job. |
+| `create_adobe_project` | `{success, data: project}` | Structured errors: `AUTH_FORBIDDEN` on a permission re-check, and a named quota message. Its two `sendMessage` calls are a best-effort UI refresh in a `try/catch` — and headless `sendMessage` is a verified no-op, so they do nothing here. |
+| `create_adobe_workspace` | `{success, data: workspace}` | Same shape. Takes an optional `projectId` used only for the refresh; creation itself targets the selected project, so the tool must set that first. |
+| `check_compatibility` | `{compatible}` | Pure registry read of a frontend/backend pair. Cheap, and a useful pre-flight before `create_project`. |
 
-**Do not build (capability already reachable):** `loadComponents`, `get-components-data` and
-`loadDependencies` return the component catalog, which `list_components` / `list_demo_packages` /
-`list_stacks` already expose. `exportProject` delegates to `exportProjectSettings`, which
-`export_project_settings` already exposes. `get-projects` and `get-workspaces` duplicate
-`list_adobe_projects` / `list_workspaces`. All verified by reading both sides, not by name.
+The three create tools want the **confirm gate** — they provision real cloud resources — and the
+two Adobe ones must go through `requireAdobeAuth`'s `quiet` path so no modal appears.
 
-**Do not build (disqualified):** the 21 dispatch-only, 15 bare-status and 1 interactive. Fixing
-those means changing the HANDLER to return its payload — a bigger change than a tool, and one the
-webview would have to keep working through. Worth doing per-handler when a real need appears, not
-as a sweep.
+### Dropped by reading (2)
+
+**`check-project-apis` — disqualified.** Its return shape (`{hasMesh}`) looked fine and hid the
+problem: it shells out to `aio plugins`, `aio console projects get` and `aio api-mesh:get`, which
+read the CLI's **process-global console selection**. That is the exact conflict phase 0
+documented — the extension deliberately stopped writing that selection, so it holds whatever
+another process last left there. As a tool it would answer about the wrong project, confidently.
+`check_mesh` already covers the question properly.
+
+**`ensure-mesh-api-subscribed` — overlaps, decide before building.** It reads well (explicit
+`orgId`/`projectId`/`workspaceId`, ids validated against injection, structured auth pre-flight),
+but `add_console_apis` already subscribes Adobe APIs on the workspace credential. Whether the
+mesh API is reachable that way depends on credential type — see the `appbuilder-api-subscription`
+skill, which records that mesh needs a specific one. **Answer that before writing a second tool
+for the same job.**
 
 ## Honest limits of this pass
 
-**Three of 53 handlers were actually read**: `handleGetGitHubRepos`, `handleCheckGitHubAuth` (both
-confirmed dispatch-only) and `handleLoadComponents` (confirmed a duplicate of `list_components`).
+**Nine of 53 handlers have been read in full**: the six on the build list, plus
+`handleGetGitHubRepos` and `handleCheckGitHubAuth` (both dispatch-only) and `handleLoadComponents`
+(a duplicate of `list_components`). Reading the six dropped two of them.
 
 Everything else rests on scripts:
 
 | Depth | Count | What it proves |
 |---|---|---|
-| Read in full | 3 | the verdict |
-| Return shape extracted | 15 | what a success path returns, and whether `sendMessage` appears in a 2,600-char window |
+| Read in full | 9 | the verdict |
+| Return shape extracted | 9 | what a success path returns, and whether `sendMessage` appears in a 2,600-char window |
 | Signal extraction only | 35 | a pattern matched, nothing more |
 
-That is thin for a phase that decides what to build, and the session producing it had three
-static classifiers give confident wrong answers — one of which ran `republish` against a live
-storefront. **Read each handler on the build list before building it**, and treat the 35 as a
-list of maybes rather than a settled exclusion. The cost of a wrong exclusion is a missed
+The build list has now been read, which is what that instruction asked for — and it removed two
+of six, one of them for a reason no return-shape check could see (`check-project-apis` shells to
+the `aio` CLI's global selection). Treat the 35 signal-only exclusions as maybes rather than a
+settled result. The cost of a wrong exclusion is a missed
 opportunity; the cost of a wrong inclusion is a tool that cannot fail.
 - The `addIntegrationFlowHandlers` entries resolved to their `requireAdobeAuth` wrapper rather
   than the inner handler. Read since: the wrapper prompts unless `quiet`, and two of the five
