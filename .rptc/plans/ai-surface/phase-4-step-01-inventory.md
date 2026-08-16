@@ -74,16 +74,17 @@ design note, not a blocker.
 `log`, `ready`, `renameAppBuilderComponent`) — every one classified dispatch-only or interactive,
 and `sign_in` already covers the auth capability.
 
-### Build (6)
+### Build (7 tools, covering 10 handlers)
 
-| Tool | Why it qualifies |
-|---|---|
-| `create_github_repo` | Returns `{owner, name, url, fullName}`; no `sendMessage`, no modal; blocks on `waitForContent`. Creates **from a template** — needs `templateOwner`/`templateRepo`. |
-| `create_adobe_project` | Returns the created project. Structured `AUTH_FORBIDDEN` + quota errors. Its `sendMessage` calls are a best-effort refresh, and headless `sendMessage` is a verified no-op. |
-| `create_adobe_workspace` | Same shape. Targets the SELECTED project, so the tool must set that first. |
-| `check_github_app` | Returns `{isInstalled, …}` for an owner/repo — whether AEM Code Sync is installed. **No tool exists**, and it is the first thing to check when publishing silently fails. |
-| `check_repo_readiness` | Returns `{readiness}` — whether a repo can serve as a storefront. **No tool exists.** Pairs with `create_github_repo`. |
-| `check_compatibility` | Pure registry read of a frontend/backend pair. Cheap pre-flight before `create_project`. |
+| Tool | Covers | Why it qualifies |
+|---|---|---|
+| `create_github_repo` | `create-github-repo` | Returns `{owner, name, url, fullName}`; no `sendMessage`, no modal; blocks on `waitForContent`. Creates **from a template**. |
+| `create_adobe_project` | `create-adobe-project` | Returns the created project. Structured `AUTH_FORBIDDEN` + quota errors; headless `sendMessage` is a verified no-op. |
+| `create_adobe_workspace` | `create-adobe-workspace` | Same shape. Targets the SELECTED project, so the tool must set that first. |
+| `check_github_app` | `check-github-app` | `{isInstalled, …}` for an owner/repo. **No tool exists**; first thing to check when publishing silently fails. |
+| `check_repo_readiness` | `check-repo-readiness` | `{readiness}` — can this repo serve as a storefront. **No tool exists.** |
+| `validate_component_selection` | `checkCompatibility`, `validateSelection`, `loadDependencies` | One question, one tool — see the merge below. |
+| `get_component_requirements` | `get-components-data` (narrowed) | The env vars, dependencies and services one component needs. `list_components` returns only `{id, name}`. |
 
 The three create tools take a **confirm gate**; the two Adobe ones must use `requireAdobeAuth`'s
 `quiet` path so no modal appears.
@@ -92,14 +93,42 @@ The three create tools take a **confirm gate**; the two Adobe ones must use `req
 `loadDependencies` all answer "will this combination work?" — one `validate_component_selection`
 tool is likelier right than three near-identical ones.
 
-### Decide before building (4)
+### The four decided (read 2026-08-16)
 
-| Handler | The question |
-|---|---|
-| `ensure-mesh-api-subscribed` | Does `add_console_apis` already cover it? Depends on credential type — `appbuilder-api-subscription` has the answer. |
-| `addAppBuilderComponent` | Substantive (id/source/name/apis) and no tool exists, but not read in full. |
-| `check-prerequisites` | `prerequisites` has NO agent surface at all. Worth a deliberate decision, not a default no. |
-| `get-components-data` | The components half duplicates `list_components`; the `envVars`/`services` half answers "what does this component need?", which nothing does. A narrow tool may be right. |
+**`ensure-mesh-api-subscribed` — NO.** Not a duplicate of `add_console_apis`, but not an agent
+tool either. `add_console_apis` requires a CURRENT PROJECT and reconciles the persisted API union;
+this one takes explicit `orgId`/`projectId`/`workspaceId` because it runs in the wizard BEFORE a
+project is persisted. An agent creating a project gets the mesh subscription inside
+`create_project`; for an existing project `add_console_apis` covers it. Exposing this would mainly
+offer a way to subscribe APIs to an arbitrary workspace outside any project — more footgun than
+capability.
+
+**`addAppBuilderComponent` — NO.** It disqualifies itself in a branch: on a guard failure it runs
+`vscode.commands.executeCommand('demoBuilder.configureProject')` and returns `{success: true}`. An
+agent would receive success while a panel opened and nothing was added. Everything before that
+branch is sound, so this is a refactor candidate rather than a permanent no.
+
+**`check-prerequisites` — NO as written, but the capability needs a tool.** It streams each result
+through `context.sendMessage('prerequisite-status', …)` and stores the outcome in
+`context.sharedState`, returning a bare status. Headless it would do all the real work, send every
+result into a no-op, discard the state and return `{success:true}`. `prerequisites` is the only
+feature with NO agent surface at all, and "is this machine set up to build a demo?" is a fair
+question for an agent to ask — so the answer is a NEW headless read over the same check services,
+not this handler. **Filed as follow-up work, not part of step 03/04.**
+
+**`get-components-data` — YES, narrowed.** Verified live: `list_components` returns `{id, name}`
+and nothing else, so "what does this component require?" is unanswerable today. Exposing the whole
+wizard blob would duplicate the catalog; the narrow tool is
+`get_component_requirements(componentId)` returning that component's required/optional env vars,
+dependencies and services. Index/detail applied properly — `list_components` is the index.
+
+### The merge
+
+`check_compatibility`, `validateSelection` and `loadDependencies` all answer "will this
+combination work?" over the same `dependencyResolver`. They become one tool,
+**`validate_component_selection(frontend, backend, dependencies?)`**, returning compatibility, the
+resolved dependency chain, and any validation failures. Three near-identical tools would make an
+agent guess which to call.
 
 ### Disqualified, by reason
 

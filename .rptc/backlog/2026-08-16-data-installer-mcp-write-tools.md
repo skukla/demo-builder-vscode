@@ -109,3 +109,23 @@ is worth its own item** — the same inflation applies to every other map it rep
 > question that decides whether each can be a tool is whether its return value carries the outcome
 > or only the dispatch. Start with `validate-datapack-import`, which is the safest (a dry run) and
 > establishes the response shape the others follow.
+
+---
+
+# Related: prerequisites has no agent surface at all
+
+Filed alongside the above, from the same phase-4 pass. Not data-installer work, but the same
+shape of gap and too small for its own file.
+
+`prerequisites` is the only feature with **zero** MCP tools and **zero** skills. Its three
+handlers (`check-prerequisites`, `continue-prerequisites`, `install-prerequisite`) are all
+disqualified as written: `handleCheckPrerequisites` streams each result through
+`context.sendMessage('prerequisite-status', …)` and stores the outcome in `context.sharedState`,
+returning a bare status. Headless it does all the real work, sends every result into a no-op,
+discards the state, and returns `{success:true}`.
+
+"Is this machine set up to build a demo?" is a fair question for an agent, and today it cannot
+ask it. The answer is a NEW headless read over the same check services — not exposing the
+streaming handler. Scope it as one read (`check_prerequisites`) returning per-prerequisite
+`{name, required, installed, version, problem?}`; leave installation behind the UI, since
+`install-prerequisite` runs package managers.
