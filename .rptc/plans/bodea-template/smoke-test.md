@@ -138,6 +138,7 @@ These checks are the delta; everything above still applies.
 | 7d Nav | Every nav link resolves; no `/apparel`, `/shop`, `/order-status` | content copy pulled a stale nav |
 | 7e Category pages | `/racks`, `/switching`, `/wi-fi`, `/cables`, `/cooling`, `/critical-power` each render products | the store group root category is not the Bodea root |
 | 7f Rack finder | Author a page with `guided-selling-luxe` (`schema-url` `/data/guided-selling/bodea-rack-finder.json`); complete the quiz; result tiles show real products | a wrong `categoryPath` renders empty tiles, and the block cannot tell that from an empty category |
+| 7h Commerce routes | `/cart`, `/checkout`, `/quick-order`, `/search`, `/wishlist`, `/order-status` all render | they were missing entirely until 2026-08-16 — a content copy from a stale page list would drop them again |
 | 7g **Repricing — the unproven one** | With results on screen, sign in as a **group 7** buyer. Tiles repaint **without a reload**: a rack goes 7,500 -> 6,750 | `bodea/customer-group-changed` never fired, or the old vendored script shipped |
 
 7g is the only check here that exercises code verified statically but never at runtime.

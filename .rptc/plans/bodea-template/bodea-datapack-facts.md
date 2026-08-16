@@ -342,3 +342,41 @@ contract pricing already flows into the result tiles for free.
 signing in mid-quiz will NOT reprice the tiles already rendered. It needs a page reload
 today. Clearing that cache in the existing `authenticated`/`auth change` handler would make
 "take the quiz as a guest, sign in, watch it reprice" work live; not done yet.
+
+## The step-04 migration dropped 13 storefront pages (found and fixed 2026-08-16)
+
+**A site's sitemap is not its page set.** The step-04 content migration built its page list
+from Jen's `/sitemap.json` (87 entries). Her site *serves* `/cart` and `/checkout` — byte
+identical to the b2b template's — but her sitemap does not list them. Everything absent from
+that index was therefore never copied, silently.
+
+Diffing `bodea-source` against the canonical `boilerplate-b2b` sitemap (121 entries), ignoring
+the `/fr/` locale and `/customer/*` (supplied by the account overlay at create time), found 13
+functional pages with **no source at all**:
+
+`/cart` · `/checkout` · `/b2b/quote-checkout` · `/quick-order` · `/search` · `/wishlist` ·
+`/order-status` · `/order-details` · `/create-return` · `/return-details` · `/store-switcher` ·
+`/sales/guest/view/` · `/sales/order/view/`
+
+Add-to-cart worked; viewing the cart 404'd. All 13 are now copied from `boilerplate-b2b`,
+published, and verified to carry the same block classes as the template (`commerce-cart`,
+`commerce-b2b-quick-order`, `product-list-page`, `commerce-wishlist`, `commerce-search-order`).
+
+Two consequences worth keeping:
+
+- **`/order-status` was removed from the nav as a "dead link" when the real fault was the
+  missing page.** A 404 on an inherited link means "find out why", not "delete the link".
+  It is restored, and `/quick-order` added — a B2B feature that previously had no route in.
+- **Trailing-slash sitemap entries are index pages.** `/sales/guest/view/` fetches as
+  `sales/guest/view/index.plain.html`; the bare path 404s.
+
+## Link checks that only match `href=` miss half the dead links
+
+Several blocks (`features-grid`, `catalog-highlights`, `product-highlights`) store their URLs
+as **plain text in key-value cells**, not as anchors. A crawler matching `href="..."` reports
+full closure while those paths are dead. Re-scanning the stripped text for bare `/path`
+strings found 14 dead references the href-only pass could not see, including a homepage
+headline still reading "Partner Enablement Session Let's Go!" from one of Jen's demo sessions.
+
+Scan the tag-stripped text, not just attributes. Current state: 30 pages, 21 references,
+zero dead.
