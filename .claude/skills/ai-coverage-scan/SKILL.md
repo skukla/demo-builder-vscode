@@ -15,14 +15,17 @@ bash .claude/skills/ai-coverage-scan/scan.sh          # summary
 bash .claude/skills/ai-coverage-scan/scan.sh --list   # + every uncovered feature
 ```
 
-## Baseline — 2026-08-16, `develop` @ beta.131 **after `feature/data-installer` merged**
+## Baseline — 2026-08-16, `develop` @ beta.131 **after the data-installer credential broker**
 
 | | |
 |---|---|
-| UI-reachable handler types | 142 |
+| UI-reachable handler types | 143 |
 | Reachable by an MCP tool | 35 |
-| Uncovered | 107 (25 UI-only, **82 agent-relevant**) |
-| **Agent-relevant gap** | **82 — 58% of the surface** |
+| Uncovered | 108 (25 UI-only, **83 agent-relevant**) |
+| **Agent-relevant gap** | **83 — 58% of the surface** |
+
+Measured twice hours apart: 142/35/82 before a develop rebase, 143/35/83 after. The rebase
+is not optional before quoting this — 15 commits had landed in between.
 
 Concentrated in `importHandlers` (22), `ProjectCreationHandlerRegistry` (13),
 `dashboardHandlers` (11) and `edsHandlers` (11) — data import, project creation, dashboard
