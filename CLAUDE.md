@@ -112,6 +112,7 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 - `appbuilder-component-authoring` — App Builder catalog entries + the deploy/subscribe spine (axis-filter semantics, full-union subscription PUT, guard chain, moving test pins)
 - `ai-context-authoring` — change the generated AI bundle (skills/AGENTS.md/.mcp.json/ai-defaults) without stranding existing projects: the four gate seams + the AI_CONTEXT_VERSION bump discipline
 - `mcp-tool-authoring` — add an in-extension MCP tool (headless-safe handler + descriptor row, no writes-hiding-in-reads, count-pinned tests, mcp-server.md sync)
+- `mcp-live-probe` — call the RUNNING MCP server over its socket: which BUILD is serving, a tool's real response and token cost, destructive calls refused by default. The counterpart to `mcp-tool-authoring` — that one says how to write a tool, this one proves it works against reality instead of against its own fixtures
 - `spectrum-webview-ui` — load-bearing Spectrum/webview UI gotchas (dimension-token scale, Menu sections/submenus, Flex-450px, box-sizing, dashboard notices)
 - `webview-test-authoring` — write/fix a React/Spectrum webview test: mock preamble, `advanceTimers` contract, hoist-safe `.testUtils` extraction, div-role card queries, mocked-vs-bundled-JSON trap (test-side counterpart to `spectrum-webview-ui`)
 - `dream` — out-of-band curation pass over memory/skills/CLAUDE.md: mine transcripts for recurring failures + staleness, propose evidence-backed changes (runs at release cuts; proposes, never applies)

@@ -39,10 +39,51 @@ as a side channel is tolerated; a handler that NEEDS interaction doesn't qualify
   credential for exactly this reason).
 - Persist state only AFTER the side effect succeeds (`add_console_apis` pattern).
 
+## Not every tool is a descriptor row
+
+Tools that need services rather than a handler map are registered **directly** on the
+server, in `src/features/ai/server/*Tools.ts` (`cloudResourceTools`, `storefrontTools`,
+`contentAuthoringTools`, …), wired from `extension.ts`. File-based tools that must stay
+`vscode`-free live in `src/mcp-server.ts` behind `registerProjectTools`.
+
+Pick by what the tool needs: a handler map → descriptor row; an EDS/Adobe service →
+a `*Tools.ts` module; the project directory only → `mcp-server.ts`.
+
+## Fixtures for anything across a network boundary must come from a LIVE response
+
+**The most expensive mistake available here, and it goes green.** Twice in one session
+(2026-08-16) a fixture was composed from what the WRITING side produces, code was written to
+match it, and every check passed:
+
+- `plugins.da.unsafeHTML` is what `promote_block_to_library` writes — and is present on **4 of
+  78** real components. The other 74 use `rows`/`columns` or `name`/`type`/`fields`. A tool
+  built on the fixture would have failed on 95% of blocks.
+- DA.live listings prefix entry paths with **`/{org}/{site}`**, not `/{site}`. The fixture used
+  one segment, so `list_content` returned paths no sibling tool accepted.
+
+Neither `tsc` nor `typecheck:tests` can catch this: an invented shape is still valid JSON and
+still typechecks. Capture the real thing with `mcp-live-probe`, then say in the test file where
+it came from so nobody "simplifies" it back.
+
+Same class as `webview-test-authoring`'s mocked-vs-bundled-JSON trap.
+
+## Verify against the running server before calling it done
+
+Green tests mean the tool matches its fixtures. Use `mcp-live-probe` to check it matches
+reality — and to read `serverInfo`, which names the build that is actually answering
+(the socket is shared and last-writer-wins, so "I just rebuilt" is not evidence).
+Extension-host changes need **F5**; Cmd+R reloads only the webview.
+
+To check a bundle, grep the **tool-name string literal**, never the registration function —
+esbuild renames identifiers, so `grep registerContentAuthoringTools dist/extension.js` returns
+0 on a perfectly good build.
+
 ## What else moves (the checklist)
 
 - `dashboardHandlersMap.test.ts` pins the EXACT handler count — bump it with the
   arithmetic comment.
+- `inExtensionMcpServer.test.ts` pins the `registerProjectTools` tool list BY NAME
+  ("serves the N project tools over the socket") — add yours and update the count word.
 - Descriptor suites: `readDescriptors`/`actionDescriptors`/`toolDescriptors` tests.
 - `docs/systems/mcp-server.md` — the descriptor-driven tool list (§ "Descriptor-driven
   tools") and, if agent-facing behavior changed, the flow sections.

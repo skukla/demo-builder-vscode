@@ -15,18 +15,22 @@ bash .claude/skills/ai-coverage-scan/scan.sh          # summary
 bash .claude/skills/ai-coverage-scan/scan.sh --list   # + every uncovered feature
 ```
 
-## Baseline — 2026-08-16, `develop` @ beta.131
+## Baseline — 2026-08-16, `develop` @ beta.131 **after `feature/data-installer` merged**
 
 | | |
 |---|---|
-| UI-reachable handler types | 106 |
-| Reachable by an MCP tool | 29 |
-| Uncovered | 77 (24 UI-only, **53 agent-relevant**) |
-| **Agent-relevant gap** | **53 — 50% of the surface** |
+| UI-reachable handler types | 142 |
+| Reachable by an MCP tool | 35 |
+| Uncovered | 107 (25 UI-only, **82 agent-relevant**) |
+| **Agent-relevant gap** | **82 — 58% of the surface** |
 
-Concentrated in `ProjectCreationHandlerRegistry` (13), `dashboardHandlers` (11) and
-`edsHandlers` (11) — project creation, dashboard actions and storefront work, which is most of
-what an SC does.
+Concentrated in `importHandlers` (22), `ProjectCreationHandlerRegistry` (13),
+`dashboardHandlers` (11) and `edsHandlers` (11) — data import, project creation, dashboard
+actions and storefront work, which is most of what an SC does.
+
+**The previous baseline (106 / 29 / 53, 50%) rotted within hours** when `7c7fcc43` merged the
+data installer, which added 36 handler types and 6 tools at once. Both halves move on a feature
+merge; that is why the re-measure warning below is not boilerplate.
 
 **Re-measure before trusting this table.** Backlog entries in this repo rot precisely because
 nobody re-runs the number; that is what the scan is for.
@@ -59,11 +63,24 @@ sibling modules with verbatim re-exports, and the scan correctly reported no cha
 
 ## What the scan CANNOT tell you
 
+**A tool that bypasses the handler maps is invisible to it.** Measured 2026-08-16: adding seven
+content-authoring and block-knowledge tools (`read_page`, `write_page`, `publish_page`,
+`list_content`, `delete_page`, `read_published_page`, `get_block_authoring_shape`) moved this
+number **by zero** — they adapt EDS services and the filesystem directly rather than dispatching
+into a map, so there is no handler type for them to cover. Before that work an agent could not
+write a page at all; the scan reported the same 82 either way.
+
+So the number answers "how much of the WEBVIEW's surface can an agent reach", which is not the
+same question as "what can an agent do". Do not read a flat number as no progress, and do not
+expect direct-registered tools (`src/features/ai/server/*Tools.ts`, `mcp-server.ts`) to move it.
+
 It measures **reachability, not usability**. A feature reachable through a tool may still be
 expensive to use — the tool may return too little, forcing the agent to derive what the
-extension already knows. This session measured a subagent spending **~121,000 tokens** deriving
-block authoring shapes that sit in `component-definition.json`, a file no tool exposes. That
-gap is invisible to this scan: `list_blocks` exists, so blocks read as "covered".
+extension already knows. A subagent was measured spending **~121,000 tokens** deriving block
+authoring shapes that sit in `component-definition.json`. That gap was invisible to this scan:
+`list_blocks` existed, so blocks read as "covered". **Closed 2026-08-16** by
+`get_block_authoring_shape`, which answers for one block in ~92 bytes — and, per the section
+above, moved this scan's number by zero.
 
 So pair it with the judgement question the count cannot answer: *for each covered feature, does
 using it cost what it should?* See
