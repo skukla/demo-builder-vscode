@@ -1,7 +1,7 @@
 import { View, Flex, Heading, Button, Text } from '@adobe/react-spectrum';
 import React, { useEffect, useRef, useState } from 'react';
 import { loadStacks } from '../helpers/brandStackLoader';
-import { getSelectablePackages } from '../helpers/demoPackageLoader';
+import { getPackageById, getSelectablePackages } from '../helpers/demoPackageLoader';
 import {
     filterComponentConfigsForStackChange,
     buildStackChangeStateReset,
@@ -108,8 +108,15 @@ export function WizardContainer({
     // NOTE: Must be declared BEFORE useWizardState so stacks can be passed for step filtering
     const [packages, setPackages] = useState<DemoPackage[]>([]);
     const [stacks, setStacks] = useState<Stack[]>([]);
+    // Distinguishes "no packages yet" from "loaded, and this one is absent" —
+    // the hidden-package effect below cannot tell them apart from an empty array,
+    // and without this it fires a lookup for EVERY project before the list lands.
+    const [packagesLoaded, setPackagesLoaded] = useState(false);
     useEffect(() => {
-        getSelectablePackages().then(setPackages);
+        getSelectablePackages().then((loaded) => {
+            setPackages(loaded);
+            setPackagesLoaded(true);
+        });
         loadStacks().then(setStacks);
     }, []);
 
@@ -144,6 +151,44 @@ export function WizardContainer({
         editProject,
         stacks,
     });
+
+    /**
+     * A project already ON a hidden package must still see it.
+     *
+     * `getSelectablePackages()` above drops anything marked `hidden`, which is
+     * right for the NEW-project picker and wrong for a project that already uses
+     * one: Configure rendered no brand at all, so the project appeared to have
+     * lost its package. `demoPackageLoader`'s own docstring already states the
+     * rule — "a hidden package must still resolve by id so existing projects keep
+     * working" — the wizard just never applied it.
+     *
+     * Appends only the CURRENT package, never every hidden one: hidden still
+     * means "not selectable", so this restores what the project has without
+     * offering a switch to something unreleased.
+     *
+     * Separate from the mount effect because `packages` loads before
+     * `useWizardState` runs (stacks feed step filtering), so `state` does not
+     * exist up there.
+     */
+    const currentPackageId = state.selectedPackage;
+    useEffect(() => {
+        // Wait for the selectable list — an empty `packages` on first render is
+        // "not loaded", not "absent", and acting on it looks up every project's
+        // package needlessly. A control test caught exactly that.
+        if (!packagesLoaded || !currentPackageId) return;
+        if (packages.some((p) => p.id === currentPackageId)) return;
+        let cancelled = false;
+        void getPackageById(currentPackageId).then((own) => {
+            if (!cancelled && own) {
+                setPackages((prev) =>
+                    prev.some((p) => p.id === own.id) ? prev : [...prev, own],
+                );
+            }
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [currentPackageId, packages, packagesLoaded]);
 
     // Reconcile committed custom library selections against current settings.
     // Runs on mount (edit mode may have stale saved libraries) and when
