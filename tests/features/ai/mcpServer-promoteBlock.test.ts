@@ -39,7 +39,10 @@ const mockSyncAndPublish = jest.fn();
 jest.mock('@/features/eds/services/storefrontSyncService', () => ({
     syncAndPublish: (...args: unknown[]) => mockSyncAndPublish(...args),
     PushRejectedError: class PushRejectedError extends Error {
-        constructor(message: string) { super(message); this.name = 'PushRejectedError'; }
+        constructor(message: string) {
+            super(message);
+            this.name = 'PushRejectedError';
+        }
     },
 }));
 
@@ -59,11 +62,17 @@ const DA_LIVE_SITE = 'user-site';
 const GITHUB_OWNER = 'user-org';
 const GITHUB_SITE = 'user-site';
 
-function manifestWith(opts: {
-    componentDef?: Array<{ id: string; title: string; plugins?: { da?: { unsafeHTML?: string } } }>;
-    includeStorefront?: boolean;
-    includeDaLive?: boolean;
-} = {}) {
+function manifestWith(
+    opts: {
+        componentDef?: Array<{
+            id: string;
+            title: string;
+            plugins?: { da?: { unsafeHTML?: string } };
+        }>;
+        includeStorefront?: boolean;
+        includeDaLive?: boolean;
+    } = {}
+) {
     const { componentDef, includeStorefront = true, includeDaLive = true } = opts;
     const compDef = {
         groups: [
@@ -80,17 +89,17 @@ function manifestWith(opts: {
             status: 'ready',
             componentInstances: includeStorefront
                 ? {
-                    'eds-storefront': {
-                        path: STOREFRONT_PATH,
-                        metadata: includeDaLive
-                            ? {
-                                daLiveOrg: DA_LIVE_ORG,
-                                daLiveSite: DA_LIVE_SITE,
-                                githubRepo: `${GITHUB_OWNER}/${GITHUB_SITE}`,
-                            }
-                            : {},
-                    },
-                }
+                      'eds-storefront': {
+                          path: STOREFRONT_PATH,
+                          metadata: includeDaLive
+                              ? {
+                                    daLiveOrg: DA_LIVE_ORG,
+                                    daLiveSite: DA_LIVE_SITE,
+                                    githubRepo: `${GITHUB_OWNER}/${GITHUB_SITE}`,
+                                }
+                              : {},
+                      },
+                  }
                 : {},
         },
         componentDefinition: compDef,
@@ -107,12 +116,18 @@ function manifestWith(opts: {
  * Pass `componentDefinition` to control the comp-def the handler reads;
  * pass `blockDirExists: false` to make the block source stat() reject.
  */
-function mockHappyPathFilesystem(opts: {
-    componentDef?: Array<{ id: string; title: string; plugins?: { da?: { unsafeHTML?: string } } }>;
-    blockDirExists?: boolean;
-    includeStorefront?: boolean;
-    includeDaLive?: boolean;
-} = {}) {
+function mockHappyPathFilesystem(
+    opts: {
+        componentDef?: Array<{
+            id: string;
+            title: string;
+            plugins?: { da?: { unsafeHTML?: string } };
+        }>;
+        blockDirExists?: boolean;
+        includeStorefront?: boolean;
+        includeDaLive?: boolean;
+    } = {}
+) {
     const { blockDirExists = true } = opts;
     const { manifest, componentDefinition } = manifestWith(opts);
 
@@ -148,16 +163,31 @@ function mockHappyPathFilesystem(opts: {
 // wrapper. The credential-source describe below exercises the wiring seam.
 const TOKENS = { daLiveToken: 'da-live-token', githubToken: 'github-token' };
 const promote = (
-    projectsDir: string, projectName: string, blockId: string,
-    title: string, unsafeHTML: string, description?: string,
+    projectsDir: string,
+    projectName: string,
+    blockId: string,
+    title: string,
+    unsafeHTML: string,
+    description?: string
 ): Promise<string> =>
-    toolHandlers.promoteBlockToLibrary(projectsDir, projectName, blockId, title, unsafeHTML, description, TOKENS);
+    toolHandlers.promoteBlockToLibrary(
+        projectsDir,
+        projectName,
+        blockId,
+        title,
+        unsafeHTML,
+        description,
+        TOKENS
+    );
 
 describe('toolHandlers.promoteBlockToLibrary', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockAppendBlockToLibrary.mockResolvedValue({ status: 'created', siteConfigRegistered: true });
+        mockAppendBlockToLibrary.mockResolvedValue({
+            status: 'created',
+            siteConfigRegistered: true,
+        });
         mockUpsertBlockDocPage.mockResolvedValue('written');
         mockSyncAndPublish.mockResolvedValue({
             committed: true,
@@ -170,13 +200,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
 
     it('throws when projectName does not resolve (invalid name)', async () => {
         await expect(
-            promote(
-                PROJECTS_DIR,
-                '../escape',
-                BLOCK_ID,
-                BLOCK_TITLE,
-                BLOCK_HTML,
-            ),
+            promote(PROJECTS_DIR, '../escape', BLOCK_ID, BLOCK_TITLE, BLOCK_HTML)
         ).rejects.toThrow(/invalid project name/i);
     });
 
@@ -184,13 +208,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
         mockHappyPathFilesystem({ includeStorefront: false });
 
         await expect(
-            promote(
-                PROJECTS_DIR,
-                PROJECT_NAME,
-                BLOCK_ID,
-                BLOCK_TITLE,
-                BLOCK_HTML,
-            ),
+            promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML)
         ).rejects.toThrow(/no eds storefront configured/i);
     });
 
@@ -198,36 +216,24 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
         mockHappyPathFilesystem({ blockDirExists: false });
 
         await expect(
-            promote(
-                PROJECTS_DIR,
-                PROJECT_NAME,
-                BLOCK_ID,
-                BLOCK_TITLE,
-                BLOCK_HTML,
-            ),
+            promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML)
         ).rejects.toThrow(/block source not found/i);
     });
 
     it('happy path — block exists, comp-def lacks entry → appends to comp-def, writes doc page, appends sheet row, publishes', async () => {
         mockHappyPathFilesystem({ componentDef: [] });
 
-        const raw = await promote(
-            PROJECTS_DIR,
-            PROJECT_NAME,
-            BLOCK_ID,
-            BLOCK_TITLE,
-            BLOCK_HTML,
-        );
+        const raw = await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML);
         const result = JSON.parse(raw);
 
         // 1. comp-def written with the new entry appended
         expect(fsProm.writeFile as jest.Mock).toHaveBeenCalledWith(
             expect.stringContaining('component-definition.json'),
             expect.stringContaining(BLOCK_ID),
-            'utf-8',
+            'utf-8'
         );
-        const writeCall = (fsProm.writeFile as jest.Mock).mock.calls.find(
-            ([p]: [string]) => String(p).endsWith('component-definition.json'),
+        const writeCall = (fsProm.writeFile as jest.Mock).mock.calls.find(([p]: [string]) =>
+            String(p).endsWith('component-definition.json')
         );
         const writtenJson = JSON.parse(writeCall[1] as string);
         const components = writtenJson.groups[0].components;
@@ -241,19 +247,17 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
 
         // 2. DA.live doc page written via upsertBlockDocPage (overwrite-always
         // semantics — supports AI iteration on variant HTML)
-        expect(mockUpsertBlockDocPage).toHaveBeenCalledWith(
-            DA_LIVE_ORG,
-            DA_LIVE_SITE,
-            { id: BLOCK_ID, exampleHtml: BLOCK_HTML },
-        );
+        expect(mockUpsertBlockDocPage).toHaveBeenCalledWith(DA_LIVE_ORG, DA_LIVE_SITE, {
+            id: BLOCK_ID,
+            exampleHtml: BLOCK_HTML,
+        });
         expect(result.docPage).toBe('written');
 
         // 3. Sheet row appended
-        expect(mockAppendBlockToLibrary).toHaveBeenCalledWith(
-            DA_LIVE_ORG,
-            DA_LIVE_SITE,
-            { blockId: BLOCK_ID, title: BLOCK_TITLE },
-        );
+        expect(mockAppendBlockToLibrary).toHaveBeenCalledWith(DA_LIVE_ORG, DA_LIVE_SITE, {
+            blockId: BLOCK_ID,
+            title: BLOCK_TITLE,
+        });
         expect(result.sheet).toBe('created');
 
         // 4. Storefront sync + Helix publish
@@ -261,7 +265,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
             expect.objectContaining({
                 storefrontPath: STOREFRONT_PATH,
                 commitMessage: expect.stringContaining(BLOCK_ID),
-            }),
+            })
         );
         expect(mockPreviewAndPublishPage).toHaveBeenCalled();
         expect(result.publish).toBe('success');
@@ -274,13 +278,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
             ],
         });
 
-        const raw = await promote(
-            PROJECTS_DIR,
-            PROJECT_NAME,
-            BLOCK_ID,
-            BLOCK_TITLE,
-            BLOCK_HTML,
-        );
+        const raw = await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML);
         const result = JSON.parse(raw);
 
         expect(result.componentDefinition).toBe('unchanged');
@@ -302,13 +300,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
             siteConfigRegistered: true,
         });
 
-        const raw = await promote(
-            PROJECTS_DIR,
-            PROJECT_NAME,
-            BLOCK_ID,
-            BLOCK_TITLE,
-            BLOCK_HTML,
-        );
+        const raw = await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML);
         const result = JSON.parse(raw);
 
         expect(result.componentDefinition).toBe('unchanged');
@@ -321,13 +313,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
         mockHappyPathFilesystem({ componentDef: [] });
         mockSyncAndPublish.mockRejectedValue(new Error('Helix admin 503'));
 
-        const raw = await promote(
-            PROJECTS_DIR,
-            PROJECT_NAME,
-            BLOCK_ID,
-            BLOCK_TITLE,
-            BLOCK_HTML,
-        );
+        const raw = await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML);
         const result = JSON.parse(raw);
 
         // Doc + sheet + comp-def succeeded
@@ -343,13 +329,7 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
 
         const malicious = '<div class="x">hi</div><script>alert("xss")</script>';
 
-        await promote(
-            PROJECTS_DIR,
-            PROJECT_NAME,
-            BLOCK_ID,
-            BLOCK_TITLE,
-            malicious,
-        );
+        await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, malicious);
 
         // Doc page write — sanitized html only
         const docCall = mockUpsertBlockDocPage.mock.calls[0];
@@ -357,11 +337,13 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
         expect(docCall[2].exampleHtml).not.toContain('alert');
 
         // comp-def write — sanitized html only
-        const writeCall = (fsProm.writeFile as jest.Mock).mock.calls.find(
-            ([p]: [string]) => String(p).endsWith('component-definition.json'),
+        const writeCall = (fsProm.writeFile as jest.Mock).mock.calls.find(([p]: [string]) =>
+            String(p).endsWith('component-definition.json')
         );
         const writtenJson = JSON.parse(writeCall[1] as string);
-        const entry = writtenJson.groups[0].components.find((c: { id: string }) => c.id === BLOCK_ID);
+        const entry = writtenJson.groups[0].components.find(
+            (c: { id: string }) => c.id === BLOCK_ID
+        );
         expect(entry.plugins.da.unsafeHTML).not.toContain('<script>');
         expect(entry.plugins.da.unsafeHTML).not.toContain('alert');
     });
@@ -369,16 +351,11 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
     it('sanitizer strips event handlers and javascript: URLs', async () => {
         mockHappyPathFilesystem({ componentDef: [] });
 
-        const malicious = '<a href="javascript:alert(1)" onclick="alert(2)">click</a>'
-            + '<img src="x" onerror="fetch(\'/steal\')">';
+        const malicious =
+            '<a href="javascript:alert(1)" onclick="alert(2)">click</a>' +
+            '<img src="x" onerror="fetch(\'/steal\')">';
 
-        await promote(
-            PROJECTS_DIR,
-            PROJECT_NAME,
-            BLOCK_ID,
-            BLOCK_TITLE,
-            malicious,
-        );
+        await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, malicious);
 
         const docCall = mockUpsertBlockDocPage.mock.calls[0];
         const cleaned = docCall[2].exampleHtml as string;
@@ -390,17 +367,12 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
     it('sanitizer strips <iframe> and other framing tags', async () => {
         mockHappyPathFilesystem({ componentDef: [] });
 
-        const malicious = '<iframe src="https://evil.example"></iframe>'
-            + '<object data="javascript:alert(1)"></object>'
-            + '<embed src="x.swf">';
+        const malicious =
+            '<iframe src="https://evil.example"></iframe>' +
+            '<object data="javascript:alert(1)"></object>' +
+            '<embed src="x.swf">';
 
-        await promote(
-            PROJECTS_DIR,
-            PROJECT_NAME,
-            BLOCK_ID,
-            BLOCK_TITLE,
-            malicious,
-        );
+        await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, malicious);
 
         const cleaned = mockUpsertBlockDocPage.mock.calls[0][2].exampleHtml as string;
         expect(cleaned).not.toContain('<iframe');
@@ -411,17 +383,12 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
     it('sanitizer strips data:, vbscript:, and protocol-relative URL schemes', async () => {
         mockHappyPathFilesystem({ componentDef: [] });
 
-        const malicious = '<img src="data:image/svg+xml;base64,PHN2Zz48c2NyaXB0PmFsZXJ0KDEpPC9zY3JpcHQ+PC9zdmc+">'
-            + '<a href="vbscript:msgbox(1)">click</a>'
-            + '<a href="//evil.example/x.js">click</a>';
+        const malicious =
+            '<img src="data:image/svg+xml;base64,PHN2Zz48c2NyaXB0PmFsZXJ0KDEpPC9zY3JpcHQ+PC9zdmc+">' +
+            '<a href="vbscript:msgbox(1)">click</a>' +
+            '<a href="//evil.example/x.js">click</a>';
 
-        await promote(
-            PROJECTS_DIR,
-            PROJECT_NAME,
-            BLOCK_ID,
-            BLOCK_TITLE,
-            malicious,
-        );
+        await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, malicious);
 
         const cleaned = mockUpsertBlockDocPage.mock.calls[0][2].exampleHtml as string;
         expect(cleaned).not.toMatch(/^data:/im);
@@ -433,15 +400,10 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
     it('sanitizer strips <style> tags', async () => {
         mockHappyPathFilesystem({ componentDef: [] });
 
-        const malicious = '<div>hi</div><style>body { background: url(javascript:alert(1)); }</style>';
+        const malicious =
+            '<div>hi</div><style>body { background: url(javascript:alert(1)); }</style>';
 
-        await promote(
-            PROJECTS_DIR,
-            PROJECT_NAME,
-            BLOCK_ID,
-            BLOCK_TITLE,
-            malicious,
-        );
+        await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, malicious);
 
         const cleaned = mockUpsertBlockDocPage.mock.calls[0][2].exampleHtml as string;
         expect(cleaned).not.toContain('<style');
@@ -458,14 +420,13 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
             PROJECT_NAME,
             BLOCK_ID,
             ornateTitle,
-            '<div class="x">hi</div><script>alert(1)</script>',
+            '<div class="x">hi</div><script>alert(1)</script>'
         );
 
-        expect(mockAppendBlockToLibrary).toHaveBeenCalledWith(
-            DA_LIVE_ORG,
-            DA_LIVE_SITE,
-            { blockId: BLOCK_ID, title: ornateTitle },
-        );
+        expect(mockAppendBlockToLibrary).toHaveBeenCalledWith(DA_LIVE_ORG, DA_LIVE_SITE, {
+            blockId: BLOCK_ID,
+            title: ornateTitle,
+        });
     });
 
     it('persists optional `description` to component-definition.json entry', async () => {
@@ -473,20 +434,15 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
 
         const desc = 'A promo banner for sitewide sales.';
 
-        await promote(
-            PROJECTS_DIR,
-            PROJECT_NAME,
-            BLOCK_ID,
-            BLOCK_TITLE,
-            BLOCK_HTML,
-            desc,
-        );
+        await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML, desc);
 
-        const writeCall = (fsProm.writeFile as jest.Mock).mock.calls.find(
-            ([p]: [string]) => String(p).endsWith('component-definition.json'),
+        const writeCall = (fsProm.writeFile as jest.Mock).mock.calls.find(([p]: [string]) =>
+            String(p).endsWith('component-definition.json')
         );
         const writtenJson = JSON.parse(writeCall[1] as string);
-        const entry = writtenJson.groups[0].components.find((c: { id: string }) => c.id === BLOCK_ID);
+        const entry = writtenJson.groups[0].components.find(
+            (c: { id: string }) => c.id === BLOCK_ID
+        );
         expect(entry.description).toBe(desc);
     });
 
@@ -498,35 +454,32 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
             PROJECT_NAME,
             BLOCK_ID,
             BLOCK_TITLE,
-            BLOCK_HTML,
+            BLOCK_HTML
             // description omitted
         );
 
-        const writeCall = (fsProm.writeFile as jest.Mock).mock.calls.find(
-            ([p]: [string]) => String(p).endsWith('component-definition.json'),
+        const writeCall = (fsProm.writeFile as jest.Mock).mock.calls.find(([p]: [string]) =>
+            String(p).endsWith('component-definition.json')
         );
         const writtenJson = JSON.parse(writeCall[1] as string);
-        const entry = writtenJson.groups[0].components.find((c: { id: string }) => c.id === BLOCK_ID);
+        const entry = writtenJson.groups[0].components.find(
+            (c: { id: string }) => c.id === BLOCK_ID
+        );
         expect(entry).not.toHaveProperty('description');
     });
 
     it('sanitizer preserves legitimate EDS block HTML (div + class + img)', async () => {
         mockHappyPathFilesystem({ componentDef: [] });
 
-        const legitimate = '<div class="hero-cta">'
-            + '<h1>Welcome</h1>'
-            + '<p>Shop now</p>'
-            + '<img src="https://example.com/hero.jpg" alt="Hero" />'
-            + '<a href="/sale">View sale</a>'
-            + '</div>';
+        const legitimate =
+            '<div class="hero-cta">' +
+            '<h1>Welcome</h1>' +
+            '<p>Shop now</p>' +
+            '<img src="https://example.com/hero.jpg" alt="Hero" />' +
+            '<a href="/sale">View sale</a>' +
+            '</div>';
 
-        await promote(
-            PROJECTS_DIR,
-            PROJECT_NAME,
-            BLOCK_ID,
-            BLOCK_TITLE,
-            legitimate,
-        );
+        await promote(PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, legitimate);
 
         const cleaned = mockUpsertBlockDocPage.mock.calls[0][2].exampleHtml as string;
         expect(cleaned).toContain('class="hero-cta"');
@@ -562,9 +515,17 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
 describe('promote_block_to_library — credential source', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        mockAppendBlockToLibrary.mockResolvedValue({ status: 'created', siteConfigRegistered: true });
+        mockAppendBlockToLibrary.mockResolvedValue({
+            status: 'created',
+            siteConfigRegistered: true,
+        });
         mockUpsertBlockDocPage.mockResolvedValue('written');
-        mockSyncAndPublish.mockResolvedValue({ committed: true, pushed: true, helixPublished: true, summary: 'ok' });
+        mockSyncAndPublish.mockResolvedValue({
+            committed: true,
+            pushed: true,
+            helixPublished: true,
+            summary: 'ok',
+        });
         mockPreviewAndPublishPage.mockResolvedValue(undefined);
     });
 
@@ -572,8 +533,13 @@ describe('promote_block_to_library — credential source', () => {
         mockHappyPathFilesystem({ componentDef: [] });
 
         await toolHandlers.promoteBlockToLibrary(
-            PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML, undefined,
-            { daLiveToken: 'injected-da', githubToken: 'injected-gh' },
+            PROJECTS_DIR,
+            PROJECT_NAME,
+            BLOCK_ID,
+            BLOCK_TITLE,
+            BLOCK_HTML,
+            undefined,
+            { daLiveToken: 'injected-da', githubToken: 'injected-gh' }
         );
 
         // DA.live ops constructed with a provider yielding the injected token.
@@ -581,7 +547,7 @@ describe('promote_block_to_library — credential source', () => {
         await expect(tokenProvider.getAccessToken()).resolves.toBe('injected-da');
         // Both tokens flow through to the storefront commit/publish step.
         expect(mockSyncAndPublish).toHaveBeenCalledWith(
-            expect.objectContaining({ githubToken: 'injected-gh', daLiveToken: 'injected-da' }),
+            expect.objectContaining({ githubToken: 'injected-gh', daLiveToken: 'injected-da' })
         );
     });
 
@@ -590,35 +556,72 @@ describe('promote_block_to_library — credential source', () => {
 
         await expect(
             toolHandlers.promoteBlockToLibrary(
-                PROJECTS_DIR, PROJECT_NAME, BLOCK_ID, BLOCK_TITLE, BLOCK_HTML, undefined,
-                { daLiveToken: null, githubToken: null },
-            ),
+                PROJECTS_DIR,
+                PROJECT_NAME,
+                BLOCK_ID,
+                BLOCK_TITLE,
+                BLOCK_HTML,
+                undefined,
+                { daLiveToken: null, githubToken: null }
+            )
         ).rejects.toThrow(/DA\.live token unavailable/i);
     });
 
-    it('registerProjectTools threads the credential provider into the promote tool', async () => {
+    /** Register the real tools against a stub server and hand back the promote tool. */
+    function registerPromoteTool() {
         mockHappyPathFilesystem({ componentDef: [] });
         const credentials = {
             getDaLiveToken: jest.fn().mockResolvedValue('live-da'),
             getGitHubToken: jest.fn().mockResolvedValue('live-gh'),
         };
         const handlers = new Map<string, (args: unknown) => Promise<unknown>>();
-        const server = {
-            registerTool: (name: string, _s: unknown, h: (a: unknown) => Promise<unknown>) => handlers.set(name, h),
-        };
+        registerProjectTools(
+            {
+                registerTool: (name: string, _s: unknown, h: (a: unknown) => Promise<unknown>) =>
+                    handlers.set(name, h),
+            },
+            PROJECTS_DIR,
+            credentials
+        );
+        return { credentials, promote: handlers.get('promote_block_to_library')! };
+    }
 
-        registerProjectTools(server, PROJECTS_DIR, credentials);
-        await handlers.get('promote_block_to_library')!({
-            projectName: PROJECT_NAME, blockId: BLOCK_ID, title: BLOCK_TITLE, unsafeHTML: BLOCK_HTML,
-        });
+    const PROMOTE_ARGS = {
+        projectName: PROJECT_NAME,
+        blockId: BLOCK_ID,
+        title: BLOCK_TITLE,
+        unsafeHTML: BLOCK_HTML,
+    };
+
+    it('registerProjectTools threads the credential provider into the promote tool', async () => {
+        const { credentials, promote } = registerPromoteTool();
+
+        await promote({ ...PROMOTE_ARGS, confirm: true });
 
         expect(credentials.getDaLiveToken).toHaveBeenCalled();
         expect(credentials.getGitHubToken).toHaveBeenCalled();
         const tokenProvider = (DaLiveContentOperations as unknown as jest.Mock).mock.calls[0][0];
         await expect(tokenProvider.getAccessToken()).resolves.toBe('live-da');
         expect(mockSyncAndPublish).toHaveBeenCalledWith(
-            expect.objectContaining({ githubToken: 'live-gh', daLiveToken: 'live-da' }),
+            expect.objectContaining({ githubToken: 'live-gh', daLiveToken: 'live-da' })
         );
+    });
+
+    // The gate matches remove_block_from_library's. Promote commits, pushes and
+    // publishes to a live site, so "it only adds things" does not make it safe.
+    it('refuses without confirm:true, and does nothing at all', async () => {
+        const { credentials, promote } = registerPromoteTool();
+
+        const res = (await promote(PROMOTE_ARGS)) as { content: { text: string }[] };
+
+        expect(JSON.parse(res.content[0].text)).toMatchObject({ destructive: true });
+        // Not merely "returned an error" — no credential was fetched and nothing
+        // was written or published.
+        expect(credentials.getDaLiveToken).not.toHaveBeenCalled();
+        expect(credentials.getGitHubToken).not.toHaveBeenCalled();
+        expect(mockSyncAndPublish).not.toHaveBeenCalled();
+        expect(mockUpsertBlockDocPage).not.toHaveBeenCalled();
+        expect(mockAppendBlockToLibrary).not.toHaveBeenCalled();
     });
 });
 
@@ -640,6 +643,7 @@ describe('promote_block_to_library Zod schema', () => {
             title: z.string(),
             unsafeHTML: z.string(),
             description: z.string().optional(),
+            confirm: z.boolean().optional(),
         });
         const parsed = schema.safeParse({
             projectName: 'p',

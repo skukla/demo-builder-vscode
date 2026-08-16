@@ -79,7 +79,8 @@ Reuse it; never re-derive org checks (see the `adobe-org-context` skill).
   axis-unrestricted entries.
 - `tileStatus.test.ts` — mesh predicates derive from the REAL catalog.
 - After any catalog/spine change, run:
-  `npx jest tests/features/app-builder tests/features/mesh tests/features/project-creation --no-coverage 2>&1 > /tmp/jest-out.txt`
+  `npx jest tests/features/app-builder tests/features/mesh tests/features/project-creation --no-coverage > "$SCRATCH/jest-out.txt" 2>&1`
+  (order matters — `2>&1 > file` leaves the file empty, since jest reports on stderr)
   (the mesh suites are where axis-semantics regressions surface).
 
 ## Related

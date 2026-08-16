@@ -62,41 +62,69 @@ function withToolLogging(server: any, logger: Logger): any {
     };
 }
 
+/** The optional wiring. Grouped so the constructor stays inside the 4-param SOP. */
+export interface InExtensionMcpServerOptions {
+    /**
+     * Hook to register additional tools (e.g. handler-backed descriptor tools) on
+     * the per-connection server. Receives the logging-wrapped server so those
+     * tools are logged too. Injected by the extension so this module stays free
+     * of vscode/handler-map imports.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    registerExtraTools?: (server: any) => void;
+    /**
+     * DA.live / GitHub token resolver injected by the extension so the
+     * credential-needing project tools (`sync_storefront`,
+     * `promote_block_to_library`) use the live sign-in session.
+     */
+    credentials?: McpCredentialProvider;
+    /**
+     * Second UDS path. When VS Code's workspace is a project folder (not the
+     * projects root), proxies spawned from per-project `.mcp.json` files target
+     * the projects-root socket (per mcpConfigWriter's
+     * resolveMcpSocketPath(path.dirname(project.path)) contract). Listening on
+     * both sockets lets the server accept connections regardless of which socket
+     * the proxy is wired to. Omit to disable; pass the same value as
+     * `socketPath` and dedup happens (single bind). Goes away when the
+     * decouple-project-from-workspace backlog lands; until then this prevents
+     * `demo-builder · timed out` in AI Verification.
+     */
+    secondarySocketPath?: string;
+    /**
+     * Build identity reported as `serverInfo.version` on every `initialize`.
+     *
+     * The socket name is sha256(projects root), identical in every window, and
+     * the last window to bind silently owns it (`bindSocket` renames over the
+     * shared name). So a client cannot tell WHICH extension host answered it —
+     * reproduced 2026-08-16, where two probes of one socket path two minutes
+     * apart returned 52 and then 58 tools. `serverInfo.version` is the one field
+     * every MCP client already reads, and it was a hardcoded '1.0.0' doing no
+     * work. Putting the build stamp there does not fix the binding race; it
+     * makes it visible instead of silent. Falls back to SERVER_VERSION when the
+     * stamp is unreadable.
+     */
+    buildLabel?: string;
+}
+
 export class InExtensionMcpServer {
     private netServers: net.Server[] = [];
     private connCounter = 0;
+    private readonly options: InExtensionMcpServerOptions;
 
     /**
      * @param socketPath  Absolute UDS path to listen on (per workspace).
      * @param projectsDir Projects root the tools operate on (`~/.demo-builder/projects`).
      * @param logger      Extension logger.
-     * @param registerExtraTools Optional hook to register additional tools (e.g.
-     *   handler-backed descriptor tools) on the per-connection server. Receives
-     *   the logging-wrapped server so those tools are logged too. Injected by the
-     *   extension so this module stays free of vscode/handler-map imports.
-     * @param credentials Optional DA.live / GitHub token resolver injected by the
-     *   extension so the credential-needing project tools (`sync_storefront`,
-     *   `promote_block_to_library`) use the live sign-in session.
-     * @param secondarySocketPath Optional second UDS path. When VS Code's
-     *   workspace is a project folder (not the projects root), proxies spawned
-     *   from per-project `.mcp.json` files target the projects-root socket
-     *   (per mcpConfigWriter's resolveMcpSocketPath(path.dirname(project.path))
-     *   contract). Listening on both sockets lets the server accept connections
-     *   regardless of which socket the proxy is wired to. Pass `undefined` to
-     *   disable; pass the same value as `socketPath` and dedup happens (single
-     *   bind). Goes away when the decouple-project-from-workspace backlog
-     *   lands; until then this prevents `demo-builder · timed out` in
-     *   AI Verification.
+     * @param options     Optional wiring — see {@link InExtensionMcpServerOptions}.
      */
     constructor(
         private readonly socketPath: string,
         private readonly projectsDir: string,
         private readonly logger: Logger,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        private readonly registerExtraTools?: (server: any) => void,
-        private readonly credentials?: McpCredentialProvider,
-        private readonly secondarySocketPath?: string,
-    ) {}
+        options: InExtensionMcpServerOptions = {},
+    ) {
+        this.options = options;
+    }
 
     async start(): Promise<void> {
         await fsPromises.mkdir(mcpSocketDir(), { recursive: true, mode: 0o700 });
@@ -107,9 +135,12 @@ export class InExtensionMcpServer {
         // Bind the secondary socket only if it's set AND distinct from primary.
         // The common single-bind case (workspace = projects root, where primary
         // and secondary collapse to the same path) skips this cleanly.
-        if (this.secondarySocketPath && this.secondarySocketPath !== this.socketPath) {
+        if (
+            this.options.secondarySocketPath &&
+            this.options.secondarySocketPath !== this.socketPath
+        ) {
             try {
-                await this.bindSocket(this.secondarySocketPath);
+                await this.bindSocket(this.options.secondarySocketPath);
             } catch (err) {
                 // The caller drops this object on a failed start (extension.ts
                 // logs and leaves the field undefined), so a primary left
@@ -199,13 +230,16 @@ export class InExtensionMcpServer {
         this.logger.debug(`[MCP] client connected (conn=${connId})`);
         // Typed `any` to avoid TS2589 (see registerProjectTools docstring).
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const server: any = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION });
+        const server: any = new McpServer({
+            name: SERVER_NAME,
+            version: this.options.buildLabel || SERVER_VERSION,
+        });
         // Wrap so every tool logs to the extension channels; registerProjectTools
         // stays vscode-free and logging-agnostic. Extra (handler-backed) tools
         // are registered through the same wrapper.
         const logged = withToolLogging(server, this.logger);
-        registerProjectTools(logged, this.projectsDir, this.credentials);
-        this.registerExtraTools?.(logged);
+        registerProjectTools(logged, this.projectsDir, this.options.credentials);
+        this.options.registerExtraTools?.(logged);
 
         const transport = new StdioServerTransport(socket, socket);
         server

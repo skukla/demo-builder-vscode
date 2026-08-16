@@ -22,6 +22,8 @@ export type WizardStep =
  * Distinct concept from the retired standalone wizard-step ids — these identify
  * the area the nested builder is currently focused on.
  */
+// `sample-data` was an area here; it is a Commerce sub-step now — a pack seeds
+// the Commerce backend, so it belongs with the sub-steps that configure it.
 export type BuildAreaId = 'commerce' | 'storefront' | 'integrations';
 
 /**
@@ -36,7 +38,12 @@ export type CommerceSectionId =
     | 'signin'
     | 'connection'
     | 'business-structure'
-    | 'catalog';
+    | 'catalog'
+    // Seeds the backend the sub-steps above configure, so it belongs with them
+    // rather than in an area of its own. Unlike every other config sub-step it is
+    // never locked: the pack list comes from the Data Installer service, not
+    // through the Commerce connection, and nothing is installed during the wizard.
+    | 'sample-data';
 
 /**
  * The ordered Storefront sub-step ids within the build step's Storefront area:
@@ -80,6 +87,14 @@ export interface WizardState {
     storefrontRepoValid?: boolean; // Storefront repo selection reported valid (RepoSelectionInline repository phase)
     storefrontCodeSyncValid?: boolean; // Storefront AEM Code Sync app install reported valid (RepoSelectionInline code-sync phase)
     activeBuildArea?: BuildAreaId; // Area currently focused within the build-your-project step
+    /**
+     * Which datapack this project should be seeded with, if any.
+     *
+     * RECORDED here, IMPORTED from the dashboard afterwards: an import needs a
+     * reachable instance with working credentials and runs for minutes, so it
+     * does not belong inside the creation path. Optional throughout.
+     */
+    datapack?: { name: string; version: string };
     activeCommerceStep?: CommerceSectionId; // Active Commerce sub-step within the build step (footer Continue/Back walks sub-steps → areas → wizard steps)
     committedCommerceSteps?: CommerceSectionId[]; // Commerce sub-steps the user has pressed Continue past — gates the summary ✓ (a valid form alone does NOT mark a row done)
     activeStorefrontStep?: StorefrontSectionId; // Active Storefront sub-step within the build step (same footer-driven walk as Commerce)

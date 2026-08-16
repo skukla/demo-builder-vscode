@@ -247,6 +247,114 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
         });
     });
 
+    /**
+     * A REFUSED subscription arrives as HTTP 200 with the failure in the BODY.
+     *
+     * Measured 2026-08-16 against an org holding no ACCS product:
+     *
+     *   { error: ['ACCS-REST-API'],
+     *     errorDetails: [{ sdkCode: 'ACCS-REST-API', domain: 'JIL', code: 400,
+     *                      message: 'Service ACCS-REST-API requires selection of a product' }] }
+     *
+     * Both wrappers previously returned `Promise<void>` and discarded the
+     * response, so this read as success. The subscription IS the entitlement —
+     * it is what moves an S2S credential's scopes to `commerce.accs` — so the
+     * caller went on to hand back a scope-less credential whose only symptom was
+     * a Data Installer pre-flight 400 minutes later, in a different feature.
+     *
+     * THE TRAP IN TESTING THIS: a fixture whose promise REJECTS passes against
+     * the broken code and proves nothing. Every case here resolves.
+     */
+    describe('a subscribe refused inside an HTTP 200', () => {
+        const REFUSAL = {
+            body: {
+                error: ['ACCS-REST-API'],
+                errorDetails: [
+                    {
+                        sdkCode: 'ACCS-REST-API',
+                        domain: 'JIL',
+                        code: 400,
+                        message: 'Service ACCS-REST-API requires selection of a product',
+                    },
+                ],
+            },
+        };
+
+        it('throws rather than reporting success (S2S)', async () => {
+            sdk.subscribeOAuthServerToServerIntegrationToServices.mockResolvedValue(REFUSAL);
+
+            await expect(
+                fetcher.subscribeOAuthServerToServerIntegrationToServices('org1', 'int-456', [
+                    { sdkCode: 'ACCS-REST-API', licenseConfigs: null, roles: null },
+                ]),
+            ).rejects.toThrow();
+        });
+
+        it('throws rather than reporting success (AdobeID)', async () => {
+            sdk.subscribeAdobeIdIntegrationToServices.mockResolvedValue(REFUSAL);
+
+            await expect(
+                fetcher.subscribeAdobeIdIntegrationToServices('org1', 'int-123', [
+                    { sdkCode: 'ACCS-REST-API', licenseConfigs: null, roles: null },
+                ]),
+            ).rejects.toThrow();
+        });
+
+        // The service's own message is the actionable part. "Provisioning failed"
+        // sends someone to the wrong place; "requires selection of a product"
+        // names the missing entitlement.
+        it('carries the service\'s own reason', async () => {
+            sdk.subscribeOAuthServerToServerIntegrationToServices.mockResolvedValue(REFUSAL);
+
+            await expect(
+                fetcher.subscribeOAuthServerToServerIntegrationToServices('org1', 'int-456', [
+                    { sdkCode: 'ACCS-REST-API', licenseConfigs: null, roles: null },
+                ]),
+            ).rejects.toThrow(/requires selection of a product/);
+        });
+
+        it('names the service that was refused', async () => {
+            sdk.subscribeOAuthServerToServerIntegrationToServices.mockResolvedValue(REFUSAL);
+
+            await expect(
+                fetcher.subscribeOAuthServerToServerIntegrationToServices('org1', 'int-456', [
+                    { sdkCode: 'ACCS-REST-API', licenseConfigs: null, roles: null },
+                ]),
+            ).rejects.toThrow(/ACCS-REST-API/);
+        });
+
+        // Only POSITIVE evidence of refusal fails. The SDK does not always return
+        // a body — the pre-existing tests above stub none at all — so requiring
+        // one would turn every real success into a throw.
+        it.each([
+            ['no response at all', undefined],
+            ['a response with no body', {}],
+            ['a body with an empty error list', { body: { error: [] } }],
+            ['a body reporting what it subscribed', { body: { sdkList: [MGMT] } }],
+        ])('resolves on %s', async (_label, response) => {
+            sdk.subscribeOAuthServerToServerIntegrationToServices.mockResolvedValue(response);
+
+            await expect(
+                fetcher.subscribeOAuthServerToServerIntegrationToServices('org1', 'int-456', [
+                    { sdkCode: MGMT, licenseConfigs: null, roles: null },
+                ]),
+            ).resolves.toBeUndefined();
+        });
+
+        // errorDetails without the `error` array, in case the two ever diverge.
+        it('throws on errorDetails alone', async () => {
+            sdk.subscribeOAuthServerToServerIntegrationToServices.mockResolvedValue({
+                body: { errorDetails: [{ sdkCode: 'X', code: 400, message: 'nope' }] },
+            });
+
+            await expect(
+                fetcher.subscribeOAuthServerToServerIntegrationToServices('org1', 'int-456', [
+                    { sdkCode: 'X', licenseConfigs: null, roles: null },
+                ]),
+            ).rejects.toThrow(/nope/);
+        });
+    });
+
     describe('ensureOAuthCredentialId', () => {
         it('should return an existing S2S credential id_integration without creating one', async () => {
             sdk.getCredentials.mockResolvedValue({

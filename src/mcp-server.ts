@@ -31,10 +31,7 @@ import {
     type TokenProvider,
 } from '@/features/eds/services/daLiveContentOperations';
 import { previewAndPublishPage, unpublishPage } from '@/features/eds/services/helixApiClient';
-import {
-    PushRejectedError,
-    syncAndPublish,
-} from '@/features/eds/services/storefrontSyncService';
+import { PushRejectedError, syncAndPublish } from '@/features/eds/services/storefrontSyncService';
 
 // Maximum number of file entries listed in a getBlockSource manifest — prevents
 // unbounded responses when a block directory contains many assets.
@@ -57,7 +54,12 @@ const SAFE_PROJECT_NAME = /^[^/\\.\0][^/\\\0]*$/;
  * @internal — exported for unit tests
  */
 export function resolveProjectPath(projectsDir: string, projectName: string): string {
-    if (!projectName || !SAFE_PROJECT_NAME.test(projectName) || projectName === '..' || projectName.includes('..')) {
+    if (
+        !projectName ||
+        !SAFE_PROJECT_NAME.test(projectName) ||
+        projectName === '..' ||
+        projectName.includes('..')
+    ) {
         throw new Error(`Invalid project name: ${projectName}`);
     }
     const resolved = path.join(projectsDir, projectName);
@@ -133,7 +135,8 @@ export function validateEnvContent(content: string): void {
 
         // Quoted escape hatches — short-circuit on properly-formed quoted values so the
         // specific guards below do not false-positive on literal `$(` inside single quotes.
-        if (SINGLE_QUOTED_VALUE.test(value) || DOUBLE_QUOTED_VALUE_NO_EXPANSION.test(value)) continue;
+        if (SINGLE_QUOTED_VALUE.test(value) || DOUBLE_QUOTED_VALUE_NO_EXPANSION.test(value))
+            continue;
 
         // Specific guards for clearer error messages on common dangerous unquoted patterns.
         // These do not change the set of rejected values (the final allowlist already rejects
@@ -142,13 +145,19 @@ export function validateEnvContent(content: string): void {
             throw new Error(`.env value must not contain subshell syntax ($(...) or backticks)`);
         }
         if (/[<>=]\(/.test(value)) {
-            throw new Error('.env value must not contain process substitution syntax (<(...), >(...), or =(...))');
+            throw new Error(
+                '.env value must not contain process substitution syntax (<(...), >(...), or =(...))',
+            );
         }
         if (/\$[A-Za-z_0-9@?!#*$\-{]/.test(value)) {
-            throw new Error('.env value must not contain shell parameter expansion ($VAR, ${VAR}, $1, $@, etc.)');
+            throw new Error(
+                '.env value must not contain shell parameter expansion ($VAR, ${VAR}, $1, $@, etc.)',
+            );
         }
         if (/[<>|&;]/.test(value)) {
-            throw new Error('.env value must not contain unquoted shell metacharacters (<, >, |, &, ;) — quote the value if it needs these characters');
+            throw new Error(
+                '.env value must not contain unquoted shell metacharacters (<, >, |, &, ;) — quote the value if it needs these characters',
+            );
         }
 
         // Allowlist backstop. Catches remaining dangerous grammar not hit by the specific
@@ -206,7 +215,9 @@ interface InstalledBlockLibraryEntry {
  * Read the project manifest and return the installed block libraries (or an
  * empty list if none).
  */
-async function readInstalledBlockLibraries(projectPath: string): Promise<InstalledBlockLibraryEntry[]> {
+async function readInstalledBlockLibraries(
+    projectPath: string,
+): Promise<InstalledBlockLibraryEntry[]> {
     const raw = await fsPromises.readFile(path.join(projectPath, '.demo-builder.json'), 'utf-8');
     const manifest = JSON.parse(raw);
     const libs = manifest?.installedBlockLibraries;
@@ -217,9 +228,14 @@ async function readInstalledBlockLibraries(projectPath: string): Promise<Install
  * Read the project manifest and extract the storefront's GitHub repo (owner, repo, branch).
  * Returns undefined if the storefront has no `githubRepo` recorded.
  */
-async function readStorefrontGithubRepo(projectPath: string): Promise<{ owner: string; site: string; branch?: string } | undefined> {
+async function readStorefrontGithubRepo(
+    projectPath: string,
+): Promise<{ owner: string; site: string; branch?: string } | undefined> {
     try {
-        const raw = await fsPromises.readFile(path.join(projectPath, '.demo-builder.json'), 'utf-8');
+        const raw = await fsPromises.readFile(
+            path.join(projectPath, '.demo-builder.json'),
+            'utf-8',
+        );
         const manifest = JSON.parse(raw);
         const repo = manifest?.componentInstances?.['eds-storefront']?.metadata?.githubRepo;
         const branch = manifest?.componentInstances?.['eds-storefront']?.metadata?.edsBranch;
@@ -252,7 +268,7 @@ function summarizeManifest(manifest: Record<string, unknown>): Record<string, un
     }
 
     if (Array.isArray(manifest.installedBlockLibraries)) {
-        summary.installedBlockLibraries = manifest.installedBlockLibraries.map(lib => {
+        summary.installedBlockLibraries = manifest.installedBlockLibraries.map((lib) => {
             const entry = lib as { name?: unknown; source?: unknown; blockIds?: unknown };
             return {
                 name: entry.name,
@@ -282,7 +298,8 @@ function summarizeManifest(manifest: Record<string, unknown>): Record<string, un
  */
 function paginate<T>(items: T[], offset?: number, limit?: number): T[] {
     const start = typeof offset === 'number' && Number.isInteger(offset) && offset > 0 ? offset : 0;
-    const validLimit = typeof limit === 'number' && Number.isInteger(limit) && limit >= 0 ? limit : undefined;
+    const validLimit =
+        typeof limit === 'number' && Number.isInteger(limit) && limit >= 0 ? limit : undefined;
     if (start === 0 && validLimit === undefined) return items;
     const end = validLimit === undefined ? undefined : start + validLimit;
     return items.slice(start, end);
@@ -345,8 +362,8 @@ async function applyComponentDefinitionEntry(
         groups?: Array<{ components?: ComponentDefinitionEntry[] }>;
     };
     const groups = parsed.groups ?? [];
-    const allComponents = groups.flatMap(g => g.components ?? []);
-    if (allComponents.some(c => c.id === blockId)) {
+    const allComponents = groups.flatMap((g) => g.components ?? []);
+    if (allComponents.some((c) => c.id === blockId)) {
         return 'unchanged';
     }
     const firstGroup = groups[0];
@@ -361,10 +378,7 @@ async function applyComponentDefinitionEntry(
     if (description) {
         entry.description = description;
     }
-    firstGroup.components = [
-        ...(firstGroup.components ?? []),
-        entry,
-    ];
+    firstGroup.components = [...(firstGroup.components ?? []), entry];
     await fsPromises.writeFile(compDefPath, JSON.stringify(parsed, null, 2), 'utf-8');
     return 'added';
 }
@@ -389,7 +403,7 @@ async function removeComponentDefinitionEntry(
     for (const group of groups) {
         const components = group.components;
         if (!components) continue;
-        const filtered = components.filter(c => c.id !== blockId);
+        const filtered = components.filter((c) => c.id !== blockId);
         if (filtered.length !== components.length) {
             group.components = filtered;
             changed = true;
@@ -468,14 +482,56 @@ function sanitizeBlockHtml(rawHtml: string): string {
     return sanitizeHtml(rawHtml, {
         allowedTags: [
             // Semantic + flow content
-            'div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-            'ul', 'ol', 'li', 'dl', 'dt', 'dd',
-            'blockquote', 'pre', 'code', 'hr', 'br',
-            'strong', 'em', 'b', 'i', 'u', 's', 'small', 'sub', 'sup', 'mark',
-            'a', 'img', 'picture', 'source',
-            'figure', 'figcaption',
-            'table', 'thead', 'tbody', 'tr', 'td', 'th', 'caption',
-            'section', 'article', 'header', 'footer', 'nav', 'aside', 'main',
+            'div',
+            'span',
+            'p',
+            'h1',
+            'h2',
+            'h3',
+            'h4',
+            'h5',
+            'h6',
+            'ul',
+            'ol',
+            'li',
+            'dl',
+            'dt',
+            'dd',
+            'blockquote',
+            'pre',
+            'code',
+            'hr',
+            'br',
+            'strong',
+            'em',
+            'b',
+            'i',
+            'u',
+            's',
+            'small',
+            'sub',
+            'sup',
+            'mark',
+            'a',
+            'img',
+            'picture',
+            'source',
+            'figure',
+            'figcaption',
+            'table',
+            'thead',
+            'tbody',
+            'tr',
+            'td',
+            'th',
+            'caption',
+            'section',
+            'article',
+            'header',
+            'footer',
+            'nav',
+            'aside',
+            'main',
         ],
         allowedAttributes: {
             // class + id allowed on all tags for EDS block styling
@@ -655,12 +711,18 @@ export const toolHandlers = {
         }
     },
 
-    async getComponentConfig(projectsDir: string, projectName: string, configRelPath: string): Promise<string> {
+    async getComponentConfig(
+        projectsDir: string,
+        projectName: string,
+        configRelPath: string,
+    ): Promise<string> {
         const projectPath = resolveProjectPath(projectsDir, projectName);
         const resolved = path.resolve(projectPath, configRelPath);
         const { realProjectPath, realResolved } = await assertInsideProject(projectPath, resolved);
         if (!isAllowedConfigPath(realProjectPath, realResolved)) {
-            throw new Error(`Reading ${configRelPath} is not permitted. Allowed: .demo-builder.json, .env files.`);
+            throw new Error(
+                `Reading ${configRelPath} is not permitted. Allowed: .demo-builder.json, .env files.`,
+            );
         }
         return fsPromises.readFile(resolved, 'utf-8');
     },
@@ -675,7 +737,9 @@ export const toolHandlers = {
         const resolved = path.resolve(projectPath, configRelPath);
         const { realProjectPath, realResolved } = await assertInsideProject(projectPath, resolved);
         if (!isAllowedConfigPath(realProjectPath, realResolved)) {
-            throw new Error(`Writing to ${configRelPath} is not permitted. Allowed: .demo-builder.json, .env files.`);
+            throw new Error(
+                `Writing to ${configRelPath} is not permitted. Allowed: .demo-builder.json, .env files.`,
+            );
         }
         if (path.basename(realResolved) === '.env') {
             validateEnvContent(content);
@@ -730,14 +794,19 @@ export const toolHandlers = {
             if (err instanceof PushRejectedError) {
                 throw new Error(
                     `${err.message} Resolve from VS Code (Demo Builder dashboard → Sync Storefront) — ` +
-                    `rebase/merge editor is not available in the AI tool surface.`,
+                        `rebase/merge editor is not available in the AI tool surface.`,
                 );
             }
             throw err;
         }
     },
 
-    async listBlocks(projectsDir: string, projectName: string, offset?: number, limit?: number): Promise<string> {
+    async listBlocks(
+        projectsDir: string,
+        projectName: string,
+        offset?: number,
+        limit?: number,
+    ): Promise<string> {
         const projectPath = resolveProjectPath(projectsDir, projectName);
         const storefrontPath = await resolveStorefrontPath(projectPath);
         if (!path.isAbsolute(storefrontPath)) {
@@ -748,7 +817,7 @@ export const toolHandlers = {
         let dirNames: string[];
         try {
             const entries = await fsPromises.readdir(blocksDir, { withFileTypes: true });
-            dirNames = entries.filter(e => e.isDirectory()).map(e => e.name);
+            dirNames = entries.filter((e) => e.isDirectory()).map((e) => e.name);
         } catch {
             return JSON.stringify([]);
         }
@@ -758,8 +827,8 @@ export const toolHandlers = {
         // First matching library wins on collisions — install order is the
         // canonical source-of-truth for which library a block currently mirrors.
         const libs = await readInstalledBlockLibraries(projectPath);
-        const result = dirNames.map(name => {
-            const lib = libs.find(l => Array.isArray(l.blockIds) && l.blockIds.includes(name));
+        const result = dirNames.map((name) => {
+            const lib = libs.find((l) => Array.isArray(l.blockIds) && l.blockIds.includes(name));
             if (!lib) return { name };
             return {
                 name,
@@ -796,13 +865,13 @@ export const toolHandlers = {
         const resolved = path.resolve(path.join(storefrontPath, 'blocks'), blockName);
         await assertInsideProject(path.join(storefrontPath, 'blocks'), resolved);
         const entries = await fsPromises.readdir(resolved, { withFileTypes: true });
-        const files = entries.filter(e => e.isFile());
+        const files = entries.filter((e) => e.isFile());
 
         // No fileName → return a names + sizes manifest only (cheap; lets the agent
         // choose what to fetch). The size lets it skip files that would truncate.
         if (!fileName) {
             const manifest = await Promise.all(
-                files.slice(0, MAX_BLOCK_FILES).map(async f => {
+                files.slice(0, MAX_BLOCK_FILES).map(async (f) => {
                     const { size } = await fsPromises.stat(path.join(resolved, f.name));
                     return { name: f.name, bytes: size };
                 }),
@@ -813,7 +882,7 @@ export const toolHandlers = {
         // fileName provided → read that single file. The fileName must name a real
         // entry in this block directory; matching against the listing (plus the
         // realpath check below) rules out traversal and symlink escapes.
-        const match = files.find(f => f.name === fileName);
+        const match = files.find((f) => f.name === fileName);
         if (!match) {
             throw new Error(`File "${fileName}" not found in block "${blockName}"`);
         }
@@ -864,7 +933,11 @@ export const toolHandlers = {
         const safeHtml = sanitizeBlockHtml(unsafeHTML);
 
         const componentDefinition = await applyComponentDefinitionEntry(
-            ctx.storefrontPath, blockId, title, safeHtml, description,
+            ctx.storefrontPath,
+            blockId,
+            title,
+            safeHtml,
+            description,
         );
 
         // Credentials come from the live extension session (DaLiveAuthService /
@@ -872,8 +945,8 @@ export const toolHandlers = {
         const daLiveToken = tokens?.daLiveToken;
         if (!daLiveToken) {
             throw new Error(
-                'DA.live token unavailable — sign in to DA.live first '
-                + '(check get_auth_status, then the sign_in tool with provider:"dalive").',
+                'DA.live token unavailable — sign in to DA.live first ' +
+                    '(check get_auth_status, then the sign_in tool with provider:"dalive").',
             );
         }
         const githubToken = tokens?.githubToken ?? undefined;
@@ -882,8 +955,11 @@ export const toolHandlers = {
         // DA.live operations log to stderr in the real flow; the MCP wrapper
         // intentionally suppresses noise.
         const noopLogger = {
-            trace: () => undefined, debug: () => undefined, info: () => undefined,
-            warn: () => undefined, error: () => undefined,
+            trace: () => undefined,
+            debug: () => undefined,
+            info: () => undefined,
+            warn: () => undefined,
+            error: () => undefined,
         };
         const daLiveOps = new DaLiveContentOperations(staticTokenProvider(daLiveToken), noopLogger);
 
@@ -897,7 +973,8 @@ export const toolHandlers = {
         });
 
         const sheetResult = await daLiveOps.appendBlockToLibrary(ctx.daLiveOrg, ctx.daLiveSite, {
-            blockId, title,
+            blockId,
+            title,
         });
 
         const publish = await publishStorefrontAndDaLive(ctx, blockId, githubToken, daLiveToken);
@@ -942,24 +1019,37 @@ export const toolHandlers = {
         const daLiveToken = tokens?.daLiveToken;
         if (!daLiveToken) {
             throw new Error(
-                'DA.live token unavailable — sign in to DA.live first '
-                + '(check get_auth_status, then the sign_in tool with provider:"dalive").',
+                'DA.live token unavailable — sign in to DA.live first ' +
+                    '(check get_auth_status, then the sign_in tool with provider:"dalive").',
             );
         }
         const githubToken = tokens?.githubToken ?? undefined;
 
-        const componentDefinition = await removeComponentDefinitionEntry(ctx.storefrontPath, blockId);
+        const componentDefinition = await removeComponentDefinitionEntry(
+            ctx.storefrontPath,
+            blockId,
+        );
 
         const noopLogger = {
-            trace: () => undefined, debug: () => undefined, info: () => undefined,
-            warn: () => undefined, error: () => undefined,
+            trace: () => undefined,
+            debug: () => undefined,
+            info: () => undefined,
+            warn: () => undefined,
+            error: () => undefined,
         };
         const daLiveOps = new DaLiveContentOperations(staticTokenProvider(daLiveToken), noopLogger);
         const { docPage, sheet } = await daLiveOps.removeBlockFromLibrary(
-            ctx.daLiveOrg, ctx.daLiveSite, { blockId },
+            ctx.daLiveOrg,
+            ctx.daLiveSite,
+            { blockId },
         );
 
-        const unpublish = await unpublishStorefrontAndDaLive(ctx, blockId, githubToken, daLiveToken);
+        const unpublish = await unpublishStorefrontAndDaLive(
+            ctx,
+            blockId,
+            githubToken,
+            daLiveToken,
+        );
 
         return JSON.stringify({
             componentDefinition,
@@ -1010,142 +1100,326 @@ export function registerProjectTools(
         return { daLiveToken, githubToken };
     };
 
-    const projectNameSchema = z.string().describe('Project name (directory name under ~/.demo-builder/projects/)');
-    const offsetSchema = z.number().int().min(0).optional().describe('Number of items to skip (pagination)');
-    const limitSchema = z.number().int().min(0).optional().describe('Maximum number of items to return (pagination)');
+    const projectNameSchema = z
+        .string()
+        .describe('Project name (directory name under ~/.demo-builder/projects/)');
+    const offsetSchema = z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe('Number of items to skip (pagination)');
+    const limitSchema = z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe('Maximum number of items to return (pagination)');
 
-    server.registerTool('list_projects', {
-        title: 'List Projects',
-        description: 'List all Demo Builder projects',
-        inputSchema: { offset: offsetSchema, limit: limitSchema },
-    }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.listProjects(projectsDir, args.offset, args.limit) }],
-    }));
-
-    server.registerTool('get_project', {
-        title: 'Get Project',
-        description: 'Read Demo Builder project state. Returns a summary by default (large arrays collapsed); pass full=true for the complete .demo-builder.json',
-        inputSchema: {
-            projectName: projectNameSchema,
-            full: z.boolean().optional().describe('Return the complete manifest instead of the summary'),
+    server.registerTool(
+        'list_projects',
+        {
+            title: 'List Projects',
+            description: 'List all Demo Builder projects',
+            inputSchema: { offset: offsetSchema, limit: limitSchema },
         },
-    }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.getProject(projectsDir, args.projectName, args.full === true) }],
-    }));
-
-    server.registerTool('get_component_config', {
-        title: 'Get Component Config',
-        description: 'Read .demo-builder.json or a .env file within the project directory (path must not escape the project root)',
-        inputSchema: {
-            projectName: projectNameSchema,
-            configRelPath: z.string().describe('Relative path to config file within project'),
-        },
-    }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.getComponentConfig(projectsDir, args.projectName, args.configRelPath as string) }],
-    }));
-
-    server.registerTool('update_project_config', {
-        title: 'Update Project Config',
-        description: 'Write content to .demo-builder.json or a .env file inside the project directory (path must not escape the project root)',
-        inputSchema: {
-            projectName: projectNameSchema,
-            configRelPath: z.string().describe('Relative path (.demo-builder.json or path to .env file)'),
-            content: z.string().max(1_000_000).describe('New file content'),
-        },
-    }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.updateProjectConfig(projectsDir, args.projectName, args.configRelPath as string, args.content as string) }],
-    }));
-
-    server.registerTool('sync_storefront', {
-        title: 'Sync Storefront',
-        description: 'Git add, commit, and push changes in the storefront directory',
-        inputSchema: {
-            projectName: projectNameSchema,
-            commitMessage: z.string().max(500).describe('Git commit message'),
-        },
-    }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.syncStorefront(projectsDir, args.projectName, args.commitMessage as string, await resolveCredentials()) }],
-    }));
-
-    server.registerTool('list_blocks', {
-        title: 'List Blocks',
-        description: 'List all block directories in the storefront blocks/ directory',
-        inputSchema: { projectName: projectNameSchema, offset: offsetSchema, limit: limitSchema },
-    }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.listBlocks(projectsDir, args.projectName, args.offset, args.limit) }],
-    }));
-
-    server.registerTool('get_block_source', {
-        title: 'Get Block Source',
-        description: "List a block's files (names + sizes) by default; pass fileName to read one file's source",
-        inputSchema: {
-            projectName: projectNameSchema,
-            blockName: z.string().regex(/^[a-zA-Z0-9_-]+$/).describe('Name of the block directory inside blocks/'),
-            fileName: z.string().regex(/^[a-zA-Z0-9._-]+$/).optional().describe('A file within the block to read; omit to list the block\'s files'),
-        },
-    }, async (args: any) => ({
-        content: [{ type: 'text' as const, text: await toolHandlers.getBlockSource(projectsDir, args.projectName, args.blockName as string, args.fileName as string | undefined) }],
-    }));
-
-    server.registerTool('promote_block_to_library', {
-        title: 'Promote Block to Library',
-        // Phrasing matches sync-changes.md:18 ("Block changes to push back to source library")
-        // so the capabilityStatements regression test (mcpServer-promoteBlock + capabilityStatements)
-        // stays green.
-        description: 'Block changes to push back to source library — adds a block to the DA.live authoring library by updating component-definition.json, writing the doc page, appending the sheet row, and committing/pushing/publishing the storefront',
-        inputSchema: {
-            projectName: projectNameSchema,
-            blockId: z.string().regex(/^[a-zA-Z0-9_-]+$/).describe('Block directory name inside storefront blocks/'),
-            title: z.string().min(1).max(200).describe('Human-readable block title shown in the DA.live library'),
-            unsafeHTML: z.string().max(100_000).describe('Example HTML for the block, embedded as plugins.da.unsafeHTML'),
-            description: z.string().max(1_000).optional().describe('Optional human-readable description'),
-        },
-    }, async (args: any) => ({
-        content: [{
-            type: 'text' as const,
-            text: await toolHandlers.promoteBlockToLibrary(
-                projectsDir,
-                args.projectName,
-                args.blockId as string,
-                args.title as string,
-                args.unsafeHTML as string,
-                args.description as string | undefined,
-                await resolveCredentials(),
-            ),
-        }],
-    }));
-
-    server.registerTool('remove_block_from_library', {
-        title: 'Remove Block from Library',
-        description: 'Remove (delete) a block from the DA.live authoring library — the inverse of promote_block_to_library. Removes the component-definition.json entry, deletes the doc page, drops the sheet row, commits/pushes the removal, and unpublishes the doc page. Does NOT delete the block source files in blocks/. Destructive: requires confirm:true.',
-        inputSchema: {
-            projectName: projectNameSchema,
-            blockId: z.string().regex(/^[a-zA-Z0-9_-]+$/).describe('Block directory name inside storefront blocks/'),
-            confirm: z.boolean().optional().describe('Must be true — this unpublishes the live doc page and pushes a removal commit'),
-        },
-    }, async (args: any) => {
-        if (args?.confirm !== true) {
-            return {
-                content: [{
+        async (args: any) => ({
+            content: [
+                {
                     type: 'text' as const,
-                    text: JSON.stringify({
-                        error: 'remove_block_from_library unpublishes the live doc page and pushes a removal commit. Call again with confirm:true.',
-                        destructive: true,
-                    }),
-                }],
+                    text: await toolHandlers.listProjects(projectsDir, args.offset, args.limit),
+                },
+            ],
+        }),
+    );
+
+    server.registerTool(
+        'get_project',
+        {
+            title: 'Get Project',
+            description:
+                'Read Demo Builder project state. Returns a summary by default (large arrays collapsed); pass full=true for the complete .demo-builder.json',
+            inputSchema: {
+                projectName: projectNameSchema,
+                full: z
+                    .boolean()
+                    .optional()
+                    .describe('Return the complete manifest instead of the summary'),
+            },
+        },
+        async (args: any) => ({
+            content: [
+                {
+                    type: 'text' as const,
+                    text: await toolHandlers.getProject(
+                        projectsDir,
+                        args.projectName,
+                        args.full === true,
+                    ),
+                },
+            ],
+        }),
+    );
+
+    server.registerTool(
+        'get_component_config',
+        {
+            title: 'Get Component Config',
+            description:
+                'Read .demo-builder.json or a .env file within the project directory (path must not escape the project root)',
+            inputSchema: {
+                projectName: projectNameSchema,
+                configRelPath: z.string().describe('Relative path to config file within project'),
+            },
+        },
+        async (args: any) => ({
+            content: [
+                {
+                    type: 'text' as const,
+                    text: await toolHandlers.getComponentConfig(
+                        projectsDir,
+                        args.projectName,
+                        args.configRelPath as string,
+                    ),
+                },
+            ],
+        }),
+    );
+
+    server.registerTool(
+        'update_project_config',
+        {
+            title: 'Update Project Config',
+            description:
+                'Write content to .demo-builder.json or a .env file inside the project directory (path must not escape the project root)',
+            inputSchema: {
+                projectName: projectNameSchema,
+                configRelPath: z
+                    .string()
+                    .describe('Relative path (.demo-builder.json or path to .env file)'),
+                content: z.string().max(1_000_000).describe('New file content'),
+            },
+        },
+        async (args: any) => ({
+            content: [
+                {
+                    type: 'text' as const,
+                    text: await toolHandlers.updateProjectConfig(
+                        projectsDir,
+                        args.projectName,
+                        args.configRelPath as string,
+                        args.content as string,
+                    ),
+                },
+            ],
+        }),
+    );
+
+    server.registerTool(
+        'sync_storefront',
+        {
+            title: 'Sync Storefront',
+            description: 'Git add, commit, and push changes in the storefront directory',
+            inputSchema: {
+                projectName: projectNameSchema,
+                commitMessage: z.string().max(500).describe('Git commit message'),
+            },
+        },
+        async (args: any) => ({
+            content: [
+                {
+                    type: 'text' as const,
+                    text: await toolHandlers.syncStorefront(
+                        projectsDir,
+                        args.projectName,
+                        args.commitMessage as string,
+                        await resolveCredentials(),
+                    ),
+                },
+            ],
+        }),
+    );
+
+    server.registerTool(
+        'list_blocks',
+        {
+            title: 'List Blocks',
+            description: 'List all block directories in the storefront blocks/ directory',
+            inputSchema: {
+                projectName: projectNameSchema,
+                offset: offsetSchema,
+                limit: limitSchema,
+            },
+        },
+        async (args: any) => ({
+            content: [
+                {
+                    type: 'text' as const,
+                    text: await toolHandlers.listBlocks(
+                        projectsDir,
+                        args.projectName,
+                        args.offset,
+                        args.limit,
+                    ),
+                },
+            ],
+        }),
+    );
+
+    server.registerTool(
+        'get_block_source',
+        {
+            title: 'Get Block Source',
+            description:
+                "List a block's files (names + sizes) by default; pass fileName to read one file's source",
+            inputSchema: {
+                projectName: projectNameSchema,
+                blockName: z
+                    .string()
+                    .regex(/^[a-zA-Z0-9_-]+$/)
+                    .describe('Name of the block directory inside blocks/'),
+                fileName: z
+                    .string()
+                    .regex(/^[a-zA-Z0-9._-]+$/)
+                    .optional()
+                    .describe("A file within the block to read; omit to list the block's files"),
+            },
+        },
+        async (args: any) => ({
+            content: [
+                {
+                    type: 'text' as const,
+                    text: await toolHandlers.getBlockSource(
+                        projectsDir,
+                        args.projectName,
+                        args.blockName as string,
+                        args.fileName as string | undefined,
+                    ),
+                },
+            ],
+        }),
+    );
+
+    server.registerTool(
+        'promote_block_to_library',
+        {
+            title: 'Promote Block to Library',
+            // Phrasing matches sync-changes.md:18 ("Block changes to push back to source library")
+            // so the capabilityStatements regression test (mcpServer-promoteBlock + capabilityStatements)
+            // stays green.
+            description:
+                'Block changes to push back to source library — adds a block to the DA.live authoring library by updating component-definition.json, writing the doc page, appending the sheet row, and committing/pushing/publishing the storefront. Requires confirm:true.',
+            inputSchema: {
+                projectName: projectNameSchema,
+                blockId: z
+                    .string()
+                    .regex(/^[a-zA-Z0-9_-]+$/)
+                    .describe('Block directory name inside storefront blocks/'),
+                title: z
+                    .string()
+                    .min(1)
+                    .max(200)
+                    .describe('Human-readable block title shown in the DA.live library'),
+                unsafeHTML: z
+                    .string()
+                    .max(100_000)
+                    .describe('Example HTML for the block, embedded as plugins.da.unsafeHTML'),
+                description: z
+                    .string()
+                    .max(1_000)
+                    .optional()
+                    .describe('Optional human-readable description'),
+                confirm: z
+                    .boolean()
+                    .optional()
+                    .describe('Must be true — this pushes a commit and publishes to the live site'),
+            },
+        },
+        async (args: any) => {
+            // Gated for the same reason its inverse is: this commits, pushes and
+            // publishes to a live site. Blast radius does not depend on the direction
+            // of the change, so `remove_block_from_library` being gated while this one
+            // was not was an inconsistency, not a policy.
+            if (args?.confirm !== true) {
+                return {
+                    content: [
+                        {
+                            type: 'text' as const,
+                            text: JSON.stringify({
+                                error: 'promote_block_to_library pushes a commit and publishes the block to the live site. Call again with confirm:true.',
+                                destructive: true,
+                            }),
+                        },
+                    ],
+                };
+            }
+            return {
+                content: [
+                    {
+                        type: 'text' as const,
+                        text: await toolHandlers.promoteBlockToLibrary(
+                            projectsDir,
+                            args.projectName,
+                            args.blockId as string,
+                            args.title as string,
+                            args.unsafeHTML as string,
+                            args.description as string | undefined,
+                            await resolveCredentials(),
+                        ),
+                    },
+                ],
             };
-        }
-        return {
-            content: [{
-                type: 'text' as const,
-                text: await toolHandlers.removeBlockFromLibrary(
-                    projectsDir,
-                    args.projectName,
-                    args.blockId as string,
-                    await resolveCredentials(),
-                ),
-            }],
-        };
-    });
+        },
+    );
+
+    server.registerTool(
+        'remove_block_from_library',
+        {
+            title: 'Remove Block from Library',
+            description:
+                'Remove (delete) a block from the DA.live authoring library — the inverse of promote_block_to_library. Removes the component-definition.json entry, deletes the doc page, drops the sheet row, commits/pushes the removal, and unpublishes the doc page. Does NOT delete the block source files in blocks/. Destructive: requires confirm:true.',
+            inputSchema: {
+                projectName: projectNameSchema,
+                blockId: z
+                    .string()
+                    .regex(/^[a-zA-Z0-9_-]+$/)
+                    .describe('Block directory name inside storefront blocks/'),
+                confirm: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        'Must be true — this unpublishes the live doc page and pushes a removal commit',
+                    ),
+            },
+        },
+        async (args: any) => {
+            if (args?.confirm !== true) {
+                return {
+                    content: [
+                        {
+                            type: 'text' as const,
+                            text: JSON.stringify({
+                                error: 'remove_block_from_library unpublishes the live doc page and pushes a removal commit. Call again with confirm:true.',
+                                destructive: true,
+                            }),
+                        },
+                    ],
+                };
+            }
+            return {
+                content: [
+                    {
+                        type: 'text' as const,
+                        text: await toolHandlers.removeBlockFromLibrary(
+                            projectsDir,
+                            args.projectName,
+                            args.blockId as string,
+                            await resolveCredentials(),
+                        ),
+                    },
+                ],
+            };
+        },
+    );
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

@@ -755,6 +755,8 @@ export function buildProjectConfig(
         importedMeshEndpoint,
         selectedPackage: wizardState.selectedPackage,
         selectedStack: wizardState.selectedStack,
+        // Recorded for the dashboard to install later — never imported here.
+        datapack: wizardState.datapack,
         selectedAppBuilderComponents: wizardState.selectedAppBuilderComponents ?? [],
         appBuilderComponentSources: wizardState.appBuilderComponentSources ?? {},
         // Legacy flat field, DERIVED from the keyed record below so both forms

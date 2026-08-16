@@ -48,6 +48,9 @@ import type { GitHubRepoItem } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
 import '../styles/eds-steps.css';
 
+/** The wizard's edsConfig, exactly as state carries it (optional included). */
+type WizardEdsConfig = BaseStepProps['state']['edsConfig'];
+
 /** Which part of the repo/code-sync flow to render (validities stay live for both). */
 export type RepoSelectionPhase = 'repository' | 'code-sync';
 
@@ -62,6 +65,65 @@ export interface RepoSelectionInlineProps extends Pick<BaseStepProps, 'state' | 
 }
 
 
+
+/**
+ * The string fields every `edsConfig` write must carry, defaulted to `''`.
+ *
+ * Both writers below spread this before applying their own changes. It was
+ * written out twice — six near-identical `|| ''` lines each — which is most of
+ * what pushed this component past the complexity limit, and meant a new required
+ * field had to be remembered in two places.
+ *
+ * `undefined` is not an acceptable value for these: they feed controlled inputs,
+ * and React silently switches an input to uncontrolled the moment its value goes
+ * undefined, discarding what the user typed with no error anywhere.
+ */
+function edsConfigStringDefaults(edsConfig: WizardEdsConfig): {
+    accsHost: string;
+    storeViewCode: string;
+    customerGroup: string;
+    repoName: string;
+    daLiveOrg: string;
+    daLiveSite: string;
+} {
+    return {
+        accsHost: edsConfig?.accsHost || '',
+        storeViewCode: edsConfig?.storeViewCode || '',
+        customerGroup: edsConfig?.customerGroup || '',
+        repoName: edsConfig?.repoName || '',
+        daLiveOrg: edsConfig?.daLiveOrg || '',
+        daLiveSite: edsConfig?.daLiveSite || '',
+    };
+}
+
+/**
+ * The repo-selection values this component derives from `edsConfig`.
+ *
+ * Six optional-chain-plus-default reads, lifted out of the component body. They
+ * are pure reads of one object and contributed a third of the component's
+ * measured complexity while making no decisions of their own — which is exactly
+ * the shape that belongs outside a component.
+ */
+function readRepoSelection(edsConfig: WizardEdsConfig): {
+    repoMode: string;
+    selectedRepo: GitHubRepoItem | undefined;
+    resetToTemplate: boolean;
+    // Derived from the state type rather than restated. Written out by hand this
+    // was `string | undefined`, which is wrong — it is the auth user OBJECT — and
+    // only a consumer passing it straight on made the compiler say so.
+    githubUser: NonNullable<NonNullable<WizardEdsConfig>['githubAuth']>['user'];
+    repoName: string;
+    hasCreatedRepo: boolean;
+} {
+    return {
+        repoMode: edsConfig?.repoMode || 'existing',
+        selectedRepo: edsConfig?.selectedRepo,
+        resetToTemplate: edsConfig?.resetToTemplate || false,
+        githubUser: edsConfig?.githubAuth?.user,
+        repoName: edsConfig?.repoName || '',
+        hasCreatedRepo: Boolean(edsConfig?.createdRepo),
+    };
+}
 
 /** Split `owner/repo`, or undefined when either half is missing. */
 function parseRepoFullName(fullName?: string): { owner: string; name: string } | undefined {
@@ -93,16 +155,13 @@ export function RepoSelectionInline({
     onCodeSyncValidChange,
 }: RepoSelectionInlineProps): React.ReactElement {
     const edsConfig = state.edsConfig;
-    const repoMode = edsConfig?.repoMode || 'existing';
-    const selectedRepo = edsConfig?.selectedRepo;
-    const resetToTemplate = edsConfig?.resetToTemplate || false;
-    const githubUser = edsConfig?.githubAuth?.user;
-    const repoName = edsConfig?.repoName || '';
+    const { repoMode, selectedRepo, resetToTemplate, githubUser, repoName, hasCreatedRepo } =
+        readRepoSelection(edsConfig);
 
     const [repoNameError, setRepoNameError] = useState<string | undefined>();
     const [repoCreationState, setRepoCreationState] = useState<RepoCreationState>({
         isCreating: false,
-        isCreated: !!edsConfig?.createdRepo,
+        isCreated: hasCreatedRepo,
     });
     const [githubAppStatus, setGitHubAppStatus] = useState<GitHubAppStatus>({
         isChecking: false,
@@ -139,11 +198,8 @@ export function RepoSelectionInline({
             updateState({
                 edsConfig: {
                     ...edsConfig,
-                    accsHost: edsConfig?.accsHost || '',
-                    storeViewCode: edsConfig?.storeViewCode || '',
-                    customerGroup: edsConfig?.customerGroup || '',
+                    ...edsConfigStringDefaults(edsConfig),
                     repoName: repo.name,
-                    daLiveOrg: edsConfig?.daLiveOrg || '',
                     // DA.live site name is locked to the GitHub repo name —
                     // see backlog 2026-06-08-unify-da-site-and-repo-name for
                     // why the dual-identifier model was retired.
@@ -170,12 +226,7 @@ export function RepoSelectionInline({
             updateState({
                 edsConfig: {
                     ...edsConfig,
-                    accsHost: edsConfig?.accsHost || '',
-                    storeViewCode: edsConfig?.storeViewCode || '',
-                    customerGroup: edsConfig?.customerGroup || '',
-                    repoName: edsConfig?.repoName || '',
-                    daLiveOrg: edsConfig?.daLiveOrg || '',
-                    daLiveSite: edsConfig?.daLiveSite || '',
+                    ...edsConfigStringDefaults(edsConfig),
                     ...updates,
                 },
             });

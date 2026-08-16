@@ -1,0 +1,96 @@
+{
+  "operation_mode": "export",
+  "processors": [
+    {
+      "data_type": "product_attributes",
+      "description": "Export product attributes",
+      "processor_script": "ProductAttributeExportProcessor"
+    },
+    {
+      "data_type": "attribute_sets",
+      "description": "Export attribute sets",
+      "processor_script": "AttributeSetExportProcessor"
+    },
+    {
+      "data_type": "attribute_assign_to_set",
+      "description": "Export attribute assignments to attribute sets (automatically runs after product_attributes export)",
+      "processor_script": "AttributeAssignmentExportProcessor"
+    },
+    {
+      "data_type": "customer_groups",
+      "description": "Export customer groups",
+      "processor_script": "CustomerGroupExportProcessor"
+    },
+    {
+      "data_type": "customers",
+      "description": "Export customer data",
+      "processor_script": "CustomerExportProcessor"
+    },
+    {
+      "data_type": "categories",
+      "description": "Export categories",
+      "processor_script": "CategoryExportProcessor"
+    },
+    {
+      "data_type": "products",
+      "description": "Export products (individual product format for POST /V1/products)",
+      "processor_script": "ProductsExportProcessor"
+    },
+    {
+      "data_type": "cart_rules",
+      "description": "Export cart/price rules",
+      "processor_script": "CartRuleExportProcessor"
+    },
+    {
+      "data_type": "coupons",
+      "description": "Export coupons (converts rule_id to rule_name for import compatibility)",
+      "processor_script": "instance-01"
+    },
+    {
+      "data_type": "stocks",
+      "description": "Export inventory stocks",
+      "processor_script": "instance-02"
+    },
+    {
+      "data_type": "sources",
+      "description": "Export inventory sources",
+      "processor_script": "instance-03"
+    },
+    {
+      "data_type": "stock_source_links",
+      "description": "Export inventory stock-source-links",
+      "processor_script": "StockSourceLinkExportProcessor"
+    },
+    {
+      "data_type": "source_items",
+      "description": "Export inventory source items",
+      "processor_script": "SourceItemsExportProcessor"
+    },
+    {
+      "data_type": "b2b_companies",
+      "description": "Export B2B companies",
+      "processor_script": "B2BCompanyExportProcessor"
+    },
+    {
+      "data_type": "b2b_shared_catalogs",
+      "description": "Export B2B shared catalogs",
+      "processor_script": "SharedCatalogExportProcessor"
+    },
+    {
+      "data_type": "b2b_shared_catalog_company_assignments",
+      "description": "Export shared catalog company assignments",
+      "processor_script": "SharedCatalogCompanyAssignmentExportProcessor"
+    },
+    {
+      "data_type": "b2b_shared_catalog_categories",
+      "description": "Export shared catalog category assignments",
+      "processor_script": "SharedCatalogCategoriesExportProcessor"
+    },
+    {
+      "data_type": "b2b_shared_catalog_products",
+      "description": "Export shared catalog product assignments",
+      "processor_script": "SharedCatalogProductsExportProcessor"
+    }
+  ],
+  "success": true
+}

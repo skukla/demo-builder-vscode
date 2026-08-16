@@ -94,6 +94,7 @@ import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
 import React from 'react';
 import type { MeshStatus, StatusDisplay } from '../hooks/useDashboardStatus';
 import { DashboardTile } from './DashboardTile';
+import { DataInstallerTile } from './DataInstallerTile';
 import { IntegrationsSummaryTile } from './IntegrationsSummaryTile';
 import type { AppBuilderComponentState } from '@/types/base';
 
@@ -603,6 +604,12 @@ export function ActionGrid({
                             hasMesh={hasMesh}
                             meshStatus={meshStatus}
                         />
+
+                        {/* Sample Data — the datapack catalog. Beside Integrations
+                            because both route to a dedicated surface, but it does
+                            NOT replace the tab: the catalog is global to the
+                            service, so browsing it should not close the dashboard. */}
+                        <DataInstallerTile />
 
                         {/* Overflow — rarely used actions tucked into a menu */}
                         <MenuTrigger>

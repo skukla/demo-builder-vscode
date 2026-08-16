@@ -136,6 +136,16 @@ Also resolved since last index (now archived to `../complete/`): **oversized tes
 
 **A design question, and the answer may be "delete the code path".** A B2B storefront serves nine placeholder 404s per page load because `fetchPlaceholderFiles` fetches each sheet from the TEMPLATE'S live site, and `main--boilerplate-b2b-template--adobe-commerce.aem.live` **does not exist** — every sheet 404s, and so do `/config.json` and `/` (control: the same path on `aem-boilerplate-commerce--hlxsites` returns 200, so the mechanism is fine and only the host is wrong). A full successful reset (`8107a42`) still left them absent, disproving the "just never reset" theory. But a sheet is only a UI label dictionary (`Global.AddProductToCart = "Add to Cart"`), and **a PDP rendered correctly with all nine 404ing** — dropins ship these English defaults compiled in. Placeholders are normally AUTHORED CONTENT (DA.live spreadsheets, like `/redirects` and `/metadata`, which the same reset copies fine), so we may be maintaining a code fetch for something the content pipeline already handles. Decide whether any package needs non-default labels before writing code; if none does, delete `fetchPlaceholderFiles` and the `placeholderSheets` inventory. Unverified: whether the B2B DA.live source already has these sheets (401 unauthenticated) — check from the extension first. The silent-404 half is ALREADY FIXED. Filed 2026-08-15.
 
+#### Move deliberately to a per-SC Adobe I/O project ([`per-sc-io-project.md`](per-sc-io-project.md))
+
+**Retire the separately-deployed shared service; each SC gets their own Adobe I/O project.** Five items: (a) the `demo-builder-s2s` credential — **CANNOT MOVE**, settled 2026-08-16; (b) store discovery; (c) prerender — **a separate research item, do not decide it here**; (d) a single SC-built mesh and (e) SC-built integration packages, both **already built**, which is what makes this credible rather than speculative. (a) cannot move, and the reason turned out to be entitlement rather than reach: a credential in the Solution Led Commerce SC org cannot be subscribed to `ACCS-REST-API` at all — the service carries no product profile there (control: twelve other services in that org DO offer products), and the subscribe is refused inside an HTTP 200. The subscription IS the entitlement, so such a credential never gains `commerce.accs`. Measured 2026-08-16, both orgs compared: `.rptc/complete/data-installer-credential-broker/step-05.md`. **Three things must exist first, all verified 2026-08-16:** no notion of a REQUIRED deployable in the catalog schema (one entry today, `app-builder-shell`); no upgrade path for a deployed integration (staleness detection is mesh-shaped — **the cost centre**, since today one deployment serves everyone and a fix ships once); and no dedup, so two demo projects sharing a workspace each believe they own the deployment and the second deploy silently overwrites the first. D1 shipped; D2–D6 pending. What it buys: retires four actions, an AES-256-GCM per-site key store, a drift checker, the org-keyed `accsDiscovery.services` setting, and `byom.overlayUrl` — which today ships a stage Runtime endpoint as a default in this PUBLIC repo. Filed 2026-08-16.
+
+#### Data Installer access requires an Adobe I/O project ([`2026-08-16-data-installer-requires-adobe-io-project.md`](2026-08-16-data-installer-requires-adobe-io-project.md))
+
+> **DECIDED 2026-08-16 — this item is now the record, not the decision.** The work split in two: `.rptc/complete/data-installer-credential-broker/` (Option 1, **shipped to develop 2026-08-16** — one shared `demo-builder-s2s` pair served from the discovery service, proven end to end including a write) and [`per-sc-io-project.md`](per-sc-io-project.md) (Option 2, everything else). The credential stays in the shared service because reach follows the instances' org, not the SC's.
+
+**A new project cannot use the Data Installer without manual Console work.** A datapack write needs an OAuth S2S pair; that pair exists only inside an Adobe I/O project + workspace; a package selecting no App Builder components never gets one, so `provision-accs-credentials` refuses. Measured live 2026-08-16 on `skukla/bodea-template-test` — both OAuth fields blank, `project.adobe` carrying only `{organization, organizationName}`. "The user can paste a pair in" is NOT an escape: it moves who creates the I/O project from the extension to a human, it does not remove the requirement. **The open decision is per-project vs one shared "Demo Builder" I/O project per org**, and the question that settles it is whether the workspace is also wanted for deploying per-project actions — shared is much the smaller change (`provisionAccsCredentials` already takes explicit ids; only the handler hard-wires them to `project.adobe`). **The two smaller defects it also carried are SHIPPED (`11dea998`)**: reset no longer asks for sample-data removal it cannot deliver (credentials resolved before the prompt, not after a 3-minute reset), and the "Set up credentials automatically" offer is gated on an actual workspace binding via one predicate shared with the provisioning guard — fixed at the flag rather than the modal, because the export spine raises the same refusal. Constraint: do NOT assume one credential reaches multiple Commerce instances; pre-flight fails identically for a real instance and a nonsense string, so it is unresolved from outside. Filed 2026-08-16 by the Bodea session.
+
 #### `delete_mesh` deletes whatever the CLI last selected ([`mesh-delete-untargeted.md`](mesh-delete-untargeted.md))
 
 **Destructive, cloud-side, both surfaces.** `handleDeleteApiMesh` validates `workspaceId` then runs `aio api-mesh delete --autoConfirmAction` without passing it, and targets no org — so the CLI falls back to its process-global `aio console where` selection, which this codebase deliberately stopped maintaining. Mesh check and deploy ARE targeted; delete is the odd one out. The safety-net guard cannot warn because `ORG_SCOPED_AIO` matches the colon form (`api-mesh:`) while the command uses the space form — and the guard's tests pin only colon spellings, so they share the blind spot. Reachable from the dashboard AND `delete_mesh`. Not reproduced live; reproduce before fixing. Filed 2026-08-14.
@@ -153,6 +163,40 @@ Note: `2026-05-30-decouple-project-from-workspace.md` looks adjacent but its hea
 #### MCP tools for Configuration Service site access ([`mcp-site-access-tools.md`](mcp-site-access-tools.md))
 
 Give an agent the same 403 repair a human now gets from `Demo Builder: Manage Site Access` — `get_site_access` / `grant_site_admin` / `revoke_site_admin` over the existing `siteAccessManagerHeadless` core, which was built UI-free for exactly this. No new logic; the constraints (report `verified` separately from `status`, treat `not_authorized` as non-retryable, never remove the last admin, mask emails) are measured rather than assumed and are listed in the item. Filed 2026-08-14 from the `config-service-admin-grant` verify loop.
+
+#### Component secret routing — the declaration decides where a credential lives ([`component-secret-routing/`](component-secret-routing/overview.md))
+
+Filed 2026-08-13; **small version shipped same day** (`ce840267`: ACCS fields declared, the
+`SECRET_ENV_KEYS` guard, one reader per credential pair). Remaining scope is the seam itself —
+generalize `type: 'secret'` routing beyond App Builder, then migrate the two secrets now in
+`componentConfigs`. Originally from Data Installer Stage 2 live verification. An ACCS project cannot import:
+the modal says "add an OAuth client id and secret" and there is **nowhere to add them** —
+`storeAccsCredentials` is called from tests only. Two designs were rejected before this one (a
+feature-specific form; collapsing the per-backend branch), both recorded in the plan so they are
+not retried.
+
+The general problem: **nothing links a config DECLARATION to SecretStorage for ordinary
+components.** `type: 'secret'` → SecretStorage exists but is App Builder-only; a Commerce
+credential lands in `componentConfigs` in the clear and is kept out of exports by
+`SECRET_ENV_KEYS`, a hand-maintained list whose own docstring warns you to remember it. The fix
+generalizes the seam that already exists (`splitAppBuilderComponentSecrets` + `secretKey`), so a
+secret is never written rather than written-then-stripped.
+
+**Step 5 is worth doing on its own.** It shrinks that list and adds a guard that fails when a
+component declares a credential-shaped field which is neither `type: 'secret'` nor listed —
+today nothing enforces the list at all, and the export's safety rests entirely on it
+(`stripSecretValues`, wired in `12f4b802`). Take step 5 even if steps 1-2 are rejected or the
+migration question stalls; it does not depend on either.
+
+**Step 2 is where the risk is**, and it is bigger than moving a value: **three consumers read that
+password straight out of `componentConfigs`**, one of them (`useAutoStoreDetect`) in the WEBVIEW,
+which cannot read SecretStorage at all. Recommended migration is three phases — one accessor with
+fallback first (behaviour-identical, independently valuable), then write-through with verified
+read-back so the credential is never in neither place, then converge on load. Phase 1 is worth
+doing even if the rest never happens. **Steps 1-2 are shared infrastructure**;
+step 3 alone would unblock ACCS the existing (worse) way. Verified against the live service, not
+assumed: it refuses with "Provide either (client_id + client_secret) or (admin_username +
+admin_password)" and 401s on a bogus pair. Not blocked; needs a design decision before code.
 
 #### App Builder app family — attach a deployable app to a demo ([`2026-06-17-appbuilder-app-deploy-spine.md`](../complete/2026-06-17-appbuilder-app-deploy-spine.md))
 

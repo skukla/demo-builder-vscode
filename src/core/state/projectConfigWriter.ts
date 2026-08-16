@@ -22,6 +22,9 @@ import { getComponentIds } from '@/types/typeGuards';
  * charging one more branch to a function already near the complexity limit.
  */
 function addOptionalManifestFields(manifest: Record<string, unknown>, project: Project): void {
+    if (project.datapack !== undefined) {
+        manifest.datapack = project.datapack;
+    }
     if (project.selectedPackage !== undefined) {
         manifest.selectedPackage = project.selectedPackage;
     }

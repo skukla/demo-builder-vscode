@@ -9,7 +9,7 @@ Use this skill after you create the source files for a new block (the `.js`, `.c
 
 ## What it does
 
-Calls the `promote_block_to_library` MCP tool with `{ projectName, blockId, title, unsafeHTML }`. The tool writes the block's preview HTML to the library doc page, appends a row to the library sheet, and adds an entry to `component-definition.json` — then publishes the doc page so DA.live picks it up. The tool is idempotent: safe to call repeatedly while you iterate on the variant HTML.
+Calls the `promote_block_to_library` MCP tool with `{ projectName, blockId, title, unsafeHTML, confirm: true }`. The tool writes the block's preview HTML to the library doc page, appends a row to the library sheet, and adds an entry to `component-definition.json` — then publishes the doc page so DA.live picks it up. The tool is idempotent: safe to call repeatedly while you iterate on the variant HTML.
 
 ## Inputs you must supply
 
@@ -18,6 +18,7 @@ Calls the `promote_block_to_library` MCP tool with `{ projectName, blockId, titl
 - **`title`** — the human-readable display name shown in the authoring picker (e.g., `"Hero CTA"`, `"Product Grid"`).
 - **`unsafeHTML`** — a representative HTML snippet showing the block in a default state. This becomes the drag-and-drop preview that authors see, so make it look like a real instance of the block (not an empty shell).
 - **`description`** *(optional)* — short author-facing description of when to use the block. Lands at `component-definition.json::components[].description` and the EDS authoring runtime renders it as a tooltip on the block tile.
+- **`confirm`** — must be `true`. Registration commits and pushes to the storefront repo and publishes the library doc page to the live site, so the tool refuses without it and does nothing. Tell the user what you are about to publish before you pass it.
 
 ### Sanitization
 

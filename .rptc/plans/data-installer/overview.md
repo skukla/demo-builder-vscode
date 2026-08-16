@@ -146,7 +146,7 @@ rather than a schema validator that would throw on a widened type.
 | `ui/DataInstallerScreen.tsx` | Page shell: header + `ViewSwitcher` + the active view. Owns no data. |
 | `ui/hooks/useDataInstallerRequest.ts` | Unwraps the response envelope. A guard refusal RETURNS rather than throws, so without this it reads as a success — which is exactly what the connectivity line it replaced did. **Every view goes through this, not `useVSCodeRequest`.** |
 | `ui/dataInstallerFailure.tsx` | The one failure treatment for every view. Signed-out is never a Retry. |
-| `ui/components/DatapackCard.tsx` | Card: cover → thumbnail → CSS letter tile, version `Picker` (contained), opens the flyout. Promotes to `core/ui` at Stage 4. |
+| `ui/components/DatapackCard.tsx` | Card: cover → thumbnail → CSS letter tile, version `Picker` (contained), opens the flyout. Feature-local; the `core/ui` promotion has not happened — Stage 4 shipped with its own simpler choice row rather than a second consumer. |
 | `ui/components/DatapackDetailPanel.tsx` | `core/ui/Drawer`'s second consumer. Pairs metadata with the stored-item inventory. |
 | `ui/components/ViewSwitcher.tsx` | Feature-local; renders nothing below two views. |
 | `ui/views/` | `DatapackCatalogView`, `InstalledDatapacksView`, `DatapackActivityView`. |
@@ -184,12 +184,15 @@ against the fixtures, the whole 40-row catalog is ~17KB of JSON and a datapack's
 - **ACCS** → a new user-supplied `client_id`/`client_secret` from an Adobe Developer Console
   **OAuth Server-to-Server** credential in a project with the *Adobe Commerce as a Cloud
   Service* service added. ACCS REST accepts only IMS OAuth2.
-  - **Cannot be auto-provisioned** — product-profile gated on *Commerce Cloud Manager*.
-    Ship the Console click-path as docs, naming that profile: it is the step that silently
-    hides the service.
-  - **SecretStorage only.** Also keeps them out of `componentConfigs`, which matters: a
-    value there is exported unless its key is in `SECRET_ENV_KEYS`
-    (`components/config/envVarKeys.ts`). A guard test now enforces that, added on `develop`.
+  - ~~Cannot be auto-provisioned~~ **DISPROVEN 2026-08-13.**
+    `accsCredentialProvisioner` creates the S2S credential and subscribes
+    `ACCS-REST-API` to it, which is what grants the scopes. Rehearsed live before it
+    was written. The Console click-path is a fallback, not the only path.
+  - ~~SecretStorage only~~ **The pair lives in `componentConfigs`**, keyed on
+    `adobe-commerce-accs` — the same place a pasted pair goes, so there is one storage
+    path and not two. Export safety comes from `SECRET_ENV_KEYS`
+    (`components/config/envVarKeys.ts`), where `ACCS_OAUTH_CLIENT_SECRET` is registered
+    and enforced by the guard test.
 - `getWorkspaceCredential()` is **not** reusable — no secret, wrong org, wrong service.
   Do not wire it up. Also **do not delete it**: the pending `appbuilder-deployable-model` D2
   plan names it as the pattern to mirror.
@@ -248,8 +251,9 @@ the selections builder to the `in` operator plus `root_category`; `StepRail` **i
 
 ### Stage 4 — wizard hook (seam only)
 
-One area row in `buildYourProjectAreas.ts` rendering the catalog compact; `DatapackCard`
-promotes to `core/ui` as its second consumer arrives. `wizard-steps.json` untouched — nested
+One area row in `buildYourProjectAreas.ts` rendering the catalog compact; `DatapackCard` was expected to promote to
+`core/ui` here; it did not — the wizard area needs a one-line choice row, not a card,
+so promotion still awaits a real second consumer. `wizard-steps.json` untouched — nested
 area, not a step. The datapack↔demo-package mapping is an **explicit table**, and a product
 decision.
 

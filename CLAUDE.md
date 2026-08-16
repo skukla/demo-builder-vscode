@@ -85,9 +85,9 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
   - `src/features/components/ui/steps/` - Component selection steps
   - `src/features/prerequisites/ui/steps/` - Prerequisites step
   - `src/features/mesh/ui/steps/` - API Mesh step
-  - `src/features/project-creation/ui/steps/` - WelcomeStep (demo package selection); `BuildYourProjectStep` (step id `'build-your-project'`) — the nested builder shell that renders a sub-step rail of **area bodies**: `CommerceStep` (area id `'commerce'`: a restyled `StepTabs` step strip (Backend · [Sign in] · Connection · Business Structure · Catalog) over a dedicated full-width view of the active step's body (one `ConnectStoreStepContent` for config steps), plus a persistent `CommerceSummary`; step/lock logic in `commerceSections.ts`), `StorefrontStep` (area id `'storefront'`, EDS-only: GitHub/DA.live + repo + block libraries), `IntegrationsStep` (area id `'integrations'`); ReviewStep, ProjectCreationStep; plus `buildYourProjectAreas.ts` (visible areas + order/status, reusing `filterStepsForStack`) and `useProjectBuilder.ts` (selection hub holding the mesh dual-flow mirror-write)
+  - `src/features/project-creation/ui/steps/` - WelcomeStep (demo package selection); `BuildYourProjectStep` (step id `'build-your-project'`) — the nested builder shell that renders a sub-step rail of **area bodies**: `CommerceStep` (area id `'commerce'`: a restyled `StepTabs` step strip (Backend · [Sign in] · Connection · Business Structure · Catalog) over a dedicated full-width view of the active step's body (one `ConnectStoreStepContent` for config steps), plus a persistent `CommerceSummary`; step/lock logic in `commerceSections.ts`), `StorefrontStep` (area id `'storefront'`, EDS-only: GitHub/DA.live + repo + block libraries), `IntegrationsStep` (area id `'integrations'`), `SampleDataStep` (area id `'sample-data'`: records which datapack seeds this project — never imports; always complete, so it cannot gate Continue); ReviewStep, ProjectCreationStep; plus `buildYourProjectAreas.ts` (visible areas + order/status, reusing `filterStepsForStack`) and `useProjectBuilder.ts` (selection hub holding the mesh dual-flow mirror-write)
   - `src/features/eds/ui/steps/RepoSelectionInline.tsx` - single-column repo choose/create body used by `StorefrontStep`
-→ Note: WelcomeStep's brand card selects a demo package; backend/stack + connect, integrations, and storefront (GitHub/DA.live + block libraries) are all configured **within the single `'build-your-project'` step** via its nested Commerce/Storefront/Integrations area rail. The canonical step order lives in `wizard-steps.json` (a single `build-your-project` entry); the area order/visibility lives in `buildYourProjectAreas.ts`. Custom block libraries are configured in VS Code settings and selected via checkboxes (see `demo-packages.json`, `block-libraries.json`, and `src/types/blockLibraries.ts`).
+→ Note: WelcomeStep's brand card selects a demo package; backend/stack + connect, integrations, and storefront (GitHub/DA.live + block libraries) are all configured **within the single `'build-your-project'` step** via its nested Commerce/Storefront/Integrations/Sample Data area rail. The canonical step order lives in `wizard-steps.json` (a single `build-your-project` entry); the area order/visibility lives in `buildYourProjectAreas.ts`. Custom block libraries are configured in VS Code settings and selected via checkboxes (see `demo-packages.json`, `block-libraries.json`, and `src/types/blockLibraries.ts`).
 
 ### Adding a New Prerequisite
 → `src/features/prerequisites/config/prerequisites.json` and `docs/systems/prerequisites-system.md`
@@ -199,6 +199,14 @@ one file through the other endpoint, read one field off the account. If no comma
 falsify a proposed cause, say it is unfalsifiable from here and name who can test it,
 rather than presenting it as the explanation.
 
+**A named field in an API response is a LEAD, not a finding.** The examples above are all
+shell-scope mistakes; this shape is different and slipped past the rule twice on 2026-08-16.
+`ACCS-REST-API … enabled: false` was read as "this org has no entitlement" — the falsifying
+check was reading the same catalog in the *other* org, one command, and it is what made the
+claim safe to write down. A `400 … "Unknown Error"` was attributed to an org restriction for
+two further tool calls; it was a malformed SDK call, found by reading the caller being
+mirrored. A field that looks like an answer is the easiest kind of evidence to over-read.
+
 **Never publish an identifier you have not read from the source.** Same day, a setting
 name written from memory into release notes — `demoBuilder.eds.defaultDaLiveOrg` — was
 wrong; the real key is `demoBuilder.daLive.defaultOrg`. Caught only by diffing
@@ -215,18 +223,18 @@ written, and they suppressed the question that would have found a shipped bug: r
 rename destroyed each site's publish key and never re-minted it. Chasing the claim is what
 found the defect; believing it is what had already let it ship.
 
-**Seeing a file's contents is not the same as having Read it.** `grep`, `awk`, `sed`, a
-`git show`, and a previous session's context all put the text in front of you without
-satisfying Edit's precondition — and the error arrives only after you have composed the
-edit. Read the file, or the specific range, before editing anything you located with a
-shell command. This is the single most common tool error in this repo: 71 occurrences
-across 6 of 12 sessions in the window ending 2026-08-15.
+**Read before you Edit.** `grep`/`awk`/`sed`/`git show` do not satisfy Edit's precondition —
+Read the file, or the range, before editing anything you located with a shell command. The
+format-on-edit hook can also invalidate your own read, so when an edit fails on a string you
+are sure is present, re-Read rather than re-deriving it from memory.
 
-**The format-on-edit hook can invalidate your own read.** It rewrites files after each
-edit — trailing commas, line wrapping — so a second edit against a region you read
-*before* the first one may no longer match. When an edit fails on a string you are certain
-is present, re-Read rather than re-deriving the string from memory (12 occurrences,
-4 sessions, same window).
+<!-- Trimmed by the 2026-08-16 dream run. The long form (incident detail, occurrence counts)
+     was added 2026-08-15 and the error rate went UP: 71 across 6 of 12 sessions before,
+     85 across 6 of 7 in the two days after. The harness already errors on this — those
+     occurrences ARE the enforcement — and the failure is loud and self-correcting, so it is
+     friction rather than a defect. Prose was not the instrument; do not re-expand it without
+     evidence that a longer form works. -->
+
 
 ## Gotchas (verified, load-bearing)
 

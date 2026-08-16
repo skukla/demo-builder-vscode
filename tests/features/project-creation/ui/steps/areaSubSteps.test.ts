@@ -93,12 +93,7 @@ describe('commerce driver', () => {
 
     it('uses activeCommerceStep + commits via committedCommerceSteps', () => {
         const s = state({ selectedBackend: 'adobe-commerce-paas' });
-        expect(driver.subSteps(s).map((x) => x.id)).toEqual([
-            'backend',
-            'connection',
-            'business-structure',
-            'catalog',
-        ]);
+        expect(driver.subSteps(s).map((x) => x.id)).toEqual(['backend', 'connection', 'business-structure', 'catalog', 'sample-data']);
         expect(driver.setActive('connection')).toEqual({ activeCommerceStep: 'connection' });
         expect(driver.commit(s, 'backend')).toEqual({ committedCommerceSteps: ['backend'] });
     });

@@ -26,6 +26,7 @@ import type {
     OrgServiceInfo,
     ServiceSubscriptionInfo,
 } from '@/features/authentication/services/types';
+import { clearSharedCredentialCache } from '@/features/data-installer/services/commerceCredentialBroker';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -348,6 +349,11 @@ export class AuthenticationService {
             // Clear all caches after logout
             this.cacheManager.clearAll(); // Includes token inspection cache
             this.sdkClient.clear();
+            // The shared Commerce credential is cached per service URL, and it was
+            // fetched under THIS user's authorization — the discovery service
+            // validates their IMS token and checks their email domain. Whoever
+            // signs in next must not inherit it.
+            clearSharedCredentialCache();
 
             const stepLogger = await this.ensureStepLogger();
             stepLogger.logTemplate('adobe-auth', 'success', { item: 'Logout' });

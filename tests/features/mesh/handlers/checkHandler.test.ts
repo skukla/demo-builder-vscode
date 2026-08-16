@@ -11,13 +11,10 @@ import * as _vscode from 'vscode';
 
 // withOrgContext records the target then runs the callback (no global mutation).
 // buildOrgTargetFromProjectAdobe is pure — use the real implementation.
-const mockWithOrgContext = jest.fn(
-    (_target: unknown, fn: () => Promise<unknown>) => fn(),
-);
+const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
 jest.mock('@/core/shell', () => ({
     ...jest.requireActual('@/core/shell'),
-    withOrgContext: (target: unknown, fn: () => Promise<unknown>) =>
-        mockWithOrgContext(target, fn),
+    withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
 }));
 
 // Mock dependencies
@@ -27,7 +24,9 @@ jest.mock('fs', () => ({
     promises: {
         mkdir: jest.fn().mockResolvedValue(undefined),
         mkdtemp: jest.fn().mockResolvedValue('/tmp/aio-workspace-test'),
-        readFile: jest.fn().mockResolvedValue('{"project":{"workspace":{"details":{"services":[]}}}}'),
+        readFile: jest
+            .fn()
+            .mockResolvedValue('{"project":{"workspace":{"details":{"services":[]}}}}'),
         rm: jest.fn().mockResolvedValue(undefined),
     },
 }));
@@ -125,6 +124,50 @@ describe('checkHandler - Security Tests (Step 2)', () => {
 
             // Should not throw validation error
             expect(result.success).toBeDefined();
+        });
+
+        // Regression: the MCP `check_mesh` tool dispatches `{}` (no agent knows an
+        // Adobe workspace id), so before the fallback existed every invocation
+        // returned "Invalid workspace ID: must be a non-empty string".
+        it('falls back to the current project workspace when the payload omits one', async () => {
+            (mockContext.stateManager.getCurrentProject as jest.Mock).mockResolvedValue({
+                adobe: {
+                    organization: 'test-org-id',
+                    projectId: 'test-project-id',
+                    workspace: 'project-workspace-id',
+                },
+            });
+
+            const result = await handleCheckApiMesh(mockContext, {});
+
+            expect(result.error ?? '').not.toMatch(/invalid workspace/i);
+            // The fallback id is what actually reached the Adobe CLI.
+            const commands = mockCommandExecutor.execute.mock.calls.map((c: any[]) => c[0]);
+            expect(commands.join('\n')).toContain('project-workspace-id');
+        });
+
+        it('prefers an explicit payload workspaceId over the project one', async () => {
+            (mockContext.stateManager.getCurrentProject as jest.Mock).mockResolvedValue({
+                adobe: { organization: 'o', projectId: 'p', workspace: 'project-workspace-id' },
+            });
+
+            await handleCheckApiMesh(mockContext, { workspaceId: 'payload-workspace-id' });
+
+            const commands = mockCommandExecutor.execute.mock.calls.map((c: any[]) => c[0]);
+            expect(commands.join('\n')).toContain('payload-workspace-id');
+            expect(commands.join('\n')).not.toContain('project-workspace-id');
+        });
+
+        it('reports no workspace when neither payload nor project has one', async () => {
+            (mockContext.stateManager.getCurrentProject as jest.Mock).mockResolvedValue({
+                adobe: { organization: 'o', projectId: 'p' },
+            });
+
+            const result = await handleCheckApiMesh(mockContext, {});
+
+            expect(result.success).toBe(false);
+            expect(result.error).toMatch(/no workspace id/i);
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
         });
 
         it('should reject empty workspaceId', async () => {
@@ -285,9 +328,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
         it('Layer 2 fallback absent-API returns no setupInstructions', async () => {
             // Force Layer 1 to fail so the handler falls back to Layer 2.
             const fs = require('fs');
-            (fs.promises.readFile as jest.Mock).mockRejectedValueOnce(
-                new Error('download failed'),
-            );
+            (fs.promises.readFile as jest.Mock).mockRejectedValueOnce(new Error('download failed'));
             // Layer 2 `aio api-mesh get --active` -> "unable to get mesh config" = API absent.
             mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
@@ -306,7 +347,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
         it('present-API reports apiEnabled true (post-automation verification signal)', async () => {
             const fs = require('fs');
             (fs.promises.readFile as jest.Mock).mockResolvedValueOnce(
-                '{"project":{"workspace":{"details":{"services":[{"name":"API Mesh","code":"MeshAPI"}]}}}}',
+                '{"project":{"workspace":{"details":{"services":[{"name":"API Mesh","code":"MeshAPI"}]}}}}'
             );
             // No mesh exists yet for this workspace.
             mockCommandExecutor.execute.mockResolvedValue({
@@ -326,7 +367,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
         it('already-enabled project is a no-op (no instructions, no re-subscribe in the check)', async () => {
             const fs = require('fs');
             (fs.promises.readFile as jest.Mock).mockResolvedValueOnce(
-                '{"project":{"workspace":{"details":{"services":[{"name":"API Mesh","code":"MeshAPI"}]}}}}',
+                '{"project":{"workspace":{"details":{"services":[{"name":"API Mesh","code":"MeshAPI"}]}}}}'
             );
             mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
@@ -366,7 +407,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                     projectId: 'proj-456',
                     workspaceId: 'workspace-123',
                 }),
-                expect.any(Function),
+                expect.any(Function)
             );
         });
 
@@ -377,7 +418,8 @@ describe('checkHandler - Security Tests (Step 2)', () => {
             });
 
             const downloadCall = mockCommandExecutor.execute.mock.calls.find(
-                (c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).includes('workspace download'),
+                (c: unknown[]) =>
+                    typeof c[0] === 'string' && (c[0] as string).includes('workspace download')
             );
             expect(downloadCall).toBeDefined();
             expect(downloadCall[0]).toContain('--workspaceId workspace-123');
@@ -394,7 +436,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                     projectId: 'test-project-id',
                     workspaceId: 'workspace-123',
                 }),
-                expect.any(Function),
+                expect.any(Function)
             );
         });
 
@@ -413,13 +455,15 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                     orgCode: 'CODE@AdobeOrg',
                     orgName: 'Acme Inc',
                 }),
-                expect.any(Function),
+                expect.any(Function)
             );
         });
 
         it('should NOT borrow cached org code/name when the cached org id differs', async () => {
             mockAuthService.getCachedOrganization = jest.fn().mockReturnValue({
-                id: 'other-org', code: 'OTHER@AdobeOrg', name: 'Other',
+                id: 'other-org',
+                code: 'OTHER@AdobeOrg',
+                name: 'Other',
             });
 
             await handleCheckApiMesh(mockContext, { workspaceId: 'workspace-123' });

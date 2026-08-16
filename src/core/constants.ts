@@ -68,7 +68,13 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // to state the real trade: edits are kept but freeze the file at your version
 // until you delete it and regenerate. First bump under the silent-sweep model:
 // nobody is prompted; the activation sweep folds it in.
-export const AI_CONTEXT_VERSION = 9;
+// v10: `promote_block_to_library` is now confirm-gated, matching its inverse
+// `remove_block_from_library`. It commits, pushes and publishes to the live
+// site; being the ADDING half of the pair never made that safe, and the gap was
+// an inconsistency rather than a policy. register-custom-block.md now passes
+// `confirm: true` and says why — without this bump, existing projects keep the
+// old skill text and the tool refuses every call it makes.
+export const AI_CONTEXT_VERSION = 10;
 
 /**
  * Component IDs for standardized component instance access

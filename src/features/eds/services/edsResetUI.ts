@@ -21,6 +21,7 @@ import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
+import type { Logger } from '@/types/logger';
 
 // ==========================================================
 // Types
@@ -349,6 +350,20 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
         return { success: false, cancelled: true };
     }
 
+    // Sample data is a SEPARATE question, asked only when there is something to
+    // remove. Reset has always meant "put the storefront back" — repo, CDN,
+    // DA.live content. This target is different: products, categories and
+    // customers on a live Commerce instance. Folding it into the first modal
+    // would widen what an existing button destroys without saying so.
+    //
+    // Gated on the project's recorded pack rather than on asking the service what
+    // is installed — that is a per-datapack lookup this dialog does not need, and
+    // the removal itself reports when there was nothing there. It DOES now make
+    // one short credential call (see the function), which is bounded and silent
+    // on failure; the older "no network call in front of a modal" phrasing here
+    // overstated a rule that was really about not adding failure modes.
+    const removeData = await confirmSampleDataRemoval(project, vscode, context.logger);
+
     const originalStatus = project.status;
     project.status = 'resetting';
     await context.stateManager.saveProject(project);
@@ -410,6 +425,13 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
                     (p) => { progress.report({ message: `Step ${p.step}/${p.totalSteps}: ${p.message}` }); },
                 );
 
+                // After the storefront reset, and never allowed to fail it — the
+                // reset is what was asked for. A removal that refuses is
+                // reported and the reset still stands.
+                if (removeData) {
+                    await removeProjectSampleData(project, context, progress);
+                }
+
                 await showResetResultNotifications(vscode, result, project.name, showLogsOnError);
                 return result;
             },
@@ -417,5 +439,110 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
     } finally {
         project.status = originalStatus;
         await context.stateManager.saveProject(project);
+    }
+}
+
+
+/**
+ * Ask whether to remove the imported sample data, when there is any to remove.
+ *
+ * Opt IN: anything other than the explicit button keeps the data. Someone
+ * resetting code must not lose a catalog by pressing Escape, which is why the
+ * dismissal path and the "Keep" path are the same path.
+ *
+ * The duration is in the prompt because it is the surprising part — a six-type
+ * reset was measured at 470 seconds, and a modal that says "this is quick"
+ * by omission would be lying.
+ */
+async function confirmSampleDataRemoval(
+    project: Project,
+    vscode: typeof import('vscode'),
+    logger: Logger,
+): Promise<boolean> {
+    const datapack = (project as { datapack?: { name: string; version: string } }).datapack;
+    if (!datapack) {
+        return false;
+    }
+
+    // Credentials BEFORE the prompt. Measured live 2026-08-16: this asked, ran
+    // the full ~3-minute storefront reset, and only then reported "no usable
+    // Commerce credentials" — three minutes spent on a question that could not
+    // be honoured.
+    //
+    // The original gate was `datapack` alone, justified by "no network call in
+    // front of a modal". THIS CALL NOW MAKES ONE: a project with no declared pair
+    // asks the shared discovery service for the credential it cannot mint itself.
+    // The earlier version of this comment said the opposite, and it was true when
+    // written — do not restore it.
+    //
+    // Keeping the call ahead of the prompt is still right, on three conditions the
+    // broker holds: one short GET on a QUICK timeout, every failure degrading
+    // silently to "no credentials", and no dialog of its own. Weighed against a
+    // three-minute reset the user cannot undo, a sub-second check is cheap.
+    const { resolveCommerceCredentials } = await import(
+        '@/features/data-installer/services/commerceCredentials'
+    );
+    const { createProjectCredentialBroker } = await import(
+        '@/features/data-installer/services/commerceCredentialBroker'
+    );
+    const { ServiceLocator } = await import('@/core/di');
+    const credentials = await resolveCommerceCredentials({
+        project: project as never,
+        broker: createProjectCredentialBroker({
+            auth: ServiceLocator.getAuthenticationService(),
+            ...(project.adobe?.organization ? { orgId: project.adobe.organization } : {}),
+            log: (line) => logger.debug(`[Reset] ${line}`),
+        }),
+    });
+    if (!credentials.ok) {
+        return false;
+    }
+
+    const removeButton = 'Remove Sample Data';
+    const answer = await vscode.window.showWarningMessage(
+        `Also remove the sample data this project imported (${datapack.name}@${datapack.version})? ` +
+            'This deletes it from the Commerce instance and can take several minutes. ' +
+            'Resetting the storefront does not require it.',
+        { modal: true },
+        removeButton,
+    );
+    return answer === removeButton;
+}
+
+/**
+ * Remove it, reporting rather than throwing.
+ *
+ * The storefront reset has already happened by the time this runs and is the
+ * thing the user asked for; a failed data removal must not turn a good reset
+ * into a failed one.
+ */
+async function removeProjectSampleData(
+    project: Project,
+    context: HandlerContext,
+    progress: { report: (value: { message: string }) => void },
+): Promise<void> {
+    try {
+        progress.report({ message: 'Removing sample data...' });
+
+        const { removeSampleData } = await import(
+            '@/features/data-installer/services/sampleDataInstall'
+        );
+        const { buildSampleDataDeps } = await import(
+            '@/features/data-installer/services/sampleDataInstallDeps'
+        );
+
+        const result = await removeSampleData(
+            project as never,
+            buildSampleDataDeps(context, project, (message) => progress.report({ message })),
+        );
+
+        if (!result.ran) {
+            context.logger.warn(
+                `[EdsReset] Sample data was not removed: ${result.reason ?? 'no reason given'}`,
+            );
+        }
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        context.logger.warn(`[EdsReset] Sample data removal failed, reset stands: ${reason}`);
     }
 }

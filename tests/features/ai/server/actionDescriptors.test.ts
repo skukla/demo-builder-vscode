@@ -43,10 +43,13 @@ describe('ACTION_DESCRIPTORS', () => {
         expect(d).toBeDefined();
         expect(d!.map).toBe(edsHandlers);
         expect(d!.type).toBe('refresh-block-library');
-        // Targets the current project's library — no input args.
-        expect(d!.inputSchema).toBeUndefined();
-        // Rebuild is idempotent/reversible (re-run) — NOT confirm-gated.
-        expect(d!.confirm).toBeUndefined();
+        // Targets the current project's library — the only arg is the gate.
+        expect(Object.keys(d!.inputSchema ?? {})).toEqual([]);
+        // Confirm-gated. This row used to assert the opposite, on the reasoning
+        // that a rebuild is "idempotent/reversible (re-run)". Locally it is —
+        // but it runs with skipPublish: false, so the re-sync reaches the live
+        // site. Reversible-for-the-filesystem is not the bar.
+        expect(d!.confirm).toBe(true);
     });
 
     it('exposes delete_mesh as a confirm-gated row dispatching to delete-api-mesh', () => {
@@ -62,6 +65,20 @@ describe('ACTION_DESCRIPTORS', () => {
         for (const d of ACTION_DESCRIPTORS.filter((r) => r.tool.startsWith('delete_'))) {
             expect(d.confirm).toBe(true);
         }
+    });
+
+    // The delete_* rule above only catches tools that SAY delete. It would not
+    // have caught refresh_block_library or promote_block_to_library, both of
+    // which published to a live site ungated. Pinning the exact set means adding
+    // a destructive tool forces a deliberate edit here rather than sliding in.
+    it('pins the exact confirm-gated set', () => {
+        const gated = ACTION_DESCRIPTORS.filter((d) => d.confirm).map((d) => d.tool);
+        expect(gated.sort()).toEqual([
+            'delete_ai_prompt',
+            'delete_mesh',
+            'refresh_block_library',
+            'remove_integration',
+        ]);
     });
 
     it('exposes rename_project dispatching to the current-project rename handler', () => {

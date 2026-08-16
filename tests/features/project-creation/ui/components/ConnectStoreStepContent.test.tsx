@@ -102,6 +102,14 @@ jest.mock('@/features/components/ui/components/StoreSelectionRow', () => ({
 const mockLookupComponentConfigValue = jest.fn();
 jest.mock('@/features/components/services/envVarHelpers', () => ({
     lookupComponentConfigValue: (...args: any[]) => mockLookupComponentConfigValue(...args),
+    // Derived from the mocked lookup rather than stubbed separately, so this cannot
+    // disagree with it. `useAutoStoreDetect` reads the admin pair through this now;
+    // a mock that omitted it failed with "readPaasAdminPair is not a function".
+    readPaasAdminPair: (configs: any) => {
+        const username = mockLookupComponentConfigValue(configs, 'ADOBE_COMMERCE_ADMIN_USERNAME');
+        const password = mockLookupComponentConfigValue(configs, 'ADOBE_COMMERCE_ADMIN_PASSWORD');
+        return username && password ? { username, password } : undefined;
+    },
 }));
 
 // Mock the LoadingDisplay and CenteredFeedbackContainer

@@ -143,6 +143,33 @@ export const handleDeployMesh: MessageHandler = async () => {
     return { success: true };
 };
 
+/**
+ * Handle 'openDataInstaller' — open the Data Installer surface.
+ *
+ * Deliberately NOT the `openIntegrations` shape. That one replaces the tab: it
+ * starts a webview transition and disposes the dashboard panel, because the
+ * integrations surface is scoped to the project you came from.
+ *
+ * The datapack catalog is global to the SERVICE — the same packs whatever
+ * project is open — so browsing it must not close what the user was looking at.
+ * The command's own registration records that decision; this dispatches and
+ * touches nothing else.
+ *
+ * A failed dispatch is reported, not thrown: the dashboard is still perfectly
+ * usable when one tile's surface will not open.
+ */
+export const handleOpenDataInstaller: MessageHandler = async (context) => {
+    try {
+        context.logger.info('Opening Data Installer surface');
+        await vscode.commands.executeCommand('demoBuilder.showDataInstaller');
+        return { success: true };
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        context.logger.error(`Failed to open the Data Installer: ${reason}`);
+        return { success: false, error: reason };
+    }
+};
+
 // ============================================================================
 // Handler Map Export (Step 3: Handler Registry Simplification)
 // ============================================================================
@@ -173,6 +200,7 @@ export const dashboardHandlers = defineHandlers({
     getProjectUrls: handleGetProjectUrls,
     navigateBack: handleNavigateBack,
     openIntegrations: handleOpenIntegrations,
+    openDataInstaller: handleOpenDataInstaller,
     showProjectDashboard: handleShowProjectDashboard,
 
     // Mesh handlers

@@ -22,11 +22,12 @@ import { extractConfigParams } from './configGenerator';
 import { validateURL } from '@/core/validation';
 import {
     ACCS_GRAPHQL_ENDPOINT,
-    PAAS_ADMIN_PASSWORD,
-    PAAS_ADMIN_USERNAME,
     PAAS_URL,
 } from '@/features/components/config/envVarKeys';
-import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
+import {
+    lookupComponentConfigValue,
+    readPaasAdminPair,
+} from '@/features/components/services/envVarHelpers';
 import type { Project } from '@/types';
 import type { CommerceStoreStructure, StoreDiscoveryParams } from '@/types/commerceStore';
 
@@ -97,9 +98,8 @@ function buildPaasRequest(
         return { error: 'Project has no usable Commerce URL configured.' };
     }
 
-    const username = lookupComponentConfigValue(configs, PAAS_ADMIN_USERNAME);
-    const password = lookupComponentConfigValue(configs, PAAS_ADMIN_PASSWORD);
-    if (!username || !password) {
+    const pair = readPaasAdminPair(configs);
+    if (!pair) {
         return {
             error:
                 'Project has no Commerce admin credentials saved. Add them in Configure → ' +
@@ -107,7 +107,7 @@ function buildPaasRequest(
         };
     }
 
-    return { backendType: 'paas', baseUrl, username, password };
+    return { backendType: 'paas', baseUrl, ...pair };
 }
 
 /**

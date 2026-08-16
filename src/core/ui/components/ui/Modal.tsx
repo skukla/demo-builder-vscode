@@ -27,7 +27,41 @@ export interface ModalProps {
      * the sticky footer still apply, so a LONG body scrolls exactly as before.
      */
     fitContent?: boolean;
+    /**
+     * Let the dialog claim more WIDTH than Spectrum's `size` allows.
+     *
+     * `size="L"` is the widest non-fullscreen Dialog, and it is not enough for
+     * content whose items cannot be broken — the Data Installer's export type
+     * list offers 18 names, the longest 38 characters, which at L either wrap
+     * mid-name or scroll. Fullscreen is far too much (it sizes to the viewport
+     * and reads as a different kind of surface).
+     *
+     * Same mechanism as {@link fitContent}: the constraint is not on the
+     * dialog's own box but on Spectrum's wrapper, so the override has to be
+     * `!important` on the element the wrapper sizes.
+     *
+     * Opt-in — every existing modal keeps its proportions.
+     */
+    wide?: boolean;
     children: ReactNode;
+}
+
+/**
+ * The dialog's opt-in size overrides, as one class string.
+ *
+ * A helper rather than two ternaries inline: chained ternaries are on the
+ * project's avoid list and the SOP scan fails on them. Returns undefined when
+ * neither applies, so the default Dialog keeps a clean class list.
+ */
+function dialogClassName(fitContent: boolean, wide: boolean): string | undefined {
+    const classes: string[] = [];
+    if (fitContent) {
+        classes.push('modal-fit-content');
+    }
+    if (wide) {
+        classes.push('modal-wide');
+    }
+    return classes.length > 0 ? classes.join(' ') : undefined;
 }
 
 /**
@@ -89,6 +123,7 @@ export function Modal({
     closeLabel = 'Close',
     closeVariant = 'secondary',
     fitContent = false,
+    wide = false,
     children,
 }: ModalProps) {
     // Map custom sizes to Dialog-compatible sizes
@@ -96,7 +131,7 @@ export function Modal({
         size === 'fullscreen' || size === 'fullscreenTakeover' ? 'L' : size;
 
     return (
-        <Dialog size={dialogSize} UNSAFE_className={fitContent ? 'modal-fit-content' : undefined}>
+        <Dialog size={dialogSize} UNSAFE_className={dialogClassName(fitContent, wide)}>
             <Heading>{title}</Heading>
             <Divider />
             <Content UNSAFE_className="modal-content">
