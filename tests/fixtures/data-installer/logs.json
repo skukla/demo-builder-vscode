@@ -1,0 +1,202 @@
+{
+  "count": 10,
+  "limit": 10,
+  "logs": [
+    {
+      "activation_id": "activation-02",
+      "commerce_instance": null,
+      "data_types": {},
+      "datapack_name": null,
+      "operation_mode": "import",
+      "scenario": null,
+      "site_type": null,
+      "timestamp": "2026-08-11T15:04:01.340Z",
+      "version": null
+    },
+    {
+      "activation_id": "activation-03",
+      "commerce_instance": null,
+      "data_types": {},
+      "datapack_name": null,
+      "operation_mode": "import",
+      "scenario": null,
+      "site_type": null,
+      "timestamp": "2026-08-11T15:03:42.248Z",
+      "version": null
+    },
+    {
+      "activation_id": "activation-01",
+      "commerce_instance": "instance-11",
+      "data_types": {
+        "attribute_assign_to_set": {
+          "status": "success"
+        },
+        "attribute_sets": {
+          "status": "success"
+        },
+        "categories": {
+          "status": "success"
+        },
+        "product_attributes": {
+          "status": "success"
+        },
+        "products": {
+          "status": "success"
+        },
+        "source_items": {
+          "status": "success"
+        },
+        "stock_source_links": {
+          "status": "success"
+        }
+      },
+      "datapack_name": "grocery",
+      "operation_mode": "import",
+      "scenario": "DATAPACK_ALL_ITEMS",
+      "site_type": "accs",
+      "timestamp": "2026-08-11T03:16:24.958Z",
+      "version": "main"
+    },
+    {
+      "activation_id": "activation-04",
+      "commerce_instance": "instance-10",
+      "data_types": {
+        "attribute_assign_to_set": {
+          "error": "HTTP 404: Not Found",
+          "status": "fail"
+        },
+        "attribute_sets": {
+          "status": "success"
+        },
+        "cart_rules": {
+          "status": "success"
+        },
+        "categories": {
+          "status": "success"
+        },
+        "customers": {
+          "error": "The %fieldName value is invalid. Set the correct value and try again.",
+          "status": "fail"
+        },
+        "product_attributes": {
+          "status": "success"
+        },
+        "products": {
+          "error": "SKU: 95103-6 - Error occurred during \"custom_attributes\" processing. Attribute \"package_size\" has invalid value. The \"Qty 6\" value's type is invalid. The \"int\" type was expected. Verify and try again.",
+          "status": "fail"
+        },
+        "source_items": {
+          "status": "success"
+        },
+        "sources": {
+          "status": "success"
+        },
+        "stock_source_links": {
+          "status": "success"
+        },
+        "stocks": {
+          "status": "success"
+        }
+      },
+      "datapack_name": "carvello",
+      "operation_mode": "import",
+      "scenario": "DATAPACK_ALL_ITEMS",
+      "site_type": "accs",
+      "timestamp": "2026-08-11T03:15:11.507Z",
+      "version": "main"
+    },
+    {
+      "activation_id": "activation-05",
+      "commerce_instance": "instance-04",
+      "data_types": {
+        "products": {
+          "status": "success"
+        }
+      },
+      "datapack_name": "AFREEN-LG-DEMO",
+      "operation_mode": "import",
+      "scenario": "DATAPACK_SPECIFIC_ITEMS",
+      "site_type": "accs",
+      "timestamp": "2026-08-07T17:31:40.380Z",
+      "version": "dev"
+    },
+    {
+      "activation_id": "activation-06",
+      "commerce_instance": "instance-04",
+      "data_types": {
+        "products": {
+          "status": "success"
+        }
+      },
+      "datapack_name": "AFREEN-LG-DEMO",
+      "operation_mode": "delete",
+      "scenario": "DATAPACK_SPECIFIC_ITEMS",
+      "site_type": "accs",
+      "timestamp": "2026-08-07T17:29:18.555Z",
+      "version": "dev"
+    },
+    {
+      "activation_id": "activation-07",
+      "commerce_instance": "instance-05",
+      "data_types": {
+        "products": {
+          "status": "success"
+        }
+      },
+      "datapack_name": "AFREEN-LG-DEMO",
+      "operation_mode": "import",
+      "scenario": "DATAPACK_SPECIFIC_ITEMS",
+      "site_type": "accs",
+      "timestamp": "2026-08-07T17:23:46.958Z",
+      "version": "dev"
+    },
+    {
+      "activation_id": "activation-08",
+      "commerce_instance": "instance-05",
+      "data_types": {
+        "products": {
+          "status": "success"
+        }
+      },
+      "datapack_name": "AFREEN-LG-DEMO",
+      "operation_mode": "delete",
+      "scenario": "DATAPACK_SPECIFIC_ITEMS",
+      "site_type": "accs",
+      "timestamp": "2026-08-07T17:22:32.092Z",
+      "version": "dev"
+    },
+    {
+      "activation_id": "activation-09",
+      "commerce_instance": "instance-05",
+      "data_types": {
+        "products": {
+          "status": "success"
+        }
+      },
+      "datapack_name": "AFREEN-LG-DEMO",
+      "operation_mode": "import",
+      "scenario": "DATAPACK_SPECIFIC_ITEMS",
+      "site_type": "accs",
+      "timestamp": "2026-08-07T17:19:47.423Z",
+      "version": "dev"
+    },
+    {
+      "activation_id": "activation-10",
+      "commerce_instance": "instance-05",
+      "data_types": {
+        "products": {
+          "status": "success"
+        }
+      },
+      "datapack_name": "AFREEN-LG-DEMO",
+      "operation_mode": "delete",
+      "scenario": "DATAPACK_SPECIFIC_ITEMS",
+      "site_type": "accs",
+      "timestamp": "2026-08-07T15:59:29.415Z",
+      "version": "dev"
+    }
+  ],
+  "skip": 0,
+  "success": true,
+  "total": 1062
+}

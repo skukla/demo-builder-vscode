@@ -65,6 +65,7 @@ export const ROW_LABELS: Record<CommerceSectionId, string> = {
     connection: 'Connection',
     'business-structure': 'Business',
     catalog: 'Catalog',
+    'sample-data': 'Sample data',
 };
 
 /** Human labels for the step/tab titles (the vertical step list nav). */
@@ -74,6 +75,7 @@ export const SECTION_TITLES: Record<CommerceSectionId, string> = {
     connection: 'Connection',
     'business-structure': 'Business Structure',
     catalog: 'Catalog',
+    'sample-data': 'Sample Data',
 };
 
 /** Context flags the section-state model needs beyond persisted wizard state. */
@@ -224,6 +226,18 @@ export function commerceSectionStates(
     );
     sections.push(catalogSection(state, gated, connectionDone));
 
+    // Never gated, unlike every sub-step above it. Those read THROUGH the live
+    // Commerce connection, so each one chains on the last; this reads the pack
+    // catalog from the Data Installer service and installs nothing during the
+    // wizard at all. Locking it behind a reachable backend would gate a choice
+    // that has no dependency on one — and picking a demo before the instance
+    // exists is the ordinary case.
+    sections.push({
+        id: 'sample-data',
+        status: 'done',
+        value: state.datapack?.name ?? 'None',
+    });
+
     return sections;
 }
 
@@ -311,6 +325,11 @@ export function isCommerceStepComplete(
             // ship a .env with blanks. `!== false` so an unknown verdict (the
             // body has not mounted yet) stays as permissive as before.
             return state.commerceCatalogValid !== false;
+        case 'sample-data':
+            // Choosing nothing is a real answer, not an unfinished one. The pack
+            // is installed from the dashboard after creation, so nothing chosen
+            // here can be required to move on.
+            return true;
     }
 }
 

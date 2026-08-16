@@ -51,6 +51,11 @@ const PANELS: ReadonlyArray<{ name: string; entry: string; command: string; noRe
         command: 'features/dashboard/commands/openAi.ts',
     },
     {
+        name: 'dataInstaller',
+        entry: 'features/data-installer/ui/index.tsx',
+        command: 'features/data-installer/commands/showDataInstaller.ts',
+    },
+    {
         name: 'integrations',
         entry: 'features/dashboard/ui/integrationsSurface/index.tsx',
         command: 'features/dashboard/commands/showIntegrations.ts',

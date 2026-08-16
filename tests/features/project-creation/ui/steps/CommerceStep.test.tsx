@@ -294,10 +294,13 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
                 storeDiscoveryData,
                 componentConfigs,
                 // Connection + business done so business-structure is a REACHED tab the
-                // user can click BACK to (active opens on catalog).
+                // user can click BACK to. With everything configured the area now
+                // opens on Sample Data — the only sub-step not yet addressed — so
+                // this names the config step it is actually about.
                 commerceConnectValid: true,
                 commerceStoreViewChosen: true,
             });
+            fireEvent.click(stepTab('catalog'));
             // Persisted store structure + configs reach the active config panel.
             expect(screen.getByTestId('connect-store-panel')).toHaveAttribute(
                 'data-has-store-discovery',

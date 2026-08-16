@@ -82,6 +82,13 @@ export interface Project {
     // Package/Stack/Addons selections (vertical + architecture)
     /** Package ID selected during project creation (e.g., 'citisignal', 'buildright') */
     selectedPackage?: string;
+    /**
+     * Sample data chosen during creation, installed later from the dashboard.
+     *
+     * Recorded, not applied: an import needs a reachable instance with working
+     * credentials and runs for minutes, so it never happens inside the wizard.
+     */
+    datapack?: { name: string; version: string };
     /** Stack ID selected during project creation (e.g., 'headless-paas') */
     selectedStack?: string;
     /** Optional addons selected during project creation (e.g., ['adobe-commerce-aco']) */

@@ -98,7 +98,9 @@ const getBack = () => screen.queryByRole('button', { name: /back/i });
 
 // Commerce sub-steps for a NON-ACCS, no-backend create-mode state (sign-in omitted):
 // [backend, connection, business-structure, catalog] (4 sub-steps).
-const COMMERCE_SUBSTEPS = 4;
+// Five now: sample-data joined the Commerce sub-steps when it stopped being
+// an area of its own.
+const COMMERCE_SUBSTEPS = 5;
 
 /** Click Continue n times (each is a separate await for state to settle). */
 async function clickContinue(
@@ -199,8 +201,9 @@ describe('WizardContainer — sub-step → area → wizard-step progression', ()
         await clickContinue(user, COMMERCE_SUBSTEPS);
         expect(screen.getByTestId('build-your-project-step')).toBeInTheDocument();
 
-        // integrations is the LAST area (null driver — no sub-steps) → Continue
-        // advances the wizard step to review.
+        // integrations ends the rail again: `sample-data` moved into Commerce, so
+        // there is no trailing area to hop through. It is driverless, so one
+        // Continue leaves the step.
         await user.click(getContinue());
         await waitFor(
             () => {

@@ -194,6 +194,29 @@ async function fetchViaDiscoveryService(
 // ==========================================================
 
 /**
+ * Drop the admin scope from a discovered structure.
+ *
+ * The admin scope is a consistent ID-0 trio on a real instance — website
+ * `0:admin`, group `0:default`, view `0:admin` (measured live, 2026-08-14).
+ * It is technically a website and nobody can use it: no storefront, not
+ * editable in the backoffice. Filtered HERE, at the seam, so every consumer —
+ * dropdowns, counts, the discovery log — sees the same user-real structure;
+ * the dropdown used to filter locally while the log counted raw, and the two
+ * numbers disagreed in front of the user.
+ *
+ * Keyed on id 0, not code: the admin GROUP's code is 'default', which collides
+ * with the real 'default' store view.
+ */
+function stripAdminScope(data: CommerceStoreStructure): CommerceStoreStructure {
+    return {
+        ...data,
+        websites: data.websites.filter((website) => Number(website.id) !== 0),
+        storeGroups: data.storeGroups.filter((group) => Number(group.id) !== 0),
+        storeViews: data.storeViews.filter((view) => Number(view.id) !== 0),
+    };
+}
+
+/**
  * Discover store structure from Commerce REST API.
  *
  * Dispatches to PaaS or ACCS path based on backendType.
@@ -221,7 +244,7 @@ export async function discoverStoreStructure(
 
             const token = await getAdminToken(params.baseUrl, params.username, params.password);
             const data = await fetchStoreStructurePaas(params.baseUrl, token);
-            return { success: true, data };
+            return { success: true, data: stripAdminScope(data) };
         }
 
         // ACCS path — uses discovery service
@@ -241,7 +264,7 @@ export async function discoverStoreStructure(
             params.imsToken,
             accsEndpoint,
         );
-        return { success: true, data };
+        return { success: true, data: stripAdminScope(data) };
     } catch (error) {
         // Structural checks (error.name, instanceof) instead of substring
         // matches. The substring approach used to collide with service-response
