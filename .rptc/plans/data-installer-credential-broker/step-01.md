@@ -12,7 +12,7 @@ the guard chain this endpoint needs. `discover-stores/index.js:105-111` reads
 credential write. This step adds a third action that runs the chain and returns a
 pair instead of consuming one.
 
-## The one thing to settle before writing code
+## The one thing to settle before writing code — RESOLVED 2026-08-16
 
 **Is a credential that works for `discover-stores` also subscribed to
 `ACCS-REST-API`?** `discover-stores` mints tokens with the scope list at
@@ -21,19 +21,30 @@ pre-flight is what actually cares, and it is the subscription — not the scope
 string — that flips it from 400 to 200
 (`accsCredentialProvisioner.ts:1-29` records this).
 
-**Falsify it with the probe the research already ran**, before deciding which pair
-to serve: mint a token from the candidate pair and call the Data Installer's
-`get-websites-and-stores` against a known instance in `285361`. 200 with that
-instance's own website codes means the pair is usable. Keep both controls from
-`.rptc/research/data-installer-credential-home/research.md` — a nonsense instance
-id (expect 400) and a bad secret (expect 401). Do not infer this from the
-subscription list in the Console.
+**Measured, not inferred.** `get-websites-and-stores` — the read the dry run uses,
+which cannot start work by accident — against a real instance in `285361`, using
+the pair already in the service's `.env`. Run twice, identical both times:
 
-- **Usable** → the deployer can point the new inputs at the same pair.
-- **Not usable** → mint a `demo-builder-s2s` credential in the service's own I/O
-  project and subscribe `ACCS-REST-API` **as a direct S2S subscribe, not the
-  axis-filtered path** — the filter reads `platformList` and silently drops an
-  S2S-only service (`accsCredentialProvisioner.ts:19-23`). Subscribe the UNION.
+| Leg | Result |
+|---|---|
+| **The test** — service pair vs the real instance | **200**, `success: true`, websites `[base]` |
+| Control — instance | nonsense 22-char id → **400** `Pre-flight check failed for all configured site types (accs, local)` |
+| Control — credential | real id, bad secret, same instance → **401** `invalid_client` |
+
+**Yes: the existing pair carries the entitlement.** Both controls failed as
+required, which is what makes the 200 load-bearing — the endpoint really does
+refuse instances it cannot reach, and really does authenticate the credential
+per-request. The credential control is the leg that closes the "maybe it returns
+200 to anything" reading, and it is why the research insisted on it.
+
+So the deployer points the new inputs at the same values, and **no
+`demo-builder-s2s` needs minting.** The `.env` is set accordingly (gitignored).
+
+Had it come back 400, the alternative was to mint one in the service's own I/O
+project and subscribe `ACCS-REST-API` **as a direct S2S subscribe, not the
+axis-filtered path** — the filter reads `platformList` and silently drops an
+S2S-only service (`accsCredentialProvisioner.ts:19-23`). Recorded in case the
+credential is ever rotated to a narrower one.
 
 Either way the action reads **its own input names**, never `IMS_CLIENT_ID`.
 
