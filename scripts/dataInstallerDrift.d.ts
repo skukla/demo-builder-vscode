@@ -49,6 +49,14 @@ export function modeFindings(
     counts: Record<string, number | null | undefined>,
 ): ModeFinding[];
 
+/**
+ * The Data Installer API base URL, read from DATA_INSTALLER_API_BASE_URL with
+ * any trailing slash stripped. Throws when unset or empty — an empty base is
+ * the failure this replaced, and returning one lets the checker "pass" against
+ * a relative URL it never fetched.
+ */
+export function readBaseUrl(): string;
+
 export const DECIDED_MODES: readonly string[];
 export const CANDIDATE_MODES: readonly string[];
 export const CONTROL_MODE: string;
