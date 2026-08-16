@@ -69,3 +69,24 @@ reusable: a create or reset overwrites them and `brandAssets` re-vendors from
 through. (An earlier note here said the stale script made that project unusable for the
 repricing check — that was too strong. It only holds for inspecting an old project
 without re-running create.)
+
+## Step 05 outcome (2026-08-16)
+
+**Items 1-3 done. Item 4 (unhide) DEFERRED by the owner; item 5 (merge) follows it.**
+
+The package works — the owner ran the dogfood and reports Step 05 fine. What changed is the
+gate: `hidden: true` no longer means "unverified", it means **"not yet redesigned"**. The
+storefront's look and feel is being reworked, and that work is deliberately coupled to building
+the AI tooling that supports it rather than done by hand.
+
+Consequences for anyone picking this up:
+
+- **Do not unhide on the strength of the smoke test.** Sections 1-7 pass; that was the old
+  criterion and it is satisfied. The current criterion is the redesign.
+- The three unhide edits are listed in `smoke-test.md` section 8 and are still correct.
+- The tooling half is `.rptc/backlog/2026-08-16-mcp-surface-for-sc-design-work.md`, on branch
+  `docs/mcp-surface-for-sc-design`. Bodea is its driving use case: the operation sort in that
+  item is literally the record of building this storefront by hand.
+- The theme trap matters more now than it did: `styles/bodea-theme.css` is vendored by
+  `brandAssets` from `skukla/bodea-source`, so redesign work done in a generated project is
+  **destroyed on the next reset**. Durable theme changes land in `bodea-source` and re-vendor.

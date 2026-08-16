@@ -141,6 +141,13 @@ These checks are the delta; everything above still applies.
 | 7h Commerce routes | `/cart`, `/checkout`, `/quick-order`, `/search`, `/wishlist`, `/order-status` all render | they were missing entirely until 2026-08-16 — a content copy from a stale page list would drop them again |
 | 7g **Repricing — the unproven one** | With results on screen, sign in as a **group 7** buyer. Tiles repaint **without a reload**: a rack goes 7,500 -> 6,750 | `bodea/customer-group-changed` never fired, or the old vendored script shipped |
 
+**7g status as of 2026-08-16: UNVERIFIED, and deliberately not a blocker.** The owner ran
+step 05 and reports it fine, but could not confirm whether the sign-in repricing was among
+what they exercised, and chose not to let it gate the redesign and AI-tooling work. So treat
+the repricing fix as statically verified only — ESLint clean, the custom event round-tripped
+through the real vendored event bus in Node, `state` confirmed mutated in place — and never
+run against a live sign-in. Anyone who does exercise it should record the result here.
+
 7g is the only check here that exercises code verified statically but never at runtime.
 Measured group pricing to compare against (`bodea-datapack-facts.md` has the full table):
 
@@ -150,10 +157,16 @@ Measured group pricing to compare against (`bodea-datapack-facts.md` has the ful
 | 6 | 7500.00 | 999.00 | 3.28 |
 | 7 | 6750.00 | 899.10 | 4.00 |
 
-### 8. Unhide — do this LAST, only once 1-7 pass
+### 8. Unhide — DEFERRED (owner's call, 2026-08-16)
 
-`hidden: true` is the gate marker for exactly this run, so flipping it early makes it
-meaningless. Three edits, then `gate`:
+**Sections 1-7 pass; the package works. `hidden: true` stays anyway.** The gate is no longer
+"does it work" but "is it designed" — the owner is holding the unhide until the storefront is
+redesigned, and that redesign is coupled to building the AI tooling that supports it
+(`.rptc/backlog/2026-08-16-mcp-surface-for-sc-design-work.md`, on branch
+`docs/mcp-surface-for-sc-design`).
+
+Do NOT flip the flag on the strength of 1-7 alone — that was the old criterion and it is
+satisfied. When the redesign lands, three edits, then `gate`:
 
 - `demo-packages.json` -> `"hidden": false`
 - `tests/templates/demo-packages-bodea.test.ts:53` — "should exist and be hidden"
