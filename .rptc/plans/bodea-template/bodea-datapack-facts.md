@@ -244,9 +244,8 @@ Everything else has none:
 | products/cooling-equipment | 1 | 1 |
 | products/critical-power-equipment | 2 | 1 |
 
-**Consequence, and why `AEM_ASSETS_ENABLED` defaults to `false` for this package.** The
-boilerplate PLP's `ProductImage` slot calls `tryRenderAemAssetsImage` unguarded. Its logic
-(read from the vendored `tools/lib/aem/assets.js`):
+**Consequence.** The boilerplate PLP's `ProductImage` slot calls `tryRenderAemAssetsImage`
+unguarded. Its logic (read from the vendored `tools/lib/aem/assets.js`):
 
 ```
 if (!isAemAssetsEnabled()) { renderPlain(); return; }   // disabled → safe
@@ -254,14 +253,33 @@ if (!imageProps.src) throw new Error('An image source is required…');  // enab
 if (!isAemAssetsUrl(src)) { renderPlain(); return; }
 ```
 
-So with assets enabled, ONE image-less product throws inside the slot and the entire product
-grid fails to render — every category page came back blank. Disabled, the plain-render path
-still shows the three products that have assets (unoptimized) and renders an empty slot for
-the rest.
+So with assets enabled, ONE image-less product throws inside the slot and the whole product
+grid fails to render.
 
 Not patched deliberately: a patch would buy image optimization for three products at the cost
 of a permanent entry in a ledger the project keeps single-digit. The unguarded throw is a
 genuine boilerplate defect and belongs upstream.
+
+### `AEM_ASSETS_ENABLED` stays TRUE for bodea — the earlier "default it off" call was wrong
+
+**Superseded 2026-08-16 (owner's call), and the reasoning is worth keeping.** This file
+previously recorded that bodea ships `AEM_ASSETS_ENABLED: "false"` because of the coverage gap
+above. That inverted cause and effect: **AEM Assets is where Bodea product images are meant to
+live** — the owner is sourcing the missing assets — so the flag describes the brand's design,
+not the catalog's current state. Turning it off to dodge a temporary data gap made the package
+permanently hide the very integration the demo exists to show.
+
+The override is now **deleted rather than set to `"true"`**: the env var's own default in
+`components.json` is already `"true"` and no other package overrides it, so bodea inherits it
+exactly like the rest and there is nothing left to contradict.
+
+Pinned in `tests/templates/demo-packages-bodea.test.ts` — `AEM_ASSETS_ENABLED` must be
+**absent** from bodea's `configDefaults`, with the rationale in the test body. The same commit
+added the first value-pin for the six store codes; before it, `configDefaults` was only ever
+asserted structurally, so the original wrong `"false"` shipped with no test able to notice.
+
+**General rule this cost us:** a package default describes the brand's intended configuration.
+When live data does not yet support it, fix the data — do not encode the gap as configuration.
 
 **Open with CoreTech:** asset coverage for the remaining 23 SKUs. That is what actually makes
 the demo look good; the toggle only stops it being broken.

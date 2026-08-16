@@ -20,6 +20,8 @@ interface DemoPackage {
     requiresMesh?: boolean;
     addons?: Record<string, 'required' | 'optional' | 'excluded'>;
     configFlags?: Record<string, boolean>;
+    /** Optional per-key, so an absent entry means "inherit the env var's own default". */
+    configDefaults?: Record<string, string>;
     storefronts: Record<string, Record<string, unknown>>;
 }
 
@@ -58,6 +60,32 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
     it('should not require mesh', () => {
         const pkg = getBodea();
         expect(pkg.requiresMesh).toBe(false);
+    });
+
+    it('should pin the store scope verified against the seeded backend', () => {
+        // Measured 2026-08-15: the live store picker resolves a real Bodea project to
+        // exactly these codes. They are load-bearing — a wrong scope yields an empty
+        // catalog with no error — and nothing else in the suite pins their values.
+        const pkg = getBodea();
+        const cfg = pkg.configDefaults ?? {};
+        expect(cfg.ADOBE_COMMERCE_WEBSITE_CODE).toBe('base');
+        expect(cfg.ADOBE_COMMERCE_STORE_CODE).toBe('main_website_store');
+        expect(cfg.ADOBE_COMMERCE_STORE_VIEW_CODE).toBe('default');
+        expect(cfg.ACCS_WEBSITE_CODE).toBe('base');
+        expect(cfg.ACCS_STORE_CODE).toBe('main_website_store');
+        expect(cfg.ACCS_STORE_VIEW_CODE).toBe('default');
+    });
+
+    it('should not override AEM_ASSETS_ENABLED — AEM Assets is where Bodea images live', () => {
+        // Product images are AEM's job for this brand by design, and the env var's own
+        // default is already "true", so bodea inherits it exactly as every other
+        // package does. This was briefly overridden to "false" to work around a data
+        // gap (3 of 26 products carried assets); that turned a temporary catalog state
+        // into a permanent package decision and hid the integration the demo exists to
+        // show. Fix the data, not the flag.
+        const pkg = getBodea();
+        const cfg = pkg.configDefaults ?? {};
+        expect(cfg.AEM_ASSETS_ENABLED).toBeUndefined();
     });
 
     it('should exclude the adobe-commerce-aco addon', () => {

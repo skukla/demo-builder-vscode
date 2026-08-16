@@ -95,7 +95,7 @@ catalog-highlights   (any two authored rows — no backend needed, proves the bl
 
 | Check | Pass looks like | Known-acceptable |
 |---|---|---|
-| 4a product-teaser | Renders "Bodea VR Rack"-class product, name + price | **Image placeholder** — the pack ships no images (by design; AEM Assets supplies them) |
+| 4a product-teaser | Renders "Bodea VR Rack"-class product, name + price | **Image placeholder** for the 23 of 26 SKUs with no AEM asset yet. `AEM_ASSETS_ENABLED` stays TRUE — assets are where Bodea images belong; the coverage gap is a data task, not a reason to flip the flag. A PLP that renders EMPTY (not just image-less) is the unguarded-throw defect, worth reporting. |
 | 4b product-teaser bad SKU | Author `sku  does-not-exist` → named "Product unavailable" card | — |
 | 4c luxury-configurator | Real Processor options (2.4/3/3.2/4 GHz), price updates on select, Add to Cart enables when valid | Dropdowns not swatches — pack has no swatch data |
 | 4d commerce-account-hub (signed out) | "Sign in to view live account…" | — |

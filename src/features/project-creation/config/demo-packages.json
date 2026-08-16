@@ -397,7 +397,6 @@
         "adobe-commerce-aco": "excluded"
       },
       "configDefaults": {
-        "AEM_ASSETS_ENABLED": "false",
         "ADOBE_COMMERCE_WEBSITE_CODE": "base",
         "ADOBE_COMMERCE_STORE_CODE": "main_website_store",
         "ADOBE_COMMERCE_STORE_VIEW_CODE": "default",
