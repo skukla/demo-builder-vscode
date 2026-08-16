@@ -30,8 +30,8 @@ node $P schema <tool>                 # the tool's inputSchema as the agent sees
 node $P call <tool> '<json args>'     # call it; prints byte size and ~token cost
 ```
 
-Flags: `--socket <path>` (when discovery is ambiguous), `--full` (don't truncate), `--force`
-(permit a non-read-only call).
+Flags: `--socket <path>` (when discovery is ambiguous), `--full` (don't truncate),
+`--force <tool>` (permit that ONE non-read-only tool).
 
 ## Read `info` FIRST, every time
 
@@ -90,7 +90,27 @@ dangerous tool correctly, forever, including ones not written yet; an allowlist 
 a new tool appears. Prefer the allowlist even though it is blunter — a false positive costs one
 flag, a false negative costs a GitHub repo or a live storefront.
 
+**`--force` names its tool, and that is not cosmetic.** It was a bare boolean until a script
+looped over 17 supposedly-gated tools passing it blanket. Two of the 17 had no gate — the
+classifier that produced the list had matched `confirm:true` inside an error MESSAGE
+(`sign_in(provider:"github", confirm:true)`) rather than a gate declaration — and `republish` ran
+against a live storefront, pushing a commit and publishing to the CDN. A blanket override is
+precisely the shape that accident requires. `--force delete_page` unlocks `delete_page` and
+nothing else.
+
 Before any `--force` call, confirm with the user and use a resource you can afford to lose.
+
+## Do not classify tools by reading their source
+
+Three attempts at "which of these tools are gated?" produced three confident wrong answers in one
+session: socket calls that failed into `{}` while the host was restarting (indistinguishable from
+"declares no confirm"), a fixed-size text window that bled into the NEXT tool's registration, and
+a regex that matched prose describing a gate as if it were one. A control caught the second and
+missed the third, and on one occasion the CONTROL itself was wrong — `open_view` does have a gate.
+
+If you need to know how a state-changing tool responds, drive its handler in a test with mocked
+services. That runs the real shaping code, measures the real output, and cannot misclassify,
+because it does not classify.
 
 **Flags never consume the argument after them.** `--full` and `--force` are booleans;
 `--socket` requires a value and errors without one. The first version consumed the next token

@@ -17,7 +17,7 @@
  * Flags:
  *   --socket <path>   explicit socket (default: auto-discover, error if ambiguous)
  *   --full            do not truncate call output
- *   --force           permit a NON-read-only tool call (refused otherwise)
+ *   --force <tool>    permit that ONE non-read-only tool (never blanket)
  */
 
 import net from 'net';
@@ -61,7 +61,13 @@ const valueFlag = (name) => {
 };
 // Booleans first: otherwise `--socket --full` would take "--full" as the path.
 const full = boolFlag('--full');
-const force = boolFlag('--force');
+// `--force` NAMES the tool it unlocks. It used to be a bare boolean, and on
+// 2026-08-16 a script looped over 17 tools passing it blanket — two of them
+// turned out not to be gated at all (a classifier bug), and `republish` ran
+// against a live storefront, pushing a commit and publishing to the CDN.
+// A blanket override is exactly the shape that accident needs; naming the tool
+// makes each unlock a deliberate, single-target decision.
+const forceTool = valueFlag('--force');
 const socketFlag = valueFlag('--socket');
 const [cmd, ...rest] = argv;
 
@@ -231,13 +237,14 @@ const commands = {
 
     async call([tool, argsJson]) {
         if (!tool) die("usage: probe.mjs call <tool> ['<json args>']");
-        if (!isReadOnly(tool) && !force) {
+        if (!isReadOnly(tool) && forceTool !== tool) {
             die(
                 `"${tool}" is not a read-only tool and was NOT called.\n` +
-                    `  Re-run with --force if you intend it, and only against a resource you can lose.\n` +
-                    `  Standing rule: never call a state-changing tool merely to measure it.\n` +
-                    `  (This is an allowlist: anything not named list_/get_/read_/check_/... is gated,\n` +
-                    `   because a denylist let sync_content and republish through to the live CDN.)`,
+                    `  To run it anyway: --force ${tool}\n` +
+                    `  --force NAMES its tool on purpose. A bare --force once let a loop over 17\n` +
+                    `  "gated" tools run republish against a live storefront — two of the 17 had no\n` +
+                    `  gate, and a blanket override could not tell.\n` +
+                    `  Standing rule: never call a state-changing tool merely to measure it.`,
             );
         }
         let args = {};

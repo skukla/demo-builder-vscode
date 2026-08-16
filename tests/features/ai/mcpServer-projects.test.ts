@@ -351,3 +351,48 @@ describe('toolHandlers.getComponentConfig', () => {
     });
 });
 
+
+// ─── summary collapses the drift map too ─────────────────────────────────────
+//
+// `aiFileHashes` is one SHA per generated AI file. Measured live 2026-08-16 it
+// was 4,479 bytes of a 9,895-byte summary — 45% — on a real project. It
+// post-dates the aiPrompts/installedBlockLibraries collapses, which is why it
+// slipped through. An agent needs to know the bundle drifted, not the hashes
+// that prove it.
+describe('toolHandlers.getProject — aiFileHashes', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    const manifestWith = (extra: Record<string, unknown>) => {
+        (fsProm.readFile as jest.Mock).mockResolvedValue(
+            JSON.stringify({ name: PROJECT_NAME, status: 'ready', ...extra }),
+        );
+    };
+
+    it('collapses the hash map to a count in the summary', async () => {
+        manifestWith({
+            aiFileHashes: { 'AGENTS.md': 'a'.repeat(64), '.mcp.json': 'b'.repeat(64) },
+        });
+
+        const out = await toolHandlers.getProject(PROJECTS_DIR, PROJECT_NAME);
+
+        expect(JSON.parse(out).aiFileHashes).toBe('[2 file hash(es) — pass full:true to expand]');
+        expect(out).not.toContain('a'.repeat(64));
+    });
+
+    it('returns the real hashes when full:true', async () => {
+        const hashes = { 'AGENTS.md': 'a'.repeat(64) };
+        manifestWith({ aiFileHashes: hashes });
+
+        expect(JSON.parse(await toolHandlers.getProject(PROJECTS_DIR, PROJECT_NAME, true)).aiFileHashes)
+            .toEqual(hashes);
+    });
+
+    it('leaves a manifest without the field untouched', async () => {
+        manifestWith({});
+        expect(JSON.parse(await toolHandlers.getProject(PROJECTS_DIR, PROJECT_NAME))).not.toHaveProperty(
+            'aiFileHashes',
+        );
+    });
+});

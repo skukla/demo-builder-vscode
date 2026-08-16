@@ -269,6 +269,18 @@ function summarizeManifest(manifest: Record<string, unknown>): Record<string, un
         summary.aiPrompts = `[${manifest.aiPrompts.length} prompt(s) — pass full:true to expand]`;
     }
 
+    // The AI-bundle drift map: one SHA per generated file. Measured live
+    // 2026-08-16 it was 4,479 bytes of a 9,895-byte "summary" — 45% — on a real
+    // project, and it post-dates the two collapses above, which is the only
+    // reason it was never folded in. An agent never needs the hashes; it needs
+    // to know whether the bundle drifted, and that comparison happens
+    // extension-side. Same waste as the raw `who_created` in
+    // list_adobe_projects: the input to a comparison, useless to the recipient.
+    if (manifest.aiFileHashes && typeof manifest.aiFileHashes === 'object') {
+        const count = Object.keys(manifest.aiFileHashes as Record<string, unknown>).length;
+        summary.aiFileHashes = `[${count} file hash(es) — pass full:true to expand]`;
+    }
+
     if (Array.isArray(manifest.installedBlockLibraries)) {
         summary.installedBlockLibraries = manifest.installedBlockLibraries.map((lib) => {
             const entry = lib as { name?: unknown; source?: unknown; blockIds?: unknown };

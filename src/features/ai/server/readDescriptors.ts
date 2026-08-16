@@ -126,6 +126,109 @@ function shapeAiSetup(res: HandlerResponse, args: Record<string, unknown>): stri
     });
 }
 
+/** Unwrap a handler response to its payload, or `undefined` if it is an error. */
+function payloadOf(res: HandlerResponse): Record<string, unknown> | undefined {
+    if (!res.success) return undefined;
+    const { success: _s, ...rest } = res as HandlerResponse & Record<string, unknown>;
+    const keys = Object.keys(rest);
+    return (keys.length === 1 && keys[0] === 'data' ? (rest as { data: unknown }).data : rest) as
+        | Record<string, unknown>
+        | undefined;
+}
+
+/**
+ * Flatten the repeated `group` object on each Console API row.
+ *
+ * Measured live 2026-08-16: 46 rows carrying a `{code, name}` group object cost
+ * 2,584 bytes — 48% of the response — to convey **6 distinct values**. Rows keep
+ * the group code; the legend is emitted once, so the names stay readable without
+ * being paid for 46 times.
+ */
+function shapeConsoleApis(res: HandlerResponse, args: Record<string, unknown>): string {
+    const payload = payloadOf(res) as
+        | ({ apis?: Array<Record<string, unknown>> } & Record<string, unknown>)
+        | undefined;
+    if (!payload || !Array.isArray(payload.apis)) return defaultShape(res);
+
+    const groups: Record<string, string> = {};
+    let apis: Array<Record<string, unknown>> = payload.apis.map((row) => {
+        const g = row.group as { code?: string; name?: string } | undefined;
+        if (g?.code && g.name) groups[g.code] = g.name;
+        return { ...row, ...(g?.code ? { group: g.code } : {}) };
+    });
+
+    // The description tells an agent to come here "to find the right code (e.g.
+    // for Firefly Services)" — a search, which the tool did not offer. Filtering
+    // turns that intent into ~a dozen rows instead of all 46.
+    const search = typeof args.search === 'string' ? args.search.trim().toLowerCase() : '';
+    const total = apis.length;
+    if (search) {
+        apis = apis.filter((a) =>
+            [a.code, a.name, a.group].some(
+                (v) => typeof v === 'string' && v.toLowerCase().includes(search),
+            ),
+        );
+    }
+    return JSON.stringify({
+        ...payload,
+        apis,
+        groups,
+        ...(search ? { search, matched: apis.length, totalUnfiltered: total } : {}),
+    });
+}
+
+/** How much of a prompt body the index shows before you fetch it in full. */
+const PROMPT_PREVIEW_CHARS = 100;
+
+/**
+ * `list_ai_prompts` is an INDEX by default; one prompt's body is a detail call.
+ *
+ * Measured live 2026-08-16: two saved prompts cost 4,848 bytes and **97% of it
+ * was the bodies**. Prompts are unbounded free text, so this grows with whatever
+ * the user has written — twenty of them would be tens of kilobytes to answer
+ * "which prompts do I have?".
+ *
+ * No `get_ai_prompt` tool exists, so trimming alone would strand the bodies.
+ * Hence `promptId`: omit for the index, pass it for one prompt in full. The
+ * index keeps a short preview because a title alone ("Build carousel") often
+ * will not tell an agent which prompt it wants.
+ */
+function shapeAiPrompts(res: HandlerResponse, args: Record<string, unknown>): string {
+    const payload = payloadOf(res) as
+        | ({ aiPrompts?: Array<Record<string, unknown>> } & Record<string, unknown>)
+        | undefined;
+    if (!payload || !Array.isArray(payload.aiPrompts)) return defaultShape(res);
+
+    const wanted = typeof args.promptId === 'string' ? args.promptId : undefined;
+    if (wanted) {
+        const one = payload.aiPrompts.find((p) => p.id === wanted);
+        return JSON.stringify(
+            one ?? {
+                error: `Unknown promptId: ${wanted}`,
+                hint: 'Call list_ai_prompts with no promptId for the available ids.',
+            },
+        );
+    }
+
+    return JSON.stringify({
+        ...payload,
+        aiPrompts: payload.aiPrompts.map((p) => {
+            const body = typeof p.prompt === 'string' ? p.prompt : '';
+            return {
+                id: p.id,
+                title: p.title,
+                ...(p.pinned ? { pinned: true } : {}),
+                chars: body.length,
+                preview:
+                    body.length > PROMPT_PREVIEW_CHARS
+                        ? `${body.slice(0, PROMPT_PREVIEW_CHARS)}…`
+                        : body,
+            };
+        }),
+        promptBodies: 'call with promptId for one prompt in full',
+    });
+}
+
 /** The four things `process-datapack` can be asked to do. */
 const OPERATION_MODE = z.enum(['import', 'export', 'delete', 'validate']);
 
@@ -149,9 +252,17 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     {
         tool: 'list_ai_prompts',
         description:
-            'List saved AI prompts for the current project (global + project-local, merged)',
+            'List saved AI prompts for the current project (global + project-local, merged). ' +
+            'Returns an index with previews; pass promptId for one prompt in full.',
         map: aiHandlers,
         type: 'list-ai-prompts',
+        inputSchema: {
+            promptId: z
+                .string()
+                .optional()
+                .describe('Return this one prompt in full; omit for the index'),
+        },
+        shape: shapeAiPrompts,
     },
     {
         tool: 'check_mesh',
@@ -176,9 +287,16 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         description:
             "List the Adobe APIs (sdk codes + names) the org can subscribe to on this project's " +
             'Developer Console workspace, flagging the ones Demo Builder already manages. Use before ' +
-            'add_console_apis to find the right code (e.g. for Firefly Services).',
+            'add_console_apis to find the right code — pass search to narrow it (e.g. "firefly").',
         map: dashboardHandlers,
         type: 'listConsoleApis',
+        inputSchema: {
+            search: z
+                .string()
+                .optional()
+                .describe('Case-insensitive substring match on sdk code, name or group'),
+        },
+        shape: shapeConsoleApis,
     },
     {
         tool: 'get_store_structure',

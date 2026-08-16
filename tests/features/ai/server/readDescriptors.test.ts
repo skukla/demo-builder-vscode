@@ -171,3 +171,119 @@ describe('verify_ai_setup returns the verdict, not the whole inventory', () => {
         expect(row('verify_ai_setup')!.inputSchema!.inventory.parse(undefined)).toBe('counts');
     });
 });
+
+describe('list_console_apis emits the group legend once, not per row', () => {
+    // 46 rows carrying a {code,name} group object cost 2,584 bytes — 48% of the
+    // response — to convey 6 distinct values.
+    const RESPONSE = {
+        success: true as const,
+        data: {
+            apis: [
+                { code: 'A', name: 'Alpha', group: { code: 'g1', name: 'Group One' } },
+                { code: 'B', name: 'Beta', group: { code: 'g1', name: 'Group One' } },
+                { code: 'C', name: 'Gamma', group: { code: 'g2', name: 'Group Two' } },
+            ],
+            added: [],
+        },
+    };
+
+    it('replaces the per-row group object with its code and adds a legend', () => {
+        const out = JSON.parse(row('list_console_apis')!.shape!(RESPONSE, {}));
+
+        expect(out.apis.map((a: { group: string }) => a.group)).toEqual(['g1', 'g1', 'g2']);
+        expect(out.groups).toEqual({ g1: 'Group One', g2: 'Group Two' });
+        // The names are still available — once each, not once per row.
+        expect(JSON.stringify(out.apis)).not.toContain('Group One');
+    });
+
+    it('preserves the other row fields and the envelope', () => {
+        const out = JSON.parse(row('list_console_apis')!.shape!(RESPONSE, {}));
+        expect(out.apis[0]).toMatchObject({ code: 'A', name: 'Alpha' });
+        expect(out.added).toEqual([]);
+    });
+});
+
+describe('list_ai_prompts indexes by default and fetches one in full', () => {
+    // Two prompts were 4,848 bytes, 97% of it the bodies. Prompt text is
+    // unbounded, so the index cannot carry it.
+    const LONG = 'x'.repeat(500);
+    const RESPONSE = {
+        success: true as const,
+        data: {
+            aiPrompts: [
+                { id: 'p1', title: 'Build carousel', pinned: true, prompt: LONG },
+                { id: 'p2', title: 'Short one', prompt: 'brief' },
+            ],
+        },
+    };
+    const shape = () => row('list_ai_prompts')!.shape!;
+
+    it('returns previews and sizes, not bodies', () => {
+        const out = JSON.parse(shape()(RESPONSE, {}));
+
+        expect(out.aiPrompts[0]).toEqual({
+            id: 'p1',
+            title: 'Build carousel',
+            pinned: true,
+            chars: 500,
+            preview: `${'x'.repeat(100)}…`,
+        });
+        expect(JSON.stringify(out).length).toBeLessThan(600);
+    });
+
+    it('does not truncate a body already shorter than the preview', () => {
+        const out = JSON.parse(shape()(RESPONSE, {}));
+        expect(out.aiPrompts[1].preview).toBe('brief');
+        expect(out.aiPrompts[1].preview).not.toContain('…');
+    });
+
+    // There is no get_ai_prompt tool, so the detail path is the only way to read
+    // a body — trimming without it would strand the content.
+    it('returns the full prompt when given a promptId', () => {
+        const out = JSON.parse(shape()(RESPONSE, { promptId: 'p1' }));
+        expect(out.prompt).toBe(LONG);
+        expect(out.title).toBe('Build carousel');
+    });
+
+    it('names the recovery path for an unknown promptId', () => {
+        const out = JSON.parse(shape()(RESPONSE, { promptId: 'nope' }));
+        expect(out.error).toMatch(/Unknown promptId/);
+        expect(out.hint).toMatch(/list_ai_prompts/);
+    });
+
+    it('declares promptId as optional so the index stays the default', () => {
+        expect(row('list_ai_prompts')!.inputSchema!.promptId.parse(undefined)).toBeUndefined();
+    });
+});
+
+describe('list_console_apis search', () => {
+    const RESPONSE = {
+        success: true as const,
+        data: {
+            apis: [
+                { code: 'FireflyAPI', name: 'Firefly Services', group: { code: 'ff', name: 'Firefly' } },
+                { code: 'AdobeAnalyticsSDK', name: 'Adobe Analytics', group: { code: 'mc', name: 'Experience Cloud' } },
+            ],
+        },
+    };
+    const shape = () => row('list_console_apis')!.shape!;
+
+    it('filters on code, name or group and reports the unfiltered total', () => {
+        const out = JSON.parse(shape()(RESPONSE, { search: 'firefly' }));
+        expect(out.apis).toHaveLength(1);
+        expect(out.apis[0].code).toBe('FireflyAPI');
+        expect(out.matched).toBe(1);
+        expect(out.totalUnfiltered).toBe(2);
+    });
+
+    it('is case-insensitive and matches the group code too', () => {
+        expect(JSON.parse(shape()(RESPONSE, { search: 'MC' })).apis).toHaveLength(1);
+    });
+
+    it('returns everything and no search keys when no term is given', () => {
+        const out = JSON.parse(shape()(RESPONSE, {}));
+        expect(out.apis).toHaveLength(2);
+        expect(out.matched).toBeUndefined();
+        expect(out.totalUnfiltered).toBeUndefined();
+    });
+});
