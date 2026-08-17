@@ -162,16 +162,29 @@ function ScopeField({
     isLoading: boolean;
     children: React.ReactNode;
 }): React.JSX.Element {
+    if (isLoading) {
+        // The label and the spinner are wrapped TOGETHER, so the wrapper shrinks
+        // to the label's width and the spinner can centre under the label's own
+        // text. Centring it in the FIELD puts it mid-column instead — far right
+        // of the words it belongs to, since the field is half the modal. A
+        // label's width is not a number anyone can write down, so the layout has
+        // to derive it rather than be told it.
+        return (
+            <div className="datapack-scope-field">
+                <span className="datapack-scope-busy">
+                    <span className="datapack-import-label">{label}</span>
+                    <span className="datapack-scope-loading">
+                        <ProgressCircle size="S" isIndeterminate aria-label={busyLabel} />
+                    </span>
+                </span>
+            </div>
+        );
+    }
+
     return (
         <div className="datapack-scope-field">
             <span className="datapack-import-label">{label}</span>
-            {isLoading ? (
-                <span className="datapack-scope-loading">
-                    <ProgressCircle size="S" isIndeterminate aria-label={busyLabel} />
-                </span>
-            ) : (
-                children
-            )}
+            {children}
         </div>
     );
 }

@@ -270,6 +270,17 @@
    swap must not reintroduce it. The value is the Spectrum medium field height —
    a literal, because the token and the size prop resolve to different px in
    this webview. */
+/* Shrinks to the LABEL, so the spinner below it has something narrow enough to
+   be centred under. `align-self: flex-start` stops the column stretching it to
+   the field's full width, which would put the centre back mid-column. */
+.datapack-scope-busy {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    align-self: flex-start;
+    gap: 4px;
+}
+
 .datapack-scope-loading {
     display: flex;
     align-items: center;
