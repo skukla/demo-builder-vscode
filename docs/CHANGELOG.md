@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.132] - 2026-08-17
+
+Adds the Data Installer — sample data for a Commerce instance, driven from inside the
+extension instead of from the Commerce Admin or a colleague's shared credentials. Pick a
+datapack when you build a project or install one later from the dashboard, watch it import,
+and remove it again when you want the instance back. Also unhides the Bodea demo package, a
+B2B data-center equipment brand.
+
+### Added
+
+- **Install sample data from a catalog of datapacks.** Browse curated packs (optionally including community ones), see what data types each carries by name rather than by code, and import into the Commerce instance your project already points at. Progress is live while it runs, and closing the modal does not stop the job — reopening picks a running import back up.
+- **Choose your sample data while building the project.** The wizard's new Sample Data area records which pack the project is for. It never imports during the build itself and never blocks Continue; the catalog then marks that pack so the project and the instance agree on what is meant to be there.
+- **Install, review and remove sample data from the dashboard.** A new Sample Data tile opens the catalog. A pack's card shows a check when its data is believed present, read from the instance rather than only from the project's own record, so a pack installed from the detail flyout is marked in the grid and an uninstalled one loses its mark.
+- **Remove a datapack's data so an instance can be reused.** For putting a Commerce instance back before installing a different pack, with a confirmation that names exactly what is about to go and does not overstate what it can undo.
+- **Try an import before committing to it.** Validate runs the same request as a dry run and reports what it would do, with no writes.
+- **Target a specific website and store view.** Imports and removals send explicit scope rather than assuming the default, with a guardrail on tier prices, which behave differently across scopes.
+- **Export a datapack from a Commerce instance.** Name a pack, choose data types, and capture what an instance already holds — the other direction of the same loop, for turning a hand-built demo into something repeatable.
+- **Set up Commerce credentials automatically.** A console-free loop provisions the integration the Data Installer needs from the project's own Adobe binding, instead of sending you to the Commerce Admin to create one by hand. Where a shared Commerce credential is available the extension falls back to it, and Diagnostics now reports plainly whether that shared service will serve you.
+- **An activity log for the instance you are working on.** Every import, export, removal and validation against your project's Commerce instance, filterable by operation. Scoped to your instance — unscoped it was the service's log for every user.
+- **The Bodea demo package.** A B2B data-center equipment brand, previously hidden while its store scope and content were settled. Now selectable when you create a project.
+
+### Changed
+
+- **Resetting a project can now clear its sample data too.** Reset asks first, and removing the data is opt-in — decline and reset behaves exactly as it always has. The prompt appears before the reset runs rather than after, so nothing is done twice.
+- **The Data Installer only offers what the extension can actually deliver.** Options that depended on credentials or a backend the project does not have are no longer presented and then refused.
+
+### Fixed
+
+- **Reset never offered to remove sample data, for any project.** The check read a field that is never saved to disk, so it was always empty and the prompt never appeared — for every project, not an unlucky subset. Three related failures had the same root cause: the removal could not resolve credentials, it polled for status with a client that has no way to report status, and when it did run it announced itself as an install.
+- **The Data Installer's staleness check had been silently inert.** It ran, found nothing, and reported success regardless.
+- **Bodea projects pointed at the wrong store scope**, and could not inherit the AEM Assets setting the other packages get.
+- **A project built on a hidden package could not see its own package.** Editing one showed an empty selection rather than the package it was created from.
+- **API Mesh deletion targeted the wrong workspace.** It deleted against the currently selected workspace rather than the one it was asked to delete from.
+- **A refused DA.live credential is no longer reported as a permissions problem.** A token can be locally valid and still refused, and every downstream error then told you that you lacked an admin role. Re-authenticating was always the fix; now it says so.
+- **A refused Adobe API subscription is no longer silent.**
+- **The AI agent surface reads the current project from disk**, so an agent and the UI can no longer disagree about which project is open. Agent tools that publish to a live site are now gated, and the mesh check tool works again.
+- **Assorted Data Installer interface fixes** — the scope pickers show a real loading state and Start waits for it, the spinners sit under their own labels, both target labels read the same way, datapack tiles show a pointer on hover, the removal confirmation is readable, and a drawer footer has one separator instead of two.
+
 ## [1.0.0-beta.131] - 2026-08-16
 
 Your project's AI files stop nagging you, and stop overwriting your edits. Until now every
