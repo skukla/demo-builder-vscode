@@ -12,7 +12,7 @@
  *
  * Two steps, in the order that makes the fix visible:
  *
- * 1. re-register the site config ({@link repairSiteConfig}) — the write that failed;
+ * 1. re-register the site config ({@link repairSiteConfigForProject}) — the write that failed;
  * 2. republish, the same `republishStorefrontConfig` the Configure command runs
  *    on save, so the change reaches the live storefront instead of sitting in a
  *    config nobody has re-read.
@@ -25,18 +25,9 @@
 
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
-import {
-    getDaLiveAuthService,
-    resolveByomOverlayConfig,
-} from '@/features/eds/handlers/edsHelpers';
-import { ConfigurationService } from '@/features/eds/services/configurationService';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLiveContentOperations';
-import { resolveStorefrontConfig } from '@/features/eds/services/edsResetParams';
 import { lostGrantsMessage } from '@/features/eds/services/lostGrantsMessage';
-import {
-    repairSiteConfig,
-    type RepairSiteConfigResult,
-} from '@/features/eds/services/repairSiteConfigHeadless';
+import { repairSiteConfigForProject } from '@/features/eds/services/repairSiteConfigForProject';
+import type { RepairSiteConfigResult } from '@/features/eds/services/repairSiteConfigHeadless';
 import { republishStorefrontConfig } from '@/features/eds/services/storefrontRepublishService';
 import type { Project } from '@/types/base';
 
@@ -76,17 +67,14 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
         await this.republish(project);
     }
 
-    /** Step 1 — the write that failed, retried. */
+    /**
+     * Step 1 — the write that failed, retried.
+     *
+     * The dependency assembly lives in `repairSiteConfigForProject` so the MCP
+     * tool shares it rather than rebuilding it; all this adds is the progress
+     * notification, which is the only part an agent must not get.
+     */
     private async runRepair(project: Project): Promise<RepairSiteConfigResult | undefined> {
-        // The VS Code setting wins, but the package's own overlay is the fallback
-        // when it is blank or invalid — every other caller passes it. Without it a
-        // blanked setting registers the site with NO overlay and the read-back
-        // then reports `verified`, because there was no overlay to look for.
-        const { byomOverlayUrl } = resolveStorefrontConfig(project);
-        const daLiveAuth = getDaLiveAuthService(this.context);
-        const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuth);
-        const userEmail = await daLiveAuth.getUserEmail();
-
         return vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
@@ -94,16 +82,9 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
                 cancellable: false,
             },
             (progress) =>
-                repairSiteConfig({
-                    project,
-                    configurationService: new ConfigurationService(tokenProvider, this.logger),
-                    tokenProvider,
-                    logger: this.logger,
-                    userEmail: userEmail || undefined,
-                    resolveOverlayUrl: (org, site) =>
-                        resolveByomOverlayConfig(byomOverlayUrl, org, site),
-                    onProgress: (message) => progress.report({ message }),
-                }),
+                repairSiteConfigForProject(project, this.context, this.logger, (message) =>
+                    progress.report({ message }),
+                ),
         );
     }
 
