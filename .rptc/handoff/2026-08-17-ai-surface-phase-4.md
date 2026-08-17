@@ -212,13 +212,27 @@ carried such a row from an earlier session, independently of this probe.
 
 ## Start here
 
-**Group 6 (EDS / storefront)** — `manage_site_access` and `repair_site_configuration` are the
-cheap two: both already have UI-free cores (`siteAccessManagerHeadless`,
-`repairSiteConfigHeadless`) and the commands only wrap them in QuickPicks.
-`migrate_storefront_names` is destructive (deletes the old DA site root) → confirm + name echo.
-The bulk `cleanup_dalive_sites` / `manage_github_repos` are confirm-gated. `github_change_account`
-and `connect_dalive` are handoffs. `cancel_storefront_setup` is **do not build** — the plan says
-so and the capability is reachable as `delete_github_repo` + `cleanup_dalive_site`.
+**Group 6 (EDS / storefront) — SCOPED, not started.** The plan's Group 6 section now carries the
+full finding; the headline is that **nothing in this group is dispatchable**, so it is bespoke
+modules rather than descriptor rows and costs 3–4× per tool what Groups 4–5 did. "Already
+headless" means UI-free, not reachable by a `{map, type}` row — two different properties, and an
+earlier line here conflated them.
+
+Three things settled before any code:
+
+- `repair_site_configuration` needs its param assembly EXTRACTED out of
+  `RepairSiteConfigurationCommand.runRepair` first, or the tool duplicates it.
+- `github_change_account` is **blocked**: no Demo Builder command exists to hand off to
+  (verified against `package.json`), and `HandoffTarget` takes only a view or a command id. It
+  needs a design decision. Do not invent an id.
+- The bulk `cleanup_dalive_sites` / `manage_github_repos` should **not** be built — the singular
+  tools plus their list tools already cover it, and neither bulk command has a headless core.
+
+`connect_dalive`'s target is real and verified: `demoBuilder.openDaLiveBookmarkletSetup`.
+
+Suggested slice order: `get_site_access` + `set_site_admin` → `repair_site_configuration` (after
+the extraction) → `connect_dalive`. Start the extraction with a FULL context — it is the step
+that ships a duplicate when rushed.
 
 **Then Group 7** — `install_prerequisite` is the only real refactor left on the surface: it
 indexes into per-call `sharedState` and must re-address by prereq id, and return

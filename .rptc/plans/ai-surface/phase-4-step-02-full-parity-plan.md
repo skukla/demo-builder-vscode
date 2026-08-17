@@ -220,13 +220,53 @@ the work being skipped; each capability is already reachable.
 
 ## Group 6 — EDS / storefront operations
 
+> **SCOPED 2026-08-17, not started. Read this before estimating it.**
+>
+> **Nothing in this group is dispatchable.** Groups 1–5 were mostly ten-line descriptor rows
+> because every planned tool's handler was already in a handler map. Group 6 is the exception the
+> build-sequencing section did not anticipate: `edsHandlers` contains none of these operations.
+> They are COMMANDS calling services with `(project, vscode.ExtensionContext, logger)`, not
+> `MessageHandler`s over a `HandlerContext`. So each tool is a bespoke module, and the group costs
+> roughly 3–4× per tool what Groups 4–5 did.
+>
+> **"Already headless" ≠ dispatchable.** `siteAccessManagerHeadless` and `repairSiteConfigHeadless`
+> are UI-free, which is what makes them USABLE from a tool — it is not what makes them reachable
+> by a descriptor row. Two different properties; the row above conflated them.
+>
+> **`repair_site_configuration` needs an EXTRACTION FIRST.** Its params are assembled inside
+> `RepairSiteConfigurationCommand.runRepair` (`ConfigurationService`, the DA.live token provider,
+> the user email, the BYOM overlay resolver, the progress reporter). A tool must not rebuild that
+> — pull it into a shared `repairSiteConfigForProject(project, context, logger)` beside the
+> headless service and give it two callers. Doing this on a thin context is how the duplicate
+> ships instead of the extraction.
+>
+> **`github_change_account` has no target and cannot be built as specified.** `HandoffTarget`
+> accepts `{view}` or `{command}`, and there is NO Demo Builder command for switching GitHub
+> accounts — verified against `package.json`, whose only matching ids are `manageSiteAccess`,
+> `repairSiteConfiguration`, `migrateStorefrontNames`, `openDaLiveBookmarkletSetup`,
+> `cleanupDaLiveSites`, `manageGitHubRepos`. It needs a design decision (add a command, or widen
+> the handoff type), not an implementation. Do not invent an id for it.
+>
+> **`connect_dalive`'s target IS real:** `demoBuilder.openDaLiveBookmarkletSetup`, verified in the
+> same pass.
+>
+> **The bulk pair should NOT be built** — same call this plan already made for
+> `cancel_storefront_setup`. `list_github_repos` + `delete_github_repo` and `list_dalive_sites` +
+> `cleanup_dalive_site` already give an agent the capability; looping is what an agent is good at.
+> Neither bulk command has a headless core, so building one means a SECOND implementation of a
+> destructive path for a convenience the surface already covers.
+>
+> **Suggested slice order:** `get_site_access` + `set_site_admin` (confirm-gated) →
+> `repair_site_configuration` (after the extraction) → `connect_dalive` (pure handoff).
+> `migrate_storefront_names` last: it is destructive and needs its own confirm + name-echo design.
+
 | Tool | Note |
 |---|---|
-| `manage_site_access` | `siteAccessManagerHeadless` is already headless; the command wraps it in a QuickPick. |
-| `repair_site_configuration` | Fully automatable. |
+| `manage_site_access` | `siteAccessManagerHeadless` is UI-free but NOT dispatchable — bespoke tool. Suggest splitting: `get_site_access` (read) + `set_site_admin({email, admin})` (write, confirm-gated), mirroring `listSiteAccess` / `addSiteAdmin` / `removeSiteAdmin`. |
+| `repair_site_configuration` | Automatable, but EXTRACT the param assembly out of the command first (see above). |
 | `migrate_storefront_names` | Destructive (deletes the old DA site root) → confirm + name echo. |
-| `cleanup_dalive_sites` / `manage_github_repos` (bulk) | The single-resource versions exist; bulk is UI-only. Confirm-gated. |
-| `github_change_account` | VS Code account picker → **handoff**. |
+| ❌ `cleanup_dalive_sites` / `manage_github_repos` (bulk) | **Do not build** — see above. The singular tools plus their list tools already cover it. |
+| ⛔ `github_change_account` | **Blocked, not deferred** — no command id exists to hand off to. |
 | `connect_dalive` | Bookmarklet + paste → **handoff**, `resumeWith: 'get_auth_status'`. |
 | `cancel_storefront_setup` | The `AbortController` lives in per-call `sharedState`, so an agent can never hold it. **Do not build**; the capability is reachable as `delete_github_repo` + `cleanup_dalive_site`. |
 
