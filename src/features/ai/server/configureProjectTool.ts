@@ -49,6 +49,7 @@
 
 import { z } from 'zod';
 import { needsUser } from './handoff';
+import { asText } from './mcpToolResult';
 import type { StateManager } from '@/core/state';
 import componentsConfig from '@/features/components/config/components.json';
 import type { Project } from '@/types';
@@ -242,17 +243,17 @@ export function registerConfigureProjectTool(
                 (k) => !(ACCEPTED as readonly string[]).includes(k),
             );
             if (unknown.length) {
-                return text({
+                return asText({
                     error: `Unknown field(s): ${unknown.join(', ')}. Accepted: ${ACCEPTED.join(', ')}.`,
                 });
             }
             if (Object.keys(input).length === 0) {
-                return text({ error: `Nothing to apply. Pass one or more of: ${ACCEPTED.join(', ')}.` });
+                return asText({ error: `Nothing to apply. Pass one or more of: ${ACCEPTED.join(', ')}.` });
             }
 
             const project = await stateManager.getCurrentProject();
             if (!project) {
-                return text({ error: 'No current project. Use list_projects and select one first.' });
+                return asText({ error: 'No current project. Use list_projects and select one first.' });
             }
 
             // Secrets are refused BEFORE anything is applied, so a payload mixing
@@ -262,7 +263,7 @@ export function registerConfigureProjectTool(
                 .flatMap((vars) => Object.keys(vars ?? {}))
                 .filter((key) => secrets.has(key));
             if (offered.length) {
-                return text(
+                return asText(
                     needsUser({
                         reason: 'secret-entry',
                         what: `Enter ${offered.join(', ')} in Demo Builder`,
@@ -276,7 +277,7 @@ export function registerConfigureProjectTool(
             }
 
             const outcome = applyToProject(project, input);
-            if ('error' in outcome) return text(outcome);
+            if ('error' in outcome) return asText(outcome);
             const { applied, changedKeys } = outcome;
 
             // MARK the mesh stale when a var it declares a dependency on actually
@@ -298,7 +299,7 @@ export function registerConfigureProjectTool(
 
             await stateManager.saveProject(project);
 
-            return text({
+            return asText({
                 applied,
                 stillUnset: stillUnset(project),
                 ...(meshAffecting.length
@@ -310,8 +311,4 @@ export function registerConfigureProjectTool(
             });
         },
     );
-}
-
-function text(body: unknown) {
-    return { content: [{ type: 'text' as const, text: JSON.stringify(body) }] };
 }

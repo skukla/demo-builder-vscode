@@ -25,7 +25,7 @@ describe('needsUser', () => {
         expect(needsUser(SIGN_IN).needsUser.resumeWith).toBe('get_auth_status');
     });
 
-    it('survives the JSON round-trip every tool result makes', () => {
+    it('survives the JSON round-trip a handoff always makes', () => {
         expect(JSON.parse(JSON.stringify(needsUser(SIGN_IN)))).toEqual({ needsUser: SIGN_IN });
     });
 });

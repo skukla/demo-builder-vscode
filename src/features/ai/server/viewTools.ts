@@ -11,6 +11,7 @@
  */
 
 import { z } from 'zod';
+import { asRawText, asText } from './mcpToolResult';
 
 /** Friendly view name → Demo Builder command id. */
 const VIEW_COMMANDS: Record<string, string> = {
@@ -43,18 +44,13 @@ export function registerViewTools(server: any, runCommand: (commandId: string) =
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
             if (args?.confirm !== true) {
-                return {
-                    content: [
-                        {
-                            type: 'text' as const,
-                            text: 'open_view requires confirm:true — it opens a VS Code panel. Ask the user before opening a view.',
-                        },
-                    ],
-                };
+                return asRawText(
+                    'open_view requires confirm:true — it opens a VS Code panel. Ask the user before opening a view.',
+                );
             }
             const commandId = VIEW_COMMANDS[args.view as string];
             await runCommand(commandId);
-            return { content: [{ type: 'text' as const, text: JSON.stringify({ opened: args.view }) }] };
+            return asText({ opened: args.view });
         },
     );
 }

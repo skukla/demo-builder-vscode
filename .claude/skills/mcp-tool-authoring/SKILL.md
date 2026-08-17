@@ -21,6 +21,22 @@ with ~10 lines. The traps are in what qualifies and what else must move.
 3. Registered from `extension.ts` (descriptor modules import handler maps, so they stay
    out of the vscode-free server module).
 
+## The response shape — never build it by hand
+
+One envelope, two builders, both from `mcpToolResult.ts`: `asText(value)` serializes;
+`asRawText(text)` wraps a string that is already final (a prose refusal, or the descriptor
+registrar's pre-stringified `shape()` output). A tool that hand-rolls
+`{content:[{type:'text',…}]}` fails `responseEnvelope.test.ts` — it checks descriptor rows
+at runtime and every registrar module at the source, in BOTH halves (`src/features/ai/server/`
+and `src/mcp-server.ts`; a new registrar file outside that directory must be added to
+`EXTRA_REGISTRAR_FILES` or it is silently unguarded). Worth knowing WHY it is enforced: the
+helper was extracted in July to kill this exact duplication and by August it had grown back
+into 10 of the 23 registrar modules, one a byte-identical copy under the same name.
+
+Note the surface is NOT all-JSON. Refusals answer prose, including the shared
+`"<tool> requires confirm:true to proceed."`, so never write guidance telling an agent
+every response parses.
+
 ## Headless-safety (the qualifying bar)
 
 A descriptor-exposed handler runs with NO panel: no `sendMessage` dependence for its

@@ -43,8 +43,9 @@ export interface OrgMismatchTarget {
 }
 
 /**
- * The canonical org-mismatch tool result, serialized like every other MCP tool
- * result (`asText`). It is STRUCTURED and NON-RETRYABLE so the agent stops and
+ * The canonical org-mismatch tool result, serialized like every other STRUCTURED
+ * tool result (`asText`; refusals answer prose via `asRawText` instead — see
+ * `mcpToolResult.ts`). It is STRUCTURED and NON-RETRYABLE so the agent stops and
  * asks the user to pick the right org instead of retrying into the same 403
  * (which would burn tokens — the shared `aio` global is unchanged by a retry).
  *

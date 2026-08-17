@@ -13,6 +13,7 @@
 
 import { z } from 'zod';
 import { clearAdobeTarget } from './adobeTargetStore';
+import { asRawText, asText } from './mcpToolResult';
 import { dispatchHandler } from '@/core/handlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { getDaLiveAuthService, getGitHubServices, showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
@@ -117,7 +118,7 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
             const adobe = await safeStatus(() => adobeStatus(ctx));
             const github = await safeStatus(() => githubStatus(ctx));
             const dalive = await safeStatus(() => daLiveStatus(ctx));
-            return { content: [{ type: 'text' as const, text: JSON.stringify({ adobe, github, dalive }) }] };
+            return asText({ adobe, github, dalive });
         },
     );
 
@@ -134,14 +135,9 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
             if (args?.confirm !== true) {
-                return {
-                    content: [
-                        {
-                            type: 'text' as const,
-                            text: 'sign_in requires confirm:true — it opens a browser/auth window. Ask the user to confirm first.',
-                        },
-                    ],
-                };
+                return asRawText(
+                    'sign_in requires confirm:true — it opens a browser/auth window. Ask the user to confirm first.',
+                );
             }
             const ctx = ctxFactory();
             const provider = args.provider as 'adobe' | 'github' | 'dalive';
@@ -152,11 +148,11 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
                 // targeting the previous account's org/project/workspace.
                 clearAdobeTarget();
                 const ok = (await ctx.authManager?.login()) ?? false;
-                return { content: [{ type: 'text' as const, text: JSON.stringify({ provider, success: ok }) }] };
+                return asText({ provider, success: ok });
             }
             if (provider === 'github') {
                 const res = await dispatchHandler(edsHandlers, ctx, 'github-oauth', {});
-                return { content: [{ type: 'text' as const, text: JSON.stringify({ provider, success: res.success }) }] };
+                return asText({ provider, success: res.success });
             }
             // dalive — DA.live has no headless token grant, so sign-in completes
             // through native VS Code prompts (open browser → paste token → org).
@@ -166,21 +162,14 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
             // and the agent's headless context drops sendMessage, so the input box
             // never appears.
             const res = await showDaLiveAuthQuickPick(ctx);
-            return {
-                content: [
-                    {
-                        type: 'text' as const,
-                        text: JSON.stringify({
-                            provider,
-                            success: res.success,
-                            cancelled: res.cancelled ?? false,
-                            note: res.success
-                                ? 'DA.live sign-in complete.'
-                                : 'DA.live sign-in was cancelled or failed; re-run sign_in to retry.',
-                        }),
-                    },
-                ],
-            };
+            return asText({
+                provider,
+                success: res.success,
+                cancelled: res.cancelled ?? false,
+                note: res.success
+                    ? 'DA.live sign-in complete.'
+                    : 'DA.live sign-in was cancelled or failed; re-run sign_in to retry.',
+            });
         },
     );
 }

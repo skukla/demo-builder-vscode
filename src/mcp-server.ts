@@ -28,6 +28,7 @@ import sanitizeHtml from 'sanitize-html';
 import { z } from 'zod';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import { assertPathInside, assertPathInsideSync } from '@/core/validation';
+import { asRawText, asText } from '@/features/ai/server/mcpToolResult';
 import { stripSecretValues } from '@/features/components/config/envVarKeys';
 import {
     DaLiveContentOperations,
@@ -1401,14 +1402,8 @@ export function registerProjectTools(
             description: 'List all Demo Builder projects',
             inputSchema: { offset: offsetSchema, limit: limitSchema },
         },
-        async (args: any) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: await toolHandlers.listProjects(projectsDir, args.offset, args.limit),
-                },
-            ],
-        }),
+        async (args: any) =>
+            asRawText(await toolHandlers.listProjects(projectsDir, args.offset, args.limit)),
     );
 
     server.registerTool(
@@ -1425,18 +1420,8 @@ export function registerProjectTools(
                     .describe('Return the complete manifest instead of the summary'),
             },
         },
-        async (args: any) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: await toolHandlers.getProject(
-                        projectsDir,
-                        args.projectName,
-                        args.full === true,
-                    ),
-                },
-            ],
-        }),
+        async (args: any) =>
+            asRawText(await toolHandlers.getProject(projectsDir, args.projectName, args.full === true)),
     );
 
     server.registerTool(
@@ -1450,18 +1435,14 @@ export function registerProjectTools(
                 configRelPath: z.string().describe('Relative path to config file within project'),
             },
         },
-        async (args: any) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: await toolHandlers.getComponentConfig(
-                        projectsDir,
-                        args.projectName,
-                        args.configRelPath as string,
-                    ),
-                },
-            ],
-        }),
+        async (args: any) =>
+            asRawText(
+                await toolHandlers.getComponentConfig(
+                    projectsDir,
+                    args.projectName,
+                    args.configRelPath as string,
+                ),
+            ),
     );
 
     server.registerTool(
@@ -1478,19 +1459,15 @@ export function registerProjectTools(
                 content: z.string().max(1_000_000).describe('New file content'),
             },
         },
-        async (args: any) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: await toolHandlers.updateProjectConfig(
-                        projectsDir,
-                        args.projectName,
-                        args.configRelPath as string,
-                        args.content as string,
-                    ),
-                },
-            ],
-        }),
+        async (args: any) =>
+            asRawText(
+                await toolHandlers.updateProjectConfig(
+                    projectsDir,
+                    args.projectName,
+                    args.configRelPath as string,
+                    args.content as string,
+                ),
+            ),
     );
 
     server.registerTool(
@@ -1503,19 +1480,15 @@ export function registerProjectTools(
                 commitMessage: z.string().max(500).describe('Git commit message'),
             },
         },
-        async (args: any) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: await toolHandlers.syncStorefront(
-                        projectsDir,
-                        args.projectName,
-                        args.commitMessage as string,
-                        await resolveCredentials(),
-                    ),
-                },
-            ],
-        }),
+        async (args: any) =>
+            asRawText(
+                await toolHandlers.syncStorefront(
+                    projectsDir,
+                    args.projectName,
+                    args.commitMessage as string,
+                    await resolveCredentials(),
+                ),
+            ),
     );
 
     server.registerTool(
@@ -1529,19 +1502,15 @@ export function registerProjectTools(
                 limit: limitSchema,
             },
         },
-        async (args: any) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: await toolHandlers.listBlocks(
-                        projectsDir,
-                        args.projectName,
-                        args.offset,
-                        args.limit,
-                    ),
-                },
-            ],
-        }),
+        async (args: any) =>
+            asRawText(
+                await toolHandlers.listBlocks(
+                    projectsDir,
+                    args.projectName,
+                    args.offset,
+                    args.limit,
+                ),
+            ),
     );
 
     server.registerTool(
@@ -1563,19 +1532,15 @@ export function registerProjectTools(
                     .describe("A file within the block to read; omit to list the block's files"),
             },
         },
-        async (args: any) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: await toolHandlers.getBlockSource(
-                        projectsDir,
-                        args.projectName,
-                        args.blockName as string,
-                        args.fileName as string | undefined,
-                    ),
-                },
-            ],
-        }),
+        async (args: any) =>
+            asRawText(
+                await toolHandlers.getBlockSource(
+                    projectsDir,
+                    args.projectName,
+                    args.blockName as string,
+                    args.fileName as string | undefined,
+                ),
+            ),
     );
 
     server.registerTool(
@@ -1599,19 +1564,15 @@ export function registerProjectTools(
                     .describe('Filter the index by id or title (ignored when blockName is given)'),
             },
         },
-        async (args: any) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: await toolHandlers.getBlockAuthoringShape(
-                        projectsDir,
-                        args.projectName,
-                        args.blockName as string | undefined,
-                        args.search as string | undefined,
-                    ),
-                },
-            ],
-        }),
+        async (args: any) =>
+            asRawText(
+                await toolHandlers.getBlockAuthoringShape(
+                    projectsDir,
+                    args.projectName,
+                    args.blockName as string | undefined,
+                    args.search as string | undefined,
+                ),
+            ),
     );
 
     server.registerTool(
@@ -1655,34 +1616,24 @@ export function registerProjectTools(
             // of the change, so `remove_block_from_library` being gated while this one
             // was not was an inconsistency, not a policy.
             if (args?.confirm !== true) {
-                return {
-                    content: [
-                        {
-                            type: 'text' as const,
-                            text: JSON.stringify({
-                                error: 'promote_block_to_library pushes a commit and publishes the block to the live site. Call again with confirm:true.',
-                                destructive: true,
-                            }),
-                        },
-                    ],
-                };
+                // JSON, not prose — these two refusals predate the descriptor
+                // registrar's prose one and an agent may already key on `error`.
+                return asText({
+                    error: 'promote_block_to_library pushes a commit and publishes the block to the live site. Call again with confirm:true.',
+                    destructive: true,
+                });
             }
-            return {
-                content: [
-                    {
-                        type: 'text' as const,
-                        text: await toolHandlers.promoteBlockToLibrary(
-                            projectsDir,
-                            args.projectName,
-                            args.blockId as string,
-                            args.title as string,
-                            args.unsafeHTML as string,
-                            args.description as string | undefined,
-                            await resolveCredentials(),
-                        ),
-                    },
-                ],
-            };
+            return asRawText(
+                await toolHandlers.promoteBlockToLibrary(
+                    projectsDir,
+                    args.projectName,
+                    args.blockId as string,
+                    args.title as string,
+                    args.unsafeHTML as string,
+                    args.description as string | undefined,
+                    await resolveCredentials(),
+                ),
+            );
         },
     );
 
@@ -1708,31 +1659,19 @@ export function registerProjectTools(
         },
         async (args: any) => {
             if (args?.confirm !== true) {
-                return {
-                    content: [
-                        {
-                            type: 'text' as const,
-                            text: JSON.stringify({
-                                error: 'remove_block_from_library unpublishes the live doc page and pushes a removal commit. Call again with confirm:true.',
-                                destructive: true,
-                            }),
-                        },
-                    ],
-                };
+                return asText({
+                    error: 'remove_block_from_library unpublishes the live doc page and pushes a removal commit. Call again with confirm:true.',
+                    destructive: true,
+                });
             }
-            return {
-                content: [
-                    {
-                        type: 'text' as const,
-                        text: await toolHandlers.removeBlockFromLibrary(
-                            projectsDir,
-                            args.projectName,
-                            args.blockId as string,
-                            await resolveCredentials(),
-                        ),
-                    },
-                ],
-            };
+            return asRawText(
+                await toolHandlers.removeBlockFromLibrary(
+                    projectsDir,
+                    args.projectName,
+                    args.blockId as string,
+                    await resolveCredentials(),
+                ),
+            );
         },
     );
 }

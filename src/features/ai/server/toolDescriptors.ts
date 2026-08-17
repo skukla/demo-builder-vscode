@@ -10,6 +10,7 @@
  */
 
 import { z } from 'zod';
+import { asRawText, asText } from './mcpToolResult';
 import {
     payloadOfEvent,
     withCapturedProgress,
@@ -185,9 +186,7 @@ export function registerDescriptorTools(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         server.registerTool(d.tool, { description: d.description, inputSchema }, async (args: any) => {
             if (d.confirm && args?.confirm !== true) {
-                return {
-                    content: [{ type: 'text' as const, text: `${d.tool} requires confirm:true to proceed.` }],
-                };
+                return asRawText(`${d.tool} requires confirm:true to proceed.`);
             }
             // After the confirm gate, before any dispatch: a preflight answer means
             // the handler must not run at all. Order is deliberate — a destructive
@@ -195,10 +194,11 @@ export function registerDescriptorTools(
             // never widen what a tool will do without confirmation.
             const early = d.preflight?.(args ?? {});
             if (early) {
-                return { content: [{ type: 'text' as const, text: JSON.stringify(early) }] };
+                return asText(early);
             }
             const res = await runHandler(d, ctxFactory, args ?? {});
-            return { content: [{ type: 'text' as const, text: shape(res, args ?? {}) }] };
+            // `shape` returns a STRING (already stringified), so raw — not asText.
+            return asRawText(shape(res, args ?? {}));
         });
     }
 }

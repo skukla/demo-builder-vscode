@@ -10,6 +10,7 @@
  * in from `extension.ts` like the handler-backed descriptors.
  */
 
+import { asText } from './mcpToolResult';
 import componentsConfig from '@/features/components/config/components.json';
 import { getSelectablePackages } from '@/features/project-creation/services/demoPackageLoader';
 import { loadStacks } from '@/features/project-creation/ui/helpers/brandStackLoader';
@@ -64,7 +65,7 @@ export function registerDiscoveryTools(server: any): void {
                 requiresGitHub: s.requiresGitHub ?? false,
                 requiresDaLive: s.requiresDaLive ?? false,
             }));
-            return { content: [{ type: 'text' as const, text: JSON.stringify(lean) }] };
+            return asText(lean);
         },
     );
 
@@ -84,7 +85,7 @@ export function registerDiscoveryTools(server: any): void {
                 // The keys of the storefronts map ARE the valid stacks for this package.
                 availableStacks: Object.keys(p.storefronts ?? {}),
             }));
-            return { content: [{ type: 'text' as const, text: JSON.stringify(lean) }] };
+            return asText(lean);
         },
     );
 
@@ -99,7 +100,7 @@ export function registerDiscoveryTools(server: any): void {
             const lean = Object.fromEntries(
                 COMPONENT_SECTIONS.map((section) => [section, listComponentSection(section)]),
             );
-            return { content: [{ type: 'text' as const, text: JSON.stringify(lean) }] };
+            return asText(lean);
         },
     );
 }

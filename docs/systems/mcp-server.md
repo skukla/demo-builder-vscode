@@ -32,13 +32,13 @@ The pieces:
   any duplex byte stream.
 
 A tool result is a list of "content" items. We only ever return **one text
-item**, and that text is **JSON we stringify ourselves** (see
-[§10 Conventions](#10-conventions-every-tool-follows)). The agent reads that JSON
-and decides what to do next.
+item**. That text is usually JSON we stringify ourselves — but not always:
+refusals and errors are plain sentences the agent reads rather than parses (see
+[§10 Conventions](#10-conventions-every-tool-follows)).
 
 That's the whole model: *the agent discovers tools, calls them with validated
-arguments, and reads back JSON.* Everything below is about how Demo Builder
-implements the server side well.
+arguments, and reads back one text answer.* Everything below is about how Demo
+Builder implements the server side well.
 
 ---
 
@@ -236,10 +236,12 @@ Take `delete_mesh` as a representative action tool:
 4. The handler builds a **headless `HandlerContext`** via the injected
    `ctxFactory` (see §8) and dispatches to the *same* mesh-deletion service/
    handler the dashboard uses.
-5. The handler returns `asText({ … })` — a single text item whose text is
-   stringified JSON describing the outcome.
+5. The handler returns an ordinary `HandlerResponse`; `delete_mesh` is a
+   descriptor row, so `registerDescriptorTools` shapes it and wraps the result
+   (`asRawText(shape(res, args))` — `shape` returns a string already). On the
+   failure branch that text is `Error: …` prose, not JSON.
 6. `withToolLogging` logs success + elapsed ms (or the error), and the result
-   travels back out the socket → proxy → Claude Code, which reads the JSON.
+   travels back out the socket → proxy → Claude Code.
 
 No webview, no modal, no button — but the work is identical to the UI path.
 
@@ -573,10 +575,26 @@ of a destructive path.
 These conventions are what make the surface predictable for an agent. New tools
 **must** follow them.
 
-**Results are JSON-as-text.** Every tool returns
-`{ content: [{ type: 'text', text: JSON.stringify(value) }] }` via a local
-`asText(...)` helper. The agent parses that text. Keep the JSON small and
-purposeful — it's consumed as LLM context tokens.
+**One envelope, two builders.** Every tool returns
+`{ content: [{ type: 'text', text }] }`, built by `src/features/ai/server/mcpToolResult.ts`
+and nothing else:
+
+- `asText(value)` — serializes the value. The default; use it for any answer.
+- `asRawText(text)` — wraps a string verbatim. For a refusal or error written as
+  prose, and for the descriptor registrar's `shape()` output (already stringified).
+
+So an agent **cannot** assume every response parses as JSON — refusals are prose,
+including the shared `"<tool> requires confirm:true to proceed."`. It can assume
+the envelope. Keep the JSON small and purposeful — it's consumed as LLM context
+tokens.
+
+`tests/features/ai/server/responseEnvelope.test.ts` enforces both halves of the
+surface: descriptor rows at runtime (through the real registrar, including the
+confirm-refusal and preflight early returns), bespoke tools at the source level
+(a registrar module must import a builder and must not hand-roll the envelope).
+The source scan covers `src/features/ai/server/` **and** `src/mcp-server.ts` —
+the second is listed by name, because the first version of the guard scanned the
+directory alone and the ten file-based project tools escaped it.
 
 **Confirmation gating for destructive ops.** A tool requires an explicit
 `confirm: true` when its effect is hard to walk back: it deletes something, or it
@@ -739,7 +757,8 @@ written.
 3. In the handler: build the headless context from `ctxFactory()`, pre-flight any
    auth (return a `needsAuth` handoff if missing), then call the **existing
    service** — extract a headless core from the UI path if the logic is currently
-   modal-coupled. Return `asText({...})`.
+   modal-coupled. Return `asText({...})` — or `asRawText(prose)` for a refusal
+   (§10). Never build the envelope by hand; a test fails the build if you do.
 4. Register it from the `registerExtraTools` callback in `src/extension.ts`.
 5. Add a test using the `fakeServer` pattern (§14).
 6. If agents should know about it, mention it in the generated `AGENTS.md`

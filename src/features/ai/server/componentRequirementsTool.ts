@@ -26,6 +26,7 @@
 
 import { z } from 'zod';
 import { COMPONENT_SECTIONS } from './discoveryTools';
+import { asText } from './mcpToolResult';
 import componentsConfig from '@/features/components/config/components.json';
 
 /** A component as `components.json` stores it — keyed by id, with no `id` field. */
@@ -110,7 +111,7 @@ export function registerComponentRequirementsTool(
                     if (id !== wanted) continue;
 
                     const config = def.configuration ?? {};
-                    return json({
+                    return asText({
                         id,
                         category: section,
                         name: def.name,
@@ -125,11 +126,7 @@ export function registerComponentRequirementsTool(
 
             // The known ids ARE the fix for this error, and the catalog is small
             // enough to list them, so a miss costs no extra call.
-            return json({ error: `No component "${wanted}".`, known: known.sort() });
+            return asText({ error: `No component "${wanted}".`, known: known.sort() });
         },
     );
-}
-
-function json(body: unknown) {
-    return { content: [{ type: 'text' as const, text: JSON.stringify(body) }] };
 }

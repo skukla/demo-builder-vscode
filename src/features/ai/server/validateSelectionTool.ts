@@ -17,6 +17,7 @@
  */
 
 import { z } from 'zod';
+import { asRawText, asText } from './mcpToolResult';
 import { dispatchHandler } from '@/core/handlers';
 import { projectCreationHandlers } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -67,7 +68,8 @@ export function registerValidateSelectionTool(
 
             const compat = await run('checkCompatibility', { frontend, backend });
             if (!compat.success) {
-                return text(`Error: ${String(compat.error ?? 'compatibility check failed')}`);
+                // Prose, not JSON — the same shape a confirm refusal answers in.
+                return asRawText(`Error: ${String(compat.error ?? 'compatibility check failed')}`);
             }
 
             const compatible = Boolean(payloadOf(compat).compatible);
@@ -76,13 +78,11 @@ export function registerValidateSelectionTool(
             // an impossible combination produces a list nobody can act on, and
             // the incompatibility is the whole answer.
             if (!compatible) {
-                return text(
-                    JSON.stringify({
-                        compatible: false,
-                        valid: false,
-                        reason: `${frontend} and ${backend} are not compatible. Use list_components or get_component_requirements to find a compatible pair.`,
-                    }),
-                );
+                return asText({
+                    compatible: false,
+                    valid: false,
+                    reason: `${frontend} and ${backend} are not compatible. Use list_components or get_component_requirements to find a compatible pair.`,
+                });
             }
 
             const deps = await run('loadDependencies', { frontend, backend });
@@ -98,20 +98,14 @@ export function registerValidateSelectionTool(
             // Ids, not the full rows. `name`, `description` and `impact` are for a
             // wizard card; an agent acting on this needs the identifiers it would
             // pass to the next tool. get_component_requirements has the detail.
-            return text(
-                JSON.stringify({
-                    compatible: true,
-                    valid: chain.valid ?? false,
-                    required: rows.filter((d) => d.required).map((d) => d.id),
-                    optional: rows.filter((d) => !d.required).map((d) => d.id),
-                    ...(chain.errors?.length ? { errors: chain.errors } : {}),
-                    ...(chain.warnings?.length ? { warnings: chain.warnings } : {}),
-                }),
-            );
+            return asText({
+                compatible: true,
+                valid: chain.valid ?? false,
+                required: rows.filter((d) => d.required).map((d) => d.id),
+                optional: rows.filter((d) => !d.required).map((d) => d.id),
+                ...(chain.errors?.length ? { errors: chain.errors } : {}),
+                ...(chain.warnings?.length ? { warnings: chain.warnings } : {}),
+            });
         },
     );
-}
-
-function text(body: string) {
-    return { content: [{ type: 'text' as const, text: body }] };
 }

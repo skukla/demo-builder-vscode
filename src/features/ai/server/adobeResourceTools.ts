@@ -30,14 +30,11 @@
 
 import { z } from 'zod';
 import { getAdobeTarget } from './adobeTargetStore';
+import { asText } from './mcpToolResult';
 import { ServiceLocator } from '@/core/di';
 import { createTeardownDeps } from '@/features/authentication/handlers/deleteAdobeProjectHandler';
 import { teardownConsoleProject } from '@/features/authentication/services/consoleProjectTeardown';
 import type { HandlerContext } from '@/types/handlers';
-
-function asText(value: unknown) {
-    return { content: [{ type: 'text' as const, text: JSON.stringify(value) }] };
-}
 
 const NEEDS_ADOBE = {
     needsAuth: 'adobe',

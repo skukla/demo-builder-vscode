@@ -25,6 +25,7 @@
  * cannot see is worse than a status that says `needs-auth`.
  */
 
+import { asRawText, asText } from './mcpToolResult';
 import { ServiceLocator } from '@/core/di';
 import type { StateManager } from '@/core/state';
 import {
@@ -50,14 +51,9 @@ export function registerProjectStatusTool(
         async () => {
             const project = await stateManager.getCurrentProject();
             if (!project) {
-                return {
-                    content: [
-                        {
-                            type: 'text' as const,
-                            text: 'Error: no current project. Use list_projects then set the current project.',
-                        },
-                    ],
-                };
+                return asRawText(
+                    'Error: no current project. Use list_projects then set the current project.',
+                );
             }
 
             // Only meaningful while running, and it reads the project's files —
@@ -78,7 +74,7 @@ export function registerProjectStatusTool(
                 mesh ? { status: mesh.status, endpoint: getMeshEndpoint(project) } : undefined,
             );
 
-            return { content: [{ type: 'text' as const, text: JSON.stringify(payload) }] };
+            return asText(payload);
         },
     );
 }
