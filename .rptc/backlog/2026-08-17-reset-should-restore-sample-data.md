@@ -19,6 +19,23 @@ one evening (all shipped on `feature/bodea-template`):
 So this is the first time anyone has watched the feature work end to end, and what it does
 now is visible for the first time: **it deletes, and stops.**
 
+## It only deletes — verified, against an appearance that it does not
+
+The progress bar said otherwise. `buildSampleDataDeps` hardcoded its progress line to the
+install wording, so a reset's REMOVAL reported `Installing sample data — 2 of 14 types done`
+while deleting, and the poller logged `data-installer import <id>` on every poll. Read
+straight, that says reset reinstalls. **It does not**, confirmed in code before this item was
+trusted:
+
+- `removeSampleData` → `runSampleDataJob(project, deps, 'remove')` → `deps.startDelete` only.
+  One job, one watch, no second phase.
+- `installSampleData` has exactly ONE caller in `src/`: `executor.ts`, the project-creation
+  path. Nothing in the reset path calls it.
+
+Both labels are fixed (2026-08-17): `mode` now drives the progress verb and the poller's job
+name. Recorded here because the wording was very nearly taken as evidence about behaviour,
+and anyone who saw the old message will remember a reinstall that never happened.
+
 ## The asymmetry
 
 Reset restores the storefront. It does not wipe DA.live content and stop — it re-copies

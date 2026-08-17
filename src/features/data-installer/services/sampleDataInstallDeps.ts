@@ -32,11 +32,24 @@ export interface SampleDataProject {
     adobe?: { organization?: string };
 }
 
-/** Build the dependency set for one build's sample-data install. */
+/**
+ * Build the dependency set for one sample-data job.
+ *
+ * `mode` exists because this builder serves BOTH `installSampleData` and
+ * `removeSampleData`, and two things it produces are phrased: the progress line
+ * a user reads, and the name the poller logs.
+ *
+ * Both used to be hardcoded to the install wording, so a reset's REMOVAL
+ * reported `Installing sample data — 2 of 14 types done` on the progress bar
+ * while deleting, and logged `data-installer import <id>` on every poll. Found
+ * 2026-08-17 when that progress line was read as evidence that reset reinstalls
+ * data — it does not, and a backlog item was nearly written around the label.
+ */
 export function buildSampleDataDeps(
     context: HandlerContext,
     project: SampleDataProject,
     report: (message: string) => void,
+    mode: 'install' | 'remove' = 'install',
 ): SampleDataDeps {
     return {
         credentials: async () => {
@@ -109,7 +122,7 @@ export function buildSampleDataDeps(
                 activationId,
                 requestedTypes,
                 polling: new PollingService(),
-                operation: operation ?? 'import',
+                operation: operation ?? (mode === 'remove' ? 'reset' : 'import'),
                 ...(onProgress ? { onProgress } : {}),
             });
             return { outcome: result.outcome, perType: result.perType };
@@ -119,7 +132,8 @@ export function buildSampleDataDeps(
             const done = Object.values(perType).filter(
                 (state) => state === 'success' || state === 'error',
             ).length;
-            report(`Installing sample data — ${done} of ${Object.keys(perType).length} types done`);
+            const verb = mode === 'remove' ? 'Removing' : 'Installing';
+            report(`${verb} sample data — ${done} of ${Object.keys(perType).length} types done`);
         },
     };
 }

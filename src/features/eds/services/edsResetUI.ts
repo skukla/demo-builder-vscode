@@ -557,7 +557,9 @@ async function removeProjectSampleData(
 
         const result = await removeSampleData(
             project,
-            buildSampleDataDeps(context, project, (message) => progress.report({ message })),
+            // 'remove' phrases the progress line and the poller's job name. Without
+            // it this reported "Installing sample data" while deleting.
+            buildSampleDataDeps(context, project, (message) => progress.report({ message }), 'remove'),
         );
 
         if (!result.ran) {

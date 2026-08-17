@@ -201,6 +201,50 @@ describe('buildSampleDataDeps — watch', () => {
 
         expect(watchImportJob.mock.calls[0][0].operation).toBe('import');
     });
+
+    it("defaults to 'reset' when the deps were built for a removal", async () => {
+        const deps = buildSampleDataDeps(makeContext(), PROJECT, jest.fn(), 'remove');
+
+        await deps.watch({ activationId: 'act-1', requestedTypes: [] });
+
+        expect(watchImportJob.mock.calls[0][0].operation).toBe('reset');
+    });
+});
+
+/**
+ * The progress line must name what is actually happening.
+ *
+ * It was hardcoded to "Installing", so a reset's REMOVAL reported
+ * `Installing sample data — 2 of 14 types done` while deleting. Reported live
+ * 2026-08-17 as apparent evidence that reset reinstalls sample data — it does
+ * not, and a backlog item was nearly written around the label rather than the
+ * behaviour. A message that states the opposite of the operation is worse than
+ * no message: it is trusted.
+ */
+describe('buildSampleDataDeps — progress wording', () => {
+    const perType = { categories: 'success', products: 'pending' } as never;
+
+    it('says Removing when built for a removal', () => {
+        const report = jest.fn();
+        buildSampleDataDeps(makeContext(), PROJECT, report, 'remove').onProgress?.(perType);
+
+        expect(report).toHaveBeenCalledWith(expect.stringContaining('Removing sample data'));
+        expect(report).not.toHaveBeenCalledWith(expect.stringContaining('Installing'));
+    });
+
+    it('CONTROL — still says Installing for an install', () => {
+        const report = jest.fn();
+        buildSampleDataDeps(makeContext(), PROJECT, report, 'install').onProgress?.(perType);
+
+        expect(report).toHaveBeenCalledWith(expect.stringContaining('Installing sample data'));
+    });
+
+    it('counts finished types, not pending ones', () => {
+        const report = jest.fn();
+        buildSampleDataDeps(makeContext(), PROJECT, report, 'remove').onProgress?.(perType);
+
+        expect(report).toHaveBeenCalledWith(expect.stringContaining('1 of 2'));
+    });
 });
 
 describe('buildSampleDataDeps — credentials', () => {
