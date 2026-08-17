@@ -28,6 +28,7 @@ import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
 import { mcpSocketBindings } from '@/features/ai/server/mcpSocketPath';
+import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
@@ -506,6 +507,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerAdobeTools(mcpServer, ctxFactory);
                 registerCreateProjectTool(mcpServer, ctxFactory);
                 registerCurrentProjectTool(mcpServer, ctxFactory);
+                registerProjectStatusTool(mcpServer, stateManager);
                 registerCloudResourceTools(mcpServer, ctxFactory);
                 registerStorefrontTools(mcpServer, ctxFactory);
                 registerContentAuthoringTools(mcpServer, ctxFactory);

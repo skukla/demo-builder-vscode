@@ -12,7 +12,12 @@
 
 import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import { Project } from '@/types';
-import { hasEntries, getProjectFrontendPort, getMeshEndpointUrl } from '@/types/typeGuards';
+import {
+    hasEntries,
+    getProjectFrontendPort,
+    getMeshComponentInstance,
+    getMeshEndpointUrl,
+} from '@/types/typeGuards';
 
 /**
  * Mesh status info for UI updates
@@ -66,6 +71,60 @@ export function buildStatusPayload(
         mesh,
         edsStorefrontStatus: project.edsStorefrontStatusSummary,
     };
+}
+
+/**
+ * Derive the mesh status shown for a project, from PERSISTED state only.
+ *
+ * Extracted from `handleRequestStatus` so the dashboard and the agent surface
+ * cannot describe the same mesh differently — the bug the `status === 'error'`
+ * branch below already documents, one layer up.
+ *
+ * Takes `authenticated` rather than checking, because the two callers must ask
+ * the question differently and only one of them may prompt. The dashboard runs
+ * `ensureAdobeIOAuth`, which can surface a sign-in warning; a tool has no UI to
+ * show it in and must never stall an agent on a dialog, so it passes the result
+ * of a silent `isAuthenticated()`. Deciding that inside would force one policy
+ * on both.
+ *
+ * TWO DIFFERENT MESH OBJECTS are in play here and they are not interchangeable.
+ * `getMeshComponentInstance` is the COMPONENT INSTANCE, whose `status` drives the
+ * deploying/error branches; `hasMeshDeploymentRecord` reads the DEPLOY RECORD
+ * (`getMeshAppBuilderComponent`), which is where an endpoint and a timestamp live.
+ * The handler this came from uses both, on purpose. Swapping one for the other
+ * looks like a simplification and reproduces the 2026-08-04 regression recorded on
+ * `hasMeshDeploymentRecord` below — a deployed mesh reading "Not Deployed".
+ *
+ * @param project The project to describe.
+ * @param authenticated Whether Adobe auth is currently usable.
+ * @returns The status and whether a deployed mesh warrants background verification
+ *          (the dashboard's mesh-verify check; tools ignore it), or `undefined`
+ *          when the project has no mesh component at all — which callers pass
+ *          through as an absent `mesh` field rather than a "not-deployed" one.
+ */
+export function deriveMeshStatus(
+    project: Project,
+    authenticated: boolean,
+): { status: string; shouldVerify: boolean } | undefined {
+    const mesh = getMeshComponentInstance(project);
+    if (!mesh) return undefined;
+
+    if (mesh.status === 'deploying') return { status: 'deploying', shouldVerify: false };
+
+    // A failed deploy is reported WITHOUT consulting meshStatusSummary and without
+    // waiting on auth — see the note on the dashboard handler this came from.
+    if (mesh.status === 'error') return { status: 'error', shouldVerify: false };
+
+    if (!authenticated) return { status: 'needs-auth', shouldVerify: false };
+
+    if (!hasMeshDeploymentRecord(project)) {
+        return { status: 'not-deployed', shouldVerify: false };
+    }
+
+    const summary = project.meshStatusSummary;
+    if (summary === 'stale') return { status: 'config-changed', shouldVerify: true };
+    if (summary === 'unknown' || !summary) return { status: 'deployed', shouldVerify: true };
+    return { status: summary, shouldVerify: true };
 }
 
 /**

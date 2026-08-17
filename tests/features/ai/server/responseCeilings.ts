@@ -111,6 +111,11 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     get_auth_status: { bytes: 2_000, why: 'per-provider status flags; 120 live' },
     get_current_project: { bytes: 2_000, why: 'name + path; 110 live' },
 
+    get_project_status: {
+        bytes: 2_000,
+        why: 'one project\'s status flags + optional mesh/EDS summary — fixed field count, nothing that grows with project size',
+    },
+
     // ── diagnosis (phase 4, Group 1) — measured live 2026-08-17 ─────────────
     check_repo_readiness: { bytes: 1_000, why: 'a verdict kind, sometimes a reason; 35 live' },
     check_github_app: {

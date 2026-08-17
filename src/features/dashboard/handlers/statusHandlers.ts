@@ -9,7 +9,8 @@
  */
 
 import * as path from 'path';
-import { buildStatusPayload, getMeshEndpoint, hasMeshDeploymentRecord } from './meshStatusHelpers';
+import { deriveMeshStatus } from '../services/dashboardStatusService';
+import { buildStatusPayload, getMeshEndpoint } from './meshStatusHelpers';
 import { withBrowserSignInNotice } from '@/core/auth/browserSignInNotice';
 import { AI_CONTEXT_VERSION } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
@@ -65,24 +66,24 @@ export const handleRequestStatus: MessageHandler = async (context) => {
 
     context.logger.debug(`[Dashboard] Status request: mesh=${meshComponent?.status || 'none'}`);
 
-    // Determine mesh status from persisted state (no redundant re-checking)
+    // Determine mesh status from persisted state (no redundant re-checking).
+    // The derivation itself lives in dashboardStatusService so the agent surface
+    // reports the same mesh the same way; only the AUTH question differs, and it
+    // stays here because only this caller may prompt.
     let meshStatus: string = 'not-deployed';
     // Set when a deployed mesh should be background-verified on open (auth'd +
     // has a deployment record). The verify runs as the mesh-verify OnOpenCheck.
     let shouldVerifyMesh = false;
 
     if (meshComponent) {
-        if (meshComponent.status === 'deploying') {
-            meshStatus = 'deploying';
-        } else if (meshComponent.status === 'error') {
-            // A failed deploy, reported WITHOUT consulting meshStatusSummary and
-            // without waiting on auth — mirrors sendDemoStatusUpdate, which has
-            // always checked this first. While only the summary was read here the
-            // two handlers could describe the same mesh differently depending on
-            // which message landed last, which is worse than either being wrong.
-            meshStatus = 'error';
-        } else {
-            // Auth check — prompt for inline sign-in if not authenticated
+        const settledWithoutAuth =
+            meshComponent.status === 'deploying' || meshComponent.status === 'error';
+
+        // Auth check — prompt for inline sign-in if not authenticated. Skipped for
+        // the two states that are reported without waiting on auth, so a failed
+        // deploy never costs the user a sign-in prompt to look at.
+        let authenticated = false;
+        if (!settledWithoutAuth) {
             const authManager = ServiceLocator.getAuthenticationService();
             const { ensureAdobeIOAuth } = await import('@/core/auth/adobeAuthGuard');
             const authResult = await ensureAdobeIOAuth({
@@ -96,33 +97,13 @@ export const handleRequestStatus: MessageHandler = async (context) => {
                 },
                 warningMessage: 'Adobe sign-in required to check mesh status.',
             });
+            authenticated = authResult.authenticated;
+        }
 
-            if (!authResult.authenticated) {
-                meshStatus = 'needs-auth';
-            }
-
-            // Only check deployment status if authenticated
-            if (authResult.authenticated) {
-                if (hasMeshDeploymentRecord(project)) {
-                    // Read persisted status — card grid already computed full fidelity
-                    const summary = project.meshStatusSummary;
-                    if (summary === 'stale') {
-                        meshStatus = 'config-changed';
-                    } else if (summary === 'unknown' || !summary) {
-                        meshStatus = 'deployed';
-                    } else {
-                        meshStatus = summary;
-                    }
-
-                    // Background verification (is the mesh still there?) runs as the
-                    // mesh-verify OnOpenCheck below — it ALWAYS posts a typed outcome
-                    // (ok / warning-gone / unknown-transient), never a silent flip.
-                    shouldVerifyMesh = true;
-                } else {
-                    meshStatus = 'not-deployed';
-                }
-            }
-            // If not authenticated, meshStatus remains 'needs-auth' from above
+        const derived = deriveMeshStatus(project, authenticated);
+        if (derived) {
+            meshStatus = derived.status;
+            shouldVerifyMesh = derived.shouldVerify;
         }
     }
 
