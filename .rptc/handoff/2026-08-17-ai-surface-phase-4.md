@@ -1,22 +1,33 @@
-# Handoff — AI surface, phase 4 (Groups 1, 2, 4 shipped)
+# Handoff — AI surface, phase 4 (Groups 1, 2, 3 shipped; Group 4 started)
 
 **Branch:** `feature/ai-surface-coverage` (worktree of the same name)
-**State:** 77 tools · full suite 14,046 / 1,068 suites green · tsc, typecheck:tests, eslint clean
+**State:** **78 tools** · full suite 14,083 / 1,070 suites green · tsc, typecheck:tests, eslint clean
 **Plan:** `.rptc/plans/ai-surface/phase-4-step-02-full-parity-plan.md` — carries every decision;
 this file carries only what a fresh session needs that the plan does not say.
 
-## What shipped (19 commits, 2026-08-17)
+## What shipped (20 commits, 2026-08-17)
 
 | Group | Tools |
 |---|---|
 | **1 — diagnosis** ✅ | `get_project_status` · `check_prerequisites` · `check_github_app` · `check_repo_readiness` · `discover_store_structure` · `get_component_requirements` · `validate_component_selection` · `get_auth_status` (enriched) |
 | **2 — cloud resources** ✅ | `create_github_repo` · `create_adobe_project` · `create_adobe_workspace` · `delete_adobe_project` |
-| **4 — configuration** ✅ | `configure_project` |
-| **Wave 3** ✅ | `add_integration` (+ the panel-branch defect it was blocked on) |
+| **3 — configuration** ✅ | `configure_project` |
+| **4 — integrations** 🟡 | `add_integration` only (Wave 3, + the panel-branch defect it was blocked on). **`rename_integration`, `set_console_apis` and `set_project_destination` REMAIN.** |
 
-Every one measured live and given a ceiling in `tests/features/ai/server/responseCeilings.ts`.
+Every Group 1–3 row was measured live and given a ceiling in
+`tests/features/ai/server/responseCeilings.ts`. `add_integration` was NOT — see its note below.
 
-## Wave 3 — DONE (uncommitted at time of writing)
+> **Correction (2026-08-17).** An earlier version of this table labelled `configure_project`
+> "Group 4 — configuration" and showed it complete. In the plan, configuration is **Group 3**;
+> **Group 4 is Integrations**, and three of its four tools are unbuilt. As written, the next
+> session would have read Group 4 as finished and skipped them.
+
+**The tool count is MEASURED, not derived.** 78 = 47 bespoke registrations + 31 descriptor rows,
+no overlap, enumerated from the `registerTool(` call sites in `src/features/ai/server/` and
+`src/mcp-server.ts`. The previous header's 77 was carried forward by hand; it happened to be
+right, which is not the same as having been checked.
+
+## Wave 3 — DONE (`9d52a5de`, pushed)
 
 `add_integration`'s panel branch, plus the tool itself. Three parts:
 
@@ -58,9 +69,23 @@ three short strings), NOT on a measurement.
 
 ## Start here
 
-**Group 5 (lifecycle)** — highest daily value: a current-project pointer, `restart_demo`,
+**Finish Group 4 first** — three tools, all small, and leaving them stranded is what the
+mislabel above would have caused: `rename_integration` (`renameAppBuilderComponent` already
+exists), `set_console_apis` (replace/remove — `add_console_apis` is add-only), and
+`set_project_destination`.
+
+**Then Group 5 (lifecycle)** — highest daily value: a current-project pointer, `restart_demo`,
 `open_url` (today `get_project_urls` returns URLs and nothing can open them), and the
 file-picker handoffs.
+
+> **`select_project` is TAKEN.** The plan's Group 5 names its current-project pointer
+> `select_project`, but that name already registers the **Adobe Console** project selector
+> (`adobeTools.ts:236`, "Select the active Adobe Console project by id"). Registering it twice
+> throws on ONE server — which `realSdkRegistration.test.ts` catches, but only after the row is
+> written. Pick another name (`set_current_project`). Confirmed the underlying gap is real:
+> `get_current_project` reads the pointer and nothing writes it. (Duplicate rejection verified
+> against the real SDK, not taken from a comment: the second `registerTool` throws
+> `Tool <name> is already registered`.)
 
 ## Primitives now available (use these, do not reinvent)
 
