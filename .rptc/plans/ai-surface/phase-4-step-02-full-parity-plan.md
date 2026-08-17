@@ -272,6 +272,77 @@ GitHub OAuth, the DA.live bookmarklet-and-paste, and the GitHub App install appr
 `needsUser` handoff naming the surface — the agent initiates, the user completes, the agent
 resumes.
 
+## Testing strategy — what "done" means for one tool
+
+The infrastructure exists (33 recorded ceilings, 8 suites asserting them, the stub harness in
+`responseSize.test.ts`). What was missing is the CONTRACT: four assertions per tool, and one
+suite-level guard that does not exist yet and matters most.
+
+### Per tool, four assertions
+
+| # | Assertion | Where | Why |
+|---|---|---|---|
+| 1 | **Shape** — the response carries the fields its description promises | the feature's own `fakeServer` suite | House pattern; already used by 8 suites |
+| 2 | **Size** — within its recorded ceiling **under an OVERSIZED payload** | `responseCeilings.ts` + the suite | Oversized is the point. Real fixtures hid three unbounded lists; 300 projects, 300 components and 900 entries found them |
+| 3 | **Honesty** — never reports success it did not achieve | the suite | See the guard below |
+| 4 | **Live** — one batched probe per wave, not per tool | `mcp-live-probe` | Live testing found every bug tests missed; batching keeps it affordable |
+
+### The guard that does not exist yet: no tool may return bare success
+
+**Every MCP tool response must be exactly one of three things:**
+
+1. a RESULT that carries the outcome,
+2. a `needsUser` handoff, or
+3. an error.
+
+**A bare `{success: true}` with no payload is none of them** — it is a tool that cannot fail, and
+it is the defect `handleAddAppBuilderComponent` ships today: on a guard failure it runs
+`demoBuilder.configureProject` and returns success while nothing was added. An agent cannot detect
+that, and neither can a human reading the transcript.
+
+Add this to `responseSize.test.ts`, which already drives every descriptor row through the real
+dispatch path with a stub map:
+
+```ts
+// Drive each ACTION row with a handler that returns a bare success and assert the
+// tool does not pass it through as an accomplishment.
+it.each(ACTION_DESCRIPTORS.map(d => d.tool))('%s never reports bare success', async (tool) => {
+    const out = JSON.parse(await harness(ALL, { success: true }).call(tool));
+    // Either it carries an outcome, or it hands off, or it errors — never "{}".
+    expect(out).not.toEqual({});
+});
+```
+
+The exemption list is the honest part: a handful of tools legitimately have nothing to report
+(`stop_demo` returns a status). Those are named explicitly, the way `responseSize.test.ts` already
+names its pass-through set — so a NEW bare-success tool fails, and the existing ones are a
+decision rather than an accident.
+
+### Testing a `needsUser` handoff
+
+Three assertions, because each rule of the convention can fail silently:
+
+1. **It hands off instead of faking.** Given the interactive precondition, the response carries
+   `needsUser` and NOT `success: true`.
+2. **It did everything it could first.** The handoff is returned only after the automatable work
+   ran — assert the service was called, not skipped.
+3. **The handoff is actionable.** `where` names a view `open_view` accepts or a real command id,
+   and `resumeWith` names a tool that exists. Both are checkable against the live catalogue, which
+   makes them a cheap suite-level assertion rather than prose.
+
+### What live verification is for, and what it is not
+
+Tests prove a tool matches its fixtures. Only the live probe proves it matches reality — and this
+session's record is unambiguous: fixtures invented from the writing side described 4 of 78 blocks;
+a path prefix was wrong in both the code and the fixture that "verified" it; three unbounded lists
+were invisible until driven with production-scale data.
+
+So: one probe pass per WAVE, against a real project, checking the batch together. Not per tool —
+each F5 round-trip costs real coordination, and the earlier waves' tools are re-verified for free
+by being on the same socket.
+
+---
+
 ## Standing constraints, still in force
 
 - Response ceilings: every new tool needs a row in `tests/features/ai/server/responseCeilings.ts`
