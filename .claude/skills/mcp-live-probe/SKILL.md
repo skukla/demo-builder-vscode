@@ -55,6 +55,45 @@ Three things it settles, each of which has produced a wrong answer before:
    invocation: a different host can rebind between two connections, and then the provenance
    describes one build while the numbers describe another.
 
+## When it times out: diagnose on the SECOND failure, never retry a third time
+
+`timed out after 60s — is the host still running?` is not "try again". A dead socket file
+produces exactly the same message as a host that is mid-startup, so retrying cannot tell them
+apart — and each attempt costs a full minute. On 2026-08-17 this ran **six** times across a
+dead socket. One command would have settled it after the second.
+
+Run this instead. It answers in under a second:
+
+```bash
+S="$(ls "${TMPDIR}demo-builder-mcp"/*.sock 2>/dev/null | head -1)"
+echo "socket:   ${S:-<none>}"
+[ -n "$S" ] && { stat -f '%Sm' "$S"; echo "holders:  $(lsof "$S" 2>/dev/null | wc -l)"; }
+echo "host:     $(ps aux | grep -c '[e]xtensionDevelopmentPath') process(es)"
+```
+
+| socket | holders | host | Meaning |
+|---|---|---|---|
+| present | 0 | 0 | **Stale file — no host.** Nothing will ever answer. Ask for F5; `rm` the socket |
+| present | >0 | ≥1 | Host is up and mid-startup. ONE more probe is reasonable |
+| absent | — | ≥1 | Host starting, has not bound yet. Wait, then probe once |
+| absent | — | 0 | No host. Same ask as row 1 |
+
+**A rebuild is not a run.** `npm run compile` and the watch task refresh `dist/extension.js` and
+start nothing — so the bundle timestamp keeps advancing while the probe keeps timing out, which
+reads exactly like "my change isn't loading". Only **F5** launches the
+`[Extension Development Host]` window that binds the socket. Before blaming the build, ask
+whether that second window is actually open.
+
+**Check your detection before trusting it.** `ps aux | grep extensionDevelopmentPath` returning 0
+is only evidence if `ps` works at all here — pair it with a positive control
+(`ps aux | grep -c 'Code Helper'`, which should be double digits on any machine running VS Code).
+A zero from a broken pattern looks identical to a zero from no host.
+
+**A wrong-build answer counts as a failure too.** Between two timeouts, one probe answered from
+`feature/bodea-template` — a sibling worktree's host had taken the socket. It was a real response
+to a real server and would have described the wrong branch entirely. This is rule 1 of `info`
+above, and it fires most often exactly when you are re-probing after a restart.
+
 ## Verifying a bundle without the probe
 
 When you only want to know whether something compiled in, grep `dist/extension.js` for the
