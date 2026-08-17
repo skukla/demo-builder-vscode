@@ -78,14 +78,54 @@ like custom/citisignal.
 
 Step 01 can land first, hidden. 02→03→04 sequential; 05 needs all.
 
-## Open items resolved during execution (never assumed)
+## Open items — RESOLVED 2026-08-17 (three of four; one is a decision)
 
-- `configDefaults` store/website/view codes: READ from the actual Bodea backend before unhide.
-- VIP group-hash determinism across instances: named falsifier — create demo data fresh,
-  compare Catalog Service group hashes; result decides the vip-config sheet values' portability.
-- Configurator keeper: read both luxe configurators during Wave 3, keep the cleaner one.
-- VIP nav gating: patch-or-defer decision at Wave 2 with the real insertion point in front of us.
-- Whether `bodea` needs its own ledger family (trigger: first Bodea-specific patch).
+**1. `configDefaults` store/website/view codes — READ, and they raise a question.**
+Read live from the instance the Bodea test project targets. It carries websites
+`admin` / `base` (Main Website) / `citisignal`; store groups `default` /
+`main_website_store` / `citisignal_store`; store views `default` / `admin` /
+`citisignal_us`. **There is no Bodea scope on it.** The declared defaults
+(`base` / `main_website_store` / `default`) are therefore VALID — those exist —
+but they are the generic Main Website, shared with `custom` and `isle5`.
+CitiSignal, the only other branded package, has its own (`citisignal` /
+`citisignal_store` / `citisignal_us`) and that scope exists on the box.
+**Open decision, and the only thing still gating unhide:** create a `bodea`
+website/store/store view and point `configDefaults` at it (the CitiSignal
+pattern, and the one that keeps two branded demos on one instance from
+colliding), or accept `base` deliberately.
+
+**2. VIP group-hash determinism — ANSWERED from code; no two-instance run needed.**
+`hashCustomerGroupUid` is `SHA-1(base64-decode(uid))` hex, and the UID is base64
+of the group's NUMERIC id (`MA==` is base64 `"0"`, the guest group). The datapack
+ships customer groups by NAME — "Platinum Buyer", "ServerSavvy Solutions" — and
+the service resolves name→id at import, so the id, and therefore the hash, is
+assigned by whichever instance the pack lands on. **Hashes are not portable.**
+That is not a problem, because nothing depends on one: `/vip-config.json` was
+never authored (404 on the published site) and no block reads it. The shipped
+mechanism resolves the group at RUNTIME — `bodea-customer-group.js` emits
+`bodea/customer-group-changed` carrying the live UID, and `guided-selling-luxe`
+consumes it. **Resolution: do not author a hash allowlist.** A sheet of
+hard-coded hashes would be copied to every new project's DA site and be wrong on
+any instance whose group ids differ.
+
+**3. Configurator keeper — RESOLVED by the port.** `product-configurator-luxe`
+exists nowhere in `bodea-source`, the extension config, or the block set; it was
+dropped during Wave 3. `luxury-configurator` and `guided-selling-luxe` survive,
+and both have published doc pages. Nothing to choose and nothing to update.
+
+**4. VIP nav gating — DEFER the patch.** The insertion point is real
+(`blocks/header/header.js`, the `if (navSections)` block that iterates every
+top-level nav `li`), so the condition "unless a clean single-patch insertion
+point exists" was tested rather than assumed. It is not clean: a patch there
+would have to inject a `/vip-config.json` fetch, an event subscription and an
+allowlist matcher, which is nothing like the six existing surgical patches, and
+patch policy defaults to no. A **zero-patch route** exists and is the
+recommendation if the story needs nav gating later: `bodea-customer-group.js`
+already resolves the group and ships through the brand-assets vendor point, as
+does `bodea-theme.css` — the module can mark `<body>` and the CSS can hide
+VIP-only entries, with no `eds-demo-patches` change. Both segment blocks
+(`customer-segment-personalization-block`, `targeted-block`) are ported, which is
+how the plan already delivers the VIP story.
 
 ## Verification (end-to-end)
 
