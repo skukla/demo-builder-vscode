@@ -15,6 +15,7 @@
 
 import * as vscode from 'vscode';
 import { ConfigurationService } from '../services/configurationService';
+import { withDaLiveAuthRetry, MAX_REAUTH_ATTEMPTS } from '../services/daLiveAuthRetry';
 import {
     createDaLiveServiceTokenProvider,
     DaLiveContentOperations,
@@ -30,8 +31,7 @@ import {
     reportUnapplied,
     type PatchReport,
 } from '../services/patchReportHelper';
-import { DaLiveAuthError } from '../services/types';
-import { ensureDaLiveAuth, getDaLiveAuthService } from './edsHelpers';
+import { getDaLiveAuthService } from './edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { executePhaseGitHubRepo } from './storefrontSetupPhase1';
 import { executePhaseHelixConfig, type BlockLibraryOptions } from './storefrontSetupPhase2';
@@ -141,47 +141,6 @@ function buildPipelineProgressCallback(
     };
 }
 
-const MAX_REAUTH_ATTEMPTS = 2;
-
-/**
- * Retry an async operation on DA.live auth expiry (DaLiveAuthError).
- * Prompts re-authentication via `ensureDaLiveAuth` and calls `onBeforeRetry`
- * before each retry. Throws if auth fails or max attempts are exhausted.
- */
-async function withDaLiveAuthRetry<T>(
-    context: HandlerContext,
-    operation: () => Promise<T>,
-    maxAttempts: number,
-    onBeforeRetry?: () => Promise<void>,
-): Promise<T> {
-    const logger = context.logger;
-    for (let attempt = 0; attempt <= maxAttempts; attempt++) {
-        try {
-            return await operation();
-        } catch (error) {
-            if (!(error instanceof DaLiveAuthError) || attempt >= maxAttempts) {
-                throw error;
-            }
-            logger.warn(`[Storefront Setup] DA.live token expired (attempt ${attempt + 1})`);
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'auth-recovery',
-                message: 'DA.live session expired. Please re-authenticate to continue.',
-                progress: -1,
-            });
-            const authResult = await ensureDaLiveAuth(context, '[Storefront Setup]');
-            if (!authResult.authenticated) {
-                throw new Error(
-                    authResult.cancelled
-                        ? 'Setup cancelled — DA.live re-authentication required'
-                        : `DA.live re-authentication failed: ${authResult.error}`,
-                );
-            }
-            logger.info('[Storefront Setup] DA.live re-authenticated');
-            if (onBeforeRetry) await onBeforeRetry();
-        }
-    }
-    throw new Error('[Storefront Setup] DA.live retry loop exhausted without result');
-}
 
 /**
  * Run Phase 2 (Helix config) and Phase 3 (code sync) with DA.live auth recovery.
@@ -224,8 +183,17 @@ async function runConfigCodeSyncPhases(
             }
             return { blockCollectionIds: phase2Result.blockCollectionIds };
         },
-        MAX_REAUTH_ATTEMPTS,
-        async () => {
+        {
+            maxAttempts: MAX_REAUTH_ATTEMPTS,
+            logPrefix: '[Storefront Setup]',
+            operationLabel: 'Setup',
+            onExpired: () =>
+                context.sendMessage('storefront-setup-progress', {
+                    phase: 'auth-recovery',
+                    message: 'DA.live session expired. Please re-authenticate to continue.',
+                    progress: -1,
+                }),
+            onBeforeRetry: async () => {
             context.logger.info(
                 '[Storefront Setup] DA.live re-authenticated, resuming configuration',
             );
@@ -234,6 +202,7 @@ async function runConfigCodeSyncPhases(
                 message: 'Resuming site configuration...',
                 progress: 40,
             });
+            },
         },
     );
 }
@@ -305,14 +274,24 @@ async function runEdsPipelineWithRecovery(
             if (!result.success) throw new Error(result.error || 'Content pipeline failed');
             return { libraryPaths: result.libraryPaths };
         },
-        MAX_REAUTH_ATTEMPTS,
-        async () => {
+        {
+            maxAttempts: MAX_REAUTH_ATTEMPTS,
+            logPrefix: '[Storefront Setup]',
+            operationLabel: 'Setup',
+            onExpired: () =>
+                context.sendMessage('storefront-setup-progress', {
+                    phase: 'auth-recovery',
+                    message: 'DA.live session expired. Please re-authenticate to continue.',
+                    progress: -1,
+                }),
+            onBeforeRetry: async () => {
             logger.info('[Storefront Setup] DA.live re-authenticated, resuming pipeline');
             await context.sendMessage('storefront-setup-progress', {
                 phase: 'content',
                 message: 'Resuming content copy...',
                 progress: 50,
             });
+            },
         },
     );
 }

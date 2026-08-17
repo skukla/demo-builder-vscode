@@ -25,10 +25,10 @@ import {
     getGitHubServices,
     configureDaLivePermissions,
     getDaLiveAuthService,
-    ensureDaLiveAuth,
 } from '../handlers/edsHelpers';
 import { verifyCdnResources } from './configSyncService';
 import { ConfigurationService } from './configurationService';
+import { withDaLiveAuthRetry } from './daLiveAuthRetry';
 import { DaLiveContentOperations } from './daLiveContentOperations';
 import type { TokenProvider } from './daLiveOrgOperations';
 import { executeEdsPipeline } from './edsPipeline';
@@ -49,7 +49,7 @@ import { lostGrantsMessage } from './lostGrantsMessage';
 import { createPatchReport, addCodeResult, reportUnapplied } from './patchReportHelper';
 import { migrateStorefrontNamingIfNeeded } from './storefrontNameMigration';
 import { updateStorefrontState } from './storefrontStalenessDetector';
-import { DaLiveAuthError, GitHubAppNotInstalledError } from './types';
+import { GitHubAppNotInstalledError } from './types';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
@@ -66,9 +66,6 @@ export type { EdsResetParams, EdsResetProgress, EdsResetResult, ExtractParamsRes
 // ==========================================================
 // Constants
 // ==========================================================
-
-/** Maximum number of DA.live re-authentication attempts in the content pipeline. */
-const MAX_REAUTH_ATTEMPTS = 2;
 
 /** Maps EDS pipeline operation names to wizard step numbers for progress reporting. */
 const PIPELINE_STEP_MAP: Record<string, number> = {
@@ -137,27 +134,6 @@ async function syncCodeAndPermissions(
  * Handle a DA.live authentication failure mid-pipeline by prompting re-authentication.
  * Returns on success (caller should continue the pipeline loop); throws on cancellation.
  */
-async function handlePipelineAuthRetry(
-    context: HandlerContext,
-    attempt: number,
-    report: (step: number, message: string) => void,
-): Promise<void> {
-    context.logger.warn(`[EdsReset] DA.live token expired mid-pipeline (attempt ${attempt})`);
-    report(8, 'DA.live session expired. Please re-authenticate...');
-
-    const authResult = await ensureDaLiveAuth(context, '[EdsReset]');
-    if (!authResult.authenticated) {
-        throw new Error(
-            authResult.cancelled
-                ? 'Reset cancelled — DA.live re-authentication required'
-                : `DA.live re-authentication failed: ${authResult.error}`,
-        );
-    }
-
-    context.logger.info('[EdsReset] DA.live re-authenticated, resuming pipeline');
-    report(8, 'Resuming content pipeline...');
-}
-
 /** Map a pipeline progress event to the wizard step number and format the message. */
 function mapPipelineProgress(
     info: { operation: string; message: string; current?: number; total?: number },
@@ -218,10 +194,13 @@ async function runContentPipeline(
 
     // tokenProvider required: DA.live content operations (copy, publish) need IMS token
     const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
-    let pipelineAttempt = 0;
-
-    while (pipelineAttempt <= MAX_REAUTH_ATTEMPTS) {
-        try {
+    // The SHARED recovery, not a third hand-rolled copy. Reset, storefront setup
+    // and (until 2026-08-16) nothing else each had their own loop; they must agree
+    // on when a refusal is retryable, and a divergence there is invisible until a
+    // pipeline fails in the field.
+    return withDaLiveAuthRetry(
+        context,
+        async () => {
             const pipelineResult = await executeEdsPipeline(
                 {
                     repoOwner,
@@ -263,18 +242,14 @@ async function runContentPipeline(
 
             context.logger.info('[EdsReset] Content pipeline completed successfully');
             return pipelineResult.contentFilesCopied;
-        } catch (error) {
-            if (error instanceof DaLiveAuthError && pipelineAttempt < MAX_REAUTH_ATTEMPTS) {
-                pipelineAttempt++;
-                await handlePipelineAuthRetry(context, pipelineAttempt, report);
-                continue;
-            }
-            throw error;
-        }
-    }
-
-    /* istanbul ignore next */
-    return 0; // Unreachable: loop throws or returns above
+        },
+        {
+            logPrefix: '[EdsReset]',
+            operationLabel: 'Reset',
+            onExpired: async () => report(8, 'DA.live session expired. Please re-authenticate...'),
+            onBeforeRetry: async () => report(8, 'Resuming content pipeline...'),
+        },
+    );
 }
 
 /**
