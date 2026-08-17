@@ -255,16 +255,26 @@
     min-width: 0;
 }
 
-/* The spinner sits immediately AFTER the label text, in flow.
+/* Label above, control below — and while discovery runs the spinner IS the
+   control, in the same place, under a label that does not move. */
+.datapack-scope-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
 
-   It was absolutely positioned at `right: 0` of the field. The field is
-   `flex: 1 1 0` — half the modal — so it rendered ~600px away, next to the other
-   column's label. In-flow beside the text is the only placement that tracks a
-   label whose width is however wide its words are. */
-.datapack-scope-label {
-    display: inline-flex;
+/* Holds the control's height so the dialog does not jump when the picker
+   replaces it. These fields used to appear only once the scopes landed, and
+   that jump is what the disabled-placeholder version was written to stop; the
+   swap must not reintroduce it. The value is the Spectrum medium field height —
+   a literal, because the token and the size prop resolve to different px in
+   this webview. */
+.datapack-scope-loading {
+    display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    min-height: 32px;
 }
 
 /* The products/customer_groups dependency. Warning colour, not error: the import

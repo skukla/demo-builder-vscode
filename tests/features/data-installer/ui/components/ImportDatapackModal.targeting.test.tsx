@@ -55,21 +55,21 @@ function stallScopes() {
     });
 }
 
-/**
- * The hidden select the Spectrum Picker mock exposes, found by its LABEL element.
- *
- * Scoped to `spectrum-picker-label` rather than any matching text: the store-view
- * picker's placeholder is "Choose a store view", so a bare text query for
- * /store view/ matches the label and the placeholder both.
- */
 /** Wait until discovery has settled: the picker exists AND is enabled. */
 async function awaitScopes(): Promise<void> {
     await waitFor(() => expect(pickerFor(/target website/i)).not.toBeDisabled());
 }
 
+/**
+ * Found via the picker's ACCESSIBLE NAME, not a label element inside it.
+ *
+ * The visible label now lives outside the Picker — the field owns it, so it can
+ * stay put while the spinner and the control swap underneath. The Picker carries
+ * `aria-label` instead, which the mock puts on its button.
+ */
 function pickerFor(label: RegExp): HTMLSelectElement {
-    const labels = screen.getAllByTestId('spectrum-picker-label');
-    const match = labels.find((node) => label.test(node.textContent ?? ''));
+    const buttons = screen.getAllByTestId('spectrum-picker');
+    const match = buttons.find((node) => label.test(node.getAttribute('aria-label') ?? ''));
     const wrapper = match?.closest('[data-testid="spectrum-picker-wrapper"]');
     return wrapper?.querySelector('[data-testid="spectrum-picker-select"]') as HTMLSelectElement;
 }
@@ -154,9 +154,13 @@ describe('import targeting', () => {
         await waitFor(() =>
             expect(screen.getByRole('button', { name: /start import/i })).toBeInTheDocument(),
         );
-        // The pickers hold space WHILE loading, so wait for the failure to settle.
+        // Wait for the failure to SETTLE — the spinner standing in for the
+        // pickers is what marks the in-flight state, so its absence is the
+        // signal. (This waited on `spectrum-picker-label`, which no longer
+        // exists at all now the label lives outside the Picker: the wait
+        // passed instantly and asserted nothing.)
         await waitFor(() =>
-            expect(screen.queryByTestId('spectrum-picker-label')).not.toBeInTheDocument(),
+            expect(screen.queryByLabelText('Loading websites')).not.toBeInTheDocument(),
         );
     });
 });
@@ -236,61 +240,53 @@ describe('the products/customer_groups dependency', () => {
  * 5. No precondition hint. It explained a rule the picker already enforces.
  */
 describe('the redesigned target section', () => {
-    /** 1. Space is held while discovery runs, rather than appearing late. */
-    it('shows the pickers disabled while scopes are still loading', async () => {
-        mockRequest.mockImplementation(async (type: string) => {
-            if (type === 'list-datapack-import-scopes') {
-                return new Promise(() => {}); // never settles
-            }
-            if (type === 'get-datapack-import-target') {
-                return { success: true, data: { instance: 'inst-1', projectName: 'demo-1' } };
-            }
-            return { success: true, data: null };
-        });
-        renderModal();
-
-        // Two pickers render (website and store view); the first is the website.
-        const pickers = await screen.findAllByTestId('spectrum-picker-select');
-        expect(pickers[0]).toBeDisabled();
-    });
-
     /**
-     * A spinner, because static text cannot show that anything is still running.
+     * 1. The SPINNER STANDS IN FOR THE CONTROL, under a label that stays put.
      *
-     * The placeholders read "Loading websites…" and "Loading…" — the same
-     * sentence twice in adjacent fields, and identical whether the request was in
-     * flight or wedged. Discovery waits on a credential fetch plus a Commerce
-     * call, so this is seconds rather than a flash. Follows `VerifiedField`: keep
-     * the control, disable it, put an indeterminate ProgressCircle beside it.
+     * The pickers used to render disabled with a placeholder. That held the space
+     * — which is the point, since before it the fields appeared late and the
+     * dialog jumped — but presented a control that could not be used, showing a
+     * value it did not have.
      */
-    it('shows a spinner on each scope field while discovery runs', async () => {
+    it('shows a spinner in place of each picker while scopes are loading', async () => {
         stallScopes();
         renderModal();
 
-        await screen.findAllByTestId('spectrum-picker-select');
-
-        expect(screen.getByLabelText('Loading websites')).toBeInTheDocument();
+        expect(await screen.findByLabelText('Loading websites')).toBeInTheDocument();
         expect(screen.getByLabelText('Loading store views')).toBeInTheDocument();
+        expect(screen.queryAllByTestId('spectrum-picker-select')).toHaveLength(0);
     });
 
-    /** CONTROL — the spinners are a loading state, not permanent furniture. */
-    it('CONTROL — removes both spinners once the scopes arrive', async () => {
+    /** The labels do not wait for the data — only the controls under them do. */
+    it('shows both field labels while still loading', async () => {
+        stallScopes();
+        renderModal();
+
+        await screen.findByLabelText('Loading websites');
+
+        expect(screen.getByText('Target website')).toBeInTheDocument();
+        expect(screen.getByText('Target store view')).toBeInTheDocument();
+    });
+
+    /** CONTROL — the swap goes both ways: pickers in, spinners out. */
+    it('CONTROL — replaces the spinners with the pickers once scopes arrive', async () => {
         withScopes();
         renderModal();
         await awaitScopes();
 
         expect(screen.queryByLabelText('Loading websites')).not.toBeInTheDocument();
         expect(screen.queryByLabelText('Loading store views')).not.toBeInTheDocument();
+        expect(screen.getAllByTestId('spectrum-picker-select')).toHaveLength(2);
     });
 
-    /** The spinner carries "busy"; the placeholder no longer repeats it twice. */
-    it('does not repeat the word Loading in the field placeholders', async () => {
+    /** The spinner carries "busy"; no field repeats it as static text. */
+    it('does not repeat the word Loading in the fields', async () => {
         stallScopes();
         renderModal();
 
-        await screen.findAllByTestId('spectrum-picker-select');
+        await screen.findByLabelText('Loading websites');
 
-        expect(screen.queryByText(/loading websites/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/loading websites…/i)).not.toBeInTheDocument();
         expect(screen.queryByText(/^loading…$/i)).not.toBeInTheDocument();
     });
 
@@ -306,7 +302,7 @@ describe('the redesigned target section', () => {
         stallScopes();
         renderModal({ availableTypes: ['categories'] });
 
-        await screen.findAllByTestId('spectrum-picker-select');
+        await screen.findByLabelText('Loading websites');
         fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
 
         // The shared Modal renders actions as div[role="button"][aria-disabled],
