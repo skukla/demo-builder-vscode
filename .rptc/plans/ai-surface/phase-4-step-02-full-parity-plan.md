@@ -98,12 +98,14 @@ fix, and it must land before the tool.
 
 | Tool | Source | Note |
 |---|---|---|
-| `get_project_status` | `buildStatusPayload` (`dashboardStatusService.ts:58`) — pure, zero vscode imports | Is the demo running, on what port, is the frontend config stale, is the EDS storefront published. `start_demo`/`stop_demo` ship today with no way to ask whether they worked. Build over the service; leave the handler alone (a test pins its panel guard). |
-| `check_prerequisites` | `PrerequisitesManager` + capture adapter | After 0b. Takes `selectedStack` — `getNodeVersionMapping` returns `{}` without it. |
-| `get_auth_status` **(enrich)** | `handleCheckGitHubAuth`, `handleCheckDaLiveAuth` | Add GitHub `orgs` and the DA.live `orgName`. The pinned DA.live namespace is reachable nowhere today and every DA.live write depends on it. ⚠️ `handleCheckGitHubAuth` **stores a token** when it finds a VS Code session (`edsGitHubHandlers.ts:79-83`) — do not expose it under a `check_*` name without splitting that write. |
-| `check_github_app` | `checkGitHubAppHandler` | Is AEM Code Sync installed on a repo. First thing to check when publishing silently fails. |
-| `check_repo_readiness` | `checkRepoReadinessHandler` | Can this repo serve as a storefront. |
-| `discover_store_structure` | ~~`handleDiscoverStoreStructureAndPersist`~~ → `handleDiscoverStoreStructure` | The LIVE Commerce fetch. `get_store_structure` only reads what was already stored. **BUILT 2026-08-17, bound to the NON-persisting handler** — see the deviation note below. |
+| ✅ `get_project_status` | `buildStatusPayload` (`dashboardStatusService.ts:58`) — pure, zero vscode imports | Is the demo running, on what port, is the frontend config stale, is the EDS storefront published. `start_demo`/`stop_demo` ship today with no way to ask whether they worked. Build over the service; leave the handler alone (a test pins its panel guard). |
+| ✅ `check_prerequisites` | `PrerequisitesManager` + capture adapter | After 0b. Takes `selectedStack` — `getNodeVersionMapping` returns `{}` without it. |
+| ✅ `get_auth_status` **(enriched)** | services directly — NOT the handlers | Adds GitHub `login`+`orgs` and the DA.live `orgName`. ⚠️ **The warning in the original row was wrong and cost two deferrals:** it said the tool could not ship until `handleCheckGitHubAuth`'s token write was split out. That handler was never on this path — `authTools.ts` has always called the services directly, and says so in its own docstring. The write is real, but it belongs to the WIZARD's handler; a tool built over that handler would still need the split. Check the tool before inheriting a warning about it. |
+| ✅ `check_github_app` | `checkGitHubAppHandler` | Is AEM Code Sync installed on a repo. First thing to check when publishing silently fails. |
+| ✅ `check_repo_readiness` | `checkRepoReadinessHandler` | Can this repo serve as a storefront. |
+| ✅ `discover_store_structure` | ~~`handleDiscoverStoreStructureAndPersist`~~ → `handleDiscoverStoreStructure` | The LIVE Commerce fetch. `get_store_structure` only reads what was already stored. Bound to the NON-persisting handler — see the deviation note below. |
+| ✅ `validate_component_selection` | merges `checkCompatibility` + `validateSelection` + `loadDependencies` | One question, one tool. Short-circuits after an incompatible pair. |
+| ✅ `get_component_requirements` | ~~`handleGetComponentsData`~~ → reads `components.json` via the shared `COMPONENT_SECTIONS` | Env vars (resolved to their meaning), services, dependencies for one component. `list_components` returns only `{id, name}`. |
 
 **Deviation (2026-08-17): `discover_store_structure` does NOT persist.** This table named
 `handleDiscoverStoreStructureAndPersist`, which writes the discovered hierarchy onto the current
@@ -126,8 +128,18 @@ step. Revisit if an agent needs `get_store_structure` to reflect a discovery it 
    now returns `needsUser` and never dispatches; ACCS resolves its IMS token from context and
    dispatches normally. `additionalProperties: false` in the generated schema means a caller
    cannot smuggle the credentials through regardless.
-| `validate_component_selection` | merges `checkCompatibility` + `validateSelection` + `loadDependencies` | One question, one tool. |
-| `get_component_requirements` | `handleGetComponentsData`, narrowed | Env vars, dependencies, services for one component. `list_components` returns only `{id, name}`. |
+
+**Group 1 is COMPLETE (2026-08-17).** Every row shipped and was measured against a live server:
+`get_project_status` 352 B · `check_prerequisites` 514 B · `check_github_app` 63 B ·
+`check_repo_readiness` 35 B · `discover_store_structure` 635 B · `get_component_requirements` 727 B ·
+`validate_component_selection` 60 B · `get_auth_status` 218 B. Ceilings recorded for all of them.
+
+**One outage worth carrying forward.** `get_component_requirements` shipped with a raw JSON-Schema
+`inputSchema` where the SDK demands zod. The throw happens inside `registerExtraTools`, so it killed
+registration for EVERY tool — the whole agent surface was dead for six commits, presenting as a
+server that bound its socket and never answered. Nothing offline saw it, because every suite here
+uses a fake server whose `registerTool` ignores the schema argument. `realSdkRegistration.test.ts`
+now hands the real `McpServer` the real descriptors; it was verified by reintroducing the defect.
 
 ## Group 2 — Cloud resource creation (closes the create/delete matrix)
 
