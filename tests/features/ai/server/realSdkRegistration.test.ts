@@ -22,11 +22,22 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
+import { registerAdobeTools } from '@/features/ai/server/adobeTools';
+import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
+import { registerAuthTools } from '@/features/ai/server/authTools';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
 import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
+import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
+import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
+import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
+import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
+import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
+import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
+import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
+import { registerViewTools } from '@/features/ai/server/viewTools';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
@@ -64,6 +75,16 @@ describe('registration against the real MCP SDK', () => {
 
     // One server, everything on it — the arrangement extension.ts actually builds.
     // A duplicate tool name also throws here, which no per-module test can see.
+    //
+    // THIS LIST WAS HALF THE SURFACE (fixed 2026-08-17). It registered 8 functions
+    // while `extension.ts` registers 17, and still claimed to be "as extension.ts
+    // registers it" — so the duplicate-name safety net covered about half the
+    // tools, and a collision between an omitted module and anything else would
+    // have shipped. That is the same shape as the stub-server hole this file was
+    // written for: a guard whose scope quietly stopped matching what it guards.
+    //
+    // The count assertion below is the part that keeps it honest — a new
+    // `register*` call in extension.ts fails here until it is added.
     it('accepts the whole surface on ONE server, as extension.ts registers it', () => {
         const s = server();
         expect(() => {
@@ -73,13 +94,54 @@ describe('registration against the real MCP SDK', () => {
                 ctxFactory,
             );
             registerDiscoveryTools(s);
+            registerAuthTools(s, ctxFactory);
+            registerAdobeTools(s, ctxFactory);
+            registerCreateProjectTool(s, ctxFactory);
+            registerCurrentProjectTool(s, ctxFactory);
             registerProjectStatusTool(s, stateManager);
             registerValidateSelectionTool(s, ctxFactory);
             registerComponentRequirementsTool(s);
             registerAdobeResourceTools(s, ctxFactory);
-            registerCloudResourceTools(s, ctxFactory);
             registerConfigureProjectTool(s, stateManager);
+            registerCloudResourceTools(s, ctxFactory);
+            registerStorefrontTools(s, ctxFactory);
+            registerContentAuthoringTools(s, ctxFactory);
+            registerEdsResetTool(s, ctxFactory);
+            registerDeleteProjectTool(s, ctxFactory);
+            registerApplyUpdatesTool(s, ctxFactory);
+            registerViewTools(s, async () => undefined);
+            registerLifecycleTools(s, ctxFactory, async () => undefined);
         }).not.toThrow();
+    });
+
+    /**
+     * The list above must keep naming every `register*` call `extension.ts` makes.
+     *
+     * Asserted by READING extension.ts rather than by counting what registered,
+     * because the failure being guarded is an omission — a function nobody calls
+     * here registers nothing, so any count taken from this server would agree with
+     * the mistake. Reading the source is the only place the two can disagree.
+     */
+    it('registers every register* call that extension.ts makes', async () => {
+        const { readFileSync } = await import('fs');
+        const extensionSource = readFileSync('src/extension.ts', 'utf8');
+        const thisSuite = readFileSync('tests/features/ai/server/realSdkRegistration.test.ts', 'utf8');
+
+        const calls = [
+            ...new Set(
+                [...extensionSource.matchAll(/\b(register[A-Za-z]*Tools?)\s*\(/g)].map((m) => m[1]),
+            ),
+        ].sort();
+
+        // Control: a regex that matched nothing would make the loop below pass
+        // whatever this suite covered.
+        expect(calls.length).toBeGreaterThan(10);
+
+        // `\s*` because the multi-argument calls wrap: `registerDescriptorTools(\n  s,`.
+        // Matching the argument at all is what stops a name MENTIONED in a comment
+        // from counting as covered.
+        const uncovered = calls.filter((name) => !new RegExp(`${name}\\(\\s*s[,)]`).test(thisSuite));
+        expect(uncovered).toEqual([]);
     });
 
     // The control. Without it, "does not throw" would pass even if the SDK

@@ -9,6 +9,7 @@ import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandle
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
+import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
 
 function row(tool: string) {
     return ACTION_DESCRIPTORS.find((d) => d.tool === tool);
@@ -83,6 +84,54 @@ describe('ACTION_DESCRIPTORS', () => {
             // — exactly the case the delete_* rule above cannot see.
             'set_console_apis',
         ]);
+    });
+
+    describe('Group 5 — lifecycle', () => {
+        it('restart_demo dispatches to restartDemo with no args', () => {
+            const d = row('restart_demo');
+            expect(d).toBeDefined();
+            expect(d!.map).toBe(dashboardHandlers);
+            expect(d!.type).toBe('restartDemo');
+            expect(d!.inputSchema).toBeUndefined();
+            expect(d!.confirm).toBeUndefined();
+        });
+
+        it('set_current_project FORCES forceNewWindow off', () => {
+            const d = row('set_current_project');
+            expect(d).toBeDefined();
+            expect(d!.map).toBe(projectsListHandlers);
+            expect(d!.type).toBe('selectProject');
+            expect(Object.keys(d!.inputSchema ?? {})).toEqual(['projectPath']);
+
+            // The load-bearing half. `forceNewWindow: true` is the shift-click
+            // gesture — it opens a SECOND VS Code window and leaves the current one
+            // on the projects list, so an agent could both take over the screen and
+            // then act on a window the user is not looking at. Forced, not
+            // defaulted: `runHandler` applies argDefaults LAST, so a caller sending
+            // `true` cannot win.
+            expect(d!.argDefaults).toEqual({ forceNewWindow: false });
+            // And it must not be offered as an argument either, or the force above
+            // would just be silently overriding something the schema advertised.
+            expect(Object.keys(d!.inputSchema ?? {})).not.toContain('forceNewWindow');
+        });
+
+        it('set_project_pinned takes a path and a boolean, no confirm', () => {
+            const d = row('set_project_pinned');
+            expect(d).toBeDefined();
+            expect(d!.map).toBe(projectsListHandlers);
+            expect(d!.type).toBe('setProjectPinned');
+            expect(Object.keys(d!.inputSchema ?? {}).sort()).toEqual(['pinned', 'projectPath']);
+            // Local display state, trivially reversible.
+            expect(d!.confirm).toBeUndefined();
+        });
+
+        // `select_project` is the ADOBE Console project selector (adobeTools.ts).
+        // Naming this one the same would throw at registration ("Tool ... is
+        // already registered") and, before that, would have read as the same
+        // capability to an agent choosing between them.
+        it('does not collide with the Adobe Console select_project', () => {
+            expect(ACTION_DESCRIPTORS.map((d) => d.tool)).not.toContain('select_project');
+        });
     });
 
     it('exposes rename_project dispatching to the current-project rename handler', () => {

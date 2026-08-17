@@ -269,6 +269,12 @@ describe('rows with no output safety net are classified', () => {
         'redeploy_integration', 'refresh_block_library', 'regenerate_ai_files',
         'remove_integration', 'rename_project', 'save_ai_prompt', 'start_demo',
         'stop_demo',
+        // Group 5. `restart_demo` and `set_project_pinned` are category 1 —
+        // success IS the outcome, and both have a confirming read
+        // (get_project_status, list_projects). `set_current_project` is category
+        // 2: handleSelectProject returns `{data: {project}}`
+        // (projects-dashboard/handlers/dashboardHandlers.ts).
+        'restart_demo', 'set_current_project', 'set_project_pinned',
     ];
 
     it('the set matches exactly — a new row must be classified before it ships', async () => {
@@ -325,6 +331,11 @@ describe('the ceiling table tracks the tool surface', () => {
             'get_project_urls', 'get_datapack', 'list_datapack_data_types',
             'find_datapacks', 'list_installed_datapacks', 'get_datapack_activity',
             'verify_ai_setup', 'list_ai_prompts', 'list_console_apis',
+            // Group 5. `restart_demo` mirrors start/stop_demo. `set_project_pinned`
+            // is a boolean write. `set_current_project` returns ONE project record
+            // — the same shape `get_project` already carries a 12,000-byte ceiling
+            // for, and bounded the same way.
+            'restart_demo', 'set_current_project', 'set_project_pinned',
         ]);
         // Rows built but not yet driven against a live extension. Distinct from
         // EXEMPT on purpose: exempt is a decision, this is an IOU. A ceiling is a

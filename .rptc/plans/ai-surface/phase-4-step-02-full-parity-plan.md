@@ -204,14 +204,19 @@ the **applied diff plus what remains unset** — never a bare success (see the e
 
 | Tool | Note |
 |---|---|
-| `select_project` (current-project pointer) | An agent cannot change which project is current. |
-| `restart_demo` | `start_demo`/`stop_demo` exist; restart does not. |
-| `set_project_pinned` | Trivial. |
-| `open_url` / extend `open_view` | `get_project_urls` returns URLs and **nothing can open them**. The UI has five open actions. |
-| `edit_project` | Wizard edit mode → **handoff** (`where: {command:'demoBuilder.createProject'}`). |
-| `import_project_from_file` | Native file picker → **handoff**, unless a path argument bypasses it. |
-| `export_project` | Save dialog → **handoff**; distinct from `export_project_settings`. |
-| `copy_from_existing` | QuickPick → **handoff**, or accept the source project as an argument. |
+**SHIPPED 2026-08-17** — five built, three refused. The refusals are the plan being wrong, not
+the work being skipped; each capability is already reachable.
+
+| Tool | Note |
+|---|---|
+| ✅ `set_current_project` | Built. NOT `select_project` — that name is the Adobe Console selector (`adobeTools.ts`), and registering it twice throws. `forceNewWindow` forced off via `argDefaults`. |
+| ✅ `restart_demo` | Built. `handleRestartDemo` already existed and owns the settle delay. |
+| ✅ `set_project_pinned` | Built. |
+| ✅ `open_url` | Built in `lifecycleTools.ts`, taking a **TARGET, never a URL** — resolved through the same `getProjectUrls` handler `get_project_urls` uses, so an agent can only open URLs that read already reported. |
+| ✅ `edit_project` | Built as a pure handoff that never dispatches; also points at `configure_project`, which covers the common asks without the wizard. |
+| ❌ `import_project_from_file` | **Not built.** `showOpenDialog` with no argument bypass, and it prefills the WIZARD — an agent driving that is not the flow. Reachable as `get_project` + `create_project` + `configure_project`. |
+| ❌ `export_project` | **Not built.** `export_project_settings` already writes the file headlessly; the only delta is a save dialog choosing the path, which an agent can choose. |
+| ❌ `copy_from_existing` | **Not built.** QuickPick, no argument bypass, same wizard-prefill reasoning as the import row. |
 
 ## Group 6 — EDS / storefront operations
 

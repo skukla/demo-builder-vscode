@@ -337,7 +337,12 @@ Thin tools declared as data and dispatched to existing handler maps:
   view that does not exist; PaaS uses the project's saved admin credentials, ACCS
   proxies through a configured discovery service and prompts Adobe sign-in ONLY
   when the read reports it needs a token).
-- Actions: `regenerate_ai_files`, `start_demo`, `stop_demo`, `rename_project`
+- Actions: `regenerate_ai_files`, `start_demo`, `stop_demo`, `restart_demo` (owns the
+  settle delay between the stop and the start, which calling the two in sequence does
+  not), `set_current_project` (the pointer every project-scoped tool acts on — note this
+  is NOT `select_project`, which picks an Adobe Console project; `forceNewWindow` is
+  FORCED off via `argDefaults`, since that gesture opens a second VS Code window and
+  leaves the current one on the projects list), `set_project_pinned`, `rename_project`
   (current-project rename via the shared `renameProjectCore` — folder, saved
   state, and the project's baked MCP/AI configs move together; agents must use
   this instead of shell `mv`, which strands the extension's paths),
@@ -466,6 +471,16 @@ entirely. Auth is indifferent to the order.
 
 ### View — `viewTools.ts`
 `open_view` — surface a specific VS Code view/screen for the user.
+
+### Lifecycle — `lifecycleTools.ts`
+
+| Tool | Notes |
+|---|---|
+| `open_url` | Opens one of the CURRENT project's URLs in the browser. **Takes a TARGET, never a URL** — `storefront` / `liveSite` / `daLive` / `commerceAdmin` / `devConsole` — so the reachable destinations are exactly the set `get_project_urls` reports, and an agent cannot point the user's browser somewhere nobody asked for. Resolves through the same `getProjectUrls` handler that read uses, so a target cannot mean two things. Confirm-gated, like `open_view`. A target the project has no URL for is refused with the list of ones it does. |
+| `edit_project` | **Always a `needsUser` handoff; it never dispatches.** `handleEditProject` opens the creation wizard, which is a multi-step human surface — an agent calling it would make a panel appear for a request the user did not make and report success for it. The handoff points at the wizard AND at `configure_project`, which covers env vars, store scope, block libraries, addons and the datapack without it. Ungated: it opens nothing. |
+
+Both take their vscode dependency by injection from `extension.ts` (a command
+runner, a URL opener), so neither module imports vscode.
 
 ---
 

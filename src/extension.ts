@@ -30,6 +30,7 @@ import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
+import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import { mcpSocketBindings } from '@/features/ai/server/mcpSocketPath';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
@@ -528,6 +529,9 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerApplyUpdatesTool(mcpServer, ctxFactory);
                 registerViewTools(mcpServer, (commandId) =>
                     Promise.resolve(vscode.commands.executeCommand(commandId)),
+                );
+                registerLifecycleTools(mcpServer, ctxFactory, (url) =>
+                    Promise.resolve(vscode.env.openExternal(vscode.Uri.parse(url))),
                 );
             },
         });

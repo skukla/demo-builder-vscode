@@ -1,7 +1,7 @@
-# Handoff — AI surface, phase 4 (Groups 1–4 shipped)
+# Handoff — AI surface, phase 4 (Groups 1–5 shipped)
 
 **Branch:** `feature/ai-surface-coverage` (worktree of the same name)
-**State:** **81 tools** · full suite 14,087 / 1,070 suites green · tsc, typecheck:tests, eslint clean
+**State:** **86 tools** · full suite 14,102 / 1,071 suites green · tsc, typecheck:tests, eslint clean
 **Plan:** `.rptc/plans/ai-surface/phase-4-step-02-full-parity-plan.md` — carries every decision;
 this file carries only what a fresh session needs that the plan does not say.
 
@@ -13,6 +13,7 @@ this file carries only what a fresh session needs that the plan does not say.
 | **2 — cloud resources** ✅ | `create_github_repo` · `create_adobe_project` · `create_adobe_workspace` · `delete_adobe_project` |
 | **3 — configuration** ✅ | `configure_project` |
 | **4 — integrations** ✅ | `add_integration` (Wave 3, + the panel-branch defect it was blocked on) · `rename_integration` · `set_console_apis` · `set_project_destination` |
+| **5 — lifecycle** ✅ | `set_current_project` · `restart_demo` · `set_project_pinned` · `open_url` · `edit_project` (handoff). **Three deliberately NOT built — see below.** |
 
 Every Group 1–3 row was measured live and given a ceiling in
 `tests/features/ai/server/responseCeilings.ts`. `add_integration` was NOT — see its note below.
@@ -88,20 +89,63 @@ An earlier `handoff.ts` paragraph blamed a GUARD failure for the defect; guards 
 Gate: 1070 suites / 14,083 tests (baseline 1069 / 14,070), tsc + typecheck:tests + whole-repo
 eslint clean. Each new assertion was falsified by re-introducing the defect before being trusted.
 
+## Group 5 — five built, three refused (2026-08-17)
+
+Built: `set_current_project` (named around the `select_project` collision — that one is the
+Adobe Console selector), `restart_demo`, `set_project_pinned` as descriptor rows, plus a new
+`lifecycleTools.ts` holding two the row shape cannot express.
+
+**`open_url` takes a TARGET, never a URL.** `open_url(url)` would let an agent point the user's
+browser anywhere, and no validation makes that safe — the danger is a well-formed URL nobody
+asked for. The argument names WHICH of the project's URLs to open (`storefront` · `liveSite` ·
+`daLive` · `commerceAdmin` · `devConsole`) and the extension resolves it through the SAME
+`getProjectUrls` handler `get_project_urls` uses, so the reachable set is exactly what that read
+reports and a target cannot mean two things. A test pins the enum against the handler's own
+`urls.X =` assignments, so the two cannot drift.
+
+**`edit_project` never dispatches** — it is always a handoff. The wizard is a multi-step human
+surface; the handoff points at it AND at `configure_project`, because most "edit my project"
+asks are env vars or store scope, which need no wizard.
+
+**`set_current_project` forces `forceNewWindow: false` via `argDefaults`.** That flag is the
+shift-click gesture: it opens a SECOND VS Code window and leaves the current one on the projects
+list, so an agent could take over the screen and then act on a window the user is not watching.
+
+**Refused, with reasons** — the plan listed eight; three earn a tool only by being on the list:
+
+- **`export_project`** — `export_project_settings` already writes the file headlessly. The only
+  delta is a save dialog choosing the path, which an agent can choose itself.
+- **`import_project_from_file`** and **`copy_from_existing`** — both are dialog-bound WIZARD
+  PREFILL (`showOpenDialog` / a QuickPick, no argument bypass), and an agent driving the wizard
+  is not the flow. The capability is reachable as `get_project` on the source, then
+  `create_project` + `configure_project`. Same call the plan made for `cancel_storefront_setup`.
+
+## The registration guard covered HALF the surface (fixed here)
+
+`realSdkRegistration.test.ts`'s "whole surface on ONE server" test registered **8** functions
+while `extension.ts` registers **17** — and still said "as extension.ts registers it". So the
+duplicate-name net covered about half the tools, and it is the test that would have caught the
+`select_project` collision before it was written. Same shape as the stub-server hole that file
+exists for: a guard whose scope quietly stopped matching what it guards.
+
+It now registers all of them, and a new test READS `extension.ts` and fails when a `register*`
+call is missing here. Asserted by reading the source rather than by counting what registered,
+because the failure is an omission — a function nobody calls registers nothing, so any count
+taken from the server would agree with the mistake.
+
 ## Start here
 
-**Group 5 (lifecycle)** — highest daily value: a current-project pointer, `restart_demo`,
-`open_url` (today `get_project_urls` returns URLs and nothing can open them), and the
-file-picker handoffs.
+**Group 6 (EDS / storefront)** — `manage_site_access` and `repair_site_configuration` are the
+cheap two: both already have UI-free cores (`siteAccessManagerHeadless`,
+`repairSiteConfigHeadless`) and the commands only wrap them in QuickPicks.
+`migrate_storefront_names` is destructive (deletes the old DA site root) → confirm + name echo.
+The bulk `cleanup_dalive_sites` / `manage_github_repos` are confirm-gated. `github_change_account`
+and `connect_dalive` are handoffs. `cancel_storefront_setup` is **do not build** — the plan says
+so and the capability is reachable as `delete_github_repo` + `cleanup_dalive_site`.
 
-> **`select_project` is TAKEN.** The plan's Group 5 names its current-project pointer
-> `select_project`, but that name already registers the **Adobe Console** project selector
-> (`adobeTools.ts:236`, "Select the active Adobe Console project by id"). Registering it twice
-> throws on ONE server — which `realSdkRegistration.test.ts` catches, but only after the row is
-> written. Pick another name (`set_current_project`). Confirmed the underlying gap is real:
-> `get_current_project` reads the pointer and nothing writes it. (Duplicate rejection verified
-> against the real SDK, not taken from a comment: the second `registerTool` throws
-> `Tool <name> is already registered`.)
+**Then Group 7** — `install_prerequisite` is the only real refactor left on the surface: it
+indexes into per-call `sharedState` and must re-address by prereq id, and return
+`{manual: true, url}` instead of calling `vscode.env.openExternal`.
 
 ## Primitives now available (use these, do not reinvent)
 
