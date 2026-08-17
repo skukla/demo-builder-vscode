@@ -63,7 +63,22 @@ recorded per edge in the source so the weak ones are visible rather than implied
 | `customers` → `customer_groups` | Mirrors the products/customer_groups substitution; matches the observed import order | inferred |
 
 **Deliberately NOT included:** every inventory edge (`stock_source_links` → `stocks`,
-`sources`; `source_items` → `sources`). Bodea disproves them for import. Also excluded:
+`sources`; `source_items` → `sources`).
+
+**Correction (2026-08-17, after shipping).** This was first written as "bodea disproves
+them," and that overstates the evidence. What bodea shows is that the import did not
+FAIL without them — every type reported `success`. It does not show that rows landed.
+`docs/systems/data-installer.md` records the distinction directly: `GET /V1/categories`
+returns only the default store group's subtree, so "a multi-root instance makes an
+import look like a no-op through that endpoint while `per-type: success` is telling the
+truth." A per-type success is not a row count.
+
+So the inventory edges are **unproven in both directions**, not disproven. Leaving them
+out remains right for a different reason than first given: bodea contains neither
+`stocks` nor `sources`, so auto-selection could not add them regardless — the only
+effect of including the edges would be a `missingDependencies` notice, and whether that
+notice would be TRUE is exactly what is unestablished. Settle it by asking the service
+author, or by checking whether bodea's `stock_source_links` item actually holds rows. Also excluded:
 the B2B assignment edges, which the export graph carries but no import evidence
 supports — bodea imported all four B2B types with no ordering help from us.
 
