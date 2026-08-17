@@ -17,8 +17,8 @@ adapter does not touch the handler.
 
 Two more were wrong from reading only the top of a function:
 
-- `handleRequestStatus` **already returns** `{success: true, data: statusData}` (`:216`). The
-  `context.panel` guard at `:53` is the first thing you see and the return is 160 lines below.
+- `handleRequestStatus` **already returns** `{success: true, data: statusData}` (`:197`). The
+  `context.panel` guard at `:54` is the first thing you see and the return is 160 lines below.
 - `handleDeleteAdobeProject` **already returns** `{success, data: result}` (`:283`). It was
   disqualified on `confirmDeletion` — but `delete_project` already ships that exact workaround:
   `confirm: true` + `confirmName` over a headless core.
@@ -98,7 +98,7 @@ fix, and it must land before the tool.
 
 | Tool | Source | Note |
 |---|---|---|
-| `get_project_status` | `buildStatusPayload` (`dashboardStatusService.ts:53`) — pure, zero vscode imports | Is the demo running, on what port, is the frontend config stale, is the EDS storefront published. `start_demo`/`stop_demo` ship today with no way to ask whether they worked. Build over the service; leave the handler alone (a test pins its panel guard). |
+| `get_project_status` | `buildStatusPayload` (`dashboardStatusService.ts:58`) — pure, zero vscode imports | Is the demo running, on what port, is the frontend config stale, is the EDS storefront published. `start_demo`/`stop_demo` ship today with no way to ask whether they worked. Build over the service; leave the handler alone (a test pins its panel guard). |
 | `check_prerequisites` | `PrerequisitesManager` + capture adapter | After 0b. Takes `selectedStack` — `getNodeVersionMapping` returns `{}` without it. |
 | `get_auth_status` **(enrich)** | `handleCheckGitHubAuth`, `handleCheckDaLiveAuth` | Add GitHub `orgs` and the DA.live `orgName`. The pinned DA.live namespace is reachable nowhere today and every DA.live write depends on it. ⚠️ `handleCheckGitHubAuth` **stores a token** when it finds a VS Code session (`edsGitHubHandlers.ts:79-83`) — do not expose it under a `check_*` name without splitting that write. |
 | `check_github_app` | `checkGitHubAppHandler` | Is AEM Code Sync installed on a repo. First thing to check when publishing silently fails. |
@@ -117,7 +117,7 @@ step. Revisit if an agent needs `get_store_structure` to reflect a discovery it 
 **Two things the live probe caught that every offline check passed (2026-08-17):**
 
 1. The first draft's schema exposed `environmentType`, guessed from the tool name. The handler
-   requires **`backendType: 'accs' | 'paas'`** (`edsHandlers.ts:88`) and rejects the call without
+   requires **`backendType: 'accs' | 'paas'`** (`edsHandlers.ts:89`) and rejects the call without
    it — so the tool failed 100% of calls while jest, tsc, typecheck:tests and eslint were green.
    The schema and its test agreed with each other and neither agreed with the handler.
 2. **PaaS discovery authenticates with an admin username and password carried in the payload**

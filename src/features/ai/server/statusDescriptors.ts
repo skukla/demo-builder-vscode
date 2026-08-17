@@ -11,7 +11,7 @@
  * had to establish first — and what a name alone will not tell you:
  *
  * - Does it survive with no `panel`? `handleRequestStatus` does not; it returns
- *   "No panel available" before doing anything (`statusHandlers.ts:53`), which is
+ *   "No panel available" before doing anything (`statusHandlers.ts:54`), which is
  *   why `get_project_status` is built over the service instead and is not here.
  * - Does it RETURN its answer, or send it? `handleDiscoverStoreStructure` sends.
  * - Does the read write anything? `checkGitHubApp` does, on one branch.
@@ -63,7 +63,7 @@ export const STATUS_DESCRIPTORS: ToolDescriptor[] = [
         type: 'discover-store-structure',
         inputSchema: {
             // `backendType` is REQUIRED — the handler rejects the call without it
-            // (`edsHandlers.ts:88`). An earlier draft of this row guessed
+            // (`edsHandlers.ts:89`). An earlier draft of this row guessed
             // `environmentType` from the tool's name and shipped a tool that failed
             // every call; the live probe caught it on the first invocation.
             backendType: z

@@ -49,9 +49,37 @@ server, in `src/features/ai/server/*Tools.ts` (`cloudResourceTools`, `storefront
 Pick by what the tool needs: a handler map → descriptor row; an EDS/Adobe service →
 a `*Tools.ts` module; the project directory only → `mcp-server.ts`.
 
-## Fixtures for anything across a network boundary must come from a LIVE response
+## Never write a shape you have not read
 
-**The most expensive mistake available here, and it goes green.** Twice in one session
+**The most expensive mistake available here, and it always goes green.** Five times across two
+sessions, a shape was inferred — from a name, from the writing side, from what seemed reasonable
+— and the code plus its test agreed with each other while neither agreed with reality. `tsc`,
+`typecheck:tests`, jest and eslint pass every time: an invented shape is still valid JSON and
+still typechecks.
+
+Three places it lands, all the same error:
+
+**1. The tool's inputSchema.** Take every field from the handler's payload TYPE, never from the
+tool's name. `discover_store_structure` shipped with `environmentType`, guessed from the name;
+the handler requires `backendType: 'accs' | 'paas'` and rejects the call without it
+(`edsHandlers.ts:89`), so the tool failed 100% of calls with four checks green. Read the payload
+interface, and while you are there check what it does with each field — the same read is what
+found that PaaS discovery takes an admin username and password, which is a `needsUser` handoff,
+not a parameter.
+
+**2. Test fixtures for extension state.** Copy them from a real artifact on disk
+(`~/.demo-builder/projects/<name>/.demo-builder.json`), not from memory. A `get_project_status`
+test invented `components: [...]` and `frontendPort`; the real shape is a `componentInstances`
+RECORD keyed by id, the port lives on the instance whose `type` is `frontend`, and the mesh is a
+`dependency`-typed instance found by `subType`.
+
+**3. Which accessor to call.** Two accessors over the same domain object are usually NOT
+interchangeable. `getMeshComponentInstance` returns the component instance (its `status` drives
+deploying/error); `getMeshAppBuilderComponent` returns the deploy record (endpoint, lastDeployed).
+Callers that use both are doing it deliberately — collapsing them reads as a simplification and
+reproduces the 2026-08-04 regression where a deployed mesh displayed "Not Deployed".
+
+**4. Fixtures across a network boundary — from a LIVE response.** Twice in one session
 (2026-08-16) a fixture was composed from what the WRITING side produces, code was written to
 match it, and every check passed:
 
@@ -61,9 +89,13 @@ match it, and every check passed:
 - DA.live listings prefix entry paths with **`/{org}/{site}`**, not `/{site}`. The fixture used
   one segment, so `list_content` returned paths no sibling tool accepted.
 
-Neither `tsc` nor `typecheck:tests` can catch this: an invented shape is still valid JSON and
-still typechecks. Capture the real thing with `mcp-live-probe`, then say in the test file where
-it came from so nobody "simplifies" it back.
+Capture the real thing with `mcp-live-probe`, then say in the test file where it came from so
+nobody "simplifies" it back.
+
+**The tell, in all four cases: you can state the shape but not name where you read it.** That is
+the moment to go look, and it costs one `grep` against the type or one `python3 -c` against a
+real project file. Every one of these was found later by something more expensive — a live probe
+call, or three failing tests written against the invention.
 
 Same class as `webview-test-authoring`'s mocked-vs-bundled-JSON trap.
 

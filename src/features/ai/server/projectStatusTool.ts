@@ -10,7 +10,7 @@
  *
  * `handleRequestStatus` is the dashboard's equivalent and it cannot be reused:
  * it returns `{success: false, error: 'No panel available'}` before doing
- * anything when `context.panel` is undefined (`statusHandlers.ts:53`), which is
+ * anything when `context.panel` is undefined (`statusHandlers.ts:54`), which is
  * every headless call. It also posts to the webview and fires the on-open check
  * orchestrator — background work an agent's read must not trigger.
  *

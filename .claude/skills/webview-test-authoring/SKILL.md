@@ -134,6 +134,33 @@ that looks catalog-ish is therefore not one. Derived flags key off the real file
 Symptom of getting it wrong: an affordance that should be hidden renders anyway, with the
 fixture looking entirely correct.
 
+### The general rule: copy state fixtures from a REAL artifact
+
+The trap above is one instance of a bigger one. Any fixture standing in for persisted extension
+state — a project, a component instance, a wizard state — must be copied from a real file, not
+written from memory. Read one and print the keys:
+
+```bash
+python3 -c "
+import json; d=json.load(open('$HOME/.demo-builder/projects/<name>/.demo-builder.json'))
+ci=d.get('componentInstances') or {}
+[print(k,'->',{x:v[x] for x in ('id','type','subType','status','port') if x in v}) for k,v in ci.items()]
+"
+```
+
+`componentInstances` is the one that catches people, and it caught this repo on 2026-08-17: it is
+a **record keyed by component id**, not a `components` array. The frontend port lives on the
+instance whose `type` is `frontend`. The mesh is found by `subType: 'mesh'` on an instance whose
+`type` is `dependency`. A fixture inventing `components: [...]` and `frontendPort` typechecks
+cleanly (the fields are optional) and fails the moment a real accessor touches it.
+
+`typecheck:tests` does NOT save you here — that is what it is for and it still cannot see this,
+because an invented shape with optional fields is a valid `Project`. The tell is being able to
+write the shape without being able to say which file you read it from.
+
+The MCP-side counterpart, with the schema and accessor variants, is
+`mcp-tool-authoring` § "Never write a shape you have not read".
+
 ## 6. `clearAllMocks()` does NOT reset implementations
 
 `jest.clearAllMocks()` clears recorded **calls**, not implementations. A
