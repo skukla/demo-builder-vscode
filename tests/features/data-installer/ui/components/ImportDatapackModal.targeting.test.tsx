@@ -177,50 +177,20 @@ describe('import targeting', () => {
  * A warning rather than a block: packs whose products carry no tier prices are
  * perfectly importable on their own, and this modal cannot know which is which.
  */
-describe('the products/customer_groups dependency', () => {
-    beforeEach(() => {
-        resetModalMocks();
-        withScopes();
-    });
-
-    it('warns when products is selected without customer_groups', async () => {
-        renderModal({ availableTypes: ['categories', 'customer_groups', 'products'] });
-
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Products' }));
-
-        await waitFor(() =>
-            // 'tier prices' — NOT /customer_groups/, which is also a checkbox
-            // label in the type grid and made this test pass with no warning.
-            expect(screen.getByText(/tier prices/i)).toBeInTheDocument(),
-        );
-        // Still startable — it is a warning, not a gate.
-        expect(screen.getByRole('button', { name: /start import/i })).not.toBeDisabled();
-    });
-
-    it('drops the warning once customer_groups is selected too', async () => {
-        renderModal({ availableTypes: ['categories', 'customer_groups', 'products'] });
-
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Products' }));
-        await waitFor(() => expect(screen.getByText(/tier prices/i)).toBeInTheDocument());
-
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Customer groups' }));
-
-        await waitFor(() =>
-            expect(screen.queryByText(/tier prices/i)).not.toBeInTheDocument(),
-        );
-    });
-
-    it('says nothing when the pack has no customer_groups to offer', async () => {
-        renderModal({ availableTypes: ['categories', 'products'] });
-
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Products' }));
-
-        await waitFor(() =>
-            expect(screen.getByRole('button', { name: /start import/i })).toBeInTheDocument(),
-        );
-        expect(screen.queryByText(/tier prices/i)).not.toBeInTheDocument();
-    });
-});
+/*
+ * The `products` / `customer_groups` warning block lived here and is gone.
+ *
+ * It guarded one hardcoded pair. Selection now resolves dependencies from
+ * `importDependencies`, so its two main cases became unreachable: with
+ * `customer_groups` in the pack, ticking `products` ticks it too, and the
+ * warned-about state cannot be produced. Its third case — a pack with no
+ * `customer_groups` to offer — inverted: that is now exactly when the
+ * missing-dependency notice fires.
+ *
+ * Replaced by ImportDatapackModal.dependencies.test.tsx, which covers both
+ * packs plus the claim this block made that the others did not: the notice
+ * warns, it does not gate.
+ */
 
 /**
  * The 2026-08-15 redesign, from a live pass over the modal.
