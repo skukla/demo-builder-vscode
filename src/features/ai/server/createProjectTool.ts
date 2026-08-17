@@ -28,7 +28,7 @@
 
 import * as path from 'path';
 import { z } from 'zod';
-import { runWithAdobeTarget } from './adobeTargetStore';
+import { getAdobeTarget, runWithAdobeTarget } from './adobeTargetStore';
 import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
 import { asText } from './mcpToolResult';
 import {
@@ -75,6 +75,40 @@ async function requireAdobeWorkspace(
 ): Promise<{ org: WizardState['adobeOrg']; project: WizardState['adobeProject']; workspace: WizardState['adobeWorkspace'] } | { error: unknown }> {
     const mgr = ctx.authManager;
     if (!mgr || !(await mgr.isAuthenticated())) return { error: NEEDS_ADOBE };
+
+    // Prefer the MCP SESSION target.
+    //
+    // The refusal below tells the agent to run select_org → select_project →
+    // select_workspace. Those write `adobeTargetStore` and deliberately do NOT
+    // run `aio console select` (see adobeTools.ts's header). `getCurrentWorkspace()`
+    // resolves through `aio console where` — the machine-global selection — so
+    // following that instruction changed nothing here, and creation recorded
+    // whatever another window or an earlier session last selected.
+    //
+    // `runWithAdobeTarget` already wraps EXECUTION with the session target, so
+    // reading it here is what makes the recorded context and the executed context
+    // the same thing.
+    const stored = getAdobeTarget();
+    if (stored?.orgId && stored.projectId && stored.workspaceId) {
+        return {
+            org: {
+                id: stored.orgId,
+                code: stored.orgCode ?? '',
+                name: stored.orgName ?? '',
+            } as WizardState['adobeOrg'],
+            project: {
+                id: stored.projectId,
+                name: stored.projectName ?? '',
+            } as WizardState['adobeProject'],
+            workspace: {
+                id: stored.workspaceId,
+                name: stored.workspaceName ?? '',
+            } as WizardState['adobeWorkspace'],
+        };
+    }
+
+    // No session selection — fall back to the resolved context. Correct when the
+    // agent never selected anything, and the only answer available then.
     const workspace = (await mgr.getCurrentWorkspace()) as WizardState['adobeWorkspace'];
     if (!workspace) {
         return {
