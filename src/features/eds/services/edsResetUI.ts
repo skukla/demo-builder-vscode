@@ -352,7 +352,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
     // that will never be asked never pays for it. Cancelling the reset therefore
     // costs one GET whose answer is discarded — bounded, idempotent, and it warms
     // a token cache eight other call sites want anyway.
-    const canRemoveSampleData = beginSampleDataCredentialCheck(project, context);
+    const canRestoreSampleData = beginSampleDataCredentialCheck(project, context);
 
     const confirmButton = 'Reset Project';
     const confirmation = await vscode.window.showWarningMessage(
@@ -376,7 +376,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
     // one short credential call (see the function), which is bounded and silent
     // on failure; the older "no network call in front of a modal" phrasing here
     // overstated a rule that was really about not adding failure modes.
-    const removeData = await confirmSampleDataRemoval(project, vscode, canRemoveSampleData);
+    const restoreData = await confirmSampleDataRestore(project, vscode, canRestoreSampleData);
 
     const originalStatus = project.status;
     project.status = 'resetting';
@@ -434,17 +434,25 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
                     includeBlockLibrary, verifyCdn, redeployMesh: redeployMesh ?? hasMesh,
                 };
 
+                // BEFORE the storefront reset, because the pipeline's last step
+                // pre-warms the catalog: it enumerates the instance's SKUs and
+                // pre-publishes a PDP page for each. Running the data step after
+                // it meant reset pre-published 30 product pages and then deleted
+                // those products — measured in two runs on 2026-08-17. Ordered
+                // this way the warm cache describes the catalog the user is left
+                // with.
+                //
+                // Never allowed to fail the reset: the storefront reset is what
+                // was asked for, and a data step that refuses is reported while
+                // the reset still stands.
+                if (restoreData) {
+                    await restoreProjectSampleData(project, context, progress);
+                }
+
                 const result = await executeEdsReset(
                     resetParams, context, tokenProvider,
                     (p) => { progress.report({ message: `Step ${p.step}/${p.totalSteps}: ${p.message}` }); },
                 );
-
-                // After the storefront reset, and never allowed to fail it — the
-                // reset is what was asked for. A removal that refuses is
-                // reported and the reset still stands.
-                if (removeData) {
-                    await removeProjectSampleData(project, context, progress);
-                }
 
                 await showResetResultNotifications(vscode, result, project.name, showLogsOnError);
                 return result;
@@ -509,66 +517,78 @@ function beginSampleDataCredentialCheck(
  * reset was measured at 470 seconds, and a modal that says "this is quick"
  * by omission would be lying.
  */
-async function confirmSampleDataRemoval(
+async function confirmSampleDataRestore(
     project: Project,
     vscode: typeof import('vscode'),
-    canRemove: Promise<boolean> | undefined,
+    canRestore: Promise<boolean> | undefined,
 ): Promise<boolean> {
     const { datapack } = project;
-    if (!datapack || !canRemove) {
+    if (!datapack || !canRestore) {
         return false;
     }
-    if (!(await canRemove)) {
+    if (!(await canRestore)) {
         return false;
     }
 
-    const removeButton = 'Remove Sample Data';
+    const restoreButton = 'Restore Sample Data';
     const answer = await vscode.window.showWarningMessage(
-        `Also remove the sample data this project imported (${datapack.name}@${datapack.version})? ` +
-            'This deletes it from the Commerce instance and can take several minutes. ' +
-            'Resetting the storefront does not require it.',
+        `Also restore the sample data for this project (${datapack.name}@${datapack.version})? ` +
+            'This removes it from the Commerce instance and imports the same pack again, ' +
+            'which can take several minutes. Resetting the storefront does not require it.',
         { modal: true },
-        removeButton,
+        restoreButton,
     );
-    return answer === removeButton;
+    return answer === restoreButton;
 }
 
 /**
- * Remove it, reporting rather than throwing.
+ * Restore it — remove, then import the same pack again — reporting rather than
+ * throwing.
  *
- * The storefront reset has already happened by the time this runs and is the
- * thing the user asked for; a failed data removal must not turn a good reset
- * into a failed one.
+ * The storefront reset is the thing the user asked for, so no outcome here may
+ * turn a good reset into a failed one. Everything is a log line.
+ *
+ * **Reported at three levels, because they mean different things.** A clean
+ * restore says nothing. A refusal (no credentials, no pack, nothing stored) is a
+ * warning. Data removed and NOT reinstalled is an ERROR: the instance is now
+ * empty, which is a worse state than the user started in and the one case where
+ * they must go and do something about it.
  */
-async function removeProjectSampleData(
+async function restoreProjectSampleData(
     project: Project,
     context: HandlerContext,
     progress: { report: (value: { message: string }) => void },
 ): Promise<void> {
     try {
-        progress.report({ message: 'Removing sample data...' });
+        progress.report({ message: 'Restoring sample data...' });
 
-        const { removeSampleData } = await import(
+        const { restoreSampleData } = await import(
             '@/features/data-installer/services/sampleDataInstall'
         );
         const { buildSampleDataDeps } = await import(
             '@/features/data-installer/services/sampleDataInstallDeps'
         );
 
-        const result = await removeSampleData(
+        const result = await restoreSampleData(
             project,
-            // 'remove' phrases the progress line and the poller's job name. Without
-            // it this reported "Installing sample data" while deleting.
-            buildSampleDataDeps(context, project, (message) => progress.report({ message }), 'remove'),
+            // 'restore' phrases the progress line; the poller's per-phase label
+            // comes from the runner, which knows which half is running.
+            buildSampleDataDeps(context, project, (message) => progress.report({ message }), 'restore'),
         );
 
+        if (result.ran && result.outcome !== 'success') {
+            context.logger.error(
+                `[EdsReset] Sample data was NOT restored: ${result.reason ?? 'no reason given'}`,
+            );
+            return;
+        }
         if (!result.ran) {
             context.logger.warn(
-                `[EdsReset] Sample data was not removed: ${result.reason ?? 'no reason given'}`,
+                `[EdsReset] Sample data was not restored: ${result.reason ?? 'no reason given'}`,
             );
         }
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
-        context.logger.warn(`[EdsReset] Sample data removal failed, reset stands: ${reason}`);
+        context.logger.warn(`[EdsReset] Sample data restore failed, reset stands: ${reason}`);
     }
 }

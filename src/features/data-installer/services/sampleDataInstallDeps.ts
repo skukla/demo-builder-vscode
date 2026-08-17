@@ -32,6 +32,22 @@ export interface SampleDataProject {
     adobe?: { organization?: string };
 }
 
+/** What this deps set is being built for. */
+export type SampleDataMode = 'install' | 'remove' | 'restore';
+
+/**
+ * The progress line's verb per job.
+ *
+ * A restore runs BOTH phases through one deps set, so it gets its own word
+ * rather than borrowing whichever half happens to be running — "Removing" would
+ * be wrong for half of it and "Installing" wrong for the other half.
+ */
+const PROGRESS_VERB: Record<SampleDataMode, string> = {
+    install: 'Installing',
+    remove: 'Removing',
+    restore: 'Restoring',
+};
+
 /**
  * Build the dependency set for one sample-data job.
  *
@@ -49,7 +65,7 @@ export function buildSampleDataDeps(
     context: HandlerContext,
     project: SampleDataProject,
     report: (message: string) => void,
-    mode: 'install' | 'remove' = 'install',
+    mode: SampleDataMode = 'install',
 ): SampleDataDeps {
     return {
         credentials: async () => {
@@ -132,7 +148,7 @@ export function buildSampleDataDeps(
             const done = Object.values(perType).filter(
                 (state) => state === 'success' || state === 'error',
             ).length;
-            const verb = mode === 'remove' ? 'Removing' : 'Installing';
+            const verb = PROGRESS_VERB[mode];
             report(`${verb} sample data — ${done} of ${Object.keys(perType).length} types done`);
         },
     };

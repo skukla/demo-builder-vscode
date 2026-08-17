@@ -139,7 +139,7 @@ jest.mock('@/features/eds/services/edsResetService', () => ({
 
 jest.mock('@/features/data-installer/services/sampleDataInstall', () => ({
     ...jest.requireActual('@/features/data-installer/services/sampleDataInstall'),
-    removeSampleData: jest.fn(),
+    restoreSampleData: jest.fn(),
 }));
 jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
     resolveCommerceCredentials: jest.fn(),
@@ -150,16 +150,18 @@ jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
 // =============================================================================
 
 import * as vscode from 'vscode';
-import { removeSampleData } from '@/features/data-installer/services/sampleDataInstall';
+import { restoreSampleData } from '@/features/data-installer/services/sampleDataInstall';
 import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
+import { executeEdsReset } from '@/features/eds/services/edsResetService';
 import { resetEdsProjectWithUI } from '@/features/eds/services/edsResetUI';
 
-const mockedRemove = removeSampleData as jest.MockedFunction<typeof removeSampleData>;
+const mockedReset = executeEdsReset as jest.MockedFunction<typeof executeEdsReset>;
+const mockedRestore = restoreSampleData as jest.MockedFunction<typeof restoreSampleData>;
 const mockedCredentials = resolveCommerceCredentials as jest.MockedFunction<
     typeof resolveCommerceCredentials
 >;
 const RESET = 'Reset Project';
-const REMOVE = 'Remove Sample Data';
+const RESTORE = 'Restore Sample Data';
 
 const testPackages = [
     {
@@ -243,7 +245,7 @@ beforeEach(() => {
     mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
     mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
     mockEnsureProjectOrgContext.mockResolvedValue({ reachable: true });
-    mockedRemove.mockResolvedValue({ ran: true, outcome: 'success' });
+    mockedRestore.mockResolvedValue({ ran: true, outcome: 'success' });
     mockedCredentials.mockResolvedValue({ ok: true, credentials: { kind: 'accs' } } as never);
 });
 
@@ -255,7 +257,7 @@ describe('resetEdsProjectWithUI — sample data', () => {
         await run(createProject());
 
         expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
-        expect(mockedRemove).not.toHaveBeenCalled();
+        expect(mockedRestore).not.toHaveBeenCalled();
     });
 
     it('asks, and names the pack, when one was recorded', async () => {
@@ -274,15 +276,40 @@ describe('resetEdsProjectWithUI — sample data', () => {
 
         await run(createProject({ name: 'bodea', version: 'main' }));
 
-        expect(mockedRemove).not.toHaveBeenCalled();
+        expect(mockedRestore).not.toHaveBeenCalled();
     });
 
     it('removes only when the removal is explicitly chosen', async () => {
-        answers(RESET, REMOVE);
+        answers(RESET, RESTORE);
 
         await run(createProject({ name: 'bodea', version: 'main' }));
 
-        expect(mockedRemove).toHaveBeenCalled();
+        expect(mockedRestore).toHaveBeenCalled();
+    });
+
+    /**
+     * The data step runs BEFORE the storefront pipeline.
+     *
+     * The pipeline's last step pre-warms the catalog — it enumerates the
+     * instance's SKUs and pre-publishes a PDP page for each. With the data step
+     * after it, reset pre-published 30 product pages and then deleted those
+     * products; measured in two live runs on 2026-08-17
+     * (`Catalog Prewarm: Complete: 30/30` → `EDS project reset successfully` →
+     * the delete's 202). Ordered this way the warm cache describes the catalog
+     * the user is actually left with.
+     *
+     * Pinned on invocation order because nothing else can see it: both calls
+     * happen, both succeed, and the wrong sequence costs a wasted pre-warm that
+     * no assertion about outcomes would notice.
+     */
+    it('runs the data step BEFORE the storefront reset, so pre-warming is not wasted', async () => {
+        answers(RESET, RESTORE);
+
+        await run(createProject({ name: 'bodea', version: 'main' }));
+
+        expect(mockedRestore.mock.invocationCallOrder[0]).toBeLessThan(
+            mockedReset.mock.invocationCallOrder[0],
+        );
     });
 
     /** Cancelling the reset cancels everything — the second prompt never runs. */
@@ -292,13 +319,13 @@ describe('resetEdsProjectWithUI — sample data', () => {
         await run(createProject({ name: 'bodea', version: 'main' }));
 
         expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
-        expect(mockedRemove).not.toHaveBeenCalled();
+        expect(mockedRestore).not.toHaveBeenCalled();
     });
 
     /** Rule 3. */
     it('still reports the reset as successful when the removal fails', async () => {
-        answers(RESET, REMOVE);
-        mockedRemove.mockResolvedValue({ ran: false, reason: 'the service refused' });
+        answers(RESET, RESTORE);
+        mockedRestore.mockResolvedValue({ ran: false, reason: 'the service refused' });
 
         const result = await run(createProject({ name: 'bodea', version: 'main' }));
 
@@ -306,8 +333,8 @@ describe('resetEdsProjectWithUI — sample data', () => {
     });
 
     it('does not throw when the removal itself blows up', async () => {
-        answers(RESET, REMOVE);
-        mockedRemove.mockRejectedValue(new Error('unexpected'));
+        answers(RESET, RESTORE);
+        mockedRestore.mockRejectedValue(new Error('unexpected'));
 
         await expect(run(createProject({ name: 'bodea', version: 'main' }))).resolves.toMatchObject(
             { success: true },
@@ -346,16 +373,16 @@ describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
         await run(createProject({ name: 'bodea', version: 'main' }));
 
         expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
-        expect(mockedRemove).not.toHaveBeenCalled();
+        expect(mockedRestore).not.toHaveBeenCalled();
     });
 
     it('still asks when the credentials resolve', async () => {
-        answers(RESET, REMOVE);
+        answers(RESET, RESTORE);
 
         await run(createProject({ name: 'bodea', version: 'main' }));
 
         expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(2);
-        expect(mockedRemove).toHaveBeenCalled();
+        expect(mockedRestore).toHaveBeenCalled();
     });
 
     /**
@@ -373,7 +400,7 @@ describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
      * the resolver is mocked here and would report success either way.
      */
     it('supplies a broker, so a project with no workspace can still be offered removal', async () => {
-        answers(RESET, REMOVE);
+        answers(RESET, RESTORE);
 
         await run(createProject({ name: 'bodea', version: 'main' }));
 
@@ -404,7 +431,7 @@ describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
      * so agreed with the bug — which is exactly why this asserts the mapping itself.
      */
     it('maps stackBackend from componentSelections, so the dispatch can match', async () => {
-        answers(RESET, REMOVE);
+        answers(RESET, RESTORE);
 
         await run(createProject({ name: 'bodea', version: 'main' }));
 
@@ -425,7 +452,7 @@ describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
      * hardcodes it.
      */
     it('CONTROL — an absent backend maps to empty, never to a guessed one', async () => {
-        answers(RESET, REMOVE);
+        answers(RESET, RESTORE);
         const project = createProject({ name: 'bodea', version: 'main' });
         (project as { componentSelections?: unknown }).componentSelections = undefined;
 
@@ -438,7 +465,7 @@ describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
 
     /** Checked BEFORE the prompt, not during the reset it would follow. */
     it('resolves credentials before asking, not after resetting', async () => {
-        answers(RESET, REMOVE);
+        answers(RESET, RESTORE);
 
         await run(createProject({ name: 'bodea', version: 'main' }));
 
@@ -473,7 +500,7 @@ describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
         const mock = vscode.window.showWarningMessage as jest.Mock;
         mock.mockReset();
         mock.mockReturnValueOnce(firstModal);
-        mock.mockResolvedValueOnce(REMOVE);
+        mock.mockResolvedValueOnce(RESTORE);
         mock.mockResolvedValue(undefined);
 
         const pending = run(createProject({ name: 'bodea', version: 'main' }));
@@ -499,7 +526,7 @@ describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
 
         expect(mockedCredentials).toHaveBeenCalledTimes(1);
         expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
-        expect(mockedRemove).not.toHaveBeenCalled();
+        expect(mockedRestore).not.toHaveBeenCalled();
     });
 
     /**
@@ -515,7 +542,7 @@ describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
 
         expect(result.success).toBe(true);
         expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
-        expect(mockedRemove).not.toHaveBeenCalled();
+        expect(mockedRestore).not.toHaveBeenCalled();
     });
 
     /** No pack, no credential lookup — nothing to spend it on. */

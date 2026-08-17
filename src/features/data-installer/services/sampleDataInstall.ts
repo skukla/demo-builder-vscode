@@ -164,6 +164,69 @@ export function removeSampleData(
     return runSampleDataJob(project, deps, 'remove');
 }
 
+/**
+ * Put the pack back: remove it, then install the same pack again.
+ *
+ * **This is what "reset" means everywhere else in the product.** Reset does not
+ * wipe the storefront and stop — it re-copies content from source and
+ * republishes. The data half only ever deleted, so one button meant "put it
+ * back" for content and "take it away" for the catalog, and an SC who reset
+ * mid-demo was left with an empty instance and a storefront rendering nothing.
+ *
+ * **The reinstall is gated on a CLEAN removal, and that gate is the whole
+ * design.** Reinstalling on top of data that could not be cleared is not a
+ * restore: the result is unverifiable from here — duplicated rows, or an import
+ * that fails on records the delete left behind — and it would be reported as a
+ * success. A removal that was `skipped` is fine to continue from; there was
+ * nothing to clear. A `partial` is not, and neither is an `error`.
+ *
+ * The costly failure is deleting and then failing to reinstall, so it gets its
+ * own outcome rather than a generic refusal — the user needs to know the
+ * catalog is now EMPTY, not merely that something went wrong.
+ */
+export async function restoreSampleData(
+    project: ProjectLike,
+    deps: SampleDataDeps,
+): Promise<SampleDataResult> {
+    const removed = await runSampleDataJob(project, deps, 'remove');
+
+    // Nothing to remove is a fine place to start an install from; a removal that
+    // ran and did not fully succeed is not.
+    const clearedEnoughToRefill =
+        removed.skipped === true || (removed.ran && removed.outcome === 'success');
+    if (!clearedEnoughToRefill) {
+        return {
+            ...removed,
+            reason: `The sample data was not fully removed, so it was not reinstalled${
+                removed.reason ? `: ${removed.reason}` : '.'
+            }`,
+        };
+    }
+
+    const installed = await runSampleDataJob(project, deps, 'install');
+    if (installed.ran && installed.outcome === 'success') {
+        return installed;
+    }
+
+    // Only alarming if something was actually taken away. When the removal was
+    // SKIPPED — no pack, no target, nothing stored — a failed install leaves the
+    // instance exactly as it was found, and "removed but could not be
+    // reinstalled" would claim a deletion that never happened. Report the
+    // install's own verdict instead.
+    const removedSomething = removed.ran === true && removed.outcome === 'success';
+    if (!removedSomething) {
+        return installed;
+    }
+
+    return {
+        ...installed,
+        ran: true,
+        reason: `The sample data was removed but could not be reinstalled${
+            installed.reason ? `: ${installed.reason}` : '.'
+        } The instance no longer holds this pack.`,
+    };
+}
+
 async function runSampleDataJob(
     project: ProjectLike,
     deps: SampleDataDeps,
@@ -233,7 +296,11 @@ async function runSampleDataJob(
         const watched = await deps.watch({
             activationId: started.activationId,
             requestedTypes: dataTypes,
-            operation: 'reset',
+            // Per PHASE, not per caller. A restore runs both verbs through this
+            // runner, and hardcoding either one mislabels the other — as it did
+            // for a few hours today, when a fix for "a removal logged as an
+            // import" pinned this to 'reset' and mislabelled every install.
+            operation: mode === 'remove' ? 'reset' : 'import',
             ...(deps.onProgress ? { onProgress: deps.onProgress } : {}),
         });
 

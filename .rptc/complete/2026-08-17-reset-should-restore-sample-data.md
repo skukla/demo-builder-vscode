@@ -1,5 +1,30 @@
 # Reset should RESTORE sample data, not only remove it
 
+> ## SHIPPED 2026-08-17
+>
+> **The open question was settled as recommended:** "Remove Sample Data" is gone,
+> replaced by "Restore Sample Data". Remove-only was dropped rather than kept as a
+> third button — an empty catalog stays reachable from the Data Installer, and a
+> modal carrying three coherent choices plus Cancel is past what it can hold.
+>
+> - **Step 1, the ordering defect** — the data step now runs BEFORE the storefront
+>   pipeline, so the pipeline's catalog pre-warm describes the catalog the user is
+>   left with. Pinned on invocation order; nothing else can see it.
+> - **Step 2, the restore** — `restoreSampleData` removes then reinstalls the same
+>   pack. **The reinstall is gated on a CLEAN removal**: a `partial` or `error`
+>   stops and says so, because refilling on top of records the delete left behind
+>   is unverifiable from here and would be reported as success.
+> - **Deleted-but-not-reinstalled gets its own reason**, and only when a removal
+>   actually took something away. A test caught the first version claiming a
+>   deletion that never happened, on a project with nothing stored.
+> - Reported at three levels in the reset log: silence on success, a warning on a
+>   refusal, an ERROR when the instance is left empty.
+>
+> Also fixed en route: `runSampleDataJob` hardcoded `operation: 'reset'`, so every
+> INSTALL — including project creation's — was logged as a reset. That was a
+> regression from the same day's fix for the opposite mislabelling; the phase now
+> derives it.
+
 **Filed:** 2026-08-17, from four live reset runs on one EDS/ACCS project.
 **A design decision plus one ordering defect that should be fixed either way.**
 
