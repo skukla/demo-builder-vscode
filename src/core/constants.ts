@@ -74,7 +74,19 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // an inconsistency rather than a policy. register-custom-block.md now passes
 // `confirm: true` and says why — without this bump, existing projects keep the
 // old skill text and the tool refuses every call it makes.
-export const AI_CONTEXT_VERSION = 10;
+// v11: phase 5 (guidance). `diagnose-demo` was routing the FIRST symptom it
+// names — "product page renders empty" — straight to `get_store_structure` and
+// then to the Commerce admin. The classic cause is a refused Configuration
+// Service write, which leaves a storefront that builds, pushes and browses and
+// serves no product page; an agent following the old table found scope healthy
+// and told the user their catalog was empty while it was fine. The tools that
+// distinguish the two (`get_site_access`, `repair_site_configuration`) did not
+// exist when that skill was written. It now routes there first, and also knows
+// the rest of the Group 1 diagnosis tools and `get_settings`. New skill
+// `import-datapack.md` teaches the six-call sample-data loop, whose worst trap
+// is that `start_datapack_import` returns a RECEIPT and reporting it as an
+// outcome is invisible — the user sees "imported" and an empty catalog.
+export const AI_CONTEXT_VERSION = 11;
 
 /**
  * Component IDs for standardized component instance access

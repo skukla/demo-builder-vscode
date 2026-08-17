@@ -255,14 +255,14 @@ describe('skillsWriter', () => {
             expect(writtenFiles().some((p) => p.endsWith('create-eds-project.md'))).toBe(true);
         });
 
-        it('writes exactly fourteen skill files for EDS projects when the Adobe skill bundle is not present', async () => {
+        it('writes exactly fifteen skill files for EDS projects when the Adobe skill bundle is not present', async () => {
             mockMissingAdobeBundle();
             await writeSkills('/projects/test', makeEdsProject());
 
             // 13 always-written Demo-Builder skills + extend-app-builder-app
             // (EDS satisfies projectNeedsAppBuilderTooling).
             // 12 → 13 always-on with diagnose-demo (AI_CONTEXT_VERSION 7).
-            expect(writtenFiles()).toHaveLength(14);
+            expect(writtenFiles()).toHaveLength(15);
         });
 
         it('writes scrape-reference-site.md for EDS projects', async () => {
@@ -321,7 +321,7 @@ describe('skillsWriter', () => {
             const writeFileMock = fsPromises.writeFile as jest.Mock;
             const calls = writeFileMock.mock.calls;
 
-            expect(calls.length).toBe(14);
+            expect(calls.length).toBe(15);
             for (const [, content] of calls) {
                 expect(typeof content).toBe('string');
                 expect((content as string).length).toBeGreaterThan(0);
@@ -589,7 +589,7 @@ describe('skillsWriter', () => {
             // remove-custom-block = 13, plus extend-app-builder-app = 14.
             expect(
                 files.filter((p) => p.startsWith('/projects/test/.claude/skills/'))
-            ).toHaveLength(14);
+            ).toHaveLength(15);
         });
 
         it('still writes the three Demo-Builder lifecycle skills when copying the Adobe bundle', async () => {

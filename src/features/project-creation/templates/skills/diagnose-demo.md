@@ -15,13 +15,47 @@ distinguishes causes; the sections below say how to read each answer.
 
 | Symptom | Check first | Why this one |
 |---|---|---|
-| Product page renders empty or 404s | `get_store_structure` | The project can point at a website or store view that has no products — or does not exist |
+| Product page renders empty or 404s (EDS) | `get_site_access` | **Start here, not with scope.** A refused Configuration Service write leaves a storefront that builds, pushes and browses fine — and cannot serve a single product page. From outside it looks exactly like an empty catalog |
+| …site config is healthy, pages still empty | `get_store_structure` | Now scope is worth checking: the project can point at a website or store view that has no products, or does not exist |
 | Catalog is empty everywhere | `get_store_structure`, then the Commerce admin | A scope that resolves is not necessarily a scope with products in it |
 | Site serves old content after an edit | `sync_storefront` | Pushing is not publishing; see "Pushed is not published" |
 | Mesh behaves unexpectedly | `check_mesh` | Reports both deployed AND up-to-date — they differ |
 | A setting change had no effect | `get_project` | Compare what is saved against what you expected to save |
+| A whole FEATURE seems absent | `get_settings` | Two keys are functional gates rather than preferences — the Data Installer surface does not exist without `dataInstaller.enabled` + `apiBaseUrl`. "Off" and "broken" look identical until you look |
+| Setup fails before anything runs | `check_prerequisites` | Needs a stack id. Reports per tool whether it is installed and at what version |
+| EDS publishing silently fails | `check_github_app` | The AEM Code Sync app not being installed on the repo is silent everywhere else |
+| A repo will not serve a storefront | `check_repo_readiness` | Returns a verdict, or `undetermined` WITH a reason — which is a different answer from "not ready" |
 | Project will not start | Debug Logs channel | The structured error is in the log, not in any tool result |
 | Agent tools missing or failing | `verify_ai_setup` | Reports AI context, MCP config and skills health together |
+| You want the whole picture at once | `get_project_status` | One call covering the project's overall health, rather than a symptom-led walk down this table |
+
+## Reading `get_site_access` — the empty-product-page check
+
+This is the one that used to be missing, and its absence sent people to the Commerce
+admin to look for products that were there all along.
+
+An EDS storefront needs a site configuration registered with the Configuration Service.
+That write is refused when the caller holds no admin role on the site. When it is
+refused, the storefront still builds, still pushes, still browses — and serves no
+product detail page, because the routing rule that resolves `/products/...` was never
+written.
+
+| `status` | Meaning | What to do |
+|---|---|---|
+| `ok` | the config is readable and this identity can manage it | Site config is not your problem — go to `get_store_structure` |
+| `not_authorized` | this identity holds no admin role on the site | Someone in `orgAdmins` / `siteAdmins` must grant it. Report those addresses to the user; they are why the tool returns them |
+| `no_credential` | not signed in to DA.live | `connect_dalive`, then re-check. Distinct from `not_authorized` on purpose — one is fixed by signing in, the other cannot be fixed by this user at all |
+| `no_site` | the project has no EDS storefront | The symptom is something else |
+
+Once access is in place, `repair_site_configuration` re-runs the write that failed. Two
+things to know before calling it:
+
+- It is confirm-gated because it re-mints the site's publish key and can drop admin
+  grants nothing in the app can restore (reported as `lostGrants`).
+- **It does not publish.** Registration writes a routing rule; the live site keeps
+  serving what it last published until you call `republish`. The result says
+  `nextStep: "republish"` for exactly this reason — stopping at `repaired` and
+  reporting the storefront fixed is the mistake this field exists to prevent.
 
 ## Reading `get_store_structure`
 
@@ -35,8 +69,13 @@ It returns the websites / store groups / store views the backend actually has, p
 | `not-configured` | no code saved at that level | Usually fine; only some setups need all three |
 
 **`ok` does not mean "has products."** It means the scope exists. A brand-new website
-resolves `ok` and serves an empty catalog. If every code is `ok` and pages are still
-empty, look at the catalog in the Commerce admin (`get_project_urls` gives you the link).
+resolves `ok` and serves an empty catalog. If every code is `ok`, the site config is
+healthy, and pages are still empty, look at the catalog in the Commerce admin
+(`get_project_urls` gives you the link).
+
+That ordering matters. An earlier version of this skill sent you straight here from the
+symptom, so the common case — a refused site-config write — was diagnosed as "your
+catalog is empty" while the catalog was fine.
 
 ## Pushed is not published
 

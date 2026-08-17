@@ -33,6 +33,8 @@ export const DEMO_BUILDER_ALWAYS_ON_SKILLS = [
     'create-eds-project.md',
     // Diagnosis
     'diagnose-demo.md',
+    // Sample data
+    'import-datapack.md',
     // EDS site-scraping
     'scrape-reference-site.md',
     'connect-authenticated-site.md',

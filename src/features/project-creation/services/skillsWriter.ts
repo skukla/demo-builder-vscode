@@ -10,6 +10,7 @@
  *    - `update-credentials.md` — edit .env credentials via update_project_config
  *    - `create-eds-project.md` — provision a new project headlessly via create_project
  *    - `diagnose-demo.md` — route a broken-demo symptom to the check that answers it
+ *    - `import-datapack.md` — the six-call sample-data loop and its three traps
  *
  * 2. **Adobe skill bundles** (component-driven): each `RawComponentDefinition`
  *    may declare `aiSkillBundle: { path, prefix }`. The bundle is copied from
@@ -37,6 +38,7 @@ import demoDataInjectorContent from '../templates/skills/demo-data-injector.md';
 import diagnoseDemoContent from '../templates/skills/diagnose-demo.md';
 import extendAppBuilderAppContent from '../templates/skills/extend-app-builder-app.md';
 import headerNavFooterContent from '../templates/skills/header-nav-footer.md';
+import importDatapackContent from '../templates/skills/import-datapack.md';
 import refineVisualMatchContent from '../templates/skills/refine-visual-match.md';
 import registerCustomBlockContent from '../templates/skills/register-custom-block.md';
 import removeCustomBlockContent from '../templates/skills/remove-custom-block.md';
@@ -71,18 +73,21 @@ const COMPONENT_CATEGORIES = [
 const components = componentsConfig as unknown as RawComponentRegistry;
 
 /**
- * The 13 first-party Demo-Builder skill contents (filename → static content
- * imported at build time), keyed by `DEMO_BUILDER_ALWAYS_ON_SKILLS`. Delivery
- * of the three Playwright-driven ones is gated per `SKILL_MCP_TOOL_DEPENDENCIES`
- * — they are NOT written into every project. Exported so other writers —
- * notably the single home Chat (`homeAiContextWriter`) — can consume the same
- * set without duplicating the import list. Order is not significant.
- */
-/**
- * Content for each always-on skill. The LIST of filenames is not defined here —
- * it lives in `DEMO_BUILDER_ALWAYS_ON_SKILLS` (`@/types/ai`), which the skill
- * inspector also reads, so the writer and the classifier cannot disagree about
- * what counts as first-party. A missing key here is a compile error.
+ * Content for each always-on skill (filename → static content imported at build
+ * time). The LIST of filenames is not defined here — it lives in
+ * `DEMO_BUILDER_ALWAYS_ON_SKILLS` (`@/types/ai`), which the skill inspector also
+ * reads, so the writer and the classifier cannot disagree about what counts as
+ * first-party. A missing key here is a compile error.
+ *
+ * Delivery of the three Playwright-driven skills is gated per
+ * `SKILL_MCP_TOOL_DEPENDENCIES` — they are NOT written into every project.
+ * Exported so other writers — notably the single home Chat
+ * (`homeAiContextWriter`) — consume the same set without duplicating the import
+ * list. Order is not significant.
+ *
+ * A second docstring used to sit above this one restating the count ("the 13
+ * first-party skills"). It was wrong the moment a fourteenth was added, and the
+ * paragraph below it already said not to restate counts here. Merged.
  */
 const SKILL_CONTENT: Record<(typeof DEMO_BUILDER_ALWAYS_ON_SKILLS)[number], string> = {
     'add-component.md': addComponentContent,
@@ -90,6 +95,7 @@ const SKILL_CONTENT: Record<(typeof DEMO_BUILDER_ALWAYS_ON_SKILLS)[number], stri
     'update-credentials.md': updateCredentialsContent,
     'create-eds-project.md': createEdsProjectContent,
     'diagnose-demo.md': diagnoseDemoContent,
+    'import-datapack.md': importDatapackContent,
     'scrape-reference-site.md': scrapeReferenceSiteContent,
     'connect-authenticated-site.md': connectAuthenticatedSiteContent,
     'commerce-block-mapper.md': commerceBlockMapperContent,
