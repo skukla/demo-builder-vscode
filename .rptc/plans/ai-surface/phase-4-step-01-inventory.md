@@ -1,5 +1,16 @@
 # Phase 4 · Step 01 — what an agent actually cannot reach
 
+> **SUPERSEDED for the build list by `phase-4-step-02-full-parity-plan.md`.**
+> This file asked "which handlers can become tools?" — the wrong question, and its central
+> disqualifier was false. `progressCapture.ts` (`withCapturedProgress` / `lastCompleteData`)
+> already converts a dispatch-only handler into a tool in ~5 lines, and
+> `createProjectTool.ts:190` has been using it in production the whole time. Two handlers
+> disqualified here (`handleRequestStatus`, `handleDeleteAdobeProject`) already return their
+> payload; I read the top of each function and stopped before the return.
+>
+> The classification of DISQUALIFIED reasons below is still useful — panel dependence, modals,
+> `sharedState`, the `aio` global selection — but "dispatch-only" is not among them.
+
 **Analysis, not building.** Produces the worklist steps 03–04 build from, and the reasons the
 rest are excluded, so nobody re-derives them.
 
