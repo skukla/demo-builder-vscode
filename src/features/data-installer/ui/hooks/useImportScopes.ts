@@ -51,7 +51,18 @@ function defaultStoreViewCode(websites: TargetWebsite[], websiteCode: string): s
     return (preferred ?? views[0])?.code ?? '';
 }
 
-export function useImportScopes(): ImportScopes {
+/** The website/store view pair the project recorded, if it recorded one. */
+export interface RecordedScope {
+    websiteCode: string;
+    storeCode: string;
+}
+
+/**
+ * @param recorded - the project's own pair, from `get-datapack-import-target`.
+ *   Preferred over the service default when discovery offers it. Omit it and the
+ *   hook behaves as it always did.
+ */
+export function useImportScopes(recorded?: RecordedScope): ImportScopes {
     const [websiteCode, setWebsiteCode] = useState('');
     const [storeCode, setStoreCode] = useState('');
     const scopes = useDataInstallerRequest<{ websites: TargetWebsite[] }>(
@@ -91,15 +102,32 @@ export function useImportScopes(): ImportScopes {
      * means what the dialog shows is what the request carries — at the cost of
      * always sending the pair explicitly, which is equivalent since the codes
      * come from the instance's own structure.
+     *
+     * **`recorded` wins over `base`.** The project's Business Structure already
+     * names a website and store view, and preferring `base` over it meant the
+     * dialog defaulted to a scope nobody chose — and a reset driven from here
+     * targeted a different scope than the project reset, on the same project.
+     * The recorded pair is only honoured when discovery actually offers it; a
+     * stale code that no longer exists on the instance falls through to the
+     * default rather than selecting nothing.
      */
     useEffect(() => {
         if (websites.length === 0 || websiteCode) {
             return;
         }
-        const site = websites.find((w) => w.code === DEFAULT_WEBSITE_CODE) ?? websites[0];
+        const site =
+            websites.find((w) => w.code === recorded?.websiteCode) ??
+            websites.find((w) => w.code === DEFAULT_WEBSITE_CODE) ??
+            websites[0];
         setWebsiteCode(site.code);
-        setStoreCode(defaultStoreViewCode(websites, site.code));
-    }, [websites, websiteCode]);
+
+        const views = site.storeViews ?? [];
+        const recordedView =
+            site.code === recorded?.websiteCode
+                ? views.find((view) => view.code === recorded.storeCode)
+                : undefined;
+        setStoreCode(recordedView?.code ?? defaultStoreViewCode(websites, site.code));
+    }, [websites, websiteCode, recorded]);
 
     /**
      * Both keys or neither. The service defaults to `base` when the pair is

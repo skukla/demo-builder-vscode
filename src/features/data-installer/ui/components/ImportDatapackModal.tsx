@@ -69,6 +69,12 @@ interface ImportTarget {
     instance?: string;
     /** The open project's name — the only human-readable handle on this target. */
     projectName?: string;
+    /**
+     * The website/store view the project's Business Structure recorded. Seeds
+     * the pickers, so the dialog opens on the scope the project is configured
+     * for rather than on whatever the instance happens to call `base`.
+     */
+    scope?: { websiteCode: string; storeCode: string };
 }
 
 /**
@@ -142,7 +148,9 @@ export function ImportDatapackModal({
     const status = useDataInstallerRequest<ImportJobRecord | null>('get-datapack-import-status');
     const target = useDataInstallerRequest<ImportTarget>('get-datapack-import-target');
     // Owns the discovered scopes AND the user's choice within them — see the hook.
-    const scope = useImportScopes();
+    // Seeded from what the PROJECT recorded, so the dialog opens on the scope the
+    // project is configured for instead of on `base`.
+    const scope = useImportScopes(target.value?.scope);
 
     const loadStatus = status.load;
     useEffect(() => {

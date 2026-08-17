@@ -177,6 +177,89 @@ describe('import targeting', () => {
  * A warning rather than a block: packs whose products carry no tier prices are
  * perfectly importable on their own, and this modal cannot know which is which.
  */
+/**
+ * The pickers seed from what the PROJECT recorded, not from `base`.
+ *
+ * They used to seed purely from discovery, preferring a website literally named
+ * `base` and falling back to the first one. On a project configured for another
+ * website that is wrong twice over: the visible default is a scope nobody chose,
+ * and a reset driven from this modal then targets a different scope than the
+ * project reset does — same project, same data, two answers.
+ *
+ * The project already holds the pair, and `get-datapack-import-target` now
+ * reports it. This is the modal honouring it.
+ */
+describe('seeding the target scope', () => {
+    const BODEA_SCOPE = { websiteCode: 'bodea', storeCode: 'bodea_us' };
+
+    /** Discovery answers with three websites; `base` exists and must NOT win. */
+    function withScopedProject(scope?: { websiteCode: string; storeCode: string }) {
+        mockRequest.mockImplementation(async (type: string) => {
+            if (type === 'get-datapack-import-target') {
+                return {
+                    success: true,
+                    data: { instance: 'inst', projectName: 'bodea-template-test', ...(scope && { scope }) },
+                };
+            }
+            if (type === 'list-datapack-import-scopes') {
+                return {
+                    success: true,
+                    data: {
+                        websites: [
+                            { code: 'base', name: 'Main Website', storeViews: [{ code: 'default', name: 'Default Store View' }] },
+                            { code: 'bodea', name: 'Bodea Website', storeViews: [{ code: 'bodea_us', name: 'Bodea US' }] },
+                        ],
+                    },
+                };
+            }
+            return { success: true, data: null };
+        });
+    }
+
+    beforeEach(() => {
+        resetModalMocks();
+    });
+
+    it('selects the website the project recorded, not `base`', async () => {
+        withScopedProject(BODEA_SCOPE);
+        renderModal();
+
+        await waitFor(() =>
+            expect(pickerFor(/target website/i)).toHaveValue('bodea'),
+        );
+    });
+
+    it('selects the store view the project recorded', async () => {
+        withScopedProject(BODEA_SCOPE);
+        renderModal();
+
+        await waitFor(() => expect(pickerFor(/store view/i)).toHaveValue('bodea_us'));
+    });
+
+    it('sends the recorded scope without the user touching a picker', async () => {
+        withScopedProject(BODEA_SCOPE);
+        renderModal();
+        await waitFor(() => expect(pickerFor(/target website/i)).toHaveValue('bodea'));
+
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+        fireEvent.click(screen.getByRole('button', { name: /start import/i }));
+
+        await waitFor(() => {
+            const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
+            expect(call?.[1]).toMatchObject({ websiteCode: 'bodea', storeCode: 'bodea_us' });
+        });
+    });
+
+    it('falls back to `base` when the project recorded nothing', async () => {
+        withScopedProject(undefined);
+        renderModal();
+
+        // Unchanged behaviour for an unconfigured project — the fallback is the
+        // service's own default, not a guess.
+        await waitFor(() => expect(pickerFor(/target website/i)).toHaveValue('base'));
+    });
+});
+
 /*
  * The `products` / `customer_groups` warning block lived here and is gone.
  *

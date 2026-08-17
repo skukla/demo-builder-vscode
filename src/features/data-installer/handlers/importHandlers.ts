@@ -36,6 +36,7 @@ import {
     buildScopeDiscoveryParams,
     groupStoreViewsByWebsite,
 } from '../services/importScopeDiscovery';
+import { resolveInstallTarget } from '../services/sampleDataInstall';
 import { downloadWorkspaceConfigJson } from '../services/workspaceConfigDownload';
 import { IMPORT_PROGRESS_MESSAGE, type ImportJobRecord } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
@@ -230,15 +231,32 @@ export const importHandlers = defineHandlers({
         // in a 25-name catalog.
         const datapack = project?.datapack;
 
+        // The website/store view the project recorded, from the SAME resolver the
+        // build path uses. The modal used to seed its pickers from live discovery
+        // instead, preferring a website named `base` — which is simply wrong on a
+        // project configured for another one, and made a modal-driven reset
+        // target a different scope than the project reset. The project is the
+        // definitive source; this is where it gets asked.
+        //
+        // `resolveInstallTarget` returns the store VIEW code, not the store group:
+        // the service's `store_code` is a view code. Both codes or neither.
+        const scope = resolveInstallTarget({
+            componentSelections: project?.componentSelections,
+            componentConfigs: configs,
+        });
+
         // Shared with the build's sample-data phase — see `deriveImportInstance`.
         // Two derivations would let the same pack land in different places
         // depending on which surface asked, with nothing to report the difference.
         const instance = deriveImportInstance(configs);
         if (instance) {
-            return { success: true, data: { instance, projectName, datapack } };
+            return {
+                success: true,
+                data: { instance, projectName, datapack, ...(scope && { scope }) },
+            };
         }
 
-        return { success: true, data: { datapack } };
+        return { success: true, data: { datapack, ...(scope && { scope }) } };
     },
 
     /**
