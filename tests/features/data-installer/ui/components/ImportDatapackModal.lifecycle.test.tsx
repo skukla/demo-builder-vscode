@@ -304,7 +304,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             fireEvent.click(screen.getByRole('button', { name: /^remove data/i }));
             fireEvent.click(screen.getByRole('button', { name: /remove the data/i }));
 
-            expect(await screen.findByText(/reset finished/i)).toBeInTheDocument();
+            expect(await screen.findByText(/removal finished/i)).toBeInTheDocument();
             fireEvent.click(screen.getByRole('button', { name: /back/i }));
             expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeInTheDocument();
         });
@@ -598,7 +598,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
         // The record knows its operation now — a reset must not call itself an
         // import, which it did live.
-        it('announces a finished reset as a reset', async () => {
+        it('announces a finished removal as a removal, never as an import', async () => {
             mockRequest.mockImplementation(async (type: string) =>
                 type === 'get-datapack-import-status'
                     ? {
@@ -619,7 +619,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             fireEvent.click(screen.getByRole('button', { name: /^remove data/i }));
             fireEvent.click(screen.getByRole('button', { name: /remove the data/i }));
 
-            expect(await screen.findByText(/reset finished/i)).toBeInTheDocument();
+            expect(await screen.findByText(/removal finished/i)).toBeInTheDocument();
             expect(screen.queryByText(/import finished/i)).not.toBeInTheDocument();
         });
 
