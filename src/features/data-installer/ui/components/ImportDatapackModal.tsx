@@ -446,9 +446,7 @@ function ModalBody({ view, ctx }: { view: ModalView; ctx: BodyContext }): React.
                                     {ctx.selected.map(dataTypeLabel).join(', ')}
                                 </span>
                             </p>
-                            <p className="datapack-danger-warning">
-                                This cannot be undone — the Data Installer has no restore.
-                            </p>
+                            <p className="datapack-danger-warning">This cannot be undone.</p>
                         </div>
                     ) : null}
 
