@@ -28,14 +28,19 @@ function serve() {
         JSON.parse((await tools.get('configure_project')!(args)).content[0].text);
 }
 
-/** The tool DEFINITION, for asserting the schema rather than the handler. */
-function definition() {
-    let def: { inputSchema: Record<string, { parse: (v: unknown) => unknown }> } | undefined;
+/**
+ * The tool's SCHEMA, for asserting what a real caller can send.
+ *
+ * It is a strict `z.object`, not a raw shape — see the tool's comment. That is
+ * why fields are reached through `.shape`.
+ */
+function schema() {
+    let def: { inputSchema: { shape: Record<string, { parse: (v: unknown) => unknown }>; safeParse: (v: unknown) => { success: boolean; error?: { message: string } } } } | undefined;
     registerConfigureProjectTool(
         { registerTool: (_n: string, d: never) => { def = d; } },
         stateManager,
     );
-    return def!;
+    return def!.inputSchema;
 }
 
 /**
@@ -146,11 +151,23 @@ describe('configure_project — store scope moves as a triple', () => {
     // The fake server above bypasses zod, which is exactly why a handler-side
     // assertion here would prove nothing about what a real caller can send.
     it('the schema REQUIRES all three codes together', () => {
-        const scope = definition().inputSchema.storeScope;
+        const scope = schema().shape.storeScope;
 
         expect(() => scope.parse({ website: 'base', store: 'main', storeView: 'default' })).not.toThrow();
         expect(() => scope.parse({ website: 'base' })).toThrow();
         expect(() => scope.parse({ website: 'base', store: 'main' })).toThrow();
+    });
+
+    // The rejection in the handler can only fire if the schema does not strip
+    // unknown keys first. A raw shape DOES strip them (zod's default), which
+    // would silently discard a misspelled field while applying the rest —
+    // exactly what the guard exists to prevent. Probed live: a typo came back as
+    // "Nothing to apply" rather than naming the key.
+    it('the schema is STRICT — unknown keys error, they are not stripped', () => {
+        const result = schema().safeParse({ addons: ['a'], stroeScope: { website: 'b' } });
+
+        expect(result.success).toBe(false);
+        expect(result.error?.message).toMatch(/stroeScope/);
     });
 
     it('refuses when the project has no backend selected', async () => {

@@ -199,7 +199,15 @@ export function registerConfigureProjectTool(
         {
             description:
                 'Configure the current project: datapack, addons, block libraries, store scope and non-secret env vars. Returns what changed and what is still unset. Secrets must be entered by the user.',
-            inputSchema: {
+            // A STRICT z.object, not a raw shape. The SDK accepts both, but a raw
+            // shape is zod's default `.strip()` — it SILENTLY DROPS unknown keys
+            // before the handler ever runs, so the rejection below could never
+            // fire and a payload of {addons, stroeScope} would apply the addons
+            // and discard the typo without a word. `additionalProperties: false`
+            // in the published schema only protects clients that validate; the
+            // server must not depend on that. Found by probing live: a misspelled
+            // key came back as "Nothing to apply" instead of naming the key.
+            inputSchema: z.object({
                 datapack: z
                     .object({ name: z.string(), version: z.string() })
                     .optional()
@@ -222,7 +230,7 @@ export function registerConfigureProjectTool(
                     .describe(
                         'Non-secret env vars, keyed by component id then var name. See get_component_requirements',
                     ),
-            },
+            }).strict(),
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
