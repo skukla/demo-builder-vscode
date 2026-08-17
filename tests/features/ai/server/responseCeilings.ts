@@ -128,6 +128,10 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         why: 'two booleans plus dependency IDs and any validation errors; the wizard rows are projected away',
     },
 
+    create_github_repo: {
+        bytes: 1_000,
+        why: 'repo name, URL, default branch and a readiness flag — fixed fields, nothing that scales',
+    },
     check_prerequisites: {
         bytes: 4_000,
         why:
