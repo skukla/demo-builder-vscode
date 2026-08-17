@@ -179,6 +179,11 @@ function createProject(datapack?: { name: string; version: string }): Project {
         lastModified: new Date(),
         selectedPackage: 'citisignal',
         selectedStack: 'eds-paas',
+        // The shape a REAL project has on disk. `stackBackend` is deliberately
+        // absent: it is not persisted, and inventing it here is what let the
+        // dispatch bug below survive every existing test.
+        componentSelections: { backend: 'adobe-commerce-accs' },
+        componentConfigs: { 'adobe-commerce-accs': { ACCS_STORE_CODE: 'main_website_store' } },
         componentInstances: {
             'eds-storefront': {
                 id: 'eds-storefront',
@@ -361,6 +366,60 @@ describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
 
         expect(mockedCredentials).toHaveBeenCalledWith(
             expect.objectContaining({ broker: expect.any(Function) }),
+        );
+    });
+
+    /**
+     * THE SECOND TRAP, and the one that actually shipped.
+     *
+     * `resolveCommerceCredentials` dispatches on `stackBackend` — a CredentialProject
+     * field that is NOT persisted, mapped from `componentSelections.backend` at every
+     * call site. This one passed the raw Project through `as never`, so `stackBackend`
+     * was undefined, neither backend branch matched, and it returned
+     * `unsupported-backend` BEFORE the broker was built. The prompt never appeared for
+     * any project, and no credential line was ever logged.
+     *
+     * Measured live 2026-08-17: an import recorded `bodea@main` at 00:00:20, the reset
+     * at 00:03:38 asked nothing, and the debug channel — which carries this call site's
+     * logger, confirmed by a control line from the same logger — held no `[Reset]`
+     * credential line at all.
+     *
+     * Asserted on the ARGUMENT because the resolver is mocked here: with the mock
+     * returning ok, every behavioural test above passed while the real dispatch fell
+     * through. `importHandlers` carries a comment about the identical failure one
+     * shape earlier (`stack?.backend`), whose fixtures shared the invented shape and
+     * so agreed with the bug — which is exactly why this asserts the mapping itself.
+     */
+    it('maps stackBackend from componentSelections, so the dispatch can match', async () => {
+        answers(RESET, REMOVE);
+
+        await run(createProject({ name: 'bodea', version: 'main' }));
+
+        expect(mockedCredentials).toHaveBeenCalledWith(
+            expect.objectContaining({
+                project: expect.objectContaining({
+                    stackBackend: 'adobe-commerce-accs',
+                    componentConfigs: expect.objectContaining({ 'adobe-commerce-accs': expect.anything() }),
+                }),
+            }),
+        );
+    });
+
+    /**
+     * CONTROL for the test above: the assertion must be sensitive to the mapping,
+     * not merely to a field existing. A project whose backend is absent must NOT
+     * produce the ACCS value — otherwise the test would pass against code that
+     * hardcodes it.
+     */
+    it('CONTROL — an absent backend maps to empty, never to a guessed one', async () => {
+        answers(RESET, REMOVE);
+        const project = createProject({ name: 'bodea', version: 'main' });
+        (project as { componentSelections?: unknown }).componentSelections = undefined;
+
+        await run(project);
+
+        expect(mockedCredentials).toHaveBeenCalledWith(
+            expect.objectContaining({ project: expect.objectContaining({ stackBackend: '' }) }),
         );
     });
 

@@ -21,7 +21,6 @@ import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
-import type { Logger } from '@/types/logger';
 
 // ==========================================================
 // Types
@@ -362,7 +361,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
     // one short credential call (see the function), which is bounded and silent
     // on failure; the older "no network call in front of a modal" phrasing here
     // overstated a rule that was really about not adding failure modes.
-    const removeData = await confirmSampleDataRemoval(project, vscode, context.logger);
+    const removeData = await confirmSampleDataRemoval(project, vscode, context);
 
     const originalStatus = project.status;
     project.status = 'resetting';
@@ -457,9 +456,9 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
 async function confirmSampleDataRemoval(
     project: Project,
     vscode: typeof import('vscode'),
-    logger: Logger,
+    context: HandlerContext,
 ): Promise<boolean> {
-    const datapack = (project as { datapack?: { name: string; version: string } }).datapack;
+    const { datapack } = project;
     if (!datapack) {
         return false;
     }
@@ -479,20 +478,33 @@ async function confirmSampleDataRemoval(
     // broker holds: one short GET on a QUICK timeout, every failure degrading
     // silently to "no credentials", and no dialog of its own. Weighed against a
     // three-minute reset the user cannot undo, a sub-second check is cheap.
+    // `stackBackend` is a CredentialProject field, NOT a persisted one — it is
+    // mapped from `componentSelections.backend` at every call site. This passed the
+    // raw Project through `as never`, so `stackBackend` was undefined, the dispatch
+    // matched neither backend, and resolution returned `unsupported-backend`
+    // BEFORE the broker was ever built. The prompt then never appeared, silently,
+    // for every project. Measured live 2026-08-17: an import recorded the pack and
+    // the reset forty seconds later asked nothing, with no credential line logged.
+    //
+    // `importHandlers` carries a comment about the identical failure one shape
+    // earlier (`stack?.backend`, a wizard-only shape, resolving to '' for every
+    // real project). Same defect, reintroduced by a cast that silenced the
+    // compiler — which is why the object is now built explicitly, exactly as the
+    // import path builds it, and nothing here is cast.
     const { resolveCommerceCredentials } = await import(
         '@/features/data-installer/services/commerceCredentials'
     );
-    const { createProjectCredentialBroker } = await import(
+    const { brokerForContext } = await import(
         '@/features/data-installer/services/commerceCredentialBroker'
     );
-    const { ServiceLocator } = await import('@/core/di');
     const credentials = await resolveCommerceCredentials({
-        project: project as never,
-        broker: createProjectCredentialBroker({
-            auth: ServiceLocator.getAuthenticationService(),
-            ...(project.adobe?.organization ? { orgId: project.adobe.organization } : {}),
-            log: (line) => logger.debug(`[Reset] ${line}`),
-        }),
+        project: {
+            stackBackend: project.componentSelections?.backend ?? '',
+            componentConfigs: project.componentConfigs ?? {},
+        },
+        secrets: context.context.secrets,
+        projectName: project.name,
+        broker: brokerForContext(context, project),
     });
     if (!credentials.ok) {
         return false;
