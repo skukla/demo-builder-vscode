@@ -50,8 +50,9 @@ needed a response fix. Each assertion was falsified before being trusted: making
 dropping the confirm flag, and restoring the bare rename success each failed exactly the test
 written for it (4 failures, no others).
 
-**Unprobed:** none of the four Group 4 tools has run against a live server. All are in the
-ceiling table's EXEMPT set on the SHAPE argument, not on a measurement.
+**Probed live 2026-08-17** — all four run correctly against a real Adobe org. Their ceiling-table
+EXEMPT entries still rest on the SHAPE argument rather than a recorded measurement, which the
+probe supports: the responses were 51–95 bytes.
 
 ## Wave 3 — DONE (`9d52a5de`, pushed)
 
@@ -179,10 +180,35 @@ before every measurement.** A wrong-build answer is a real response to a real se
 identical to a right one. This is the skill's rule 1 and it is not paranoia — it produced a
 false defect report in this session.
 
-**Still unprobed:** `restart_demo`, `open_url`'s open path, `set_console_apis`,
-`set_project_destination`, `add_integration`. All four were approved for probing; the host
-churn stopped them. `set_console_apis` needs care — called WITHOUT `componentId` it rewrites
+**The happy paths were then probed** against a single host, and every Group 4/5 tool works:
+`add_integration` really clones and deploys (85 B `{added}`), `open_url` opens (53 B),
+`rename_integration` renames, `set_console_apis` runs a real subscribe PUT leaving state and
+attribution untouched, `restart_demo` starts the demo. `set_project_destination` was approved
+but not run — the round trip is two multi-minute redeploys and nothing else was outstanding.
+
+One caution if you probe `set_console_apis` again: called WITHOUT `componentId` it rewrites
 `componentApiPicks` through `applyDesiredApis`, which can collapse per-integration attribution.
+Pass `componentId`.
+
+## Three more defects the probe found, all pre-existing
+
+- **`remove_integration` left the integration SELECTED** — keyed entry and instance cleared,
+  `componentSelections.appBuilder` not. The mesh branch of that same function had been fixed on
+  the identical argument and nobody carried it across. Fixed (`06ccb91d`); it bites at RESET,
+  which rebuilds the component list from the selections.
+- **`restart_demo` never returns inside 60 s** though it completes — the storefront URL resolved
+  afterwards. `start_demo`/`stop_demo` share the shape, so this is a property of the
+  demo-lifecycle tools, not of the new row. FILED, not fixed: it is a design question about
+  long-running tools with no progress channel.
+- **`set_console_apis` under-reports.** Asked for `AppBuilderDataServicesSDK`, it answered
+  `subscribed: [GraphQLServiceSDK]` — an API the caller did not request — and said nothing about
+  the one it did. The handler already COMPUTES the missing set and logs it as a warning; the
+  response just does not carry it. FILED, not fixed: two lines, but on the subscribe path.
+
+**Not a defect, checked rather than assumed:** `componentVersions` keeps a row for a removed
+component. `getComponentVersion` is a keyed lookup nothing asks for after removal, and
+`projectFileLoader.discoverComponents` reconciles it against disk — and the project already
+carried such a row from an earlier session, independently of this probe.
 
 ## Start here
 
