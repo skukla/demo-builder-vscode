@@ -86,14 +86,30 @@ export function buildSampleDataDeps(
             return client.startDelete(request as never);
         },
 
-        watch: async ({ activationId, requestedTypes, onProgress }) => {
-            const client = await writeClient(context);
+        /**
+         * Polls with the READ client, which is the only one that can answer.
+         *
+         * `watchImportJob` needs a `JobStatusSource` — `getJobStatus` and
+         * `getJobFailureReason` — and those live on `DataInstallerClient`. This
+         * passed the WRITE client through `client as never`, which has neither, so
+         * every poll threw `TypeError: e.getJobStatus is not a function`.
+         *
+         * Observed live 2026-08-17: a reset's delete was accepted (202) and then
+         * polled to nothing, once per backoff step, with the job left unwatched.
+         * The import path next door already passed `access.client` uncast; this is
+         * the same call, made the same way. Another cast, another silent mismatch.
+         */
+        watch: async ({ activationId, requestedTypes, operation, onProgress }) => {
+            const access = await resolveDataInstallerAccess(context);
+            if (!access.ok) {
+                throw new Error('The Data Installer is not reachable for this project.');
+            }
             const result = await watchImportJob({
-                client: client as never,
+                client: access.client,
                 activationId,
                 requestedTypes,
                 polling: new PollingService(),
-                operation: 'import',
+                operation: operation ?? 'import',
                 ...(onProgress ? { onProgress } : {}),
             });
             return { outcome: result.outcome, perType: result.perType };

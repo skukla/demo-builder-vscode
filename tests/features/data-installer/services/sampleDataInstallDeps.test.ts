@@ -20,6 +20,15 @@ jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
 jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({
     resolveDataInstallerAccess: jest.fn().mockResolvedValue({ ok: false }),
 }));
+jest.mock('@/features/data-installer/services/importJobRunner', () => ({
+    watchImportJob: jest.fn(),
+    IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },
+}));
+// Its constructor calls getLogger(), which throws unless the extension has
+// activated. The poller itself is mocked above, so the instance is never used.
+jest.mock('@/core/shell/pollingService', () => ({
+    PollingService: jest.fn().mockImplementation(() => ({})),
+}));
 
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
 import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
@@ -104,6 +113,93 @@ describe('buildSampleDataDeps — the credential dispatch, unmocked', () => {
         const result = await deps.credentials(noBackend as never);
 
         expect(result.ok).toBe(false);
+    });
+});
+
+/**
+ * `watch` must be handed a client that can answer.
+ *
+ * `watchImportJob` needs a `JobStatusSource` — `getJobStatus` and
+ * `getJobFailureReason` — which live on the READ client. This passed the WRITE
+ * client through `client as never`, so every poll threw
+ * `TypeError: e.getJobStatus is not a function`.
+ *
+ * Observed live 2026-08-17: a reset's delete was accepted (202) and then polled
+ * to nothing, once per backoff step, leaving the job unwatched. The third cast
+ * of the night to hide a shape mismatch, which is why this asserts on the object
+ * handed over rather than on any outcome.
+ */
+describe('buildSampleDataDeps — watch', () => {
+    const { watchImportJob } = jest.requireMock('@/features/data-installer/services/importJobRunner') as {
+        watchImportJob: jest.Mock;
+    };
+    const { resolveDataInstallerAccess } = jest.requireMock(
+        '@/features/data-installer/handlers/dataInstallerHandlers',
+    ) as { resolveDataInstallerAccess: jest.Mock };
+
+    /** A read client: the two methods the poller calls, and nothing else. */
+    const readClient = {
+        getJobStatus: jest.fn(),
+        getJobFailureReason: jest.fn(),
+        getDatapackDetail: jest.fn(),
+        batchGetDataItems: jest.fn(),
+    };
+
+    beforeEach(() => {
+        resolveDataInstallerAccess.mockResolvedValue({
+            ok: true,
+            client: readClient,
+            baseUrl: 'https://example.test/api',
+            getToken: async () => 'tok',
+        });
+        watchImportJob.mockResolvedValue({ outcome: 'success', perType: {} });
+    });
+
+    // `clearAllMocks` clears CALLS, not implementations, so the ok:true override
+    // above would otherwise leak into every later describe in this file.
+    afterEach(() => {
+        resolveDataInstallerAccess.mockResolvedValue({ ok: false });
+    });
+
+    it('passes a client that can report job status', async () => {
+        const deps = buildSampleDataDeps(makeContext(), PROJECT, jest.fn());
+
+        await deps.watch({ activationId: 'act-1', requestedTypes: ['categories'] });
+
+        const passed = watchImportJob.mock.calls[0][0].client;
+        expect(typeof passed.getJobStatus).toBe('function');
+        expect(typeof passed.getJobFailureReason).toBe('function');
+    });
+
+    /**
+     * CONTROL. The assertion above must be sensitive to WHICH client is passed —
+     * a write client has neither method, which is exactly the bug. Asserting the
+     * identity pins it to the one `resolveDataInstallerAccess` supplies.
+     */
+    it('CONTROL — it is the access client, not some other one', async () => {
+        const deps = buildSampleDataDeps(makeContext(), PROJECT, jest.fn());
+
+        await deps.watch({ activationId: 'act-1', requestedTypes: ['categories'] });
+
+        expect(watchImportJob.mock.calls[0][0].client).toBe(readClient);
+    });
+
+    // The poller names the job from this; a removal labelled `import` is what the
+    // 2026-08-17 log said while deleting.
+    it('labels the job with the operation it was given', async () => {
+        const deps = buildSampleDataDeps(makeContext(), PROJECT, jest.fn());
+
+        await deps.watch({ activationId: 'act-1', requestedTypes: [], operation: 'reset' });
+
+        expect(watchImportJob.mock.calls[0][0].operation).toBe('reset');
+    });
+
+    it('defaults the label to import when none is given', async () => {
+        const deps = buildSampleDataDeps(makeContext(), PROJECT, jest.fn());
+
+        await deps.watch({ activationId: 'act-1', requestedTypes: [] });
+
+        expect(watchImportJob.mock.calls[0][0].operation).toBe('import');
     });
 });
 
