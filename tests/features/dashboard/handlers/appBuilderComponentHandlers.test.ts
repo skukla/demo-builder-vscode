@@ -345,6 +345,20 @@ describe('handleRenameAppBuilderComponent (display name only — shell instancin
         });
     });
 
+    // Same rule as the add path: `defaultShape` renders a bare success as "{}",
+    // so `rename_integration` would answer an agent with nothing at all. The
+    // TRIMMED name is the part worth returning — it is not what the caller sent.
+    it('reports what it renamed, not a bare success', async () => {
+        const { mockContext, showInputBox } = setupRename();
+        showInputBox.mockResolvedValue('  Firefly Video Gen  ');
+
+        const result = await handleRenameAppBuilderComponent(mockContext, {
+            id: 'firefly-image-gen',
+        });
+
+        expect(result.renamed).toEqual({ id: 'firefly-image-gen', name: 'Firefly Video Gen' });
+    });
+
     it('pushes the row-status refresh with the CURRENT status and the new name (label update)', async () => {
         const { mockContext, showInputBox } = setupRename();
         showInputBox.mockResolvedValue('Firefly Video Gen');

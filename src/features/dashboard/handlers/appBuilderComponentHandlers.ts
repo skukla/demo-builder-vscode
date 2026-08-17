@@ -823,5 +823,8 @@ export const handleRenameAppBuilderComponent: MessageHandler<{
     // (the entry's current one); the name rides along to refresh the row label.
     await postRowStatus(id, entry.status, undefined, name);
     await postComponentsSnapshot(context);
-    return { success: true };
+    // The TRIMMED name, which is not necessarily what the caller sent. Additive:
+    // the drawer's InlineRenameField reads `success`/`error` and ignores this.
+    // `rename_integration` does not — a bare success renders as "{}".
+    return { success: true, renamed: { id, name } };
 };

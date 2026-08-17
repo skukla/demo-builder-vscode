@@ -79,6 +79,9 @@ describe('ACTION_DESCRIPTORS', () => {
             'delete_mesh',
             'refresh_block_library',
             'remove_integration',
+            // Says "set", not "delete", and removes on a live workspace credential
+            // — exactly the case the delete_* rule above cannot see.
+            'set_console_apis',
         ]);
     });
 
@@ -118,6 +121,54 @@ describe('ACTION_DESCRIPTORS', () => {
             expect(d!.type).toBe('removeAppBuilderComponent');
             expect(Object.keys(d!.inputSchema ?? {})).toContain('id');
             expect(d!.confirm).toBe(true);
+        });
+
+        it('rename_integration REQUIRES a name — an omitted one opens an input box', () => {
+            const d = row('rename_integration');
+            expect(d).toBeDefined();
+            expect(d!.map).toBe(dashboardHandlers);
+            expect(d!.type).toBe('renameAppBuilderComponent');
+            expect(Object.keys(d!.inputSchema ?? {}).sort()).toEqual(['id', 'name']);
+            // THE headless-safety guard, not a convenience. `resolveRenameName`
+            // falls through to `vscode.window.showInputBox` when the payload
+            // carries no name — a tool that allowed the omission would hang an
+            // agent's call on a dialog nobody is looking at.
+            expect(d!.inputSchema!.name.isOptional()).toBe(false);
+            expect(d!.inputSchema!.id.isOptional()).toBe(false);
+            // A rename is a local display-name write, undone by renaming back.
+            expect(d!.confirm).toBeUndefined();
+        });
+
+        it('set_console_apis is confirm-gated — a short list UNSUBSCRIBES', () => {
+            const d = row('set_console_apis');
+            expect(d).toBeDefined();
+            expect(d!.map).toBe(dashboardHandlers);
+            expect(d!.type).toBe('setConsoleApis');
+            expect(Object.keys(d!.inputSchema ?? {})).toContain('apis');
+            // Per-integration edits need the owner, or the write lands on the union.
+            expect(Object.keys(d!.inputSchema ?? {})).toContain('componentId');
+            // `add_console_apis` is add-only and ungated. This one sets the list to
+            // EXACTLY what it is given, so anything dropped is unsubscribed from a
+            // live workspace credential — that is the delete the gate is for.
+            expect(d!.confirm).toBe(true);
+        });
+
+        it('set_project_destination takes an Adobe project AND workspace, no confirm', () => {
+            const d = row('set_project_destination');
+            expect(d).toBeDefined();
+            expect(d!.map).toBe(dashboardHandlers);
+            expect(d!.type).toBe('setProjectDestination');
+            expect(Object.keys(d!.inputSchema ?? {}).sort()).toEqual(['project', 'workspace']);
+            // Both required: the handler refuses a half-specified destination, and
+            // the schema should say so rather than let the call round-trip to find out.
+            expect(d!.inputSchema!.project.isOptional()).toBe(false);
+            expect(d!.inputSchema!.workspace.isOptional()).toBe(false);
+            // Ungated deliberately. The move only ever DEPLOYS — nothing is
+            // undeployed from the old destination — and it is undone by setting the
+            // destination back. The UI's confirmation modal was removed for the same
+            // reason (user decision 2026-08-07); a gate here would reinstate it for
+            // agents only.
+            expect(d!.confirm).toBeUndefined();
         });
 
         it('add_integration dispatches to addAppBuilderComponent, catalog id OR custom source', () => {

@@ -351,7 +351,22 @@ Thin tools declared as data and dispatched to existing handler maps:
   `deploy_integration` / `redeploy_integration` (deploy one App Builder integration
   by id — idempotent, guard-chained, org-context-targeted; the API Mesh has its own
   `deploy_mesh` / `check_mesh` / `delete_mesh`), `remove_integration` (confirm-gated — remote
-  undeploy + local cleanup + storefront republish), `deploy_mesh` (deploy or redeploy
+  undeploy + local cleanup + storefront republish),
+  `rename_integration` (DISPLAY NAME only — the id, folder and Runtime package are
+  immutable; local metadata write, nothing redeploys; pre-built catalog entries and the
+  mesh are rejected. `name` is REQUIRED in the schema, and that is a headless-safety
+  guard rather than a convenience: the handler falls through to
+  `vscode.window.showInputBox` when the payload carries none),
+  `set_console_apis` (confirm-gated — sets the optional extras to EXACTLY the given
+  list, so anything dropped is UNSUBSCRIBED from the live workspace credential; pass
+  `componentId` to edit one integration's picks instead of the union. `add_console_apis`
+  is the add-only, ungated sibling),
+  `set_project_destination` (repoint the project at another Adobe Console
+  project + workspace and MOVE every integration there — each redeploys under the new
+  target, the old deployments are left running. The org is NOT taken from the payload;
+  sign-in owns org selection. Create the target first with `create_adobe_project` /
+  `create_adobe_workspace`. Ungated: the move only ever deploys and is undone by setting
+  the destination back), `deploy_mesh` (deploy or redeploy
   the current project's API Mesh — same guard chain and org targeting as the dashboard
   Deploy button, sharing the UI-free `deployMeshHeadless` core; persists the mesh
   endpoint), `refresh_block_library` (EDS-only — destructive rebuild of the DA.live
@@ -469,7 +484,11 @@ purposeful — it's consumed as LLM context tokens.
 pushes/publishes to a live site. Without it the tool refuses and does nothing.
 Currently gated: `remove_integration`, `delete_ai_prompt`, `delete_mesh`,
 `delete_project`, `remove_block_from_library`, `promote_block_to_library`,
-`refresh_block_library`.
+`refresh_block_library`, `set_console_apis`.
+
+`set_console_apis` is the one whose NAME hides what it does — it says "set" and it
+removes, so the `delete_*` reading of this list would miss it. Judge against the rule,
+not the verb.
 
 Merely *mutating* is deliberately not the bar. Deploys (`deploy_mesh`,
 `add_integration`, `deploy_integration`, `redeploy_integration`), lifecycle (`start_demo`,

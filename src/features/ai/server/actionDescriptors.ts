@@ -120,6 +120,81 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         preflight: addIntegrationPreflight,
     },
     {
+        tool: 'rename_integration',
+        description:
+            "Change one App Builder integration's DISPLAY NAME on the current project. The id, " +
+            'its folder and its Runtime package are immutable and do not move. Local metadata ' +
+            'only — nothing redeploys. Pre-built catalog integrations and the API Mesh cannot ' +
+            'be renamed.',
+        map: dashboardHandlers,
+        type: 'renameAppBuilderComponent',
+        inputSchema: {
+            id: z.string().describe('The integration id to rename (from get_project)'),
+            // REQUIRED, and that is the headless-safety guard rather than a
+            // convenience: `resolveRenameName` falls through to
+            // `vscode.window.showInputBox` when the payload carries no name, so an
+            // optional field here would hang an agent's call on a dialog nobody is
+            // watching. Anything the caller must control belongs in the schema —
+            // the same reasoning as `argDefaults`, from the other direction.
+            name: z.string().min(1).describe('New display name; must not collide with another integration'),
+        },
+    },
+    {
+        tool: 'set_console_apis',
+        description:
+            'Set the OPTIONAL Adobe API subscriptions on this project\'s Developer Console ' +
+            'workspace credential to EXACTLY this list — anything currently subscribed and not ' +
+            'listed is REMOVED. Pass an empty array to clear the extras. Use add_console_apis to ' +
+            'only add. Always-on codes (baseline + whatever the components require) are re-included ' +
+            'regardless. Pass componentId to edit one integration\'s picks rather than the union.',
+        map: dashboardHandlers,
+        type: 'setConsoleApis',
+        // Gated where `add_console_apis` is not, and the tool NAME is why the
+        // `delete_*` rule could never catch it: a short list unsubscribes codes on
+        // a live workspace credential, which is a delete wearing a setter's name.
+        confirm: true,
+        inputSchema: {
+            apis: z
+                .array(z.string())
+                .describe('The complete desired list of extra sdk codes (from list_console_apis); [] clears them'),
+            componentId: z
+                .string()
+                .optional()
+                .describe("Edit only this integration's picks; omit to set the project-wide union"),
+        },
+    },
+    {
+        tool: 'set_project_destination',
+        description:
+            'Point the current project at a different Adobe Console project + workspace, and MOVE ' +
+            'every integration there (each is redeployed under the new target; the old deployments ' +
+            'are left running and can be cleaned up in the Console). Takes a minute or more per ' +
+            'integration. The org is NOT taken from here — sign-in owns org selection. Create the ' +
+            'target first with create_adobe_project / create_adobe_workspace if it does not exist.',
+        map: dashboardHandlers,
+        type: 'setProjectDestination',
+        inputSchema: {
+            project: z
+                .object({
+                    id: z.string().describe('Adobe Console project id (from list_adobe_projects)'),
+                    name: z.string().optional(),
+                    title: z.string().optional().describe('Display title, used in progress and the header'),
+                })
+                .describe('The Adobe Console project to deploy into'),
+            workspace: z
+                .object({
+                    id: z.string().describe('Workspace id (from list_workspaces)'),
+                    name: z.string().optional(),
+                    title: z.string().optional().describe('Display title, used in progress and the header'),
+                })
+                .describe('The workspace within that project'),
+        },
+        // Ungated on purpose. The move only ever DEPLOYS — nothing is undeployed
+        // from the old destination — and it is undone by setting the destination
+        // back. The UI's confirmation modal was removed for that reason (user
+        // decision 2026-08-07); gating here would reinstate it for agents alone.
+    },
+    {
         tool: 'deploy_integration',
         description:
             'Deploy (or redeploy — idempotent) one App Builder integration on the current ' +

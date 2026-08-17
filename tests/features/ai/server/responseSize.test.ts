@@ -256,6 +256,12 @@ describe('rows with no output safety net are classified', () => {
         // returns `{added: {id, name, kind}}` on success and a named refusal
         // otherwise (`appBuilderComponentHandlers.ts`). The stub cannot see that.
         'add_integration',
+        // The rest of Group 4, all category 2 and all read before being listed:
+        // `handleRenameAppBuilderComponent` returns `{renamed: {id, name}}`,
+        // `handleSetConsoleApis` returns `{data: {subscribed}}` via reconcileExtras,
+        // and `handleSetProjectDestination` returns
+        // `{data: {destination, previous, move}}` (`destinationHandlers.ts`).
+        'rename_integration', 'set_console_apis', 'set_project_destination',
         'add_console_apis', 'check_datapack_service', 'check_mesh',
         'delete_ai_prompt', 'delete_mesh', 'deploy_integration', 'deploy_mesh',
         'export_project_settings', 'get_datapack', 'get_datapack_activity',
@@ -306,6 +312,12 @@ describe('the ceiling table tracks the tool surface', () => {
             // `{added: {id, name, kind}}` — three short strings, bounded by
             // nothing that scales with project or catalog size.
             'add_integration',
+            // `rename_integration` returns two short strings. `set_console_apis`
+            // returns `{code, name?}` per subscribed API — the same shape and the
+            // same credential-bounded union `add_console_apis` already returns
+            // exempt. `set_project_destination` returns the destination refs plus a
+            // move summary, bounded by the project's integration COUNT.
+            'rename_integration', 'set_console_apis', 'set_project_destination',
             'deploy_integration', 'redeploy_integration', 'remove_integration',
             'deploy_mesh', 'delete_mesh', 'save_ai_prompt', 'delete_ai_prompt',
             'export_project_settings', 'refresh_block_library', 'add_console_apis',
