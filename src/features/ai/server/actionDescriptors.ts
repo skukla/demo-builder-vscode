@@ -7,11 +7,88 @@
  */
 
 import { z } from 'zod';
+import { needsUser } from './handoff';
 import type { ToolDescriptor } from './toolDescriptors';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
+import {
+    resolveAddEntry,
+    userSuppliedEnvVars,
+} from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
+
+/**
+ * The add payload, as `handleAddAppBuilderComponent` reads it.
+ *
+ * Shared by the tool's `inputSchema` and its preflight, so the schema cannot
+ * describe one shape while the preflight resolves another.
+ */
+const addIntegrationSchema = {
+    id: z
+        .string()
+        .optional()
+        .describe('Catalog component id (from list_components). Omit when passing `source`.'),
+    source: z
+        .object({
+            owner: z.string().describe('GitHub owner/org'),
+            repo: z.string().describe('GitHub repository name'),
+        })
+        .optional()
+        .describe('A custom App Builder app on GitHub. Omit when passing `id`.'),
+    name: z
+        .string()
+        .optional()
+        .describe('Display name for a custom/blank instance (defaults to the repo name)'),
+    instanceId: z
+        .string()
+        .optional()
+        .describe('Explicit instance id for a custom/blank add; must not collide with an existing one'),
+    apis: z
+        .array(z.string())
+        .optional()
+        .describe('Adobe sdk codes to subscribe for THIS integration (from list_console_apis)'),
+};
+
+/**
+ * Refuse a bucket-3 add BEFORE it dispatches, and say where the values go.
+ *
+ * `handleAddAppBuilderComponent` routes an entry whose `envSchema` declares
+ * user-supplied vars to Configure rather than deploying with blanks — by running
+ * `demoBuilder.configureProject`. Dispatched from an agent that would open a
+ * panel in the user's editor for a call they did not make, and hand back nothing
+ * they could act on. Answering here means the handler never runs.
+ *
+ * Resolution and classification come from the handler's own exports, so the two
+ * paths cannot decide differently about the same payload.
+ *
+ * MEASURED 2026-08-17: no entry in the shipped catalog declares such a var, so
+ * this returns `undefined` for every add available today. It is the guard that
+ * has to exist before the first one is authored, not a live branch.
+ */
+function addIntegrationPreflight(args: Record<string, unknown>): Record<string, unknown> | undefined {
+    const entry = resolveAddEntry(args as Parameters<typeof resolveAddEntry>[0]);
+    // An unknown id is the HANDLER's error to report; answering here would say
+    // "enter values" for a component that does not exist.
+    if (!entry) return undefined;
+
+    const { names, hasSecret } = userSuppliedEnvVars(entry);
+    if (names.length === 0) return undefined;
+
+    const label = entry.name ?? entry.id;
+    const listed = names.join(', ');
+    return needsUser({
+        reason: hasSecret ? 'secret-entry' : 'config-entry',
+        what: `Enter ${listed} for ${label} in Demo Builder`,
+        where: { command: 'demoBuilder.configureProject' },
+        tellUser:
+            `${label} needs ${listed}, which Demo Builder collects on its own form — ` +
+            `${hasSecret ? 'and a secret must not be sent through the agent. ' : ''}` +
+            'Open Configure Project, enter the values, then ask me to add it again. ' +
+            'Nothing has been added yet.',
+        resumeWith: 'get_component_requirements',
+    });
+}
 
 export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     {
@@ -25,6 +102,22 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         description: "Start the current project's demo server",
         map: dashboardHandlers,
         type: 'startDemo',
+    },
+    {
+        tool: 'add_integration',
+        description:
+            'Add an App Builder integration to the current project: clone it, subscribe its ' +
+            'Adobe APIs, build and deploy it under the project org, and register it on the ' +
+            'dashboard. Pass a catalog `id` (from list_components) OR a custom GitHub `source`. ' +
+            'Takes about a minute. Returns the id to use with deploy_integration / ' +
+            'remove_integration. Confirm the choice with the user first.',
+        map: dashboardHandlers,
+        type: 'addAppBuilderComponent',
+        inputSchema: addIntegrationSchema,
+        // Not confirm-gated, matching deploy_integration: an add is additive and
+        // re-runnable (a failed add keeps its folder so the user can retry), and
+        // remove_integration — which undeploys remotely — carries the gate instead.
+        preflight: addIntegrationPreflight,
     },
     {
         tool: 'deploy_integration',

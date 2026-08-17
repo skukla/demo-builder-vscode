@@ -341,6 +341,13 @@ Thin tools declared as data and dispatched to existing handler maps:
   (current-project rename via the shared `renameProjectCore` — folder, saved
   state, and the project's baked MCP/AI configs move together; agents must use
   this instead of shell `mv`, which strands the extension's paths),
+  `add_integration` (add one App Builder integration to the current project by catalog
+  id OR custom GitHub source — clone, subscribe its Adobe APIs, build, deploy, register
+  on the dashboard; returns `{added: {id, name, kind}}`, and the id is what
+  `deploy_integration` / `remove_integration` take. A component whose `envSchema`
+  declares user-supplied vars is refused with a `needsUser` handoff pointing at
+  Configure Project — the tool's `preflight` answers before dispatch, so the panel the
+  webview path opens never opens for an agent's call),
   `deploy_integration` / `redeploy_integration` (deploy one App Builder integration
   by id — idempotent, guard-chained, org-context-targeted; the API Mesh has its own
   `deploy_mesh` / `check_mesh` / `delete_mesh`), `remove_integration` (confirm-gated — remote
@@ -465,7 +472,7 @@ Currently gated: `remove_integration`, `delete_ai_prompt`, `delete_mesh`,
 `refresh_block_library`.
 
 Merely *mutating* is deliberately not the bar. Deploys (`deploy_mesh`,
-`deploy_integration`, `redeploy_integration`), lifecycle (`start_demo`,
+`add_integration`, `deploy_integration`, `redeploy_integration`), lifecycle (`start_demo`,
 `stop_demo`) and config writes (`update_project_config`, `rename_project`) change
 state and are ungated, because they are idempotent or trivially reversible and
 gating them would make the agent surface useless for the routine work it exists

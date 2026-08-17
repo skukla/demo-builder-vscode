@@ -18,12 +18,18 @@
  *
  * ## Why a handoff and not a bare failure
  *
- * A tool that opens a panel and returns `{success: true}` is the defect
- * `handleAddAppBuilderComponent` ships today: on a guard failure it runs
- * `demoBuilder.configureProject` and reports success while nothing happened.
- * Neither the agent nor a human reading the transcript can detect that. A
- * handoff is the honest shape — it says the work is not done and names the way
- * to finish it.
+ * A tool that opens a panel and returns `{success: true}` was the defect
+ * `handleAddAppBuilderComponent` shipped: for an entry whose `envSchema`
+ * declares user-supplied vars it ran `demoBuilder.configureProject` and reported
+ * success while nothing was added. Neither the agent nor a human reading the
+ * transcript could detect that. A handoff is the honest shape — it says the work
+ * is not done and names the way to finish it.
+ *
+ * Fixed in Wave 3: the handler refuses that route with `blocked` and names the
+ * missing vars, and `add_integration`'s preflight (`actionDescriptors.ts`)
+ * returns the handoff before dispatch, so the panel never opens for an agent's
+ * call. (An earlier version of this paragraph blamed a GUARD failure; guards
+ * already returned `blocked`. The bucket-3 branch was the one reporting success.)
  */
 
 /** Why a person is required. Drives how an agent phrases the ask. */
@@ -32,6 +38,16 @@ export type HandoffReason =
     | 'browser-oauth'
     /** A secret must be typed; it must not travel through a tool argument. */
     | 'secret-entry'
+    /**
+     * Non-secret values the extension collects on its OWN form, which the agent
+     * has no argument to carry.
+     *
+     * Distinct from `secret-entry` on purpose: a secret must never ride a tool
+     * argument, and saying so about a plain base URL trains an agent to treat
+     * ordinary config as dangerous. `add_integration` needs both — a bucket-3
+     * component can declare either kind, and the handoff reports which it is.
+     */
+    | 'config-entry'
     /** A native open/save dialog. */
     | 'file-picker'
     /** An approval on someone else's site (e.g. installing a GitHub App). */

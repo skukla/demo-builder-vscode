@@ -213,7 +213,11 @@ describe('descriptor tools — response size', () => {
 // returning a bare `{success: true}` produces the literal string "{}". An agent
 // reading that cannot tell the work from a no-op, and neither can a human
 // reading the transcript — which is exactly how `handleAddAppBuilderComponent`
-// reports success for opening a panel and doing nothing.
+// used to report success for opening a panel and doing nothing.
+//
+// FIXED (Wave 3): that handler now refuses the panel route with `blocked` and
+// names the missing vars, returns `{added: {id, name, kind}}` on success, and
+// `add_integration`'s preflight answers the agent before the panel can open.
 //
 // WHAT THIS CAN AND CANNOT SEE. The harness stubs the handler, so it cannot know
 // whether a real handler returns data — that is the question phase 4 answered by
@@ -248,6 +252,10 @@ describe('rows with no output safety net are classified', () => {
         // response object directly (`checkGitHubAppHandler.ts:261`) and
         // `handleCheckRepoReadiness` returns `{success, readiness}` (`:50`).
         'check_github_app', 'check_repo_readiness',
+        // Category 2, verified by reading it: `handleAddAppBuilderComponent`
+        // returns `{added: {id, name, kind}}` on success and a named refusal
+        // otherwise (`appBuilderComponentHandlers.ts`). The stub cannot see that.
+        'add_integration',
         'add_console_apis', 'check_datapack_service', 'check_mesh',
         'delete_ai_prompt', 'delete_mesh', 'deploy_integration', 'deploy_mesh',
         'export_project_settings', 'get_datapack', 'get_datapack_activity',
@@ -294,6 +302,10 @@ describe('the ceiling table tracks the tool surface', () => {
         // so adding a tool cannot silently join them.
         const EXEMPT = new Set([
             'regenerate_ai_files', 'start_demo', 'stop_demo', 'rename_project',
+            // `add_integration` joins its three siblings: its response is
+            // `{added: {id, name, kind}}` — three short strings, bounded by
+            // nothing that scales with project or catalog size.
+            'add_integration',
             'deploy_integration', 'redeploy_integration', 'remove_integration',
             'deploy_mesh', 'delete_mesh', 'save_ai_prompt', 'delete_ai_prompt',
             'export_project_settings', 'refresh_block_library', 'add_console_apis',
