@@ -78,6 +78,11 @@ describe('ACTION_DESCRIPTORS', () => {
         expect(gated.sort()).toEqual([
             'delete_ai_prompt',
             'delete_mesh',
+            // Not destructive, and gated anyway: it runs package managers (fnm,
+            // npm, brew) on the user's machine and can take minutes. The rule
+            // this row stretches is that a confirm gate is about SURPRISE as much
+            // as about loss.
+            'install_prerequisite',
             'refresh_block_library',
             'remove_integration',
             // Says "set", not "delete", and removes on a live workspace credential

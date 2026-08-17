@@ -19,6 +19,7 @@
  */
 
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
+import { DATA_INSTALLER_DESCRIPTORS } from '@/features/ai/server/dataInstallerDescriptors';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { registerDescriptorTools, type ToolDescriptor } from '@/features/ai/server/toolDescriptors';
@@ -77,6 +78,20 @@ const bigRows = (n: number) =>
  * payloads rode through untouched.
  */
 const PAYLOADS: Record<string, HandlerResponse> = {
+    // Group 8. The service's own `ExportItemPage`, at the size it can actually
+    // reach: `listExportItems` asks for `page_size: 1000` and returns what comes
+    // back, so 500 rows is well inside what one call produces.
+    list_datapack_export_items: {
+        success: true,
+        data: {
+            items: Array.from({ length: 500 }, (_, i) => ({
+                sku: `SKU-${i}`,
+                name: `Product number ${i} with a reasonably long merchandising name`,
+            })),
+            totalCount: 500,
+            excludedCount: 4,
+        },
+    },
     find_datapacks: { success: true, data: { items: bigRows(400), count: 400, total: 400 } },
     list_installed_datapacks: {
         success: true,
@@ -128,6 +143,11 @@ const ALL = [
     ...READ_DESCRIPTORS,
     ...STATUS_DESCRIPTORS,
     ...ACTION_DESCRIPTORS,
+    // Group 8. Added the moment the array existed, because the alternative is
+    // the failure this file already documents twice: a guard whose scope quietly
+    // stops matching what it guards. Eight rows registered by `extension.ts` and
+    // classified by nothing would have looked exactly like a clean run.
+    ...DATA_INSTALLER_DESCRIPTORS,
 ];
 const SHAPED = ALL.filter((d) => d.shape).map((d) => d.tool);
 
@@ -163,6 +183,10 @@ describe('descriptor tools — response size', () => {
         find_datapacks: 0.6,
         list_installed_datapacks: 0.6,
         list_console_apis: 0.9,
+        // Pages 500 rows down to 20 and keeps two counts. The saving is the page
+        // size, so it is the largest of any projector here — which is the point:
+        // the caller is CHOOSING from this list, not reading it.
+        list_datapack_export_items: 0.1,
     };
 
     it.each(SHAPED)('%s shrinks its own payload to the expected degree', async (tool) => {
@@ -283,6 +307,26 @@ describe('rows with no output safety net are classified', () => {
         // itself — "paired with a confirming read" is a claim about ANOTHER tool,
         // and nothing here checks it.
         'restart_demo', 'set_current_project', 'set_project_pinned',
+        // Group 7. Category 2, verified by reading the handler: every branch of
+        // `handleInstallPrerequisite` now names its outcome — `{installed: {id,
+        // name, version, verified}}` on a completed install, `{manual, url}` when
+        // the prerequisite can only be installed by hand. It reached this list
+        // because the STUB cannot see either, not because a branch is bare.
+        'install_prerequisite',
+        // Group 8. All category 2, each verified by READING the handler rather
+        // than inferred from the name: `get-datapack-import-target` returns
+        // `{instance, projectName, datapack}`, `list-datapack-import-scopes`
+        // returns `{websites}`, `get-datapack-import-status` returns the persisted
+        // job record, `validate-datapack-import` returns the verdict, and the two
+        // `runAndWatch` writes return `{activationId}`. They appear here only
+        // because the STUB cannot see any of it.
+        'get_datapack_import_target', 'list_datapack_import_scopes',
+        'get_datapack_import_status', 'validate_datapack_import',
+        'start_datapack_import', 'reset_datapack',
+        // Same category, listed separately because it is the one that does NOT
+        // go through `runAndWatch`: the export is synchronous (the service gives
+        // no activation id to watch) and returns per-type outcomes inline.
+        'start_datapack_export',
     ];
 
     it('the set matches exactly — a new row must be classified before it ships', async () => {
@@ -344,6 +388,16 @@ describe('the ceiling table tracks the tool surface', () => {
             // — the same shape `get_project` already carries a 12,000-byte ceiling
             // for, and bounded the same way.
             'restart_demo', 'set_current_project', 'set_project_pinned',
+            // Group 7. Four short strings on the install branch, two on the
+            // manual one — bounded by nothing that scales with the machine or
+            // the stack.
+            'install_prerequisite',
+            // Group 8's three job-handle writes. Each returns an activation id or
+            // a short per-type outcome list — bounded by the number of DATA TYPES
+            // in one datapack, not by how much data moved.
+            'start_datapack_import', 'reset_datapack', 'start_datapack_export',
+            // A target reference and a status record. Both fixed-shape.
+            'get_datapack_import_target', 'get_datapack_import_status',
         ]);
         // Rows built but not yet driven against a live extension. Distinct from
         // EXEMPT on purpose: exempt is a decision, this is an IOU. A ceiling is a
@@ -352,9 +406,16 @@ describe('the ceiling table tracks the tool surface', () => {
         // ceilings in the same F5 pass that first exercises them; anything left
         // here after that pass is a tool nobody actually ran.
         //
-        // Empty: every Group 1 row has now been driven against a live server and
-        // carries a measured ceiling. A row lands here only between being built
-        // and being probed.
+        // Group 8's three variable-size rows. Each returns something whose size
+        // depends on a live service — a merchant's store hierarchy, the service's
+        // validation verdict, a page of real catalog items — and inventing a
+        // number for any of them from the stub would record a size no production
+        // payload ever produces. The three fixed-shape writes and two fixed-shape
+        // reads are EXEMPT above on their shape; these are the ones that need a
+        // measurement.
+        // Empty again: Group 8's three variable-size rows were probed against a
+        // real Data Installer and now carry measured ceilings. A row lands here
+        // only between being built and being probed.
         const PENDING_LIVE_MEASUREMENT = new Set<string>([]);
 
         const missing = descriptorTools.filter(

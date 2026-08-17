@@ -33,7 +33,20 @@ function getStackById(stackId: string): Stack | undefined {
  * Summary of a prerequisite check result for UI display
  */
 interface PrerequisiteSummary {
+    /**
+     * Position in the resolved list. The webview's row identity — and NOT a
+     * durable name for the prerequisite: the list is rebuilt per check from the
+     * stack and the optional dependencies, so index 3 means different things
+     * across two calls with different stacks.
+     */
     id: number;
+    /**
+     * The prerequisite's own id from `prerequisites.json` (`node`, `aio-cli`).
+     * Stable across checks, which is what makes it the thing an agent can name
+     * in a later `install_prerequisite` call. Added for that surface; the
+     * webview keys off `id` and ignores this.
+     */
+    prereqId: string;
     name: string;
     required: boolean;
     installed: boolean;
@@ -56,6 +69,7 @@ function toPrerequisiteSummary(
 ): PrerequisiteSummary {
     return {
         id,
+        prereqId: state.prereq.id,
         name: state.prereq.name,
         required: !state.prereq.optional,
         installed: state.result.installed,

@@ -520,6 +520,32 @@ fails silently: the demo package's own `byomOverlayUrl` is the fallback when the
 VS Code setting is blank, and without it the site registers with NO overlay while
 the read-back still reports `verified`.
 
+### Prerequisites & settings — Group 7
+
+| Tool | Notes |
+|---|---|
+| `install_prerequisite` | Descriptor row over `install-prerequisite`, addressed by the prerequisite's OWN id — never the numeric index. That index is a position in a list rebuilt per check and looked up in `sharedState`, which the headless context recreates on every call, so an index-addressed install could only ever fail. `check_prerequisites` now reports `prereqId` beside it for this call. Confirm-gated: it runs package managers (fnm, npm, brew) and can take minutes. A prerequisite that can only be installed by hand answers `{manual, url}` **and does not open a browser** when there is no panel — `vscode.env.openExternal` still fires for the wizard, which is a person who just clicked Install. |
+| `get_settings` | The 21 `demoBuilder.*` keys and their values. Two are functional gates rather than preferences — the Data Installer surface does not exist without `dataInstaller.enabled` + `apiBaseUrl` — so "the feature is missing" and "the feature is off" are finally distinguishable. Unset keys come back as `null`, not omitted: `JSON.stringify` drops `undefined`, which silently shortened the answer. `dataInstaller.apiBaseUrl` reports `{configured}` rather than its value, because `package.json` withholds a default on the grounds that this repository is public. |
+| `set_setting` | **Handoff.** A tool could call `.update()`; it should not. Several keys are `machine` scoped, and a value changed silently by an agent is indistinguishable from one the user chose. Refuses any key outside the Demo Builder set, so it cannot be used to instruct a user to change arbitrary VS Code settings under this extension's name. |
+
+### Data Installer writes — Group 8, `dataInstallerDescriptors.ts`
+
+Six data-installer READS were exposed and optimised in phase 2; zero writes were.
+These are descriptor rows, not adapters: `importHandlers`/`exportHandlers` are
+ordinary handlers over a `HandlerContext` and contain no `vscode.window`
+reference (checked with a control).
+
+| Tool | Notes |
+|---|---|
+| `validate_datapack_import` | The dry run — same guard, same credentials, same request body as a real start, without writing. **Deliberately ungated**: gating it would push an agent toward the real import to find out whether a request is well-formed. |
+| `start_datapack_import` | Confirm-gated. Returns `{activationId}` as soon as the job starts. |
+| `reset_datapack` | Confirm-gated **twice** — the handler has always required `confirm:true` in its payload, and the row's gate refuses before dispatch. The same flag satisfies both, so they agree rather than compete; remove either and the other still holds. |
+| `get_datapack_import_status` | Polls the persisted `ImportJobRecord`. The long-running problem was already solved: `runAndWatch` validates, starts, persists, fires the watcher with `void`, and returns a handle. The watcher's `onProgress` pushes to the webview (a no-op headless) but the authoritative record goes to `TransientStateManager`, which this reads — so polling works with no webview and no handler needed changing. |
+| `list_datapack_export_items` | Paged at `AGENT_PAGE_SIZE`. `listExportItems` asks the service for `page_size: 1000` and returns what comes back — phase 2's 25KB finding, and worse here because the caller is CHOOSING from the list. `totalCount`/`excludedCount` are passed through verbatim, never recomputed from the page. |
+| `start_datapack_export` | Confirm **and** a `confirmName` echo, checked before dispatch. An export writes into the datapack catalog other teams depend on; a confirm alone is the bar for your own project. |
+| `get_datapack_import_target` · `list_datapack_import_scopes` | Reads. An empty scope list is normal, not an error — it means the import lands on the default. |
+| ⛔ `provision_accs_credentials` | **Not exposed, by its own handler's instruction:** "Panel-only by construction (never in the MCP maps): it creates a credential in the user's Console workspace." Its bare `{success: true}` is deliberate for the same reason — the response never carries the values. |
+
 **Not built, with reasons.** `migrate_storefront_names` (plural, the bulk sweep) is
 deliberately absent — see the pair above. `github_change_account` is BLOCKED, not deferred —
 `HandoffTarget` accepts a view or a command id and no Demo Builder command exists

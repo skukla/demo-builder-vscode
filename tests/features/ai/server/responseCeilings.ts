@@ -210,6 +210,30 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
             'paths, driven in siteTools.test.ts. Bounded by AGENT_PAGE_SIZE, not by project count; ' +
             'the `total` beside the page reports what the cap hid',
     },
+    // ── Data Installer writes (dataInstallerDescriptors.ts) ─────────────────
+    // Measured 2026-08-17 against a real Data Installer and a live ACCS instance.
+    list_datapack_import_scopes: {
+        bytes: 8_000,
+        why:
+            '320 live for a 3-website / 3-store-view hierarchy. Same data and same unbounded-by-design ' +
+            'shape as discover_store_structure, which carries the same number for the same reason: ' +
+            'the whole hierarchy IS the answer, because the caller is choosing a scope from it',
+    },
+    validate_datapack_import: {
+        bytes: 2_000,
+        why:
+            '14 live for {valid:true} — the dry run answers a question, it does not describe the ' +
+            'request. 47 and 80 for the two argument refusals. The headroom is for a valid:false ' +
+            'whose `reason` is the service\'s own prose',
+    },
+    list_datapack_export_items: {
+        bytes: 4_000,
+        why:
+            '801 live for 20 categories (25 exist), 622 for 20 products (186 exist) — the rows are ' +
+            '{id, displayName} and uniformly narrow. Bounded by AGENT_PAGE_SIZE, NOT by the catalog: ' +
+            'the client asks the service for page_size 1000, so the 186-product type would have been ' +
+            '~5,800 unpaged and a real merchant catalog far worse',
+    },
     migrate_storefront_name: {
         bytes: 2_000,
         why:

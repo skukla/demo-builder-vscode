@@ -36,6 +36,7 @@ import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
+import { registerSettingsTools } from '@/features/ai/server/settingsTools';
 import { registerSiteTools } from '@/features/ai/server/siteTools';
 import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
 import { registerViewTools } from '@/features/ai/server/viewTools';
@@ -107,6 +108,7 @@ describe('registration against the real MCP SDK', () => {
             registerCloudResourceTools(s, ctxFactory);
             registerStorefrontTools(s, ctxFactory);
             registerSiteTools(s, ctxFactory);
+            registerSettingsTools(s, () => undefined);
             registerContentAuthoringTools(s, ctxFactory);
             registerEdsResetTool(s, ctxFactory);
             registerDeleteProjectTool(s, ctxFactory);

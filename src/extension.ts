@@ -25,6 +25,7 @@ import { registerConfigureProjectTool } from '@/features/ai/server/configureProj
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
+import { DATA_INSTALLER_DESCRIPTORS } from '@/features/ai/server/dataInstallerDescriptors';
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
@@ -34,6 +35,7 @@ import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import { mcpSocketBindings } from '@/features/ai/server/mcpSocketPath';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
+import { registerSettingsTools } from '@/features/ai/server/settingsTools';
 import { registerSiteTools } from '@/features/ai/server/siteTools';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
@@ -509,6 +511,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                         ...READ_DESCRIPTORS,
                         ...STATUS_DESCRIPTORS,
                         ...ACTION_DESCRIPTORS,
+                        ...DATA_INSTALLER_DESCRIPTORS,
                     ],
                     ctxFactory,
                 );
@@ -525,6 +528,15 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerCloudResourceTools(mcpServer, ctxFactory);
                 registerStorefrontTools(mcpServer, ctxFactory);
                 registerSiteTools(mcpServer, ctxFactory);
+                registerSettingsTools(mcpServer, (key) => {
+                    // Split on the LAST dot: `workspace.getConfiguration(section)`
+                    // takes the parent and the leaf separately, and these keys are
+                    // two and three segments deep alike.
+                    const lastDot = key.lastIndexOf('.');
+                    return vscode.workspace
+                        .getConfiguration(key.slice(0, lastDot))
+                        .get(key.slice(lastDot + 1));
+                });
                 registerContentAuthoringTools(mcpServer, ctxFactory);
                 registerEdsResetTool(mcpServer, ctxFactory);
                 registerDeleteProjectTool(mcpServer, ctxFactory);

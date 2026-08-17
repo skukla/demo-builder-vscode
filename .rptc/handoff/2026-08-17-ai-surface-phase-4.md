@@ -1,7 +1,7 @@
-# Handoff — AI surface, phase 4 (Groups 1–6 shipped)
+# Handoff — AI surface, phase 4 (Groups 1–8 shipped)
 
 **Branch:** `feature/ai-surface-coverage` (worktree of the same name)
-**State:** **92 tools** · full suite 14,279 / 1,081 suites green · tsc, typecheck:tests, eslint clean
+**State:** **103 tools** · full suite 14,318 / 1,084 suites green · tsc, typecheck:tests, eslint clean
 (2 eslint warnings, both from develop's bodea line, neither in AI-surface code)
 **Plan:** `.rptc/plans/ai-surface/phase-4-step-02-full-parity-plan.md` — carries every decision;
 this file carries only what a fresh session needs that the plan does not say.
@@ -25,14 +25,26 @@ Every Group 1–3 row was measured live and given a ceiling in
 > **Group 4 is Integrations**, and three of its four tools are unbuilt. As written, the next
 > session would have read Group 4 as finished and skipped them.
 
-**The tool count is MEASURED, not derived.** 90 = 53 bespoke registrations + 37 descriptor rows,
+**The tool count is MEASURED, not derived.** 103 = 57 bespoke registrations + 46 descriptor rows
+(12 read + 4 status + 22 action + 8 data-installer), cross-checked against `info`'s own 103,
 no overlap, enumerated from the `registerTool(` call sites in `src/features/ai/server/` and
 `src/mcp-server.ts`. An earlier header's 77 was carried forward by hand; it happened to be right,
-which is not the same as having been checked. Re-run the greps rather than adding to it — and
-note that a raw `grep -c` over those paths reads **55**, not 53: one hit is
-`inExtensionMcpServer.ts`'s `withToolLogging` wrapper and one is a doc comment in
-`mcp-server.ts`. Enumerate the NAMES (the line after each call site) and `sort -u` them; a count
-of call sites is not a count of tools.
+which is not the same as having been checked.
+
+**Re-run the greps rather than adding to the number.** This paragraph has now been wrong twice,
+both times by someone updating the total and leaving the breakdown alone — most recently
+"103 = 53 + 50", where neither figure was measured and only the total was. Two traps make the
+raw counts untrustworthy in opposite directions:
+
+- A raw `grep -c "server.registerTool("` reads **60**, not 57. THREE hits are not tools:
+  `toolDescriptors.ts`'s generic registrar, `inExtensionMcpServer.ts`'s `withToolLogging`
+  wrapper, and a doc comment in `mcp-server.ts`. (Writing this rule, I first put "59, two
+  hits" — from memory — and the count disagreed. Enumerate the NAMES on the following line
+  and `sort -u` them; do not subtract from memory.)
+- The descriptor total must include EVERY array `extension.ts` spreads. There are four now.
+
+The cheapest honest check is `probe.mjs info`, which reports the count the SERVER registered —
+independent of any grep, and the thing the greps are trying to predict.
 
 ## Group 4 — the last three (2026-08-17)
 
@@ -312,6 +324,88 @@ the caller wants none" passed whether the key was absent or explicitly `undefine
 fail is worse than no test — it reads as coverage.
 
 **No debt left on these four** — ceilings measured and recorded, see the probe section above.
+
+## Groups 7 and 8 — built and probed 2026-08-17
+
+**103 tools.** `info` reported it, matching 92 + 11 exactly, and the tree line moved 6 → 14
+datapack tools.
+
+### Group 7 — two defects, not just two tools
+
+- **`install_prerequisite` could only ever fail from an agent.** It addressed the prerequisite by
+  a numeric INDEX looked up in `sharedState`, which the headless context rebuilds empty on every
+  call. However correct the index, the answer was always "state not found". Now addressed by the
+  prerequisite's own id, resolved by re-reading config rather than cached state — and
+  `check_prerequisites` reports `prereqId` beside the index so there is something to name.
+- **It opened the user's browser for a call they did not make**, then returned bare
+  `{success: true}` — "installed" for something that was not installed and never would be by that
+  call. Now returns `{manual, url}`; `openExternal` still fires when there IS a panel, which is a
+  person who just clicked Install. `createProject.ts:407` is the only caller and passes
+  `panel: this.panel`, so the signal was traced rather than assumed.
+
+A regression I introduced and the EXISTING tests caught: returning early instead of throwing
+skipped the `prerequisite-status` push, which would have left the wizard's row on "Installing…"
+forever. Kept as a throw.
+
+`get_settings` returns all 21 keys; `dataInstaller.apiBaseUrl` reports `{configured}` rather than
+its value because `package.json` withholds a default on the grounds that this repo is public. The
+other three endpoint-shaped keys DO return values — checked, and all three are package defaults
+already published in the public manifest, so withholding them would protect nothing.
+
+**Unset settings used to vanish.** `JSON.stringify` drops `undefined`, so a key with no default
+disappeared from the response with nothing saying the list was short. They are `null` now.
+
+### Group 8 — three decisions the code made for me
+
+- **`provision_accs_credentials` is not exposed.** Its handler docstring: "Panel-only by
+  construction (never in the MCP maps): it creates a credential in the user's Console workspace."
+  A prior judgement, not a gap. Its bare success is deliberate for the same reason.
+- **The long-running problem was already solved.** `runAndWatch` validates, starts, persists an
+  `ImportJobRecord`, fires the watcher with `void`, returns `{activationId}`. The watcher's
+  `onProgress` pushes to a webview that is not there headlessly, but the authoritative record goes
+  to `TransientStateManager`, which `get_datapack_import_status` reads. No handler needed changing.
+- **`reset_datapack` is gated twice and that is not redundant** — the handler has always required
+  `confirm:true` in its payload, the row refuses before dispatch, and the same flag satisfies both.
+
+### The guard that did not cover the new rows
+
+Adding 8 tools produced an all-green run, which was wrong. `responseSize.test.ts`'s `ALL` listed
+three descriptor arrays and not the new one, so every Group 8 row escaped BOTH the bare-success
+classification and the ceiling-coverage check. Widened; it immediately demanded five things that
+had been skipped. This is the third instance of the same shape in this file's own history — a
+guard whose scope quietly stopped matching what it guards. **When adding a descriptor array, add
+it to `ALL` in the same edit.**
+
+### Two schema defects the probe found
+
+Both are the "never write a shape you have not read" trap, and neither is visible offline:
+
+- **`list_datapack_export_items` was UNCALLABLE.** Its schema omitted `dataTypes`, and a raw zod
+  shape STRIPS unknown keys — so the argument never reached the handler and every call answered
+  "Select at least one data type to export." Same class as the `discover_store_structure`
+  `backendType` defect this plan already records. Fixed and verified live: 801 bytes for 20
+  categories of 25, 622 for 20 products of 186.
+- **`commerceInstance` and `version` were described as optional.** They are required, and
+  `commerceInstance` deliberately so — the handler's comment says "a wrong default writes sample
+  data into someone else's live demo". The schema was inviting an agent to omit the one argument
+  that was made mandatory for safety.
+
+### Live measurements
+
+| Tool | Bytes |
+|---|---|
+| `get_settings` | 1,159 (all 21 keys) |
+| `get_datapack_import_target` | 71 |
+| `list_datapack_import_scopes` | 320 (3 websites) |
+| `get_datapack_import_status` | 997 (a real completed 14-type import) |
+| `validate_datapack_import` | 14 valid · 47 / 80 refusals |
+| `list_datapack_export_items` | 801 categories · 622 products |
+
+**One note for whoever probes next:** `mcp-live-probe`'s read-only allowlist has no `validate_`
+prefix, so `validate_datapack_import` needs `--force` despite being a dry run that writes nothing
+(verified by reading the handler). Widening the allowlist is a change to a SAFETY mechanism —
+`validate_something_destructive` is imaginable — so it was left alone rather than edited in
+passing. Worth a deliberate decision, not a drive-by.
 
 ## Then
 

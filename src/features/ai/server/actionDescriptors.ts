@@ -17,6 +17,7 @@ import {
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
+import { prerequisitesHandlers } from '@/features/prerequisites/handlers/prerequisitesHandlers';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
 
 /**
@@ -394,6 +395,34 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
                 .array(z.string())
                 .min(1)
                 .describe('Adobe sdk codes to subscribe (from list_console_apis)'),
+        },
+    },
+    {
+        tool: 'install_prerequisite',
+        description:
+            'Install one missing prerequisite (Node, aio CLI, plugins) by its prereqId from ' +
+            'check_prerequisites. Runs a package manager — confirm with the user first. Some ' +
+            'prerequisites can only be installed by hand; those answer with a URL to relay.',
+        map: prerequisitesHandlers,
+        type: 'install-prerequisite',
+        // CONFIRM-GATED because it runs package managers on the user's machine —
+        // fnm, npm, brew. Not destructive, but not something to discover after
+        // the fact either, and it can take minutes.
+        confirm: true,
+        inputSchema: {
+            // The prerequisite's OWN id, never the numeric index. That index is a
+            // position in a list rebuilt per check and looked up in `sharedState`,
+            // which the headless context recreates on every call — so an
+            // index-addressed install could only ever fail here, however correct
+            // the index was. `check_prerequisites` now reports `prereqId`
+            // alongside it for exactly this call.
+            prerequisiteId: z
+                .string()
+                .describe('Prerequisite id from check_prerequisites, e.g. node or aio-cli'),
+            version: z
+                .string()
+                .optional()
+                .describe('Specific version to install, where the prerequisite supports one'),
         },
     },
 ];
