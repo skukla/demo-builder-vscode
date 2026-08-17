@@ -136,21 +136,24 @@ the only thing that changes.
 
 ## Found while building this, NOT part of it
 
-**The import scope is tracked nowhere.** `useImportScopes` holds the website and
-store view in `useState` and re-defaults to `base` on every mount, and the service
-does not record them either — the installation record carries `commerce_instance`,
-`id`, `installedAt`, `processingTimeMs` and `dataTypeCount`, with no scope fields
-(checked against a live response and both doc descriptions).
+**The import scope defaulted to `base` instead of to the project.** FIXED —
+`08382431` (modal seeds from the project) and `e2716d81` (an omitted payload falls
+back to it). Three surfaces now resolve through one `resolveInstallTarget`.
 
-So nothing in the system knows which store view a pack went into. The visible
-symptom is the dropdowns resetting. The part worth investigating is that RESET
-sends the same body as import, scope included, so a freshly opened modal resets
-against `base` rather than wherever the data landed. **Whether that removes the
-wrong data or misses it is UNVERIFIED** — proving it needs a destructive test on a
-throwaway instance, and it was not run on a hunch.
+**The reset worry that drove it is DOWNGRADED.** The concern was that a
+freshly-opened modal reset against `base` rather than wherever the data landed.
+Per the service author, delete "is limited to the products it knows about — think
+of it like import in reverse, it goes through the data files and deletes those
+entities." Identity comes from the pack's files, so a wrong scope is unlikely to
+mis-target them; scope's documented job is resolving names to ids in a session
+context (`session_website_id` / `session_store_id`), not selecting the set.
 
-Filed rather than fixed here: it touches the project manifest and the reset path,
-which is a different change with different risk.
+So this reads as a papercut rather than a lurking defect, and the fix stands on
+its own merits — three paths agreeing, at no cost. **Still not established**, and
+deliberately not asserted in any user-facing doc: whether a scope pair changes
+WHICH entities a delete removes, or only how names resolve. One question to the
+service author closes it; a destructive test would too, and neither is worth
+scheduling on its own.
 
 **Instance prerequisites the UI never mentions**, all from the vendor docs and none
 of them type dependencies: B2B features must be enabled in the Admin UI before

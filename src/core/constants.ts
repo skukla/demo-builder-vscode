@@ -91,7 +91,15 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // so an agent that skipped `list_datapack_import_scopes` could import — or
 // RESET — against a website nobody chose. `import-datapack.md` says so, and
 // says to send both or neither.
-export const AI_CONTEXT_VERSION = 12;
+// v13: the SECOND wrong route in diagnose-demo, found the same way as the first.
+// "Catalog is empty everywhere" pointed at store scope and then the Admin, but
+// `GET /V1/categories` returns only the default store group's subtree — so on a
+// multi-root instance a successful import reads as a no-op and an agent reports
+// an empty catalog that is not empty. The cause is usually a root category
+// nobody assigned, which is an Admin step. import-datapack also gains the
+// instance-level limits (B2B enablement, pre-existing scopes, unsupported
+// customer segments) that no API can report.
+export const AI_CONTEXT_VERSION = 13;
 
 /**
  * Component IDs for standardized component instance access

@@ -73,6 +73,32 @@ describe('diagnose-demo routes the empty-product-page symptom correctly', () => 
         }
     });
 
+    /**
+     * The second wrong route in this file, found the same way as the first.
+     *
+     * "Catalog is empty everywhere" pointed at store scope and then the Commerce
+     * admin. But `docs/systems/data-installer.md` records that `GET /V1/categories`
+     * returns only the DEFAULT store group's subtree, so on a multi-root instance
+     * a successful import reads as a no-op through that endpoint "while
+     * `per-type: success` is telling the truth". An agent checking scope finds it
+     * healthy and reports an empty catalog that is not empty.
+     *
+     * The cause is a root category that was never assigned to the store — a
+     * post-import Admin step the vendor documents and nothing here mentioned.
+     */
+    it('names an unassigned root category as a cause of an empty catalog', () => {
+        const c = content();
+        // NOT a bare /root categor/ — that matched even after the sentence
+        // carrying the claim was gutted, because the words survive elsewhere.
+        // Pin the two claims that make this actionable instead.
+        expect(c).toMatch(/does not attach it to a store/i);
+        // The distinguishing check: the flat search is what shows reality when
+        // the tree endpoint hides it.
+        expect(c).toMatch(/categories\/list|flat search/i);
+        // And the instruction that stops the wrong instinct.
+        expect(c).toMatch(/rather than re-importing/i);
+    });
+
     it('can ask whether a feature is off rather than broken', () => {
         // Two settings are functional gates; without this the skill cannot tell
         // "absent" from "unconfigured".
@@ -154,6 +180,27 @@ describe('import-datapack teaches the traps, not just the sequence', () => {
         expect(c).toMatch(/attributes before products/i);
         expect(c).toContain('list_datapack_data_types');
         expect(c).toMatch(/operationMode.*export|export.*operationMode/i);
+    });
+
+    /**
+     * Instance-level gotchas, which are NOT data type dependencies.
+     *
+     * Deliberately here and not in the modal. None is detectable — no module
+     * status read exists for B2B, and nothing can tell whether this pack's cart
+     * rules name a segment — so a modal warning would fire mostly when it did
+     * not apply. This project already rejected that shape once: the
+     * customer-groups warning was scoped to fire only when the pack actually
+     * offered the type, because "a warning naming an unavailable type is noise".
+     *
+     * A skill is read when planning, once, by something that can then ask.
+     */
+    it('names the instance prerequisites the service documents', () => {
+        const c = content();
+        // B2B: the import fails outright without it.
+        expect(c).toMatch(/B2B/);
+        expect(c).toMatch(/Admin/i);
+        // Customer segments: the rule installs and is silently broken.
+        expect(c).toMatch(/segment/i);
     });
 
     it('says a re-export rewrites rather than duplicates', () => {

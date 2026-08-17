@@ -22,8 +22,12 @@ describe('AI_CONTEXT_VERSION', () => {
     // v12: import scope defaults to the project's, not the service's. Without
     // the bump, existing projects keep a skill that does not say so — and the
     // omit-the-pair advice is exactly what used to reset against `base`.
-    it('is 12 (import scope defaults to the project’s website/store view)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(12);
+    // v13: diagnose-demo's empty-catalog route, and the instance limits no API
+    // reports. Without the bump, existing projects keep a diagnosis table that
+    // sends the reader to the Commerce admin for a category tree the endpoint
+    // is hiding from them.
+    it('is 13 (empty-catalog route names the root category; instance limits added)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(13);
     });
 });
 

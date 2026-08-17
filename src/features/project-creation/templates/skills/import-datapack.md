@@ -125,6 +125,29 @@ Re-exporting a data type **rewrites the previous one** in the pack rather than a
 duplicating. So a wrong-order export is fixable by re-exporting in the right order — it is
 the one mistake in this skill that does not require starting over.
 
+## What the INSTANCE needs, which the import cannot check
+
+Three limitations live on the Commerce instance rather than in the datapack. None
+is detectable from here, so raise them with the user when they apply rather than
+waiting for the symptom.
+
+- **B2B data needs B2B features enabled**, in the Commerce Admin. Without it the
+  B2B types fail. There is no API that reports whether they are on, so if the
+  pack contains `b2b_*` types, ask.
+- **A non-default website or store view must already exist** on the instance
+  before data can be imported into it. Nothing can create one from here.
+  `list_datapack_import_scopes` reports what exists, so a scope missing from that
+  list is a Commerce Admin task, not a bad argument.
+- **Customer segments are not supported.** A cart rule that references one still
+  imports, and is silently non-functional until someone fixes it in the Admin.
+  If the pack has `cart_rules` or `coupons`, say so — nothing will report it
+  later.
+
+And one that only bites AFTER a successful import: **a root category is assigned
+by hand.** The service builds the category tree but does not attach it to a
+store, so the storefront reads empty until someone does. `diagnose-demo` carries
+the full symptom, including why `GET /V1/categories` hides it.
+
 ## If the Data Installer is not there at all
 
 Check `get_settings`. `demoBuilder.dataInstaller.enabled` and

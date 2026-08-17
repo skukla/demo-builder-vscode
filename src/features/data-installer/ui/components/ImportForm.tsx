@@ -46,18 +46,6 @@ function MissingDependencies({
     );
 }
 
-/**
- * Where the pack lands.
- *
- * Hidden entirely when nothing was discovered — no project, no credentials, or a
- * discovery that failed. Targeting is optional and an import without it still
- * works, so an empty picker would be a dead control demanding explanation.
- *
- * The hint is not decoration. `websites` is not an importable data type, so a
- * website the user has not created cannot appear here, and the failure mode is
- * "the one I want is missing" — which reads as a bug unless the missing step is
- * named. Per the service author: create it in Commerce first, then name it here.
- */
 /** The service's own default website code, when the user picks nothing. */
 const DEFAULT_WEBSITE_CODE = 'base';
 

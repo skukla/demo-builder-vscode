@@ -17,7 +17,7 @@ distinguishes causes; the sections below say how to read each answer.
 |---|---|---|
 | Product page renders empty or 404s (EDS) | `get_site_access` | **Start here, not with scope.** A refused Configuration Service write leaves a storefront that builds, pushes and browses fine — and cannot serve a single product page. From outside it looks exactly like an empty catalog |
 | …site config is healthy, pages still empty | `get_store_structure` | Now scope is worth checking: the project can point at a website or store view that has no products, or does not exist |
-| Catalog is empty everywhere | `get_store_structure`, then the Commerce admin | A scope that resolves is not necessarily a scope with products in it |
+| Catalog is empty everywhere | `get_store_structure`, then "Reading an empty catalog" below | A scope that resolves is not necessarily a scope with products in it — and an import that SUCCEEDED can still read as empty |
 | Site serves old content after an edit | `sync_storefront` | Pushing is not publishing; see "Pushed is not published" |
 | Mesh behaves unexpectedly | `check_mesh` | Reports both deployed AND up-to-date — they differ |
 | A setting change had no effect | `get_project` | Compare what is saved against what you expected to save |
@@ -76,6 +76,32 @@ healthy, and pages are still empty, look at the catalog in the Commerce admin
 That ordering matters. An earlier version of this skill sent you straight here from the
 symptom, so the common case — a refused site-config write — was diagnosed as "your
 catalog is empty" while the catalog was fine.
+
+## Reading an empty catalog
+
+An import that reported success can still show you nothing, and the reason is not
+that the import lied.
+
+**`GET /V1/categories` returns only the DEFAULT store group's subtree.** On an
+instance with several roots — Default, plus one per brand — a pack's categories
+land under their own root and are invisible through that endpoint. The per-type
+`success` is telling the truth; the read is what is narrow. Use
+`GET /V1/categories/list`, the flat search, to see what is actually there.
+
+**A root category is assigned by hand, in the Admin, after the import.** The
+service creates the category tree; it does not attach it to a store. Until
+someone does, the storefront has a catalog it cannot see. This is the step most
+often missing when "the import worked and the site is empty".
+
+So, in order:
+
+1. `get_store_structure` — is the configured scope real?
+2. If scope is fine, check the flat category list rather than the tree.
+3. If the categories exist but the store shows none, the root category has not
+   been assigned. That is an Admin step; say so rather than re-importing.
+
+Re-importing does not fix this and costs minutes. It is the wrong instinct here
+precisely because the import was never the problem.
 
 ## Pushed is not published
 
