@@ -62,32 +62,46 @@ produces exactly the same message as a host that is mid-startup, so retrying can
 apart — and each attempt costs a full minute. On 2026-08-17 this ran **six** times across a
 dead socket. One command would have settled it after the second.
 
-Run this instead. It answers in under a second:
+**Ask the socket, not the process table.** The only reliable question is whether anything
+accepts a connection:
 
 ```bash
-S="$(ls "${TMPDIR}demo-builder-mcp"/*.sock 2>/dev/null | head -1)"
-echo "socket:   ${S:-<none>}"
-[ -n "$S" ] && { stat -f '%Sm' "$S"; echo "holders:  $(lsof "$S" 2>/dev/null | wc -l)"; }
-echo "host:     $(ps aux | grep -c '[e]xtensionDevelopmentPath') process(es)"
+node -e "
+const net=require('net');
+const s=process.env.TMPDIR+'demo-builder-mcp/'+require('fs')
+  .readdirSync(process.env.TMPDIR+'demo-builder-mcp').find(f=>f.endsWith('.sock'));
+const c=net.connect(s);
+const t=setTimeout(()=>{console.log('HALF-OPEN — listening but not answering');c.destroy();process.exit(0)},2500);
+c.on('connect',()=>{console.log('LISTENING');clearTimeout(t);c.end();process.exit(0)});
+c.on('error',e=>{console.log('DEAD:',e.code);clearTimeout(t);process.exit(0)});
+"
 ```
 
-| socket | holders | host | Meaning |
-|---|---|---|---|
-| present | 0 | 0 | **Stale file — no host.** Nothing will ever answer. Ask for F5; `rm` the socket |
-| present | >0 | ≥1 | Host is up and mid-startup. ONE more probe is reasonable |
-| absent | — | ≥1 | Host starting, has not bound yet. Wait, then probe once |
-| absent | — | 0 | No host. Same ask as row 1 |
+| Result | Meaning |
+|---|---|
+| `LISTENING` but `info` still times out | Host is up; its **MCP server is wedged**. Restarting the host is the fix, not waiting |
+| `HALF-OPEN` | Same — accepted the socket, never answered |
+| `DEAD: ECONNREFUSED` | Stale socket file, no host. Ask for F5; `rm` the socket |
+| `DEAD: ENOENT` | No socket at all. No host has ever bound here |
+
+**Do NOT diagnose this with `lsof` or `ps`.** Both produced confident wrong answers on
+2026-08-17, and the wrong answer went into this skill before the connect test caught it:
+
+- **`lsof <socket>` reported 0 holders while a server was listening.** On macOS it does not
+  reliably show the listener for a unix domain socket. "0 holders" is not evidence of anything.
+- **`ps aux | grep extensionDevelopmentPath` returned 0 while a host was running.** The editor
+  here is **Cursor**, whose processes are `Cursor Helper (Plugin): extension-host` and whose
+  argument is `extensionDevelopment`, not `…Path`. A case-insensitive `grep -ic extensiondevelopment`
+  finds it; the original pattern never could.
+
+Both failures are the same shape: a zero from a probe that cannot see the thing, read as a zero
+from the thing being absent. That is why the connect test above is the primary — it asks the
+resource itself rather than asking the OS about it.
 
 **A rebuild is not a run.** `npm run compile` and the watch task refresh `dist/extension.js` and
 start nothing — so the bundle timestamp keeps advancing while the probe keeps timing out, which
-reads exactly like "my change isn't loading". Only **F5** launches the
-`[Extension Development Host]` window that binds the socket. Before blaming the build, ask
-whether that second window is actually open.
-
-**Check your detection before trusting it.** `ps aux | grep extensionDevelopmentPath` returning 0
-is only evidence if `ps` works at all here — pair it with a positive control
-(`ps aux | grep -c 'Code Helper'`, which should be double digits on any machine running VS Code).
-A zero from a broken pattern looks identical to a zero from no host.
+reads exactly like "my change isn't loading". Only **F5** launches the extension host that binds
+the socket.
 
 **A wrong-build answer counts as a failure too.** Between two timeouts, one probe answered from
 `feature/bodea-template` — a sibling worktree's host had taken the socket. It was a real response
