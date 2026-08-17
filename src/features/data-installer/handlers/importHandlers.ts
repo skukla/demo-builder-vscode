@@ -433,7 +433,18 @@ async function prepareImport(
             id: { name: input.datapackName, version: input.version },
             commerceInstance: input.commerceInstance,
             dataTypes: input.dataTypes,
-            target: input.target,
+            // A caller that names a scope means it. One that names NONE gets the
+            // project's, because the alternative is the SERVICE's `base`/`default`
+            // — a scope nobody chose. The modal always sends a pair (its pickers
+            // are seeded), so this is really the agent surface: the MCP rows leave
+            // both codes optional and an agent that skips
+            // `list_datapack_import_scopes` would otherwise import, and RESET,
+            // against `base`.
+            //
+            // Half a pair never reaches here — `readTarget` refuses it — so this
+            // cannot complete a partial specification into something the caller
+            // did not ask for.
+            target: input.target ?? resolveInstallTarget(project) ?? undefined,
             credentials: credentials.credentials,
         },
     };

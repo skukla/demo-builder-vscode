@@ -52,6 +52,16 @@ It is required and deliberately not defaulted. From the handler that refuses it:
 name so you can confirm it with the user. If it returns nothing, ask — do not infer one
 from anything else you can see.
 
+### The website and store view default to the project's, not the service's
+
+`websiteCode` and `storeCode` are optional, and omitting them is safe: the import lands
+on the scope the project recorded, which `get_datapack_import_target` also reports.
+
+That was not always true. Omitting them used to mean the SERVICE's own `base`/`default`
+— so an import, or worse a **reset**, could run against a website nobody chose. Send both
+to override deliberately, or neither to inherit. Never send one: half a pair is refused
+rather than completed.
+
 ## Trap 3 — validate first, every time
 
 `validate_datapack_import` sends the same guard, the same credentials and the same

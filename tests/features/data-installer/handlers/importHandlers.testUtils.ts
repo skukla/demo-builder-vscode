@@ -1,0 +1,134 @@
+/**
+ * Shared preamble for the split importHandlers suites.
+ *
+ * Owns the mocks AND the SUT import (§3 of webview-test-authoring: `jest.mock`
+ * hoists only within the module it appears in, so a spec that imported
+ * `importHandlers` itself could bind to the REAL write client). Specs import
+ * everything from here and never reach for the handlers directly.
+ *
+ * Split out when `importHandlers.test.ts` crossed the 500-line cap.
+ */
+
+import * as vscode from 'vscode';
+import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
+import { watchImportJob } from '@/features/data-installer/services/importJobRunner';
+import type { Project } from '@/types/base';
+import type { HandlerContext } from '@/types/handlers';
+
+jest.mock('@/core/auth/adobeAuthGuard', () => ({
+    ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
+}));
+// `PollingService` reads the GLOBAL logger at construction, and the extension
+// host initializes that at activation — which no handler test does. Without this
+// the detached watch dies in its own try/catch and simply never starts, showing
+// up as "watchImportJob was not called" rather than as a logger error.
+jest.mock('@/core/logging/debugLogger', () => ({
+    ...jest.requireActual('@/core/logging/debugLogger'),
+    getLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
+}));
+jest.mock('@/features/data-installer/services/dataInstallerWriteClient');
+jest.mock('@/features/data-installer/services/importJobRunner', () => ({
+    watchImportJob: jest.fn(),
+    IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },
+}));
+
+// Below the mocks on purpose — see the module docstring. `import/first` is not a
+// registered rule here, so this needs no disable comment.
+import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
+
+export { importHandlers };
+
+export const MockedWriteClient = DataInstallerWriteClient as jest.MockedClass<
+    typeof DataInstallerWriteClient
+>;
+export const mockedWatch = watchImportJob as jest.MockedFunction<typeof watchImportJob>;
+
+const BASE = 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api';
+
+export function setupSettings(): void {
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+        get: jest.fn((key: string) => (key === 'apiBaseUrl' ? BASE : true)),
+    });
+}
+
+/** In-memory globalState + secrets, standing in for the extension context. */
+export function makeStores() {
+    const mem = new Map<string, unknown>();
+    return {
+        globalState: {
+            get: jest.fn((k: string, d?: unknown) => (mem.has(k) ? mem.get(k) : d)),
+            update: jest.fn(async (k: string, v: unknown) => void mem.set(k, v)),
+            keys: jest.fn(() => [...mem.keys()]),
+            setKeysForSync: jest.fn(),
+        },
+        secrets: { get: jest.fn(async () => undefined), store: jest.fn(), delete: jest.fn() },
+        peek: (k: string) => mem.get(k),
+    };
+}
+
+/**
+ * A PaaS project, shaped like a PERSISTED one.
+ *
+ * `componentSelections.backend` is where the backend id actually lives — typed as
+ * `Project` on purpose, so tsc rejects an invented field. An earlier fixture used
+ * `stack: { backend }`, which exists nowhere in persisted state; every test passed
+ * against the invention and the import path could not resolve credentials for any
+ * real project. A live dry run found it, not this suite.
+ */
+export const PAAS_PROJECT: Partial<Project> = {
+    name: 'demo-a',
+    componentSelections: { backend: 'adobe-commerce-paas' },
+    componentConfigs: {
+        'adobe-commerce-paas': {
+            ADOBE_COMMERCE_ADMIN_USERNAME: 'admin',
+            ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret',
+        },
+    },
+};
+
+export function makeContext(project: unknown = PAAS_PROJECT) {
+    const stores = makeStores();
+    const tokenManager = { inspectToken: jest.fn().mockResolvedValue({ valid: true, token: 'tok' }) };
+    const context = {
+        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        authManager: {
+            isAuthenticated: jest.fn().mockResolvedValue(true),
+            getTokenManager: jest.fn().mockReturnValue(tokenManager),
+        },
+        panel: {} as vscode.WebviewPanel,
+        context: stores as unknown as vscode.ExtensionContext,
+        stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
+        sendMessage: jest.fn().mockResolvedValue(undefined),
+    } as unknown as HandlerContext;
+    return { context, stores };
+}
+
+export const PAYLOAD = {
+    datapackName: 'bodea',
+    version: 'main',
+    commerceInstance: 'whatever-the-user-typed',
+    dataTypes: ['categories', 'products'],
+};
+
+/** A write client whose validate passes and whose start is accepted. */
+export function happyClient() {
+    const validateImport = jest.fn().mockResolvedValue({ valid: true });
+    const startImport = jest.fn().mockResolvedValue({ activationId: 'act-1' });
+    const startDelete = jest.fn().mockResolvedValue({ activationId: 'act-9' });
+    const checkCredentials = jest.fn().mockResolvedValue({ usable: true });
+    MockedWriteClient.mockImplementation(
+        () => ({ validateImport, startImport, startDelete, checkCredentials }) as never,
+    );
+    return { validateImport, startImport, startDelete, checkCredentials };
+}
+
+/**
+ * The preamble every spec runs. A shared `beforeEach` in this module would NOT
+ * apply to importing specs, so each calls this from its own.
+ */
+export function resetImportHandlerMocks(): void {
+    jest.clearAllMocks();
+    setupSettings();
+    mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} } as never);
+}

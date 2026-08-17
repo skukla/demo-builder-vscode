@@ -19,8 +19,11 @@ describe('AI_CONTEXT_VERSION', () => {
     // was written; an agent following the old table reported an empty catalog
     // while the catalog was fine. Plus the new import-datapack skill. Without the
     // bump, existing projects keep the wrong routing table.
-    it('is 11 (diagnose-demo routes PDP to site config; import-datapack added)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(11);
+    // v12: import scope defaults to the project's, not the service's. Without
+    // the bump, existing projects keep a skill that does not say so — and the
+    // omit-the-pair advice is exactly what used to reset against `base`.
+    it('is 12 (import scope defaults to the project’s website/store view)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(12);
     });
 });
 

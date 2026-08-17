@@ -543,7 +543,16 @@ reference (checked with a control).
 | `get_datapack_import_status` | Polls the persisted `ImportJobRecord`. The long-running problem was already solved: `runAndWatch` validates, starts, persists, fires the watcher with `void`, and returns a handle. The watcher's `onProgress` pushes to the webview (a no-op headless) but the authoritative record goes to `TransientStateManager`, which this reads — so polling works with no webview and no handler needed changing. |
 | `list_datapack_export_items` | Paged at `AGENT_PAGE_SIZE`. `listExportItems` asks the service for `page_size: 1000` and returns what comes back — phase 2's 25KB finding, and worse here because the caller is CHOOSING from the list. `totalCount`/`excludedCount` are passed through verbatim, never recomputed from the page. |
 | `start_datapack_export` | Confirm **and** a `confirmName` echo, checked before dispatch. An export writes into the datapack catalog other teams depend on; a confirm alone is the bar for your own project. |
-| `get_datapack_import_target` · `list_datapack_import_scopes` | Reads. An empty scope list is normal, not an error — it means the import lands on the default. |
+| `get_datapack_import_target` · `list_datapack_import_scopes` | Reads. An empty scope list is normal, not an error — it means the import lands on the default. `get_datapack_import_target` also reports the website/store-view scope the project recorded, which is what the import modal seeds its pickers from. |
+
+**Scope defaults to the PROJECT's, not the service's.** `websiteCode`/`storeCode`
+are optional on the three write rows, and omitting them used to mean the service
+applied its own `base`/`default` — so an agent that skipped
+`list_datapack_import_scopes` could import, and **reset**, against a website
+nobody chose. The handler now falls back to the pair the project recorded (the
+same `resolveInstallTarget` the build path uses). Send both to override, or
+neither to inherit; half a pair is refused rather than completed, because filling
+in the other half would silently change what the call asked for.
 | ⛔ `provision_accs_credentials` | **Not exposed, by its own handler's instruction:** "Panel-only by construction (never in the MCP maps): it creates a credential in the user's Console workspace." Its bare `{success: true}` is deliberate for the same reason — the response never carries the values. |
 
 **Not built, with reasons.** `migrate_storefront_names` (plural, the bulk sweep) is

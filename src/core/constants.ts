@@ -86,7 +86,12 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // `import-datapack.md` teaches the six-call sample-data loop, whose worst trap
 // is that `start_datapack_import` returns a RECEIPT and reporting it as an
 // outcome is invisible — the user sees "imported" and an empty catalog.
-export const AI_CONTEXT_VERSION = 11;
+// v12: the import scope now defaults to the PROJECT's website/store view rather
+// than the service's `base`/`default`. Omitting the pair used to send nothing,
+// so an agent that skipped `list_datapack_import_scopes` could import — or
+// RESET — against a website nobody chose. `import-datapack.md` says so, and
+// says to send both or neither.
+export const AI_CONTEXT_VERSION = 12;
 
 /**
  * Component IDs for standardized component instance access

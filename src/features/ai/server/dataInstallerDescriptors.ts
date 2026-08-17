@@ -79,8 +79,27 @@ const IMPORT_TARGET = {
         .array(z.string())
         .min(1)
         .describe('Data types to include, from list_datapack_data_types. At least one'),
-    websiteCode: z.string().optional().describe('Scope from list_datapack_import_scopes'),
-    storeCode: z.string().optional().describe('Scope from list_datapack_import_scopes'),
+    // Optional, and safe to omit: the handler falls back to the scope the
+    // PROJECT recorded. Omitting them used to mean the SERVICE's base/default —
+    // a scope nobody chose — which is how an agent could import, and reset,
+    // against the wrong website without ever seeing a decision.
+    //
+    // Send BOTH or NEITHER. Half a pair is refused rather than completed, so a
+    // caller cannot half-specify and get a target it did not ask for.
+    websiteCode: z
+        .string()
+        .optional()
+        .describe(
+            'Website scope. Omit to use what the project recorded (get_datapack_import_target ' +
+                'reports it); send with storeCode to override',
+        ),
+    storeCode: z
+        .string()
+        .optional()
+        .describe(
+            'Store VIEW code, from list_datapack_import_scopes. Omit to use the project’s; ' +
+                'send with websiteCode to override',
+        ),
 };
 
 /**
@@ -121,7 +140,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         tool: 'get_datapack_import_target',
         description:
             'Which Commerce instance an import would land on, derived from the current project, ' +
-            'plus the datapack the project was created to hold. Answers; does not decide.',
+            'plus the datapack the project was created to hold and the website/store-view scope ' +
+            'it recorded. Answers; does not decide.',
         map: importHandlers,
         type: 'get-datapack-import-target',
     },
