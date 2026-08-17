@@ -37,6 +37,7 @@
 import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import type { DatapackId, ImportJobRecord } from '../../types';
+import { dataTypeLabel } from '../dataTypeLabel';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useImportProgress } from '../hooks/useImportProgress';
 import { useImportScopes, type ImportScopes } from '../hooks/useImportScopes';
@@ -409,9 +410,46 @@ function ModalBody({ view, ctx }: { view: ModalView; ctx: BodyContext }): React.
                     ) : null}
 
                     {view === 'confirm-reset' ? (
+                        // Three lines, not one sentence. This read as a single run
+                        // of prose carrying fourteen raw service codes
+                        // (`b2b_shared_catalog_company_assignments`) and a bare
+                        // 22-character tenant id — the shape nobody reads before
+                        // pressing the button that cannot be undone.
+                        //
+                        // The list stays in full rather than being summarised to a
+                        // count: the user picked these types, and a destructive
+                        // confirmation is the one place they should be able to
+                        // check the picking. It is the CODES that were unreadable,
+                        // so they go through the same `dataTypeLabel` as the
+                        // checkboxes they were chosen from.
                         <div className="datapack-import-danger">
-                            {`Remove ${ctx.displayName}'s ${ctx.selected.join(', ')} from ${ctx.commerceInstance}. This cannot be undone — the Data Installer has no restore.`}
-                </div>
+                            <p className="datapack-danger-lede">
+                                Remove {ctx.displayName}&rsquo;s sample data from this Commerce
+                                instance?
+                            </p>
+                            {/* Term and value each in their own element. A bare
+                                text node beside the term leaves the value with no
+                                element of its own, so nothing can query or style
+                                it independently. */}
+                            <p className="datapack-danger-detail">
+                                <span className="datapack-danger-term">Instance</span>
+                                <span className="datapack-danger-value">
+                                    {ctx.commerceInstance}
+                                </span>
+                            </p>
+                            <p className="datapack-danger-detail">
+                                <span className="datapack-danger-term">
+                                    {ctx.selected.length} data{' '}
+                                    {ctx.selected.length === 1 ? 'type' : 'types'}
+                                </span>
+                                <span className="datapack-danger-value">
+                                    {ctx.selected.map(dataTypeLabel).join(', ')}
+                                </span>
+                            </p>
+                            <p className="datapack-danger-warning">
+                                This cannot be undone — the Data Installer has no restore.
+                            </p>
+                        </div>
                     ) : null}
 
                     {view === 'watching' && ctx.record ? (

@@ -77,7 +77,30 @@ describe('ImportDatapackModal — job lifecycle', () => {
             fireEvent.click(resetButton());
 
             expect(await screen.findByText(/cannot be undone/i)).toBeInTheDocument();
-            expect(screen.getByText(/inst/)).toBeInTheDocument();
+            // The instance id exactly ('inst', per the shared fixture). This was
+            // /inst/, which also matches the word "instance" in the prose — so it
+            // would have passed with the id absent, the one thing it checks.
+            expect(screen.getByText('inst')).toBeInTheDocument();
+        });
+
+        /**
+         * The chosen types are listed, as the LABELS they were chosen by.
+         *
+         * This confirmation printed raw service codes — fourteen of them, joined
+         * by commas into one sentence with a 22-character tenant id at the end.
+         * The list is what a user checks before an irreversible press, so it
+         * reads like the checkboxes it came from.
+         */
+        it('lists the chosen data types by their labels, not their codes', async () => {
+            renderModal();
+            await awaitForm();
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+
+            fireEvent.click(resetButton());
+
+            await screen.findByText(/cannot be undone/i);
+            expect(screen.getByText(/1 data type\b/)).toBeInTheDocument();
+            expect(screen.queryByText(/stock_source_links|b2b_shared/)).not.toBeInTheDocument();
         });
 
         it('can be backed out of without removing anything', async () => {

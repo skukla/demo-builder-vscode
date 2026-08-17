@@ -377,6 +377,35 @@
     line-height: 1.5;
 }
 
+/* The question, the facts, then the warning — three blocks rather than one run
+   of prose. The list of data types can be fourteen entries long, and read as a
+   sentence it was the part nobody finished before pressing the button. */
+.datapack-import-danger p {
+    margin: 0;
+}
+
+.datapack-import-danger p + p {
+    margin-top: 8px;
+}
+
+.datapack-danger-lede {
+    font-weight: 600;
+}
+
+/* A label the eye can skip to, so "Instance" and "14 data types" read as fields
+   rather than as the start of another sentence. */
+.datapack-danger-term {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.datapack-danger-warning {
+    color: var(--spectrum-global-color-red-600);
+}
+
 
 /* The derived target, shown instead of an input. Leads with the project name —
    the only part a person can confirm — and keeps the instance id visible but
