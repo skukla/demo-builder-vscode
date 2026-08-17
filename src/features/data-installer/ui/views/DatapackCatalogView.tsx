@@ -138,7 +138,23 @@ export function DatapackCatalogView(): React.JSX.Element {
     // flow modal beside the list and keeps its flyout view-only, and this follows
     // that. Closing the modal therefore leaves the flyout open behind it.
     const openImport = useCallback((id: DatapackId): void => setImporting(id), []);
-    const closeImport = useCallback((): void => setImporting(undefined), []);
+    /**
+     * Closing the import modal RE-READS which pack this project holds.
+     *
+     * The handler records `project.datapack` when the service accepts an import
+     * and clears it when it accepts a removal — so the modal the user just closed
+     * is exactly what decides which card wears the check. Without this the
+     * catalog kept the copy it read on mount: import a pack and no card changed,
+     * remove one and the check stayed, until the whole panel was reopened.
+     *
+     * Unconditional rather than only-when-something-ran: the modal owns that
+     * knowledge and the read is a cheap local lookup, so asking it to report back
+     * would be a second thing to keep in step for no gain.
+     */
+    const closeImport = useCallback((): void => {
+        setImporting(undefined);
+        loadProjectContext({});
+    }, [loadProjectContext]);
 
     const retryDetail = useCallback((): void => {
         if (selected) {

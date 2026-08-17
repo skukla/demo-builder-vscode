@@ -491,6 +491,71 @@ describe('the project’s recorded sample data', () => {
         expect(screen.getAllByTestId('datapack-card').length).toBeGreaterThan(1);
     });
 
+    /**
+     * The check follows what the user just did, not what was true on mount.
+     *
+     * The handler writes `project.datapack` when the service accepts an import
+     * and clears it when it accepts a removal — so the modal the user just closed
+     * decides which card is marked. The catalog read that once at mount and never
+     * again: importing a pack changed no card, and removing one left the check
+     * standing, until the whole panel was reopened.
+     *
+     * Asserted on the RE-READ rather than on the rendered check, because the mock
+     * would have to change its answer mid-test to show the check appearing — and
+     * the re-read is the thing that was missing.
+     */
+    it('re-reads which pack the project holds when the import modal closes', async () => {
+        // Needs the DETAIL too: the flyout's Import affordance is gated on it,
+        // and `withRecordedChoice` answers only the catalog and the target.
+        mockRequest.mockImplementation((type: string) => {
+            if (type === 'find-datapacks') {
+                return Promise.resolve({
+                    success: true,
+                    data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length },
+                });
+            }
+            if (type === 'get-datapack-detail') {
+                return Promise.resolve({
+                    success: true,
+                    data: {
+                        detail: { ...CATALOG[0], description: 'B2B office supplies' },
+                        inventory: {
+                            present: ['products'],
+                            missing: [],
+                            presentCount: 1,
+                            missingCount: 0,
+                            requestedCount: 1,
+                        },
+                    },
+                });
+            }
+            if (type === 'get-datapack-import-target') {
+                return Promise.resolve({
+                    success: true,
+                    data: { instance: 'inst-1', projectName: 'demo-1' },
+                });
+            }
+            return Promise.resolve({ success: true, data: null });
+        });
+        render(<DatapackCatalogView />);
+
+        const cards = await screen.findAllByTestId('datapack-card');
+        fireEvent.click(cards[0]);
+        fireEvent.click(await screen.findByRole('button', { name: /^import/i }));
+        await screen.findByRole('button', { name: /start import/i });
+
+        const before = mockRequest.mock.calls.filter(
+            (c) => c[0] === 'get-datapack-import-target',
+        ).length;
+        fireEvent.click(screen.getByRole('button', { name: /^close$/i }));
+
+        await waitFor(() =>
+            expect(
+                mockRequest.mock.calls.filter((c) => c[0] === 'get-datapack-import-target').length,
+            ).toBeGreaterThan(before),
+        );
+    });
+
     it('marks nothing when the project recorded no choice', async () => {
         withRecordedChoice(undefined);
         render(<DatapackCatalogView />);
