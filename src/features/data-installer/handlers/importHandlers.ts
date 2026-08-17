@@ -571,6 +571,8 @@ async function runAndWatch(
         const transient = new TransientStateManager(context.context);
         await transient.set(JOB_KEY, record);
 
+        await recordDatapackOnProject(context, spec.operation, request);
+
         void watchAndRecord(context, transient, record);
 
         return { success: true, data: { activationId: started.activationId } };
@@ -580,6 +582,54 @@ async function runAndWatch(
             error: error instanceof Error ? error.message : spec.failed,
             code: ErrorCode.UNKNOWN,
         };
+    }
+}
+
+/**
+ * Record on the PROJECT which datapack its instance now holds — or no longer does.
+ *
+ * `project.datapack` was written only by the wizard's Sample Data step, so a pack
+ * imported from this modal left no trace on the project. `confirmSampleDataRemoval`
+ * gates on exactly that field, so reset silently never offered to remove data the
+ * user had just imported. Found live 2026-08-16: an import succeeded, and the
+ * following reset asked nothing.
+ *
+ * **Recorded when the service ACCEPTS, not when the job finishes.** A partial
+ * import still puts data on the instance, and a record written only on full
+ * success would leave that data with nothing pointing at it — the failure mode
+ * worth avoiding. The opposite error (recording a pack whose import then failed
+ * entirely) costs one removal that reports nothing to remove.
+ *
+ * A reset CLEARS it: the manifest is rebuilt from the project on every write
+ * (`projectConfigWriter`, "no merging needed"), so `undefined` genuinely removes
+ * the field rather than leaving the old value behind.
+ *
+ * Never fatal. The import has already been accepted by the service by this point,
+ * and failing the handler over a bookkeeping write would report a started job as
+ * a failed one.
+ */
+async function recordDatapackOnProject(
+    context: HandlerContext,
+    operation: ImportJobRecord['operation'],
+    request: ImportRequest,
+): Promise<void> {
+    try {
+        const project = await context.stateManager.getCurrentProject();
+        if (!project) {
+            return;
+        }
+        project.datapack =
+            operation === 'reset' ? undefined : { name: request.id.name, version: request.id.version };
+        await context.stateManager.saveProject(project);
+        context.debugLogger.debug(
+            `[Data Installer] project datapack ${operation === 'reset' ? 'cleared' : `recorded as ${request.id.name}@${request.id.version}`}`,
+        );
+    } catch (error) {
+        context.debugLogger.debug(
+            `[Data Installer] could not record the datapack on the project: ${
+                error instanceof Error ? error.message : String(error)
+            }`,
+        );
     }
 }
 
