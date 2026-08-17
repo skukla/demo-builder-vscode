@@ -14,8 +14,8 @@
 
 import * as vscode from 'vscode';
 import { DaLiveContentOperations } from './daLiveContentOperations';
-import { DaLiveAuthError } from './types';
 import type { GitHubTokenService } from './githubTokenService';
+import { DaLiveAuthError } from './types';
 import {
     getCacheTTLWithJitter,
     isExpired,
