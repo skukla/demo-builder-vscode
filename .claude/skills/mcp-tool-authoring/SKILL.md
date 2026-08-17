@@ -99,6 +99,40 @@ call, or three failing tests written against the invention.
 
 Same class as `webview-test-authoring`'s mocked-vs-bundled-JSON trap.
 
+## The stub server tests BEHAVIOUR. It cannot test REGISTRATION.
+
+Every suite here builds the same fake, and **20 of 22 test files** write it this way:
+
+```ts
+registerTool(name: string, _def: unknown, handler) { tools.set(name, handler); }
+//                         ^^^^^^^^^^^^^ the tool definition, thrown away
+```
+
+That is correct for what those tests do — drive a handler and assert its output. It is also
+completely blind to the argument it discards, which is where the SDK contract lives: the input
+schema. `tsc` cannot cover the gap either, because `server` is typed `any`.
+
+Two defects shipped through that hole on 2026-08-17, both with green suites:
+
+| What was passed as `inputSchema` | What happened |
+|---|---|
+| A raw **JSON Schema** object (`{componentId: {type: 'string'}}`) | SDK threw inside `registerExtraTools`, aborting registration for **every** tool. The server bound its socket and never answered a handshake — the whole agent surface was dead for six commits |
+| A raw zod **shape** where strictness mattered | The SDK wraps a shape in zod's default `.strip()`, which SILENTLY DROPS unknown keys before the handler runs. `configure_project`'s unknown-key rejection could never fire, so `{addons, stroeScope}` applied the addons and discarded the typo |
+
+**So:** keep using the stub for behaviour, and let `tests/features/ai/server/realSdkRegistration.test.ts`
+own registration. It hands the real `McpServer` every module's tools, then all of them on one
+server as `extension.ts` builds it — which also catches a duplicate tool name, something no
+per-module test can see. Add your registration function to it when you add a tool; that is the
+whole maintenance cost.
+
+**Schema rules the stub will not enforce for you:**
+
+- `inputSchema` takes a zod **shape** or a zod **schema** — never raw JSON Schema.
+- A raw shape STRIPS unknown keys. When rejecting them matters (any tool that WRITES), pass
+  `z.object({...}).strict()` instead and assert it with `schema().safeParse(...)`, not through the
+  handler. `additionalProperties: false` appears in the published schema either way, but that only
+  protects clients that validate — it is not server-side enforcement.
+
 ## Verify against the running server before calling it done
 
 Green tests mean the tool matches its fixtures. Use `mcp-live-probe` to check it matches
