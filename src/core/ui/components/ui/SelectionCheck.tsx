@@ -8,7 +8,12 @@
  * `corner` pins it to the card's top-right (for whole-card selects); omit it to render
  * inline (e.g. the Integrations card, whose top-right holds the Add/Remove button).
  *
- * @module features/project-creation/ui/components/SelectionCheck
+ * Lives in core, not in the wizard: it is a shared primitive by its own
+ * description, and the Data Installer catalog became the third feature to need
+ * it. Importing it from another feature's internals would have been an SOP
+ * module-boundary break for a component that was never wizard-specific.
+ *
+ * @module core/ui/components/ui/SelectionCheck
  */
 
 import React from 'react';

@@ -69,20 +69,11 @@ export const createFailureResult = (stderr: string): CommandResult => ({
     duration: 0,
 });
 
-export const createValidTokenResult = (expiry?: number): CommandResult => {
-    const futureExpiry = expiry || Date.now() + 3600000; // 1 hour from now
-    return createSuccessResult(JSON.stringify({
-        token: 'x'.repeat(150), // Valid token > 100 chars
-        expiry: futureExpiry
-    }));
-};
-
-export const createInvalidTokenResult = (): CommandResult => {
-    return createSuccessResult(JSON.stringify({
-        token: 'short', // Invalid token < 100 chars
-        expiry: Date.now() + 3600000
-    }));
-};
+// `createValidTokenResult` / `createInvalidTokenResult` lived here. They staged a
+// token as fake `aio config get` STDOUT, which stopped being how the token is read
+// — `TokenManager` reads the config store in process. Suites now mock
+// `@adobe/aio-lib-core-config` directly, and these were deleted rather than left
+// as helpers that build a shape nothing consumes.
 
 export const createOrgContextResult = (): CommandResult => {
     return createSuccessResult(JSON.stringify({ org: 'org123', project: 'proj123' }));

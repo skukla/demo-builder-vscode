@@ -1,21 +1,25 @@
-import { TokenManager } from '@/features/authentication/services/tokenManager';
-import type { CommandExecutor } from '@/core/shell';
-import type { CommandResult } from '@/core/shell';
-
 /**
- * TokenManager Test Suite
+ * TokenManager — the rules applied to the CLI's stored token.
  *
- * Tests token management functionality:
- * - Atomic token inspection (prevents race conditions)
- * - Token validity checking
- * - Token storage and clearing
- * - Corruption detection
- * - Output cleaning (fnm messages)
+ * Every case here is a rule about a `{ token, expiry }` pair: the length floor,
+ * the expiry comparison, and the corruption state. They are driven through the
+ * injected reader, so the suite exercises those rules and nothing else.
  *
- * Total tests: 45+
+ * **This used to be a CLI test.** Reading the token meant spawning
+ * `aio config get … --json`, so a test about a date comparison had to fake
+ * subprocess stdout — including fnm version banners and the CLI's emoji warning
+ * lines, which had their own cleaning code and their own tests. That read is now
+ * in-process via `@adobe/aio-lib-core-config` (MEASURED 2.05s → 20ms; the
+ * subprocess was the reason reset's second prompt took 2-3s to appear).
+ *
+ * The output-cleaning, JSON-parse and retry-on-timeout cases were DELETED rather
+ * than ported. They covered a subprocess that no longer exists; keeping them
+ * would have meant testing a code path against a mock of a thing we stopped
+ * doing. What replaced them is one case for a reader that throws.
  */
 
-// Mock getLogger
+import { TokenManager, type StoredTokenConfig } from '@/features/authentication/services/tokenManager';
+
 jest.mock('@/core/logging', () => ({
     getLogger: jest.fn(() => ({
         trace: jest.fn(),
@@ -26,403 +30,173 @@ jest.mock('@/core/logging', () => ({
     })),
 }));
 
-// Mock CommandExecutor
-const createMockCommandExecutor = (): jest.Mocked<CommandExecutor> => ({
-    execute: jest.fn(),
-    executeCommand: jest.fn(),
-    executeWithNodeVersion: jest.fn(),
-    testCommand: jest.fn(),
-    getNodeVersionForComponent: jest.fn(),
-    getCachedBinaryPath: jest.fn(),
-    invalidateBinaryPathCache: jest.fn(),
-    getCachedNodeVersion: jest.fn(),
-    invalidateNodeVersionCache: jest.fn(),
-} as any);
+/** A token long enough to clear the 100-character floor. */
+const LONG_TOKEN = 'x'.repeat(150);
+const HOUR_MS = 60 * 60 * 1000;
 
-describe('TokenManager', () => {
-    let tokenManager: TokenManager;
-    let mockCommandExecutor: jest.Mocked<CommandExecutor>;
+/** A manager reading exactly what the test says the config store holds. */
+function managerReading(stored: StoredTokenConfig | undefined): TokenManager {
+    return new TokenManager(undefined, undefined, () => stored);
+}
 
-    beforeEach(() => {
-        mockCommandExecutor = createMockCommandExecutor();
-        tokenManager = new TokenManager(mockCommandExecutor);
-        jest.clearAllMocks();
+describe('TokenManager — inspectToken', () => {
+    it('returns valid, with the token and a positive expiry', async () => {
+        const manager = managerReading({ token: LONG_TOKEN, expiry: Date.now() + HOUR_MS });
+
+        const result = await manager.inspectToken();
+
+        expect(result.valid).toBe(true);
+        expect(result.token).toBe(LONG_TOKEN);
+        expect(result.expiresIn).toBeGreaterThan(0);
     });
 
-    describe('inspectToken', () => {
-        it('should return valid token with expiry', async () => {
-            const now = Date.now();
-            const expiry = now + (60 * 60 * 1000); // 1 hour from now
-            const token = 'x'.repeat(150); // Valid long token
+    it('returns invalid when the config store holds nothing', async () => {
+        const result = await managerReading(undefined).inspectToken();
 
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ token, expiry }),
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.inspectToken();
-
-            expect(result.valid).toBe(true);
-            expect(result.token).toBe(token);
-            expect(result.expiresIn).toBeGreaterThan(0);
-            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
-                'aio config get ims.contexts.cli.access_token --json',
-                expect.objectContaining({ encoding: 'utf8' }),
-            );
-        });
-
-        it('passes a 10s timeout (TIMEOUTS.TOKEN_VALIDATION) to the command executor', async () => {
-            // Pins the contract that token-read uses TIMEOUTS.TOKEN_VALIDATION (10s)
-            // rather than the prior TIMEOUTS.QUICK (5s). The 5s budget was too tight
-            // for users on slow networks / low-power systems — field cases on
-            // v1.0.0-beta.113 hit the retry loop's exit repeatedly.
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ token: 'x'.repeat(150), expiry: Date.now() + 3600000 }),
-                stderr: '',
-            } as CommandResult);
-
-            await tokenManager.inspectToken();
-
-            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
-                'aio config get ims.contexts.cli.access_token --json',
-                expect.objectContaining({ timeout: 10000 }),
-            );
-        });
-
-        it('should return invalid when no token found', async () => {
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 1,
-                stdout: '',
-                stderr: 'Not found',
-            } as CommandResult);
-
-            const result = await tokenManager.inspectToken();
-
-            expect(result.valid).toBe(false);
-            expect(result.expiresIn).toBe(0);
-            expect(result.token).toBeUndefined();
-        });
-
-        it('should return invalid for token shorter than 100 characters', async () => {
-            const now = Date.now();
-            const expiry = now + (60 * 60 * 1000);
-            const token = 'short-token'; // Too short
-
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ token, expiry }),
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.inspectToken();
-
-            expect(result.valid).toBe(false);
-            expect(result.expiresIn).toBe(0);
-        });
-
-        it('should return invalid for expired token', async () => {
-            const now = Date.now();
-            const expiry = now - (60 * 60 * 1000); // 1 hour ago
-            const token = 'x'.repeat(150);
-
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ token, expiry }),
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.inspectToken();
-
-            expect(result.valid).toBe(false);
-            expect(result.token).toBe(token);
-            expect(result.expiresIn).toBeLessThan(0);
-        });
-
-        it('should detect corruption when token exists but expiry is 0', async () => {
-            const token = 'x'.repeat(150);
-            const expiry = 0; // Corrupted state
-
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ token, expiry }),
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.inspectToken();
-
-            expect(result.valid).toBe(false);
-            expect(result.expiresIn).toBe(0);
-            expect(result.token).toBe(token);
-        });
-
-        it('should clean fnm messages from output', async () => {
-            const now = Date.now();
-            const expiry = now + (60 * 60 * 1000);
-            const token = 'x'.repeat(150);
-
-            const outputWithFnm = `Using Node v20.10.0
-${JSON.stringify({ token, expiry })}`;
-
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: outputWithFnm,
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.inspectToken();
-
-            expect(result.valid).toBe(true);
-            expect(result.token).toBe(token);
-        });
-
-        it('should clean Adobe CLI emoji warning lines from output', async () => {
-            const now = Date.now();
-            const expiry = now + (60 * 60 * 1000);
-            const token = 'x'.repeat(150);
-
-            // Adobe CLI outputs "⚠️ Warning: ..." lines when token is near expiry
-            const outputWithWarning = `⚠️ Warning: Your token will expire soon
-${JSON.stringify({ token, expiry })}`;
-
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: outputWithWarning,
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.inspectToken();
-
-            expect(result.valid).toBe(true);
-            expect(result.token).toBe(token);
-        });
-
-        it('should clean multiple warning lines before JSON', async () => {
-            const now = Date.now();
-            const expiry = now + (60 * 60 * 1000);
-            const token = 'x'.repeat(150);
-
-            const outputWithMultipleWarnings = `⚠️ Warning: first warning
-Warning: second warning
-! another warning line
-${JSON.stringify({ token, expiry })}`;
-
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: outputWithMultipleWarnings,
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.inspectToken();
-
-            expect(result.valid).toBe(true);
-            expect(result.token).toBe(token);
-        });
-
-        it('should handle invalid JSON in output', async () => {
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: 'not-valid-json',
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.inspectToken();
-
-            expect(result.valid).toBe(false);
-            expect(result.expiresIn).toBe(0);
-        });
-
-        it('should handle command execution errors', async () => {
-            mockCommandExecutor.execute.mockRejectedValue(new Error('Command failed'));
-
-            const result = await tokenManager.inspectToken();
-
-            expect(result.valid).toBe(false);
-            expect(result.expiresIn).toBe(0);
-        });
-
-        it('should handle missing token in JSON', async () => {
-            const now = Date.now();
-            const expiry = now + (60 * 60 * 1000);
-
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ expiry }), // No token
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.inspectToken();
-
-            expect(result.valid).toBe(false);
-        });
-
-        it('should handle missing expiry in JSON', async () => {
-            const token = 'x'.repeat(150);
-
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ token }), // No expiry
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.inspectToken();
-
-            expect(result.valid).toBe(false);
-        });
-
-        it('should calculate expiresIn correctly in minutes', async () => {
-            const now = Date.now();
-            const expiry = now + (120 * 60 * 1000); // 120 minutes from now
-            const token = 'x'.repeat(150);
-
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ token, expiry }),
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.inspectToken();
-
-            expect(result.valid).toBe(true);
-            expect(result.expiresIn).toBeGreaterThanOrEqual(119);
-            expect(result.expiresIn).toBeLessThanOrEqual(121);
-        });
+        expect(result.valid).toBe(false);
+        expect(result.expiresIn).toBe(0);
+        expect(result.token).toBeUndefined();
     });
 
-    describe('isTokenValid', () => {
-        it('should return true when token is valid', async () => {
-            const now = Date.now();
-            const expiry = now + (60 * 60 * 1000);
-            const token = 'x'.repeat(150);
+    it('returns invalid for a token shorter than 100 characters', async () => {
+        const result = await managerReading({
+            token: 'short-token',
+            expiry: Date.now() + HOUR_MS,
+        }).inspectToken();
 
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ token, expiry }),
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.isTokenValid();
-
-            expect(result).toBe(true);
-        });
-
-        it('should return false when token is invalid', async () => {
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 1,
-                stdout: '',
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.isTokenValid();
-
-            expect(result).toBe(false);
-        });
-
-        it('should return false when token is expired', async () => {
-            const now = Date.now();
-            const expiry = now - (60 * 60 * 1000); // Expired
-            const token = 'x'.repeat(150);
-
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ token, expiry }),
-                stderr: '',
-            } as CommandResult);
-
-            const result = await tokenManager.isTokenValid();
-
-            expect(result).toBe(false);
-        });
+        expect(result.valid).toBe(false);
+        expect(result.expiresIn).toBe(0);
     });
 
-    describe('edge cases', () => {
-        it('should handle token at exactly 100 characters', async () => {
-            const now = Date.now();
-            const expiry = now + (60 * 60 * 1000);
-            const token = 'x'.repeat(100); // Exactly 100 chars
+    // The token is still returned: callers distinguish "expired" from "absent".
+    it('returns invalid, with a negative expiresIn, for an expired token', async () => {
+        const result = await managerReading({
+            token: LONG_TOKEN,
+            expiry: Date.now() - HOUR_MS,
+        }).inspectToken();
 
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ token, expiry }),
-                stderr: '',
-            } as CommandResult);
+        expect(result.valid).toBe(false);
+        expect(result.token).toBe(LONG_TOKEN);
+        expect(result.expiresIn).toBeLessThan(0);
+    });
 
-            const result = await tokenManager.inspectToken();
+    /**
+     * CORRUPTION (beta.42): a real token with expiry=0 is a corrupted store, not
+     * an expired session, and the two need different remedies.
+     */
+    it('detects corruption when a long token carries expiry 0', async () => {
+        const result = await managerReading({ token: LONG_TOKEN, expiry: 0 }).inspectToken();
 
-            expect(result.valid).toBe(true); // Code checks < 100, so 100 is valid
+        expect(result.valid).toBe(false);
+        expect(result.expiresIn).toBe(0);
+        expect(result.token).toBe(LONG_TOKEN);
+    });
+
+    it('returns invalid when the entry has an expiry but no token', async () => {
+        const result = await managerReading({ expiry: Date.now() + HOUR_MS }).inspectToken();
+
+        expect(result.valid).toBe(false);
+    });
+
+    it('returns invalid when the entry has a token but no expiry', async () => {
+        const result = await managerReading({ token: LONG_TOKEN }).inspectToken();
+
+        expect(result.valid).toBe(false);
+    });
+
+    it('reports expiresIn in minutes', async () => {
+        const result = await managerReading({
+            token: LONG_TOKEN,
+            expiry: Date.now() + 120 * 60 * 1000,
+        }).inspectToken();
+
+        expect(result.valid).toBe(true);
+        expect(result.expiresIn).toBeGreaterThanOrEqual(119);
+        expect(result.expiresIn).toBeLessThanOrEqual(121);
+    });
+
+    /**
+     * Replaces the old "command execution errors" case. An unreadable config store
+     * is "not signed in" — the same answer the failed subprocess gave — and must
+     * never propagate, since `isAuthenticated` sits in front of eight UI paths.
+     */
+    it('reports not-signed-in when the config read throws, rather than propagating', async () => {
+        const manager = new TokenManager(undefined, undefined, () => {
+            throw new Error('config store unreadable');
         });
 
-        it('should handle token at 101 characters', async () => {
-            const now = Date.now();
-            const expiry = now + (60 * 60 * 1000);
-            const token = 'x'.repeat(101); // Just over threshold
+        await expect(manager.inspectToken()).resolves.toEqual({ valid: false, expiresIn: 0 });
+    });
+});
 
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ token, expiry }),
-                stderr: '',
-            } as CommandResult);
+describe('TokenManager — isTokenValid', () => {
+    it('is true for a live token', async () => {
+        const manager = managerReading({ token: LONG_TOKEN, expiry: Date.now() + HOUR_MS });
 
-            const result = await tokenManager.inspectToken();
+        await expect(manager.isTokenValid()).resolves.toBe(true);
+    });
 
-            expect(result.valid).toBe(true);
-        });
+    it('is false when there is no token', async () => {
+        await expect(managerReading(undefined).isTokenValid()).resolves.toBe(false);
+    });
 
-        it('should handle expiry exactly at current time', async () => {
-            const now = Date.now();
-            const expiry = now; // Exactly now
-            const token = 'x'.repeat(150);
+    it('is false for an expired token', async () => {
+        const manager = managerReading({ token: LONG_TOKEN, expiry: Date.now() - HOUR_MS });
 
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ token, expiry }),
-                stderr: '',
-            } as CommandResult);
+        await expect(manager.isTokenValid()).resolves.toBe(false);
+    });
+});
 
-            const result = await tokenManager.inspectToken();
+describe('TokenManager — boundaries', () => {
+    // The check is `< 100`, so exactly 100 passes. Pinned at both sides so a
+    // change from `<` to `<=` cannot slip through.
+    it('accepts a token of exactly 100 characters', async () => {
+        const result = await managerReading({
+            token: 'x'.repeat(100),
+            expiry: Date.now() + HOUR_MS,
+        }).inspectToken();
 
-            expect(result.valid).toBe(false); // Must be > now
-        });
+        expect(result.valid).toBe(true);
+    });
 
-        it('should handle very large expiry values', async () => {
-            const expiry = Date.now() + (365 * 24 * 60 * 60 * 1000); // 1 year
-            const token = 'x'.repeat(150);
+    it('accepts a token of 101 characters', async () => {
+        const result = await managerReading({
+            token: 'x'.repeat(101),
+            expiry: Date.now() + HOUR_MS,
+        }).inspectToken();
 
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ token, expiry }),
-                stderr: '',
-            } as CommandResult);
+        expect(result.valid).toBe(true);
+    });
 
-            const result = await tokenManager.inspectToken();
+    // Must be strictly in the future.
+    it('rejects an expiry exactly at the current time', async () => {
+        const result = await managerReading({
+            token: LONG_TOKEN,
+            expiry: Date.now(),
+        }).inspectToken();
 
-            expect(result.valid).toBe(true);
-            expect(result.expiresIn).toBeGreaterThan(525000); // ~365 days in minutes
-        });
+        expect(result.valid).toBe(false);
+    });
 
-        it('should handle empty JSON object', async () => {
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({}),
-                stderr: '',
-            } as CommandResult);
+    it('handles an expiry a year out', async () => {
+        const result = await managerReading({
+            token: LONG_TOKEN,
+            expiry: Date.now() + 365 * 24 * HOUR_MS,
+        }).inspectToken();
 
-            const result = await tokenManager.inspectToken();
+        expect(result.valid).toBe(true);
+        expect(result.expiresIn).toBeGreaterThan(525000);
+    });
 
-            expect(result.valid).toBe(false);
-        });
+    it('returns invalid for an empty entry', async () => {
+        await expect(managerReading({}).inspectToken()).resolves.toMatchObject({ valid: false });
+    });
 
-        it('should handle null values in JSON', async () => {
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ token: null, expiry: null }),
-                stderr: '',
-            } as CommandResult);
+    // The store is HJSON written by another tool; nulls are possible and are not
+    // the same as absent keys.
+    it('returns invalid for null token and expiry', async () => {
+        const nulls = { token: null, expiry: null } as unknown as StoredTokenConfig;
 
-            const result = await tokenManager.inspectToken();
-
-            expect(result.valid).toBe(false);
-        });
+        await expect(managerReading(nulls).inspectToken()).resolves.toMatchObject({ valid: false });
     });
 });

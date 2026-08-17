@@ -12,7 +12,7 @@
  * @module features/data-installer/ui/components/ImportForm
  */
 
-import { ActionButton, Checkbox, Item, Picker } from '@adobe/react-spectrum';
+import { ActionButton, Checkbox, Item, Picker, ProgressCircle } from '@adobe/react-spectrum';
 import React from 'react';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { TargetWebsite } from '../hooks/useImportScopes';
@@ -94,48 +94,114 @@ function TargetScopeFields({
 
     return (
         <div className="datapack-import-scope">
-            <Picker
-                label="Target website"
-                placeholder={websitePlaceholder(isLoading, defaultSite?.name)}
-                isDisabled={isLoading}
-                selectedKey={websiteCode || null}
-                onSelectionChange={(key) => onWebsiteChange(String(key ?? ''))}
-            >
-                {websites.map((site) => (
-                    <Item key={site.code} textValue={site.name}>
-                        {site.name}
-                    </Item>
-                ))}
-            </Picker>
-            <Picker
-                label="Store view"
-                placeholder={storePlaceholder(isLoading, chosen ? storeViews[0]?.name : undefined)}
-                isDisabled={isLoading || !websiteCode}
-                selectedKey={storeCode || null}
-                onSelectionChange={(key) => onStoreChange(String(key ?? ''))}
-            >
-                {storeViews.map((view) => (
-                    <Item key={view.code} textValue={view.name}>
-                        {view.name}
-                    </Item>
-                ))}
-            </Picker>
+            <ScopeField label="Target website" busyLabel="Loading websites" isLoading={isLoading}>
+                <Picker
+                    aria-label="Target website"
+                    placeholder={websitePlaceholder(defaultSite?.name)}
+                    selectedKey={websiteCode || null}
+                    onSelectionChange={(key) => onWebsiteChange(String(key ?? ''))}
+                >
+                    {websites.map((site) => (
+                        <Item key={site.code} textValue={site.name}>
+                            {site.name}
+                        </Item>
+                    ))}
+                </Picker>
+            </ScopeField>
+            <ScopeField label="Target store view" busyLabel="Loading store views" isLoading={isLoading}>
+                <Picker
+                    aria-label="Target store view"
+                    placeholder={storePlaceholder(chosen ? storeViews[0]?.name : undefined)}
+                    isDisabled={!websiteCode}
+                    selectedKey={storeCode || null}
+                    onSelectionChange={(key) => onStoreChange(String(key ?? ''))}
+                >
+                    {storeViews.map((view) => (
+                        <Item key={view.code} textValue={view.name}>
+                            {view.name}
+                        </Item>
+                    ))}
+                </Picker>
+            </ScopeField>
         </div>
     );
 }
 
-/** Names the default WEBSITE, never "base" and never the default store view. */
-function websitePlaceholder(isLoading: boolean, defaultName?: string): string {
+/**
+ * A labelled scope field: the SPINNER STANDS IN FOR THE CONTROL while discovery
+ * runs, and the control replaces it when the values arrive.
+ *
+ * The label is always present and always ours, so the swap happens under a
+ * heading that never moves. That also fixes the styling: the label carries
+ * `datapack-import-label`, the same class as "Data types", so the modal's three
+ * labels cannot render differently. (Reaching Spectrum's own label through
+ * `.spectrum-FieldLabel` was tried and left them at default size; the class IS
+ * in the bundle, so the reason is unestablished rather than diagnosed. Owning
+ * the element removes the question.) The `Picker` therefore takes `aria-label`
+ * rather than a visible `label`.
+ *
+ * **The field holds its height across the swap.** These pickers used to appear
+ * only once scopes arrived and the dialog jumped; the disabled-placeholder
+ * version fixed that, and so must this — hence a min-height on the busy state
+ * rather than a bare spinner that collapses.
+ *
+ * Earlier shapes, so they are not retried: a spinner absolutely positioned at
+ * `right: 0` of the field landed ~600px from its label, because the field is
+ * `flex: 1 1 0` — half the modal. Beside the label text it was correct but
+ * competed with the label for the eye while the control below sat inert showing
+ * an em dash for a value it did not have.
+ */
+function ScopeField({
+    label,
+    busyLabel,
+    isLoading,
+    children,
+}: {
+    label: string;
+    busyLabel: string;
+    isLoading: boolean;
+    children: React.ReactNode;
+}): React.JSX.Element {
     if (isLoading) {
-        return 'Loading websites…';
+        // The label and the spinner are wrapped TOGETHER, so the wrapper shrinks
+        // to the label's width and the spinner can centre under the label's own
+        // text. Centring it in the FIELD puts it mid-column instead — far right
+        // of the words it belongs to, since the field is half the modal. A
+        // label's width is not a number anyone can write down, so the layout has
+        // to derive it rather than be told it.
+        return (
+            <div className="datapack-scope-field">
+                <span className="datapack-scope-busy">
+                    <span className="datapack-import-label">{label}</span>
+                    <span className="datapack-scope-loading">
+                        <ProgressCircle size="S" isIndeterminate aria-label={busyLabel} />
+                    </span>
+                </span>
+            </div>
+        );
     }
+
+    return (
+        <div className="datapack-scope-field">
+            <span className="datapack-import-label">{label}</span>
+            {children}
+        </div>
+    );
+}
+
+/**
+ * Names the default WEBSITE, never "base" and never the default store view.
+ *
+ * No loading case any more: the control does not exist while discovery runs, so
+ * it has no placeholder to show. It used to read "Loading websites…" — the same
+ * sentence as the store view's, in the field beside it, and static, so identical
+ * whether the request was in flight or wedged.
+ */
+function websitePlaceholder(defaultName?: string): string {
     return defaultName ? `${defaultName} (default)` : 'Instance default';
 }
 
-function storePlaceholder(isLoading: boolean, firstViewName?: string): string {
-    if (isLoading) {
-        return 'Loading…';
-    }
+function storePlaceholder(firstViewName?: string): string {
     return firstViewName ? `${firstViewName} (default)` : 'Choose a website first';
 }
 
@@ -167,14 +233,17 @@ export function ImportForm({
 }): React.JSX.Element {
     return (
         <>
-            {/* No target block and no Change escape. The project already fixes
-                where data lands; changing that means changing the project, which
-                belongs on the dashboard rather than behind a link in here. The
-                22-character instance id it used to print was not something
-                anyone could verify by eye either. */}
-            <p className="datapack-import-warning">
-                There is no undo — check with whoever owns this instance before importing.
-            </p>
+            {/* No target block, no Change escape, and no standing warning line.
+                The project already fixes where data lands; changing that means
+                changing the project, which belongs on the dashboard rather than
+                behind a link in here.
+
+                "There is no undo — check with whoever owns this instance before
+                importing" used to sit here. It was permanent furniture above a
+                form the user opened deliberately, so it carried no information
+                at the moment it was read. The destructive path that DOES need a
+                warning — Reset — has its own armed confirmation naming the
+                instance, and that is where the caution belongs. */}
             <TargetScopeFields
                 websites={websites}
                 websiteCode={websiteCode}

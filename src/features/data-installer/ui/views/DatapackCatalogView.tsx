@@ -50,6 +50,7 @@ import type {
     DatapackDetail,
     DatapackId,
     DatapackSummary,
+    InstalledDatapack,
     Page,
 } from '../../types';
 import { DatapackCard } from '../components/DatapackCard';
@@ -110,6 +111,53 @@ export function DatapackCatalogView(): React.JSX.Element {
         loadProjectContext({});
     }, [loadProjectContext]);
 
+    /**
+     * What the SERVICE records as installed on this project's instance.
+     *
+     * Scoped to the instance, so it answers "what is on the box this project
+     * writes to" rather than the global cross-instance list an earlier Installed
+     * view showed (removed for exactly that reason — see `DataInstallerScreen`).
+     *
+     * Self-reported, like every source available here: a `DELETE
+     * get-installed-datapacks` clears the record without uninstalling anything,
+     * so it can say ABSENT while data sits on the instance. That is the safe
+     * direction for a checkmark, and it is why this is unioned with the
+     * project's own record rather than replacing it.
+     */
+    const installed = useDataInstallerRequest<Page<InstalledDatapack>>(
+        'list-installed-datapacks',
+    );
+    const commerceInstance = projectContext.value?.instance;
+    const loadInstalled = installed.load;
+    useEffect(() => {
+        if (!commerceInstance) {
+            return;
+        }
+        loadInstalled({ commerceInstance });
+    }, [loadInstalled, commerceInstance]);
+
+    /**
+     * Every pack believed to be on this instance, from both self-reports.
+     *
+     * UNION, not either alone. The service's list can be wrong in the absent
+     * direction; the project's record covers only one pack and can outlive a
+     * failed import. Neither is ground truth — nothing here has that, since only
+     * Commerce itself knows what it holds — so the check means "believed
+     * installed", and both sources clear when a removal runs through the
+     * extension, which is the case that matters.
+     */
+    const installedPacks = useMemo(() => {
+        const names = new Set<string>();
+        for (const row of installed.value?.items ?? []) {
+            names.add(row.id.name);
+        }
+        const recorded = projectContext.value?.datapack?.name;
+        if (recorded) {
+            names.add(recorded);
+        }
+        return names;
+    }, [installed.value, projectContext.value]);
+
     const groups = useMemo(() => groupDatapacks(value?.items ?? []), [value]);
     const filtered = useMemo(
         () => groups.filter((group) => matchesSearchFields(group, SEARCH_FIELDS, query)),
@@ -138,7 +186,26 @@ export function DatapackCatalogView(): React.JSX.Element {
     // flow modal beside the list and keeps its flyout view-only, and this follows
     // that. Closing the modal therefore leaves the flyout open behind it.
     const openImport = useCallback((id: DatapackId): void => setImporting(id), []);
-    const closeImport = useCallback((): void => setImporting(undefined), []);
+    /**
+     * Closing the import modal RE-READS which pack this project holds.
+     *
+     * The handler records `project.datapack` when the service accepts an import
+     * and clears it when it accepts a removal — so the modal the user just closed
+     * is exactly what decides which card wears the check. Without this the
+     * catalog kept the copy it read on mount: import a pack and no card changed,
+     * remove one and the check stayed, until the whole panel was reopened.
+     *
+     * Unconditional rather than only-when-something-ran: the modal owns that
+     * knowledge and the read is a cheap local lookup, so asking it to report back
+     * would be a second thing to keep in step for no gain.
+     */
+    const closeImport = useCallback((): void => {
+        setImporting(undefined);
+        loadProjectContext({});
+        if (commerceInstance) {
+            loadInstalled({ commerceInstance });
+        }
+    }, [loadProjectContext, loadInstalled, commerceInstance]);
 
     const retryDetail = useCallback((): void => {
         if (selected) {
@@ -204,12 +271,15 @@ export function DatapackCatalogView(): React.JSX.Element {
             </div>
 
             <div className="page-container-padded pb-6">
-                <RecordedChoiceNotice
-                    projectName={projectContext.value?.projectName}
-                    datapack={projectContext.value?.datapack}
-                    onOpen={openDetail}
-                />
-                {renderBody({ groups, filtered, query, versions, pickVersion, openDetail })}
+                {renderBody({
+                    groups,
+                    filtered,
+                    query,
+                    versions,
+                    pickVersion,
+                    openDetail,
+                    installedPacks,
+                })}
             </div>
 
             <DatapackDetailPanel
@@ -244,45 +314,27 @@ export function DatapackCatalogView(): React.JSX.Element {
 /** What `get-datapack-import-target` reports about the open project. */
 interface ProjectSampleData {
     projectName?: string;
+    /** The Commerce instance this project writes to — scopes the installed list. */
+    instance?: string;
     datapack?: { name: string; version: string };
 }
 
-/**
- * "This project is set up for X" — the visible end of the Stage 4 loop.
+/*
+ * `RecordedChoiceNotice` stood here: a full-width bar reading "<project> is set
+ * up for <pack> (main)" with a "Review and install" link.
  *
- * The wizard records a datapack and deliberately does not import it (an import
- * needs a reachable instance and runs for minutes). Without this the user would
- * have to remember the name and find it again among 25 of them, which is the
- * kind of small forgetting that makes a recorded choice worthless.
+ * It existed to close the wizard's loop — the Sample Data step records a pack and
+ * deliberately does not import it, so the user needed the name carried forward
+ * rather than re-found among 25 cards. That need is real and has not gone away;
+ * it is now met by the card itself, which wears the shared `SelectionCheck` and
+ * the accent border. The banner announced a card's state somewhere the card was
+ * not, and then needed a link to point back at it.
  *
- * Renders nothing at all when there is no project or no recorded choice — the
- * catalog is browsable without either, and an empty banner explaining its own
- * absence is worse than silence.
+ * The wording had also stopped being true. `project.datapack` was written only by
+ * the wizard, so "is set up for" meant "chosen, not yet installed" — until an
+ * import from the modal began writing the same field, at which point the bar
+ * invited the user to install what they had just installed.
  */
-function RecordedChoiceNotice({
-    projectName,
-    datapack,
-    onOpen,
-}: {
-    projectName?: string;
-    datapack?: { name: string; version: string };
-    onOpen: (id: DatapackId) => void;
-}): React.JSX.Element | null {
-    if (!datapack) {
-        return null;
-    }
-    return (
-        <div className="datapack-recorded-choice">
-            <span>
-                {projectName ? `${projectName} is` : 'This project is'} set up for{' '}
-                <strong>{datapack.name}</strong> ({datapack.version}).
-            </span>
-            <Link isQuiet onPress={() => onOpen(datapack)}>
-                Review and install
-            </Link>
-        </div>
-    );
-}
 
 /** Pick the one body state to show under the header. */
 function renderBody(args: {
@@ -292,8 +344,10 @@ function renderBody(args: {
     versions: Record<string, string>;
     pickVersion: (name: string, version: string) => void;
     openDetail: (id: DatapackId) => void;
+    /** Every pack believed installed on this instance — one check per card. */
+    installedPacks?: ReadonlySet<string>;
 }): React.JSX.Element {
-    const { groups, filtered, query, versions, pickVersion, openDetail } = args;
+    const { groups, filtered, query, versions, pickVersion, openDetail, installedPacks } = args;
 
     if (groups.length === 0) {
         return (
@@ -317,6 +371,7 @@ function renderBody(args: {
                     selectedVersion={versions[group.name] ?? pickDefaultVersion(group) ?? ''}
                     onVersionChange={(version) => pickVersion(group.name, version)}
                     onOpen={openDetail}
+                    isInstalled={installedPacks?.has(group.name) ?? false}
                 />
             ))}
         </div>

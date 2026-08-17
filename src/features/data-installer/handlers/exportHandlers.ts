@@ -27,8 +27,7 @@
  */
 
 import { canProvisionAccsCredentials } from '../services/accsProvisionEligibility';
-import { brokerForContext } from '../services/commerceCredentialBroker';
-import { resolveCommerceCredentials } from '../services/commerceCredentials';
+import { resolveProjectCredentials } from '../services/commerceCredentialBroker';
 import {
     DataInstallerWriteClient,
     type ExportRequest,
@@ -168,15 +167,7 @@ async function prepareExport(
         return { response: { success: false, error: 'Open a project before exporting.' } };
     }
 
-    const credentials = await resolveCommerceCredentials({
-        project: {
-            stackBackend: project.componentSelections?.backend ?? '',
-            componentConfigs: project.componentConfigs ?? {},
-        },
-        secrets: context.context.secrets,
-        projectName: project.name,
-        broker: brokerForContext(context, project),
-    });
+    const credentials = await resolveProjectCredentials(context, project);
     if (!credentials.ok) {
         return {
             response: {

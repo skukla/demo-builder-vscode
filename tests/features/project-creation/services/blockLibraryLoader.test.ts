@@ -140,6 +140,22 @@ describe('blockLibraryLoader', () => {
             // CitiSignal sees demo-team-blocks only (package-DEFAULT, deselectable)
             expect(libs.map((l) => l.id)).toEqual(['demo-team-blocks']);
         });
+
+        it('should NOT offer bodea-blocks to non-Bodea packages (pinned via onlyForPackages)', () => {
+            const edsStack = makeStack();
+
+            for (const pkg of ['custom', 'citisignal', 'isle5', 'buildright']) {
+                const libs = getAvailableBlockLibraries(edsStack, pkg);
+                expect(libs.map((l) => l.id)).not.toContain('bodea-blocks');
+            }
+        });
+
+        it('should not include bodea-blocks in available list for Bodea package (native)', () => {
+            const edsStack = makeStack();
+            const libs = getAvailableBlockLibraries(edsStack, 'bodea');
+
+            expect(libs.map((l) => l.id)).not.toContain('bodea-blocks');
+        });
     });
 
     describe('getNativeBlockLibraries', () => {
@@ -171,6 +187,23 @@ describe('blockLibraryLoader', () => {
             const natives = getNativeBlockLibraries(edsStack, 'custom');
 
             expect(natives).toHaveLength(0);
+        });
+
+        it('should return bodea-blocks as native for Bodea package', () => {
+            const edsStack = makeStack();
+            const natives = getNativeBlockLibraries(edsStack, 'bodea');
+
+            expect(natives).toHaveLength(1);
+            expect(natives[0].id).toBe('bodea-blocks');
+        });
+
+        it('should NOT report bodea-blocks as native for other packages', () => {
+            const edsStack = makeStack();
+
+            for (const pkg of ['custom', 'citisignal', 'isle5', 'buildright']) {
+                const natives = getNativeBlockLibraries(edsStack, pkg);
+                expect(natives.map((l) => l.id)).not.toContain('bodea-blocks');
+            }
         });
 
         it('should return no native libraries for headless stacks', () => {

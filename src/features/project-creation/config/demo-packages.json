@@ -384,6 +384,164 @@
           "templateRepo": "buildright-eds"
         }
       }
+    },
+    {
+      "id": "bodea",
+      "name": "Bodea",
+      "description": "Bodea-branded B2B demo for data center equipment",
+      "icon": "bodea",
+      "featured": false,
+      "hidden": false,
+      "requiresMesh": false,
+      "addons": {
+        "adobe-commerce-aco": "excluded"
+      },
+      "configDefaults": {
+         "ADOBE_COMMERCE_WEBSITE_CODE": "bodea",
+         "ADOBE_COMMERCE_STORE_CODE": "bodea_store",
+         "ADOBE_COMMERCE_STORE_VIEW_CODE": "bodea_us",
+         "ACCS_WEBSITE_CODE": "bodea",
+         "ACCS_STORE_CODE": "bodea_store",
+         "ACCS_STORE_VIEW_CODE": "bodea_us"
+      },
+      "configFlags": {
+        "commerce-b2b-enabled": true,
+        "commerce-companies-enabled": true
+      },
+      "storefronts": {
+        "eds-paas": {
+          "name": "Bodea EDS + PaaS",
+          "description": "Bodea Edge Delivery Services storefront with Commerce PaaS backend",
+          "icon": "eds",
+          "featured": false,
+          "tags": [
+            "eds",
+            "bodea",
+            "paas"
+          ],
+          "source": {
+            "type": "git",
+            "url": "https://github.com/adobe-commerce/boilerplate-b2b-template",
+            "branch": "main",
+            "gitOptions": {
+              "shallow": true
+            }
+          },
+          "templateOwner": "adobe-commerce",
+          "templateRepo": "boilerplate-b2b-template",
+          "contentSource": {
+            "org": "skukla",
+            "site": "bodea-source",
+            "indexPath": "/sitemap.json"
+          },
+          "accountContentSource": {
+            "org": "adobe-commerce",
+            "site": "boilerplate-b2b"
+          },
+          "codePatches": [
+            "header-nav-tools-defensive",
+            "product-link-sku-encoding",
+            "product-link-sku-slash-encoding",
+            "aem-assets-sku-sanitization",
+            "commerce-account-sidebar-selector-race",
+            "account-page-column-layout"
+          ],
+          "codePatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-patches",
+            "path": "b2b",
+            "lkgFile": "b2b/last-known-good"
+          },
+          "brandAssets": {
+            "source": {
+              "owner": "skukla",
+              "repo": "bodea-source",
+              "branch": "main"
+            },
+            "files": [
+              {
+                "from": "styles/bodea-theme.css",
+                "to": "styles/bodea-theme.css"
+              },
+              {
+                "from": "scripts/bodea-customer-group.js",
+                "to": "scripts/bodea-customer-group.js"
+              },
+              {
+                "from": "data/guided-selling/bodea-rack-finder.json",
+                "to": "data/guided-selling/bodea-rack-finder.json"
+              }
+            ],
+            "headSnippet": "<link rel=\"stylesheet\" href=\"/styles/bodea-theme.css\">\n<script type=\"module\" src=\"/scripts/bodea-customer-group.js\"></script>"
+          }
+        },
+        "eds-accs": {
+          "name": "Bodea EDS + ACCS",
+          "description": "Bodea Edge Delivery Services storefront with Commerce Cloud Service backend",
+          "icon": "eds",
+          "featured": true,
+          "tags": [
+            "eds",
+            "bodea",
+            "accs"
+          ],
+          "source": {
+            "type": "git",
+            "url": "https://github.com/adobe-commerce/boilerplate-b2b-template",
+            "branch": "main",
+            "gitOptions": {
+              "shallow": true
+            }
+          },
+          "templateOwner": "adobe-commerce",
+          "templateRepo": "boilerplate-b2b-template",
+          "contentSource": {
+            "org": "skukla",
+            "site": "bodea-source",
+            "indexPath": "/sitemap.json"
+          },
+          "accountContentSource": {
+            "org": "adobe-commerce",
+            "site": "boilerplate-b2b"
+          },
+          "codePatches": [
+            "header-nav-tools-defensive",
+            "product-link-sku-encoding",
+            "product-link-sku-slash-encoding",
+            "aem-assets-sku-sanitization",
+            "commerce-account-sidebar-selector-race",
+            "account-page-column-layout"
+          ],
+          "codePatchSource": {
+            "owner": "skukla",
+            "repo": "eds-demo-patches",
+            "path": "b2b",
+            "lkgFile": "b2b/last-known-good"
+          },
+          "brandAssets": {
+            "source": {
+              "owner": "skukla",
+              "repo": "bodea-source",
+              "branch": "main"
+            },
+            "files": [
+              {
+                "from": "styles/bodea-theme.css",
+                "to": "styles/bodea-theme.css"
+              },
+              {
+                "from": "scripts/bodea-customer-group.js",
+                "to": "scripts/bodea-customer-group.js"
+              },
+              {
+                "from": "data/guided-selling/bodea-rack-finder.json",
+                "to": "data/guided-selling/bodea-rack-finder.json"
+              }
+            ],
+            "headSnippet": "<link rel=\"stylesheet\" href=\"/styles/bodea-theme.css\">\n<script type=\"module\" src=\"/scripts/bodea-customer-group.js\"></script>"
+          }
+        }
+      }
     }
   ]
 }

@@ -14,6 +14,7 @@
 
 import * as vscode from 'vscode';
 import { DaLiveContentOperations } from './daLiveContentOperations';
+import { DaLiveAuthError } from './types';
 import type { GitHubTokenService } from './githubTokenService';
 import {
     getCacheTTLWithJitter,
@@ -430,6 +431,40 @@ export class HelixService {
         return response?.headers?.get?.('x-error') ?? null;
     }
 
+    /**
+     * Raise a 403 as a CREDENTIAL refusal, not a permissions verdict.
+     *
+     * Helix answers `403 [admin] not authorized` both when an identity genuinely
+     * lacks a role AND when a perfectly authorized identity presents a token the
+     * server will no longer accept. These threw a plain `Error` saying "you do
+     * not have permission", which is a claim about the USER that the response
+     * does not support.
+     *
+     * Measured 2026-08-16: one reset failed with 52 of these plus a fatal
+     * "you do not have permission to preview", told the user at three surfaces
+     * that they held no admin role, and succeeded forty minutes later — same
+     * identity, same project, after nothing but a DA.live re-auth.
+     *
+     * Throwing `DaLiveAuthError` lets `withDaLiveAuthRetry` prompt and resume
+     * instead. The classification cannot separate "expired token" from "genuinely
+     * unauthorized identity" — Helix gives the same `x-error` for both — and it
+     * does not need to: re-authenticating as an identity that really lacks the
+     * role fails the retry and surfaces the original error after
+     * MAX_REAUTH_ATTEMPTS. The cost of being wrong is one prompt; the cost of not
+     * trying was a three-minute pipeline failing 52 times.
+     *
+     * NOT used for the DELETE /live 403, which is the documented
+     * "while source exists" restriction — a real constraint, not a credential
+     * problem, and on a different method (see `getDeleteAuthHeaders`).
+     */
+    private async throwCredentialRefused(response: Response, what: string): Promise<never> {
+        const detail = await this.captureErrorDetail(response);
+        throw new DaLiveAuthError(
+            `Access denied while trying to ${what} (403: ${detail}). ` +
+                'This may be an expired session rather than a missing role.',
+        );
+    }
+
     /** Build diagnostic string from body and x-error for 403/401. */
     private async captureErrorDetail(response: Response): Promise<string> {
         const body = await this.captureErrorBody(response);
@@ -700,7 +735,7 @@ export class HelixService {
         }
 
         if (response.status === 403) {
-            throw new Error('Access denied. You do not have permission to preview this content.');
+            await this.throwCredentialRefused(response, 'preview this content');
         }
 
         if (!response.ok) {
@@ -1189,7 +1224,7 @@ export class HelixService {
         }
 
         if (response.status === 403) {
-            throw new Error('Access denied. You do not have permission to preview this content.');
+            await this.throwCredentialRefused(response, 'preview this content');
         }
 
         // 400 = Bad request - log details for debugging
@@ -1775,7 +1810,7 @@ export class HelixService {
             }
 
             if (response.status === 403) {
-                throw new Error('Access denied. You do not have permission to preview this code.');
+                await this.throwCredentialRefused(response, 'preview this code');
             }
 
             // Helix's code mirror hasn't caught up with the just-pushed commit

@@ -182,6 +182,7 @@ Our fork (`skukla/citisignal-eds-boilerplate`) is archived as a reference once D
 ### Neutral
 
 - **CSS theming stays expressed as modifications.** EDS loads block CSS from fixed per-block paths, so brand theming on canonical blocks ships as append-dominant patches rather than overlay files. Acceptable; revisit only if patch churn on CSS proves high.
+  - *Amendment (2026-08-14)*: the "1 vendor point" consolidation this ADR prescribed for brand CSS now exists as a general mechanism — the data-driven `brandAssets` storefront field + `brandAssetPublisher.ts` (marker-bounded `demo-builder:brand-assets` block in `head.html` + additive files, same idempotent/non-fatal contract as `pdp404HandlerPublisher`, targets policy-checked at consumption). First consumer: the Bodea package (additive theme stylesheet + customer-group module). CitiSignal's CSS patches can migrate onto it if churn warrants.
 - **The smart-404 vendoring (ADR-005) is unchanged** — it becomes one resident of a generalized layer rather than a special case.
 
 ---
@@ -203,7 +204,7 @@ Tracked in `.rptc/plans/thin-layer-storefront-adr-006/`. As of 2026-06-10 (live)
 | 8. Upstream PRs to canonical for retired fork-only fixes | **Pending** | Non-blocking by design. Each patch's `exit` field carries the upstream PR queue; gate auto-retires when a patch's fix lands upstream. |
 | 9. Migration cutover (sequencing gate + cleanup) | **Substantially complete** | CitiSignal cutover smoke-tested live (skukla/citisignal-b2b). Fork archival (`skukla/citisignal-eds-boilerplate`) waits on a ~30-day soak so any SC still creating against the old config gets a reset window. |
 
-**Live on develop.** Three demo packages now drive the thin-layer pipeline — CitiSignal, `custom`, and `b2b`. The mechanism handles multi-canonical patches repos (the gate at `skukla/eds-demo-patches` clones one canonical for citisignal+custom and a different one for b2b, advancing per-ledger LKG pointers independently). The earlier "dormant until Step 5b" framing is now historical.
+**Live on develop** (updated 2026-08-14). Three demo packages drive the thin-layer pipeline — CitiSignal (`citisignal-b2b` ledger), `custom` (`b2b` ledger), and `bodea` (added 2026-08-14, hidden; shares the `b2b` ledger + LKG pin, with its brand delta shipped additively via the bodea-blocks library and the brand-assets vendor point). All three template on `adobe-commerce/boilerplate-b2b-template` and pin via `b2b/last-known-good`. The mechanism still supports multi-canonical patches repos (per-ledger `canonical` + `lkgFile`; the gate clones each unique canonical once and advances per-ledger LKG pointers independently). The earlier "dormant until Step 5b" framing is now historical.
 
 ---
 
@@ -213,7 +214,7 @@ Tracked in `.rptc/plans/thin-layer-storefront-adr-006/`. As of 2026-06-10 (live)
 - **Originating backlog item**: `.rptc/complete/2026-06-09-evaluate-thin-layer-storefront-model.md`
 - **Dropped by this decision**: `.rptc/complete/2026-06-09-storefront-template-sync.md` (the gated sync project)
 - **Successor backlog item**: `.rptc/backlog/2026-06-10-buildright-eds-disposition.md`
-- **Mechanism precedents**: `src/features/eds/services/pdp404HandlerPublisher.ts` (code vendoring, ADR-005), `src/features/eds/services/contentPatchRegistry.ts` (`contentPatches` + external `ContentPatchSource`), `src/features/eds/services/blockCollectionHelpers.ts` (block install + UE merge)
+- **Mechanism precedents**: `src/features/eds/services/pdp404HandlerPublisher.ts` (code vendoring, ADR-005), `src/features/eds/services/brandAssetPublisher.ts` (brand-asset vendoring — the "1 vendor point" this ADR prescribed; added 2026-08-14), `src/features/eds/services/contentPatchRegistry.ts` (`contentPatches` + external `ContentPatchSource`), `src/features/eds/services/blockCollectionHelpers.ts` (block install + UE merge)
 - **Prior art (v1 template-patch system)**: extension commits `6026b695` (added 2026-01-20), `cfbd05ba` (CDN publish), `f6a7d029` + `06dd6549` (removed 2026-02-01) — recoverable from git history at `f6a7d029^:src/features/eds/services/templatePatchRegistry.ts` and `f6a7d029^:src/features/eds/config/patches/`
 - **External patches repo**: `skukla/eds-demo-content-patches` (`citisignal/patches.json`) — the externalization precedent code patches follow
 - **Related ADRs**: ADR-005 (BYOM PDP routing — vendoring precedent)

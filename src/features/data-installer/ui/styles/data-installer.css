@@ -250,26 +250,42 @@
     min-width: 0;
 }
 
-/* The no-undo line, which is a caution rather than target metadata. */
-.datapack-import-warning {
-    margin: 0;
-    font-size: 12px;
-    color: var(--vscode-descriptionForeground);
-}
-
 .datapack-import-scope > [data-testid='spectrum-picker-wrapper'],
 .datapack-import-scope > div {
     min-width: 0;
 }
 
-/* Names the manual precondition: `websites` is not an importable data type, so a
-   website the user has not created cannot appear in the picker above, and a short
-   list with no explanation reads as a bug. */
-.datapack-import-scope-hint {
-    margin: 0;
-    font-size: 11px;
-    line-height: 1.4;
-    color: var(--vscode-descriptionForeground);
+/* Label above, control below — and while discovery runs the spinner IS the
+   control, in the same place, under a label that does not move. */
+.datapack-scope-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+/* Holds the control's height so the dialog does not jump when the picker
+   replaces it. These fields used to appear only once the scopes landed, and
+   that jump is what the disabled-placeholder version was written to stop; the
+   swap must not reintroduce it. The value is the Spectrum medium field height —
+   a literal, because the token and the size prop resolve to different px in
+   this webview. */
+/* Shrinks to the LABEL, so the spinner below it has something narrow enough to
+   be centred under. `align-self: flex-start` stops the column stretching it to
+   the field's full width, which would put the centre back mid-column. */
+.datapack-scope-busy {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    align-self: flex-start;
+    gap: 4px;
+}
+
+.datapack-scope-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
 }
 
 /* The products/customer_groups dependency. Warning colour, not error: the import
@@ -327,6 +343,18 @@
     min-width: 0;
 }
 
+/* EVERY field label in this modal, from one rule.
+
+   "Data types" was the only one styled, so Spectrum's default sized "Target
+   website" and "Store view" larger than the section heading below them — three
+   labels at one level of the hierarchy, rendered three ways.
+
+   The picker labels wear this class DIRECTLY (see `ScopeLabel`). Reaching them
+   through `.datapack-import-scope .spectrum-FieldLabel` was tried and the labels
+   still rendered at their default size. Why is unestablished — the class is
+   present in the bundle (24 occurrences), so "the selector matches nothing" is a
+   guess, not a finding, and specificity or Spectrum's own cascade are equally
+   live. Owning the element removes the question instead of answering it. */
 .datapack-import-label {
     font-size: 11px;
     text-transform: uppercase;
@@ -347,6 +375,35 @@
     border-left: 2px solid var(--spectrum-global-color-red-600);
     font-size: 13px;
     line-height: 1.5;
+}
+
+/* The question, the facts, then the warning — three blocks rather than one run
+   of prose. The list of data types can be fourteen entries long, and read as a
+   sentence it was the part nobody finished before pressing the button. */
+.datapack-import-danger p {
+    margin: 0;
+}
+
+.datapack-import-danger p + p {
+    margin-top: 8px;
+}
+
+.datapack-danger-lede {
+    font-weight: 600;
+}
+
+/* A label the eye can skip to, so "Instance" and "14 data types" read as fields
+   rather than as the start of another sentence. */
+.datapack-danger-term {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.datapack-danger-warning {
+    color: var(--spectrum-global-color-red-600);
 }
 
 
@@ -377,24 +434,6 @@
 .datapack-import-target-warning {
     font-size: 12px;
     color: var(--spectrum-global-color-gray-600);
-}
-
-/* "This project is set up for X" — the wizard's recorded choice, surfaced where
-   the packs are. An accent BORDER, not a filled banner: the dashboard
-   convention (see OrgContextNotice) is that attention is a border and an icon,
-   never a saturated fill. */
-.datapack-recorded-choice {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
-    padding: 12px 16px;
-    border-left: 3px solid var(--spectrum-global-color-blue-500);
-    background: var(--spectrum-global-color-gray-75);
-    border-radius: 4px;
-    box-sizing: border-box;
 }
 
 /* Export modal. Reuses the import modal's type grid — the two forms ask the

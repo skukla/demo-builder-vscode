@@ -152,8 +152,10 @@ jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
 import * as vscode from 'vscode';
 import { removeSampleData } from '@/features/data-installer/services/sampleDataInstall';
 import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
+import { executeEdsReset } from '@/features/eds/services/edsResetService';
 import { resetEdsProjectWithUI } from '@/features/eds/services/edsResetUI';
 
+const mockedReset = executeEdsReset as jest.MockedFunction<typeof executeEdsReset>;
 const mockedRemove = removeSampleData as jest.MockedFunction<typeof removeSampleData>;
 const mockedCredentials = resolveCommerceCredentials as jest.MockedFunction<
     typeof resolveCommerceCredentials
@@ -179,6 +181,11 @@ function createProject(datapack?: { name: string; version: string }): Project {
         lastModified: new Date(),
         selectedPackage: 'citisignal',
         selectedStack: 'eds-paas',
+        // The shape a REAL project has on disk. `stackBackend` is deliberately
+        // absent: it is not persisted, and inventing it here is what let the
+        // dispatch bug below survive every existing test.
+        componentSelections: { backend: 'adobe-commerce-accs' },
+        componentConfigs: { 'adobe-commerce-accs': { ACCS_STORE_CODE: 'main_website_store' } },
         componentInstances: {
             'eds-storefront': {
                 id: 'eds-storefront',
@@ -214,6 +221,19 @@ function answers(...values: Array<string | undefined>): void {
         mock.mockResolvedValueOnce(value);
     }
     mock.mockResolvedValue(undefined);
+}
+
+/**
+ * Let the SUT's dynamic imports and its detached credential promise settle.
+ *
+ * The lookup is started without being awaited, so nothing the caller returns
+ * guarantees it has run. A microtask tick is not enough — `await import()`
+ * resolves on the macrotask queue.
+ */
+async function flush(): Promise<void> {
+    for (let i = 0; i < 5; i++) {
+        await new Promise((resolve) => setImmediate(resolve));
+    }
 }
 
 function run(project: Project) {
@@ -265,6 +285,31 @@ describe('resetEdsProjectWithUI — sample data', () => {
         await run(createProject({ name: 'bodea', version: 'main' }));
 
         expect(mockedRemove).toHaveBeenCalled();
+    });
+
+    /**
+     * The data step runs BEFORE the storefront pipeline.
+     *
+     * The pipeline's last step pre-warms the catalog — it enumerates the
+     * instance's SKUs and pre-publishes a PDP page for each. With the data step
+     * after it, reset pre-published 30 product pages and then deleted those
+     * products; measured in two live runs on 2026-08-17
+     * (`Catalog Prewarm: Complete: 30/30` → `EDS project reset successfully` →
+     * the delete's 202). Ordered this way the warm cache describes the catalog
+     * the user is actually left with.
+     *
+     * Pinned on invocation order because nothing else can see it: both calls
+     * happen, both succeed, and the wrong sequence costs a wasted pre-warm that
+     * no assertion about outcomes would notice.
+     */
+    it('runs the data step BEFORE the storefront reset, so pre-warming is not wasted', async () => {
+        answers(RESET, REMOVE);
+
+        await run(createProject({ name: 'bodea', version: 'main' }));
+
+        expect(mockedRemove.mock.invocationCallOrder[0]).toBeLessThan(
+            mockedReset.mock.invocationCallOrder[0],
+        );
     });
 
     /** Cancelling the reset cancels everything — the second prompt never runs. */
@@ -364,6 +409,60 @@ describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
         );
     });
 
+    /**
+     * THE SECOND TRAP, and the one that actually shipped.
+     *
+     * `resolveCommerceCredentials` dispatches on `stackBackend` — a CredentialProject
+     * field that is NOT persisted, mapped from `componentSelections.backend` at every
+     * call site. This one passed the raw Project through `as never`, so `stackBackend`
+     * was undefined, neither backend branch matched, and it returned
+     * `unsupported-backend` BEFORE the broker was built. The prompt never appeared for
+     * any project, and no credential line was ever logged.
+     *
+     * Measured live 2026-08-17: an import recorded `bodea@main` at 00:00:20, the reset
+     * at 00:03:38 asked nothing, and the debug channel — which carries this call site's
+     * logger, confirmed by a control line from the same logger — held no `[Reset]`
+     * credential line at all.
+     *
+     * Asserted on the ARGUMENT because the resolver is mocked here: with the mock
+     * returning ok, every behavioural test above passed while the real dispatch fell
+     * through. `importHandlers` carries a comment about the identical failure one
+     * shape earlier (`stack?.backend`), whose fixtures shared the invented shape and
+     * so agreed with the bug — which is exactly why this asserts the mapping itself.
+     */
+    it('maps stackBackend from componentSelections, so the dispatch can match', async () => {
+        answers(RESET, REMOVE);
+
+        await run(createProject({ name: 'bodea', version: 'main' }));
+
+        expect(mockedCredentials).toHaveBeenCalledWith(
+            expect.objectContaining({
+                project: expect.objectContaining({
+                    stackBackend: 'adobe-commerce-accs',
+                    componentConfigs: expect.objectContaining({ 'adobe-commerce-accs': expect.anything() }),
+                }),
+            }),
+        );
+    });
+
+    /**
+     * CONTROL for the test above: the assertion must be sensitive to the mapping,
+     * not merely to a field existing. A project whose backend is absent must NOT
+     * produce the ACCS value — otherwise the test would pass against code that
+     * hardcodes it.
+     */
+    it('CONTROL — an absent backend maps to empty, never to a guessed one', async () => {
+        answers(RESET, REMOVE);
+        const project = createProject({ name: 'bodea', version: 'main' });
+        (project as { componentSelections?: unknown }).componentSelections = undefined;
+
+        await run(project);
+
+        expect(mockedCredentials).toHaveBeenCalledWith(
+            expect.objectContaining({ project: expect.objectContaining({ stackBackend: '' }) }),
+        );
+    });
+
     /** Checked BEFORE the prompt, not during the reset it would follow. */
     it('resolves credentials before asking, not after resetting', async () => {
         answers(RESET, REMOVE);
@@ -373,6 +472,77 @@ describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
         const askedAt = (vscode.window.showWarningMessage as jest.Mock).mock.invocationCallOrder[1];
         const checkedAt = mockedCredentials.mock.invocationCallOrder[0];
         expect(checkedAt).toBeLessThan(askedAt);
+    });
+
+    /**
+     * The lookup starts before the FIRST modal, not between the two.
+     *
+     * Reported live 2026-08-17: the second prompt took ~2s to appear after the
+     * first was confirmed. The cost is not the HTTP call (130-230ms measured) but
+     * the IMS token behind it — `tokenManager.inspectToken` spawns the whole `aio`
+     * CLI when its inspection cache is cold, which its own comment puts at ~3.7s.
+     * Nothing here makes that faster; starting it against a dialog the user is
+     * already reading is what removes the wait.
+     *
+     * Pinned on ordering because it is the entire point and is otherwise invisible:
+     * awaiting in the old place passes every other test in this file.
+     */
+    it('runs the credential lookup WHILE the reset confirmation is still open', async () => {
+        // Held open, so "did the lookup happen yet?" is a question about overlap
+        // rather than about call order. Ordering alone cannot express this: the
+        // lookup sits behind two dynamic imports, so it is always invoked a
+        // microtask AFTER the modal opens — which is exactly what makes it
+        // concurrent with the modal rather than after it.
+        let releaseFirstModal!: (answer: string) => void;
+        const firstModal = new Promise<string>((resolve) => {
+            releaseFirstModal = resolve;
+        });
+        const mock = vscode.window.showWarningMessage as jest.Mock;
+        mock.mockReset();
+        mock.mockReturnValueOnce(firstModal);
+        mock.mockResolvedValueOnce(REMOVE);
+        mock.mockResolvedValue(undefined);
+
+        const pending = run(createProject({ name: 'bodea', version: 'main' }));
+        await flush();
+
+        // The user has not answered anything yet.
+        expect(mockedCredentials).toHaveBeenCalled();
+
+        releaseFirstModal(RESET);
+        await pending;
+    });
+
+    /**
+     * Cancelling costs one discarded lookup — acceptable, and asserted so the
+     * trade-off is a decision rather than an accident. It must NOT cost a second
+     * prompt.
+     */
+    it('starts it even if the reset is then cancelled, and asks nothing', async () => {
+        answers(undefined);
+
+        await run(createProject({ name: 'bodea', version: 'main' }));
+        await flush();
+
+        expect(mockedCredentials).toHaveBeenCalledTimes(1);
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+        expect(mockedRemove).not.toHaveBeenCalled();
+    });
+
+    /**
+     * CONTROL for the unawaited promise: a rejecting lookup must degrade to "do
+     * not ask", never surface as an unhandled rejection or fail the reset. It is
+     * held across a modal, so a throw here has no caller to catch it.
+     */
+    it('CONTROL — a lookup that throws keeps the reset successful and asks nothing', async () => {
+        answers(RESET);
+        mockedCredentials.mockRejectedValue(new Error('discovery service down'));
+
+        const result = await run(createProject({ name: 'bodea', version: 'main' }));
+
+        expect(result.success).toBe(true);
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+        expect(mockedRemove).not.toHaveBeenCalled();
     });
 
     /** No pack, no credential lookup — nothing to spend it on. */

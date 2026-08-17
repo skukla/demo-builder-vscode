@@ -42,6 +42,12 @@ jest.mock('@/features/project-creation/ui/helpers/demoPackageLoader', () => {
         __esModule: true,
         loadDemoPackages: async () => testPackages,
         getSelectablePackages: async () => testPackages,
+        // Resolves ANY package by id, hidden included — that asymmetry with
+        // getSelectablePackages is the whole point of the real module, and the
+        // wizard now depends on it to show a project its own hidden package.
+        getPackageById: jest.fn(async (id: string) =>
+            testPackages.find((p) => p.id === id),
+        ),
     };
 });
 

@@ -124,6 +124,13 @@ export interface SampleDataDeps {
     watch: (args: {
         activationId: string;
         requestedTypes: string[];
+        /**
+         * Names the job in the poller's log line. Defaults to `import`, which is
+         * what a REMOVAL was labelled for its whole life — every poll of a
+         * reset's delete read `data-installer import <id>`, saying the opposite
+         * of what was running.
+         */
+        operation?: 'import' | 'reset';
         onProgress?: (perType: Record<string, DataTypeStatus>) => void;
     }) => Promise<{ outcome: string; perType: Record<string, DataTypeStatus> }>;
     /** Live per-type progress, for the build's progress line. */
@@ -226,6 +233,11 @@ async function runSampleDataJob(
         const watched = await deps.watch({
             activationId: started.activationId,
             requestedTypes: dataTypes,
+            // Per PHASE, not per caller. A restore runs both verbs through this
+            // runner, and hardcoding either one mislabels the other — as it did
+            // for a few hours today, when a fix for "a removal logged as an
+            // import" pinned this to 'reset' and mislabelled every install.
+            operation: mode === 'remove' ? 'reset' : 'import',
             ...(deps.onProgress ? { onProgress: deps.onProgress } : {}),
         });
 

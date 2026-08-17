@@ -243,6 +243,9 @@ async function createEds(
         dispatchHandler(edsHandlers, capturing, 'storefront-setup-start', {
             projectName: args.projectName,
             selectedPackage: args.pkgId,
+            // Rehydration of package-derived config (brandAssets, codePatches,
+            // …) requires BOTH the package and the stack id.
+            selectedStack: args.stackId,
             dependencies: setupDeps,
             edsConfig: edsConfigInput,
         }),

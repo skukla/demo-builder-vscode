@@ -24,8 +24,7 @@
 
 import { provisionAccsCredentials } from '../services/accsCredentialProvisioner';
 import { canProvisionAccsCredentials } from '../services/accsProvisionEligibility';
-import { brokerForContext } from '../services/commerceCredentialBroker';
-import { resolveCommerceCredentials } from '../services/commerceCredentials';
+import { resolveProjectCredentials } from '../services/commerceCredentialBroker';
 import {
     DataInstallerWriteClient,
     type ImportRequest,
@@ -177,7 +176,7 @@ export const importHandlers = defineHandlers({
         if (payload?.confirm !== true) {
             return {
                 success: false,
-                error: 'A reset removes this datapack\'s data from the Commerce instance and cannot be undone. Confirm to proceed.',
+                error: 'This removes the datapack\'s data from the Commerce instance and cannot be undone. Confirm to proceed.',
                 code: ErrorCode.INVALID_OPERATION,
             };
         }
@@ -266,15 +265,7 @@ export const importHandlers = defineHandlers({
             return { success: true, data: { websites: [] } };
         }
 
-        const credentials = await resolveCommerceCredentials({
-            project: {
-                stackBackend: project.componentSelections?.backend ?? '',
-                componentConfigs: project.componentConfigs ?? {},
-            },
-            secrets: context.context.secrets,
-            projectName: project.name,
-            broker: brokerForContext(context, project),
-        });
+        const credentials = await resolveProjectCredentials(context, project);
         if (!credentials.ok) {
             // Not an error: the import still works, it just lands on the default.
             return { success: true, data: { websites: [] } };
@@ -391,22 +382,7 @@ async function prepareImport(
         return { response: { success: false, error: 'Open a project before importing a datapack.' } };
     }
 
-    const credentials = await resolveCommerceCredentials({
-        project: {
-            // `componentSelections.backend` — the field a PERSISTED project
-            // actually carries, and what the other six readers in this repo use.
-            // This read `stack?.backend` for its whole life, a shape that exists
-            // only in wizard state, so EVERY real project resolved to '' and got
-            // "this project has no Adobe Commerce backend". The unit fixtures had
-            // the same invented shape and so agreed with it — a live dry run is
-            // what caught it, which no test here could have.
-            stackBackend: project.componentSelections?.backend ?? '',
-            componentConfigs: project.componentConfigs ?? {},
-        },
-        secrets: context.context.secrets,
-        projectName: project.name,
-        broker: brokerForContext(context, project),
-    });
+    const credentials = await resolveProjectCredentials(context, project);
     if (!credentials.ok) {
         return {
             response: {
@@ -571,6 +547,8 @@ async function runAndWatch(
         const transient = new TransientStateManager(context.context);
         await transient.set(JOB_KEY, record);
 
+        await recordDatapackOnProject(context, spec.operation, request);
+
         void watchAndRecord(context, transient, record);
 
         return { success: true, data: { activationId: started.activationId } };
@@ -580,6 +558,54 @@ async function runAndWatch(
             error: error instanceof Error ? error.message : spec.failed,
             code: ErrorCode.UNKNOWN,
         };
+    }
+}
+
+/**
+ * Record on the PROJECT which datapack its instance now holds — or no longer does.
+ *
+ * `project.datapack` was written only by the wizard's Sample Data step, so a pack
+ * imported from this modal left no trace on the project. `confirmSampleDataRemoval`
+ * gates on exactly that field, so reset silently never offered to remove data the
+ * user had just imported. Found live 2026-08-16: an import succeeded, and the
+ * following reset asked nothing.
+ *
+ * **Recorded when the service ACCEPTS, not when the job finishes.** A partial
+ * import still puts data on the instance, and a record written only on full
+ * success would leave that data with nothing pointing at it — the failure mode
+ * worth avoiding. The opposite error (recording a pack whose import then failed
+ * entirely) costs one removal that reports nothing to remove.
+ *
+ * A reset CLEARS it: the manifest is rebuilt from the project on every write
+ * (`projectConfigWriter`, "no merging needed"), so `undefined` genuinely removes
+ * the field rather than leaving the old value behind.
+ *
+ * Never fatal. The import has already been accepted by the service by this point,
+ * and failing the handler over a bookkeeping write would report a started job as
+ * a failed one.
+ */
+async function recordDatapackOnProject(
+    context: HandlerContext,
+    operation: ImportJobRecord['operation'],
+    request: ImportRequest,
+): Promise<void> {
+    try {
+        const project = await context.stateManager.getCurrentProject();
+        if (!project) {
+            return;
+        }
+        project.datapack =
+            operation === 'reset' ? undefined : { name: request.id.name, version: request.id.version };
+        await context.stateManager.saveProject(project);
+        context.debugLogger.debug(
+            `[Data Installer] project datapack ${operation === 'reset' ? 'cleared' : `recorded as ${request.id.name}@${request.id.version}`}`,
+        );
+    } catch (error) {
+        context.debugLogger.debug(
+            `[Data Installer] could not record the datapack on the project: ${
+                error instanceof Error ? error.message : String(error)
+            }`,
+        );
     }
 }
 

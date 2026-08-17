@@ -29,6 +29,7 @@ const STOREFRONT_DERIVED_FIELDS = [
     'contentPatchSource',
     'codePatches',
     'codePatchSource',
+    'brandAssets',
 ] as const;
 
 /** Fields the user owns — carried over from the previous config, never from the storefront. */
@@ -53,6 +54,11 @@ function makeStorefront(overrides: Partial<Storefront> = {}): Storefront {
         contentPatchSource: { owner: 'p-owner', repo: 'p-repo' },
         codePatches: ['code-a'],
         codePatchSource: { owner: 'c-owner', repo: 'c-repo', path: 'patches' },
+        brandAssets: {
+            source: { owner: 'b-owner', repo: 'b-repo', branch: 'main' },
+            files: [{ from: 'styles/theme.css', to: 'styles/theme.css' }],
+            headSnippet: '<link rel="stylesheet" href="/styles/theme.css">',
+        },
         ...overrides,
     } as Storefront;
 }

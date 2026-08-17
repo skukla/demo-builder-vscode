@@ -79,7 +79,7 @@ describe('demoPackageLoader (logic, injected fixture)', () => {
             const result = await loadDemoPackages(config);
 
             expect(result).toBe(config.packages);
-            expect(result.map(p => p.id)).toEqual(['alpha', 'beta']);
+            expect(result.map((p) => p.id)).toEqual(['alpha', 'beta']);
         });
     });
 
@@ -154,7 +154,7 @@ describe('demoPackageLoader (logic, injected fixture)', () => {
             const storefronts = await getAllStorefronts(packages);
 
             expect(storefronts).toHaveLength(3);
-            storefronts.forEach(item => {
+            storefronts.forEach((item) => {
                 expect(item.packageId).toBeDefined();
                 expect(item.stackId).toBeDefined();
                 expect(item.storefront.name).toBeDefined();
@@ -165,8 +165,8 @@ describe('demoPackageLoader (logic, injected fixture)', () => {
         it('groups storefronts under their owning package', async () => {
             const storefronts = await getAllStorefronts(packages);
 
-            expect(storefronts.filter(s => s.packageId === 'alpha')).toHaveLength(2);
-            const beta = storefronts.filter(s => s.packageId === 'beta');
+            expect(storefronts.filter((s) => s.packageId === 'alpha')).toHaveLength(2);
+            const beta = storefronts.filter((s) => s.packageId === 'beta');
             expect(beta).toHaveLength(1);
             expect(beta[0].stackId).toBe('eds-accs');
         });
@@ -174,13 +174,13 @@ describe('demoPackageLoader (logic, injected fixture)', () => {
 });
 
 describe('shipped demo-packages.json (config integrity)', () => {
-    it('ships exactly 4 packages (citisignal, isle5, buildright, custom)', async () => {
+    it('ships exactly 5 packages (citisignal, isle5, buildright, custom, bodea)', async () => {
         const packages = await loadDemoPackages();
 
-        expect(packages.length).toBe(4);
-        const ids = packages.map(p => p.id);
+        expect(packages.length).toBe(5);
+        const ids = packages.map((p) => p.id);
         expect(ids).toEqual(
-            expect.arrayContaining(['citisignal', 'isle5', 'buildright', 'custom'])
+            expect.arrayContaining(['citisignal', 'isle5', 'buildright', 'custom', 'bodea'])
         );
         // citisignal-b2b retired — merged into the hybrid `citisignal` package.
         expect(ids).not.toContain('citisignal-b2b');
@@ -190,22 +190,26 @@ describe('shipped demo-packages.json (config integrity)', () => {
 
     it('getSelectablePackages hides packages marked hidden (isle5, buildright)', async () => {
         const selectable = await getSelectablePackages();
-        const ids = selectable.map(p => p.id);
+        const ids = selectable.map((p) => p.id);
 
         // The new-project picker shows only the non-hidden packages.
-        expect(ids).toEqual(expect.arrayContaining(['citisignal', 'custom']));
+        // `bodea` joined them 2026-08-17 — it shipped hidden by design and was
+        // unhidden once its four pre-unhide items closed (store scope read live,
+        // group-hash portability answered, configurator keeper settled, VIP nav
+        // gating deleted).
+        expect(ids).toEqual(expect.arrayContaining(['citisignal', 'custom', 'bodea']));
         expect(ids).not.toContain('isle5');
         expect(ids).not.toContain('buildright');
         // None of the returned packages are hidden.
-        expect(selectable.every(p => !p.hidden)).toBe(true);
+        expect(selectable.every((p) => !p.hidden)).toBe(true);
         // loadDemoPackages still returns everything (existing projects resolve by id).
-        expect((await loadDemoPackages()).length).toBe(4);
+        expect((await loadDemoPackages()).length).toBe(5);
     });
 
     it('every package has the required structural properties', async () => {
         const packages = await loadDemoPackages();
 
-        packages.forEach(pkg => {
+        packages.forEach((pkg) => {
             expect(pkg.id).toBeDefined();
             expect(pkg.name).toBeDefined();
             expect(pkg.description).toBeDefined();
@@ -217,7 +221,7 @@ describe('shipped demo-packages.json (config integrity)', () => {
     it('does not carry package-level contentSources (content source is per-storefront)', async () => {
         const packages = await loadDemoPackages();
 
-        packages.forEach(pkg => {
+        packages.forEach((pkg) => {
             expect((pkg as unknown as Record<string, unknown>).contentSources).toBeUndefined();
         });
     });
@@ -227,7 +231,7 @@ describe('shipped demo-packages.json (config integrity)', () => {
 
         expect(citisignal?.name).toBe('CitiSignal');
         expect(await getAvailableStacksForPackage('citisignal')).toEqual(
-            expect.arrayContaining(['headless-paas', 'eds-paas', 'eds-accs']),
+            expect.arrayContaining(['headless-paas', 'eds-paas', 'eds-accs'])
         );
         const edsPaas = citisignal!.storefronts['eds-paas'];
         expect(edsPaas.contentSource?.org).toBeDefined();
@@ -246,7 +250,7 @@ describe('shipped demo-packages.json (config integrity)', () => {
         // One row per (package, stack) pair across all shipped packages.
         const expected = (await loadDemoPackages()).reduce(
             (sum, p) => sum + Object.keys(p.storefronts).length,
-            0,
+            0
         );
         expect(storefronts).toHaveLength(expected);
     });
@@ -255,7 +259,7 @@ describe('shipped demo-packages.json (config integrity)', () => {
         it('keeps commerce-block-collection out of package addons (moved to block-libraries.json)', async () => {
             const packages = await loadDemoPackages();
 
-            packages.forEach(pkg => {
+            packages.forEach((pkg) => {
                 expect(pkg.addons?.['commerce-block-collection']).toBeUndefined();
             });
         });
@@ -263,9 +267,9 @@ describe('shipped demo-packages.json (config integrity)', () => {
         it('uses the simplified string form for all addon configs', async () => {
             const packages = await loadDemoPackages();
 
-            packages.forEach(pkg => {
+            packages.forEach((pkg) => {
                 if (pkg.addons) {
-                    Object.values(pkg.addons).forEach(config => {
+                    Object.values(pkg.addons).forEach((config) => {
                         expect(typeof config).toBe('string');
                     });
                 }

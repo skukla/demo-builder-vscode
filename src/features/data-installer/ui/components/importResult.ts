@@ -109,7 +109,7 @@ export function resolveResult(
             const request = lastAction === 'start' ? start : reset;
             if (request.failure) {
                 return failureResult(
-                    lastAction === 'start' ? 'Import failed to start' : 'Reset failed to start',
+                    lastAction === 'start' ? 'Import failed to start' : 'Removal failed to start',
                     request.failure,
                 );
             }
@@ -146,7 +146,9 @@ function failureResult(
 
 /** A finished job, worded for ITS operation — a reset must not say "Import". */
 function terminalResult(record: ImportJobRecord): ResultContent {
-    const op = record.operation === 'reset' ? 'Reset' : 'Import';
+    // "Removal", not "Reset" — see importProgress. This surface says what the
+    // button said, and a project reset means something else now.
+    const op = record.operation === 'reset' ? 'Removal' : 'Import';
 
     // Success says it once and shows the check. Listing fourteen lines of
     // "success" repeats the title in longhand, and — measured against the live

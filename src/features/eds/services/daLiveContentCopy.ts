@@ -26,7 +26,12 @@ import { DaLiveContentDiscovery } from './daLiveContentDiscovery';
 import { transformHtmlForDaLive, buildSourceUrl, resolveDaPath } from './daLiveContentHelpers';
 import { DaLiveSourceOperations } from './daLiveSourceOperations';
 import { convertSpreadsheetJsonToHtml } from './daLiveSpreadsheetUtils';
-import { addContentResult, addReferenceResult, type PatchReport } from './patchReportHelper';
+import {
+    addContentResult,
+    addReferenceResult,
+    isDeferredReference,
+    type PatchReport,
+} from './patchReportHelper';
 import { RUNTIME_SURFACES } from './runtimeSurfaceInventory';
 import { getRuntimeSurfaces, type RuntimeSurfaceSource } from './runtimeSurfaceResolver';
 import {
@@ -971,9 +976,11 @@ export class DaLiveContentCopy {
         // via the proceed-and-warn report — the loud signal for the
         // "silently-dropped content" class even if discovery missed a shape. The
         // demo still proceeds; this never fails the copy.
+        // References a later stage is configured to supply are not gaps — see
+        // `deferredReferencePrefixes`. Skipping them keeps this channel worth reading.
         const copiedSet = new Set(copiedFiles);
         for (const ref of discoveredPaths) {
-            if (!copiedSet.has(ref)) {
+            if (!copiedSet.has(ref) && !isDeferredReference(patchReport, ref)) {
                 this.logger.warn(
                     `[DA.live] Completeness audit — referenced document not copied: ${ref}`,
                 );

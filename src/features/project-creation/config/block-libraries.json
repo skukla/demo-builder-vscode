@@ -38,6 +38,24 @@
       }
     },
     {
+      "id": "bodea-blocks",
+      "name": "Bodea Blocks",
+      "description": "Bodea blocks: VIP segmentation, guided selling, configurators, and marketing blocks",
+      "type": "storefront",
+      "source": {
+        "owner": "skukla",
+        "repo": "bodea-source",
+        "branch": "main"
+      },
+      "nativeForPackages": ["bodea"],
+      "onlyForPackages": ["bodea"],
+      "stackTypes": ["eds-storefront"],
+      "contentSource": {
+        "org": "skukla",
+        "site": "bodea-source"
+      }
+    },
+    {
       "id": "buildright-blocks",
       "name": "BuildRight Blocks",
       "description": "Branded blocks from the BuildRight EDS storefront",

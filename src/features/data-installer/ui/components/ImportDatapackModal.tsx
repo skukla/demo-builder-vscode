@@ -37,6 +37,7 @@
 import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import type { DatapackId, ImportJobRecord } from '../../types';
+import { dataTypeLabel } from '../dataTypeLabel';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useImportProgress } from '../hooks/useImportProgress';
 import { useImportScopes, type ImportScopes } from '../hooks/useImportScopes';
@@ -252,7 +253,18 @@ export function ImportDatapackModal({
         !dismissed && !busy
             ? resolveResult(lastAction, { dryRun, start, reset, provision, record, startedActivation })
             : null;
-    const canStart = commerceInstance.length > 0 && selected.length > 0 && !busy;
+    // `scopes.loading` is in here because the target is still resolving while it
+    // is true. Without it the user can tick types and press Start during the
+    // second or two the pickers show a spinner, and the import lands on the
+    // service default (`base`/`default`) instead of the target that was about to
+    // arrive — silently, since the request simply omits the pair.
+    //
+    // Safe to gate on: `useVSCodeRequest` clears `loading` in its catch as well
+    // as on success, so a discovery that FAILS re-enables Start rather than
+    // stranding it. That matters because targeting is optional — an import with
+    // no target is legitimate, and must stay possible when discovery cannot run.
+    const canStart =
+        commerceInstance.length > 0 && selected.length > 0 && !busy && !scope.loading;
 
     const bodyContext: BodyContext = {
         displayName,
@@ -398,9 +410,44 @@ function ModalBody({ view, ctx }: { view: ModalView; ctx: BodyContext }): React.
                     ) : null}
 
                     {view === 'confirm-reset' ? (
+                        // Three lines, not one sentence. This read as a single run
+                        // of prose carrying fourteen raw service codes
+                        // (`b2b_shared_catalog_company_assignments`) and a bare
+                        // 22-character tenant id — the shape nobody reads before
+                        // pressing the button that cannot be undone.
+                        //
+                        // The list stays in full rather than being summarised to a
+                        // count: the user picked these types, and a destructive
+                        // confirmation is the one place they should be able to
+                        // check the picking. It is the CODES that were unreadable,
+                        // so they go through the same `dataTypeLabel` as the
+                        // checkboxes they were chosen from.
                         <div className="datapack-import-danger">
-                            {`Remove ${ctx.displayName}'s ${ctx.selected.join(', ')} from ${ctx.commerceInstance}. This cannot be undone — the Data Installer has no restore.`}
-                </div>
+                            <p className="datapack-danger-lede">
+                                Remove {ctx.displayName}&rsquo;s sample data from this Commerce
+                                instance?
+                            </p>
+                            {/* Term and value each in their own element. A bare
+                                text node beside the term leaves the value with no
+                                element of its own, so nothing can query or style
+                                it independently. */}
+                            <p className="datapack-danger-detail">
+                                <span className="datapack-danger-term">Instance</span>
+                                <span className="datapack-danger-value">
+                                    {ctx.commerceInstance}
+                                </span>
+                            </p>
+                            <p className="datapack-danger-detail">
+                                <span className="datapack-danger-term">
+                                    {ctx.selected.length} data{' '}
+                                    {ctx.selected.length === 1 ? 'type' : 'types'}
+                                </span>
+                                <span className="datapack-danger-value">
+                                    {ctx.selected.map(dataTypeLabel).join(', ')}
+                                </span>
+                            </p>
+                            <p className="datapack-danger-warning">This cannot be undone.</p>
+                        </div>
                     ) : null}
 
                     {view === 'watching' && ctx.record ? (
@@ -443,7 +490,8 @@ function busyMessage(starting: boolean, resetting: boolean, provisioning: boolea
         return 'Starting import…';
     }
     if (resetting) {
-        return 'Starting reset…';
+        // "removal", matching the button and the progress verb.
+        return 'Starting removal…';
     }
     if (provisioning) {
         return 'Setting up credentials…';
@@ -508,7 +556,12 @@ function buildActions(a: {
             isDisabled: !a.canStart,
         },
         // Arms only. Removing data always takes a second, explicit press.
-        { label: 'Reset…', variant: 'secondary', onPress: a.armReset, isDisabled: !a.canStart },
+        //
+        // "Remove data…", not "Reset…": a project RESET restores the pack —
+        // deletes it and imports the same one again — so the same word meant
+        // opposite things one menu apart, and this modal's own confirm text
+        // ("cannot be undone") was true here and false there.
+        { label: 'Remove data…', variant: 'secondary', onPress: a.armReset, isDisabled: !a.canStart },
         {
             label: startLabel(a.provisioning, a.starting),
             variant: 'accent',
@@ -531,8 +584,12 @@ function WatchProgress({
     record: ImportJobRecord;
     watching: boolean;
 }): React.JSX.Element {
+    // `op` is the WIRE value, passed to progressLabel. `noun` is what the user
+    // reads — they diverged when this surface stopped saying "reset", and one
+    // variable serving both is how "The reset continues on the server" survived.
     const op = record.operation === 'reset' ? 'reset' : 'import';
-    const active = record.operation === 'reset' ? 'Resetting…' : 'Importing…';
+    const noun = record.operation === 'reset' ? 'removal' : 'import';
+    const active = record.operation === 'reset' ? 'Removing…' : 'Importing…';
 
     // The LIVE map, pushed each poll. `record.perType` is empty for the whole
     // run — it is only written when the watch settles — so reading it here is
@@ -552,7 +609,7 @@ function WatchProgress({
             helperText={
                 watching
                     ? 'This can take several minutes. Closing this or stopping the watch continues on the server.'
-                    : `The ${op} continues on the server.`
+                    : `The ${noun} continues on the server.`
             }
         />
     );
