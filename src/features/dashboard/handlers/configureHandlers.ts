@@ -20,7 +20,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { validateURL } from '@/core/validation';
-import { handleDiscoverStoreStructure } from '@/features/eds';
+import { handleCheckCredentialService, handleDiscoverStoreStructure } from '@/features/eds';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 import { parseJSON } from '@/types/typeGuards';
@@ -154,4 +154,6 @@ export const configureHandlers = defineHandlers({
     openExternal: handleOpenExternal,
     'open-eds-settings': handleOpenEdsSettings,
     'discover-store-structure': handleDiscoverStoreStructureAndPersist,
+    // Whether the OAuth fields need filling in at all. Status only — never a pair.
+    'check-credential-service': handleCheckCredentialService,
 });

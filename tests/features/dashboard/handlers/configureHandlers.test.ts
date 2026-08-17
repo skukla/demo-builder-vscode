@@ -127,7 +127,10 @@ describe('configureHandlers', () => {
         it('should have exactly 6 handlers', () => {
             const types = getRegisteredTypes(configureHandlers) as Array<keyof typeof configureHandlers>;
             // 6 → 5: create-workspace-credential removed 2026-08-05 (nothing sent it).
-            expect(types).toHaveLength(5);
+            // 5 → 6: check-credential-service — Configure renders the same ACCS OAuth
+            // fields as the wizard, so it must answer the same probe or the two
+            // surfaces disagree about whether those fields need filling in.
+            expect(types).toHaveLength(6);
         });
 
         it('should NOT include AI handlers (they live in aiHandlers.ts)', () => {
