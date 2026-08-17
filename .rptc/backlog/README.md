@@ -176,39 +176,21 @@ Note: `2026-05-30-decouple-project-from-workspace.md` looks adjacent but its hea
 
 Give an agent the same 403 repair a human now gets from `Demo Builder: Manage Site Access` — `get_site_access` / `grant_site_admin` / `revoke_site_admin` over the existing `siteAccessManagerHeadless` core, which was built UI-free for exactly this. No new logic; the constraints (report `verified` separately from `status`, treat `not_authorized` as non-retryable, never remove the last admin, mask emails) are measured rather than assumed and are listed in the item. Filed 2026-08-14 from the `config-service-admin-grant` verify loop.
 
-#### Component secret routing — the declaration decides where a credential lives ([`component-secret-routing/`](component-secret-routing/overview.md))
+#### ~~Component secret routing~~ — **SHIPPED 2026-08-17**, moved to [`../complete/component-secret-routing/`](../complete/component-secret-routing/overview.md)
 
-Filed 2026-08-13; **small version shipped same day** (`ce840267`: ACCS fields declared, the
-`SECRET_ENV_KEYS` guard, one reader per credential pair). Remaining scope is the seam itself —
-generalize `type: 'secret'` routing beyond App Builder, then migrate the two secrets now in
-`componentConfigs`. Originally from Data Installer Stage 2 live verification. An ACCS project cannot import:
-the modal says "add an OAuth client id and secret" and there is **nowhere to add them** —
-`storeAccsCredentials` is called from tests only. Two designs were rejected before this one (a
-feature-specific form; collapsing the per-backend branch), both recorded in the plan so they are
-not retried.
+`secret: true` now separates the routing decision from `type`'s render hint; the two Commerce
+credentials go to SecretStorage via a verified write-through (write → read back → only then
+strip), applied at project creation, at Configure save, and by an activation sweep that converges
+existing projects. The completion record notes two places the plan was wrong and building it
+corrected them.
 
-The general problem: **nothing links a config DECLARATION to SecretStorage for ordinary
-components.** `type: 'secret'` → SecretStorage exists but is App Builder-only; a Commerce
-credential lands in `componentConfigs` in the clear and is kept out of exports by
-`SECRET_ENV_KEYS`, a hand-maintained list whose own docstring warns you to remember it. The fix
-generalizes the seam that already exists (`splitAppBuilderComponentSecrets` + `secretKey`), so a
-secret is never written rather than written-then-stripped.
-
-**Step 5 is worth doing on its own.** It shrinks that list and adds a guard that fails when a
-component declares a credential-shaped field which is neither `type: 'secret'` nor listed —
-today nothing enforces the list at all, and the export's safety rests entirely on it
-(`stripSecretValues`, wired in `12f4b802`). Take step 5 even if steps 1-2 are rejected or the
-migration question stalls; it does not depend on either.
-
-**Step 2 is where the risk is**, and it is bigger than moving a value: **three consumers read that
-password straight out of `componentConfigs`**, one of them (`useAutoStoreDetect`) in the WEBVIEW,
-which cannot read SecretStorage at all. Recommended migration is three phases — one accessor with
-fallback first (behaviour-identical, independently valuable), then write-through with verified
-read-back so the credential is never in neither place, then converge on load. Phase 1 is worth
-doing even if the rest never happens. **Steps 1-2 are shared infrastructure**;
-step 3 alone would unblock ACCS the existing (worse) way. Verified against the live service, not
-assumed: it refuses with "Provide either (client_id + client_secret) or (admin_username +
-admin_password)" and 401s on a bogus pair. Not blocked; needs a design decision before code.
+The risk the plan named was real and landed as predicted: three consumers read the password out
+of `componentConfigs`, one of them (`useAutoStoreDetect`) in the WEBVIEW, which cannot read
+SecretStorage at all. Each got its own answer — `.env` generation hydrates the value at write
+time, the webview gates on an `isSet` flag rather than the value, and the Configure field renders
+"Saved" instead of an empty required box. A fourth hazard the plan did not foresee is recorded in
+the completion note: an empty field means "cleared" to the migration and "hidden" to the form, so
+an unfiltered save would have destroyed the credential.
 
 #### App Builder app family — attach a deployable app to a demo ([`2026-06-17-appbuilder-app-deploy-spine.md`](../complete/2026-06-17-appbuilder-app-deploy-spine.md))
 

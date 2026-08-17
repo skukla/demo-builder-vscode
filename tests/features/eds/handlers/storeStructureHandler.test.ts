@@ -27,7 +27,7 @@ const PROJECT = {
     adobe: { organization: 'org-1', projectId: 'p1', workspace: 'Stage' },
 };
 
-function ctx(project: unknown, token?: string): HandlerContext {
+function ctx(project: unknown, token?: string, secrets?: unknown): HandlerContext {
     return {
         stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
         logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
@@ -36,6 +36,7 @@ function ctx(project: unknown, token?: string): HandlerContext {
                 inspectToken: jest.fn().mockResolvedValue({ valid: !!token, token }),
             }),
         },
+        ...(secrets ? { context: { secrets } } : {}),
     } as unknown as HandlerContext;
 }
 
@@ -65,6 +66,27 @@ describe('handleGetStoreStructure', () => {
         expect(mockEnsureAuth).not.toHaveBeenCalled();
     });
 
+    it('threads SecretStorage into BOTH reads', async () => {
+        // Asserting the ARGUMENT, not the outcome: `readStoreStructure` is mocked
+        // here, and a mock answers the same whether or not it was handed `secrets`.
+        // Without it the PaaS branch is config-only, so a project whose admin
+        // password has migrated reports "no credentials saved" while the value sits
+        // one lookup away — invisible to any outcome-based assertion.
+        const secrets = { get: jest.fn(), store: jest.fn(), delete: jest.fn() };
+        const data = { backendType: 'accs', websites: [], resolution: {} };
+        mockRead
+            .mockResolvedValueOnce({ success: false, error: 'sign-in', authRequired: true })
+            .mockResolvedValueOnce({ success: true, data });
+
+        await handleGetStoreStructure(ctx(PROJECT, 'ims-token', secrets));
+
+        expect(mockRead).toHaveBeenNthCalledWith(1, PROJECT, { secrets });
+        expect(mockRead).toHaveBeenNthCalledWith(2, PROJECT, {
+            imsToken: 'ims-token',
+            secrets,
+        });
+    });
+
     it('passes a non-auth failure straight through without signing in', async () => {
         mockRead.mockResolvedValue({ success: false, error: 'No Commerce URL configured.' });
 
@@ -83,7 +105,7 @@ describe('handleGetStoreStructure', () => {
         const result = await handleGetStoreStructure(ctx(PROJECT, 'ims-token'));
 
         expect(result).toEqual({ success: true, data });
-        expect(mockRead).toHaveBeenNthCalledWith(1, PROJECT);
+        expect(mockRead).toHaveBeenNthCalledWith(1, PROJECT, {});
         expect(mockRead).toHaveBeenNthCalledWith(2, PROJECT, { imsToken: 'ims-token' });
         // The project's own org/workspace ride along so the guard targets it.
         expect(mockEnsureAuth).toHaveBeenCalledWith(

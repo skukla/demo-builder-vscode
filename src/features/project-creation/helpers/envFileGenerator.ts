@@ -7,6 +7,7 @@ import * as path from 'path';
 import { formatGroupName } from './formatters';
 import { generateConfigFile } from '@/core/config/configFileGenerator';
 import { COMPONENT_IDS } from '@/core/constants';
+import { ServiceLocator } from '@/core/di';
 import { normalizeIfUrl } from '@/core/validation/Validator';
 import { resolveBackendOwnedScopeValue } from '@/features/components/config/backendOwnedScope';
 import {
@@ -14,6 +15,8 @@ import {
     CATALOG_SERVICE_ENDPOINT,
     ACCS_CATALOG_SERVICE_ENDPOINT,
 } from '@/features/components/config/envVarKeys';
+import { hydrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
+import type { ConfigMap } from '@/features/components/services/envVarHelpers';
 import {
     generateConfigJson,
     extractConfigParamsFromConfigs,
@@ -318,7 +321,7 @@ export async function regenerateProjectEnvFiles(
     registry: ComponentRegistry,
     logger: Logger,
 ): Promise<void> {
-    const context = buildEnvGenerationContext(project, registry, logger);
+    const context = await buildEnvGenerationContext(project, registry, logger);
 
     for (const [componentId, instance] of Object.entries(project.componentInstances || {})) {
         if (!instance?.path) {
@@ -344,20 +347,33 @@ export async function regenerateProjectEnvFiles(
  * below resolve env values identically — same `derivedFrom` handling, same
  * cross-component `componentConfigs` reads, same mesh endpoint.
  */
-function buildEnvGenerationContext(
+async function buildEnvGenerationContext(
     project: Project,
     registry: ComponentRegistry,
     logger: Logger,
-): EnvGenerationContext {
+): Promise<EnvGenerationContext> {
     const backendId = project.componentSelections?.backend;
+
+    // Declared secrets live in SecretStorage, not `componentConfigs` — but the
+    // generated `.env` is how a component actually RECEIVES them at runtime, so
+    // they are restored here, for this write only. Hydrating inside the context
+    // builder rather than at each caller is deliberate: five call chains reach
+    // `.env` generation, and a missed one writes `KEY=` and breaks the demo at
+    // runtime instead of failing at the call site.
+    //
+    // The hydrated copy is never persisted — `project.componentConfigs` is
+    // untouched, and `hydrateDeclaredSecrets` returns a copy.
+    const hydratedConfigs = (await hydrateDeclaredSecrets(
+        project.componentConfigs as ConfigMap,
+        project.path,
+        ServiceLocator.getSecretStorage() ?? undefined,
+    )) as Record<string, Record<string, string | number | boolean | undefined>> | undefined;
+
     return {
         registry,
         logger,
         getBackendId: () => backendId,
-        getComponentConfigs: () =>
-            project.componentConfigs as
-                | Record<string, Record<string, string | number | boolean | undefined>>
-                | undefined,
+        getComponentConfigs: () => hydratedConfigs,
         getEnvVarDefinitions: () => registry.envVars || {},
         // Keyed-first (ADR-011 D3 Steps 07+09): the endpoint lives on the keyed
         // mesh appBuilderComponents entry (legacy meshState fallback inside).
@@ -418,7 +434,7 @@ export async function regenerateComponentEnvFile(
         componentPath,
         componentId,
         definition,
-        buildEnvGenerationContext(project, registry, logger),
+        await buildEnvGenerationContext(project, registry, logger),
     );
 }
 

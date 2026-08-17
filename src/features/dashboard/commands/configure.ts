@@ -20,6 +20,11 @@ import { getBundleUri } from '@/core/utils/bundleUri';
 import { parseEnvFile } from '@/core/utils/envParser';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { getProvidedEnvVars } from '@/features/app-builder/services/appBuilderComponentState';
+import {
+    loadDeclaredSecretFlags,
+    migrateDeclaredSecrets,
+    reKeyProjectSecrets,
+} from '@/features/components/services/commerceSecretMigration';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { detectStorefrontChanges, isEdsProject, republishStorefrontConfig } from '@/features/eds';
 import {
@@ -72,6 +77,8 @@ interface ConfigureInitialData {
     providedEnvVars: Record<string, string>;
     /** Per-appBuilderComponent "is set" flags for secret vars (booleans only, no values). */
     appBuilderComponentSecretFlags: Record<string, Record<string, boolean>>;
+    /** Component-declared secrets this project holds, as booleans only. */
+    componentSecretFlags: Record<string, Record<string, boolean>>;
 }
 
 export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
@@ -202,6 +209,15 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             project.path,
             this.context.secrets,
         );
+        // The same signal for COMPONENT-declared secrets. The webview cannot read
+        // the keychain, and two things there depend on knowing a value exists: the
+        // store-discovery trigger, and the password field, which would otherwise
+        // render empty and let a blank be saved over a good credential.
+        const componentSecretFlags = await loadDeclaredSecretFlags(
+            Object.keys(project.componentConfigs ?? {}),
+            project.path,
+            this.context.secrets,
+        );
 
         return {
             theme,
@@ -214,6 +230,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             appBuilderComponentCatalog,
             providedEnvVars,
             appBuilderComponentSecretFlags,
+            componentSecretFlags,
         };
     }
 
@@ -244,6 +261,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                     }
 
                     // Handle project rename if name changed
+                    const pathBeforeRename = project.path;
                     if (data.newProjectName && data.newProjectName !== project.name) {
                         const renameResult = await handleRenameProject(
                             this.createHandlerContext(),
@@ -262,6 +280,19 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                         if (!project) {
                             throw new Error('Project not found after rename');
                         }
+
+                        // The SecretStorage key is keyed on the project PATH, so a
+                        // rename orphans it. Follow the path before anything reads a
+                        // credential: an already-migrated secret is no longer in
+                        // componentConfigs, so a missed re-key loses it from both
+                        // places and the Configure field simply reads blank.
+                        await reKeyProjectSecrets(
+                            pathBeforeRename,
+                            project.path,
+                            Object.keys(project.componentConfigs ?? {}),
+                            this.context.secrets,
+                            (line) => this.logger.info(`[Configure] ${line}`),
+                        );
                     }
 
                     // SECRET SAFETY (repo is PUBLIC): split appBuilderComponent `type:'secret'`
@@ -280,13 +311,35 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                     // Values are all strings here (the Configure payload is text/secret
                     // strings); the split only deletes secret keys, so the narrow local
                     // ComponentConfigs shape is preserved.
-                    const sanitizedConfigs = split.sanitizedConfigs as ComponentConfigs;
+                    const appBuilderSanitized = split.sanitizedConfigs as ComponentConfigs;
                     await persistAppBuilderComponentSecrets(
                         split.secrets,
                         project.path,
                         this.context.secrets,
                         this.logger,
                     );
+
+                    // Same guarantee for COMPONENT-declared secrets (`secret: true` in
+                    // components.json) — the Commerce credentials. Write-through with a
+                    // verified read-back: a value only leaves componentConfigs once
+                    // SecretStorage is proven to hold it, so it is never in neither place
+                    // (`.rptc/complete/component-secret-routing/`, phase 2).
+                    const migration = await migrateDeclaredSecrets(
+                        appBuilderSanitized,
+                        project.path,
+                        this.context.secrets,
+                        (line) => this.logger.info(`[Configure] ${line}`),
+                    );
+                    if (migration.retained.length > 0) {
+                        // Not fatal, and not silent: the save proceeds with the value
+                        // exactly where it was, and the next one tries again.
+                        this.logger.warn(
+                            `[Configure] ${migration.retained.length} secret(s) could not be ` +
+                                `moved to SecretStorage and remain in project config: ` +
+                                `${migration.retained.join(', ')}`,
+                        );
+                    }
+                    const sanitizedConfigs = migration.sanitizedConfigs as ComponentConfigs;
 
                     // Detect if mesh configuration changed BEFORE saving.
                     // Org-targeted: with an empty staleness baseline this fetches

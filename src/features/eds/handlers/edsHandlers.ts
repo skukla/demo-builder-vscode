@@ -16,6 +16,7 @@
 
 import { selectDiscoveryService } from '../services/accsDiscoveryConfig';
 import { discoverStoreStructure } from '../services/commerceStoreDiscovery';
+import { handleCheckCredentialService } from './credentialServiceHandler';
 import {
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
@@ -35,6 +36,7 @@ import { handleStartStorefrontSetup, handleCancelStorefrontSetup } from './store
 import { handleGetStoreStructure } from './storeStructureHandler';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { validateURL } from '@/core/validation';
+import { resolvePaasAdminPair } from '@/features/components/services/commerceCredentialStore';
 import type { StoreDiscoveryParams } from '@/types/commerceStore';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -54,9 +56,32 @@ export { clearServiceCache } from './edsHelpers';
 // ==========================================================
 
 /**
+ * The PaaS admin pair for the CURRENT project, from wherever it lives.
+ *
+ * Only reached when the caller sent no credentials. Returns undefined for every
+ * "there is nothing to find" case — no project, no store, an unsaved project —
+ * and the service then rejects the empty pair with its own user-facing message,
+ * exactly as it did when the webview sent blanks.
+ */
+async function resolvePaasPairForCurrentProject(
+    context: HandlerContext,
+): Promise<{ username: string; password: string } | undefined> {
+    const project = await context.stateManager?.getCurrentProject();
+    if (!project) return undefined;
+
+    return resolvePaasAdminPair(
+        {
+            ...(context.context?.secrets ? { secrets: context.context.secrets } : {}),
+            ...(project.path ? { projectId: project.path } : {}),
+        },
+        project.componentConfigs,
+    );
+}
+
+/**
  * Payload for handleDiscoverStoreStructure.
- * PaaS admin credentials travel in the payload so the request is self-contained —
- * the discovery handler needs no out-of-band credential cache.
+ * PaaS admin credentials travel in the payload when the wizard has just collected
+ * them; otherwise the host resolves them for the current project.
  */
 interface DiscoverStoreStructurePayload {
     /** Commerce backend type */
@@ -116,16 +141,24 @@ export async function handleDiscoverStoreStructure(
         };
 
         if (payload.backendType === 'paas') {
-            // Credentials arrive in the discovery payload (self-contained request).
-            // The service rejects empty credentials with a user-facing message.
+            // Credentials arrive in the payload when the WIZARD sends them, because
+            // the user is typing them and no project exists yet to have saved them.
+            // When the payload omits them the host resolves them from the current
+            // project instead — the seam that lets Configure stop sending a
+            // credential it only holds because we sent it there
+            // (`.rptc/complete/component-secret-routing/`, phase 1).
             //
             // NOTE: admin username/password is the deliberate model for PaaS discovery.
             // A scoped Commerce integration token was evaluated and DECLINED (2026-06-15):
             // no attacker exposure it would close (creds are gitignored, in-process IPC,
             // HTTPS-only, never logged), and it adds real per-demo setup friction. The only
             // residual is plaintext-at-rest in .env, which a token shares and does not fix.
-            params.username = payload.username || undefined;
-            params.password = payload.password || undefined;
+            const supplied =
+                payload.username && payload.password
+                    ? { username: payload.username, password: payload.password }
+                    : await resolvePaasPairForCurrentProject(context);
+            params.username = supplied?.username || undefined;
+            params.password = supplied?.password || undefined;
         } else {
             const earlyReturn = await buildAccsDiscoveryParams(context, payload, params);
             if (earlyReturn !== null) return earlyReturn;
@@ -273,6 +306,10 @@ export const edsHandlers = defineHandlers({
 
     // Store discovery
     'discover-store-structure': handleDiscoverStoreStructure,
+
+    // Will the shared service hand this user a Commerce credential? Status only —
+    // the pair never crosses to the webview.
+    'check-credential-service': handleCheckCredentialService,
 
     // Agent-facing: headless store-structure read behind the get_store_structure MCP tool
     'get-store-structure': handleGetStoreStructure,

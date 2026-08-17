@@ -43,6 +43,7 @@ import {
 import { parseGitHubUrl } from '@/core/utils';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
@@ -433,6 +434,30 @@ export async function executeProjectCreation(
         projectPath,
         existingProject,
     );
+
+    // Route declared secrets (`secret: true` in components.json) to SecretStorage
+    // BEFORE the project is ever persisted, so a NEW project's credential is never
+    // written to the manifest in the clear — not even once, to be cleaned up on a
+    // later save. This is the first moment a project path exists, which is the
+    // first moment the key scheme can address it.
+    //
+    // Write-through with a verified read-back: a value only leaves the config once
+    // SecretStorage is proven to hold it. A failure leaves it exactly where it was
+    // and creation proceeds — the credential still works, it is merely still in the
+    // manifest, which is where it lived before this existed.
+    const secretMigration = await migrateDeclaredSecrets(
+        project.componentConfigs,
+        project.path,
+        context.context?.secrets,
+        (line) => context.logger.info(`[Project Creation] ${line}`),
+    );
+    project.componentConfigs = secretMigration.sanitizedConfigs as typeof project.componentConfigs;
+    if (secretMigration.retained.length > 0) {
+        context.logger.warn(
+            `[Project Creation] ${secretMigration.retained.length} secret(s) remain in project ` +
+                `config: ${secretMigration.retained.join(', ')}`,
+        );
+    }
 
     context.logger.debug(
         '[Project Creation] Deferring project state save until after installation',

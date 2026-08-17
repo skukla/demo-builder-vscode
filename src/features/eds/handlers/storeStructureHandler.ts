@@ -31,7 +31,11 @@ export const handleGetStoreStructure: MessageHandler = async (context) => {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const firstAttempt = await readStoreStructure(project);
+    // `secrets` on BOTH attempts: without it the PaaS branch is config-only, and a
+    // project whose admin password has migrated reports "no credentials saved"
+    // while the value sits one lookup away.
+    const secrets = context.context?.secrets;
+    const firstAttempt = await readStoreStructure(project, { ...(secrets ? { secrets } : {}) });
     if (firstAttempt.success) {
         return { success: true, data: firstAttempt.data };
     }
@@ -75,7 +79,10 @@ export const handleGetStoreStructure: MessageHandler = async (context) => {
         };
     }
 
-    const retry = await readStoreStructure(project, { imsToken: inspection.token });
+    const retry = await readStoreStructure(project, {
+        imsToken: inspection.token,
+        ...(secrets ? { secrets } : {}),
+    });
     if (retry.success) {
         return { success: true, data: retry.data };
     }

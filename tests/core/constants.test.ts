@@ -26,8 +26,14 @@ describe('AI_CONTEXT_VERSION', () => {
     // reports. Without the bump, existing projects keep a diagnosis table that
     // sends the reader to the Commerce admin for a category tree the endpoint
     // is hiding from them.
-    it('is 13 (empty-catalog route names the root category; instance limits added)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(13);
+    // v14: update-credentials told agents ALL credentials live in component `.env`
+    // files and to read them with get_component_config. Passwords and client
+    // secrets are now in the OS keychain, so that is wrong AND harmful — an agent
+    // finding nothing could "fix" it by writing the secret back into project files
+    // with update_project_config, undoing the protection. Without the bump,
+    // existing projects keep an instruction that reverses a security change.
+    it('is 14 (secrets are not in .env; the skill must stop saying they are)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(14);
     });
 });
 

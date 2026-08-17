@@ -79,6 +79,8 @@ jest.mock('@/core/di', () => ({
         setCommandExecutor: jest.fn(),
         setAuthenticationService: jest.fn(),
         setStateManager: jest.fn(),
+        setSecretStorage: jest.fn(),
+        getSecretStorage: jest.fn(() => null),
         reset: jest.fn(),
     },
 }));

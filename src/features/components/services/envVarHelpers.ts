@@ -102,7 +102,9 @@ function parseAccsEndpoint(
 }
 
 /** A Commerce config map, as a project carries it. */
-type ConfigMap = Record<string, Record<string, string | boolean | number | undefined>> | undefined;
+export type ConfigMap =
+    | Record<string, Record<string, string | boolean | number | undefined>>
+    | undefined;
 
 /**
  * The PaaS admin pair, or nothing.
@@ -115,7 +117,7 @@ type ConfigMap = Record<string, Record<string, string | boolean | number | undef
  * read themselves — the data installer, the EDS store-structure reader and the
  * wizard's auto-detect hook — and three copies of "how do I get this credential"
  * is what makes moving it expensive. It is planned to move
- * (`.rptc/backlog/component-secret-routing/`); when it does, this changes and they
+ * (`.rptc/complete/component-secret-routing/`); when it does, this changes and they
  * do not.
  *
  * Deliberately PURE. `useAutoStoreDetect` runs in the WEBVIEW, which can reach

@@ -99,7 +99,16 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // nobody assigned, which is an Admin step. import-datapack also gains the
 // instance-level limits (B2B enablement, pre-existing scopes, unsupported
 // customer segments) that no API can report.
-export const AI_CONTEXT_VERSION = 13;
+// v14: `update-credentials.md` was telling agents that ALL credentials live in
+// component `.env` files and to read them with `get_component_config`. Passwords
+// and client secrets now live in the OS keychain, so that instruction is both
+// wrong and harmful — an agent following it would find nothing and could "fix"
+// the gap by writing the secret back into project files with
+// `update_project_config`, undoing the protection. The skill now separates the
+// two kinds of value, says a secret read as absent is deliberate, and routes the
+// user to Configure. It also corrects `ACCS_ENDPOINT`, which is not a key that
+// exists — the catalog calls it `ACCS_GRAPHQL_ENDPOINT`.
+export const AI_CONTEXT_VERSION = 14;
 
 /**
  * Component IDs for standardized component instance access

@@ -25,9 +25,11 @@ import {
     PAAS_URL,
 } from '@/features/components/config/envVarKeys';
 import {
-    lookupComponentConfigValue,
-    readPaasAdminPair,
-} from '@/features/components/services/envVarHelpers';
+    resolvePaasAdminPair,
+    type CommercePairDeps,
+    type SecretReader,
+} from '@/features/components/services/commerceCredentialStore';
+import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import type { Project } from '@/types';
 import type { CommerceStoreStructure, StoreDiscoveryParams } from '@/types/commerceStore';
 
@@ -90,15 +92,16 @@ type DiscoveryRequest = StoreDiscoveryParams | RequestFailure;
 /**
  * Build the PaaS discovery request from the project's saved admin credentials.
  */
-function buildPaasRequest(
+async function buildPaasRequest(
     configs: Record<string, Record<string, string | boolean | number | undefined>>,
-): DiscoveryRequest {
+    deps: CommercePairDeps,
+): Promise<DiscoveryRequest> {
     const baseUrl = toSafeOrigin(lookupComponentConfigValue(configs, PAAS_URL));
     if (!baseUrl) {
         return { error: 'Project has no usable Commerce URL configured.' };
     }
 
-    const pair = readPaasAdminPair(configs);
+    const pair = await resolvePaasAdminPair(deps, configs);
     if (!pair) {
         return {
             error:
@@ -197,7 +200,7 @@ function buildScopeReport(project: Project, structure: CommerceStoreStructure): 
  */
 export async function readStoreStructure(
     project: Project,
-    options: { imsToken?: string } = {},
+    options: { imsToken?: string; secrets?: SecretReader } = {},
 ): Promise<StoreStructureOutcome> {
     const environmentType = extractConfigParams(project).environmentType;
     if (environmentType !== 'paas' && environmentType !== 'accs') {
@@ -214,7 +217,10 @@ export async function readStoreStructure(
 
     const request =
         environmentType === 'paas'
-            ? buildPaasRequest(configs)
+            ? await buildPaasRequest(configs, {
+                  ...(options.secrets ? { secrets: options.secrets } : {}),
+                  ...(project.path ? { projectId: project.path } : {}),
+              })
             : buildAccsRequest(configs, project.adobe?.organization, options.imsToken);
 
     if ('error' in request) {

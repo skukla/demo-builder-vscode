@@ -43,6 +43,7 @@ import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
 import { registerValidateSelectionTool } from '@/features/ai/server/validateSelectionTool';
 import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication';
+import { sweepCommerceSecrets } from '@/features/components/services/commerceSecretSweep';
 import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
 import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromptsSeeder';
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
@@ -151,6 +152,11 @@ export async function activate(context: vscode.ExtensionContext) {
         // Register StateManager with ServiceLocator (for commands without handler context)
         ServiceLocator.setStateManager(stateManager);
 
+        // SecretStorage, for the write-time consumers of a declared secret — the
+        // generated `.env` above all, which is how a PaaS demo receives its admin
+        // password. Registered before anything can generate one.
+        ServiceLocator.setSecretStorage(context.secrets);
+
         // The two per-project upkeep sweeps, run ONE AFTER THE OTHER.
         //
         // 1. Silent AI-bundle upkeep for every known project (ADR-013): tier-1
@@ -174,6 +180,11 @@ export async function activate(context: vscode.ExtensionContext) {
         void (async () => {
             await refreshAiBundlesOnActivation(context.extensionPath, logger);
             await sweepPublishKeyRenewals(context);
+            // Last in the chain, and the ordering buys nothing structural: each
+            // sweep re-loads from disk independently, and the two before it write
+            // manifests as well. Kept last only so the newest one is the easiest to
+            // drop if the upkeep chain ever needs shortening.
+            await sweepCommerceSecretStorage(context);
         })().catch((error) => {
             logger.warn(`[Activation] Project upkeep sweep failed: ${(error as Error).message}`);
         });
@@ -560,6 +571,48 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
 }
 
 /**
+ * Every project on disk, fully loaded.
+ *
+ * Shared by the upkeep sweeps below, which each need the whole set. Extracted at
+ * two rather than three because the duplicate carries a SIDE EFFECT that is easy
+ * to miss: `loadProjectFromPath` defaults to `persistAfterLoad: true`, so each
+ * copy re-saves every project and moves `currentProject`. Two copies did that
+ * twice per activation.
+ */
+async function loadAllProjects(): Promise<Project[]> {
+    const summaries = await stateManager.getAllProjects();
+    const projects: Project[] = [];
+    for (const summary of summaries) {
+        const project = await stateManager.loadProjectFromPath(summary.path);
+        if (project) projects.push(project);
+    }
+    return projects;
+}
+
+/**
+ * Move every existing project's declared secrets into SecretStorage.
+ *
+ * Glue only; the verified write-through lives in `migrateDeclaredSecrets`. Runs on
+ * the activation upkeep path because a credential sitting in plaintext should not
+ * wait for a user to happen to open Configure and save
+ * (`.rptc/complete/component-secret-routing/`, phase 3).
+ */
+async function sweepCommerceSecretStorage(context: vscode.ExtensionContext): Promise<void> {
+    try {
+        const projects = await loadAllProjects();
+
+        await sweepCommerceSecrets({
+            projects,
+            secrets: context.secrets,
+            saveProject: (project) => stateManager.saveProjectConfigOnly(project),
+            log: (line) => logger.info(`[Secrets] ${line}`),
+        });
+    } catch (error) {
+        logger.debug(`[Secrets] Sweep skipped: ${(error as Error).message}`);
+    }
+}
+
+/**
  * Load every project and hand them to the publish-key renewal sweep.
  *
  * Glue only — the decision of what is due lives in `renewPublishKeys`, which
@@ -568,12 +621,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
  */
 async function sweepPublishKeyRenewals(context: vscode.ExtensionContext): Promise<void> {
     try {
-        const summaries = await stateManager.getAllProjects();
-        const projects: Project[] = [];
-        for (const summary of summaries) {
-            const project = await stateManager.loadProjectFromPath(summary.path);
-            if (project) projects.push(project);
-        }
+        const projects = await loadAllProjects();
 
         await renewPublishKeys({
             projects,

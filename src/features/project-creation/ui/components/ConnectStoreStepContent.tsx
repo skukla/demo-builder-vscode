@@ -22,6 +22,7 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import {
+    ACCS_OAUTH_CLIENT_ID,
     ACCS_STORE_VIEW_CODE,
     PAAS_STORE_VIEW_CODE,
 } from '@/features/components/config/envVarKeys';
@@ -30,6 +31,7 @@ import { ServiceGroupList } from '@/features/components/ui/components/ServiceGro
 import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
 import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
 import { useComponentConfig } from '@/features/components/ui/hooks/useComponentConfig';
+import { useCredentialService } from '@/features/components/ui/hooks/useCredentialService';
 import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { ComponentConfigs } from '@/types/webview';
@@ -126,6 +128,18 @@ export function ConnectStoreStepContent({
         hasStoreData,
         isFetching,
     });
+
+    // Only ACCS uses the shared OAuth pair, and only when the catalog actually
+    // declares the field — keyed off the rendered fields rather than the backend id,
+    // so the probe fires exactly when the UI it feeds is on screen.
+    const hasBrokeredCredentialField = useMemo(
+        () =>
+            serviceGroups.some((group) =>
+                group.fields.some((field) => field.key === ACCS_OAUTH_CLIENT_ID),
+            ),
+        [serviceGroups],
+    );
+    const credentialService = useCredentialService(hasBrokeredCredentialField, adobeOrg?.id);
 
     // Report each sub-step's own verdict. Whole-form validity was the deadlock:
     // Catalog's required fields kept Connection from ever completing, and Catalog
@@ -242,6 +256,7 @@ export function ConnectStoreStepContent({
                             getStoreGroupItems={getStoreGroupItems}
                             getStoreViewItems={getStoreViewItems}
                             onRefresh={forceFetch}
+                            credentialService={credentialService}
                         />
                     )}
                 />

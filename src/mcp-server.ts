@@ -29,7 +29,7 @@ import { z } from 'zod';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import { assertPathInside, assertPathInsideSync } from '@/core/validation';
 import { asRawText, asText } from '@/features/ai/server/mcpToolResult';
-import { stripSecretValues } from '@/features/components/config/envVarKeys';
+import { stripManifestSecrets } from '@/features/components/config/envVarKeys';
 import {
     DaLiveContentOperations,
     type TokenProvider,
@@ -856,14 +856,14 @@ export const toolHandlers = {
             // whose credential it is.
             //
             // This is the convention `export_project_settings` already follows in
-            // the other direction — secrets go to the FILE, never the response —
-            // and `stripSecretValues` is the same helper that enforces it there.
-            const safe = {
-                ...manifest,
-                ...(manifest.componentConfigs
-                    ? { componentConfigs: stripSecretValues(manifest.componentConfigs) }
-                    : {}),
-            };
+            // the other direction — secrets go to the FILE, never the response.
+            //
+            // `stripManifestSecrets`, not `stripSecretValues`: componentConfigs is
+            // not the only place the manifest keeps env values. Four staleness
+            // baselines carry flat snapshots too, and stripping only the first left
+            // `ADOBE_CATALOG_API_KEY` readable through this very tool — the same
+            // leak, one field over.
+            const safe = stripManifestSecrets(manifest);
             // Compact JSON (no indentation) — the response is consumed as LLM
             // context, not read by a human, so whitespace is pure token waste.
             return JSON.stringify(full ? safe : summarizeManifest(safe));

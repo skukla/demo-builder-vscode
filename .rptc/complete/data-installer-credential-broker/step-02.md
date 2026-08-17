@@ -105,7 +105,7 @@ SecretStorage is a live mechanism here and `commerceCredentials.ts:54-59` reserv
 a `SecretStore` interface plus an unused `secrets` param for it — but there is no
 writer for the ACCS pair (`storeAccsCredentials` was deleted; only a test docstring
 remembers it). That seam is the right home for **the user's own** pair, and wiring
-it is `.rptc/backlog/component-secret-routing/overview.md`, not this plan. The
+it is `.rptc/complete/component-secret-routing/overview.md`, not this plan. The
 broker result lives in memory and goes into the request.
 
 ## Tests

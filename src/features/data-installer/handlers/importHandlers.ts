@@ -44,6 +44,7 @@ import { exportHandlers } from './exportHandlers';
 import { ServiceLocator } from '@/core/di';
 import { PollingService } from '@/core/shell/pollingService';
 import { TransientStateManager } from '@/core/state/transientStateManager';
+import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -359,6 +360,20 @@ export const importHandlers = defineHandlers({
             ACCS_OAUTH_CLIENT_ID: result.clientId,
             ACCS_OAUTH_CLIENT_SECRET: result.clientSecret,
         };
+
+        // Route the freshly-provisioned secret to SecretStorage before the project
+        // is saved. Without this the one path that CREATES a credential is the one
+        // path that writes it to the manifest in the clear — the migration would
+        // only clean it up on some later save, and until then a public-repo
+        // manifest holds an org-wide Commerce write credential.
+        const migration = await migrateDeclaredSecrets(
+            project.componentConfigs,
+            project.path,
+            context.context?.secrets,
+            (line: string) => context.debugLogger.debug(`[Data Installer] ${line}`),
+        );
+        project.componentConfigs = migration.sanitizedConfigs as typeof project.componentConfigs;
+
         await context.stateManager.saveProject(project);
 
         return { success: true };
