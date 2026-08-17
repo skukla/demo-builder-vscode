@@ -12,7 +12,7 @@
  * @module features/data-installer/ui/components/ImportForm
  */
 
-import { ActionButton, Checkbox, Item, Picker } from '@adobe/react-spectrum';
+import { ActionButton, Checkbox, Item, Picker, ProgressCircle } from '@adobe/react-spectrum';
 import React from 'react';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { TargetWebsite } from '../hooks/useImportScopes';
@@ -94,47 +94,103 @@ function TargetScopeFields({
 
     return (
         <div className="datapack-import-scope">
-            <Picker
-                label="Target website"
-                placeholder={websitePlaceholder(isLoading, defaultSite?.name)}
-                isDisabled={isLoading}
-                selectedKey={websiteCode || null}
-                onSelectionChange={(key) => onWebsiteChange(String(key ?? ''))}
-            >
-                {websites.map((site) => (
-                    <Item key={site.code} textValue={site.name}>
-                        {site.name}
-                    </Item>
-                ))}
-            </Picker>
-            <Picker
-                label="Store view"
-                placeholder={storePlaceholder(isLoading, chosen ? storeViews[0]?.name : undefined)}
-                isDisabled={isLoading || !websiteCode}
-                selectedKey={storeCode || null}
-                onSelectionChange={(key) => onStoreChange(String(key ?? ''))}
-            >
-                {storeViews.map((view) => (
-                    <Item key={view.code} textValue={view.name}>
-                        {view.name}
-                    </Item>
-                ))}
-            </Picker>
+            <ScopeField isLoading={isLoading} busyLabel="Loading websites">
+                <Picker
+                    label="Target website"
+                    placeholder={websitePlaceholder(isLoading, defaultSite?.name)}
+                    isDisabled={isLoading}
+                    selectedKey={websiteCode || null}
+                    onSelectionChange={(key) => onWebsiteChange(String(key ?? ''))}
+                >
+                    {websites.map((site) => (
+                        <Item key={site.code} textValue={site.name}>
+                            {site.name}
+                        </Item>
+                    ))}
+                </Picker>
+            </ScopeField>
+            <ScopeField isLoading={isLoading} busyLabel="Loading store views">
+                <Picker
+                    label="Store view"
+                    placeholder={storePlaceholder(
+                        isLoading,
+                        chosen ? storeViews[0]?.name : undefined,
+                    )}
+                    isDisabled={isLoading || !websiteCode}
+                    selectedKey={storeCode || null}
+                    onSelectionChange={(key) => onStoreChange(String(key ?? ''))}
+                >
+                    {storeViews.map((view) => (
+                        <Item key={view.code} textValue={view.name}>
+                            {view.name}
+                        </Item>
+                    ))}
+                </Picker>
+            </ScopeField>
         </div>
     );
 }
 
+/**
+ * A scope picker with a spinner on its label row while discovery runs.
+ *
+ * The spinner is a SIBLING of the `Picker`, positioned over the label row, not a
+ * node passed as `label`. Spectrum's label accepts a node, but the repo's test
+ * mock forwards it to `aria-label` (`aria-label={ariaLabel || label}`), so a node
+ * label stringifies to `[object Object]` and every `getByLabelText('Target
+ * website')` in the suite stops matching. The label stays a plain string.
+ *
+ * Follows `VerifiedField`, which is this repo's existing answer to "a form field
+ * that is checking something": keep the control in place, disable it, and put an
+ * indeterminate `ProgressCircle` beside it. Two static "Loading…" strings, which
+ * is what this had, cannot show that anything is still happening — and discovery
+ * here waits on a credential fetch plus a Commerce call, so it is not instant.
+ */
+function ScopeField({
+    isLoading,
+    busyLabel,
+    children,
+}: {
+    isLoading: boolean;
+    busyLabel: string;
+    children: React.ReactNode;
+}): React.JSX.Element {
+    return (
+        <div className="datapack-scope-field">
+            {children}
+            {isLoading ? (
+                <ProgressCircle
+                    size="S"
+                    isIndeterminate
+                    aria-label={busyLabel}
+                    UNSAFE_className="datapack-scope-spinner"
+                />
+            ) : null}
+        </div>
+    );
+}
+
+/**
+ * An em dash while discovery runs — the SPINNER says it is loading.
+ *
+ * These read "Loading websites…" and "Loading…", which is the same sentence
+ * twice in adjacent fields and, being static text, looked identical whether the
+ * request was in flight or wedged. The spinner carries that meaning now, so the
+ * placeholder only has to avoid claiming a value that has not arrived.
+ */
+const PENDING_PLACEHOLDER = '—';
+
 /** Names the default WEBSITE, never "base" and never the default store view. */
 function websitePlaceholder(isLoading: boolean, defaultName?: string): string {
     if (isLoading) {
-        return 'Loading websites…';
+        return PENDING_PLACEHOLDER;
     }
     return defaultName ? `${defaultName} (default)` : 'Instance default';
 }
 
 function storePlaceholder(isLoading: boolean, firstViewName?: string): string {
     if (isLoading) {
-        return 'Loading…';
+        return PENDING_PLACEHOLDER;
     }
     return firstViewName ? `${firstViewName} (default)` : 'Choose a website first';
 }
@@ -167,14 +223,17 @@ export function ImportForm({
 }): React.JSX.Element {
     return (
         <>
-            {/* No target block and no Change escape. The project already fixes
-                where data lands; changing that means changing the project, which
-                belongs on the dashboard rather than behind a link in here. The
-                22-character instance id it used to print was not something
-                anyone could verify by eye either. */}
-            <p className="datapack-import-warning">
-                There is no undo — check with whoever owns this instance before importing.
-            </p>
+            {/* No target block, no Change escape, and no standing warning line.
+                The project already fixes where data lands; changing that means
+                changing the project, which belongs on the dashboard rather than
+                behind a link in here.
+
+                "There is no undo — check with whoever owns this instance before
+                importing" used to sit here. It was permanent furniture above a
+                form the user opened deliberately, so it carried no information
+                at the moment it was read. The destructive path that DOES need a
+                warning — Reset — has its own armed confirmation naming the
+                instance, and that is where the caution belongs. */}
             <TargetScopeFields
                 websites={websites}
                 websiteCode={websiteCode}

@@ -250,26 +250,28 @@
     min-width: 0;
 }
 
-/* The no-undo line, which is a caution rather than target metadata. */
-.datapack-import-warning {
-    margin: 0;
-    font-size: 12px;
-    color: var(--vscode-descriptionForeground);
-}
-
 .datapack-import-scope > [data-testid='spectrum-picker-wrapper'],
 .datapack-import-scope > div {
     min-width: 0;
 }
 
-/* Names the manual precondition: `websites` is not an importable data type, so a
-   website the user has not created cannot appear in the picker above, and a short
-   list with no explanation reads as a bug. */
-.datapack-import-scope-hint {
-    margin: 0;
-    font-size: 11px;
-    line-height: 1.4;
-    color: var(--vscode-descriptionForeground);
+/* Anchors the discovery spinner to the picker's own label row.
+
+   Positioned against the FIELD rather than by a computed offset: a Spectrum size
+   prop and the matching CSS var resolve to different px in this webview, so any
+   value derived from a token lands wrong at one of the two scales. */
+.datapack-scope-field {
+    position: relative;
+    min-width: 0;
+}
+
+/* The right end of the label row, opposite the label text. `top` targets the
+   label's line box rather than the field top, so it reads as part of the label
+   instead of floating over the control. */
+.datapack-scope-spinner {
+    position: absolute;
+    top: 2px;
+    right: 0;
 }
 
 /* The products/customer_groups dependency. Warning colour, not error: the import
@@ -327,7 +329,16 @@
     min-width: 0;
 }
 
-.datapack-import-label {
+/* EVERY field label in this modal, in one rule.
+
+   "Data types" was the only one styled, so Spectrum's default FieldLabel sized
+   "Target website" and "Store view" larger than the section heading above the
+   grid — three labels at the same level of the hierarchy, rendered three ways.
+   The picker labels are listed here rather than given their own matching rule:
+   a second copy of these four declarations is a second thing to keep in step,
+   and the values would drift the first time one was tuned. */
+.datapack-import-label,
+.datapack-import-scope .spectrum-FieldLabel {
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;

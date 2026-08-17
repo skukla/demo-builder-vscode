@@ -252,7 +252,18 @@ export function ImportDatapackModal({
         !dismissed && !busy
             ? resolveResult(lastAction, { dryRun, start, reset, provision, record, startedActivation })
             : null;
-    const canStart = commerceInstance.length > 0 && selected.length > 0 && !busy;
+    // `scopes.loading` is in here because the target is still resolving while it
+    // is true. Without it the user can tick types and press Start during the
+    // second or two the pickers show a spinner, and the import lands on the
+    // service default (`base`/`default`) instead of the target that was about to
+    // arrive — silently, since the request simply omits the pair.
+    //
+    // Safe to gate on: `useVSCodeRequest` clears `loading` in its catch as well
+    // as on success, so a discovery that FAILS re-enables Start rather than
+    // stranding it. That matters because targeting is optional — an import with
+    // no target is legitimate, and must stay possible when discovery cannot run.
+    const canStart =
+        commerceInstance.length > 0 && selected.length > 0 && !busy && !scope.loading;
 
     const bodyContext: BodyContext = {
         displayName,

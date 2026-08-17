@@ -38,6 +38,24 @@ function withScopes(scopes: unknown = SCOPES) {
 }
 
 /**
+ * Discovery that never settles, so the loading state can be asserted.
+ *
+ * Every other request still answers — a modal that cannot resolve its target
+ * renders a different view, and the loading state would never be reached.
+ */
+function stallScopes() {
+    mockRequest.mockImplementation(async (type: string) => {
+        if (type === 'list-datapack-import-scopes') {
+            return new Promise(() => {}); // never settles
+        }
+        if (type === 'get-datapack-import-target') {
+            return { success: true, data: { instance: 'inst-1', projectName: 'demo' } };
+        }
+        return { success: true, data: null };
+    });
+}
+
+/**
  * The hidden select the Spectrum Picker mock exposes, found by its LABEL element.
  *
  * Scoped to `spectrum-picker-label` rather than any matching text: the store-view
@@ -234,6 +252,99 @@ describe('the redesigned target section', () => {
         // Two pickers render (website and store view); the first is the website.
         const pickers = await screen.findAllByTestId('spectrum-picker-select');
         expect(pickers[0]).toBeDisabled();
+    });
+
+    /**
+     * A spinner, because static text cannot show that anything is still running.
+     *
+     * The placeholders read "Loading websites…" and "Loading…" — the same
+     * sentence twice in adjacent fields, and identical whether the request was in
+     * flight or wedged. Discovery waits on a credential fetch plus a Commerce
+     * call, so this is seconds rather than a flash. Follows `VerifiedField`: keep
+     * the control, disable it, put an indeterminate ProgressCircle beside it.
+     */
+    it('shows a spinner on each scope field while discovery runs', async () => {
+        stallScopes();
+        renderModal();
+
+        await screen.findAllByTestId('spectrum-picker-select');
+
+        expect(screen.getByLabelText('Loading websites')).toBeInTheDocument();
+        expect(screen.getByLabelText('Loading store views')).toBeInTheDocument();
+    });
+
+    /** CONTROL — the spinners are a loading state, not permanent furniture. */
+    it('CONTROL — removes both spinners once the scopes arrive', async () => {
+        withScopes();
+        renderModal();
+        await awaitScopes();
+
+        expect(screen.queryByLabelText('Loading websites')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('Loading store views')).not.toBeInTheDocument();
+    });
+
+    /** The spinner carries "busy"; the placeholder no longer repeats it twice. */
+    it('does not repeat the word Loading in the field placeholders', async () => {
+        stallScopes();
+        renderModal();
+
+        await screen.findAllByTestId('spectrum-picker-select');
+
+        expect(screen.queryByText(/loading websites/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/^loading…$/i)).not.toBeInTheDocument();
+    });
+
+    /**
+     * Start must not fire into an unresolved target.
+     *
+     * `canStart` omitted `scope.loading`, so during the second or two the pickers
+     * spin the user could tick types and press Start — and the import landed on
+     * the service default (`base`/`default`) rather than the target about to
+     * arrive, silently, because the request simply omits the pair.
+     */
+    it('disables Start import while the target is still resolving', async () => {
+        stallScopes();
+        renderModal({ availableTypes: ['categories'] });
+
+        await screen.findAllByTestId('spectrum-picker-select');
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+
+        // The shared Modal renders actions as div[role="button"][aria-disabled],
+        // not <button disabled>, so jest-dom's toBeDisabled() does not apply —
+        // and worse, `.not.toBeDisabled()` passes vacuously on a div. Assert the
+        // attribute, as the sibling suites do.
+        expect(screen.getByRole('button', { name: /start import/i })).toHaveAttribute(
+            'aria-disabled',
+            'true',
+        );
+    });
+
+    /**
+     * CONTROL, and the reason gating is safe at all. Targeting is OPTIONAL — an
+     * import with no target is legitimate — so a discovery that FAILS must
+     * re-enable Start rather than stranding it. `useVSCodeRequest` clears
+     * `loading` in its catch as well as on success; this pins that.
+     */
+    it('CONTROL — re-enables Start when discovery FAILS', async () => {
+        mockRequest.mockImplementation(async (type: string) => {
+            if (type === 'list-datapack-import-scopes') {
+                return { success: false, error: 'discovery unavailable' };
+            }
+            if (type === 'get-datapack-import-target') {
+                return { success: true, data: { instance: 'inst-1', projectName: 'demo' } };
+            }
+            return { success: true, data: null };
+        });
+        renderModal({ availableTypes: ['categories'] });
+
+        fireEvent.click(await screen.findByRole('checkbox', { name: 'Categories' }));
+
+        await waitFor(() =>
+            expect(screen.getByRole('button', { name: /start import/i })).toHaveAttribute(
+                'aria-disabled',
+                'false',
+            ),
+        );
     });
 
     /** 2 and 3. */

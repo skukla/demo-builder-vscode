@@ -354,14 +354,14 @@ describe('DatapackCatalogView', () => {
         it('opens when the flyout raises Import', async () => {
             await openImport();
 
-            expect(await screen.findByText(/there is no undo/i)).toBeInTheDocument();
+            expect(await screen.findByRole('button', { name: /start import/i })).toBeInTheDocument();
         });
 
         // The types on offer are what the service HOLDS, from the detail
         // inventory — never what the pack declares.
         it('offers only the data types the service stores', async () => {
             await openImport();
-            await screen.findByText(/there is no undo/i);
+            await screen.findByRole('button', { name: /start import/i });
 
             expect(screen.getByRole('checkbox', { name: 'Products' })).toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Giftcards' })).not.toBeInTheDocument();
@@ -369,7 +369,7 @@ describe('DatapackCatalogView', () => {
 
         it('closes without closing the flyout behind it', async () => {
             await openImport();
-            await screen.findByText(/there is no undo/i);
+            await screen.findByRole('button', { name: /start import/i });
 
             fireEvent.click(screen.getByRole('button', { name: /^close$/i }));
 
