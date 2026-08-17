@@ -18,18 +18,27 @@
  * names the remedy — an administrator for a 403, the user for an unset setting),
  * and unknown/in-flight (say nothing, show the fields as they always were).
  *
- * Uses the shared `StatusCard` — the house treatment for an ambient status plus a
- * remediation link — rather than a bespoke dot-and-text row.
+ * ## Shaped like the form, not like a notice
+ *
+ * This first shipped as a `StatusCard` — a coloured dot, a bold statement, an
+ * action link and a second descriptive line. On a form where every other row is
+ * label / control / one muted help line, that read as an alert about a problem
+ * rather than as the absence of work.
+ *
+ * So: no card, no dot, no banner. The served state renders no field at all,
+ * because there is nothing to type — just the same muted help line the rest of the
+ * form uses, with the override as an inline link exactly like the endpoint field's
+ * help carries its link. The unserved state puts the reason in the client-id
+ * field's own `description`, which is where every other field keeps its help.
  *
  * @module features/components/ui/components/BrokeredCredentialFields
  */
 
-import { Text, View } from '@adobe/react-spectrum';
+import { Link, Text, View } from '@adobe/react-spectrum';
 import React, { useState } from 'react';
 import type { UniqueField } from '../hooks/useComponentConfig';
 import type { CredentialServiceStatus } from '../hooks/useCredentialService';
 import { ConfigFieldRenderer } from './ConfigFieldRenderer';
-import { StatusCard } from '@/core/ui/components/feedback/StatusCard';
 
 export interface BrokeredCredentialFieldsProps {
     /** The client-id field — this component is rendered from its row. */
@@ -81,52 +90,67 @@ export function BrokeredCredentialFields({
         </>
     );
 
+    const toggleOverride = () => {
+        // Turning the override OFF must CLEAR the pair, not just hide it.
+        // `resolveAccs` prefers any present pair over the broker, so a hidden stale
+        // credential would keep being sent — 401ing under a line saying credentials
+        // are provided automatically. Clearing also deletes the stored secret, via
+        // the migration's empty-value path.
+        if (overriding) {
+            updateField(idField, '');
+            if (secretField) updateField(secretField, '');
+        }
+        setOverriding((open) => !open);
+    };
+
+    /** One line of help, in the same muted style every field on the form uses. */
+    const helpLine = (text: string, linkLabel: string) => (
+        <Text UNSAFE_className="text-gray-600 text-sm">
+            {text}{' '}
+            <Link onPress={toggleOverride} data-testid="toggle-credential-override">
+                {linkLabel}
+            </Link>
+        </Text>
+    );
+
     // While the probe is in flight, and when it could not answer at all, the fields
     // stand exactly as they did. "We could not check" must never read as a verdict.
     if (loading || !status) {
         return <View>{bothFields}</View>;
     }
 
+    // Cannot be served: the fields ARE the answer, and the reason rides in the
+    // client-id field's own description — the same place every other field on this
+    // form carries its help, rather than a banner above them.
     if (!status.served) {
         return (
             <View>
-                <View marginBottom="size-200">
-                    <StatusCard status={status.verdict} color="yellow" />
-                </View>
-                {bothFields}
+                {renderField({ ...idField, description: status.verdict })}
+                {secretField && renderField(secretField)}
             </View>
         );
     }
 
+    // Served and overriding: show the pair, with the way back in its help line.
+    if (overriding) {
+        return (
+            <View>
+                {bothFields}
+                {helpLine('Or let Demo Builder supply one.', 'Use the shared credential')}
+            </View>
+        );
+    }
+
+    // Served: there is nothing to type, so this renders no FIELD at all — just the
+    // one muted line the rest of the form uses for help. A label with no input, or
+    // a status banner, both claim more space and attention than "you need do
+    // nothing" is worth.
     return (
         <View>
-            <View marginBottom="size-200">
-                <StatusCard
-                    status="Credentials are provided automatically — nothing to enter."
-                    color="green"
-                    action={{
-                        label: overriding ? 'Use the shared credential' : 'Use my own instead',
-                        onPress: () => {
-                            // Turning the override OFF must CLEAR the pair, not just
-                            // hide it. `resolveAccs` prefers any present pair over the
-                            // broker, so a hidden stale credential would keep being
-                            // sent — 401ing under a message saying credentials are
-                            // provided automatically. Clearing also deletes the stored
-                            // secret, via the migration's empty-value path.
-                            if (overriding) {
-                                updateField(idField, '');
-                                if (secretField) updateField(secretField, '');
-                            }
-                            setOverriding((open) => !open);
-                        },
-                        testId: 'toggle-credential-override',
-                    }}
-                />
-                <Text UNSAFE_className="text-gray-600 text-sm">
-                    Demo Builder fetches a shared credential when it imports sample data.
-                </Text>
-            </View>
-            {overriding && bothFields}
+            {helpLine(
+                'Commerce credentials are provided automatically when sample data is imported.',
+                'Use my own instead',
+            )}
         </View>
     );
 }

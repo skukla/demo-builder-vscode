@@ -12,30 +12,27 @@ import React from 'react';
 jest.mock('@adobe/react-spectrum', () => ({
     View: ({ children }: any) => <div>{children}</div>,
     Text: ({ children }: any) => <span>{children}</span>,
-}));
-
-jest.mock('@/core/ui/components/feedback/StatusCard', () => ({
-    StatusCard: ({ status, color, action }: any) => (
-        <div data-testid="status-card" data-color={color}>
-            <span>{status}</span>
-            {action && (
-                <button data-testid={action.testId} onClick={action.onPress}>
-                    {action.label}
-                </button>
-            )}
-        </div>
+    // Spectrum's Link uses onPress; jsdom only knows onClick.
+    Link: ({ children, onPress, ...props }: any) => (
+        <button onClick={onPress} {...props}>
+            {children}
+        </button>
     ),
 }));
 
-// A faithful stand-in: one labelled input per field, so "is the field rendered"
-// is asked the way a user asks it.
+// A faithful stand-in: one labelled input per field, plus its description, so both
+// "is the field rendered" and "where did the help text land" are asked the way a
+// user asks them.
 jest.mock('@/features/components/ui/components/ConfigFieldRenderer', () => ({
     ConfigFieldRenderer: ({ field, value, onUpdate }: any) => (
-        <input
-            aria-label={field.label}
-            value={(value as string) ?? ''}
-            onChange={(e) => onUpdate(field, e.target.value)}
-        />
+        <span>
+            <input
+                aria-label={field.label}
+                value={(value as string) ?? ''}
+                onChange={(e) => onUpdate(field, e.target.value)}
+            />
+            {field.description && <span>{field.description}</span>}
+        </span>
     ),
 }));
 

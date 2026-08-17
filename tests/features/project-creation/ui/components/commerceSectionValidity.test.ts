@@ -92,8 +92,12 @@ describe('computeCommerceSectionValidity', () => {
     it('is all-valid when there are no errors — the control', () => {
         const validity = computeCommerceSectionValidity(GROUPS, {});
 
+        // `credentials` joined the split when the OAuth pair got its own heading.
+        // Every RENDERED section must appear here: an unlisted one gates nothing,
+        // which is the inverse of the deadlock this function exists to prevent.
         expect(validity).toEqual({
             connection: true,
+            credentials: true,
             'business-structure': true,
             catalog: true,
         });

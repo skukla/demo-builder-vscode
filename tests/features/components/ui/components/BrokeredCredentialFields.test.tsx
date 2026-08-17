@@ -33,11 +33,14 @@ describe('when the service serves a credential', () => {
         expect(screen.queryByLabelText('OAuth client secret')).not.toBeInTheDocument();
     });
 
-    it('says so, in the affirmative', () => {
+    it('says so in ONE muted help line, not a status banner', () => {
+        // It first shipped as a coloured StatusCard with a bold statement and a
+        // second descriptive line — on a form of label/control/help rows that read
+        // as an alert about a problem rather than the absence of work.
         renderFields({ status: SERVED });
 
-        expect(screen.getByTestId('status-card')).toHaveAttribute('data-color', 'green');
-        expect(screen.getByText(/nothing to enter/i)).toBeInTheDocument();
+        expect(screen.queryByTestId('status-card')).not.toBeInTheDocument();
+        expect(screen.getByText(/provided automatically/i)).toBeInTheDocument();
     });
 
     it('offers the override, and reveals BOTH fields when taken', async () => {
@@ -102,10 +105,10 @@ describe('when the service will NOT serve this user', () => {
         expect(screen.getByLabelText('OAuth client secret')).toBeInTheDocument();
     });
 
-    it('names the remedy rather than just failing', () => {
+    it('names the remedy in the field’s own help text, not a banner', () => {
         renderFields({ status: REFUSED });
 
-        expect(screen.getByTestId('status-card')).toHaveAttribute('data-color', 'yellow');
+        expect(screen.queryByTestId('status-card')).not.toBeInTheDocument();
         expect(screen.getByText(/ask an administrator/i)).toBeInTheDocument();
     });
 });
@@ -115,7 +118,7 @@ describe('when the probe has not answered', () => {
         renderFields({ loading: true });
 
         expect(screen.getByLabelText('OAuth client ID')).toBeInTheDocument();
-        expect(screen.queryByTestId('status-card')).not.toBeInTheDocument();
+        expect(screen.queryByText(/provided automatically/i)).not.toBeInTheDocument();
     });
 
     it('shows the fields and says NOTHING when the probe failed', () => {
@@ -124,7 +127,7 @@ describe('when the probe has not answered', () => {
         renderFields({ loading: false, status: undefined });
 
         expect(screen.getByLabelText('OAuth client ID')).toBeInTheDocument();
-        expect(screen.queryByTestId('status-card')).not.toBeInTheDocument();
+        expect(screen.queryByText(/provided automatically/i)).not.toBeInTheDocument();
     });
 });
 

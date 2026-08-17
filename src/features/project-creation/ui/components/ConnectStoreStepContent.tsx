@@ -30,7 +30,10 @@ import { lookupComponentConfigValue } from '@/features/components/services/envVa
 import { ServiceGroupList } from '@/features/components/ui/components/ServiceGroupList';
 import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
 import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
-import { useComponentConfig } from '@/features/components/ui/hooks/useComponentConfig';
+import {
+    useComponentConfig,
+    type ServiceGroup,
+} from '@/features/components/ui/hooks/useComponentConfig';
 import { useCredentialService } from '@/features/components/ui/hooks/useCredentialService';
 import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
@@ -67,6 +70,32 @@ export interface ConnectStoreStepContentProps {
 
 /** The hook still needs a callback; its whole-form verdict is not the gate. */
 const noopValidation = (): void => {};
+
+/**
+ * One group list carrying several sections' fields, in section order.
+ *
+ * Groups are keyed by id, so two slices of the same group must be folded back
+ * together rather than concatenated — otherwise the group renders twice.
+ */
+function mergeSlices(
+    groups: ServiceGroup[],
+    sections: ConnectStoreSection[],
+): ServiceGroup[] {
+    const merged = new Map<string, ServiceGroup>();
+
+    for (const section of sections) {
+        for (const sliced of filterGroupsForSection(groups, section)) {
+            const existing = merged.get(sliced.id);
+            merged.set(
+                sliced.id,
+                existing
+                    ? { ...existing, fields: [...existing.fields, ...sliced.fields] }
+                    : sliced,
+            );
+        }
+    }
+    return [...merged.values()];
+}
 
 export function ConnectStoreStepContent({
     selectedStackId,
@@ -204,8 +233,13 @@ export function ConnectStoreStepContent({
 
     // When a section is requested (Commerce tabs), render only that slice.
     // Hooks stay mounted; only rendering is filtered so state persists across tabs.
+    //
+    // `connection` carries `credentials` with it. The wizard's rail has no
+    // Credentials tab — Configure splits them under separate headings, but here
+    // they belong to the one Connection view, and a slice that dropped them would
+    // leave the user no way to supply their own pair during creation.
     const visibleGroups = section
-        ? filterGroupsForSection(disclosedGroups, section)
+        ? mergeSlices(disclosedGroups, section === 'connection' ? ['connection', 'credentials'] : [section])
         : disclosedGroups;
 
     // Catalog section gate: catalog/assets groups stay hidden until a store view
