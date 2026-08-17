@@ -147,10 +147,22 @@ with working credentials and runs for minutes, and a failure inside creation
 would leave a half-populated instance the wizard has no story for. The area's
 status is unconditionally `completed`, so it can never gate Continue.
 
-`get-datapack-import-target` reports that choice back, and the catalog shows
-"&lt;project&gt; is set up for &lt;pack&gt;" with a link into its detail
-(`RecordedChoiceNotice` in `DatapackCatalogView.tsx`). Nothing renders when there
-is no project or no recorded choice.
+`get-datapack-import-target` reports that choice back, and the catalog marks the
+pack's own CARD with the shared `SelectionCheck` plus the accent border — the same
+"this is the one" treatment the wizard's package cards use. Nothing is marked when
+no pack is believed installed.
+
+A full-width banner above the grid ("&lt;project&gt; is set up for &lt;pack&gt;" +
+a Review link) did this until 2026-08-17. It announced a card's state somewhere the
+card was not, and then needed a link to point back at it.
+
+The check is the union of two SELF-REPORTS, and neither is ground truth — nothing
+available reports what Commerce actually holds: `list-installed-datapacks` scoped
+to the project's `commerceInstance`, and `project.datapack`, which the handlers
+write on an accepted import and clear on an accepted removal. Both are re-read when
+the import modal closes. The service's list can be cleared without uninstalling
+anything, so it errs toward ABSENT — the safe direction for a checkmark. Data
+deleted directly in Commerce Admin is invisible to both.
 
 There is deliberately **no datapack↔demo-package mapping table**: once the choice
 is an explicit pick, an auto-map is a maintenance surface that still cannot cover

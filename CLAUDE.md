@@ -224,6 +224,23 @@ written, and they suppressed the question that would have found a shipped bug: r
 rename destroyed each site's publish key and never re-minted it. Chasing the claim is what
 found the defect; believing it is what had already let it ship.
 
+**A cast at a call boundary is a silenced type error.** `as never` / `as any` on an
+ARGUMENT tells the compiler to stop checking the one thing it is best at. Four times in
+this repo it hid a field the callee dispatches on — `stackBackend`, mapped from
+`componentSelections.backend` and never persisted — and each time the result was a silent
+no-op in production that every test agreed with: the import handler resolved EVERY real
+project to `''` (2026-08-13), then reset never offered sample-data removal to anyone, the
+removal could not resolve credentials, and the poller was handed a client with no
+`getJobStatus` (all 2026-08-17). If a cast is needed to pass something, the shape is
+wrong — build the object the callee declares and let it fail at compile time.
+
+**A mock cannot see a malformed CALL.** All four of those survived because the collaborator
+was mocked, and a mock answers the same whatever it is handed, so a caller passing a
+wrong-shaped argument is indistinguishable from a correct one. Twelve tests stayed green
+across all four. When the thing under test is HOW a collaborator is invoked — a dispatch
+field, a scoped id, which client is passed — assert the ARGUMENT, or drive the real
+collaborator with `jest.requireActual`. Asserting the outcome tests the mock.
+
 **Read before you Edit.** `grep`/`awk`/`sed`/`git show` do not satisfy Edit's precondition —
 Read the file, or the range, before editing anything you located with a shell command. The
 format-on-edit hook can also invalidate your own read, so when an edit fails on a string you

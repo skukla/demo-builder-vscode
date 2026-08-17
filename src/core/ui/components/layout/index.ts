@@ -7,6 +7,8 @@
  * Migration from atomic design: templates/ → layout/
  */
 
+export { FullScreenSurface } from './FullScreenSurface';
+export type { FullScreenSurfaceProps } from './FullScreenSurface';
 export { TwoColumnLayout } from './TwoColumnLayout';
 export type { TwoColumnLayoutProps } from './TwoColumnLayout';
 

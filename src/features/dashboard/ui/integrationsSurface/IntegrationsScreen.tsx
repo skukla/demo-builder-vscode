@@ -34,6 +34,7 @@ import { useRowStatusOverrides } from '../hooks/useRowStatusOverrides';
 import { AddIntegrationFlowAdapter } from './AddIntegrationFlowAdapter';
 import { LoadingDisplay, StatusDisplay } from '@/core/ui/components/feedback';
 import { PageHeader, PageLayout } from '@/core/ui/components/layout';
+import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { DestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
@@ -177,7 +178,8 @@ export function IntegrationsScreen({
     const visibleCards = useMemo(() => filterCards(cards, searchQuery), [cards, searchQuery]);
     // Named rather than inlined: a 4-operand && chain in JSX trips the
     // complex-expression SOP scan (tests/sop/complex-expressions.test.ts).
-    const searchFoundNothing = Boolean(searchQuery) && visibleCards.length === 0 && cards.length > 0;
+    const searchFoundNothing =
+        Boolean(searchQuery) && visibleCards.length === 0 && cards.length > 0;
 
     const handleBack = useCallback((): void => {
         webviewClient.postMessage('showProjectDashboard');
@@ -232,8 +234,8 @@ export function IntegrationsScreen({
             }
             backgroundColor="var(--spectrum-global-color-gray-50)"
         >
-            <div className="projects-sticky-header">
-                <div className="page-container-padded page-header-section">
+            <FullScreenSurface
+                header={
                     <Flex alignItems="start" gap="size-300">
                         <View flex>
                             <SearchHeader
@@ -297,11 +299,8 @@ export function IntegrationsScreen({
                             </Button>
                         )}
                     </Flex>
-
-                </div>
-            </div>
-
-            <div className="page-container-padded pb-6">
+                }
+            >
                 {/* The empty state renders INSIDE the page chrome, not instead of
                     it. As a full-screen takeover it dropped the title, the
                     project · destination subtitle, and the Project Dashboard
@@ -358,7 +357,7 @@ export function IntegrationsScreen({
                     adobeWorkspaceTitle={destination?.workspaceTitle}
                     adobeOrgId={adobeOrgId}
                 />
-            </div>
+            </FullScreenSurface>
         </PageLayout>
     );
 }

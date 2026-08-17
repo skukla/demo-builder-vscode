@@ -31,6 +31,7 @@ import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 
 /** One page of the log. Matches the button's label, so both move together. */
 const PAGE_SIZE = 50;
@@ -71,9 +72,8 @@ export function DatapackActivityView(): React.JSX.Element {
     const [total, setTotal] = useState(0);
     const [hasLoaded, setHasLoaded] = useState(false);
 
-    const { load, loading, value, failure } = useDataInstallerRequest<Page<ActivityEntry>>(
-        'get-datapack-activity',
-    );
+    const { load, loading, value, failure } =
+        useDataInstallerRequest<Page<ActivityEntry>>('get-datapack-activity');
 
     /**
      * The skip we ASKED for, which decides append vs replace.
@@ -94,9 +94,7 @@ export function DatapackActivityView(): React.JSX.Element {
      * work". Nothing new was needed — `logs` has always accepted
      * `commerce_instance`, and the panel already resolves this for its banner.
      */
-    const target = useDataInstallerRequest<{ instance?: string }>(
-        'get-datapack-import-target',
-    );
+    const target = useDataInstallerRequest<{ instance?: string }>('get-datapack-import-target');
     const loadTarget = target.load;
     useEffect(() => {
         loadTarget({});
@@ -188,8 +186,8 @@ export function DatapackActivityView(): React.JSX.Element {
 
     return (
         <>
-            <div className="projects-sticky-header">
-                <div className="page-container-padded page-header-section">
+            <FullScreenSurface
+                header={
                     <div className="datapack-activity-filters">
                         <Picker
                             aria-label="Filter by operation"
@@ -204,12 +202,10 @@ export function DatapackActivityView(): React.JSX.Element {
                             {entries.length} of {total}
                         </span>
                     </div>
-                </div>
-            </div>
-
-            <div className="page-container-padded pb-6">
+                }
+            >
                 {renderActivityBody({ loading, entries, total, loadMore })}
-            </div>
+            </FullScreenSurface>
         </>
     );
 }
@@ -218,9 +214,11 @@ export function DatapackActivityView(): React.JSX.Element {
  * Pick the one body state to show under the filter.
  *
  * An extracted helper rather than chained ternaries in JSX: nested ternaries are
- * on the project's HIGH-priority avoid list, and the sibling views
- * (`DatapackCatalogView`, `InstalledDatapacksView`) already solve the identical
- * problem this way.
+ * on the project's HIGH-priority avoid list, and the sibling view
+ * (`DatapackCatalogView`) already solves the identical problem this way. An
+ * `InstalledDatapacksView` was a third sibling until it was retired — it listed
+ * the service's global self-report across every instance, which can call a pack
+ * absent while its data sits on the box.
  */
 function renderActivityBody({
     loading,

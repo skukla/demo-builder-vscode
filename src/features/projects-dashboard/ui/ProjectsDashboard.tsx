@@ -7,15 +7,7 @@
  * - Rows: Full-width horizontal list
  */
 
-import {
-    View,
-    Flex,
-    Text,
-    Button,
-    MenuTrigger,
-    Menu,
-    Item,
-} from '@adobe/react-spectrum';
+import { View, Flex, Text, Button, MenuTrigger, Menu, Item } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import Copy from '@spectrum-icons/workflow/Copy';
@@ -27,6 +19,7 @@ import { ProjectRowList } from './components/ProjectRowList';
 import { ProjectsGrid } from './components/ProjectsGrid';
 import { buildMenuItems } from './projectsDashboardHelpers';
 import { LoadingDisplay } from '@/core/ui/components/feedback';
+import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { SearchHeader, type ViewMode } from '@/core/ui/components/navigation/SearchHeader';
@@ -98,8 +91,8 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     // Focus trap for keyboard navigation (WCAG 2.1 AA)
     const containerRef = useFocusTrap<HTMLDivElement>({
         enabled: true,
-        autoFocus: true,  // Focus first element on mount so Tab works immediately
-        containFocus: true,  // Prevent focus escape
+        autoFocus: true, // Focus first element on mount so Tab works immediately
+        containFocus: true, // Prevent focus escape
     });
 
     // Sync viewMode when initialViewMode changes (from parent/settings)
@@ -164,103 +157,95 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     return (
         <div ref={containerRef}>
             <PageLayout
-            header={
-                <PageHeader
-                    title="Your Projects"
-                    constrainWidth
-                />
-            }
-            backgroundColor="var(--spectrum-global-color-gray-50)"
-        >
-            {/* Sticky controls - search, view toggle, and new project button */}
-            <div className="projects-sticky-header">
-                <div className="page-container-padded page-header-section">
-                    <Flex alignItems="start" gap="size-300">
-                        {/* Search Header with view mode toggle */}
-                        <View flex>
-                            <SearchHeader
-                                searchQuery={searchQuery}
-                                onSearchQueryChange={setSearchQuery}
-                                searchPlaceholder="Filter projects..."
-                                searchThreshold={0}
-                                totalCount={projects.length}
-                                filteredCount={filteredProjects.length}
-                                itemNoun="project"
-                                onRefresh={onRefresh}
-                                isRefreshing={isRefreshing}
-                                refreshAriaLabel="Refresh projects"
-                                viewMode={viewMode}
-                                onViewModeChange={handleViewModeChange}
-                                hasLoadedOnce={hasLoadedOnce}
-                                alwaysShowCount={true}
-                            />
-                        </View>
-                        {/* New Project dropdown menu */}
-                        <MenuTrigger>
-                            <Button variant="cta">
-                                <Text>New</Text>
-                                <ChevronDown size="S" />
-                            </Button>
-                            <Menu
-                                onAction={(key) => {
-                                    if (key === 'new') {
-                                        onCreateProject();
-                                    } else if (key === 'copy' && onCopyFromExisting) {
-                                        onCopyFromExisting();
-                                    } else if (key === 'import' && onImportFromFile) {
-                                        onImportFromFile();
-                                    }
-                                }}
-                                items={buildMenuItems({ onCopyFromExisting, onImportFromFile })}
-                            >
-                                {(item) => (
-                                    <Item key={item.key} textValue={item.label}>
-                                        {item.icon === 'add' && <Add size="S" />}
-                                        {item.icon === 'copy' && <Copy size="S" />}
-                                        {item.icon === 'import' && <Import size="S" />}
-                                        <Text>{item.label}</Text>
-                                    </Item>
-                                )}
-                            </Menu>
-                        </MenuTrigger>
-                    </Flex>
-                </div>
-            </div>
+                header={<PageHeader title="Your Projects" constrainWidth />}
+                backgroundColor="var(--spectrum-global-color-gray-50)"
+            >
+                {/* Sticky controls - search, view toggle, and new project button */}
+                <FullScreenSurface
+                    header={
+                        <Flex alignItems="start" gap="size-300">
+                            {/* Search Header with view mode toggle */}
+                            <View flex>
+                                <SearchHeader
+                                    searchQuery={searchQuery}
+                                    onSearchQueryChange={setSearchQuery}
+                                    searchPlaceholder="Filter projects..."
+                                    searchThreshold={0}
+                                    totalCount={projects.length}
+                                    filteredCount={filteredProjects.length}
+                                    itemNoun="project"
+                                    onRefresh={onRefresh}
+                                    isRefreshing={isRefreshing}
+                                    refreshAriaLabel="Refresh projects"
+                                    viewMode={viewMode}
+                                    onViewModeChange={handleViewModeChange}
+                                    hasLoadedOnce={hasLoadedOnce}
+                                    alwaysShowCount={true}
+                                />
+                            </View>
+                            {/* New Project dropdown menu */}
+                            <MenuTrigger>
+                                <Button variant="cta">
+                                    <Text>New</Text>
+                                    <ChevronDown size="S" />
+                                </Button>
+                                <Menu
+                                    onAction={(key) => {
+                                        if (key === 'new') {
+                                            onCreateProject();
+                                        } else if (key === 'copy' && onCopyFromExisting) {
+                                            onCopyFromExisting();
+                                        } else if (key === 'import' && onImportFromFile) {
+                                            onImportFromFile();
+                                        }
+                                    }}
+                                    items={buildMenuItems({ onCopyFromExisting, onImportFromFile })}
+                                >
+                                    {(item) => (
+                                        <Item key={item.key} textValue={item.label}>
+                                            {item.icon === 'add' && <Add size="S" />}
+                                            {item.icon === 'copy' && <Copy size="S" />}
+                                            {item.icon === 'import' && <Import size="S" />}
+                                            <Text>{item.label}</Text>
+                                        </Item>
+                                    )}
+                                </Menu>
+                            </MenuTrigger>
+                        </Flex>
+                    }
+                >
+                    {/* Render active view */}
+                    {viewMode === 'cards' && (
+                        <ProjectsGrid
+                            projects={filteredProjects}
+                            runningProjectPath={runningProjectPath}
+                            onSelectProject={onSelectProject}
+                            actions={actions}
+                        />
+                    )}
+                    {viewMode === 'rows' && (
+                        <ProjectRowList
+                            projects={filteredProjects}
+                            runningProjectPath={runningProjectPath}
+                            onSelectProject={onSelectProject}
+                            actions={actions}
+                        />
+                    )}
 
-            {/* Freely scrolling content */}
-            <div className="page-container-padded pb-6">
-                {/* Render active view */}
-                {viewMode === 'cards' && (
-                    <ProjectsGrid
-                        projects={filteredProjects}
-                        runningProjectPath={runningProjectPath}
-                        onSelectProject={onSelectProject}
-                        actions={actions}
-                    />
-                )}
-                {viewMode === 'rows' && (
-                    <ProjectRowList
-                        projects={filteredProjects}
-                        runningProjectPath={runningProjectPath}
-                        onSelectProject={onSelectProject}
-                        actions={actions}
-                    />
-                )}
-
-                {/* No results message */}
-                {isFiltering && filteredProjects.length === 0 && (
-                    <Flex
-                        justifyContent="center"
-                        alignItems="center"
-                        UNSAFE_className="centered-padding-lg"
-                    >
-                        <Text UNSAFE_className="text-gray-500">
-                            No projects match "{searchQuery}"
-                        </Text>
-                    </Flex>
-                )}
-            </div>
-        </PageLayout>
+                    {/* No results message */}
+                    {isFiltering && filteredProjects.length === 0 && (
+                        <Flex
+                            justifyContent="center"
+                            alignItems="center"
+                            UNSAFE_className="centered-padding-lg"
+                        >
+                            <Text UNSAFE_className="text-gray-500">
+                                No projects match "{searchQuery}"
+                            </Text>
+                        </Flex>
+                    )}
+                </FullScreenSurface>
+            </PageLayout>
         </div>
     );
 };

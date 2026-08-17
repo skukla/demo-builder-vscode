@@ -127,6 +127,10 @@ Also resolved since last index (now archived to `../complete/`): **oversized tes
 
 ### A. Active front (nearest to actionable — nothing here is in progress)
 
+#### A refused credential is reported as a missing permission ([`2026-08-16-refused-credential-reported-as-missing-permission.md`](2026-08-16-refused-credential-reported-as-missing-permission.md))
+
+**PARTLY FIXED — the remainder is three named decisions, not a hunt.** A DA.live token can be locally valid (present, `expiresAt` in the future) and still refused by the server, and every downstream 403 was then reported as a statement about the USER's permissions. Measured on one project forty minutes apart: run 1 told the user at three surfaces that they held no admin role, failed 52 unpublish calls and died on a preview 403; run 2 succeeded after nothing but a re-auth. SHIPPED: Helix 403s now throw `DaLiveAuthError` (`e79cca3c`), the Code Sync inner status no longer reports a refusal as a missing App (`dcac1475`), and the three hand-rolled recoveries are one shared `withDaLiveAuthRetry`. REMAINING: wrap `syncCodeAndPermissions` (needs an idempotency check on its phases first); decide whether the 52 unpublish 403s should throw at all (a product call — they are non-fatal by design today); reword `configAccessRecovery` and `configurationService`, which still say "no admin role" on a 403. Filed 2026-08-16.
+
 #### Bodea's shared catalogs assign identical categories ([`2026-08-17-bodea-shared-catalogs-are-undifferentiated.md`](2026-08-17-bodea-shared-catalogs-are-undifferentiated.md))
 
 **Measured, and it changes what the Bodea demo can claim.** All three shared catalogs — Default (General), ServerSavvy Solutions, Platinum Buyer — assign the SAME 11 categories, compared as sets against the live service. So a nav driven by shared-catalog assignment, which is the correct mechanism, would render an identical menu for every company and group: the mechanism is right and the data has nothing to express. This is the real reason VIP nav gating was deferred; the "no clean patch insertion point in header.js" reason recorded in the plan is true but secondary. What the pack DOES demonstrate is price, not visibility — 49 of 56 products carry `tier_prices` naming "Platinum Buyer". Also records why `bodea-customer-group.js` is NOT redundant with shared catalogs: the catalog decides what the price is, the module tells Catalog Service who is asking, and deleting it silently shows guest prices to everyone, which looks like the demo working. If catalog-driven menus are wanted it is a DATA change first (differentiate the catalogs), then a new nav block reading Catalog Service — never a gate over the authored `/nav` document, which would drift toward showing what should be hidden. Filed 2026-08-17.
@@ -451,8 +455,9 @@ Nor is it all-or-nothing: of the six EDS scraping skills only three drive Playwr
 other three work on already-scraped material. **The state to avoid is a skill that tells an
 agent to use a tool that is not installed** — worse than no skill, because the agent tries,
 fails and improvises. Step 1 is declaring the dependency. Do the composition axis of
-[`2026-08-13-tier-the-ai-bundle-refresh.md`](2026-08-13-tier-the-ai-bundle-refresh.md) first;
-this shares its gate. Not blocked.
+[`2026-08-13-tier-the-ai-bundle-refresh.md`](../complete/2026-08-13-tier-the-ai-bundle-refresh.md)
+first — it SHIPPED 2026-08-14 (`d2cb8e85`), so that dependency is already met; this shares its
+gate. Not blocked.
 
 
 #### App Builder attach — Model A seed ([`2026-06-15-integration-service-cleanup-and-discovery-token.md`](2026-06-15-integration-service-cleanup-and-discovery-token.md))
