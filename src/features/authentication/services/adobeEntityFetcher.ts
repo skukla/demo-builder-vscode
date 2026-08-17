@@ -58,6 +58,18 @@ export interface AdobeEntityFetcherConfig {
      * Used by the facade to clear stale console context.
      */
     onNoOrgsAccessible?: () => Promise<void>;
+    /**
+     * Is the Adobe session actually still valid?
+     *
+     * Consulted before telling a user their session expired. A CLI 401 is matched
+     * by substring, and on 2026-08-17 that produced "your session has expired"
+     * four seconds after the token manager reported 23h 22m remaining — so the
+     * user signed in three times against a problem sign-in could not touch.
+     *
+     * Optional: without it the old assertion stands, which keeps every existing
+     * caller behaving exactly as before.
+     */
+    isTokenValid?: () => Promise<boolean>;
 }
 
 /**
@@ -189,12 +201,21 @@ export class AdobeEntityFetcher {
         }
 
         if (outcome.error || !outcome.result) {
-            this.debugLogger.trace(
-                `[Entity Fetcher] SDK failed for ${entityName}, falling back to CLI:`,
-                outcome.error,
-            );
+            // The REASON rides in the warning, not in a trace line.
+            //
+            // `trace` is priority 4 and the default `demoBuilder.logLevel` is
+            // `debug` (3), so it never emits on a default install. A user's log on
+            // 2026-08-17 contained zero trace lines while showing "SDK initialized
+            // successfully" followed 120ms later by "SDK unavailable" — every org
+            // read for the whole session, with the cause written where nobody could
+            // read it. That silence is what made the failure look like an auth
+            // problem and cost three pointless sign-ins.
+            const reason =
+                outcome.error instanceof Error
+                    ? `${outcome.error.name}: ${outcome.error.message}`
+                    : String(outcome.error ?? 'no result returned');
             this.debugLogger.warn(
-                `[Entity Fetcher] SDK unavailable, using slower CLI fallback for ${entityName}`,
+                `[Entity Fetcher] SDK unavailable, using slower CLI fallback for ${entityName} — ${reason}`,
             );
             return undefined;
         }
@@ -231,12 +252,12 @@ export class AdobeEntityFetcher {
      * Strips CLI warning lines (prefixed with ›) that the aio CLI writes to stdout
      * alongside JSON output, which would otherwise break JSON.parse.
      */
-    private parseCLIResponse<TRaw>(
+    private async parseCLIResponse<TRaw>(
         stdout: string,
         stderr: string,
         entityName: string,
         exitCode?: number | null,
-    ): TRaw[] {
+    ): Promise<TRaw[]> {
         const parsed = parseJSON<TRaw[]>(stdout);
         if (parsed && Array.isArray(parsed)) return parsed;
 
@@ -282,11 +303,31 @@ export class AdobeEntityFetcher {
             if (stderrParsed && Array.isArray(stderrParsed)) return stderrParsed;
 
             if (stderr.includes('401') || stderr.toLowerCase().includes('unauthorized')) {
+                // The raw output goes down BEFORE this throws. It used to be logged
+                // only at the bottom of this function, which the 401 and 403 paths
+                // never reach — so the two failures most worth diagnosing were the
+                // two that recorded nothing.
+                this.logRawCLIOutput(stdout, stderr, entityName);
+
+                // Only claim expiry if the session really is expired. A valid token
+                // plus a CLI 401 means something else — org access, targeting, a
+                // transient gateway — and "sign in again" is then the one remedy
+                // guaranteed not to help. Jon signed in three times on 2026-08-17
+                // while his token had 23 hours left.
+                const tokenValid = (await this.config.isTokenValid?.()) ?? false;
+                if (!tokenValid) {
+                    throw new Error(
+                        'AUTH_EXPIRED: Your Adobe I/O session has expired. Please sign in again.',
+                    );
+                }
                 throw new Error(
-                    'AUTH_EXPIRED: Your Adobe I/O session has expired. Please sign in again.',
+                    `Adobe refused this request for ${entityName} (401), but your session is ` +
+                        'still valid. This usually means the account cannot access the targeted ' +
+                        'organization. Check the org selection rather than signing in again.',
                 );
             }
             if (stderr.includes('403') || stderr.toLowerCase().includes('forbidden')) {
+                this.logRawCLIOutput(stdout, stderr, entityName);
                 // Typed, in-app-recoverable error. NO terminal instruction — the UI
                 // routes ORG_MISMATCH through ensureOrgContext + a forced sign-in
                 // recovery, and agents treat it as non-retryable.
@@ -302,13 +343,7 @@ export class AdobeEntityFetcher {
             }
         }
 
-        // Log raw stdout and stderr for debugging when all parsing attempts fail
-        this.debugLogger.error(
-            `[Entity Fetcher] Raw ${entityName} stdout (${stdout.length} chars): ${stdout.substring(0, 500)}`,
-        );
-        this.debugLogger.error(
-            `[Entity Fetcher] Raw ${entityName} stderr (${stderr.length} chars): ${stderr.substring(0, 500)}`,
-        );
+        this.logRawCLIOutput(stdout, stderr, entityName);
 
         // Nothing parsed AND the CLI exited non-zero: the CLI FAILED, and it said
         // why on stderr. Reporting a "response format" problem here names the wrong
@@ -331,19 +366,40 @@ export class AdobeEntityFetcher {
     }
 
     /**
-     * The first line of CLI stderr that carries a message rather than decoration.
+     * Record what the CLI actually produced.
      *
-     * The aio CLI prefixes errors with `›` and writes spinner frames starting `-`,
-     * so the raw first line is usually "- Getting Projects...". Strips both so the
-     * surfaced error is the one a human would read.
+     * The LENGTH is the load-bearing part: issue #63 was solved by noticing
+     * "262144 chars" — a page-aligned truncation — rather than by reading the
+     * content. Called from every throwing path, so no failure is unrecorded.
+     */
+    private logRawCLIOutput(stdout: string, stderr: string, entityName: string): void {
+        this.debugLogger.error(
+            `[Entity Fetcher] Raw ${entityName} stdout (${stdout.length} chars): ${stdout.substring(0, 500)}`,
+        );
+        this.debugLogger.error(
+            `[Entity Fetcher] Raw ${entityName} stderr (${stderr.length} chars): ${stderr.substring(0, 500)}`,
+        );
+    }
+
+    /**
+     * The line of CLI stderr that states an ERROR, if there is one.
+     *
+     * The aio CLI prefixes lines with `›` and writes spinner frames starting `-`,
+     * so the raw first line is usually "- Getting Projects...". Both are stripped.
+     *
+     * **Returns undefined when stderr holds only noise.** aio writes update notices
+     * to stderr on almost every run, and issue #63's failing logs contain nothing
+     * else — exit 2, truncated stdout, and two lines about an available upgrade.
+     * Reporting the first line there would blame "@adobe/aio-cli update available"
+     * for a truncation bug, which is worse than saying nothing: it looks like a
+     * diagnosis and sends the reader somewhere there is nothing to find.
      */
     private firstMeaningfulLine(stderr: string): string | undefined {
-        const lines = stderr
+        return stderr
             .split('\n')
             .map((line) => line.replace(/^[\s›-]+/, '').trim())
-            .filter((line) => line.length > 0);
-
-        return lines.find((line) => /error|failed|forbidden|unauthorized/i.test(line)) ?? lines[0];
+            .filter((line) => line.length > 0)
+            .find((line) => /error|failed|forbidden|unauthorized|denied/i.test(line));
     }
 
     /**
@@ -364,7 +420,7 @@ export class AdobeEntityFetcher {
             return [];
         }
 
-        const parsed = this.parseCLIResponse<TRaw>(
+        const parsed = await this.parseCLIResponse<TRaw>(
             result.stdout,
             result.stderr,
             entityName,

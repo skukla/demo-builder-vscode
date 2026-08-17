@@ -96,6 +96,25 @@ describe('a CLI that failed', () => {
     });
 });
 
+describe('stderr that is only NOISE is not an error', () => {
+    it('does not report an update warning as the failure', async () => {
+        // Issue #63's real logs: exit 2, TRUNCATED stdout, and stderr carrying
+        // nothing but aio's update warnings. Treating the first stderr line as the
+        // cause would report "Failed to get projects: Warning: @adobe/aio-cli update
+        // available…" — which is worse than the generic message, because it names an
+        // innocent bystander as the culprit.
+        mocks.mockCommandExecutor.execute.mockResolvedValue({
+            code: 2,
+            stdout: '[{"id":"p1","name":"demo","tit',
+            stderr:
+                ' ›   Warning: @adobe/aio-cli update available from 10.3.4 to 11.1.2.\n' +
+                ' ›   Run npm install -g @adobe/aio-cli to update.\n',
+        } as never);
+
+        await expect(mocks.service.getProjects()).rejects.not.toThrow(/update available/);
+    });
+});
+
 describe('what must keep working', () => {
     it('still parses JSON on stdout with exit 0', async () => {
         mocks.mockCommandExecutor.execute.mockResolvedValue({

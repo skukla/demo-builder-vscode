@@ -105,6 +105,10 @@ export class AuthenticationService {
                     this.cacheManager,
                     this.logger,
                     stepLogger,
+                    // So a CLI 401 cannot be reported as an expired session while
+                    // this same manager says the token has hours left — the state
+                    // that had a user signing in three times to no effect.
+                    async () => (await this.tokenManager.inspectToken()).valid,
                 );
             }
 
