@@ -391,7 +391,7 @@
       "description": "Bodea-branded B2B demo showcasing native commerce: VIP segmentation, customer-group pricing, and guided selling",
       "icon": "bodea",
       "featured": false,
-      "hidden": true,
+      "hidden": false,
       "requiresMesh": false,
       "addons": {
         "adobe-commerce-aco": "excluded"

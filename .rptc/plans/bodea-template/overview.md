@@ -69,6 +69,9 @@ like custom/citisignal.
    published; account chrome via `accountContentSource: adobe-commerce/boilerplate-b2b` overlay.
    No contentPatches (we own the site).
 8. **Rollout**: package lands `hidden: true`; unhide is the release step.
+   **DONE 2026-08-17** — unhidden once all four pre-unhide items closed and the
+   `bodea` store scope was exercised live from the import modal against the new
+   website/store view.
 
 ## Steps
 

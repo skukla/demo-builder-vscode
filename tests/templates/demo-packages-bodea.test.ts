@@ -52,9 +52,20 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
         return pkg!;
     }
 
-    it('should exist and be hidden', () => {
+    /**
+     * SHIPPED 2026-08-17. The package landed `hidden: true` by design — the plan's
+     * rollout step made unhiding the release itself — and stayed hidden until all
+     * four pre-unhide items were closed: the store scope read live from the
+     * instance, group-hash portability answered, the configurator keeper settled
+     * by the port, and VIP nav gating deleted rather than deferred.
+     *
+     * Asserted rather than deleted, because `hidden` is what decides whether
+     * anyone can pick this package: flipping it back would otherwise be a silent
+     * one-character regression in a config file.
+     */
+    it('should exist and be selectable', () => {
         const pkg = getBodea();
-        expect(pkg.hidden).toBe(true);
+        expect(pkg.hidden).toBe(false);
     });
 
     it('should not require mesh', () => {
