@@ -115,3 +115,84 @@ describe('registerDescriptorTools', () => {
         expect(textOf(result)).toBe('SHAPED');
     });
 });
+
+// ─── capturePayloadFrom ──────────────────────────────────────────────────────
+//
+// The rule this replaces was wrong. Step 01 of phase 4 disqualified 21 handlers
+// for pushing their result through sendMessage and returning {success:true} —
+// but progressCapture already solves that, and createProjectTool has used it in
+// production since it shipped. A dispatch-only handler is one descriptor field
+// away from being a tool, and the handler is not modified.
+
+describe('capturePayloadFrom', () => {
+    /** A handler that computes an answer, pushes it, and returns bare success. */
+    const dispatchOnly: HandlerMap = {
+        'check-thing': async (ctx: HandlerContext) => {
+            await ctx.sendMessage('thing-status', { isReady: true, detail: 'all good' });
+            return { success: true };
+        },
+    };
+
+    function serverFor(row: Partial<ToolDescriptor>) {
+        const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
+        const server = {
+            registerTool(name: string, _d: unknown, h: (a: unknown) => Promise<{ content: Array<{ text: string }> }>) {
+                tools.set(name, h);
+            },
+        };
+        registerDescriptorTools(
+            server,
+            [{ tool: 't', description: 'd', map: dispatchOnly, type: 'check-thing', ...row } as ToolDescriptor],
+            () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
+        );
+        return async () => JSON.parse((await tools.get('t')!({})).content[0].text);
+    }
+
+    it('WITHOUT it, the tool returns nothing — the "cannot fail" defect', async () => {
+        expect(await serverFor({})()).toEqual({});
+    });
+
+    it('WITH it, the pushed payload becomes the tool result', async () => {
+        expect(await serverFor({ capturePayloadFrom: 'thing-status' })()).toEqual({
+            isReady: true,
+            detail: 'all good',
+        });
+    });
+
+    it('ignores an event name that never fires, rather than inventing one', async () => {
+        expect(await serverFor({ capturePayloadFrom: 'never-sent' })()).toEqual({});
+    });
+
+    it('lets the handler\'s own return win over the captured payload', async () => {
+        const both: HandlerMap = {
+            'check-thing': async (ctx: HandlerContext) => {
+                await ctx.sendMessage('thing-status', { isReady: false });
+                return { success: true, isReady: true };
+            },
+        };
+        const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
+        registerDescriptorTools(
+            { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
+            [{ tool: 't', description: 'd', map: both, type: 'check-thing', capturePayloadFrom: 'thing-status' }],
+            () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
+        );
+        const out = JSON.parse((await tools.get('t')!({})).content[0].text);
+        expect(out.isReady).toBe(true);
+    });
+
+    it('does not capture over an error result', async () => {
+        const failing: HandlerMap = {
+            'check-thing': async (ctx: HandlerContext) => {
+                await ctx.sendMessage('thing-status', { isReady: true });
+                return { success: false, error: 'nope' };
+            },
+        };
+        const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
+        registerDescriptorTools(
+            { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
+            [{ tool: 't', description: 'd', map: failing, type: 'check-thing', capturePayloadFrom: 'thing-status' }],
+            () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
+        );
+        expect((await tools.get('t')!({})).content[0].text).toMatch(/^Error: nope/);
+    });
+});

@@ -94,6 +94,31 @@ export function lastCompleteData(events: CapturedEvent[]): Record<string, unknow
     return undefined;
 }
 
+/**
+ * The payload of the last event with EXACTLY this type.
+ *
+ * `lastCompleteData` only matches the `*-complete` convention, which long-running
+ * orchestrations follow. Most webview-coupled handlers do not: they compute an
+ * answer and push it under a domain name — `handleCheckGitHubAuth` sends
+ * `'github-auth-status'`, `handleCheckDaLiveAuth` sends `'dalive-auth-status'`.
+ * For those the descriptor NAMES the event whose payload is the result, so
+ * nothing has to be inferred from a suffix.
+ *
+ * @param events Captured events, in order.
+ * @param type   Exact event type to look for.
+ */
+export function payloadOfEvent(
+    events: CapturedEvent[],
+    type: string,
+): Record<string, unknown> | undefined {
+    for (let i = events.length - 1; i >= 0; i--) {
+        if (events[i].type === type) {
+            return (events[i].data ?? {}) as Record<string, unknown>;
+        }
+    }
+    return undefined;
+}
+
 /** Find the last `*-error` event's data (the failure payload), if any. */
 export function lastErrorData(events: CapturedEvent[]): Record<string, unknown> | undefined {
     for (let i = events.length - 1; i >= 0; i--) {

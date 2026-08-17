@@ -199,6 +199,77 @@ describe('descriptor tools — response size', () => {
     });
 });
 
+// ─── the empty-response guard ────────────────────────────────────────────────
+//
+// The counterpart to a ceiling. A ceiling catches a tool that says too much;
+// this catches one that says NOTHING.
+//
+// `defaultShape` strips `success` and stringifies the rest, so a handler
+// returning a bare `{success: true}` produces the literal string "{}". An agent
+// reading that cannot tell the work from a no-op, and neither can a human
+// reading the transcript — which is exactly how `handleAddAppBuilderComponent`
+// reports success for opening a panel and doing nothing.
+//
+// WHAT THIS CAN AND CANNOT SEE. The harness stubs the handler, so it cannot know
+// whether a real handler returns data — that is the question phase 4 answered by
+// reading 53 handlers, and no stub can re-derive it. What it CAN see is which
+// rows have no safety net: no `capturePayloadFrom`, no `shape`, nothing between
+// the handler's return and the agent. Those rows are silent IF their handler
+// returns bare success, and the list below pins exactly which ones they are.
+//
+// So this is a classification guard, not a defect detector. A new row lands in
+// the set and fails the test until someone reads its handler and decides which
+// of the two reasons applies — which is the step that gets skipped.
+describe('rows with no output safety net are classified', () => {
+    const BARE_SUCCESS: HandlerResponse = { success: true };
+
+    /**
+     * Every row that returns "{}" when its handler returns bare success. Two
+     * reasons live here and the harness cannot distinguish them:
+     *
+     * 1. NOTHING TO REPORT — success IS the outcome (`start_demo`, `deploy_mesh`).
+     *    Honest, if terse. The plan pairs each with a confirming read.
+     * 2. HANDLER RETURNS DATA — verified by reading it (`get_datapack`,
+     *    `check_mesh`, and the other reads). Safe, and the ceiling table below
+     *    holds the ones whose live size was measured.
+     *
+     * A row in NEITHER category is the defect: a panel-opening handler reporting
+     * success for work it did not do.
+     */
+    const NO_SAFETY_NET = [
+        // `apply_updates` is deliberately absent — it is a bespoke tool
+        // (`applyUpdatesTool.ts`), not a descriptor row, so it is out of scope here.
+        'add_console_apis', 'check_datapack_service', 'check_mesh',
+        'delete_ai_prompt', 'delete_mesh', 'deploy_integration', 'deploy_mesh',
+        'export_project_settings', 'get_datapack', 'get_datapack_activity',
+        'get_project_urls', 'get_store_structure', 'list_datapack_data_types',
+        'redeploy_integration', 'refresh_block_library', 'regenerate_ai_files',
+        'remove_integration', 'rename_project', 'save_ai_prompt', 'start_demo',
+        'stop_demo',
+    ];
+
+    it('the set matches exactly — a new row must be classified before it ships', async () => {
+        const h = harness(ALL, BARE_SUCCESS);
+        const silent: string[] = [];
+
+        for (const d of ALL) {
+            if (d.capturePayloadFrom || d.shape) continue;
+            if ((await h.sizeOf(d.tool)) <= 2) silent.push(d.tool);
+        }
+
+        expect(silent.sort()).toEqual([...NO_SAFETY_NET].sort());
+    });
+
+    // The control. Without it the loop above passes whether it measured every row
+    // or never ran one — a row given real data must NOT come back empty.
+    it('control: the same rows are not silent when the handler returns data', async () => {
+        const h = harness(ALL, GENERIC);
+        for (const tool of NO_SAFETY_NET) {
+            expect(await h.sizeOf(tool)).toBeGreaterThan(2);
+        }
+    });
+});
+
 // ─── audit coverage ──────────────────────────────────────────────────────────
 //
 // The table is only a guard while it keeps up with the surface. This asserts the
@@ -217,7 +288,7 @@ describe('the ceiling table tracks the tool surface', () => {
             'deploy_integration', 'redeploy_integration', 'remove_integration',
             'deploy_mesh', 'delete_mesh', 'save_ai_prompt', 'delete_ai_prompt',
             'export_project_settings', 'refresh_block_library', 'add_console_apis',
-            'apply_updates', 'check_mesh', 'check_datapack_service', 'get_store_structure',
+            'check_mesh', 'check_datapack_service', 'get_store_structure',
             'get_project_urls', 'get_datapack', 'list_datapack_data_types',
             'find_datapacks', 'list_installed_datapacks', 'get_datapack_activity',
             'verify_ai_setup', 'list_ai_prompts', 'list_console_apis',
@@ -226,6 +297,13 @@ describe('the ceiling table tracks the tool surface', () => {
             (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t),
         );
         expect(missing).toEqual([]);
+
+        // The exemption list needs the same two-way check as the ceilings, or it
+        // rots in the direction nothing notices: an entry that names no descriptor
+        // row can never match, so it sits there reading as a decision. Found this
+        // way — `apply_updates` is a bespoke tool and was never in scope here.
+        const stale = [...EXEMPT].filter((t) => !descriptorTools.includes(t));
+        expect(stale).toEqual([]);
     });
 
     it('has no ceiling for a tool that no longer exists', async () => {

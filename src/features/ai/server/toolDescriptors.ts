@@ -10,6 +10,11 @@
  */
 
 import { z } from 'zod';
+import {
+    payloadOfEvent,
+    withCapturedProgress,
+    type CapturedEvent,
+} from './progressCapture';
 import { dispatchHandler } from '@/core/handlers';
 import type { HandlerContext, HandlerMap, HandlerResponse } from '@/types/handlers';
 
@@ -26,6 +31,22 @@ export interface ToolDescriptor {
     inputSchema?: Record<string, z.ZodTypeAny>;
     /** When true, the tool refuses unless called with `confirm: true`. */
     confirm?: boolean;
+    /**
+     * Name the sendMessage event whose payload IS this handler's answer.
+     *
+     * Many handlers compute a result, push it to the webview, and return a bare
+     * `{success:true}` — `handleCheckGitHubAuth` sends `'github-auth-status'`,
+     * `handleCheckDaLiveAuth` sends `'dalive-auth-status'`. Exposed as-is they
+     * would be tools that cannot fail and carry no answer.
+     *
+     * With this set, the handler runs under a capturing context and the named
+     * event's payload is folded into the result before shaping. The handler is
+     * not modified; nothing about the webview path changes.
+     *
+     * The event is NAMED rather than inferred, because only orchestrations follow
+     * the `*-complete` convention that `lastCompleteData` keys on.
+     */
+    capturePayloadFrom?: string;
     /**
      * Custom response projector; defaults to {@link defaultShape}.
      *
@@ -69,6 +90,35 @@ const confirmField = z
  * @param ctxFactory  Builds a headless HandlerContext for each invocation.
  */
  
+/**
+ * Dispatch one descriptor's handler, capturing its pushed payload when the row
+ * asks for it.
+ *
+ * A captured payload is merged UNDER the handler's own return, so a handler that
+ * returns real data keeps it and the capture only fills a gap. Capture failures
+ * are silent by design: the tool still returns whatever the handler returned,
+ * which is the pre-existing behaviour.
+ */
+async function runHandler(
+    d: ToolDescriptor,
+    ctxFactory: () => HandlerContext,
+    args: Record<string, unknown>,
+): Promise<HandlerResponse> {
+    if (!d.capturePayloadFrom) {
+        return dispatchHandler(d.map, ctxFactory(), d.type, args);
+    }
+    const events: CapturedEvent[] = [];
+    const res = await dispatchHandler(
+        d.map,
+        withCapturedProgress(ctxFactory(), events),
+        d.type,
+        args,
+    );
+    if (!res.success) return res;
+    const captured = payloadOfEvent(events, d.capturePayloadFrom);
+    return captured ? ({ ...captured, ...res } as HandlerResponse) : res;
+}
+
 export function registerDescriptorTools(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     server: any,
@@ -89,7 +139,7 @@ export function registerDescriptorTools(
                     content: [{ type: 'text' as const, text: `${d.tool} requires confirm:true to proceed.` }],
                 };
             }
-            const res = await dispatchHandler(d.map, ctxFactory(), d.type, args ?? {});
+            const res = await runHandler(d, ctxFactory, args ?? {});
             return { content: [{ type: 'text' as const, text: shape(res, args ?? {}) }] };
         });
     }
