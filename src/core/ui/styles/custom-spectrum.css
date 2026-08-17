@@ -5551,6 +5551,22 @@ div[class*="spectrum"] input[type="search"] {
     padding: 13px 18px 16px;
     border-top: 1px solid var(--spectrum-global-color-gray-200);
 }
+
+/* One line, not two.
+
+   `.integration-panel-row` ends with a border-bottom, guarded by a
+   `:last-child` rule so the final row does not leave a trailing line. That guard
+   silently stops applying the moment ANYTHING follows the rows — and this footer
+   does, as their sibling inside `.db-drawer-body`. So the last row kept its
+   bottom border, this kept its top border, and the two rendered a pixel apart as
+   a double rule.
+
+   Dropping the footer's border only where a row precedes it: the row's own line
+   is already there, and where the panel body ends with something else the footer
+   still draws its own. Exactly one line either way. */
+.integration-panel-row + .db-drawer-actions {
+    border-top: none;
+}
 .integration-panel-title {
     font-size: 15px;
     font-weight: 600;
