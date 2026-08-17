@@ -352,7 +352,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
     // that will never be asked never pays for it. Cancelling the reset therefore
     // costs one GET whose answer is discarded — bounded, idempotent, and it warms
     // a token cache eight other call sites want anyway.
-    const canActOnSampleData = beginSampleDataCredentialCheck(project, context);
+    const canRemoveSampleData = beginSampleDataCredentialCheck(project, context);
 
     const confirmButton = 'Reset Project';
     const confirmation = await vscode.window.showWarningMessage(
@@ -376,7 +376,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
     // one short credential call (see the function), which is bounded and silent
     // on failure; the older "no network call in front of a modal" phrasing here
     // overstated a rule that was really about not adding failure modes.
-    const dataChoice = await confirmSampleDataChoice(project, vscode, canActOnSampleData);
+    const removeData = await confirmSampleDataRemoval(project, vscode, canRemoveSampleData);
 
     const originalStatus = project.status;
     project.status = 'resetting';
@@ -445,8 +445,8 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
                 // Never allowed to fail the reset: the storefront reset is what
                 // was asked for, and a data step that refuses is reported while
                 // the reset still stands.
-                if (dataChoice !== 'none') {
-                    await runProjectSampleDataJob(project, context, progress, dataChoice);
+                if (removeData) {
+                    await removeProjectSampleData(project, context, progress);
                 }
 
                 const result = await executeEdsReset(
@@ -506,53 +506,45 @@ function beginSampleDataCredentialCheck(
     })().catch(() => false);
 }
 
-/** What the user chose to do with the sample data, if anything. */
-export type SampleDataChoice = 'restore' | 'remove' | 'none';
-
 /**
- * Ask what to do with the imported sample data, when there is any.
+ * Ask whether to remove the imported sample data, when there is any to remove.
  *
- * **Both verbs, because they are different intentions.** Restore is "give me
- * this demo back" — the common one, and why reset offers it at all. Remove is
- * "clear the instance so I can put a different pack in", which the Data
- * Installer also does per-type; offering it here too costs one button and saves
- * a user who is already in the reset flow from being told to go elsewhere.
+ * ONE question with one action. A restore (remove, then import the same pack
+ * again) was offered here for part of a day and taken out before release: it
+ * roughly tripled the tail of an already three-minute operation, and it made
+ * "reset" mean two different things depending on a button. Reset means what it
+ * has always meant — put the storefront back, and optionally clear the data.
  *
- * Opt IN: anything other than an explicit button keeps the data. Someone
+ * Opt IN: anything other than the explicit button keeps the data. Someone
  * resetting code must not lose a catalog by pressing Escape, which is why the
  * dismissal path and the "keep" path are the same path.
  *
  * The duration is in the prompt because it is the surprising part — a six-type
- * removal was measured at 470 seconds and a restore does that work twice, so a
- * modal that says "this is quick" by omission would be lying.
+ * removal was measured at 470 seconds, so a modal that says "this is quick" by
+ * omission would be lying.
  */
-async function confirmSampleDataChoice(
+async function confirmSampleDataRemoval(
     project: Project,
     vscode: typeof import('vscode'),
-    canAct: Promise<boolean> | undefined,
-): Promise<SampleDataChoice> {
+    canRemove: Promise<boolean> | undefined,
+): Promise<boolean> {
     const { datapack } = project;
-    if (!datapack || !canAct) {
-        return 'none';
+    if (!datapack || !canRemove) {
+        return false;
     }
-    if (!(await canAct)) {
-        return 'none';
+    if (!(await canRemove)) {
+        return false;
     }
 
-    const restoreButton = 'Restore Sample Data';
     const removeButton = 'Remove Sample Data';
     const answer = await vscode.window.showWarningMessage(
-        `What should happen to this project's sample data (${datapack.name}@${datapack.version})?\n\n` +
-            'Restore removes it from the Commerce instance and imports the same pack again. ' +
-            'Remove clears it and leaves the instance empty. ' +
-            'Either can take several minutes; resetting the storefront requires neither.',
+        `Also remove the sample data this project imported (${datapack.name}@${datapack.version})? ` +
+            'This deletes it from the Commerce instance and can take several minutes. ' +
+            'Resetting the storefront does not require it.',
         { modal: true },
-        restoreButton,
         removeButton,
     );
-    if (answer === restoreButton) return 'restore';
-    if (answer === removeButton) return 'remove';
-    return 'none';
+    return answer === removeButton;
 }
 
 /**
@@ -568,18 +560,15 @@ async function confirmSampleDataChoice(
  * empty, which is a worse state than the user started in and the one case where
  * they must go and do something about it.
  */
-async function runProjectSampleDataJob(
+async function removeProjectSampleData(
     project: Project,
     context: HandlerContext,
     progress: { report: (value: { message: string }) => void },
-    choice: 'restore' | 'remove',
 ): Promise<void> {
     try {
-        progress.report({
-            message: choice === 'restore' ? 'Restoring sample data...' : 'Removing sample data...',
-        });
+        progress.report({ message: 'Removing sample data...' });
 
-        const { restoreSampleData, removeSampleData } = await import(
+        const { removeSampleData } = await import(
             '@/features/data-installer/services/sampleDataInstall'
         );
         const { buildSampleDataDeps } = await import(
@@ -588,28 +577,24 @@ async function runProjectSampleDataJob(
 
         // The mode phrases the progress line; the poller's per-phase label comes
         // from the runner, which knows which half of a restore is running.
-        const deps = buildSampleDataDeps(
-            context, project, (message) => progress.report({ message }), choice,
+        const result = await removeSampleData(
+            project,
+            buildSampleDataDeps(context, project, (message) => progress.report({ message }), 'remove'),
         );
-        const result =
-            choice === 'restore'
-                ? await restoreSampleData(project, deps)
-                : await removeSampleData(project, deps);
 
-        const verb = choice === 'restore' ? 'restored' : 'removed';
         if (result.ran && result.outcome !== 'success') {
             context.logger.error(
-                `[EdsReset] Sample data was NOT ${verb}: ${result.reason ?? 'no reason given'}`,
+                `[EdsReset] Sample data was NOT removed: ${result.reason ?? 'no reason given'}`,
             );
             return;
         }
         if (!result.ran) {
             context.logger.warn(
-                `[EdsReset] Sample data was not ${verb}: ${result.reason ?? 'no reason given'}`,
+                `[EdsReset] Sample data was not removed: ${result.reason ?? 'no reason given'}`,
             );
         }
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
-        context.logger.warn(`[EdsReset] Sample data ${choice} failed, reset stands: ${reason}`);
+        context.logger.warn(`[EdsReset] Sample data removal failed, reset stands: ${reason}`);
     }
 }

@@ -1,36 +1,39 @@
 # Reset should RESTORE sample data, not only remove it
 
-> ## SHIPPED 2026-08-17
+> ## PART SHIPPED, RESTORE WITHDRAWN — 2026-08-17
 >
-> **The open question was settled, then CORRECTED the same session.** Restore first
-> replaced Remove outright, on the reasoning that a modal carries two actions plus
-> Cancel. That was a judgement about the ceiling rather than the ceiling: restore +
-> remove + Cancel is exactly two actions. The prompt now offers both, because they
-> are different intentions — "give me this demo back" and "clear the instance so I
-> can put a different pack in".
+> **The ordering defect SHIPPED.** The data step now runs BEFORE the storefront
+> pipeline, so the pipeline's catalog pre-warm describes the catalog the user is
+> left with instead of pre-publishing 30 PDP pages and then deleting those
+> products. Pinned on invocation order; nothing else can see it. This was always
+> the separable half and it stands on its own.
 >
-> Renaming came with it: the Data Installer's `Reset…` became `Remove data…`. A
-> project RESET restores the pack, so the same word had come to mean opposite
-> things one menu apart, and that modal's own confirm text ("cannot be undone")
-> was true there and false of the reset beside it.
+> **The restore was built and then TAKEN OUT before release.** `restoreSampleData`,
+> the two-verb prompt and the Restore/Remove buttons are all gone. Reset means what
+> it always meant: put the storefront back, and optionally remove the sample data.
 >
-> - **Step 1, the ordering defect** — the data step now runs BEFORE the storefront
->   pipeline, so the pipeline's catalog pre-warm describes the catalog the user is
->   left with. Pinned on invocation order; nothing else can see it.
-> - **Step 2, the restore** — `restoreSampleData` removes then reinstalls the same
->   pack. **The reinstall is gated on a CLEAN removal**: a `partial` or `error`
->   stops and says so, because refilling on top of records the delete left behind
->   is unverifiable from here and would be reported as success.
-> - **Deleted-but-not-reinstalled gets its own reason**, and only when a removal
->   actually took something away. A test caught the first version claiming a
->   deletion that never happened, on a project with nothing stored.
-> - Reported at three levels in the reset log: silence on success, a warning on a
->   refusal, an ERROR when the instance is left empty.
+> Why, from the user who asked for it: a restore roughly triples the tail of an
+> already three-minute operation, and offering two verbs made "reset" mean
+> different things depending on which button was pressed — the prompt stopped
+> reading as one decision about a reset and started reading as a separate question
+> about data.
 >
-> Also fixed en route: `runSampleDataJob` hardcoded `operation: 'reset'`, so every
-> INSTALL — including project creation's — was logged as a reset. That was a
-> regression from the same day's fix for the opposite mislabelling; the phase now
-> derives it.
+> **The open question this item existed to settle is therefore answered NO**, on
+> evidence from using it rather than from reasoning about it. Do not re-propose a
+> restore without new evidence; the design work is in git history if it is ever
+> wanted again.
+>
+> **A larger question surfaced and is NOT answered here.** A removal is
+> pack-scoped: `startDelete` sends the same body as an import with
+> `operation_mode: 'delete'`. Whether the service removes only the records that
+> pack defines, or everything of those data types, is service-side behaviour this
+> repo cannot see — so whether reset can give a genuinely clean instance, including
+> data a user created by hand, is UNVERIFIED. The cheap experiment: create one
+> product by hand, remove `products` only, see whether it survives.
+>
+> Kept en route: the `operation` label fix (an install was being logged as a
+> reset), and the Data Installer's `Reset…` → `Remove data…` rename with its
+> progress vocabulary.
 
 **Filed:** 2026-08-17, from four live reset runs on one EDS/ACCS project.
 **A design decision plus one ordering defect that should be fixed either way.**

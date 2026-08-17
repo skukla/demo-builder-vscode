@@ -33,19 +33,12 @@ export interface SampleDataProject {
 }
 
 /** What this deps set is being built for. */
-export type SampleDataMode = 'install' | 'remove' | 'restore';
+export type SampleDataMode = 'install' | 'remove';
 
-/**
- * The progress line's verb per job.
- *
- * A restore runs BOTH phases through one deps set, so it gets its own word
- * rather than borrowing whichever half happens to be running — "Removing" would
- * be wrong for half of it and "Installing" wrong for the other half.
- */
+/** The progress line's verb per job. */
 const PROGRESS_VERB: Record<SampleDataMode, string> = {
     install: 'Installing',
     remove: 'Removing',
-    restore: 'Restoring',
 };
 
 /**

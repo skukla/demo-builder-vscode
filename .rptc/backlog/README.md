@@ -437,7 +437,7 @@ at-rest plaintext ever matters.
 
 ## Recently shipped — 2026-08
 
-- **Reset should RESTORE sample data** — reset now removes AND reinstalls the recorded pack rather than only deleting it, and the data step runs before the pipeline so catalog pre-warming is not spent on products about to be deleted. Reinstall gated on a clean removal; deleted-but-not-reinstalled is its own reported outcome ([`../complete/2026-08-17-reset-should-restore-sample-data.md`](../complete/2026-08-17-reset-should-restore-sample-data.md))
+- **Reset sample-data ordering** — the data step now runs BEFORE the storefront pipeline, so catalog pre-warming is not spent on products about to be deleted (measured: 30 PDP pages published, then those products removed). The RESTORE half of that item was built and withdrawn before release — it tripled the tail of a three-minute operation and made "reset" mean two things depending on a button; reset removes sample data or leaves it, as it always did. Also unresolved and worth knowing: a removal is pack-scoped, and whether it can clear hand-created data is UNVERIFIED ([`../complete/2026-08-17-reset-should-restore-sample-data.md`](../complete/2026-08-17-reset-should-restore-sample-data.md))
 
 Pointers only; `../complete/` holds each writeup and git history holds the implementation.
 
