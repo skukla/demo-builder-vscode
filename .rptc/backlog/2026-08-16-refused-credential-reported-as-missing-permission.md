@@ -1,5 +1,32 @@
 # A refused credential is reported as a missing permission
 
+> ## PARTLY FIXED 2026-08-16 — `dcac1475`, `e79cca3c`
+>
+> **Done.** Helix 403s at the preview/publish/code sites now throw
+> `DaLiveAuthError` rather than "you do not have permission", and the Code Sync
+> inner `code.status` no longer reports a refusal as a missing App. Crucially the
+> classification ACTIVATED a retry that already existed — `runContentPipeline` was
+> keyed on `DaLiveAuthError` and had simply never seen one from Helix. Three
+> hand-rolled copies of the recovery are now one shared `withDaLiveAuthRetry`
+> (`services/daLiveAuthRetry.ts`).
+>
+> **What remains, and why each was left:**
+>
+> 1. **`syncCodeAndPermissions` has no retry wrapper** — and it is where run 1
+>    first failed, at config-service registration. Wrapping it is small, but its
+>    phases are not obviously idempotent on replay, which needs checking before a
+>    retry is safe to add.
+> 2. **The 52 unpublish 403s are logged as warnings, never thrown**, so nothing can
+>    catch them even now. Making them throw changes reset's failure semantics — a
+>    403 there is non-fatal by design today — so it is a product decision, not a
+>    refactor.
+> 3. **The probe (option 1 below) was not built.** With mid-pipeline recovery
+>    working it is now an optimisation — fail before the repo is rewritten rather
+>    than recover after — not the main fix. Re-evaluate on its own merits.
+> 4. **`configAccessRecovery` and `configurationService` still say "no admin
+>    role"** on a 403. `siteConfigRegistrar` already throws `DaLiveAuthError`, so
+>    the wiring is closer than it looks; the wording is downstream of item 1.
+
 **Filed:** 2026-08-16, from two reset runs on `bodea-template-test` forty minutes apart.
 **Shipped defect, user-facing, and it sends people to fix the wrong thing.**
 
