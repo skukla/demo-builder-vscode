@@ -19,10 +19,24 @@ import type { SampleDataDeps } from './sampleDataInstall';
 import { PollingService } from '@/core/shell/pollingService';
 import type { HandlerContext } from '@/types/handlers';
 
+/**
+ * What this needs to know about a project.
+ *
+ * Typed rather than `unknown` because the credential resolver dispatches on
+ * `stackBackend`, which is NOT a persisted field — it is mapped from
+ * `componentSelections.backend`, and `unknown` plus a cast is exactly how that
+ * mapping went missing (see {@link buildSampleDataDeps}).
+ */
+export interface SampleDataProject {
+    componentSelections?: { backend?: string };
+    componentConfigs?: Record<string, Record<string, string | boolean | number | undefined>>;
+    adobe?: { organization?: string };
+}
+
 /** Build the dependency set for one build's sample-data install. */
 export function buildSampleDataDeps(
     context: HandlerContext,
-    project: unknown,
+    project: SampleDataProject,
     report: (message: string) => void,
 ): SampleDataDeps {
     return {
@@ -32,9 +46,28 @@ export function buildSampleDataDeps(
             // components is exactly the one with no workspace to mint a pair in.
             // Omitting it would leave every unit test green and the feature inert
             // on its main path.
+            //
+            // `stackBackend` is a CredentialProject field, NOT a persisted one.
+            // This passed the raw project through `as never`, so it was undefined,
+            // the dispatch matched neither backend, and every caller got
+            // "This project has no usable Commerce credentials."
+            //
+            // Measured live 2026-08-17: a reset ran the full ~3-minute pipeline,
+            // was answered "Remove Sample Data" at a prompt whose OWN credential
+            // check had just succeeded, and then failed the removal on this line.
+            // Two resolutions of the same question disagreeing is the symptom that
+            // the second one was not asking it properly.
+            //
+            // The same defect sat in `edsResetUI` and, one shape earlier, in
+            // `importHandlers` (`stack?.backend`). Three sites, one cause: a cast
+            // that silenced the compiler. Hence the typed parameter above —
+            // nothing here is cast, so the next caller cannot repeat it.
             const resolution = await resolveCommerceCredentials({
-                project: project as never,
-                broker: brokerForContext(context, project as { adobe?: { organization?: string } }),
+                project: {
+                    stackBackend: project.componentSelections?.backend ?? '',
+                    componentConfigs: project.componentConfigs ?? {},
+                },
+                broker: brokerForContext(context, project),
             });
             // The pair goes into the REQUEST and nowhere else — never into the
             // result, never into a log line.

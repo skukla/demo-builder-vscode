@@ -576,7 +576,7 @@ async function removeProjectSampleData(
         );
 
         const result = await removeSampleData(
-            project as never,
+            project,
             buildSampleDataDeps(context, project, (message) => progress.report({ message })),
         );
 
