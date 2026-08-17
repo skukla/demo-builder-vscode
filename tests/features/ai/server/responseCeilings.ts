@@ -169,6 +169,39 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
             'the whole hierarchy IS the answer (the caller is choosing a scope from it). 8,000 covers roughly ' +
             '30x this store; a breach means a merchant large enough to need paging, not a regression',
     },
+
+    // ── storefront site (siteTools.ts) ───────────────────────────────────────
+    //
+    // Bespoke tools, so the descriptor-row EXEMPT machinery below never covered
+    // them. Measured 2026-08-17 against a real Configuration Service on a site
+    // with one site admin and one org admin.
+    get_site_access: {
+        bytes: 4_000,
+        why:
+            '131 live (1 site admin + 1 org admin). The only thing that grows is the two ROSTERS, ' +
+            'at ~25 bytes an address — 4,000 covers roughly 150 of them. A breach means an org large ' +
+            'enough to need paging, which is a real finding rather than a regression, because there ' +
+            'is no page size here: the caller is picking a person to ask',
+    },
+    set_site_admin: {
+        bytes: 2_000,
+        why:
+            '140 live granting, 115 revoking, 126 for the confirm refusal. Carries the site roster ' +
+            'but NOT the org one, so it is bounded more tightly than get_site_access',
+    },
+    repair_site_configuration: {
+        bytes: 2_000,
+        why:
+            '241 live repaired+verified (the overlay URL is most of it), 148 for the confirm refusal. ' +
+            'Fixed fields plus `lostGrants`, which scales with the admin roster — and is the case ' +
+            'worth having headroom for, since a run that loses grants must report every one',
+    },
+    connect_dalive: {
+        bytes: 600,
+        why:
+            '444 live, and it does not vary: the tool never dispatches, so the response is the same ' +
+            'literal handoff every call. A breach here means the tellUser text grew, nothing else',
+    },
 };
 
 /**

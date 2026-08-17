@@ -220,7 +220,7 @@ the work being skipped; each capability is already reachable.
 
 ## Group 6 — EDS / storefront operations
 
-> **BUILT 2026-08-17** — `get_site_access`, `set_site_admin`, `repair_site_configuration`,
+> **BUILT AND PROBED 2026-08-17** — `get_site_access`, `set_site_admin`, `repair_site_configuration`,
 > `connect_dalive` in `src/features/ai/server/siteTools.ts`, plus the extraction below.
 > `migrate_storefront_names` is the one planned tool still outstanding. The scoping that
 > follows is kept because every one of its calls held up under implementation.
@@ -236,10 +236,12 @@ the work being skipped; each capability is already reachable.
 > the two are indistinguishable to `onProgress?.()`. It was deleted and the conditional spread
 > with it, rather than left as a test that cannot fail.
 >
-> **What live measurement still owes.** All four tools are built and unit-tested; none has been
-> driven against a running extension, so none carries a `RESPONSE_CEILINGS` entry yet. That is
-> the same IOU Groups 4–5 carried between building and probing, and the same rule applies —
-> a ceiling is a live measurement, never a number invented from the stub harness.
+> **Probed live the same day, no defects.** 131 / 140 / 241 / 444 bytes, ceilings recorded from
+> those numbers, the storefront's admin roster byte-identical before and after the whole run —
+> including across the re-register, which is `pinSiteAdmin`'s merge-not-replace working rather
+> than nothing having happened. `repair_site_configuration` returned `nextStep: 'republish'` and
+> did NOT publish, the one claim about it no fixture could ever have supported. Full record in
+> the handoff.
 >
 > **SCOPED 2026-08-17. Read this before estimating what is left.**
 >

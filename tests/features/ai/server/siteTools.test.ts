@@ -31,6 +31,7 @@ jest.mock('@/features/eds/services/repairSiteConfigForProject', () => ({
     repairSiteConfigForProject: (...a: unknown[]) => mockRepairSiteConfigForProject(...a),
 }));
 
+import { expectWithinCeiling } from './responseCeilings';
 import { registerSiteTools } from '@/features/ai/server/siteTools';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -64,6 +65,9 @@ function buildHarness(currentProject: unknown) {
     );
     return {
         names: () => [...tools.keys()],
+        async callRaw(name: string, args: Record<string, unknown> = {}): Promise<string> {
+            return (await tools.get(name)!(args)).content[0].text;
+        },
         async call(name: string, args: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
             const out = await tools.get(name)!(args);
             return JSON.parse(out.content[0].text);
@@ -255,6 +259,68 @@ describe('repair_site_configuration', () => {
 
         expect(String(out.error)).toMatch(/No current project/);
         expect(mockRepairSiteConfigForProject).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * The response-size guard, driven with shapes COPIED from the live probe
+ * (2026-08-17, a real Configuration Service) rather than invented — addresses
+ * and the Runtime overlay host redacted, lengths kept representative.
+ *
+ * A fixture composed from what the writing side produces is the mistake behind
+ * two of the three bugs `mcp-live-probe` was written for. Do not "simplify"
+ * these back to `{status:'ok'}`; the roster and the overlay URL are what the
+ * ceilings are actually about.
+ */
+describe('response ceilings', () => {
+    it('get_site_access stays under its ceiling with both rosters populated', async () => {
+        mockListSiteAccess.mockResolvedValue({
+            status: 'ok',
+            site: 'someone/demo-builder-test',
+            siteAdmins: ['first.admin@example.test'],
+            orgAdmins: ['first.admin@example.test'],
+            canManage: true,
+        });
+
+        expectWithinCeiling('get_site_access', await harness().callRaw('get_site_access'));
+    });
+
+    it('set_site_admin stays under its ceiling', async () => {
+        mockAddSiteAdmin.mockResolvedValue({
+            status: 'ok',
+            site: 'someone/demo-builder-test',
+            siteAdmins: ['first.admin@example.test', 'mcp-probe@example.test'],
+            canManage: true,
+            verified: true,
+        });
+
+        const raw = await harness().callRaw('set_site_admin', {
+            email: 'mcp-probe@example.test',
+            admin: true,
+            confirm: true,
+        });
+        expectWithinCeiling('set_site_admin', raw);
+    });
+
+    it('repair_site_configuration stays under its ceiling, overlay URL and all', async () => {
+        mockRepairSiteConfigForProject.mockResolvedValue({
+            status: 'repaired',
+            verified: true,
+            org: 'someone',
+            site: 'demo-builder-test',
+            // Length matters more than the value: the overlay URL was most of
+            // the 241 bytes measured live.
+            overlayUrl:
+                'https://000000-exampleworkspace-stage.adobeioruntime.net/api/v1/web/' +
+                'accs-discovery/render-pdp?org=someone&site=demo-builder-test',
+        });
+
+        const raw = await harness().callRaw('repair_site_configuration', { confirm: true });
+        expectWithinCeiling('repair_site_configuration', raw);
+    });
+
+    it('connect_dalive stays under its ceiling', async () => {
+        expectWithinCeiling('connect_dalive', await harness().callRaw('connect_dalive'));
     });
 });
 

@@ -14,7 +14,7 @@ this file carries only what a fresh session needs that the plan does not say.
 | **3 — configuration** ✅ | `configure_project` |
 | **4 — integrations** ✅ | `add_integration` (Wave 3, + the panel-branch defect it was blocked on) · `rename_integration` · `set_console_apis` · `set_project_destination` |
 | **5 — lifecycle** ✅ | `set_current_project` · `restart_demo` · `set_project_pinned` · `open_url` · `edit_project` (handoff). **Three deliberately NOT built — see below.** |
-| **6 — EDS / storefront** ✅ | `get_site_access` · `set_site_admin` · `repair_site_configuration` · `connect_dalive` (handoff), all in `siteTools.ts`, preceded by the `repairSiteConfigForProject` extraction. `migrate_storefront_names` outstanding; `github_change_account` blocked; bulk pair deliberately not built. **Unprobed — see below.** |
+| **6 — EDS / storefront** ✅ | `get_site_access` · `set_site_admin` · `repair_site_configuration` · `connect_dalive` (handoff), all in `siteTools.ts`, preceded by the `repairSiteConfigForProject` extraction. All four probed live, ceilings recorded, no defects. `migrate_storefront_names` outstanding; `github_change_account` blocked; bulk pair deliberately not built. |
 
 Every Group 1–3 row was measured live and given a ceiling in
 `tests/features/ai/server/responseCeilings.ts`. `add_integration` was NOT — see its note below.
@@ -215,7 +215,43 @@ component. `getComponentVersion` is a keyed lookup nothing asks for after remova
 `projectFileLoader.discoverComponents` reconciles it against disk — and the project already
 carried such a row from an earlier session, independently of this probe.
 
-## Group 6 — built 2026-08-17, NOT yet probed
+## Group 6 — built AND probed 2026-08-17
+
+**All four run correctly against a real Configuration Service**, on build
+`feature/ai-surface-coverage@0c9d0bc6` with exactly one Dev Host, `info` read immediately
+before the first measurement. `info` reported **90 tools** — an independent confirmation of the
+53 bespoke + 37 descriptor count, arrived at by a different route than the greps.
+
+| Tool | Live bytes | Path exercised |
+|---|---|---|
+| `get_site_access` | 131 | 1 site admin + 1 org admin, `canManage: true` |
+| `set_site_admin` | 140 grant · 115 revoke · 126 refusal | grant → revoke round trip, both `verified: true` |
+| `repair_site_configuration` | 241 · 148 refusal | real re-register, `repaired` + `verified` |
+| `connect_dalive` | 444 | the handoff, unchanged by anything |
+
+**No defects.** Every gate refused before touching its service, both `set_site_admin` directions
+verified on re-read, and the storefront's admin roster was byte-identical before and after the
+whole run — including across the re-register, which is the merge-not-replace pin in
+`pinSiteAdmin` doing its job rather than an absence of evidence.
+
+`repair_site_configuration` returned `nextStep: 'republish'` and did NOT publish, which is the
+one claim about this tool that a fixture could never have supported.
+
+Ceilings are recorded in `responseCeilings.ts` from these numbers, and the fixtures driving them
+in `siteTools.test.ts` were copied from the live responses (addresses and the Runtime overlay
+host redacted, lengths kept). Falsified by lowering `connect_dalive`'s ceiling: the failure
+reported **444 bytes**, byte-identical to the live call — which is what a static handoff should
+do, and is the check that the fixture is not a simplification.
+
+### The earlier probe attempt answered from the wrong build
+
+The first `info` returned `develop@8e5f40c2` from the MAIN checkout — 58 tools, none of them
+these. Same shared-socket rebinding as the Group 4/5 session, and it would have reported all four
+tools missing. Caught because `info` was read first rather than after a confusing result. This is
+the second session in a row where that rule paid, and both times the wrong answer would have read
+as a registration bug.
+
+## Group 6 — what was built
 
 Four tools in `siteTools.ts`, preceded by the extraction the plan insisted on:
 `repairSiteConfigForProject(project, context, logger, onProgress?)` in
@@ -245,9 +281,7 @@ the caller wants none" passed whether the key was absent or explicitly `undefine
 `onProgress?.()` cannot tell them apart. The conditional spread went with it. A test that cannot
 fail is worse than no test — it reads as coverage.
 
-**The debt:** none of the four carries a `RESPONSE_CEILINGS` entry, because none has been driven
-against a running extension. Same IOU Groups 4–5 carried between building and probing. Probe
-them (one Dev Host, read `info` first) and promote the measurements.
+**No debt left on these four** — ceilings measured and recorded, see the probe section above.
 
 ## Then
 
