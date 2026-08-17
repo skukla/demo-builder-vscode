@@ -1,6 +1,12 @@
 # Phase 5 — Guidance (skills)
 
-**Status:** scoped 2026-08-17, not started.
+**Status:** SHIPPED 2026-08-17 — findings 1 and 2 in `e4efb90f` and `0a94137b`.
+Finding 3 deferred by decision to a future design-skill pass (see below).
+
+**What the phase actually found, versus what it expected.** It was planned as "add skills
+for uncovered tools". The real defect was that the diagnosis skill was WRONG — twice, in
+the same file, both times routing a symptom to a check that could not see its cause. The
+second one was found only because the first had established the shape to look for.
 **Blocked on:** nothing. Phase 4 was its blocker — the overview says skills are "scored
 against the post-phase-4 tool surface — that is its denominator, so it cannot start
 earlier." That denominator is now **103 tools**, up from 65 when the program was written.
@@ -82,6 +88,15 @@ The traps, each measured or read this session:
 
 This qualifies under "multi-step-with-traps" on every clause. It is the only new workflow
 that clearly does.
+
+## Finding 3 — DEFERRED 2026-08-17, not open
+
+Moved out of this phase by decision: it belongs to a pass that ADDS design skills, not to
+one that corrected existing ones. Filed with its full reasoning, including why the premise
+must be re-checked before anyone acts on it, at
+[`../../backlog/2026-08-17-open-ended-design-skill.md`](../../backlog/2026-08-17-open-ended-design-skill.md).
+
+The original note is kept below because the caution in it is the durable part.
 
 ## Finding 3 — the open-ended design gap (from the overview, unverified here)
 

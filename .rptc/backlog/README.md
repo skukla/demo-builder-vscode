@@ -343,6 +343,10 @@ for anyone still on `v1.0.0-beta.123`. Do it once that build is out of circulati
 
 ### E. Larger / untouched
 
+#### An open-ended design skill ([`2026-08-17-open-ended-design-skill.md`](2026-08-17-open-ended-design-skill.md))
+
+**Deferred out of phase 5 by decision — belongs to a pass that ADDS design skills, not one that corrected existing ones.** Every generated skill today answers "how do I do this named thing", or in `diagnose-demo`'s case "how do I look"; none answers "how do I approach a demo nobody gave me a recipe for". Whether that gap is real is genuinely open, and the item exists mainly to stop the next person inheriting a claim that does not hold: the overview's "21 skills, all task-shaped" rests on a count measured as **14**, and the conclusion was never independently checked. Also unresolved by design: skill vs an `AGENTS.md` section — a skill is best at "here is the sequence and its traps", and an open-ended brief has no sequence. Either way it is the first deliberate exception to the 2026-07-11 "no new generated skills unless multi-step-with-traps" constraint, so it needs an argument rather than a gap. Filed 2026-08-17.
+
 #### Multi-locale storefront — Phase 1 ([`2026-05-19-multisite-multilocale.md`](2026-05-19-multisite-multilocale.md))
 
 Serve multiple locales (eventually multiple brands) from a single project. Repurposes the wizard `settings` step as **Business Structure** (Connection, Primary Store, Regions & Locales, reserved Additional Brands). Covers PaaS, ACCS, ACO addon. Research: [`docs/research/2026-05-19-multisite-multillocale-research.md`](../../docs/research/2026-05-19-multisite-multillocale-research.md); seam: [ADR-003](../../docs/architecture/adr/003-multisite-architecture-seam.md). Phase 2 (repoless multi-brand) deferred.
