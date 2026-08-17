@@ -28,6 +28,7 @@ import sanitizeHtml from 'sanitize-html';
 import { z } from 'zod';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import { assertPathInside, assertPathInsideSync } from '@/core/validation';
+import { stripSecretValues } from '@/features/components/config/envVarKeys';
 import {
     DaLiveContentOperations,
     type TokenProvider,
@@ -808,7 +809,7 @@ export const toolHandlers = {
         } catch {
             return JSON.stringify([]);
         }
-        const projects: Array<{ name: string; path: string; status: string }> = [];
+        const projects: Array<{ name: string; path: string; status: string; pinned?: boolean }> = [];
         for (const entry of entries) {
             if (!entry.isDirectory()) continue;
             const dirPath = path.join(projectsDir, entry.name);
@@ -821,6 +822,11 @@ export const toolHandlers = {
                     name: manifest.name ?? entry.name,
                     path: dirPath,
                     status: manifest.status ?? 'unknown',
+                    // Only when SET. `set_project_pinned` was a write nothing could
+                    // confirm — no read reported pinned state anywhere — and a write
+                    // with no read is a write an agent has to take on faith. Omitted
+                    // when false/absent so the common case costs no tokens.
+                    ...(manifest.pinned ? { pinned: true } : {}),
                 });
             } catch {
                 // Skip directories without valid .demo-builder.json
@@ -835,9 +841,31 @@ export const toolHandlers = {
         try {
             const raw = await fsPromises.readFile(jsonPath, 'utf-8');
             const manifest = JSON.parse(raw);
+            // Secrets are stripped BEFORE anything else looks at the manifest, and
+            // on the `full` path too.
+            //
+            // Found by probing the live server (2026-08-17): a real project's
+            // response carried its ACCS_OAUTH_CLIENT_SECRET in plaintext, so every
+            // agent that read the project put a working Commerce credential into
+            // its transcript — and into whatever logs that transcript reaches.
+            //
+            // `full: true` is not an exemption. It is the MORE dangerous path: it
+            // is what an agent reaches for when the summary looks incomplete, and
+            // "the caller asked for everything" is not consent from the person
+            // whose credential it is.
+            //
+            // This is the convention `export_project_settings` already follows in
+            // the other direction — secrets go to the FILE, never the response —
+            // and `stripSecretValues` is the same helper that enforces it there.
+            const safe = {
+                ...manifest,
+                ...(manifest.componentConfigs
+                    ? { componentConfigs: stripSecretValues(manifest.componentConfigs) }
+                    : {}),
+            };
             // Compact JSON (no indentation) — the response is consumed as LLM
             // context, not read by a human, so whitespace is pure token waste.
-            return JSON.stringify(full ? manifest : summarizeManifest(manifest));
+            return JSON.stringify(full ? safe : summarizeManifest(safe));
         } catch (err) {
             return `Error reading project state: ${err instanceof Error ? err.message : String(err)}`;
         }

@@ -172,6 +172,53 @@ describe('toolHandlers.listProjects', () => {
     });
 });
 
+/**
+ * `pinned` in the list — the READ half of a write nothing could confirm.
+ *
+ * Measured live 2026-08-17: `set_project_pinned` returned the literal "{}" and
+ * NO tool anywhere reported pinned state, so an agent could pin a project and
+ * had no way to find out whether it had worked. It was classified as "success is
+ * the outcome, paired with a confirming read" — the pairing was assumed, not
+ * checked, and did not exist.
+ */
+describe('toolHandlers.listProjects — pinned', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    function withManifests(manifests: Record<string, unknown>[]): void {
+        (fsProm.readdir as jest.Mock).mockResolvedValue(
+            manifests.map((m) => ({ name: (m as { name: string }).name, isDirectory: () => true })),
+        );
+        (fsProm.stat as jest.Mock).mockResolvedValue({});
+        let call = 0;
+        (fsProm.readFile as jest.Mock).mockImplementation(async () =>
+            JSON.stringify(manifests[call++]),
+        );
+    }
+
+    it('reports pinned:true for a pinned project', async () => {
+        withManifests([{ name: 'pinned-one', pinned: true }]);
+
+        const parsed = JSON.parse(await toolHandlers.listProjects(PROJECTS_DIR));
+
+        expect(parsed[0]).toMatchObject({ name: 'pinned-one', pinned: true });
+    });
+
+    // Omitted rather than `pinned: false`: every unpinned project would otherwise
+    // pay for the field, and this list is capped at 100 rows.
+    it('omits the field entirely when a project is not pinned', async () => {
+        withManifests([{ name: 'plain' }]);
+
+        const parsed = JSON.parse(await toolHandlers.listProjects(PROJECTS_DIR));
+
+        expect(parsed[0]).not.toHaveProperty('pinned');
+        // Control: the row is otherwise intact, so the assertion above is about
+        // the field and not about the row failing to build.
+        expect(parsed[0]).toMatchObject({ name: 'plain', status: 'unknown' });
+    });
+});
+
 // ─── toolHandlers.getProject ──────────────────────────────────────────────────
 
 describe('toolHandlers.getProject', () => {
@@ -190,6 +237,74 @@ describe('toolHandlers.getProject', () => {
             'utf-8',
         );
         expect(JSON.parse(result)).toEqual(projectData);
+    });
+
+    /**
+     * Found by probing the LIVE server (2026-08-17): a real project's response
+     * carried its `ACCS_OAUTH_CLIENT_SECRET` in plaintext, so every agent that
+     * read the project put a working Commerce credential into its transcript.
+     *
+     * The convention it breaks was already written down and already enforced one
+     * door over — `export_project_settings` returns `{path, includesSecrets}` and
+     * never the values, and `stripSecretValues` exists for exactly this. Only this
+     * tool was not using it.
+     *
+     * Fixtures could never have caught it: an invented manifest has no real
+     * secret in it.
+     */
+    describe('secret values never ride the response', () => {
+        const WITH_SECRETS = {
+            name: 'test-project',
+            componentConfigs: {
+                'adobe-commerce-accs': {
+                    ACCS_GRAPHQL_ENDPOINT: 'https://example.test/graphql',
+                    ACCS_OAUTH_CLIENT_ID: 'client-id-is-not-a-secret',
+                    ACCS_OAUTH_CLIENT_SECRET: 'fake-test-pw-not-a-secret',
+                },
+            },
+        };
+
+        it('strips them from the summary', async () => {
+            (fsProm.readFile as jest.Mock).mockResolvedValue(JSON.stringify(WITH_SECRETS));
+
+            const result = await toolHandlers.getProject(PROJECTS_DIR, PROJECT_NAME);
+
+            expect(result).not.toContain('fake-test-pw-not-a-secret');
+            expect(result).not.toContain('ACCS_OAUTH_CLIENT_SECRET');
+        });
+
+        // full:true is the MORE dangerous path, not an exemption from the rule —
+        // it is the one an agent reaches for when the summary looks incomplete.
+        it('strips them from full:true as well', async () => {
+            (fsProm.readFile as jest.Mock).mockResolvedValue(JSON.stringify(WITH_SECRETS));
+
+            const result = await toolHandlers.getProject(PROJECTS_DIR, PROJECT_NAME, true);
+
+            expect(result).not.toContain('fake-test-pw-not-a-secret');
+            expect(result).not.toContain('ACCS_OAUTH_CLIENT_SECRET');
+        });
+
+        // The control. Stripping the whole config map would also pass the two
+        // assertions above while destroying the tool — the non-secret keys beside
+        // the secret are most of why an agent reads this.
+        it('control: keeps every non-secret key in the same component', async () => {
+            (fsProm.readFile as jest.Mock).mockResolvedValue(JSON.stringify(WITH_SECRETS));
+
+            const parsed = JSON.parse(await toolHandlers.getProject(PROJECTS_DIR, PROJECT_NAME));
+
+            expect(parsed.componentConfigs['adobe-commerce-accs']).toEqual({
+                ACCS_GRAPHQL_ENDPOINT: 'https://example.test/graphql',
+                ACCS_OAUTH_CLIENT_ID: 'client-id-is-not-a-secret',
+            });
+        });
+
+        it('leaves a project with no componentConfigs alone', async () => {
+            (fsProm.readFile as jest.Mock).mockResolvedValue(JSON.stringify({ name: 'bare' }));
+
+            expect(JSON.parse(await toolHandlers.getProject(PROJECTS_DIR, PROJECT_NAME))).toEqual({
+                name: 'bare',
+            });
+        });
     });
 
     it('returns error text (does not throw) when readFile throws ENOENT', async () => {

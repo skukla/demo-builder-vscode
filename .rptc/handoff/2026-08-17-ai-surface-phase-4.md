@@ -133,6 +133,57 @@ call is missing here. Asserted by reading the source rather than by counting wha
 because the failure is an omission — a function nobody calls registers nothing, so any count
 taken from the server would agree with the mistake.
 
+## The Group 4/5 live probe (2026-08-17) — two real findings, one wrong one
+
+12 paths probed against build `94c8bb18`. Every refusal, gate and validation path behaved as
+designed, and `open_url`'s `available` list matched `get_project_urls` exactly — the
+shared-resolver claim, proven rather than argued.
+
+**Found and fixed:**
+
+- **`get_project` returned `ACCS_OAUTH_CLIENT_SECRET` in plaintext**, on the summary AND on
+  `full: true`. Every agent that read the project put a working Commerce credential into its
+  transcript. `stripSecretValues` already existed and `export_project_settings` already followed
+  the convention — only this tool did not. Fixtures could never have caught it: an invented
+  manifest has no real secret in it.
+- **`set_project_pinned` returned the literal `{}`** and NOTHING anywhere reported pinned state,
+  so an agent could pin a project and never learn whether it worked. It had been classified in
+  `responseSize.test.ts` as "category 1 — paired with a confirming read". The pairing was
+  assumed, not checked, and did not exist. Both halves now exist: the handler names the new
+  state, `list_projects` carries `pinned` (only when true).
+
+**Withdrawn: `rename_integration` is NOT broken.** It was reported as refusing real integrations
+— `Only integrations can be renamed` for two live, deployed ones. On a clean host it works and
+returns its `{renamed}` payload. What made it look broken is below, and it is the more important
+finding.
+
+## Three Dev Hosts, one socket — this invalidates measurements silently
+
+The socket name is `sha256(projects-root)`, identical across every checkout, and the last host to
+start takes it. **Three rebound it during one probe session**: `ai-surface-coverage` →
+`bodea-template` (07:22) → `develop` (07:32). Consequences actually observed:
+
+- A `restart_demo` call answered `Tool restart_demo not found` — a correct answer from the wrong
+  build, which reads exactly like a registration bug in yours.
+- The `rename_integration` "defect" almost certainly came from `getCurrentProject()` resolving a
+  DIFFERENT project: the hosts share one on-disk current-project pointer, and
+  `bodea-template-test` exists in the same projects root. That is the leading explanation, not a
+  proven one — it cannot be established after the fact, and what would prove it is running the
+  same call twice with a second host started in between.
+- A full-suite run failed one suite on a 10s timeout in `inExtensionMcpServer` — the documented
+  contention signature. `ps` showed ZERO competing jest runs; the contention was the Dev Hosts.
+  The re-run was clean.
+
+**So: before probing, have exactly ONE Extension Dev Host running, and read `info` immediately
+before every measurement.** A wrong-build answer is a real response to a real server and looks
+identical to a right one. This is the skill's rule 1 and it is not paranoia — it produced a
+false defect report in this session.
+
+**Still unprobed:** `restart_demo`, `open_url`'s open path, `set_console_apis`,
+`set_project_destination`, `add_integration`. All four were approved for probing; the host
+churn stopped them. `set_console_apis` needs care — called WITHOUT `componentId` it rewrites
+`componentApiPicks` through `applyDesiredApis`, which can collapse per-integration attribution.
+
 ## Start here
 
 **Group 6 (EDS / storefront)** — `manage_site_access` and `repair_site_configuration` are the

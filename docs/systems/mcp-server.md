@@ -276,9 +276,9 @@ These are `vscode`-free and operate on files under `~/.demo-builder/projects`.
 
 | Tool | Purpose |
 |---|---|
-| `list_projects` | List all projects (paginated). |
-| `get_project` | Read a project's manifest (summary or full). |
-| `get_component_config` | Read a component's `.demo-builder.json` / `.env`. |
+| `list_projects` | List all projects (paginated). Carries `pinned: true` when set — omitted otherwise, so the common row costs nothing. It exists because `set_project_pinned` was a write no read could confirm. |
+| `get_project` | Read a project's manifest (summary or full). **Secret VALUES are stripped** (`stripSecretValues` over `componentConfigs`) on BOTH paths — `full: true` is the more dangerous one, not an exemption. Found live 2026-08-17 returning a real `ACCS_OAUTH_CLIENT_SECRET`; the same convention `export_project_settings` already followed. To read a secret, open the project — not an agent transcript. |
+| `get_component_config` | Read a component's `.demo-builder.json` / `.env`. **Returns the file VERBATIM, secrets included** — deliberately, since the file is the answer, but it means the `get_project` strip above does not cover this door. Whether that stays deliberate is an open question, not a settled one: a `.env` read hands an agent every credential the project has. Filed rather than changed, because narrowing it changes the tool's contract. |
 | `update_project_config` | Write `.demo-builder.json` / `.env` (env content validated). |
 | `sync_storefront` | Git add/commit/push the storefront. |
 | `list_blocks` | List EDS blocks in the storefront. |

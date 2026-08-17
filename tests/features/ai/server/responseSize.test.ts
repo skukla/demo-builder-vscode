@@ -269,11 +269,19 @@ describe('rows with no output safety net are classified', () => {
         'redeploy_integration', 'refresh_block_library', 'regenerate_ai_files',
         'remove_integration', 'rename_project', 'save_ai_prompt', 'start_demo',
         'stop_demo',
-        // Group 5. `restart_demo` and `set_project_pinned` are category 1 —
-        // success IS the outcome, and both have a confirming read
-        // (get_project_status, list_projects). `set_current_project` is category
-        // 2: handleSelectProject returns `{data: {project}}`
-        // (projects-dashboard/handlers/dashboardHandlers.ts).
+        // Group 5. `restart_demo` is category 1 — success IS the outcome, and
+        // `get_project_status` confirms it. `set_current_project` and
+        // `set_project_pinned` are category 2: `handleSelectProject` returns
+        // `{data: {project}}` and `handleSetProjectPinned` returns `{pinned: {…}}`.
+        //
+        // `set_project_pinned` was FILED HERE AS CATEGORY 1 and that was wrong —
+        // it claimed a confirming read that did not exist. Probing it live
+        // (2026-08-17) returned the literal "{}" while NOTHING anywhere reported
+        // pinned state, so an agent could pin a project and never learn whether it
+        // worked. Both halves were added: the handler now names the new state, and
+        // `list_projects` carries `pinned`. The lesson is in the classification
+        // itself — "paired with a confirming read" is a claim about ANOTHER tool,
+        // and nothing here checks it.
         'restart_demo', 'set_current_project', 'set_project_pinned',
     ];
 

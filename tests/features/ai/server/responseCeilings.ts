@@ -45,11 +45,17 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     // ── file-based tools (mcp-server.ts) ────────────────────────────────────
     list_projects: {
         bytes: 8_000,
-        why: 'bounded by DEFAULT_LIST_LIMIT (100 rows ≈ 6,000 bytes), not by how many projects exist — 227 live with 2, 18,191 with 300 before the cap',
+        why:
+            'bounded by DEFAULT_LIST_LIMIT (100 rows ≈ 6,000 bytes), not by how many projects exist — ' +
+            '227 live with 2, 18,191 with 300 before the cap. `pinned` is emitted only when TRUE, ' +
+            'which is why it costs ~0 on a normal list rather than 16 bytes × 100 rows',
     },
     get_project: {
         bytes: 12_000,
-        why: 'summary with aiPrompts/aiFileHashes/blockLibraries collapsed; 5,179 live (was 9,532 before the aiFileHashes collapse)',
+        why:
+            'summary with aiPrompts/aiFileHashes/blockLibraries collapsed; 5,179 live (was 9,532 ' +
+            'before the aiFileHashes collapse). Secret VALUES are stripped before shaping ' +
+            '(stripSecretValues), so this number can only go down',
     },
     get_component_config: { bytes: 40_000, why: 'returns a config file verbatim — the file IS the answer' },
     update_project_config: { bytes: 2_000, why: 'write confirmation' },
