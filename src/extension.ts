@@ -19,6 +19,7 @@ import { registerAdobeTools } from '@/features/ai/server/adobeTools';
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { registerAuthTools } from '@/features/ai/server/authTools';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
+import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
@@ -33,6 +34,7 @@ import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
+import { registerValidateSelectionTool } from '@/features/ai/server/validateSelectionTool';
 import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication';
 import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
@@ -499,7 +501,11 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             registerExtraTools: (mcpServer) => {
                 registerDescriptorTools(
                     mcpServer,
-                    [...READ_DESCRIPTORS, ...STATUS_DESCRIPTORS, ...ACTION_DESCRIPTORS],
+                    [
+                        ...READ_DESCRIPTORS,
+                        ...STATUS_DESCRIPTORS,
+                        ...ACTION_DESCRIPTORS,
+                    ],
                     ctxFactory,
                 );
                 registerDiscoveryTools(mcpServer);
@@ -508,6 +514,8 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerCreateProjectTool(mcpServer, ctxFactory);
                 registerCurrentProjectTool(mcpServer, ctxFactory);
                 registerProjectStatusTool(mcpServer, stateManager);
+                registerValidateSelectionTool(mcpServer, ctxFactory);
+                registerComponentRequirementsTool(mcpServer);
                 registerCloudResourceTools(mcpServer, ctxFactory);
                 registerStorefrontTools(mcpServer, ctxFactory);
                 registerContentAuthoringTools(mcpServer, ctxFactory);

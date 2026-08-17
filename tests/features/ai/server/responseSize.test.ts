@@ -124,7 +124,11 @@ const PAYLOADS: Record<string, HandlerResponse> = {
 /** Generic oversized payload for rows that declare no projector. */
 const GENERIC: HandlerResponse = { success: true, data: { items: bigRows(400) } };
 
-const ALL = [...READ_DESCRIPTORS, ...STATUS_DESCRIPTORS, ...ACTION_DESCRIPTORS];
+const ALL = [
+    ...READ_DESCRIPTORS,
+    ...STATUS_DESCRIPTORS,
+    ...ACTION_DESCRIPTORS,
+];
 const SHAPED = ALL.filter((d) => d.shape).map((d) => d.tool);
 
 describe('descriptor tools — response size', () => {
