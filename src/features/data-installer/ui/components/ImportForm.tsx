@@ -94,79 +94,75 @@ function TargetScopeFields({
 
     return (
         <div className="datapack-import-scope">
-            <ScopeField isLoading={isLoading} busyLabel="Loading websites">
-                <Picker
-                    label="Target website"
-                    placeholder={websitePlaceholder(isLoading, defaultSite?.name)}
-                    isDisabled={isLoading}
-                    selectedKey={websiteCode || null}
-                    onSelectionChange={(key) => onWebsiteChange(String(key ?? ''))}
-                >
-                    {websites.map((site) => (
-                        <Item key={site.code} textValue={site.name}>
-                            {site.name}
-                        </Item>
-                    ))}
-                </Picker>
-            </ScopeField>
-            <ScopeField isLoading={isLoading} busyLabel="Loading store views">
-                <Picker
-                    label="Store view"
-                    placeholder={storePlaceholder(
-                        isLoading,
-                        chosen ? storeViews[0]?.name : undefined,
-                    )}
-                    isDisabled={isLoading || !websiteCode}
-                    selectedKey={storeCode || null}
-                    onSelectionChange={(key) => onStoreChange(String(key ?? ''))}
-                >
-                    {storeViews.map((view) => (
-                        <Item key={view.code} textValue={view.name}>
-                            {view.name}
-                        </Item>
-                    ))}
-                </Picker>
-            </ScopeField>
+            <Picker
+                label={<ScopeLabel text="Target website" busyLabel="Loading websites" isLoading={isLoading} />}
+                aria-label="Target website"
+                placeholder={websitePlaceholder(isLoading, defaultSite?.name)}
+                isDisabled={isLoading}
+                selectedKey={websiteCode || null}
+                onSelectionChange={(key) => onWebsiteChange(String(key ?? ''))}
+            >
+                {websites.map((site) => (
+                    <Item key={site.code} textValue={site.name}>
+                        {site.name}
+                    </Item>
+                ))}
+            </Picker>
+            <Picker
+                label={<ScopeLabel text="Store view" busyLabel="Loading store views" isLoading={isLoading} />}
+                aria-label="Store view"
+                placeholder={storePlaceholder(isLoading, chosen ? storeViews[0]?.name : undefined)}
+                isDisabled={isLoading || !websiteCode}
+                selectedKey={storeCode || null}
+                onSelectionChange={(key) => onStoreChange(String(key ?? ''))}
+            >
+                {storeViews.map((view) => (
+                    <Item key={view.code} textValue={view.name}>
+                        {view.name}
+                    </Item>
+                ))}
+            </Picker>
         </div>
     );
 }
 
 /**
- * A scope picker with a spinner on its label row while discovery runs.
+ * The picker's label, with the spinner sitting directly after the words.
  *
- * The spinner is a SIBLING of the `Picker`, positioned over the label row, not a
- * node passed as `label`. Spectrum's label accepts a node, but the repo's test
- * mock forwards it to `aria-label` (`aria-label={ariaLabel || label}`), so a node
- * label stringifies to `[object Object]` and every `getByLabelText('Target
- * website')` in the suite stops matching. The label stays a plain string.
+ * **Two earlier attempts, and why this one.** The spinner was first a SIBLING of
+ * the `Picker`, absolutely positioned at `right: 0` — but the field is
+ * `flex: 1 1 0`, i.e. half the modal, so it landed ~600px from the label it
+ * belonged to, out by the next column. There is no offset that fixes that: the
+ * label's width is its text's width, which differs per label. Owning the element
+ * is what makes "after the text" expressible at all.
  *
- * Follows `VerifiedField`, which is this repo's existing answer to "a form field
- * that is checking something": keep the control in place, disable it, and put an
- * indeterminate `ProgressCircle` beside it. Two static "Loading…" strings, which
- * is what this had, cannot show that anything is still happening — and discovery
- * here waits on a credential fetch plus a Commerce call, so it is not instant.
+ * Styling had the same shape of problem. Reaching the labels through
+ * `.datapack-import-scope .spectrum-FieldLabel` left them at their default size
+ * while "Data types" beside them was small caps; the class IS in the bundle, so
+ * the reason is unestablished rather than diagnosed. This carries
+ * `datapack-import-label` — the very class that styles "Data types" — so the
+ * three labels cannot render differently regardless of that reason.
+ *
+ * `aria-label` is passed explicitly alongside because the repo's Spectrum mock
+ * does `aria-label={ariaLabel || label}`; without the string, a node label
+ * stringifies to `[object Object]` and every label query in the suite breaks.
  */
-function ScopeField({
-    isLoading,
+function ScopeLabel({
+    text,
     busyLabel,
-    children,
+    isLoading,
 }: {
-    isLoading: boolean;
+    text: string;
     busyLabel: string;
-    children: React.ReactNode;
+    isLoading: boolean;
 }): React.JSX.Element {
     return (
-        <div className="datapack-scope-field">
-            {children}
+        <span className="datapack-import-label datapack-scope-label">
+            {text}
             {isLoading ? (
-                <ProgressCircle
-                    size="S"
-                    isIndeterminate
-                    aria-label={busyLabel}
-                    UNSAFE_className="datapack-scope-spinner"
-                />
+                <ProgressCircle size="S" isIndeterminate aria-label={busyLabel} />
             ) : null}
-        </div>
+        </span>
     );
 }
 

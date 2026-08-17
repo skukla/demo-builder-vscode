@@ -255,23 +255,16 @@
     min-width: 0;
 }
 
-/* Anchors the discovery spinner to the picker's own label row.
+/* The spinner sits immediately AFTER the label text, in flow.
 
-   Positioned against the FIELD rather than by a computed offset: a Spectrum size
-   prop and the matching CSS var resolve to different px in this webview, so any
-   value derived from a token lands wrong at one of the two scales. */
-.datapack-scope-field {
-    position: relative;
-    min-width: 0;
-}
-
-/* The right end of the label row, opposite the label text. `top` targets the
-   label's line box rather than the field top, so it reads as part of the label
-   instead of floating over the control. */
-.datapack-scope-spinner {
-    position: absolute;
-    top: 2px;
-    right: 0;
+   It was absolutely positioned at `right: 0` of the field. The field is
+   `flex: 1 1 0` — half the modal — so it rendered ~600px away, next to the other
+   column's label. In-flow beside the text is the only placement that tracks a
+   label whose width is however wide its words are. */
+.datapack-scope-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 /* The products/customer_groups dependency. Warning colour, not error: the import
@@ -329,16 +322,19 @@
     min-width: 0;
 }
 
-/* EVERY field label in this modal, in one rule.
+/* EVERY field label in this modal, from one rule.
 
-   "Data types" was the only one styled, so Spectrum's default FieldLabel sized
-   "Target website" and "Store view" larger than the section heading above the
-   grid — three labels at the same level of the hierarchy, rendered three ways.
-   The picker labels are listed here rather than given their own matching rule:
-   a second copy of these four declarations is a second thing to keep in step,
-   and the values would drift the first time one was tuned. */
-.datapack-import-label,
-.datapack-import-scope .spectrum-FieldLabel {
+   "Data types" was the only one styled, so Spectrum's default sized "Target
+   website" and "Store view" larger than the section heading below them — three
+   labels at one level of the hierarchy, rendered three ways.
+
+   The picker labels wear this class DIRECTLY (see `ScopeLabel`). Reaching them
+   through `.datapack-import-scope .spectrum-FieldLabel` was tried and the labels
+   still rendered at their default size. Why is unestablished — the class is
+   present in the bundle (24 occurrences), so "the selector matches nothing" is a
+   guess, not a finding, and specificity or Spectrum's own cascade are equally
+   live. Owning the element removes the question instead of answering it. */
+.datapack-import-label {
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
