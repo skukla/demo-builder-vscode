@@ -24,8 +24,7 @@
 
 import { provisionAccsCredentials } from '../services/accsCredentialProvisioner';
 import { canProvisionAccsCredentials } from '../services/accsProvisionEligibility';
-import { brokerForContext } from '../services/commerceCredentialBroker';
-import { resolveCommerceCredentials } from '../services/commerceCredentials';
+import { resolveProjectCredentials } from '../services/commerceCredentialBroker';
 import {
     DataInstallerWriteClient,
     type ImportRequest,
@@ -266,15 +265,7 @@ export const importHandlers = defineHandlers({
             return { success: true, data: { websites: [] } };
         }
 
-        const credentials = await resolveCommerceCredentials({
-            project: {
-                stackBackend: project.componentSelections?.backend ?? '',
-                componentConfigs: project.componentConfigs ?? {},
-            },
-            secrets: context.context.secrets,
-            projectName: project.name,
-            broker: brokerForContext(context, project),
-        });
+        const credentials = await resolveProjectCredentials(context, project);
         if (!credentials.ok) {
             // Not an error: the import still works, it just lands on the default.
             return { success: true, data: { websites: [] } };
@@ -391,22 +382,7 @@ async function prepareImport(
         return { response: { success: false, error: 'Open a project before importing a datapack.' } };
     }
 
-    const credentials = await resolveCommerceCredentials({
-        project: {
-            // `componentSelections.backend` — the field a PERSISTED project
-            // actually carries, and what the other six readers in this repo use.
-            // This read `stack?.backend` for its whole life, a shape that exists
-            // only in wizard state, so EVERY real project resolved to '' and got
-            // "this project has no Adobe Commerce backend". The unit fixtures had
-            // the same invented shape and so agreed with it — a live dry run is
-            // what caught it, which no test here could have.
-            stackBackend: project.componentSelections?.backend ?? '',
-            componentConfigs: project.componentConfigs ?? {},
-        },
-        secrets: context.context.secrets,
-        projectName: project.name,
-        broker: brokerForContext(context, project),
-    });
+    const credentials = await resolveProjectCredentials(context, project);
     if (!credentials.ok) {
         return {
             response: {

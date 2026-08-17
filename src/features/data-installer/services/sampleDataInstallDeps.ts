@@ -11,8 +11,7 @@
  */
 
 import { resolveDataInstallerAccess } from '../handlers/dataInstallerHandlers';
-import { brokerForContext } from './commerceCredentialBroker';
-import { resolveCommerceCredentials } from './commerceCredentials';
+import { resolveProjectCredentials } from './commerceCredentialBroker';
 import { DataInstallerWriteClient } from './dataInstallerWriteClient';
 import { watchImportJob } from './importJobRunner';
 import type { SampleDataDeps } from './sampleDataInstall';
@@ -47,28 +46,11 @@ export function buildSampleDataDeps(
             // Omitting it would leave every unit test green and the feature inert
             // on its main path.
             //
-            // `stackBackend` is a CredentialProject field, NOT a persisted one.
-            // This passed the raw project through `as never`, so it was undefined,
-            // the dispatch matched neither backend, and every caller got
-            // "This project has no usable Commerce credentials."
-            //
-            // Measured live 2026-08-17: a reset ran the full ~3-minute pipeline,
-            // was answered "Remove Sample Data" at a prompt whose OWN credential
-            // check had just succeeded, and then failed the removal on this line.
-            // Two resolutions of the same question disagreeing is the symptom that
-            // the second one was not asking it properly.
-            //
-            // The same defect sat in `edsResetUI` and, one shape earlier, in
-            // `importHandlers` (`stack?.backend`). Three sites, one cause: a cast
-            // that silenced the compiler. Hence the typed parameter above —
-            // nothing here is cast, so the next caller cannot repeat it.
-            const resolution = await resolveCommerceCredentials({
-                project: {
-                    stackBackend: project.componentSelections?.backend ?? '',
-                    componentConfigs: project.componentConfigs ?? {},
-                },
-                broker: brokerForContext(context, project),
-            });
+            // Through the shared resolver, which owns the `stackBackend` mapping.
+            // This line passed a raw project through `as never` and so resolved
+            // nothing for anyone — see `resolveProjectCredentials` for the three
+            // sites that made the same mistake.
+            const resolution = await resolveProjectCredentials(context, project);
             // The pair goes into the REQUEST and nowhere else — never into the
             // result, never into a log line.
             return resolution.ok

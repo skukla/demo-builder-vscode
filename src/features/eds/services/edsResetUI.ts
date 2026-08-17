@@ -485,35 +485,15 @@ function beginSampleDataCredentialCheck(
         return undefined;
     }
 
-    // `stackBackend` is a CredentialProject field, NOT a persisted one — it is
-    // mapped from `componentSelections.backend` at every call site. This passed the
-    // raw Project through `as never`, so `stackBackend` was undefined, the dispatch
-    // matched neither backend, and resolution returned `unsupported-backend`
-    // BEFORE the broker was ever built. The prompt then never appeared, silently,
-    // for every project. Measured live 2026-08-17: an import recorded the pack and
-    // the reset forty seconds later asked nothing, with no credential line logged.
-    //
-    // `importHandlers` carries a comment about the identical failure one shape
-    // earlier (`stack?.backend`, a wizard-only shape, resolving to '' for every
-    // real project). Same defect, reintroduced by a cast that silenced the
-    // compiler — which is why the object is built explicitly, exactly as the
-    // import path builds it, and nothing here is cast.
+    // Through the shared resolver, which owns the `stackBackend` mapping. This
+    // site passed a raw Project through `as never`, so the dispatch matched
+    // neither backend and the prompt never appeared for any project — see
+    // `resolveProjectCredentials` for the three sites that made that mistake.
     return (async () => {
-        const { resolveCommerceCredentials } = await import(
-            '@/features/data-installer/services/commerceCredentials'
-        );
-        const { brokerForContext } = await import(
+        const { resolveProjectCredentials } = await import(
             '@/features/data-installer/services/commerceCredentialBroker'
         );
-        const credentials = await resolveCommerceCredentials({
-            project: {
-                stackBackend: project.componentSelections?.backend ?? '',
-                componentConfigs: project.componentConfigs ?? {},
-            },
-            secrets: context.context.secrets,
-            projectName: project.name,
-            broker: brokerForContext(context, project),
-        });
+        const credentials = await resolveProjectCredentials(context, project);
         return credentials.ok;
     })().catch(() => false);
 }

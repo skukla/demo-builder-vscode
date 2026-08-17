@@ -24,7 +24,7 @@
  * @module features/data-installer/services/commerceCredentialBroker
  */
 
-import type { BrokerOutcome, CredentialBroker } from './commerceCredentials';
+import type { BrokerOutcome, CredentialBroker, CredentialResolution } from './commerceCredentials';
 import { createCacheEntry, isExpired, type CacheEntry } from '@/core/cache';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { selectCredentialService } from '@/features/eds/services/accsDiscoveryConfig';
@@ -246,6 +246,50 @@ export function brokerForContext(
         ...(context.authManager ? { auth: context.authManager } : {}),
         ...(project.adobe?.organization ? { orgId: project.adobe.organization } : {}),
         log: (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
+    });
+}
+
+/** What a persisted project carries that credential resolution needs. */
+export interface CredentialSourceProject {
+    componentSelections?: { backend?: string };
+    componentConfigs?: Record<string, Record<string, string | boolean | number | undefined>>;
+    adobe?: { organization?: string };
+}
+
+/**
+ * Resolve a persisted project's Commerce credential. **The only way to ask.**
+ *
+ * `resolveCommerceCredentials` takes a `CredentialProject`, whose `stackBackend`
+ * is NOT a persisted field — it is mapped from `componentSelections.backend`.
+ * That mapping lived at five call sites, and forgetting it is silent: the
+ * dispatch matches neither backend and returns `unsupported-backend`, which
+ * every caller reports as "no usable Commerce credentials".
+ *
+ * It was forgotten three times. `importHandlers` read `stack?.backend` — a shape
+ * only wizard state has — so every real project resolved to `''`. `edsResetUI`
+ * and `sampleDataInstallDeps` each passed a raw Project through `as never`, so
+ * the field was undefined; the first meant reset never offered sample-data
+ * removal to anyone, and the second meant the removal failed after the user had
+ * agreed to it and waited out the pipeline. All three were found live, none by a
+ * test, because every suite mocks the resolver and a mock cannot notice a
+ * missing dispatch field.
+ *
+ * Centralised at the fifth call site, later than it should have been. The point
+ * is not brevity — it is that the mapping and the broker are now impossible to
+ * supply inconsistently, which is what let two resolutions of the same question
+ * disagree with each other.
+ */
+export async function resolveProjectCredentials(
+    context: HandlerContext,
+    project: CredentialSourceProject,
+): Promise<CredentialResolution> {
+    const { resolveCommerceCredentials } = await import('./commerceCredentials');
+    return resolveCommerceCredentials({
+        project: {
+            stackBackend: project.componentSelections?.backend ?? '',
+            componentConfigs: project.componentConfigs ?? {},
+        },
+        broker: brokerForContext(context, project),
     });
 }
 
