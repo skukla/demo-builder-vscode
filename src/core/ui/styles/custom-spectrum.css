@@ -5820,6 +5820,10 @@ div[class*="spectrum"] input[type="search"] {
     border-radius: 8px;
     background: var(--spectrum-global-color-gray-50);
     overflow: hidden;
+    /* The whole card is the control (role=button, or radio when choosing), and
+       every other clickable card here says so with the cursor. This one only
+       changed colour on hover, which reads as decoration rather than a target. */
+    cursor: pointer;
 }
 
 .datapack-card:hover {
