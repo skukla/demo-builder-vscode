@@ -34,6 +34,7 @@ import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import { mcpSocketBindings } from '@/features/ai/server/mcpSocketPath';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
+import { registerSiteTools } from '@/features/ai/server/siteTools';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
@@ -523,6 +524,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerConfigureProjectTool(mcpServer, stateManager);
                 registerCloudResourceTools(mcpServer, ctxFactory);
                 registerStorefrontTools(mcpServer, ctxFactory);
+                registerSiteTools(mcpServer, ctxFactory);
                 registerContentAuthoringTools(mcpServer, ctxFactory);
                 registerEdsResetTool(mcpServer, ctxFactory);
                 registerDeleteProjectTool(mcpServer, ctxFactory);

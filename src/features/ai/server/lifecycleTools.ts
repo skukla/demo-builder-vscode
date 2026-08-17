@@ -28,6 +28,7 @@
 
 import { z } from 'zod';
 import { needsUser } from './handoff';
+import { asText } from './mcpToolResult';
 import { dispatchHandler } from '@/core/handlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import type { HandlerContext } from '@/types/handlers';
@@ -51,10 +52,6 @@ const TARGET_HINTS: Record<(typeof URL_TARGETS)[number], string> = {
     commerceAdmin: 'the Commerce admin panel',
     devConsole: 'the Adobe Developer Console for this workspace',
 };
-
-const asText = (value: unknown) => ({
-    content: [{ type: 'text' as const, text: JSON.stringify(value) }],
-});
 
 /**
  * Register `open_url` and `edit_project`.

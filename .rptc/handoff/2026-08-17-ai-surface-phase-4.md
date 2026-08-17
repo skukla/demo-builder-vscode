@@ -1,7 +1,7 @@
-# Handoff — AI surface, phase 4 (Groups 1–5 shipped)
+# Handoff — AI surface, phase 4 (Groups 1–6 shipped)
 
 **Branch:** `feature/ai-surface-coverage` (worktree of the same name)
-**State:** **86 tools** · full suite 14,102 / 1,071 suites green · tsc, typecheck:tests, eslint clean
+**State:** **90 tools** · full suite 14,134 / 1,073 suites green · tsc, typecheck:tests, eslint clean
 **Plan:** `.rptc/plans/ai-surface/phase-4-step-02-full-parity-plan.md` — carries every decision;
 this file carries only what a fresh session needs that the plan does not say.
 
@@ -14,6 +14,7 @@ this file carries only what a fresh session needs that the plan does not say.
 | **3 — configuration** ✅ | `configure_project` |
 | **4 — integrations** ✅ | `add_integration` (Wave 3, + the panel-branch defect it was blocked on) · `rename_integration` · `set_console_apis` · `set_project_destination` |
 | **5 — lifecycle** ✅ | `set_current_project` · `restart_demo` · `set_project_pinned` · `open_url` · `edit_project` (handoff). **Three deliberately NOT built — see below.** |
+| **6 — EDS / storefront** ✅ | `get_site_access` · `set_site_admin` · `repair_site_configuration` · `connect_dalive` (handoff), all in `siteTools.ts`, preceded by the `repairSiteConfigForProject` extraction. `migrate_storefront_names` outstanding; `github_change_account` blocked; bulk pair deliberately not built. **Unprobed — see below.** |
 
 Every Group 1–3 row was measured live and given a ceiling in
 `tests/features/ai/server/responseCeilings.ts`. `add_integration` was NOT — see its note below.
@@ -23,10 +24,14 @@ Every Group 1–3 row was measured live and given a ceiling in
 > **Group 4 is Integrations**, and three of its four tools are unbuilt. As written, the next
 > session would have read Group 4 as finished and skipped them.
 
-**The tool count is MEASURED, not derived.** 81 = 47 bespoke registrations + 34 descriptor rows,
+**The tool count is MEASURED, not derived.** 90 = 53 bespoke registrations + 37 descriptor rows,
 no overlap, enumerated from the `registerTool(` call sites in `src/features/ai/server/` and
 `src/mcp-server.ts`. An earlier header's 77 was carried forward by hand; it happened to be right,
-which is not the same as having been checked. Re-run the two greps rather than adding to it.
+which is not the same as having been checked. Re-run the greps rather than adding to it — and
+note that a raw `grep -c` over those paths reads **55**, not 53: one hit is
+`inExtensionMcpServer.ts`'s `withToolLogging` wrapper and one is a doc comment in
+`mcp-server.ts`. Enumerate the NAMES (the line after each call site) and `sort -u` them; a count
+of call sites is not a count of tools.
 
 ## Group 4 — the last three (2026-08-17)
 
@@ -210,33 +215,53 @@ component. `getComponentVersion` is a keyed lookup nothing asks for after remova
 `projectFileLoader.discoverComponents` reconciles it against disk — and the project already
 carried such a row from an earlier session, independently of this probe.
 
-## Start here
+## Group 6 — built 2026-08-17, NOT yet probed
 
-**Group 6 (EDS / storefront) — SCOPED, not started.** The plan's Group 6 section now carries the
-full finding; the headline is that **nothing in this group is dispatchable**, so it is bespoke
-modules rather than descriptor rows and costs 3–4× per tool what Groups 4–5 did. "Already
-headless" means UI-free, not reachable by a `{map, type}` row — two different properties, and an
-earlier line here conflated them.
+Four tools in `siteTools.ts`, preceded by the extraction the plan insisted on:
+`repairSiteConfigForProject(project, context, logger, onProgress?)` in
+`features/eds/services/`, with two callers. The command keeps only the progress notification —
+which is the one part an agent must not get — and the tool passes no `onProgress` at all.
 
-Three things settled before any code:
+The scoping held up under implementation. Every call it made was correct, including the one
+that mattered most: **nothing here is dispatchable**, so these are bespoke modules over
+`ctx.context` / `ctx.stateManager` rather than `{map, type}` rows.
 
-- `repair_site_configuration` needs its param assembly EXTRACTED out of
-  `RepairSiteConfigurationCommand.runRepair` first, or the tool duplicates it.
-- `github_change_account` is **blocked**: no Demo Builder command exists to hand off to
-  (verified against `package.json`), and `HandoffTarget` takes only a view or a command id. It
-  needs a design decision. Do not invent an id.
-- The bulk `cleanup_dalive_sites` / `manage_github_repos` should **not** be built — the singular
-  tools plus their list tools already cover it, and neither bulk command has a headless core.
+Decisions worth not re-litigating:
 
-`connect_dalive`'s target is real and verified: `demoBuilder.openDaLiveBookmarkletSetup`.
+- **`get_site_access` returns UNMASKED addresses.** The tool exists to name who can grant a
+  role; a masked address can neither be relayed to the user nor passed to `set_site_admin`.
+  This was checked against the `get_project` secret finding and is not the same case — an
+  address is not a credential, and the masking in this codebase serves the diagnostics report,
+  which is written to be pasted into tickets.
+- **`repair_site_configuration` does not publish**, and says `nextStep: 'republish'` instead.
+  Registration writes a routing rule; publishing here would push a config change under whoever
+  is presenting the demo. An agent that stopped at `repaired` would report a storefront fixed
+  that still serves the old config.
+- **Both writes are confirm-gated and refuse BEFORE touching the service.** Asserted by
+  checking the service was never called, not merely that an error came back.
 
-Suggested slice order: `get_site_access` + `set_site_admin` → `repair_site_configuration` (after
-the extraction) → `connect_dalive`. Start the extraction with a FULL context — it is the step
-that ships a duplicate when rushed.
+**One test could not be falsified and was deleted rather than kept.** "Omits `onProgress` when
+the caller wants none" passed whether the key was absent or explicitly `undefined`, because
+`onProgress?.()` cannot tell them apart. The conditional spread went with it. A test that cannot
+fail is worse than no test — it reads as coverage.
 
-**Then Group 7** — `install_prerequisite` is the only real refactor left on the surface: it
+**The debt:** none of the four carries a `RESPONSE_CEILINGS` entry, because none has been driven
+against a running extension. Same IOU Groups 4–5 carried between building and probing. Probe
+them (one Dev Host, read `info` first) and promote the measurements.
+
+## Then
+
+**`migrate_storefront_names`** is the one planned Group 6 tool still unbuilt — destructive
+(deletes the old DA site root), so it needs confirm + name echo.
+
+**Group 7** — `install_prerequisite` is the only real refactor left on the surface: it
 indexes into per-call `sharedState` and must re-address by prereq id, and return
 `{manual: true, url}` instead of calling `vscode.env.openExternal`.
+
+Still blocked, unchanged: **`github_change_account`** — no Demo Builder command exists to hand
+off to (re-verified against `package.json`), and `HandoffTarget` takes only a view or a command
+id. Design decision, not an implementation. Do not invent an id. The bulk
+`cleanup_dalive_sites` / `manage_github_repos` pair stays deliberately unbuilt.
 
 ## Primitives now available (use these, do not reinvent)
 

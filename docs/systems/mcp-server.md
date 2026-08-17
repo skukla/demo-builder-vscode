@@ -482,6 +482,42 @@ entirely. Auth is indifferent to the order.
 Both take their vscode dependency by injection from `extension.ts` (a command
 runner, a URL opener), so neither module imports vscode.
 
+### Storefront site — `siteTools.ts`
+
+Who administers a storefront's Configuration Service entry, and the repair for a
+registration that was refused. **None of these is a descriptor row.** The
+services behind them take `(project, vscode.ExtensionContext, logger)` rather
+than being `MessageHandler`s in a handler map, so they are reached through a
+`HandlerContext`'s own fields. Being UI-free is what makes a service usable from
+a tool; it is not what makes it dispatchable, and the two were conflated when
+this group was first estimated.
+
+| Tool | Notes |
+|---|---|
+| `get_site_access` | Who holds the admin role on the project's site config, plus a PROBED `canManage` (the grant endpoint sits behind the same `[admin]` gate as the read, so an identity without the role cannot add anyone — including itself). Returns real addresses, deliberately: the use of the tool is naming who can grant a role, and a masked address can neither be relayed nor passed to `set_site_admin`. Not the `get_project` secret case — an address is not a credential, and the masking in the codebase exists for the diagnostics report, which is written to be pasted into tickets. |
+| `set_site_admin` | Grant (`admin:true`) or revoke (`admin:false`). Confirm-gated: it changes access for another person on a shared site. Every mutation is confirmed by a RE-READ, so `verified` is separate from `status` — a 2xx write and a landed role are different claims. The last-admin refusal comes from `revokeSiteAdmin` and passes through: a site with no admin cannot be granted one back from inside the app. |
+| `repair_site_configuration` | Re-runs the registration that failed. Confirm-gated: the write re-mints the site's publish key and can drop admin grants nothing in the app can restore (reported as `lostGrants`, masked). **Does NOT publish** — that separation is `repairSiteConfigHeadless`'s own, and this surface is its reason: registration writes a routing rule, and making it take effect would republish a demo out from under whoever is presenting. On `repaired` the result carries `nextStep: 'republish'` rather than reading as done. |
+| `connect_dalive` | **Always a `needsUser` handoff.** The credential comes from a bookmarklet run in the user's own browser and a paste; there is no argument this tool could take that would not be a secret travelling as a tool argument. Points at `demoBuilder.openDaLiveBookmarkletSetup`, resumes with `get_auth_status`. Ungated: it opens and changes nothing. |
+
+The dependency assembly `repair_site_configuration` needs lives in
+`repairSiteConfigForProject` (`features/eds/services/`), shared with the
+`Repair Site Configuration` command — which adds only the progress notification,
+the one part an agent must not get. It was extracted before the tool was written
+precisely so there would not be two assemblies, because the piece that drifts
+fails silently: the demo package's own `byomOverlayUrl` is the fallback when the
+VS Code setting is blank, and without it the site registers with NO overlay while
+the read-back still reports `verified`.
+
+**Not built, with reasons.** `github_change_account` is BLOCKED, not deferred —
+`HandoffTarget` accepts a view or a command id and no Demo Builder command exists
+for switching GitHub accounts (checked against `package.json`). It needs a design
+decision, not an implementation. The bulk `cleanup_dalive_sites` /
+`manage_github_repos` are deliberately absent: `list_github_repos` +
+`delete_github_repo` and `list_dalive_sites` + `cleanup_dalive_site` already give
+an agent the capability, looping is what an agent is good at, and neither bulk
+command has a headless core — so building one would mean a second implementation
+of a destructive path.
+
 ---
 
 ## 10. Conventions every tool follows

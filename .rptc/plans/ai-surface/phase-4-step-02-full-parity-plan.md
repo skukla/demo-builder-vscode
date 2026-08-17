@@ -220,7 +220,28 @@ the work being skipped; each capability is already reachable.
 
 ## Group 6 — EDS / storefront operations
 
-> **SCOPED 2026-08-17, not started. Read this before estimating it.**
+> **BUILT 2026-08-17** — `get_site_access`, `set_site_admin`, `repair_site_configuration`,
+> `connect_dalive` in `src/features/ai/server/siteTools.ts`, plus the extraction below.
+> `migrate_storefront_names` is the one planned tool still outstanding. The scoping that
+> follows is kept because every one of its calls held up under implementation.
+>
+> **The extraction landed first, as its own commit-sized step.**
+> `repairSiteConfigForProject(project, context, logger, onProgress?)` now lives in
+> `features/eds/services/` with two callers — the command (which adds only the progress
+> notification) and the tool (which passes none). Each assembled dependency is pinned by a test
+> that was FALSIFIED before being trusted: dropping the package's `byomOverlayUrl`, passing a
+> blank email through, and building `ConfigurationService` over a different credential each
+> failed exactly one assertion and nothing else. A fourth candidate assertion — that
+> `onProgress` is OMITTED rather than passed as `undefined` — could not be falsified, because
+> the two are indistinguishable to `onProgress?.()`. It was deleted and the conditional spread
+> with it, rather than left as a test that cannot fail.
+>
+> **What live measurement still owes.** All four tools are built and unit-tested; none has been
+> driven against a running extension, so none carries a `RESPONSE_CEILINGS` entry yet. That is
+> the same IOU Groups 4–5 carried between building and probing, and the same rule applies —
+> a ceiling is a live measurement, never a number invented from the stub harness.
+>
+> **SCOPED 2026-08-17. Read this before estimating what is left.**
 >
 > **Nothing in this group is dispatchable.** Groups 1–5 were mostly ten-line descriptor rows
 > because every planned tool's handler was already in a handler map. Group 6 is the exception the
@@ -262,9 +283,10 @@ the work being skipped; each capability is already reachable.
 
 | Tool | Note |
 |---|---|
-| `manage_site_access` | `siteAccessManagerHeadless` is UI-free but NOT dispatchable — bespoke tool. Suggest splitting: `get_site_access` (read) + `set_site_admin({email, admin})` (write, confirm-gated), mirroring `listSiteAccess` / `addSiteAdmin` / `removeSiteAdmin`. |
-| `repair_site_configuration` | Automatable, but EXTRACT the param assembly out of the command first (see above). |
-| `migrate_storefront_names` | Destructive (deletes the old DA site root) → confirm + name echo. |
+| ✅ `get_site_access` + `set_site_admin` | **Built.** The split was right: the read is the far more common call (an agent asks "who can fix this?" long before it asks to change anything), so it carries no confirm gate while the write does. `get_site_access` returns UNMASKED addresses, deliberately — the use of the tool is naming who can grant a role, and a masked address can neither be relayed to the user nor passed to `set_site_admin`. That is not the `get_project` secret case: an address is not a credential, and the masking that exists in this codebase serves the diagnostics report, whose output is written to be pasted into tickets. |
+| ✅ `repair_site_configuration` | **Built, after the extraction.** Confirm-gated — the write re-mints the site's publish key and can drop admin grants nothing in the app can restore. **Does NOT publish**: that separation is `repairSiteConfigHeadless`'s own and this surface is the reason it gives, so the result carries `nextStep: 'republish'` on success rather than reading as finished. An agent that stopped at `repaired` would report a storefront fixed that still serves the old config. |
+| ✅ `connect_dalive` | **Built** as a pure handoff — `demoBuilder.openDaLiveBookmarkletSetup`, `resumeWith: 'get_auth_status'`. Both ids read from source (`package.json` and `authTools.ts`), not from memory. |
+| `migrate_storefront_names` | **Still outstanding.** Destructive (deletes the old DA site root) → confirm + name echo. |
 | ❌ `cleanup_dalive_sites` / `manage_github_repos` (bulk) | **Do not build** — see above. The singular tools plus their list tools already cover it. |
 | ⛔ `github_change_account` | **Blocked, not deferred** — no command id exists to hand off to. |
 | `connect_dalive` | Bookmarklet + paste → **handoff**, `resumeWith: 'get_auth_status'`. |
