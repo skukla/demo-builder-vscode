@@ -50,6 +50,7 @@ import type {
     DatapackDetail,
     DatapackId,
     DatapackSummary,
+    InstalledDatapack,
     Page,
 } from '../../types';
 import { DatapackCard } from '../components/DatapackCard';
@@ -110,6 +111,53 @@ export function DatapackCatalogView(): React.JSX.Element {
         loadProjectContext({});
     }, [loadProjectContext]);
 
+    /**
+     * What the SERVICE records as installed on this project's instance.
+     *
+     * Scoped to the instance, so it answers "what is on the box this project
+     * writes to" rather than the global cross-instance list an earlier Installed
+     * view showed (removed for exactly that reason — see `DataInstallerScreen`).
+     *
+     * Self-reported, like every source available here: a `DELETE
+     * get-installed-datapacks` clears the record without uninstalling anything,
+     * so it can say ABSENT while data sits on the instance. That is the safe
+     * direction for a checkmark, and it is why this is unioned with the
+     * project's own record rather than replacing it.
+     */
+    const installed = useDataInstallerRequest<Page<InstalledDatapack>>(
+        'list-installed-datapacks',
+    );
+    const commerceInstance = projectContext.value?.instance;
+    const loadInstalled = installed.load;
+    useEffect(() => {
+        if (!commerceInstance) {
+            return;
+        }
+        loadInstalled({ commerceInstance });
+    }, [loadInstalled, commerceInstance]);
+
+    /**
+     * Every pack believed to be on this instance, from both self-reports.
+     *
+     * UNION, not either alone. The service's list can be wrong in the absent
+     * direction; the project's record covers only one pack and can outlive a
+     * failed import. Neither is ground truth — nothing here has that, since only
+     * Commerce itself knows what it holds — so the check means "believed
+     * installed", and both sources clear when a removal runs through the
+     * extension, which is the case that matters.
+     */
+    const installedPacks = useMemo(() => {
+        const names = new Set<string>();
+        for (const row of installed.value?.items ?? []) {
+            names.add(row.id.name);
+        }
+        const recorded = projectContext.value?.datapack?.name;
+        if (recorded) {
+            names.add(recorded);
+        }
+        return names;
+    }, [installed.value, projectContext.value]);
+
     const groups = useMemo(() => groupDatapacks(value?.items ?? []), [value]);
     const filtered = useMemo(
         () => groups.filter((group) => matchesSearchFields(group, SEARCH_FIELDS, query)),
@@ -154,7 +202,10 @@ export function DatapackCatalogView(): React.JSX.Element {
     const closeImport = useCallback((): void => {
         setImporting(undefined);
         loadProjectContext({});
-    }, [loadProjectContext]);
+        if (commerceInstance) {
+            loadInstalled({ commerceInstance });
+        }
+    }, [loadProjectContext, loadInstalled, commerceInstance]);
 
     const retryDetail = useCallback((): void => {
         if (selected) {
@@ -227,9 +278,7 @@ export function DatapackCatalogView(): React.JSX.Element {
                     versions,
                     pickVersion,
                     openDetail,
-                    ...(projectContext.value?.datapack
-                        ? { projectPack: projectContext.value.datapack.name }
-                        : {}),
+                    installedPacks,
                 })}
             </div>
 
@@ -265,6 +314,8 @@ export function DatapackCatalogView(): React.JSX.Element {
 /** What `get-datapack-import-target` reports about the open project. */
 interface ProjectSampleData {
     projectName?: string;
+    /** The Commerce instance this project writes to — scopes the installed list. */
+    instance?: string;
     datapack?: { name: string; version: string };
 }
 
@@ -293,10 +344,10 @@ function renderBody(args: {
     versions: Record<string, string>;
     pickVersion: (name: string, version: string) => void;
     openDetail: (id: DatapackId) => void;
-    /** The pack this project records, so its card can say so itself. */
-    projectPack?: string;
+    /** Every pack believed installed on this instance — one check per card. */
+    installedPacks?: ReadonlySet<string>;
 }): React.JSX.Element {
-    const { groups, filtered, query, versions, pickVersion, openDetail, projectPack } = args;
+    const { groups, filtered, query, versions, pickVersion, openDetail, installedPacks } = args;
 
     if (groups.length === 0) {
         return (
@@ -320,7 +371,7 @@ function renderBody(args: {
                     selectedVersion={versions[group.name] ?? pickDefaultVersion(group) ?? ''}
                     onVersionChange={(version) => pickVersion(group.name, version)}
                     onOpen={openDetail}
-                    isProjectPack={group.name === projectPack}
+                    isInstalled={installedPacks?.has(group.name) ?? false}
                 />
             ))}
         </div>

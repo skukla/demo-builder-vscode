@@ -467,6 +467,80 @@ describe('the project’s recorded sample data', () => {
         });
     }
 
+    /**
+     * The check follows the INSTANCE, not just the project's one recorded pack.
+     *
+     * The service keeps an installed list; scoped to this project's Commerce
+     * instance it answers "what is on the box this project writes to". Neither
+     * source is ground truth — nothing here has that, since only Commerce knows
+     * what it holds — so the two are unioned and the check means "believed
+     * installed".
+     *
+     * `bodea` here is NOT the project's recorded pack; the service reports it.
+     * Before this the card could only be marked from `project.datapack`, so a
+     * second pack on the same instance was invisible.
+     */
+    it('marks a pack the service reports installed on this instance', async () => {
+        mockRequest.mockImplementation((type: string) => {
+            if (type === 'find-datapacks') {
+                return Promise.resolve({
+                    success: true,
+                    data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length },
+                });
+            }
+            if (type === 'get-datapack-import-target') {
+                // No `datapack` — the project records nothing.
+                return Promise.resolve({
+                    success: true,
+                    data: { instance: 'inst-1', projectName: 'demo-1' },
+                });
+            }
+            if (type === 'list-installed-datapacks') {
+                return Promise.resolve({
+                    success: true,
+                    data: {
+                        items: [
+                            {
+                                commerceInstance: 'inst-1',
+                                id: { name: 'bodea', version: 'main' },
+                                dataTypes: ['products'],
+                                art: {},
+                            },
+                        ],
+                        count: 1,
+                        total: 1,
+                    },
+                });
+            }
+            return Promise.resolve({ success: true, data: null });
+        });
+        render(<DatapackCatalogView />);
+
+        const check = await screen.findByTestId('datapack-card-project-check');
+
+        expect(check.closest('[data-datapack]')).toHaveAttribute('data-datapack', 'bodea');
+    });
+
+    /**
+     * CONTROL — the installed list is SCOPED to this project's instance.
+     *
+     * Without the scope this would be the global cross-instance list an earlier
+     * Installed view showed, which was removed precisely because it spoke for
+     * boxes the user was not looking at.
+     */
+    it('CONTROL — asks only about this project’s instance', async () => {
+        withRecordedChoice({ name: 'bodea', version: 'main' });
+        render(<DatapackCatalogView />);
+
+        await waitFor(() =>
+            expect(
+                mockRequest.mock.calls.find((c) => c[0] === 'list-installed-datapacks'),
+            ).toBeDefined(),
+        );
+        const call = mockRequest.mock.calls.find((c) => c[0] === 'list-installed-datapacks');
+        expect(call?.[1]).toEqual({ commerceInstance: 'inst-1' });
+    });
+
     /** The check lands on the project's pack, and on no other card. */
     it('marks the pack this project was created for', async () => {
         withRecordedChoice({ name: 'bodea', version: 'main' });

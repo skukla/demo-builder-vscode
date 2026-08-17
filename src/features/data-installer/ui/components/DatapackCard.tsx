@@ -51,17 +51,22 @@ export interface DatapackCardProps {
      */
     selected?: boolean;
     /**
-     * This is the pack the open project records.
+     * This pack is believed to be on the project's Commerce instance.
+     *
+     * "Believed", precisely: nothing available reports what Commerce actually
+     * holds. It is the union of two self-reports — the service's instance-scoped
+     * installed list and the project's own record — and both clear when a
+     * removal runs through the extension, which is the case that matters.
      *
      * Distinct from {@link DatapackCardProps.selected}, which is radio semantics
      * for a set the user is choosing between. This is a STATUS the card reports
-     * about itself, and it is why the card can carry both at once in the wizard.
+     * about itself, which is why a wizard card can carry both at once.
      *
      * It replaces a full-width banner above the grid ("<project> is set up for
-     * <pack>" + a Review link). The banner said a card's own state somewhere the
-     * card was not, and then needed a link to point back at it.
+     * <pack>" + a Review link) that said a card's own state somewhere the card
+     * was not, and then needed a link to point back at it.
      */
-    isProjectPack?: boolean;
+    isInstalled?: boolean;
 }
 
 /**
@@ -78,7 +83,7 @@ export function DatapackCard({
     onVersionChange,
     onOpen,
     selected,
-    isProjectPack,
+    isInstalled,
 }: DatapackCardProps): React.JSX.Element {
     // Checked for PRESENCE: `false` means selectable-and-unselected, which is
     // still a radio. Truthiness here would silently make every unselected card
@@ -113,7 +118,7 @@ export function DatapackCard({
             // for the same reason a chosen card does: it is the one that matters
             // in this grid. The two never conflict — a wizard card that is both
             // wants one border, not two.
-            className={`datapack-card${selected || isProjectPack ? ' is-selected' : ''}`}
+            className={`datapack-card${selected || isInstalled ? ' is-selected' : ''}`}
             data-testid="datapack-card"
             data-datapack={group.name}
             onClick={handleOpen}
@@ -137,7 +142,7 @@ export function DatapackCard({
                         It takes the tag's slot: the two never need to be read at
                         once, and side by side in a row this narrow they wrap the
                         title. */}
-                    {isProjectPack ? (
+                    {isInstalled ? (
                         <SelectionCheck testId="datapack-card-project-check" />
                     ) : group.shared ? null : (
                         <span className="datapack-card-tag">Community</span>
