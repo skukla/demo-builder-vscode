@@ -61,6 +61,7 @@ import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 
@@ -91,16 +92,13 @@ export function DatapackCatalogView(): React.JSX.Element {
     /** Stage 3: capture a NEW pack from the connected instance. */
     const [exporting, setExporting] = useState(false);
 
-    const { load, loading, value, failure } = useDataInstallerRequest<Page<DatapackSummary>>(
-        'find-datapacks',
-    );
+    const { load, loading, value, failure } =
+        useDataInstallerRequest<Page<DatapackSummary>>('find-datapacks');
     const detail = useDataInstallerRequest<DatapackDetailResponse>('get-datapack-detail');
     // What the open project was CREATED to hold, recorded by the wizard's Sample
     // Data area. Optional in every direction: no project, or a project that
     // chose nothing, simply shows no banner.
-    const projectContext = useDataInstallerRequest<ProjectSampleData>(
-        'get-datapack-import-target',
-    );
+    const projectContext = useDataInstallerRequest<ProjectSampleData>('get-datapack-import-target');
 
     useEffect(() => {
         load({ includeCommunity });
@@ -124,9 +122,7 @@ export function DatapackCatalogView(): React.JSX.Element {
      * direction for a checkmark, and it is why this is unioned with the
      * project's own record rather than replacing it.
      */
-    const installed = useDataInstallerRequest<Page<InstalledDatapack>>(
-        'list-installed-datapacks',
-    );
+    const installed = useDataInstallerRequest<Page<InstalledDatapack>>('list-installed-datapacks');
     const commerceInstance = projectContext.value?.instance;
     const loadInstalled = installed.load;
     useEffect(() => {
@@ -232,12 +228,10 @@ export function DatapackCatalogView(): React.JSX.Element {
 
     return (
         <>
-            {/* Sticky controls band — the shape ProjectsDashboard and
-                IntegrationsScreen both use. No `Flex` wrapper around the header:
-                those two need one for their trailing buttons, and this surface
-                has none to place. */}
-            <div className="projects-sticky-header">
-                <div className="page-container-padded page-header-section">
+            {/* No `Flex` wrapper around the header: the two surfaces that have
+                one need it for trailing buttons, and this one has none to place. */}
+            <FullScreenSurface
+                header={
                     <SearchHeader
                         searchQuery={query}
                         onSearchQueryChange={setQuery}
@@ -267,10 +261,8 @@ export function DatapackCatalogView(): React.JSX.Element {
                             </Flex>
                         }
                     />
-                </div>
-            </div>
-
-            <div className="page-container-padded pb-6">
+                }
+            >
                 {renderBody({
                     groups,
                     filtered,
@@ -280,7 +272,7 @@ export function DatapackCatalogView(): React.JSX.Element {
                     openDetail,
                     installedPacks,
                 })}
-            </div>
+            </FullScreenSurface>
 
             <DatapackDetailPanel
                 selected={selected}
@@ -310,7 +302,6 @@ export function DatapackCatalogView(): React.JSX.Element {
     );
 }
 
-
 /** What `get-datapack-import-target` reports about the open project. */
 interface ProjectSampleData {
     projectName?: string;
@@ -320,8 +311,9 @@ interface ProjectSampleData {
 }
 
 /*
- * `RecordedChoiceNotice` stood here: a full-width bar reading "<project> is set
- * up for <pack> (main)" with a "Review and install" link.
+ * A `RecordedChoiceNotice` banner was previously rendered here and has been
+ * replaced by the card's own check: a full-width bar reading "<project> is set up
+ * for <pack> (main)" with a "Review and install" link.
  *
  * It existed to close the wizard's loop — the Sample Data step records a pack and
  * deliberately does not import it, so the user needed the name carried forward
