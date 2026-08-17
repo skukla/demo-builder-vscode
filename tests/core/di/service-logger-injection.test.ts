@@ -151,23 +151,20 @@ describe('Service Logger Injection', () => {
 
     describe('TokenManager', () => {
         it('should accept optional logger in constructor and use injected logger', async () => {
-            // Mock command executor
-            const mockCommandExecutor = {
-                execute: jest.fn().mockResolvedValue({
-                    code: 1,
-                    stdout: '',
-                    stderr: 'Not found',
-                }),
-            };
+            // Reads the CLI token store. Injected so this test needs no subprocess
+            // and does not depend on the developer's real ~/.config/aio — the
+            // constructor no longer takes a CommandExecutor at all, because the
+            // read is in-process.
+            const readNoToken = () => undefined;
 
             const { TokenManager } = require('@/features/authentication/services/tokenManager');
 
             // Should work without logger (backward compatible via getLogger())
-            const tokenManager1 = new TokenManager(mockCommandExecutor);
+            const tokenManager1 = new TokenManager();
             expect(tokenManager1).toBeDefined();
 
             // Should work with logger (DI pattern)
-            const tokenManager2 = new TokenManager(mockCommandExecutor, undefined, mockLogger);
+            const tokenManager2 = new TokenManager(undefined, mockLogger, readNoToken);
             expect(tokenManager2).toBeDefined();
 
             // Trigger operation that logs

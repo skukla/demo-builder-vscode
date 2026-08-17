@@ -103,9 +103,7 @@ export class AdobeSDKClient {
             // Dynamic imports: deferred to avoid module loading chain in tests
             // (TokenManager → loadingHTML → vscode not available during test setup)
             const { TokenManager } = await import('./tokenManager');
-            const { ServiceLocator } = await import('@/core/di');
-            const commandManager = ServiceLocator.getCommandExecutor();
-            const tokenManager = new TokenManager(commandManager);
+            const tokenManager = new TokenManager();
 
             const tokenInspection = await tokenManager.inspectToken();
 

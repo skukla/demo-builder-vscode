@@ -64,7 +64,7 @@ export class AuthenticationService {
 
         // Initialize all submodules
         this.cacheManager = new AuthCacheManager();
-        this.tokenManager = new TokenManager(commandManager, this.cacheManager);
+        this.tokenManager = new TokenManager(this.cacheManager);
         this.sdkClient = new AdobeSDKClient(logger);
         this.organizationValidator = new OrganizationValidator(
             commandManager,
