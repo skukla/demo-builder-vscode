@@ -80,19 +80,19 @@ Step 01 can land first, hidden. 02→03→04 sequential; 05 needs all.
 
 ## Open items — RESOLVED 2026-08-17 (three of four; one is a decision)
 
-**1. `configDefaults` store/website/view codes — READ, and they raise a question.**
-Read live from the instance the Bodea test project targets. It carries websites
-`admin` / `base` (Main Website) / `citisignal`; store groups `default` /
-`main_website_store` / `citisignal_store`; store views `default` / `admin` /
-`citisignal_us`. **There is no Bodea scope on it.** The declared defaults
-(`base` / `main_website_store` / `default`) are therefore VALID — those exist —
-but they are the generic Main Website, shared with `custom` and `isle5`.
-CitiSignal, the only other branded package, has its own (`citisignal` /
-`citisignal_store` / `citisignal_us`) and that scope exists on the box.
-**Open decision, and the only thing still gating unhide:** create a `bodea`
-website/store/store view and point `configDefaults` at it (the CitiSignal
-pattern, and the one that keeps two branded demos on one instance from
-colliding), or accept `base` deliberately.
+**1. `configDefaults` store/website/view codes — READ, then FIXED.**
+Read live 2026-08-17 from the instance the Bodea project targets. It carried no
+Bodea scope: websites were `admin` / `base` (Main Website) / `citisignal`. The
+declared defaults (`base` / `main_website_store` / `default`) were valid — those
+codes exist — but they are the GENERIC Main Website, shared with `custom` and
+`isle5`, so two branded demos on one instance landed on top of each other.
+
+A Bodea website, store and store view were then created, and the codes re-read
+from the live store structure rather than assumed from the name: **`bodea`
+(Bodea Website, id 3) / `bodea_store` / `bodea_us`**. `configDefaults` now points
+at them, matching the CitiSignal pattern — the only other branded package with a
+scope of its own. The pin in `demo-packages-bodea.test.ts` moved with it and
+records why.
 
 **2. VIP group-hash determinism — ANSWERED from code; no two-instance run needed.**
 `hashCustomerGroupUid` is `SHA-1(base64-decode(uid))` hex, and the UID is base64

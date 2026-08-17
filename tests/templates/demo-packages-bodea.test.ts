@@ -47,7 +47,7 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
     });
 
     function getBodea(): DemoPackage {
-        const pkg = packagesConfig.packages.find(p => p.id === 'bodea');
+        const pkg = packagesConfig.packages.find((p) => p.id === 'bodea');
         expect(pkg).toBeDefined();
         return pkg!;
     }
@@ -63,17 +63,27 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
     });
 
     it('should pin the store scope verified against the seeded backend', () => {
-        // Measured 2026-08-15: the live store picker resolves a real Bodea project to
-        // exactly these codes. They are load-bearing — a wrong scope yields an empty
-        // catalog with no error — and nothing else in the suite pins their values.
+        // Load-bearing: a wrong scope yields an empty catalog with no error, and
+        // nothing else in the suite pins these values.
+        //
+        // Was `base` / `main_website_store` / `default` — measured 2026-08-15, and
+        // correct at the time in that those codes existed. But they are the GENERIC
+        // Main Website, shared with `custom` and `isle5`, so two branded demos on one
+        // instance landed on top of each other.
+        //
+        // A Bodea website/store/store view was created 2026-08-17 and these codes read
+        // live from the instance's store structure rather than assumed from the name:
+        // websites now carry `bodea` (Bodea Website, id 3), groups `bodea_store`, views
+        // `bodea_us`. That matches the CitiSignal pattern, the only other branded
+        // package with a scope of its own.
         const pkg = getBodea();
         const cfg = pkg.configDefaults ?? {};
-        expect(cfg.ADOBE_COMMERCE_WEBSITE_CODE).toBe('base');
-        expect(cfg.ADOBE_COMMERCE_STORE_CODE).toBe('main_website_store');
-        expect(cfg.ADOBE_COMMERCE_STORE_VIEW_CODE).toBe('default');
-        expect(cfg.ACCS_WEBSITE_CODE).toBe('base');
-        expect(cfg.ACCS_STORE_CODE).toBe('main_website_store');
-        expect(cfg.ACCS_STORE_VIEW_CODE).toBe('default');
+        expect(cfg.ADOBE_COMMERCE_WEBSITE_CODE).toBe('bodea');
+        expect(cfg.ADOBE_COMMERCE_STORE_CODE).toBe('bodea_store');
+        expect(cfg.ADOBE_COMMERCE_STORE_VIEW_CODE).toBe('bodea_us');
+        expect(cfg.ACCS_WEBSITE_CODE).toBe('bodea');
+        expect(cfg.ACCS_STORE_CODE).toBe('bodea_store');
+        expect(cfg.ACCS_STORE_VIEW_CODE).toBe('bodea_us');
     });
 
     it('should not override AEM_ASSETS_ENABLED — AEM Assets is where Bodea images live', () => {
@@ -109,7 +119,7 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
 
     it('should use the boilerplate-b2b-template as template repo for both storefronts', () => {
         const pkg = getBodea();
-        Object.values(pkg.storefronts).forEach(sf => {
+        Object.values(pkg.storefronts).forEach((sf) => {
             expect(sf.templateOwner).toBe('adobe-commerce');
             expect(sf.templateRepo).toBe('boilerplate-b2b-template');
         });
@@ -117,7 +127,7 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
 
     it('should have codePatchSource pinning the b2b patch family for both storefronts', () => {
         const pkg = getBodea();
-        Object.values(pkg.storefronts).forEach(sf => {
+        Object.values(pkg.storefronts).forEach((sf) => {
             expect(sf.codePatchSource).toEqual({
                 owner: 'skukla',
                 repo: 'eds-demo-patches',
@@ -130,20 +140,20 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
     it('should carry the same b2b codePatches as the custom package', () => {
         // Parity is against the real custom package, read from the same
         // config — not a hardcoded copy that silently drifts.
-        const custom = packagesConfig.packages.find(p => p.id === 'custom');
+        const custom = packagesConfig.packages.find((p) => p.id === 'custom');
         expect(custom).toBeDefined();
         const customPatches = custom!.storefronts['eds-paas'].codePatches as string[];
         expect(customPatches.length).toBeGreaterThan(0);
 
         const pkg = getBodea();
-        Object.values(pkg.storefronts).forEach(sf => {
+        Object.values(pkg.storefronts).forEach((sf) => {
             expect(sf.codePatches).toEqual(customPatches);
         });
     });
 
     it('should source content from skukla/bodea-source for both storefronts', () => {
         const pkg = getBodea();
-        Object.values(pkg.storefronts).forEach(sf => {
+        Object.values(pkg.storefronts).forEach((sf) => {
             expect(sf.contentSource).toEqual({
                 org: 'skukla',
                 site: 'bodea-source',
@@ -156,7 +166,7 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
 
     it('should overlay the account chrome from adobe-commerce/boilerplate-b2b', () => {
         const pkg = getBodea();
-        Object.values(pkg.storefronts).forEach(sf => {
+        Object.values(pkg.storefronts).forEach((sf) => {
             expect(sf.accountContentSource).toEqual({
                 org: 'adobe-commerce',
                 site: 'boilerplate-b2b',
@@ -166,11 +176,13 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
 
     it('should carry brandAssets sourcing theme, customer-group and rack-finder schema from skukla/bodea-source@main', () => {
         const pkg = getBodea();
-        Object.values(pkg.storefronts).forEach(sf => {
-            const brandAssets = sf.brandAssets as {
-                source: Record<string, unknown>;
-                files: unknown;
-            } | undefined;
+        Object.values(pkg.storefronts).forEach((sf) => {
+            const brandAssets = sf.brandAssets as
+                | {
+                      source: Record<string, unknown>;
+                      files: unknown;
+                  }
+                | undefined;
             expect(brandAssets).toBeDefined();
             expect(brandAssets!.source).toEqual({
                 owner: 'skukla',
@@ -193,12 +205,10 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
 
     it('should vendor a head snippet linking the theme and the customer-group module', () => {
         const pkg = getBodea();
-        Object.values(pkg.storefronts).forEach(sf => {
+        Object.values(pkg.storefronts).forEach((sf) => {
             const headSnippet = (sf.brandAssets as { headSnippet?: string } | undefined)
                 ?.headSnippet;
-            expect(headSnippet).toContain(
-                '<link rel="stylesheet" href="/styles/bodea-theme.css">'
-            );
+            expect(headSnippet).toContain('<link rel="stylesheet" href="/styles/bodea-theme.css">');
             expect(headSnippet).toContain(
                 '<script type="module" src="/scripts/bodea-customer-group.js"></script>'
             );
@@ -206,10 +216,7 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
     });
 
     it('schema declares brandAssets on storefronts (data-driven vendor point)', () => {
-        const defs = schema.definitions as Record<
-            string,
-            { properties?: Record<string, unknown> }
-        >;
+        const defs = schema.definitions as Record<string, { properties?: Record<string, unknown> }>;
         expect(defs.storefront.properties).toHaveProperty('brandAssets');
         expect(defs).toHaveProperty('brandAssets');
     });
