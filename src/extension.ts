@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { CommandManager } from '@/commands/commandManager';
 import { BaseWebviewCommand } from '@/core/base';
+import { describeBuildInfo, readBuildInfo } from '@/core/build/buildInfo';
 import { registerBuildStamp } from '@/core/build/buildStampUi';
 import { ServiceLocator } from '@/core/di';
 import { initializeLogger, getLogger } from '@/core/logging';
@@ -481,11 +482,18 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         // Root socket is primary and always bound; a distinct workspace is bound
         // additionally. See mcpSocketBindings.
         const { primary, secondary } = mcpSocketBindings(projectsDir, workspacePath);
-        const server = new InExtensionMcpServer(
-            primary,
-            projectsDir,
-            logger,
-            (mcpServer) => {
+        // Name the serving host in serverInfo.version. Every window computes the
+        // same socket name and the last to bind silently owns it, so without this
+        // an MCP client has no way to tell which extension host answered — two
+        // probes of one path minutes apart can return different tool sets. Same
+        // stamp the activation `[Build]` line prints; undefined when unreadable,
+        // which falls back to the static version.
+        const buildInfo = await readBuildInfo(context.extensionPath);
+        const server = new InExtensionMcpServer(primary, projectsDir, logger, {
+            buildLabel: buildInfo ? describeBuildInfo(buildInfo) : undefined,
+            credentials,
+            secondarySocketPath: secondary,
+            registerExtraTools: (mcpServer) => {
                 registerDescriptorTools(
                     mcpServer,
                     [...READ_DESCRIPTORS, ...ACTION_DESCRIPTORS],
@@ -505,9 +513,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                     Promise.resolve(vscode.commands.executeCommand(commandId)),
                 );
             },
-            credentials,
-            secondary,
-        );
+        });
         await server.start();
         inExtensionMcpServer = server;
     } catch (err) {

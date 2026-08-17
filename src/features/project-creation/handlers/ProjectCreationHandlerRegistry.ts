@@ -12,6 +12,7 @@ import { addIntegrationFlowHandlers } from './addIntegrationFlowHandlers';
 import * as creation from './';
 import * as authentication from '@/features/authentication';
 import * as components from '@/features/components/handlers/componentHandlers';
+import { dataInstallerHandlers } from '@/features/data-installer/handlers';
 import * as eds from '@/features/eds/handlers';
 import * as lifecycle from '@/features/lifecycle/handlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
@@ -65,6 +66,17 @@ export const projectCreationHandlers = defineHandlers({
     // Mesh handlers
     'check-api-mesh': meshHandlers['check-api-mesh'],
     'delete-api-mesh': meshHandlers['delete-api-mesh'],
+
+    // Sample data — ONE read, deliberately. The Commerce area's sample-data
+    // sub-step lists the packs a project can be seeded with, and this is what it
+    // calls. Without it registered here the request had no handler at all, and
+    // the step could render nothing but "the catalog could not be loaded".
+    //
+    // The Data Installer panel registers the union of the read and write maps.
+    // This is not that panel: datapack WRITES stay out, or project creation could
+    // start an import, a reset or an export. Pinned both ways in
+    // sampleDataHandlerReach.test.ts.
+    'find-datapacks': dataInstallerHandlers['find-datapacks'],
 
     // EDS handlers - GitHub
     'check-github-auth': eds.handleCheckGitHubAuth,

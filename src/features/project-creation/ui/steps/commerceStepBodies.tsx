@@ -15,6 +15,7 @@
 import React from 'react';
 import { ChoiceCard } from '../components/ChoiceCard';
 import { BACKEND_LABELS, type CommerceSectionId } from './commerceSections';
+import { SampleDataStep } from './SampleDataStep';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import type { WizardState } from '@/types/webview';
 
@@ -85,6 +86,13 @@ export function sectionBody(id: CommerceSectionId, ctx: SectionBodyContext): Rea
     if (id === 'signin') {
         return (
             <AdobeAuthStep state={ctx.state} updateState={ctx.updateState} setCanProceed={NOOP} />
+        );
+    }
+    // Not a config step: it writes a choice onto the project rather than into the
+    // .env, and it reads the Data Installer's catalog rather than the connection.
+    if (id === 'sample-data') {
+        return (
+            <SampleDataStep state={ctx.state} updateState={ctx.updateState} setCanProceed={NOOP} />
         );
     }
     // Config steps render ONLY the form — the footer Continue advances to the next

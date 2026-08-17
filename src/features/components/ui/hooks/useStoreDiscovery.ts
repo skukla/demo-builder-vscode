@@ -126,9 +126,11 @@ export function useStoreDiscovery(config: UseStoreDiscoveryConfig = {}): UseStor
     // List-item getters for StoreStructureSelector
     const getWebsiteItems = useCallback((): StoreListItem[] => {
         if (!state.storeData) return [];
-        return state.storeData.websites
-            .filter((w) => w.code !== 'admin') // Exclude admin website
-            .map((w) => ({ code: w.code, name: w.name, numericId: w.id }));
+        // No admin filter here: discoverStoreStructure strips the id-0 admin
+        // scope at the seam, so every consumer sees the same structure. The
+        // local code-based filter this replaces was the reason the dropdown
+        // showed 2 websites while the discovery log counted 3.
+        return state.storeData.websites.map((w) => ({ code: w.code, name: w.name, numericId: w.id }));
     }, [state.storeData]);
 
     const getStoreGroupItems = useCallback(

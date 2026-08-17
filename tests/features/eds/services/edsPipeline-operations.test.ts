@@ -26,6 +26,16 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     bulkPreviewAndPublish: (...args: unknown[]) => mockBulkPreviewAndPublish(...args),
 }));
 
+// Mock the brand-asset publisher (phase runs iff params.brandAssets present)
+const mockPublishBrandAssets = jest.fn();
+
+jest.mock('@/features/eds/services/brandAssetPublisher', () => ({
+    publishBrandAssets: (...args: unknown[]) => mockPublishBrandAssets(...args),
+    // Pure result filter — keep the real one so the pipeline's warning
+    // summary exercises the actual semantics.
+    failedTargets: jest.requireActual('@/features/eds/services/brandAssetPublisher').failedTargets,
+}));
+
 describe('executeEdsPipeline - operations', () => {
     let mockDaLiveContentOps: EdsPipelineServices['daLiveContentOps'];
     let mockGithubFileOps: EdsPipelineServices['githubFileOps'];
@@ -334,6 +344,57 @@ describe('executeEdsPipeline - operations', () => {
             );
 
             expect(result.libraryPaths).toEqual(['.da/library/blocks.json', '.da/library/blocks/hero']);
+        });
+    });
+
+    describe('brand assets', () => {
+        const BRAND_ASSETS = {
+            source: { owner: 'skukla', repo: 'bodea-source', branch: 'main' },
+            files: [{ from: 'styles/theme.css', to: 'styles/theme.css' }],
+            headSnippet: '<link rel="stylesheet" href="/styles/theme.css">',
+        };
+
+        beforeEach(() => {
+            mockPublishBrandAssets.mockResolvedValue({ success: true, files: [] });
+        });
+
+        it('should publish brand assets when params carry a brandAssets config', async () => {
+            const params: EdsPipelineParams = {
+                ...baseParams,
+                skipContent: true,
+                brandAssets: BRAND_ASSETS,
+            };
+
+            const result = await executeEdsPipeline(params, services);
+
+            expect(result.success).toBe(true);
+            expect(mockPublishBrandAssets).toHaveBeenCalledWith(
+                BRAND_ASSETS,
+                mockGithubFileOps,
+                'test-owner',
+                'test-repo',
+                mockLogger,
+            );
+        });
+
+        it('should skip silently when params have no brandAssets', async () => {
+            await executeEdsPipeline({ ...baseParams, skipContent: true }, services);
+
+            expect(mockPublishBrandAssets).not.toHaveBeenCalled();
+        });
+
+        it('should not fail the pipeline when brand-asset publishing reports failures', async () => {
+            mockPublishBrandAssets.mockResolvedValue({
+                success: false,
+                files: [{ path: 'styles/theme.css', installed: false, reason: 'fetch failed' }],
+            });
+
+            const result = await executeEdsPipeline(
+                { ...baseParams, skipContent: true, brandAssets: BRAND_ASSETS },
+                services,
+            );
+
+            expect(result.success).toBe(true);
         });
     });
 

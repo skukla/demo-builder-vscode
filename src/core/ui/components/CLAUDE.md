@@ -27,8 +27,10 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | The deploy destination, once per surface | `ui/DestinationContext` | a per-card "Deploys to" line |
 | Rename in place | `forms/InlineRenameField` | a bespoke pencil + TextField |
 | Any modal | `ui/Modal` | `DialogContainer` assembled by hand |
+| A modal too tall or too narrow for its content | `ui/Modal` `fitContent` / `wide` props | CSS aimed at the Dialog — the constraint lives on Spectrum's wrapper, not the dialog's own box |
 | Slide-in right panel for detail beside a list or grid | `ui/Drawer` | Spectrum `Tray` (mobile-only, unmocked in the test stack) or a bespoke scrim + panel |
 | Page shell (header, back, footer) | `layout/PageLayout` + `PageHeader` + `PageFooter` | a bespoke page div |
+| Full-screen surface: sticky search band over a 960px body | `layout/FullScreenSurface` | re-inlining `.projects-sticky-header` + `.page-container-padded` |
 | Two-column / grid / sidebar layout | `layout/TwoColumnLayout`, `GridLayout`, `ContentWithSidebar` | raw flex (see the 450px trap) |
 | Search box over a list | `navigation/SearchHeader` / `SearchableList` | a TextField + filter |
 | Copy-to-clipboard value | `ui/CopyableText` | a Button + clipboard call |

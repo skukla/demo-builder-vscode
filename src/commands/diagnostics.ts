@@ -33,10 +33,14 @@ import {
 } from './diagnosticsReport';
 import { ServiceLocator } from '@/core/di';
 import { getLogger, type DebugLogger } from '@/core/logging';
-import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { maskEmail } from '@/core/utils/maskEmail';
+import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { mcpSocketBindings } from '@/features/ai/server/mcpSocketPath';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
+import {
+    probeCredentialService,
+    type CredentialServiceProbeResult,
+} from '@/features/data-installer/services/credentialServiceProbe';
 import { getDaLiveAuthService, resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
 import { pickSampleSku } from '@/features/eds/services/catalogPrewarmService';
 import {
@@ -103,13 +107,19 @@ export async function runDiagnosticsAction(
  * a deep clone of a large object on every diagnostics run buys nothing.
  */
 function redactReportPii(report: DiagnosticsReport): DiagnosticsReport {
-    const emails = report.configService?.orgAdmins?.emails;
-    if (!emails) return report;
+    // Bound to locals before the guard so the narrowing survives into the spread.
+    // Re-reaching through `report.configService` afterwards needed two non-null
+    // assertions to compile, which asserted exactly what the guard had already
+    // established — and an assertion that is merely redundant today is the one
+    // that stays behind when the guard above it changes.
+    const configService = report.configService;
+    const orgAdmins = configService?.orgAdmins;
+    if (!orgAdmins?.emails) return report;
     return {
         ...report,
         configService: {
-            ...report.configService,
-            orgAdmins: { ...report.configService!.orgAdmins!, emails: emails.map(maskEmail) },
+            ...configService,
+            orgAdmins: { ...orgAdmins, emails: orgAdmins.emails.map(maskEmail) },
         },
     } as DiagnosticsReport;
 }
@@ -173,10 +183,11 @@ export class DiagnosticsCommand {
             this.logger.debug('Probing in-extension MCP server...');
             report.mcp = await this.checkMcp();
 
-            // The three remote probes run CONCURRENTLY: each is pure HTTP against
-            // a different service (GitHub/AEM, the Config Service, aem.live), they
-            // share no state, and none reads another's result — so serialising
-            // them only added their latencies together.
+            // The four remote probes run CONCURRENTLY: each is pure HTTP against
+            // a different service (GitHub/AEM, the Config Service, aem.live, and
+            // the shared credential service), they share no state, and none reads
+            // another's result — so serialising them only added their latencies
+            // together.
             //
             // The `aio` checks above stay sequential on purpose. The first aio
             // command in a session triggers `aio config set
@@ -184,13 +195,16 @@ export class DiagnosticsCommand {
             // only by in-process flags — so running those concurrently would race
             // that write for a saving these three already cover.
             this.logger.debug('Probing GitHub, Config Service and storefront...');
-            const [githubCredential, configService, storefront] = await Promise.all([
-                this.checkGitHubCredential(),
-                this.checkConfigService(),
-                this.checkStorefront(),
-            ]);
+            const [githubCredential, configService, storefront, credentialService] =
+                await Promise.all([
+                    this.checkGitHubCredential(),
+                    this.checkConfigService(),
+                    this.checkStorefront(),
+                    this.checkCredentialService(),
+                ]);
             report.githubCredential = githubCredential;
             report.configService = configService;
+            report.credentialService = credentialService;
             report.storefront = storefront?.probe;
             report.storefrontScope = storefront?.scope;
 
@@ -317,6 +331,23 @@ export class DiagnosticsCommand {
      * Returns undefined without an EDS project: there is no site to address,
      * and an invented one would produce a 404 that reads like a real finding.
      */
+/**
+     * Is the shared Commerce credential service configured and serving this user?
+     *
+     * Runs with or WITHOUT a project open, unlike the probes around it: the
+     * service is a global capability, and the person most likely to need this
+     * answer is someone whose project cannot import — who has no reason to think
+     * the cause is a setting they have never heard of.
+     */
+    private async checkCredentialService(): Promise<CredentialServiceProbeResult> {
+        const project = await ServiceLocator.getStateManager()?.getCurrentProject();
+        const orgId = project?.adobe?.organization;
+        return probeCredentialService({
+            auth: ServiceLocator.getAuthenticationService(),
+            ...(orgId ? { orgId } : {}),
+        });
+    }
+
     private async checkConfigService(): Promise<ConfigServiceProbeResult | undefined> {
         const project = await ServiceLocator.getStateManager()?.getCurrentProject();
         // GitHub owner/repo — NOT the DA.live org/site. The Config Service keys

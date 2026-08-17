@@ -25,14 +25,25 @@ If nothing changed, say so and stop.
 
 Jest emits huge output; piping buffers it and looks hung. ALWAYS redirect to a file, then read it.
 
+**Redirect order matters.** Jest writes its results to STDERR. `cmd 2>&1 > file` points
+stderr at the terminal *first*, then sends stdout to the file — so the file lands EMPTY
+and every `grep -c FAIL` on it returns a clean-looking `0`. Write `> file 2>&1`. This
+skill shipped the wrong order for months; on 2026-08-16 it produced a `FAIL_COUNT=0`
+against a zero-byte file that read exactly like a green full-suite run.
+
 ```bash
 # Scope to the tests for the changed areas (a path/pattern that covers them), e.g.:
-npx jest --no-coverage <pattern> 2>&1 > /tmp/gate-jest.txt
+npx jest --no-coverage <pattern> > "$SCRATCH/gate-jest.txt" 2>&1
 # React-only components can use: --selectProjects react
-# Full suite (only when warranted): npx jest --no-coverage 2>&1 > /tmp/gate-jest.txt
+# Full suite (only when warranted): npx jest --no-coverage > "$SCRATCH/gate-jest.txt" 2>&1
 ```
 
-Then read `/tmp/gate-jest.txt` and extract the `Tests:` / `Test Suites:` lines and any `FAIL`.
+Use the session scratchpad directory, not `/tmp`.
+
+Then read the file and extract the `Tests:` / `Test Suites:` lines and any `FAIL`.
+Confirm it is non-empty before believing a zero count — `wc -c` on the file, or just
+check that the `Test Suites:` line is present. An absent summary means the run did not
+land, not that it passed.
 Note: the `check-test-file-sizes` suite prints `❌ ... exceed 750-line limit` for its OWN
 intentional fixtures (`tests/oversized.test.ts`, `tests/subdir/test.test.ts`) — that suite
 PASSES; it's not a failure.
@@ -85,7 +96,7 @@ pushing, match CI exactly:
 npm run lint                                  # whole repo — the one that's easy to miss
 npx tsc --noEmit
 npm run typecheck:tests                       # test tree — CI gates on this too
-npx jest --no-coverage 2>&1 > /tmp/gate-jest.txt   # full suite; never pipe through tail
+npx jest --no-coverage > "$SCRATCH/gate-jest.txt" 2>&1   # full suite; never pipe through tail
 bash .claude/skills/dead-code-scan/scan.sh src     # ~5s — cruft the compiler cannot see
 ```
 

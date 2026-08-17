@@ -1,20 +1,20 @@
 /**
  * TokenManager — inspectToken single-flight
  *
- * `inspectToken` spawns the whole `aio` Node CLI to read one config value
- * (`aio config get ims.contexts.cli.access_token --json`), which costs ~3.7s of
- * process start + module load. It caches the result at CACHE_TTL.MEDIUM, but a
- * cache only helps callers arriving AFTER a fetch completes: concurrent callers
- * on a cold cache each check, each miss, and each spawn their own CLI.
+ * Concurrent callers collapse into ONE read. There are 8 `isAuthenticated()`
+ * call sites across the dashboard/creation handlers, and the inspection CACHE
+ * only helps callers arriving AFTER a read completes — on a cold cache they all
+ * check, all miss, and all read.
  *
- * There are 8 `isAuthenticated()` call sites across the dashboard/creation
- * handlers, and the sibling org-list path was observed doing exactly this
- * (2.5s + 1.4s overlapping, 2026-07-31). This is the same structure, so the
- * guard is PREVENTIVE — the token path happened to serialise in that trace.
+ * **The stakes dropped, and the guard stayed.** This was written when the read
+ * spawned the whole `aio` Node CLI (MEASURED 2.05s), so a stampede cost seconds
+ * per extra caller; the read is now in-process and sub-millisecond. It is kept
+ * because it is still correct and costs nothing, not because it still saves
+ * seconds — do not restore the old "~3.7s each" framing, which stopped being
+ * true when the subprocess went away.
  */
 
-import { TokenManager } from '@/features/authentication/services/tokenManager';
-import type { CommandExecutor, CommandResult } from '@/core/shell';
+import { TokenManager, type StoredTokenConfig } from '@/features/authentication/services/tokenManager';
 
 jest.mock('@/core/logging', () => ({
     getLogger: jest.fn(() => ({
@@ -26,54 +26,31 @@ jest.mock('@/core/logging', () => ({
     })),
 }));
 
-/** A valid token payload: >100 chars and an expiry comfortably in the future. */
-function tokenPayload(): CommandResult {
-    return {
-        code: 0,
-        stdout: JSON.stringify({ token: 'x'.repeat(150), expiry: Date.now() + 3_600_000 }),
-        stderr: '',
-    } as CommandResult;
+/** A valid entry: >100 chars and an expiry comfortably in the future. */
+function tokenPayload(): StoredTokenConfig {
+    return { token: 'x'.repeat(150), expiry: Date.now() + 3_600_000 };
 }
 
 describe('TokenManager — inspectToken single-flight', () => {
     let tokenManager: TokenManager;
-    let execute: jest.Mock;
-    let release: (value: CommandResult) => void;
+    let reads: number;
 
     beforeEach(() => {
-        execute = jest.fn(
-            () =>
-                new Promise<CommandResult>((resolve) => {
-                    release = resolve;
-                })
-        );
-
-        tokenManager = new TokenManager({
-            execute,
-            executeCommand: jest.fn(),
-            executeWithNodeVersion: jest.fn(),
-            testCommand: jest.fn(),
-            getNodeVersionForComponent: jest.fn(),
-            getCachedBinaryPath: jest.fn(),
-            invalidateBinaryPathCache: jest.fn(),
-            getCachedNodeVersion: jest.fn(),
-            invalidateNodeVersionCache: jest.fn(),
-        } as unknown as jest.Mocked<CommandExecutor>);
+        reads = 0;
+        tokenManager = new TokenManager(undefined, undefined, () => {
+            reads += 1;
+            return tokenPayload();
+        });
     });
 
-    // Each concurrent caller would otherwise spawn its own `aio` CLI — ~3.7s each.
-    it('collapses concurrent callers into ONE aio spawn', async () => {
+    it('collapses concurrent callers into ONE read', async () => {
         const a = tokenManager.inspectToken();
         const b = tokenManager.inspectToken();
         const c = tokenManager.inspectToken();
 
-        await Promise.resolve();
-        await Promise.resolve();
-        release(tokenPayload());
-
         const [ra, rb, rc] = await Promise.all([a, b, c]);
 
-        expect(execute).toHaveBeenCalledTimes(1);
+        expect(reads).toBe(1);
         expect(ra.valid).toBe(true);
         expect(rb).toEqual(ra);
         expect(rc).toEqual(ra);
@@ -83,51 +60,22 @@ describe('TokenManager — inspectToken single-flight', () => {
         const a = tokenManager.inspectToken();
         const b = tokenManager.isTokenValid();
 
-        await Promise.resolve();
-        await Promise.resolve();
-        release(tokenPayload());
-
         const [inspection, valid] = await Promise.all([a, b]);
 
-        expect(execute).toHaveBeenCalledTimes(1);
+        expect(reads).toBe(1);
         expect(inspection.valid).toBe(true);
         expect(valid).toBe(true);
     });
 
-    it('releases the flight so a LATER call can inspect again', async () => {
-        const first = tokenManager.inspectToken();
-        await Promise.resolve();
-        await Promise.resolve();
-        release(tokenPayload());
-        await first;
-
-        const second = tokenManager.inspectToken();
-        await Promise.resolve();
-        await Promise.resolve();
-        release(tokenPayload());
-        await second;
-
-        expect(execute).toHaveBeenCalledTimes(2);
-    });
-
-    // A flight left pending after a throw would wedge auth for the whole session.
-    it('releases the flight after a THROWING fetch', async () => {
-        execute.mockRejectedValueOnce(new Error('spawn failed'));
-
-        // The retry loop swallows the failure and returns an invalid result.
+    /**
+     * CONTROL. The flight must RELEASE — otherwise the test above would also pass
+     * against an implementation that reads once and never again, which would pin
+     * a token permanently and survive no re-authentication.
+     */
+    it('releases the flight so a LATER call reads again', async () => {
+        await tokenManager.inspectToken();
         await tokenManager.inspectToken();
 
-        execute.mockImplementationOnce(
-            () =>
-                new Promise<CommandResult>((resolve) => {
-                    release = resolve;
-                })
-        );
-        const second = tokenManager.inspectToken();
-        await Promise.resolve();
-        await Promise.resolve();
-        release(tokenPayload());
-
-        expect((await second).valid).toBe(true);
+        expect(reads).toBe(2);
     });
 });

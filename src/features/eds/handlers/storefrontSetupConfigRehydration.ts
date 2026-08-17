@@ -26,9 +26,9 @@ import type { Logger } from '@/types/logger';
 /**
  * Fields owned by the package definition rather than by the project.
  *
- * All seven are assigned together in `WelcomeStep` and go missing together, so
- * they are restored together — fixing only the code patches would leave content
- * patches failing in precisely the same silent way.
+ * All are assigned together in `WelcomeStep` (via `buildEdsConfigFromStorefront`)
+ * and go missing together, so they are restored together — fixing only the code
+ * patches would leave content patches failing in precisely the same silent way.
  */
 const PACKAGE_DERIVED_KEYS = [
     'patches',
@@ -38,6 +38,7 @@ const PACKAGE_DERIVED_KEYS = [
     'codePatchSource',
     'byomOverlayUrl',
     'accountContentSource',
+    'brandAssets',
 ] as const;
 
 /**

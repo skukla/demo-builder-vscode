@@ -58,5 +58,6 @@ export function buildEdsConfigFromStorefront(
         contentPatchSource: storefront.contentPatchSource,
         codePatches: storefront.codePatches,
         codePatchSource: storefront.codePatchSource,
+        brandAssets: storefront.brandAssets,
     } as EDSConfig;
 }

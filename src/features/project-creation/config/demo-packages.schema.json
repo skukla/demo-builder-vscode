@@ -151,6 +151,64 @@
         "codePatchSource": {
           "$ref": "#/definitions/codePatchSource",
           "description": "External repository for code patches. When set, the storefront is thin-layer per ADR-006 — lastSyncedCommit records the LKG SHA and reset pins to LKG."
+        },
+        "brandAssets": {
+          "$ref": "#/definitions/brandAssets",
+          "description": "Additive brand files (theme CSS, brand modules) copied from a source repo into the generated storefront repo, plus an optional marker-bounded head.html snippet. ADR-006's prescribed shape for brand CSS."
+        }
+      }
+    },
+    "brandAssets": {
+      "type": "object",
+      "description": "Additive brand files vendored into generated storefront repos, applied during the shared EDS pipeline (create + reset).",
+      "required": ["source", "files"],
+      "properties": {
+        "source": {
+          "type": "object",
+          "required": ["owner", "repo", "branch"],
+          "properties": {
+            "owner": {
+              "type": "string",
+              "minLength": 1,
+              "description": "GitHub owner/organization of the brand-assets source repository"
+            },
+            "repo": {
+              "type": "string",
+              "minLength": 1,
+              "description": "GitHub repository name"
+            },
+            "branch": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Branch to fetch brand files from (branch HEAD is the contract)"
+            }
+          }
+        },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["from", "to"],
+            "properties": {
+              "from": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Source-repo path of the brand file"
+              },
+              "to": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Target path in the generated storefront repo. Must be under styles/ with a .css extension or scripts/ with a .js extension — any other target is refused at publish time (non-fatal warn)"
+              }
+            }
+          },
+          "description": "Files to copy verbatim from the source repo into the generated repo"
+        },
+        "headSnippet": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional HTML snippet vendored into head.html between demo-builder brand-assets markers (idempotent re-vendor on reset). Only <link rel=\"stylesheet\" href=\"/...\"> and <script type=\"module\" src=\"/...\"></script> lines with root-relative paths are accepted; path characters are restricted to A-Za-z0-9 . _ / - (no query strings, spaces, or percent-escapes) — anything else is refused at publish time (non-fatal warn)"
         }
       }
     },

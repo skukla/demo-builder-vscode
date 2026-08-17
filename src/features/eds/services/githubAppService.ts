@@ -254,6 +254,34 @@ export class GitHubAppService {
             `[GitHub App] Code status for ${owner}/${repo}: ${codeStatus}, installed: ${isInstalled}`,
         );
 
+        // Only THREE inner statuses are definitive: 200 and 400 mean installed
+        // (working / initializing); 404 means Helix knows the repo and has no code
+        // sync for it. Everything else — 403 above all — is Helix DECLINING to
+        // answer, and it arrives inside an HTTP 200 body, so the outer
+        // classification never sees it.
+        //
+        // Without this, strict mode turned `code.status: 403` into a definitive
+        // "the App is not installed" while its own log line called that status
+        // "unclear". Measured 2026-08-16: the same repo, the same 403, reported
+        // INSTALLED under lenient and NOT INSTALLED under strict one minute apart,
+        // with the App demonstrably installed on GitHub. That is the
+        // eleven-reinstalls failure this module documents, reached through the
+        // inner status instead of the outer one.
+        //
+        // `transient` is set regardless of mode. `resolveAppInstallation` checks
+        // `isInstalled` BEFORE `transient`, so lenient callers keep their
+        // permissive verdict and only the strict path changes — from a false "no"
+        // to an honest "undetermined".
+        const isDefinitiveStatus = codeStatus === 200 || codeStatus === 400 || codeStatus === 404;
+        if (!isDefinitiveStatus) {
+            this.logger.info(
+                `[GitHub App] AEM Code Sync status undetermined for ${owner}/${repo} ` +
+                    `(code.status: ${codeStatus}) — Helix declined to answer. This is NOT ` +
+                    `evidence that the App is missing.`,
+            );
+            return { isInstalled, codeStatus, transient: true };
+        }
+
         if (codeStatus === 404) {
             this.logger.info(
                 `[GitHub App] AEM Code Sync app not installed for ${owner}/${repo} (code.status: 404)`,

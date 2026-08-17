@@ -24,7 +24,7 @@ export function makeLogger(): Logger {
 /** Minimal newline-delimited JSON-RPC client over a connected socket. */
 export class SocketRpc {
     private buf = '';
-     
+
     private readonly pending = new Map<number, (msg: any) => void>();
 
     constructor(private readonly socket: net.Socket) {
@@ -46,7 +46,6 @@ export class SocketRpc {
         });
     }
 
-     
     request(id: number, method: string, params: unknown): Promise<any> {
         return new Promise((resolve) => {
             this.pending.set(id, resolve);
@@ -77,11 +76,33 @@ export async function connectAndInit(
     return { socket, rpc };
 }
 
+/**
+ * The `serverInfo` the server reports at `initialize` — the only field naming
+ * WHICH extension host answered, since every window binds the same socket name.
+ */
+export async function serverInfoOverSocket(
+    socketPath: string
+): Promise<{ name: string; version: string }> {
+    const socket = net.connect(socketPath);
+    await new Promise<void>((resolve, reject) => {
+        socket.once('connect', resolve);
+        socket.once('error', reject);
+    });
+    const rpc = new SocketRpc(socket);
+    const res = await rpc.request(1, 'initialize', {
+        protocolVersion: '2024-11-05',
+        capabilities: {},
+        clientInfo: { name: 'test', version: '0.0.0' },
+    });
+    socket.end();
+    return res.result?.serverInfo;
+}
+
 export async function listToolsOverSocket(socketPath: string): Promise<string[]> {
     const { socket, rpc } = await connectAndInit(socketPath);
     const res = await rpc.request(2, 'tools/list', {});
     socket.end();
-     
+
     return (res.result?.tools ?? []).map((t: any) => t.name);
 }
 

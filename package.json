@@ -2,7 +2,7 @@
   "name": "adobe-demo-builder",
   "displayName": "Adobe Demo Builder",
   "description": "Create and manage Adobe Commerce demos with ease",
-  "version": "1.0.0-beta.131",
+  "version": "1.0.0-beta.132",
   "publisher": "skukla",
   "engines": {
     "vscode": "^1.84.0"
@@ -55,6 +55,11 @@
       {
         "command": "demoBuilder.diagnostics",
         "title": "Diagnostics",
+        "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.showDataInstaller",
+        "title": "Open Data Installer",
         "category": "Demo Builder"
       },
       {
@@ -300,6 +305,7 @@
         "title": "ACCS Discovery",
         "properties": {
           "demoBuilder.accsDiscovery.services": {
+            "scope": "machine",
             "type": "array",
             "items": {
               "type": "object",
@@ -342,6 +348,7 @@
             "description": "Register the PDP overlay action on each EDS storefront created by this extension. When off, no overlay is registered (storefronts behave as if BYOM didn't exist)."
           },
           "demoBuilder.byom.overlayUrl": {
+            "scope": "machine",
             "type": "string",
             "default": "https://285361-249darkllama-stage.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp",
             "format": "uri",
@@ -365,6 +372,23 @@
             ],
             "default": "claude-code",
             "description": "Which AI tool Demo Builder launches. Currently only Claude Code is supported; reserved for future engines (e.g. Codex)."
+          }
+        }
+      },
+      {
+        "title": "Data Installer",
+        "properties": {
+          "demoBuilder.dataInstaller.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable the Data Installer surface for browsing and installing Adobe Commerce sample-data datapacks. When off, the panel and its AI tools report the feature as unavailable."
+          },
+          "demoBuilder.dataInstaller.apiBaseUrl": {
+            "scope": "machine",
+            "type": "string",
+            "default": "",
+            "format": "uri",
+            "description": "Data Installer API base URL, without a trailing action segment. Required — set this to your deployment. There is no default: this repository is public, and a bundled endpoint would ship to every user. Must be https."
           }
         }
       }
@@ -434,7 +458,8 @@
     "mesh:delete": "aio api-mesh delete --autoConfirmAction",
     "mesh:status": "aio api-mesh get --active",
     "hooks": "node scripts/hooks.js",
-    "docs:check": "node scripts/hooks.js coverage"
+    "docs:check": "node scripts/hooks.js coverage",
+    "data-installer:drift": "node scripts/dataInstallerDrift.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
@@ -484,6 +509,7 @@
   },
   "dependencies": {
     "@adobe/aio-lib-console": "^5.4.2",
+    "@adobe/aio-lib-core-config": "^5.0.1",
     "@adobe/aio-lib-ims": "^7.0.2",
     "@adobe/react-spectrum": "^3.46.0",
     "@modelcontextprotocol/sdk": "1.29.0",

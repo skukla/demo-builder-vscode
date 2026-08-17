@@ -2,15 +2,20 @@
 
 Read this, then [`overview.md`](overview.md) for the design and the verified API contract.
 
-**Stage 1 (reads) has SHIPPED** — merged to `develop` as `a3c07420`, 14 commits,
-fast-forward. Stage 2 (import) is next and is **not blocked** — see "Next action".
+**Stages 1, 2 and 4 have SHIPPED and Stage 2 is VERIFIED LIVE end to end**
+(import, watch, reset, targeting — see the DoD list below). Stage 1 merged to
+`develop` as `a3c07420`. **Stage 3 (export) is BLOCKED on the service**, not on
+us: `docs/systems/data-installer.md` §6b.
 
 ## Where the work is
 
 ```
 worktree   demo-builder-vscode.worktrees/feature/data-installer
-branch     feature/data-installer   (== origin/develop at handoff; pushed)
+branch     feature/data-installer   (BEHIND origin/develop; local commits unpushed)
 ```
+
+A peer session holds `develop`. Rebase onto it, push only this branch, and land
+through them — do not push `develop` from here.
 
 **Work in the worktree, not the main checkout.** Both exist and they are different
 directories. A previous session edited the main checkout by mistake — absolute paths
@@ -28,7 +33,8 @@ git fetch origin && git rebase origin/develop   # develop moves several times a 
 npx jest --no-coverage tests/features/data-installer > /tmp/j.txt 2>&1   # never pipe jest
 ```
 
-Expect **17 suites / 265 tests** green. The descriptor rows have their own suite at
+Expect roughly **30 suites / 485 tests** green (counts move; the shape is what matters). Add `tests/scripts` for the drift checker
+(2 more suites, 34 more tests). The descriptor rows have their own suite at
 `tests/features/ai/server/readDescriptors.test.ts`.
 
 ## What is done — all of Stage 1
@@ -52,37 +58,138 @@ Expect **17 suites / 265 tests** green. The descriptor rows have their own suite
 **The panel works end to end and has been visually confirmed by the user.** All four
 surfaces render: catalog, detail flyout, installed, activity.
 
-## Next action — Stage 2, unblocked
+## Definition of done — set by the user, 2026-08-13
 
-**Nothing is waiting on the service owner.** Both questions were put to them and will not
-be answered; their read was that this was going too deep. They are right, and the two
-"blockers" dissolve into defensive design that is more robust than any answer would have
-been:
+**The branch does NOT land until the feature is complete, and complete means the
+full plan (Stages 1–4).** Landing was offered after Stage 2 verification and
+declined. Remaining, in execution order:
 
-- **`commerce_instance`** — an opaque string the user supplies. A plain text field, no
-  derivation, no prefill, no validation, no formatting. This was already the safe default;
-  the spike that "justified" it was wasted motion.
-- **Auth `scope`** — find out by doing. Attempt the credential flow and handle failure with
-  a clear message, rather than branching on a scope value nobody will confirm. If PaaS and
-  ACCS turn out to need different paths, the failure will say so on the first attempt.
+1. **Console-free credential provisioning** — wire the proven loop (create S2S
+   credential → subscribe `ACCS-REST-API` via the DIRECT S2S call, not
+   `add_console_apis` (axis-filter bug) → targeted workspace download → fill the
+   two declared fields). Every step rehearsed live 2026-08-13.
+2. **PaaS verified live** — the user has an instance to test against. One dry run
+   answers whether the service's `local` handler takes a PaaS URL.
+3. ~~Website targeting~~ **DONE 2026-08-14** (3a substitution confirmed live;
+   3b picker SHIPPED — `d3585249` client+handler, `c2b01651` UI). Plan and
+   what-shipped notes: `.rptc/plans/datapack-import-targeting/overview.md`.
+   One thing deliberately unverified: no import has yet RUN with the pair
+   actually set — that needs an instance with a second website.
+4. ~~Exercise `partial` and multi-type~~ **DONE 2026-08-14**: 5-type import →
+   4 success + `products` fail (type-level ATOMIC: zero landed; cause: tier
+   prices name "Platinum Buyer", needs `customer_groups` imported too);
+   recovery run succeeded; 6-type reset restored the instance byte-identical.
+   Findings recorded in `docs/systems/data-installer.md`.
+5. ~~Stage 3 (export)~~ **BUILT 2026-08-15** (`439c4f0d` client+handlers,
+   plus the modal). Two-step flow: `list-datapack-export-items` then
+   `start-datapack-export`, surfaced by `ExportDatapackModal` from the catalog's
+   "Export from this instance" action.
 
-Then build Stage 2 per `overview.md`: credentials in SecretStorage, the job runner, the
-import UI. The runner's rules — two status endpoints failing in opposite directions, the
-grace window, `partial` as a first-class outcome, the covering-set terminal rule — are in
-the overview and in `docs/systems/data-installer.md` §5, and those DID come from probing
-behaviour rather than reading stored data.
+   **The one thing not verified end to end**: the service's own store step. It
+   500s with "MongoDB connection URI required" because `MONGO_URI` does not reach
+   the export path on the stage deployment — proven by `verbose: 'full'`, and NOT
+   ours to fix. Everything up to that point is exercised, and the client is
+   correct for the moment their fix lands. Root cause and the nine eliminated
+   payload hypotheses: `docs/systems/data-installer.md` §6b.
 
-### The lesson worth more than the spike
+6. ~~Stage 4 (wizard hook)~~ **DONE 2026-08-14** (`f2564d2e` wizard area,
+   `2752c7bd` panel loop). The product decision was made: **record in the
+   wizard, install from the panel afterwards** — an import needs a reachable
+   instance with working credentials and runs for minutes, and a failure
+   mid-wizard would leave a half-populated instance the wizard has no story for.
 
-**Stage data is not a specification.** A live read of the installed list found a few rows
-holding `https://datapack-accs.test` — test junk in a stage database. That became a
-documented "two-shape contract", three file edits, two commits and a long letter to
-another team. The correct response to an anomaly in stage data is to treat the field as
-opaque and move on.
+   So there is **no datapack↔demo-package mapping table**. The user picks
+   explicitly in a new optional "Sample Data" area (always complete, never gates
+   Continue), the choice persists through the manifest, and the installer panel
+   says "<project> is set up for <pack>" with a link into it. An auto-mapping
+   table was considered and rejected: it is a maintenance surface, and packs
+   exist with no matching demo package.
 
-The service owner's own conclusion is worth recording: this is a case for **discovery
-metadata in the API for AI introspection**. Absent that, probing stored data to infer a
-contract will keep producing confident wrong answers — so don't.
+The standing cost accepted with this: the branch keeps rebasing onto develop
+(six times on 2026-08-13 alone) until all six are done.
+
+## Next action — get Jeff's answer on ACCS export
+
+Stage 3 is the only DoD item left, and it is blocked on the service rather than
+on this branch. Every export returns 200 / `success: false` / `exported: 0` with
+no message while pre-flight reports auth and connectivity true, and the control
+`validate` call in the same script returns 200 `success: true`. The questions and
+the four activation ids to look up are in `docs/systems/data-installer.md` §6b.
+
+**Historical note, kept because it is the lesson this feature keeps re-teaching:**
+Stage 2 was once fully unit-tested and had never spoken to the service. Unit
+tests prove the pieces agree with each other and nothing about whether they agree
+with the API — the same trap that produced a "two-shape contract" out of stage
+junk. Verifying it live is what found the divergences now recorded in §2.
+
+### 1. Validate without writing (do this first)
+
+**There IS a dry-run in the UI now** — the **Validate** button beside Start in the import
+modal. It runs the same guard, credentials and request body as a start and stops after the
+synchronous `operation_mode: 'validate'` call; both paths build that body through one
+shared `prepareImport`, so it cannot check something other than what a start would send.
+It also checks the credentials first, with `get-websites-and-stores`.
+
+`docs/systems/data-installer.md` §6 keeps the equivalent direct curl, for probing without
+the extension open.
+
+**DONE 2026-08-13 — the dry run passed live.** `get-websites-and-stores` 200, then
+`operation_mode: 'validate'` 200, through the modal, with the Debug Logs lines to prove it.
+That answered the auth-scope question empirically (user IMS bearer to the service; OAuth
+S2S pair with `commerce.accs` scope to the instance) and proved the derived tenant id is
+accepted as `commerce_instance`. The entitlement recipe — create the S2S credential,
+subscribe `ACCS-REST-API` to it — is in `docs/systems/data-installer.md` §pre-flight.
+
+### 2. DONE at the service level (2026-08-13) — the modal pass remains
+
+Import → reset → re-verify ran live by direct service calls against a populated
+instance: categories import landed 12 nodes (11 + the pack's own root), reset
+removed exactly those 12, zero collateral, products untouched. Scoped-delete
+semantics proven; see `docs/systems/data-installer.md` § "Reset semantics".
+
+**DONE 2026-08-13, same day: the modal pass ran too.** Import through the UI
+(per-type success, verified +12 nodes on the instance), then Reset through the UI
+(verified: instance diffed byte-identical to pre-import, zero collateral). The
+runner watched the delete with no changes — the seam's own test, passed. Stage 2
+is verified end to end; the live session also drove six UX fixes (busy states,
+centered loaders, compact success, operation-aware copy), all committed.
+
+### 2b. The original step, kept for its cautions: one real import, on a target you own
+
+Needs a project open (the handler requires one), its credentials resolvable, and an instance
+id you have checked. There is **no cancel endpoint**: once started it runs to completion
+server-side. Prefer a throwaway instance and a single small data type.
+
+Watch for: whether the status map fills the way the runner expects, whether the grace window
+is long enough for a real start, and whether `partial` ever appears.
+
+### 3. Then reset, and import again — the reuse claim
+
+**Reset** in the import modal removes that datapack's data from the instance
+(`operation_mode: 'delete'`), so the same project can be rebuilt. It is confirm-gated: the
+handler refuses without `confirm: true` and the modal arms that with a second press.
+
+Import → reset → import is the whole reuse claim, and running it is the only thing that
+proves it. Watch for: whether the same 21 `data_type`s come back terminal on a delete, and
+whether a re-import after a reset behaves like a first import rather than reporting
+`partial` because something survived.
+
+### 4. Only then, Stage 3
+
+Export reuses the runner unchanged with `operation_mode: 'export'`. **If it needs runner
+changes, the Stage 2 seam was wrong** — that is the design's own falsification test, and the
+cheapest review of this work available. Reset already passed that test: it needed nothing.
+
+Export lists **18** of import's 21 `data_type`s, and only one of the three is a real gap:
+`giftcards` has no export processor. `product_export` and `customers_export` are
+import-side input formats, not missing exports — the `_export` suffix names the shape of
+the data being read in. So that screen must say it will skip gift cards.
+
+### Known gaps, deliberately left
+- **`core/ui/Modal` renders `role="dialog"` with no accessible name.** Real a11y gap, shared
+  code, touches every modal in the extension — reported, not fixed here.
+- **The gate is noisy.** Run the full suite at `--maxWorkers=25%`; see
+  `.rptc/backlog/2026-08-13-jest-full-suite-timeout-flake.md`.
 
 ## Process this repo actually enforces
 
@@ -98,6 +205,18 @@ contract will keep producing confident wrong answers — so don't.
 
 ## Traps that already cost time here
 
+- **Coverage is `action × parameter`, not action.** The plan enumerated every ACTION name
+  and made an explicit call on each — wired, held back, or deferred. It still missed reset,
+  because reset is not an action: it is `operation_mode: 'delete'` on an action the plan had
+  already ticked off. The plan *used* two values of that axis (`validate`, `export`) without
+  ever enumerating it. Any request field with a fixed value set gets its values listed and
+  each one decided, or the next capability hides the same way. `npm run
+  data-installer:drift` now fails on a mode with no recorded decision; the enumeration and
+  its limits are in `docs/systems/data-installer.md`.
+- **An unknown `operation_mode` answers `200` with an empty list, never a `400`.** So the
+  readable signal is the COUNT, and a deliberate nonsense mode is the only thing that proves
+  a count means anything. Seven guesses and the control were indistinguishable — which is
+  the correct result, and unreadable without the control.
 - **A handler that RETURNS `{success:false}` does not reject.** The communication manager
   puts the whole `HandlerResponse` in the response payload, and `webviewClient` rejects
   only when a handler THROWS — so a guard refusal arrives at the webview looking exactly

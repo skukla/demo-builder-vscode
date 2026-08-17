@@ -1,12 +1,31 @@
+import * as aioConfig from '@adobe/aio-lib-core-config';
 import type { AuthCacheManager } from './authCacheManager';
 import { AuthenticationErrorFormatter } from './authenticationErrorFormatter';
 import { getLogger } from '@/core/logging';
-import type { CommandExecutor } from '@/core/shell';
-import { SingleFlight, TIMEOUTS, formatMinutes } from '@/core/utils';
-import { sleep } from '@/core/utils/sleep';
-import { toAppError, isTimeout } from '@/types/errors';
+import { SingleFlight, formatMinutes } from '@/core/utils';
 import type { Logger } from '@/types/logger';
 import { toError } from '@/types/typeGuards';
+
+/** The stored CLI token, as `aio` writes it. */
+export interface StoredTokenConfig {
+    token?: string;
+    expiry?: number;
+}
+
+/**
+ * Reads the `aio` CLI's stored token.
+ *
+ * Injectable so tests drive the parsing and expiry rules directly, with no
+ * subprocess AND no dependence on whatever is in the developer's real
+ * `~/.config/aio`. The previous design injected a whole `CommandExecutor` for
+ * this one read, which meant every test had to fake CLI stdout — including its
+ * fnm warnings and emoji noise — to exercise a date comparison.
+ */
+export type TokenConfigReader = () => StoredTokenConfig | undefined;
+
+/** The real read: the same library, and the same key, the CLI itself uses. */
+const readFromAioConfig: TokenConfigReader = () =>
+    aioConfig.get('ims.contexts.cli.access_token') as StoredTokenConfig | undefined;
 
 /**
  * Manages Adobe access tokens
@@ -17,12 +36,6 @@ export class TokenManager {
     private cacheManager: AuthCacheManager | undefined;
 
     /**
-     * Create a TokenManager
-     * @param commandManager - Command executor for running CLI commands
-     * @param cacheManager - Optional cache manager for token caching
-     * @param logger - Optional logger for dependency injection (defaults to getLogger())
-     */
-    /**
      * Shared in-flight token inspection. Distinct from the inspection CACHE, which
      * can only help callers arriving after a fetch has completed.
      */
@@ -32,40 +45,24 @@ export class TokenManager {
         token?: string;
     }>();
 
+    /**
+     * Create a TokenManager.
+     *
+     * The first parameter used to be a `CommandExecutor`, for the sole purpose of
+     * spawning `aio config get`. That read is now in-process, so the executor is
+     * gone rather than kept and ignored.
+     *
+     * @param cacheManager - Optional cache manager for token caching
+     * @param logger - Optional logger for dependency injection (defaults to getLogger())
+     * @param readTokenConfig - Optional reader override; tests inject a fake store
+     */
     constructor(
-        private commandManager: CommandExecutor,
         cacheManager?: AuthCacheManager,
         logger?: Logger,
+        private readonly readTokenConfig: TokenConfigReader = readFromAioConfig,
     ) {
         this.logger = logger ?? getLogger();
         this.cacheManager = cacheManager;
-    }
-
-    /**
-     * Clean CLI output by removing fnm version messages and Adobe CLI warning lines,
-     * then extract the JSON object. Adobe CLI sometimes prefixes output with emoji
-     * warning lines (e.g. "⚠️ Warning: token expired") that break JSON.parse.
-     */
-    private cleanCommandOutput(output: string): string {
-        const lines = output.trim().split('\n').filter(line => {
-            const trimmed = line.trim();
-            if (!trimmed) return false;
-            if (trimmed.startsWith('Using Node')) return false;
-            if (trimmed.includes('fnm')) return false;
-            // Adobe CLI warning lines (emoji prefix or text prefix)
-            if (trimmed.startsWith('⚠') || trimmed.startsWith('Warning') || trimmed.startsWith('!')) return false;
-            return true;
-        });
-
-        const joined = lines.join('\n').trim();
-
-        // If the output doesn't start with a JSON value, extract the first JSON object
-        if (joined && !joined.startsWith('{') && !joined.startsWith('[') && !joined.startsWith('"')) {
-            const match = joined.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-            if (match) return match[0];
-        }
-
-        return joined;
     }
 
     /**
@@ -97,113 +94,98 @@ export class TokenManager {
         return this.inspectionFlight.run(() => this.fetchTokenInspection());
     }
 
-    /** The uncached, retrying CLI read behind {@link inspectToken}'s single-flight. */
+    /**
+     * The uncached read behind {@link inspectToken}'s single-flight.
+     *
+     * Reads the CLI's config IN PROCESS. This used to run
+     * `aio config get ims.contexts.cli.access_token --json` as a subprocess,
+     * which MEASURED 2.05s (twice, consistent) to read one value — the whole
+     * `aio` Node CLI starting and loading its modules. The in-process read is
+     * 20ms including cold module load, and returns a byte-identical token and
+     * expiry (controlled against the CLI on 2026-08-17).
+     *
+     * Reported symptom: reset's second prompt took 2-3s to appear even after the
+     * credential lookup was moved ahead of the first modal — the wait was longer
+     * than the modal was open. `isAuthenticated` has eight call sites in the
+     * dashboard and creation handlers, and its own `⚠️ SLOW` warnings came from
+     * the same subprocess.
+     *
+     * `@adobe/aio-lib-core-config` is the library the CLI itself uses, so this is
+     * the same read rather than a reimplementation of it. Parsing the file by
+     * hand is deliberately NOT an option: `~/.config/aio` is HJSON, a format this
+     * repo does not own.
+     *
+     * Three things went away with the subprocess, and none is a behaviour change:
+     * the retry-with-backoff loop (nothing to time out), the fnm/emoji output
+     * cleaning (no stdout to clean), and JSON.parse of that output. What is KEPT
+     * is every semantic rule — corruption detection, the length floor, the expiry
+     * comparison and the cache write.
+     */
     private async fetchTokenInspection(): Promise<{
         valid: boolean;
         expiresIn: number;
         token?: string;
     }> {
-        const maxRetries = 3;
-
-        // Retry loop with exponential backoff
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                // Get ENTIRE access_token object (includes both token and expiry)
-                // Using --json flag ensures atomic read of both fields
-                const cmdResult = await this.commandManager.execute(
-                    'aio config get ims.contexts.cli.access_token --json',
-                    { encoding: 'utf8', timeout: TIMEOUTS.TOKEN_VALIDATION },
-                );
-
-                if (cmdResult.code !== 0 || !cmdResult.stdout) {
-                    this.logger.debug('[Token] No access token found in CLI config');
-                    return { valid: false, expiresIn: 0 };
-                }
-
-                // Clean output (remove fnm/node version warnings)
-                const cleanOutput = this.cleanCommandOutput(cmdResult.stdout);
-
-                // Parse the JSON object {token: "...", expiry: 123456789}
-                let tokenData: { token?: string; expiry?: number };
-                try {
-                    tokenData = JSON.parse(cleanOutput);
-                } catch (parseError) {
-                    this.logger.warn(`[Token] Failed to parse token config as JSON: ${toError(parseError).message}`);
-                    return { valid: false, expiresIn: 0 };
-                }
-
-                const token = tokenData.token;
-                const expiry = tokenData.expiry || 0;
-                const now = Date.now();
-
-                // CORRUPTION DETECTION (beta.42): expiry=0 indicates corrupted state
-                if (token && token.length > 100 && expiry === 0) {
-                    this.logger.warn('[Token] CORRUPTION DETECTED: Token present but expiry=0');
-
-                    // Format user-friendly corruption message
-                    const formatted = AuthenticationErrorFormatter.formatError(
-                        new Error('Token corruption: expiry=0'),
-                        { operation: 'token-validation' },
-                    );
-
-                    this.logger.error(`[Token] ${formatted.message}`);
-                    this.logger.trace(formatted.technical);
-
-                    return { valid: false, expiresIn: 0, token };
-                }
-
-                // Validate token length
-                if (!token || token.length < 100) {
-                    this.logger.debug(`[Token] Invalid token length: ${token?.length || 0}`);
-                    return { valid: false, expiresIn: 0 };
-                }
-
-                // Check expiry
-                if (!expiry || expiry <= now) {
-                    const expiresIn = expiry > 0 ? Math.floor((expiry - now) / 1000 / 60) : 0;
-                    this.logger.debug(`[Token] Token expired or invalid: expiresIn=${expiresIn} min`);
-                    return { valid: false, expiresIn, token };
-                }
-
-                const expiresIn = Math.floor((expiry - now) / 1000 / 60);
-                this.logger.debug(`[Token] Token valid, expires in ${formatMinutes(expiresIn)}`);
-
-                const result = { valid: true, expiresIn, token };
-
-                // Cache the successful result (if cacheManager available)
-                if (this.cacheManager) {
-                    this.cacheManager.setCachedTokenInspection(result);
-                }
-
-                return result;
-            } catch (error) {
-                const appError = toAppError(error);
-
-                // Check if it's a timeout error that should be retried
-                const isTimeoutError = isTimeout(appError);
-
-                if (isTimeoutError && attempt < maxRetries) {
-                    // Exponential backoff: 500ms, 1000ms, 2000ms
-                    const backoffMs = TIMEOUTS.TOKEN_RETRY_BASE * Math.pow(2, attempt - 1);
-                    this.logger.warn(`[Token] Timeout on attempt ${attempt}/${maxRetries}, retrying in ${backoffMs}ms...`);
-                    await sleep(backoffMs);
-                    continue; // Retry
-                }
-
-                // Non-timeout error or max retries reached
-                if (attempt === maxRetries) {
-                    this.logger.warn(`[Token] Failed after ${maxRetries} attempts: ${appError.userMessage}`);
-                } else {
-                    this.logger.warn(`[Token] Non-timeout error on attempt ${attempt}, giving up: ${appError.userMessage}`);
-                }
-
-                return { valid: false, expiresIn: 0 };
-            }
+        let tokenData: { token?: string; expiry?: number } | undefined;
+        try {
+            tokenData = this.readTokenConfig();
+        } catch (error) {
+            // A config store that cannot be read is "not signed in", the same
+            // answer the failed subprocess gave. It is not worth a stack trace in
+            // a channel users paste into tickets.
+            this.logger.warn(`[Token] Could not read the CLI config: ${toError(error).message}`);
+            return { valid: false, expiresIn: 0 };
         }
 
-        // Should never reach here, but TypeScript requires a return
-        this.logger.error('[Token] Unexpected: retry loop completed without return');
-        return { valid: false, expiresIn: 0 };
+        if (!tokenData) {
+            this.logger.debug('[Token] No access token found in CLI config');
+            return { valid: false, expiresIn: 0 };
+        }
+
+        const token = tokenData.token;
+        const expiry = tokenData.expiry || 0;
+        const now = Date.now();
+
+        // CORRUPTION DETECTION (beta.42): expiry=0 indicates corrupted state
+        if (token && token.length > 100 && expiry === 0) {
+            this.logger.warn('[Token] CORRUPTION DETECTED: Token present but expiry=0');
+
+            // Format user-friendly corruption message
+            const formatted = AuthenticationErrorFormatter.formatError(
+                new Error('Token corruption: expiry=0'),
+                { operation: 'token-validation' },
+            );
+
+            this.logger.error(`[Token] ${formatted.message}`);
+            this.logger.trace(formatted.technical);
+
+            return { valid: false, expiresIn: 0, token };
+        }
+
+        // Validate token length
+        if (!token || token.length < 100) {
+            this.logger.debug(`[Token] Invalid token length: ${token?.length || 0}`);
+            return { valid: false, expiresIn: 0 };
+        }
+
+        // Check expiry
+        if (!expiry || expiry <= now) {
+            const expiresIn = expiry > 0 ? Math.floor((expiry - now) / 1000 / 60) : 0;
+            this.logger.debug(`[Token] Token expired or invalid: expiresIn=${expiresIn} min`);
+            return { valid: false, expiresIn, token };
+        }
+
+        const expiresIn = Math.floor((expiry - now) / 1000 / 60);
+        this.logger.debug(`[Token] Token valid, expires in ${formatMinutes(expiresIn)}`);
+
+        const result = { valid: true, expiresIn, token };
+
+        // Cache the successful result (if cacheManager available)
+        if (this.cacheManager) {
+            this.cacheManager.setCachedTokenInspection(result);
+        }
+
+        return result;
     }
 
     /**

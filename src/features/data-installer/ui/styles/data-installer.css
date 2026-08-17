@@ -1,0 +1,459 @@
+/**
+ * Data Installer surface styles.
+ *
+ * Feature-scoped: this sheet reaches ONLY the `dataInstaller` esbuild entry, via
+ * the side-effect import in `ui/index.tsx`. A class defined here is absent from
+ * every other webview bundle, and an element using it there renders raw with no
+ * error anywhere — so nothing outside this feature may reference these names.
+ *
+ * Card metrics come from the shared `--card-*` custom properties in
+ * `custom-spectrum.css` rather than copied numbers, so this card cannot drift
+ * away from `.project-card-spectrum` and `.integration-card`.
+ */
+
+/* ===========================================
+   View switcher
+   =========================================== */
+/* Tabs anchored to a rule, not pills floating on the page.
+
+   As filled pills they belonged to neither neighbour: the page header above has
+   a border and the controls band below has a fill, so two loose buttons sat in
+   the gap between them looking like a leftover of the three-tab design this
+   surface used to have.
+
+   Not StepRail, which is the shared horizontal navigation — that is a STEP rail,
+   where only `done` and `current` are actionable. These two views are peers,
+   always reachable, in no sequence; borrowing the progress vocabulary would mean
+   calling Activity "done" to make it clickable. The switcher stays feature-local
+   for that reason, and only its treatment changes. */
+.view-switcher {
+    display: flex;
+    gap: var(--spectrum-global-dimension-size-300, 24px);
+    /* The rule the tabs sit on. The active tab's underline overlaps it, which is
+       what makes them read as tabs rather than as buttons with a line beneath. */
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+    /* Off the header's own rule. Without it the tabs sat tight under the header
+       band while their rule had ~24px of air beneath it — top-heavy, and it read
+       as the tabs belonging to the header rather than to the content. */
+    margin-top: var(--spectrum-global-dimension-size-200, 16px);
+    margin-bottom: var(--spectrum-global-dimension-size-200, 16px);
+}
+
+.view-switcher-button {
+    /* Square, transparent, and carrying the underline slot on every tab so the
+       active one does not shift its neighbours by 2px when it gains one. */
+    border-radius: 0 !important;
+    background-color: transparent !important;
+    border-bottom: 2px solid transparent !important;
+    /* Pull the underline down onto the container's rule. */
+    margin-bottom: -1px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+}
+
+.view-switcher-button:hover {
+    background-color: transparent !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+}
+
+.view-switcher-button.is-active {
+    background-color: transparent !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+    border-bottom-color: var(--spectrum-global-color-blue-500) !important;
+}
+
+/* ===========================================
+   Datapack grid
+   =========================================== */
+/* The house card-grid shape: reflows by available width rather than a fixed
+   column count, so it holds up in a narrow editor pane.
+ *
+ * The three numbers are LITERALS, matching `.projects-grid` and
+ * `.integrations-grid`. Lifting them into shared custom properties looks like the
+ * DRY move and is the wrong one here: `integrationsGridLayout.test.ts` guards
+ * these grids by parsing the px values out of the stylesheet text — jsdom
+ * resolves no layout, so a rendering test cannot count columns and would pass
+ * either way. A `var()` moves the number out of the rule, and that guard then
+ * FAILS — loudly, positive control included. Keep the literal; do not loosen the
+ * test. Drift is already prevented by test, which is why this needs no token.
+ *
+ * The constraint those tests encode: 3 tracks + 2 gaps must fit the ~815px
+ * content band, so 3*240 + 2*24 = 768. Its sibling suite extends it here.
+ *
+ * No `grid-auto-rows: 1fr`: these cards are already equal-height (a fixed art
+ * band over a fixed body), so stretching rows would only pad the shorter ones. */
+.datapack-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 24px;
+    padding: 8px;
+}
+
+/* ===========================================
+   Detail flyout
+   =========================================== */
+/* Head/body chrome and the key/value rows come from custom-spectrum.css
+   (`db-drawer-*`, `integration-panel-row*`) — global, so they reach this bundle.
+   Only what is specific to a datapack lives here. */
+.datapack-panel-title {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+}
+
+/* The flyout's loading state fills the REMAINING drawer-body space and centers
+   the spinner in it. flex:1 rather than a fixed height, because the drawer is
+   viewport-height and CenteredFeedbackContainer's DimensionValue cannot say
+   "whatever is left". */
+.datapack-panel-loading {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Data types as wrapping chips: a pack can carry 18, and a comma-joined line
+   ran to four wrapped rows in an 88px-key row layout. */
+.datapack-panel-types {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.datapack-panel-type {
+    padding: 1px 6px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+/* Declared but not stored — muted and dashed, so the difference reads without
+   colour alone carrying it. */
+.datapack-panel-type.is-missing {
+    border-style: dashed;
+    color: var(--spectrum-global-color-gray-500);
+}
+
+/* ===========================================
+   Row lists (installed, activity)
+   =========================================== */
+/* A record list, not a card grid — the ProjectRowList shape. Rows are full
+   width and stack; there is no art to give them a tile. */
+.datapack-row-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 8px;
+}
+
+.datapack-row {
+    box-sizing: border-box;
+    padding: 12px 16px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    background: var(--spectrum-global-color-gray-50);
+}
+
+.datapack-row-main {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.datapack-row-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+}
+
+.datapack-row-version {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* Wraps rather than truncating: an ACCS instance id is 21–22 characters and
+   sits beside three other facts, which overflows a narrow pane on one line. */
+.datapack-row-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.datapack-row-instance {
+    font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.datapack-row-mode {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* ===========================================
+   Activity view
+   =========================================== */
+.datapack-activity-filters {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.datapack-activity-count {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* Centred under the feed, the way a "more" affordance reads — not pinned to
+   either edge, where it looks like a form action. */
+.datapack-activity-more {
+    display: flex;
+    justify-content: center;
+    padding-top: 16px;
+}
+
+/* ===========================================
+   Catalog view
+   =========================================== */
+.datapack-catalog-empty {
+    font-size: 13px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* ===========================================
+   Import modal
+   =========================================== */
+.datapack-import-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Where the pack lands. Two pickers side by side — they are one decision, and
+   stacking them reads as two unrelated fields. */
+/* Side by side: website and store view are one decision, and the hint that used
+   to sit under them (explaining a rule the picker already enforces) is gone. */
+.datapack-import-scope {
+    display: flex;
+    gap: 16px;
+}
+
+.datapack-import-scope > * {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.datapack-import-scope > [data-testid='spectrum-picker-wrapper'],
+.datapack-import-scope > div {
+    min-width: 0;
+}
+
+/* Label above, control below — and while discovery runs the spinner IS the
+   control, in the same place, under a label that does not move. */
+.datapack-scope-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+/* Holds the control's height so the dialog does not jump when the picker
+   replaces it. These fields used to appear only once the scopes landed, and
+   that jump is what the disabled-placeholder version was written to stop; the
+   swap must not reintroduce it. The value is the Spectrum medium field height —
+   a literal, because the token and the size prop resolve to different px in
+   this webview. */
+/* Shrinks to the LABEL, so the spinner below it has something narrow enough to
+   be centred under. `align-self: flex-start` stops the column stretching it to
+   the field's full width, which would put the centre back mid-column. */
+.datapack-scope-busy {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    align-self: flex-start;
+    gap: 4px;
+}
+
+.datapack-scope-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+}
+
+/* The products/customer_groups dependency. Warning colour, not error: the import
+   is still valid and a pack without tier prices is unaffected. */
+.datapack-import-type-warning {
+    margin: 4px 0 0;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--vscode-editorWarning-foreground, var(--vscode-descriptionForeground));
+}
+
+.datapack-import-types {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Label and bulk toggle sit TOGETHER on the left. They used to be pushed apart
+   by space-between, which at the wide modal width left the toggle a screen away
+   from the heading it acts on — easy to miss entirely. */
+.datapack-import-types-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* The data-type checkbox list, shared by BOTH modals — import and export.
+
+   It was two classes. The export copy set minmax(420px, 1fr), sized back when a
+   type was a raw underscore code held on one unbroken line, and at the wide
+   modal's ~685px content box auto-fill fits floor(685/420) = 1 track: eighteen
+   exportable types in a single scrolling column. The import copy had already
+   been tuned away from that and the export one could not inherit it, because
+   nothing linked them. One class now, so they cannot drift apart again.
+
+   260px tracks give two columns at that same width, which halves the export
+   list from eighteen rows to nine — shorter, not necessarily scroll-free. Equal
+   tracks keep the rows aligned; a list read downward wants alignment more than
+   density. */
+.datapack-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 8px 24px;
+    /* A safety net rather than the rule it once was. Labels now carry spaces
+       ("B2B shared catalog company assignments") and break on their own, but a
+       code still reaches this grid whenever the service adds a type the label
+       derivation has not been taught. `anywhere` is the only value that breaks a
+       word with no break opportunity; `break-word` leaves it overflowing.
+       Inherited, so it reaches the Spectrum label without naming a Spectrum
+       class. */
+    overflow-wrap: anywhere;
+}
+
+.datapack-type-grid > * {
+    min-width: 0;
+}
+
+/* EVERY field label in this modal, from one rule.
+
+   "Data types" was the only one styled, so Spectrum's default sized "Target
+   website" and "Store view" larger than the section heading below them — three
+   labels at one level of the hierarchy, rendered three ways.
+
+   The picker labels wear this class DIRECTLY (see `ScopeLabel`). Reaching them
+   through `.datapack-import-scope .spectrum-FieldLabel` was tried and the labels
+   still rendered at their default size. Why is unestablished — the class is
+   present in the bundle (24 occurrences), so "the selector matches nothing" is a
+   guess, not a finding, and specificity or Spectrum's own cascade are equally
+   live. Owning the element removes the question instead of answering it. */
+.datapack-import-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+
+
+
+
+
+
+/* The armed reset confirmation. An accent BORDER, not a filled banner — that is
+   the convention here (see OrgContextNotice); saturated fills are not used. */
+.datapack-import-danger {
+    padding: 8px 12px;
+    border-left: 2px solid var(--spectrum-global-color-red-600);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* The question, the facts, then the warning — three blocks rather than one run
+   of prose. The list of data types can be fourteen entries long, and read as a
+   sentence it was the part nobody finished before pressing the button. */
+.datapack-import-danger p {
+    margin: 0;
+}
+
+.datapack-import-danger p + p {
+    margin-top: 8px;
+}
+
+.datapack-danger-lede {
+    font-weight: 600;
+}
+
+/* A label the eye can skip to, so "Instance" and "14 data types" read as fields
+   rather than as the start of another sentence. */
+.datapack-danger-term {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.datapack-danger-warning {
+    color: var(--spectrum-global-color-red-600);
+}
+
+
+/* The derived target, shown instead of an input. Leads with the project name —
+   the only part a person can confirm — and keeps the instance id visible but
+   subordinate, because the id is what actually decides where data lands. */
+.datapack-import-target {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.datapack-import-target-name {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.datapack-import-target-id {
+    /* Monospace, matching `.datapack-row-instance`: an instance id is checked
+       character by character against the console, which proportional type makes
+       harder for exactly the strings that matter (l/1, O/0). */
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-700);
+    overflow-wrap: anywhere;
+}
+
+.datapack-import-target-warning {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* Export modal. Reuses the import modal's type grid — the two forms ask the
+   same question about data types and a second grid would drift from the first. */
+/* No min-width: one on this body pushed the intro text past the dialog's right
+   edge, clipping it. The import body sets none and flows correctly. */
+.datapack-export-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.datapack-export-intro {
+    margin: 0;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+.datapack-export-note {
+    margin: 0;
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+}

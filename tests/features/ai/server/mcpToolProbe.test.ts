@@ -15,7 +15,13 @@ import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
 import type { Logger } from '@/types/logger';
 
 function makeLogger(): Logger {
-    return { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as unknown as Logger;
+    return {
+        info: jest.fn(),
+        debug: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        trace: jest.fn(),
+    } as unknown as Logger;
 }
 
 describe('probeInExtensionMcpTools', () => {
@@ -42,19 +48,26 @@ describe('probeInExtensionMcpTools', () => {
 
         expect(result.ok).toBe(true);
         expect(result.tools).toEqual(
-            expect.arrayContaining(['get_project', 'list_projects', 'promote_block_to_library', 'sync_storefront']),
+            expect.arrayContaining([
+                'get_project',
+                'list_projects',
+                'promote_block_to_library',
+                'sync_storefront',
+            ])
         );
         // Names are returned sorted.
         expect(result.tools).toEqual([...(result.tools ?? [])].sort());
     });
 
     it('surfaces tools registered via the extra-tools hook (e.g. sign_in)', async () => {
-        server = new InExtensionMcpServer(socketPath, '/projects', makeLogger(), (srv) => {
-            srv.registerTool(
-                'sign_in',
-                { description: 'test sign-in tool', inputSchema: {} },
-                async () => ({ content: [{ type: 'text' as const, text: 'ok' }] }),
-            );
+        server = new InExtensionMcpServer(socketPath, '/projects', makeLogger(), {
+            registerExtraTools: (srv) => {
+                srv.registerTool(
+                    'sign_in',
+                    { description: 'test sign-in tool', inputSchema: {} },
+                    async () => ({ content: [{ type: 'text' as const, text: 'ok' }] })
+                );
+            },
         });
         await server.start();
 

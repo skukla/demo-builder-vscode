@@ -155,6 +155,13 @@ export interface StorefrontSetupStartPayload {
             repo: string;
             path: string;
         };
+        // Additive brand files + optional marker-bounded head.html snippet
+        // (from demo-packages.json storefronts), vendored by brandAssetPublisher.
+        brandAssets?: {
+            source: { owner: string; repo: string; branch: string };
+            files: Array<{ from: string; to: string }>;
+            headSnippet?: string;
+        };
         // GitHub auth info from Connect Services step
         githubAuth?: {
             isAuthenticated?: boolean;

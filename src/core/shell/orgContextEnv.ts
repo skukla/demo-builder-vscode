@@ -138,8 +138,19 @@ const orgContextStore = new AsyncLocalStorage<OrgContextTarget>();
  * Deliberately NOT included: `aio console *` (choosing an org is how a target is
  * obtained, so those legitimately run untargeted), `aio auth *`, and anything
  * that is not an `aio` command.
+ *
+ * The api-mesh pattern matches BOTH `api-mesh:get` and `api-mesh get` — the aio
+ * CLI accepts either and this codebase uses both. It required the colon until
+ * 2026-08-16, so the four space-form call sites were invisible to it: three were
+ * wrapped anyway, and the fourth was `aio api-mesh delete --autoConfirmAction`
+ * running untargeted. A detector that misses one spelling reports silence, not
+ * safety.
+ *
+ * Requiring a letter after the separator keeps `aio api-mesh --help` out — that
+ * one probes whether the plugin is installed and has no workspace to be wrong
+ * about.
  */
-const ORG_SCOPED_AIO = [/^aio\s+api-mesh:/, /^aio\s+app\s+(deploy|undeploy|get-url)\b/];
+const ORG_SCOPED_AIO = [/^aio\s+api-mesh[:\s]+[a-z]/, /^aio\s+app\s+(deploy|undeploy|get-url)\b/];
 
 /**
  * Whether a command needs an org target to answer correctly.

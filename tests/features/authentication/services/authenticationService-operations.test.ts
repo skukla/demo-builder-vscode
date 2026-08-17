@@ -26,10 +26,15 @@ import {
 jest.mock('@/core/logging');
 jest.mock('@/features/authentication/services/adobeSDKClient');
 jest.mock('@/features/authentication/services/adobeEntityService');
+// Mocked so the assertion is on the CALL, not on cache state in another feature.
+jest.mock('@/features/data-installer/services/commerceCredentialBroker', () => ({
+    clearSharedCredentialCache: jest.fn(),
+}));
 
 import { getLogger } from '@/core/logging';
 import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import { createEntityServices } from '@/features/authentication/services/adobeEntityService';
+import { clearSharedCredentialCache } from '@/features/data-installer/services/commerceCredentialBroker';
 
 describe('AuthenticationService - Login/Logout Operations', () => {
     let authService: AuthenticationService;
@@ -194,6 +199,24 @@ describe('AuthenticationService - Login/Logout Operations', () => {
             mockCommandExecutor.execute.mockRejectedValue(error);
 
             await expect(authService.logout()).rejects.toThrow('Logout failed');
+        });
+
+        /**
+         * The shared Commerce credential is cached per service URL, and it was
+         * fetched under THIS user's authorization — the discovery service checks
+         * their IMS token and email domain before serving it. Whoever signs in
+         * next must not inherit a credential they were never cleared for.
+         *
+         * Pinned here rather than left to the broker's own suite because the
+         * coupling is what matters: the cache is in another feature entirely, and
+         * nothing else would notice if this call were dropped.
+         */
+        it('clears the cached shared Commerce credential', async () => {
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult('Logged out'));
+
+            await authService.logout();
+
+            expect(clearSharedCredentialCache).toHaveBeenCalled();
         });
     });
 

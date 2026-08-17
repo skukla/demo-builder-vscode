@@ -264,4 +264,41 @@ describe('copyContentFromSource — reference-following discovery', () => {
         expect(unapplied.some((u) => u.kind === 'reference' && u.target === '/customer/nav')).toBe(true);
         expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('referenced document not copied: /customer/nav'));
     });
+
+    it('stays silent about references a later stage is configured to supply', async () => {
+        // Hybrid packages copy brand content first, then overlay /customer/* from the
+        // canonical B2B site. The brand source legitimately has none of those pages, so
+        // auditing them here reports a gap the very next pipeline step fills — six
+        // warnings on every correct create and reset, which teaches people to ignore
+        // warnings. Anything OUTSIDE the deferred prefixes must still be reported.
+        mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
+            const method = options?.method ?? 'GET';
+            if (url.includes('/list/')) return status(404);
+            if (url.includes('full-index.json')) return jsonResponse({ data: [] });
+            if (method === 'HEAD') return url.includes('/customer/account.plain.html') ? status(200) : status(404);
+            if (method === 'POST' && url.includes('/source/')) return status(200);
+            if (url === `${sourceBase}/customer/account.plain.html`) {
+                return htmlResponse(
+                    '<body><main><div><a href="/customer/nav">n</a><a href="/brand-page">b</a></div></main></body>',
+                );
+            }
+            return status(404); // both references 404 on the brand source
+        });
+
+        const { createPatchReport, getUnapplied } = await import('@/features/eds/services/patchReportHelper');
+        const report = createPatchReport();
+        report.deferredReferencePrefixes = ['/customer/'];
+        await service.copyContentFromSource(source(), destOrg, destSite, undefined, undefined, undefined, report);
+
+        const unapplied = getUnapplied(report);
+        expect(unapplied.some((u) => u.kind === 'reference' && u.target === '/customer/nav')).toBe(false);
+        expect(mockLogger.warn).not.toHaveBeenCalledWith(
+            expect.stringContaining('referenced document not copied: /customer/nav'),
+        );
+        // The audit still does its job for everything else.
+        expect(unapplied.some((u) => u.kind === 'reference' && u.target === '/brand-page')).toBe(true);
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('referenced document not copied: /brand-page'),
+        );
+    });
 });

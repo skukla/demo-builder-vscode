@@ -22,7 +22,10 @@ import {
     ACCS_GRAPHQL_ENDPOINT as ACCS_ENDPOINT_KEY,
 } from '@/features/components/config/envVarKeys';
 import { STORE_GROUP_IDS } from '@/features/components/config/storeFieldHelpers';
-import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
+import {
+    lookupComponentConfigValue,
+    readPaasAdminPair,
+} from '@/features/components/services/envVarHelpers';
 import type { ComponentConfigs } from '@/types/webview';
 
 /** Derive the component service group ID from an autoDetectKey prefix. */
@@ -78,9 +81,9 @@ export function useAutoStoreDetect({
 
             // Credentials travel in the discovery request itself (single source of truth,
             // no out-of-band sync cache). autoDetectKey already gates on both being present.
-            const username = lookupComponentConfigValue(configs, PAAS_ADMIN_USERNAME);
-            const password = lookupComponentConfigValue(configs, PAAS_ADMIN_PASSWORD);
-            fetchStores({ backendType: 'paas', baseUrl, username, password });
+            const pair = readPaasAdminPair(configs);
+            if (!pair) return;
+            fetchStores({ backendType: 'paas', baseUrl, ...pair });
         } else {
             const accsEndpoint = lookupComponentConfigValue(configs, ACCS_ENDPOINT_KEY);
             if (!accsEndpoint) return;

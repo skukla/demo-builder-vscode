@@ -301,7 +301,10 @@ stays extension-side; only the field travels.
 
 ### Descriptor-driven tools — `readDescriptors.ts` / `actionDescriptors.ts` (via `toolDescriptors.ts`)
 Thin tools declared as data and dispatched to existing handler maps:
-- Reads: `verify_ai_setup`, `list_ai_prompts`, `check_mesh`, `list_console_apis`
+- Reads: `verify_ai_setup`, `list_ai_prompts`, `check_mesh` (optional
+  `workspaceId`; defaults to the current project's — a descriptor row with NO
+  `inputSchema` is dispatched `{}`, which is what made this tool return "Invalid
+  workspace ID" on every call until it was fixed), `list_console_apis`
   (the org's subscribable Adobe services, flagging ones the reconcile union
   already manages), `get_project_urls` (the project's useful URLs as data — local
   storefront, EDS live site + DA.live authoring, Commerce admin, Developer Console
@@ -371,11 +374,35 @@ These conventions are what make the surface predictable for an agent. New tools
 `asText(...)` helper. The agent parses that text. Keep the JSON small and
 purposeful — it's consumed as LLM context tokens.
 
-**Confirmation gating for mutations.** Anything that changes cloud or local
-state requires an explicit `confirm: true`. Without it, the tool returns a
-description of what *would* happen so the agent can relay it to the user — it
-does not act. `apply_updates` reuses this elegantly: no `confirm` = a read-only
-"here's what's available" report.
+**Confirmation gating for destructive ops.** A tool requires an explicit
+`confirm: true` when its effect is hard to walk back: it deletes something, or it
+pushes/publishes to a live site. Without it the tool refuses and does nothing.
+Currently gated: `remove_integration`, `delete_ai_prompt`, `delete_mesh`,
+`delete_project`, `remove_block_from_library`, `promote_block_to_library`,
+`refresh_block_library`.
+
+Merely *mutating* is deliberately not the bar. Deploys (`deploy_mesh`,
+`deploy_integration`, `redeploy_integration`), lifecycle (`start_demo`,
+`stop_demo`) and config writes (`update_project_config`, `rename_project`) change
+state and are ungated, because they are idempotent or trivially reversible and
+gating them would make the agent surface useless for the routine work it exists
+to do.
+
+This paragraph used to claim that *anything* changing state was gated. It never
+was — and the overclaim hid a real gap: `promote_block_to_library` pushed a commit
+and published to a live site ungated while its exact inverse
+`remove_block_from_library` was gated. If you add a tool, decide against the rule
+above, not against this list.
+
+Both block-library gaps were closed together on 2026-08-16, and they are the
+worked example of the rule: `promote_block_to_library` was ungated because it
+only *adds* things, and `refresh_block_library` because "rebuild" sounds local.
+Both push to a live site. Reach, not intent, is what decides.
+
+Note the shape of the refusal differs by tool. Most return an error and do
+nothing. `apply_updates` is the one that reports what *would* happen: no
+`confirm` = a read-only "here's what's available". Don't assume the dry-run
+behavior generalizes.
 
 **Extra-strict gating for irreversible ops.** `delete_project` additionally
 requires `confirmName` to exactly echo the project name, so an agent can't delete

@@ -13,7 +13,7 @@
 import { COMPONENT_IDS } from '@/core/constants';
 import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
 import type { Project } from '@/types/base';
-import type { CodePatchSource } from '@/types/demoPackages';
+import type { BrandAssetsConfig, CodePatchSource } from '@/types/demoPackages';
 import type { HandlerResponse } from '@/types/handlers';
 
 // ==========================================================
@@ -71,6 +71,9 @@ export interface EdsResetParams {
      * storefront can pin code and content ledgers independently.
      */
     codePatchSource?: CodePatchSource;
+    /** Additive brand files + optional head.html snippet vendored during the
+     *  shared pipeline (create + reset). From demo-packages.json storefronts. */
+    brandAssets?: BrandAssetsConfig;
 }
 
 /**
@@ -179,6 +182,7 @@ interface StorefrontConfig {
     contentPatchSource?: { owner: string; repo: string; path: string };
     codePatches?: string[];
     codePatchSource?: CodePatchSource;
+    brandAssets?: BrandAssetsConfig;
     byomOverlayUrl?: string;
 }
 
@@ -235,6 +239,7 @@ export function extractResetParams(
         contentPatchSource,
         codePatches,
         codePatchSource,
+        brandAssets,
         byomOverlayUrl,
     } = resolveStorefrontConfig(project, packages);
 
@@ -304,6 +309,7 @@ export function extractResetParams(
             ...(contentPatchSource && { contentPatchSource }),
             codePatches,
             ...(codePatchSource && { codePatchSource }),
+            ...(brandAssets && { brandAssets }),
         },
     };
 }

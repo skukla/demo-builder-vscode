@@ -12,13 +12,24 @@ import type { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
 
 function makeLogger(): Logger {
-    return { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as unknown as Logger;
+    return {
+        info: jest.fn(),
+        debug: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        trace: jest.fn(),
+    } as unknown as Logger;
 }
 
 describe('createHeadlessHandlerContext', () => {
-    const fakeAuth = { id: 'auth' } as unknown as Parameters<typeof ServiceLocator.setAuthenticationService>[0];
-     
-    const fakeContext = { extensionPath: '/ext', globalState: { get: jest.fn(), update: jest.fn() } } as any;
+    const fakeAuth = { id: 'auth' } as unknown as Parameters<
+        typeof ServiceLocator.setAuthenticationService
+    >[0];
+
+    const fakeContext = {
+        extensionPath: '/ext',
+        globalState: { get: jest.fn(), update: jest.fn() },
+    } as any;
     const fakeStateManager = { getCurrentProject: jest.fn() } as unknown as StateManager;
 
     beforeEach(() => {
@@ -45,4 +56,5 @@ describe('createHeadlessHandlerContext', () => {
         expect(ctx.authManager).toBe(fakeAuth);
         expect(ctx.sharedState).toEqual({ isAuthenticating: false });
     });
+
 });

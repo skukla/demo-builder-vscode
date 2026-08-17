@@ -32,6 +32,11 @@ const STOREFRONT = {
     patches: ['legacy-a'],
     byomOverlayUrl: 'https://example.test/render-pdp',
     accountContentSource: { owner: 'demo', repo: 'content' },
+    brandAssets: {
+        source: { owner: 'skukla', repo: 'bodea-source', branch: 'main' },
+        files: [{ from: 'styles/bodea-theme.css', to: 'styles/bodea-theme.css' }],
+        headSnippet: '<link rel="stylesheet" href="/styles/bodea-theme.css">',
+    },
 };
 
 /**

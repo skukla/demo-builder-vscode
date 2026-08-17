@@ -47,6 +47,7 @@ src/features/eds/
 │   ├── lkgReader.ts                # Reads `last-known-good` SHA from patches repo; supports per-ledger `lkgFile` for multi-canonical patches repos (ADR-006)
 │   ├── lkgPinHelper.ts             # Create-path LKG pin (Step 4b — mirrors edsResetRepoHelper's reset-path pinning so fresh creates produce a repo byte-identical to an immediate reset)
 │   ├── patchReportHelper.ts        # Unified content + code patch result aggregation + warning toast
+│   ├── brandAssetPublisher.ts      # Additive brand-file + head.html snippet vendoring (data-driven from demo-packages.json `brandAssets`)
 │   ├── blockCollectionHelpers.ts   # Block collection installation from source repo with version tracking
 │   ├── edsResetParams.ts            # Reset parameter types and extractResetParams validation
 │   ├── edsResetRepoHelper.ts        # Repo reset helpers (template reset, block libraries, inspector)
@@ -191,11 +192,13 @@ The full architecture (request flows, dependencies on Helix/Catalog Service case
 
 ### Code Patches — Thin-Layer Storefront (ADR-006)
 
-A generic patch engine that lets demo packages ship targeted file edits against a canonical storefront template, retiring the practice of maintaining storefront-shaped forks for small customizations. **Live on develop.** Three demo packages now drive the thin-layer pipeline:
+A generic patch engine that lets demo packages ship targeted file edits against a canonical storefront template, retiring the practice of maintaining storefront-shaped forks for small customizations. **Live on develop.** Three demo packages drive the thin-layer pipeline, all templating on `adobe-commerce/boilerplate-b2b-template`:
 
-- **CitiSignal (PaaS + ACCS)** — 8 patches against `hlxsites/aem-boilerplate-commerce`; replaces the retired `skukla/citisignal-eds-boilerplate` fork.
-- **custom (PaaS + ACCS)** — 2 universal patches (header + sidebar) against the same canonical.
-- **b2b (PaaS + ACCS)** — 5 patches (2 universal + 3 SKU/slash) against `adobe-commerce/boilerplate-b2b-template` — a different upstream from citisignal+custom; supported via the multi-canonical `lkgFile` field on `CodePatchSource`.
+- **CitiSignal (PaaS + ACCS)** — 9 patches via the `citisignal-b2b` ledger; replaces the retired `skukla/citisignal-eds-boilerplate` fork.
+- **custom (PaaS + ACCS)** — 6 patches via the `b2b` ledger.
+- **bodea (PaaS + ACCS, hidden)** — rides the same `b2b` ledger + LKG pin as `custom`; its brand delta ships additively (bodea-blocks library + the brand-assets vendor point below), not as new patches.
+
+The multi-canonical `lkgFile` field on `CodePatchSource` lets ledgers in the same patches repo track different upstreams; every current ledger pins via `b2b/last-known-good`.
 
 The mechanism:
 
@@ -205,12 +208,31 @@ The mechanism:
   - `applyBlockCodePatches` reads installed library blocks via `GitHubFileOperations`, runs the engine, writes patched files back with one commit per file. Phase routing is mechanical: targets starting with `blocks/` → block-phase, everything else → canonical-phase.
 - **lkgPinHelper** — Create-path counterpart to `edsResetRepoHelper`'s reset-side pinning. Runs after `generate-from-template` to bulk-Tree-reset the new repo to canonical@LKG with canonical patches applied. Result: a fresh create produces a repo byte-identical to what an immediate reset would produce. Create and reset mirror.
 - **externalPatchFetcher** — Shared HTTP fetch + per-source promise cache. Used by both `contentPatchRegistry` and `codePatchRegistry` so the two patch domains share one network surface.
-- **lkgReader** — Reads the plain-text `last-known-good` SHA file from the patches repo (D2 in ADR-006 — Chromium LKGR / Nix `git-revision` convention). Supports per-ledger `lkgFile` for multi-canonical patches repos (b2b's ledger tracks `adobe-commerce/boilerplate-b2b-template` and reads `b2b/last-known-good`; citisignal+custom share the root LKG). Strict 40-hex validation; returns `undefined` for all failure modes so the caller can fall back to `main` HEAD per D1 (proceed-and-warn).
+- **lkgReader** — Reads the plain-text `last-known-good` SHA file from the patches repo (D2 in ADR-006 — Chromium LKGR / Nix `git-revision` convention). Supports per-ledger `lkgFile` for multi-canonical patches repos (every current package entry — citisignal-b2b, b2b/custom, bodea — reads `b2b/last-known-good`, which tracks `adobe-commerce/boilerplate-b2b-template`; the root LKG file exists for ledgers tracking other canonicals). Strict 40-hex validation; returns `undefined` for all failure modes so the caller can fall back to `main` HEAD per D1 (proceed-and-warn).
 - **patchReportHelper** — Unified `PatchReport` shape for content + code patch results. `reportUnapplied(report, logger, showWarning?)` is the one-call exit point — UI callers inject `vscode.window.showWarningMessage`; headless (MCP/AI) contexts get warn-level logging only. The orchestrator (`executeStorefrontSetupPhases`) creates one shared report per setup that aggregates canonical (Step 1 pin) + block + content patches, so a single toast surfaces every unapplied patch.
 
 `EdsStorefrontMetadata.lkgSource` marks a storefront as thin-layer; when present, `TemplateUpdateChecker` reads the verified canonical SHA from the patches repo's per-ledger LKG file instead of comparing against the template's `main`. Storefronts pin to the LKG SHA at **both create and reset time** via `buildArchiveUrl` (exported from `githubFileOperations`), which routes the SHA-vs-branch URL shape on `https://github.com/{owner}/{repo}/archive/*.zip`.
 
 The full decision rationale and step-by-step implementation status lives in [ADR-006](../../../docs/architecture/adr/006-thin-layer-storefront-customization.md).
+
+### Brand Assets (brandAssetPublisher)
+
+The additive counterpart to code patches — ADR-006's prescribed "vendored `<link>` + additive
+brand stylesheet" shape, generalized as a data-driven vendor point. A storefront's `brandAssets`
+field in `demo-packages.json` declares a source repo (`owner/repo@branch` — branch HEAD is the
+contract, same integrity model as block libraries), a list of `files[]` copied into the generated
+repo, and an optional `headSnippet` vendored into `head.html` between
+`demo-builder:brand-assets` markers.
+
+- Runs as pipeline Step 2.6 (after block install, so brand files can reference installed
+  blocks); create and reset reach it through the shared pipeline — behavior-identical by
+  construction.
+- Non-fatal (proceed-and-warn: an unbranded storefront still works), idempotent by marker +
+  content comparison, one stale-SHA retry — the `pdp404HandlerPublisher` contract.
+- Targets are policy-checked at the point of consumption (styles/`.css` + scripts/`.js` only,
+  no traversal), and the head snippet is validated (link/script tags with in-repo paths only) —
+  the brand-asset analogue of `patchTargetPolicy`.
+- First consumer: the Bodea package (theme CSS + customer-group module).
 
 ### Commerce Store Discovery (commerceStoreDiscovery)
 

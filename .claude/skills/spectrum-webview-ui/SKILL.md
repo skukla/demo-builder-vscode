@@ -38,7 +38,13 @@ that keep biting — read the docs for the how, read this for the traps.
   Integration flow was the only fullscreen container in the repo, and it cost four failed CSS
   fixes; guarded by a source-reading test in flowStages.test.ts).
 - **When a style override does not take, READ THE DOM before writing a second one.** One pass
-  up the ancestor chain names the culprit; a second guess rarely does. In the webview devtools
+  up the ancestor chain names the culprit; a second guess rarely does. **You cannot read it
+  here — so the second attempt is not yours to make: ask for a screenshot of the specific
+  element, or for the DOM around it.** Four guesses at one spinner's placement on 2026-08-17
+  (`right: 0` landed ~600px away because the field is `flex: 1 1 0`; then beside the label;
+  then centred in the field; then a shrink-to-fit wrapper) cost four build-and-reload cycles.
+  The next CSS question that session was ASKED first — the user named the two elements and
+  the double divider was fixed in one commit. In the webview devtools
   the console defaults to VS Code's outer document — switch the frame dropdown from `top` to
   the innermost `vscode-webview://` frame, or right-click the element → Inspect, then walk
   `parentElement` printing `className` + `getBoundingClientRect()` + the computed

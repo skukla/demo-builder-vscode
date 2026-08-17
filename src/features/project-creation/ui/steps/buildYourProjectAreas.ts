@@ -62,6 +62,11 @@ const BUILD_AREA_DESCRIPTORS: readonly BuildAreaDescriptor[] = [
         condition: { stackRequiresAny: ['requiresGitHub', 'requiresDaLive'] },
     },
     { id: 'integrations', label: 'Integrations' },
+    // Sample data was an area here. It seeds the COMMERCE backend, so it is a
+    // Commerce sub-step now — see CommerceSectionId. As an area it was one
+    // optional radio list in an otherwise empty full-width body, and the body
+    // could not load at all: `find-datapacks` was registered only by the Data
+    // Installer panel's own command.
 ] as const;
 
 /**

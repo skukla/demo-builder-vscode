@@ -12,11 +12,11 @@ describe('AI_CONTEXT_VERSION', () => {
     // generated-content change (see the ai-context-authoring discipline): the
     // constant re-gates every existing project for a bundle refresh — since v8
     // via the silent activation sweep rather than a prompt.
-    // v9: AGENTS.md banner reworded to match ADR-013 reality (edits are kept,
-    // not overwritten — but freeze the file until delete + regenerate). First
-    // bump under the silent-sweep model: no prompt, the sweep folds it in.
-    it('is 9 (honest ADR-013 banner)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(9);
+    // v10: promote_block_to_library is confirm-gated now, so register-custom-block.md
+    // must pass `confirm: true`. Without the bump, existing projects keep the old
+    // skill text and every call that skill makes is refused.
+    it('is 10 (register-custom-block passes confirm:true)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(10);
     });
 });
 

@@ -18,6 +18,7 @@ import { ProjectFileLoader } from './projectFileLoader';
 import { RecentProjectsManager, RecentProject } from './recentProjectsManager';
 import { getLogger } from '@/core/logging';
 import { ExecutionLock } from '@/core/utils';
+import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import { Project, StateData, ProcessInfo } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
 
@@ -68,7 +69,10 @@ export class StateManager {
         try {
             await fs.mkdir(dir, { recursive: true });
         } catch (error) {
-            this.logger.error('Failed to create state directory', error instanceof Error ? error : undefined);
+            this.logger.error(
+                'Failed to create state directory',
+                error instanceof Error ? error : undefined,
+            );
         }
 
         // Load existing state
@@ -108,15 +112,19 @@ export class StateManager {
                     if (freshProject) {
                         this.logger.debug(
                             `[StateManager] Loaded project from manifest: ` +
-                            `selectedPackage=${freshProject.selectedPackage}, selectedStack=${freshProject.selectedStack}`,
+                                `selectedPackage=${freshProject.selectedPackage}, selectedStack=${freshProject.selectedStack}`,
                         );
                         validProject = freshProject;
                     } else {
-                        this.logger.warn(`[StateManager] Failed to load project from manifest at ${projectPath}`);
+                        this.logger.warn(
+                            `[StateManager] Failed to load project from manifest at ${projectPath}`,
+                        );
                     }
                 } catch {
                     // Project path doesn't exist, clear it
-                    this.logger.warn(`Project path ${projectPath} does not exist, clearing project`);
+                    this.logger.warn(
+                        `Project path ${projectPath} does not exist, clearing project`,
+                    );
                 }
             }
 
@@ -146,7 +154,13 @@ export class StateManager {
                 lastUpdated: this.state.lastUpdated,
             };
 
-            await fs.writeFile(this.stateFile, JSON.stringify(data, null, 2));
+            // Atomic (temp + rename): getCurrentProject now reads this file on
+            // every call, from every window. A plain writeFile leaves a window
+            // where a concurrent reader sees a truncated file. The reader treats
+            // a parse failure as "no pointer" and falls back to its in-memory
+            // copy, so a torn read was a silently wrong project rather than an
+            // error.
+            await writeFileAtomic(this.stateFile, JSON.stringify(data, null, 2));
         } catch (error) {
             this.logger.error('Failed to save state', error instanceof Error ? error : undefined);
             throw error;
@@ -169,13 +183,56 @@ export class StateManager {
         return this.state.currentProject !== undefined;
     }
 
+    /**
+     * The current-project path as it stands ON DISK.
+     *
+     * `state.json` is the cross-window authority for which project is selected;
+     * in-memory state is a per-window copy loaded once at `initialize()`. Returns
+     * undefined when there is no pointer, the file is unreadable, or a concurrent
+     * write is caught mid-flight — every one of which means "fall back to what
+     * this window holds".
+     */
+    private async readPointerPathFromDisk(): Promise<string | undefined> {
+        try {
+            const data = await fs.readFile(this.stateFile, 'utf-8');
+            const parsed = parseJSON<{
+                currentProjectPath?: string;
+                currentProject?: Project; // legacy format, same as loadState()
+            }>(data);
+            return parsed?.currentProjectPath ?? parsed?.currentProject?.path;
+        } catch {
+            return undefined;
+        }
+    }
+
     public async getCurrentProject(): Promise<Project | undefined> {
-        // If we have a cached project, reload it from disk to get latest data
-        // Use persistAfterLoad: false to avoid triggering saves during status bar polling
-        if (this.state.currentProject?.path) {
+        // The PATH comes from disk, the DATA from that project's manifest.
+        //
+        // In-memory state is loaded once at initialize() and there is no watcher
+        // on the state file, so a window that did not make the selection held a
+        // stale pointer forever — and answered confidently, because the manifest
+        // really was re-read. Right data, wrong project. That bit the MCP surface
+        // hardest (every window binds the same socket name and the last to bind
+        // serves), but it is not MCP-specific: loadProjectFromPath with
+        // persistAfterLoad:false assigns state.currentProject, so home-screen
+        // kebab actions on an unrelated project reassign this window's in-memory
+        // pointer too.
+        //
+        // Reading the pointer per call also makes the read self-healing: the
+        // window's in-memory copy converges on the next call, via the same
+        // loadProjectFromPath assignment.
+        //
+        // Falls back to the in-memory path when disk has no pointer, so a project
+        // held in memory but never persisted still resolves.
+        const pointerPath =
+            (await this.readPointerPathFromDisk()) ?? this.state.currentProject?.path;
+
+        if (pointerPath) {
             try {
+                // persistAfterLoad: false — avoids triggering saves during status
+                // bar polling.
                 const freshProject = await this.loadProjectFromPath(
-                    this.state.currentProject.path,
+                    pointerPath,
                     () => vscode.window.terminals,
                     { persistAfterLoad: false },
                 );
@@ -194,7 +251,9 @@ export class StateManager {
 
     public async saveProject(project: Project): Promise<void> {
         const stack = new Error().stack?.split('\n').slice(2, 5).join(' <- ') || 'unknown';
-        this.logger.trace(`[StateManager] saveProject called for ${project.name}, caller: ${stack}`);
+        this.logger.trace(
+            `[StateManager] saveProject called for ${project.name}, caller: ${stack}`,
+        );
 
         // Serialize save operations to prevent concurrent writes racing on temp file
         return StateManager.saveLock.run(async () => {
@@ -209,7 +268,10 @@ export class StateManager {
             await this.saveState();
 
             // Save project-specific config via delegated service
-            await this.projectConfigWriter.saveProjectConfig(project, this.state.currentProject?.path);
+            await this.projectConfigWriter.saveProjectConfig(
+                project,
+                this.state.currentProject?.path,
+            );
 
             // Clear dirty state after successful save
             this.dirtyFields.clear();
@@ -230,7 +292,10 @@ export class StateManager {
      */
     public async saveProjectConfigOnly(project: Project): Promise<void> {
         return StateManager.saveLock.run(async () => {
-            await this.projectConfigWriter.saveProjectConfig(project, this.state.currentProject?.path);
+            await this.projectConfigWriter.saveProjectConfig(
+                project,
+                this.state.currentProject?.path,
+            );
         });
     }
 
@@ -316,12 +381,6 @@ export class StateManager {
 
     public async getProcess(name: string): Promise<ProcessInfo | undefined> {
         return this.state.processes.get(name);
-    }
-
-    public async reload(): Promise<void> {
-        await this.loadState();
-        await this.recentProjectsManager.load();
-        this._onProjectChanged.fire(this.state.currentProject);
     }
 
     // Recent Projects Management (delegated)

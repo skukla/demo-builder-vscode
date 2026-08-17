@@ -1,0 +1,4 @@
+{
+  "error": "Invalid input. Must provide one of: (datapack_name), (datapack_name + data_types[]), (data_type + data), or (items[])",
+  "success": false
+}
