@@ -339,6 +339,21 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
     const { repoOwner, repoName } = paramsResult.params;
     const repoFullName = `${repoOwner}/${repoName}`;
 
+    // Started BEFORE the first modal and awaited after it, so the wait happens
+    // while the user is reading a dialog rather than staring at nothing.
+    //
+    // MEASURED 2026-08-17: the second prompt took ~2s to appear. It is not the
+    // HTTP call — that endpoint answers in 130-230ms. It is the IMS token, which
+    // `tokenManager.inspectToken` reads by spawning the whole `aio` Node CLI
+    // (~3.7s cold, per its own comment) whenever its inspection cache is empty. A
+    // reset is a common way to arrive at that cold cache.
+    //
+    // Deliberately NOT awaited here, and gated on the recorded pack so a project
+    // that will never be asked never pays for it. Cancelling the reset therefore
+    // costs one GET whose answer is discarded — bounded, idempotent, and it warms
+    // a token cache eight other call sites want anyway.
+    const canRemoveSampleData = beginSampleDataCredentialCheck(project, context);
+
     const confirmButton = 'Reset Project';
     const confirmation = await vscode.window.showWarningMessage(
         `Are you sure you want to reset "${project.name}"? This will reset all code to the template state and re-copy demo content.`,
@@ -361,7 +376,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
     // one short credential call (see the function), which is bounded and silent
     // on failure; the older "no network call in front of a modal" phrasing here
     // overstated a rule that was really about not adding failure modes.
-    const removeData = await confirmSampleDataRemoval(project, vscode, context);
+    const removeData = await confirmSampleDataRemoval(project, vscode, canRemoveSampleData);
 
     const originalStatus = project.status;
     project.status = 'resetting';
@@ -443,6 +458,67 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
 
 
 /**
+ * Can this project's sample data actually be removed? Started early, awaited late.
+ *
+ * Answering needs a Commerce credential, and getting one is the slow part of this
+ * dialog — not the HTTP call (130-230ms measured) but the IMS token behind it,
+ * which `tokenManager.inspectToken` reads by spawning the whole `aio` CLI when its
+ * inspection cache is cold. Kicking it off before the reset confirmation spends
+ * that time against a dialog the user is already reading.
+ *
+ * Returns undefined when there is no pack — nothing to ask about, so nothing to
+ * spend. **Never rejects**: this is held unawaited across a modal, where a
+ * rejection would surface as an unhandled promise rather than as a failed reset.
+ *
+ * Checked BEFORE the prompt rather than during the reset. Measured live
+ * 2026-08-16: this asked, ran the full ~3-minute storefront reset, and only then
+ * reported "no usable Commerce credentials" — three minutes spent on a question
+ * that could not be honoured. The original gate was `datapack` alone, justified by
+ * "no network call in front of a modal"; that rule was really about not adding
+ * failure modes, and a bounded GET that degrades silently removes one.
+ */
+function beginSampleDataCredentialCheck(
+    project: Project,
+    context: HandlerContext,
+): Promise<boolean> | undefined {
+    if (!project.datapack) {
+        return undefined;
+    }
+
+    // `stackBackend` is a CredentialProject field, NOT a persisted one — it is
+    // mapped from `componentSelections.backend` at every call site. This passed the
+    // raw Project through `as never`, so `stackBackend` was undefined, the dispatch
+    // matched neither backend, and resolution returned `unsupported-backend`
+    // BEFORE the broker was ever built. The prompt then never appeared, silently,
+    // for every project. Measured live 2026-08-17: an import recorded the pack and
+    // the reset forty seconds later asked nothing, with no credential line logged.
+    //
+    // `importHandlers` carries a comment about the identical failure one shape
+    // earlier (`stack?.backend`, a wizard-only shape, resolving to '' for every
+    // real project). Same defect, reintroduced by a cast that silenced the
+    // compiler — which is why the object is built explicitly, exactly as the
+    // import path builds it, and nothing here is cast.
+    return (async () => {
+        const { resolveCommerceCredentials } = await import(
+            '@/features/data-installer/services/commerceCredentials'
+        );
+        const { brokerForContext } = await import(
+            '@/features/data-installer/services/commerceCredentialBroker'
+        );
+        const credentials = await resolveCommerceCredentials({
+            project: {
+                stackBackend: project.componentSelections?.backend ?? '',
+                componentConfigs: project.componentConfigs ?? {},
+            },
+            secrets: context.context.secrets,
+            projectName: project.name,
+            broker: brokerForContext(context, project),
+        });
+        return credentials.ok;
+    })().catch(() => false);
+}
+
+/**
  * Ask whether to remove the imported sample data, when there is any to remove.
  *
  * Opt IN: anything other than the explicit button keeps the data. Someone
@@ -456,57 +532,13 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
 async function confirmSampleDataRemoval(
     project: Project,
     vscode: typeof import('vscode'),
-    context: HandlerContext,
+    canRemove: Promise<boolean> | undefined,
 ): Promise<boolean> {
     const { datapack } = project;
-    if (!datapack) {
+    if (!datapack || !canRemove) {
         return false;
     }
-
-    // Credentials BEFORE the prompt. Measured live 2026-08-16: this asked, ran
-    // the full ~3-minute storefront reset, and only then reported "no usable
-    // Commerce credentials" — three minutes spent on a question that could not
-    // be honoured.
-    //
-    // The original gate was `datapack` alone, justified by "no network call in
-    // front of a modal". THIS CALL NOW MAKES ONE: a project with no declared pair
-    // asks the shared discovery service for the credential it cannot mint itself.
-    // The earlier version of this comment said the opposite, and it was true when
-    // written — do not restore it.
-    //
-    // Keeping the call ahead of the prompt is still right, on three conditions the
-    // broker holds: one short GET on a QUICK timeout, every failure degrading
-    // silently to "no credentials", and no dialog of its own. Weighed against a
-    // three-minute reset the user cannot undo, a sub-second check is cheap.
-    // `stackBackend` is a CredentialProject field, NOT a persisted one — it is
-    // mapped from `componentSelections.backend` at every call site. This passed the
-    // raw Project through `as never`, so `stackBackend` was undefined, the dispatch
-    // matched neither backend, and resolution returned `unsupported-backend`
-    // BEFORE the broker was ever built. The prompt then never appeared, silently,
-    // for every project. Measured live 2026-08-17: an import recorded the pack and
-    // the reset forty seconds later asked nothing, with no credential line logged.
-    //
-    // `importHandlers` carries a comment about the identical failure one shape
-    // earlier (`stack?.backend`, a wizard-only shape, resolving to '' for every
-    // real project). Same defect, reintroduced by a cast that silenced the
-    // compiler — which is why the object is now built explicitly, exactly as the
-    // import path builds it, and nothing here is cast.
-    const { resolveCommerceCredentials } = await import(
-        '@/features/data-installer/services/commerceCredentials'
-    );
-    const { brokerForContext } = await import(
-        '@/features/data-installer/services/commerceCredentialBroker'
-    );
-    const credentials = await resolveCommerceCredentials({
-        project: {
-            stackBackend: project.componentSelections?.backend ?? '',
-            componentConfigs: project.componentConfigs ?? {},
-        },
-        secrets: context.context.secrets,
-        projectName: project.name,
-        broker: brokerForContext(context, project),
-    });
-    if (!credentials.ok) {
+    if (!(await canRemove)) {
         return false;
     }
 

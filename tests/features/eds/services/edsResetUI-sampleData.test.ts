@@ -221,6 +221,19 @@ function answers(...values: Array<string | undefined>): void {
     mock.mockResolvedValue(undefined);
 }
 
+/**
+ * Let the SUT's dynamic imports and its detached credential promise settle.
+ *
+ * The lookup is started without being awaited, so nothing the caller returns
+ * guarantees it has run. A microtask tick is not enough — `await import()`
+ * resolves on the macrotask queue.
+ */
+async function flush(): Promise<void> {
+    for (let i = 0; i < 5; i++) {
+        await new Promise((resolve) => setImmediate(resolve));
+    }
+}
+
 function run(project: Project) {
     return resetEdsProjectWithUI({ project, context: createContext(), packages: testPackages });
 }
@@ -432,6 +445,77 @@ describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
         const askedAt = (vscode.window.showWarningMessage as jest.Mock).mock.invocationCallOrder[1];
         const checkedAt = mockedCredentials.mock.invocationCallOrder[0];
         expect(checkedAt).toBeLessThan(askedAt);
+    });
+
+    /**
+     * The lookup starts before the FIRST modal, not between the two.
+     *
+     * Reported live 2026-08-17: the second prompt took ~2s to appear after the
+     * first was confirmed. The cost is not the HTTP call (130-230ms measured) but
+     * the IMS token behind it — `tokenManager.inspectToken` spawns the whole `aio`
+     * CLI when its inspection cache is cold, which its own comment puts at ~3.7s.
+     * Nothing here makes that faster; starting it against a dialog the user is
+     * already reading is what removes the wait.
+     *
+     * Pinned on ordering because it is the entire point and is otherwise invisible:
+     * awaiting in the old place passes every other test in this file.
+     */
+    it('runs the credential lookup WHILE the reset confirmation is still open', async () => {
+        // Held open, so "did the lookup happen yet?" is a question about overlap
+        // rather than about call order. Ordering alone cannot express this: the
+        // lookup sits behind two dynamic imports, so it is always invoked a
+        // microtask AFTER the modal opens — which is exactly what makes it
+        // concurrent with the modal rather than after it.
+        let releaseFirstModal!: (answer: string) => void;
+        const firstModal = new Promise<string>((resolve) => {
+            releaseFirstModal = resolve;
+        });
+        const mock = vscode.window.showWarningMessage as jest.Mock;
+        mock.mockReset();
+        mock.mockReturnValueOnce(firstModal);
+        mock.mockResolvedValueOnce(REMOVE);
+        mock.mockResolvedValue(undefined);
+
+        const pending = run(createProject({ name: 'bodea', version: 'main' }));
+        await flush();
+
+        // The user has not answered anything yet.
+        expect(mockedCredentials).toHaveBeenCalled();
+
+        releaseFirstModal(RESET);
+        await pending;
+    });
+
+    /**
+     * Cancelling costs one discarded lookup — acceptable, and asserted so the
+     * trade-off is a decision rather than an accident. It must NOT cost a second
+     * prompt.
+     */
+    it('starts it even if the reset is then cancelled, and asks nothing', async () => {
+        answers(undefined);
+
+        await run(createProject({ name: 'bodea', version: 'main' }));
+        await flush();
+
+        expect(mockedCredentials).toHaveBeenCalledTimes(1);
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+        expect(mockedRemove).not.toHaveBeenCalled();
+    });
+
+    /**
+     * CONTROL for the unawaited promise: a rejecting lookup must degrade to "do
+     * not ask", never surface as an unhandled rejection or fail the reset. It is
+     * held across a modal, so a throw here has no caller to catch it.
+     */
+    it('CONTROL — a lookup that throws keeps the reset successful and asks nothing', async () => {
+        answers(RESET);
+        mockedCredentials.mockRejectedValue(new Error('discovery service down'));
+
+        const result = await run(createProject({ name: 'bodea', version: 'main' }));
+
+        expect(result.success).toBe(true);
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+        expect(mockedRemove).not.toHaveBeenCalled();
     });
 
     /** No pack, no credential lookup — nothing to spend it on. */
