@@ -20,6 +20,7 @@
 import { z } from 'zod';
 import { needsUser } from './handoff';
 import type { ToolDescriptor } from './toolDescriptors';
+import { prerequisitesHandlers } from '@/features/prerequisites/handlers/prerequisitesHandlers';
 import { projectCreationHandlers } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
 
 /** Owner/repo, shared by both GitHub-side checks. */
@@ -29,6 +30,39 @@ const REPO = {
 };
 
 export const STATUS_DESCRIPTORS: ToolDescriptor[] = [
+    {
+        tool: 'check_prerequisites',
+        description:
+            'Check the tools a stack needs (Node versions, aio CLI, plugins) and whether each is installed. Requires a stack id from list_stacks.',
+        map: prerequisitesHandlers,
+        type: 'check-prerequisites',
+        inputSchema: {
+            // REQUIRED, and not merely for convenience. `getNodeVersionMapping`
+            // returns `{}` when `sharedState.currentComponentSelection` is unset
+            // (`shared.ts:268-270`), which only `selectedStack` populates. With an
+            // empty mapping `checkNodePrerequisite` takes its "no components need
+            // Node" branch and reports Node as **installed: true** — a silent pass
+            // on the prerequisite most likely to be missing. Same class as the
+            // Group 0b defect, one layer in.
+            selectedStack: z
+                .string()
+                .describe(
+                    'Stack id from list_stacks, e.g. eds-accs. Determines which Node versions are checked',
+                ),
+            selectedOptionalDependencies: z
+                .array(z.string())
+                .optional()
+                .describe('Optional dependency ids the project actually uses, e.g. api-mesh'),
+            isRecheck: z
+                .boolean()
+                .optional()
+                .describe('Clear the cache and re-run every check from scratch'),
+        },
+        // Dispatch-only: the handler pushes its answer and returns a bare
+        // `{success: true}` (`checkHandler.ts:448`). The completion event carries
+        // `allInstalled` plus a per-prerequisite summary.
+        capturePayloadFrom: 'prerequisites-complete',
+    },
     {
         tool: 'check_github_app',
         description:

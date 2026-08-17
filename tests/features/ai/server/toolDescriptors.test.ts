@@ -6,6 +6,7 @@
  * `confirm` gating — all without touching vscode.
  */
 
+import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { defaultShape, registerDescriptorTools, type ToolDescriptor } from '@/features/ai/server/toolDescriptors';
 import type { HandlerContext, HandlerMap, HandlerResponse } from '@/types/handlers';
 
@@ -328,5 +329,32 @@ describe('preflight', () => {
         const t = build({ confirm: true, preflight: () => HANDOFF });
         expect((await t.call({})).content[0].text).toMatch(/requires confirm:true/);
         expect(t.ran).toEqual([]);
+    });
+});
+
+// check_prerequisites is the clearest capture case on the surface: the handler
+// runs every check, pushes the verdict, and returns a bare {success:true}.
+describe('check_prerequisites wiring', () => {
+    const row = STATUS_DESCRIPTORS.find((d) => d.tool === 'check_prerequisites')!;
+
+    it('captures the completion event, or the tool would answer "{}"', () => {
+        expect(row.capturePayloadFrom).toBe('prerequisites-complete');
+    });
+
+    // Without selectedStack the node-version mapping is {} and Node is reported
+    // INSTALLED regardless of the machine (`shared.ts:268` → `checkHandler.ts:168-179`).
+    // Optional here would ship a check that passes on a bare machine.
+    it('requires selectedStack — optional would make it lie about Node', () => {
+        expect(row.inputSchema?.selectedStack).toBeDefined();
+        expect(row.inputSchema!.selectedStack.isOptional()).toBe(false);
+    });
+
+    it('leaves the genuinely optional arguments optional', () => {
+        expect(row.inputSchema!.selectedOptionalDependencies.isOptional()).toBe(true);
+        expect(row.inputSchema!.isRecheck.isOptional()).toBe(true);
+    });
+
+    it('is not confirm-gated — it only reads', () => {
+        expect(row.confirm).toBeUndefined();
     });
 });
