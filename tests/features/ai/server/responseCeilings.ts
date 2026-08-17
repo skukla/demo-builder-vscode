@@ -110,6 +110,21 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     list_stacks: { bytes: 4_000, why: 'catalog summary; 601 live' },
     get_auth_status: { bytes: 2_000, why: 'per-provider status flags; 120 live' },
     get_current_project: { bytes: 2_000, why: 'name + path; 110 live' },
+
+    // ── diagnosis (phase 4, Group 1) — measured live 2026-08-17 ─────────────
+    check_repo_readiness: { bytes: 1_000, why: 'a verdict kind, sometimes a reason; 35 live' },
+    check_github_app: {
+        bytes: 1_000,
+        why: 'three flags, plus an install URL when absent; 63 live installed, 128 not-installed',
+    },
+    discover_store_structure: {
+        bytes: 8_000,
+        why:
+            '635 live for a 2-website / 2-group / 2-view hierarchy, 420 for the PaaS handoff, 107 for a failure. ' +
+            'UNBOUNDED BY DESIGN — it scales with the merchant’s store hierarchy and has no page size, because ' +
+            'the whole hierarchy IS the answer (the caller is choosing a scope from it). 8,000 covers roughly ' +
+            '30x this store; a breach means a merchant large enough to need paging, not a regression',
+    },
 };
 
 /**

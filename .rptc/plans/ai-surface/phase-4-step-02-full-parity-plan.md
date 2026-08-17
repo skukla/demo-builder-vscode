@@ -103,7 +103,29 @@ fix, and it must land before the tool.
 | `get_auth_status` **(enrich)** | `handleCheckGitHubAuth`, `handleCheckDaLiveAuth` | Add GitHub `orgs` and the DA.live `orgName`. The pinned DA.live namespace is reachable nowhere today and every DA.live write depends on it. ⚠️ `handleCheckGitHubAuth` **stores a token** when it finds a VS Code session (`edsGitHubHandlers.ts:79-83`) — do not expose it under a `check_*` name without splitting that write. |
 | `check_github_app` | `checkGitHubAppHandler` | Is AEM Code Sync installed on a repo. First thing to check when publishing silently fails. |
 | `check_repo_readiness` | `checkRepoReadinessHandler` | Can this repo serve as a storefront. |
-| `discover_store_structure` | `handleDiscoverStoreStructureAndPersist` | The LIVE Commerce fetch. `get_store_structure` only reads what was already stored. |
+| `discover_store_structure` | ~~`handleDiscoverStoreStructureAndPersist`~~ → `handleDiscoverStoreStructure` | The LIVE Commerce fetch. `get_store_structure` only reads what was already stored. **BUILT 2026-08-17, bound to the NON-persisting handler** — see the deviation note below. |
+
+**Deviation (2026-08-17): `discover_store_structure` does NOT persist.** This table named
+`handleDiscoverStoreStructureAndPersist`, which writes the discovered hierarchy onto the current
+project. That wrapper's own docstring explains it is wrapped rather than folded in precisely
+because the shared handler is also registered by the WIZARD, where `getCurrentProject()` would
+"write another project's structure onto it" (`configureHandlers.ts:82-100`). An agent calls a
+`discover_*` tool speculatively, often with no project in mind, so the agent surface has exactly
+the hazard the wrapper was built to avoid. The tool is a pure read; persisting stays an explicit
+step. Revisit if an agent needs `get_store_structure` to reflect a discovery it just ran.
+
+**Two things the live probe caught that every offline check passed (2026-08-17):**
+
+1. The first draft's schema exposed `environmentType`, guessed from the tool name. The handler
+   requires **`backendType: 'accs' | 'paas'`** (`edsHandlers.ts:88`) and rejects the call without
+   it — so the tool failed 100% of calls while jest, tsc, typecheck:tests and eslint were green.
+   The schema and its test agreed with each other and neither agreed with the handler.
+2. **PaaS discovery authenticates with an admin username and password carried in the payload**
+   (`edsHandlers.ts:118-127`). That is a `secret-entry` handoff, not a parameter — a credential in
+   a tool argument lands in the transcript and in whatever logs the agent keeps. The PaaS branch
+   now returns `needsUser` and never dispatches; ACCS resolves its IMS token from context and
+   dispatches normally. `additionalProperties: false` in the generated schema means a caller
+   cannot smuggle the credentials through regardless.
 | `validate_component_selection` | merges `checkCompatibility` + `validateSelection` + `loadDependencies` | One question, one tool. |
 | `get_component_requirements` | `handleGetComponentsData`, narrowed | Env vars, dependencies, services for one component. `list_components` returns only `{id, name}`. |
 
@@ -133,7 +155,29 @@ integrations, no store scope. The remaining configuration has no tool except raw
 | `set_block_libraries` | Selected + custom. Custom libraries are settings-only today → handoff for those. |
 | `set_datapack` | Records which datapack seeds the project (the wizard's Sample Data area records, never imports). |
 | `set_addons` | e.g. ACO, unreachable today. |
-| `configure_project` | Or: ONE tool mirroring `save-configuration`, taking a partial config. **Decide first** — five narrow tools or one wide one. The wizard treats these as one step, which argues for one tool. |
+### DECIDED (2026-08-16): ONE `configure_project`, not the five narrow tools
+
+One tool mirroring `save-configuration` and taking a partial config. The five rows above become
+its fields, not separate tools.
+
+Decided on output efficiency, which here is dominated by ROUND TRIPS, not schema bytes:
+
+- **One turn, not five.** Configuring a project is one wizard step and one handler; five tools make
+  it five model turns for one user intent.
+- **One coherent result.** The agent's real next question is "is this project configured enough to
+  proceed, and what is missing?" One tool answers that in the same payload. Five each answer a
+  fragment, forcing a sixth read to find out where it stands.
+- **One handoff, in context.** Secrets are typed by a person. Five tools return that handoff from
+  one call while four others report success, and the agent stitches a mixed picture. One tool
+  returns one result: applied, still unset, needs-you.
+- **1:1 with the handler.** Five tools are five read-modify-write wrappers over a single
+  `save-configuration` — five chances at a lost update and five copies of the guard.
+
+The narrow tools' genuine advantage is that invalid combinations are unrepresentable in the schema.
+Buy it back inside the tool: validate the three store-scope codes as a **triple**, **reject unknown
+keys** rather than ignoring them (a silently-dropped field is the worst failure here), and return
+the **applied diff plus what remains unset** — never a bare success (see the empty-response guard in
+`tests/features/ai/server/responseSize.test.ts`).
 
 ## Group 4 — Integrations
 
@@ -249,6 +293,7 @@ adding 3; verifying them one at a time costs 15x.
 |---|---|---|
 | **1** | Both defects · the `needsUser` type · the capture-adapter helper · the projector library | Small, few files, and nothing built later is trustworthy until defect 0a is settled |
 | **2** | **Every descriptor row at once** — each tool whose handler already returns its payload or works through the capture adapter | The win: one file, one test file, one ceiling batch, **one F5 verification pass** |
+| ↳ 2a ✅ | `check_github_app` · `check_repo_readiness` · `discover_store_structure` in `statusDescriptors.ts`, live-measured | Done 2026-08-17. Batched deliberately small because it also had to prove three bindings (plain return · forced-arg · capture) before the bulk drop rides on them — and two of the three turned up defects |
 | **3** | Handlers needing a real edit — `add_integration`'s panel branch, `install_prerequisite`'s id addressing | Genuine code, but few |
 | **4** | Group 3 configuration | Design decision first; the only genuinely new surface |
 

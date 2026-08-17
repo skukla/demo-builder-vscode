@@ -20,7 +20,21 @@
  * a payload larger than production before trusting a ceiling.
  */
 
-/** Default rows per page. Enough to answer a question; short of dumping a table. */
+/**
+ * Default rows per page for every agent-facing list.
+ *
+ * The Data Installer service defaults to 100 rows — a sensible UI page and a
+ * terrible agent one. Measured 2026-08-16 against a live service:
+ * `get_datapack_activity` with no arguments returned 100 of 1,099 rows and cost
+ * **25,056 bytes (~6,264 tokens)**, more than 2.5x the entire 65-tool catalogue
+ * of descriptions. An agent's first call is almost always `{}`, so the default
+ * IS the cost.
+ *
+ * 20 is enough to answer "what happened recently" or "what is installed" in one
+ * call; `skip` pages for the rest, and `total` in the envelope says how much is
+ * there. As a zod default it is applied by the MCP SDK before our handler runs
+ * (`validateToolInput` → `parseResult.data`), so it needs no handler change.
+ */
 export const AGENT_PAGE_SIZE = 20;
 
 /** The paging envelope an agent needs to know whether it has everything. */

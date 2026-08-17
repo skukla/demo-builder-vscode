@@ -196,3 +196,137 @@ describe('capturePayloadFrom', () => {
         expect((await tools.get('t')!({})).content[0].text).toMatch(/^Error: nope/);
     });
 });
+
+// A captured payload can contradict the handler's return, and production does
+// exactly that: `handleDiscoverStoreStructure` sends the discovery failure, then
+// returns `{success:true}` because the HANDLER ran fine (`edsHandlers.ts:153`).
+describe('capturePayloadFrom — when the payload disagrees with the return', () => {
+    function run(sent: Record<string, unknown>, returned: HandlerResponse) {
+        const map: HandlerMap = {
+            'do-thing': async (ctx: HandlerContext) => {
+                await ctx.sendMessage('thing-result', sent);
+                return returned;
+            },
+        };
+        const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
+        registerDescriptorTools(
+            { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
+            [{ tool: 't', description: 'd', map, type: 'do-thing', capturePayloadFrom: 'thing-result' }],
+            () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
+        );
+        return tools.get('t')!({});
+    }
+
+    it('reports the operation failure, not the handler success', async () => {
+        const out = await run(
+            { success: false, error: 'Store discovery failed: 404' },
+            { success: true },
+        );
+        expect(out.content[0].text).toMatch(/^Error: Store discovery failed: 404/);
+    });
+
+    it('never emits a success carrying a stray error field', async () => {
+        const out = await run({ success: false, error: 'nope' }, { success: true });
+        expect(out.content[0].text).not.toMatch(/^\{/);
+    });
+
+    it('still merges when the payload reports success', async () => {
+        const out = await run({ success: true, stores: ['a', 'b'] }, { success: true });
+        expect(JSON.parse(out.content[0].text)).toEqual({ stores: ['a', 'b'] });
+    });
+});
+
+// A read tool must not carry a write on any branch. `checkGitHubApp` fires a
+// code sync at the repo when Helix 404s unless `skipTrigger` is set, so the
+// guard has to be un-overridable — a default the agent can turn off is not one.
+describe('argDefaults', () => {
+    function capture(row: Partial<ToolDescriptor>, sent: Record<string, unknown>) {
+        const seen: Record<string, unknown>[] = [];
+        const map: HandlerMap = {
+            'do-thing': async (_ctx: HandlerContext, payload: unknown) => {
+                seen.push(payload as Record<string, unknown>);
+                return { success: true, ok: true };
+            },
+        };
+        const tools = new Map<string, (a: unknown) => Promise<unknown>>();
+        registerDescriptorTools(
+            { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
+            [{ tool: 't', description: 'd', map, type: 'do-thing', ...row } as ToolDescriptor],
+            () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
+        );
+        return tools.get('t')!(sent).then(() => seen[0]);
+    }
+
+    it('forces its values onto the handler payload', async () => {
+        expect(await capture({ argDefaults: { skipTrigger: true } }, {})).toMatchObject({
+            skipTrigger: true,
+        });
+    });
+
+    it('OVERRIDES a caller trying to turn the guard off', async () => {
+        expect(
+            await capture({ argDefaults: { skipTrigger: true } }, { skipTrigger: false }),
+        ).toMatchObject({ skipTrigger: true });
+    });
+
+    it('leaves the caller\'s other arguments alone', async () => {
+        expect(
+            await capture({ argDefaults: { skipTrigger: true } }, { owner: 'me', repo: 'site' }),
+        ).toMatchObject({ owner: 'me', repo: 'site', skipTrigger: true });
+    });
+
+    it('changes nothing for a row that declares none', async () => {
+        expect(await capture({}, { owner: 'me' })).toMatchObject({ owner: 'me' });
+    });
+});
+
+// A capability that needs a person still gets a tool — it just refuses BEFORE
+// dispatching. Shaping the result afterwards would be too late: the call has
+// already happened with whatever the agent could supply.
+describe('preflight', () => {
+    const HANDOFF = { needsUser: { reason: 'secret-entry', what: 'Type the password' } };
+
+    function build(row: Partial<ToolDescriptor>) {
+        const ran: string[] = [];
+        const map: HandlerMap = {
+            'do-thing': async () => {
+                ran.push('dispatched');
+                return { success: true, data: 'real work' };
+            },
+        };
+        const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
+        registerDescriptorTools(
+            { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
+            [{ tool: 't', description: 'd', map, type: 'do-thing', ...row } as ToolDescriptor],
+            () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
+        );
+        return { call: (a: unknown) => tools.get('t')!(a), ran };
+    }
+
+    it('returns the handoff and NEVER dispatches', async () => {
+        const t = build({ preflight: () => HANDOFF });
+        expect(JSON.parse((await t.call({})).content[0].text)).toEqual(HANDOFF);
+        expect(t.ran).toEqual([]);
+    });
+
+    it('dispatches normally when preflight returns nothing', async () => {
+        const t = build({ preflight: () => undefined });
+        expect((await t.call({})).content[0].text).toBe('"real work"');
+        expect(t.ran).toEqual(['dispatched']);
+    });
+
+    it('branches on the arguments', async () => {
+        const t = build({ preflight: (a) => (a.backendType === 'paas' ? HANDOFF : undefined) });
+        await t.call({ backendType: 'accs' });
+        expect(t.ran).toEqual(['dispatched']);
+        await t.call({ backendType: 'paas' });
+        expect(t.ran).toEqual(['dispatched']);
+    });
+
+    // A preflight must not become a way around the confirm gate.
+    it('an unconfirmed destructive row still refuses first', async () => {
+        const t = build({ confirm: true, preflight: () => HANDOFF });
+        expect((await t.call({})).content[0].text).toMatch(/requires confirm:true/);
+        expect(t.ran).toEqual([]);
+    });
+});

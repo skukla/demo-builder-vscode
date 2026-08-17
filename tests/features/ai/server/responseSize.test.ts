@@ -20,6 +20,7 @@
 
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
+import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { registerDescriptorTools, type ToolDescriptor } from '@/features/ai/server/toolDescriptors';
 import type { HandlerContext, HandlerMap, HandlerResponse } from '@/types/handlers';
 import { RESPONSE_CEILINGS } from './responseCeilings';
@@ -123,7 +124,7 @@ const PAYLOADS: Record<string, HandlerResponse> = {
 /** Generic oversized payload for rows that declare no projector. */
 const GENERIC: HandlerResponse = { success: true, data: { items: bigRows(400) } };
 
-const ALL = [...READ_DESCRIPTORS, ...ACTION_DESCRIPTORS];
+const ALL = [...READ_DESCRIPTORS, ...STATUS_DESCRIPTORS, ...ACTION_DESCRIPTORS];
 const SHAPED = ALL.filter((d) => d.shape).map((d) => d.tool);
 
 describe('descriptor tools — response size', () => {
@@ -239,6 +240,10 @@ describe('rows with no output safety net are classified', () => {
     const NO_SAFETY_NET = [
         // `apply_updates` is deliberately absent — it is a bespoke tool
         // (`applyUpdatesTool.ts`), not a descriptor row, so it is out of scope here.
+        // Both verified by reading the handler: `checkGitHubApp` returns its
+        // response object directly (`checkGitHubAppHandler.ts:261`) and
+        // `handleCheckRepoReadiness` returns `{success, readiness}` (`:50`).
+        'check_github_app', 'check_repo_readiness',
         'add_console_apis', 'check_datapack_service', 'check_mesh',
         'delete_ai_prompt', 'delete_mesh', 'deploy_integration', 'deploy_mesh',
         'export_project_settings', 'get_datapack', 'get_datapack_activity',
@@ -293,10 +298,25 @@ describe('the ceiling table tracks the tool surface', () => {
             'find_datapacks', 'list_installed_datapacks', 'get_datapack_activity',
             'verify_ai_setup', 'list_ai_prompts', 'list_console_apis',
         ]);
+        // Rows built but not yet driven against a live extension. Distinct from
+        // EXEMPT on purpose: exempt is a decision, this is an IOU. A ceiling is a
+        // live measurement, and inventing one from the stub harness would record a
+        // number no production payload ever produced. These get promoted to real
+        // ceilings in the same F5 pass that first exercises them; anything left
+        // here after that pass is a tool nobody actually ran.
+        //
+        // Empty right now: Group 1's three rows were measured live on 2026-08-17
+        // and moved into the table.
+        const PENDING_LIVE_MEASUREMENT = new Set<string>([]);
+
         const missing = descriptorTools.filter(
-            (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t),
+            (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t) && !PENDING_LIVE_MEASUREMENT.has(t),
         );
         expect(missing).toEqual([]);
+
+        // An IOU that is already paid is rot in the other direction.
+        const paid = [...PENDING_LIVE_MEASUREMENT].filter((t) => RESPONSE_CEILINGS[t]);
+        expect(paid).toEqual([]);
 
         // The exemption list needs the same two-way check as the ceilings, or it
         // rots in the direction nothing notices: an entry that names no descriptor

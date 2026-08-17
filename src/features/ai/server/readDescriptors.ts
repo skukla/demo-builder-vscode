@@ -11,6 +11,10 @@
  */
 
 import { z } from 'zod';
+// AGENT_PAGE_SIZE is owned by `projectors.ts`, alongside the shaping that applies
+// it — two copies of a default page size drift into two different defaults. The
+// measurement behind the number is in its docstring there.
+import { AGENT_PAGE_SIZE } from './projectors';
 import { defaultShape, type ToolDescriptor } from './toolDescriptors';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
@@ -18,23 +22,6 @@ import { dataInstallerHandlers } from '@/features/data-installer/handlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { meshHandlers } from '@/features/mesh/handlers';
 import type { HandlerResponse } from '@/types/handlers';
-
-/**
- * Default page size for list reads.
- *
- * The Data Installer service defaults to 100 rows — a sensible UI page and a
- * terrible agent one. Measured 2026-08-16 against a live service:
- * `get_datapack_activity` with no arguments returned 100 of 1,099 rows and cost
- * **25,056 bytes (~6,264 tokens)**, more than 2.5x the entire 65-tool catalogue
- * of descriptions. An agent's first call is almost always `{}`, so the default
- * IS the cost.
- *
- * 20 is enough to answer "what happened recently" or "what is installed" in one
- * call; `skip` pages for the rest, and `total` in the envelope says how much is
- * there. The zod default is applied by the MCP SDK before our handler runs
- * (`validateToolInput` → `parseResult.data`), so it needs no handler change.
- */
-const AGENT_PAGE_SIZE = 20;
 
 /** Paging, shared by the Data Installer's list reads. */
 const PAGING = {

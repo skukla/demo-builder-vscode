@@ -29,6 +29,7 @@ import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandl
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
 import { mcpSocketBindings } from '@/features/ai/server/mcpSocketPath';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
+import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
 import { registerViewTools } from '@/features/ai/server/viewTools';
@@ -497,7 +498,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             registerExtraTools: (mcpServer) => {
                 registerDescriptorTools(
                     mcpServer,
-                    [...READ_DESCRIPTORS, ...ACTION_DESCRIPTORS],
+                    [...READ_DESCRIPTORS, ...STATUS_DESCRIPTORS, ...ACTION_DESCRIPTORS],
                     ctxFactory,
                 );
                 registerDiscoveryTools(mcpServer);

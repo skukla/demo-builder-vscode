@@ -48,6 +48,34 @@ export interface ToolDescriptor {
      */
     capturePayloadFrom?: string;
     /**
+     * Arguments forced onto every call, overriding anything the agent sends.
+     *
+     * Exists because a handler's default can be a WRITE. `checkGitHubApp` fires
+     * `triggerAndWaitForCodeSync` against the repo when Helix 404s, unless
+     * `skipTrigger` is set (`checkGitHubAppHandler.ts:202-228`) — so exposing it
+     * as `check_github_app` without forcing that flag ships a read tool that
+     * mutates a repo, and an agent enumerating checks would trip it.
+     *
+     * Forced, not defaulted: a default the agent can override is not a guard.
+     * Anything the caller should control belongs in `inputSchema` instead.
+     */
+    argDefaults?: Record<string, unknown>;
+    /**
+     * Answer the call WITHOUT dispatching, when a value is returned.
+     *
+     * For capabilities the agent cannot complete: return a `needsUser` handoff and
+     * the handler never runs. Dispatching first and shaping after is not the same
+     * thing — by then the call has already happened, with whatever the agent could
+     * supply, and the user sees a failure instead of an instruction.
+     *
+     * The case that motivated it: PaaS store discovery takes an admin username and
+     * password in its payload (`edsHandlers.ts:118-127`). Those must never travel
+     * through a tool argument, so the tool refuses the PaaS branch and points at
+     * the surface where a person types them. The ACCS branch needs no secret and
+     * dispatches normally.
+     */
+    preflight?: (args: Record<string, unknown>) => Record<string, unknown> | undefined;
+    /**
      * Custom response projector; defaults to {@link defaultShape}.
      *
      * Receives the validated call arguments as well as the response, so a row
@@ -104,19 +132,41 @@ async function runHandler(
     ctxFactory: () => HandlerContext,
     args: Record<string, unknown>,
 ): Promise<HandlerResponse> {
+    // Forced last, so a caller cannot send the flag that turns a read into a write.
+    const callArgs = d.argDefaults ? { ...args, ...d.argDefaults } : args;
+
     if (!d.capturePayloadFrom) {
-        return dispatchHandler(d.map, ctxFactory(), d.type, args);
+        return dispatchHandler(d.map, ctxFactory(), d.type, callArgs);
     }
     const events: CapturedEvent[] = [];
     const res = await dispatchHandler(
         d.map,
         withCapturedProgress(ctxFactory(), events),
         d.type,
-        args,
+        callArgs,
     );
     if (!res.success) return res;
     const captured = payloadOfEvent(events, d.capturePayloadFrom);
-    return captured ? ({ ...captured, ...res } as HandlerResponse) : res;
+    if (!captured) return res;
+
+    // Two different questions wear the same `success` key, and conflating them
+    // reports failures as successes.
+    //
+    // The RETURN answers "did the handler run"; the captured payload answers
+    // "did the operation succeed". They diverge in production:
+    // `handleDiscoverStoreStructure` sends the discovery failure and then
+    // returns `{success: true}` with the comment "Handler succeeded, discovery
+    // failed" (`edsHandlers.ts:153`). Spreading the return last would let its
+    // `true` overwrite the payload's `false` and hand the agent a success
+    // carrying a stray `error`.
+    //
+    // So a captured failure wins outright — it is the outcome the caller asked
+    // about. Otherwise the return's fields win, since a handler that bothered to
+    // return data meant it.
+    if (captured.success === false) {
+        return captured as HandlerResponse;
+    }
+    return { ...captured, ...res } as HandlerResponse;
 }
 
 export function registerDescriptorTools(
@@ -138,6 +188,14 @@ export function registerDescriptorTools(
                 return {
                     content: [{ type: 'text' as const, text: `${d.tool} requires confirm:true to proceed.` }],
                 };
+            }
+            // After the confirm gate, before any dispatch: a preflight answer means
+            // the handler must not run at all. Order is deliberate — a destructive
+            // row still refuses an unconfirmed call first, so adding a preflight can
+            // never widen what a tool will do without confirmation.
+            const early = d.preflight?.(args ?? {});
+            if (early) {
+                return { content: [{ type: 'text' as const, text: JSON.stringify(early) }] };
             }
             const res = await runHandler(d, ctxFactory, args ?? {});
             return { content: [{ type: 'text' as const, text: shape(res, args ?? {}) }] };
