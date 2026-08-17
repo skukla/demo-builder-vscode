@@ -931,7 +931,11 @@ export class AdobeEntityFetcher {
      * failure, missing org, unavailable SDK, or any SDK error (403 permission /
      * 409 name-taken / quota), which the handler surfaces to the user.
      */
-    async createProject(title: string, description: string): Promise<AdobeProject | undefined> {
+    async createProject(
+        title: string,
+        description: string,
+        target?: { orgId?: string },
+    ): Promise<AdobeProject | undefined> {
         // Input validation — enforce constraints regardless of caller.
         if (!title || title.length > 200) {
             this.debugLogger.error('[Entity Fetcher] Invalid project title (empty or >200 chars)');
@@ -945,7 +949,11 @@ export class AdobeEntityFetcher {
         try {
             await this.ensureSDKReady();
 
-            const orgId = this.cacheManager.getCachedOrganization()?.id;
+            // An explicit target overrides the cache. The cache is the UI's
+            // selection; the agent surface has its own (`adobeTargetStore`), and
+            // `select_org` does not write the cache — so without this a tool would
+            // create in whatever the UI last selected. See ADR/plan defect 0a.
+            const orgId = target?.orgId ?? this.cacheManager.getCachedOrganization()?.id;
             if (!orgId) {
                 this.debugLogger.debug('[Entity Fetcher] Cannot create project: missing org ID');
                 return undefined;
@@ -1156,7 +1164,11 @@ export class AdobeEntityFetcher {
      * unavailable SDK, or any SDK error (403 permission / 409 name-taken /
      * quota), which the handler surfaces to the user.
      */
-    async createWorkspace(title: string, description: string): Promise<AdobeWorkspace | undefined> {
+    async createWorkspace(
+        title: string,
+        description: string,
+        target?: { orgId?: string; projectId?: string },
+    ): Promise<AdobeWorkspace | undefined> {
         // Input validation — enforce constraints regardless of caller.
         if (!title || title.length > 200) {
             this.debugLogger.error(
@@ -1172,8 +1184,11 @@ export class AdobeEntityFetcher {
         try {
             await this.ensureSDKReady();
 
-            const orgId = this.cacheManager.getCachedOrganization()?.id;
-            const projectId = this.cacheManager.getCachedProject()?.id;
+            // Explicit target wins over the cache — same reason as createProject:
+            // the agent's selection lives in `adobeTargetStore`, which never
+            // reaches this cache, so a cached project could be a different one.
+            const orgId = target?.orgId ?? this.cacheManager.getCachedOrganization()?.id;
+            const projectId = target?.projectId ?? this.cacheManager.getCachedProject()?.id;
             if (!orgId || !projectId) {
                 this.debugLogger.debug(
                     '[Entity Fetcher] Cannot create workspace: missing org or project ID',

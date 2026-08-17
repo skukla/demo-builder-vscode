@@ -533,10 +533,14 @@ export class AuthenticationService {
      * Create a new Adobe I/O App Builder project in the current organization.
      * Returns the created project, or undefined on failure (permission, quota, etc.).
      */
-    async createProject(name: string, description: string): Promise<AdobeProject | undefined> {
+    async createProject(
+        name: string,
+        description: string,
+        target?: { orgId?: string },
+    ): Promise<AdobeProject | undefined> {
         return withTiming('createProject', async () => {
             const { fetcher } = await this.ensureEntities();
-            return fetcher.createProject(name, description);
+            return fetcher.createProject(name, description, target);
         });
     }
 
@@ -544,10 +548,14 @@ export class AuthenticationService {
      * Create a new workspace in the current organization's selected project.
      * Returns the created workspace, or undefined on failure (permission, quota, etc.).
      */
-    async createWorkspace(name: string, description: string): Promise<AdobeWorkspace | undefined> {
+    async createWorkspace(
+        name: string,
+        description: string,
+        target?: { orgId?: string; projectId?: string },
+    ): Promise<AdobeWorkspace | undefined> {
         return withTiming('createWorkspace', async () => {
             const { fetcher } = await this.ensureEntities();
-            return fetcher.createWorkspace(name, description);
+            return fetcher.createWorkspace(name, description, target);
         });
     }
 

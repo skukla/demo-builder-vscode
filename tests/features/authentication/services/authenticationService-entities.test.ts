@@ -123,14 +123,25 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             const result = await authService.createProject('My Demo', 'A demo project');
 
             expect(result).toEqual(mockProject);
-            expect(mockFetcher.createProject).toHaveBeenCalledWith('My Demo', 'A demo project');
+            // Third arg is the optional explicit target, threaded through for the
+            // agent surface (phase-4 defect 0a). Undefined here means "use the
+            // cached selection", which is what every webview caller wants.
+            expect(mockFetcher.createProject).toHaveBeenCalledWith(
+                'My Demo',
+                'A demo project',
+                undefined,
+            );
         });
 
         it('should create a workspace (delegates to fetcher.createWorkspace)', async () => {
             const result = await authService.createWorkspace('Stage', 'A workspace');
 
             expect(result).toEqual(mockWorkspace);
-            expect(mockFetcher.createWorkspace).toHaveBeenCalledWith('Stage', 'A workspace');
+            expect(mockFetcher.createWorkspace).toHaveBeenCalledWith(
+                'Stage',
+                'A workspace',
+                undefined,
+            );
         });
 
         it('ensures a workspace Runtime namespace (delegates to the fetcher)', async () => {

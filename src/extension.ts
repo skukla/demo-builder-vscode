@@ -15,6 +15,7 @@ import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
+import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
 import { registerAdobeTools } from '@/features/ai/server/adobeTools';
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { registerAuthTools } from '@/features/ai/server/authTools';
@@ -516,6 +517,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerProjectStatusTool(mcpServer, stateManager);
                 registerValidateSelectionTool(mcpServer, ctxFactory);
                 registerComponentRequirementsTool(mcpServer);
+                registerAdobeResourceTools(mcpServer, ctxFactory);
                 registerCloudResourceTools(mcpServer, ctxFactory);
                 registerStorefrontTools(mcpServer, ctxFactory);
                 registerContentAuthoringTools(mcpServer, ctxFactory);
