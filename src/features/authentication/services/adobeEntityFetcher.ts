@@ -231,7 +231,12 @@ export class AdobeEntityFetcher {
      * Strips CLI warning lines (prefixed with ›) that the aio CLI writes to stdout
      * alongside JSON output, which would otherwise break JSON.parse.
      */
-    private parseCLIResponse<TRaw>(stdout: string, stderr: string, entityName: string): TRaw[] {
+    private parseCLIResponse<TRaw>(
+        stdout: string,
+        stderr: string,
+        entityName: string,
+        exitCode?: number | null,
+    ): TRaw[] {
         const parsed = parseJSON<TRaw[]>(stdout);
         if (parsed && Array.isArray(parsed)) return parsed;
 
@@ -304,7 +309,41 @@ export class AdobeEntityFetcher {
         this.debugLogger.error(
             `[Entity Fetcher] Raw ${entityName} stderr (${stderr.length} chars): ${stderr.substring(0, 500)}`,
         );
+
+        // Nothing parsed AND the CLI exited non-zero: the CLI FAILED, and it said
+        // why on stderr. Reporting a "response format" problem here names the wrong
+        // layer — it sent two engineers into a decompiled bundle hunting a parser
+        // bug that did not exist (issue #63), while the actual error sat unread.
+        //
+        // Exit code 2 is the case that matters: `validateCLIResult` lets it through
+        // deliberately, because some CLI versions put valid JSON on stderr with that
+        // code. When the JSON is there we never reach this line; when it is not, the
+        // 2 meant failure and the message above is the diagnosis.
+        //
+        // Reproduced live 2026-08-17: a stale AIO_CONSOLE_ORG_ID gives exit 2, zero
+        // bytes of stdout, and the real 403 on stderr.
+        const cliError = this.firstMeaningfulLine(stderr);
+        if (exitCode !== 0 && cliError) {
+            throw new Error(`Failed to get ${entityName}: ${cliError}`);
+        }
+
         throw new Error(`Invalid ${entityName} response format`);
+    }
+
+    /**
+     * The first line of CLI stderr that carries a message rather than decoration.
+     *
+     * The aio CLI prefixes errors with `›` and writes spinner frames starting `-`,
+     * so the raw first line is usually "- Getting Projects...". Strips both so the
+     * surfaced error is the one a human would read.
+     */
+    private firstMeaningfulLine(stderr: string): string | undefined {
+        const lines = stderr
+            .split('\n')
+            .map((line) => line.replace(/^[\s›-]+/, '').trim())
+            .filter((line) => line.length > 0);
+
+        return lines.find((line) => /error|failed|forbidden|unauthorized/i.test(line)) ?? lines[0];
     }
 
     /**
@@ -325,7 +364,12 @@ export class AdobeEntityFetcher {
             return [];
         }
 
-        const parsed = this.parseCLIResponse<TRaw>(result.stdout, result.stderr, entityName);
+        const parsed = this.parseCLIResponse<TRaw>(
+            result.stdout,
+            result.stderr,
+            entityName,
+            result.code,
+        );
         const mapped = mapper(parsed);
         this.debugLogger.debug(
             `[Entity Fetcher] Retrieved ${mapped.length} ${entityName} via CLI in ${formatDuration(cliDuration)}`,
