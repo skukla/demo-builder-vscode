@@ -50,9 +50,13 @@ like custom/citisignal.
 5. **Descope-by-default for the two remaining core deltas** (patch policy: default answer is no):
    - Configurator PDP auto-routing → replaced by **authored PDP pages** carrying configurator
      blocks (content-native, zero patches). Verify during Wave 3.
-   - Header VIP nav gating → deferred unless a clean single-patch insertion point exists at
-     port time (VIP story still delivered by segment-gated blocks). VIP group-hash allowlist
-     lives in a DA content sheet (`/vip-config.json`) read by the blocks with safe empty default.
+   - Header VIP nav gating → **DELETED 2026-08-17, not deferred.** The pack's three
+     shared catalogs assign the SAME 11 categories, so a menu driven by catalog
+     assignment renders identically for every company and group — there is nothing
+     to gate. No content assumed it either (no VIP nav entry, no VIP-only page among
+     60 published paths). The `/vip-config.json` allowlist it depended on was never
+     authored and nothing read it. Evidence:
+     [`../../backlog/2026-08-17-bodea-shared-catalogs-are-undifferentiated.md`](../../backlog/2026-08-17-bodea-shared-catalogs-are-undifferentiated.md).
 6. **Block scope** (unchanged from v1): native (commerce-account-hub,
    customer-segment-personalization-block, search-bar, live-block(+premium),
    vip-member-block-real-v2, de-MCCS'd vip-hero) + native-backed (uniform-configurator, ONE of
@@ -113,19 +117,18 @@ exists nowhere in `bodea-source`, the extension config, or the block set; it was
 dropped during Wave 3. `luxury-configurator` and `guided-selling-luxe` survive,
 and both have published doc pages. Nothing to choose and nothing to update.
 
-**4. VIP nav gating — DEFER the patch.** The insertion point is real
-(`blocks/header/header.js`, the `if (navSections)` block that iterates every
-top-level nav `li`), so the condition "unless a clean single-patch insertion
-point exists" was tested rather than assumed. It is not clean: a patch there
-would have to inject a `/vip-config.json` fetch, an event subscription and an
-allowlist matcher, which is nothing like the six existing surgical patches, and
-patch policy defaults to no. A **zero-patch route** exists and is the
-recommendation if the story needs nav gating later: `bodea-customer-group.js`
-already resolves the group and ships through the brand-assets vendor point, as
-does `bodea-theme.css` — the module can mark `<body>` and the CSS can hide
-VIP-only entries, with no `eds-demo-patches` change. Both segment blocks
-(`customer-segment-personalization-block`, `targeted-block`) are ported, which is
-how the plan already delivers the VIP story.
+**4. VIP nav gating — DELETED, not deferred.** The insertion point was checked
+rather than assumed (`blocks/header/header.js`, the `if (navSections)` loop) and
+is not clean: a patch there would inject a fetch, a subscription and an allowlist
+matcher, unlike the six surgical patches that exist. But that is the secondary
+reason. The primary one is that **the data cannot express it** — all three shared
+catalogs assign the same 11 categories, so a catalog-driven menu is identical for
+everyone. No content assumed a gate, nothing read the `/vip-config.json` the
+design depended on, and no code was ever written. Carried as "deferred" it would
+read to the next person as supported-and-postponed, and cost them the afternoon
+it cost to disprove. The measurement and the order of operations, should
+catalog-driven menus ever be genuinely wanted, are in
+[`../../backlog/2026-08-17-bodea-shared-catalogs-are-undifferentiated.md`](../../backlog/2026-08-17-bodea-shared-catalogs-are-undifferentiated.md).
 
 ## Verification (end-to-end)
 

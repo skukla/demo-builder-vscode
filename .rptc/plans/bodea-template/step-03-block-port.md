@@ -22,8 +22,10 @@ customer-segment-personalization-block, vip-hero (de-MCCS'd), commerce-account-h
 live-block (+live-block-premium), vip-member-block-real-v2.
 Per block: rewrite `@dropins/*` 3.x imports/calls to the LKG generation APIs, verify the real
 journey live (sign-in, segments, quotes, POs, req lists as applicable).
-**VIP nav gating decision point**: with header.js in front of us, either a single clean
-insertion patch (goes to a new `bodea/` ledger family + gate run) or defer — default defer.
+**VIP nav gating decision point — CLOSED 2026-08-17: deleted, not deferred.** header.js was
+read; the insertion point exists but a patch there is not clean. More decisively, the pack's
+three shared catalogs assign the SAME categories, so there is nothing for a gate to express.
+See [`../../backlog/2026-08-17-bodea-shared-catalogs-are-undifferentiated.md`](../../backlog/2026-08-17-bodea-shared-catalogs-are-undifferentiated.md).
 
 ## Wave 3 — configurators + guided selling
 
