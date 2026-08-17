@@ -1,7 +1,8 @@
 # Handoff — AI surface, phase 4 (Groups 1–6 shipped)
 
 **Branch:** `feature/ai-surface-coverage` (worktree of the same name)
-**State:** **90 tools** · full suite 14,134 / 1,073 suites green · tsc, typecheck:tests, eslint clean
+**State:** **92 tools** · full suite 14,279 / 1,081 suites green · tsc, typecheck:tests, eslint clean
+(2 eslint warnings, both from develop's bodea line, neither in AI-surface code)
 **Plan:** `.rptc/plans/ai-surface/phase-4-step-02-full-parity-plan.md` — carries every decision;
 this file carries only what a fresh session needs that the plan does not say.
 
@@ -237,6 +238,35 @@ whole run — including across the re-register, which is the merge-not-replace p
 `repair_site_configuration` returned `nextStep: 'republish'` and did NOT publish, which is the
 one claim about this tool that a fixture could never have supported.
 
+### The storefront-name pair (added after, probed the same way)
+
+| Tool | Live bytes | Path exercised |
+|---|---|---|
+| `find_storefront_name_mismatches` | 39 | 2 projects scanned, 0 mismatches |
+| `migrate_storefront_name` | 105 no-op · 82 unknown path · 35 blank arg | every branch that refuses |
+
+**The migration SUCCESS branch was NOT probed, and cannot be from here.** No project with a
+name mismatch exists — this is a heal for pre-`164fd251` storefronts and both live projects are
+newer. Manufacturing one means corrupting a real manifest, which costs more than the branch is
+worth. Its ceiling therefore comes from the SHAPE plus a unit-driven measurement, and the
+ceiling entry says so rather than implying a live number.
+
+Two things the probe settled that no unit test could:
+
+- **`projectPath` is rejected by the SDK before the handler runs** (the zod field is required),
+  so the handler's own `projectPath is required` check looked like dead code. It is not: zod's
+  `z.string()` accepts `"   "`, and the trim catches it — measured, 35 bytes. Worth knowing
+  before someone "simplifies" that guard away.
+- **`find_storefront_name_mismatches`' 39 bytes proves nothing about its bound**, because it
+  found nothing. The ceiling is set from a full page instead — 2,780 bytes for 20 rows of long
+  project paths, driven in the suite. A live measurement of an empty result is not a
+  measurement of the tool.
+
+The `confirm` + `confirmName` gate could not be reached live either, for a reason that is
+correct rather than a gap: on a project with no mismatch the tool returns "nothing to do"
+BEFORE the gate, so an agent looping the find list is never asked to confirm work that does not
+exist. The gate is covered by unit tests and was falsified there.
+
 Ceilings are recorded in `responseCeilings.ts` from these numbers, and the fixtures driving them
 in `siteTools.test.ts` were copied from the live responses (addresses and the Runtime overlay
 host redacted, lengths kept). Falsified by lowering `connect_dalive`'s ceiling: the failure
@@ -285,8 +315,15 @@ fail is worse than no test — it reads as coverage.
 
 ## Then
 
-**`migrate_storefront_names`** is the one planned Group 6 tool still unbuilt — destructive
-(deletes the old DA site root), so it needs confirm + name echo.
+**Group 6 is COMPLETE.** `migrate_storefront_names` shipped as a PAIR rather than the single
+bulk tool the plan named: `find_storefront_name_mismatches` (read) +
+`migrate_storefront_name` (one project, confirm + name echo). The bulk shape cannot carry a
+name echo — there is no single name to echo — and it would hand an agent one call that deletes
+N DA.live site roots. Its per-project sequence is extracted into
+`storefrontNameMigrationForProject`, shared with the command, because the migration mutates the
+manifest in memory WITHOUT saving and the re-register DESTROYS the site publish key. A second
+implementation omitting either step would look correct and leave every migrated storefront
+unable to publish. The command's 16 existing tests pass unmoved over the extraction.
 
 **Group 7** — `install_prerequisite` is the only real refactor left on the surface: it
 indexes into per-call `sharedState` and must re-address by prereq id, and return

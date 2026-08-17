@@ -28,6 +28,16 @@
  * masking exists for the diagnostics report, whose output is written to be
  * pasted into tickets.
  *
+ * ## The migration pair is split for a different reason than the access pair
+ *
+ * The `Migrate Storefront Names` command sweeps EVERY project and migrates them
+ * all behind one modal. That shape cannot carry the name echo this group's
+ * conventions require for an irreversible action — there is no single name to
+ * echo — and it would hand an agent a single call that deletes N DA.live site
+ * roots. So the sweep becomes a read (`find_storefront_name_mismatches`) and
+ * the migration addresses one project at a time. Looping is what an agent is
+ * good at; a bulk destructive call is not what it should be handed.
+ *
  * ## `repair_site_configuration` does not publish
  *
  * That separation is `repairSiteConfigHeadless`'s own, and the reason it gives
@@ -42,17 +52,22 @@
 import { z } from 'zod';
 import { needsUser } from './handoff';
 import { asText } from './mcpToolResult';
+import { AGENT_PAGE_SIZE } from './projectors';
 import { repairSiteConfigForProject } from '@/features/eds/services/repairSiteConfigForProject';
 import {
     addSiteAdmin,
     listSiteAccess,
     removeSiteAdmin,
 } from '@/features/eds/services/siteAccessManagerHeadless';
+import {
+    findStorefrontNameMismatch,
+    migrateStorefrontNameForProject,
+} from '@/features/eds/services/storefrontNameMigrationForProject';
 import type { HandlerContext } from '@/types/handlers';
 
 /**
- * Register `get_site_access`, `set_site_admin`, `repair_site_configuration` and
- * `connect_dalive` on `server`.
+ * Register the storefront-site tools on `server`: the site-access pair, the
+ * config repair, the storefront-name migration pair, and the DA.live handoff.
  *
  * @param server     McpServer (typed `any`; see registerProjectTools docstring).
  * @param ctxFactory Builds a headless HandlerContext for each invocation.
@@ -168,6 +183,149 @@ export function registerSiteTools(
             return asText({
                 ...result,
                 ...(result.status === 'repaired' && { nextStep: 'republish' }),
+            });
+        },
+    );
+
+    server.registerTool(
+        'find_storefront_name_mismatches',
+        {
+            title: 'Find Storefront Name Mismatches',
+            description:
+                'Projects whose DA.live site name does not match their GitHub repo name — a legacy ' +
+                'defect in storefronts created by older builds. Read-only; migrate_storefront_name ' +
+                'fixes one.',
+            inputSchema: {},
+        },
+        async () => {
+            const ctx = ctxFactory();
+            const summaries = await ctx.stateManager.getAllProjects();
+            const mismatches = [];
+
+            for (const summary of summaries) {
+                try {
+                    // persistAfterLoad: false — this is a read. A scan that
+                    // rewrote every manifest it inspected would be a write
+                    // hiding in a read, which the tool conventions forbid.
+                    const project = await ctx.stateManager.loadProjectFromPath(
+                        summary.path,
+                        () => [],
+                        { persistAfterLoad: false },
+                    );
+                    if (!project) continue;
+
+                    const found = findStorefrontNameMismatch(project);
+                    if (found) {
+                        mismatches.push({
+                            project: found.projectName,
+                            projectPath: found.projectPath,
+                            from: `${found.daLiveOrg}/${found.daLiveSite}`,
+                            to: `${found.daLiveOrg}/${found.repoName}`,
+                        });
+                    }
+                } catch (error) {
+                    // One unreadable manifest must not hide every other
+                    // mismatch — the command skips it too.
+                    ctx.logger.warn(
+                        `[find_storefront_name_mismatches] skipped ${summary.name}: ` +
+                            `${(error as Error).message}`,
+                    );
+                }
+            }
+
+            // Paged even though a mismatch list is legacy-bounded and small
+            // today. "Naturally small" is the assumption that let
+            // list_adobe_projects return 725 rows.
+            return asText({
+                scanned: summaries.length,
+                total: mismatches.length,
+                mismatches: mismatches.slice(0, AGENT_PAGE_SIZE),
+            });
+        },
+    );
+
+    server.registerTool(
+        'migrate_storefront_name',
+        {
+            title: 'Migrate Storefront Name',
+            description:
+                "Rename ONE project's DA.live site to match its GitHub repo name, preserving all " +
+                'content. **Destructive** — it deletes the old DA.live site root. Requires ' +
+                'confirm:true and confirmName equal to the project name. Find candidates with ' +
+                'find_storefront_name_mismatches.',
+            inputSchema: {
+                projectPath: z.string().describe('Absolute path of the project to migrate'),
+                confirm: z.boolean().optional().describe('Must be true to proceed'),
+                confirmName: z
+                    .string()
+                    .optional()
+                    .describe('Must equal the project name exactly — guards the old site root deletion'),
+            },
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        async (args: any) => {
+            const projectPath = String(args?.projectPath ?? '').trim();
+            if (!projectPath) {
+                return asText({ error: 'projectPath is required' });
+            }
+
+            const ctx = ctxFactory();
+            const project = await ctx.stateManager.loadProjectFromPath(projectPath, () => [], {
+                persistAfterLoad: false,
+            });
+            if (!project) {
+                return asText({ error: `No project found at ${projectPath}` });
+            }
+
+            const candidate = findStorefrontNameMismatch(project);
+            if (!candidate) {
+                // Not an error state. A project whose names already match is the
+                // desired outcome, and saying "nothing to do" is what lets an
+                // agent loop over the list without treating each no-op as a
+                // failure.
+                return asText({
+                    migrated: false,
+                    project: project.name,
+                    reason: 'This project has no storefront-name mismatch.',
+                });
+            }
+
+            // The echo is the project NAME rather than the site name: it is what
+            // find_storefront_name_mismatches reports first and what the user
+            // recognises. The site names are in `from`/`to` on that same row.
+            if (args?.confirm !== true || args?.confirmName !== candidate.projectName) {
+                return asText({
+                    error:
+                        `migrate_storefront_name deletes the old DA.live site root ` +
+                        `${candidate.daLiveOrg}/${candidate.daLiveSite}. To proceed, call again with ` +
+                        `confirm:true and confirmName:"${candidate.projectName}".`,
+                    irreversible: true,
+                    from: `${candidate.daLiveOrg}/${candidate.daLiveSite}`,
+                    to: `${candidate.daLiveOrg}/${candidate.repoName}`,
+                });
+            }
+
+            const result = await migrateStorefrontNameForProject(
+                candidate,
+                ctx.context,
+                ctx.logger,
+                (updated) => ctx.stateManager.saveProject(updated),
+            );
+
+            return asText({
+                migrated: result.migrated,
+                project: candidate.projectName,
+                from: `${candidate.daLiveOrg}/${candidate.daLiveSite}`,
+                to: `${candidate.daLiveOrg}/${candidate.repoName}`,
+                // Reported, never assumed: a migrated storefront whose key was
+                // not re-minted cannot publish, and that is invisible until
+                // someone tries.
+                publishKeyRenewed: result.publishKeyRenewed,
+                ...(result.error && { error: result.error }),
+                // Masked already by the migration. Surfaced because nothing in
+                // the app can restore them, and these legacy storefronts are the
+                // ones most likely to have several admins.
+                ...(result.lostGrants?.length && { lostGrants: result.lostGrants }),
             });
         },
     );

@@ -27,43 +27,19 @@
 
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
-import { COMPONENT_IDS } from '@/core/constants';
 import { getLogger } from '@/core/logging';
-import {
-    ensureDaLiveAuth,
-    getDaLiveAuthService,
-    resolveByomOverlayConfig,
-} from '@/features/eds/handlers/edsHelpers';
-import { ConfigurationService } from '@/features/eds/services/configurationService';
-import {
-    createDaLiveServiceTokenProvider,
-    DaLiveContentOperations,
-} from '@/features/eds/services/daLiveContentOperations';
-import {
-    resolveStorefrontConfig,
-    type StorefrontConfigSource,
-} from '@/features/eds/services/edsResetParams';
+import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
 import { lostGrantsMessage } from '@/features/eds/services/lostGrantsMessage';
-import { registerPublishKey } from '@/features/eds/services/publishKeyRegistrar';
 import {
-    migrateStorefrontNamingIfNeeded,
-    type StorefrontMigrationContext,
-} from '@/features/eds/services/storefrontNameMigration';
-import demoPackagesConfig from '@/features/project-creation/config/demo-packages.json';
-import type { Project } from '@/types/base';
+    findStorefrontNameMismatch,
+    migrateStorefrontNameForProject,
+    type StorefrontNameMismatch,
+} from '@/features/eds/services/storefrontNameMigrationForProject';
 import type { HandlerContext } from '@/types/handlers';
 
 const LOG_PREFIX = '[MigrateStorefrontNames]';
 
-interface MigrationCandidate {
-    project: Project;
-    projectName: string;
-    repoOwner: string;
-    repoName: string;
-    daLiveOrg: string;
-    daLiveSite: string; // the current (mismatched) name
-    byomOverlayUrl?: string;
-}
+type MigrationCandidate = StorefrontNameMismatch;
 
 interface MigrationOutcome {
     projectName: string;
@@ -135,7 +111,7 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
                 );
                 if (!project) continue;
 
-                const candidate = this.extractCandidate(project);
+                const candidate = findStorefrontNameMismatch(project);
                 if (candidate) candidates.push(candidate);
             } catch (error) {
                 getLogger().warn(
@@ -145,55 +121,6 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
         }
 
         return candidates;
-    }
-
-    /**
-     * If this project has an EDS storefront whose DA name differs from
-     * its GitHub repo name, return the migration context for it.
-     * Otherwise return null.
-     */
-    private extractCandidate(project: Project): MigrationCandidate | null {
-        const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-        if (!edsInstance?.metadata) return null;
-
-        const githubRepo = edsInstance.metadata.githubRepo as string | undefined;
-        const daLiveOrg = edsInstance.metadata.daLiveOrg as string | undefined;
-        const daLiveSite = edsInstance.metadata.daLiveSite as string | undefined;
-
-        if (!githubRepo || !daLiveOrg || !daLiveSite) return null;
-
-        // githubRepo arrives as "owner/repo" — split out the repo half.
-        const [repoOwner, repoName] = githubRepo.split('/');
-        if (!repoOwner || !repoName) return null;
-        if (daLiveSite === repoName) return null; // already matches — no work to do.
-
-        // Stamp the BYOM overlay URL with the NEW daLiveSite (= repoName)
-        // so the post-migration registration carries the correct telemetry
-        // coords. Pulls the base URL from the demo-packages config; the
-        // VS Code setting can override.
-        let byomOverlayUrl: string | undefined;
-        try {
-            const { byomOverlayUrl: baseUrl } = resolveStorefrontConfig(
-                project,
-                demoPackagesConfig.packages as unknown as StorefrontConfigSource[],
-            );
-            byomOverlayUrl = resolveByomOverlayConfig(baseUrl, daLiveOrg, repoName);
-        } catch {
-            // resolveStorefrontConfig can throw on malformed manifests;
-            // we still want to migrate the storefront — just without
-            // overlay reconfiguration.
-            byomOverlayUrl = undefined;
-        }
-
-        return {
-            project,
-            projectName: project.name,
-            repoOwner,
-            repoName,
-            daLiveOrg,
-            daLiveSite,
-            byomOverlayUrl,
-        };
     }
 
     /**
@@ -236,12 +163,6 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
                 cancellable: false,
             },
             async (progress) => {
-                const tokenProvider = createDaLiveServiceTokenProvider(
-                    getDaLiveAuthService(this.context),
-                );
-                const daLiveContentOps = new DaLiveContentOperations(tokenProvider, logger);
-                const configService = new ConfigurationService(tokenProvider, logger);
-
                 for (let i = 0; i < candidates.length; i++) {
                     const candidate = candidates[i];
                     progress.report({
@@ -249,21 +170,16 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
                         message: `${candidate.projectName} (${i + 1}/${candidates.length})…`,
                     });
 
-                    const ctx: StorefrontMigrationContext = {
-                        repoOwner: candidate.repoOwner,
-                        repoName: candidate.repoName,
-                        daLiveOrg: candidate.daLiveOrg,
-                        daLiveSite: candidate.daLiveSite,
-                        byomOverlayUrl: candidate.byomOverlayUrl,
-                    };
-
                     try {
-                        const result = await migrateStorefrontNamingIfNeeded(
-                            ctx,
-                            candidate.project,
-                            daLiveContentOps,
-                            configService,
+                        // The persist and the publish-key re-mint live inside
+                        // this call, shared with the MCP tool. Both are steps a
+                        // second implementation would plausibly omit and neither
+                        // announces its absence.
+                        const result = await migrateStorefrontNameForProject(
+                            candidate,
+                            this.context,
                             logger,
+                            (project) => this.stateManager.saveProject(project),
                         );
 
                         // Reported on BOTH paths: this command runs against the
@@ -291,21 +207,6 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
                             continue;
                         }
 
-                        // Persist the manifest now that metadata.daLiveSite has been mutated.
-                        await this.stateManager.saveProject(candidate.project);
-
-                        // The migration re-registered the site config, and `apiKeys`
-                        // lives inside that document — so the site's publish key is
-                        // gone. The reset pipeline gets away with not repairing it
-                        // here because its own config step follows and re-mints;
-                        // this command has no follow-up, so it repairs what it
-                        // broke. Without this, runtime PDP self-heal stays dead
-                        // until someone runs Repair Site Configuration by hand.
-                        await registerPublishKey(
-                            tokenProvider,
-                            { owner: candidate.repoOwner, repo: candidate.repoName },
-                            logger,
-                        );
                         outcomes.push({ projectName: candidate.projectName, success: true });
                         logger.info(
                             `${LOG_PREFIX} ${candidate.projectName} migrated to ${candidate.daLiveOrg}/${candidate.repoName}`,

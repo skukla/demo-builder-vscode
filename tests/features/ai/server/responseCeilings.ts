@@ -202,6 +202,22 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
             '444 live, and it does not vary: the tool never dispatches, so the response is the same ' +
             'literal handoff every call. A breach here means the tellUser text grew, nothing else',
     },
+    find_storefront_name_mismatches: {
+        bytes: 4_000,
+        why:
+            '39 live across 2 projects with 0 mismatches — which proves nothing about the bound, so ' +
+            'the number comes from a FULL page instead: 2,780 bytes for 20 rows of long project ' +
+            'paths, driven in siteTools.test.ts. Bounded by AGENT_PAGE_SIZE, not by project count; ' +
+            'the `total` beside the page reports what the cap hid',
+    },
+    migrate_storefront_name: {
+        bytes: 2_000,
+        why:
+            '105 live for the no-op branch, 82 for an unknown path, 35 for a blank argument. The ' +
+            'SUCCESS branch is NOT among these numbers — no project with a name mismatch exists to ' +
+            'run it against, so its size is bounded by reading the shape: the same fields plus ' +
+            '`lostGrants`, which scales with the site admin roster',
+    },
 };
 
 /**

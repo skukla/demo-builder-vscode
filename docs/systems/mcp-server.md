@@ -498,6 +498,18 @@ this group was first estimated.
 | `set_site_admin` | Grant (`admin:true`) or revoke (`admin:false`). Confirm-gated: it changes access for another person on a shared site. Every mutation is confirmed by a RE-READ, so `verified` is separate from `status` — a 2xx write and a landed role are different claims. The last-admin refusal comes from `revokeSiteAdmin` and passes through: a site with no admin cannot be granted one back from inside the app. |
 | `repair_site_configuration` | Re-runs the registration that failed. Confirm-gated: the write re-mints the site's publish key and can drop admin grants nothing in the app can restore (reported as `lostGrants`, masked). **Does NOT publish** — that separation is `repairSiteConfigHeadless`'s own, and this surface is its reason: registration writes a routing rule, and making it take effect would republish a demo out from under whoever is presenting. On `repaired` the result carries `nextStep: 'republish'` rather than reading as done. |
 | `connect_dalive` | **Always a `needsUser` handoff.** The credential comes from a bookmarklet run in the user's own browser and a paste; there is no argument this tool could take that would not be a secret travelling as a tool argument. Points at `demoBuilder.openDaLiveBookmarkletSetup`, resumes with `get_auth_status`. Ungated: it opens and changes nothing. |
+| `find_storefront_name_mismatches` | Projects whose DA.live site name does not match their GitHub repo name — a legacy defect in storefronts created before `164fd251`. Read-only, and explicitly `persistAfterLoad: false`, because a scan that rewrote every manifest it inspected would be a write hiding in a read. Paged at `AGENT_PAGE_SIZE` with the true `total` beside it, even though a legacy list is small today. |
+| `migrate_storefront_name` | Migrates ONE project. **Irreversible** (deletes the old DA.live site root) → `confirm:true` AND `confirmName` equal to the PROJECT name, which is what the find tool reports first and what a user recognises. Reports `publishKeyRenewed` explicitly: the re-register destroys the site's publish key and a migrated storefront that cannot publish is invisible until someone tries. A project that needs no migration answers `{migrated: false, reason}` rather than an error, so an agent looping the find list can tell a no-op from a failure. |
+
+**Why the migration is a pair rather than one bulk tool.** The `Migrate Storefront
+Names` command sweeps every project behind one modal. That shape cannot carry the
+name echo an irreversible action requires — there is no single name to echo — and
+it would hand an agent one call that deletes N DA.live site roots. So the sweep is
+a read and the migration addresses one project at a time. The per-project
+sequence (migrate → persist → re-mint the publish key) lives in
+`storefrontNameMigrationForProject`, shared with the command: the persist and the
+re-mint are steps a second implementation would plausibly omit, and neither
+announces its absence.
 
 The dependency assembly `repair_site_configuration` needs lives in
 `repairSiteConfigForProject` (`features/eds/services/`), shared with the
@@ -508,7 +520,8 @@ fails silently: the demo package's own `byomOverlayUrl` is the fallback when the
 VS Code setting is blank, and without it the site registers with NO overlay while
 the read-back still reports `verified`.
 
-**Not built, with reasons.** `github_change_account` is BLOCKED, not deferred —
+**Not built, with reasons.** `migrate_storefront_names` (plural, the bulk sweep) is
+deliberately absent — see the pair above. `github_change_account` is BLOCKED, not deferred —
 `HandoffTarget` accepts a view or a command id and no Demo Builder command exists
 for switching GitHub accounts (checked against `package.json`). It needs a design
 decision, not an implementation. The bulk `cleanup_dalive_sites` /
