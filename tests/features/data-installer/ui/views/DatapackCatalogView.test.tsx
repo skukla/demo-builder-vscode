@@ -439,9 +439,14 @@ describe('DatapackCatalogView', () => {
  *
  * The wizard records which pack a project was created to hold but never imports
  * it — an import needs a reachable instance and runs for minutes. So the panel
- * has to close the loop: say what this project is set up for and offer it
- * directly, rather than making the user remember a name and find it again among
- * 25 of them.
+ * has to close the loop rather than making the user remember a name and find it
+ * again among 25 of them.
+ *
+ * It closed it with a full-width bar above the grid ("<project> is set up for
+ * <pack>" + a Review link). That bar is gone: the CARD carries the state now,
+ * with the shared `SelectionCheck` and the accent border that every other
+ * "this is the one" surface in the app uses. These assert the check rather than
+ * prose, which is also what makes them survive the next wording change.
  */
 describe('the project’s recorded sample data', () => {
     function withRecordedChoice(datapack: unknown) {
@@ -462,21 +467,46 @@ describe('the project’s recorded sample data', () => {
         });
     }
 
-    it('names the pack this project was created for', async () => {
+    /** The check lands on the project's pack, and on no other card. */
+    it('marks the pack this project was created for', async () => {
         withRecordedChoice({ name: 'bodea', version: 'main' });
         render(<DatapackCatalogView />);
 
-        await waitFor(() =>
-            expect(screen.getByText(/set up for/i)).toBeInTheDocument(),
-        );
-        expect(screen.getByText(/demo-1/)).toBeInTheDocument();
+        const check = await screen.findByTestId('datapack-card-project-check');
+
+        expect(check.closest('[data-datapack]')).toHaveAttribute('data-datapack', 'bodea');
     });
 
-    it('says nothing when the project recorded no choice', async () => {
+    /**
+     * CONTROL. Exactly one card is marked — the assertion above would pass just
+     * as well if every card wore a check, which is the mistake a grid invites.
+     */
+    it('CONTROL — marks only that one card', async () => {
+        withRecordedChoice({ name: 'bodea', version: 'main' });
+        render(<DatapackCatalogView />);
+
+        await screen.findByTestId('datapack-card-project-check');
+
+        expect(screen.getAllByTestId('datapack-card-project-check')).toHaveLength(1);
+        expect(screen.getAllByTestId('datapack-card').length).toBeGreaterThan(1);
+    });
+
+    it('marks nothing when the project recorded no choice', async () => {
         withRecordedChoice(undefined);
         render(<DatapackCatalogView />);
 
         await waitFor(() => expect(screen.getAllByRole('button').length).toBeGreaterThan(0));
+        expect(screen.queryByTestId('datapack-card-project-check')).not.toBeInTheDocument();
+    });
+
+    /** The banner is gone, not merely unrendered in this state. */
+    it('no longer shows a "set up for" banner', async () => {
+        withRecordedChoice({ name: 'bodea', version: 'main' });
+        render(<DatapackCatalogView />);
+
+        await screen.findByTestId('datapack-card-project-check');
+
         expect(screen.queryByText(/set up for/i)).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /review and install/i })).not.toBeInTheDocument();
     });
 });

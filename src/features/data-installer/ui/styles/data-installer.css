@@ -386,24 +386,6 @@
     color: var(--spectrum-global-color-gray-600);
 }
 
-/* "This project is set up for X" — the wizard's recorded choice, surfaced where
-   the packs are. An accent BORDER, not a filled banner: the dashboard
-   convention (see OrgContextNotice) is that attention is a border and an icon,
-   never a saturated fill. */
-.datapack-recorded-choice {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
-    padding: 12px 16px;
-    border-left: 3px solid var(--spectrum-global-color-blue-500);
-    background: var(--spectrum-global-color-gray-75);
-    border-radius: 4px;
-    box-sizing: border-box;
-}
-
 /* Export modal. Reuses the import modal's type grid — the two forms ask the
    same question about data types and a second grid would drift from the first. */
 /* No min-width: one on this body pushed the intro text past the dialog's right

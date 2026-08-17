@@ -204,12 +204,17 @@ export function DatapackCatalogView(): React.JSX.Element {
             </div>
 
             <div className="page-container-padded pb-6">
-                <RecordedChoiceNotice
-                    projectName={projectContext.value?.projectName}
-                    datapack={projectContext.value?.datapack}
-                    onOpen={openDetail}
-                />
-                {renderBody({ groups, filtered, query, versions, pickVersion, openDetail })}
+                {renderBody({
+                    groups,
+                    filtered,
+                    query,
+                    versions,
+                    pickVersion,
+                    openDetail,
+                    ...(projectContext.value?.datapack
+                        ? { projectPack: projectContext.value.datapack.name }
+                        : {}),
+                })}
             </div>
 
             <DatapackDetailPanel
@@ -247,42 +252,22 @@ interface ProjectSampleData {
     datapack?: { name: string; version: string };
 }
 
-/**
- * "This project is set up for X" — the visible end of the Stage 4 loop.
+/*
+ * `RecordedChoiceNotice` stood here: a full-width bar reading "<project> is set
+ * up for <pack> (main)" with a "Review and install" link.
  *
- * The wizard records a datapack and deliberately does not import it (an import
- * needs a reachable instance and runs for minutes). Without this the user would
- * have to remember the name and find it again among 25 of them, which is the
- * kind of small forgetting that makes a recorded choice worthless.
+ * It existed to close the wizard's loop — the Sample Data step records a pack and
+ * deliberately does not import it, so the user needed the name carried forward
+ * rather than re-found among 25 cards. That need is real and has not gone away;
+ * it is now met by the card itself, which wears the shared `SelectionCheck` and
+ * the accent border. The banner announced a card's state somewhere the card was
+ * not, and then needed a link to point back at it.
  *
- * Renders nothing at all when there is no project or no recorded choice — the
- * catalog is browsable without either, and an empty banner explaining its own
- * absence is worse than silence.
+ * The wording had also stopped being true. `project.datapack` was written only by
+ * the wizard, so "is set up for" meant "chosen, not yet installed" — until an
+ * import from the modal began writing the same field, at which point the bar
+ * invited the user to install what they had just installed.
  */
-function RecordedChoiceNotice({
-    projectName,
-    datapack,
-    onOpen,
-}: {
-    projectName?: string;
-    datapack?: { name: string; version: string };
-    onOpen: (id: DatapackId) => void;
-}): React.JSX.Element | null {
-    if (!datapack) {
-        return null;
-    }
-    return (
-        <div className="datapack-recorded-choice">
-            <span>
-                {projectName ? `${projectName} is` : 'This project is'} set up for{' '}
-                <strong>{datapack.name}</strong> ({datapack.version}).
-            </span>
-            <Link isQuiet onPress={() => onOpen(datapack)}>
-                Review and install
-            </Link>
-        </div>
-    );
-}
 
 /** Pick the one body state to show under the header. */
 function renderBody(args: {
@@ -292,8 +277,10 @@ function renderBody(args: {
     versions: Record<string, string>;
     pickVersion: (name: string, version: string) => void;
     openDetail: (id: DatapackId) => void;
+    /** The pack this project records, so its card can say so itself. */
+    projectPack?: string;
 }): React.JSX.Element {
-    const { groups, filtered, query, versions, pickVersion, openDetail } = args;
+    const { groups, filtered, query, versions, pickVersion, openDetail, projectPack } = args;
 
     if (groups.length === 0) {
         return (
@@ -317,6 +304,7 @@ function renderBody(args: {
                     selectedVersion={versions[group.name] ?? pickDefaultVersion(group) ?? ''}
                     onVersionChange={(version) => pickVersion(group.name, version)}
                     onOpen={openDetail}
+                    isProjectPack={group.name === projectPack}
                 />
             ))}
         </div>
