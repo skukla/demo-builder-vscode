@@ -185,6 +185,77 @@ gives it a way to hand off credential entry.
 
 ---
 
+## Output design — decide this BEFORE writing rows
+
+**The trap:** these tools dispatch to handlers built for a WEBVIEW, and `defaultShape` passes the
+payload through unchanged. Every one of phase 2's four worst offenders was a pass-through. Adding
+~30 rows on the default recreates that problem thirty times and pays to fix it afterwards; phase 2
+spent real effort recovering 79% on four tools, and none of it had to happen.
+
+### A projector library, applied by default
+
+Four reusable projectors cover nearly everything phase 2 hand-wrote. Build them once in
+`readDescriptors.ts` (or a sibling) so a new row is `shape: leanList(...)` rather than a bespoke
+function:
+
+| Projector | Rule | Earned by |
+|---|---|---|
+| `leanList(project, pageSize)` | page size + intact envelope, each row projected | `find_datapacks`, `list_adobe_projects` |
+| `indexDetail(idArg, previewFn)` | index carries identity + a short preview; full payload on request | `list_ai_prompts`, `get_block_authoring_shape` |
+| `verdictOnly(computeFn)` | return the ANSWER, not the inputs to it | `who_created` → `deletable` |
+| `legend(field)` | repeated `{code,name}` → a code per row + one legend | `list_console_apis` |
+
+### Five rules, each earned by a measurement
+
+1. **Answer the question; do not ship the data.** `who_created` was 46% of one response and the
+   agent could not use it — the comparison needs a token claim only the extension can read.
+   `deletable` was ~40x smaller and strictly more useful.
+2. **A page size on every list, including indexes.** `get_block_authoring_shape` HAD an
+   index/detail split and still measured 21,992 bytes at 300 components. The split bounds the
+   detail call, not the catalogue's growth.
+3. **Counts where the array is detail.** `dataTypes` → `dataTypeCount`, with `get_datapack` for
+   the full list.
+4. **Never fabricate an envelope field.** `total: 20` for a 23-row catalogue came from a
+   `?? items.length` fallback. Omit what the service does not give.
+5. **Write the ceiling BEFORE the tool.** `responseCeilings.ts` already fails on a tool with no
+   recorded size, which turns the ceiling into a design constraint instead of a postmortem.
+
+### One structural choice outweighs any projector
+
+**Prefer the SERVICE over the HANDLER when the handler's payload is webview-shaped.**
+`get_project_status` built over `buildStatusPayload` is both cheaper to run and leaner to return
+than dispatching through `handleRequestStatus`. Reach for `dispatchHandler` when the handler's
+payload is already the answer; reach for the service when it is not.
+
+### `needsUser` stays tight
+
+It is returned often. Five fields only — `reason`, `what`, `where`, `tellUser`, `resumeWith`.
+Never echo back state the agent already has.
+
+---
+
+## Build sequencing — batch by FILE, not by feature group
+
+**Every planned tool's handler is already in a dispatchable handler map** (checked: all 20
+sampled resolved, across `ProjectCreationHandlerRegistry`, `dashboardHandlers`, `edsHandlers`,
+`configureHandlers`, `projectsListHandlers`, `prerequisitesHandlers`). So these are ~10-line
+descriptor rows, not bespoke tools — which moves the cost off the tools entirely.
+
+What actually costs: the two defects, the shared primitives, the few handlers needing an edit,
+group 3's design decision, and **live verification cycles**. Adding 15 rows costs barely more than
+adding 3; verifying them one at a time costs 15x.
+
+| Wave | What | Why here |
+|---|---|---|
+| **1** | Both defects · the `needsUser` type · the capture-adapter helper · the projector library | Small, few files, and nothing built later is trustworthy until defect 0a is settled |
+| **2** | **Every descriptor row at once** — each tool whose handler already returns its payload or works through the capture adapter | The win: one file, one test file, one ceiling batch, **one F5 verification pass** |
+| **3** | Handlers needing a real edit — `add_integration`'s panel branch, `install_prerequisite`'s id addressing | Genuine code, but few |
+| **4** | Group 3 configuration | Design decision first; the only genuinely new surface |
+
+**Two traps, both paid for in this session:** do not verify per-tool (batch the F5 — each
+round-trip costs real coordination), and do not trust a script's classification (reading promoted
+two handlers every script had missed, and one script ran `republish` against a live storefront).
+
 ## Sequencing
 
 1. **Group 0** — the two defects. Nothing else is trustworthy until 0a is settled.
