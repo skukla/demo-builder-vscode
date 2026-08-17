@@ -7,6 +7,8 @@
  * Migration from atomic design: atoms/ → ui/
  */
 
+export { SelectionCheck } from './SelectionCheck';
+export type { SelectionCheckProps } from './SelectionCheck';
 export { Spinner } from './Spinner';
 export type { SpinnerProps } from './Spinner';
 

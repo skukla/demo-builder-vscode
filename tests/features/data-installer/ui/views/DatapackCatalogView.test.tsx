@@ -354,14 +354,14 @@ describe('DatapackCatalogView', () => {
         it('opens when the flyout raises Import', async () => {
             await openImport();
 
-            expect(await screen.findByText(/there is no undo/i)).toBeInTheDocument();
+            expect(await screen.findByRole('button', { name: /start import/i })).toBeInTheDocument();
         });
 
         // The types on offer are what the service HOLDS, from the detail
         // inventory — never what the pack declares.
         it('offers only the data types the service stores', async () => {
             await openImport();
-            await screen.findByText(/there is no undo/i);
+            await screen.findByRole('button', { name: /start import/i });
 
             expect(screen.getByRole('checkbox', { name: 'Products' })).toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Giftcards' })).not.toBeInTheDocument();
@@ -369,7 +369,7 @@ describe('DatapackCatalogView', () => {
 
         it('closes without closing the flyout behind it', async () => {
             await openImport();
-            await screen.findByText(/there is no undo/i);
+            await screen.findByRole('button', { name: /start import/i });
 
             fireEvent.click(screen.getByRole('button', { name: /^close$/i }));
 
@@ -439,9 +439,14 @@ describe('DatapackCatalogView', () => {
  *
  * The wizard records which pack a project was created to hold but never imports
  * it — an import needs a reachable instance and runs for minutes. So the panel
- * has to close the loop: say what this project is set up for and offer it
- * directly, rather than making the user remember a name and find it again among
- * 25 of them.
+ * has to close the loop rather than making the user remember a name and find it
+ * again among 25 of them.
+ *
+ * It closed it with a full-width bar above the grid ("<project> is set up for
+ * <pack>" + a Review link). That bar is gone: the CARD carries the state now,
+ * with the shared `SelectionCheck` and the accent border that every other
+ * "this is the one" surface in the app uses. These assert the check rather than
+ * prose, which is also what makes them survive the next wording change.
  */
 describe('the project’s recorded sample data', () => {
     function withRecordedChoice(datapack: unknown) {
@@ -462,21 +467,185 @@ describe('the project’s recorded sample data', () => {
         });
     }
 
-    it('names the pack this project was created for', async () => {
+    /**
+     * The check follows the INSTANCE, not just the project's one recorded pack.
+     *
+     * The service keeps an installed list; scoped to this project's Commerce
+     * instance it answers "what is on the box this project writes to". Neither
+     * source is ground truth — nothing here has that, since only Commerce knows
+     * what it holds — so the two are unioned and the check means "believed
+     * installed".
+     *
+     * `bodea` here is NOT the project's recorded pack; the service reports it.
+     * Before this the card could only be marked from `project.datapack`, so a
+     * second pack on the same instance was invisible.
+     */
+    it('marks a pack the service reports installed on this instance', async () => {
+        mockRequest.mockImplementation((type: string) => {
+            if (type === 'find-datapacks') {
+                return Promise.resolve({
+                    success: true,
+                    data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length },
+                });
+            }
+            if (type === 'get-datapack-import-target') {
+                // No `datapack` — the project records nothing.
+                return Promise.resolve({
+                    success: true,
+                    data: { instance: 'inst-1', projectName: 'demo-1' },
+                });
+            }
+            if (type === 'list-installed-datapacks') {
+                return Promise.resolve({
+                    success: true,
+                    data: {
+                        items: [
+                            {
+                                commerceInstance: 'inst-1',
+                                id: { name: 'bodea', version: 'main' },
+                                dataTypes: ['products'],
+                                art: {},
+                            },
+                        ],
+                        count: 1,
+                        total: 1,
+                    },
+                });
+            }
+            return Promise.resolve({ success: true, data: null });
+        });
+        render(<DatapackCatalogView />);
+
+        const check = await screen.findByTestId('datapack-card-project-check');
+
+        expect(check.closest('[data-datapack]')).toHaveAttribute('data-datapack', 'bodea');
+    });
+
+    /**
+     * CONTROL — the installed list is SCOPED to this project's instance.
+     *
+     * Without the scope this would be the global cross-instance list an earlier
+     * Installed view showed, which was removed precisely because it spoke for
+     * boxes the user was not looking at.
+     */
+    it('CONTROL — asks only about this project’s instance', async () => {
         withRecordedChoice({ name: 'bodea', version: 'main' });
         render(<DatapackCatalogView />);
 
         await waitFor(() =>
-            expect(screen.getByText(/set up for/i)).toBeInTheDocument(),
+            expect(
+                mockRequest.mock.calls.find((c) => c[0] === 'list-installed-datapacks'),
+            ).toBeDefined(),
         );
-        expect(screen.getByText(/demo-1/)).toBeInTheDocument();
+        const call = mockRequest.mock.calls.find((c) => c[0] === 'list-installed-datapacks');
+        expect(call?.[1]).toEqual({ commerceInstance: 'inst-1' });
     });
 
-    it('says nothing when the project recorded no choice', async () => {
+    /** The check lands on the project's pack, and on no other card. */
+    it('marks the pack this project was created for', async () => {
+        withRecordedChoice({ name: 'bodea', version: 'main' });
+        render(<DatapackCatalogView />);
+
+        const check = await screen.findByTestId('datapack-card-project-check');
+
+        expect(check.closest('[data-datapack]')).toHaveAttribute('data-datapack', 'bodea');
+    });
+
+    /**
+     * CONTROL. Exactly one card is marked — the assertion above would pass just
+     * as well if every card wore a check, which is the mistake a grid invites.
+     */
+    it('CONTROL — marks only that one card', async () => {
+        withRecordedChoice({ name: 'bodea', version: 'main' });
+        render(<DatapackCatalogView />);
+
+        await screen.findByTestId('datapack-card-project-check');
+
+        expect(screen.getAllByTestId('datapack-card-project-check')).toHaveLength(1);
+        expect(screen.getAllByTestId('datapack-card').length).toBeGreaterThan(1);
+    });
+
+    /**
+     * The check follows what the user just did, not what was true on mount.
+     *
+     * The handler writes `project.datapack` when the service accepts an import
+     * and clears it when it accepts a removal — so the modal the user just closed
+     * decides which card is marked. The catalog read that once at mount and never
+     * again: importing a pack changed no card, and removing one left the check
+     * standing, until the whole panel was reopened.
+     *
+     * Asserted on the RE-READ rather than on the rendered check, because the mock
+     * would have to change its answer mid-test to show the check appearing — and
+     * the re-read is the thing that was missing.
+     */
+    it('re-reads which pack the project holds when the import modal closes', async () => {
+        // Needs the DETAIL too: the flyout's Import affordance is gated on it,
+        // and `withRecordedChoice` answers only the catalog and the target.
+        mockRequest.mockImplementation((type: string) => {
+            if (type === 'find-datapacks') {
+                return Promise.resolve({
+                    success: true,
+                    data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length },
+                });
+            }
+            if (type === 'get-datapack-detail') {
+                return Promise.resolve({
+                    success: true,
+                    data: {
+                        detail: { ...CATALOG[0], description: 'B2B office supplies' },
+                        inventory: {
+                            present: ['products'],
+                            missing: [],
+                            presentCount: 1,
+                            missingCount: 0,
+                            requestedCount: 1,
+                        },
+                    },
+                });
+            }
+            if (type === 'get-datapack-import-target') {
+                return Promise.resolve({
+                    success: true,
+                    data: { instance: 'inst-1', projectName: 'demo-1' },
+                });
+            }
+            return Promise.resolve({ success: true, data: null });
+        });
+        render(<DatapackCatalogView />);
+
+        const cards = await screen.findAllByTestId('datapack-card');
+        fireEvent.click(cards[0]);
+        fireEvent.click(await screen.findByRole('button', { name: /^import/i }));
+        await screen.findByRole('button', { name: /start import/i });
+
+        const before = mockRequest.mock.calls.filter(
+            (c) => c[0] === 'get-datapack-import-target',
+        ).length;
+        fireEvent.click(screen.getByRole('button', { name: /^close$/i }));
+
+        await waitFor(() =>
+            expect(
+                mockRequest.mock.calls.filter((c) => c[0] === 'get-datapack-import-target').length,
+            ).toBeGreaterThan(before),
+        );
+    });
+
+    it('marks nothing when the project recorded no choice', async () => {
         withRecordedChoice(undefined);
         render(<DatapackCatalogView />);
 
         await waitFor(() => expect(screen.getAllByRole('button').length).toBeGreaterThan(0));
+        expect(screen.queryByTestId('datapack-card-project-check')).not.toBeInTheDocument();
+    });
+
+    /** The banner is gone, not merely unrendered in this state. */
+    it('no longer shows a "set up for" banner', async () => {
+        withRecordedChoice({ name: 'bodea', version: 'main' });
+        render(<DatapackCatalogView />);
+
+        await screen.findByTestId('datapack-card-project-check');
+
         expect(screen.queryByText(/set up for/i)).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /review and install/i })).not.toBeInTheDocument();
     });
 });

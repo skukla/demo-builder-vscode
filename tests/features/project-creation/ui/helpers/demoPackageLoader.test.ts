@@ -174,13 +174,13 @@ describe('demoPackageLoader (logic, injected fixture)', () => {
 });
 
 describe('shipped demo-packages.json (config integrity)', () => {
-    it('ships exactly 4 packages (citisignal, isle5, buildright, custom)', async () => {
+    it('ships exactly 5 packages (citisignal, isle5, buildright, custom, bodea)', async () => {
         const packages = await loadDemoPackages();
 
-        expect(packages.length).toBe(4);
+        expect(packages.length).toBe(5);
         const ids = packages.map(p => p.id);
         expect(ids).toEqual(
-            expect.arrayContaining(['citisignal', 'isle5', 'buildright', 'custom'])
+            expect.arrayContaining(['citisignal', 'isle5', 'buildright', 'custom', 'bodea'])
         );
         // citisignal-b2b retired — merged into the hybrid `citisignal` package.
         expect(ids).not.toContain('citisignal-b2b');
@@ -188,7 +188,7 @@ describe('shipped demo-packages.json (config integrity)', () => {
         expect(ids).not.toContain('b2b');
     });
 
-    it('getSelectablePackages hides packages marked hidden (isle5, buildright)', async () => {
+    it('getSelectablePackages hides packages marked hidden (isle5, buildright, bodea)', async () => {
         const selectable = await getSelectablePackages();
         const ids = selectable.map(p => p.id);
 
@@ -196,10 +196,12 @@ describe('shipped demo-packages.json (config integrity)', () => {
         expect(ids).toEqual(expect.arrayContaining(['citisignal', 'custom']));
         expect(ids).not.toContain('isle5');
         expect(ids).not.toContain('buildright');
+        // bodea ships hidden until the template graduates.
+        expect(ids).not.toContain('bodea');
         // None of the returned packages are hidden.
         expect(selectable.every(p => !p.hidden)).toBe(true);
         // loadDemoPackages still returns everything (existing projects resolve by id).
-        expect((await loadDemoPackages()).length).toBe(4);
+        expect((await loadDemoPackages()).length).toBe(5);
     });
 
     it('every package has the required structural properties', async () => {

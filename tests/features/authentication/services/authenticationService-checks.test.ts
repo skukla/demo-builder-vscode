@@ -1,14 +1,11 @@
 import { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import type { CommandExecutor, CommandResult } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell';
 import type { StepLogger } from '@/core/logging';
 import type { Logger } from '@/types/logger';
 import {
     createMockCommandExecutor,
     createMockLogger,
     createMockStepLogger,
-    createValidTokenResult,
-    createInvalidTokenResult,
-    createFailureResult,
     createOrgContextResult,
     createProjectListResult,
     mockOrg,
@@ -31,6 +28,26 @@ jest.mock('@/core/logging');
 jest.mock('@/features/authentication/services/adobeSDKClient');
 jest.mock('@/features/authentication/services/adobeEntityService');
 
+/**
+ * The CLI token store. `TokenManager` reads it IN PROCESS through this library —
+ * it used to spawn `aio config get`, which is why these tests once staged a token
+ * by faking subprocess stdout on the command executor. Mocked here rather than in
+ * testUtils because `jest.mock` hoists only within the module it appears in, so a
+ * factory living in another file would register too late.
+ */
+const mockStoredToken: { value: { token?: string; expiry?: number } | undefined } = {
+    value: undefined,
+};
+jest.mock('@adobe/aio-lib-core-config', () => ({
+    get: jest.fn(() => mockStoredToken.value),
+}));
+
+/** Clears the 100-character floor, expiring an hour out unless told otherwise. */
+const validStoredToken = (expiry?: number) => ({
+    token: 'x'.repeat(150),
+    expiry: expiry ?? Date.now() + 3600000,
+});
+
 import { getLogger } from '@/core/logging';
 import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import { createEntityServices } from '@/features/authentication/services/adobeEntityService';
@@ -44,6 +61,9 @@ describe('AuthenticationService - Authentication Checks', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        // `clearAllMocks` clears CALLS, not this value — without the reset a
+        // valid token set by one test silently authenticates the next one.
+        mockStoredToken.value = undefined;
 
         mockCommandExecutor = createMockCommandExecutor();
         mockLogger = createMockLogger();
@@ -83,23 +103,19 @@ describe('AuthenticationService - Authentication Checks', () => {
 
     describe('isAuthenticated', () => {
         it('should return true when valid token exists', async () => {
-            // Given: CLI returns a valid token with expiry
-            mockCommandExecutor.execute.mockResolvedValue(createValidTokenResult());
+            // Given: the CLI config store holds a valid token with expiry
+            mockStoredToken.value = validStoredToken();
 
             // When: checking authentication quickly
             const result = await authService.isAuthenticated();
 
             // Then: should return true
             expect(result).toBe(true);
-            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
-                'aio config get ims.contexts.cli.access_token --json',
-                expect.objectContaining({ encoding: 'utf8' })
-            );
         });
 
         it('should return false when token is invalid', async () => {
-            // Given: CLI returns short token
-            mockCommandExecutor.execute.mockResolvedValue(createInvalidTokenResult());
+            // Given: stored token is too short
+            mockStoredToken.value = { token: 'short', expiry: Date.now() + 3600000 };
 
             // When: checking authentication quickly
             const result = await authService.isAuthenticated();
@@ -108,9 +124,9 @@ describe('AuthenticationService - Authentication Checks', () => {
             expect(result).toBe(false);
         });
 
-        it('should return false when CLI command fails', async () => {
-            // Given: CLI command fails
-            mockCommandExecutor.execute.mockResolvedValue(createFailureResult('Error: Not logged in'));
+        it('should return false when nothing is stored', async () => {
+            // Given: no token in the config store — the signed-out case
+            mockStoredToken.value = undefined;
 
             // When: checking authentication quickly
             const result = await authService.isAuthenticated();
@@ -120,8 +136,12 @@ describe('AuthenticationService - Authentication Checks', () => {
         });
 
         it('should handle exceptions gracefully', async () => {
-            // Given: CLI throws an exception
-            mockCommandExecutor.execute.mockRejectedValue(new Error('Command failed'));
+            // Given: the config store itself cannot be read
+            mockStoredToken.value = undefined;
+            const config = jest.requireMock('@adobe/aio-lib-core-config') as { get: jest.Mock };
+            config.get.mockImplementationOnce(() => {
+                throw new Error('config store unreadable');
+            });
 
             // When: checking authentication quickly
             const result = await authService.isAuthenticated();
@@ -133,9 +153,10 @@ describe('AuthenticationService - Authentication Checks', () => {
 
     describe('isFullyAuthenticated', () => {
         it('should return true when token is valid and org context is valid', async () => {
-            // Given: Valid token and org context
+            // Given: Valid token and org context. The token comes from the config
+            // store now; only the org calls still go through the CLI.
+            mockStoredToken.value = validStoredToken();
             mockCommandExecutor.execute
-                .mockResolvedValueOnce(createValidTokenResult())
                 .mockResolvedValueOnce(createOrgContextResult())
                 .mockResolvedValueOnce(createProjectListResult());
 
@@ -148,7 +169,7 @@ describe('AuthenticationService - Authentication Checks', () => {
 
         it('should return false when token is invalid', async () => {
             // Given: Invalid token (too short)
-            mockCommandExecutor.execute.mockResolvedValue(createInvalidTokenResult());
+            mockStoredToken.value = { token: 'short', expiry: Date.now() + 3600000 };
 
             // When: checking full authentication
             const result = await authService.isFullyAuthenticated();
@@ -159,13 +180,8 @@ describe('AuthenticationService - Authentication Checks', () => {
 
         it('should NOT initialize SDK during authentication check', async () => {
             // Given: Valid token
-            mockCommandExecutor.execute
-                .mockResolvedValueOnce({
-                    code: 0,
-                    stdout: 'x'.repeat(150),
-                    stderr: '',
-                } as CommandResult)
-                .mockResolvedValueOnce(createOrgContextResult());
+            mockStoredToken.value = validStoredToken();
+            mockCommandExecutor.execute.mockResolvedValueOnce(createOrgContextResult());
 
             // When: checking authentication
             await authService.isFullyAuthenticated();
@@ -174,9 +190,23 @@ describe('AuthenticationService - Authentication Checks', () => {
             expect(mockSDKClient.initialize).not.toHaveBeenCalled();
         });
 
-        it('should handle ENOENT errors gracefully', async () => {
-            // Given: CLI command fails with ENOENT
-            mockCommandExecutor.execute.mockRejectedValue(new Error('ENOENT: no such file'));
+        /**
+         * There were two tests here — "ENOENT errors" and "timeout errors" — and
+         * both worked by rejecting the CLI call that READ THE TOKEN. That read is
+         * in-process now, so neither could fail for its stated reason.
+         *
+         * One survives, below, as the store-unreadable case. The other is DELETED
+         * rather than renamed: the only other failure it could have described is
+         * an org check, and `isFullyAuthenticated` stopped doing one in Phase 4a
+         * (org reachability is resolved per-operation via `ensureOrgContext`). A
+         * test asserting a branch the method does not have is worse than no test.
+         */
+        it('should handle an unreadable config store gracefully', async () => {
+            // Given: the token store throws rather than answering
+            const config = jest.requireMock('@adobe/aio-lib-core-config') as { get: jest.Mock };
+            config.get.mockImplementationOnce(() => {
+                throw new Error('ENOENT: no such file');
+            });
 
             // When: checking authentication
             const result = await authService.isFullyAuthenticated();
@@ -185,15 +215,5 @@ describe('AuthenticationService - Authentication Checks', () => {
             expect(result).toBe(false);
         });
 
-        it('should handle timeout errors gracefully', async () => {
-            // Given: CLI command times out
-            mockCommandExecutor.execute.mockRejectedValue(new Error('Operation timeout'));
-
-            // When: checking authentication
-            const result = await authService.isFullyAuthenticated();
-
-            // Then: should return false
-            expect(result).toBe(false);
-        });
     });
 });

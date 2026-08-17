@@ -190,6 +190,22 @@ describe('create_project', () => {
             );
         });
 
+        it('passes selectedPackage AND selectedStack to storefront setup so package-derived config rehydrates', async () => {
+            const s = fakeServer();
+            registerCreateProjectTool(s, ctxFactory);
+            await s.call(EDS);
+
+            // storefrontSetupConfigRehydration needs BOTH ids to restore
+            // brandAssets/codePatches for MCP-created projects.
+            expect(storefrontSetup).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.objectContaining({
+                    selectedPackage: 'citisignal',
+                    selectedStack: 'eds-paas',
+                }),
+            );
+        });
+
         it('maps an ORG_MISMATCH during project finalization to a typed non-retryable result', async () => {
             (executeProjectCreation as jest.Mock).mockRejectedValueOnce(
                 new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org'),

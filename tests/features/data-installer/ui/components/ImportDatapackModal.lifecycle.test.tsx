@@ -39,7 +39,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
     });
 
     describe('resetting', () => {
-        const resetButton = () => screen.getByRole('button', { name: /^reset/i });
+        // "Remove data…", not "Reset…": a project RESET restores the pack, so the
+        // same word meant opposite things one menu apart.
+        const resetButton = () => screen.getByRole('button', { name: /^remove data/i });
         const resetCalls = () => mockRequest.mock.calls.filter((c) => c[0] === 'reset-datapack');
 
         it('is offered once an instance and types are chosen', async () => {
@@ -75,7 +77,30 @@ describe('ImportDatapackModal — job lifecycle', () => {
             fireEvent.click(resetButton());
 
             expect(await screen.findByText(/cannot be undone/i)).toBeInTheDocument();
-            expect(screen.getByText(/inst/)).toBeInTheDocument();
+            // The instance id exactly ('inst', per the shared fixture). This was
+            // /inst/, which also matches the word "instance" in the prose — so it
+            // would have passed with the id absent, the one thing it checks.
+            expect(screen.getByText('inst')).toBeInTheDocument();
+        });
+
+        /**
+         * The chosen types are listed, as the LABELS they were chosen by.
+         *
+         * This confirmation printed raw service codes — fourteen of them, joined
+         * by commas into one sentence with a 22-character tenant id at the end.
+         * The list is what a user checks before an irreversible press, so it
+         * reads like the checkboxes it came from.
+         */
+        it('lists the chosen data types by their labels, not their codes', async () => {
+            renderModal();
+            await awaitForm();
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+
+            fireEvent.click(resetButton());
+
+            await screen.findByText(/cannot be undone/i);
+            expect(screen.getByText(/1 data type\b/)).toBeInTheDocument();
+            expect(screen.queryByText(/stock_source_links|b2b_shared/)).not.toBeInTheDocument();
         });
 
         it('can be backed out of without removing anything', async () => {
@@ -175,7 +200,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await screen.findByRole('button', { name: /checking…/i });
 
             expect(screen.getByRole('button', { name: /start import/i })).toHaveAttribute('aria-disabled', 'true');
-            expect(screen.getByRole('button', { name: /reset/i })).toHaveAttribute('aria-disabled', 'true');
+            expect(screen.getByRole('button', { name: /^remove data/i })).toHaveAttribute('aria-disabled', 'true');
         });
     });
 
@@ -276,10 +301,10 @@ describe('ImportDatapackModal — job lifecycle', () => {
             renderModal();
             await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
-            fireEvent.click(screen.getByRole('button', { name: /^reset/i }));
+            fireEvent.click(screen.getByRole('button', { name: /^remove data/i }));
             fireEvent.click(screen.getByRole('button', { name: /remove the data/i }));
 
-            expect(await screen.findByText(/reset finished/i)).toBeInTheDocument();
+            expect(await screen.findByText(/removal finished/i)).toBeInTheDocument();
             fireEvent.click(screen.getByRole('button', { name: /back/i }));
             expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeInTheDocument();
         });
@@ -573,7 +598,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
         // The record knows its operation now — a reset must not call itself an
         // import, which it did live.
-        it('announces a finished reset as a reset', async () => {
+        it('announces a finished removal as a removal, never as an import', async () => {
             mockRequest.mockImplementation(async (type: string) =>
                 type === 'get-datapack-import-status'
                     ? {
@@ -591,10 +616,10 @@ describe('ImportDatapackModal — job lifecycle', () => {
             renderModal();
             await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
-            fireEvent.click(screen.getByRole('button', { name: /^reset/i }));
+            fireEvent.click(screen.getByRole('button', { name: /^remove data/i }));
             fireEvent.click(screen.getByRole('button', { name: /remove the data/i }));
 
-            expect(await screen.findByText(/reset finished/i)).toBeInTheDocument();
+            expect(await screen.findByText(/removal finished/i)).toBeInTheDocument();
             expect(screen.queryByText(/import finished/i)).not.toBeInTheDocument();
         });
 

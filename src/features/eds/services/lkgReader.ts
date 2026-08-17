@@ -29,10 +29,10 @@ const MALFORMED_BODY_LOG_CAP = 80;
  *
  * `lkgFile` lets multi-canonical patches repos (where each ledger may
  * track a different upstream) point at per-ledger LKG files. When
- * omitted, defaults to `last-known-good` at the repo root — the
- * single-canonical case used by `citisignal` + `custom` (both track
- * `hlxsites/aem-boilerplate-commerce` and share one LKG). The `b2b`
- * ledger tracks the B2B template and sets `lkgFile: 'b2b/last-known-good'`.
+ * omitted, defaults to `last-known-good` at the repo root. All current
+ * package entries set `lkgFile: 'b2b/last-known-good'` (tracking
+ * `adobe-commerce/boilerplate-b2b-template`); the root default is
+ * presently unused but remains the mechanism's fallback.
  */
 export interface LkgSource {
     owner: string;

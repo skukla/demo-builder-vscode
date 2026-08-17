@@ -26,7 +26,11 @@ import type { StacksConfig } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
 
 const STACKS = (stacksConfig as StacksConfig).stacks;
-const PACKAGES = (demoPackagesConfig as DemoPackagesConfig).packages;
+// Widen through `unknown` as demoPackageLoader and aiContextWriter both do: the
+// inferred JSON literal is a union of per-package shapes, so each member is missing
+// storefront keys the others declare and a direct cast stops overlapping once a
+// package with a distinct storefront set is added.
+const PACKAGES = (demoPackagesConfig as unknown as DemoPackagesConfig).packages;
 
 const PAAS = 'adobe-commerce-paas';
 const ACCS = 'adobe-commerce-accs';

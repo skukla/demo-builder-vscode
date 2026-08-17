@@ -8,7 +8,6 @@ import {
     createMockStepLogger,
     createSuccessResult,
     createOrgContextResult,
-    createValidTokenResult,
     createProjectListResult,
     mockOrg,
 } from './authenticationService.testUtils';
@@ -30,6 +29,17 @@ import { getActiveOrgContext } from '@/features/authentication/services/orgConte
 jest.mock('@/core/logging');
 jest.mock('@/features/authentication/services/adobeSDKClient');
 jest.mock('@/features/authentication/services/adobeEntityService');
+
+/**
+ * The CLI token store, read IN PROCESS by `TokenManager`. Mocked here rather
+ * than in testUtils because `jest.mock` hoists only within its own module.
+ */
+const mockStoredToken: { value: { token?: string; expiry?: number } | undefined } = {
+    value: undefined,
+};
+jest.mock('@adobe/aio-lib-core-config', () => ({
+    get: jest.fn(() => mockStoredToken.value),
+}));
 
 import { getLogger } from '@/core/logging';
 import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
@@ -143,17 +153,15 @@ describe('AuthenticationService - Context Validation and SDK', () => {
         it('should handle full authentication flow with caching', async () => {
             // Given: First authentication check with valid token
             const futureExpiry = Date.now() + 3600000;
+            mockStoredToken.value = { token: 'x'.repeat(150), expiry: futureExpiry };
             mockCommandExecutor.execute
-                .mockResolvedValueOnce(createValidTokenResult(futureExpiry))
                 .mockResolvedValueOnce(createOrgContextResult())
                 .mockResolvedValueOnce(createProjectListResult());
 
             // When: Multiple authentication checks
             const result1 = await authService.isAuthenticated();
 
-            // Reset mock to return cached result
-            mockCommandExecutor.execute.mockResolvedValue(createValidTokenResult(futureExpiry));
-
+            // The second check rides the inspection cache; the store is unchanged.
             const result2 = await authService.isAuthenticated();
 
             // Then: Both should succeed

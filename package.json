@@ -509,6 +509,7 @@
   },
   "dependencies": {
     "@adobe/aio-lib-console": "^5.4.2",
+    "@adobe/aio-lib-core-config": "^5.0.1",
     "@adobe/aio-lib-ims": "^7.0.2",
     "@adobe/react-spectrum": "^3.46.0",
     "@modelcontextprotocol/sdk": "1.29.0",

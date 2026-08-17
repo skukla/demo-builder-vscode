@@ -29,6 +29,7 @@ import { Item, Picker } from '@adobe/react-spectrum';
 import React, { useCallback, useState } from 'react';
 import type { DatapackGroup } from '../../services/datapackCatalog';
 import type { DatapackArt, DatapackId, DatapackSummary } from '../../types';
+import { SelectionCheck } from '@/core/ui/components/ui/SelectionCheck';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 
 export interface DatapackCardProps {
@@ -49,6 +50,23 @@ export interface DatapackCardProps {
      * too. The wizard's sample-data sub-step is the choosing caller.
      */
     selected?: boolean;
+    /**
+     * This pack is believed to be on the project's Commerce instance.
+     *
+     * "Believed", precisely: nothing available reports what Commerce actually
+     * holds. It is the union of two self-reports — the service's instance-scoped
+     * installed list and the project's own record — and both clear when a
+     * removal runs through the extension, which is the case that matters.
+     *
+     * Distinct from {@link DatapackCardProps.selected}, which is radio semantics
+     * for a set the user is choosing between. This is a STATUS the card reports
+     * about itself, which is why a wizard card can carry both at once.
+     *
+     * It replaces a full-width banner above the grid ("<project> is set up for
+     * <pack>" + a Review link) that said a card's own state somewhere the card
+     * was not, and then needed a link to point back at it.
+     */
+    isInstalled?: boolean;
 }
 
 /**
@@ -65,6 +83,7 @@ export function DatapackCard({
     onVersionChange,
     onOpen,
     selected,
+    isInstalled,
 }: DatapackCardProps): React.JSX.Element {
     // Checked for PRESENCE: `false` means selectable-and-unselected, which is
     // still a radio. Truthiness here would silently make every unselected card
@@ -95,7 +114,11 @@ export function DatapackCard({
             {...(choosing ? { 'aria-checked': selected } : {})}
             tabIndex={0}
             aria-label={`${group.displayName}, version ${selectedVersion}`}
-            className={`datapack-card${selected ? ' is-selected' : ''}`}
+            // `is-selected` is the accent border, and the project's pack earns it
+            // for the same reason a chosen card does: it is the one that matters
+            // in this grid. The two never conflict — a wizard card that is both
+            // wants one border, not two.
+            className={`datapack-card${selected || isInstalled ? ' is-selected' : ''}`}
             data-testid="datapack-card"
             data-datapack={group.name}
             onClick={handleOpen}
@@ -109,7 +132,21 @@ export function DatapackCard({
             <div className="datapack-card-body">
                 <div className="datapack-card-title-row">
                     <span className="datapack-card-name">{group.displayName}</span>
-                    {group.shared ? null : <span className="datapack-card-tag">Community</span>}
+                    {/* The shared blue check, INLINE rather than `corner`. The
+                        corner variant pins to the card's top-right, which on this
+                        card is the artwork — a check over a photograph, at
+                        whatever contrast that photo happens to give it. The
+                        Integrations card renders it inline for the same kind of
+                        reason (its corner holds a button).
+
+                        It takes the tag's slot: the two never need to be read at
+                        once, and side by side in a row this narrow they wrap the
+                        title. */}
+                    {isInstalled ? (
+                        <SelectionCheck testId="datapack-card-project-check" />
+                    ) : group.shared ? null : (
+                        <span className="datapack-card-tag">Community</span>
+                    )}
                 </div>
                 {/* Containment: the picker's press must not bubble to the card,
                     or choosing a version would also open the flyout — the

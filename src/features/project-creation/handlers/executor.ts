@@ -1744,7 +1744,7 @@ export async function executeSampleDataPhase(
         );
 
         const result = await installSampleData(
-            project as never,
+            project,
             buildSampleDataDeps(context, project, (message) =>
                 progressTracker('Installing Sample Data', 94, message),
             ),

@@ -131,12 +131,15 @@ describe('progressLabel', () => {
         expect(progressLabel({ done: 0, total: 14, percent: 0 })).toBeUndefined();
     });
 
-    it('words a reset as resetting, never as importing', () => {
+    // "Removing", not "Resetting": the button reads "Remove data…", and a
+    // project RESET now RESTORES the pack — so "Resetting" here named the one
+    // thing this operation is not. The `reset` operation id is unchanged.
+    it('words a removal as removing, never as importing', () => {
         const label = progressLabel(
             { done: 2, total: 6, current: 'products', percent: 33 },
             'reset',
         );
 
-        expect(label).toBe('Resetting Products… 2 of 6 done');
+        expect(label).toBe('Removing Products… 2 of 6 done');
     });
 });

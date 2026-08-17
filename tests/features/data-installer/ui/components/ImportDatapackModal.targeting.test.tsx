@@ -38,20 +38,38 @@ function withScopes(scopes: unknown = SCOPES) {
 }
 
 /**
- * The hidden select the Spectrum Picker mock exposes, found by its LABEL element.
+ * Discovery that never settles, so the loading state can be asserted.
  *
- * Scoped to `spectrum-picker-label` rather than any matching text: the store-view
- * picker's placeholder is "Choose a store view", so a bare text query for
- * /store view/ matches the label and the placeholder both.
+ * Every other request still answers — a modal that cannot resolve its target
+ * renders a different view, and the loading state would never be reached.
  */
+function stallScopes() {
+    mockRequest.mockImplementation(async (type: string) => {
+        if (type === 'list-datapack-import-scopes') {
+            return new Promise(() => {}); // never settles
+        }
+        if (type === 'get-datapack-import-target') {
+            return { success: true, data: { instance: 'inst-1', projectName: 'demo' } };
+        }
+        return { success: true, data: null };
+    });
+}
+
 /** Wait until discovery has settled: the picker exists AND is enabled. */
 async function awaitScopes(): Promise<void> {
     await waitFor(() => expect(pickerFor(/target website/i)).not.toBeDisabled());
 }
 
+/**
+ * Found via the picker's ACCESSIBLE NAME, not a label element inside it.
+ *
+ * The visible label now lives outside the Picker — the field owns it, so it can
+ * stay put while the spinner and the control swap underneath. The Picker carries
+ * `aria-label` instead, which the mock puts on its button.
+ */
 function pickerFor(label: RegExp): HTMLSelectElement {
-    const labels = screen.getAllByTestId('spectrum-picker-label');
-    const match = labels.find((node) => label.test(node.textContent ?? ''));
+    const buttons = screen.getAllByTestId('spectrum-picker');
+    const match = buttons.find((node) => label.test(node.getAttribute('aria-label') ?? ''));
     const wrapper = match?.closest('[data-testid="spectrum-picker-wrapper"]');
     return wrapper?.querySelector('[data-testid="spectrum-picker-select"]') as HTMLSelectElement;
 }
@@ -136,9 +154,13 @@ describe('import targeting', () => {
         await waitFor(() =>
             expect(screen.getByRole('button', { name: /start import/i })).toBeInTheDocument(),
         );
-        // The pickers hold space WHILE loading, so wait for the failure to settle.
+        // Wait for the failure to SETTLE — the spinner standing in for the
+        // pickers is what marks the in-flight state, so its absence is the
+        // signal. (This waited on `spectrum-picker-label`, which no longer
+        // exists at all now the label lives outside the Picker: the wait
+        // passed instantly and asserted nothing.)
         await waitFor(() =>
-            expect(screen.queryByTestId('spectrum-picker-label')).not.toBeInTheDocument(),
+            expect(screen.queryByLabelText('Loading websites')).not.toBeInTheDocument(),
         );
     });
 });
@@ -218,22 +240,107 @@ describe('the products/customer_groups dependency', () => {
  * 5. No precondition hint. It explained a rule the picker already enforces.
  */
 describe('the redesigned target section', () => {
-    /** 1. Space is held while discovery runs, rather than appearing late. */
-    it('shows the pickers disabled while scopes are still loading', async () => {
+    /**
+     * 1. The SPINNER STANDS IN FOR THE CONTROL, under a label that stays put.
+     *
+     * The pickers used to render disabled with a placeholder. That held the space
+     * — which is the point, since before it the fields appeared late and the
+     * dialog jumped — but presented a control that could not be used, showing a
+     * value it did not have.
+     */
+    it('shows a spinner in place of each picker while scopes are loading', async () => {
+        stallScopes();
+        renderModal();
+
+        expect(await screen.findByLabelText('Loading websites')).toBeInTheDocument();
+        expect(screen.getByLabelText('Loading store views')).toBeInTheDocument();
+        expect(screen.queryAllByTestId('spectrum-picker-select')).toHaveLength(0);
+    });
+
+    /** The labels do not wait for the data — only the controls under them do. */
+    it('shows both field labels while still loading', async () => {
+        stallScopes();
+        renderModal();
+
+        await screen.findByLabelText('Loading websites');
+
+        expect(screen.getByText('Target website')).toBeInTheDocument();
+        expect(screen.getByText('Target store view')).toBeInTheDocument();
+    });
+
+    /** CONTROL — the swap goes both ways: pickers in, spinners out. */
+    it('CONTROL — replaces the spinners with the pickers once scopes arrive', async () => {
+        withScopes();
+        renderModal();
+        await awaitScopes();
+
+        expect(screen.queryByLabelText('Loading websites')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('Loading store views')).not.toBeInTheDocument();
+        expect(screen.getAllByTestId('spectrum-picker-select')).toHaveLength(2);
+    });
+
+    /** The spinner carries "busy"; no field repeats it as static text. */
+    it('does not repeat the word Loading in the fields', async () => {
+        stallScopes();
+        renderModal();
+
+        await screen.findByLabelText('Loading websites');
+
+        expect(screen.queryByText(/loading websites…/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/^loading…$/i)).not.toBeInTheDocument();
+    });
+
+    /**
+     * Start must not fire into an unresolved target.
+     *
+     * `canStart` omitted `scope.loading`, so during the second or two the pickers
+     * spin the user could tick types and press Start — and the import landed on
+     * the service default (`base`/`default`) rather than the target about to
+     * arrive, silently, because the request simply omits the pair.
+     */
+    it('disables Start import while the target is still resolving', async () => {
+        stallScopes();
+        renderModal({ availableTypes: ['categories'] });
+
+        await screen.findByLabelText('Loading websites');
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+
+        // The shared Modal renders actions as div[role="button"][aria-disabled],
+        // not <button disabled>, so jest-dom's toBeDisabled() does not apply —
+        // and worse, `.not.toBeDisabled()` passes vacuously on a div. Assert the
+        // attribute, as the sibling suites do.
+        expect(screen.getByRole('button', { name: /start import/i })).toHaveAttribute(
+            'aria-disabled',
+            'true',
+        );
+    });
+
+    /**
+     * CONTROL, and the reason gating is safe at all. Targeting is OPTIONAL — an
+     * import with no target is legitimate — so a discovery that FAILS must
+     * re-enable Start rather than stranding it. `useVSCodeRequest` clears
+     * `loading` in its catch as well as on success; this pins that.
+     */
+    it('CONTROL — re-enables Start when discovery FAILS', async () => {
         mockRequest.mockImplementation(async (type: string) => {
             if (type === 'list-datapack-import-scopes') {
-                return new Promise(() => {}); // never settles
+                return { success: false, error: 'discovery unavailable' };
             }
             if (type === 'get-datapack-import-target') {
-                return { success: true, data: { instance: 'inst-1', projectName: 'demo-1' } };
+                return { success: true, data: { instance: 'inst-1', projectName: 'demo' } };
             }
             return { success: true, data: null };
         });
-        renderModal();
+        renderModal({ availableTypes: ['categories'] });
 
-        // Two pickers render (website and store view); the first is the website.
-        const pickers = await screen.findAllByTestId('spectrum-picker-select');
-        expect(pickers[0]).toBeDisabled();
+        fireEvent.click(await screen.findByRole('checkbox', { name: 'Categories' }));
+
+        await waitFor(() =>
+            expect(screen.getByRole('button', { name: /start import/i })).toHaveAttribute(
+                'aria-disabled',
+                'false',
+            ),
+        );
     });
 
     /** 2 and 3. */

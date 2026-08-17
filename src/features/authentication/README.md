@@ -107,7 +107,7 @@ if (isReady) {
 ```typescript
 import { TokenManager } from '@/features/authentication';
 
-const tokenManager = new TokenManager(commandManager);
+const tokenManager = new TokenManager();
 
 // Check token validity
 const isValid = await tokenManager.isTokenValid();

@@ -57,6 +57,16 @@ export function buildArchiveUrl(
 }
 
 /**
+ * True when an error is GitHub's Contents API update-with-SHA rejection —
+ * the passed SHA no longer matches HEAD because the file changed under us.
+ * Shared by the publishers (brandAssetPublisher, pdp404HandlerPublisher)
+ * to gate their re-read-and-retry-once handling.
+ */
+export function isStaleShaFailure(error: unknown): boolean {
+    return /does not match/i.test((error as Error)?.message ?? '');
+}
+
+/**
  * GitHub File Operations Service
  */
 /**

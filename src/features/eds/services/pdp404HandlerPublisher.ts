@@ -9,7 +9,7 @@
  * import path.
  */
 
-import { GitHubFileOperations } from './githubFileOperations';
+import { GitHubFileOperations, isStaleShaFailure } from './githubFileOperations';
 import {
     buildSmart404Snippet,
     derivePrepublishUrl,
@@ -36,11 +36,6 @@ export interface Pdp404InstallResult {
     installed: boolean;
     /** Set when installed=false to explain why the step was skipped. */
     reason?: string;
-}
-
-/** GitHub's update-with-SHA rejection when the SHA no longer matches HEAD. */
-function isStaleShaFailure(error: unknown): boolean {
-    return /does not match/i.test((error as Error)?.message ?? '');
 }
 
 /**

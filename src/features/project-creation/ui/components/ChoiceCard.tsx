@@ -14,7 +14,7 @@
  */
 
 import React from 'react';
-import { SelectionCheck } from './SelectionCheck';
+import { SelectionCheck } from '@/core/ui/components/ui/SelectionCheck';
 
 export interface ChoiceCardProps {
     /** Card title (the prominent line). */
