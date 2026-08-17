@@ -24,6 +24,7 @@
  * through it unchanged anyway.
  */
 
+import { z } from 'zod';
 import { COMPONENT_SECTIONS } from './discoveryTools';
 import componentsConfig from '@/features/components/config/components.json';
 
@@ -86,11 +87,17 @@ export function registerComponentRequirementsTool(
         {
             description:
                 'What one component needs: its required/optional env vars (with what each one means), required services, and dependencies. list_components only returns ids and names.',
+            // ZOD, not raw JSON Schema. The SDK rejects a plain object with
+            // "inputSchema must be a Zod schema or raw shape", and that throw
+            // happens inside `registerExtraTools` — so it takes down registration
+            // for EVERY tool, leaving a server that binds its socket and never
+            // answers a handshake. Shipped that way in e26bd01e and found by the
+            // probe hanging; no offline check saw it, because the test's fake
+            // server ignores the schema argument entirely.
             inputSchema: {
-                componentId: {
-                    type: 'string',
-                    description: 'Component id, e.g. eds-storefront (see list_components)',
-                },
+                componentId: z
+                    .string()
+                    .describe('Component id, e.g. eds-storefront (see list_components)'),
             },
         },
         async (args: { componentId?: string }) => {

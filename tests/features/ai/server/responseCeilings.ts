@@ -128,6 +128,13 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         why: 'two booleans plus dependency IDs and any validation errors; the wizard rows are projected away',
     },
 
+    check_prerequisites: {
+        bytes: 4_000,
+        why:
+            'one summary row per prerequisite; 514 live for the 5 an eds-accs stack needs. Grows with the ' +
+            'prerequisite COUNT, which is config-bounded, not with anything a project can inflate',
+    },
+
     // ── diagnosis (phase 4, Group 1) — measured live 2026-08-17 ─────────────
     check_repo_readiness: { bytes: 1_000, why: 'a verdict kind, sometimes a reason; 35 live' },
     check_github_app: {

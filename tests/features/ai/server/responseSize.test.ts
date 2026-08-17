@@ -309,12 +309,10 @@ describe('the ceiling table tracks the tool surface', () => {
         // ceilings in the same F5 pass that first exercises them; anything left
         // here after that pass is a tool nobody actually ran.
         //
-        // Group 1's first three rows were measured live on 2026-08-17 and moved
-        // into the table. `check_prerequisites` runs real version probes against
-        // the machine, so its size depends on how many prerequisites the stack
-        // pulls in and cannot be derived from a stub; it was built while no
-        // Extension Dev Host was running, and the first probe promotes it.
-        const PENDING_LIVE_MEASUREMENT = new Set<string>(['check_prerequisites']);
+        // Empty: every Group 1 row has now been driven against a live server and
+        // carries a measured ceiling. A row lands here only between being built
+        // and being probed.
+        const PENDING_LIVE_MEASUREMENT = new Set<string>([]);
 
         const missing = descriptorTools.filter(
             (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t) && !PENDING_LIVE_MEASUREMENT.has(t),
