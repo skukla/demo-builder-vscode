@@ -140,6 +140,7 @@ jest.mock('@/features/eds/services/edsResetService', () => ({
 jest.mock('@/features/data-installer/services/sampleDataInstall', () => ({
     ...jest.requireActual('@/features/data-installer/services/sampleDataInstall'),
     restoreSampleData: jest.fn(),
+    removeSampleData: jest.fn(),
 }));
 jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
     resolveCommerceCredentials: jest.fn(),
@@ -150,13 +151,14 @@ jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
 // =============================================================================
 
 import * as vscode from 'vscode';
-import { restoreSampleData } from '@/features/data-installer/services/sampleDataInstall';
+import { restoreSampleData, removeSampleData } from '@/features/data-installer/services/sampleDataInstall';
 import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
 import { executeEdsReset } from '@/features/eds/services/edsResetService';
 import { resetEdsProjectWithUI } from '@/features/eds/services/edsResetUI';
 
 const mockedReset = executeEdsReset as jest.MockedFunction<typeof executeEdsReset>;
 const mockedRestore = restoreSampleData as jest.MockedFunction<typeof restoreSampleData>;
+const mockedRemove = removeSampleData as jest.MockedFunction<typeof removeSampleData>;
 const mockedCredentials = resolveCommerceCredentials as jest.MockedFunction<
     typeof resolveCommerceCredentials
 >;
@@ -246,6 +248,7 @@ beforeEach(() => {
     mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
     mockEnsureProjectOrgContext.mockResolvedValue({ reachable: true });
     mockedRestore.mockResolvedValue({ ran: true, outcome: 'success' });
+    mockedRemove.mockResolvedValue({ ran: true, outcome: 'success' });
     mockedCredentials.mockResolvedValue({ ok: true, credentials: { kind: 'accs' } } as never);
 });
 
@@ -285,6 +288,56 @@ describe('resetEdsProjectWithUI — sample data', () => {
         await run(createProject({ name: 'bodea', version: 'main' }));
 
         expect(mockedRestore).toHaveBeenCalled();
+    });
+
+    /**
+     * BOTH verbs are offered, because they are different intentions.
+     *
+     * Restore is "give me this demo back". Remove is "clear the instance so I
+     * can put a different pack in" — which the Data Installer also does, but a
+     * user already in the reset flow should not be sent elsewhere for it.
+     *
+     * The prompt briefly dropped Remove when restore arrived, on the reasoning
+     * that a modal carries two actions plus Cancel. That was a judgement about
+     * the ceiling, not the ceiling: restore + remove + Cancel IS two actions.
+     */
+    it('offers Remove as well as Restore', async () => {
+        answers(RESET, undefined);
+
+        await run(createProject({ name: 'bodea', version: 'main' }));
+
+        const [, ...rest] = (vscode.window.showWarningMessage as jest.Mock).mock.calls[1];
+        expect(rest).toContain('Restore Sample Data');
+        expect(rest).toContain('Remove Sample Data');
+    });
+
+    it('removes without reinstalling when Remove is chosen', async () => {
+        answers(RESET, 'Remove Sample Data');
+
+        await run(createProject({ name: 'bodea', version: 'main' }));
+
+        expect(mockedRemove).toHaveBeenCalled();
+        expect(mockedRestore).not.toHaveBeenCalled();
+    });
+
+    /** CONTROL — the buttons drive different jobs, not one job with a flag. */
+    it('CONTROL — restores without a bare removal when Restore is chosen', async () => {
+        answers(RESET, RESTORE);
+
+        await run(createProject({ name: 'bodea', version: 'main' }));
+
+        expect(mockedRestore).toHaveBeenCalled();
+        expect(mockedRemove).not.toHaveBeenCalled();
+    });
+
+    /** Dismissal still keeps the data — neither job runs. */
+    it('does neither when the prompt is dismissed', async () => {
+        answers(RESET, undefined);
+
+        await run(createProject({ name: 'bodea', version: 'main' }));
+
+        expect(mockedRestore).not.toHaveBeenCalled();
+        expect(mockedRemove).not.toHaveBeenCalled();
     });
 
     /**

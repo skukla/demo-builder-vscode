@@ -2,10 +2,17 @@
 
 > ## SHIPPED 2026-08-17
 >
-> **The open question was settled as recommended:** "Remove Sample Data" is gone,
-> replaced by "Restore Sample Data". Remove-only was dropped rather than kept as a
-> third button — an empty catalog stays reachable from the Data Installer, and a
-> modal carrying three coherent choices plus Cancel is past what it can hold.
+> **The open question was settled, then CORRECTED the same session.** Restore first
+> replaced Remove outright, on the reasoning that a modal carries two actions plus
+> Cancel. That was a judgement about the ceiling rather than the ceiling: restore +
+> remove + Cancel is exactly two actions. The prompt now offers both, because they
+> are different intentions — "give me this demo back" and "clear the instance so I
+> can put a different pack in".
+>
+> Renaming came with it: the Data Installer's `Reset…` became `Remove data…`. A
+> project RESET restores the pack, so the same word had come to mean opposite
+> things one menu apart, and that modal's own confirm text ("cannot be undone")
+> was true there and false of the reset beside it.
 >
 > - **Step 1, the ordering defect** — the data step now runs BEFORE the storefront
 >   pipeline, so the pipeline's catalog pre-warm describes the catalog the user is

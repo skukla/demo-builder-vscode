@@ -519,7 +519,12 @@ function buildActions(a: {
             isDisabled: !a.canStart,
         },
         // Arms only. Removing data always takes a second, explicit press.
-        { label: 'Reset…', variant: 'secondary', onPress: a.armReset, isDisabled: !a.canStart },
+        //
+        // "Remove data…", not "Reset…": a project RESET restores the pack —
+        // deletes it and imports the same one again — so the same word meant
+        // opposite things one menu apart, and this modal's own confirm text
+        // ("cannot be undone") was true here and false there.
+        { label: 'Remove data…', variant: 'secondary', onPress: a.armReset, isDisabled: !a.canStart },
         {
             label: startLabel(a.provisioning, a.starting),
             variant: 'accent',

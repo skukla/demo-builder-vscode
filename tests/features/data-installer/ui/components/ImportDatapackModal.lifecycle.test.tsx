@@ -39,7 +39,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
     });
 
     describe('resetting', () => {
-        const resetButton = () => screen.getByRole('button', { name: /^reset/i });
+        // "Remove data…", not "Reset…": a project RESET restores the pack, so the
+        // same word meant opposite things one menu apart.
+        const resetButton = () => screen.getByRole('button', { name: /^remove data/i });
         const resetCalls = () => mockRequest.mock.calls.filter((c) => c[0] === 'reset-datapack');
 
         it('is offered once an instance and types are chosen', async () => {
@@ -175,7 +177,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await screen.findByRole('button', { name: /checking…/i });
 
             expect(screen.getByRole('button', { name: /start import/i })).toHaveAttribute('aria-disabled', 'true');
-            expect(screen.getByRole('button', { name: /reset/i })).toHaveAttribute('aria-disabled', 'true');
+            expect(screen.getByRole('button', { name: /^remove data/i })).toHaveAttribute('aria-disabled', 'true');
         });
     });
 
@@ -276,7 +278,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             renderModal();
             await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
-            fireEvent.click(screen.getByRole('button', { name: /^reset/i }));
+            fireEvent.click(screen.getByRole('button', { name: /^remove data/i }));
             fireEvent.click(screen.getByRole('button', { name: /remove the data/i }));
 
             expect(await screen.findByText(/reset finished/i)).toBeInTheDocument();
@@ -591,7 +593,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             renderModal();
             await awaitForm();
             fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
-            fireEvent.click(screen.getByRole('button', { name: /^reset/i }));
+            fireEvent.click(screen.getByRole('button', { name: /^remove data/i }));
             fireEvent.click(screen.getByRole('button', { name: /remove the data/i }));
 
             expect(await screen.findByText(/reset finished/i)).toBeInTheDocument();

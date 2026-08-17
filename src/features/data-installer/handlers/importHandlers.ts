@@ -176,7 +176,7 @@ export const importHandlers = defineHandlers({
         if (payload?.confirm !== true) {
             return {
                 success: false,
-                error: 'A reset removes this datapack\'s data from the Commerce instance and cannot be undone. Confirm to proceed.',
+                error: 'This removes the datapack\'s data from the Commerce instance and cannot be undone. Confirm to proceed.',
                 code: ErrorCode.INVALID_OPERATION,
             };
         }
