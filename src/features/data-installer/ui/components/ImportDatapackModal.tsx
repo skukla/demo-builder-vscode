@@ -19,8 +19,10 @@
  * fixed precedence would replay an old outcome over a new one (a provisioning
  * success would outrank the dry run the user just ran).
  *
- * **The target comes from the project, and is shown rather than typed** (see
- * {@link ImportTargetField}). **"Stop watching" is not cancel** — there is no
+ * **The target comes from the project, and is shown rather than typed.** An
+ * editable `ImportTargetField` was retired for it — the instance is decided by the
+ * project, and its 22-character id was not something anyone could check by eye.
+ * **"Stop watching" is not cancel** — there is no
  * cancel endpoint; the job continues server-side and the copy says so. Closing
  * the modal stops nothing either: the handler's watch is detached and records
  * into `TransientStateManager`, so reopening picks a RUNNING job back up — but
