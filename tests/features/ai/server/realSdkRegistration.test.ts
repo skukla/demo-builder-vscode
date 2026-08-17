@@ -24,6 +24,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
 import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
+import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
@@ -55,6 +56,7 @@ describe('registration against the real MCP SDK', () => {
         ['get_project_status', (s: McpServer) => registerProjectStatusTool(s, stateManager)],
         ['discovery tools', (s: McpServer) => registerDiscoveryTools(s)],
         ['adobe resource tools', (s: McpServer) => registerAdobeResourceTools(s, ctxFactory)],
+        ['configure_project', (s: McpServer) => registerConfigureProjectTool(s, stateManager)],
         ['cloud resource tools', (s: McpServer) => registerCloudResourceTools(s, ctxFactory)],
     ])('accepts %s', (_name, register) => {
         expect(() => register(server())).not.toThrow();
@@ -76,6 +78,7 @@ describe('registration against the real MCP SDK', () => {
             registerComponentRequirementsTool(s);
             registerAdobeResourceTools(s, ctxFactory);
             registerCloudResourceTools(s, ctxFactory);
+            registerConfigureProjectTool(s, stateManager);
         }).not.toThrow();
     });
 

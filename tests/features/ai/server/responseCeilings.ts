@@ -128,6 +128,10 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         why: 'two booleans plus dependency IDs and any validation errors; the wizard rows are projected away',
     },
 
+    configure_project: {
+        bytes: 4_000,
+        why: 'the applied diff (env reported as KEYS, never values) plus the still-unset list — bounded by the field count, not by config size',
+    },
     create_adobe_project: { bytes: 1_000, why: 'created project id + name, or a refusal explaining the likely cause' },
     create_adobe_workspace: { bytes: 1_000, why: 'created workspace id + name and the project it landed in' },
     delete_adobe_project: {
