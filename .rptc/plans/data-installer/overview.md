@@ -15,12 +15,15 @@
 > - The security condition the old banner set was MET: `demoBuilder.dataInstaller.apiBaseUrl`
 >   ships with an empty default (`package.json`), so no internal stage endpoint is in this
 >   public repo. `resolveDataInstallerAccess` refuses cleanly and actionably without it.
-> - **One gap, open as of this writing:** `DataInstallerTile` renders unconditionally
->   (`ActionGrid.tsx`, the Build zone), gated on neither `dataInstaller.enabled` nor
->   `apiBaseUrl`. A user without the API URL therefore sees a "Sample Data" tile that opens
->   a surface refusing with "No Data Installer API URL is configured." Note this contradicts
->   the root `CLAUDE.md`, which states the surface "does not exist" without those two keys —
->   true of the HANDLER guard, not of the tile.
+> - **One gap, found and CLOSED 2026-08-18:** `DataInstallerTile` used to render
+>   unconditionally, gated on neither setting, so a user without the API URL saw a "Sample
+>   Data" tile that opened a surface refusing with "No Data Installer API URL is
+>   configured." It is now gated on `isDataInstallerConfigured()` — both settings, decided
+>   host-side and shipped to the webview as `dataInstallerAvailable`, failing CLOSED when
+>   the host does not say. This also makes the `diagnose-demo` skill's claim true: it tells
+>   agents the surface "does not exist" without `dataInstaller.enabled` + `apiBaseUrl`,
+>   which described the HANDLER guard and was false of the tile. The palette command still
+>   exists and still explains itself when unconfigured; only the discoverable tile is gated.
 >
 > The lesson worth keeping: a banner asserting where code lives is a claim with nothing
 > keeping it true. This one was wrong for two days and would have sent the next reader to a

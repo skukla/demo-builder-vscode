@@ -35,6 +35,24 @@ export function isDataInstallerEnabled(): boolean {
 }
 
 /**
+ * Whether the Data Installer can actually be used: switched on AND pointed at a
+ * usable API.
+ *
+ * The two settings are a single question for anyone deciding whether to OFFER
+ * the feature, and answering it in two places is how they drift. `resolveDataInstallerAccess`
+ * asks the same pair, in the same order, to decide whether to SERVE a request —
+ * it stays separate because it must say WHICH half failed, and this must not care.
+ *
+ * Exists because the dashboard's Sample Data tile rendered unconditionally: a
+ * user with no `apiBaseUrl` got a tile that opened a surface refusing them. The
+ * root `CLAUDE.md` had described the surface as absent without these two keys,
+ * which was true of the request guard and false of the tile.
+ */
+export function isDataInstallerConfigured(): boolean {
+    return isDataInstallerEnabled() && resolveDataInstallerBaseUrl().ok;
+}
+
+/**
  * Outcome of resolving the base URL — success carries the validated value.
  *
  * A rejection carries a `fingerprint` rather than the value, so a caller can log

@@ -13,6 +13,7 @@ import {
     DATA_INSTALLER_MAX_URL_LENGTH,
     actionUrl,
     fingerprintUrl,
+    isDataInstallerConfigured,
     isDataInstallerEnabled,
     resolveDataInstallerBaseUrl,
 } from '@/features/data-installer/services/dataInstallerConfig';
@@ -191,5 +192,44 @@ describe('dataInstallerConfig', () => {
         it('reports length and not-URL-shaped for garbage, without echoing it', () => {
             expect(fingerprintUrl('token=abc123')).toBe('length=12 chars, not URL-shaped');
         });
+    });
+});
+
+/**
+ * The OFFER question, as opposed to the SERVE question `resolveDataInstallerAccess`
+ * answers. Both halves have to hold: the dashboard tile used to render on
+ * neither, so a user with no API URL got an invitation to a surface that
+ * refused them.
+ */
+describe('isDataInstallerConfigured', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('is true when enabled and pointed at a usable URL', () => {
+        setupConfig({ enabled: true, apiBaseUrl: STAGE_URL });
+
+        expect(isDataInstallerConfigured()).toBe(true);
+    });
+
+    it('is false when switched off, even with a good URL', () => {
+        setupConfig({ enabled: false, apiBaseUrl: STAGE_URL });
+
+        expect(isDataInstallerConfigured()).toBe(false);
+    });
+
+    it('is false when enabled but no URL is configured', () => {
+        // The shipped default: `enabled` true, `apiBaseUrl` empty. This is the
+        // exact combination every beta user has until they set one, and the
+        // combination the ungated tile was wrong about.
+        setupConfig({ enabled: true, apiBaseUrl: '' });
+
+        expect(isDataInstallerConfigured()).toBe(false);
+    });
+
+    it('is false when the configured URL is not usable', () => {
+        setupConfig({ enabled: true, apiBaseUrl: 'http://insecure.example.com' });
+
+        expect(isDataInstallerConfigured()).toBe(false);
     });
 });
