@@ -389,6 +389,19 @@ the MCP socket root is shared across concurrent runs by construction.
 
 ### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
 
+#### An agent cannot tell CDN lag from lost work ([`2026-08-18-agent-cannot-tell-cdn-lag-from-lost-work.md`](2026-08-18-agent-cannot-tell-cdn-lag-from-lost-work.md))
+
+Filed 2026-08-18. A colleague's agent reported a background process force-pushing and
+rewriting `main`; **the report is false and the file disproves it** — every push on both
+affected repos is `ahead / behind=0`, and the two "wiped out" files were never reverted.
+It had been verifying against the deployed site and misread CDN propagation lag as lost
+commits. Re-run the compare check in the file before anyone re-opens this as a force-push
+bug. Three real gaps behind it: `cdnVerified` is computed and then dropped instead of
+returned from the agent-facing publish/sync tools; `diagnose-demo` has no entry for "my
+change isn't showing" (check `git log` first); and `sync_storefront` strands the caller on
+a non-fast-forward instead of rebasing and retrying — the symmetric twin of the fix in
+`efac22fe`.
+
 #### `create_project` demands a mesh workspace for mesh-free packages ([`2026-08-18-create-project-tool-demands-a-mesh-workspace.md`](2026-08-18-create-project-tool-demands-a-mesh-workspace.md))
 
 Filed 2026-08-18. The headless `create_project` MCP tool refuses without an Adobe workspace
