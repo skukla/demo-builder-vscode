@@ -296,12 +296,24 @@ export class DaLiveContentCopy {
      *
      * `source.preview` reads the PREVIEW host (`.aem.page`) instead of the
      * published one. Content pages are published, so `.aem.live` is right for
-     * them — but block-library doc pages are only ever PREVIEWED, because that is
-     * all DA.live's Insert-block palette requires and nobody publishes them.
-     * Measured 2026-08-17 on the two library sources this extension ships:
-     * `accs-citisignal` `/.da/library/blocks/cards` was 200 on `.aem.page` and
-     * 404 on `.aem.live`. Aimed at the published host, the library doc copy
-     * 404'd for every block of every source and had never copied anything.
+     * them. Block-library doc pages are a different matter: a library source
+     * publishes SOME of its doc pages and not others, and which is which is a
+     * per-block property nobody maintains deliberately. Measured 2026-08-18
+     * across the two library sources this extension ships:
+     *
+     *     accs-citisignal  cards, hero              preview 200, live 404
+     *     accs-citisignal  carousel, product-teaser preview 200, live 200
+     *     bodea-source     guided-selling-luxe, …   preview 200, live 200
+     *
+     * Preview is the superset — publishing requires previewing first — so it is
+     * the only host where everything a source HAS is reachable.
+     *
+     * Aimed at the published host, this copy silently skipped whichever blocks
+     * happened to be preview-only, and those fell through to
+     * `generateStubDocPages`: an author opening the DA.live palette got a box
+     * with the block's name where the authored example should be, for some
+     * blocks and not others. That is worse than a clean failure, because a
+     * library half full of stubs looks like it worked.
      *
      * @param contentPatchIds - Optional content patch IDs to apply to HTML content
      * @param contentPatchSource - Optional external source for content patches

@@ -6,20 +6,29 @@
  * - Verification logging (filtering blocks by documentation pages)
  *
  * **The copy reads the PREVIEW host (`.aem.page`), not the published one.**
- * Library doc pages are previewed and, in practice, never published — DA.live's
- * own Insert-block palette only requires a preview, so nobody publishes them.
- * Measured 2026-08-17 against the two library sources this extension ships with:
+ * Whether a library source has PUBLISHED a given doc page is a per-block
+ * property nobody maintains on purpose. Measured 2026-08-18 against both library
+ * sources this extension ships with:
  *
- *   demo-system-stores/accs-citisignal  /.da/library/blocks/cards
- *       .aem.page  200      <- previewed
- *       .aem.live  404      <- never published
- *   skukla/bodea-source                 /.da/library/blocks/text
- *       .aem.page  404      <- not previewed either (its own defect)
+ *   demo-system-stores/accs-citisignal   cards, hero               page 200, live 404
+ *   demo-system-stores/accs-citisignal   carousel, product-teaser  page 200, live 200
+ *   skukla/bodea-source                  guided-selling-luxe,
+ *                                        luxury-configurator,
+ *                                        hero-cta                  page 200, live 200
  *
- * So a copy aimed at `.aem.live` 404s for every block of every source, which is
- * why this fallback had never actually copied anything: blocks fell through to
- * `generateStubDocPages` and authors got an empty stub where the real example
- * markup should be.
+ * Publishing requires previewing first, so preview is the superset and the only
+ * host where everything a source HAS is reachable.
+ *
+ * Aimed at `.aem.live`, this copy skipped whichever blocks happened to be
+ * preview-only and they fell through to `generateStubDocPages` — a box with the
+ * block's name where the authored example belongs, for some blocks and not
+ * others. A library half full of stubs looks like it worked, which is why this
+ * went unnoticed.
+ *
+ * (An earlier version of this note claimed the copy had never worked for any
+ * source. That came from probing `bodea-source` for `text` — a generic block
+ * that site does not own — and generalising one 404. Bodea's own blocks were
+ * previewed AND published the whole time.)
  */
 
 import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLiveContentOperations';
