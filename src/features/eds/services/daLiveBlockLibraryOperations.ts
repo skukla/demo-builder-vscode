@@ -520,12 +520,20 @@ export class DaLiveBlockLibraryOperations {
                 };
             }
 
-            // ABSOLUTE. These go to the AEM admin bulk API, which addresses
-            // content from the site root; relative paths matched nothing and the
-            // call still reported success, so every block in the DA.live palette
-            // read "It appears <block> has not been previewed" with no failure
-            // anywhere in the log. `bulkPreviewAndPublish` normalises as well —
-            // this is the producer being right, not a reason it does not.
+            // ABSOLUTE, and load-bearing. These go to the AEM admin bulk API,
+            // which addresses content from the site root; relative paths matched
+            // nothing and the call still reported success, so every block in the
+            // DA.live palette read "It appears <block> has not been previewed"
+            // with no failure anywhere in the log.
+            //
+            // Nothing downstream will save us: the bulk path runs
+            // `helixService.previewAllContent`, whose `getPathsOrDefault` only
+            // substitutes `['/']` for an empty list and passes every other path
+            // through untouched. (`normalizeWebPath` exists on HelixService, but
+            // the SINGLE-path calls use it, not this one.) An earlier version of
+            // this comment named a `bulkPreviewAndPublish` that normalised "as
+            // well" — that function no longer exists, and the claim was wrong
+            // even for its successor. Verified 2026-08-18.
             paths.push('/.da/library/blocks.json');
 
             this.logger.info(

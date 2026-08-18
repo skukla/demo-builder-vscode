@@ -32,8 +32,15 @@ describe('AI_CONTEXT_VERSION', () => {
     // finding nothing could "fix" it by writing the secret back into project files
     // with update_project_config, undoing the protection. Without the bump,
     // existing projects keep an instruction that reverses a security change.
-    it('is 14 (secrets are not in .env; the skill must stop saying they are)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(14);
+    // v15: diagnose-demo had no entry for "my change is not on the site" — the
+    // symptom an agent meets every time it edits a storefront file. With nothing
+    // routing it to git, one agent verified against the deployed site, read CDN
+    // propagation lag as discarded commits, re-applied work that had never been
+    // lost, and filed a bug about the extension force-pushing. Without the bump,
+    // existing projects keep a diagnosis table with no answer for the symptom
+    // that produced a false bug report.
+    it('is 15 (check git before deciding your work is gone)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(15);
     });
 });
 
