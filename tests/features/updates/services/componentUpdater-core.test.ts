@@ -459,6 +459,50 @@ describe('ComponentUpdater - Core Workflow', () => {
                 expect.any(Error)
             );
         });
+
+        /**
+         * The same defect the mesh build had, in the update path: the failure
+         * was thrown with the build output as its MESSAGE, and the logger keeps
+         * only the first line of a message and then redacts a leading path away.
+         * Node prints the offending file path as line 1 of any uncaught
+         * exception, so the whole reason vanished. See
+         * `core/shell/buildComponent.ts`, where this is fixed for the deploy path.
+         */
+        it('dumps the post-update build output so the cause survives the message pipeline', async () => {
+            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const newVersion = '1.0.0';
+            const buildUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path');
+            const meshProject = {
+                ...mockProject,
+                componentInstances: {
+                    'eds-commerce-mesh': {
+                        id: 'eds-commerce-mesh',
+                        path: '/path/to/project/components/commerce-mesh',
+                        port: 3000
+                    }
+                }
+            } as unknown as Project;
+
+            const nodeCrash = [
+                '/Users/leah/.demo-builder/projects/demo/components/commerce-mesh/mesh.config.js:1',
+                "Error: Cannot find module 'dotenv'",
+            ].join('\n');
+
+            mockExecutor.execute
+                .mockResolvedValueOnce({ stdout: '', stderr: '', code: 0, duration: 100 }) // unzip
+                .mockResolvedValueOnce({ stdout: '', stderr: '', code: 0, duration: 100 }) // npm install
+                .mockResolvedValueOnce({ stdout: '', stderr: nodeCrash, code: 1, duration: 100 }); // build
+
+            await expect(
+                buildUpdater.updateComponent(meshProject, 'eds-commerce-mesh', downloadUrl, newVersion)
+            ).rejects.toThrow();
+
+            const dump = mockLogger.debug.mock.calls.find(
+                (call: unknown[]) => typeof call[1] === 'object' && call[1] !== null,
+            );
+            expect(dump).toBeDefined();
+            expect(JSON.stringify(dump?.[1])).toContain("Cannot find module 'dotenv'");
+        });
     });
 
     describe('Snapshot lifecycle', () => {

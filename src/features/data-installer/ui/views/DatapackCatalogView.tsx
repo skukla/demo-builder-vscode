@@ -64,6 +64,7 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 /** Fields a query is matched against — the id and the label, nothing else. */
 const SEARCH_FIELDS: ReadonlyArray<keyof DatapackGroup> = ['name', 'displayName'];
@@ -161,6 +162,11 @@ export function DatapackCatalogView(): React.JSX.Element {
     );
 
     const refresh = useCallback((): void => load({ includeCommunity }), [load, includeCommunity]);
+
+    /** Opens VS Code settings at the section a configuration refusal names. */
+    const openDataInstallerSettings = useCallback((): void => {
+        webviewClient.postMessage('open-data-installer-settings');
+    }, []);
     const pickVersion = useCallback(
         (name: string, version: string): void =>
             setVersions((current) => ({ ...current, [name]: version })),
@@ -223,7 +229,9 @@ export function DatapackCatalogView(): React.JSX.Element {
     }
 
     if (failure) {
-        return renderDataInstallerFailure(failure, refresh);
+        return renderDataInstallerFailure(failure, refresh, {
+            onOpenSettings: openDataInstallerSettings,
+        });
     }
 
     return (

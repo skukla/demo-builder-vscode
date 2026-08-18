@@ -13,3 +13,4 @@
 export { dataInstallerHandlers, resolveDataInstallerAccess } from './dataInstallerHandlers';
 export type { DataInstallerAccess } from './dataInstallerHandlers';
 export { importHandlers } from './importHandlers';
+export { handleOpenDataInstallerSettings } from './settingsHandlers';

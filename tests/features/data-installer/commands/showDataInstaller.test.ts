@@ -78,12 +78,32 @@ describe('ShowDataInstallerCommand', () => {
             // BOTH maps. They stay separate because the read map is what the MCP
             // descriptors mirror — writes are deliberately not agent-exposed — but
             // the panel needs every type, so the command registers the union.
+            //
+            // Plus `open-data-installer-settings`, which is in NEITHER map on
+            // purpose: it opens a VS Code pane, so it has no business in the read
+            // map the MCP descriptors mirror. Named here rather than derived,
+            // because being outside both maps is the whole point of it.
             expect(registered).toEqual(
                 [
                     ...getRegisteredTypes(dataInstallerHandlers),
                     ...getRegisteredTypes(importHandlers),
+                    'open-data-installer-settings',
                 ].sort(),
             );
+        });
+
+        /**
+         * The refusal's own fix. Unregistered, the "Open Settings" button on the
+         * configuration failure would be a silent no-op — and that failure is the
+         * FIRST thing an unconfigured install sees, because `apiBaseUrl` ships
+         * with no default.
+         */
+        it('registers the settings action the configuration refusal offers', () => {
+            const comm = { onStreaming: jest.fn() };
+            makeCommand().initializeMessageHandlers(comm);
+
+            const registered = comm.onStreaming.mock.calls.map((call) => call[0]);
+            expect(registered).toContain('open-data-installer-settings');
         });
 
         it('registers at least the six Stage 1 types', () => {

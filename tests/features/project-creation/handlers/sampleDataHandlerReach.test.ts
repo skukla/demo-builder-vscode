@@ -24,6 +24,15 @@ describe('the wizard handler map', () => {
     });
 
     /**
+     * The sub-step's whole recovery path when the Data Installer was never
+     * configured. Unregistered, the button would be a no-op — the silent-failure
+     * mode this file exists to prevent, in the one place a stuck user presses.
+     */
+    it('can open the Data Installer settings the sub-step points at', () => {
+        expect(projectCreationHandlers['open-data-installer-settings']).toBeInstanceOf(Function);
+    });
+
+    /**
      * Every datapack WRITE stays out. Derived from the write map rather than
      * listed by hand, so a write added later is caught without editing this.
      */

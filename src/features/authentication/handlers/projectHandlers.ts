@@ -366,8 +366,9 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
  *
  * The "New" affordance is always offered; permission is validated HERE. Checks developer
  * permission and, when absent, returns an `AUTH_FORBIDDEN`-coded error the UI surfaces
- * inline (telegraph-on-attempt, no pre-flight probe). On success, refreshes the project
- * list and acks the new selection (mirrors `handleSelectProject`). Never throws.
+ * inline (telegraph-on-attempt, no pre-flight probe). On success, returns the refreshed
+ * project list alongside the new project so the caller can seed its cache — see the
+ * comment on that block for why this must not be a push. Never throws.
  */
 export async function handleCreateAdobeProject(
     context: HandlerContext,
@@ -405,21 +406,28 @@ export async function handleCreateAdobeProject(
             };
         }
 
-        // Refresh the project list and ack the new selection (best-effort).
-        // The push goes through the SAME deletable stamping as get-projects.
+        // Refresh the project list and return it ON THIS RESPONSE (best-effort).
+        // It must NOT be a `sendMessage` push: the only listener for `get-projects`
+        // lives in AdobeProjectPicker, and every create path has replaced that
+        // picker with the create panel (AdobeProjectField) or a phase spinner
+        // (the Add Integration flow) by the time this runs. WebviewClient drops a
+        // message with no registered listener, so the pushed refresh was lost and
+        // the remounted picker read a stale cache — a list missing the project the
+        // user had just made. The caller awaits this response, so it always lands.
+        // Goes through the SAME deletable stamping as get-projects.
+        let projects: AdobeProject[] | undefined;
         try {
-            const projects = await context.authManager.getProjects();
-            await context.sendMessage(
-                'get-projects',
-                await stampProjectsDeletable(context.authManager, projects),
+            projects = await stampProjectsDeletable(
+                context.authManager,
+                await context.authManager.getProjects(),
             );
-            await context.sendMessage('projectSelected', { projectId: project.id });
         } catch (refreshError) {
+            // Omitted, not empty: the caller clears its cache and reloads.
             context.debugLogger.debug('[Project] Post-create refresh failed:', refreshError);
         }
 
         context.logger.info(`[Project] Created App Builder project: ${project.name}`);
-        return { success: true, data: project };
+        return { success: true, data: project, projects };
     } catch (error) {
         context.logger.error('[Project] Failed to create project:', error as Error);
         return { success: false, error: `Failed to create project: ${toError(error).message}` };

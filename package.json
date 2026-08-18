@@ -2,7 +2,7 @@
   "name": "adobe-demo-builder",
   "displayName": "Adobe Demo Builder",
   "description": "Create and manage Adobe Commerce demos with ease",
-  "version": "1.0.0-beta.133",
+  "version": "1.0.0-beta.134",
   "publisher": "skukla",
   "engines": {
     "vscode": "^1.84.0"
@@ -273,8 +273,8 @@
         "properties": {
           "demoBuilder.daLive.aemAuthorUrl": {
             "type": "string",
-            "default": "author-p158081-e1683323.adobeaemcloud.com",
-            "description": "AEM Author environment URL for DA.live content authoring with AEM Assets. Format: author-pXXXXX-eYYYYY.adobeaemcloud.com"
+            "default": "",
+            "description": "AEM Author environment for the DA.live Assets panel, written to each site as aem.repositoryId. Required — set this to your environment. There is no default: a bundled one binds every user to an AEM they may not be able to reach, and reports success while doing it. Leave empty to write no binding at all. Format: author-pXXXXX-eYYYYY.adobeaemcloud.com"
           },
           "demoBuilder.daLive.IMSOrgId": {
             "type": "string",

@@ -1051,6 +1051,11 @@ export async function applyDaLiveOrgConfigSettings(
         const removeKeys: string[] = [];
         if (aemAuthorUrl) {
             updates['aem.repositoryId'] = aemAuthorUrl;
+        } else {
+            // Symmetric with editor.path below. Without this, clearing
+            // `aemAuthorUrl` left the previous binding on the site for good —
+            // a state the extension could create and then never undo.
+            removeKeys.push('aem.repositoryId');
         }
         const ewCanvasBranch = getEwCanvasBranch();
         const editorValue = buildEditorPathValue(
@@ -1083,14 +1088,38 @@ export async function applyDaLiveOrgConfigSettings(
             updates,
             removeKeys,
         );
+        // Name the AEM host, not just the key. `aemAuthorUrl` ships with a
+        // DEFAULT, so "aem.repositoryId was applied" is true for every user and
+        // tells nobody which repository they were bound to — a colleague's
+        // missing Assets panel could not be told apart from a wrong host without
+        // asking her to read her own settings. The value is a hostname already
+        // published in package.json, so logging it discloses nothing new.
+        const boundHost = updates['aem.repositoryId'];
         const summary = [
             appliedKeys.length ? `Applied: ${appliedKeys.join(', ')}` : '',
+            boundHost ? `AEM Assets bound to ${boundHost}` : '',
             removeKeys.length ? `Cleared: ${removeKeys.join(', ')}` : '',
         ]
             .filter(Boolean)
             .join('; ');
         if (result.success) {
             logger.info(`[EDS Config] ${summary}`);
+            // Losing the Assets panel because a setting is unset is the same
+            // silent failure the rest of this branch exists to fix — it removed a
+            // working binding from a live site within an hour of the no-default
+            // change, and said so only at info level.
+            //
+            // Gated on what was ACTUALLY removed, not on what was asked for: a
+            // site that never had a binding has lost nothing, and warning there
+            // would train people to ignore the message that matters.
+            if (result.removed?.includes('aem.repositoryId')) {
+                logger.warn(
+                    '[EDS Config] Removed this site\'s AEM Assets binding because '
+                        + 'demoBuilder.daLive.aemAuthorUrl is not set — the Assets panel will '
+                        + 'no longer appear in da.live. Set it (bare host, e.g. '
+                        + 'author-pXXXXX-eYYYYY.adobeaemcloud.com) and re-run to restore it.',
+                );
+            }
         } else {
             logger.warn(`[EDS Config] Failed to apply settings (${summary}): ${result.error}`);
         }

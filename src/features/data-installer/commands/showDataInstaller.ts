@@ -15,7 +15,7 @@
  */
 
 import * as vscode from 'vscode';
-import { dataInstallerHandlers, importHandlers } from '../handlers';
+import { dataInstallerHandlers, handleOpenDataInstallerSettings, importHandlers } from '../handlers';
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import type { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
@@ -100,6 +100,24 @@ export class ShowDataInstallerCommand extends BaseWebviewCommand {
                 });
             }
         }
+
+        // Registered on its own because it belongs to NEITHER map: it is a VS Code
+        // UI action, and the read map is mirrored by the MCP descriptors, where a
+        // window-opening command has no business being offered to an agent.
+        //
+        // The panel needs it for the same reason the wizard does. `apiBaseUrl` has
+        // no default, so an unconfigured install meets the refusal before it meets
+        // a catalog, and naming a settings key the user must then hunt for is half
+        // an answer on every surface, not just the wizard's.
+        const settingsMap = { 'open-data-installer-settings': handleOpenDataInstallerSettings };
+        comm.onStreaming('open-data-installer-settings', async (data: unknown) =>
+            dispatchHandler(
+                settingsMap,
+                this.createHandlerContext(),
+                'open-data-installer-settings',
+                data,
+            ),
+        );
     }
 
     /** Dispose any active Data Installer panel (used by sibling surfaces on swap). */

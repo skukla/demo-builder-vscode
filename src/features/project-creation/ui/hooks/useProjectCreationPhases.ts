@@ -46,6 +46,12 @@ export type ProjectCreationActivePhase = 'creating' | 'workspace' | 'enabling';
 interface HandlerResult<T> {
     success: boolean;
     data?: T;
+    /**
+     * `create-adobe-project`'s post-create refresh, carried on the RESPONSE because
+     * this flow has replaced the picker — the only listener for a `get-projects`
+     * push — with its centered spinner. Absent when the refresh fetch failed.
+     */
+    projects?: AdobeProject[];
     error?: string;
     code?: string;
 }
@@ -260,10 +266,15 @@ export function useProjectCreationPhases({
                     };
                     runCtx.current.project = project;
                     // Commit exactly what AdobeProjectField.handleCreate commits.
+                    // `projectsCache` is always written, even as undefined: leaving
+                    // the key out keeps the pre-create list, and the picker skips its
+                    // auto-load whenever a cache exists — so it would remount showing
+                    // a list without the project just created.
                     commit({
                         adobeProject: project,
                         adobeWorkspace: undefined,
                         workspacesCache: undefined,
+                        projectsCache: res.projects,
                     });
                     await runWorkspace(token);
                 } else {

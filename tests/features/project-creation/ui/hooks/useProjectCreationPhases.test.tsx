@@ -96,7 +96,11 @@ async function startAndCreate(
         hook.result.current.start(name);
     });
     await act(async () => {
-        route.latest('create-adobe-project').resolve({ success: true, data: CREATED_PROJECT });
+        route.latest('create-adobe-project').resolve({
+            success: true,
+            data: CREATED_PROJECT,
+            projects: [CREATED_PROJECT],
+        });
     });
 }
 
@@ -161,10 +165,31 @@ describe('useProjectCreationPhases', () => {
                 },
                 adobeWorkspace: undefined,
                 workspacesCache: undefined,
+                projectsCache: [CREATED_PROJECT],
             });
             const firstCommit = hook.updateState.mock.calls[0][0] as Record<string, unknown>;
             expect(Object.prototype.hasOwnProperty.call(firstCommit, 'adobeWorkspace')).toBe(true);
             expect(Object.prototype.hasOwnProperty.call(firstCommit, 'workspacesCache')).toBe(true);
+        });
+
+        // The picker is replaced by this flow's centered spinner while the create
+        // runs, so the handler's old `get-projects` push had no listener; the list
+        // rides back on the response instead (pinned in the commit test above).
+        // Without a list, the cache must be CLEARED rather than left stale.
+        it('clears the project cache when the response carries no list (forces a reload)', async () => {
+            const route = routeDeferred();
+            const hook = renderPhases();
+
+            await act(async () => {
+                hook.result.current.start('My Demo');
+            });
+            await act(async () => {
+                route.latest('create-adobe-project').resolve({ success: true, data: CREATED_PROJECT });
+            });
+
+            const firstCommit = hook.updateState.mock.calls[0][0] as Record<string, unknown>;
+            expect(Object.prototype.hasOwnProperty.call(firstCommit, 'projectsCache')).toBe(true);
+            expect(firstCommit.projectsCache).toBeUndefined();
         });
 
         it('a create envelope failure fails at "creating" with the handler error and stops', async () => {

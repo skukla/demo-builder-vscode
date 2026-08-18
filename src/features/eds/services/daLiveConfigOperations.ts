@@ -23,6 +23,21 @@ import { hasWriteAccess } from './daLiveOrgOperations';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
+/**
+ * Outcome of a site-config write.
+ *
+ * `removed` is what was ACTUALLY deleted, not what was asked for. The two differ
+ * whenever a caller clears a key defensively, and only the first means the user
+ * just lost something — a caller that cannot tell them apart either warns on
+ * every run or never warns at all.
+ */
+export interface SiteConfigWriteResult {
+    success: boolean;
+    error?: string;
+    /** The `removeKeys` that were present in the sheet and are now gone. */
+    removed?: string[];
+}
+
 /** DA.live config-sheet write operations. */
 export class DaLiveConfigOperations {
     constructor(
@@ -158,7 +173,7 @@ export class DaLiveConfigOperations {
         site: string,
         configUpdates: Record<string, string>,
         removeKeys: string[] = [],
-    ): Promise<{ success: boolean; error?: string }> {
+    ): Promise<SiteConfigWriteResult> {
         return this.writeMergedDataConfig(
             `${DA_LIVE_BASE_URL}/config/${org}/${site}`,
             org,
@@ -191,7 +206,7 @@ export class DaLiveConfigOperations {
         org: string,
         configUpdates: Record<string, string>,
         removeKeys: string[] = [],
-    ): Promise<{ success: boolean; error?: string }> {
+    ): Promise<SiteConfigWriteResult> {
         const token = await this.apiClient.getImsToken();
 
         const read = await this.readConfigOrError(configUrl, org, token);
@@ -212,9 +227,11 @@ export class DaLiveConfigOperations {
             }
         }
 
-        // Determine which removeKeys actually exist before mutating the map.
-        // Used by the no-op short-circuit below.
-        const removedAnything = removeKeys.some((key) => configMap.has(key));
+        // Which removeKeys actually exist, captured BEFORE the map is mutated.
+        // Drives the no-op short-circuit below and is reported to the caller, who
+        // needs "was something lost" rather than "was something asked for".
+        const removed = removeKeys.filter((key) => configMap.has(key));
+        const removedAnything = removed.length > 0;
 
         // Apply updates
         for (const [key, value] of Object.entries(configUpdates)) {
@@ -233,7 +250,7 @@ export class DaLiveConfigOperations {
         // create an empty config doc where none existed (UE projects that never had
         // editor.path). Skip the round-trip and report success.
         if (Object.keys(configUpdates).length === 0 && !removedAnything) {
-            return { success: true };
+            return { success: true, removed: [] };
         }
 
         // Convert back to rows format (key/value columns)
@@ -258,7 +275,7 @@ export class DaLiveConfigOperations {
                 `[DA.live] Config applied at ${configUrl}: ${Object.keys(configUpdates).join(', ')}`,
             );
         }
-        return result;
+        return { ...result, removed: result.success ? removed : [] };
     }
 
     /**

@@ -13,6 +13,7 @@
 import * as vscode from 'vscode';
 import {
     checkAdobeCLI,
+    checkOrphanedSettings,
     checkTools,
     getEnvironment,
     getSystemInfo,
@@ -174,6 +175,10 @@ export class DiagnosticsCommand {
             // Environment variables
             this.logger.debug('Collecting environment variables...');
             report.environment = getEnvironment();
+
+            // Settings whose value stopped applying when the key was renamed.
+            // Local and instant — no probe, no network.
+            report.orphanedSettings = checkOrphanedSettings();
 
             // Run diagnostic tests
             this.logger.debug('Running diagnostic tests...');

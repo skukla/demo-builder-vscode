@@ -26,6 +26,7 @@ import {
     type ToolsInfo,
     type VSCodeInfo,
 } from './diagnosticsReport';
+import { collectUserSetKeys, contributedKeysFrom, orphanedKeys } from './orphanedSettings';
 import { ServiceLocator } from '@/core/di';
 import { getLogger, type CommandResultWithContext } from '@/core/logging';
 import { parseJSON } from '@/types/typeGuards';
@@ -230,6 +231,45 @@ export function getEnvironment(): EnvironmentInfo {
         FNM_NODE_DIST_MIRROR: env.FNM_NODE_DIST_MIRROR,
         FNM_LOGLEVEL: env.FNM_LOGLEVEL,
     };
+}
+
+/** The extension id whose manifest declares the settings this checks against. */
+const EXTENSION_ID = 'adobe.demo-builder';
+
+/** Configuration section every setting this extension owns hangs off. */
+const SETTINGS_SECTION = 'demoBuilder';
+
+/**
+ * Settings the user has set that this extension no longer reads.
+ *
+ * Answers the question a rename makes unanswerable: "is the value I configured
+ * actually the one in use?" See `orphanedSettings` for the failure that earned
+ * this check. Returns an empty list on ANY failure — a diagnostic must never
+ * become the failure it was called to explain.
+ *
+ * @returns Full dotted keys with a user value and no schema, sorted
+ */
+export function checkOrphanedSettings(): string[] {
+    try {
+        const manifest = vscode.extensions.getExtension(EXTENSION_ID)?.packageJSON;
+        const contributed = contributedKeysFrom(manifest);
+        if (contributed.length === 0) {
+            // Without the manifest every key looks orphaned. Say nothing rather
+            // than accuse every setting the user has.
+            return [];
+        }
+        const root = vscode.workspace.getConfiguration();
+        const tree = vscode.workspace.getConfiguration(SETTINGS_SECTION) as unknown;
+        const userSet = collectUserSetKeys(
+            tree as Record<string, unknown>,
+            SETTINGS_SECTION,
+            (key) => root.inspect(key),
+        );
+        return orphanedKeys(contributed, userSet);
+    } catch (error) {
+        getLogger().debug('[Diagnostics] Orphaned-settings check failed', error);
+        return [];
+    }
 }
 
 export async function runTests(): Promise<TestResults> {
