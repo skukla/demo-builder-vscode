@@ -389,6 +389,17 @@ the MCP socket root is shared across concurrent runs by construction.
 
 ### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
 
+#### `create_project` demands a mesh workspace for mesh-free packages ([`2026-08-18-create-project-tool-demands-a-mesh-workspace.md`](2026-08-18-create-project-tool-demands-a-mesh-workspace.md))
+
+Filed 2026-08-18. The headless `create_project` MCP tool refuses without an Adobe workspace
+**unconditionally** (`createProjectTool.ts:112`), so a package whose `demo-packages.json` entry
+says `mesh: false` — `bodea`, `citisignal`, `custom`, `isle5`, i.e. four of the five — cannot be
+created headlessly at all. Reproduced on both `eds-accs` and `eds-paas`, refused in 0.0s. The
+message compounds it: it blames API Mesh for a project that has none, which is a false
+explanation the reader has no reason to doubt. The wizard path is unaffected. Small fix — the
+mesh requirement is already in the config the tool has loaded; needs tests in both directions so
+`buildright` still refuses.
+
 #### EDS contract drift checker ([`2026-08-13-eds-contract-drift-checker.md`](2026-08-13-eds-contract-drift-checker.md))
 
 Filed 2026-08-13, raised by the Data Installer session and re-measured here before filing.
