@@ -71,7 +71,7 @@ describe('projectHandlers - Create', () => {
             expect(result.error).toBeTruthy();
         });
 
-        it('creates, refreshes the list, acks the selection, and returns the project', async () => {
+        it('returns the refreshed list ON THE RESPONSE (the caller is unmounted, a push is lost)', async () => {
             mockContext.authManager.getProjects.mockResolvedValue([PROJECT]);
 
             const result = await handleCreateAdobeProject(mockContext, { name: 'My Demo', description: 'A demo' });
@@ -79,15 +79,25 @@ describe('projectHandlers - Create', () => {
             expect(result.success).toBe(true);
             expect(result.data).toEqual(PROJECT);
             expect(mockContext.authManager.createProject).toHaveBeenCalledWith('My Demo', 'A demo');
-            // The refresh push goes through the same deletable stamping as
+            // The refreshed list goes through the same deletable stamping as
             // get-projects (no token manager on the harness → false).
-            expect(mockContext.sendMessage).toHaveBeenCalledWith(
-                'get-projects', [{ ...PROJECT, deletable: false }],
-            );
-            expect(mockContext.sendMessage).toHaveBeenCalledWith('projectSelected', { projectId: 'proj-new' });
+            expect(result.projects).toEqual([{ ...PROJECT, deletable: false }]);
         });
 
-        it('stamps the refresh push with ownership (deletable=true for own projects)', async () => {
+        it('does NOT push the refresh: the picker unmounts during create, so a push is dropped', async () => {
+            mockContext.authManager.getProjects.mockResolvedValue([PROJECT]);
+
+            await handleCreateAdobeProject(mockContext, { name: 'My Demo' });
+
+            // `AdobeProjectField` swaps the picker out for the create panel (and the
+            // Add Integration flow for a phase spinner), so nothing is listening for
+            // `get-projects` at this moment — WebviewClient drops it. `projectSelected`
+            // never had a listener at all.
+            expect(mockContext.sendMessage).not.toHaveBeenCalledWith('get-projects', expect.anything());
+            expect(mockContext.sendMessage).not.toHaveBeenCalledWith('projectSelected', expect.anything());
+        });
+
+        it('stamps the returned list with ownership (deletable=true for own projects)', async () => {
             const userId = TEST_USER_ID;
             const token = makeJwt({ user_id: userId });
             mockContext.authManager.getTokenManager = jest.fn().mockReturnValue({
@@ -97,12 +107,19 @@ describe('projectHandlers - Create', () => {
                 { ...PROJECT, who_created: userId },
             ]);
 
-            await handleCreateAdobeProject(mockContext, { name: 'My Demo' });
+            const result = await handleCreateAdobeProject(mockContext, { name: 'My Demo' });
 
-            expect(mockContext.sendMessage).toHaveBeenCalledWith(
-                'get-projects',
-                [{ ...PROJECT, who_created: userId, deletable: true }],
-            );
+            expect(result.projects).toEqual([{ ...PROJECT, who_created: userId, deletable: true }]);
+        });
+
+        it('still succeeds when the refresh fetch fails, omitting projects so the caller reloads', async () => {
+            mockContext.authManager.getProjects.mockRejectedValue(new Error('adobe down'));
+
+            const result = await handleCreateAdobeProject(mockContext, { name: 'My Demo' });
+
+            expect(result.success).toBe(true);
+            expect(result.data).toEqual(PROJECT);
+            expect(result.projects).toBeUndefined();
         });
 
         it('returns an error when createProject throws', async () => {

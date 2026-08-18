@@ -85,7 +85,11 @@ describe('AdobeProjectField', () => {
         const updateState = jest.fn();
         mockRequests((type) =>
             type === 'create-adobe-project'
-                ? { success: true, data: { id: 'p9', name: 'np', title: 'New Project' } }
+                ? {
+                      success: true,
+                      data: { id: 'p9', name: 'np', title: 'New Project' },
+                      projects: [{ id: 'p9', name: 'np', title: 'New Project' }],
+                  }
                 : { success: true },
         );
         renderField(<AdobeProjectField state={EMPTY} updateState={updateState} />);
@@ -164,6 +168,54 @@ describe('AdobeProjectField', () => {
         expect(screen.getByTestId('project-picker')).toBeInTheDocument();
         expect(request).not.toHaveBeenCalledWith('create-adobe-project', expect.anything());
     });
+
+    // The picker is UNMOUNTED while this panel is up, so the handler's old
+    // `get-projects` push had no listener and was dropped — the remounted picker
+    // then read a stale cache and showed a list without the new project. The
+    // refreshed list now rides back on the response and is committed here.
+    it('commits the refreshed list from the response so the remounted picker is current', async () => {
+        const updateState = jest.fn();
+        const created = { id: 'p9', name: 'np', title: 'New Project' };
+        mockRequests((type) =>
+            type === 'create-adobe-project'
+                ? { success: true, data: created, projects: [{ id: 'p1', name: 'old' }, created] }
+                : { success: true },
+        );
+        renderField(<AdobeProjectField state={EMPTY} updateState={updateState} />);
+
+        fireEvent.click(await screen.findByRole('button', { name: 'New' }));
+        fireEvent.change(screen.getByRole('textbox'), { target: { value: 'np' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+        await waitFor(() =>
+            expect(updateState).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    projectsCache: [{ id: 'p1', name: 'old' }, created],
+                }),
+            ),
+        );
+    });
+
+    it('clears the cache when the response carries no list, so the picker reloads', async () => {
+        const updateState = jest.fn();
+        mockRequests((type) =>
+            type === 'create-adobe-project'
+                ? { success: true, data: { id: 'p9', name: 'np', title: 'New Project' } }
+                : { success: true },
+        );
+        renderField(<AdobeProjectField state={EMPTY} updateState={updateState} />);
+
+        fireEvent.click(await screen.findByRole('button', { name: 'New' }));
+        fireEvent.change(screen.getByRole('textbox'), { target: { value: 'np' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+        await waitFor(() => expect(updateState).toHaveBeenCalled());
+        const commit = updateState.mock.calls[0][0] as Record<string, unknown>;
+        // Present-and-undefined, not absent: an absent key leaves the stale cache
+        // in place and the picker never reloads.
+        expect(Object.prototype.hasOwnProperty.call(commit, 'projectsCache')).toBe(true);
+        expect(commit.projectsCache).toBeUndefined();
+    });
 });
 
 describe('AdobeWorkspaceField', () => {
@@ -189,6 +241,50 @@ describe('AdobeWorkspaceField', () => {
                 expect.objectContaining({ adobeWorkspace: expect.objectContaining({ id: 'w9' }) }),
             ),
         );
+    });
+
+    // Same defect as the project field: the workspace picker is unmounted while
+    // this panel is up, so a pushed refresh is dropped.
+    it('commits the refreshed list from the response so the remounted picker is current', async () => {
+        const updateState = jest.fn();
+        const created = { id: 'w9', name: 'nw', title: 'New WS' };
+        mockRequests((type) =>
+            type === 'create-adobe-workspace'
+                ? { success: true, data: created, workspaces: [{ id: 'w1', name: 'Prod' }, created] }
+                : { success: true },
+        );
+        renderField(<AdobeWorkspaceField state={EMPTY} updateState={updateState} />);
+
+        fireEvent.click(await screen.findByRole('button', { name: 'New' }));
+        fireEvent.change(screen.getByRole('textbox'), { target: { value: 'nw' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+        await waitFor(() =>
+            expect(updateState).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    workspacesCache: [{ id: 'w1', name: 'Prod' }, created],
+                }),
+            ),
+        );
+    });
+
+    it('clears the cache when the response carries no list, so the picker reloads', async () => {
+        const updateState = jest.fn();
+        mockRequests((type) =>
+            type === 'create-adobe-workspace'
+                ? { success: true, data: { id: 'w9', name: 'nw', title: 'New WS' } }
+                : { success: true },
+        );
+        renderField(<AdobeWorkspaceField state={EMPTY} updateState={updateState} />);
+
+        fireEvent.click(await screen.findByRole('button', { name: 'New' }));
+        fireEvent.change(screen.getByRole('textbox'), { target: { value: 'nw' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+        await waitFor(() => expect(updateState).toHaveBeenCalled());
+        const commit = updateState.mock.calls[0][0] as Record<string, unknown>;
+        expect(Object.prototype.hasOwnProperty.call(commit, 'workspacesCache')).toBe(true);
+        expect(commit.workspacesCache).toBeUndefined();
     });
 });
 
