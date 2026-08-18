@@ -12,7 +12,10 @@ import { addIntegrationFlowHandlers } from './addIntegrationFlowHandlers';
 import * as creation from './';
 import * as authentication from '@/features/authentication';
 import * as components from '@/features/components/handlers/componentHandlers';
-import { dataInstallerHandlers } from '@/features/data-installer/handlers';
+import {
+    dataInstallerHandlers,
+    handleOpenDataInstallerSettings,
+} from '@/features/data-installer/handlers';
 import * as eds from '@/features/eds/handlers';
 import * as lifecycle from '@/features/lifecycle/handlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
@@ -77,6 +80,11 @@ export const projectCreationHandlers = defineHandlers({
     // start an import, a reset or an export. Pinned both ways in
     // sampleDataHandlerReach.test.ts.
     'find-datapacks': dataInstallerHandlers['find-datapacks'],
+
+    // The sub-step's recovery path. `apiBaseUrl` has no default, so a fresh
+    // install reaches the catalog refusal before it reaches a catalog; naming the
+    // setting without opening it leaves the user hunting through a settings tree.
+    'open-data-installer-settings': handleOpenDataInstallerSettings,
 
     // EDS handlers - GitHub
     'check-github-auth': eds.handleCheckGitHubAuth,

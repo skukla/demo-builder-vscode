@@ -76,7 +76,7 @@ describe('workspaceHandlers - Create', () => {
         expect(result.error).toBeTruthy();
     });
 
-    it('creates, refreshes the list, acks the selection, and returns the workspace', async () => {
+    it('returns the refreshed list ON THE RESPONSE (the caller is unmounted, a push is lost)', async () => {
         mockContext.authManager.getWorkspaces.mockResolvedValue([WS]);
 
         const result = await handleCreateAdobeWorkspace(mockContext, { name: 'Stage', description: 'A workspace' });
@@ -84,8 +84,27 @@ describe('workspaceHandlers - Create', () => {
         expect(result.success).toBe(true);
         expect(result.data).toEqual(WS);
         expect(mockContext.authManager.createWorkspace).toHaveBeenCalledWith('Stage', 'A workspace');
-        expect(mockContext.sendMessage).toHaveBeenCalledWith('get-workspaces', [WS]);
-        expect(mockContext.sendMessage).toHaveBeenCalledWith('workspaceSelected', { workspaceId: 'ws-new' });
+        expect(result.workspaces).toEqual([WS]);
+    });
+
+    it('does NOT push the refresh: the picker unmounts during create, so a push is dropped', async () => {
+        await handleCreateAdobeWorkspace(mockContext, { name: 'Stage' });
+
+        // `AdobeWorkspaceField` swaps the picker out for the create panel, so nothing
+        // is listening for `get-workspaces` at this moment — WebviewClient drops it.
+        // `workspaceSelected` never had a listener at all.
+        expect(mockContext.sendMessage).not.toHaveBeenCalledWith('get-workspaces', expect.anything());
+        expect(mockContext.sendMessage).not.toHaveBeenCalledWith('workspaceSelected', expect.anything());
+    });
+
+    it('still succeeds when the refresh fetch fails, omitting workspaces so the caller reloads', async () => {
+        mockContext.authManager.getWorkspaces.mockRejectedValue(new Error('adobe down'));
+
+        const result = await handleCreateAdobeWorkspace(mockContext, { name: 'Stage' });
+
+        expect(result.success).toBe(true);
+        expect(result.data).toEqual(WS);
+        expect(result.workspaces).toBeUndefined();
     });
 
     it('threads the payload projectId into the post-create refresh (SDK path, not the stale CLI)', async () => {

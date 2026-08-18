@@ -34,10 +34,12 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import {
     DatapackCard,
     groupDatapacks,
     pickDefaultVersion,
+    renderDataInstallerFailure,
     useDataInstallerRequest,
     type DatapackGroup,
     type DatapackSummary,
@@ -70,6 +72,11 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
     }, [load]);
 
     const groups = useMemo(() => groupDatapacks(value?.items ?? []), [value]);
+
+    /** Opens VS Code settings at the section the refusal names. */
+    const openDataInstallerSettings = useCallback((): void => {
+        webviewClient.postMessage('open-data-installer-settings');
+    }, []);
 
     /**
      * Filtered locally, because the service offers nothing else. Its
@@ -129,10 +136,26 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
     return (
         <div className="sample-data-area">
             {failure ? (
-                <p className="sample-data-note">
-                    The sample data catalog could not be loaded — {failure.message} You can still
-                    create this project and choose sample data later from the dashboard.
-                </p>
+                // The ONE failure treatment every Data Installer surface uses —
+                // its own module warns that this is the shape that drifts when it
+                // is copied, and a second copy was written here before this call
+                // replaced it. `extraDetail` carries the only thing that is
+                // genuinely wizard-specific: this sub-step never blocks Continue.
+                //
+                // The copy this replaced ended "choose sample data later from the
+                // dashboard". That tile is hidden by the SAME predicate that
+                // produces this refusal, so the sentence was false precisely when
+                // it was shown.
+                <CenteredFeedbackContainer>
+                    {renderDataInstallerFailure(
+                        failure,
+                        () => load({ includeCommunity: false }),
+                        {
+                            onOpenSettings: openDataInstallerSettings,
+                            extraDetail: 'You can create this project without sample data.',
+                        },
+                    )}
+                </CenteredFeedbackContainer>
             ) : loading ? (
                 // Not an empty grid. A None card over an empty grid states "there
                 // is no sample data" for as long as the fetch takes — the same

@@ -33,10 +33,22 @@ import { LoadingOverlay } from '@/core/ui/components/feedback/LoadingOverlay';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { AdobeProject, WizardState, Workspace } from '@/types/webview';
 
-/** The handler response envelope (`webviewClient.request` resolves with this). */
+/**
+ * The handler response envelope (`webviewClient.request` resolves with this).
+ *
+ * `list` carries the create handler's post-create refresh. It rides the RESPONSE
+ * rather than arriving as a `get-projects` / `get-workspaces` push because this
+ * component has already swapped the picker — the only listener for those messages —
+ * out for the create panel, and WebviewClient drops a message nothing is listening
+ * for. Absent on a failed refresh, which the caller reads as "clear the cache".
+ */
 interface HandlerResult<T> {
     success: boolean;
     data?: T;
+    /** Post-create refresh (project create). Absent when the refresh fetch failed. */
+    projects?: AdobeProject[];
+    /** Post-create refresh (workspace create). Absent when the refresh fetch failed. */
+    workspaces?: Workspace[];
     error?: string;
     code?: string;
 }
@@ -197,6 +209,12 @@ export function AdobeProjectField({
                             description: res.data.description,
                             org_id: res.data.org_id,
                         },
+                        // Seed the list the remounting picker reads. Always written,
+                        // even as undefined: leaving the key out keeps the pre-create
+                        // cache, and the picker skips its auto-load when a cache
+                        // exists — the stale list the user saw. Undefined forces the
+                        // reload; a refresh failure is the only way that happens.
+                        projectsCache: res.projects,
                         // Clear dependent workspace selection for the new project.
                         adobeWorkspace: undefined,
                         workspacesCache: undefined,
@@ -290,6 +308,8 @@ export function AdobeWorkspaceField({
                             name: res.data.name,
                             title: res.data.title,
                         },
+                        // Same contract as the project field above: always written.
+                        workspacesCache: res.workspaces,
                     });
                     setMode('browse');
                 } else {

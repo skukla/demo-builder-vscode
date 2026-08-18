@@ -125,9 +125,9 @@ export async function handleSelectWorkspace(
  *
  * Defensively re-checks developer permission (the shared `can-create-adobe-project`
  * probe may be stale) and returns an `AUTH_FORBIDDEN`-coded error so the UI drops
- * to Flow B (select existing / open console / switch org). On success, refreshes
- * the workspace list and acks the new selection (mirrors `handleSelectWorkspace`).
- * Never throws.
+ * to Flow B (select existing / open console / switch org). On success, returns the
+ * refreshed workspace list alongside the new workspace so the caller can seed its
+ * cache — see the comment on that block for why this must not be a push. Never throws.
  */
 export async function handleCreateAdobeWorkspace(
     context: HandlerContext,
@@ -168,21 +168,28 @@ export async function handleCreateAdobeWorkspace(
             };
         }
 
-        // Refresh the workspace list and ack the new selection (best-effort). Thread the
-        // wizard's project so the fetch takes the SDK path (the org resolves via the
-        // fetcher's token-org fallback); unthreaded it would drop to the stale-org CLI.
+        // Refresh the workspace list and return it ON THIS RESPONSE (best-effort).
+        // It must NOT be a `sendMessage` push: the only listener for `get-workspaces`
+        // lives in AdobeWorkspacePicker, which AdobeWorkspaceField has replaced with
+        // the create panel by the time this runs. WebviewClient drops a message with
+        // no registered listener, so the pushed refresh was lost and the remounted
+        // picker read a stale cache. The caller awaits this response, so it lands.
+        //
+        // Thread the wizard's project so the fetch takes the SDK path (the org
+        // resolves via the fetcher's token-org fallback); unthreaded it would drop
+        // to the stale-org CLI.
+        let workspaces: AdobeWorkspace[] | undefined;
         try {
-            const workspaces = await context.authManager.getWorkspaces({
+            workspaces = await context.authManager.getWorkspaces({
                 projectId: payload?.projectId,
             });
-            await context.sendMessage('get-workspaces', workspaces);
-            await context.sendMessage('workspaceSelected', { workspaceId: workspace.id });
         } catch (refreshError) {
+            // Omitted, not empty: the caller clears its cache and reloads.
             context.debugLogger.debug('[Workspace] Post-create refresh failed:', refreshError);
         }
 
         context.logger.info(`[Workspace] Created workspace: ${workspace.name}`);
-        return { success: true, data: workspace };
+        return { success: true, data: workspace, workspaces };
     } catch (error) {
         context.logger.error('[Workspace] Failed to create workspace:', error as Error);
         return { success: false, error: `Failed to create workspace: ${toError(error).message}` };

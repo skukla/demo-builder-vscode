@@ -136,6 +136,12 @@ export interface DiagnosticsReport {
     tests: TestResults;
     mcp: McpInfo;
     githubCredential: CredentialProbeResult;
+    /**
+     * `demoBuilder.*` keys the user has set that the extension no longer reads —
+     * usually the losing half of a rename, whose value silently stopped applying.
+     * Empty when there are none, absent when the check could not run.
+     */
+    orphanedSettings?: string[];
     /** Absent when no EDS project is open — there is no site config to probe. */
     configService?: ConfigServiceProbeResult;
     /**
@@ -510,6 +516,16 @@ export function buildSummaryLines(report: DiagnosticsReport): string[] {
         // part; the roster stays in the debug report dump.
     } else {
         lines.push('  Reachable: No', `  Reason: ${report.mcp.error ?? 'unknown'}`);
+    }
+
+    if (report.orphanedSettings?.length) {
+        lines.push(
+            '',
+            'Settings you have set that this extension NO LONGER READS:',
+            ...report.orphanedSettings.map((key) => `  ⚠️  ${key}`),
+            '  These were renamed or removed. Their values are being ignored, and any',
+            '  replacement setting is falling back to its default — silently.',
+        );
     }
 
     lines.push(...credentialLines(report.githubCredential));

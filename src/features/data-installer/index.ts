@@ -65,6 +65,19 @@ export {
     type DataInstallerFailure,
 } from './ui/hooks/useDataInstallerRequest';
 
+/**
+ * The ONE failure treatment, exported for that same caller.
+ *
+ * Every surface calls the same guard, so every surface can be refused for the
+ * same reasons and must offer the same affordance for each. The wizard's
+ * sub-step grew its own copy first; this export is what retired it.
+ * Presentational only — it pulls no extension-host module into a webview bundle.
+ */
+export {
+    renderDataInstallerFailure,
+    type DataInstallerFailureOptions,
+} from './ui/dataInstallerFailure';
+
 export type {
     DatapackId,
     DatapackSummary,

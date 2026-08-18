@@ -260,6 +260,62 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
         });
     });
 
+    /**
+     * "Cleared" and "there was nothing to clear" are different events, and only
+     * one of them means the user just LOST something. The caller warns on the
+     * first and stays quiet on the second, so the distinction has to survive the
+     * return value — `removeKeys` alone cannot carry it, since it says what was
+     * ASKED for, not what was there.
+     */
+    describe('reports which removeKeys were actually present', () => {
+        it('names the key it removed', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: jest.fn().mockResolvedValue({
+                    ':version': 3,
+                    ':names': ['data'],
+                    ':type': 'multi-sheet',
+                    data: {
+                        total: 1,
+                        offset: 0,
+                        limit: 1,
+                        data: [{ key: 'aem.repositoryId', value: 'author-p1-e1.example' }],
+                    },
+                }),
+            });
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: jest.fn().mockResolvedValue({}) });
+
+            const result = await service.applySiteConfig(
+                'leahrayard', 'leah-b2b-demo', { 'editor.path': '/x=y' }, ['aem.repositoryId'],
+            );
+
+            expect(result.success).toBe(true);
+            expect(result.removed).toEqual(['aem.repositoryId']);
+        });
+
+        it('reports nothing removed when the key was never there', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: jest.fn().mockResolvedValue({
+                    ':version': 3,
+                    ':names': ['data'],
+                    ':type': 'multi-sheet',
+                    data: { total: 0, offset: 0, limit: 0, data: [] },
+                }),
+            });
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: jest.fn().mockResolvedValue({}) });
+
+            const result = await service.applySiteConfig(
+                'leahrayard', 'leah-b2b-demo', { 'editor.path': '/x=y' }, ['aem.repositoryId'],
+            );
+
+            expect(result.success).toBe(true);
+            expect(result.removed ?? []).toEqual([]);
+        });
+    });
+
     it('preserves non-data sheets when deleting a key via removeKeys', async () => {
         const permissionsSheet = {
             total: 1,

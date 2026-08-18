@@ -179,6 +179,98 @@ describe('buildComponent', () => {
                 buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any),
             ).rejects.toThrow('stdout boom');
         });
+
+        /**
+         * A colleague's mesh build failed on 2026-08-18 and the ONLY trace it
+         * left was `Error: Build failed: <path>/`. The reason is a three-step
+         * pipeline that each do something reasonable and together destroy the
+         * evidence:
+         *
+         *   1. this function folds multi-line npm/node output into one Error;
+         *   2. `sanitizeErrorForLogging` keeps only `message.split('\n')[0]`;
+         *   3. the path redactor replaces `/Users/...` up to the next whitespace.
+         *
+         * Node prints the offending FILE PATH as line 1 of any uncaught
+         * exception, so step 2 selects a bare path and step 3 erases it. The
+         * message can never be the record. The deploy half of this feature
+         * already dumps stdout/stderr before it throws (`handleDeployFailure`);
+         * the build half is why that log was undiagnosable.
+         */
+        describe('a failed build leaves a readable trace, not just a message', () => {
+            /** Exactly the shape node emits — path first, everything else after. */
+            const NODE_CRASH = [
+                '/Users/leah/.demo-builder/projects/demo/components/eds-accs-mesh/mesh.config.js:1',
+                "require('dotenv').config();",
+                '^',
+                "Error: Cannot find module 'dotenv'",
+            ].join('\n');
+
+            function dumpFor(logger: { debug: jest.Mock }): Record<string, unknown> | undefined {
+                const call = logger.debug.mock.calls.find(
+                    (c: unknown[]) => typeof c[1] === 'object' && c[1] !== null,
+                );
+                return call?.[1] as Record<string, unknown> | undefined;
+            }
+
+            it('dumps the build output so the cause survives the message pipeline', async () => {
+                cm.execute
+                    .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '' })
+                    .mockResolvedValueOnce({ code: 1, stdout: '', stderr: NODE_CRASH });
+
+                await expect(
+                    buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any),
+                ).rejects.toThrow();
+
+                const dump = dumpFor(logger as any);
+                expect(dump).toBeDefined();
+                // The line the thrown message can never carry.
+                expect(JSON.stringify(dump)).toContain("Cannot find module 'dotenv'");
+            });
+
+            it('records the exit code, which survives redaction when the text does not', async () => {
+                cm.execute
+                    .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '' })
+                    .mockResolvedValueOnce({ code: 1, stdout: '', stderr: NODE_CRASH });
+
+                await expect(
+                    buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any),
+                ).rejects.toThrow();
+
+                expect(dumpFor(logger as any)?.code).toBe(1);
+            });
+
+            it('dumps stdout too — npm puts the useful half there', async () => {
+                cm.execute
+                    .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '' })
+                    .mockResolvedValueOnce({ code: 1, stdout: 'the real reason', stderr: '' });
+
+                await expect(
+                    buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any),
+                ).rejects.toThrow();
+
+                expect(JSON.stringify(dumpFor(logger as any))).toContain('the real reason');
+            });
+
+            it('names the exit code in the thrown message, which redaction cannot erase', async () => {
+                cm.execute
+                    .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '' })
+                    .mockResolvedValueOnce({ code: 1, stdout: '', stderr: NODE_CRASH });
+
+                await expect(
+                    buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any),
+                ).rejects.toThrow(/exit 1/);
+            });
+
+            it('dumps nothing on a successful build', async () => {
+                cm.execute
+                    .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '' })
+                    .mockResolvedValueOnce({ code: 0, stdout: 'built', stderr: '' });
+
+                await buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any);
+
+                expect(dumpFor(logger as any)).toBeUndefined();
+            });
+        });
     });
 
     describe('progress + logging', () => {

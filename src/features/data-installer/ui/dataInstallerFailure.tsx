@@ -19,17 +19,35 @@ import type { DataInstallerFailure } from './hooks/useDataInstallerRequest';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { ErrorCode } from '@/types/errorCodes';
 
+/** Per-surface extras for the configuration refusal. */
+export interface DataInstallerFailureOptions {
+    /**
+     * Opens VS Code settings at `demoBuilder.dataInstaller`. Supplied by surfaces
+     * whose host registers `open-data-installer-settings`.
+     *
+     * Naming a setting is only half an answer — `apiBaseUrl` ships with no
+     * default (this repository is public), so on a fresh install the FIRST thing
+     * every user meets is this refusal, and the fix is a settings key they then
+     * have to go hunting for.
+     */
+    onOpenSettings?: () => void;
+    /** One extra line, for a surface that can say what still works without it. */
+    extraDetail?: string;
+}
+
 /**
  * Render a failure with the affordance that can actually fix it.
  *
  * @param failure - the flattened refusal or transport failure
  * @param onRetry - re-runs the request; also the sign-in trigger, since the
  *                  interactive guard prompts for Adobe sign-in on its way through
+ * @param options - per-surface extras for the configuration refusal
  * @returns the status block to render in place of the view's body
  */
 export function renderDataInstallerFailure(
     failure: DataInstallerFailure,
     onRetry: () => void,
+    options: DataInstallerFailureOptions = {},
 ): React.JSX.Element {
     if (failure.code === ErrorCode.AUTH_REQUIRED) {
         return (
@@ -43,14 +61,29 @@ export function renderDataInstallerFailure(
     }
 
     if (failure.code === ErrorCode.INVALID_OPERATION) {
+        const details = [
+            'Set demoBuilder.dataInstaller.apiBaseUrl, and make sure demoBuilder.dataInstaller.enabled is on.',
+        ];
+        if (options.extraDetail) {
+            details.push(options.extraDetail);
+        }
         return (
             <StatusDisplay
                 variant="warning"
                 title="The Data Installer is not configured"
                 message={failure.message}
-                details={[
-                    'Set demoBuilder.dataInstaller.apiBaseUrl, and make sure demoBuilder.dataInstaller.enabled is on.',
-                ]}
+                details={details}
+                actions={
+                    options.onOpenSettings
+                        ? [
+                              {
+                                  label: 'Open Settings',
+                                  onPress: options.onOpenSettings,
+                                  variant: 'primary',
+                              },
+                          ]
+                        : undefined
+                }
             />
         );
     }
