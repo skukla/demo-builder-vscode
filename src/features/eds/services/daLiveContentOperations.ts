@@ -550,4 +550,19 @@ export class DaLiveContentOperations {
     ): Promise<{ success: boolean; error?: string }> {
         return this.configOps.applySiteConfig(org, site, configUpdates, removeKeys);
     }
+
+    /**
+     * The site config as DA.live holds it — for logging when something that
+     * depends on it fails inexplicably. Null when it cannot be read.
+     *
+     * @param org - DA.live organization
+     * @param site - DA.live site
+     * @returns the raw config document, or null
+     */
+    async readSiteConfigForDiagnostics(
+        org: string,
+        site: string,
+    ): Promise<Record<string, unknown> | null> {
+        return this.configOps.readSiteConfigForDiagnostics(org, site);
+    }
 }

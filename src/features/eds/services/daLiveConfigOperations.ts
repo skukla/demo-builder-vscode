@@ -47,6 +47,36 @@ export class DaLiveConfigOperations {
      * @param libraryEntries - Array of library entries with title and path
      * @returns Result with success status
      */
+    /**
+     * The site config exactly as DA.live holds it — for diagnostics only.
+     *
+     * Every other read here is part of a read-merge-write cycle and fails closed.
+     * This one is for printing: when the block library publishes cleanly and none
+     * of it previews, the site config is the state nobody can see afterwards, and
+     * the write that broke it is long gone. Returns null rather than throwing —
+     * a diagnostic must never become the failure it was called to explain.
+     *
+     * @param org - Organization name
+     * @param site - Site name
+     * @returns the raw config document, or null when it cannot be read
+     */
+    async readSiteConfigForDiagnostics(
+        org: string,
+        site: string,
+    ): Promise<Record<string, unknown> | null> {
+        try {
+            const token = await this.apiClient.getImsToken();
+            const read = await this.readConfigOrError(
+                `${DA_LIVE_BASE_URL}/config/${org}/${site}`,
+                org,
+                token,
+            );
+            return 'error' in read ? null : read.config;
+        } catch {
+            return null;
+        }
+    }
+
     async updateSiteConfig(
         org: string,
         site: string,
