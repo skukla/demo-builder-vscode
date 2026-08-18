@@ -520,7 +520,13 @@ export class DaLiveBlockLibraryOperations {
                 };
             }
 
-            paths.push('.da/library/blocks.json');
+            // ABSOLUTE. These go to the AEM admin bulk API, which addresses
+            // content from the site root; relative paths matched nothing and the
+            // call still reported success, so every block in the DA.live palette
+            // read "It appears <block> has not been previewed" with no failure
+            // anywhere in the log. `bulkPreviewAndPublish` normalises as well —
+            // this is the producer being right, not a reason it does not.
+            paths.push('/.da/library/blocks.json');
 
             this.logger.info(
                 `[DA.live] Block library created: ${verifiedBlocks.length}/${blocks.length} blocks with docs in ${org}/${site}`,
@@ -528,7 +534,7 @@ export class DaLiveBlockLibraryOperations {
 
             // Add block doc pages to paths for publishing
             for (const blockId of existingBlockIds) {
-                paths.push(`.da/library/blocks/${blockId}`);
+                paths.push(`/.da/library/blocks/${blockId}`);
             }
 
             return { success: true, blocksCount: verifiedBlocks.length, paths };
@@ -707,7 +713,10 @@ export class DaLiveBlockLibraryOperations {
             for (const source of contentSources) {
                 const success = await this.copyOps.copySingleFile(
                     token,
-                    source,
+                    // PREVIEW, not published. Library doc pages get previewed and
+                    // left there — that is all the DA.live palette needs — so the
+                    // published host 404s for every block of every source.
+                    { ...source, preview: true },
                     docPath,
                     { org, site },
                     docPath,

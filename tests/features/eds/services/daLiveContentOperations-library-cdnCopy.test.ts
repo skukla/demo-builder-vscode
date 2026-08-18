@@ -4,6 +4,22 @@
  * Tests for createBlockLibraryFromTemplate:
  * - copyBlockDocPagesFromSources (CDN-based copy for blocks without unsafeHTML)
  * - Verification logging (filtering blocks by documentation pages)
+ *
+ * **The copy reads the PREVIEW host (`.aem.page`), not the published one.**
+ * Library doc pages are previewed and, in practice, never published — DA.live's
+ * own Insert-block palette only requires a preview, so nobody publishes them.
+ * Measured 2026-08-17 against the two library sources this extension ships with:
+ *
+ *   demo-system-stores/accs-citisignal  /.da/library/blocks/cards
+ *       .aem.page  200      <- previewed
+ *       .aem.live  404      <- never published
+ *   skukla/bodea-source                 /.da/library/blocks/text
+ *       .aem.page  404      <- not previewed either (its own defect)
+ *
+ * So a copy aimed at `.aem.live` 404s for every block of every source, which is
+ * why this fallback had never actually copied anything: blocks fell through to
+ * `generateStubDocPages` and authors got an empty stub where the real example
+ * markup should be.
  */
 
 import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLiveContentOperations';
@@ -83,11 +99,11 @@ describe('createBlockLibraryFromTemplate', () => {
             const createdPages = new Set<string>();
 
             return async (url: string, options?: RequestInit) => {
-                if (url.includes('.aem.live/') && url.endsWith('.json') && options?.method === 'HEAD') {
+                if (url.includes('.aem.page/') && url.endsWith('.json') && options?.method === 'HEAD') {
                     return { ok: false, status: 404 } as Response;
                 }
 
-                if (url.includes('.aem.live/') && url.includes('.plain.html')) {
+                if (url.includes('.aem.page/') && url.includes('.plain.html')) {
                     const match = url.match(/\.da\/library\/blocks\/([^.]+)\.plain\.html/);
                     if (match && cdnAvailableBlocks.includes(match[1])) {
                         return {
@@ -153,12 +169,12 @@ describe('createBlockLibraryFromTemplate', () => {
 
             expect(result.success).toBe(true);
             expect(result.blocksCount).toBe(2);
-            expect(result.paths).toContain('.da/library/blocks/cards');
-            expect(result.paths).toContain('.da/library/blocks/hero-v2');
+            expect(result.paths).toContain('/.da/library/blocks/cards');
+            expect(result.paths).toContain('/.da/library/blocks/hero-v2');
 
             const cdnFetches = mockFetch.mock.calls.filter(
                 (call: [string, RequestInit]) =>
-                    call[0].includes('aem.live') && call[0].includes('.plain.html'),
+                    call[0].includes('aem.page') && call[0].includes('.plain.html'),
             );
             expect(cdnFetches.some((c: [string]) => c[0].includes('hero-v2'))).toBe(true);
             expect(cdnFetches.some((c: [string]) => c[0].includes('cards'))).toBe(false);
@@ -174,10 +190,10 @@ describe('createBlockLibraryFromTemplate', () => {
 
             const createdPages = new Set<string>();
             mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
-                if (url.includes('.aem.live/') && url.endsWith('.json') && options?.method === 'HEAD') {
+                if (url.includes('.aem.page/') && url.endsWith('.json') && options?.method === 'HEAD') {
                     return { ok: false, status: 404 } as Response;
                 }
-                if (url.includes('.aem.live/') && url.includes('.plain.html')) {
+                if (url.includes('.aem.page/') && url.includes('.plain.html')) {
                     if (url.includes('isle5')) {
                         return {
                             ok: true, status: 200,
@@ -217,7 +233,7 @@ describe('createBlockLibraryFromTemplate', () => {
 
             expect(result.success).toBe(true);
             expect(result.blocksCount).toBe(1);
-            expect(result.paths).toContain('.da/library/blocks/hero-v2');
+            expect(result.paths).toContain('/.da/library/blocks/hero-v2');
         });
 
         it('should only attempt CDN copy for installedBlockIds, skipping native template blocks', async () => {
@@ -247,7 +263,7 @@ describe('createBlockLibraryFromTemplate', () => {
 
             const cdnFetches = mockFetch.mock.calls.filter(
                 (call: [string, RequestInit]) =>
-                    call[0].includes('aem.live') && call[0].includes('.plain.html'),
+                    call[0].includes('aem.page') && call[0].includes('.plain.html'),
             );
 
             expect(cdnFetches.some((c: [string]) => c[0].includes('commerce-cart'))).toBe(true);
@@ -281,7 +297,7 @@ describe('createBlockLibraryFromTemplate', () => {
 
             const cdnFetches = mockFetch.mock.calls.filter(
                 (call: [string, RequestInit]) =>
-                    call[0].includes('aem.live') && call[0].includes('.plain.html'),
+                    call[0].includes('aem.page') && call[0].includes('.plain.html'),
             );
             expect(cdnFetches.some((c: [string]) => c[0].includes('cards'))).toBe(true);
             expect(cdnFetches.some((c: [string]) => c[0].includes('hero-v2'))).toBe(true);
@@ -417,9 +433,9 @@ describe('createBlockLibraryFromTemplate', () => {
             expect(result.success).toBe(true);
             expect(result.blocksCount).toBe(2);
 
-            expect(result.paths).toContain('.da/library/blocks.json');
-            expect(result.paths).toContain('.da/library/blocks/cards');
-            expect(result.paths).toContain('.da/library/blocks/hero');
+            expect(result.paths).toContain('/.da/library/blocks.json');
+            expect(result.paths).toContain('/.da/library/blocks/cards');
+            expect(result.paths).toContain('/.da/library/blocks/hero');
             expect(result.paths).not.toContain('.da/library/blocks/accordion');
             expect(result.paths).not.toContain('.da/library/blocks/carousel');
         });

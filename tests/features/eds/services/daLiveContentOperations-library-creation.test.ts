@@ -71,9 +71,19 @@ describe('createBlockLibraryFromTemplate', () => {
         );
         expect(blocksCall).toBeDefined();
 
-        expect(result.paths).toContain('.da/library/blocks.json');
-        expect(result.paths).toContain('.da/library/blocks/cards');
-        expect(result.paths).toContain('.da/library/blocks/hero');
+        expect(result.paths).toContain('/.da/library/blocks.json');
+        expect(result.paths).toContain('/.da/library/blocks/cards');
+        expect(result.paths).toContain('/.da/library/blocks/hero');
+
+        // ABSOLUTE, every one. These go straight to the AEM admin bulk API, which
+        // addresses content from the site root, and they were emitted relative
+        // while every other path in the system carried a leading slash — the
+        // single-page promote path uses `/.da/library/blocks/<id>` and previews
+        // fine. Measured on a project created 2026-08-17: every block in the
+        // DA.live Insert-block palette answered "It appears Text has not been
+        // previewed", `/.da/library/blocks/text` was 404 on the preview CDN, and
+        // `/index` — through the same bulk call, with a slash — was 200.
+        expect(result.paths.every((p) => p.startsWith('/'))).toBe(true);
     });
 
     it('should return success with zero blocks when template has no component-definition.json', async () => {
@@ -133,8 +143,8 @@ describe('createBlockLibraryFromTemplate', () => {
 
         expect(result.success).toBe(true);
         expect(result.blocksCount).toBe(2);
-        expect(result.paths).toContain('.da/library/blocks/hero');
-        expect(result.paths).toContain('.da/library/blocks/product-teaser');
+        expect(result.paths).toContain('/.da/library/blocks/hero');
+        expect(result.paths).toContain('/.da/library/blocks/product-teaser');
     });
 
     it('should handle getFileContent errors gracefully', async () => {
@@ -248,9 +258,9 @@ describe('createBlockLibraryFromTemplate', () => {
             // deduplicated (not in installedBlockIds)
             expect(result.success).toBe(true);
             expect(result.blocksCount).toBe(3);
-            expect(result.paths).toContain('.da/library/blocks/accordion');
-            expect(result.paths).toContain('.da/library/blocks/carousel');
-            expect(result.paths).toContain('.da/library/blocks/hero-v2');
+            expect(result.paths).toContain('/.da/library/blocks/accordion');
+            expect(result.paths).toContain('/.da/library/blocks/carousel');
+            expect(result.paths).toContain('/.da/library/blocks/hero-v2');
 
             expect(mockLogger.info).toHaveBeenCalledWith(
                 expect.stringContaining('Generating 3 stub doc pages'),
@@ -358,7 +368,7 @@ describe('createBlockLibraryFromTemplate', () => {
 
             expect(result.success).toBe(true);
             expect(result.blocksCount).toBe(1);
-            expect(result.paths).toContain('.da/library/blocks/carousel');
+            expect(result.paths).toContain('/.da/library/blocks/carousel');
             expect(mockLogger.warn).toHaveBeenCalledWith(
                 expect.stringContaining('Failed to create stub doc page for accordion'),
             );

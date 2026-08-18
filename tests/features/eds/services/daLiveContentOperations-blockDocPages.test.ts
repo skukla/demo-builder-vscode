@@ -145,8 +145,8 @@ describe('createBlockLibraryFromTemplate', () => {
             // Both blocks appear: hero-cta via ensureBlockDocPages, cards via generateStubDocPages
             expect(result.success).toBe(true);
             expect(result.blocksCount).toBe(2);
-            expect(result.paths).toContain('.da/library/blocks/hero-cta');
-            expect(result.paths).toContain('.da/library/blocks/cards');
+            expect(result.paths).toContain('/.da/library/blocks/hero-cta');
+            expect(result.paths).toContain('/.da/library/blocks/cards');
         });
 
         it('should skip blocks that already have doc pages from content source', async () => {
@@ -224,7 +224,7 @@ describe('createBlockLibraryFromTemplate', () => {
 
             expect(result.success).toBe(true);
             expect(result.blocksCount).toBe(1);
-            expect(result.paths).toContain('.da/library/blocks/hero-cta');
+            expect(result.paths).toContain('/.da/library/blocks/hero-cta');
 
             expect(mockLogger.warn).toHaveBeenCalledWith(
                 expect.stringContaining('Failed to create doc page for newsletter'),

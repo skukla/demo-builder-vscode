@@ -19,11 +19,11 @@ import { DaLiveError, DaLiveAuthError } from '@/features/eds/services/types';
 
 // Mock edsHelpers
 const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
-const mockBulkPreviewAndPublish = jest.fn().mockResolvedValue(undefined);
+const mockPublishLibraryPaths = jest.fn().mockResolvedValue(undefined);
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     applyDaLiveOrgConfigSettings: (...args: unknown[]) => mockApplyDaLiveOrgConfigSettings(...args),
-    bulkPreviewAndPublish: (...args: unknown[]) => mockBulkPreviewAndPublish(...args),
+    publishLibraryPaths: (...args: unknown[]) => mockPublishLibraryPaths(...args),
 }));
 
 // Mock the brand-asset publisher (phase runs iff params.brandAssets present)
@@ -57,7 +57,7 @@ describe('executeEdsPipeline - operations', () => {
             createBlockLibraryFromTemplate: jest.fn().mockResolvedValue({
                 success: true,
                 blocksCount: 5,
-                paths: ['.da/library/blocks.json', '.da/library/blocks/hero'],
+                paths: ['/.da/library/blocks.json', '/.da/library/blocks/hero'],
             }),
             copyContent: jest.fn().mockResolvedValue({
                 success: true,
@@ -343,7 +343,7 @@ describe('executeEdsPipeline - operations', () => {
                 services,
             );
 
-            expect(result.libraryPaths).toEqual(['.da/library/blocks.json', '.da/library/blocks/hero']);
+            expect(result.libraryPaths).toEqual(['/.da/library/blocks.json', '/.da/library/blocks/hero']);
         });
     });
 
@@ -486,11 +486,11 @@ describe('executeEdsPipeline - operations', () => {
                 services,
             );
 
-            expect(mockBulkPreviewAndPublish).toHaveBeenCalledWith(
+            expect(mockPublishLibraryPaths).toHaveBeenCalledWith(
                 mockHelixService,
                 'test-owner',
                 'test-repo',
-                ['.da/library/blocks.json', '.da/library/blocks/hero'],
+                ['/.da/library/blocks.json', '/.da/library/blocks/hero'],
                 mockLogger,
             );
         });
@@ -507,11 +507,11 @@ describe('executeEdsPipeline - operations', () => {
                 services,
             );
 
-            expect(mockBulkPreviewAndPublish).not.toHaveBeenCalled();
+            expect(mockPublishLibraryPaths).not.toHaveBeenCalled();
         });
 
         it('should not fail when library publish throws', async () => {
-            mockBulkPreviewAndPublish.mockRejectedValue(new Error('publish error'));
+            mockPublishLibraryPaths.mockRejectedValue(new Error('publish error'));
 
             const result = await executeEdsPipeline(
                 { ...baseParams, skipContent: true, includeBlockLibrary: true },

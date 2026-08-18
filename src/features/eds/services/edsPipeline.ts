@@ -700,15 +700,44 @@ export async function executeEdsPipeline(
             });
 
             try {
-                const { bulkPreviewAndPublish } = await import('../handlers/edsHelpers');
-                await bulkPreviewAndPublish(
+                const { publishLibraryPaths, verifyLibraryPreviewed } = await import(
+                    '../handlers/edsHelpers'
+                );
+                await publishLibraryPaths(
                     helixService,
                     repoOwner,
                     repoName,
                     libraryPaths,
                     logger,
                 );
-                logger.info('[EdsPipeline] Block library published');
+                // Say it landed only if it landed. The bulk job reports success
+                // for paths that matched nothing, which is how a library that
+                // could not preview a single block logged "published".
+                const previewed = await verifyLibraryPreviewed(
+                    repoOwner,
+                    repoName,
+                    logger,
+                    helixService,
+                );
+                if (previewed) {
+                    logger.info('[EdsPipeline] Block library published');
+                } else {
+                    logger.info(
+                        '[EdsPipeline] Block library published, but it is not previewable',
+                    );
+                    // The site config is the state nobody can inspect after the
+                    // fact, and it is the leading suspect when publishing reports
+                    // success and the CDN still 404s. Print it here, once, where
+                    // the user is already being told something is wrong.
+                    const siteConfig = await daLiveContentOps.readSiteConfigForDiagnostics(
+                        daLiveOrg,
+                        daLiveSite,
+                    );
+                    logger.warn(
+                        `[EdsPipeline] Site config for ${daLiveOrg}/${daLiveSite}: ` +
+                            (siteConfig ? JSON.stringify(siteConfig) : '(could not be read)'),
+                    );
+                }
             } catch (libPublishError) {
                 // Non-fatal -- library config was created, publishing can be retried
                 logger.warn(

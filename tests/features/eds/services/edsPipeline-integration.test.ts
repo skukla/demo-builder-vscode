@@ -15,11 +15,11 @@ import {
 
 // Mock edsHelpers
 const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
-const mockBulkPreviewAndPublish = jest.fn().mockResolvedValue(undefined);
+const mockPublishLibraryPaths = jest.fn().mockResolvedValue(undefined);
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     applyDaLiveOrgConfigSettings: (...args: unknown[]) => mockApplyDaLiveOrgConfigSettings(...args),
-    bulkPreviewAndPublish: (...args: unknown[]) => mockBulkPreviewAndPublish(...args),
+    publishLibraryPaths: (...args: unknown[]) => mockPublishLibraryPaths(...args),
 }));
 
 describe('executeEdsPipeline - integration', () => {
@@ -43,7 +43,7 @@ describe('executeEdsPipeline - integration', () => {
             createBlockLibraryFromTemplate: jest.fn().mockResolvedValue({
                 success: true,
                 blocksCount: 5,
-                paths: ['.da/library/blocks.json', '.da/library/blocks/hero'],
+                paths: ['/.da/library/blocks.json', '/.da/library/blocks/hero'],
             }),
         } as unknown as EdsPipelineServices['daLiveContentOps'];
 
@@ -334,7 +334,7 @@ describe('executeEdsPipeline - integration', () => {
             (mockHelixService.publishAllSiteContent as jest.Mock).mockImplementation(async () => {
                 callOrder.push('publishContent');
             });
-            mockBulkPreviewAndPublish.mockImplementation(async () => {
+            mockPublishLibraryPaths.mockImplementation(async () => {
                 callOrder.push('publishLibrary');
             });
 
@@ -376,7 +376,7 @@ describe('executeEdsPipeline - integration', () => {
             expect(mockHelixService.publishAllSiteContent).not.toHaveBeenCalled();
             expect(mockHelixService.purgeCacheAll).not.toHaveBeenCalled();
             // Library should still be published
-            expect(mockBulkPreviewAndPublish).toHaveBeenCalled();
+            expect(mockPublishLibraryPaths).toHaveBeenCalled();
         });
     });
 });

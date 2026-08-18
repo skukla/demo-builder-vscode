@@ -58,12 +58,12 @@ jest.mock('@/features/eds/services/githubFileOperations', () => ({
 
 const mockConfigureDaLivePermissions = jest.fn();
 const mockApplyDaLiveOrgConfigSettings = jest.fn();
-const mockBulkPreviewAndPublish = jest.fn();
+const mockPublishLibraryPaths = jest.fn();
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     configureDaLivePermissions: (...args: unknown[]) => mockConfigureDaLivePermissions(...args),
     applyDaLiveOrgConfigSettings: (...args: unknown[]) => mockApplyDaLiveOrgConfigSettings(...args),
-    bulkPreviewAndPublish: (...args: unknown[]) => mockBulkPreviewAndPublish(...args),
+    publishLibraryPaths: (...args: unknown[]) => mockPublishLibraryPaths(...args),
     getDaLiveAuthService: jest.fn().mockReturnValue({
         getAccessToken: mockGetAccessToken,
         getUserEmail: mockGetUserEmail,
@@ -120,7 +120,7 @@ function setupDefaultMocks() {
     mockApplyDaLiveOrgConfigSettings.mockResolvedValue(undefined);
     mockPurgeCacheAll.mockResolvedValue(undefined);
     mockPublishAllSiteContent.mockResolvedValue(undefined);
-    mockBulkPreviewAndPublish.mockResolvedValue(undefined);
+    mockPublishLibraryPaths.mockResolvedValue(undefined);
     mockGetAccessToken.mockResolvedValue('da-live-token');
 }
 
@@ -209,7 +209,7 @@ describe('ensureEdsContent', () => {
             'test-org',
             'test-site'
         );
-        expect(mockBulkPreviewAndPublish).toHaveBeenCalledTimes(1);
+        expect(mockPublishLibraryPaths).toHaveBeenCalledTimes(1);
     });
 
     it('permission failure is non-fatal', async () => {
@@ -275,7 +275,7 @@ describe('ensureEdsContent', () => {
 
         expect(result).toBe(true);
         expect(mockCreateBlockLibraryFromTemplate).not.toHaveBeenCalled();
-        expect(mockBulkPreviewAndPublish).not.toHaveBeenCalled();
+        expect(mockPublishLibraryPaths).not.toHaveBeenCalled();
     });
 
     it('skips block library publish when no library paths returned', async () => {
@@ -284,7 +284,7 @@ describe('ensureEdsContent', () => {
 
         await ensureEdsContent(config, makeDeps());
 
-        expect(mockBulkPreviewAndPublish).not.toHaveBeenCalled();
+        expect(mockPublishLibraryPaths).not.toHaveBeenCalled();
     });
 
     it('returns false when repo URL cannot be parsed', async () => {
