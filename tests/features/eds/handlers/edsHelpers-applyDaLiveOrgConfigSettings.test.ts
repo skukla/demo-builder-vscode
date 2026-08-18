@@ -136,7 +136,9 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
             `${SITE_ROW_KEY}=https://experience.adobe.com/#/@${IMS_ORG_ID}/aem/editor/canvas/main--${DA_LIVE_SITE}--${DA_LIVE_ORG}.ue.da.live`,
         );
         // Writing a row → nothing to clear.
-        expect(removeKeys).toEqual([]);
+        // aemAuthorUrl is unset in this case, so the binding is cleared for the
+        // same reason a valueless editor.path is — the two keys are symmetric now.
+        expect(removeKeys).toEqual(['aem.repositoryId']);
 
         // LOAD-BEARING: editor.path must NOT go through the org-scoped write —
         // that is what isolates sibling sites in a shared DA org.
@@ -156,7 +158,9 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         expect(site).toBe(DA_LIVE_SITE);
         expect(updates['editor.path']).toBe(`${SITE_ROW_KEY}=https://da.live/canvas#`);
         // EW always writes the canvas row → nothing to clear.
-        expect(removeKeys).toEqual([]);
+        // aemAuthorUrl is unset in this case, so the binding is cleared for the
+        // same reason a valueless editor.path is — the two keys are symmetric now.
+        expect(removeKeys).toEqual(['aem.repositoryId']);
 
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();
     });
@@ -193,6 +197,77 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();
     });
 
+    /**
+     * Leah's 2026-08-18 log said `Applied: aem.repositoryId, editor.path` and
+     * nothing more — a binding existed, and there was no way to tell WHAT it
+     * pointed at. `demoBuilder.daLive.aemAuthorUrl` ships with a default
+     * (a shared demo-system AEM host), so "the key was written" says nothing
+     * about whether the user can reach the repository it names. The value is a
+     * hostname already published in `package.json`; logging it costs no secrecy
+     * and is the difference between a diagnosable report and another round trip.
+     */
+    describe('the applied binding is diagnosable from the log alone', () => {
+        it('logs the AEM host it bound, not just the key name', async () => {
+            mockAemAuthorUrl = AEM_AUTHOR_URL;
+
+            await applyDaLiveOrgConfigSettings(
+                mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
+            );
+
+            const logged = JSON.stringify([
+                ...(mockLogger.info as jest.Mock).mock.calls,
+                ...(mockLogger.debug as jest.Mock).mock.calls,
+            ]);
+            expect(logged).toContain(AEM_AUTHOR_URL);
+        });
+    });
+
+    /**
+     * `editor.path` is cleared when it has no value to write; `aem.repositoryId`
+     * was not, so clearing the setting left the old binding on the site forever
+     * — the one state a user cannot reach from the extension. The module's own
+     * docblock already argues for this symmetry; only one half was implemented.
+     */
+    describe('clearing the setting clears the binding', () => {
+        it('removes aem.repositoryId when aemAuthorUrl is empty', async () => {
+            mockAemAuthorUrl = '';
+            mockImsOrgId = IMS_ORG_ID;
+
+            await applyDaLiveOrgConfigSettings(
+                mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
+            );
+
+            const [, , updates, removeKeys] = mockApplySiteConfig.mock.calls[0];
+            expect(updates['aem.repositoryId']).toBeUndefined();
+            expect(removeKeys).toContain('aem.repositoryId');
+        });
+
+        it('does not remove aem.repositoryId when the setting has a value', async () => {
+            mockAemAuthorUrl = AEM_AUTHOR_URL;
+            mockImsOrgId = IMS_ORG_ID;
+
+            await applyDaLiveOrgConfigSettings(
+                mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
+            );
+
+            const [, , , removeKeys] = mockApplySiteConfig.mock.calls[0];
+            expect(removeKeys).not.toContain('aem.repositoryId');
+        });
+
+        it('clears BOTH keys when neither setting has a value', async () => {
+            mockAemAuthorUrl = '';
+            mockImsOrgId = '';
+
+            await applyDaLiveOrgConfigSettings(
+                mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
+            );
+
+            const [, , updates, removeKeys] = mockApplySiteConfig.mock.calls[0];
+            expect(updates).toEqual({});
+            expect([...removeKeys].sort()).toEqual(['aem.repositoryId', 'editor.path']);
+        });
+    });
+
     it('writes the EW editor.path even when no DA.live settings are configured', async () => {
         // EW's editor.path value (the da.live canvas) is a constant that needs
         // neither aemAuthorUrl nor IMSOrgId, so flipping to EW must take effect on
@@ -227,7 +302,8 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         expect(org).toBe(DA_LIVE_ORG);
         expect(site).toBe(DA_LIVE_SITE);
         expect(updates).toEqual({});
-        expect(removeKeys).toEqual(['editor.path']);
+        // Neither setting has a value here, so BOTH rows are cleared.
+        expect([...removeKeys].sort()).toEqual(['aem.repositoryId', 'editor.path']);
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();
     });
 });

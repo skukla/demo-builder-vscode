@@ -1051,6 +1051,11 @@ export async function applyDaLiveOrgConfigSettings(
         const removeKeys: string[] = [];
         if (aemAuthorUrl) {
             updates['aem.repositoryId'] = aemAuthorUrl;
+        } else {
+            // Symmetric with editor.path below. Without this, clearing
+            // `aemAuthorUrl` left the previous binding on the site for good —
+            // a state the extension could create and then never undo.
+            removeKeys.push('aem.repositoryId');
         }
         const ewCanvasBranch = getEwCanvasBranch();
         const editorValue = buildEditorPathValue(
@@ -1083,8 +1088,16 @@ export async function applyDaLiveOrgConfigSettings(
             updates,
             removeKeys,
         );
+        // Name the AEM host, not just the key. `aemAuthorUrl` ships with a
+        // DEFAULT, so "aem.repositoryId was applied" is true for every user and
+        // tells nobody which repository they were bound to — a colleague's
+        // missing Assets panel could not be told apart from a wrong host without
+        // asking her to read her own settings. The value is a hostname already
+        // published in package.json, so logging it discloses nothing new.
+        const boundHost = updates['aem.repositoryId'];
         const summary = [
             appliedKeys.length ? `Applied: ${appliedKeys.join(', ')}` : '',
+            boundHost ? `AEM Assets bound to ${boundHost}` : '',
             removeKeys.length ? `Cleared: ${removeKeys.join(', ')}` : '',
         ]
             .filter(Boolean)
