@@ -19,6 +19,7 @@ import {
     createComponentFilters,
     createDestComponentFilters,
     createBlockFileEntries,
+    delegateCommitTreeToBranch,
 } from './blockCollectionHelpers.testUtils';
 
 describe('installBlockCollections', () => {
@@ -45,7 +46,11 @@ describe('installBlockCollections', () => {
             createTree: jest.fn(),
             createCommit: jest.fn(),
             updateBranchRef: jest.fn(),
+            commitTreeToBranch: jest.fn(),
         } as unknown as jest.Mocked<GitHubFileOperations>;
+        delegateCommitTreeToBranch(
+            mockGithubFileOps as unknown as Parameters<typeof delegateCommitTreeToBranch>[0],
+        );
     });
 
     describe('multi-source component-definition.json merge', () => {

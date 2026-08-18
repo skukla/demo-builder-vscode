@@ -268,17 +268,18 @@ export async function installBlockCollections(
             treeEntries.push(...additionalTreeEntries);
         }
 
-        // 5. Create a single atomic commit
-        const { treeSha, commitSha } = await githubFileOps.getBranchInfo(destOwner, destRepo, 'main');
-        const newTreeSha = await githubFileOps.createTree(destOwner, destRepo, treeEntries, treeSha);
-
+        // 5. Create a single atomic commit.
+        //
+        // Through `commitTreeToBranch`, which re-bases if `main` moves while this
+        // runs. This is ADDITIVE — it must never move the branch to a commit that
+        // is not a descendant of what is there now. Doing that by hand here, with
+        // a forced ref update, is what silently reverted a colleague's work
+        // (2026-08-18); the sequence is several API round-trips and a push landing
+        // inside it used to lose.
         const commitMsg = libraries.length === 1
             ? `chore: add ${libraries[0].name} (${sortedBlockIds.length} blocks)`
             : `chore: add blocks from ${libraries.length} libraries (${sortedBlockIds.length} blocks)`;
-        const newCommitSha = await githubFileOps.createCommit(
-            destOwner, destRepo, commitMsg, newTreeSha, commitSha,
-        );
-        await githubFileOps.updateBranchRef(destOwner, destRepo, 'main', newCommitSha);
+        await githubFileOps.commitTreeToBranch(destOwner, destRepo, 'main', treeEntries, commitMsg);
 
         logger.info(`[Block Collection] Installed ${sortedBlockIds.length} blocks from ${libraries.length} ${libraries.length === 1 ? 'library' : 'libraries'}`);
 

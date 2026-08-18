@@ -22,6 +22,7 @@ import {
     createComponentDef,
     createDestComponentDef,
     createBlockFileEntries,
+    delegateCommitTreeToBranch,
 } from './blockCollectionHelpers.testUtils';
 
 describe('installBlockCollections (single library)', () => {
@@ -48,7 +49,11 @@ describe('installBlockCollections (single library)', () => {
             createTree: jest.fn(),
             createCommit: jest.fn(),
             updateBranchRef: jest.fn(),
+            commitTreeToBranch: jest.fn(),
         } as unknown as jest.Mocked<GitHubFileOperations>;
+        delegateCommitTreeToBranch(
+            mockGithubFileOps as unknown as Parameters<typeof delegateCommitTreeToBranch>[0],
+        );
     });
 
     /**
@@ -527,4 +532,54 @@ describe('installBlockCollections (single library)', () => {
             expect(result.error).toBe('Commit failed');
         });
     });
+
+    /**
+     * Structural guard: the install lands its commit through
+     * `commitTreeToBranch`, and never moves the ref itself.
+     *
+     * Every other assertion in these suites reads `createTree` / `createCommit`,
+     * which the shared fake still drives — so all of them would keep passing if
+     * someone re-inlined the four steps here and force-moved the ref by hand.
+     * That is exactly the code this bug WAS: additive work calling
+     * `updateBranchRef` directly, with `force` inherited from a default. A
+     * colleague lost two real fixes to it on 2026-08-18.
+     *
+     * Installing a block library must never move `main` to a commit that is not a
+     * descendant of what is there now. `commitTreeToBranch` is where that promise
+     * is kept — unforced, and re-based on a fresh read if it loses the race.
+     */
+    describe('how the commit is landed', () => {
+        it('goes through commitTreeToBranch', async () => {
+            setupSuccessfulInstall(createComponentDef([
+                { title: 'Circle Carousel', id: 'circle-carousel' },
+            ]), createDestComponentDef(), ['circle-carousel']);
+
+            await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
+            );
+
+            expect(mockGithubFileOps.commitTreeToBranch).toHaveBeenCalledTimes(1);
+        });
+
+        it('writes the discovered blocks through that call, onto main', async () => {
+            // A guard that only checked WHICH method was called would pass on an
+            // empty commit.
+            setupSuccessfulInstall(createComponentDef([
+                { title: 'Circle Carousel', id: 'circle-carousel' },
+            ]), createDestComponentDef(), ['circle-carousel']);
+
+            await installBlockCollections(
+                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                [{ source: TEST_SOURCE, name: 'block collection' }],
+                mockLogger,
+            );
+
+            const call = mockGithubFileOps.commitTreeToBranch.mock.calls[0];
+            expect(call[2]).toBe('main');
+            expect((call[3] as unknown[]).length).toBeGreaterThan(0);
+        });
+    });
+
 });

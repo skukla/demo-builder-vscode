@@ -297,14 +297,12 @@ export async function installInspectorTagging(
             return { success: true };
         }
 
-        const { treeSha, commitSha } = await githubFileOps.getBranchInfo(destOwner, destRepo, 'main');
-        const newTreeSha = await githubFileOps.createTree(destOwner, destRepo, treeEntries, treeSha);
-        const newCommitSha = await githubFileOps.createCommit(
-            destOwner, destRepo,
+        // Additive: `commitTreeToBranch` re-bases rather than forcing, so a push
+        // landing mid-sequence costs a retry instead of the other person's work.
+        await githubFileOps.commitTreeToBranch(
+            destOwner, destRepo, 'main', treeEntries,
             'chore: add Demo Inspector tagging',
-            newTreeSha, commitSha,
         );
-        await githubFileOps.updateBranchRef(destOwner, destRepo, 'main', newCommitSha);
 
         return { success: true };
     } catch (error) {

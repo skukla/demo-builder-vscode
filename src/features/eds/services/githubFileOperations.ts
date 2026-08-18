@@ -11,7 +11,11 @@
 import { Octokit } from '@octokit/core';
 import { retry } from '@octokit/plugin-retry';
 import AdmZip from 'adm-zip';
-import { describePushProtectionBlock, describeRejectionDiagnostics } from './errorFormatters';
+import {
+    describePushProtectionBlock,
+    describeRejectionDiagnostics,
+    isRulesetRejection,
+} from './errorFormatters';
 import type { GitHubTokenService } from './githubTokenService';
 import type {
     GitHubFileContent,
@@ -110,6 +114,23 @@ export function batchTreeEntries(
     }
     if (current.length > 0) batches.push(current);
     return batches;
+}
+
+/** How many times a commit re-bases onto a moved branch before giving up. */
+const COMMIT_REBASE_ATTEMPTS = 3;
+
+/**
+ * Whether a ref update failed because the branch moved under us.
+ *
+ * Keyed on the MESSAGE, not the 422 — a repository-ruleset rejection carries the
+ * same status and an entirely different remedy, and retrying it can only repeat a
+ * write the rules forbid. `errorFormatters` makes the same distinction for the
+ * Contents path; this is the refs-API side of it.
+ */
+function isStaleRefRejection(error: unknown): boolean {
+    const message = (error as Error | undefined)?.message ?? '';
+    if (isRulesetRejection(message)) return false;
+    return /fast[ -]forward|reference cannot be updated/i.test(message);
 }
 
 export class GitHubFileOperations {
@@ -464,19 +485,106 @@ export class GitHubFileOperations {
     }
 
     /**
-     * Update a branch reference to point to a new commit
+     * Commit tree entries onto a branch, re-basing if someone else got there first.
+     *
+     * The four-step dance — read the branch, build a tree on its base, commit,
+     * move the ref — is a read-modify-write across several API round-trips, and
+     * anything landing in that window makes the ref update a non-fast-forward.
+     * Unforced (which is the only safe way to do it) GitHub rejects that, so the
+     * caller has to be able to lose the race without losing its work OR the other
+     * person's.
+     *
+     * The retry re-reads the branch and rebuilds the tree on the NEW base. That is
+     * the part that matters: re-pushing the SAME commit would move the ref to a
+     * tree built before their push and revert their files anyway — the original
+     * damage, arrived at politely. Rebuilt, our entries win for the paths we
+     * wrote and everything else comes from their commit.
+     *
+     * Only a stale-ref rejection is retried. 422 is ambiguous here: a repository
+     * ruleset rejection carries the same status, cannot succeed however many times
+     * it is repeated, and is told apart by its message — the same rule
+     * `describePushProtectionBlock` keys on.
+     *
+     * @param owner - Repository owner
+     * @param repo - Repository name
+     * @param branch - Branch to commit onto
+     * @param treeEntries - Files to write (paths not listed keep the branch's content)
+     * @param message - Commit message
+     * @returns The SHA of the commit the branch now points at
+     */
+    async commitTreeToBranch(
+        owner: string,
+        repo: string,
+        branch: string,
+        treeEntries: GitHubTreeInput[],
+        message: string,
+    ): Promise<string> {
+        let lastError: Error | undefined;
+
+        for (let attempt = 1; attempt <= COMMIT_REBASE_ATTEMPTS; attempt++) {
+            const { treeSha, commitSha } = await this.getBranchInfo(owner, repo, branch);
+            const newTreeSha = await this.createTree(owner, repo, treeEntries, treeSha);
+            const newCommitSha = await this.createCommit(
+                owner,
+                repo,
+                message,
+                newTreeSha,
+                commitSha,
+            );
+
+            try {
+                await this.updateBranchRef(owner, repo, branch, newCommitSha);
+                return newCommitSha;
+            } catch (error) {
+                if (!isStaleRefRejection(error)) throw error;
+                lastError = error as Error;
+                this.logger.info(
+                    `[GitHub] ${branch} moved while committing (attempt ${attempt}` +
+                        `/${COMMIT_REBASE_ATTEMPTS}) — re-reading and rebuilding on the new head`,
+                );
+            }
+        }
+
+        throw new Error(
+            `Could not commit to ${branch}: it moved during every attempt ` +
+                `(${COMMIT_REBASE_ATTEMPTS}). Nothing was overwritten. ` +
+                `Last rejection: ${lastError?.message ?? 'not a fast forward'}`,
+        );
+    }
+
+    /**
+     * Update a branch reference to point to a new commit.
+     *
+     * `force` REWRITES HISTORY: it moves the branch to `sha` even when that is
+     * not a fast-forward, discarding every commit that is no longer reachable.
+     * It defaults to FALSE, so a caller that means to do that has to say so.
+     *
+     * It used to default to TRUE — written for `resetRepoToTemplate`, which does
+     * mean it ("default: true for reset", the docstring said). The other two
+     * callers are additive (installing a block library, vendoring Inspector
+     * tagging) and inherited it silently. Each reads the branch, builds a tree,
+     * commits, then moves the ref — several API round-trips, batched for a large
+     * library — and a commit landing inside that window makes the ref update a
+     * non-fast-forward. Unforced, GitHub rejects it with a 422 and nothing is
+     * lost. Forced, the ref moves anyway: that commit is discarded AND every file
+     * differing from the base tree read at the start is reverted with it.
+     *
+     * Reported 2026-08-18 by a colleague who lost two real fixes that way in one
+     * evening. A destructive default is the whole defect — safety should not be
+     * the thing you have to opt into.
+     *
      * @param owner - Repository owner
      * @param repo - Repository name
      * @param branch - Branch name
      * @param sha - SHA of the commit to point to
-     * @param force - Force update even if not fast-forward (default: true for reset)
+     * @param force - Rewrite history: move the ref even if not a fast-forward
      */
     async updateBranchRef(
         owner: string,
         repo: string,
         branch: string,
         sha: string,
-        force = true,
+        force = false,
     ): Promise<void> {
         const octokit = await this.ensureAuthenticated();
 
@@ -735,8 +843,12 @@ export class GitHubFileOperations {
         );
         this.logger.info(`[GitHub] Created commit: ${commitSha.substring(0, 7)}`);
 
-        // Step 6: Update branch to point to new commit
-        await this.updateBranchRef(targetOwner, targetRepo, targetBranch, commitSha);
+        // Step 6: Update branch to point to new commit.
+        //
+        // `force` explicitly: a reset REPLACES the repository, and the commit
+        // built above is deliberately not a descendant of what is there now.
+        // Every other caller of updateBranchRef is additive and must NOT pass it.
+        await this.updateBranchRef(targetOwner, targetRepo, targetBranch, commitSha, true);
         this.logger.info(`[GitHub] Updated branch ${targetBranch} to ${commitSha.substring(0, 7)}`);
 
         return {

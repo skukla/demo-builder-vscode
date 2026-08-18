@@ -15,6 +15,7 @@ import type { AddonSource } from '@/types/demoPackages';
 import {
     createDestComponentDef,
     createBlockFileEntries,
+    delegateCommitTreeToBranch,
 } from './blockCollectionHelpers.testUtils';
 
 describe('installBlockCollections (single library)', () => {
@@ -41,7 +42,11 @@ describe('installBlockCollections (single library)', () => {
             createTree: jest.fn(),
             createCommit: jest.fn(),
             updateBranchRef: jest.fn(),
+            commitTreeToBranch: jest.fn(),
         } as unknown as jest.Mocked<GitHubFileOperations>;
+        delegateCommitTreeToBranch(
+            mockGithubFileOps as unknown as Parameters<typeof delegateCommitTreeToBranch>[0],
+        );
     });
 
     /**
