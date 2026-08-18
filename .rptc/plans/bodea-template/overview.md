@@ -43,7 +43,7 @@ like custom/citisignal.
    ADR-006 explicitly prescribes for brand CSS. This is the one NEW extension mechanism
    ("brand assets vendor point"), small and data-driven.
 4. **Customer-group/VIP machinery is additive**: net-new `scripts/bodea-customer-group.js`
-   module importing `CS_FETCH_GRAPHQL` (exported at boilerplate HEAD `scripts/commerce.js:45`)
+   module importing `CS_FETCH_GRAPHQL` (exported from `scripts/commerce.js` at boilerplate HEAD — an EXTERNAL repo, not this one)
    + `@dropins/tools/event-bus`, subscribing to auth events and setting the hashed
    `Magento-Customer-Group` header. Vendored + loaded via the same vendor point.
    Zero patches on `commerce.js`.

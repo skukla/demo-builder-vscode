@@ -8,12 +8,12 @@ one-app guard so there is exactly one add/remove system supporting N integration
 **Prerequisites:** Steps 01–04.
 
 **Reuse / surgical anchors (verified 2026-07-15):**
-- `src/features/app-builder/services/appComponentManager.ts:134-138` — the one-app guard
+- `src/features/app-builder/services/appComponentManager.ts` — the one-app guard (module since DELETED, `4c85a15d`)
   (`if (getAppBuilderInstance(project)) return {…'already has a custom integration'}`); `:149-152` add;
   `:202-230` `removeAppComponent` (clears singular `appState`).
 - `src/features/app-builder/services/appBuilderComponentRunner.ts:240` `addAppBuilderComponent`,
   `:373-402` `removeAppBuilderComponent` (the keyed targets, per-id undeploy + save).
-- `src/features/dashboard/handlers/dashboardHandlers.ts:1081-1091` — BOTH systems registered
+- `src/features/dashboard/handlers/dashboardHandlers.ts` — BOTH systems registered
   (`addApp`/`removeApp` singular + `addAppBuilderComponent`/`removeAppBuilderComponent` keyed).
 - `src/types/typeGuards.ts:528-533` — `getAppBuilderInstance` (the singular guard reader; remove usages).
 
@@ -29,7 +29,7 @@ one-app guard so there is exactly one add/remove system supporting N integration
 
 - MODIFY/REMOVE the singular `addApp`/`removeApp` handlers → delegate to keyed, or delete once callers
   migrate. Drop the `getAppBuilderInstance` one-app guard in `appComponentManager.ts`.
-- MODIFY `dashboardHandlers.ts:1081-1091` — collapse to the keyed handlers only.
+- MODIFY `dashboardHandlers.ts` — collapse to the keyed handlers only.
 - Update tests that assert the guard (e.g. `appComponentManager.test.ts` "already has" test) — the guard
   is intentionally removed.
 

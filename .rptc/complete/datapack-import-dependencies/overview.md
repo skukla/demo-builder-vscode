@@ -1,3 +1,8 @@
+> **Archived 2026-08-18.** Verified on `develop`: `src/features/data-installer/ui/importDependencies.ts`
+> exists, landed by `16428dd8` (*feat(data-installer): resolve data type dependencies when
+> importing part of a pack*). The commits this plan's body cites are pre-rebase hashes and no
+> longer resolve — check the artifact, not the hash.
+
 # Datapack import — data type dependency selection
 
 **Goal.** When someone imports part of a datapack, help them pick a coherent set:

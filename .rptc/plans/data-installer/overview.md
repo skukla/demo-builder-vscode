@@ -1,22 +1,30 @@
-> ⛔ **PULLED FROM `develop` 2026-08-15, before v1.0.0-beta.129.**
+> ⚠️ **The "PULLED FROM `develop`" banner that stood here until 2026-08-18 was OBSOLETE
+> and is replaced below. It said the feature had been removed from `develop` on 2026-08-15
+> for not being ready. It came back the next day and matured substantially, so a reader
+> trusting that banner would have looked for the feature in the wrong place entirely.**
 >
-> Stage 1 had been merged to `develop`, so the palette command, the webview, the six
-> MCP reads and the drift script would all have shipped to every beta user in `.129`.
-> The feature is not ready for that, so the shipped artefacts were removed from
-> `develop` in one commit: `src/features/data-installer/`, its tests and fixtures,
-> `scripts/dataInstallerDrift.*`, `docs/systems/data-installer.md`, the probe hook
-> rule, and the four integration points (commandManager, the `package.json` command
-> and settings, the esbuild webview entry, and the MCP read descriptors).
+> **Current state, measured on `develop` 2026-08-18:**
 >
-> **Nothing is lost.** The code lives on `feature/data-installer` (ahead of what
-> develop had), and in develop's history — the removal commit reverts cleanly. THIS
-> PLAN AND ITS RESEARCH WERE DELIBERATELY KEPT: they are repo-only, never shipped in
-> the VSIX, and they are how Stage 2 resumes.
+> - `src/features/data-installer/` is PRESENT on `develop`. The public API index landed in
+>   `41fa521f` (2026-08-16) and roughly fifteen further commits followed through 2026-08-17
+>   — removal warnings, the card's instance check, the flyout refresh, reset semantics.
+> - Per `HANDOFF.md`, **Stages 1, 2 and 4 have shipped and Stage 2 is verified live end to
+>   end** (import, watch, reset, targeting). **Stage 3 (export) is the only DoD item left,
+>   and it is blocked on the SERVICE, not on this repo** — see
+>   `docs/systems/data-installer.md` §6b.
+> - The security condition the old banner set was MET: `demoBuilder.dataInstaller.apiBaseUrl`
+>   ships with an empty default (`package.json`), so no internal stage endpoint is in this
+>   public repo. `resolveDataInstallerAccess` refuses cleanly and actionably without it.
+> - **One gap, open as of this writing:** `DataInstallerTile` renders unconditionally
+>   (`ActionGrid.tsx`, the Build zone), gated on neither `dataInstaller.enabled` nor
+>   `apiBaseUrl`. A user without the API URL therefore sees a "Sample Data" tile that opens
+>   a surface refusing with "No Data Installer API URL is configured." Note this contradicts
+>   the root `CLAUDE.md`, which states the surface "does not exist" without those two keys —
+>   true of the HANDLER guard, not of the tile.
 >
-> **Before resuming**, note the removal also deleted a `package.json` default that
-> should not return as-is: a stage Adobe I/O Runtime endpoint, in a public repo.
-> `.rptc/CLAUDE.md` forbids exactly that. Re-introduce it as a required setting with
-> no default, or a non-internal one.
+> The lesson worth keeping: a banner asserting where code lives is a claim with nothing
+> keeping it true. This one was wrong for two days and would have sent the next reader to a
+> branch to find code that was on `develop` all along.
 
 # Data Installer integration — plan + handoff
 

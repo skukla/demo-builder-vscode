@@ -10,7 +10,7 @@ from the keyed entry.
 **Prerequisites:** Step 01 (keyed map must persist first).
 
 **Reuse / surgical anchors (verified 2026-07-15):**
-- `src/features/app-builder/services/deployAppHeadless.ts:137` (sets `appState`), `:146` (`saveProject`).
+- `src/features/app-builder/services/deployAppHeadless.ts` — sets `appState`, then `saveProject` (module since DELETED, `9bb3b820`).
 - `src/features/app-builder/services/deployMeshHeadless.ts` — mesh sibling (same pattern).
 - `src/features/app-builder/services/appBuilderComponentRunner.ts:154-155` — `setAppBuilderComponent`
   then `saveProject` (the target write shape).

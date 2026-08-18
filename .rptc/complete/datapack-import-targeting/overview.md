@@ -1,3 +1,9 @@
+> **Archived 2026-08-18.** Verified on `develop`: the `website_code` / `store_code` pair is sent
+> from `dataInstallerWriteClient.ts` (`targetFields`), with `08382431` (*seed the import scope
+> from the project, not from `base`*) and `e2716d81` (*an omitted import scope falls back to the
+> project's*) on top. The `d3585249` / `c2b01651` hashes in the header are pre-rebase and resolve
+> to nothing; the behaviour is what confirms this shipped.
+
 # Datapack Import Targeting — website/store picker + dependency guardrails
 
 **Status**: SHIPPED 2026-08-14 (commits d3585249 client+handler, c2b01651 UI)
