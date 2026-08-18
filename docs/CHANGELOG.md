@@ -7,6 +7,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.134] - 2026-08-18
+
+Five field-reported defects from one colleague's session, plus the settings failure that
+had been hiding one of them since February.
+
+Four of the five share a shape: the extension failed, fell back, or discarded a configured
+value **without saying so**. The debug log a colleague sends back was silent on the one
+thing that had gone wrong, so each report cost hours of guessing. Most of this release is
+not new behaviour — it is making the existing behaviour audible.
+
+### ⚠️ Action required — set your AEM Author environment
+
+`demoBuilder.daLive.aemAuthorUrl` **no longer ships a default**. Until you set it, creating
+or resetting a storefront writes no AEM Assets binding, and will **remove an existing one**
+— the da.live Assets panel will disappear from that site. Set it to your AEM Author host as
+a bare hostname (`author-pXXXXX-eYYYYY.adobeaemcloud.com`, no `https://`) and re-run.
+
+The extension now warns loudly when it removes a binding for this reason, and names the
+setting to fix it.
+
+Why the default went away: it bound every user to one environment they might not be able to
+reach, and reported success while doing it. A February rename of this setting orphaned each
+user's own value, and the default silently absorbed the loss for six months.
+
+### Fixed
+
+- **Creating an Adobe I/O project now refreshes the list, with the new project selected.**
+  The refresh was pushed to a listener that is guaranteed to be gone at that moment — the
+  picker has been replaced by the create panel — so the list you came back to was the one
+  from before the create. The same defect affected workspace creation and is fixed too.
+- **The sample data catalog says why it refused, and offers the fix.** With
+  `demoBuilder.dataInstaller.apiBaseUrl` unset, the catalog failed and the dashboard's
+  Sample Data tile was hidden by the same condition — so the wizard pointed at a route that
+  had been removed. Both surfaces now name the setting and offer an **Open Settings** button.
+  Every refusal and every failed call is now logged; previously they returned in silence.
+- **A failed component build now says what failed.** The build error was folded into a
+  message, truncated to its first line, and then redacted away — which for an uncaught
+  Node exception erased the entire reason, every time. Build failures now dump their real
+  output before throwing, on both the deploy and update paths, and carry the exit code.
+- **AEM Assets bindings name the environment they bound to.** The log said only that a
+  binding was applied, which was true for every user and identified nothing.
+
+### Changed
+
+- **`demoBuilder.daLive.aemAuthorUrl` has no default.** See the action-required note above.
+- **Clearing the setting now clears the binding.** Previously a stale binding stayed on the
+  site permanently — a state the extension could create and never undo.
+- **`Demo Builder: Diagnostics` lists settings the extension no longer reads.** A renamed
+  setting silently discards your value; if the replacement has a default, nothing surfaces
+  the substitution. This is derived from the manifest, so it needs no maintenance and will
+  catch the next rename too.
+
+### Notes
+
+The `codebase-sweep` and `dream` passes were skipped for this cut — both ran hours earlier
+at `.133` on the same day. The RPTC hygiene scan ran clean.
+
+
 ## [1.0.0-beta.133] - 2026-08-18
 
 The big one is the **AI agent surface**. Until now an agent working in a Demo Builder
