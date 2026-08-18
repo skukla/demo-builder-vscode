@@ -79,8 +79,20 @@ describe('CenteredFeedbackContainer', () => {
         });
     });
 
+    /**
+     * `height` RESERVES space; it does not cap it.
+     *
+     * It used to set a fixed `height`, so content taller than the box overflowed
+     * it in both directions — centered means half the excess goes UP. The AEM
+     * Code Sync install view (a heading, four numbered steps and two buttons) had
+     * its title sheared off above the pane while empty space sat below it.
+     *
+     * A minimum keeps the whole reason the prop exists — a fetch that resolves
+     * does not jolt the layout, because the box was already that tall — and lets
+     * anything larger simply be as tall as it is.
+     */
     describe('height prop', () => {
-        it('should apply default height of 350px when not specified', () => {
+        it('should reserve 350px by default', () => {
             // Given: CenteredFeedbackContainer without height prop
             const { container } = renderWithProvider(
                 <CenteredFeedbackContainer>
@@ -88,10 +100,22 @@ describe('CenteredFeedbackContainer', () => {
                 </CenteredFeedbackContainer>
             );
 
-            // Then: Container has default 350px height
+            // Then: Container reserves the default 350px
             const feedbackContainer = findContainerElement(container);
             expect(feedbackContainer).toBeInTheDocument();
-            expect(feedbackContainer?.style.height).toBe('350px');
+            expect(feedbackContainer?.style.minHeight).toBe('350px');
+        });
+
+        it('should never CAP the height, or tall content is clipped', () => {
+            // The defect, stated as a rule: no fixed height at any size.
+            const { container } = renderWithProvider(
+                <CenteredFeedbackContainer>
+                    <p>Content</p>
+                </CenteredFeedbackContainer>
+            );
+
+            const feedbackContainer = findContainerElement(container);
+            expect(feedbackContainer?.style.height).toBe('');
         });
 
         it('should apply custom height when specified', () => {
@@ -102,10 +126,11 @@ describe('CenteredFeedbackContainer', () => {
                 </CenteredFeedbackContainer>
             );
 
-            // Then: Container has custom height
+            // Then: Container reserves the custom height
             const feedbackContainer = findContainerElement(container);
             expect(feedbackContainer).toBeInTheDocument();
-            expect(feedbackContainer?.style.height).toBe('500px');
+            expect(feedbackContainer?.style.minHeight).toBe('500px');
+            expect(feedbackContainer?.style.height).toBe('');
         });
 
         it('should support Spectrum design tokens for height', () => {
@@ -119,7 +144,55 @@ describe('CenteredFeedbackContainer', () => {
             // Then: Token translated to pixel value (size-6000 = 480px)
             const feedbackContainer = findContainerElement(container);
             expect(feedbackContainer).toBeInTheDocument();
-            expect(feedbackContainer?.style.height).toBe('480px');
+            expect(feedbackContainer?.style.minHeight).toBe('480px');
+        });
+    });
+
+    /**
+     * `fill` centres in the PANE; `height` centres in a box the size of itself.
+     *
+     * Without it, a short state (a spinner) sits at the top of a tall area with
+     * dead space beneath, because the container is only as tall as it reserves.
+     */
+    describe('fill prop', () => {
+        it('takes the parent height when filling', () => {
+            const { container } = renderWithProvider(
+                <CenteredFeedbackContainer fill>
+                    <p>Content</p>
+                </CenteredFeedbackContainer>
+            );
+
+            expect(findContainerElement(container)?.style.minHeight).toBe('100%');
+        });
+
+        it('still refuses to cap, so tall content grows past the parent', () => {
+            const { container } = renderWithProvider(
+                <CenteredFeedbackContainer fill>
+                    <p>Content</p>
+                </CenteredFeedbackContainer>
+            );
+
+            expect(findContainerElement(container)?.style.height).toBe('');
+        });
+
+        it('wins over height — both answer the same question', () => {
+            const { container } = renderWithProvider(
+                <CenteredFeedbackContainer fill height="500px">
+                    <p>Content</p>
+                </CenteredFeedbackContainer>
+            );
+
+            expect(findContainerElement(container)?.style.minHeight).toBe('100%');
+        });
+
+        it('is off by default, so existing callers reserve as before', () => {
+            const { container } = renderWithProvider(
+                <CenteredFeedbackContainer>
+                    <p>Content</p>
+                </CenteredFeedbackContainer>
+            );
+
+            expect(findContainerElement(container)?.style.minHeight).toBe('350px');
         });
     });
 
