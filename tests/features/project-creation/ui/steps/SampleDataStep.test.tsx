@@ -41,6 +41,11 @@ jest.mock('@/core/ui/hooks/useVSCodeRequest', () => ({
     },
 }));
 
+const mockPostMessage = jest.fn();
+jest.mock('@/core/ui/utils/WebviewClient', () => ({
+    webviewClient: { postMessage: (...args: unknown[]) => mockPostMessage(...args) },
+}));
+
 /** A handler reply as it really arrives: the whole envelope, not the payload. */
 function envelope(data: unknown) {
     return { loading: false, error: null, data: { success: true, data } };
@@ -51,9 +56,31 @@ function pending() {
     return { loading: true, error: null, data: null };
 }
 
-/** A guard refusal — `success:false` with a reason. It does NOT reject. */
-function refusal(message: string) {
-    return { loading: false, error: null, data: { success: false, error: message } };
+/**
+ * A guard refusal — `success:false` with a reason. It does NOT reject.
+ *
+ * The `code` is what the shared failure renderer branches on; matching the
+ * MESSAGE instead would break the moment the copy is reworded.
+ */
+function refusal(message: string, code?: string) {
+    return {
+        loading: false,
+        error: null,
+        data: { success: false, error: message, ...(code !== undefined ? { code } : {}) },
+    };
+}
+
+/** An unset `demoBuilder.dataInstaller.apiBaseUrl` — what every colleague has. */
+function notConfigured() {
+    return {
+        loading: false,
+        error: null,
+        data: {
+            success: false,
+            error: 'No Data Installer API URL is configured. Set demoBuilder.dataInstaller.apiBaseUrl.',
+            code: 'INVALID_OPERATION',
+        },
+    };
 }
 
 const mockTypes: string[] = [];
@@ -205,11 +232,68 @@ describe('SampleDataStep', () => {
 
     /** A catalog that cannot load must not block creating the project. */
     it('explains a failed catalog without offering a broken list', async () => {
-        mockState = refusal('The Data Installer is not configured.');
+        mockState = refusal('The Data Installer service is unreachable.');
         renderStep();
 
-        await waitFor(() => expect(screen.getByText(/could not be loaded/i)).toBeInTheDocument());
+        await waitFor(() =>
+            expect(screen.getByText(/The Data Installer service is unreachable\./i)).toBeInTheDocument(),
+        );
         expect(screen.queryByTestId('datapack-card')).not.toBeInTheDocument();
+    });
+
+    /**
+     * The reason this step failed for a colleague on 2026-08-18: nobody but the
+     * author has `demoBuilder.dataInstaller.apiBaseUrl` set (it ships with no
+     * default, deliberately — the repo is public). The step must say so and hand
+     * her the setting, not report a generic failure.
+     */
+    describe('when the Data Installer has never been configured', () => {
+        it('names the setting that is missing', async () => {
+            mockState = notConfigured();
+            renderStep();
+
+            // findAllBy: the handler's own message names the key and the shared
+            // renderer's detail line names it again. Both are legitimate.
+            expect(
+                (await screen.findAllByText(/demoBuilder\.dataInstaller\.apiBaseUrl/)).length,
+            ).toBeGreaterThan(0);
+        });
+
+        it('offers a button that opens the setting', async () => {
+            mockState = notConfigured();
+            renderStep();
+
+            const open = await screen.findByRole('button', { name: /open settings/i });
+            fireEvent.click(open);
+
+            expect(mockPostMessage).toHaveBeenCalledWith('open-data-installer-settings');
+        });
+
+        /**
+         * The copy used to end "You can still create this project and choose
+         * sample data later from the dashboard." The dashboard tile is hidden by
+         * the SAME predicate that produced this refusal, so the sentence was
+         * false exactly when it was shown — it sent the user to a door that had
+         * been removed.
+         */
+        it('does not promise a dashboard route that this same condition hides', async () => {
+            mockState = notConfigured();
+            renderStep();
+
+            await screen.findAllByText(/demoBuilder\.dataInstaller\.apiBaseUrl/);
+            expect(screen.queryByText(/from the dashboard/i)).not.toBeInTheDocument();
+        });
+
+        /** A reachability failure is not a settings problem — no false fix. */
+        it('offers no settings button for a failure configuration cannot fix', async () => {
+            mockState = refusal('The Data Installer service is unreachable.');
+            renderStep();
+
+            await waitFor(() =>
+                expect(screen.getByText(/unreachable/i)).toBeInTheDocument(),
+            );
+            expect(screen.queryByRole('button', { name: /open settings/i })).not.toBeInTheDocument();
+        });
     });
 });
 
@@ -342,11 +426,11 @@ describe('SampleDataStep — loading', () => {
 
     /** A failure is not a permanent spinner. */
     it('shows the reason rather than spinning forever when the catalog fails', () => {
-        mockState = refusal('The Data Installer is not configured.');
+        mockState = refusal('The Data Installer service is unreachable.');
         renderStep();
 
         expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-        expect(screen.getByText(/could not be loaded/i)).toBeInTheDocument();
+        expect(screen.getByText(/unreachable/i)).toBeInTheDocument();
     });
 });
 

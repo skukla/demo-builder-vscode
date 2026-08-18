@@ -61,7 +61,17 @@ function refuse(error: string, code: ErrorCode, extra: Record<string, unknown> =
 export async function resolveDataInstallerAccess(
     context: HandlerContext,
 ): Promise<DataInstallerAccess> {
+    // Both config refusals LOG. They used to return in silence, and a colleague's
+    // 864-line debug log carried zero lines from this feature while the catalog
+    // failed on every surface she could reach — the log is the support artifact,
+    // so a refusal that leaves no trace costs a round trip to her settings.
+    //
+    // The refusal keeps its INVALID_OPERATION code, which is what
+    // `renderDataInstallerFailure` already branches on to offer the settings fix.
     if (!isDataInstallerEnabled()) {
+        context.logger.warn(
+            `${LOG_PREFIX} Refused: demoBuilder.dataInstaller.enabled is false.`,
+        );
         return refuse(
             'The Data Installer is turned off. Enable demoBuilder.dataInstaller.enabled to use it.',
             ErrorCode.INVALID_OPERATION,
@@ -71,11 +81,11 @@ export async function resolveDataInstallerAccess(
     const resolved = resolveDataInstallerBaseUrl();
     if (!resolved.ok) {
         // Fingerprint only: a rejected URL may carry a secret in its query string.
-        if (resolved.reason === 'invalid-url') {
-            context.logger.warn(
-                `${LOG_PREFIX} Ignoring invalid demoBuilder.dataInstaller.apiBaseUrl (${resolved.fingerprint ?? 'unreadable'}). Expected https://.`,
-            );
-        }
+        context.logger.warn(
+            resolved.reason === 'not-configured'
+                ? `${LOG_PREFIX} Refused: demoBuilder.dataInstaller.apiBaseUrl is not set. It has no default — every install needs it set once.`
+                : `${LOG_PREFIX} Refused: invalid demoBuilder.dataInstaller.apiBaseUrl (${resolved.fingerprint ?? 'unreadable'}). Expected https://.`,
+        );
         return refuse(
             resolved.reason === 'not-configured'
                 ? 'No Data Installer API URL is configured. Set demoBuilder.dataInstaller.apiBaseUrl.'
@@ -172,6 +182,12 @@ async function withClient(
     try {
         return { success: true, data: await run(access.client) };
     } catch (error) {
+        // Logged for the same reason the refusals above are: without this, a
+        // service that is down and a setting that was never filled in produce
+        // the same empty log, and telling them apart is the only reason to read one.
+        context.logger.error(
+            `${LOG_PREFIX} ${fallback} ${error instanceof Error ? error.message : String(error)}`,
+        );
         return toFailure(error, fallback);
     }
 }

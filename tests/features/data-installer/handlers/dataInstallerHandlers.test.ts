@@ -120,6 +120,51 @@ describe('dataInstallerHandlers', () => {
             expect(MockedClient).not.toHaveBeenCalled();
         });
 
+        /**
+         * A colleague's 864-line debug log carried ZERO `[Data Installer]` lines
+         * while the catalog failed on every surface, because the two config
+         * refusals returned in silence. The log is the support artifact; a
+         * feature that fails without a trace costs a round trip to the user's
+         * settings every single time.
+         */
+        describe('every config refusal leaves a trace and says how to fix it', () => {
+            it('logs the unset base URL by name', async () => {
+                setupSettings({ apiBaseUrl: '' });
+                const context = makeContext();
+
+                const access = await resolveDataInstallerAccess(context);
+
+                expect(access.ok).toBe(false);
+                const logged = JSON.stringify((context.logger.warn as jest.Mock).mock.calls);
+                expect(logged).toContain('apiBaseUrl');
+            });
+
+            it('logs the disabled feature by name', async () => {
+                setupSettings({ enabled: false });
+                const context = makeContext();
+
+                await resolveDataInstallerAccess(context);
+
+                const logged = JSON.stringify((context.logger.warn as jest.Mock).mock.calls);
+                expect(logged).toContain('enabled');
+            });
+
+            /**
+             * The code is the discriminator `renderDataInstallerFailure` reads to
+             * offer "Open Settings" instead of a Retry that cannot help, so both
+             * config refusals must carry it.
+             */
+            it('codes both config refusals so the UI can offer the settings fix', async () => {
+                setupSettings({ apiBaseUrl: '' });
+                const unset = await resolveDataInstallerAccess(makeContext());
+                setupSettings({ enabled: false });
+                const off = await resolveDataInstallerAccess(makeContext());
+
+                expect(unset.ok === false && unset.response.code).toBe(ErrorCode.INVALID_OPERATION);
+                expect(off.ok === false && off.response.code).toBe(ErrorCode.INVALID_OPERATION);
+            });
+        });
+
         it('logs a URL fingerprint and never the rejected value', async () => {
             const secret = 'http://host.example.invalid/p?token=super-secret';
             setupSettings({ apiBaseUrl: secret });
@@ -272,6 +317,23 @@ describe('dataInstallerHandlers', () => {
             const res = await dataInstallerHandlers['find-datapacks'](makeContext(), {});
             expect(res.success).toBe(false);
             expect(res.error).toBeDefined();
+        });
+
+        /**
+         * The other half of the silence: a refusal now logs, but a FAILED CALL
+         * did not, so a reachability problem and a missing setting produced the
+         * same empty log. Distinguishing them is the whole reason to read one.
+         */
+        it('logs a failed call, so the log distinguishes it from a refusal', async () => {
+            MockedClient.prototype.findDatapacks = jest
+                .fn()
+                .mockRejectedValue(new DataInstallerApiError('boom', 500, 'find-datapacks'));
+            const context = makeContext();
+
+            await dataInstallerHandlers['find-datapacks'](context, {});
+
+            const logged = JSON.stringify((context.logger.error as jest.Mock).mock.calls);
+            expect(logged).toContain('boom');
         });
 
         it('returns the guard failure unchanged rather than calling the client', async () => {

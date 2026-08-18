@@ -19,7 +19,14 @@ Two settings, read in exactly one place — `services/dataInstallerConfig.ts`:
 | Setting | Default | Notes |
 |---|---|---|
 | `demoBuilder.dataInstaller.enabled` | `true` | A corrupted non-boolean reads as `true`: a broken `settings.json` should not look like a deliberate opt-out. |
-| `demoBuilder.dataInstaller.apiBaseUrl` | the team's stage deployment | `https` only, ≤2048 chars, trailing slash stripped. |
+| `demoBuilder.dataInstaller.apiBaseUrl` | **none — `""`** | `https` only, ≤2048 chars, trailing slash stripped. Verified against `package.json`; this row previously claimed "the team's stage deployment", which has been false since the default was removed for the public repo. |
+
+**Nobody has this set until they set it.** The consequence is the whole first-run
+story, and it was mistaken for a bug on 2026-08-18: a fresh install has the feature
+ENABLED and pointed nowhere, so the wizard's sample-data sub-step refuses and the
+dashboard's Sample Data tile is hidden (`isDataInstallerConfigured()` gates it).
+Both surfaces now name the setting and offer an **Open Settings** button rather than
+reporting a dead end.
 
 **Reading** the service needs no credentials. The client sends the extension's
 existing Adobe IMS token as `Bearer` — verified byte-identical to the token a
@@ -125,12 +132,13 @@ type.
 | File | Responsibility |
 |---|---|
 | `types.ts` | Domain types. ISO strings, not `Date` — these cross the webview boundary, where `postMessage` serializes a `Date` to a string anyway. |
-| `services/dataInstallerConfig.ts` | Settings read, https-only validation, `actionUrl()`, `fingerprintUrl()`. Returns **reasons, never messages** — the caller owns wording. |
+| `services/dataInstallerConfig.ts` | Settings read, https-only validation, `actionUrl()`, `fingerprintUrl()`. Returns **reasons, never messages** — the caller owns wording. `isDataInstallerConfigured()` answers "should this be OFFERED at all" and gates the dashboard tile. |
 | `services/dataInstallerErrors.ts` | Typed errors; transport classified **structurally**, never by message text. |
 | `services/dataInstallerParsers.ts` | The containment layer. One normalizer per endpoint. |
 | `services/dataInstallerClient.ts` | All HTTP. No `vscode`. Injected `fetchImpl` + token provider. A drift canary logs unexpected key names once per endpoint, and never fails a request. |
 | `services/datapackCatalog.ts` | Grouping, version ordering, default-version pick. Pure. |
-| `handlers/dataInstallerHandlers.ts` | Six read message types + `resolveDataInstallerAccess`. |
+| `handlers/dataInstallerHandlers.ts` | Six read message types + `resolveDataInstallerAccess`. Every config refusal and every failed call LOGS — they used to return in silence, and a colleague's debug log carried zero lines from this feature while the catalog failed on every surface. |
+| `handlers/settingsHandlers.ts` | `open-data-installer-settings` — opens the settings pane. In NEITHER handler map on purpose: the read map is what the MCP descriptors mirror, and a window-opening command has no business being offered to an agent. Registered by the panel and by the wizard. |
 | `commands/showDataInstaller.ts` | The panel. Standalone — deliberately does NOT dispose sibling tabs, because browsing datapacks should not close what you were looking at. |
 | `ui/` | The panel surface — see below. |
 
