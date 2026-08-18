@@ -23,6 +23,15 @@ import type { SidebarProvider } from '@/features/sidebar';
 import type { StateManager as IStateManager } from '@/types/state';
 
 /**
+ * The `vscode.SecretStorage` surface, narrowed so core stays vscode-free in type.
+ */
+export interface SecretStorageLike {
+    get(key: string): Thenable<string | undefined>;
+    store(key: string, value: string): Thenable<void>;
+    delete(key: string): Thenable<void>;
+}
+
+/**
  * Centralized service registry for dependency injection
  */
 export class ServiceLocator {
@@ -30,6 +39,7 @@ export class ServiceLocator {
     private static authenticationService: AuthenticationService | null = null;
     private static sidebarProvider: SidebarProvider | null = null;
     private static stateManager: IStateManager | null = null;
+    private static secretStorage: SecretStorageLike | null = null;
 
     /**
      * Register CommandExecutor instance
@@ -88,6 +98,32 @@ export class ServiceLocator {
     }
 
     /**
+     * Register the extension's SecretStorage.
+     *
+     * **Called by**: extension.ts during activation
+     *
+     * Registered here rather than threaded through call chains because the
+     * consumers are deep and diffuse — `.env` generation is reached from project
+     * creation, Configure, project reset, mesh deploy and the App Builder runner.
+     * Threading an optional parameter through all of them makes forgetting ONE
+     * silent: the secret quietly fails to reach a generated `.env`, and the demo
+     * breaks at runtime rather than at the call site.
+     */
+    static setSecretStorage(secrets: SecretStorageLike): void {
+        this.secretStorage = secrets;
+    }
+
+    /**
+     * Get SecretStorage.
+     *
+     * @returns the store, or null outside an activated extension host (tests,
+     *          the vscode-free MCP entry) — callers treat null as "config only"
+     */
+    static getSecretStorage(): SecretStorageLike | null {
+        return this.secretStorage;
+    }
+
+    /**
      * Reset all services
      *
      * **Used for**: Testing only
@@ -98,6 +134,7 @@ export class ServiceLocator {
         this.authenticationService = null;
         this.sidebarProvider = null;
         this.stateManager = null;
+        this.secretStorage = null;
     }
 
     /**

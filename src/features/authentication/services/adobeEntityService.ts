@@ -43,6 +43,12 @@ export function createEntityServices(
     cacheManager: AuthCacheManager,
     logger: Logger,
     stepLogger: StepLogger,
+    /**
+     * Answers "is the session actually still valid?" before the fetcher tells a
+     * user it expired. Optional so existing callers and tests are unaffected; when
+     * absent the fetcher keeps its previous, blunter assertion.
+     */
+    isTokenValid?: () => Promise<boolean>,
 ): EntityServices {
     // Mutable reference for the Fetcher → Selector callback
     const selectorContainer: { ref?: AdobeEntitySelector } = {};
@@ -59,6 +65,7 @@ export function createEntityServices(
                     await selectorContainer.ref.clearConsoleContext();
                 }
             },
+            ...(isTokenValid ? { isTokenValid } : {}),
         },
     );
 

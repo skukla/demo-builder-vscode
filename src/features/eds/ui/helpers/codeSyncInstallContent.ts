@@ -30,7 +30,30 @@ export const CODE_SYNC_INSTALL_ACTION = 'Install App';
 export const CODE_SYNC_RECHECK_ACTION = 'Check Again';
 
 /**
- * The install steps for one repository.
+ * The one-line brief that sits above the steps.
+ *
+ * Carries what the numbered list must not: the repository this is about, and the
+ * fact that installing is not the end of it. Both surfaces render it, because a
+ * hand-written lead-in beside a shared list is the same drift one paragraph up —
+ * the dialog had already grown one.
+ *
+ * @param owner - GitHub owner
+ * @param repo - repository to grant access to
+ */
+export function buildCodeSyncInstallSummary(owner: string, repo: string): string {
+    return `Grant the app access to ${owner}/${repo}, then click "${CODE_SYNC_RECHECK_ACTION}".`;
+}
+
+/**
+ * The install steps for one repository — the part that happens on GitHub.
+ *
+ * A numbered row earns its place by describing something the user cannot see.
+ * Two of these four described the buttons directly beneath them ("Click 'Install
+ * App'", "Return here and click 'Check Again'"), which doubled the height of a
+ * block that then overflowed its pane, to say what the buttons already said.
+ * What is left is the browser tab this UI cannot reach into: which "Configure"
+ * to press, and which repository to grant. The recheck lives in the summary
+ * above, and on the button itself.
  *
  * Returns a fresh array each call — the steps embed `owner`/`repo`, and a shared
  * mutable constant would be a trap for a caller that filtered or appended.
@@ -41,20 +64,12 @@ export const CODE_SYNC_RECHECK_ACTION = 'Check Again';
 export function buildCodeSyncInstallSteps(owner: string, repo: string): Instruction[] {
     return [
         {
-            step: `Click "${CODE_SYNC_INSTALL_ACTION}"`,
-            details: 'Opens the AEM Code Sync GitHub App page',
-        },
-        {
             step: 'Configure the app',
             details: `Click "Configure", sign in if prompted, then click "Configure" next to "${owner}"`,
         },
         {
             step: 'Grant repository access',
             details: `Select "Only select repositories", search for "${repo}", and click the green "Save" button`,
-        },
-        {
-            step: `Return here and click "${CODE_SYNC_RECHECK_ACTION}"`,
-            details: "We'll verify the installation completed",
         },
     ];
 }

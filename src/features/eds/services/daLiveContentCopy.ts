@@ -294,12 +294,33 @@ export class DaLiveContentCopy {
      * For HTML content, fetches .plain.html to get just the main content without
      * the full page wrapper, then transforms and wraps it in document structure.
      *
+     * `source.preview` reads the PREVIEW host (`.aem.page`) instead of the
+     * published one. Content pages are published, so `.aem.live` is right for
+     * them. Block-library doc pages are a different matter: a library source
+     * publishes SOME of its doc pages and not others, and which is which is a
+     * per-block property nobody maintains deliberately. Measured 2026-08-18
+     * across the two library sources this extension ships:
+     *
+     *     accs-citisignal  cards, hero              preview 200, live 404
+     *     accs-citisignal  carousel, product-teaser preview 200, live 200
+     *     bodea-source     guided-selling-luxe, …   preview 200, live 200
+     *
+     * Preview is the superset — publishing requires previewing first — so it is
+     * the only host where everything a source HAS is reachable.
+     *
+     * Aimed at the published host, this copy silently skipped whichever blocks
+     * happened to be preview-only, and those fell through to
+     * `generateStubDocPages`: an author opening the DA.live palette got a box
+     * with the block's name where the authored example should be, for some
+     * blocks and not others. That is worse than a clean failure, because a
+     * library half full of stubs looks like it worked.
+     *
      * @param contentPatchIds - Optional content patch IDs to apply to HTML content
      * @param contentPatchSource - Optional external source for content patches
      */
     async copySingleFile(
         token: string,
-        source: { org: string; site: string },
+        source: { org: string; site: string; preview?: boolean },
         sourcePath: string,
         destination: { org: string; site: string },
         destPath: string,
@@ -308,7 +329,8 @@ export class DaLiveContentCopy {
         patchReport?: PatchReport,
         discoveredPaths?: Set<string>,
     ): Promise<boolean> {
-        const sourceBaseUrl = `https://main--${source.site}--${source.org}.aem.live`;
+        const sourceHost = source.preview ? 'aem.page' : 'aem.live';
+        const sourceBaseUrl = `https://main--${source.site}--${source.org}.${sourceHost}`;
 
         const isSpreadsheet = await this.isSpreadsheetPath(sourceBaseUrl, sourcePath);
         if (isSpreadsheet) {

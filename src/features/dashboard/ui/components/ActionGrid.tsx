@@ -127,6 +127,18 @@ export interface ActionGridProps {
      * action, and grouping it there keeps the row to a single line.
      */
     hasAdobeContext?: boolean;
+    /**
+     * Whether to offer the Sample Data tile. The Data Installer needs BOTH
+     * `dataInstaller.enabled` and a usable `apiBaseUrl`; without the URL the
+     * surface refuses every request, so a tile is an invitation to a dead end.
+     * Decided host-side (`isDataInstallerConfigured`) — these are settings, and
+     * the webview cannot read them.
+     *
+     * Defaults to hidden. An undefined flag means the host did not say, and
+     * offering a surface we have not confirmed is the failure this prop exists
+     * to prevent.
+     */
+    dataInstallerAvailable?: boolean;
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
     hasMesh?: boolean;
     meshStatus?: MeshStatus;
@@ -476,6 +488,7 @@ export function ActionGrid({
     demoStatus,
     handleRestartDemo,
     hasAdobeContext,
+    dataInstallerAvailable,
     appBuilderComponents,
     hasMesh,
     meshStatus,
@@ -609,7 +622,7 @@ export function ActionGrid({
                             because both route to a dedicated surface, but it does
                             NOT replace the tab: the catalog is global to the
                             service, so browsing it should not close the dashboard. */}
-                        <DataInstallerTile />
+                        {dataInstallerAvailable && <DataInstallerTile />}
 
                         {/* Overflow — rarely used actions tucked into a menu */}
                         <MenuTrigger>

@@ -20,19 +20,17 @@
 
 import { Button, Text } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
-import React, { useEffect, useCallback, useState, useRef } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import {
     CodeSyncStatusView,
     NewRepoForm,
     ResetToTemplateOption,
-    buildAppStatusFromResult,
     computeCodeSyncValid,
     computeRepoValid,
     type RepoReadinessState,
     pollGitHubAppInstallation,
-    probeExistingRepoApp,
+    probeRepoCodeSync,
     shouldShowAppStatus,
-    type GitHubAppCheckResult,
     type GitHubAppStatus,
     type RepoCreationState,
 } from './repoSelectionInline.helpers';
@@ -169,7 +167,6 @@ export function RepoSelectionInline({
     });
     const [isRechecking, setIsRechecking] = useState(false);
     const [recheckMessage, setRecheckMessage] = useState('Checking installation status...');
-    const lastCheckedRepo = useRef<string | null>(null);
 
     const {
         items: repos,
@@ -237,7 +234,6 @@ export function RepoSelectionInline({
     const resetLocalState = useCallback(() => {
         setRepoCreationState({ isCreating: false, isCreated: false });
         setGitHubAppStatus({ isChecking: false, isInstalled: null });
-        lastCheckedRepo.current = null;
     }, []);
 
     const handleCreateNew = useCallback(() => {
@@ -282,35 +278,6 @@ export function RepoSelectionInline({
         setRepoNameError(getRepositoryNameError(repoName));
     }, [repoName]);
 
-    /**
-     * Selection-time check for an existing repo: report what Helix says now and
-     * stop. Lenient (a 400 code.status means installed-but-unsynced, which is fine
-     * at selection) and non-triggering, so the answer lands in ~1s.
-     */
-    const checkGitHubApp = useCallback(async (owner: string, repo: string, lenient = false) => {
-        const repoKey = `${owner}/${repo}`;
-        if (lastCheckedRepo.current === repoKey && !lenient) return;
-        lastCheckedRepo.current = repoKey;
-
-        try {
-            const result = await webviewClient.request<GitHubAppCheckResult>('check-github-app', {
-                owner,
-                repo,
-                lenient,
-            });
-            setGitHubAppStatus(buildAppStatusFromResult(result));
-        } catch (err) {
-            console.error('[GitHub App] Check failed:', err);
-            setGitHubAppStatus({
-                isChecking: false,
-                isInstalled: false,
-                error: (err as Error).message,
-            });
-        } finally {
-            setIsRechecking(false);
-        }
-    }, []);
-
     const handleCreateRepository = useCallback(async () => {
         const templateOwner = edsConfig?.templateOwner;
         const templateRepo = edsConfig?.templateRepo;
@@ -351,11 +318,21 @@ export function RepoSelectionInline({
                 },
             });
             setRepoCreationState({ isCreating: false, isCreated: true });
-            setGitHubAppStatus({
-                isChecking: false,
-                isInstalled: false,
-                installUrl: 'https://github.com/apps/aem-code-sync/installations/select_target',
-            });
+
+            // NOT ASKED YET — and say exactly that, nothing more.
+            //
+            // This used to assert `{isInstalled: false}` with no `codeStatus`, which
+            // `resolveCodeSyncView` reads as "Adobe was asked and did not answer": a
+            // claim about a request that never happened. It also silently disabled
+            // the recovery below — the "re-check when returning with an already
+            // created repo" effect fires only on `isInstalled === null`, so the
+            // fabricated `false` was what kept it from ever running.
+            //
+            // `null` is the honest value AND the one that arms that effect. Do not
+            // start a second check here: one poller is enough, and two produced the
+            // interleaved duplicate checks seen on 2026-08-17, each triggering its
+            // own Helix code sync.
+            setGitHubAppStatus({ isChecking: false, isInstalled: null });
         } catch (err) {
             console.error('[GitHub Repo] Creation failed:', err);
             setRepoCreationState({
@@ -413,7 +390,6 @@ export function RepoSelectionInline({
     // Reset GitHub App status when repo mode changes.
     useEffect(() => {
         setGitHubAppStatus({ isChecking: false, isInstalled: null });
-        lastCheckedRepo.current = null;
     }, [repoMode, selectedRepo]);
 
     // Check Code Sync as soon as an EXISTING repo is picked, not mid-pipeline.
@@ -428,18 +404,19 @@ export function RepoSelectionInline({
         if (repoMode !== 'existing' || !selectedRepo) return;
         const [owner, name] = (selectedRepo.fullName ?? '').split('/');
         if (!owner || !name) return;
-        void probeExistingRepoApp(owner, name, setGitHubAppStatus);
+        void probeRepoCodeSync(owner, name, setGitHubAppStatus);
     }, [repoMode, selectedRepo]);
 
-    // Re-check GitHub App when returning with an already-created repo.
+    // Check the App for a created repo — both on returning to the step and right
+    // after creation, which leaves `isInstalled: null` precisely to arm this.
     useEffect(() => {
         if (repoMode === 'new' && edsConfig?.createdRepo && githubAppStatus.isInstalled === null) {
             const { owner, name } = edsConfig.createdRepo;
             if (owner && name) {
-                checkGitHubApp(owner, name, true);
+                void probeRepoCodeSync(owner, name, setGitHubAppStatus);
             }
         }
-    }, [repoMode, edsConfig?.createdRepo, githubAppStatus.isInstalled, checkGitHubApp]);
+    }, [repoMode, edsConfig?.createdRepo, githubAppStatus.isInstalled]);
 
     // Classify the selected repo so the reset control can ask only when there
     // is something to lose. Undefined while in flight — the gate treats that as
@@ -592,7 +569,9 @@ export function RepoSelectionInline({
     // had written to the repo; it now runs at selection.
 
     return (
-        <div className="w-full relative">
+        // `flex-1 flex-column` claims the pane's full height from `.step-view-anim`,
+        // which is what lets CodeSyncStatusView centre in it rather than sit at the top.
+        <div className="w-full relative flex-1 flex-column">
             {showAppStatus && (
                 <CodeSyncStatusView
                     createdRepo={edsConfig?.createdRepo}

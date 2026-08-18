@@ -215,6 +215,52 @@ const CDN_VERIFY_INTERVAL = 2000;
 const CDN_VERIFY_ATTEMPTS = 10;
 
 /**
+ * How long `verifyConfigOnCdn` polls before giving up, in seconds.
+ *
+ * DERIVED, never written by hand. It is quoted to agents in
+ * `describeCdnPropagation`, and a number typed there from memory would drift
+ * away from the loop the moment either constant above changed — telling an
+ * agent we waited a length of time we did not.
+ */
+export const CDN_VERIFY_BUDGET_SECONDS = Math.round(
+    (CDN_VERIFY_INTERVAL * CDN_VERIFY_ATTEMPTS) / 1000,
+);
+
+/**
+ * Turn the `cdnVerified` flag into a sentence an agent can act on.
+ *
+ * We already poll the live CDN after every publish and record the answer; until
+ * now it only reached the debug log, so an agent that published and then looked
+ * at the site had no way to tell "not served yet" from "my work is gone". One
+ * did exactly that, decided commits were being discarded, and filed a bug for a
+ * defect that did not exist.
+ *
+ * This is a per-call fact rather than a standing caution about propagation
+ * delay: it is true for THIS publish, and it arrives at the moment the agent is
+ * about to go look.
+ */
+export function describeCdnPropagation(status: {
+    cdnVerified?: boolean;
+    cdnError?: string;
+}): string {
+    if (status.cdnError) {
+        return (
+            `The CDN publish itself failed (${status.cdnError}), so the site keeps serving ` +
+            `the previous copy. This is not propagation delay — waiting will not fix it.`
+        );
+    }
+    if (status.cdnVerified) {
+        return 'Confirmed live on the CDN — the site is serving this publish now.';
+    }
+    return (
+        `Published, but the CDN was still serving the previous copy after ` +
+        `~${CDN_VERIFY_BUDGET_SECONDS}s of polling. That is normal propagation delay, not ` +
+        `lost work — wait and re-check rather than re-applying the change. Git is the ` +
+        `record of what was pushed; \`git log\` settles it.`
+    );
+}
+
+/**
  * Verify config.json is accessible on the live CDN.
  *
  * After publishing via Helix Admin API, config.json needs time to propagate

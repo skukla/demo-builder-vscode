@@ -7,13 +7,22 @@
  * Connection and Business Structure — and the field sets already existed as
  * `isStoreCodeField` / the connection-group predicate.
  *
- * SUB-SECTIONS, NOT TABS. Configure is an edit surface: every tab is deliberately
- * always reachable and there is no lock vocabulary. Two tabs would either import
- * the wizard's gating — the thing that deadlocked PaaS — or be two tabs in no
- * particular order, which is worse than two headings.
+ * **Business Structure became its own RAIL TAB on 2026-08-17**, by product
+ * decision, reversing the note that used to head this file. That note argued
+ * sub-sections because "two tabs would either import the wizard's gating — the
+ * thing that deadlocked PaaS — or be two tabs in no particular order".
+ *
+ * The gating was the hazard, and it has not come along: neither tab locks, both
+ * stay reachable, and the rail keeps them adjacent and ordered. What the tab does
+ * carry is the honest empty state the sub-section used to solve by vanishing —
+ * store pickers cannot render before the connection works, and a tab that
+ * disappears is worse than one that says why it is waiting.
+ *
+ * Connection keeps ONE sub-section beside it, Credentials, because that pair is
+ * part of reaching the instance rather than a third task.
  *
  * The store cascade branches on `group.id`, so the ORIGINAL group must still reach
- * `renderFieldRow`. Only the section chrome is split.
+ * `renderFieldRow`. Only the chrome is split.
  */
 
 import React from 'react';
@@ -48,6 +57,18 @@ const COMMERCE: ServiceGroup = {
     ],
 };
 
+/** The ACCS half: the only backend with the brokered OAuth pair. */
+const ACCS: ServiceGroup = {
+    id: 'accs',
+    label: 'Adobe Commerce Cloud Service',
+    fields: [
+        field('ACCS_GRAPHQL_ENDPOINT'),
+        field('ACCS_OAUTH_CLIENT_ID'),
+        field('ACCS_OAUTH_CLIENT_SECRET'),
+        field('ACCS_WEBSITE_CODE'),
+    ],
+};
+
 const CATALOG: ServiceGroup = {
     id: 'catalog-service',
     label: 'Catalog Service',
@@ -62,7 +83,7 @@ function renderBody(group: ServiceGroup, storeStructureReady = true) {
     return render(
         <ConfigureSectionBody
             section={{ id: group.id, label: group.label, kind: 'serviceGroup' } as never}
-            serviceGroups={[COMMERCE, CATALOG]}
+            serviceGroups={[group, CATALOG]}
             renderFieldRow={(f, g) => {
                 seen.push({ key: f.key, groupId: g.id });
                 return <div data-testid={`row-${f.key}`} />;
@@ -83,11 +104,28 @@ function renderBody(group: ServiceGroup, storeStructureReady = true) {
 }
 
 describe('ConfigureSectionBody — the Commerce tab splits into two sub-sections', () => {
-    it('names both sub-sections', () => {
+    it('names Connection, and Business Structure is NOT one of them', () => {
         renderBody(COMMERCE);
 
         expect(screen.getByText('Connection')).toBeInTheDocument();
-        expect(screen.getByText('Business Structure')).toBeInTheDocument();
+        // It has its own rail tab now; a heading here too would render it twice.
+        expect(screen.queryByText('Business Structure')).not.toBeInTheDocument();
+    });
+
+    it('shows no Credentials heading on PaaS, which has no OAuth pair', () => {
+        // The section is for the ACCS OAuth credentials, which the shared service
+        // can supply. PaaS authenticates with admin username/password, and those
+        // stay in Connection — an empty heading would imply a missing setting.
+        renderBody(COMMERCE);
+
+        expect(screen.queryByText('Credentials')).not.toBeInTheDocument();
+    });
+
+    it('shows the Credentials heading on ACCS', () => {
+        renderBody(ACCS);
+
+        expect(screen.getByText('Connection')).toBeInTheDocument();
+        expect(screen.getByText('Credentials')).toBeInTheDocument();
     });
 
     it('does NOT repeat the group label as a third heading', () => {
@@ -98,14 +136,12 @@ describe('ConfigureSectionBody — the Commerce tab splits into two sub-sections
         expect(screen.queryByText('Adobe Commerce')).not.toBeInTheDocument();
     });
 
-    it('puts each field in the right sub-section and loses none', () => {
+    it('renders only the connection half — the store codes live on the other tab', () => {
         renderBody(COMMERCE);
 
         expect(seen.map((s) => s.key)).toEqual([
             'ADOBE_COMMERCE_URL',
             'ADOBE_COMMERCE_ADMIN_USERNAME',
-            'ADOBE_COMMERCE_WEBSITE_CODE',
-            'ADOBE_COMMERCE_STORE_CODE',
         ]);
     });
 
@@ -117,13 +153,83 @@ describe('ConfigureSectionBody — the Commerce tab splits into two sub-sections
         expect(seen.every((s) => s.groupId === 'adobe-commerce')).toBe(true);
     });
 
-    it('hides Business Structure until the store structure can load', () => {
-        // Its fields render null before then (StoreConfigFieldRow's disclosure
-        // gate), so the heading would otherwise sit above nothing.
-        renderBody(COMMERCE, false);
+    it('keeps the connection sub-sections whether or not stores can load', () => {
+        renderBody(ACCS, false);
 
         expect(screen.getByText('Connection')).toBeInTheDocument();
-        expect(screen.queryByText('Business Structure')).not.toBeInTheDocument();
+        expect(screen.getByText('Credentials')).toBeInTheDocument();
+    });
+});
+
+describe('the Business Structure tab', () => {
+    /** Render the sliced section id the rail now emits for the store cascade. */
+    function renderBusinessStructure(storeStructureReady: boolean) {
+        seen.length = 0;
+        return render(
+            <ConfigureSectionBody
+                section={
+                    {
+                        id: 'adobe-commerce:business-structure',
+                        label: 'Business Structure',
+                        kind: 'serviceGroup',
+                    } as never
+                }
+                serviceGroups={[COMMERCE, CATALOG]}
+                renderFieldRow={(f, g) => {
+                    seen.push({ key: f.key, groupId: g.id });
+                    return <div data-testid={`row-${f.key}`} />;
+                }}
+                projectName="p"
+                onProjectNameChange={jest.fn()}
+                projectNameTouched={false}
+                appBuilderComponentCatalog={[]}
+                componentConfigs={{}}
+                providedEnvVars={{}}
+                appBuilderComponentSecretFlags={{}}
+                onAppBuilderValueChange={jest.fn()}
+                authoringExperience="da-live-classic"
+                onAuthoringExperienceChange={jest.fn()}
+                storeStructureReady={storeStructureReady}
+            />,
+        );
+    }
+
+    it('names itself, like every other section does', () => {
+        // `ServiceGroupList` wraps each group in a ConfigSection with its label, so
+        // a tab whose body has no heading is the odd one out.
+        renderBusinessStructure(true);
+
+        expect(screen.getByText('Business Structure')).toBeInTheDocument();
+    });
+
+    it('keeps its heading while it is waiting', () => {
+        renderBusinessStructure(false);
+
+        expect(screen.getByText('Business Structure')).toBeInTheDocument();
+    });
+
+    it('renders the store cascade and nothing else', () => {
+        renderBusinessStructure(true);
+
+        expect(seen.map((s) => s.key)).toEqual([
+            'ADOBE_COMMERCE_WEBSITE_CODE',
+            'ADOBE_COMMERCE_STORE_CODE',
+        ]);
+    });
+
+    it('still hands rows the ORIGINAL group, so the cascade resolves its keys', () => {
+        renderBusinessStructure(true);
+
+        expect(seen.every((s) => s.groupId === 'adobe-commerce')).toBe(true);
+    });
+
+    it('says what it is waiting for instead of rendering an empty tab', () => {
+        // As a sub-section this could simply vanish. A TAB cannot — a tab that
+        // disappears reads as a broken feature, so it explains itself instead.
+        renderBusinessStructure(false);
+
+        expect(screen.getByText(/Fill in the Connection details/i)).toBeInTheDocument();
+        expect(seen).toHaveLength(0);
     });
 
     it('draws no divider between the two sub-sections', () => {

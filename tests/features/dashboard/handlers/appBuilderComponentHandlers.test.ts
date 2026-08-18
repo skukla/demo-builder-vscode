@@ -144,13 +144,71 @@ describe('handleAddAppBuilderComponent', () => {
             envSchema: [{ name: 'ERP_API_KEY', type: 'secret', label: 'ERP API Key' }],
         });
 
-        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+        await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
         // Routed to Configure, not silently deployed with a missing secret.
         const vscode = require('vscode');
         expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.configureProject');
         expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
+    });
+
+    // This branch used to return `{success: true}` for opening a panel and adding
+    // NOTHING. Neither the grid, an agent, nor a human reading the transcript
+    // could tell that from a completed add. It is the defect the `needsUser`
+    // handoff convention was written against.
+    it('does NOT report success for the Configure route — nothing was added', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+        mockGetAppBuilderComponentEntry.mockReturnValue({
+            ...ERP_ENTRY,
+            envSchema: [{ name: 'ERP_API_KEY', type: 'secret', label: 'ERP API Key' }],
+        });
+
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(result.success).toBe(false);
+        // The message must name what is missing — "it failed" is not actionable.
+        expect(result.error).toContain('ERP_API_KEY');
+        expect(result.error).toContain('ERP Sync');
+    });
+
+    // `blocked`, like a guard refusal: nothing ran, so the row must not be
+    // painted red as though a deploy had failed.
+    it('does not post an error row status for the Configure route', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+        mockGetAppBuilderComponentEntry.mockReturnValue({
+            ...ERP_ENTRY,
+            envSchema: [{ name: 'ERP_API_KEY', type: 'secret', label: 'ERP API Key' }],
+        });
+
+        await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(mockSendAppBuilderComponentStatusUpdate).not.toHaveBeenCalledWith(
+            'erp-sync',
+            'error',
+            expect.anything(),
+            expect.anything()
+        );
+    });
+
+    // Control for the two above: the SAME assertions on an entry needing no
+    // inputs must go the other way, or they would pass on a handler that
+    // refused every add.
+    it('control: an entry needing no user inputs still adds and reports what it added', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        const vscode = require('vscode');
+        expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
+            'demoBuilder.configureProject'
+        );
         expect(result.success).toBe(true);
+        // Not a bare `{success: true}`: the agent needs the id it can now deploy,
+        // remove or ask the status of — and for a CUSTOM source it never saw one.
+        expect(result.added).toEqual({ id: 'erp-sync', name: 'ERP Sync', kind: 'integration' });
     });
 
     it('posts an error row status when the runner returns failure (no throw)', async () => {
@@ -285,6 +343,20 @@ describe('handleRenameAppBuilderComponent (display name only — shell instancin
             ...KEYED_ENTRY,
             name: 'Firefly Video Gen',
         });
+    });
+
+    // Same rule as the add path: `defaultShape` renders a bare success as "{}",
+    // so `rename_integration` would answer an agent with nothing at all. The
+    // TRIMMED name is the part worth returning — it is not what the caller sent.
+    it('reports what it renamed, not a bare success', async () => {
+        const { mockContext, showInputBox } = setupRename();
+        showInputBox.mockResolvedValue('  Firefly Video Gen  ');
+
+        const result = await handleRenameAppBuilderComponent(mockContext, {
+            id: 'firefly-image-gen',
+        });
+
+        expect(result.renamed).toEqual({ id: 'firefly-image-gen', name: 'Firefly Video Gen' });
     });
 
     it('pushes the row-status refresh with the CURRENT status and the new name (label update)', async () => {

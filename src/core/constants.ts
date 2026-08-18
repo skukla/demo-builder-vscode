@@ -74,7 +74,48 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // an inconsistency rather than a policy. register-custom-block.md now passes
 // `confirm: true` and says why — without this bump, existing projects keep the
 // old skill text and the tool refuses every call it makes.
-export const AI_CONTEXT_VERSION = 10;
+// v11: phase 5 (guidance). `diagnose-demo` was routing the FIRST symptom it
+// names — "product page renders empty" — straight to `get_store_structure` and
+// then to the Commerce admin. The classic cause is a refused Configuration
+// Service write, which leaves a storefront that builds, pushes and browses and
+// serves no product page; an agent following the old table found scope healthy
+// and told the user their catalog was empty while it was fine. The tools that
+// distinguish the two (`get_site_access`, `repair_site_configuration`) did not
+// exist when that skill was written. It now routes there first, and also knows
+// the rest of the Group 1 diagnosis tools and `get_settings`. New skill
+// `import-datapack.md` teaches the six-call sample-data loop, whose worst trap
+// is that `start_datapack_import` returns a RECEIPT and reporting it as an
+// outcome is invisible — the user sees "imported" and an empty catalog.
+// v12: the import scope now defaults to the PROJECT's website/store view rather
+// than the service's `base`/`default`. Omitting the pair used to send nothing,
+// so an agent that skipped `list_datapack_import_scopes` could import — or
+// RESET — against a website nobody chose. `import-datapack.md` says so, and
+// says to send both or neither.
+// v13: the SECOND wrong route in diagnose-demo, found the same way as the first.
+// "Catalog is empty everywhere" pointed at store scope and then the Admin, but
+// `GET /V1/categories` returns only the default store group's subtree — so on a
+// multi-root instance a successful import reads as a no-op and an agent reports
+// an empty catalog that is not empty. The cause is usually a root category
+// nobody assigned, which is an Admin step. import-datapack also gains the
+// instance-level limits (B2B enablement, pre-existing scopes, unsupported
+// customer segments) that no API can report.
+// v14: `update-credentials.md` was telling agents that ALL credentials live in
+// component `.env` files and to read them with `get_component_config`. Passwords
+// and client secrets now live in the OS keychain, so that instruction is both
+// wrong and harmful — an agent following it would find nothing and could "fix"
+// the gap by writing the secret back into project files with
+// `update_project_config`, undoing the protection. The skill now separates the
+// two kinds of value, says a secret read as absent is deliberate, and routes the
+// user to Configure. It also corrects `ACCS_ENDPOINT`, which is not a key that
+// exists — the catalog calls it `ACCS_GRAPHQL_ENDPOINT`.
+// v15: `diagnose-demo` had no entry for "my change is not on the site", the
+// symptom an agent hits every time it edits a storefront file. With nothing
+// routing it to git, one agent verified against the DEPLOYED SITE, read CDN
+// propagation lag as lost commits, re-applied work that had never been lost,
+// and filed a bug report about the extension force-pushing — which never
+// happened. The skill now says to run `git log` before concluding anything, and
+// gives the `gh api .../compare` check that settles a rewrite claim outright.
+export const AI_CONTEXT_VERSION = 15;
 
 /**
  * Component IDs for standardized component instance access

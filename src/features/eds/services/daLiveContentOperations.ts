@@ -185,6 +185,22 @@ export class DaLiveContentOperations {
     }
 
     /**
+     * Read source content (raw body + status, size-capped).
+     * @param org - Organization name
+     * @param site - Site name
+     * @param path - Content path
+     * @param maxBytes - Optional cap; `bytes` still reports the true size
+     */
+    async readSource(
+        org: string,
+        site: string,
+        path: string,
+        maxBytes?: number,
+    ): Promise<{ status: number; body: string; bytes: number; truncated: boolean }> {
+        return this.sourceOps.readSource(org, site, path, maxBytes);
+    }
+
+    /**
      * Delete source content
      * @param org - Organization name
      * @param site - Site name
@@ -533,5 +549,20 @@ export class DaLiveContentOperations {
         removeKeys: string[] = [],
     ): Promise<{ success: boolean; error?: string }> {
         return this.configOps.applySiteConfig(org, site, configUpdates, removeKeys);
+    }
+
+    /**
+     * The site config as DA.live holds it — for logging when something that
+     * depends on it fails inexplicably. Null when it cannot be read.
+     *
+     * @param org - DA.live organization
+     * @param site - DA.live site
+     * @returns the raw config document, or null
+     */
+    async readSiteConfigForDiagnostics(
+        org: string,
+        site: string,
+    ): Promise<Record<string, unknown> | null> {
+        return this.configOps.readSiteConfigForDiagnostics(org, site);
     }
 }

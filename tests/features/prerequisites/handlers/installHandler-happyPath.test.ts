@@ -80,7 +80,16 @@ describe('Install Handler - Happy Path', () => {
         );
     });
 
-    it('should handle manual installation by opening URL', async () => {
+    /**
+     * Sets up a manual-install prerequisite and gives the context a `panel`.
+     *
+     * The panel is the point. `createProject.ts:407` — the wizard, and the only
+     * caller of this handler — passes `panel: this.panel`, and its presence is
+     * how the handler tells a person who just clicked Install from an agent
+     * calling a tool. A mock without one is a headless context wearing a
+     * webview's name, which is why this test was passing against the wrong branch.
+     */
+    function arrangeManualInstall(): void {
         const states = new Map();
         states.set(0, { prereq: mockManualPrereq, result: mockNodeResult });
         mockContext.sharedState.currentPrerequisiteStates = states;
@@ -88,6 +97,11 @@ describe('Install Handler - Happy Path', () => {
             manual: true,
             url: 'https://www.docker.com/get-started',
         });
+    }
+
+    it('should handle manual installation by opening URL', async () => {
+        arrangeManualInstall();
+        mockContext.panel = {} as never;
 
         const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
@@ -100,6 +114,32 @@ describe('Install Handler - Happy Path', () => {
                 message: 'Manual installation required. Open: https://www.docker.com/get-started',
             })
         );
+    });
+
+    it('reports the manual URL instead of opening it when there is no panel', async () => {
+        arrangeManualInstall();
+        mockContext.panel = undefined;
+
+        const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+        // An agent gets the URL to relay; the user's browser is not hijacked for
+        // a call they did not make.
+        expect(vscode.env.openExternal).not.toHaveBeenCalled();
+        expect(result.data).toMatchObject({
+            manual: true,
+            url: 'https://www.docker.com/get-started',
+        });
+    });
+
+    it('carries the manual URL in the payload on the webview path too', async () => {
+        arrangeManualInstall();
+        mockContext.panel = {} as never;
+
+        const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+        // `{success: true}` alone said "installed" for something that was not
+        // installed and never would be by this call.
+        expect(result.data).toMatchObject({ manual: true });
     });
 
     it('should install multi-version Node.js with missing majors', async () => {

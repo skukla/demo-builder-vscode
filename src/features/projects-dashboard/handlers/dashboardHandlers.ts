@@ -951,7 +951,15 @@ export const handleSetProjectPinned: MessageHandler<{
         // and fire onProjectChanged, side effects we don't want from the
         // home-screen kebab.
         await context.stateManager.saveProjectConfigOnly({ ...project, pinned: payload.pinned });
-        return { success: true };
+        // Report the resulting state rather than a bare success.
+        //
+        // The webview ignores this (the kebab re-reads the list), but
+        // `set_project_pinned` does not: `defaultShape` renders a bare success as
+        // the literal "{}", and — measured live 2026-08-17 — that is a 2-byte
+        // answer an agent has NO other way to confirm, because nothing else
+        // reported pinned state at all. `list_projects` now carries it too, so the
+        // pair is a write that says what it did and a read that can check it.
+        return { success: true, pinned: { projectPath: payload.projectPath, pinned: payload.pinned } };
     } catch (error) {
         context.logger.error(
             'Failed to set project pinned state',

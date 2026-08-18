@@ -548,6 +548,39 @@ function withoutMeshDependencies(project: Project): Project['componentSelections
 }
 
 /**
+ * The project's selections with one integration's id dropped from `appBuilder`.
+ *
+ * The integration counterpart of {@link withoutMeshDependencies}, and it exists
+ * for the same reason: a selected-but-absent component is an error state, not a
+ * resting one. Found live 2026-08-17 — an `add_integration` / `remove_integration`
+ * round trip cleared the keyed entry and the component instance while leaving the
+ * id in `componentSelections.appBuilder`.
+ *
+ * The cost lands at RESET, which rebuilds the component list from the selections
+ * (`projectResetService`) and would try to re-clone a component that is gone.
+ *
+ * NOT `reconcileComponentSelections`: that helper is additive by design, because
+ * a wizard selection not yet installed is a legitimate mid-creation state. Its
+ * docstring assumed an explicit removal already cleaned up after itself — which
+ * was true only for meshes until now.
+ *
+ * @param project - the project whose integration selection is being revoked
+ * @param id - the integration id being removed
+ * @returns componentSelections without that id
+ */
+function withoutIntegrationSelection(
+    project: Project,
+    id: string,
+): Project['componentSelections'] {
+    const selections = project.componentSelections;
+    if (!selections?.appBuilder) return selections;
+    return {
+        ...selections,
+        appBuilder: selections.appBuilder.filter((entry) => entry !== id),
+    };
+}
+
+/**
  * Remove an App Builder component: kind-dispatched remote teardown (best-effort) → delete the
  * local folder → clear `appBuilderComponents[id]` → if it provided env vars, regenerate the
  * storefront config WITHOUT them.
@@ -586,7 +619,13 @@ export async function removeAppBuilderComponent(
         // and its Redeploy answered "This project does not have an API Mesh
         // component". A selected-but-absent mesh is an error state, not a resting
         // one — so the selection goes with the component.
-        ...(state.kind === 'mesh' ? { componentSelections: withoutMeshDependencies(project) } : {}),
+        // Both kinds revoke their selection; they just live in different lists —
+        // the mesh dual-flows through `dependencies`, an integration through
+        // `appBuilder`. Only the mesh half existed until 2026-08-17.
+        componentSelections:
+            state.kind === 'mesh'
+                ? withoutMeshDependencies(project)
+                : withoutIntegrationSelection(project, id),
         // The component's API picks go with it. `componentApiPicks` records WHICH
         // integration wanted an API precisely so this moment can answer "is it safe
         // to drop?" — and nothing was spending that: three writers, no remover.

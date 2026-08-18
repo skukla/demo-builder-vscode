@@ -111,7 +111,17 @@ export interface ActivityEntry {
 export interface Page<T> {
     items: T[];
     count: number;
-    total: number;
+    /**
+     * Total rows the service holds, when it reports one.
+     *
+     * OPTIONAL because not every endpoint returns it, and inventing one is
+     * worse than omitting it: the catalog endpoint sends no total, so a
+     * `?? items.length` fallback made `find_datapacks` answer `total: 20` for a
+     * 23-row catalog whenever a page size applied — a number that reads as
+     * authoritative and silently hides rows. When this is absent, treat
+     * `count === limit` as "there may be more".
+     */
+    total?: number;
     limit?: number;
     skip?: number;
 }

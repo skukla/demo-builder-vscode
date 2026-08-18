@@ -13,7 +13,29 @@ import { FieldHelp } from './webview';
 export interface EnvVarDefinition {
     key: string;
     label: string;
+    /**
+     * How the field RENDERS. `password` masks the input; it says nothing about
+     * where the value is stored — see {@link EnvVarDefinition.secret}.
+     */
     type: 'text' | 'password' | 'url' | 'select' | 'boolean' | 'number';
+    /**
+     * Where the value LIVES. `true` routes it to VS Code SecretStorage instead of
+     * `componentConfigs`, so it never reaches the project manifest, the `.env`
+     * file, a settings export or a log.
+     *
+     * Deliberately separate from `type`, which conflated the two: `password` is a
+     * render hint and `secret` is a routing decision, and a field can need one
+     * without the other. Keeping them apart is the whole point of
+     * `.rptc/complete/component-secret-routing/` — a masked field whose value still
+     * sits in plaintext on disk is the defect it exists to remove.
+     *
+     * A `secret` field still belongs in `SECRET_ENV_KEYS`, the hand-maintained
+     * export blocklist. It is NOT exempt: a value whose write could not be
+     * verified is retained in `componentConfigs`, and a project the activation
+     * sweep has not reached still holds one. The list shrinks when the field is
+     * proven converged everywhere, not when the code that moves it ships.
+     */
+    secret?: boolean;
     required?: boolean;
     default?: string | boolean | number;
     placeholder?: string;

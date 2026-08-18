@@ -24,6 +24,8 @@ import {
     ACCS_STORE_CODE,
     ACCS_STORE_VIEW_CODE,
     ACCS_GRAPHQL_ENDPOINT as ACCS_ENDPOINT_KEY,
+    ACCS_OAUTH_CLIENT_ID,
+    ACCS_OAUTH_CLIENT_SECRET,
 } from './envVarKeys';
 
 /** Service group IDs for PaaS and ACCS commerce backends */
@@ -53,8 +55,25 @@ export const CONNECTION_FIELDS = new Set<string>([
     ACCS_ENDPOINT_KEY, PAAS_URL, PAAS_GRAPHQL_ENDPOINT, PAAS_ADMIN_USERNAME, PAAS_ADMIN_PASSWORD,
 ]);
 
+/**
+ * Commerce credential fields — their own section.
+ *
+ * They usually render as a single line saying nothing needs entering, because the
+ * shared service supplies the pair. Kept out of `connection` so that line, and the
+ * two inputs behind "Use my own instead", have a heading of their own to appear
+ * under instead of trailing the endpoint field.
+ */
+export const CREDENTIAL_FIELDS = new Set<string>([
+    ACCS_OAUTH_CLIENT_ID,
+    ACCS_OAUTH_CLIENT_SECRET,
+]);
+
 /** Which slice of the commerce config a caller wants. */
-export type ConnectStoreSection = 'connection' | 'business-structure' | 'catalog';
+export type ConnectStoreSection =
+    | 'connection'
+    | 'credentials'
+    | 'business-structure'
+    | 'catalog';
 
 /** The two groups that carry the Commerce connection + store scope. */
 const CONNECTION_GROUP_IDS: ReadonlySet<string> = new Set([
@@ -78,15 +97,27 @@ interface SliceableGroup {
 }
 
 /**
+ * Which keys a section keeps.
+ *
+ * `connection` is deliberately the DEFAULT rather than a list of its own: a field
+ * none of the others claim lands there and renders. The inverse — every section
+ * enumerating its keys — is how a new field ends up rendering nowhere, which has
+ * shipped here before (`ADOBE_COMMERCE_ADMIN_URL`).
+ */
+function sectionFilter(section: ConnectStoreSection): (key: string) => boolean {
+    if (section === 'credentials') return (key) => CREDENTIAL_FIELDS.has(key);
+    if (section === 'business-structure') return (key) => isStoreCodeField(key);
+    // connection: everything the other two do not claim.
+    return (key) => !isStoreCodeField(key) && !CREDENTIAL_FIELDS.has(key);
+}
+
+/**
  * Filter service groups down to one section's fields.
  *
- * - connection: connection groups, CONNECTION_FIELDS only (no store-code cascade)
+ * - connection: connection groups, minus the store-code cascade AND the credentials
+ * - credentials: connection groups, CREDENTIAL_FIELDS only
  * - business-structure: connection groups, the store-code cascade only
  * - catalog: everything that is NOT a connection group
- *
- * A connection-group field that is neither a connection field nor a store code
- * belongs to `connection` — it is part of reaching the instance, and leaving it
- * unclaimed is how the wizard ends up rendering ADOBE_COMMERCE_ADMIN_URL nowhere.
  *
  * @param groups - the full service-group list
  * @param section - the slice to keep
@@ -100,10 +131,7 @@ export function filterGroupsForSection<T extends SliceableGroup>(
         return groups.filter((group) => !isConnectionGroup(group.id));
     }
 
-    const keepField =
-        section === 'connection'
-            ? (key: string) => !isStoreCodeField(key)
-            : (key: string) => isStoreCodeField(key);
+    const keepField = sectionFilter(section);
 
     return groups
         .filter((group) => isConnectionGroup(group.id))

@@ -86,15 +86,25 @@
         animation: fadeIn 0.3s ease-in-out;
     }
 
-    /* Circular Number Badge */
+    /* Circular Number Badge
+       Coloured by the USER'S THEME, not by our palette. The `--db-surface-*`
+       ramp assumes the webview sits on #1a1a1a; VS Code paints it whatever the
+       active theme says, and on a pure-black editor background a #1a1a1a fill
+       (and then a #292929 one) was a circle nobody could see — the steps read as
+       loose numerals.
+       `--vscode-badge-*` is the theme's own token for exactly this chip, so its
+       contrast against the surface is the theme author's problem and it stays
+       right in light themes too. (VS Code injects its theme colours as CSS vars
+       into every webview; `.sample-data-note` above already relies on one.)
+       The fallback is the accent blue rather than another grey — if the var is
+       ever missing, a visible chip is the failure we want. */
     .number-badge {
         min-width: 32px;
         width: 32px;
         height: 32px;
         border-radius: 50%;
-        background-color: var(--db-surface-background);
-        color: var(--db-surface-foreground);
-        border: 1px solid var(--db-code-border);
+        background-color: var(--vscode-badge-background, var(--db-status-info));
+        color: var(--vscode-badge-foreground, #ffffff);
         display: flex;
         align-items: center;
         justify-content: center;

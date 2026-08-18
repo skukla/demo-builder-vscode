@@ -176,39 +176,21 @@ Note: `2026-05-30-decouple-project-from-workspace.md` looks adjacent but its hea
 
 Give an agent the same 403 repair a human now gets from `Demo Builder: Manage Site Access` — `get_site_access` / `grant_site_admin` / `revoke_site_admin` over the existing `siteAccessManagerHeadless` core, which was built UI-free for exactly this. No new logic; the constraints (report `verified` separately from `status`, treat `not_authorized` as non-retryable, never remove the last admin, mask emails) are measured rather than assumed and are listed in the item. Filed 2026-08-14 from the `config-service-admin-grant` verify loop.
 
-#### Component secret routing — the declaration decides where a credential lives ([`component-secret-routing/`](component-secret-routing/overview.md))
+#### ~~Component secret routing~~ — **SHIPPED 2026-08-17**, moved to [`../complete/component-secret-routing/`](../complete/component-secret-routing/overview.md)
 
-Filed 2026-08-13; **small version shipped same day** (`ce840267`: ACCS fields declared, the
-`SECRET_ENV_KEYS` guard, one reader per credential pair). Remaining scope is the seam itself —
-generalize `type: 'secret'` routing beyond App Builder, then migrate the two secrets now in
-`componentConfigs`. Originally from Data Installer Stage 2 live verification. An ACCS project cannot import:
-the modal says "add an OAuth client id and secret" and there is **nowhere to add them** —
-`storeAccsCredentials` is called from tests only. Two designs were rejected before this one (a
-feature-specific form; collapsing the per-backend branch), both recorded in the plan so they are
-not retried.
+`secret: true` now separates the routing decision from `type`'s render hint; the two Commerce
+credentials go to SecretStorage via a verified write-through (write → read back → only then
+strip), applied at project creation, at Configure save, and by an activation sweep that converges
+existing projects. The completion record notes two places the plan was wrong and building it
+corrected them.
 
-The general problem: **nothing links a config DECLARATION to SecretStorage for ordinary
-components.** `type: 'secret'` → SecretStorage exists but is App Builder-only; a Commerce
-credential lands in `componentConfigs` in the clear and is kept out of exports by
-`SECRET_ENV_KEYS`, a hand-maintained list whose own docstring warns you to remember it. The fix
-generalizes the seam that already exists (`splitAppBuilderComponentSecrets` + `secretKey`), so a
-secret is never written rather than written-then-stripped.
-
-**Step 5 is worth doing on its own.** It shrinks that list and adds a guard that fails when a
-component declares a credential-shaped field which is neither `type: 'secret'` nor listed —
-today nothing enforces the list at all, and the export's safety rests entirely on it
-(`stripSecretValues`, wired in `12f4b802`). Take step 5 even if steps 1-2 are rejected or the
-migration question stalls; it does not depend on either.
-
-**Step 2 is where the risk is**, and it is bigger than moving a value: **three consumers read that
-password straight out of `componentConfigs`**, one of them (`useAutoStoreDetect`) in the WEBVIEW,
-which cannot read SecretStorage at all. Recommended migration is three phases — one accessor with
-fallback first (behaviour-identical, independently valuable), then write-through with verified
-read-back so the credential is never in neither place, then converge on load. Phase 1 is worth
-doing even if the rest never happens. **Steps 1-2 are shared infrastructure**;
-step 3 alone would unblock ACCS the existing (worse) way. Verified against the live service, not
-assumed: it refuses with "Provide either (client_id + client_secret) or (admin_username +
-admin_password)" and 401s on a bogus pair. Not blocked; needs a design decision before code.
+The risk the plan named was real and landed as predicted: three consumers read the password out
+of `componentConfigs`, one of them (`useAutoStoreDetect`) in the WEBVIEW, which cannot read
+SecretStorage at all. Each got its own answer — `.env` generation hydrates the value at write
+time, the webview gates on an `isSet` flag rather than the value, and the Configure field renders
+"Saved" instead of an empty required box. A fourth hazard the plan did not foresee is recorded in
+the completion note: an empty field means "cleared" to the migration and "hidden" to the form, so
+an unfiltered save would have destroyed the credential.
 
 #### App Builder app family — attach a deployable app to a demo ([`2026-06-17-appbuilder-app-deploy-spine.md`](../complete/2026-06-17-appbuilder-app-deploy-spine.md))
 
@@ -253,7 +235,7 @@ Core self-heal **shipped** (see Recently shipped). Residual scope from the origi
 
 `componentConfigs` is keyed by who CONSUMES a value, not by what the value IS, so one fact is stored once per declaring component. Measured 2026-08-11: **17 of 25** declared env vars have more than one owner; 6 are the Commerce scope keys (single-sourced 2026-08-11), leaving **11**. The drift mechanism is NOT a second writer — there is none; it is that Configure's fan-out targets come from `selectedComponents`, so a component holding a copy but missing from the selection lists never gets updated (the same gap `reconcileComponentSelections` exists for). That is **key-agnostic**, so all 11 are exposed. Two candidate fixes: widen the fan-out target set (one change, every key) or single-source per key (what scope got). **Do the fan-out audit first** — it may make most of the per-key work unnecessary. **Not blocked.**
 
-#### AI surface coverage — tools and skills vs features ([`ai-surface-coverage/`](ai-surface-coverage/))
+#### AI surface coverage — tools and skills vs features ([`ai-surface-coverage/`](ai-surface-coverage/)) — **now phase 4 of `.rptc/plans/ai-surface/`**
 
 Paused 2026-08-13 with the research done and seven steps written; deferred so a live defect
 could go first. Measured: **58 tools, 14 skills, 67 handlers** across five feature maps, 26
@@ -267,6 +249,29 @@ exposing it hands an agent a tool that cannot fail. Real gaps are on the guidanc
 authentication has 8 tools and no skill, mesh has 3 and none dedicated, prerequisites has no
 surface at all. Step 01 is mechanical and the worklist of all 41 is written; backing research
 is `.rptc/research/ai-surface-coverage/research.md`. **Not blocked.**
+
+#### Data Installer — MCP write tools ([`2026-08-16-data-installer-mcp-write-tools.md`](2026-08-16-data-installer-mcp-write-tools.md)) — **fast-follow to phase 4**
+
+Filed 2026-08-16 during phase 4, whose plan puts `src/features/data-installer/` out of scope —
+the largest single hole in the agent surface, so the exclusion is now a scheduled decision
+rather than a permanent one. Six datapack READS are exposed and were all optimised in phase 2
+(`get_datapack_activity` 25,056 → 5,709; `list_installed_datapacks` 16,611 → 4,055). **Zero
+writes are**, though `OPERATION_MODE` has always been typed `import | export | delete |
+validate`. Nine real unexposed handlers, read from the maps: import start/validate/status/
+target/scopes/reset, credential provisioning, export start/list.
+
+Two things changed since the exclusion was written. The credential blocker moved — develop
+landed the shared-credential broker (ADR-014) and research established one Commerce credential
+reaches every instance in its org. And phase 2 produced six concrete optimisations (page-size
+defaults, no dashboard-only fields, index/detail, never fabricate an envelope field, a recorded
+ceiling per tool, pollable progress) that should go in from day one rather than as a later pass.
+
+**Also records a measurement defect worth its own item:** `ai-coverage-scan` reported 31
+unexposed data-installer handlers; reading the maps gives 9. Its extractor matches handler keys
+by regex across a whole file and counts nested object keys (`auth: context.authManager`, and
+`success`/`data`/`context` inside handler bodies). A depth-aware parser written to check it also
+failed its control. The same inflation applies to every map the scan reports, so no phase-4
+number should be sized from it without reading. **Not blocked.**
 
 #### App Builder deployable model — the unresolved gaps ([`appbuilder-deployable-model/`](appbuilder-deployable-model/overview.md))
 
@@ -319,6 +324,10 @@ shipped build reads `componentApiPicks`, so retiring the flat write today would 
 for anyone still on `v1.0.0-beta.123`. Do it once that build is out of circulation.
 
 ### E. Larger / untouched
+
+#### An open-ended design skill ([`2026-08-17-open-ended-design-skill.md`](2026-08-17-open-ended-design-skill.md))
+
+**Deferred out of phase 5 by decision — belongs to a pass that ADDS design skills, not one that corrected existing ones.** Every generated skill today answers "how do I do this named thing", or in `diagnose-demo`'s case "how do I look"; none answers "how do I approach a demo nobody gave me a recipe for". Whether that gap is real is genuinely open, and the item exists mainly to stop the next person inheriting a claim that does not hold: the overview's "21 skills, all task-shaped" rests on a count measured as **14**, and the conclusion was never independently checked. Also unresolved by design: skill vs an `AGENTS.md` section — a skill is best at "here is the sequence and its traps", and an open-ended brief has no sequence. Either way it is the first deliberate exception to the 2026-07-11 "no new generated skills unless multi-step-with-traps" constraint, so it needs an argument rather than a gap. Filed 2026-08-17.
 
 #### Multi-locale storefront — Phase 1 ([`2026-05-19-multisite-multilocale.md`](2026-05-19-multisite-multilocale.md))
 
@@ -379,6 +388,34 @@ a dead `spawnedPids` safety net wired up, `cacheDirectory` moved where jest actu
 the MCP socket root is shared across concurrent runs by construction.
 
 ### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
+
+#### ✅ An agent cannot tell CDN lag from lost work — SHIPPED 2026-08-18 (moved to [`../complete/2026-08-18-agent-cannot-tell-cdn-lag-from-lost-work.md`](../complete/2026-08-18-agent-cannot-tell-cdn-lag-from-lost-work.md))
+
+Filed 2026-08-18. A colleague's agent reported a background process force-pushing and
+rewriting `main`; **the report is false and the file disproves it** — every push on both
+affected repos is `ahead / behind=0`, and the two "wiped out" files were never reverted.
+Re-run the compare check in the file before anyone re-opens this as a force-push bug.
+All three real gaps behind it are fixed: `diagnose-demo` now routes "my change isn't
+showing" to `git log` first (`AI_CONTEXT_VERSION` 15); `describeCdnPropagation` returns
+`cdnStatus` from `republish` / `sync_content`, quoting a wait derived from the polling
+constants rather than invented, and `sync_storefront` names the commit it pushed; and
+`sync_storefront` rebases and retries once on a `non-fast-forward`, aborting cleanly on
+conflict — never on a `ruleset` rejection, which a new typed `reason` on
+`PushRejectedError` separates. A fourth defect surfaced while writing this up and was
+fixed too: the extension-side `handlePushRejected` rebased on every rejection, so a
+blocked-by-push-protection sync told the user "push failed after resolving conflicts" —
+conflicts that never existed — while the real reason reached only the debug log.
+
+#### `create_project` demands a mesh workspace for mesh-free packages ([`2026-08-18-create-project-tool-demands-a-mesh-workspace.md`](2026-08-18-create-project-tool-demands-a-mesh-workspace.md))
+
+Filed 2026-08-18. The headless `create_project` MCP tool refuses without an Adobe workspace
+**unconditionally** (`createProjectTool.ts:112`), so a package whose `demo-packages.json` entry
+says `mesh: false` — `bodea`, `citisignal`, `custom`, `isle5`, i.e. four of the five — cannot be
+created headlessly at all. Reproduced on both `eds-accs` and `eds-paas`, refused in 0.0s. The
+message compounds it: it blames API Mesh for a project that has none, which is a false
+explanation the reader has no reason to doubt. The wizard path is unaffected. Small fix — the
+mesh requirement is already in the config the tool has loaded; needs tests in both directions so
+`buildright` still refuses.
 
 #### EDS contract drift checker ([`2026-08-13-eds-contract-drift-checker.md`](2026-08-13-eds-contract-drift-checker.md))
 

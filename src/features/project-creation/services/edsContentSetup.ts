@@ -156,7 +156,12 @@ export async function ensureEdsContent(
     // Service dependencies for remaining operations (daLiveAuthService + daLiveTokenProvider created above)
     const { GitHubTokenService } = await import('@/features/eds/services/githubTokenService');
     const { HelixService } = await import('@/features/eds/services/helixService');
-    const { configureDaLivePermissions, applyDaLiveOrgConfigSettings, bulkPreviewAndPublish } =
+    const {
+        configureDaLivePermissions,
+        applyDaLiveOrgConfigSettings,
+        publishLibraryPaths,
+        verifyLibraryPreviewed,
+    } =
         await import('@/features/eds/handlers/edsHelpers');
 
     const githubTokenService = new GitHubTokenService(deps.secrets, logger);
@@ -227,7 +232,9 @@ export async function ensureEdsContent(
     // Publish block library paths (non-fatal, may be missed by publishAllSiteContent)
     if (libraryPaths.length > 0) {
         try {
-            await bulkPreviewAndPublish(helixService, repoInfo.owner, repoInfo.repo, libraryPaths, logger);
+            await publishLibraryPaths(helixService, repoInfo.owner, repoInfo.repo, libraryPaths, logger);
+            // The publish reporting success proves nothing — see verifyLibraryPreviewed.
+            await verifyLibraryPreviewed(repoInfo.owner, repoInfo.repo, logger, helixService);
         } catch (error) {
             logger.warn(`[EDS Content] Block library publish failed: ${(error as Error).message}`);
         }

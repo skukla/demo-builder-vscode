@@ -110,6 +110,97 @@ export function registerCloudResourceTools(
     );
 
     server.registerTool(
+        'create_github_repo',
+        {
+            description:
+                'Create a GitHub repo from a template (the EDS storefront path). Returns the repo and whether its content has finished materialising.',
+            inputSchema: {
+                templateOwner: z.string().describe('Owner of the template repository'),
+                templateRepo: z.string().describe('Name of the template repository'),
+                name: z.string().describe('Name for the new repository'),
+                targetOwner: z
+                    .string()
+                    .optional()
+                    .describe(
+                        'Namespace to create under — an org from get_auth_status.github.orgs. Omit for your personal account',
+                    ),
+                isPrivate: z.boolean().optional().describe('Create it private (default false)'),
+                waitForContent: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        'Block until the template content is readable (default true). Set false to return as soon as the repo exists',
+                    ),
+            },
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        async (args: any) => {
+            const templateOwner = String(args?.templateOwner ?? '').trim();
+            const templateRepo = String(args?.templateRepo ?? '').trim();
+            const name = String(args?.name ?? '').trim();
+            if (!templateOwner || !templateRepo || !name) {
+                return asText({ error: 'templateOwner, templateRepo and name are required' });
+            }
+
+            const ctx = ctxFactory();
+            if (!(await githubAuthed(ctx))) {
+                return asText(NEEDS_GITHUB);
+            }
+
+            const { repoOperations } = getGitHubServices(ctx);
+            let repo;
+            try {
+                repo = await repoOperations.createFromTemplate(
+                    templateOwner,
+                    templateRepo,
+                    name,
+                    args?.isPrivate === true,
+                    args?.targetOwner ? String(args.targetOwner).trim() : undefined,
+                );
+            } catch (err) {
+                return asText({
+                    created: false,
+                    error: err instanceof Error ? err.message : String(err),
+                });
+            }
+
+            // The repo EXISTS before its template content does. Reporting success
+            // at creation would hand the agent a repo whose files 404 for the next
+            // few seconds, and the next step is always a push or a publish against
+            // exactly those files. Waiting is the default for that reason.
+            //
+            // Reported separately from `created` rather than folded into it: the
+            // repo is real either way, and a caller that stopped waiting needs to
+            // know it exists so it does not retry creation and collide on the name.
+            // `GitHubRepo` carries no `owner` — only `fullName` — so the owner is
+            // taken from there rather than from `targetOwner`, which is optional
+            // and absent whenever the repo went to the personal account.
+            const createdOwner = repo.fullName.split('/')[0];
+
+            let contentReady: boolean | undefined;
+            if (args?.waitForContent !== false) {
+                try {
+                    contentReady = await repoOperations.waitForContent(createdOwner, repo.name);
+                } catch {
+                    contentReady = false;
+                }
+            }
+
+            return asText({
+                created: true,
+                repo: repo.fullName,
+                url: repo.htmlUrl,
+                defaultBranch: repo.defaultBranch,
+                isPrivate: repo.isPrivate,
+                ...(contentReady === undefined ? {} : { contentReady }),
+                ...(contentReady === false
+                    ? { note: 'Repo created, but its template content is not readable yet. Retry the next operation shortly.' }
+                    : {}),
+            });
+        },
+    );
+
+    server.registerTool(
         'delete_github_repo',
         {
             description:

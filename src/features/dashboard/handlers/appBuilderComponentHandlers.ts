@@ -110,8 +110,14 @@ export async function runGuards(
     return undefined;
 }
 
-/** Resolve the catalog entry from an add payload (catalog id OR custom source). */
-function resolveAddEntry(payload: {
+/**
+ * Resolve the catalog entry from an add payload (catalog id OR custom source).
+ *
+ * Exported for the same reason as {@link userSuppliedEnvVars}: `add_integration`'s
+ * preflight must resolve the payload EXACTLY as this handler will, or it decides
+ * about a different component than the one that would be added.
+ */
+export function resolveAddEntry(payload: {
     id?: string;
     source?: { owner: string; repo: string };
     name?: string;
@@ -133,10 +139,33 @@ function resolveAddEntry(payload: {
     return undefined;
 }
 
-/** True when the entry needs user-provided inputs (bucket 3: text or secret). */
-function needsUserInputs(entry: AppBuilderComponentCatalogEntry): boolean {
+/** The bucket-3 vars an entry needs a PERSON to supply — text and secret alike. */
+export interface UserSuppliedEnvVars {
+    /** Every var name the user must type. Empty when the entry needs none. */
+    names: string[];
+    /** True when at least one is a SECRET, which must never ride a tool argument. */
+    hasSecret: boolean;
+}
+
+/**
+ * Classify an entry's `envSchema` into what a PERSON must supply.
+ *
+ * Auto-wired (`providedBy`) and auto-provisioned (`derivedFrom`) vars are
+ * excluded — naming one would send the user hunting for a value another
+ * component supplies.
+ *
+ * Exported because `add_integration`'s descriptor preflight
+ * (`actionDescriptors.ts`) must reach the SAME verdict this handler does, one
+ * step earlier. Two copies of that rule would be two things that must agree
+ * while nothing makes them: the tool would dispatch, the handler would refuse,
+ * and the panel the preflight exists to suppress would open anyway.
+ */
+export function userSuppliedEnvVars(entry: AppBuilderComponentCatalogEntry): UserSuppliedEnvVars {
     const { userText, userSecret } = classifyEnvSchema(entry.envSchema ?? []);
-    return userText.length > 0 || userSecret.length > 0;
+    return {
+        names: [...userText, ...userSecret].map((envVar) => envVar.name),
+        hasSecret: userSecret.length > 0,
+    };
 }
 
 /**
@@ -352,9 +381,28 @@ export const handleAddAppBuilderComponent: MessageHandler<{
             }
 
             // Bucket-3 inputs → Configure FIRST (never silently deploy with missing inputs).
-            if (needsUserInputs(entry)) {
+            //
+            // This used to return `{success: true}` for opening a panel and adding
+            // NOTHING. The grid painted a component that was not there, and once
+            // the same handler became the `add_integration` tool an agent had no
+            // way to tell the route from a completed add — it is the defect the
+            // `needsUser` convention was written against (`ai/server/handoff.ts`).
+            //
+            // `blocked`, like a guard refusal: nothing ran and nothing persisted,
+            // so the caller must not take the failed-op path (error row + snapshot).
+            // The AGENT path never reaches here — `add_integration`'s preflight
+            // answers with the handoff before dispatching, so no panel opens for a
+            // call the user did not make.
+            const userVars = userSuppliedEnvVars(entry);
+            if (userVars.names.length > 0) {
                 await vscode.commands.executeCommand('demoBuilder.configureProject');
-                return { success: true };
+                return {
+                    success: false,
+                    error:
+                        `"${entry.name ?? entry.id}" needs ${userVars.names.join(', ')} before it ` +
+                        'can be added. Enter the values in Configure Project, then add it again.',
+                    blocked: true,
+                };
             }
 
             // Attribute the picks to THIS integration before anything subscribes.
@@ -395,7 +443,18 @@ export const handleAddAppBuilderComponent: MessageHandler<{
     await postRowStatus(entry.id, 'deployed', undefined);
     await postComponentsSnapshot(context);
     await refreshProjectStatus(context);
-    return { success: true };
+    // Name what was added rather than answering a bare `{success: true}`.
+    //
+    // The webview ignores this response (the flow posts and closes; progress
+    // arrives on the status channel), but `add_integration` does not: `defaultShape`
+    // renders a bare success as the literal string "{}", and the id is the one
+    // thing the agent needs next — to deploy, remove, or ask the status of what it
+    // just added. For a CUSTOM source it never supplied that id; `resolveAddEntry`
+    // derived it.
+    return {
+        success: true,
+        added: { id: entry.id, name: entry.name ?? entry.id, kind: entry.kind },
+    };
 };
 
 /**
@@ -764,5 +823,8 @@ export const handleRenameAppBuilderComponent: MessageHandler<{
     // (the entry's current one); the name rides along to refresh the row label.
     await postRowStatus(id, entry.status, undefined, name);
     await postComponentsSnapshot(context);
-    return { success: true };
+    // The TRIMMED name, which is not necessarily what the caller sent. Additive:
+    // the drawer's InlineRenameField reads `success`/`error` and ignores this.
+    // `rename_integration` does not — a bare success renders as "{}".
+    return { success: true, renamed: { id, name } };
 };

@@ -254,6 +254,14 @@ export interface CredentialSourceProject {
     componentSelections?: { backend?: string };
     componentConfigs?: Record<string, Record<string, string | boolean | number | undefined>>;
     adobe?: { organization?: string };
+    /**
+     * Project path — the SecretStorage key's project segment.
+     *
+     * A FOURTH field that is silent when forgotten, for the same reason as
+     * `stackBackend` below: without it the credential store is never consulted and
+     * a migrated secret resolves to nothing, reported as "no usable credentials".
+     */
+    path?: string;
 }
 
 /**
@@ -288,7 +296,12 @@ export async function resolveProjectCredentials(
         project: {
             stackBackend: project.componentSelections?.backend ?? '',
             componentConfigs: project.componentConfigs ?? {},
+            // Threaded with `secrets` below so a migrated credential is findable.
+            // Omitting either silently degrades every resolution to config-only —
+            // the same class of miss this function was centralised to prevent.
+            ...(project.path ? { path: project.path } : {}),
         },
+        ...(context.context?.secrets ? { secrets: context.context.secrets } : {}),
         broker: brokerForContext(context, project),
     });
 }

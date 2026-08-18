@@ -5,10 +5,19 @@
  */
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
+    // Shapes taken from the services, not invented: validateToken returns
+    // `{valid, user?}` with a `login` (`types.ts:23-38`), and getUserOrgs returns
+    // a plain string[] of org logins (`githubTokenService.ts:151-165`).
     getGitHubServices: jest.fn(() => ({
-        tokenService: { validateToken: jest.fn(async () => ({ valid: true })) },
+        tokenService: {
+            validateToken: jest.fn(async () => ({ valid: true, user: { login: 'octocat' } })),
+            getUserOrgs: jest.fn(async () => ['acme', 'skukla']),
+        },
     })),
-    getDaLiveAuthService: jest.fn(() => ({ isAuthenticated: jest.fn(async () => false) })),
+    getDaLiveAuthService: jest.fn(() => ({
+        isAuthenticated: jest.fn(async () => false),
+        getOrgName: jest.fn(() => undefined),
+    })),
     // Native DA.live sign-in flow (browser → token input → org). The agent
     // routes here instead of the webview-only 'open-dalive-login' handler.
     showDaLiveAuthQuickPick: jest.fn(async () => ({ success: true })),
@@ -22,7 +31,7 @@ jest.mock('@/features/eds/handlers/edsHandlers', () => ({
 
 import { registerAuthTools } from '@/features/ai/server/authTools';
 import { clearAdobeTarget, getAdobeTarget, setAdobeTarget } from '@/features/ai/server/adobeTargetStore';
-import { getGitHubServices, showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
+import { getDaLiveAuthService, getGitHubServices, showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
 import type { HandlerContext } from '@/types/handlers';
 
 function fakeServer() {
@@ -69,9 +78,80 @@ describe('registerAuthTools', () => {
 
         const status = await server.call('get_auth_status');
         expect(status.adobe).toEqual({ authenticated: true, expiresInMinutes: 120 });
-        expect(status.github).toEqual({ authenticated: true });
+        // orgs are the namespaces a repo can be created in — nothing else on the
+        // agent surface exposes them.
+        expect(status.github).toEqual({
+            authenticated: true,
+            login: 'octocat',
+            orgs: ['acme', 'skukla'],
+        });
         expect(status.dalive).toEqual({ authenticated: false });
         expect(login).not.toHaveBeenCalled();
+    });
+
+    // The tool must NOT do what handleCheckGitHubAuth does: on finding a VS Code
+    // session that handler calls storeToken (`edsGitHubHandlers.ts:79-83`).
+    // A get_* tool that persists a credential is the defect this design avoids.
+    it('get_auth_status stores no token', async () => {
+        const storeToken = jest.fn();
+        (getGitHubServices as jest.Mock).mockImplementationOnce(() => ({
+            tokenService: {
+                validateToken: jest.fn(async () => ({ valid: true, user: { login: 'octocat' } })),
+                getUserOrgs: jest.fn(async () => []),
+                storeToken,
+            },
+        }));
+        const server = fakeServer();
+        registerAuthTools(server, makeCtxFactory(true));
+
+        await server.call('get_auth_status');
+        expect(storeToken).not.toHaveBeenCalled();
+    });
+
+    it('reports the pinned DA.live namespace when one is set', async () => {
+        (getDaLiveAuthService as jest.Mock).mockImplementationOnce(() => ({
+            isAuthenticated: jest.fn(async () => true),
+            getOrgName: jest.fn(() => 'skukla'),
+        }));
+        const server = fakeServer();
+        registerAuthTools(server, makeCtxFactory(true));
+
+        // Every DA.live write targets this; "authenticated: true" without it
+        // tells an agent to proceed while withholding what the write needs.
+        expect((await server.call('get_auth_status')).dalive).toEqual({
+            authenticated: true,
+            orgName: 'skukla',
+        });
+    });
+
+    it('omits orgName rather than reporting an empty one', async () => {
+        expect((await (() => {
+            const server = fakeServer();
+            registerAuthTools(server, makeCtxFactory(true));
+            return server.call('get_auth_status');
+        })()).dalive).toEqual({ authenticated: false });
+    });
+
+    // Orgs are enrichment. Folding their failure into the outer safeStatus would
+    // report authenticated:false for a valid token whose org lookup broke —
+    // a wrong answer to the question actually asked.
+    it('stays authenticated when only the orgs lookup fails', async () => {
+        (getGitHubServices as jest.Mock).mockImplementationOnce(() => ({
+            tokenService: {
+                validateToken: jest.fn(async () => ({ valid: true, user: { login: 'octocat' } })),
+                getUserOrgs: jest.fn(async () => {
+                    throw new Error('missing read:org scope');
+                }),
+            },
+        }));
+        const server = fakeServer();
+        registerAuthTools(server, makeCtxFactory(true));
+
+        const { github } = await server.call('get_auth_status');
+        expect(github.authenticated).toBe(true);
+        expect(github.login).toBe('octocat');
+        expect(github.orgs).toBeUndefined();
+        expect(github.error).toBeUndefined();
     });
 
     it('get_auth_status degrades gracefully when a provider check throws', async () => {

@@ -53,7 +53,10 @@ const COMPONENT_GIT_OPTIONS_FIELDS = new Set([
 ]);
 
 const ENV_VAR_DEFINITION_FIELDS = new Set([
-    'label', 'type', 'required', 'default', 'placeholder', 'description',
+    // `type` is how the field RENDERS; `secret` is where the value LIVES. They are
+    // deliberately separate — a masked input whose value still sits in plaintext on
+    // disk is the defect `.rptc/complete/component-secret-routing/` exists to remove.
+    'label', 'type', 'secret', 'required', 'default', 'placeholder', 'description',
     'help', 'group', 'providedBy', 'usedBy', 'derivedFrom', 'options', 'validation',
 ]);
 

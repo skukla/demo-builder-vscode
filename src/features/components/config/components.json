@@ -441,15 +441,16 @@
             "type": "text",
             "required": false,
             "placeholder": "your_oauth_client_id",
-            "description": "Adobe OAuth Server-to-Server credential. Needed only to import sample data into this instance. Create it in the Developer Console; it is product-profile gated on Commerce Cloud Manager.",
+            "description": "Optional override. Leave blank — Demo Builder fetches a shared credential from the discovery service when it imports sample data. Fill this in only to use your own Adobe OAuth Server-to-Server credential instead.",
             "group": "accs"
         },
         "ACCS_OAUTH_CLIENT_SECRET": {
             "label": "OAuth client secret",
             "type": "password",
+            "secret": true,
             "required": false,
             "placeholder": "your_oauth_client_secret",
-            "description": "Paired secret for the OAuth client ID above. Stored with the project and stripped from settings exports.",
+            "description": "Required only if you filled in the client ID above. Kept in the OS keychain, never in the project files.",
             "group": "accs"
         },
         "ACCS_CUSTOMER_GROUP": {
@@ -544,6 +545,7 @@
         "ADOBE_COMMERCE_ADMIN_PASSWORD": {
             "label": "Admin Password",
             "type": "password",
+            "secret": true,
             "required": true,
             "placeholder": "your_admin_password",
             "description": "Admin user must have API access permissions",

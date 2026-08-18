@@ -39,6 +39,16 @@ export interface UseAutoStoreDetectProps {
     fetchStores: (params: FetchStoresParams) => void;
     hasStoreData: boolean;
     isFetching: boolean;
+    /**
+     * Which declared secrets the project HAS, without their values
+     * (`{ [componentId]: { [varName]: true } }`).
+     *
+     * A migrated admin password is in the OS keychain, which a webview cannot
+     * read. Without this the gate below sees an empty string, decides the
+     * connection fields are incomplete, and store discovery silently never fires —
+     * no request, no error, and a Re-detect button that does nothing.
+     */
+    secretFlags?: Record<string, Record<string, boolean>>;
 }
 
 export interface UseAutoStoreDetectReturn {
@@ -53,7 +63,16 @@ export function useAutoStoreDetect({
     fetchStores,
     hasStoreData,
     isFetching,
+    secretFlags,
 }: UseAutoStoreDetectProps): UseAutoStoreDetectReturn {
+    /** True when a value is typed here OR already held in the keychain. */
+    const hasSecret = useCallback(
+        (varName: string): boolean => {
+            if (lookupComponentConfigValue(configs, varName)) return true;
+            return Object.values(secretFlags ?? {}).some((perVar) => perVar[varName] === true);
+        },
+        [configs, secretFlags],
+    );
     /** Build and send the store discovery request for a given group */
     const handleFetchStores = useCallback((groupId: string) => {
         const isPaas = groupId === STORE_GROUP_IDS.PAAS;
@@ -79,11 +98,16 @@ export function useAutoStoreDetect({
                 return;
             }
 
-            // Credentials travel in the discovery request itself (single source of truth,
-            // no out-of-band sync cache). autoDetectKey already gates on both being present.
+            // Credentials travel in the request when the user just TYPED them —
+            // the wizard case, where no project exists to have saved them. On a
+            // saved project the password is in the keychain, which this webview
+            // cannot read, so they are OMITTED and the host resolves them
+            // (`handleDiscoverStoreStructure`). Sending a half pair would be worse
+            // than sending none: the handler's fallback only runs when both are
+            // absent, so a lone username would reach the service as an empty
+            // password and 401.
             const pair = readPaasAdminPair(configs);
-            if (!pair) return;
-            fetchStores({ backendType: 'paas', baseUrl, ...pair });
+            fetchStores({ backendType: 'paas', baseUrl, ...(pair ?? {}) });
         } else {
             const accsEndpoint = lookupComponentConfigValue(configs, ACCS_ENDPOINT_KEY);
             if (!accsEndpoint) return;
@@ -117,7 +141,10 @@ export function useAutoStoreDetect({
         const accsEndpoint = lookupComponentConfigValue(configs, ACCS_ENDPOINT_KEY);
         const paasUrl = lookupComponentConfigValue(configs, PAAS_URL);
         const paasUser = lookupComponentConfigValue(configs, PAAS_ADMIN_USERNAME);
-        const paasPass = lookupComponentConfigValue(configs, PAAS_ADMIN_PASSWORD);
+        // Existence, not the value: a migrated password is in the keychain and
+        // this webview cannot see it. Reading the value here is what made store
+        // discovery stop firing entirely on a converged project.
+        const paasPass = hasSecret(PAAS_ADMIN_PASSWORD);
 
         // ACCS: valid URL with /graphql
         if (accsEndpoint) {
@@ -136,7 +163,7 @@ export function useAutoStoreDetect({
         }
 
         return undefined;
-    }, [configs]);
+    }, [configs, hasSecret]);
 
     const prevAutoDetectKeyRef = useRef<string | undefined>(undefined);
 

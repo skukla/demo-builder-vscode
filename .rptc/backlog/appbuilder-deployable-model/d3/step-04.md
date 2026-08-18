@@ -7,7 +7,7 @@ redeployed independently from the card grid.
 **Prerequisites:** Steps 02–03 (one writer + one isolating path).
 
 **Reuse / surgical anchors (verified 2026-07-15):**
-- `src/features/projects-dashboard/handlers/dashboardHandlers.ts:1086-1100` — `handleRedeployApp`
+- `src/features/projects-dashboard/handlers/dashboardHandlers.ts` — `handleRedeployApp` (line numbers dropped 2026-08-18: this step is obsolete, see the parent overview)
   (`{ projectPath }` only) dynamically imports and calls the singular `deployAppHeadless`.
 - `src/features/projects-dashboard/utils/projectStatusUtils.ts` — the card's app-status display
   (`getAppBuilderAppStatus`, redeploy visibility). *(confirm the redeploy-visibility predicate at execution.)*

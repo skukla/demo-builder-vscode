@@ -10,6 +10,7 @@ import type { Project } from '@/types';
 // We'll import from the new service location
 import {
     buildStatusPayload,
+    deriveMeshStatus,
     hasMeshDeploymentRecord,
     getMeshEndpoint,
 } from '@/features/dashboard/services/dashboardStatusService';
@@ -461,6 +462,69 @@ describe('dashboardStatusService', () => {
 
             // Then: Should return the meshState endpoint
             expect(result).toBe('https://correct-endpoint.adobe.io/graphql');
+        });
+    });
+
+    // ── deriveMeshStatus ────────────────────────────────────────────────────
+    //
+    // Extracted from handleRequestStatus so the dashboard and the agent surface
+    // describe one mesh the same way. It reads TWO different objects — the
+    // component instance (for `status`) and the deploy record (for evidence of a
+    // deployment) — and collapsing them reproduces a shipped regression.
+    describe('deriveMeshStatus', () => {
+        const meshInstance = (status: string) => ({
+            componentInstances: {
+                'eds-accs-mesh': { id: 'eds-accs-mesh', type: 'dependency', subType: 'mesh', status },
+            },
+        });
+
+        it('returns undefined when the project has no mesh component', () => {
+            // Undefined, not 'not-deployed' — callers pass this through as an
+            // ABSENT mesh field, which is a different statement.
+            expect(deriveMeshStatus({} as Project, true)).toBeUndefined();
+        });
+
+        it.each([
+            ['deploying', 'deploying'],
+            ['error', 'error'],
+        ])('reports %s without consulting auth', (instanceStatus, expected) => {
+            const p = meshInstance(instanceStatus) as unknown as Project;
+            // Same answer signed out — a failed deploy must not cost a sign-in.
+            expect(deriveMeshStatus(p, false)?.status).toBe(expected);
+            expect(deriveMeshStatus(p, true)?.status).toBe(expected);
+        });
+
+        it('reports needs-auth when signed out', () => {
+            const p = meshInstance('deployed') as unknown as Project;
+            expect(deriveMeshStatus(p, false)).toEqual({ status: 'needs-auth', shouldVerify: false });
+        });
+
+        it('reports not-deployed when no deployment record exists', () => {
+            // The instance says 'deployed'; the DEPLOY RECORD is what decides.
+            const p = meshInstance('deployed') as unknown as Project;
+            expect(deriveMeshStatus(p, true)).toEqual({ status: 'not-deployed', shouldVerify: false });
+        });
+
+        it('maps a stale summary to config-changed, and asks for verification', () => {
+            const p = {
+                ...meshInstance('deployed'),
+                appBuilderComponents: {
+                    'eds-accs-mesh': { kind: 'mesh', endpoint: 'https://mesh.test/graphql' },
+                },
+                meshStatusSummary: 'stale',
+            } as unknown as Project;
+            expect(deriveMeshStatus(p, true)).toEqual({ status: 'config-changed', shouldVerify: true });
+        });
+
+        it.each([undefined, 'unknown'])('treats %s summary as deployed', (summary) => {
+            const p = {
+                ...meshInstance('deployed'),
+                appBuilderComponents: {
+                    'eds-accs-mesh': { kind: 'mesh', endpoint: 'https://mesh.test/graphql' },
+                },
+                meshStatusSummary: summary,
+            } as unknown as Project;
+            expect(deriveMeshStatus(p, true)).toEqual({ status: 'deployed', shouldVerify: true });
         });
     });
 });

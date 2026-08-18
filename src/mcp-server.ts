@@ -1,10 +1,12 @@
 /**
  * Demo Builder MCP — shared project-tool registration.
  *
- * Defines the seven project-scoped MCP tools (list_projects, get_project,
- * get_component_config, update_project_config, sync_storefront, list_blocks,
- * get_block_source) and the security helpers they use, then exposes them via
- * `registerProjectTools(server, projectsDir)`.
+ * Defines the project-scoped MCP tools — the ones that need only the filesystem,
+ * not the extension host — and the security helpers they use, then exposes them
+ * via `registerProjectTools(server, projectsDir)`. The authoritative list is the
+ * `server.registerTool(...)` calls in that function and the name-by-name pin in
+ * `tests/features/ai/server/inExtensionMcpServer.test.ts`; an enumeration here
+ * only rots (it said "seven" while the function registered ten).
  *
  * This module is NOT a server process. The in-extension MCP server
  * (`@/features/ai/server/inExtensionMcpServer`) imports `registerProjectTools`
@@ -26,12 +28,20 @@ import sanitizeHtml from 'sanitize-html';
 import { z } from 'zod';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import { assertPathInside, assertPathInsideSync } from '@/core/validation';
+import { asRawText, asText } from '@/features/ai/server/mcpToolResult';
+import { stripManifestSecrets } from '@/features/components/config/envVarKeys';
 import {
     DaLiveContentOperations,
     type TokenProvider,
 } from '@/features/eds/services/daLiveContentOperations';
 import { previewAndPublishPage, unpublishPage } from '@/features/eds/services/helixApiClient';
-import { PushRejectedError, syncAndPublish } from '@/features/eds/services/storefrontSyncService';
+import {
+    PushRejectedError,
+    rebaseOntoRemote,
+    syncAndPublish,
+    type SyncAndPublishInput,
+    type SyncAndPublishResult,
+} from '@/features/eds/services/storefrontSyncService';
 
 // Maximum number of file entries listed in a getBlockSource manifest — prevents
 // unbounded responses when a block directory contains many assets.
@@ -40,6 +50,15 @@ const MAX_BLOCK_FILES = 50;
 // because the response is consumed as LLM context tokens, not by a human — large
 // vendored/minified assets should be read from disk directly, not through MCP.
 const MAX_FILE_BYTES = 30_000; // 30 KB
+// Rows in a get_block_authoring_shape INDEX. A 78-block catalog is 5,577 bytes;
+// a 300-component one measured 21,992. The index/detail split bounds the detail
+// call, not a catalog that keeps growing.
+const MAX_AUTHORING_INDEX_ROWS = 100;
+// Default page size for the file-based list tools. 100 rather than the 20 used
+// for the Data Installer's lists: these rows are terse (a name and a path) and
+// seeing the whole catalog is usually the point, so 100 changes nothing for a
+// real project while capping the tail.
+const DEFAULT_LIST_LIMIT = 100;
 
 // ─── Security helpers ─────────────────────────────────────────────────────────
 
@@ -248,6 +267,53 @@ async function readStorefrontGithubRepo(
 }
 
 /**
+ * Recover from a `non-fast-forward` push rejection: rebase onto the remote's new
+ * commits and push again, once.
+ *
+ * The extension writes to the same branch this clone holds — `ConfigSync`
+ * commits config.json straight through the GitHub API — so an agent editing
+ * locally loses this race routinely. Left to itself it pulled and MERGED,
+ * because "Pull and rebase, then retry" named a remedy and then handed the whole
+ * thing back. The extension side already re-reads and retries
+ * (`commitTreeToBranch`); this is the same remedy on the side that lacked it.
+ *
+ * Two things it deliberately does NOT do:
+ *   - retry a `ruleset` rejection (filtered by the caller) — replaying a push
+ *     that a repository rule refused changes nothing about why it was refused;
+ *   - retry twice. A second loser of the same race is reported, not re-run.
+ *
+ * `rebaseOntoRemote` aborts on conflict, so the checkout is exactly as we found
+ * it when this throws.
+ */
+async function retryAfterRebase(input: SyncAndPublishInput): Promise<SyncAndPublishResult> {
+    const outcome = await rebaseOntoRemote(input.storefrontPath, input.githubToken);
+    if (outcome === 'aborted') {
+        throw new Error(
+            'git push was rejected because the remote has new commits, and rebasing onto them ' +
+                'conflicts. The rebase was aborted — your storefront is exactly as it was, and ' +
+                'nothing was lost. Resolve from VS Code (Demo Builder dashboard → Sync ' +
+                'Storefront), which opens the merge editor.',
+        );
+    }
+
+    // The commit already exists; skipCommit starts this attempt at push. Without
+    // it, `git add -A` would re-stage and `git commit` would sit an empty commit
+    // on top of the rebased head.
+    try {
+        return await syncAndPublish({ ...input, skipCommit: true });
+    } catch (err) {
+        if (err instanceof PushRejectedError) {
+            throw new Error(
+                `${err.message} Demo Builder already rebased onto the remote once and the push ` +
+                    `was rejected again; it does not retry a second time. Your commits are ` +
+                    `intact locally.`,
+            );
+        }
+        throw err;
+    }
+}
+
+/**
  * Produce a token-lean view of a project manifest for `getProject`.
  *
  * The full manifest can carry large arrays (saved AI prompts, per-library block
@@ -265,6 +331,18 @@ function summarizeManifest(manifest: Record<string, unknown>): Record<string, un
 
     if (Array.isArray(manifest.aiPrompts)) {
         summary.aiPrompts = `[${manifest.aiPrompts.length} prompt(s) — pass full:true to expand]`;
+    }
+
+    // The AI-bundle drift map: one SHA per generated file. Measured live
+    // 2026-08-16 it was 4,479 bytes of a 9,895-byte "summary" — 45% — on a real
+    // project, and it post-dates the two collapses above, which is the only
+    // reason it was never folded in. An agent never needs the hashes; it needs
+    // to know whether the bundle drifted, and that comparison happens
+    // extension-side. Same waste as the raw `who_created` in
+    // list_adobe_projects: the input to a comparison, useless to the recipient.
+    if (manifest.aiFileHashes && typeof manifest.aiFileHashes === 'object') {
+        const count = Object.keys(manifest.aiFileHashes as Record<string, unknown>).length;
+        summary.aiFileHashes = `[${count} file hash(es) — pass full:true to expand]`;
     }
 
     if (Array.isArray(manifest.installedBlockLibraries)) {
@@ -342,6 +420,106 @@ async function readPromoteBlockContext(projectPath: string): Promise<PromoteBloc
     return { storefrontPath, daLiveOrg, daLiveSite, githubRepo };
 }
 
+/** Parsed shape of `component-definition.json` — a groups[]-nested registry. */
+interface ComponentDefinition {
+    groups?: Array<{ components?: ComponentDefinitionEntry[] }>;
+}
+
+/**
+ * Read and parse `<storefrontPath>/component-definition.json`.
+ *
+ * Both failure modes (missing file, malformed JSON) are reported against the
+ * file's name — a bare ENOENT or SyntaxError says nothing about which file, and
+ * three callers now depend on telling them apart.
+ */
+async function readComponentDefinition(
+    storefrontPath: string,
+): Promise<{ compDefPath: string; parsed: ComponentDefinition }> {
+    const compDefPath = path.join(storefrontPath, 'component-definition.json');
+    let raw: string;
+    try {
+        raw = await fsPromises.readFile(compDefPath, 'utf-8');
+    } catch (err) {
+        throw new Error(
+            `Could not read component-definition.json at ${compDefPath}: ${(err as Error).message}`,
+        );
+    }
+    try {
+        return { compDefPath, parsed: JSON.parse(raw) as ComponentDefinition };
+    } catch (err) {
+        throw new Error(
+            `component-definition.json is not valid JSON (${compDefPath}): ${(err as Error).message}`,
+        );
+    }
+}
+
+/**
+ * Which of the three authoring conventions an entry uses. Reported in the index
+ * so an agent knows what kind of shape the detail call will return — and so
+ * "registered but shapeless" is visible without a call per block.
+ */
+function authoringConvention(
+    entry: ComponentDefinitionEntry,
+): 'table' | 'fields' | 'html' | 'none' {
+    const da = entry.plugins?.da;
+    if (!da) return 'none';
+    if (da.unsafeHTML) return 'html';
+    if (da.fields || da.type) return 'fields';
+    if (da.rows !== undefined || da.columns !== undefined) return 'table';
+    return 'none';
+}
+
+/**
+ * Read a sibling registry file (`component-models.json` / `component-filters.json`)
+ * and return the entry with the given id.
+ *
+ * Both files are OPTIONAL and a miss is normal, not an error: a storefront may
+ * ship neither, and 38 of 78 real components resolve no model fields (27 name a
+ * model id with no entry; 11 name none at all).
+ * Every failure — absent file, bad JSON, unexpected top-level shape, no match —
+ * collapses to `undefined`, because the caller's answer is still useful without it.
+ */
+async function readRegistryEntry(
+    storefrontPath: string,
+    fileName: string,
+    id: string | undefined,
+): Promise<Record<string, unknown> | undefined> {
+    if (!id) return undefined;
+    try {
+        const raw = await fsPromises.readFile(path.join(storefrontPath, fileName), 'utf-8');
+        const parsed: unknown = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return undefined;
+        return (parsed as Array<Record<string, unknown>>).find((e) => e?.id === id);
+    } catch {
+        return undefined;
+    }
+}
+
+/** Model fields projected to what an author needs: what to type, where, called what. */
+async function resolveModelFields(
+    storefrontPath: string,
+    modelId: string | undefined,
+): Promise<Array<{ name: unknown; label: unknown; component: unknown }> | undefined> {
+    const model = await readRegistryEntry(storefrontPath, 'component-models.json', modelId);
+    const fields = model?.fields;
+    if (!Array.isArray(fields) || fields.length === 0) return undefined;
+    return (fields as Array<Record<string, unknown>>).map((f) => ({
+        name: f.name,
+        label: f.label,
+        component: f.component,
+    }));
+}
+
+/** The component ids allowed to nest inside this block, per component-filters.json. */
+async function resolveFilterChildren(
+    storefrontPath: string,
+    filterId: string | undefined,
+): Promise<string[] | undefined> {
+    const filter = await readRegistryEntry(storefrontPath, 'component-filters.json', filterId);
+    const components = filter?.components;
+    return Array.isArray(components) && components.length > 0 ? (components as string[]) : undefined;
+}
+
 /**
  * Read component-definition.json, append the new entry to the first group's
  * components if missing, write it back, and return whether a change was made.
@@ -356,11 +534,7 @@ async function applyComponentDefinitionEntry(
     unsafeHTML: string,
     description: string | undefined,
 ): Promise<'added' | 'unchanged'> {
-    const compDefPath = path.join(storefrontPath, 'component-definition.json');
-    const raw = await fsPromises.readFile(compDefPath, 'utf-8');
-    const parsed = JSON.parse(raw) as {
-        groups?: Array<{ components?: ComponentDefinitionEntry[] }>;
-    };
+    const { compDefPath, parsed } = await readComponentDefinition(storefrontPath);
     const groups = parsed.groups ?? [];
     const allComponents = groups.flatMap((g) => g.components ?? []);
     if (allComponents.some((c) => c.id === blockId)) {
@@ -393,11 +567,7 @@ async function removeComponentDefinitionEntry(
     storefrontPath: string,
     blockId: string,
 ): Promise<'removed' | 'absent'> {
-    const compDefPath = path.join(storefrontPath, 'component-definition.json');
-    const raw = await fsPromises.readFile(compDefPath, 'utf-8');
-    const parsed = JSON.parse(raw) as {
-        groups?: Array<{ components?: ComponentDefinitionEntry[] }>;
-    };
+    const { compDefPath, parsed } = await readComponentDefinition(storefrontPath);
     const groups = parsed.groups ?? [];
     let changed = false;
     for (const group of groups) {
@@ -424,7 +594,17 @@ interface ComponentDefinitionEntry {
     id: string;
     title?: string;
     description?: string;
-    plugins?: { da?: { unsafeHTML?: string } };
+    /** Names an entry in `component-models.json`; 27 of 78 real entries name one that does not exist, and 11 more name none. */
+    model?: string;
+    /** Names an entry in `component-filters.json` — which components may nest inside. */
+    filter?: string;
+    /**
+     * The authoring shape. `unsafeHTML` is what the promote flow writes, but it
+     * is the RAREST form in a real storefront (4 of 78) — template-shipped
+     * blocks describe themselves with `rows`/`columns` or `name`/`type`/`fields`.
+     * Left open-ended because the EDS authoring runtime owns this schema.
+     */
+    plugins?: { da?: Record<string, unknown> & { unsafeHTML?: string } };
 }
 
 /**
@@ -669,14 +849,21 @@ export interface McpCredentialProvider {
 
 /** @internal — exported only for unit tests; not part of the public API */
 export const toolHandlers = {
-    async listProjects(projectsDir: string, offset?: number, limit?: number): Promise<string> {
+    async listProjects(
+        projectsDir: string,
+        offset?: number,
+        // Defaulted HERE, not only in the tool's zod schema. The schema default
+        // is applied by the MCP SDK, so a direct call — a test, or any non-MCP
+        // caller — still got the whole list. 300 projects measured 18,191 bytes.
+        limit: number = DEFAULT_LIST_LIMIT,
+    ): Promise<string> {
         let entries: Array<{ name: string; isDirectory: () => boolean }>;
         try {
             entries = await fsPromises.readdir(projectsDir, { withFileTypes: true });
         } catch {
             return JSON.stringify([]);
         }
-        const projects: Array<{ name: string; path: string; status: string }> = [];
+        const projects: Array<{ name: string; path: string; status: string; pinned?: boolean }> = [];
         for (const entry of entries) {
             if (!entry.isDirectory()) continue;
             const dirPath = path.join(projectsDir, entry.name);
@@ -689,6 +876,11 @@ export const toolHandlers = {
                     name: manifest.name ?? entry.name,
                     path: dirPath,
                     status: manifest.status ?? 'unknown',
+                    // Only when SET. `set_project_pinned` was a write nothing could
+                    // confirm — no read reported pinned state anywhere — and a write
+                    // with no read is a write an agent has to take on faith. Omitted
+                    // when false/absent so the common case costs no tokens.
+                    ...(manifest.pinned ? { pinned: true } : {}),
                 });
             } catch {
                 // Skip directories without valid .demo-builder.json
@@ -703,9 +895,31 @@ export const toolHandlers = {
         try {
             const raw = await fsPromises.readFile(jsonPath, 'utf-8');
             const manifest = JSON.parse(raw);
+            // Secrets are stripped BEFORE anything else looks at the manifest, and
+            // on the `full` path too.
+            //
+            // Found by probing the live server (2026-08-17): a real project's
+            // response carried its ACCS_OAUTH_CLIENT_SECRET in plaintext, so every
+            // agent that read the project put a working Commerce credential into
+            // its transcript — and into whatever logs that transcript reaches.
+            //
+            // `full: true` is not an exemption. It is the MORE dangerous path: it
+            // is what an agent reaches for when the summary looks incomplete, and
+            // "the caller asked for everything" is not consent from the person
+            // whose credential it is.
+            //
+            // This is the convention `export_project_settings` already follows in
+            // the other direction — secrets go to the FILE, never the response.
+            //
+            // `stripManifestSecrets`, not `stripSecretValues`: componentConfigs is
+            // not the only place the manifest keeps env values. Four staleness
+            // baselines carry flat snapshots too, and stripping only the first left
+            // `ADOBE_CATALOG_API_KEY` readable through this very tool — the same
+            // leak, one field over.
+            const safe = stripManifestSecrets(manifest);
             // Compact JSON (no indentation) — the response is consumed as LLM
             // context, not read by a human, so whitespace is pure token waste.
-            return JSON.stringify(full ? manifest : summarizeManifest(manifest));
+            return JSON.stringify(full ? safe : summarizeManifest(safe));
         } catch (err) {
             return `Error reading project state: ${err instanceof Error ? err.message : String(err)}`;
         }
@@ -778,19 +992,56 @@ export const toolHandlers = {
 
         const githubRepo = await readStorefrontGithubRepo(projectPath);
 
-        try {
-            const result = await syncAndPublish({
-                storefrontPath,
-                commitMessage,
-                githubRepo,
-                githubToken,
-                daLiveToken,
-            });
+        const input: SyncAndPublishInput = {
+            storefrontPath,
+            commitMessage,
+            githubRepo,
+            githubToken,
+            daLiveToken,
+        };
 
-            if (!result.committed && !result.helixPublished) return 'Nothing to commit';
-            if (result.helixPublished) return 'Storefront synced and published successfully';
-            return 'Storefront synced successfully';
+        try {
+            let result: SyncAndPublishResult;
+            try {
+                result = await syncAndPublish(input);
+            } catch (err) {
+                if (!(err instanceof PushRejectedError) || err.reason !== 'non-fast-forward') {
+                    throw err;
+                }
+                result = await retryAfterRebase(input);
+            }
+
+            // Keyed on `pushed`, not `committed`: the rebase-and-retry path
+            // re-enters syncAndPublish with skipCommit, so it reports
+            // committed=false for a sync that pushed a real commit. Reading
+            // that as "nothing to commit" told the caller its work had
+            // evaporated at exactly the moment it had just been saved.
+            if (!result.pushed && !result.helixPublished) return 'Nothing to commit';
+
+            // Name the commit we pushed. Publishing reaches the CDN edge on a
+            // delay, so an agent that syncs and then looks at the live site sees
+            // the OLD page — and one that has nothing to weigh that against has
+            // talked itself into believing its commits were being discarded.
+            // The sha is what `git log` can confirm in one command.
+            const at = result.commitSha ? ` (commit ${result.commitSha})` : '';
+            if (result.helixPublished) {
+                return (
+                    `Storefront synced and published successfully${at}. Publishing reaches the ` +
+                    `CDN edge on a delay — if the live site still shows the old content, that is ` +
+                    `propagation, not lost work. Confirm with \`git log\` in the storefront ` +
+                    `before changing anything.`
+                );
+            }
+            return (
+                `Storefront synced successfully${at} — pushed to GitHub, not published. ` +
+                `Call sync_content (or the dashboard's Republish) to publish it to the CDN.`
+            );
         } catch (err) {
+            if (err instanceof PushRejectedError && err.reason === 'ruleset') {
+                // Nothing this surface can do — and nothing VS Code can do
+                // either. The content itself has to change.
+                throw new Error(err.message);
+            }
             if (err instanceof PushRejectedError) {
                 throw new Error(
                     `${err.message} Resolve from VS Code (Demo Builder dashboard → Sync Storefront) — ` +
@@ -805,7 +1056,8 @@ export const toolHandlers = {
         projectsDir: string,
         projectName: string,
         offset?: number,
-        limit?: number,
+        // See listProjects: the cap belongs in the handler, not only the schema.
+        limit: number = DEFAULT_LIST_LIMIT,
     ): Promise<string> {
         const projectPath = resolveProjectPath(projectsDir, projectName);
         const storefrontPath = await resolveStorefrontPath(projectPath);
@@ -894,6 +1146,118 @@ export const toolHandlers = {
                 ? `[truncated: ${size} bytes — file exceeds ${MAX_FILE_BYTES / 1000} KB; read it directly from disk if full contents are needed]`
                 : await fsPromises.readFile(filePath, 'utf-8');
         return JSON.stringify({ name: fileName, content });
+    },
+
+    /**
+     * Read a block's AUTHORING shape — how a DA.live author fills the block in,
+     * as opposed to how its JS consumes what they filled in.
+     *
+     * The answer already sits in the storefront's three registry files and is
+     * read back by nothing. Deriving it instead — reading a block's JS and
+     * inferring the table it expects — measured ~121,000 tokens for eight blocks
+     * during the Bodea build. This answers for one block in roughly two hundred.
+     *
+     * Three conventions coexist, and which one a block uses is itself the
+     * answer. Counts are what {@link authoringConvention} REPORTS across 78 real
+     * components, not raw key presence — 51 entries carry `rows`/`columns`, but
+     * 15 of those also carry `fields` and are classified by it:
+     *   - `rows`/`columns`         — a positional table (36 of 78)
+     *   - `name`/`type`/`fields`   — key-value cells with CSS selectors (35)
+     *   - `unsafeHTML`             — literal markup (4; what promotion writes)
+     *   - nothing at all           — (3)
+     *
+     * `plugins.da` alone is not enough for nested blocks: `cards` reports two
+     * columns, but its real content is `card` children, which only
+     * `component-filters.json` knows. `component-models.json` names the fields.
+     * Both are best-effort — 38 of 78 real components resolve no model fields
+     * (27 name a model id that has no entry, 11 name none at all), and a
+     * storefront may ship neither file.
+     *
+     * Omit `blockName` for the registry index (ids, titles, which convention);
+     * pass it for the full shape. Mirrors `getBlockSource`'s index/detail split.
+     */
+    async getBlockAuthoringShape(
+        projectsDir: string,
+        projectName: string,
+        blockName?: string,
+        search?: string,
+    ): Promise<string> {
+        const projectPath = resolveProjectPath(projectsDir, projectName);
+        const storefrontPath = await resolveStorefrontPath(projectPath);
+        await assertInsideProject(projectPath, storefrontPath);
+        const { parsed } = await readComponentDefinition(storefrontPath);
+
+        // The registry is groups[]-nested: a flat components[] scan sees only the
+        // first group. Measured on a real storefront, 76 of 78 components live
+        // outside group 0, so that mistake would hide almost everything.
+        const entries = (parsed.groups ?? []).flatMap((g) => g.components ?? []);
+
+        if (!blockName) {
+            // Index: which blocks exist and which convention each uses. Deliberately
+            // carries no markup, selectors or field lists — that is the whole point
+            // of splitting it from the detail call.
+            //
+            // `search` and a page size because the index alone was still
+            // unbounded: 78 blocks is 5,577 bytes, but a 300-component registry
+            // measured 21,992. Splitting index from detail bounds the DETAIL
+            // call; it does nothing for a catalog that keeps growing.
+            const all = entries.map((e) => ({
+                id: e.id,
+                title: e.title,
+                authoring: authoringConvention(e),
+            }));
+            const term = search?.trim().toLowerCase();
+            const matched = term
+                ? all.filter(
+                      (b) =>
+                          b.id.toLowerCase().includes(term) ||
+                          (b.title ?? '').toLowerCase().includes(term),
+                  )
+                : all;
+            const page = matched.slice(0, MAX_AUTHORING_INDEX_ROWS);
+            return JSON.stringify({
+                blocks: page,
+                count: page.length,
+                total: matched.length,
+                ...(term ? { search: term, totalUnfiltered: all.length } : {}),
+                ...(matched.length > page.length
+                    ? { more: `${matched.length - page.length} more — narrow with search` }
+                    : {}),
+            });
+        }
+
+        const entry = entries.find((e) => e.id === blockName);
+        if (!entry) {
+            // A block can exist under blocks/ and never have been registered. That
+            // is a different problem from a typo, so name the tool that tells the
+            // two apart rather than reporting a flat "not found".
+            throw new Error(
+                `Block "${blockName}" is not registered in the authoring library. ` +
+                    `Call get_block_authoring_shape with no blockName for the registered ids, ` +
+                    `or get_block_source to check whether the block exists on disk unregistered.`,
+            );
+        }
+        const authoring = entry.plugins?.da;
+        if (!authoring || Object.keys(authoring).length === 0) {
+            throw new Error(
+                `Block "${blockName}" is registered but declares no authoring shape ` +
+                    `(no plugins.da). Read its source with get_block_source instead.`,
+            );
+        }
+
+        const [fields, childComponents] = await Promise.all([
+            resolveModelFields(storefrontPath, entry.model),
+            resolveFilterChildren(storefrontPath, entry.filter),
+        ]);
+
+        return JSON.stringify({
+            id: entry.id,
+            title: entry.title,
+            ...(entry.description ? { description: entry.description } : {}),
+            authoring,
+            ...(childComponents ? { childComponents } : {}),
+            ...(fields ? { fields } : {}),
+        });
     },
 
     /**
@@ -1109,12 +1473,17 @@ export function registerProjectTools(
         .min(0)
         .optional()
         .describe('Number of items to skip (pagination)');
+    // `paginate` returns EVERYTHING when no limit is given, so an agent's first
+    // call — always `{}` — got the whole list. Invisible on a developer's
+    // machine (2 projects, 227 bytes) and not on a real one: 300 projects
+    // measured 18,191 bytes, and a 300-component authoring index 21,992.
+    //
     const limitSchema = z
         .number()
         .int()
         .min(0)
-        .optional()
-        .describe('Maximum number of items to return (pagination)');
+        .default(DEFAULT_LIST_LIMIT)
+        .describe(`Maximum number of items to return (default ${DEFAULT_LIST_LIMIT})`);
 
     server.registerTool(
         'list_projects',
@@ -1123,14 +1492,8 @@ export function registerProjectTools(
             description: 'List all Demo Builder projects',
             inputSchema: { offset: offsetSchema, limit: limitSchema },
         },
-        async (args: any) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: await toolHandlers.listProjects(projectsDir, args.offset, args.limit),
-                },
-            ],
-        }),
+        async (args: any) =>
+            asRawText(await toolHandlers.listProjects(projectsDir, args.offset, args.limit)),
     );
 
     server.registerTool(
@@ -1147,18 +1510,8 @@ export function registerProjectTools(
                     .describe('Return the complete manifest instead of the summary'),
             },
         },
-        async (args: any) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: await toolHandlers.getProject(
-                        projectsDir,
-                        args.projectName,
-                        args.full === true,
-                    ),
-                },
-            ],
-        }),
+        async (args: any) =>
+            asRawText(await toolHandlers.getProject(projectsDir, args.projectName, args.full === true)),
     );
 
     server.registerTool(
@@ -1172,18 +1525,14 @@ export function registerProjectTools(
                 configRelPath: z.string().describe('Relative path to config file within project'),
             },
         },
-        async (args: any) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: await toolHandlers.getComponentConfig(
-                        projectsDir,
-                        args.projectName,
-                        args.configRelPath as string,
-                    ),
-                },
-            ],
-        }),
+        async (args: any) =>
+            asRawText(
+                await toolHandlers.getComponentConfig(
+                    projectsDir,
+                    args.projectName,
+                    args.configRelPath as string,
+                ),
+            ),
     );
 
     server.registerTool(
@@ -1200,19 +1549,15 @@ export function registerProjectTools(
                 content: z.string().max(1_000_000).describe('New file content'),
             },
         },
-        async (args: any) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: await toolHandlers.updateProjectConfig(
-                        projectsDir,
-                        args.projectName,
-                        args.configRelPath as string,
-                        args.content as string,
-                    ),
-                },
-            ],
-        }),
+        async (args: any) =>
+            asRawText(
+                await toolHandlers.updateProjectConfig(
+                    projectsDir,
+                    args.projectName,
+                    args.configRelPath as string,
+                    args.content as string,
+                ),
+            ),
     );
 
     server.registerTool(
@@ -1225,19 +1570,15 @@ export function registerProjectTools(
                 commitMessage: z.string().max(500).describe('Git commit message'),
             },
         },
-        async (args: any) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: await toolHandlers.syncStorefront(
-                        projectsDir,
-                        args.projectName,
-                        args.commitMessage as string,
-                        await resolveCredentials(),
-                    ),
-                },
-            ],
-        }),
+        async (args: any) =>
+            asRawText(
+                await toolHandlers.syncStorefront(
+                    projectsDir,
+                    args.projectName,
+                    args.commitMessage as string,
+                    await resolveCredentials(),
+                ),
+            ),
     );
 
     server.registerTool(
@@ -1251,19 +1592,15 @@ export function registerProjectTools(
                 limit: limitSchema,
             },
         },
-        async (args: any) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: await toolHandlers.listBlocks(
-                        projectsDir,
-                        args.projectName,
-                        args.offset,
-                        args.limit,
-                    ),
-                },
-            ],
-        }),
+        async (args: any) =>
+            asRawText(
+                await toolHandlers.listBlocks(
+                    projectsDir,
+                    args.projectName,
+                    args.offset,
+                    args.limit,
+                ),
+            ),
     );
 
     server.registerTool(
@@ -1285,19 +1622,47 @@ export function registerProjectTools(
                     .describe("A file within the block to read; omit to list the block's files"),
             },
         },
-        async (args: any) => ({
-            content: [
-                {
-                    type: 'text' as const,
-                    text: await toolHandlers.getBlockSource(
-                        projectsDir,
-                        args.projectName,
-                        args.blockName as string,
-                        args.fileName as string | undefined,
+        async (args: any) =>
+            asRawText(
+                await toolHandlers.getBlockSource(
+                    projectsDir,
+                    args.projectName,
+                    args.blockName as string,
+                    args.fileName as string | undefined,
+                ),
+            ),
+    );
+
+    server.registerTool(
+        'get_block_authoring_shape',
+        {
+            title: 'Get Block Authoring Shape',
+            description:
+                "Get the DA.live authoring markup for a block — the table structure an author fills in. Omit blockName to list the blocks registered in the authoring library. Use this instead of reading a block's JS to infer its shape.",
+            inputSchema: {
+                projectName: projectNameSchema,
+                blockName: z
+                    .string()
+                    .regex(/^[a-zA-Z0-9_-]+$/)
+                    .optional()
+                    .describe(
+                        'Block id as registered in component-definition.json; omit to list registered blocks',
                     ),
-                },
-            ],
-        }),
+                search: z
+                    .string()
+                    .optional()
+                    .describe('Filter the index by id or title (ignored when blockName is given)'),
+            },
+        },
+        async (args: any) =>
+            asRawText(
+                await toolHandlers.getBlockAuthoringShape(
+                    projectsDir,
+                    args.projectName,
+                    args.blockName as string | undefined,
+                    args.search as string | undefined,
+                ),
+            ),
     );
 
     server.registerTool(
@@ -1341,34 +1706,24 @@ export function registerProjectTools(
             // of the change, so `remove_block_from_library` being gated while this one
             // was not was an inconsistency, not a policy.
             if (args?.confirm !== true) {
-                return {
-                    content: [
-                        {
-                            type: 'text' as const,
-                            text: JSON.stringify({
-                                error: 'promote_block_to_library pushes a commit and publishes the block to the live site. Call again with confirm:true.',
-                                destructive: true,
-                            }),
-                        },
-                    ],
-                };
+                // JSON, not prose — these two refusals predate the descriptor
+                // registrar's prose one and an agent may already key on `error`.
+                return asText({
+                    error: 'promote_block_to_library pushes a commit and publishes the block to the live site. Call again with confirm:true.',
+                    destructive: true,
+                });
             }
-            return {
-                content: [
-                    {
-                        type: 'text' as const,
-                        text: await toolHandlers.promoteBlockToLibrary(
-                            projectsDir,
-                            args.projectName,
-                            args.blockId as string,
-                            args.title as string,
-                            args.unsafeHTML as string,
-                            args.description as string | undefined,
-                            await resolveCredentials(),
-                        ),
-                    },
-                ],
-            };
+            return asRawText(
+                await toolHandlers.promoteBlockToLibrary(
+                    projectsDir,
+                    args.projectName,
+                    args.blockId as string,
+                    args.title as string,
+                    args.unsafeHTML as string,
+                    args.description as string | undefined,
+                    await resolveCredentials(),
+                ),
+            );
         },
     );
 
@@ -1394,31 +1749,19 @@ export function registerProjectTools(
         },
         async (args: any) => {
             if (args?.confirm !== true) {
-                return {
-                    content: [
-                        {
-                            type: 'text' as const,
-                            text: JSON.stringify({
-                                error: 'remove_block_from_library unpublishes the live doc page and pushes a removal commit. Call again with confirm:true.',
-                                destructive: true,
-                            }),
-                        },
-                    ],
-                };
+                return asText({
+                    error: 'remove_block_from_library unpublishes the live doc page and pushes a removal commit. Call again with confirm:true.',
+                    destructive: true,
+                });
             }
-            return {
-                content: [
-                    {
-                        type: 'text' as const,
-                        text: await toolHandlers.removeBlockFromLibrary(
-                            projectsDir,
-                            args.projectName,
-                            args.blockId as string,
-                            await resolveCredentials(),
-                        ),
-                    },
-                ],
-            };
+            return asRawText(
+                await toolHandlers.removeBlockFromLibrary(
+                    projectsDir,
+                    args.projectName,
+                    args.blockId as string,
+                    await resolveCredentials(),
+                ),
+            );
         },
     );
 }

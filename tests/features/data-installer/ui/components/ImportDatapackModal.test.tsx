@@ -152,11 +152,15 @@ describe('ImportDatapackModal', () => {
         it('sends only the selected types', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Products' }));
+            // Categories, not Products: products now pulls in the types it
+            // depends on (see ImportDatapackModal.dependencies.test.tsx), so it
+            // is the wrong probe for "unselected types stay out of the payload".
+            // Categories depends on nothing, which is what makes it one.
+            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
 
             fireEvent.click(startButton());
 
-            await waitFor(() => expect(startPayload()).toMatchObject({ dataTypes: ['products'] }));
+            await waitFor(() => expect(startPayload()).toMatchObject({ dataTypes: ['categories'] }));
         });
     });
 

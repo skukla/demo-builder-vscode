@@ -13,6 +13,7 @@
 
 import { z } from 'zod';
 import { clearAdobeTarget } from './adobeTargetStore';
+import { asRawText, asText } from './mcpToolResult';
 import { dispatchHandler } from '@/core/handlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { getDaLiveAuthService, getGitHubServices, showDaLiveAuthQuickPick } from '@/features/eds/handlers/edsHelpers';
@@ -22,8 +23,65 @@ interface ProviderStatus {
     authenticated: boolean;
     /** Minutes until the Adobe token expires (negative if expired). Adobe only. */
     expiresInMinutes?: number;
+    /** GitHub only: the authenticated username. */
+    login?: string;
+    /** GitHub only: orgs this user belongs to — the namespaces a repo can be created in. */
+    orgs?: string[];
+    /** DA.live only: the pinned namespace every DA.live write targets. */
+    orgName?: string;
     /** Set when the status could not be determined (e.g. EDS services unavailable). */
     error?: string;
+}
+
+/**
+ * GitHub identity, WITHOUT adopting a VS Code session.
+ *
+ * Deliberately not `handleCheckGitHubAuth`, the wizard's equivalent: on finding a
+ * VS Code GitHub session that handler calls `tokenService.storeToken(...)`
+ * (`edsGitHubHandlers.ts:79-83`), persisting a credential. Correct mid-setup,
+ * wrong under a `get_*` name — an agent pre-flighting auth would silently adopt a
+ * session into extension storage. Reading the services reports only what is
+ * already stored, and writes nothing.
+ *
+ * `orgs` earns its place beyond diagnostics: a repo can only be created in a
+ * namespace the user belongs to, and nothing else on the agent surface exposes
+ * that list.
+ */
+async function githubStatus(ctx: HandlerContext): Promise<ProviderStatus> {
+    const { tokenService } = getGitHubServices(ctx);
+    const validation = await tokenService.validateToken();
+    if (!validation.valid) return { authenticated: false };
+
+    // Orgs are ENRICHMENT, so their failure must not unseat the answer. Folding
+    // this call into the outer `safeStatus` would report `authenticated: false`
+    // for a perfectly valid token whose org lookup happened to fail — turning a
+    // missing nice-to-have into a wrong verdict on the question actually asked.
+    let orgs: string[] | undefined;
+    try {
+        orgs = await tokenService.getUserOrgs();
+    } catch {
+        orgs = undefined;
+    }
+
+    return {
+        authenticated: true,
+        login: validation.user?.login,
+        ...(orgs ? { orgs } : {}),
+    };
+}
+
+/**
+ * DA.live status plus the pinned namespace.
+ *
+ * `orgName` is reachable nowhere else on the agent surface and every DA.live
+ * write targets it, so reporting `authenticated: true` without it tells an agent
+ * it may proceed while withholding the one value the operation needs.
+ */
+async function daLiveStatus(ctx: HandlerContext): Promise<ProviderStatus> {
+    const service = getDaLiveAuthService(ctx.context);
+    const authenticated = await service.isAuthenticated();
+    const orgName = service.getOrgName();
+    return { authenticated, ...(orgName ? { orgName } : {}) };
 }
 
 async function adobeStatus(ctx: HandlerContext): Promise<ProviderStatus> {
@@ -51,19 +109,16 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
         'get_auth_status',
         {
             title: 'Get Auth Status',
-            description: 'Report Adobe / GitHub / DA.live authentication status (no side effects)',
+            description:
+                'Report Adobe / GitHub / DA.live authentication status, with the GitHub user + orgs a repo can be created in, and the pinned DA.live namespace. No side effects.',
             inputSchema: {},
         },
         async () => {
             const ctx = ctxFactory();
             const adobe = await safeStatus(() => adobeStatus(ctx));
-            const github = await safeStatus(async () => ({
-                authenticated: (await getGitHubServices(ctx).tokenService.validateToken()).valid,
-            }));
-            const dalive = await safeStatus(async () => ({
-                authenticated: await getDaLiveAuthService(ctx.context).isAuthenticated(),
-            }));
-            return { content: [{ type: 'text' as const, text: JSON.stringify({ adobe, github, dalive }) }] };
+            const github = await safeStatus(() => githubStatus(ctx));
+            const dalive = await safeStatus(() => daLiveStatus(ctx));
+            return asText({ adobe, github, dalive });
         },
     );
 
@@ -80,14 +135,9 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
             if (args?.confirm !== true) {
-                return {
-                    content: [
-                        {
-                            type: 'text' as const,
-                            text: 'sign_in requires confirm:true — it opens a browser/auth window. Ask the user to confirm first.',
-                        },
-                    ],
-                };
+                return asRawText(
+                    'sign_in requires confirm:true — it opens a browser/auth window. Ask the user to confirm first.',
+                );
             }
             const ctx = ctxFactory();
             const provider = args.provider as 'adobe' | 'github' | 'dalive';
@@ -98,11 +148,11 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
                 // targeting the previous account's org/project/workspace.
                 clearAdobeTarget();
                 const ok = (await ctx.authManager?.login()) ?? false;
-                return { content: [{ type: 'text' as const, text: JSON.stringify({ provider, success: ok }) }] };
+                return asText({ provider, success: ok });
             }
             if (provider === 'github') {
                 const res = await dispatchHandler(edsHandlers, ctx, 'github-oauth', {});
-                return { content: [{ type: 'text' as const, text: JSON.stringify({ provider, success: res.success }) }] };
+                return asText({ provider, success: res.success });
             }
             // dalive — DA.live has no headless token grant, so sign-in completes
             // through native VS Code prompts (open browser → paste token → org).
@@ -112,21 +162,14 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
             // and the agent's headless context drops sendMessage, so the input box
             // never appears.
             const res = await showDaLiveAuthQuickPick(ctx);
-            return {
-                content: [
-                    {
-                        type: 'text' as const,
-                        text: JSON.stringify({
-                            provider,
-                            success: res.success,
-                            cancelled: res.cancelled ?? false,
-                            note: res.success
-                                ? 'DA.live sign-in complete.'
-                                : 'DA.live sign-in was cancelled or failed; re-run sign_in to retry.',
-                        }),
-                    },
-                ],
-            };
+            return asText({
+                provider,
+                success: res.success,
+                cancelled: res.cancelled ?? false,
+                note: res.success
+                    ? 'DA.live sign-in complete.'
+                    : 'DA.live sign-in was cancelled or failed; re-run sign_in to retry.',
+            });
         },
     );
 }

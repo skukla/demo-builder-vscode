@@ -16,39 +16,36 @@ import { ActionButton, Checkbox, Item, Picker, ProgressCircle } from '@adobe/rea
 import React from 'react';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { TargetWebsite } from '../hooks/useImportScopes';
+import { blockedBy, missingDependencies } from '../importDependencies';
 
 /**
- * Whether to warn that `products` was chosen without `customer_groups`.
+ * Dependencies the selected types need that this datapack does not contain.
  *
- * Measured 2026-08-14: Bodea's tier prices name the "Platinum Buyer" group, the
- * service resolves that name to an id at import time, and with no groups
- * imported the lookup failed and took the ENTIRE `products` type down — 56
- * products, zero landed. `validate` cannot catch it; it checks request shape,
- * not referential integrity.
- *
- * Only when the pack actually offers `customer_groups`: nothing else can be
- * suggested, and a warning naming an unavailable type is noise.
+ * Ticking cannot fix these — there is no box to tick — so the only useful moment
+ * to say so is before the import runs. This replaces a hardcoded warning about
+ * `products` needing `customer_groups`, which was one of the three substitutions
+ * products actually depends on and covered only the case where the pack HELD the
+ * missing type, which is the case selection now handles by itself.
  */
-function needsCustomerGroups(availableTypes: string[], selected: string[]): boolean {
+function MissingDependencies({
+    availableTypes,
+    selected,
+}: {
+    availableTypes: string[];
+    selected: string[];
+}): React.JSX.Element | null {
+    const missing = missingDependencies(selected, availableTypes);
+    if (missing.length === 0) {
+        return null;
+    }
     return (
-        selected.includes('products') &&
-        availableTypes.includes('customer_groups') &&
-        !selected.includes('customer_groups')
+        <p className="datapack-import-type-warning">
+            Not in this datapack: {missing.map(dataTypeLabel).join(', ')}. The types you selected
+            look these up by name, and one failed lookup fails the whole type.
+        </p>
     );
 }
 
-/**
- * Where the pack lands.
- *
- * Hidden entirely when nothing was discovered — no project, no credentials, or a
- * discovery that failed. Targeting is optional and an import without it still
- * works, so an empty picker would be a dead control demanding explanation.
- *
- * The hint is not decoration. `websites` is not an importable data type, so a
- * website the user has not created cannot appear here, and the failure mode is
- * "the one I want is missing" — which reads as a bug unless the missing step is
- * named. Per the service author: create it in Commerce first, then name it here.
- */
 /** The service's own default website code, when the user picks nothing. */
 const DEFAULT_WEBSITE_CODE = 'base';
 
@@ -269,19 +266,17 @@ export function ImportForm({
                         <Checkbox
                             key={type}
                             isSelected={selected.includes(type)}
+                            // Locked while something selected needs it. Disabled
+                            // rather than silently refusing the click: a box that
+                            // does not move when pressed reads as a bug.
+                            isDisabled={blockedBy(type, selected).length > 0}
                             onChange={(isSelected) => onToggle(type, isSelected)}
                         >
                             {dataTypeLabel(type)}
                         </Checkbox>
                     ))}
                 </div>
-                {needsCustomerGroups(availableTypes, selected) ? (
-                    <p className="datapack-import-type-warning">
-                        Products whose tier prices name a customer group fail to import without
-                        it — and one failure fails the whole type. Add {dataTypeLabel('customer_groups')}{' '}
-                        unless you know this pack has no tier prices.
-                    </p>
-                ) : null}
+                <MissingDependencies availableTypes={availableTypes} selected={selected} />
             </div>
         </>
     );

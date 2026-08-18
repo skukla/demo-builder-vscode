@@ -9,6 +9,7 @@ export { edsHandlers } from './edsHandlers';
 
 // Export individual handlers
 export { handleDiscoverStoreStructure } from './edsHandlers';
+export { handleCheckCredentialService } from './credentialServiceHandler';
 export {
     handleCheckGitHubAuth,
     handleGitHubOAuth,

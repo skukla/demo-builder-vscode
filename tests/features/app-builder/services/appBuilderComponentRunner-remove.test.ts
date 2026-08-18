@@ -98,14 +98,32 @@ describe('removeAppBuilderComponent — a removed mesh is a mesh the project no 
         expect(saved.componentInstances?.['eds-accs-mesh']).toBeUndefined();
     });
 
-    it('leaves the selections of a NON-mesh removal alone', async () => {
-        const project = createProject({
+    /**
+     * The integration half of the same rule, found by probing live (2026-08-17).
+     *
+     * `add_integration` then `remove_integration` left `app-builder-shell` sitting
+     * in `componentSelections.appBuilder` while its keyed entry and its component
+     * instance were both gone. The mesh branch above had been fixed on exactly the
+     * argument that applies here — a selected-but-absent component is an error
+     * state, not a resting one — and nobody carried it across.
+     *
+     * It matters most at RESET: `projectResetService` rebuilds the component list
+     * from the selections, so a stale id is a component reset tries to re-clone.
+     *
+     * `reconcileComponentSelections` cannot do this. It is additive by design (its
+     * own docstring says so), because a wizard selection that is not installed yet
+     * is legitimate mid-creation. Its docstring also assumed removal already
+     * cleaned up after itself — true for meshes, and this is what made it true for
+     * integrations.
+     */
+    function integrationSelectionProject(): Project {
+        return createProject({
             componentSelections: {
                 frontend: 'eds-storefront',
                 backend: 'adobe-commerce-accs',
                 dependencies: ['eds-accs-mesh'],
                 integrations: [],
-                appBuilder: ['erp-bridge'],
+                appBuilder: ['erp-bridge', 'order-sync'],
             } as never,
             appBuilderComponents: {
                 'erp-bridge': {
@@ -115,12 +133,29 @@ describe('removeAppBuilderComponent — a removed mesh is a mesh the project no 
                 },
             },
         });
+    }
+
+    it('drops the integration from componentSelections.appBuilder', async () => {
+        const project = integrationSelectionProject();
         const deps = createDeps();
 
         await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
 
         const saved = (deps.saveProject as jest.Mock).mock.calls.at(-1)![0] as Project;
-        // The mesh dependency belongs to the mesh, not to the integration.
+        expect(saved.componentSelections?.appBuilder).toEqual(['order-sync']);
+        // The other two arms must fall with it, as they already did.
+        expect(saved.appBuilderComponents?.['erp-bridge']).toBeUndefined();
+    });
+
+    it('leaves the mesh DEPENDENCY of a non-mesh removal alone', async () => {
+        const project = integrationSelectionProject();
+        const deps = createDeps();
+
+        await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+
+        const saved = (deps.saveProject as jest.Mock).mock.calls.at(-1)![0] as Project;
+        // The mesh dependency belongs to the mesh, not to the integration —
+        // removing an integration must not revoke it.
         expect(saved.componentSelections?.dependencies).toEqual(['eds-accs-mesh']);
     });
 });

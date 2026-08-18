@@ -9,6 +9,7 @@
  */
 
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
+import { delegateCommitTreeToBranch } from './blockCollectionHelpers.testUtils';
 import type { Logger } from '@/types/logger';
 import type { GitHubFileOperations } from '@/features/eds/services/githubFileOperations';
 import type { AddonSource } from '@/types/demoPackages';
@@ -50,7 +51,11 @@ describe('installBlockCollections', () => {
             createTree: jest.fn(),
             createCommit: jest.fn(),
             updateBranchRef: jest.fn(),
+            commitTreeToBranch: jest.fn(),
         } as unknown as jest.Mocked<GitHubFileOperations>;
+        delegateCommitTreeToBranch(
+            mockGithubFileOps as unknown as Parameters<typeof delegateCommitTreeToBranch>[0],
+        );
     });
 
     describe('cross-library block deduplication', () => {

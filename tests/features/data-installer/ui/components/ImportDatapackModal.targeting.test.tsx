@@ -177,50 +177,103 @@ describe('import targeting', () => {
  * A warning rather than a block: packs whose products carry no tier prices are
  * perfectly importable on their own, and this modal cannot know which is which.
  */
-describe('the products/customer_groups dependency', () => {
+/**
+ * The pickers seed from what the PROJECT recorded, not from `base`.
+ *
+ * They used to seed purely from discovery, preferring a website literally named
+ * `base` and falling back to the first one. On a project configured for another
+ * website that is wrong twice over: the visible default is a scope nobody chose,
+ * and a reset driven from this modal then targets a different scope than the
+ * project reset does — same project, same data, two answers.
+ *
+ * The project already holds the pair, and `get-datapack-import-target` now
+ * reports it. This is the modal honouring it.
+ */
+describe('seeding the target scope', () => {
+    const BODEA_SCOPE = { websiteCode: 'bodea', storeCode: 'bodea_us' };
+
+    /** Discovery answers with three websites; `base` exists and must NOT win. */
+    function withScopedProject(scope?: { websiteCode: string; storeCode: string }) {
+        mockRequest.mockImplementation(async (type: string) => {
+            if (type === 'get-datapack-import-target') {
+                return {
+                    success: true,
+                    data: { instance: 'inst', projectName: 'bodea-template-test', ...(scope && { scope }) },
+                };
+            }
+            if (type === 'list-datapack-import-scopes') {
+                return {
+                    success: true,
+                    data: {
+                        websites: [
+                            { code: 'base', name: 'Main Website', storeViews: [{ code: 'default', name: 'Default Store View' }] },
+                            { code: 'bodea', name: 'Bodea Website', storeViews: [{ code: 'bodea_us', name: 'Bodea US' }] },
+                        ],
+                    },
+                };
+            }
+            return { success: true, data: null };
+        });
+    }
+
     beforeEach(() => {
         resetModalMocks();
-        withScopes();
     });
 
-    it('warns when products is selected without customer_groups', async () => {
-        renderModal({ availableTypes: ['categories', 'customer_groups', 'products'] });
-
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Products' }));
-
-        await waitFor(() =>
-            // 'tier prices' — NOT /customer_groups/, which is also a checkbox
-            // label in the type grid and made this test pass with no warning.
-            expect(screen.getByText(/tier prices/i)).toBeInTheDocument(),
-        );
-        // Still startable — it is a warning, not a gate.
-        expect(screen.getByRole('button', { name: /start import/i })).not.toBeDisabled();
-    });
-
-    it('drops the warning once customer_groups is selected too', async () => {
-        renderModal({ availableTypes: ['categories', 'customer_groups', 'products'] });
-
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Products' }));
-        await waitFor(() => expect(screen.getByText(/tier prices/i)).toBeInTheDocument());
-
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Customer groups' }));
+    it('selects the website the project recorded, not `base`', async () => {
+        withScopedProject(BODEA_SCOPE);
+        renderModal();
 
         await waitFor(() =>
-            expect(screen.queryByText(/tier prices/i)).not.toBeInTheDocument(),
+            expect(pickerFor(/target website/i)).toHaveValue('bodea'),
         );
     });
 
-    it('says nothing when the pack has no customer_groups to offer', async () => {
-        renderModal({ availableTypes: ['categories', 'products'] });
+    it('selects the store view the project recorded', async () => {
+        withScopedProject(BODEA_SCOPE);
+        renderModal();
 
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Products' }));
+        await waitFor(() => expect(pickerFor(/store view/i)).toHaveValue('bodea_us'));
+    });
 
-        await waitFor(() =>
-            expect(screen.getByRole('button', { name: /start import/i })).toBeInTheDocument(),
-        );
-        expect(screen.queryByText(/tier prices/i)).not.toBeInTheDocument();
+    it('sends the recorded scope without the user touching a picker', async () => {
+        withScopedProject(BODEA_SCOPE);
+        renderModal();
+        await waitFor(() => expect(pickerFor(/target website/i)).toHaveValue('bodea'));
+
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+        fireEvent.click(screen.getByRole('button', { name: /start import/i }));
+
+        await waitFor(() => {
+            const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
+            expect(call?.[1]).toMatchObject({ websiteCode: 'bodea', storeCode: 'bodea_us' });
+        });
+    });
+
+    it('falls back to `base` when the project recorded nothing', async () => {
+        withScopedProject(undefined);
+        renderModal();
+
+        // Unchanged behaviour for an unconfigured project — the fallback is the
+        // service's own default, not a guess.
+        await waitFor(() => expect(pickerFor(/target website/i)).toHaveValue('base'));
     });
 });
+
+/*
+ * The `products` / `customer_groups` warning block lived here and is gone.
+ *
+ * It guarded one hardcoded pair. Selection now resolves dependencies from
+ * `importDependencies`, so its two main cases became unreachable: with
+ * `customer_groups` in the pack, ticking `products` ticks it too, and the
+ * warned-about state cannot be produced. Its third case — a pack with no
+ * `customer_groups` to offer — inverted: that is now exactly when the
+ * missing-dependency notice fires.
+ *
+ * Replaced by ImportDatapackModal.dependencies.test.tsx, which covers both
+ * packs plus the claim this block made that the others did not: the notice
+ * warns, it does not gate.
+ */
 
 /**
  * The 2026-08-15 redesign, from a live pass over the modal.

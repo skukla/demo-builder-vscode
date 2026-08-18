@@ -236,4 +236,40 @@ describe('AdobeEntityFetcher.createProject()', () => {
         const result = await fetcher.createProject('My Demo', 'desc');
         expect(result).toBeUndefined();
     });
+
+    // ── explicit target overrides the cache ─────────────────────────────────
+    //
+    // The cache is the EXTENSION UI's selection. The agent surface has its own
+    // (`adobeTargetStore`), and `select_org` never writes this cache — so before
+    // the override existed, an agent tool would create in whatever the UI had
+    // selected, silently. Phase-4 defect 0a.
+    describe('explicit target', () => {
+        it('creates in the PASSED org, not the cached one', async () => {
+            createFireflyProject.mockResolvedValue({ body: { projectId: 'proj-9' } });
+
+            await fetcher.createProject('My Demo', '', { orgId: 'org-FROM-AGENT' });
+
+            expect(createFireflyProject).toHaveBeenCalledWith(
+                'org-FROM-AGENT',
+                expect.anything(),
+            );
+        });
+
+        // The control: same call without a target must still use the cache, or
+        // the assertion above proves nothing about the override specifically.
+        it('control: falls back to the cached org when no target is passed', async () => {
+            createFireflyProject.mockResolvedValue({ body: { projectId: 'proj-9' } });
+
+            await fetcher.createProject('My Demo', '');
+
+            expect(createFireflyProject).toHaveBeenCalledWith('org-123', expect.anything());
+        });
+
+        it('still requires an org from somewhere', async () => {
+            (mockCacheManager.getCachedOrganization as jest.Mock).mockReturnValue(undefined);
+
+            expect(await fetcher.createProject('My Demo', '')).toBeUndefined();
+            expect(createFireflyProject).not.toHaveBeenCalled();
+        });
+    });
 });

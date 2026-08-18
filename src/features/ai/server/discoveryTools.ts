@@ -10,12 +10,28 @@
  * in from `extension.ts` like the handler-backed descriptors.
  */
 
+import { asText } from './mcpToolResult';
 import componentsConfig from '@/features/components/config/components.json';
 import { getSelectablePackages } from '@/features/project-creation/services/demoPackageLoader';
 import { loadStacks } from '@/features/project-creation/ui/helpers/brandStackLoader';
 
-/** Component sections worth surfacing to an agent (selectable building blocks). */
-const COMPONENT_SECTIONS = ['frontends', 'backends', 'mesh', 'integrations', 'addons'] as const;
+/**
+ * Component sections worth surfacing to an agent (selectable building blocks).
+ *
+ * EXPORTED because `get_component_requirements` must look in exactly the sections
+ * `list_components` advertises. They were separate lists once, and the drift was
+ * immediate: `list_components` offered `adobe-commerce-aco` from `addons` while
+ * the other tool — reading the registry manager, which has no addons concept —
+ * answered "No component". An agent following the obvious path hit a dead end on
+ * a component the surface had just handed it (found live, 2026-08-17).
+ */
+export const COMPONENT_SECTIONS = [
+    'frontends',
+    'backends',
+    'mesh',
+    'integrations',
+    'addons',
+] as const;
 
 function listComponentSection(section: string): Array<{ id: string; name: string }> {
     const entries = (componentsConfig as Record<string, unknown>)[section];
@@ -49,7 +65,7 @@ export function registerDiscoveryTools(server: any): void {
                 requiresGitHub: s.requiresGitHub ?? false,
                 requiresDaLive: s.requiresDaLive ?? false,
             }));
-            return { content: [{ type: 'text' as const, text: JSON.stringify(lean) }] };
+            return asText(lean);
         },
     );
 
@@ -69,7 +85,7 @@ export function registerDiscoveryTools(server: any): void {
                 // The keys of the storefronts map ARE the valid stacks for this package.
                 availableStacks: Object.keys(p.storefronts ?? {}),
             }));
-            return { content: [{ type: 'text' as const, text: JSON.stringify(lean) }] };
+            return asText(lean);
         },
     );
 
@@ -84,7 +100,7 @@ export function registerDiscoveryTools(server: any): void {
             const lean = Object.fromEntries(
                 COMPONENT_SECTIONS.map((section) => [section, listComponentSection(section)]),
             );
-            return { content: [{ type: 'text' as const, text: JSON.stringify(lean) }] };
+            return asText(lean);
         },
     );
 }

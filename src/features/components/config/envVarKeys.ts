@@ -150,9 +150,77 @@ export function stripSecretValues<T>(
 ): Record<string, Record<string, T>> {
     const out: Record<string, Record<string, T>> = {};
     for (const [componentId, config] of Object.entries(configs ?? {})) {
-        const copy = { ...config };
-        for (const key of SECRET_ENV_KEYS) delete copy[key];
-        out[componentId] = copy;
+        out[componentId] = stripSecretKeys(config);
     }
     return out;
+}
+
+/**
+ * Strip secrets from ONE flat env map.
+ *
+ * `componentConfigs` is not the only place a manifest keeps env values. Four other
+ * fields hold flat snapshots — `meshState.envVars`, `edsStorefrontState.envVars`,
+ * `frontendEnvState.envVars` and each `appBuilderComponents[id].envVars` — and
+ * they are staleness baselines, so they carry whatever was set at the time,
+ * `ADOBE_CATALOG_API_KEY` included.
+ *
+ * Stripping only `componentConfigs` left those readable through `get_project`,
+ * one field over from the leak that motivated the strip in the first place.
+ *
+ * @param values - a flat env map
+ * @returns a copy with every {@link SECRET_ENV_KEYS} entry removed
+ */
+export function stripSecretKeys<T>(values: Record<string, T> | undefined): Record<string, T> {
+    const copy = { ...(values ?? {}) };
+    for (const key of SECRET_ENV_KEYS) delete copy[key];
+    return copy;
+}
+
+/**
+ * Every place a project manifest keeps env values, stripped in one call.
+ *
+ * Callers that hand a whole manifest to something outward-facing — the
+ * `get_project` MCP response, a settings export — must not have to remember the
+ * list. Enumerated here so adding a field to the manifest and forgetting it is a
+ * change in ONE place rather than a silent leak in several.
+ *
+ * @param manifest - a parsed `.demo-builder.json`
+ * @returns a shallow copy with every env-carrying field stripped
+ */
+export function stripManifestSecrets<T extends Record<string, unknown>>(manifest: T): T {
+    const out = { ...manifest } as Record<string, unknown>;
+
+    if (out.componentConfigs) {
+        out.componentConfigs = stripSecretValues(
+            out.componentConfigs as Record<string, Record<string, unknown>>,
+        );
+    }
+
+    // Staleness baselines. Each holds whatever env was set when it was captured.
+    for (const field of ['meshState', 'edsStorefrontState', 'frontendEnvState']) {
+        const state = out[field] as { envVars?: Record<string, unknown> } | undefined;
+        if (state?.envVars) {
+            out[field] = { ...state, envVars: stripSecretKeys(state.envVars) };
+        }
+    }
+
+    // Per-integration snapshots, keyed by component id.
+    const components = out.appBuilderComponents as
+        | Record<string, { envVars?: Record<string, unknown>; providesEnvVars?: Record<string, unknown> }>
+        | undefined;
+    if (components) {
+        const safe: Record<string, unknown> = {};
+        for (const [id, entry] of Object.entries(components)) {
+            safe[id] = {
+                ...entry,
+                ...(entry?.envVars ? { envVars: stripSecretKeys(entry.envVars) } : {}),
+                ...(entry?.providesEnvVars
+                    ? { providesEnvVars: stripSecretKeys(entry.providesEnvVars) }
+                    : {}),
+            };
+        }
+        out.appBuilderComponents = safe;
+    }
+
+    return out as T;
 }

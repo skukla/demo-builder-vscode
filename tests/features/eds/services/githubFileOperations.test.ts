@@ -229,7 +229,17 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
             LKG_SHA,
         );
 
-        expect(updateRefSpy).toHaveBeenCalledWith('user', 'user-storefront', 'main', 'new-commit-sha');
+        // The trailing `true` is the force flag, which reset now passes EXPLICITLY
+        // (see githubFileOperations-branchRef.test.ts). This assertion is about the
+        // branch argument — `main`, never the template ref — so it carries the flag
+        // rather than loosening to ignore it.
+        expect(updateRefSpy).toHaveBeenCalledWith(
+            'user',
+            'user-storefront',
+            'main',
+            'new-commit-sha',
+            true,
+        );
     });
 });
 

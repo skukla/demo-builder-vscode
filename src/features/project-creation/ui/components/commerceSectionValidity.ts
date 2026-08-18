@@ -41,7 +41,16 @@ export type { ConnectStoreSection } from '@/features/components/config/storeFiel
 /** Per-section verdicts. A section with no fields is valid, not unfinished. */
 export type CommerceSectionValidity = Record<ConnectStoreSection, boolean>;
 
-const SECTIONS: ConnectStoreSection[] = ['connection', 'business-structure', 'catalog'];
+// `credentials` is listed even though its fields are optional today. The rule this
+// file exists to enforce is that every RENDERED field is charged to exactly one
+// section — leaving a rendered section unlisted is how a required field ends up
+// gating nothing, which is the inverse of the deadlock described above.
+const SECTIONS: ConnectStoreSection[] = [
+    'connection',
+    'credentials',
+    'business-structure',
+    'catalog',
+];
 
 /**
  * Decide, per sub-step, whether every field that sub-step RENDERS is satisfied.

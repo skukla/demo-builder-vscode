@@ -105,3 +105,49 @@ export function createBlockFileEntries(
     }));
     return [...blockEntries, ...extras];
 }
+
+/**
+ * Make the mocked `commitTreeToBranch` do what the real one does on the happy
+ * path: read the branch, build a tree on its base, commit, move the ref.
+ *
+ * The suites here assert WHICH files were written and WHAT the commit message
+ * was, by reading `createTree` / `createCommit`. Those facts did not change when
+ * the four steps moved behind one method — so rather than rewrite sixty
+ * assertions to read a different call, the fake keeps them pointed at the same
+ * observations. It is faithful, not convenient: a fake that skipped the inner
+ * calls would let the caller stop writing files without a single test noticing.
+ *
+ * The retry and the never-force rule are pinned where they live, against the
+ * real implementation, in `githubFileOperations-branchRef.test.ts`.
+ *
+ * @param mock - the mocked GitHubFileOperations to install the behaviour on
+ */
+export function delegateCommitTreeToBranch(mock: {
+    getBranchInfo: jest.Mock;
+    createTree: jest.Mock;
+    createCommit: jest.Mock;
+    updateBranchRef: jest.Mock;
+    commitTreeToBranch: jest.Mock;
+}): void {
+    mock.commitTreeToBranch.mockImplementation(
+        async (
+            owner: string,
+            repo: string,
+            branch: string,
+            entries: unknown,
+            message: string,
+        ) => {
+            const { treeSha, commitSha } = await mock.getBranchInfo(owner, repo, branch);
+            const newTreeSha = await mock.createTree(owner, repo, entries, treeSha);
+            const newCommitSha = await mock.createCommit(
+                owner,
+                repo,
+                message,
+                newTreeSha,
+                commitSha,
+            );
+            await mock.updateBranchRef(owner, repo, branch, newCommitSha);
+            return newCommitSha;
+        },
+    );
+}

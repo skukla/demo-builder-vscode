@@ -21,6 +21,7 @@ import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
 import { asText } from './mcpToolResult';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import { describeCdnPropagation } from '@/features/eds/services/configSyncService';
 import {
     republishStorefrontConfig,
     republishStorefrontContent,
@@ -105,6 +106,15 @@ export function registerStorefrontTools(
                     githubPushed: result.githubPushed,
                     cdnPublished: result.cdnPublished,
                     cdnVerified: result.cdnVerified,
+                    // The boolean alone left the caller to guess what an
+                    // unverified publish meant; the ones that guessed read it as
+                    // lost work. Say it outright.
+                    cdnStatus: result.success
+                        ? describeCdnPropagation({
+                              cdnVerified: result.cdnVerified,
+                              cdnError: result.cdnError,
+                          })
+                        : undefined,
                     error: result.error,
                 });
             } catch (err) {
@@ -173,7 +183,14 @@ export function registerStorefrontTools(
                         githubTokenService,
                     }),
                 );
-                return asText({ success: result.success, cdnVerified: result.cdnVerified, error: result.error });
+                return asText({
+                    success: result.success,
+                    cdnVerified: result.cdnVerified,
+                    cdnStatus: result.success
+                        ? describeCdnPropagation({ cdnVerified: result.cdnVerified })
+                        : undefined,
+                    error: result.error,
+                });
             } catch (err) {
                 if (isOrgMismatchError(err)) return orgMismatchResult();
                 throw err;

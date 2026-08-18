@@ -149,12 +149,12 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
     });
 
     describe('EDS project (playwright entry applies)', () => {
-        it('writes all fourteen skills when @playwright/mcp is installed (pins hold)', async () => {
+        it('writes all fifteen skills when @playwright/mcp is installed (pins hold)', async () => {
             mockDisk(playwrightInstalled());
 
             await writeSkillFiles(PROJECT_PATH, makeEdsProject(), makeTestWriter(PROJECT_PATH));
 
-            expect(writtenFiles()).toHaveLength(14);
+            expect(writtenFiles()).toHaveLength(15);
             for (const filename of PLAYWRIGHT_SKILLS) {
                 expect(writtenFiles().some((p) => p.endsWith(filename))).toBe(true);
             }
@@ -165,7 +165,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
 
             await writeSkillFiles(PROJECT_PATH, makeEdsProject(), makeTestWriter(PROJECT_PATH));
 
-            expect(writtenFiles()).toHaveLength(11);
+            expect(writtenFiles()).toHaveLength(12);
             for (const filename of PLAYWRIGHT_SKILLS) {
                 expect(writtenFiles().some((p) => p.endsWith(filename))).toBe(false);
             }
@@ -176,7 +176,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
 
             await writeSkillFiles(PROJECT_PATH, makeEdsProject(), makeTestWriter(PROJECT_PATH));
 
-            expect(writtenFiles()).toHaveLength(11);
+            expect(writtenFiles()).toHaveLength(12);
         });
 
         it('excludes gated-out skills from summary.written', async () => {
@@ -188,7 +188,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
                 makeTestWriter(PROJECT_PATH)
             );
 
-            expect(summary.written).toHaveLength(11);
+            expect(summary.written).toHaveLength(12);
             for (const filename of PLAYWRIGHT_SKILLS) {
                 expect(summary.written).not.toContain(filename);
             }
@@ -229,9 +229,9 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
                 makeTestWriter(PROJECT_PATH)
             );
 
-            // 13 always-on minus the 3 playwright skills; no extend-app-builder-app
+            // 14 always-on minus the 3 playwright skills; no extend-app-builder-app
             // (a bare project needs no App Builder tooling).
-            expect(writtenFiles()).toHaveLength(10);
+            expect(writtenFiles()).toHaveLength(11);
             for (const filename of PLAYWRIGHT_SKILLS) {
                 expect(writtenFiles().some((p) => p.endsWith(filename))).toBe(false);
             }
@@ -246,8 +246,8 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
                 makeTestWriter(PROJECT_PATH)
             );
 
-            // 10 gated always-on + the conditional extend-app-builder-app.
-            expect(summary.written).toHaveLength(11);
+            // 11 gated always-on + the conditional extend-app-builder-app.
+            expect(summary.written).toHaveLength(12);
             expect(summary.written).toContain('extend-app-builder-app.md');
             for (const filename of PLAYWRIGHT_SKILLS) {
                 expect(summary.written).not.toContain(filename);
@@ -276,7 +276,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
                 ])
             );
             // Thirteen always-written skills + the conditional extend-app-builder-app.
-            expect(summary.written).toHaveLength(14);
+            expect(summary.written).toHaveLength(15);
             expect(summary.written).toContain('extend-app-builder-app.md');
         });
 

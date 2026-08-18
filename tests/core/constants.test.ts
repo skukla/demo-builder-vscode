@@ -12,11 +12,35 @@ describe('AI_CONTEXT_VERSION', () => {
     // generated-content change (see the ai-context-authoring discipline): the
     // constant re-gates every existing project for a bundle refresh — since v8
     // via the silent activation sweep rather than a prompt.
-    // v10: promote_block_to_library is confirm-gated now, so register-custom-block.md
-    // must pass `confirm: true`. Without the bump, existing projects keep the old
-    // skill text and every call that skill makes is refused.
-    it('is 10 (register-custom-block passes confirm:true)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(10);
+    // v11: diagnose-demo was routing the FIRST symptom it names — "product page
+    // renders empty" — to store scope and then the Commerce admin. The classic
+    // cause is a refused Configuration Service write, whose distinguishing tools
+    // (get_site_access, repair_site_configuration) did not exist when that skill
+    // was written; an agent following the old table reported an empty catalog
+    // while the catalog was fine. Plus the new import-datapack skill. Without the
+    // bump, existing projects keep the wrong routing table.
+    // v12: import scope defaults to the project's, not the service's. Without
+    // the bump, existing projects keep a skill that does not say so — and the
+    // omit-the-pair advice is exactly what used to reset against `base`.
+    // v13: diagnose-demo's empty-catalog route, and the instance limits no API
+    // reports. Without the bump, existing projects keep a diagnosis table that
+    // sends the reader to the Commerce admin for a category tree the endpoint
+    // is hiding from them.
+    // v14: update-credentials told agents ALL credentials live in component `.env`
+    // files and to read them with get_component_config. Passwords and client
+    // secrets are now in the OS keychain, so that is wrong AND harmful — an agent
+    // finding nothing could "fix" it by writing the secret back into project files
+    // with update_project_config, undoing the protection. Without the bump,
+    // existing projects keep an instruction that reverses a security change.
+    // v15: diagnose-demo had no entry for "my change is not on the site" — the
+    // symptom an agent meets every time it edits a storefront file. With nothing
+    // routing it to git, one agent verified against the deployed site, read CDN
+    // propagation lag as discarded commits, re-applied work that had never been
+    // lost, and filed a bug about the extension force-pushing. Without the bump,
+    // existing projects keep a diagnosis table with no answer for the symptom
+    // that produced a false bug report.
+    it('is 15 (check git before deciding your work is gone)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(15);
     });
 });
 

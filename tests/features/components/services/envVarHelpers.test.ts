@@ -21,7 +21,7 @@ describe('envVarHelpers', () => {
      * installer, the EDS store-structure reader, and the wizard's auto-detect hook.
      * Three copies of "how do I get this credential" is what makes moving it
      * expensive, and moving it is planned
-     * (`.rptc/backlog/component-secret-routing/`). Collapsed here so that when the
+     * (`.rptc/complete/component-secret-routing/`). Collapsed here so that when the
      * value moves, one function changes.
      *
      * Deliberately PURE — no vscode, no async. `useAutoStoreDetect` runs in the

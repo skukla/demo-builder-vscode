@@ -20,6 +20,41 @@ describe('ActionGrid', () => {
         jest.clearAllMocks();
     });
 
+    describe('Sample Data tile gating', () => {
+        /**
+         * The Data Installer needs both `dataInstaller.enabled` and a usable
+         * `apiBaseUrl`. The tile used to render on neither, so every user
+         * without the URL — which is the shipped default — got a tile that
+         * opened a surface refusing them. The host decides; this only obeys.
+         */
+        it('hides the tile when the Data Installer is not configured', () => {
+            render(<ActionGrid {...defaultProps} dataInstallerAvailable={false} />);
+
+            expect(screen.queryByText('Sample Data')).not.toBeInTheDocument();
+        });
+
+        it('shows the tile when the Data Installer is configured', () => {
+            render(<ActionGrid {...defaultProps} dataInstallerAvailable={true} />);
+
+            expect(screen.getByText('Sample Data')).toBeInTheDocument();
+        });
+
+        it('hides the tile when the host did not say', () => {
+            // Undefined is not "yes". Offering a surface we have not confirmed
+            // is the failure the flag exists to prevent, so absence must fail
+            // closed rather than fall back to the old unconditional render.
+            render(<ActionGrid {...defaultProps} />);
+
+            expect(screen.queryByText('Sample Data')).not.toBeInTheDocument();
+        });
+
+        it('gates it for EDS projects too', () => {
+            render(<ActionGrid {...edsProps} dataInstallerAvailable={false} />);
+
+            expect(screen.queryByText('Sample Data')).not.toBeInTheDocument();
+        });
+    });
+
     describe('AI tile removal', () => {
         it('should not render an AI tile (AI lives in the sidebar)', () => {
             render(<ActionGrid {...defaultProps} />);

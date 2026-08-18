@@ -108,7 +108,7 @@ describe('InExtensionMcpServer', () => {
         });
     });
 
-    it('serves the nine project tools over the socket', async () => {
+    it('serves the ten project tools over the socket', async () => {
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
         await server.start();
 
@@ -116,6 +116,7 @@ describe('InExtensionMcpServer', () => {
 
         expect(names.sort()).toEqual(
             [
+                'get_block_authoring_shape',
                 'get_block_source',
                 'get_component_config',
                 'get_project',
@@ -146,7 +147,7 @@ describe('InExtensionMcpServer', () => {
 
         const names = await listToolsOverSocket(socketPath);
         expect(names).toContain('ping_tool');
-        expect(names).toContain('list_projects'); // the 7 project tools still present
+        expect(names).toContain('list_projects'); // the file-based project tools still present
 
         const result = await callToolOverSocket(socketPath, 'ping_tool', {});
         expect(result).toBe('{"pong":true}');

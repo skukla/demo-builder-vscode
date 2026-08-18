@@ -32,6 +32,7 @@ import type {
 import { useConfigureFieldValues } from './hooks/useConfigureFieldValues';
 import { useSelectedComponents } from './hooks/useSelectedComponents';
 import { useServiceGroups } from './hooks/useServiceGroups';
+import { withStoredSecretsPreserved } from './storedSecretPayload';
 import { PageHeader, PageFooter } from '@/core/ui/components/layout';
 // Direct paths, not the barrels: several Configure suites mock `components/layout`
 // wholesale to stub PageHeader/PageFooter, and a barrel import would hand this screen an
@@ -42,8 +43,10 @@ import { StepRail } from '@/core/ui/components/navigation/StepRail';
 import { useFocusTrap } from '@/core/ui/hooks';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { normalizeProjectName, getProjectNameError } from '@/core/validation/normalizers';
+import { ACCS_OAUTH_CLIENT_ID } from '@/features/components/config/envVarKeys';
 import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
 import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
+import { useCredentialService } from '@/features/components/ui/hooks/useCredentialService';
 import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AuthoringExperience, Project } from '@/types/base';
@@ -69,6 +72,14 @@ interface ConfigureScreenProps {
     providedEnvVars?: Record<string, string>;
     /** Per-appBuilderComponent "is set" flags for secret vars (booleans only, no values). */
     appBuilderComponentSecretFlags?: Record<string, Record<string, boolean>>;
+    /**
+     * Component-declared secrets this project holds, booleans only.
+     *
+     * A migrated credential is in the OS keychain, which this webview cannot read.
+     * Without the flag a required password field renders empty and a save writes a
+     * blank over a working credential.
+     */
+    componentSecretFlags?: Record<string, Record<string, boolean>>;
 }
 
 /** Derive save button label from saving/deploying state */
@@ -88,6 +99,7 @@ export function ConfigureScreen({
     appBuilderComponentCatalog = EMPTY_CATALOG,
     providedEnvVars = EMPTY_PROVIDED,
     appBuilderComponentSecretFlags = EMPTY_SECRET_FLAGS,
+    componentSecretFlags = EMPTY_SECRET_FLAGS,
 }: ConfigureScreenProps) {
     const [authoringExperience, setAuthoringExperience] = useState<AuthoringExperience>(
         initialAuthoringExperience ?? 'da-live-classic',
@@ -172,6 +184,9 @@ export function ConfigureScreen({
         fetchStores,
         hasStoreData,
         isFetching,
+        // Configure is the surface that renders a SAVED project, so it is the one
+        // whose password may already have migrated out of the config map.
+        secretFlags: componentSecretFlags,
     });
 
     // GLOBAL validation: every service group, not the one on screen. An error the user
@@ -225,7 +240,11 @@ export function ConfigureScreen({
             const result = await webviewClient.request<SaveConfigurationResponse>(
                 'save-configuration',
                 {
-                    componentConfigs,
+                    componentConfigs: withStoredSecretsPreserved(
+                        componentConfigs,
+                        componentSecretFlags,
+                        touchedFields,
+                    ),
                     newProjectName,
                     ...(isEds ? { authoringExperience } : {}),
                 },
@@ -241,6 +260,11 @@ export function ConfigureScreen({
         }
     }, [
         componentConfigs,
+        // Both feed the stored-secret filter. A stale closure here would send the
+        // blank placeholder and delete the credential — the exact failure the
+        // filter exists to prevent.
+        componentSecretFlags,
+        touchedFields,
         projectName,
         project.name,
         isEds,
@@ -256,11 +280,28 @@ export function ConfigureScreen({
     // and its rail tab carries `hasError` so the user can reach it.
     const canSave = !hasEntries(validationErrors) && !projectNameError;
 
+    // Same treatment the wizard's Connection step gets: these two fields are an
+    // override, and an empty box that cannot say so is what sent people to the
+    // Developer Console. One config entry, two surfaces — they must agree.
+    const hasBrokeredCredentialField = useMemo(
+        () =>
+            serviceGroups.some((group) =>
+                group.fields.some((field) => field.key === ACCS_OAUTH_CLIENT_ID),
+            ),
+        [serviceGroups],
+    );
+    const credentialService = useCredentialService(
+        hasBrokeredCredentialField,
+        project.adobe?.organization,
+    );
+
     const renderFieldRow = useCallback(
         (field: UniqueField, group: ServiceGroup) => (
             <StoreConfigFieldRow
                 field={field}
                 group={group}
+                credentialService={credentialService}
+                secretFlags={componentSecretFlags}
                 autoDetectKey={autoDetectKey}
                 isFetching={isFetching}
                 hasStoreData={hasStoreData}
@@ -292,6 +333,8 @@ export function ConfigureScreen({
             getStoreGroupItems,
             getStoreViewItems,
             forceFetch,
+            credentialService,
+            componentSecretFlags,
         ],
     );
 

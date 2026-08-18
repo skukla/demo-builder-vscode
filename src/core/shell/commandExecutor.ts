@@ -348,13 +348,27 @@ export class CommandExecutor {
         let stderr = '';
 
         const shellOption = options.shell || false;
+        // NO explicit `stdin` option. Passing one — ANY value, including execa's own
+        // default of 'pipe' — makes a large-output child die mid-write: measured
+        // 2026-08-17 against `aio console project list --json`, whose real output is
+        // 398KB. With `stdin: 'pipe'` it exited 2 after 32KB / 82KB / 57KB across
+        // three runs; with the option omitted, 398,275 bytes and exit 0 every time.
+        // The truncated size is random, so it is a race; whether it truncates is
+        // deterministic on the option's presence.
+        //
+        // That is issue #63: an org with 32 projects produced valid JSON cut off at
+        // a page boundary, which surfaced as "Invalid projects response format" with
+        // no error on stderr to explain it.
+        //
+        // The option was added to auto-answer the aio telemetry prompt below. It is
+        // not needed for that — execa's default stdio already provides a writable
+        // `subprocess.stdin`, and a test pins that the prompt handler still reaches it.
         const subprocess: ExecaChildProcess = execa(command, {
             shell: shellOption,
             cwd: options.cwd as string | undefined,
             env: options.env as NodeJS.ProcessEnv | undefined,
             timeout: options.timeout,
             reject: false,
-            stdin: 'pipe',
         });
 
         // Manual AbortController support

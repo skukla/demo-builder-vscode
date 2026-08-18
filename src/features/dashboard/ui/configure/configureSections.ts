@@ -18,6 +18,11 @@
 import type { AppBuilderComponentFieldGroup } from './appBuilderComponentFieldModel';
 import type { ServiceGroup, UniqueField } from './configureTypes';
 import type { StepTab } from '@/core/ui/components/navigation/StepRail';
+import {
+    filterGroupsForSection,
+    isConnectionGroup,
+    type ConnectStoreSection,
+} from '@/features/components/config/storeFieldHelpers';
 
 /** Which of the four sources a section came from. Callers should not need to care. */
 export type ConfigureSectionKind = 'project' | 'serviceGroup' | 'appBuilderComponent' | 'authoring';
@@ -111,6 +116,50 @@ function toServiceGroupSection(
 }
 
 /**
+ * The rail section id for one slice of a connection group.
+ *
+ * `connection` keeps the bare group id, so every existing anchor, test and
+ * remembered tab selection still resolves. Only the new slice is suffixed.
+ */
+export function slicedSectionId(groupId: string, section: ConnectStoreSection): string {
+    return section === 'connection' ? groupId : `${groupId}:${section}`;
+}
+
+/**
+ * One rail section for a slice of a connection group.
+ *
+ * Completion and error counts come from the slice's OWN fields. Counting the whole
+ * group in both tabs would show "1 of 4" on a tab holding one field, and would put
+ * an error badge on a tab where the offending field cannot be seen — the exact
+ * unfindability the `hasError` flag exists to prevent.
+ */
+function toSlicedSection(
+    group: ServiceGroup,
+    section: ConnectStoreSection,
+    label: string,
+    isFieldComplete: (field: UniqueField) => boolean,
+    fieldHasError: (field: UniqueField) => boolean,
+): ConfigureSection {
+    // `connection` carries its credentials, matching what its body renders.
+    const sections: ConnectStoreSection[] =
+        section === 'connection' ? ['connection', 'credentials'] : [section];
+    const fields = sections.flatMap((s) => filterGroupsForSection([group], s)[0]?.fields ?? []);
+
+    const requiredFields = fields.filter((f) => f.required);
+    const requiredComplete = requiredFields.filter((f) => isFieldComplete(f)).length;
+
+    return {
+        id: slicedSectionId(group.id, section),
+        label,
+        kind: 'serviceGroup',
+        isComplete: requiredComplete === requiredFields.length,
+        requiredTotal: requiredFields.length,
+        requiredComplete,
+        hasError: fields.some((f) => fieldHasError(f)),
+    };
+}
+
+/**
  * Build the ordered list of every section the Configure screen renders.
  *
  * Order matches the render order: Project → service groups → App Builder components →
@@ -142,6 +191,36 @@ export function buildConfigureSections({
     ];
 
     for (const group of serviceGroups) {
+        if (isConnectionGroup(group.id)) {
+            // The Commerce group is TWO jobs — reaching the instance, and choosing
+            // the scope within it — and they now get a rail tab each. Accounting is
+            // split with them, or a tab's badge would count the other tab's fields.
+            //
+            // NEITHER tab locks. The earlier decision here preferred sub-sections
+            // precisely because "two tabs would have to borrow the wizard's gating,
+            // which is what deadlocked PaaS" — that gating is what must not come
+            // along, not the tabs. On Configure every tab stays reachable, so a
+            // required field can always be got at.
+            sections.push(
+                toSlicedSection(group, 'connection', group.label, isFieldComplete, fieldHasError),
+            );
+            // Only when there is a scope to choose. A connection group without the
+            // store-code cascade — a partial catalog, or a backend that has none —
+            // would otherwise get a permanently empty tab, which reads as a feature
+            // that is broken rather than one that does not apply.
+            if (filterGroupsForSection([group], 'business-structure').length > 0) {
+                sections.push(
+                    toSlicedSection(
+                        group,
+                        'business-structure',
+                        'Business Structure',
+                        isFieldComplete,
+                        fieldHasError,
+                    ),
+                );
+            }
+            continue;
+        }
         sections.push(toServiceGroupSection(group, isFieldComplete, fieldHasError));
     }
 

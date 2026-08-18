@@ -53,6 +53,11 @@ interface ProjectDashboardScreenProps {
     initialEdsStorefrontStatus?: 'published' | 'stale' | 'update-declined' | 'not-published';
     /** Whether the project has an Adobe org (drives the "Checking organization…" telegraph) */
     hasAdobeContext?: boolean;
+    /**
+     * Whether the Data Installer is switched on AND pointed at an API. Decided
+     * host-side (`isDataInstallerConfigured`) because both halves are settings.
+     */
+    dataInstallerAvailable?: boolean;
     /** Keyed appBuilderComponents map (drives the summary tile's count + dot). */
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
 }
@@ -80,6 +85,7 @@ export function ProjectDashboardScreen({
     initialMeshStatus,
     initialEdsStorefrontStatus,
     hasAdobeContext,
+    dataInstallerAvailable,
     appBuilderComponents,
 }: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
@@ -273,6 +279,7 @@ export function ProjectDashboardScreen({
                                     demoStatus={demoStatusDisplay}
                                     handleRestartDemo={handleRestartDemo}
                                     hasAdobeContext={hasAdobeContext}
+                                    dataInstallerAvailable={dataInstallerAvailable}
                                     appBuilderComponents={appBuilderComponents}
                                     hasMesh={hasMesh}
                                     meshStatus={meshStatus}

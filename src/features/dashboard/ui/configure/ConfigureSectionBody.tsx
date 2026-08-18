@@ -15,7 +15,7 @@
 import { Text, Flex, Link, TextField, RadioGroup, Radio } from '@adobe/react-spectrum';
 import React from 'react';
 import { AppBuilderComponentFieldsSection } from './AppBuilderComponentFieldsSection';
-import type { ConfigureSection } from './configureSections';
+import { slicedSectionId, type ConfigureSection } from './configureSections';
 import type { ServiceGroup, UniqueField } from './configureTypes';
 import { ConfigSection } from '@/core/ui/components/forms';
 import { getValidationState } from '@/core/ui/utils/validationState';
@@ -165,7 +165,15 @@ function AuthoringBody({
  * sections by `group.id` — both halves share one id here, and only the chrome
  * differs.
  */
-function CommerceSubSections({
+/**
+ * The store-scope cascade, as its own rail tab.
+ *
+ * The tab is ALWAYS reachable — no lock. Its fields disclose themselves (they
+ * render null until the connection is usable), so before then the tab would be an
+ * empty pane; a line saying what is missing is the difference between "not yet"
+ * and "broken". The wizard says the same thing for its locked Catalog step.
+ */
+function BusinessStructureSection({
     group,
     renderFieldRow,
     storeStructureReady,
@@ -174,11 +182,42 @@ function CommerceSubSections({
     renderFieldRow: (field: UniqueField, group: ServiceGroup) => React.ReactNode;
     storeStructureReady: boolean;
 }): React.ReactElement {
+    const sliced = filterGroupsForSection([group], 'business-structure')[0];
+
+    // The heading is the section's name, exactly as every other section renders it
+    // (`ServiceGroupList` wraps each group in a ConfigSection with its label). It
+    // stays put in the waiting state too — a body that swaps its heading for a
+    // sentence reads as a different screen rather than the same one, not ready.
+    return (
+        <ConfigSection id="business-structure" label="Business Structure">
+            {!storeStructureReady || !sliced ? (
+                <Text UNSAFE_className="text-gray-600">
+                    Fill in the Connection details to load this instance&apos;s websites and
+                    stores.
+                </Text>
+            ) : (
+                sliced.fields.map((field) => (
+                    <React.Fragment key={field.key}>{renderFieldRow(field, group)}</React.Fragment>
+                ))
+            )}
+        </ConfigSection>
+    );
+}
+
+function CommerceSubSections({
+    group,
+    renderFieldRow,
+}: {
+    group: ServiceGroup;
+    renderFieldRow: (field: UniqueField, group: ServiceGroup) => React.ReactNode;
+}): React.ReactElement {
     const parts: { section: ConnectStoreSection; label: string }[] = [
         { section: 'connection', label: 'Connection' },
-        ...(storeStructureReady
-            ? [{ section: 'business-structure' as ConnectStoreSection, label: 'Business Structure' }]
-            : []),
+        // Credentials get their own heading even though they usually render a
+        // single line saying nothing needs entering — because "Use my own instead"
+        // reveals two inputs, and those need somewhere to belong rather than
+        // appearing under the endpoint field they have nothing to do with.
+        { section: 'credentials', label: 'Credentials' },
     ];
 
     return (
@@ -264,23 +303,33 @@ export function ConfigureSectionBody({
         );
     }
 
+    // Business Structure is its own rail tab, so its id carries the slice suffix.
+    const businessStructureOf = serviceGroups.find(
+        (g) => slicedSectionId(g.id, 'business-structure') === section.id,
+    );
+    if (businessStructureOf) {
+        return (
+            <BusinessStructureSection
+                group={businessStructureOf}
+                renderFieldRow={renderFieldRow}
+                storeStructureReady={storeStructureReady}
+            />
+        );
+    }
+
     const group = serviceGroups.find((g) => g.id === section.id);
     if (!group) return null;
 
     // The Commerce group is TWO tasks: reaching the instance, and choosing the
     // scope within it. Eight fields on PaaS with nothing separating them.
     //
-    // Sub-sections, not tabs: Configure edits rather than sequences, every tab is
-    // always reachable, and there is no lock vocabulary here. Two tabs would have
-    // to borrow the wizard's gating, which is what deadlocked PaaS.
+    // Those are now a rail tab each. The earlier note here preferred sub-sections
+    // because "two tabs would have to borrow the wizard's gating, which is what
+    // deadlocked PaaS" — the gating is the hazard, not the tabs, and neither tab
+    // here locks. Connection keeps its Credentials sub-section, because that pair
+    // is part of reaching the instance rather than a third task.
     if (isConnectionGroup(group.id)) {
-        return (
-            <CommerceSubSections
-                group={group}
-                renderFieldRow={renderFieldRow}
-                storeStructureReady={storeStructureReady}
-            />
-        );
+        return <CommerceSubSections group={group} renderFieldRow={renderFieldRow} />;
     }
 
     // One group in, so `ServiceGroupList` gives it showDivider={false} — right, because

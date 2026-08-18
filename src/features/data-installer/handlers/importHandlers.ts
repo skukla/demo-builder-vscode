@@ -36,6 +36,7 @@ import {
     buildScopeDiscoveryParams,
     groupStoreViewsByWebsite,
 } from '../services/importScopeDiscovery';
+import { resolveInstallTarget } from '../services/sampleDataInstall';
 import { downloadWorkspaceConfigJson } from '../services/workspaceConfigDownload';
 import { IMPORT_PROGRESS_MESSAGE, type ImportJobRecord } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
@@ -43,6 +44,7 @@ import { exportHandlers } from './exportHandlers';
 import { ServiceLocator } from '@/core/di';
 import { PollingService } from '@/core/shell/pollingService';
 import { TransientStateManager } from '@/core/state/transientStateManager';
+import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -230,15 +232,32 @@ export const importHandlers = defineHandlers({
         // in a 25-name catalog.
         const datapack = project?.datapack;
 
+        // The website/store view the project recorded, from the SAME resolver the
+        // build path uses. The modal used to seed its pickers from live discovery
+        // instead, preferring a website named `base` — which is simply wrong on a
+        // project configured for another one, and made a modal-driven reset
+        // target a different scope than the project reset. The project is the
+        // definitive source; this is where it gets asked.
+        //
+        // `resolveInstallTarget` returns the store VIEW code, not the store group:
+        // the service's `store_code` is a view code. Both codes or neither.
+        const scope = resolveInstallTarget({
+            componentSelections: project?.componentSelections,
+            componentConfigs: configs,
+        });
+
         // Shared with the build's sample-data phase — see `deriveImportInstance`.
         // Two derivations would let the same pack land in different places
         // depending on which surface asked, with nothing to report the difference.
         const instance = deriveImportInstance(configs);
         if (instance) {
-            return { success: true, data: { instance, projectName, datapack } };
+            return {
+                success: true,
+                data: { instance, projectName, datapack, ...(scope && { scope }) },
+            };
         }
 
-        return { success: true, data: { datapack } };
+        return { success: true, data: { datapack, ...(scope && { scope }) } };
     },
 
     /**
@@ -341,6 +360,20 @@ export const importHandlers = defineHandlers({
             ACCS_OAUTH_CLIENT_ID: result.clientId,
             ACCS_OAUTH_CLIENT_SECRET: result.clientSecret,
         };
+
+        // Route the freshly-provisioned secret to SecretStorage before the project
+        // is saved. Without this the one path that CREATES a credential is the one
+        // path that writes it to the manifest in the clear — the migration would
+        // only clean it up on some later save, and until then a public-repo
+        // manifest holds an org-wide Commerce write credential.
+        const migration = await migrateDeclaredSecrets(
+            project.componentConfigs,
+            project.path,
+            context.context?.secrets,
+            (line: string) => context.debugLogger.debug(`[Data Installer] ${line}`),
+        );
+        project.componentConfigs = migration.sanitizedConfigs as typeof project.componentConfigs;
+
         await context.stateManager.saveProject(project);
 
         return { success: true };
@@ -415,7 +448,18 @@ async function prepareImport(
             id: { name: input.datapackName, version: input.version },
             commerceInstance: input.commerceInstance,
             dataTypes: input.dataTypes,
-            target: input.target,
+            // A caller that names a scope means it. One that names NONE gets the
+            // project's, because the alternative is the SERVICE's `base`/`default`
+            // — a scope nobody chose. The modal always sends a pair (its pickers
+            // are seeded), so this is really the agent surface: the MCP rows leave
+            // both codes optional and an agent that skips
+            // `list_datapack_import_scopes` would otherwise import, and RESET,
+            // against `base`.
+            //
+            // Half a pair never reaches here — `readTarget` refuses it — so this
+            // cannot complete a partial specification into something the caller
+            // did not ask for.
+            target: input.target ?? resolveInstallTarget(project) ?? undefined,
             credentials: credentials.credentials,
         },
     };

@@ -127,6 +127,7 @@ export {
     handleOpenDaLiveLogin,
     handleStoreDaLiveToken,
     handleDiscoverStoreStructure,
+    handleCheckCredentialService,
 } from './handlers';
 
 // Types - GitHub

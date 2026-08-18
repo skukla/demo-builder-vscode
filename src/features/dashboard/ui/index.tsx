@@ -30,6 +30,7 @@ root.render(
                 initialMeshStatus={data?.initialMeshStatus}
                 initialEdsStorefrontStatus={data?.initialEdsStorefrontStatus}
                 hasAdobeContext={data?.hasAdobeContext}
+                dataInstallerAvailable={data?.dataInstallerAvailable}
                 appBuilderComponents={data?.appBuilderComponents}
                 appBuilderComponentCatalog={data?.appBuilderComponentCatalog}
             />

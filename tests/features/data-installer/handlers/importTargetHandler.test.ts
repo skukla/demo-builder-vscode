@@ -82,8 +82,86 @@ async function target(project: unknown) {
         instance?: string;
         projectName?: string;
         datapack?: { name: string; version: string };
+        scope?: { websiteCode: string; storeCode: string };
     };
 }
+
+/**
+ * The scope the project recorded, and why it belongs on THIS handler.
+ *
+ * The import modal seeds its website/store-view pickers from live discovery,
+ * preferring a website literally named `base`. On a project configured for
+ * `bodea` that is simply wrong — the project already holds the answer, in the
+ * same `componentConfigs` pair the build path reads through
+ * `resolveInstallTarget`. The modal was inventing a scope instead of asking.
+ *
+ * This handler is where the asking belongs: its whole job is "what should the
+ * modal prefill", and it already answers that for the instance and the datapack.
+ * Adding the scope here fixes the modal and `get_datapack_import_target` (the
+ * MCP tool) from one source rather than teaching each caller separately.
+ *
+ * Store VIEW, not store group: the service's `store_code` is a store view code
+ * (`import.md`), so `ACCS_STORE_VIEW_CODE` is the one that travels and
+ * `ACCS_STORE_CODE` — the group — does not.
+ */
+const SCOPED_PROJECT: Partial<Project> = {
+    name: 'bodea-template-test',
+    componentSelections: { backend: 'adobe-commerce-accs' },
+    componentConfigs: {
+        'adobe-commerce-accs': {
+            ACCS_GRAPHQL_ENDPOINT: `https://na1-sandbox.api.commerce.adobe.com/${TENANT}/graphql`,
+            ACCS_WEBSITE_CODE: 'bodea',
+            ACCS_STORE_CODE: 'bodea_store',
+            ACCS_STORE_VIEW_CODE: 'bodea_us',
+        },
+    },
+};
+
+describe('the scope the project recorded', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('reports the website and store VIEW codes', async () => {
+        expect((await target(SCOPED_PROJECT)).scope).toEqual({
+            websiteCode: 'bodea',
+            storeCode: 'bodea_us',
+        });
+    });
+
+    it('never reports the store GROUP code', async () => {
+        // `bodea_store` is a store group. The service's `store_code` is a store
+        // view, so sending the group would target nothing.
+        expect(JSON.stringify(await target(SCOPED_PROJECT))).not.toContain('bodea_store');
+    });
+
+    it('omits the scope when the project records none', async () => {
+        // ACCS_PROJECT has an endpoint but no codes. Half a pair is worse than
+        // none, so nothing is reported and the modal keeps its own default.
+        expect((await target(ACCS_PROJECT)).scope).toBeUndefined();
+    });
+
+    it('omits the scope when only one code is recorded', async () => {
+        const halfScoped = {
+            ...ACCS_PROJECT,
+            componentConfigs: {
+                'adobe-commerce-accs': {
+                    ...ACCS_PROJECT.componentConfigs!['adobe-commerce-accs'],
+                    ACCS_WEBSITE_CODE: 'bodea',
+                },
+            },
+        };
+
+        expect((await target(halfScoped)).scope).toBeUndefined();
+    });
+
+    it('still reports the instance alongside the scope', async () => {
+        // The scope is additive; it must not displace what this handler already
+        // answered.
+        expect(await target(SCOPED_PROJECT)).toMatchObject({
+            instance: TENANT,
+            projectName: 'bodea-template-test',
+        });
+    });
+});
 
 describe('get-datapack-import-target', () => {
     beforeEach(() => jest.clearAllMocks());

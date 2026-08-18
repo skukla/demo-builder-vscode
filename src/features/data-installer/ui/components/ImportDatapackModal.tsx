@@ -43,6 +43,7 @@ import { dataTypeLabel } from '../dataTypeLabel';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useImportProgress } from '../hooks/useImportProgress';
 import { useImportScopes, type ImportScopes } from '../hooks/useImportScopes';
+import { deselectType, selectType, type TypeSelection } from '../importDependencies';
 import { progressLabel, summarizeProgress } from '../importProgress';
 import { ImportForm } from './ImportForm';
 import {
@@ -68,6 +69,12 @@ interface ImportTarget {
     instance?: string;
     /** The open project's name — the only human-readable handle on this target. */
     projectName?: string;
+    /**
+     * The website/store view the project's Business Structure recorded. Seeds
+     * the pickers, so the dialog opens on the scope the project is configured
+     * for rather than on whatever the instance happens to call `base`.
+     */
+    scope?: { websiteCode: string; storeCode: string };
 }
 
 /**
@@ -115,7 +122,11 @@ export function ImportDatapackModal({
     availableTypes,
     onClose,
 }: ImportDatapackModalProps): React.JSX.Element {
-    const [selected, setSelected] = useState<string[]>([]);
+    // One state, not two: the provenance record only means anything alongside
+    // the selection it describes, and splitting them invites an update that
+    // moves one without the other.
+    const [selection, setSelection] = useState<TypeSelection>({ selected: [], auto: [] });
+    const selected = selection.selected as string[];
     const [watching, setWatching] = useState(true);
     const [resetArmed, setResetArmed] = useState(false);
     /** Which operation's outcome the result view shows. */
@@ -137,7 +148,9 @@ export function ImportDatapackModal({
     const status = useDataInstallerRequest<ImportJobRecord | null>('get-datapack-import-status');
     const target = useDataInstallerRequest<ImportTarget>('get-datapack-import-target');
     // Owns the discovered scopes AND the user's choice within them — see the hook.
-    const scope = useImportScopes();
+    // Seeded from what the PROJECT recorded, so the dialog opens on the scope the
+    // project is configured for instead of on `base`.
+    const scope = useImportScopes(target.value?.scope);
 
     const loadStatus = status.load;
     useEffect(() => {
@@ -191,17 +204,29 @@ export function ImportDatapackModal({
         }
     }, [startedActivation, loadStatus]);
 
-    const toggle = useCallback((type: string, isSelected: boolean): void => {
-        setSelected((current) =>
-            isSelected ? [...current, type] : current.filter((t) => t !== type),
-        );
-    }, []);
+    const toggle = useCallback(
+        (type: string, isSelected: boolean): void => {
+            // Both transitions are pure and live in `importDependencies` — the
+            // provenance rule they implement is the whole reason this is not a
+            // one-line filter, and it is worth testing without React.
+            setSelection((current) =>
+                isSelected
+                    ? selectType(current, type, availableTypes)
+                    : deselectType(current, type),
+            );
+        },
+        [availableTypes],
+    );
 
     // A pack ships up to 14 types (Bodea does), so ticking them one at a time
     // is a chore for what is usually "all of it".
     const allSelected = availableTypes.length > 0 && selected.length === availableTypes.length;
     const toggleAll = useCallback((): void => {
-        setSelected(allSelected ? [] : [...availableTypes]);
+        // Everything or nothing, and either way the user chose all of it — so
+        // nothing is `auto` and Clear all genuinely clears.
+        setSelection(
+            allSelected ? { selected: [], auto: [] } : { selected: [...availableTypes], auto: [] },
+        );
     }, [allSelected, availableTypes]);
 
     /** The one body both paths send, so a dry run checks what a start would do. */

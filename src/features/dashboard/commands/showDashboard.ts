@@ -14,6 +14,7 @@ import { dashboardHandlers } from '@/features/dashboard/handlers';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import type { AppBuilderComponentRowStatus } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks';
+import { isDataInstallerConfigured } from '@/features/data-installer/services/dataInstallerConfig';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
@@ -141,6 +142,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         edsDaLiveUrl?: string;
         initialEdsStorefrontStatus?: string;
         hasAdobeContext: boolean;
+        dataInstallerAvailable: boolean;
         appBuilderComponents?: Record<string, AppBuilderComponentState>;
         appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
     }> {
@@ -180,6 +182,12 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         // stack-filtered catalog for the add-integration picker (the mesh
         // renders as the grid's first peer card, derived from the live mesh
         // status channels, so no separate seed is needed here).
+        // Whether to OFFER the Sample Data tile at all. Read here rather than in
+        // the webview because these are host settings; the tile used to render
+        // unconditionally, so a user without an API URL got a tile that opened a
+        // surface refusing them.
+        const dataInstallerAvailable = isDataInstallerConfigured();
+
         const appBuilderComponentCatalog = this.resolveAppBuilderComponentCatalog(project ?? null);
 
         return {
@@ -198,6 +206,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             edsDaLiveUrl,
             initialEdsStorefrontStatus,
             hasAdobeContext,
+            dataInstallerAvailable,
             appBuilderComponents: project?.appBuilderComponents,
             appBuilderComponentCatalog,
         };

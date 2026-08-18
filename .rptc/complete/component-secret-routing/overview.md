@@ -1,10 +1,50 @@
 # Component secret routing — the declaration decides where a credential lives
 
-**Status: PARTIALLY SHIPPED.** The small version — step 3, step 5 and phase 1 —
-landed in `ce840267` (2026-08-13, same day, on `feature/data-installer`). What
-remains is the seam itself: steps 1–2 and migration phases 2–3. This file is the
-record for THAT remaining work; do not file it anywhere else, or one job gets two
-records in two lifecycle states.
+**Status: SHIPPED 2026-08-17.** The small version (steps 3 and 5) landed in
+`ce840267` on 2026-08-13. Steps 1–2 and migration phases 1–3 landed 2026-08-17.
+Moved from `.rptc/backlog/` on completion.
+
+## What shipped, and where it lives
+
+| Piece | Where |
+|---|---|
+| `secret: true` as a routing decision, separate from `type` as a render hint | `src/types/components.ts`, declared on the two Commerce credentials in `components.json` |
+| **Phase 1** — one accessor: SecretStorage first, `componentConfigs` fallback | `components/services/commerceCredentialStore.ts` |
+| **Phase 2** — write-through with a verified read-back | `components/services/commerceSecretMigration.ts`, wired into project creation AND the Configure save |
+| **Phase 3** — converge every existing project on activation | `components/services/commerceSecretSweep.ts`, in the `extension.ts` upkeep chain |
+
+## Two things the plan got wrong, corrected by building it
+
+**1. The webview consumer does NOT simply become a handler round trip.** The plan
+says it does. That is right for Configure and wrong for the wizard, and the
+difference decided phase 2's shape:
+
+- Configure renders a SAVED project — the value is in the webview only because the
+  host sent it, so the host can resolve it instead.
+- The wizard renders a credential the user is TYPING. No project exists, so there
+  is no key and nothing saved. No round trip can produce it.
+
+So the seam is "the HOST can always resolve them, and the webview only supplies
+what it just collected". `discover-store-structure` accepts either, which is what
+lets Configure stop sending a credential without breaking creation.
+
+**2. Creation, not just save, had to write the secret.** The plan's phase 2 says
+"on save". Doing only that means every NEW project writes its credential to the
+manifest in the clear and cleans it up later. Creation is the first moment a
+project path exists, which is the first moment the key scheme can address it — so
+the migration runs there too, before the project is ever persisted.
+
+## Still deliberately true after the migration
+
+`SECRET_ENV_KEYS` still lists both credentials, and should. A value is RETAINED in
+`componentConfigs` whenever a SecretStorage write cannot be verified, and a project
+that has not yet been swept still holds one. Removing them from the export
+blocklist would leak exactly those cases. The list shrinks when the sweep is proven
+to have converged the field everywhere, not when the code that moves it ships.
+
+---
+
+## The original plan follows, unedited.
 
 **Shipped, so do not redo:**
 
@@ -266,7 +306,7 @@ field that exists — rather than an error message pointing at nothing.
 
 ## Kickoff prompt
 
-> Read `.rptc/backlog/component-secret-routing/overview.md`, then
+> Read `.rptc/complete/component-secret-routing/overview.md`, then
 > `src/features/dashboard/handlers/appBuilderComponentSecrets.ts` and
 > `src/features/app-builder/services/secretKey.ts` — the two pieces being
 > generalized. Confirm with the user which migration strategy step 2 uses (eager

@@ -23,9 +23,30 @@ export interface StoredTokenConfig {
  */
 export type TokenConfigReader = () => StoredTokenConfig | undefined;
 
-/** The real read: the same library, and the same key, the CLI itself uses. */
-const readFromAioConfig: TokenConfigReader = () =>
-    aioConfig.get('ims.contexts.cli.access_token') as StoredTokenConfig | undefined;
+/**
+ * The real read: the same library, and the same key, the CLI itself uses.
+ *
+ * `reload()` first, every time, because the library caches the parsed config in
+ * memory and reloads only when it holds nothing (`Config.js`: `this.values ||
+ * this.reload()`). Without it the first read of the session is the ONLY read of
+ * the file — and `aio login` writes that file from another process, so a
+ * successful sign-in was invisible here: the check that follows it re-inspected
+ * the expired snapshot, said `expiresIn=-15 min`, and sent the user back to the
+ * browser. Three logins in a row in the 2026-08-17 log, all "successful".
+ *
+ * Exported so the reload is under test. It is the default argument of a
+ * `TokenConfigReader` parameter, and every other test injects past it.
+ */
+export const readStoredTokenConfig: TokenConfigReader = () => {
+    try {
+        aioConfig.reload();
+    } catch {
+        // Serve whatever the library already holds. A stale token is a poor
+        // answer; throwing is a worse one, because the caller reads a throw as
+        // "not signed in" and offers a login that cannot fix an unreadable file.
+    }
+    return aioConfig.get('ims.contexts.cli.access_token') as StoredTokenConfig | undefined;
+};
 
 /**
  * Manages Adobe access tokens
@@ -59,7 +80,7 @@ export class TokenManager {
     constructor(
         cacheManager?: AuthCacheManager,
         logger?: Logger,
-        private readonly readTokenConfig: TokenConfigReader = readFromAioConfig,
+        private readonly readTokenConfig: TokenConfigReader = readStoredTokenConfig,
     ) {
         this.logger = logger ?? getLogger();
         this.cacheManager = cacheManager;

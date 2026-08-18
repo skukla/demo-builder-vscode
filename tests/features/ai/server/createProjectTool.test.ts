@@ -30,7 +30,8 @@ jest.mock('@/features/ai/server/adobeTargetStore', () => ({
 }));
 
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
-import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
+import { getAdobeTarget, runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
+import { buildProjectConfig } from '@/features/project-creation/ui/wizard/wizardHelpers';
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import {
@@ -123,6 +124,44 @@ describe('create_project', () => {
             await s.call(HEADLESS);
             // INVARIANT: aio-touching work runs inside withOrgContext(storedTarget, …)
             expect(runWithAdobeTarget).toHaveBeenCalled();
+        });
+
+        // The tool's OWN error text tells the agent: "Select one first: select_org →
+        // select_project → select_workspace." Those write adobeTargetStore. Reading
+        // the aio CLI's global selection instead records whatever another process
+        // last chose — so the instruction could not satisfy the tool.
+        it('anchors a mesh project to the MCP session target, not the aio global', async () => {
+            (getResolvedMeshRequirement as jest.Mock).mockReturnValueOnce(true);
+            (getAdobeTarget as jest.Mock).mockReturnValueOnce({
+                orgId: 'org-session', orgCode: 'SESSION@AdobeOrg', orgName: 'Session Org',
+                projectId: 'proj-session', projectName: 'Session Project',
+                workspaceId: 'ws-session', workspaceName: 'Session Workspace',
+            });
+            const s = fakeServer();
+            registerCreateProjectTool(s, ctxFactory);
+            await s.call(HEADLESS);
+
+            const state = (buildProjectConfig as jest.Mock).mock.calls[0][0];
+            expect(state.adobeWorkspace).toMatchObject({ id: 'ws-session' });
+            expect(state.adobeOrg).toMatchObject({ id: 'org-session' });
+            expect(state.adobeProject).toMatchObject({ id: 'proj-session' });
+            // Stronger than comparing values: the CLI's global selection is never
+            // consulted at all when the session has one.
+            expect(authManager.getCurrentWorkspace).not.toHaveBeenCalled();
+        });
+
+        // Nothing has selected in this MCP session — the CLI's selection is the
+        // only answer available, and using it is correct.
+        it('falls back to the resolved context when no session target is set', async () => {
+            (getResolvedMeshRequirement as jest.Mock).mockReturnValueOnce(true);
+            (getAdobeTarget as jest.Mock).mockReturnValueOnce(undefined);
+
+            const s = fakeServer();
+            registerCreateProjectTool(s, ctxFactory);
+            await s.call(HEADLESS);
+
+            const state = (buildProjectConfig as jest.Mock).mock.calls[0][0];
+            expect(state.adobeWorkspace).toMatchObject({ id: 'ws-1' });
         });
 
         it('mesh project hands off when not signed in', async () => {

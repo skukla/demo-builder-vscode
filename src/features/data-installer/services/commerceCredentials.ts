@@ -14,16 +14,21 @@
  * `ACCS-REST-API` to it, proven live 2026-08-13. An earlier version of this
  * docstring said auto-provisioning was impossible; that was wrong.
  *
- * **The ACCS pair lives in `componentConfigs`**, keyed on the
- * `adobe-commerce-accs` component — the same place a hand-pasted pair goes, so
- * there is one storage path and not two. An earlier version of this docstring
- * claimed SecretStorage "and nowhere else", which was never true of the shipped
- * code and is the kind of claim a reader trusts instead of checking.
+ * **The ACCS pair is SPLIT, and asking where it lives has one answer only via
+ * `commerceCredentialStore`.** As of 2026-08-17 the client SECRET is declared
+ * `secret: true` and routes to VS Code SecretStorage; the client ID is not a
+ * secret and stays in `componentConfigs`. So neither "it is in configs" nor "it is
+ * in SecretStorage" is true of the pair — each half is looked up independently and
+ * assembled here.
  *
- * Export safety comes from `SECRET_ENV_KEYS` (`components/config/envVarKeys.ts`)
- * instead: `ACCS_OAUTH_CLIENT_SECRET` is listed there, so `stripSecretValues`
- * removes it from secret-free exports. The `secrets` parameter below is unused
- * and kept only for call-site stability — see its own note.
+ * This docstring has now been wrong in BOTH directions: it once claimed
+ * SecretStorage "and nowhere else" when nothing wrote there, and then claimed
+ * `componentConfigs` after half of it moved. Do not restate where the value lives;
+ * name the accessor and let it answer.
+ *
+ * Export safety still comes from `SECRET_ENV_KEYS` (`components/config/envVarKeys.ts`)
+ * as well: a write that could not be verified is RETAINED in configs, so
+ * `stripSecretValues` remains the backstop rather than becoming redundant.
  *
  * **This module never says whether a credential WORKS.** For PaaS that is
  * `getAdminToken`; for ACCS nothing local can, which is exactly why the write
@@ -38,7 +43,11 @@
  */
 
 import type { CommerceCredentials } from './dataInstallerWriteClient';
-import { readAccsOAuthPair, readPaasAdminPair } from '@/features/components/services/envVarHelpers';
+import {
+    resolveAccsOAuthPair,
+    resolvePaasAdminPair,
+    type CommercePairDeps,
+} from '@/features/components/services/commerceCredentialStore';
 
 /** Backend component ids, as they appear on a stack in `stacks.json`. */
 const PAAS_BACKEND = 'adobe-commerce-paas';
@@ -49,6 +58,15 @@ export interface CredentialProject {
     /** Backend component id from the project's stack. */
     stackBackend: string;
     componentConfigs: Record<string, Record<string, string | boolean | number | undefined>>;
+    /**
+     * Project path — the SecretStorage key scheme's project segment, the same one
+     * `persistAppBuilderComponentSecrets` uses.
+     *
+     * Optional because an UNSAVED project has none, and a credential cannot be in
+     * SecretStorage before the project it belongs to exists. Absent simply means
+     * "config only", which is what every read did before the seam landed.
+     */
+    path?: string;
 }
 
 /** The `vscode.SecretStorage` surface this module uses. Narrowed for testing. */
@@ -92,10 +110,12 @@ export type CredentialBroker = () => Promise<BrokerOutcome>;
 export async function resolveCommerceCredentials(args: {
     project: CredentialProject;
     /**
-     * Unused, and kept only so callers need not change while the seam lands.
-     * Both backends now read DECLARED config; when a credential moves to
-     * SecretStorage (see `.rptc/backlog/component-secret-routing/`), this is where
-     * the store gets consulted.
+     * The credential store, consulted BEFORE `componentConfigs`.
+     *
+     * Wired 2026-08-17 (`.rptc/complete/component-secret-routing/`). Omitting it
+     * degrades every resolution to config-only, which after migration means a
+     * declared secret resolves to nothing and the caller reports "no usable
+     * credentials". Pass it wherever one exists.
      */
     secrets?: SecretStore;
     projectName?: string;
@@ -107,19 +127,26 @@ export async function resolveCommerceCredentials(args: {
     broker?: CredentialBroker;
 }): Promise<CredentialResolution> {
     const { project } = args;
+    const deps: CommercePairDeps = {
+        ...(args.secrets ? { secrets: args.secrets } : {}),
+        ...(project.path ? { projectId: project.path } : {}),
+    };
 
     if (project.stackBackend === PAAS_BACKEND) {
-        return resolvePaas(project);
+        return resolvePaas(deps, project);
     }
     if (project.stackBackend === ACCS_BACKEND) {
-        return resolveAccs(project, args.broker);
+        return resolveAccs(deps, project, args.broker);
     }
     return { ok: false, reason: 'unsupported-backend' };
 }
 
 /** Both halves or nothing — half a credential is a failure, not a partial success. */
-function resolvePaas(project: CredentialProject): CredentialResolution {
-    const pair = readPaasAdminPair(project.componentConfigs);
+async function resolvePaas(
+    deps: CommercePairDeps,
+    project: CredentialProject,
+): Promise<CredentialResolution> {
+    const pair = await resolvePaasAdminPair(deps, project.componentConfigs);
     if (!pair) {
         return { ok: false, reason: 'missing-paas-admin' };
     }
@@ -139,10 +166,11 @@ function resolvePaas(project: CredentialProject): CredentialResolution {
  * easy one.
  */
 async function resolveAccs(
+    deps: CommercePairDeps,
     project: CredentialProject,
     broker?: CredentialBroker,
 ): Promise<CredentialResolution> {
-    const pair = readAccsOAuthPair(project.componentConfigs);
+    const pair = await resolveAccsOAuthPair(deps, project.componentConfigs);
     if (pair) {
         return { ok: true, credentials: { kind: 'accs', ...pair } };
     }

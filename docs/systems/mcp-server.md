@@ -32,13 +32,13 @@ The pieces:
   any duplex byte stream.
 
 A tool result is a list of "content" items. We only ever return **one text
-item**, and that text is **JSON we stringify ourselves** (see
-[§10 Conventions](#10-conventions-every-tool-follows)). The agent reads that JSON
-and decides what to do next.
+item**. That text is usually JSON we stringify ourselves — but not always:
+refusals and errors are plain sentences the agent reads rather than parses (see
+[§10 Conventions](#10-conventions-every-tool-follows)).
 
 That's the whole model: *the agent discovers tools, calls them with validated
-arguments, and reads back JSON.* Everything below is about how Demo Builder
-implements the server side well.
+arguments, and reads back one text answer.* Everything below is about how Demo
+Builder implements the server side well.
 
 ---
 
@@ -140,7 +140,7 @@ What survived the retirement, and why it matters when reading the code:
 
 - **`src/mcp-server.ts` still exists**, but only as a **shared, `vscode`-free
   tool-registration module.** Its `registerProjectTools(server, projectsDir)`
-  registers the original seven file-based tools, and the in-extension server
+  registers the file-based tools (ten today), and the in-extension server
   calls it (see §6). The standalone *bootstrap* (the `StdioServerTransport`
   process entry) is gone.
 - Only **`dist/mcp-proxy.js`** is built as a standalone artifact now (see
@@ -213,7 +213,7 @@ Wiring lives in `src/extension.ts`:
 
 Tool registration on each connection happens in two layers:
 
-1. `registerProjectTools(server, projectsDir)` — the seven shared file-based
+1. `registerProjectTools(server, projectsDir)` — the ten shared file-based
    tools from `src/mcp-server.ts`.
 2. A `registerExtraTools` callback (injected by `extension.ts` so the server
    module stays free of `vscode`/handler imports) that calls every other
@@ -236,10 +236,12 @@ Take `delete_mesh` as a representative action tool:
 4. The handler builds a **headless `HandlerContext`** via the injected
    `ctxFactory` (see §8) and dispatches to the *same* mesh-deletion service/
    handler the dashboard uses.
-5. The handler returns `asText({ … })` — a single text item whose text is
-   stringified JSON describing the outcome.
+5. The handler returns an ordinary `HandlerResponse`; `delete_mesh` is a
+   descriptor row, so `registerDescriptorTools` shapes it and wraps the result
+   (`asRawText(shape(res, args))` — `shape` returns a string already). On the
+   failure branch that text is `Error: …` prose, not JSON.
 6. `withToolLogging` logs success + elapsed ms (or the error), and the result
-   travels back out the socket → proxy → Claude Code, which reads the JSON.
+   travels back out the socket → proxy → Claude Code.
 
 No webview, no modal, no button — but the work is identical to the UI path.
 
@@ -276,13 +278,16 @@ These are `vscode`-free and operate on files under `~/.demo-builder/projects`.
 
 | Tool | Purpose |
 |---|---|
-| `list_projects` | List all projects (paginated). |
-| `get_project` | Read a project's manifest (summary or full). |
-| `get_component_config` | Read a component's `.demo-builder.json` / `.env`. |
+| `list_projects` | List all projects (paginated). Carries `pinned: true` when set — omitted otherwise, so the common row costs nothing. It exists because `set_project_pinned` was a write no read could confirm. |
+| `get_project` | Read a project's manifest (summary or full). **Secret VALUES are stripped** (`stripSecretValues` over `componentConfigs`) on BOTH paths — `full: true` is the more dangerous one, not an exemption. Found live 2026-08-17 returning a real `ACCS_OAUTH_CLIENT_SECRET`; the same convention `export_project_settings` already followed. To read a secret, open the project — not an agent transcript. |
+| `get_component_config` | Read a component's `.demo-builder.json` / `.env`. **Returns the file VERBATIM, secrets included** — deliberately, since the file is the answer, but it means the `get_project` strip above does not cover this door. Whether that stays deliberate is an open question, not a settled one: a `.env` read hands an agent every credential the project has. Filed rather than changed, because narrowing it changes the tool's contract. |
 | `update_project_config` | Write `.demo-builder.json` / `.env` (env content validated). |
-| `sync_storefront` | Git add/commit/push the storefront. |
+| `sync_storefront` | Git add/commit/push the storefront. Names the pushed commit in its reply, and says publishing reaches the CDN on a delay — an agent that verified against the rendered site instead of git once read that lag as discarded commits. On a `non-fast-forward` rejection it rebases onto the remote and retries **once** (`retryAfterRebase`); a conflicting rebase is aborted so the checkout is exactly as found. A `ruleset` rejection is never retried — replaying it cannot change why a rule refused it. |
 | `list_blocks` | List EDS blocks in the storefront. |
 | `get_block_source` | Read a block's files (manifest or one file, size-capped). |
+| `get_block_authoring_shape` | Read a block's DA.live authoring shape from `component-definition.json` + the models/filters siblings (registry index when `blockName` is omitted). |
+| `promote_block_to_library` | Add a local block to the DA.live authoring library. Destructive (commits, pushes, publishes); confirm-gated. |
+| `remove_block_from_library` | The inverse. Destructive; confirm-gated. |
 
 ### Discovery & catalog — `discoveryTools.ts`
 `list_components`, `list_demo_packages`, `list_stacks` — read-only catalog lookups
@@ -293,11 +298,28 @@ used while assembling a `create_project` call.
 `select_project`, `list_workspaces`, `select_workspace`. These back the
 [auth handoff](#auth-handoff) other tools rely on.
 
-`list_adobe_projects` returns `who_created` when the Console reports one. That
-field alone decides whether a project offers a delete affordance — the ownership
-gate compares it to the token's `user_id` claim and fails closed — so exposing it
-is what makes "why can I not delete this project?" answerable. The comparison
-stays extension-side; only the field travels.
+`list_adobe_projects` is **paged and searchable**, and each row carries
+`deletable` — the ownership verdict, not the raw creator id.
+
+That answers "why can I not delete this project?", which is the question the
+field exists for. It replaced shipping `who_created` itself, which was wrong two
+ways, both measured live 2026-08-16 against a real org:
+
+- **Size.** The org has **725 projects**; the unpaged response was **111,748
+  bytes** (~28,000 tokens), and `who_created` alone was **46%** of it — 35KB of
+  other people's technical-account addresses in a model's context.
+- **Usefulness.** The agent could not act on it. The comparison is against the
+  token's `user_id` claim, which only the extension can read, so the field was
+  inert at the receiving end.
+
+`deletable` is that comparison already made — ~40x smaller and directly
+actionable. The fail-closed rule is preserved: no recorded creator resolves to
+`false` (`isProjectOwnedBy`).
+
+`select_project` no longer enumerates on a bad id. It used to return every
+project in the org as `validOptions`, so one mistyped id cost more than the
+entire tool catalogue; it now reports the count and points at
+`list_adobe_projects`'s `search`.
 
 ### Descriptor-driven tools — `readDescriptors.ts` / `actionDescriptors.ts` (via `toolDescriptors.ts`)
 Thin tools declared as data and dispatched to existing handler maps:
@@ -317,14 +339,41 @@ Thin tools declared as data and dispatched to existing handler maps:
   view that does not exist; PaaS uses the project's saved admin credentials, ACCS
   proxies through a configured discovery service and prompts Adobe sign-in ONLY
   when the read reports it needs a token).
-- Actions: `regenerate_ai_files`, `start_demo`, `stop_demo`, `rename_project`
+- Actions: `regenerate_ai_files`, `start_demo`, `stop_demo`, `restart_demo` (owns the
+  settle delay between the stop and the start, which calling the two in sequence does
+  not), `set_current_project` (the pointer every project-scoped tool acts on — note this
+  is NOT `select_project`, which picks an Adobe Console project; `forceNewWindow` is
+  FORCED off via `argDefaults`, since that gesture opens a second VS Code window and
+  leaves the current one on the projects list), `set_project_pinned`, `rename_project`
   (current-project rename via the shared `renameProjectCore` — folder, saved
   state, and the project's baked MCP/AI configs move together; agents must use
   this instead of shell `mv`, which strands the extension's paths),
+  `add_integration` (add one App Builder integration to the current project by catalog
+  id OR custom GitHub source — clone, subscribe its Adobe APIs, build, deploy, register
+  on the dashboard; returns `{added: {id, name, kind}}`, and the id is what
+  `deploy_integration` / `remove_integration` take. A component whose `envSchema`
+  declares user-supplied vars is refused with a `needsUser` handoff pointing at
+  Configure Project — the tool's `preflight` answers before dispatch, so the panel the
+  webview path opens never opens for an agent's call),
   `deploy_integration` / `redeploy_integration` (deploy one App Builder integration
   by id — idempotent, guard-chained, org-context-targeted; the API Mesh has its own
   `deploy_mesh` / `check_mesh` / `delete_mesh`), `remove_integration` (confirm-gated — remote
-  undeploy + local cleanup + storefront republish), `deploy_mesh` (deploy or redeploy
+  undeploy + local cleanup + storefront republish),
+  `rename_integration` (DISPLAY NAME only — the id, folder and Runtime package are
+  immutable; local metadata write, nothing redeploys; pre-built catalog entries and the
+  mesh are rejected. `name` is REQUIRED in the schema, and that is a headless-safety
+  guard rather than a convenience: the handler falls through to
+  `vscode.window.showInputBox` when the payload carries none),
+  `set_console_apis` (confirm-gated — sets the optional extras to EXACTLY the given
+  list, so anything dropped is UNSUBSCRIBED from the live workspace credential; pass
+  `componentId` to edit one integration's picks instead of the union. `add_console_apis`
+  is the add-only, ungated sibling),
+  `set_project_destination` (repoint the project at another Adobe Console
+  project + workspace and MOVE every integration there — each redeploys under the new
+  target, the old deployments are left running. The org is NOT taken from the payload;
+  sign-in owns org selection. Create the target first with `create_adobe_project` /
+  `create_adobe_workspace`. Ungated: the move only ever deploys and is undone by setting
+  the destination back), `deploy_mesh` (deploy or redeploy
   the current project's API Mesh — same guard chain and org targeting as the dashboard
   Deploy button, sharing the UI-free `deployMeshHeadless` core; persists the mesh
   endpoint), `refresh_block_library` (EDS-only — destructive rebuild of the DA.live
@@ -359,8 +408,172 @@ Thin tools declared as data and dispatched to existing handler maps:
 | `republish` | `storefrontTools.ts` | Regenerate + push storefront config. |
 | `sync_content` | `storefrontTools.ts` | Full content publish (config + code + DA.live pages). |
 
+Both carry `cdnStatus` beside the `cdnVerified` boolean — one sentence, true for
+that call, from `describeCdnPropagation` in `configSyncService.ts`. We already
+poll the live CDN after every publish; until this the answer only reached the
+debug log, so a caller looking at an unchanged site could not tell "not served
+yet" from "my work is gone". The wait it quotes is derived from the polling
+constants (`CDN_VERIFY_BUDGET_SECONDS`), never written by hand.
+
+### Content authoring — `contentAuthoringTools.ts`
+
+Page-level authoring against the CURRENT project's storefront. Before these, an
+agent could list and destroy DA.live sites but could not write a page to one.
+
+| Tool | Notes |
+|---|---|
+| `read_page` | Reads DA.live source HTML. Delegates to `DaLiveSourceOperations.readSource`, which sits beside the `sourceExists` GET that already hit this endpoint — what was new is reading the BODY, not reaching the URL. |
+| `write_page` | Writes source; `publish:true` previews+publishes in the same call. |
+| `publish_page` | Preview + publish an existing page. |
+| `list_content` | Directory listing, projected to web paths with a page/file/folder type. |
+| `delete_page` | Unpublish + delete. Destructive; confirm-gated. |
+| `read_published_page` | Fetches `.plain.html` off the CDN — the verification primitive. |
+
+**One page, three path spellings.** This is what the tools are for; raw transport
+would move the trap to the caller rather than remove it:
+
+| Surface | Spelling | Why |
+|---|---|---|
+| DA source API | `about.html` | extension REQUIRED for files (DA Admin API) |
+| Helix preview/publish | `/about` | `normalizeWebPath` never strips `.html`, so the suffixed form publishes the wrong path |
+| `da.live/canvas` | `about` | extensionless, or the path double-appends to `index.html.html` |
+
+Every tool takes ONE canonical web path; the three that need a source path derive
+it via `resolveDaPath`, and `read_published_page` builds its CDN URL with
+`buildSourceUrl` + `aemLiveBaseUrl` — the same helpers the content-copy pipeline
+and storefront probe use, so none of them can drift apart.
+
+**No `org`/`site` arguments.** All six target the current project. An override
+would let an agent write into, and unpublish from, any DA.live site the user's
+token reaches, with no confirmation on the non-destructive paths;
+`list_dalive_sites` already covers cross-site reads.
+
+**That control lives or dies on the path.** Omitting `org`/`site` means nothing if
+`path` can walk out of the site: the URL parser collapses `..`, so
+`/source/{org}/{site}/../../victim/site/index.html` resolves to
+`/source/victim/site/index.html` and is sent with the user's DA.live bearer —
+reaching Helix preview/publish and the unpublish DELETE the same way, since
+`normalizeWebPath` also leaves `..` intact. Paths are therefore **rejected, not
+normalized**: no `.`/`..` segments, no scheme, no protocol-relative prefix, no
+backslashes, no control characters, and percent-encoded traversal is decoded
+before the check. The storefront coordinates are validated too (must start
+alphanumeric), because `githubRepo: "../../x/y"` otherwise puts the traversal
+back via the metadata. Both are covered by tests named for the escape they
+block.
+
+**Auth: the DA.live token, not the Adobe one.** Two IMS tokens can reach DA.live
+— `DaLiveAuthService`'s (its own sign-in and storage, used by the production
+content path) and the extension's Adobe token (used for org-level reads like
+`list_dalive_sites`). Content operations need the former; picking wrong fails as
+a 401 at runtime, not a type error. Preview/publish also sends
+`x-auth-token: <github>`, so those paths pre-flight both credentials.
+
+`delete_page` unpublishes **before** deleting the source, and **aborts if the
+unpublish fails** — only that order fails recoverably. Deleting first and then
+failing to unpublish leaves a live page whose content is gone.
+
+This is a failure-mode argument, not an auth one. An earlier version of this
+section cited ADR-002's `delete not allowed while source exists` 403; that reads
+the ADR backwards. The 403 fires while the source EXISTS, and `unpublishPage`
+sends the DA.live Bearer that ADR-002 measured as bypassing the restriction
+entirely. Auth is indifferent to the order.
+
 ### View — `viewTools.ts`
 `open_view` — surface a specific VS Code view/screen for the user.
+
+### Lifecycle — `lifecycleTools.ts`
+
+| Tool | Notes |
+|---|---|
+| `open_url` | Opens one of the CURRENT project's URLs in the browser. **Takes a TARGET, never a URL** — `storefront` / `liveSite` / `daLive` / `commerceAdmin` / `devConsole` — so the reachable destinations are exactly the set `get_project_urls` reports, and an agent cannot point the user's browser somewhere nobody asked for. Resolves through the same `getProjectUrls` handler that read uses, so a target cannot mean two things. Confirm-gated, like `open_view`. A target the project has no URL for is refused with the list of ones it does. |
+| `edit_project` | **Always a `needsUser` handoff; it never dispatches.** `handleEditProject` opens the creation wizard, which is a multi-step human surface — an agent calling it would make a panel appear for a request the user did not make and report success for it. The handoff points at the wizard AND at `configure_project`, which covers env vars, store scope, block libraries, addons and the datapack without it. Ungated: it opens nothing. |
+
+Both take their vscode dependency by injection from `extension.ts` (a command
+runner, a URL opener), so neither module imports vscode.
+
+### Storefront site — `siteTools.ts`
+
+Who administers a storefront's Configuration Service entry, and the repair for a
+registration that was refused. **None of these is a descriptor row.** The
+services behind them take `(project, vscode.ExtensionContext, logger)` rather
+than being `MessageHandler`s in a handler map, so they are reached through a
+`HandlerContext`'s own fields. Being UI-free is what makes a service usable from
+a tool; it is not what makes it dispatchable, and the two were conflated when
+this group was first estimated.
+
+| Tool | Notes |
+|---|---|
+| `get_site_access` | Who holds the admin role on the project's site config, plus a PROBED `canManage` (the grant endpoint sits behind the same `[admin]` gate as the read, so an identity without the role cannot add anyone — including itself). Returns real addresses, deliberately: the use of the tool is naming who can grant a role, and a masked address can neither be relayed nor passed to `set_site_admin`. Not the `get_project` secret case — an address is not a credential, and the masking in the codebase exists for the diagnostics report, which is written to be pasted into tickets. |
+| `set_site_admin` | Grant (`admin:true`) or revoke (`admin:false`). Confirm-gated: it changes access for another person on a shared site. Every mutation is confirmed by a RE-READ, so `verified` is separate from `status` — a 2xx write and a landed role are different claims. The last-admin refusal comes from `revokeSiteAdmin` and passes through: a site with no admin cannot be granted one back from inside the app. |
+| `repair_site_configuration` | Re-runs the registration that failed. Confirm-gated: the write re-mints the site's publish key and can drop admin grants nothing in the app can restore (reported as `lostGrants`, masked). **Does NOT publish** — that separation is `repairSiteConfigHeadless`'s own, and this surface is its reason: registration writes a routing rule, and making it take effect would republish a demo out from under whoever is presenting. On `repaired` the result carries `nextStep: 'republish'` rather than reading as done. |
+| `connect_dalive` | **Always a `needsUser` handoff.** The credential comes from a bookmarklet run in the user's own browser and a paste; there is no argument this tool could take that would not be a secret travelling as a tool argument. Points at `demoBuilder.openDaLiveBookmarkletSetup`, resumes with `get_auth_status`. Ungated: it opens and changes nothing. |
+| `find_storefront_name_mismatches` | Projects whose DA.live site name does not match their GitHub repo name — a legacy defect in storefronts created before `164fd251`. Read-only, and explicitly `persistAfterLoad: false`, because a scan that rewrote every manifest it inspected would be a write hiding in a read. Paged at `AGENT_PAGE_SIZE` with the true `total` beside it, even though a legacy list is small today. |
+| `migrate_storefront_name` | Migrates ONE project. **Irreversible** (deletes the old DA.live site root) → `confirm:true` AND `confirmName` equal to the PROJECT name, which is what the find tool reports first and what a user recognises. Reports `publishKeyRenewed` explicitly: the re-register destroys the site's publish key and a migrated storefront that cannot publish is invisible until someone tries. A project that needs no migration answers `{migrated: false, reason}` rather than an error, so an agent looping the find list can tell a no-op from a failure. |
+
+**Why the migration is a pair rather than one bulk tool.** The `Migrate Storefront
+Names` command sweeps every project behind one modal. That shape cannot carry the
+name echo an irreversible action requires — there is no single name to echo — and
+it would hand an agent one call that deletes N DA.live site roots. So the sweep is
+a read and the migration addresses one project at a time. The per-project
+sequence (migrate → persist → re-mint the publish key) lives in
+`storefrontNameMigrationForProject`, shared with the command: the persist and the
+re-mint are steps a second implementation would plausibly omit, and neither
+announces its absence.
+
+The dependency assembly `repair_site_configuration` needs lives in
+`repairSiteConfigForProject` (`features/eds/services/`), shared with the
+`Repair Site Configuration` command — which adds only the progress notification,
+the one part an agent must not get. It was extracted before the tool was written
+precisely so there would not be two assemblies, because the piece that drifts
+fails silently: the demo package's own `byomOverlayUrl` is the fallback when the
+VS Code setting is blank, and without it the site registers with NO overlay while
+the read-back still reports `verified`.
+
+### Prerequisites & settings — Group 7
+
+| Tool | Notes |
+|---|---|
+| `install_prerequisite` | Descriptor row over `install-prerequisite`, addressed by the prerequisite's OWN id — never the numeric index. That index is a position in a list rebuilt per check and looked up in `sharedState`, which the headless context recreates on every call, so an index-addressed install could only ever fail. `check_prerequisites` now reports `prereqId` beside it for this call. Confirm-gated: it runs package managers (fnm, npm, brew) and can take minutes. A prerequisite that can only be installed by hand answers `{manual, url}` **and does not open a browser** when there is no panel — `vscode.env.openExternal` still fires for the wizard, which is a person who just clicked Install. |
+| `get_settings` | The 21 `demoBuilder.*` keys and their values. Two are functional gates rather than preferences — the Data Installer surface does not exist without `dataInstaller.enabled` + `apiBaseUrl` — so "the feature is missing" and "the feature is off" are finally distinguishable. Unset keys come back as `null`, not omitted: `JSON.stringify` drops `undefined`, which silently shortened the answer. `dataInstaller.apiBaseUrl` reports `{configured}` rather than its value, because `package.json` withholds a default on the grounds that this repository is public. |
+| `set_setting` | **Handoff.** A tool could call `.update()`; it should not. Several keys are `machine` scoped, and a value changed silently by an agent is indistinguishable from one the user chose. Refuses any key outside the Demo Builder set, so it cannot be used to instruct a user to change arbitrary VS Code settings under this extension's name. |
+
+### Data Installer writes — Group 8, `dataInstallerDescriptors.ts`
+
+Six data-installer READS were exposed and optimised in phase 2; zero writes were.
+These are descriptor rows, not adapters: `importHandlers`/`exportHandlers` are
+ordinary handlers over a `HandlerContext` and contain no `vscode.window`
+reference (checked with a control).
+
+| Tool | Notes |
+|---|---|
+| `validate_datapack_import` | The dry run — same guard, same credentials, same request body as a real start, without writing. **Deliberately ungated**: gating it would push an agent toward the real import to find out whether a request is well-formed. |
+| `start_datapack_import` | Confirm-gated. Returns `{activationId}` as soon as the job starts. |
+| `reset_datapack` | Confirm-gated **twice** — the handler has always required `confirm:true` in its payload, and the row's gate refuses before dispatch. The same flag satisfies both, so they agree rather than compete; remove either and the other still holds. |
+| `get_datapack_import_status` | Polls the persisted `ImportJobRecord`. The long-running problem was already solved: `runAndWatch` validates, starts, persists, fires the watcher with `void`, and returns a handle. The watcher's `onProgress` pushes to the webview (a no-op headless) but the authoritative record goes to `TransientStateManager`, which this reads — so polling works with no webview and no handler needed changing. |
+| `list_datapack_export_items` | Paged at `AGENT_PAGE_SIZE`. `listExportItems` asks the service for `page_size: 1000` and returns what comes back — phase 2's 25KB finding, and worse here because the caller is CHOOSING from the list. `totalCount`/`excludedCount` are passed through verbatim, never recomputed from the page. |
+| `start_datapack_export` | Confirm **and** a `confirmName` echo, checked before dispatch. An export writes into the datapack catalog other teams depend on; a confirm alone is the bar for your own project. |
+| `get_datapack_import_target` · `list_datapack_import_scopes` | Reads. An empty scope list is normal, not an error — it means the import lands on the default. `get_datapack_import_target` also reports the website/store-view scope the project recorded, which is what the import modal seeds its pickers from. |
+
+**Scope defaults to the PROJECT's, not the service's.** `websiteCode`/`storeCode`
+are optional on the three write rows, and omitting them used to mean the service
+applied its own `base`/`default` — so an agent that skipped
+`list_datapack_import_scopes` could import, and **reset**, against a website
+nobody chose. The handler now falls back to the pair the project recorded (the
+same `resolveInstallTarget` the build path uses). Send both to override, or
+neither to inherit; half a pair is refused rather than completed, because filling
+in the other half would silently change what the call asked for.
+| ⛔ `provision_accs_credentials` | **Not exposed, by its own handler's instruction:** "Panel-only by construction (never in the MCP maps): it creates a credential in the user's Console workspace." Its bare `{success: true}` is deliberate for the same reason — the response never carries the values. |
+
+**Not built, with reasons.** `migrate_storefront_names` (plural, the bulk sweep) is
+deliberately absent — see the pair above. `github_change_account` is BLOCKED, not deferred —
+`HandoffTarget` accepts a view or a command id and no Demo Builder command exists
+for switching GitHub accounts (checked against `package.json`). It needs a design
+decision, not an implementation. The bulk `cleanup_dalive_sites` /
+`manage_github_repos` are deliberately absent: `list_github_repos` +
+`delete_github_repo` and `list_dalive_sites` + `cleanup_dalive_site` already give
+an agent the capability, looping is what an agent is good at, and neither bulk
+command has a headless core — so building one would mean a second implementation
+of a destructive path.
 
 ---
 
@@ -369,20 +582,40 @@ Thin tools declared as data and dispatched to existing handler maps:
 These conventions are what make the surface predictable for an agent. New tools
 **must** follow them.
 
-**Results are JSON-as-text.** Every tool returns
-`{ content: [{ type: 'text', text: JSON.stringify(value) }] }` via a local
-`asText(...)` helper. The agent parses that text. Keep the JSON small and
-purposeful — it's consumed as LLM context tokens.
+**One envelope, two builders.** Every tool returns
+`{ content: [{ type: 'text', text }] }`, built by `src/features/ai/server/mcpToolResult.ts`
+and nothing else:
+
+- `asText(value)` — serializes the value. The default; use it for any answer.
+- `asRawText(text)` — wraps a string verbatim. For a refusal or error written as
+  prose, and for the descriptor registrar's `shape()` output (already stringified).
+
+So an agent **cannot** assume every response parses as JSON — refusals are prose,
+including the shared `"<tool> requires confirm:true to proceed."`. It can assume
+the envelope. Keep the JSON small and purposeful — it's consumed as LLM context
+tokens.
+
+`tests/features/ai/server/responseEnvelope.test.ts` enforces both halves of the
+surface: descriptor rows at runtime (through the real registrar, including the
+confirm-refusal and preflight early returns), bespoke tools at the source level
+(a registrar module must import a builder and must not hand-roll the envelope).
+The source scan covers `src/features/ai/server/` **and** `src/mcp-server.ts` —
+the second is listed by name, because the first version of the guard scanned the
+directory alone and the ten file-based project tools escaped it.
 
 **Confirmation gating for destructive ops.** A tool requires an explicit
 `confirm: true` when its effect is hard to walk back: it deletes something, or it
 pushes/publishes to a live site. Without it the tool refuses and does nothing.
 Currently gated: `remove_integration`, `delete_ai_prompt`, `delete_mesh`,
 `delete_project`, `remove_block_from_library`, `promote_block_to_library`,
-`refresh_block_library`.
+`refresh_block_library`, `set_console_apis`.
+
+`set_console_apis` is the one whose NAME hides what it does — it says "set" and it
+removes, so the `delete_*` reading of this list would miss it. Judge against the rule,
+not the verb.
 
 Merely *mutating* is deliberately not the bar. Deploys (`deploy_mesh`,
-`deploy_integration`, `redeploy_integration`), lifecycle (`start_demo`,
+`add_integration`, `deploy_integration`, `redeploy_integration`), lifecycle (`start_demo`,
 `stop_demo`) and config writes (`update_project_config`, `rename_project`) change
 state and are ungated, because they are idempotent or trivially reversible and
 gating them would make the agent surface useless for the routine work it exists
@@ -404,9 +637,15 @@ nothing. `apply_updates` is the one that reports what *would* happen: no
 `confirm` = a read-only "here's what's available". Don't assume the dry-run
 behavior generalizes.
 
-**Extra-strict gating for irreversible ops.** `delete_project` additionally
-requires `confirmName` to exactly echo the project name, so an agent can't delete
-the wrong project on a fuzzy match.
+**Extra-strict gating for irreversible ops.** Three tools require a `confirmName`
+that exactly echoes the resource, so an agent can't destroy the wrong one on a
+fuzzy match: `delete_project` (project name), `delete_github_repo` (`owner/repo`),
+and `cleanup_dalive_site` (`org/site`).
+
+`delete_page` deliberately uses the plain `confirm: true` gate instead — it removes
+one page from the current project's own storefront, not a whole repository or site.
+That proportionality holds only because the page path is confined to the current
+site; see the traversal note in the content-authoring section.
 
 <a name="auth-handoff"></a>**Auth handoff instead of silent failure.** Tools that
 need credentials pre-flight the relevant provider and, if not signed in, return a
@@ -446,7 +685,21 @@ The agent surface is powerful, so it's deliberately constrained:
 - **`.env` content is allowlist-validated** (`validateEnvContent`) before being
   written — defense-in-depth against injecting executable content.
 - **Bounded responses.** `get_block_source` caps at 50 files / 30 KB each, since
-  the output is paid for as context tokens.
+  the output is paid for as context tokens. `get_block_authoring_shape` splits
+  index from detail for the same reason: the index carries ids, titles and which
+  authoring convention each block uses, but never the markup, selectors or field
+  lists. Measured on a real 78-block storefront: whole index 5,577 bytes, one
+  block's detail 92–432 bytes. It exists because deriving those shapes from block
+  JS instead measured ~121,000 tokens for eight blocks.
+
+  Three authoring conventions coexist in `plugins.da` and the tool reports which
+  one applies: positional (`rows`/`columns`, 36 of 78), key-value
+  (`name`/`type`/`fields`, 35), and literal `unsafeHTML` (4 — what
+  `promote_block_to_library` writes, and the rarest form in a real storefront).
+  `component-filters.json` supplies nested children, without which `cards` reads
+  as two flat columns rather than a list of `card`s; `component-models.json`
+  supplies field labels. Both are best-effort — 38 of 78 components resolve no
+  model fields (27 name a model id with no entry, 11 name none at all).
 - **No secret leakage to child processes.** Where the extension spawns other MCP
   servers to introspect them, it uses an env allowlist.
 
@@ -511,7 +764,8 @@ written.
 3. In the handler: build the headless context from `ctxFactory()`, pre-flight any
    auth (return a `needsAuth` handoff if missing), then call the **existing
    service** — extract a headless core from the UI path if the logic is currently
-   modal-coupled. Return `asText({...})`.
+   modal-coupled. Return `asText({...})` — or `asRawText(prose)` for a refusal
+   (§10). Never build the envelope by hand; a test fails the build if you do.
 4. Register it from the `registerExtraTools` callback in `src/extension.ts`.
 5. Add a test using the `fakeServer` pattern (§14).
 6. If agents should know about it, mention it in the generated `AGENTS.md`
@@ -527,7 +781,7 @@ in a map, plus a `call(args)` that invokes the handler and JSON-parses the text
 result. The underlying service is mocked; the test asserts the tool's gating
 (confirm, auth handoff), argument shaping, and result. See
 `tests/features/ai/server/*.test.ts` (e.g. `applyUpdatesTool.test.ts`,
-`deleteProjectTool.test.ts`). The shared seven tools have their own suites under
+`deleteProjectTool.test.ts`). The shared file-based tools have their own suites under
 `tests/features/ai/mcpServer-*.test.ts`, and the socket server has
 `tests/features/ai/server/inExtensionMcpServer.test.ts`.
 

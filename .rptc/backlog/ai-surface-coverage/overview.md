@@ -1,6 +1,9 @@
 # AI surface coverage — tools and skills against Demo Builder features
 
-**Status:** planned, not started
+**Status:** planned, not started — **adopted as phase 4 of
+`.rptc/plans/ai-surface/`** (2026-08-16). Read that program's `overview.md` first: it sequences
+this work AFTER response quality and enforcement, so new tools land against a tested convention.
+This file stays authoritative for the coverage axis itself; only its position changed.
 **Created:** 2026-08-12
 **Slug:** `ai-surface-coverage`
 

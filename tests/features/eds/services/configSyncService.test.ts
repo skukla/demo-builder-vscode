@@ -17,7 +17,12 @@
 // Assertions here pin the SEQUENCE of attempts, never elapsed duration.
 jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
 
-import { syncConfigToRemote, ConfigSyncParams } from '@/features/eds/services/configSyncService';
+import {
+    syncConfigToRemote,
+    describeCdnPropagation,
+    CDN_VERIFY_BUDGET_SECONDS,
+    ConfigSyncParams,
+} from '@/features/eds/services/configSyncService';
 import { promises as fsPromises } from 'fs';
 
 // Mock the dependencies
@@ -348,5 +353,42 @@ describe('syncConfigToRemote', () => {
                 expect.any(Object)
             );
         });
+    });
+});
+
+/**
+ * The publish path has always known whether the CDN was serving the new copy;
+ * the answer died in the debug log. An agent that published, looked at the site,
+ * saw the old page and had nothing to weigh that against concluded its commits
+ * were being discarded and filed a bug for a defect that did not exist.
+ */
+describe('describeCdnPropagation', () => {
+    it('says the site is serving this publish when the CDN confirmed it', () => {
+        expect(describeCdnPropagation({ cdnVerified: true })).toMatch(/serving this publish/i);
+    });
+
+    it('calls an unconfirmed publish propagation delay, not lost work', () => {
+        const message = describeCdnPropagation({ cdnVerified: false });
+
+        expect(message).toMatch(/not\s+lost work/i);
+        expect(message).toMatch(/git log/i);
+    });
+
+    it('quotes the real polling budget rather than a number typed by hand', () => {
+        // Guards the one detail this message can get wrong in a way nobody
+        // notices: claiming we waited a length of time we did not.
+        expect(describeCdnPropagation({ cdnVerified: false })).toContain(
+            `~${CDN_VERIFY_BUDGET_SECONDS}s`,
+        );
+        expect(CDN_VERIFY_BUDGET_SECONDS).toBe(20);
+    });
+
+    it('does not call a FAILED publish propagation delay', () => {
+        // Waiting fixes a slow edge. It does not fix a publish that never
+        // happened, and saying so would send the caller off to wait forever.
+        const message = describeCdnPropagation({ cdnVerified: false, cdnError: 'Helix 503' });
+
+        expect(message).toContain('Helix 503');
+        expect(message).toMatch(/not propagation delay/i);
     });
 });

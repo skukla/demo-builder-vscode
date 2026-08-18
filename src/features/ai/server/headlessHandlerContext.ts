@@ -10,11 +10,17 @@
  * Only handlers that never touch `panel`/`communicationManager`/`sendMessage`
  * (and never pop a modal `vscode.window.show*Message`) are safe to expose this
  * way; handlers that do get a curated adapter instead (later phases).
+ *
+ * "Touches sendMessage" is NOT among the disqualifiers, despite how it reads:
+ * `progressCapture.withCapturedProgress` wraps this context so the pushes are
+ * collected and `lastCompleteData` reads the payload back out. `createProjectTool`
+ * has used that in production since it shipped.
  */
 
 import type * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di';
 import type { StateManager } from '@/core/state';
+import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import type { HandlerContext, SharedState } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
@@ -24,7 +30,17 @@ export function createHeadlessHandlerContext(
     logger: Logger,
 ): HandlerContext {
     return {
-        prereqManager: undefined as unknown as HandlerContext['prereqManager'],
+        // Real, not undefined. `PrerequisitesManager` takes only an extension path
+        // and a logger and contains ZERO `vscode.window` references, so it works
+        // headlessly exactly as it does behind the panel
+        // (`src/commands/handlerContextFactory.ts:55` builds it the same way).
+        //
+        // Leaving it undefined was actively dangerous, not merely limiting:
+        // `initializePrerequisiteCheck` calls `context.prereqManager?.loadConfig()`,
+        // gets nothing, iterates zero prerequisites, and `[].every(...)` is `true`
+        // — so a prerequisites check would report "everything installed" on a bare
+        // machine. Any tool over that handler needs this line first.
+        prereqManager: new PrerequisitesManager(context.extensionPath, logger),
         authManager: ServiceLocator.getAuthenticationService(),
         errorLogger: undefined as unknown as HandlerContext['errorLogger'],
         progressUnifier: undefined as unknown as HandlerContext['progressUnifier'],

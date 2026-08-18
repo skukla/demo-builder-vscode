@@ -476,6 +476,67 @@ async function sendFinalInstallStatus(
 }
 
 /**
+ * Resolve WHICH prerequisite to install, from either address.
+ *
+ * Two callers with genuinely different knowledge:
+ *
+ * - The **webview** holds a numeric index into the list it was sent, and the
+ *   matching `currentPrerequisiteStates` entry was populated by the check that
+ *   ran moments earlier in the same session.
+ * - An **agent** holds neither. `sharedState` is rebuilt per call on the headless
+ *   context, so the map is always empty there and an index-addressed install
+ *   could only ever fail. It addresses the prerequisite by its own id from
+ *   `prerequisites.json`, which `check_prerequisites` now reports as `prereqId`.
+ *
+ * The id path re-resolves the list rather than reading cached state, so it does
+ * not depend on a check having run first.
+ */
+async function resolveInstallTarget(
+    context: HandlerContext,
+    payload: { prereqId?: number; prerequisiteId?: string },
+): Promise<{ prereq: PrerequisiteDefinition; prereqId: number } | undefined> {
+    if (payload.prerequisiteId) {
+        const config = await context.prereqManager?.loadConfig();
+        const resolved = context.prereqManager?.resolveDependencies(config?.prerequisites || []);
+        const index = resolved?.findIndex((p) => p.id === payload.prerequisiteId) ?? -1;
+        if (index < 0 || !resolved) return undefined;
+        // The index still travels onward: it is the row identity every
+        // `prerequisite-status` push carries, and the webview keys off it. On the
+        // agent path nothing is listening, which costs nothing.
+        return { prereq: resolved[index], prereqId: index };
+    }
+
+    if (typeof payload.prereqId !== 'number') return undefined;
+    const state = context.sharedState.currentPrerequisiteStates?.get(payload.prereqId);
+    return state ? { prereq: state.prereq, prereqId: payload.prereqId } : undefined;
+}
+
+/** Say which address failed, because the two fail for unrelated reasons. */
+function describeUnresolvedTarget(payload: {
+    prereqId?: number;
+    prerequisiteId?: string;
+}): string {
+    if (payload.prerequisiteId) {
+        return `No prerequisite with id "${payload.prerequisiteId}". Run check_prerequisites and use a prereqId it reports.`;
+    }
+    if (typeof payload.prereqId === 'number') {
+        return `Prerequisite state not found for index ${payload.prereqId}. Run the prerequisites check first, or address it by prerequisiteId.`;
+    }
+    return 'Either prerequisiteId (preferred) or prereqId is required.';
+}
+
+/**
+ * Whether this context has no webview behind it.
+ *
+ * `createHeadlessHandlerContext` leaves `panel` undefined precisely so a handler
+ * can tell — see its docstring. Used here for ONE decision: whether opening a
+ * browser window is a service to the caller or an ambush.
+ */
+function isHeadless(context: HandlerContext): boolean {
+    return context.panel === undefined;
+}
+
+/**
  * install-prerequisite - Install a missing prerequisite
  *
  * Handles installation of prerequisites including multi-version Node.js
@@ -483,16 +544,20 @@ async function sendFinalInstallStatus(
  */
 export async function handleInstallPrerequisite(
     context: HandlerContext,
-    payload: { prereqId: number; version?: string },
+    payload: { prereqId?: number; prerequisiteId?: string; version?: string },
 ): Promise<SimpleResult> {
     try {
-        const { prereqId, version } = payload;
-        const state = context.sharedState.currentPrerequisiteStates?.get(prereqId);
-        if (!state) {
-            throw new Error(`Prerequisite state not found for ID ${prereqId}`);
+        const { version } = payload;
+        const target = await resolveInstallTarget(context, payload);
+        if (!target) {
+            // Thrown, not returned. The catch below pushes `prerequisite-status`
+            // with `status: 'error'`, and without it the webview's row sits on
+            // "Installing…" forever — which is what returning early did, and what
+            // installHandler-errorHandling.test.ts caught.
+            throw new Error(describeUnresolvedTarget(payload));
         }
 
-        const { prereq } = state;
+        const { prereq, prereqId } = target;
         context.logger.debug(`[Prerequisites] User initiated install for: ${prereq.name}`);
         context.debugLogger.debug('[Prerequisites] install-prerequisite payload', { id: prereqId, name: prereq.name, version });
 
@@ -523,8 +588,22 @@ export async function handleInstallPrerequisite(
                 message: `Manual installation required. Open: ${installPlan.url}`,
                 required: !prereq.optional,
             });
-            await vscode.env.openExternal(vscode.Uri.parse(installPlan.url));
-            return { success: true };
+
+            // Only for a person who just clicked Install. Headless this is an
+            // agent's call, and opening a browser window nobody asked for is the
+            // same ambush `open_url` exists to prevent — there, the argument is
+            // that the danger is a well-formed URL nobody requested.
+            if (!isHeadless(context)) {
+                await vscode.env.openExternal(vscode.Uri.parse(installPlan.url));
+            }
+
+            // Structured on BOTH paths. `{success: true}` alone said "installed"
+            // for a prerequisite that was not installed and never would be by
+            // this call — the bare-success shape Wave 3 removed elsewhere.
+            return {
+                success: true,
+                data: { manual: true, url: installPlan.url, prerequisite: prereq.name },
+            };
         }
 
         // Resolve per-node-version target versions
@@ -579,7 +658,22 @@ export async function handleInstallPrerequisite(
         );
 
         await context.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: true });
-        return { success: true };
+
+        // Named, not bare. `{success: true}` renders as the literal "{}" through
+        // `defaultShape`, so an agent learned nothing — not which prerequisite,
+        // not which version it ended up with, and not whether the re-check
+        // actually found it installed. All three are already in hand here.
+        return {
+            success: true,
+            data: {
+                installed: {
+                    id: prereq.id,
+                    name: prereq.name,
+                    version: installResult.version,
+                    verified: installResult.installed,
+                },
+            },
+        };
     } catch (error) {
         const { prereqId } = payload;
         context.logger.error(`Failed to install prerequisite ${prereqId}:`, error as Error);

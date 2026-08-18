@@ -520,7 +520,21 @@ export class DaLiveBlockLibraryOperations {
                 };
             }
 
-            paths.push('.da/library/blocks.json');
+            // ABSOLUTE, and load-bearing. These go to the AEM admin bulk API,
+            // which addresses content from the site root; relative paths matched
+            // nothing and the call still reported success, so every block in the
+            // DA.live palette read "It appears <block> has not been previewed"
+            // with no failure anywhere in the log.
+            //
+            // Nothing downstream will save us: the bulk path runs
+            // `helixService.previewAllContent`, whose `getPathsOrDefault` only
+            // substitutes `['/']` for an empty list and passes every other path
+            // through untouched. (`normalizeWebPath` exists on HelixService, but
+            // the SINGLE-path calls use it, not this one.) An earlier version of
+            // this comment named a `bulkPreviewAndPublish` that normalised "as
+            // well" — that function no longer exists, and the claim was wrong
+            // even for its successor. Verified 2026-08-18.
+            paths.push('/.da/library/blocks.json');
 
             this.logger.info(
                 `[DA.live] Block library created: ${verifiedBlocks.length}/${blocks.length} blocks with docs in ${org}/${site}`,
@@ -528,7 +542,7 @@ export class DaLiveBlockLibraryOperations {
 
             // Add block doc pages to paths for publishing
             for (const blockId of existingBlockIds) {
-                paths.push(`.da/library/blocks/${blockId}`);
+                paths.push(`/.da/library/blocks/${blockId}`);
             }
 
             return { success: true, blocksCount: verifiedBlocks.length, paths };
@@ -707,7 +721,10 @@ export class DaLiveBlockLibraryOperations {
             for (const source of contentSources) {
                 const success = await this.copyOps.copySingleFile(
                     token,
-                    source,
+                    // PREVIEW, not published. Library doc pages get previewed and
+                    // left there — that is all the DA.live palette needs — so the
+                    // published host 404s for every block of every source.
+                    { ...source, preview: true },
                     docPath,
                     { org, site },
                     docPath,

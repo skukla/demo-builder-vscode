@@ -4474,6 +4474,16 @@ div[class*="spectrum"] input[type="search"] {
  * the existing `fadeInUp` (opacity + 4px). Zeroed under prefers-reduced-motion. */
 .step-view-anim {
     animation: fadeInUp var(--db-motion-base) var(--db-motion-ease);
+    /* Pass the pane's height DOWN. An area body that wants to centre itself in the
+       view (the Code Sync states) cannot: a percentage height resolves against the
+       nearest definite ancestor, and this wrapper was auto-height, so `100%` two
+       levels below it computed to zero and the body sat at the top of a tall pane.
+       A flex column with a 100% MINIMUM makes this box at least the pane and lets a
+       body opt in with `flex-1` — while taller content still grows and scrolls,
+       because it is a minimum and .step-view owns the scroll. */
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
 }
 
 /* ---- Backend "choice cards" (.choice-*) — prominent binary pick, not a dense tile.

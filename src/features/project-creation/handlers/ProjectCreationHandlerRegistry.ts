@@ -95,6 +95,10 @@ export const projectCreationHandlers = defineHandlers({
     // EDS handlers - ACCS
     // EDS handlers - Store Discovery
     'discover-store-structure': eds.handleDiscoverStoreStructure,
+    // Whether the shared service supplies the Commerce credential, so the
+    // Connection step can say the OAuth fields need no filling in. Status only —
+    // the pair never crosses to the webview.
+    'check-credential-service': eds.handleCheckCredentialService,
 
     // EDS handlers - Storefront Setup (renamed from Preflight)
     'storefront-setup-start': eds.handleStartStorefrontSetup,

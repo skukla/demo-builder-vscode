@@ -600,6 +600,23 @@ export class HelixService {
         // returned: prefer `resources.length`, fall back to processed.
         const processed = status.progress?.processed ?? status.processed ?? 0;
         const count = resources.length > 0 ? resources.length : processed;
+
+        // A job that finished having touched NOTHING is not a success, and it
+        // read as one: no resource carried a failing status because no resource
+        // came back at all. That is exactly how the block library published
+        // "fine" while none of it previewed — measured 2026-08-18 on a live site,
+        // two runs of ~78 paths each, zero previewed and zero complaints. Print
+        // the whole payload: the caller cannot ask Helix a follow-up question
+        // after the job is gone, and this is a user-pasteable log.
+        if (count === 0) {
+            this.logger.warn(
+                `[Helix] Bulk ${topic} job finished having processed NOTHING. ` +
+                    'The paths were accepted and none was acted on. Raw job status: ' +
+                    JSON.stringify(status),
+            );
+            return;
+        }
+
         this.logger.debug(`[Helix] Bulk ${topic} job completed: ${count} paths processed`);
     }
 
@@ -704,6 +721,68 @@ export class HelixService {
      * @param branch - Branch name (default: main)
      * @throws Error on access denied (403) or network error
      */
+    /**
+     * What Helix holds for one path: the preview and live status it reports.
+     *
+     * A diagnostic, not a gate — it never throws, and an unreachable admin API
+     * comes back as `httpStatus: 0` rather than failing the operation that asked.
+     *
+     * This exists because a publish reporting success proved nothing. The block
+     * library published "fine" for a month while every doc page 404'd, and no
+     * code ever asked Helix what it thought — one GET that carries `preview.status`
+     * and, on a refusal, the `x-error` header that names the reason (the body is
+     * empty on 401/403).
+     *
+     * @param org - Organization/owner name
+     * @param site - Site/repository name
+     * @param path - Content path
+     * @param branch - Branch name (default: main)
+     * @returns the admin HTTP status, the preview/live statuses when present, and any x-error
+     */
+    async getResourceStatus(
+        org: string,
+        site: string,
+        path: string,
+        branch: string = DEFAULT_BRANCH,
+    ): Promise<{
+        httpStatus: number;
+        previewStatus?: number;
+        liveStatus?: number;
+        error?: string;
+    }> {
+        const cleanPath = this.normalizeWebPath(path);
+        const url = `${HELIX_ADMIN_URL}/status/${org}/${site}/${branch}${cleanPath}`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    ...(await this.tryAdminBearer()),
+                    'x-auth-token': await this.getGitHubToken(),
+                },
+                signal: AbortSignal.timeout(TIMEOUTS.QUICK),
+            });
+
+            const error = response.headers?.get?.('x-error') ?? undefined;
+            if (!response.ok) {
+                return { httpStatus: response.status, error };
+            }
+
+            const body = (await response.json()) as {
+                preview?: { status?: number };
+                live?: { status?: number };
+            };
+            return {
+                httpStatus: response.status,
+                previewStatus: body.preview?.status,
+                liveStatus: body.live?.status,
+                error,
+            };
+        } catch (error) {
+            return { httpStatus: 0, error: (error as Error).message };
+        }
+    }
+
     async previewPage(
         org: string,
         site: string,
