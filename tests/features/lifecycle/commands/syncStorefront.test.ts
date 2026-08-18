@@ -198,8 +198,95 @@ describe('SyncStorefrontCommand', () => {
         expect(syncAndPublishMock.mock.calls[0][0].daLiveToken).toBeUndefined();
     });
 
+    describe('push refused by a repository rule', () => {
+        // A rule violation — push protection finding a secret, most often — survives
+        // any rebase. Routing it through the conflict flow narrated a pull that had
+        // nothing to pull and then blamed conflicts that never existed, while the
+        // accurate diagnosis reached only the debug log (`showError` displays its
+        // first argument and logs the second).
+        const RULESET_MESSAGE =
+            "git push blocked: the repository's rules rejected it (for example push " +
+            'protection finding a secret). Rebasing will not clear this.';
+
+        const rejectWithRuleset = (): void => {
+            syncAndPublishMock.mockRejectedValueOnce(
+                new PushRejectedError(RULESET_MESSAGE, 'ruleset')
+            );
+        };
+
+        const runCommand = (): Promise<void> =>
+            new SyncStorefrontCommand(
+                makeContext(),
+                makeStateManager(makeEdsProject()) as never,
+                makeLogger() as never
+            ).execute();
+
+        it('shows the rule-violation reason to the user, not just to the log', async () => {
+            rejectWithRuleset();
+
+            await runCommand();
+
+            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+                expect.stringContaining('rules rejected it'),
+                'OK'
+            );
+        });
+
+        it('does not rebase — the remote never moved', async () => {
+            rejectWithRuleset();
+
+            await runCommand();
+
+            const rebased = execFileMock.mock.calls.some(
+                (c) => Array.isArray(c[1]) && (c[1] as string[]).includes('--rebase')
+            );
+            expect(rebased).toBe(false);
+        });
+
+        it('never mentions conflicts the user did not have', async () => {
+            rejectWithRuleset();
+
+            await runCommand();
+
+            const shown = (vscode.window.showErrorMessage as jest.Mock).mock.calls
+                .map((c) => String(c[0]))
+                .join(' ');
+            expect(shown).not.toMatch(/conflict/i);
+            // The conflict flow's modal prompt must never open either.
+            expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+        });
+
+        it('still routes a non-fast-forward rejection through the rebase flow', async () => {
+            // The two rejections look alike in stderr; only `reason` separates
+            // them, and this one's remedy really is pull-and-rebase.
+            execFileMock.mockImplementation(
+                (
+                    _cmd: string,
+                    _args: string[],
+                    cb: (err: Error | null, result?: { stdout: string; stderr: string }) => void
+                ) => cb(null, { stdout: '', stderr: '' })
+            );
+            syncAndPublishMock
+                .mockRejectedValueOnce(new PushRejectedError('push rejected', 'non-fast-forward'))
+                // The re-push after a clean rebase.
+                .mockResolvedValueOnce({
+                    committed: false,
+                    pushed: true,
+                    helixPublished: false,
+                    summary: '',
+                });
+
+            await runCommand();
+
+            const rebased = execFileMock.mock.calls.some(
+                (c) => Array.isArray(c[1]) && (c[1] as string[]).includes('--rebase')
+            );
+            expect(rebased).toBe(true);
+        });
+    });
+
     it('on PushRejectedError + "Cancel and Reset", runs git rebase --abort and shows info', async () => {
-        syncAndPublishMock.mockRejectedValueOnce(new PushRejectedError('push rejected'));
+        syncAndPublishMock.mockRejectedValueOnce(new PushRejectedError('push rejected', 'non-fast-forward'));
         // First execFile call is git pull --rebase -> simulate conflict
         execFileMock.mockImplementation(
             (
@@ -268,7 +355,7 @@ describe('SyncStorefrontCommand', () => {
     it('on PushRejectedError + "Continue", registers the nested storefront repo and opens the conflicts', async () => {
         // First sync push is rejected; after conflict resolution the re-push succeeds.
         syncAndPublishMock
-            .mockRejectedValueOnce(new PushRejectedError('push rejected'))
+            .mockRejectedValueOnce(new PushRejectedError('push rejected', 'non-fast-forward'))
             .mockResolvedValueOnce({
                 committed: false,
                 pushed: true,
@@ -388,7 +475,7 @@ describe('SyncStorefrontCommand', () => {
 
         it('auto-resolves when every conflicted file is managed (no manual prompt)', async () => {
             syncAndPublishMock
-                .mockRejectedValueOnce(new PushRejectedError('push rejected'))
+                .mockRejectedValueOnce(new PushRejectedError('push rejected', 'non-fast-forward'))
                 .mockResolvedValueOnce({
                     committed: false,
                     pushed: true,
@@ -420,7 +507,7 @@ describe('SyncStorefrontCommand', () => {
 
         it('resolves managed conflicts with --ours (remote), never --theirs', async () => {
             syncAndPublishMock
-                .mockRejectedValueOnce(new PushRejectedError('push rejected'))
+                .mockRejectedValueOnce(new PushRejectedError('push rejected', 'non-fast-forward'))
                 .mockResolvedValueOnce({
                     committed: false,
                     pushed: true,
@@ -445,7 +532,7 @@ describe('SyncStorefrontCommand', () => {
 
         it('falls back to the manual flow when the conflict set is mixed', async () => {
             syncAndPublishMock
-                .mockRejectedValueOnce(new PushRejectedError('push rejected'))
+                .mockRejectedValueOnce(new PushRejectedError('push rejected', 'non-fast-forward'))
                 .mockResolvedValueOnce({
                     committed: false,
                     pushed: true,
@@ -470,7 +557,7 @@ describe('SyncStorefrontCommand', () => {
 
         it('treats an unknown-class file as content and falls back to the manual flow', async () => {
             syncAndPublishMock
-                .mockRejectedValueOnce(new PushRejectedError('push rejected'))
+                .mockRejectedValueOnce(new PushRejectedError('push rejected', 'non-fast-forward'))
                 .mockResolvedValueOnce({
                     committed: false,
                     pushed: true,
@@ -495,7 +582,7 @@ describe('SyncStorefrontCommand', () => {
 
         it('skips the emptied commit when rebase --continue reports no changes', async () => {
             syncAndPublishMock
-                .mockRejectedValueOnce(new PushRejectedError('push rejected'))
+                .mockRejectedValueOnce(new PushRejectedError('push rejected', 'non-fast-forward'))
                 .mockResolvedValueOnce({
                     committed: false,
                     pushed: true,
@@ -520,7 +607,7 @@ describe('SyncStorefrontCommand', () => {
         });
 
         it('aborts the rebase and does not push when the auto-resolve fails', async () => {
-            syncAndPublishMock.mockRejectedValueOnce(new PushRejectedError('push rejected'));
+            syncAndPublishMock.mockRejectedValueOnce(new PushRejectedError('push rejected', 'non-fast-forward'));
             mockConflictFlow({ conflicted: ['config.json'], checkoutError: true });
 
             const command = new SyncStorefrontCommand(

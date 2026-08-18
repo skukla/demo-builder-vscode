@@ -10,11 +10,13 @@
  *      instead, see `src/mcp-server.ts`).
  *   2. `withProgress` notification + `showInputBox` commit message prompt.
  *   3. Non-technical-user conflict resolution flow when `git push` is
- *      rejected: auto `git pull --rebase`; if rebase produces conflict
- *      markers, opens VS Code's Source Control view and polls via
- *      `PollingService.pollUntilCondition` until markers clear; cancel
- *      runs `git rebase --abort` programmatically. The user never sees a
- *      terminal — all merge-editor work happens in VS Code's built-in UI.
+ *      rejected AS NON-FAST-FORWARD: auto `git pull --rebase`; if rebase
+ *      produces conflict markers, opens VS Code's Source Control view and
+ *      polls via `PollingService.pollUntilCondition` until markers clear;
+ *      cancel runs `git rebase --abort` programmatically. The user never sees
+ *      a terminal — all merge-editor work happens in VS Code's built-in UI.
+ *      A `ruleset` rejection is routed AROUND this flow and reported as
+ *      itself; see the catch in `execute`.
  */
 
 import * as childProcess from 'child_process';
@@ -84,6 +86,10 @@ export class SyncStorefrontCommand extends BaseCommand {
         const daLiveToken = await this.readDaLiveToken();
         const githubRepo = this.resolveGithubRepo(project);
 
+        // Set when the push was refused by a repository rule. Reported after the
+        // progress notification closes, for the same reason `reportSyncResult` is.
+        let rulesetRejection: PushRejectedError | undefined;
+
         const result = await this.withProgress('Syncing storefront', async (progress) => {
             try {
                 progress.report({ message: 'Committing changes…' });
@@ -95,6 +101,19 @@ export class SyncStorefrontCommand extends BaseCommand {
                     daLiveToken,
                 });
             } catch (err) {
+                if (err instanceof PushRejectedError && err.reason === 'ruleset') {
+                    // NOT the rebase flow. A rule violation — push protection
+                    // finding a secret, most often — survives any rebase, and
+                    // that flow's whole vocabulary is wrong for it: it opens by
+                    // announcing "remote has new commits" when the remote never
+                    // moved, then reports "push failed after resolving
+                    // conflicts" for conflicts that never existed. The accurate
+                    // diagnosis is already on the error, and it used to reach
+                    // only the debug log, because `showError` displays its first
+                    // argument and logs the second.
+                    rulesetRejection = err;
+                    return null;
+                }
                 if (err instanceof PushRejectedError) {
                     await this.handlePushRejected({
                         storefrontPath,
@@ -108,6 +127,11 @@ export class SyncStorefrontCommand extends BaseCommand {
                 throw err;
             }
         });
+
+        if (rulesetRejection) {
+            await this.showError(rulesetRejection.message, rulesetRejection);
+            return;
+        }
 
         // Report the plain-sync outcome AFTER the progress notification closes.
         // `reportSyncResult` awaits a confirmation dialog ("…nothing to commit" /
