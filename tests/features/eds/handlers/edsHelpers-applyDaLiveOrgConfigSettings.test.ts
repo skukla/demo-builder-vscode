@@ -198,6 +198,30 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
     });
 
     /**
+     * `demoBuilder.daLive.aemAuthorUrl` ships with NO default (2026-08-18). A
+     * bundled one silently bound every user to one AEM environment and reported
+     * success — and when the setting was renamed from `AEMRepositoryId` in
+     * February, that fallback is what quietly replaced the author's own value on
+     * every site created for six months.
+     *
+     * With no default, an unconfigured install writes no binding rather than
+     * someone else's. This test is the guard on that: if a default is ever
+     * reintroduced, `aemAuthorUrl` stops being empty here and this fails.
+     */
+    it('writes NO AEM binding when the setting is unconfigured', async () => {
+        mockAemAuthorUrl = undefined;
+        mockImsOrgId = IMS_ORG_ID;
+
+        await applyDaLiveOrgConfigSettings(
+            mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
+        );
+
+        const [, , updates, removeKeys] = mockApplySiteConfig.mock.calls[0];
+        expect(updates['aem.repositoryId']).toBeUndefined();
+        expect(removeKeys).toContain('aem.repositoryId');
+    });
+
+    /**
      * Leah's 2026-08-18 log said `Applied: aem.repositoryId, editor.path` and
      * nothing more — a binding existed, and there was no way to tell WHAT it
      * pointed at. `demoBuilder.daLive.aemAuthorUrl` ships with a default
