@@ -7,6 +7,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.133] - 2026-08-18
+
+The big one is the **AI agent surface**. Until now an agent working in a Demo Builder
+project could read a lot and change almost nothing — it could list and delete a DA.live
+site but could not write a page, and it could not create a project, a repo, an Adobe
+Console project or an integration at all. This release closes most of that gap: more than
+thirty new agent tools spanning diagnosis, cloud resources, project lifecycle, content
+authoring and settings, plus the guidance an agent needs to use them without guessing.
+
+Also: **Commerce passwords and client secrets move out of project files and into the OS
+keychain**, EDS publishing stops reporting success when nothing landed, and Adobe sign-in
+errors say what actually went wrong.
+
+### Added
+
+- **An agent can now build and change a project, not just read one.** New tools cover
+  creating a GitHub repo from a template, creating and deleting Adobe Console projects and
+  workspaces, adding an integration, configuring a project in one call, renaming it, and
+  setting its destination — each returning a structured result rather than a sentence to
+  parse.
+- **Six content-authoring tools.** An agent can write a page to DA.live, not only delete
+  one. `get_block_authoring_shape` reads a block's real authoring table from
+  `component-definition.json` instead of inferring it from the block's JavaScript, which
+  was the step that used to go wrong silently.
+- **Diagnosis tools that distinguish causes.** Repo readiness, GitHub App installation and
+  store discovery each return a verdict — including an explicit *undetermined, and why*,
+  which is a different answer from "not ready". `get_project_status` gives the whole
+  picture in one call.
+- **`check_prerequisites` and one-call selection validation.** An agent can check tooling
+  and validate a component selection before starting work rather than discovering the
+  problem halfway through.
+- **Commerce credentials are stored in the OS keychain.** Passwords and client secrets no
+  longer live in component `.env` files. The extension tells you when a credential is
+  already handled, so you are not sent to look for something that is deliberately absent.
+- **Publishing now tells you whether the CDN actually served it.** `republish` and
+  `sync_content` report whether the new content was confirmed live or is still
+  propagating — the answer was already being measured and then thrown away.
+
+### Fixed
+
+- **EDS publishing could report success when nothing reached the site.** The publish path
+  now reports what Helix actually did, and the block library is published page by page
+  with proof that each landed, rather than in a bulk call that could match nothing and
+  still return OK.
+- **A storefront sync that lost a race left you to fix it by hand.** When the extension's
+  own config write moved the branch first, `sync_storefront` rejected the push and stopped.
+  It now rebases and retries once, aborting cleanly on conflict so the checkout is exactly
+  as it was found. A push blocked by a repository rule — a secret caught by push
+  protection, typically — is no longer sent through that flow, where it reported "push
+  failed after resolving conflicts" for conflicts that never existed.
+- **`get_project` returned secret values to agents.** Secrets are now stripped on both the
+  summary and full paths.
+- **A path traversal in the content tools** that defeated their own site guard.
+- **Adobe sign-in errors blamed the wrong thing.** A failed `aio` call now reports the
+  CLI's own error instead of a parse failure, large CLI output is no longer truncated
+  mid-message, and the token read no longer trusts a stale config.
+- **"Couldn't verify" on AEM Code Sync** now offers to install the app instead, which is
+  what was actually needed.
+- **Removing an integration left it selected**, so it came back.
+- **Sample data import targeted the wrong scope.** An omitted scope now falls back to the
+  project's website and store view rather than the service's `base`/`default`, and
+  selecting a data type selects what it depends on.
+- **The Sample Data tile appeared for everyone**, including projects with no Data
+  Installer API configured, where it opened a surface that refused them. It is now shown
+  only when the feature can actually be used.
+- **Two UI fixes:** the numbered-step badge takes its colour from your VS Code theme, and
+  feedback views reserve space without capping it.
+
+### Changed
+
+- **Agent tool responses are much smaller.** The four largest were 78% of the entire read
+  surface and are now 79% smaller; `list_adobe_projects` alone was 111KB for a single org,
+  46% of it other people's account identifiers. Every tool is now audited against a
+  recorded size ceiling.
+- **Adobe I/O credentials are re-read on every token read**, so a session that changed
+  underneath the extension is picked up instead of being reported as broken.
+
+
 ## [1.0.0-beta.132] - 2026-08-17
 
 Adds the Data Installer — sample data for a Commerce instance, driven from inside the
