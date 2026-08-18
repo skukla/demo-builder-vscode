@@ -43,11 +43,38 @@ only because the cross-feature slice below was derived from it.
   a new field on `createPanelHandlerContext` has to be threaded six times, and
   missing one produces a panel whose handlers see an incomplete context — the exact
   failure the comments in these very methods say the factory exists to prevent.
-- Proposal: move it to `BaseWebviewCommand` as `protected createHandlerContext()`,
-  delete the six overrides. Behaviour-preserving, so it proves itself by leaving the
-  consumers' suites untouched.
-- Cost: small — one method added, six deleted, no call-site changes (all callers use
-  `this.createHandlerContext()` already).
+- ~~Proposal: move it to `BaseWebviewCommand` as `protected createHandlerContext()`.~~
+  **WITHDRAWN 2026-08-18 — the fix would create an import cycle.** `BaseWebviewCommand`
+  would have to import `createPanelHandlerContext` from `@/commands/handlerContextFactory`,
+  and that module already reaches `baseWebviewCommand` transitively:
+
+  ```
+  commands/handlerContextFactory → core/di/index → core/di/serviceLocator
+    → features/sidebar/index → features/sidebar/providers/sidebarProvider
+    → core/base/index → core/base/baseWebviewCommand
+  ```
+
+  Measured with `madge --json` on `handlerContextFactory.ts` (339 modules reachable) and
+  a shortest-path search, not inferred. Adding the edge closes the loop.
+
+- **Why the alternatives do not work either.** Moving `handlerContextFactory` into `core/`
+  is worse — it imports `@/features/prerequisites/services/PrerequisitesManager`, so core
+  would then depend on a feature. A structurally-typed helper taking the five values
+  cannot be handed `this` from a subclass, because the fields are `protected` and do not
+  satisfy a public interface from outside the class; every command would still write the
+  same object literal, which is the actual duplicated text.
+
+- **Standing verdict:** the duplication is real and the cost of leaving it is real — a new
+  field on `createPanelHandlerContext` must be threaded six times, and missing one yields
+  a panel whose handlers see an incomplete context. But there is no cheap fix that does
+  not either invert the layering or close a cycle. Leaving it, deliberately and on the
+  record, is the correct call until someone untangles
+  `serviceLocator → features/sidebar`, which is the edge that makes this impossible.
+
+- **Lesson for this skill:** this proposal named a mechanism without checking the import
+  graph, and the mechanism was unavailable. A sweep finding that proposes "move X to Y"
+  should run `madge` on Y's would-be import BEFORE writing the proposal, not when someone
+  tries to apply it.
 
 ## Considered and rejected
 
