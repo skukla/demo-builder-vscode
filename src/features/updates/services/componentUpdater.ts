@@ -9,6 +9,15 @@ import type { Logger } from '@/types/logger';
 import { DEFAULT_SHELL } from '@/types/shell';
 import { parseJSON } from '@/types/typeGuards';
 
+/**
+ * How much build output to dump on failure.
+ *
+ * Same budget as the deploy-path build dump in `core/shell/buildComponent.ts`
+ * and the mesh deploy dump in `meshDeployment.ts` — a reader looking for one of
+ * these should find the same shape wherever a build or deploy step failed.
+ */
+const BUILD_OUTPUT_LOG_LIMIT = 500;
+
 export class ComponentUpdater {
     private logger: Logger;
     private extensionPath: string;
@@ -324,7 +333,19 @@ export class ComponentUpdater {
                 });
 
                 if (buildResult.code !== 0) {
-                    throw new Error(`Build failed: ${buildResult.stderr || buildResult.stdout}`);
+                    // Dump BEFORE throwing, for the same reason the deploy-path
+                    // build does (`core/shell/buildComponent.ts`): the logger keeps
+                    // only a message's FIRST line and then redacts a leading path
+                    // wholesale, which is exactly what node prints on an uncaught
+                    // exception — so the message cannot be the record.
+                    this.logger.debug('[Updates] Post-update build failed', {
+                        code: buildResult.code,
+                        stdout: buildResult.stdout?.substring(0, BUILD_OUTPUT_LOG_LIMIT),
+                        stderr: buildResult.stderr?.substring(0, BUILD_OUTPUT_LOG_LIMIT),
+                    });
+                    throw new Error(
+                        `Build failed (exit ${buildResult.code}): ${buildResult.stderr || buildResult.stdout}`,
+                    );
                 }
                 this.logger.debug('[Updates] ✓ Post-update build completed successfully');
             }

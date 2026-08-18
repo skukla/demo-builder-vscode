@@ -9,7 +9,7 @@
  * - No package.json        -> no-op (nothing to build)
  * - No `build` script      -> early return (install is skipped too, as before)
  * - install exits non-zero -> warn and continue (does NOT abort the build)
- * - build exits non-zero   -> throw with stderr/stdout detail
+ * - build exits non-zero   -> DUMP stdout/stderr to the debug log, then throw
  *
  * The build command is `npm run build ${buildArgs ?? ''}` so mesh (buildArgs:
  * '-- --force') issues the identical command it did before, while App Builder
@@ -37,6 +37,14 @@ export interface BuildComponentOptions {
      */
     kind?: 'mesh' | 'integration';
 }
+
+/**
+ * How much build output to dump on failure.
+ *
+ * Matches `handleDeployFailure` in `meshDeployment.ts`, which is the sibling
+ * dump a reader is told to look for when a mesh step fails.
+ */
+const BUILD_OUTPUT_LOG_LIMIT = 500;
 
 /** Mesh install: production-only deps, no scripts (byte-identical to the original). */
 const INSTALL_COMMAND = 'npm install --production --no-fund --ignore-scripts';
@@ -107,8 +115,24 @@ async function buildMesh(
     const buildCommand = `npm run build${opts.buildArgs ? ` ${opts.buildArgs}` : ''}`;
     const buildResult = await commandManager.execute(buildCommand, execOptions);
     if (buildResult.code !== 0) {
+        // Dump BEFORE throwing. The thrown message cannot be the record: the
+        // logger keeps only its first line (`sanitizeErrorForLogging`), and the
+        // path redactor then replaces that line wholesale when it begins with a
+        // path — which is exactly what node prints on an uncaught exception.
+        // A colleague's failed mesh build reached the log as
+        // `Error: Build failed: <path>/` and nothing else, three steps each
+        // doing something individually reasonable. The deploy half of this
+        // feature has always dumped its output here; the build half had not,
+        // so a build failure was the one mesh failure nobody could read.
+        logger.debug(`${prefix} Build failed`, {
+            code: buildResult.code,
+            stdout: buildResult.stdout?.substring(0, BUILD_OUTPUT_LOG_LIMIT),
+            stderr: buildResult.stderr?.substring(0, BUILD_OUTPUT_LOG_LIMIT),
+        });
         const errorMsg = buildResult.stderr?.trim() || buildResult.stdout?.trim() || 'Build failed';
-        throw new Error(`Build failed: ${errorMsg}`);
+        // The exit code is carried in the message because it is the one detail
+        // redaction cannot erase — `Build failed: <path>/` told the user nothing.
+        throw new Error(`Build failed (exit ${buildResult.code}): ${errorMsg}`);
     }
 
     logger.debug(`${prefix} Component built successfully`);
