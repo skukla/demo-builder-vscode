@@ -24,6 +24,7 @@ import {
     CODE_SYNC_INSTALL_ACTION,
     CODE_SYNC_RECHECK_ACTION,
     buildCodeSyncInstallSteps,
+    buildCodeSyncInstallSummary,
 } from '../helpers/codeSyncInstallContent';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { LoadingOverlay } from '@/core/ui/components/feedback/LoadingOverlay';
@@ -31,6 +32,7 @@ import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { SuccessStateDisplay } from '@/core/ui/components/feedback/SuccessStateDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout';
 import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
+import { getValidationState } from '@/core/ui/utils/validationState';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { sleep } from '@/core/utils/sleep';
 import { isValidRepositoryName } from '@/core/validation/normalizers';
@@ -44,6 +46,15 @@ export interface GitHubAppStatus {
     codeStatus?: number;
     error?: string;
     installUrl?: string;
+    /**
+     * The check never resolved — AEM refused the credential or was unreachable.
+     *
+     * Distinct from `isInstalled: false`, which asserts the app is absent. The
+     * handler sets this instead of `installUrl`, because installing cannot fix a
+     * refused credential. It is the signal for "we cannot tell"; the absence of a
+     * `codeStatus` is NOT (a Helix 404 has no code.status and is perfectly definite).
+     */
+    undetermined?: boolean;
 }
 
 /** Repository creation state tracking. */
@@ -60,6 +71,8 @@ export interface GitHubAppCheckResult {
     codeStatus?: number;
     installUrl?: string;
     error?: string;
+    /** Mirrors `CheckGitHubAppResponse.undetermined` — see `GitHubAppStatus`. */
+    undetermined?: boolean;
 }
 
 /**
@@ -89,8 +102,14 @@ export async function pollGitHubAppInstallation(
                 };
             }
 
-            // HTTP 404 (codeStatus undefined) means repo not yet indexed -- retry
-            if (result.codeStatus === undefined && attempt < maxAttempts) {
+            // Retry only what waiting can fix. This keyed off `codeStatus ===
+            // undefined`, which is ALSO true of a definitive Helix 404 ("no such
+            // site") — so a repo whose App was simply never installed spent 25
+            // seconds counting "still being registered... (attempt 3 of 5)" and
+            // then landed back where it started. An undetermined check is the one
+            // that deserves another go: AEM refused or was unreachable, and the
+            // next attempt may resolve it.
+            if (result.undetermined && attempt < maxAttempts) {
                 setRecheckMessage(
                     `Repository is still being registered... (attempt ${attempt + 1} of ${maxAttempts})`,
                 );
@@ -104,6 +123,7 @@ export async function pollGitHubAppInstallation(
                     isInstalled: false,
                     codeStatus: result.codeStatus,
                     installUrl: result.installUrl,
+                    undetermined: result.undetermined,
                 },
                 failed: true,
             };
@@ -175,19 +195,28 @@ export function computeRepoValid(
  *             step isn't "done" until a repo has been chosen)
  */
 /**
- * Selection-time Code Sync probe for an EXISTING repo: report what Helix says now and
- * stop. Lenient (a 400 code.status is installed-but-unsynced, fine at selection) and
- * non-triggering (`skipTrigger`), so it answers in ~1s instead of polling a code sync
- * for up to three minutes.
+ * Report what Helix says about Code Sync right now, and stop.
  *
- * Module-level rather than a component callback: it closes over nothing but its setter,
- * and inlining it pushed RepoSelectionInline past the complexity limit.
+ * Lenient (a 400 code.status is installed-but-unsynced, which is fine at this
+ * point) and non-triggering (`skipTrigger`), so it answers in about a second
+ * instead of firing a code sync and polling it for up to three minutes.
+ *
+ * BOTH step-level checks land here — the existing repo just selected, and the new
+ * repo just created. The created-repo path used to run a near-copy that omitted
+ * `skipTrigger` while its docstring claimed otherwise, so creating a repository
+ * sat on "Checking AEM Code Sync" for minutes: Helix 404s a repo it has never
+ * indexed, and the sync that would fix that cannot run until the App is installed.
+ * The user needs the install steps first, not a wait that resolves nothing. The
+ * mid-pipeline gate still triggers, because that is where the latency is affordable.
+ *
+ * Module-level rather than a component callback: it closes over nothing but its
+ * setter, and inlining it pushed RepoSelectionInline past the complexity limit.
  *
  * @param owner - repo owner
  * @param repo - repo name
  * @param setStatus - receives the resulting status
  */
-export async function probeExistingRepoApp(
+export async function probeRepoCodeSync(
     owner: string,
     repo: string,
     setStatus: (s: GitHubAppStatus) => void,
@@ -254,13 +283,28 @@ export function resolveCodeSyncView(
     // Not yet asked. Never "missing" — we have no answer to report.
     if (status.isInstalled === null) return { kind: 'checking' };
 
-    // A refusal (401) or an unreachable service leaves `codeStatus` undefined, and
-    // that says NOTHING about whether the app is installed. Reporting it as
-    // missing sends the user to reinstall an app that is already there — which is
+    // Undetermined means the check never resolved — a refused credential or an
+    // unreachable service — and that says NOTHING about the app. Reporting it as
+    // missing sends the user to reinstall one that is already there, which is
     // exactly what the old "Registering..." row did.
-    if (status.codeStatus === undefined) return { kind: 'unverifiable' };
+    //
+    // Read the HANDLER's verdict, not the absence of a number. It sends
+    // `installUrl` when it is confident enough to offer the install and withholds
+    // it when it is not. `githubAppService` warns about the shortcut this used to
+    // take: `httpNotFound` is the only signal meaning "Helix has never heard of
+    // this repo", and callers "must not re-derive it from codeStatus === undefined,
+    // which is equally true of a 401/403/5xx".
+    //
+    // That shortcut is why a brand-new repository — Helix 404, no `code.status` to
+    // report, install genuinely required — showed "Couldn't verify" and offered
+    // nothing but a re-check that could never come good.
+    if (status.undetermined) return { kind: 'unverifiable' };
 
-    return { kind: 'needs-install' };
+    // Positive evidence either way: the handler offered somewhere to install, or
+    // Helix reported an actual code.status. With neither, claim nothing.
+    if (status.installUrl || status.codeStatus !== undefined) return { kind: 'needs-install' };
+
+    return { kind: 'unverifiable' };
 }
 
 export function computeCodeSyncValid(
@@ -313,6 +357,9 @@ export function buildAppStatusFromResult(result: GitHubAppCheckResult): GitHubAp
         isInstalled: result.success ? result.isInstalled : false,
         codeStatus: result.codeStatus,
         installUrl: result.installUrl,
+        // Carried through, not dropped. The handler computes it; the view needs it
+        // to tell "cannot tell" apart from "definitely needs installing".
+        undetermined: result.undetermined,
         error: result.success ? undefined : result.error || 'Failed to check GitHub App status',
     };
 }
@@ -334,6 +381,13 @@ export function buildAppStatusFromResult(result: GitHubAppCheckResult): GitHubAp
  * The install flow renders for BOTH repo modes. It previously required
  * `repoMode === 'new'`, so an existing repo missing the app was blocked by
  * `computeCodeSyncValid` with no instructions anywhere on screen — a dead end.
+ */
+
+/*
+ * Every branch below passes `fill`, so all four states centre in the SAME place.
+ * A short one (a spinner, a green check) lands in the middle of the pane; the
+ * install steps grow past it and scroll. One state centred and the next
+ * top-aligned is the jump reported as "the message is too high in the web view".
  */
 export function CodeSyncStatusView({
     createdRepo,
@@ -361,7 +415,7 @@ export function CodeSyncStatusView({
 
     if (view.kind === 'checking') {
         return (
-            <CenteredFeedbackContainer>
+            <CenteredFeedbackContainer fill>
                 <LoadingDisplay
                     size="L"
                     message="Checking AEM Code Sync"
@@ -371,12 +425,18 @@ export function CodeSyncStatusView({
         );
     }
 
+    // Every branch below is wrapped the same way as `checking` above. Only that one
+    // was centered, so the pane's content jumped to the top the moment the check
+    // finished — the same view, in a different place, for no reason the user can
+    // see. `CenteredFeedbackContainer` is the house treatment for exactly this.
     if (view.kind === 'verified') {
         return (
-            <SuccessStateDisplay
-                title="AEM Code Sync Verified"
-                message={`${owner}/${repo} is connected and ready to publish.`}
-            />
+            <CenteredFeedbackContainer fill>
+                <SuccessStateDisplay
+                    title="AEM Code Sync Verified"
+                    message={`${owner}/${repo} is connected and ready to publish.`}
+                />
+            </CenteredFeedbackContainer>
         );
     }
 
@@ -385,37 +445,66 @@ export function CodeSyncStatusView({
         // says nothing about the app, and telling someone to install one that is
         // already there is the wrong remedy.
         return (
-            <StatusDisplay
-                variant="warning"
-                title="Couldn't verify AEM Code Sync"
-                height="auto"
-                actions={[{ label: CODE_SYNC_RECHECK_ACTION, variant: 'accent', onPress: onCheckAgain }]}
-            >
-                <Text UNSAFE_className="text-sm text-gray-600">
-                    Adobe did not answer for {owner}/{repo}. This does not mean the app is
-                    missing — a new repository can take a few minutes to register.
-                </Text>
-            </StatusDisplay>
+            <CenteredFeedbackContainer fill>
+                <StatusDisplay
+                    variant="warning"
+                    title="Couldn't verify AEM Code Sync"
+                    height="auto"
+                    actions={[
+                        { label: CODE_SYNC_RECHECK_ACTION, variant: 'accent', onPress: onCheckAgain },
+                    ]}
+                >
+                    <Text UNSAFE_className="text-sm text-gray-600">
+                        Adobe did not answer for {owner}/{repo}. This does not mean the app is
+                        missing — a new repository can take a few minutes to register.
+                    </Text>
+                </StatusDisplay>
+            </CenteredFeedbackContainer>
         );
     }
 
     return (
-        <StatusDisplay
-            variant="info"
-            title="Install the AEM Code Sync App"
-            height="auto"
-            actions={[
-                {
-                    label: CODE_SYNC_INSTALL_ACTION,
-                    variant: 'accent',
-                    onPress: onOpenInstallPage,
-                },
-                { label: CODE_SYNC_RECHECK_ACTION, variant: 'secondary', onPress: onCheckAgain },
-            ]}
-        >
-            <NumberedInstructions instructions={buildCodeSyncInstallSteps(owner, repo)} />
-        </StatusDisplay>
+        <CenteredFeedbackContainer fill>
+            <StatusDisplay
+                variant="info"
+                title="Install the AEM Code Sync App"
+                height="auto"
+                actions={[
+                    {
+                        label: CODE_SYNC_INSTALL_ACTION,
+                        variant: 'accent',
+                        onPress: onOpenInstallPage,
+                    },
+                    { label: CODE_SYNC_RECHECK_ACTION, variant: 'secondary', onPress: onCheckAgain },
+                ]}
+            >
+                <NumberedInstructions
+                    description={buildCodeSyncInstallSummary(owner, repo)}
+                    instructions={buildCodeSyncInstallSteps(owner, repo)}
+                />
+            </StatusDisplay>
+        </CenteredFeedbackContainer>
     );
+}
+
+/**
+ * The line under the name field: where the repo WILL live, or where it now DOES.
+ *
+ * Tense is the whole point. "Will be created as …" stayed on screen after the repo
+ * existed, which is the same class of mistake as an empty field that is actually
+ * satisfied — the UI describing an intention rather than the state.
+ */
+function describeRepoTarget(
+    repoName: string,
+    repoCreationState: RepoCreationState,
+    githubUser?: { login: string },
+): string {
+    if (!githubUser) return 'Name for your new GitHub repository';
+
+    const target = `${githubUser.login}/${repoName || 'my-eds-project'}`;
+    return repoCreationState.isCreated && !repoCreationState.isCreating
+        ? `Created as ${target}`
+        : `Will be created as ${target}`;
 }
 
 /**
@@ -453,18 +542,28 @@ export function NewRepoForm({
                 value={repoName}
                 onChange={onRepoNameChange}
                 onBlur={onRepoNameBlur}
-                validationState={repoNameError || repoCreationState.error ? 'invalid' : undefined}
+                // The field that did the work says so. Creation left it grey and
+                // disabled with helper text still in the future tense, so the only
+                // confirmation was a tick in the summary panel across the screen.
+                // `valid` is what draws Spectrum's checkmark, the same mark the
+                // project-name field earns.
+                validationState={getValidationState(
+                    repoNameError || repoCreationState.error,
+                    repoCreationState.isCreated && !repoCreationState.isCreating,
+                )}
                 errorMessage={repoNameError || repoCreationState.error}
                 placeholder="my-eds-project"
-                description={
-                    githubUser
-                        ? `Will be created as ${githubUser.login}/${repoName || 'my-eds-project'}`
-                        : 'Name for your new GitHub repository'
-                }
+                description={describeRepoTarget(repoName, repoCreationState, githubUser)}
                 width="100%"
                 isRequired
                 autoFocus
-                isDisabled={repoCreationState.isCreated || repoCreationState.isCreating}
+                // READ-only once created, not DISABLED. Both stop editing, but a
+                // disabled Spectrum field suppresses the validation icon — so the
+                // checkmark this field earns on success was drawn and then hidden.
+                // Still disabled while the request is in flight: there is nothing to
+                // report yet, and greying it is the honest signal that it is busy.
+                isReadOnly={repoCreationState.isCreated}
+                isDisabled={repoCreationState.isCreating}
             />
 
             <Flex justifyContent="end" gap="size-100" marginTop="size-200">

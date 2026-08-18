@@ -23,6 +23,7 @@ import {
     CODE_SYNC_INSTALL_ACTION,
     CODE_SYNC_RECHECK_ACTION,
     buildCodeSyncInstallSteps,
+    buildCodeSyncInstallSummary,
 } from '@/features/eds/ui/helpers/codeSyncInstallContent';
 
 describe('codeSyncInstallContent', () => {
@@ -35,19 +36,40 @@ describe('codeSyncInstallContent', () => {
         expect(JSON.stringify(steps)).toContain('demo-builder-test');
     });
 
-    it('ends by telling the user to come back and re-check, naming that button', () => {
+    /**
+     * A numbered step earns its row by describing something the user cannot see.
+     *
+     * Two of the four described the buttons directly beneath them — "Click
+     * 'Install App'" and "Return here and click 'Check Again'". Numbering the
+     * on-screen affordances doubled the height of a block that then overflowed
+     * its pane, and told the user something the buttons already said.
+     *
+     * What remains is the part that happens on GitHub, in a browser tab, where
+     * this UI cannot help: which "Configure" to press, and which repository to
+     * grant. The button names live on the buttons, and in the summary line.
+     */
+    it('walks only the screens the user cannot see — the ones on GitHub', () => {
         const steps = buildCodeSyncInstallSteps('owner', 'repo');
-        const last = steps[steps.length - 1];
 
-        // The final step must name the button that actually exists, or the user
-        // completes the install and has no idea what closes the loop.
-        expect(`${last.step} ${last.details}`).toContain(CODE_SYNC_RECHECK_ACTION);
+        expect(steps).toHaveLength(2);
+        expect(steps[0].step).toBe('Configure the app');
+        expect(steps[1].step).toBe('Grant repository access');
     });
 
-    it('opens by naming the install button', () => {
-        const steps = buildCodeSyncInstallSteps('owner', 'repo');
+    it('never numbers a button that is on screen', () => {
+        const script = JSON.stringify(buildCodeSyncInstallSteps('owner', 'repo'));
 
-        expect(`${steps[0].step} ${steps[0].details}`).toContain(CODE_SYNC_INSTALL_ACTION);
+        expect(script).not.toContain(CODE_SYNC_INSTALL_ACTION);
+        expect(script).not.toContain(CODE_SYNC_RECHECK_ACTION);
+    });
+
+    it('the summary names the repo and the button that closes the loop', () => {
+        // What the deleted final step carried, in one line instead of a row:
+        // the user has to know the install is not the end of it.
+        const summary = buildCodeSyncInstallSummary('skukla', 'bodea-team-demo');
+
+        expect(summary).toContain('skukla/bodea-team-demo');
+        expect(summary).toContain(CODE_SYNC_RECHECK_ACTION);
     });
 
     it('exposes stable action labels for both surfaces to share', () => {
@@ -82,6 +104,12 @@ describe('both surfaces use the shared script', () => {
 
     it.each(SURFACES)('%s builds its steps from the shared module', (rel) => {
         expect(read(rel)).toContain('buildCodeSyncInstallSteps');
+    });
+
+    it.each(SURFACES)('%s takes its summary line from the shared module too', (rel) => {
+        // The dialog used to hand-write its own lead-in sentence. That is the
+        // same drift the steps already had, one paragraph higher up.
+        expect(read(rel)).toContain('buildCodeSyncInstallSummary');
     });
 
     it.each(SURFACES)('%s does not hand-write the install steps', (rel) => {
