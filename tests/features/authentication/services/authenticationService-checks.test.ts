@@ -40,6 +40,10 @@ const mockStoredToken: { value: { token?: string; expiry?: number } | undefined 
 };
 jest.mock('@adobe/aio-lib-core-config', () => ({
     get: jest.fn(() => mockStoredToken.value),
+    // The real reader reloads before every get (the library serves a snapshot
+    // otherwise). Declared here so this mock is the real module's shape: without
+    // it, the reader's reload throws and quietly runs its fallback path instead.
+    reload: jest.fn(),
 }));
 
 /** Clears the 100-character floor, expiring an hour out unless told otherwise. */
