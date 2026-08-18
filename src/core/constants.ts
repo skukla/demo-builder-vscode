@@ -108,7 +108,14 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // two kinds of value, says a secret read as absent is deliberate, and routes the
 // user to Configure. It also corrects `ACCS_ENDPOINT`, which is not a key that
 // exists — the catalog calls it `ACCS_GRAPHQL_ENDPOINT`.
-export const AI_CONTEXT_VERSION = 14;
+// v15: `diagnose-demo` had no entry for "my change is not on the site", the
+// symptom an agent hits every time it edits a storefront file. With nothing
+// routing it to git, one agent verified against the DEPLOYED SITE, read CDN
+// propagation lag as lost commits, re-applied work that had never been lost,
+// and filed a bug report about the extension force-pushing — which never
+// happened. The skill now says to run `git log` before concluding anything, and
+// gives the `gh api .../compare` check that settles a rewrite claim outright.
+export const AI_CONTEXT_VERSION = 15;
 
 /**
  * Component IDs for standardized component instance access

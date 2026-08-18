@@ -19,6 +19,7 @@ distinguishes causes; the sections below say how to read each answer.
 | …site config is healthy, pages still empty | `get_store_structure` | Now scope is worth checking: the project can point at a website or store view that has no products, or does not exist |
 | Catalog is empty everywhere | `get_store_structure`, then "Reading an empty catalog" below | A scope that resolves is not necessarily a scope with products in it — and an import that SUCCEEDED can still read as empty |
 | Site serves old content after an edit | `sync_storefront` | Pushing is not publishing; see "Pushed is not published" |
+| Your change is not on the site — did work get lost? | `git log` in the storefront | Git is the record, not the rendered page. See "Is your work still there?" — check it BEFORE concluding anything, and before re-applying anything |
 | Mesh behaves unexpectedly | `check_mesh` | Reports both deployed AND up-to-date — they differ |
 | A setting change had no effect | `get_project` | Compare what is saved against what you expected to save |
 | A whole FEATURE seems absent | `get_settings` | Two keys are functional gates rather than preferences — the Data Installer surface does not exist without `dataInstaller.enabled` + `apiBaseUrl`. "Off" and "broken" look identical until you look |
@@ -102,6 +103,36 @@ So, in order:
 
 Re-importing does not fix this and costs minutes. It is the wrong instinct here
 precisely because the import was never the problem.
+
+## Is your work still there?
+
+You edited a file, the site does not show it, and the question that follows is whether
+something ate your change. **Run `git log` in the storefront before you answer it.**
+
+```
+git -C <storefront> log --oneline -20 -- <the file you changed>
+```
+
+- **Your commit is in the log** → your work is safe. The site is behind, not wrong.
+  Publishing reaches the CDN edge on a delay, and that delay is not data loss. Wait,
+  reload, and check again. Do not re-apply the change; you will only commit it twice.
+- **Your commit is not in the log** → it was never committed. Look at `git status`
+  first; the edit is probably still sitting in the working tree.
+
+Nothing in this extension force-pushes or rewrites a storefront branch. If you suspect
+history was rewritten, that is a claim git can settle in one command — compare the
+before and after of each push rather than inferring it from what the site serves:
+
+```
+gh api "/repos/{owner}/{repo}/compare/{before}...{head}" --jq .status
+```
+
+`ahead` means commits were added and none were lost. Only `behind` or `diverged` would
+mean a branch was moved backwards.
+
+This exact symptom once cost an hour and produced a bug report about force-pushing that
+was entirely wrong. What had happened was CDN propagation lag. `git log` would have
+ended it at the first minute.
 
 ## Pushed is not published
 
