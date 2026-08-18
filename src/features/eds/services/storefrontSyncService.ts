@@ -16,9 +16,10 @@
  *      `githubRepo` are provided)
  *
  * Conflict resolution is NOT handled here. On `git push` rejection the service
- * throws `PushRejectedError`; callers decide whether to surface the rebase /
- * merge-editor flow (the extension wrapper in B8) or return a clean error
- * (the MCP wrapper).
+ * throws `PushRejectedError`, tagged with the `reason` that separates a remote
+ * that moved from a ruleset that refused; callers decide whether to surface the
+ * merge-editor flow (the extension wrapper in B8) or rebase-and-retry
+ * unattended (the MCP wrapper, via the exported `rebaseOntoRemote`).
  */
 
 import * as childProcess from 'child_process';
@@ -29,9 +30,18 @@ import { previewAndPublishPage } from './helixApiClient';
 
 const execFile = promisify(childProcess.execFile);
 
+/**
+ * Why the remote refused the push. The two causes look alike in stderr — both
+ * contain "rejected" — and have opposite remedies: one is cleared by rebasing
+ * onto the new remote head, the other cannot be cleared by rebasing at all.
+ * Callers that retry MUST check this rather than the message text.
+ */
+export type PushRejectionReason = 'non-fast-forward' | 'ruleset';
+
 export class PushRejectedError extends Error {
     constructor(
         message: string,
+        readonly reason: PushRejectionReason,
         readonly stderr?: string,
     ) {
         super(message);
@@ -77,6 +87,17 @@ export interface SyncAndPublishResult {
     committed: boolean;
     pushed: boolean;
     helixPublished: boolean;
+    /**
+     * Short sha of the commit this sync pushed, when it pushed one.
+     *
+     * The one per-call fact that answers "did my work survive?". Publishing
+     * reaches the CDN on a delay, so an agent that checks the rendered site
+     * right after a sync sees the OLD page and has nothing to weigh that
+     * against. Naming the commit gives it something git can confirm. Read
+     * best-effort: a failed `rev-parse` leaves this undefined rather than
+     * failing a sync that already succeeded.
+     */
+    commitSha?: string;
     /** One-line summary safe to log or surface to a user. */
     summary: string;
 }
@@ -128,6 +149,7 @@ export async function syncAndPublish(input: SyncAndPublishInput): Promise<SyncAn
 
     await push(input.storefrontPath, input.githubToken);
     result.pushed = true;
+    result.commitSha = await readHeadSha(input.storefrontPath);
 
     if (isHelixPublishableInput(input)) {
         await previewAndPublishPage(
@@ -163,29 +185,70 @@ export async function syncAndPublish(input: SyncAndPublishInput): Promise<SyncAn
  */
 async function fetchAndFastForward(storefrontPath: string, githubToken?: string): Promise<void> {
     try {
-        if (githubToken) {
-            const { stdout: remoteRaw } = await execFile('git', [
-                '-C',
-                storefrontPath,
-                'remote',
-                'get-url',
-                'origin',
-            ]);
-            const tokenizedUrl = injectTokenIntoUrl(remoteRaw.trim(), githubToken);
-            await execFile('git', [
-                '-C',
-                storefrontPath,
-                'pull',
-                '--ff-only',
-                tokenizedUrl,
-                'HEAD',
-            ]);
-        } else {
-            await execFile('git', ['-C', storefrontPath, 'pull', '--ff-only']);
-        }
+        await execFile('git', [
+            '-C',
+            storefrontPath,
+            'pull',
+            '--ff-only',
+            ...(await remoteArgs(storefrontPath, githubToken)),
+        ]);
     } catch {
         // Diverged or dirty — let push → rebase handle it. Not fatal to the sync.
     }
+}
+
+/** Result of `rebaseOntoRemote`. */
+export type RebaseOutcome = 'clean' | 'aborted';
+
+/**
+ * Replay the local commits on top of the remote's new ones so the next push
+ * fast-forwards. Use ONLY for a `non-fast-forward` rejection — a ruleset
+ * rejection survives any rebase, and replaying it just costs another round trip.
+ *
+ * On ANY failure (conflict, dirty tree, anything) this runs `git rebase
+ * --abort` and reports `'aborted'`. That matters more than the retry does:
+ * these commands run inside someone else's checkout, and leaving it
+ * half-rebased is a worse state than the rejected push we started from. The
+ * abort is itself best-effort — when no rebase is in progress it fails, and
+ * that failure means there is nothing to undo.
+ */
+export async function rebaseOntoRemote(
+    storefrontPath: string,
+    githubToken?: string,
+): Promise<RebaseOutcome> {
+    try {
+        await execFile('git', [
+            '-C',
+            storefrontPath,
+            'pull',
+            '--rebase',
+            ...(await remoteArgs(storefrontPath, githubToken)),
+        ]);
+        return 'clean';
+    } catch {
+        try {
+            await execFile('git', ['-C', storefrontPath, 'rebase', '--abort']);
+        } catch {
+            // No rebase in progress (e.g. the pull refused before starting one).
+        }
+        return 'aborted';
+    }
+}
+
+/**
+ * Trailing args that point a pull at origin: a token-injected URL plus `HEAD`
+ * when we hold a token, nothing at all when git's ambient auth is doing the work.
+ */
+async function remoteArgs(storefrontPath: string, githubToken?: string): Promise<string[]> {
+    if (!githubToken) return [];
+    const { stdout: remoteRaw } = await execFile('git', [
+        '-C',
+        storefrontPath,
+        'remote',
+        'get-url',
+        'origin',
+    ]);
+    return [injectTokenIntoUrl(remoteRaw.trim(), githubToken), 'HEAD'];
 }
 
 async function stageAll(storefrontPath: string): Promise<void> {
@@ -238,16 +301,39 @@ async function push(storefrontPath: string, githubToken?: string): Promise<void>
                 "git push blocked: the repository's rules rejected it (for example push " +
                     'protection finding a secret). Rebasing will not clear this — the content ' +
                     'itself has to change.',
+                'ruleset',
                 stderr,
             );
         }
         if (/non-fast-forward|rejected/i.test(stderr)) {
             throw new PushRejectedError(
                 'git push rejected: remote has new commits. Pull and rebase, then retry.',
+                'non-fast-forward',
                 stderr,
             );
         }
         throw wrapGitError(err, 'push');
+    }
+}
+
+/**
+ * Short sha of HEAD, or undefined when it cannot be read.
+ *
+ * Deliberately swallows: this runs AFTER a successful push, so a failure here
+ * means we cannot name the commit, not that the commit is missing.
+ */
+async function readHeadSha(storefrontPath: string): Promise<string | undefined> {
+    try {
+        const { stdout } = await execFile('git', [
+            '-C',
+            storefrontPath,
+            'rev-parse',
+            '--short',
+            'HEAD',
+        ]);
+        return stdout.trim() || undefined;
+    } catch {
+        return undefined;
     }
 }
 

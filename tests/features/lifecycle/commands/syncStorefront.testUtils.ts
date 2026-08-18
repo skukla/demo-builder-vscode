@@ -56,15 +56,19 @@ jest.mock('fs/promises', () => ({
 }));
 
 jest.mock('@/features/eds/services/storefrontSyncService', () => ({
+    // Signature mirrors the real class, `reason` included. A mock that dropped
+    // it would let a spec construct a rejection the real code could not.
     PushRejectedError: class PushRejectedError extends Error {
         constructor(
             message: string,
+            public reason: 'non-fast-forward' | 'ruleset',
             public stderr?: string
         ) {
             super(message);
             this.name = 'PushRejectedError';
         }
     },
+    rebaseOntoRemote: jest.fn(),
     syncAndPublish: jest.fn(),
 }));
 

@@ -13,6 +13,7 @@ import { previewAndPublishPage } from '@/features/eds/services/helixApiClient';
 import {
     GitOperationError,
     PushRejectedError,
+    rebaseOntoRemote,
     syncAndPublish,
 } from '@/features/eds/services/storefrontSyncService';
 
@@ -352,6 +353,136 @@ describe('storefrontSyncService.syncAndPublish', () => {
             });
 
             expect(previewMock).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('pushed commit sha', () => {
+        // The one per-call fact that separates "the CDN has not caught up" from
+        // "my work is gone". Without it the caller has only the rendered site to
+        // go on, and the site is exactly what lags.
+
+        it('reports the short sha of the commit it pushed', async () => {
+            execFileMock.mockImplementation((cmd: string, args: string[], cb: (err: Error | null, result: { stdout: string; stderr: string }) => void) => {
+                if (args.includes('rev-parse')) {
+                    cb(null, { stdout: 'a1b2c3d\n', stderr: '' });
+                    return;
+                }
+                cb(null, { stdout: '', stderr: '' });
+            });
+
+            const result = await syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' });
+
+            expect(result.commitSha).toBe('a1b2c3d');
+        });
+
+        it('leaves commitSha undefined rather than failing a sync that already pushed', async () => {
+            execFileMock.mockImplementation((cmd: string, args: string[], cb: (err: Error | null, result?: { stdout: string; stderr: string }) => void) => {
+                if (args.includes('rev-parse')) {
+                    cb(new Error('fatal: ambiguous argument'));
+                    return;
+                }
+                cb(null, { stdout: '', stderr: '' });
+            });
+
+            const result = await syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' });
+
+            expect(result.pushed).toBe(true);
+            expect(result.commitSha).toBeUndefined();
+        });
+
+        it('does not report a sha when nothing was committed', async () => {
+            execImplWithCommitFailure('nothing to commit, working tree clean');
+
+            const result = await syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' });
+
+            expect(result.commitSha).toBeUndefined();
+        });
+    });
+
+    describe('push rejection carries its cause', () => {
+        // The two rejections both say "rejected" in stderr and have opposite
+        // remedies. Callers that retry must branch on `reason`, never the text.
+
+        it('tags a non-fast-forward rejection', async () => {
+            execImplWithPushRejected();
+
+            await expect(
+                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' }),
+            ).rejects.toMatchObject({ reason: 'non-fast-forward' });
+        });
+
+        it('tags a ruleset rejection', async () => {
+            execImplWithPushStderr(
+                'remote: error: GH013: Repository rule violations found for refs/heads/main.\n' +
+                    '! [remote rejected] main -> main (push declined due to repository rule violations)',
+            );
+
+            await expect(
+                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' }),
+            ).rejects.toMatchObject({ reason: 'ruleset' });
+        });
+    });
+
+    describe('rebaseOntoRemote', () => {
+        // The riskiest code in this module: it runs inside someone else's
+        // checkout. A half-rebased working tree is worse than the rejected push
+        // it is recovering from, so the abort matters more than the retry.
+
+        it('reports clean when the rebase succeeds', async () => {
+            const outcome = await rebaseOntoRemote(STOREFRONT);
+
+            expect(outcome).toBe('clean');
+            const pullCall = execFileMock.mock.calls.find(
+                c => c[1].includes('pull') && c[1].includes('--rebase'),
+            );
+            expect(pullCall?.[1]).toEqual(['-C', STOREFRONT, 'pull', '--rebase']);
+        });
+
+        it('pulls from a token-injected URL when a token is provided', async () => {
+            await rebaseOntoRemote(STOREFRONT, 'gh-token-abc');
+
+            const pullCall = execFileMock.mock.calls.find(
+                c => c[1].includes('pull') && c[1].includes('--rebase'),
+            );
+            expect(pullCall?.[1].some((a: string) => a.includes('gh-token-abc'))).toBe(true);
+        });
+
+        it('runs git rebase --abort and reports aborted when the rebase conflicts', async () => {
+            execFileMock.mockImplementation((cmd: string, args: string[], cb: (err: Error | null, result?: { stdout: string; stderr: string }) => void) => {
+                if (args.includes('pull') && args.includes('--rebase')) {
+                    const err = new Error('Command failed') as NodeJS.ErrnoException & { stderr?: string };
+                    err.stderr = 'CONFLICT (content): Merge conflict in blocks/hero/hero.js';
+                    cb(err);
+                    return;
+                }
+                cb(null, { stdout: '', stderr: '' });
+            });
+
+            const outcome = await rebaseOntoRemote(STOREFRONT);
+
+            expect(outcome).toBe('aborted');
+            const abortCall = execFileMock.mock.calls.find(c => c[1].includes('--abort'));
+            expect(abortCall?.[1]).toEqual(['-C', STOREFRONT, 'rebase', '--abort']);
+        });
+
+        it('still reports aborted when git rebase --abort itself fails', async () => {
+            // No rebase in progress: the pull refused before starting one. There
+            // is nothing to undo, and the caller must not be told otherwise.
+            execFileMock.mockImplementation((cmd: string, args: string[], cb: (err: Error | null, result?: { stdout: string; stderr: string }) => void) => {
+                if (args.includes('pull') && args.includes('--rebase')) {
+                    const err = new Error('Command failed') as NodeJS.ErrnoException & { stderr?: string };
+                    err.stderr = 'error: cannot pull with rebase: You have unstaged changes.';
+                    cb(err);
+                    return;
+                }
+                if (args.includes('--abort')) {
+                    cb(new Error('fatal: No rebase in progress?'));
+                    return;
+                }
+                cb(null, { stdout: '', stderr: '' });
+            });
+
+            await expect(rebaseOntoRemote(STOREFRONT)).resolves.toBe('aborted');
         });
     });
 

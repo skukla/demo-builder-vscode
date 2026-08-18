@@ -282,7 +282,7 @@ These are `vscode`-free and operate on files under `~/.demo-builder/projects`.
 | `get_project` | Read a project's manifest (summary or full). **Secret VALUES are stripped** (`stripSecretValues` over `componentConfigs`) on BOTH paths — `full: true` is the more dangerous one, not an exemption. Found live 2026-08-17 returning a real `ACCS_OAUTH_CLIENT_SECRET`; the same convention `export_project_settings` already followed. To read a secret, open the project — not an agent transcript. |
 | `get_component_config` | Read a component's `.demo-builder.json` / `.env`. **Returns the file VERBATIM, secrets included** — deliberately, since the file is the answer, but it means the `get_project` strip above does not cover this door. Whether that stays deliberate is an open question, not a settled one: a `.env` read hands an agent every credential the project has. Filed rather than changed, because narrowing it changes the tool's contract. |
 | `update_project_config` | Write `.demo-builder.json` / `.env` (env content validated). |
-| `sync_storefront` | Git add/commit/push the storefront. |
+| `sync_storefront` | Git add/commit/push the storefront. Names the pushed commit in its reply, and says publishing reaches the CDN on a delay — an agent that verified against the rendered site instead of git once read that lag as discarded commits. On a `non-fast-forward` rejection it rebases onto the remote and retries **once** (`retryAfterRebase`); a conflicting rebase is aborted so the checkout is exactly as found. A `ruleset` rejection is never retried — replaying it cannot change why a rule refused it. |
 | `list_blocks` | List EDS blocks in the storefront. |
 | `get_block_source` | Read a block's files (manifest or one file, size-capped). |
 | `get_block_authoring_shape` | Read a block's DA.live authoring shape from `component-definition.json` + the models/filters siblings (registry index when `blockName` is omitted). |
@@ -407,6 +407,13 @@ Thin tools declared as data and dispatched to existing handler maps:
 | `cleanup_dalive_site` | `cloudResourceTools.ts` | Destructive; confirm-gated. |
 | `republish` | `storefrontTools.ts` | Regenerate + push storefront config. |
 | `sync_content` | `storefrontTools.ts` | Full content publish (config + code + DA.live pages). |
+
+Both carry `cdnStatus` beside the `cdnVerified` boolean — one sentence, true for
+that call, from `describeCdnPropagation` in `configSyncService.ts`. We already
+poll the live CDN after every publish; until this the answer only reached the
+debug log, so a caller looking at an unchanged site could not tell "not served
+yet" from "my work is gone". The wait it quotes is derived from the polling
+constants (`CDN_VERIFY_BUDGET_SECONDS`), never written by hand.
 
 ### Content authoring — `contentAuthoringTools.ts`
 
