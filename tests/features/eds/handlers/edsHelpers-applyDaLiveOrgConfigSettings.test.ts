@@ -198,6 +198,55 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
     });
 
     /**
+     * Losing the Assets panel because a setting is unset is the same silent
+     * failure as the four bugs this branch fixed — and it bit the author within
+     * an hour of shipping the no-default change: a reset quietly stripped
+     * `aem.repositoryId` from a working site and said so only at info level.
+     *
+     * The warning fires ONLY when a binding was actually removed. A project that
+     * never had one has lost nothing, and warning there would train people to
+     * ignore the message that matters.
+     */
+    describe('losing an existing AEM binding is a warning, not a log line', () => {
+        it('warns and names the setting when the binding was actually removed', async () => {
+            mockAemAuthorUrl = undefined;
+            mockImsOrgId = IMS_ORG_ID;
+            mockApplySiteConfig.mockResolvedValue({ success: true, removed: ['aem.repositoryId'] });
+
+            await applyDaLiveOrgConfigSettings(
+                mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
+            );
+
+            const warned = JSON.stringify((mockLogger.warn as jest.Mock).mock.calls);
+            expect(warned).toContain('demoBuilder.daLive.aemAuthorUrl');
+        });
+
+        it('stays quiet when there was no binding to lose', async () => {
+            mockAemAuthorUrl = undefined;
+            mockImsOrgId = IMS_ORG_ID;
+            mockApplySiteConfig.mockResolvedValue({ success: true, removed: [] });
+
+            await applyDaLiveOrgConfigSettings(
+                mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
+            );
+
+            expect(mockLogger.warn).not.toHaveBeenCalled();
+        });
+
+        it('stays quiet when a binding was written', async () => {
+            mockAemAuthorUrl = AEM_AUTHOR_URL;
+            mockImsOrgId = IMS_ORG_ID;
+            mockApplySiteConfig.mockResolvedValue({ success: true, removed: [] });
+
+            await applyDaLiveOrgConfigSettings(
+                mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
+            );
+
+            expect(mockLogger.warn).not.toHaveBeenCalled();
+        });
+    });
+
+    /**
      * `demoBuilder.daLive.aemAuthorUrl` ships with NO default (2026-08-18). A
      * bundled one silently bound every user to one AEM environment and reported
      * success — and when the setting was renamed from `AEMRepositoryId` in

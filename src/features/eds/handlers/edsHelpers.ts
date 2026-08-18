@@ -1104,6 +1104,22 @@ export async function applyDaLiveOrgConfigSettings(
             .join('; ');
         if (result.success) {
             logger.info(`[EDS Config] ${summary}`);
+            // Losing the Assets panel because a setting is unset is the same
+            // silent failure the rest of this branch exists to fix — it removed a
+            // working binding from a live site within an hour of the no-default
+            // change, and said so only at info level.
+            //
+            // Gated on what was ACTUALLY removed, not on what was asked for: a
+            // site that never had a binding has lost nothing, and warning there
+            // would train people to ignore the message that matters.
+            if (result.removed?.includes('aem.repositoryId')) {
+                logger.warn(
+                    '[EDS Config] Removed this site\'s AEM Assets binding because '
+                        + 'demoBuilder.daLive.aemAuthorUrl is not set — the Assets panel will '
+                        + 'no longer appear in da.live. Set it (bare host, e.g. '
+                        + 'author-pXXXXX-eYYYYY.adobeaemcloud.com) and re-run to restore it.',
+                );
+            }
         } else {
             logger.warn(`[EDS Config] Failed to apply settings (${summary}): ${result.error}`);
         }

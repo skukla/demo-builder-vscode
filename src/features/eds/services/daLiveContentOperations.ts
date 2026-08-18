@@ -28,7 +28,7 @@
 
 import { DaLiveApiClient, type TokenProvider } from './daLiveApiClient';
 import { DaLiveBlockLibraryOperations } from './daLiveBlockLibraryOperations';
-import { DaLiveConfigOperations } from './daLiveConfigOperations';
+import { DaLiveConfigOperations, type SiteConfigWriteResult } from './daLiveConfigOperations';
 import { DaLiveContentCopy } from './daLiveContentCopy';
 import { DaLiveContentDiscovery } from './daLiveContentDiscovery';
 import { DaLiveSourceOperations } from './daLiveSourceOperations';
@@ -547,7 +547,7 @@ export class DaLiveContentOperations {
         site: string,
         configUpdates: Record<string, string>,
         removeKeys: string[] = [],
-    ): Promise<{ success: boolean; error?: string }> {
+    ): Promise<SiteConfigWriteResult> {
         return this.configOps.applySiteConfig(org, site, configUpdates, removeKeys);
     }
 
