@@ -389,18 +389,22 @@ the MCP socket root is shared across concurrent runs by construction.
 
 ### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
 
-#### An agent cannot tell CDN lag from lost work ([`2026-08-18-agent-cannot-tell-cdn-lag-from-lost-work.md`](2026-08-18-agent-cannot-tell-cdn-lag-from-lost-work.md))
+#### ✅ An agent cannot tell CDN lag from lost work — SHIPPED 2026-08-18 (moved to [`../complete/2026-08-18-agent-cannot-tell-cdn-lag-from-lost-work.md`](../complete/2026-08-18-agent-cannot-tell-cdn-lag-from-lost-work.md))
 
 Filed 2026-08-18. A colleague's agent reported a background process force-pushing and
 rewriting `main`; **the report is false and the file disproves it** — every push on both
 affected repos is `ahead / behind=0`, and the two "wiped out" files were never reverted.
-It had been verifying against the deployed site and misread CDN propagation lag as lost
-commits. Re-run the compare check in the file before anyone re-opens this as a force-push
-bug. Three real gaps behind it: `cdnVerified` is computed and then dropped instead of
-returned from the agent-facing publish/sync tools; `diagnose-demo` has no entry for "my
-change isn't showing" (check `git log` first); and `sync_storefront` strands the caller on
-a non-fast-forward instead of rebasing and retrying — the symmetric twin of the fix in
-`efac22fe`.
+Re-run the compare check in the file before anyone re-opens this as a force-push bug.
+All three real gaps behind it are fixed: `diagnose-demo` now routes "my change isn't
+showing" to `git log` first (`AI_CONTEXT_VERSION` 15); `describeCdnPropagation` returns
+`cdnStatus` from `republish` / `sync_content`, quoting a wait derived from the polling
+constants rather than invented, and `sync_storefront` names the commit it pushed; and
+`sync_storefront` rebases and retries once on a `non-fast-forward`, aborting cleanly on
+conflict — never on a `ruleset` rejection, which a new typed `reason` on
+`PushRejectedError` separates. A fourth defect surfaced while writing this up and was
+fixed too: the extension-side `handlePushRejected` rebased on every rejection, so a
+blocked-by-push-protection sync told the user "push failed after resolving conflicts" —
+conflicts that never existed — while the real reason reached only the debug log.
 
 #### `create_project` demands a mesh workspace for mesh-free packages ([`2026-08-18-create-project-tool-demands-a-mesh-workspace.md`](2026-08-18-create-project-tool-demands-a-mesh-workspace.md))
 
