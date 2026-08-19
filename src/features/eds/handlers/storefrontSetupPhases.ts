@@ -37,6 +37,7 @@ import { executePhaseGitHubRepo } from './storefrontSetupPhase1';
 import { executePhaseHelixConfig, type BlockLibraryOptions } from './storefrontSetupPhase2';
 import { executePhaseCodeSync } from './storefrontSetupPhase3';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
+import { projectTargetsStorefront } from '@/features/eds/services/catalogPrewarmService';
 import { getBlockLibraryContentSource } from '@/features/project-creation/services/blockLibraryLoader';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -226,10 +227,28 @@ async function runEdsPipelineWithRecovery(
     onProgress: (info: PipelineProgressInfo) => void,
     patchReport?: PatchReport,
 ): Promise<{ libraryPaths: string[] }> {
-    // Fetch the project for catalog pre-warming (v1 ACCS only). Optional
-    // — pipeline skips pre-warming when project is undefined. We read it
-    // here so the pipeline call site stays declarative.
-    const project = await context.stateManager.getCurrentProject();
+    // The project for catalog pre-warming (v1 ACCS only). Optional — the
+    // pipeline skips pre-warming when it is undefined.
+    //
+    // GUARDED, because `storefront-setup-start` is registered by the WIZARD as
+    // well as the dashboard, and in the wizard the project being created does
+    // not exist yet: `getCurrentProject()` there returns whatever was last open.
+    // Unguarded, a user with one existing project who creates a second
+    // storefront prewarms the FIRST project's catalog onto the second's site —
+    // measured 2026-08-18, where it surfaced only as an unexplained
+    // `No index was found` against a store view nobody had asked about.
+    //
+    // On the create path this correctly yields undefined, and project creation
+    // pre-warms after its sample-data phase instead, where the real project
+    // exists AND its datapack has been imported.
+    const currentProject = await context.stateManager.getCurrentProject();
+    const project = projectTargetsStorefront(
+        currentProject ?? undefined,
+        repoInfo.repoOwner,
+        repoInfo.repoName,
+    )
+        ? currentProject
+        : undefined;
 
     return withDaLiveAuthRetry(
         context,

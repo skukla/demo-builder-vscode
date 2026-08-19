@@ -47,6 +47,7 @@ import { migrateDeclaredSecrets } from '@/features/components/services/commerceS
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
+import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
 import { TransformedComponentDefinition } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import { AdobeConfig } from '@/types/base';
@@ -628,6 +629,17 @@ export async function executeProjectCreation(
     // from them. Never throws — see `executeSampleDataPhase`.
 
     await executeSampleDataPhase(context, project, progressTracker);
+
+    // ========================================================================
+    // PHASE 5d: CATALOG PRE-WARMING
+    // ========================================================================
+    //
+    // AFTER sample data, because pre-warming a catalog that has not been seeded
+    // publishes nothing useful. The EDS pipeline pre-warms at its own step 8,
+    // which is correct for RESET (that flow imports data BEFORE the pipeline)
+    // and impossible for creation, where the pipeline runs during storefront
+    // setup and the datapack lands here. Never throws.
+    await executeCatalogPrewarmPhase(context, project, progressTracker);
 
     await finalizeProject(finalizationContext);
     await sendCompletionAndCleanup(finalizationContext);
