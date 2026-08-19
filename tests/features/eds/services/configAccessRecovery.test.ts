@@ -8,6 +8,7 @@
  */
 
 import {
+    announceConfigAccess,
     logConfigAccessState,
     waitForConfigAccess,
 } from '@/features/eds/services/configAccessRecovery';
@@ -59,6 +60,20 @@ describe('waitForConfigAccess', () => {
 
         expect(result).toBe('granted');
         expect(mockProbe).toHaveBeenCalledTimes(2);
+    });
+
+    /**
+     * Polling waits for an admin role to propagate. A refused SESSION will never
+     * propagate into a role, so the wait is pure cost — three sleeps totalling
+     * ~105s before telling the user the wrong thing. Stop on the first 401.
+     */
+    it('stops immediately on a refused session rather than polling for a role', async () => {
+        mockProbe.mockResolvedValue('unauthenticated');
+
+        const result = await waitForConfigAccess(tokenProvider, SITE, logger);
+
+        expect(result).toBe('unauthenticated');
+        expect(mockProbe).toHaveBeenCalledTimes(1);
     });
 
     it('gives up as STILL REFUSED rather than reporting success', async () => {
@@ -136,5 +151,33 @@ describe('logConfigAccessState', () => {
 
         expect(state).toBe('unknown');
         expect(logger.warn).not.toHaveBeenCalled();
+    });
+});
+
+describe('a refused session is not a missing role', () => {
+    it('logConfigAccessState says re-auth, never "no admin role"', async () => {
+        mockProbe.mockResolvedValue('unauthenticated');
+
+        await logConfigAccessState(tokenProvider, SITE, logger);
+
+        const warned = JSON.stringify((logger.warn as jest.Mock).mock.calls);
+        expect(warned).not.toMatch(/no admin role/i);
+        expect(warned).toMatch(/sign in|session/i);
+    });
+
+    /**
+     * The announcement offers "an org admin can grant it: …". For a dead session
+     * that is a false remedy — the identity already HAS the role. Naming people
+     * to go ask is worse than saying nothing.
+     */
+    it('announceConfigAccess does not name org admins for a refused session', async () => {
+        mockProbe.mockResolvedValue('unauthenticated');
+        const announce = jest.fn().mockResolvedValue(undefined);
+
+        await announceConfigAccess(tokenProvider, SITE, logger, announce);
+
+        const said = JSON.stringify(announce.mock.calls);
+        expect(said).not.toMatch(/admin role/i);
+        expect(said).toMatch(/sign in/i);
     });
 });

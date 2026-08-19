@@ -80,6 +80,14 @@ export async function logConfigAccessState(
 
     if (access === 'granted') {
         logger.info(`[ConfigAccess] ${target}: admin access confirmed`);
+    } else if (access === 'unauthenticated') {
+        // NOT a missing role. The identity may well hold it — the session was
+        // refused, so nothing about it could be read. Saying "no admin role" here
+        // sends the user to grant a permission they already have.
+        logger.warn(
+            `[ConfigAccess] ${target}: the DA.live session was refused (401) — sign in ` +
+                'again. This says nothing about the admin role; it could not be checked.',
+        );
     } else if (access === 'refused') {
         logger.warn(
             `[ConfigAccess] ${target}: this Adobe identity holds no admin role on the site ` +
@@ -110,6 +118,16 @@ export async function waitForConfigAccess(
     const total = ACCESS_POLL_DELAYS_MS.length + 1;
 
     let access = await probeConfigWriteAccess(tokenProvider, site.owner, site.repo, logger);
+    // A refused SESSION never propagates into an admin role, so polling for one is
+    // pure cost — three sleeps totalling ~105s before telling the user the wrong
+    // thing. Stop on the first 401 and say what actually needs doing.
+    if (access === 'unauthenticated') {
+        logger.warn(
+            `[ConfigAccess] ${site.owner}/${site.repo}: the DA.live session was refused ` +
+                '(401) — not waiting for an admin role that is not the problem. Sign in again.',
+        );
+        return access;
+    }
     for (let i = 0; i < ACCESS_POLL_DELAYS_MS.length && access !== 'granted'; i++) {
         await onAttempt?.(i + 1, total);
         await sleep(ACCESS_POLL_DELAYS_MS[i]);
@@ -155,6 +173,16 @@ export async function announceConfigAccess(
     announce: (message: string) => Promise<void>,
 ): Promise<ConfigWriteAccess> {
     const access = await logConfigAccessState(tokenProvider, site, logger);
+    if (access === 'unauthenticated') {
+        // Naming org admins to go ask would be a false remedy: the identity is not
+        // short a role, its session is dead. Offering people to chase is worse
+        // than offering nothing.
+        await announce(
+            '⚠️ Your DA.live session was refused — sign in again, then retry. Site ' +
+                'configuration could not be checked, so this says nothing about your access.',
+        );
+        return access;
+    }
     if (access !== 'refused') return access;
 
     const roster = await readOrgAdmins(tokenProvider, site.owner, logger);

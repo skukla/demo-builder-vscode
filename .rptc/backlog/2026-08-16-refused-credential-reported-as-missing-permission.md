@@ -23,6 +23,13 @@
 > 3. **The probe (option 1 below) was not built.** With mid-pipeline recovery
 >    working it is now an optimisation — fail before the repo is rewritten rather
 >    than recover after — not the main fix. Re-evaluate on its own merits.
+> 4. **DONE 2026-08-19.** `probeConfigWriteAccess` no longer folds 401 into 403:
+>    401 returns `unauthenticated`, and the three remedy-choosing callers act on
+>    it — `logConfigAccessState` says sign in rather than blaming the role,
+>    `waitForConfigAccess` stops instead of polling ~105s for a role that is not
+>    the problem, and `announceConfigAccess` stops naming org admins to go ask.
+>    The ORIGINAL text follows.
+>
 > 4. **`configAccessRecovery` and `configurationService` still say "no admin
 >    role"** on a 403. `siteConfigRegistrar` already throws `DaLiveAuthError`, so
 >    the wiring is closer than it looks; the wording is downstream of item 1.

@@ -116,8 +116,19 @@ export interface GrantResult {
     error?: string;
 }
 
-/** What the oracle saw. `unknown` never means granted. */
-export type ConfigWriteAccess = 'granted' | 'refused' | 'unknown';
+/**
+ * What the oracle saw. `unknown` never means granted.
+ *
+ * `unauthenticated` (401) is deliberately distinct from `refused` (403). Both mean
+ * "you did not get in", and folding them is right for deciding whether to RETRY —
+ * but wrong for choosing a REMEDY, exactly as the `httpStatus` note above says. A
+ * refused session needs a re-auth; a missing admin role needs an org admin. Told
+ * the wrong one, a user grants permissions they already have while the real cause
+ * sits untouched — measured 2026-08-16, where one identity was told it "holds no
+ * admin role" and then, having changed nothing but re-authenticating, "admin
+ * access confirmed" forty minutes later.
+ */
+export type ConfigWriteAccess = 'granted' | 'refused' | 'unauthenticated' | 'unknown';
 
 interface RawOrgConfig {
     users?: Array<{ email?: string; roles?: string[] }>;
@@ -337,8 +348,12 @@ export async function probeConfigWriteAccess(
         logger.debug(`[ConfigAccess] ${org}/${site}: config readable — admin role held`);
         return 'granted';
     }
-    if (result.status === 401 || result.status === 403) {
-        logger.debug(`[ConfigAccess] ${org}/${site}: refused (${result.status})`);
+    if (result.status === 401) {
+        logger.debug(`[ConfigAccess] ${org}/${site}: session refused (401)`);
+        return 'unauthenticated';
+    }
+    if (result.status === 403) {
+        logger.debug(`[ConfigAccess] ${org}/${site}: refused (403)`);
         return 'refused';
     }
     logger.debug(`[ConfigAccess] ${org}/${site}: access indeterminate (${result.status})`);

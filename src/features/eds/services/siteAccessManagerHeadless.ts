@@ -139,7 +139,13 @@ export async function listSiteAccess(
         // Do not offer affordances that are guaranteed to be refused.
         const orgRoster = await readOrgAdmins(tokenProvider, owner, logger);
         return {
+            // `not_authorized` is a verdict about the ROLE. A 401 is a verdict
+            // about the SESSION, and reporting it as not_authorized would send an
+            // agent to fix permissions that were never checked.
             status: access === 'refused' ? 'not_authorized' : 'failed',
+            ...(access === 'unauthenticated'
+                ? { error: 'DA.live session refused (401) — sign in again' }
+                : {}),
             site,
             canManage: false,
             orgAdmins: orgRoster.status === 'ok' ? orgRoster.admins : undefined,

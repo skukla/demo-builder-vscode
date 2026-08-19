@@ -216,6 +216,31 @@ describe('probeConfigWriteAccess — the oracle', () => {
         expect(result).toBe('refused');
     });
 
+    /**
+     * 401 and 403 both mean "you did not get in", and the module's own docblock
+     * already says folding them "is right for deciding whether to retry but wrong
+     * for choosing a remedy: an expired session needs a re-auth, not a 'grant
+     * yourself the admin role' deep link and ~135s of propagation retries."
+     *
+     * The oracle discarded the status, so no remedy-choosing caller could tell
+     * them apart. Measured 2026-08-16: the same identity on the same project was
+     * told it "holds no admin role" at 19:53 and "admin access confirmed" at
+     * 23:28, having changed nothing but re-authenticating. The role was never
+     * missing.
+     */
+    it('reports unauthenticated on 401 — a refused session, not a missing role', async () => {
+        mockFetchOnce(401);
+
+        const result = await probeConfigWriteAccess(
+            tokenProvider,
+            'leahrayard',
+            'leah-b2b-demo',
+            logger,
+        );
+
+        expect(result).toBe('unauthenticated');
+    });
+
     it('reports unknown on a transport failure, never granted', async () => {
         // A network blip must not read as success — this value gates a claim we
         // make to the user about whether their access is fixed.
