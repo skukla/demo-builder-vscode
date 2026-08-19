@@ -227,3 +227,91 @@ print(f"  control: {len(active)} active entries scanned against "
       f"{len(complete_names)} archived item(s)"
       + (f"  ⚠️  CHECK BROKEN — {'; '.join(broken)}" if broken else ""))
 PY
+
+echo
+echo "== 6. Items citing a file:line whose CODE moved after the item was last updated =="
+python3 - "$RPTC" <<'PY'
+import os, re, subprocess, sys
+
+rptc = sys.argv[1]
+backlog = os.path.join(rptc, 'backlog')
+if not os.path.isdir(backlog):
+    print("  (no backlog dir)"); raise SystemExit(0)
+
+def git(*args):
+    try:
+        r = subprocess.run(['git', *args], capture_output=True, text=True, timeout=15)
+        return r.stdout.strip() if r.returncode == 0 else ''
+    except Exception:
+        return ''
+
+# LINE-NUMBERED citations only. A bare filename is background reference; a
+# `file.ts:NN` is a specific claim about specific code, and it is the claim that
+# goes stale. Restricting to these is what keeps the section actionable — the
+# unrestricted version flagged 17 of 35 items, most of them old entries naming
+# hot files, which is drift rather than staleness.
+CITE_RE = re.compile(r'\b([A-Za-z0-9_/.-]+?\.(?:ts|tsx|json)):\d+')
+
+# Bare filenames are the COMMON citation style ("`deleteHandler.ts:29-33`"), not
+# the exception — an earlier draft required a src/ prefix and missed the one item
+# already known to be stale. Resolve them, but only when unambiguous: two files
+# with the same basename means we cannot tell which was meant, and guessing would
+# manufacture findings.
+bare_index = {}
+for dirpath, dirnames, files in os.walk('src'):
+    dirnames[:] = [d for d in dirnames if d != 'node_modules']
+    for f in files:
+        bare_index.setdefault(f, []).append(os.path.join(dirpath, f))
+
+def resolve(cite):
+    if os.path.exists(cite):
+        return cite
+    hits = bare_index.get(os.path.basename(cite), [])
+    return hits[0] if len(hits) == 1 else None
+
+items = sorted(f for f in os.listdir(backlog) if f.endswith('.md') and f != 'README.md')
+scanned = cited_total = flagged = 0
+findings = []
+
+for name in items:
+    item = os.path.join(backlog, name)
+    last_touched = git('log', '-1', '--format=%cI', '--', item)
+    if not last_touched:
+        continue
+    scanned += 1
+    text = open(item, encoding='utf-8', errors='ignore').read()
+    refs = sorted({r for r in (resolve(c) for c in CITE_RE.findall(text)) if r})
+    cited_total += len(refs)
+    moved = []
+    for ref in refs:
+        out = git('log', '--oneline', f'--since={last_touched}', '--', ref)
+        n = len([l for l in out.split('\n') if l.strip()])
+        if n:
+            moved.append((n, ref))
+    if moved:
+        findings.append((sum(n for n, _ in moved), name, sorted(moved)))
+
+# Fewest commits first: a single targeted commit on cited code is far more likely
+# to BE the fix than twenty commits of ambient churn.
+findings.sort()
+for _, name, moved in findings:
+    flagged += 1
+    print(f"  CODE MOVED  {name}")
+    for n, ref in moved[:3]:
+        print(f"              {ref}  ({n} commit{'s' if n != 1 else ''} since the item was last updated)")
+    if len(moved) > 3:
+        print(f"              …and {len(moved) - 3} more")
+
+if not flagged:
+    print("  (none)")
+
+broken = []
+if not scanned:
+    broken.append("no committed backlog items found")
+elif not cited_total:
+    broken.append("no file:line citations resolved")
+print(f"  control: {scanned} committed item(s) scanned, {cited_total} line-numbered citation(s) resolved"
+      + (f"  ⚠️  CHECK BROKEN — {'; '.join(broken)}" if broken else ""))
+print("  NOTE: advisory, ordered fewest-commits-first. It says the ground moved,")
+print("        never that the item is wrong. Read the code before acting.")
+PY
