@@ -5,6 +5,10 @@
 Filed so nobody re-derives this from scratch, and so nobody "fixes" the detector
 by reaching for an API that cannot answer.
 
+**Two small changes ARE proposed here**, in "Two things worth taking" at the
+bottom: treat an outer 401/403 as site-exists, and gate on the install click.
+Everything above that section is reference.
+
 ## The one endpoint
 
 `githubAppService.checkHelixStatus` is the only source. Everything —
@@ -91,6 +95,69 @@ Only Adobe. Either an admin endpoint that reports App installation independently
 of site registration, or `/status` distinguishing "unknown repo" from "known
 repo, no App" in the outer status. Worth raising with the Code Sync team if this
 keeps costing field time; not something this repo can build.
+
+## Prior art: `adobe-commerce/storefront-tools` reached the same wall
+
+Researched 2026-08-19 against that repo at `38d124b`. Adobe's own DA.live-hosted
+site-creator **deleted its Code Sync verification** three weeks earlier
+(`fbae1c3`, 2026-08-05) and replaced it with a fixed 7-second wait:
+
+```js
+// Code Sync install can't be verified without the user's own admin.hlx.page
+// credentials, so trust the user's confirmation and give the install a
+// few seconds to finish registering before we start hitting the code bus.
+await new Promise((resolve) => { setTimeout(resolve, 7000); });
+```
+
+**Their constraint is NOT ours, and this is the part to get right before copying
+anything.** They are a Cloudflare Worker calling `admin.hlx.page` with no user
+credential, so 401 and 403 are indistinguishable from "still installing". This
+extension holds the user's GitHub OAuth token and sends it as `x-auth-token`
+(see `checkHelixStatus`), which is exactly why the inner `code.status` is
+readable here and not there. **Do not adopt the fixed wait** — for us it trades a
+real signal for a timer.
+
+What their work DOES give us:
+
+1. **Independent corroboration of the endpoint semantics.** `worker/aem-proxy.js`
+   (from `6b8c1dd`), on a different endpoint —
+   `admin.hlx.page/code/{org}/{repo}/main/scripts/aem.js`:
+
+   > A 404 means Helix has no site config yet (Code Sync not installed/synced).
+   > A 401/403 means the site config already exists but access is restricted,
+   > which still confirms Code Sync has synced the repo.
+
+   Same 404-vs-401 split measured above on `/status`, reached separately. Its
+   commit message names the cause, which is our own trap: *"aem code sync
+   installation now allows adding users to site config access. If defined, code
+   sync check WILL return 401/403."* — the `access.admin` role that
+   `catalogPrewarmService` already documents closing the admin API.
+
+### Two things worth taking
+
+**A. Treat an outer 401/403 as site-exists, not `undetermined`.** We currently
+classify it transient and retry. Both measurements say it confirms Helix knows
+the site. This matters because our own pipeline pins a site admin, creating
+exactly that condition on storefronts we made. Careful: `undetermined` also
+covers genuine transport failures, and the module's docblock records the
+eleven-reinstalls bug caused by over-reading a refusal — so narrow this to
+401/403 specifically, keep 5xx and timeouts transient, and do not let it become
+a positive App verdict. A site existing is not an App installed.
+
+**B. Gate on the install click.** `templates.js:786` disables their Continue
+button until the install link has been clicked:
+`?disabled=${loading || !installLinkClicked}`. Cheap, and it turns "the user
+probably installed it" into "the user at least opened the install page", which
+is the honest bar for a case we cannot verify. Fits our existing-repo path. For
+an existing repo they show only a note: *"Ensure that the AEM Code Sync app is
+installed and has completed its initial deployment before continuing."*
+
+### Noted, different question
+
+Their `create-site.js` calls `deleteFstab` after install — *"fstab.yaml is
+superseded by the EDS Configuration Service after code sync installs"* — while
+our pipeline pushes one. That may be a real divergence in the Helix 5 model.
+Out of scope here; do not fold it into A or B.
 
 ## Kickoff prompt
 
