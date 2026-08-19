@@ -99,6 +99,8 @@ export const projectCreationHandlers = defineHandlers({
     'open-dalive-login': eds.handleOpenDaLiveLogin,
     'store-dalive-token': eds.handleStoreDaLiveToken,
     'store-dalive-token-with-org': eds.handleStoreDaLiveTokenWithOrg,
+    'check-dalive-clipboard': eds.handleCheckDaLiveClipboard,
+    'store-dalive-token-from-clipboard': eds.handleStoreDaLiveTokenFromClipboard,
     'clear-dalive-auth': eds.handleClearDaLiveAuth,
     // EDS handlers - ACCS
     // EDS handlers - Store Discovery

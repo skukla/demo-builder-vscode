@@ -50,9 +50,7 @@ interface StoreDaLiveTokenWithOrgPayload {
  * @param context - Handler context with logging and messaging
  * @returns Success with auth status
  */
-export async function handleCheckDaLiveAuth(
-    context: HandlerContext,
-): Promise<HandlerResponse> {
+export async function handleCheckDaLiveAuth(context: HandlerContext): Promise<HandlerResponse> {
     try {
         context.logger.debug('[EDS] Checking DA.live auth status');
         const authService = getDaLiveAuthService(context.context);
@@ -107,9 +105,7 @@ export async function handleCheckDaLiveAuth(
  * @param context - Handler context with logging and messaging
  * @returns Success with bookmarklet info
  */
-export async function handleOpenDaLiveLogin(
-    context: HandlerContext,
-): Promise<HandlerResponse> {
+export async function handleOpenDaLiveLogin(context: HandlerContext): Promise<HandlerResponse> {
     try {
         context.logger.debug('[EDS] Opening DA.live for login');
 
@@ -180,7 +176,7 @@ export async function handleStoreDaLiveToken(
         }
 
         // Store token via service (handles expiry, email, and setupComplete)
-        const tokenExpiry = validation.expiresAt || (Date.now() + 24 * 60 * 60 * 1000);
+        const tokenExpiry = validation.expiresAt || Date.now() + 24 * 60 * 60 * 1000;
         const authService = getDaLiveAuthService(context.context);
         await authService.storeToken(token, {
             expiresAt: tokenExpiry,
@@ -246,10 +242,35 @@ export async function handleStoreDaLiveTokenWithOrg(
         return { success: false, error: 'Organization name is required' };
     }
 
+    return storeValidatedDaLiveToken(context, token, orgName);
+}
+
+/**
+ * Validate a token and pin it to a namespace, reporting on the org channel.
+ *
+ * Shared by the two paths that store against a chosen namespace — the token
+ * the user pasted into the card, and the token read off the clipboard. They
+ * differ only in where the string came from; everything after that must be
+ * identical, and a credential path is the last place to let two copies drift.
+ *
+ * Never throws: every outcome is both a `sendMessage` to the webview and a
+ * returned result, because a handler that throws produces an `error` field the
+ * webview treats differently from a refusal (see the webview-command-handler
+ * skill on refusals arriving as successes).
+ *
+ * @param context - Handler context with logging and messaging
+ * @param token - The candidate token, from either source
+ * @param orgName - The namespace to pin it to
+ * @returns Success status
+ */
+async function storeValidatedDaLiveToken(
+    context: HandlerContext,
+    token: string,
+    orgName: string,
+): Promise<HandlerResponse> {
     try {
         context.logger.debug('[EDS] Validating DA.live token and org:', orgName);
 
-        // Validate token using helper
         const validation = validateDaLiveTokenStrict(token);
         if (!validation.valid) {
             if (validation.error?.includes('expired')) {
@@ -273,7 +294,7 @@ export async function handleStoreDaLiveTokenWithOrg(
         // Code Sync and prompts install. Any genuine write failure now surfaces
         // at the actual write site with contextual error messaging, not as a
         // generic "organization not found".
-        const tokenExpiry = validation.expiresAt || (Date.now() + 24 * 60 * 60 * 1000);
+        const tokenExpiry = validation.expiresAt || Date.now() + 24 * 60 * 60 * 1000;
         const authService = getDaLiveAuthService(context.context);
         await authService.storeToken(token, {
             expiresAt: tokenExpiry,
@@ -310,6 +331,87 @@ export async function handleStoreDaLiveTokenWithOrg(
 }
 
 /**
+ * Report WHETHER the clipboard holds a DA.live token — never the token.
+ *
+ * The bookmarklet's job is to copy the token, so by the time this card is on
+ * screen the value is usually already on the clipboard and asking the user to
+ * paste it is asking them to hand over something we can read. The webview only
+ * needs to know whether to offer that path, so a boolean is the entire answer,
+ * and a boolean is all that crosses the boundary.
+ *
+ * Uses the same strict check as every other path that accepts a credential:
+ * a token-SHAPED string is not enough (see `validateDaLiveTokenStrict`).
+ *
+ * Never throws — a denied or empty clipboard simply means "offer the field".
+ *
+ * @param context - Handler context with logging and messaging
+ * @returns `{ success, hasToken }`
+ */
+export async function handleCheckDaLiveClipboard(
+    context: HandlerContext,
+): Promise<HandlerResponse> {
+    let hasToken = false;
+    try {
+        const clipped = (await vscode.env.clipboard.readText())?.trim();
+        hasToken = Boolean(clipped) && validateDaLiveTokenStrict(clipped).valid;
+    } catch (error) {
+        context.logger.debug(
+            `[EDS] Clipboard unavailable for DA.live check: ${(error as Error).message}`,
+        );
+    }
+    context.logger.debug(`[EDS] DA.live token on clipboard: ${hasToken}`);
+    return { success: true, data: { hasToken } };
+}
+
+/**
+ * Store the DA.live token sitting on the clipboard, against the chosen namespace.
+ *
+ * The counterpart to {@link handleCheckDaLiveClipboard}: the webview sends only
+ * the namespace it picked, and the token is read, validated and stored here.
+ * That is deliberately narrower than {@link handleStoreDaLiveTokenWithOrg},
+ * where the token travels from the webview — a value the user pasted into a
+ * React state field and posted back. Nothing about this path puts the
+ * credential in the webview at all.
+ *
+ * @param context - Handler context with logging and messaging
+ * @param payload - The namespace to pin the token to
+ * @returns Success status
+ */
+export async function handleStoreDaLiveTokenFromClipboard(
+    context: HandlerContext,
+    payload?: { orgName?: string },
+): Promise<HandlerResponse> {
+    const { orgName } = payload || {};
+
+    if (!orgName) {
+        context.logger.error('[EDS] handleStoreDaLiveTokenFromClipboard missing orgName');
+        await context.sendMessage('dalive-token-with-org-result', {
+            success: false,
+            error: 'Organization name is required',
+        });
+        return { success: false, error: 'Organization name is required' };
+    }
+
+    let token: string | undefined;
+    try {
+        token = (await vscode.env.clipboard.readText())?.trim();
+    } catch (error) {
+        context.logger.warn(`[EDS] Clipboard read failed: ${(error as Error).message}`);
+    }
+
+    if (!token) {
+        // The clipboard changed between the check and the click, or the read
+        // was refused. Say so plainly rather than reporting a token problem.
+        const error =
+            'No token found on your clipboard. Copy it again with the da.live bookmarklet, or paste it manually.';
+        await context.sendMessage('dalive-token-with-org-result', { success: false, error });
+        return { success: false, error };
+    }
+
+    return storeValidatedDaLiveToken(context, token, orgName);
+}
+
+/**
  * Clear DA.live authentication
  *
  * Removes stored DA.live token and related data.
@@ -317,9 +419,7 @@ export async function handleStoreDaLiveTokenWithOrg(
  * @param context - Handler context with logging and messaging
  * @returns Success status
  */
-export async function handleClearDaLiveAuth(
-    context: HandlerContext,
-): Promise<HandlerResponse> {
+export async function handleClearDaLiveAuth(context: HandlerContext): Promise<HandlerResponse> {
     try {
         context.logger.debug('[EDS] Clearing DA.live auth');
 

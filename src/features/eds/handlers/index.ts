@@ -22,6 +22,8 @@ export {
     handleOpenDaLiveLogin,
     handleStoreDaLiveToken,
     handleStoreDaLiveTokenWithOrg,
+    handleCheckDaLiveClipboard,
+    handleStoreDaLiveTokenFromClipboard,
     handleClearDaLiveAuth,
 } from './edsDaLiveHandlers';
 export { clearServiceCache } from './edsHandlers';

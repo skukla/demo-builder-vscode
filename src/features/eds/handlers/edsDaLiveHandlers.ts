@@ -11,6 +11,8 @@
  * - `handleOpenDaLiveLogin`: Open DA.live for login with bookmarklet info
  * - `handleStoreDaLiveToken`: Store a manually pasted DA.live token
  * - `handleStoreDaLiveTokenWithOrg`: Store token and verify org in one operation
+ * - `handleCheckDaLiveClipboard`: Report whether a DA.live token is on the clipboard
+ * - `handleStoreDaLiveTokenFromClipboard`: Store the clipboard's token against a namespace
  * - `handleClearDaLiveAuth`: Clear stored DA.live authentication
  *
  * @module features/eds/handlers/edsDaLiveHandlers
@@ -27,5 +29,7 @@ export {
     handleOpenDaLiveLogin,
     handleStoreDaLiveToken,
     handleStoreDaLiveTokenWithOrg,
+    handleCheckDaLiveClipboard,
+    handleStoreDaLiveTokenFromClipboard,
     handleClearDaLiveAuth,
 } from './edsDaLiveAuthHandlers';

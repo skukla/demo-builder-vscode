@@ -15,6 +15,12 @@ import type { HandlerContext } from '@/types/handlers';
 
 jest.setTimeout(5000);
 
+// Clipboard contents the extension-side handlers read. `clipboardReadImpl` lets
+// a test make the read itself fail, which must degrade to "no token" rather
+// than to an error.
+let clipboardText = '';
+let clipboardReadImpl: (() => Promise<string>) | undefined;
+
 // =============================================================================
 // Mock Setup
 // =============================================================================
@@ -26,7 +32,14 @@ jest.mock(
             showErrorMessage: jest.fn(),
             showInformationMessage: jest.fn(),
         },
-        env: { openExternal: jest.fn() },
+        env: {
+            openExternal: jest.fn(),
+            clipboard: {
+                readText: jest.fn().mockImplementation(() =>
+                    clipboardReadImpl ? clipboardReadImpl() : Promise.resolve(clipboardText)
+                ),
+            },
+        },
         Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
         workspace: {
             getConfiguration: jest.fn().mockReturnValue({ get: jest.fn().mockReturnValue('') }),
@@ -76,6 +89,8 @@ jest.mock('@/features/eds/services/helixService', () => ({
 import {
     handleStoreDaLiveToken,
     handleStoreDaLiveTokenWithOrg,
+    handleCheckDaLiveClipboard,
+    handleStoreDaLiveTokenFromClipboard,
 } from '@/features/eds/handlers/edsDaLiveAuthHandlers';
 
 // =============================================================================
@@ -234,6 +249,110 @@ describe('handleStoreDaLiveTokenWithOrg — namespace', () => {
             token: goodToken,
             orgName: '',
         });
+
+        expect(result.success).toBe(false);
+        expect(mockStoreToken).not.toHaveBeenCalled();
+    });
+});
+
+// =============================================================================
+// Clipboard pair
+//
+// The point of these two handlers is that the token never enters the webview:
+// the check answers with a boolean, and the store reads the clipboard itself.
+// Both assertions below are about what does NOT cross the boundary.
+// =============================================================================
+
+describe('handleCheckDaLiveClipboard', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        clipboardText = '';
+        clipboardReadImpl = undefined;
+    });
+
+    it('should report true for a real DA.live token', async () => {
+        clipboardText = goodToken;
+
+        const result = await handleCheckDaLiveClipboard(createMockContext());
+
+        expect(result).toEqual({ success: true, data: { hasToken: true } });
+    });
+
+    it('should never return the token itself', async () => {
+        clipboardText = goodToken;
+
+        const result = await handleCheckDaLiveClipboard(createMockContext());
+
+        expect(JSON.stringify(result)).not.toContain(goodToken);
+    });
+
+    it('should report false for a token-shaped string that is not DA.live', async () => {
+        clipboardText = Buffer.from('{"some":"blob"}').toString('base64');
+
+        const result = await handleCheckDaLiveClipboard(createMockContext());
+
+        expect(result).toEqual({ success: true, data: { hasToken: false } });
+    });
+
+    it('should report false rather than fail when the clipboard is unreadable', async () => {
+        clipboardReadImpl = () => Promise.reject(new Error('clipboard unavailable'));
+
+        const result = await handleCheckDaLiveClipboard(createMockContext());
+
+        expect(result).toEqual({ success: true, data: { hasToken: false } });
+    });
+});
+
+describe('handleStoreDaLiveTokenFromClipboard', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockStoreToken.mockClear().mockResolvedValue(undefined);
+        clipboardText = '';
+        clipboardReadImpl = undefined;
+    });
+
+    it('should store the clipboard token against the supplied namespace', async () => {
+        clipboardText = goodToken;
+
+        const result = await handleStoreDaLiveTokenFromClipboard(createMockContext(), {
+            orgName: 'demo-system-stores',
+        });
+
+        expect(result.success).toBe(true);
+        expect(mockStoreToken).toHaveBeenCalledWith(
+            goodToken,
+            expect.objectContaining({ orgName: 'demo-system-stores' })
+        );
+    });
+
+    it('should refuse when the clipboard no longer holds a DA.live token', async () => {
+        // The clipboard can change between the check and the click.
+        clipboardText = Buffer.from('{"changed":"since the check"}').toString('base64');
+
+        const result = await handleStoreDaLiveTokenFromClipboard(createMockContext(), {
+            orgName: 'my-org',
+        });
+
+        expect(result.success).toBe(false);
+        expect(mockStoreToken).not.toHaveBeenCalled();
+    });
+
+    it('should say the clipboard is empty rather than blame the token', async () => {
+        clipboardText = '';
+
+        const result = await handleStoreDaLiveTokenFromClipboard(createMockContext(), {
+            orgName: 'my-org',
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('clipboard');
+        expect(mockStoreToken).not.toHaveBeenCalled();
+    });
+
+    it('should refuse without a namespace', async () => {
+        clipboardText = goodToken;
+
+        const result = await handleStoreDaLiveTokenFromClipboard(createMockContext(), {});
 
         expect(result.success).toBe(false);
         expect(mockStoreToken).not.toHaveBeenCalled();

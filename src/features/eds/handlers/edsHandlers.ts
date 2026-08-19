@@ -22,6 +22,8 @@ import {
     handleOpenDaLiveLogin,
     handleStoreDaLiveToken,
     handleStoreDaLiveTokenWithOrg,
+    handleCheckDaLiveClipboard,
+    handleStoreDaLiveTokenFromClipboard,
     handleClearDaLiveAuth,
 } from './edsDaLiveHandlers';
 import {
@@ -300,6 +302,8 @@ export const edsHandlers = defineHandlers({
     'open-dalive-login': handleOpenDaLiveLogin,
     'store-dalive-token': handleStoreDaLiveToken,
     'store-dalive-token-with-org': handleStoreDaLiveTokenWithOrg,
+    'check-dalive-clipboard': handleCheckDaLiveClipboard,
+    'store-dalive-token-from-clipboard': handleStoreDaLiveTokenFromClipboard,
     'clear-dalive-auth': handleClearDaLiveAuth,
 
     // ACCS handlers
