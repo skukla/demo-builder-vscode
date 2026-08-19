@@ -1,5 +1,5 @@
 /**
- * edsHelpers — getEwCanvasBranch tests
+ * authoringExperience — getEwCanvasBranch tests
  *
  * getEwCanvasBranch reads the demoBuilder.daLive.ewCanvasBranch setting — the
  * da-nx branch the Experience Workspace canvas loads from (the `?nx=` override).
@@ -9,7 +9,7 @@
  * non-string (corrupted settings.json) also falls back to the '' default.
  *
  * Mirrors the vscode getConfiguration mock pattern from
- * edsHelpers-authoringExperience.test.ts.
+ * authoringExperience.test.ts.
  */
 
 // jest.mock factories are hoisted above imports; references inside must be
@@ -46,7 +46,7 @@ jest.mock('@/core/logging', () => ({
     initializeLogger: jest.fn(),
 }));
 
-// Service imports required by the edsHelpers module to load.
+// Service imports required by the authoringExperience module to load.
 jest.mock('@/features/eds/services/githubTokenService');
 jest.mock('@/features/eds/services/githubRepoOperations');
 jest.mock('@/features/eds/services/githubFileOperations');
@@ -56,7 +56,7 @@ jest.mock('@/features/eds/services/daLiveOrgOperations', () => ({
     hasWriteAccess: jest.fn(),
 }));
 
-import { getEwCanvasBranch } from '@/features/eds/handlers/edsHelpers';
+import { getEwCanvasBranch } from '@/features/eds/handlers/authoringExperience';
 import * as vscode from 'vscode';
 
 describe('getEwCanvasBranch', () => {

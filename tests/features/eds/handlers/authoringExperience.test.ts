@@ -1,5 +1,5 @@
 /**
- * edsHelpers — resolveAuthoringExperience tests
+ * authoringExperience — resolveAuthoringExperience tests
  *
  * resolveAuthoringExperience picks the AEM authoring experience for a project
  * with a two-tier precedence:
@@ -10,7 +10,7 @@
  * corrupted setting or stray metadata can never break the Author button.
  *
  * Mirrors the vscode getConfiguration mock pattern from
- * edsHelpers-byomOverlay.test.ts.
+ * byomOverlay.test.ts.
  */
 
 // jest.mock factories are hoisted above imports; references inside must be
@@ -47,7 +47,7 @@ jest.mock('@/core/logging', () => ({
     initializeLogger: jest.fn(),
 }));
 
-// Service imports required by the edsHelpers module to load.
+// Service imports required by the authoringExperience module to load.
 jest.mock('@/features/eds/services/githubTokenService');
 jest.mock('@/features/eds/services/githubRepoOperations');
 jest.mock('@/features/eds/services/githubFileOperations');
@@ -57,7 +57,7 @@ jest.mock('@/features/eds/services/daLiveOrgOperations', () => ({
     hasWriteAccess: jest.fn(),
 }));
 
-import { resolveAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
+import { resolveAuthoringExperience } from '@/features/eds/handlers/authoringExperience';
 import * as vscode from 'vscode';
 
 describe('resolveAuthoringExperience', () => {

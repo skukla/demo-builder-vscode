@@ -1,5 +1,5 @@
 /**
- * EDS Helpers - DA.live Auth Guard Tests
+ * daLiveAuthPrompt - DA.live Auth Guard Tests
  *
  * Tests for ensureDaLiveAuth shared utility:
  * - Already authenticated (fast path)
@@ -9,8 +9,8 @@
  * - Logger behavior and custom logPrefix
  *
  * Note: showDaLiveAuthQuickPick is in the same module, so we mock
- * its dependencies (vscode APIs) to control the flow. The QuickPick
- * itself is thoroughly tested in edsHelpers-quickpick.test.ts.
+ * its dependencies (vscode APIs) to control the flow. The sign-in flow
+ * itself is thoroughly tested in daLiveAuthPrompt-signIn.test.ts.
  */
 
 import type { HandlerContext } from '@/types/handlers';
@@ -114,13 +114,13 @@ jest.mock('@/features/eds/services/daLiveAuthService', () => {
     };
 });
 
-// Mock hasWriteAccess (now imported by edsHelpers from the service layer)
+// Mock hasWriteAccess (now imported by daLiveAuthPrompt from the service layer)
 const mockHasWriteAccess = jest.fn();
 jest.mock('@/features/eds/services/daLiveOrgOperations', () => ({
     hasWriteAccess: (...args: unknown[]) => mockHasWriteAccess(...args),
 }));
 
-// Mock remaining service imports required by edsHelpers module
+// Mock remaining service imports required by daLiveAuthPrompt to load
 jest.mock('@/features/eds/services/githubTokenService');
 jest.mock('@/features/eds/services/githubRepoOperations');
 jest.mock('@/features/eds/services/githubFileOperations');
@@ -139,11 +139,8 @@ jest.mock('@/core/utils/oneTimeTip', () => ({
 // =============================================================================
 
 import * as vscode from 'vscode';
-import {
-    ensureDaLiveAuth,
-    clearServiceCache,
-    type DaLiveGuardResult,
-} from '@/features/eds/handlers/edsHelpers';
+import { ensureDaLiveAuth, type DaLiveGuardResult } from '@/features/eds/handlers/daLiveAuthPrompt';
+import { clearServiceCache } from '@/features/eds/handlers/edsServiceCache';
 
 // =============================================================================
 // Test Utilities

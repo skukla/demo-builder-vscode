@@ -1,7 +1,7 @@
 /**
- * EDS Helpers - DA.live Authentication Tests
+ * daLiveAuthPrompt - DA.live Sign-In Tests
  *
- * Tests for showDaLiveAuthQuickPick function in edsHelpers:
+ * Tests for showDaLiveAuthQuickPick and validateDaLiveToken:
  * - Org step: skipped entirely when a namespace is already pinned, otherwise
  *   asked FIRST (before the token) — the org is the GitHub namespace, and
  *   re-typing it on every expiry is what the flow used to demand
@@ -128,7 +128,7 @@ jest.mock('@/features/eds/services/daLiveAuthService', () => {
     };
 });
 
-// Mock GitHub services (required by edsHelpers module)
+// Mock GitHub services (required by daLiveAuthPrompt to load)
 jest.mock('@/features/eds/services/githubTokenService');
 jest.mock('@/features/eds/services/githubRepoOperations');
 jest.mock('@/features/eds/services/githubFileOperations');
@@ -141,7 +141,10 @@ jest.mock('@/features/eds/services/daLiveContentOperations');
 // =============================================================================
 
 import * as vscode from 'vscode';
-import { showDaLiveAuthQuickPick, validateDaLiveToken } from '@/features/eds/handlers/edsHelpers';
+import {
+    showDaLiveAuthQuickPick,
+    validateDaLiveToken,
+} from '@/features/eds/handlers/daLiveAuthPrompt';
 
 // =============================================================================
 // Test Utilities

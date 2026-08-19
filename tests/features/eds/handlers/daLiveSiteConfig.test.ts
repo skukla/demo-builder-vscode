@@ -1,5 +1,5 @@
 /**
- * edsHelpers — applyDaLiveOrgConfigSettings routing tests
+ * daLiveSiteConfig — applyDaLiveOrgConfigSettings routing tests
  *
  * applyDaLiveOrgConfigSettings reads two VS Code settings and routes each to a
  * config scope on DA.live. Both are now SITE-scoped (applySiteConfig):
@@ -54,7 +54,7 @@ jest.mock('@/core/logging', () => ({
     initializeLogger: jest.fn(),
 }));
 
-// Service imports required by the edsHelpers module to load.
+// Service imports required by the daLiveSiteConfig module to load.
 jest.mock('@/features/eds/services/githubTokenService');
 jest.mock('@/features/eds/services/githubRepoOperations');
 jest.mock('@/features/eds/services/githubFileOperations');
@@ -67,7 +67,7 @@ jest.mock('@/features/eds/services/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn(),
 }));
 
-import { applyDaLiveOrgConfigSettings } from '@/features/eds/handlers/edsHelpers';
+import { applyDaLiveOrgConfigSettings } from '@/features/eds/handlers/daLiveSiteConfig';
 import type { DaLiveContentOperations } from '@/features/eds/services/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
 

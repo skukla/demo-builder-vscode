@@ -1,5 +1,5 @@
 /**
- * edsHelpers — BYOM overlay tests
+ * byomOverlay — BYOM overlay tests
  *
  * The BYOM overlay URL stamps each storefront's `org` and `site` query params
  * onto a base URL drawn from the `demoBuilder.byom.overlayUrl` VS Code
@@ -51,7 +51,7 @@ jest.mock('@/core/logging', () => {
     };
 });
 
-// Mock service imports required by edsHelpers module
+// Mock service imports required by byomOverlay module
 jest.mock('@/features/eds/services/githubTokenService');
 jest.mock('@/features/eds/services/githubRepoOperations');
 jest.mock('@/features/eds/services/githubFileOperations');
@@ -69,7 +69,7 @@ import {
     surfaceOverlayRegistrationFailure,
     BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE,
     BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE,
-} from '@/features/eds/handlers/edsHelpers';
+} from '@/features/eds/handlers/byomOverlay';
 import * as vscode from 'vscode';
 import type { Logger } from '@/types/logger';
 
