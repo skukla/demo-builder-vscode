@@ -1193,9 +1193,15 @@ export class HelixService {
         site: string,
         branch: string,
         webPaths: string[],
-    ): Promise<{ success: boolean; count: number }> {
+    ): Promise<{
+        success: boolean;
+        count: number;
+        total: number;
+        liveFailed: number;
+        previewFailed: number;
+    }> {
         if (webPaths.length === 0) {
-            return { success: true, count: 0 };
+            return { success: true, count: 0, total: 0, liveFailed: 0, previewFailed: 0 };
         }
 
         this.logger.info(`[Helix] Unpublishing ${webPaths.length} pages (page-by-page)`);
@@ -1216,9 +1222,21 @@ export class HelixService {
         this.logger.info(
             `[Helix] Unpublish complete: ${liveCount}/${webPaths.length} live, ${previewCount}/${webPaths.length} preview`,
         );
+        // `success` and `count` keep their meanings: the DELETE path asks "did we
+        // manage to unpublish anything", and best-effort cleanup is the right
+        // question there. The RESET path needs the other one — "did everything go"
+        // — and could not ask it, because `success` is true when ONE path of 52
+        // succeeds and `count` folds live and preview together with Math.max.
+        //
+        // A reset where all 52 live deletes 403'd therefore reported success while
+        // the stale pages kept serving. `liveFailed` is the count users feel: the
+        // live entry is what the CDN serves.
         return {
             success: liveCount > 0 || previewCount > 0,
             count: Math.max(liveCount, previewCount),
+            total: webPaths.length,
+            liveFailed: webPaths.length - liveCount,
+            previewFailed: webPaths.length - previewCount,
         };
     }
 

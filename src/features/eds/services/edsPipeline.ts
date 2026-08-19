@@ -270,7 +270,32 @@ async function pipelineClearContent(
         });
 
         try {
-            await helixService.unpublishPages(repoOwner, repoName, 'main', webPaths);
+            // The RESULT is read, not discarded. `unpublishPages` never throws —
+            // per-path failures become counts — so the try/catch below could never
+            // fire, and a reset where every live DELETE was refused reported a
+            // clean run while the stale pages kept serving from the CDN.
+            //
+            // Still non-fatal: the reset republishes over the top and the user has
+            // a working storefront either way. But "52 pages could not be
+            // unpublished" is a fact they need, because the pages that should have
+            // DISAPPEARED are the ones that will not.
+            const unpublished = await helixService.unpublishPages(
+                repoOwner,
+                repoName,
+                'main',
+                webPaths,
+            );
+            if (unpublished.liveFailed > 0) {
+                logger.warn(
+                    `[EdsPipeline] ${unpublished.liveFailed}/${unpublished.total} pages could not ` +
+                        'be unpublished from the CDN — they will keep serving their old content. ' +
+                        'A refused DA.live session is the usual cause; sign in again and reset to clear them.',
+                );
+                onProgress?.({
+                    operation: 'content-clear',
+                    message: `⚠️ ${unpublished.liveFailed} of ${unpublished.total} pages could not be unpublished`,
+                });
+            }
         } catch (error) {
             logger.warn(
                 `[EdsPipeline] CDN unpublish failed (non-fatal): ${(error as Error).message}`,

@@ -62,3 +62,14 @@ run, and which will re-measure rather than trusting the numbers above.
 > The bar is that the existing suites pass UNTOUCHED — a test that has to change
 > means the extraction changed behaviour. Leave `configServiceAccess.ts` alone
 > unless its comment ratio and export list say otherwise; the item explains why.
+
+## Also over threshold, measured 2026-08-19
+
+`edsPipeline.ts` is **839 lines** — more than either service this item was filed
+for — and `executeEdsPipeline` carries a **cyclomatic complexity of 27** against a
+limit of 25, which eslint reports as a warning on every touch. Verified
+pre-existing: 27 both before and after an unrelated edit that day, with only the
+line number moving.
+
+Named here rather than fixed in passing: absorbing an unrelated decomposition into
+a bug fix is how a small change becomes unreviewable. It belongs to this item.

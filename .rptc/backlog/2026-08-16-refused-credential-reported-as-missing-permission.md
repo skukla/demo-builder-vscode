@@ -38,8 +38,22 @@
 >    run 1 first failed, at config-service registration. Wrapping it is small, but
 >    its phases are not obviously idempotent on replay, which needs checking before
 >    a retry is safe to add." 
-> 2. **The 52 unpublish 403s are logged as warnings, never thrown**, so nothing can
->    catch them even now. Making them throw changes reset's failure semantics — a
+> 2. **PARTLY DONE 2026-08-19.** Investigating it split the item in two, and only
+>    one half was ever a product decision:
+>
+>    - **SURFACED (done).** `unpublishPages` never throws, but it DOES return a
+>      result — and `edsPipeline.ts:273` discarded it, wrapping the call in a
+>      try/catch that could never fire. It now returns `total`, `liveFailed` and
+>      `previewFailed`, and the caller warns when live deletes failed. `success`
+>      and `count` are unchanged: `success` means "did anything unpublish", which
+>      is the right question for the DELETE path, and it is TRUE when one path of
+>      52 succeeds — which is exactly why it was never enough on its own.
+>    - **STILL A DECISION.** Whether a failed unpublish should be FATAL to a reset.
+>      Non-fatal by design today, and the reset still republishes over the top; the
+>      cost is stale pages that should have disappeared but keep serving.
+>
+>    ORIGINAL text: "The 52 unpublish 403s are logged as warnings, never thrown",
+>    so nothing can catch them even now. Making them throw changes reset's failure semantics — a
 >    403 there is non-fatal by design today — so it is a product decision, not a
 >    refactor.
 > 3. **The probe (option 1 below) was not built.** With mid-pipeline recovery
