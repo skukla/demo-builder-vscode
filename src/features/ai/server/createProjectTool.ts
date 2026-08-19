@@ -213,10 +213,20 @@ async function createEds(
         return asText({ error: 'EDS + ACCS projects require accsEndpoint (the Adobe Commerce Cloud GraphQL endpoint).' });
     }
 
-    // Adobe (mesh) + GitHub + DA.live must all be authenticated before we create
-    // real cloud resources.
-    const adobe = await requireAdobeWorkspace(ctx);
-    if ('error' in adobe) return asText(adobe.error);
+    // Adobe is required only when this package + stack actually deploys a mesh —
+    // the same question `createHeadless` asks. Unconditionally, this refused EVERY
+    // EDS creation an agent attempted: all EDS packages except BuildRight declare
+    // `requiresMesh: false`, and the refusal named API Mesh for projects that
+    // declare they need none, which sends the reader hunting a mesh that is not
+    // there. GitHub + DA.live are required for EDS regardless, below.
+    let adobe:
+        | { org: WizardState['adobeOrg']; project: WizardState['adobeProject']; workspace: WizardState['adobeWorkspace'] }
+        | undefined;
+    if (getResolvedMeshRequirement(pkg, args.stackId) === true) {
+        const resolved = await requireAdobeWorkspace(ctx);
+        if ('error' in resolved) return asText(resolved.error);
+        adobe = resolved;
+    }
     const handoff = await edsAuthHandoff(ctx);
     if (handoff) return asText(handoff);
 
@@ -268,9 +278,9 @@ async function createEds(
         selectedPackage: args.pkgId,
         selectedStack: args.stackId,
         selectedOptionalDependencies: await getAutoSelectedOptionalDependencies(args.pkgId, args.stackId),
-        adobeOrg: adobe.org,
-        adobeProject: adobe.project,
-        adobeWorkspace: adobe.workspace,
+        adobeOrg: adobe?.org,
+        adobeProject: adobe?.project,
+        adobeWorkspace: adobe?.workspace,
         componentConfigs: {},
         selectedAddons: [],
         selectedBlockLibraries: [],
@@ -288,7 +298,7 @@ async function createEds(
     try {
         await runWithAdobeTarget(() => executeProjectCreation(capturing, config));
     } catch (err) {
-        if (isOrgMismatchError(err)) return orgMismatchResult(leanOrg(adobe.org));
+        if (isOrgMismatchError(err)) return orgMismatchResult(leanOrg(adobe?.org));
         return asText({
             created: false,
             stage: 'project-creation',

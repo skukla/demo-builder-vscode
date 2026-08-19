@@ -77,7 +77,13 @@ const authManager = {
     isAuthenticated: jest.fn(async () => true),
     getCurrentOrganization: jest.fn(async () => ({ id: 'org-1', name: 'Org' })),
     getCurrentProject: jest.fn(async () => ({ id: 'proj-1', name: 'Proj' })),
-    getCurrentWorkspace: jest.fn(async () => ({ id: 'ws-1', name: 'Stage' })),
+    // Typed to include `undefined` because that is a REAL runtime answer — the
+    // production guard branches on `if (!workspace)`. Narrowing the mock to the
+    // happy shape would make the unset case untypeable, which is how a test suite
+    // ends up unable to express the condition the code exists to handle.
+    getCurrentWorkspace: jest.fn(
+        async (): Promise<{ id: string; name: string } | undefined> => ({ id: 'ws-1', name: 'Stage' }),
+    ),
 };
 const ctxFactory = () => ({ authManager, context: {}, sendMessage: jest.fn(async () => undefined) }) as unknown as HandlerContext;
 
@@ -186,6 +192,56 @@ describe('create_project', () => {
     });
 
     describe('eds', () => {
+        /**
+         * The headless path has asked `getResolvedMeshRequirement` since it was
+         * written; the EDS path demanded a workspace unconditionally. Every EDS
+         * package except BuildRight declares `requiresMesh: false`, so the tool
+         * refused every EDS creation an agent attempted — measured 2026-08-18 with
+         * `bodea`/`eds-accs`, then again on `eds-paas`, both 0.0s.
+         *
+         * Two things were wrong and only one is about being blocked: the message
+         * said "required for API Mesh" for a project whose package declares it
+         * needs no mesh, which sends the reader hunting a mesh that is not there.
+         */
+        it('does NOT demand an Adobe workspace for a mesh-free EDS package', async () => {
+            (getResolvedMeshRequirement as jest.Mock).mockReturnValueOnce(false);
+            authManager.getCurrentWorkspace.mockResolvedValueOnce(undefined);
+
+            const s = fakeServer();
+            registerCreateProjectTool(s, ctxFactory);
+            const res = await s.call(EDS);
+
+            expect(JSON.stringify(res)).not.toMatch(/API Mesh/);
+            expect(executeProjectCreation).toHaveBeenCalled();
+        });
+
+        it('still demands one when the package DOES require a mesh', async () => {
+            (getResolvedMeshRequirement as jest.Mock).mockReturnValueOnce(true);
+            (getAdobeTarget as jest.Mock).mockReturnValueOnce(undefined);
+            authManager.getCurrentWorkspace.mockResolvedValueOnce(undefined);
+
+            const s = fakeServer();
+            registerCreateProjectTool(s, ctxFactory);
+            const res = await s.call(EDS);
+
+            expect(JSON.stringify(res)).toMatch(/API Mesh/);
+            expect(executeProjectCreation).not.toHaveBeenCalled();
+        });
+
+        /** A mesh-free EDS project records no Adobe context rather than a stale one. */
+        it('records no Adobe context for a mesh-free EDS package', async () => {
+            (getResolvedMeshRequirement as jest.Mock).mockReturnValueOnce(false);
+            authManager.getCurrentWorkspace.mockResolvedValueOnce(undefined);
+
+            const s = fakeServer();
+            registerCreateProjectTool(s, ctxFactory);
+            await s.call(EDS);
+
+            const state = (buildProjectConfig as jest.Mock).mock.calls[0][0];
+            expect(state.adobeWorkspace).toBeUndefined();
+            expect(state.adobeOrg).toBeUndefined();
+        });
+
         it('requires repoName / daLiveOrg / daLiveSite', async () => {
             const s = fakeServer();
             registerCreateProjectTool(s, ctxFactory);
