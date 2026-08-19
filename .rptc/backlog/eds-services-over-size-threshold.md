@@ -62,3 +62,37 @@ run, and which will re-measure rather than trusting the numbers above.
 > The bar is that the existing suites pass UNTOUCHED — a test that has to change
 > means the extraction changed behaviour. Leave `configServiceAccess.ts` alone
 > unless its comment ratio and export list say otherwise; the item explains why.
+
+## `edsPipeline.ts` was added here and then REMOVED — 2026-08-19
+
+It was filed here on size alone (839 lines). Running `decompose-god-file`'s own
+test rejected it, and the correction is worth keeping because size was the wrong
+reason both times:
+
+| Coupling signal | Threshold | `edsPipeline.ts` |
+|---|---|---|
+| non-type imports | >15 | **5** |
+| public methods | >10 | **1** (`executeEdsPipeline`) |
+| entity domains | multiple | one — the pipeline |
+
+The skill's rule is "threshold WITHOUT coupling → leave it". The file is one
+orchestrator plus eight private step helpers: cohesive, one public entry point,
+one reason to change per step but all serving the same pipeline.
+
+**And decomposing would not have fixed the thing that prompted it.** The eslint
+warning is `executeEdsPipeline` at cyclomatic complexity 27 (limit 25), and every
+one of those branches is step-gating INSIDE that function — `clearExistingContent`,
+`skipContent`, `contentSource`, `includeBlockLibrary`, `purgeCache`, `skipPublish`,
+`libraryPaths.length`, `byomOverlayUrl && project`, plus nested try/catch. Moving
+the helpers to another file leaves all of them. The file shrinks; the warning stays.
+
+Refiled as `2026-08-19-eds-pipeline-orchestrator-complexity.md`, which is a
+complexity-reduction item, not a decomposition one.
+
+## Measured 2026-08-19 — `edsResetService.ts` is the genuine candidate here
+
+Of the three files, only this one shows the coupling the skill looks for: **440
+lines with 16 non-type imports**, over the >15 signal. `configurationService.ts` is
+532 lines with **2** non-type imports and 7 public methods — over on size, under on
+every coupling signal, so the same "leave it" verdict applies until something else
+argues otherwise.

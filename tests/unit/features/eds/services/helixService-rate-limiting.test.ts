@@ -107,7 +107,7 @@ describe('HelixService - Rate Limiting', () => {
 
             const result = await service.unpublishPages('org', 'site', 'main', ['/about']);
 
-            expect(result).toEqual({ success: true, count: 1 });
+            expect(result).toMatchObject({ success: true, count: 1 });
             // 3 calls: initial 429 + retry 204 + preview 204
             expect(mockFetch).toHaveBeenCalledTimes(3);
         });
@@ -147,7 +147,7 @@ describe('HelixService - Rate Limiting', () => {
 
             const result = await service.unpublishPages('org', 'site', 'main', ['/about']);
 
-            expect(result).toEqual({ success: true, count: 1 });
+            expect(result).toMatchObject({ success: true, count: 1 });
             expect(mockFetch).toHaveBeenCalledTimes(3);
         });
     });

@@ -139,10 +139,9 @@ Also resolved since last index (now archived to `../complete/`): **oversized tes
 
 **A question with one experiment behind it, and the two answers differ on whether a user loses their own work.** `startDelete` sends the same body as an import with `operation_mode: 'delete'`, so the extension asks for a PACK-SCOPED removal — but what the service does with that is not visible from this repo. If it deletes the records the pack defines, hand-created data survives and reset can never give a clean instance (the prompt is honest; the expectation gap is the risk). If it deletes everything of those data types, a removal takes the user's own products and the prompt understates a destructive act with no undo. Settle it in four steps on a throwaway instance: import a pack, create one product by hand, remove `products` ONLY from the Data Installer, look for the SKU. Do not infer it from a reset run — reset changes two things at once. Split out of the archived reset item so it stays visible; an entry that reads as finished stops being re-read. Filed 2026-08-17.
 
-#### Catalog prewarm 401s on every new storefront ([`pdp-prewarm-401-after-admin-pinning.md`](pdp-prewarm-401-after-admin-pinning.md))
+#### Catalog prewarm fails on a store view with no Catalog Service index ([`2026-08-18-prewarm-enumeration-needs-an-indexed-scope.md`](2026-08-18-prewarm-enumeration-needs-an-indexed-scope.md))
 
-**We close the door ourselves, and it SHIPPED in beta.129.** `prewarmOne` POSTs to the `prepublish-pdp` action with no headers at all (verified: `catalogPrewarmService.ts:341-358` passes only a method and a timeout signal), while storefront setup pins an admin at registration two minutes earlier — and any `access.admin` role closes the whole Helix admin API to anonymous callers, a rule the `eds-publish-and-config` skill already documents. Result: `0/39 succeeded`, systemic. **Severity resolved 2026-08-15 — BROKEN FEATURE, no probe needed:** the vendored browser snippet builds the identical unauthenticated request (`pdp404Snippet.ts:170-176`), so the live 401 the reporter already captured IS the smart-404 request; PDPs cannot self-heal. Admin pinning is new in `v1.0.0-beta.129` (absent at the `beta.128` tag), so every storefront created from that release on is affected; earlier ones are fine. **Fix A SHIPPED 2026-08-15 (`3d73419b`)** — prewarm now publishes through `helixService.previewAndPublishPage`, which already sent the DA.live bearer and which prewarm simply never used; that restores PDPs for the whole setup-time catalog. **Fix B (runtime self-heal) is designed, not built.** Measured: an IMS S2S token is refused, but a `roles: ['publish']` Admin API Key clears the lock (200 on a PDP path; controls 401/200). It matters more than it first looked — **SCs routinely add products after setup**, so the runtime fallback is a main path, not a tail. Design: the extension mints a **SITE-scoped** publish key (org scope was tried and rejected — it saves no lookup, since every request already carries `org` AND `site`, and it costs both blast radius and per-project revocation) and registers it with the action, which authenticates the caller using the IMS chain already guarding `discover-stores` and stores it encrypted per site; rotation then rides the extension's existing ≤7-day re-mint, which is what the deleted shared-secret scheme (`ac36fc7`) failed to do. The extension half is PROVEN end to end (mint → publish → revoke, live), and the action half's AUTH is proven too — the deployed `discover-stores` accepts the `darkalley` DA.live token (400 on a missing param, i.e. past every auth gate; controls 401/401). **The action half is now BUILT, DEPLOYED and PROVEN** (`accs-discovery-service@ac1190b`, Stage): `register-publish-key` behind the discover-stores guard chain, AES-256-GCM per-site blobs in aio-lib-files with a per-write IV, and `prepublish-pdp` reading the key. Probed with the bug and fix in one run against a locked site using a real catalog SKU — anon prepublish 502 `Preview failed (401)` with no key, then 200 published after registering, and the live tier served the PDP. Only the EXTENSION side remains: mint, register, and re-do both on each rotation trigger. **Load-bearing constraint found by probe: `apiKeys` lives inside the site config document, so `updateSiteConfig`'s delete-then-re-register destroys the key on EVERY project edit** (measured: 1 key → delete → re-register → 0). It cannot be captured and restored like the admin roster, because a key value is unreadable after creation — so the design must re-mint AND re-register after any config write, and invalidate the 7-day local cache, which today would serve a key that no longer exists. `helixService.createAdminApiKey` is that minter — kept, not deleted, with two live-measured bugs fixed (`roles: ['admin']`→`['publish']`, and raw→URL-safe key ids that made every DELETE 400). Research: `.rptc/research/pdp-credential-rotation/research.md`. Filed 2026-08-15.
-
+**Not the 401 item, and not an empty catalog.** `enumerateAccsCatalog` queries `productSearch` (`catalogPrewarmService.ts:98`) scoped by the `Store:` header, and `No index was found for this request` means THAT STORE VIEW has no search index — built per scope, separately from the catalog. **Confirmed against a live case: the reporter's backend HELD products and enumeration still failed**, so "no products yet" is the wrong explanation. Same sandbox, different scope: 3/3/3 worked, 2/2/2 did not. Partly addressed the same day — the warning now names the scope it queried, which a project with two store views previously could not determine at all. What remains is a decision, not a hunt: whether an unindexed scope is user error or a supported state that needs actionable guidance; whether a `products(skus:)` fallback is worth it (it needs a SKU list, so probably not); and whether prewarm running BEFORE the sample-data import on a first create (`edsPipeline.ts:770` vs `executor.ts:630`) is deliberate. Filed 2026-08-18.
 
 #### Placeholder sheets: does anything need them, and should code fetch them at all? ([`placeholder-sheets-who-owns-them.md`](placeholder-sheets-who-owns-them.md))
 
@@ -158,15 +157,15 @@ Also resolved since last index (now archived to `../complete/`): **oversized tes
 
 **A new project cannot use the Data Installer without manual Console work.** A datapack write needs an OAuth S2S pair; that pair exists only inside an Adobe I/O project + workspace; a package selecting no App Builder components never gets one, so `provision-accs-credentials` refuses. Measured live 2026-08-16 on `skukla/bodea-template-test` — both OAuth fields blank, `project.adobe` carrying only `{organization, organizationName}`. "The user can paste a pair in" is NOT an escape: it moves who creates the I/O project from the extension to a human, it does not remove the requirement. **The open decision is per-project vs one shared "Demo Builder" I/O project per org**, and the question that settles it is whether the workspace is also wanted for deploying per-project actions — shared is much the smaller change (`provisionAccsCredentials` already takes explicit ids; only the handler hard-wires them to `project.adobe`). **The two smaller defects it also carried are SHIPPED (`11dea998`)**: reset no longer asks for sample-data removal it cannot deliver (credentials resolved before the prompt, not after a 3-minute reset), and the "Set up credentials automatically" offer is gated on an actual workspace binding via one predicate shared with the provisioning guard — fixed at the flag rather than the modal, because the export spine raises the same refusal. Constraint: do NOT assume one credential reaches multiple Commerce instances; pre-flight fails identically for a real instance and a nonsense string, so it is unresolved from outside. Filed 2026-08-16 by the Bodea session.
 
-#### `delete_mesh` deletes whatever the CLI last selected ([`mesh-delete-untargeted.md`](mesh-delete-untargeted.md))
-
-**Destructive, cloud-side, both surfaces.** `handleDeleteApiMesh` validates `workspaceId` then runs `aio api-mesh delete --autoConfirmAction` without passing it, and targets no org — so the CLI falls back to its process-global `aio console where` selection, which this codebase deliberately stopped maintaining. Mesh check and deploy ARE targeted; delete is the odd one out. The safety-net guard cannot warn because `ORG_SCOPED_AIO` matches the colon form (`api-mesh:`) while the command uses the space form — and the guard's tests pin only colon spellings, so they share the blind spot. Reachable from the dashboard AND `delete_mesh`. Not reproduced live; reproduce before fixing. Filed 2026-08-14.
-
 #### MCP: which window serves, and which project it acts on ([`mcp-window-and-project-binding.md`](mcp-window-and-project-binding.md))
 
 Two independent last-writer-wins races. The socket name is `sha256(projects-root)` — identical in every window — and a second window `rename`s over the first's bind silently, so the LAST window to start serves. Separately, `StateManager` reads `state.json` once at `initialize()` with no watcher, so that serving window never learns about a project selected in another window. Net: `get_current_project` can report the wrong project, and `reset_eds_project` (confirm-only, pointer-resolved, rewrites repo + DA.live content) acts on it. `delete_project` is safe — it demands an explicit name. Not reproduced live; preconditions stated from code. Filed 2026-08-14.
 
 Note: `2026-05-30-decouple-project-from-workspace.md` looks adjacent but its headline premise shipped fixed on 2026-06-02 — re-scope it, do not pick it up as written.
+
+#### `executeEdsPipeline` is a 254-line orchestrator at complexity 27 ([`2026-08-19-eds-pipeline-orchestrator-complexity.md`](2026-08-19-eds-pipeline-orchestrator-complexity.md))
+
+**A complexity item, not a decomposition one — and the distinction is the finding.** `edsPipeline.ts` is 839 lines and was briefly filed as a god file on size alone; `decompose-god-file`'s own coupling test rejects it (5 non-type imports against a >15 signal, ONE public export against >10, a single entity domain), and its rule is "threshold without coupling → leave it". Decisively, **splitting the file would not move the number the eslint warning is about**: all 27 branches are step-gating inside `executeEdsPipeline` itself (`clearExistingContent`, `skipContent`, `contentSource`, `includeBlockLibrary`, `purgeCache`, `skipPublish`, `libraryPaths.length`, `byomOverlayUrl && project`, plus nested try/catch), and extracting the eight private helpers leaves every one of them. The fix is a declarative step list, which collapses the orchestrator to a loop. **Not a quick win:** this is the shared spine of create, reset AND refresh-block-library, all provisioning real cloud resources, and two things need settling first — the steps share mutable locals that a step list must make an explicit context, and their error semantics deliberately differ per step. Filed 2026-08-19.
 
 #### Two EDS services sit over the god-file threshold ([`eds-services-over-size-threshold.md`](eds-services-over-size-threshold.md))
 
@@ -175,22 +174,6 @@ Note: `2026-05-30-decouple-project-from-workspace.md` looks adjacent but its hea
 #### MCP tools for Configuration Service site access ([`mcp-site-access-tools.md`](mcp-site-access-tools.md))
 
 Give an agent the same 403 repair a human now gets from `Demo Builder: Manage Site Access` — `get_site_access` / `grant_site_admin` / `revoke_site_admin` over the existing `siteAccessManagerHeadless` core, which was built UI-free for exactly this. No new logic; the constraints (report `verified` separately from `status`, treat `not_authorized` as non-retryable, never remove the last admin, mask emails) are measured rather than assumed and are listed in the item. Filed 2026-08-14 from the `config-service-admin-grant` verify loop.
-
-#### ~~Component secret routing~~ — **SHIPPED 2026-08-17**, moved to [`../complete/component-secret-routing/`](../complete/component-secret-routing/overview.md)
-
-`secret: true` now separates the routing decision from `type`'s render hint; the two Commerce
-credentials go to SecretStorage via a verified write-through (write → read back → only then
-strip), applied at project creation, at Configure save, and by an activation sweep that converges
-existing projects. The completion record notes two places the plan was wrong and building it
-corrected them.
-
-The risk the plan named was real and landed as predicted: three consumers read the password out
-of `componentConfigs`, one of them (`useAutoStoreDetect`) in the WEBVIEW, which cannot read
-SecretStorage at all. Each got its own answer — `.env` generation hydrates the value at write
-time, the webview gates on an `isSet` flag rather than the value, and the Configure field renders
-"Saved" instead of an empty required box. A fourth hazard the plan did not foresee is recorded in
-the completion note: an empty field means "cleared" to the migration and "hidden" to the form, so
-an unfiltered save would have destroyed the credential.
 
 #### App Builder app family — attach a deployable app to a demo ([`2026-06-17-appbuilder-app-deploy-spine.md`](../complete/2026-06-17-appbuilder-app-deploy-spine.md))
 
@@ -374,48 +357,11 @@ appeared in **7 — about 44%**, not every run. Do not plan around it being reli
 co-occurred with the `ENOTEMPTY` teardown failure a peer session reported (**0/16**), so the two are
 not one bug in the direction testable from here.
 
-#### ✅ Full-suite timeout flake — RESOLVED 2026-08-13 (moved to [`../complete/2026-08-13-jest-full-suite-timeout-flake.md`](../complete/2026-08-13-jest-full-suite-timeout-flake.md))
-
-**The cause was a second concurrent jest run, not the config.** One suite at a time: 0 failed suites
-in 10 runs. Two concurrently: failures in all 6, 4–6 suites each. `maxWorkers: '75%'` and
-`workerIdleMemoryLimit` — the two suspects this item was filed against — are both innocent, so the
-planned worker-count bisect was answering a dissolved question and would have "fixed" it by narrowing
-the collision window. A PreToolUse rule (`.claude/hooks/rules/15-jest-concurrent.rule`) now blocks the
-second run. Shipped alongside: four machine-speed assertions removed from `processCleanup.timeout`,
-a dead `spawnedPids` safety net wired up, `cacheDirectory` moved where jest actually reads it, a
-`validate:jest-config` that had been failing unnoticed, and the full-suite duration corrected from
-"3–5 minutes" to ~20 seconds everywhere it was documented. **Still open** and recorded in the outcome:
-the MCP socket root is shared across concurrent runs by construction.
-
 ### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
 
-#### ✅ An agent cannot tell CDN lag from lost work — SHIPPED 2026-08-18 (moved to [`../complete/2026-08-18-agent-cannot-tell-cdn-lag-from-lost-work.md`](../complete/2026-08-18-agent-cannot-tell-cdn-lag-from-lost-work.md))
+#### A package that requires a mesh must be forced to add one ([`2026-08-18-force-the-mesh-a-package-requires.md`](2026-08-18-force-the-mesh-a-package-requires.md))
 
-Filed 2026-08-18. A colleague's agent reported a background process force-pushing and
-rewriting `main`; **the report is false and the file disproves it** — every push on both
-affected repos is `ahead / behind=0`, and the two "wiped out" files were never reverted.
-Re-run the compare check in the file before anyone re-opens this as a force-push bug.
-All three real gaps behind it are fixed: `diagnose-demo` now routes "my change isn't
-showing" to `git log` first (`AI_CONTEXT_VERSION` 15); `describeCdnPropagation` returns
-`cdnStatus` from `republish` / `sync_content`, quoting a wait derived from the polling
-constants rather than invented, and `sync_storefront` names the commit it pushed; and
-`sync_storefront` rebases and retries once on a `non-fast-forward`, aborting cleanly on
-conflict — never on a `ruleset` rejection, which a new typed `reason` on
-`PushRejectedError` separates. A fourth defect surfaced while writing this up and was
-fixed too: the extension-side `handlePushRejected` rebased on every rejection, so a
-blocked-by-push-protection sync told the user "push failed after resolving conflicts" —
-conflicts that never existed — while the real reason reached only the debug log.
-
-#### `create_project` demands a mesh workspace for mesh-free packages ([`2026-08-18-create-project-tool-demands-a-mesh-workspace.md`](2026-08-18-create-project-tool-demands-a-mesh-workspace.md))
-
-Filed 2026-08-18. The headless `create_project` MCP tool refuses without an Adobe workspace
-**unconditionally** (`createProjectTool.ts:112`), so a package whose `demo-packages.json` entry
-says `mesh: false` — `bodea`, `citisignal`, `custom`, `isle5`, i.e. four of the five — cannot be
-created headlessly at all. Reproduced on both `eds-accs` and `eds-paas`, refused in 0.0s. The
-message compounds it: it blames API Mesh for a project that has none, which is a false
-explanation the reader has no reason to doubt. The wizard path is unaffected. Small fix — the
-mesh requirement is already in the config the tool has loaded; needs tests in both directions so
-`buildright` still refuses.
+**NOT DESIGNED — requirement settled, surface open.** A package can declare `requiresMesh: true` (`demo-packages.json`; only BuildRight today), and nothing enforces it: `isIntegrationsComplete` (`tileStatus.ts:139`) opens with `if (!anyDeployableSelected(state)) return true`, so integrations are unconditionally optional and a required mesh can be walked past. **Hard block decided 2026-08-18** — a demo whose storefront queries a mesh that was never deployed is broken in a way the user finds out while presenting. Most of the machinery already exists (which mesh comes from the stack's `optionalDependencies`; the destination create-or-select flow and the build-time deploy are both built); the gap is the one predicate. **Constraint, also decided: the mesh does NOT go in `app-builder-components.json`** — that catalog is heading toward shared catch-all repos, and a package-specific mesh does not belong there even scoped by `onlyForPackages`. Note the schema currently invites the opposite ("the three seeded meshes") and `resolveRequirement` already handles `kind === 'mesh'`; do not take that invitation without revisiting. Gates zero users today (BuildRight is `hidden`/`coming-soon`), which is why it is safe to make strict. Filed 2026-08-18.
 
 #### EDS contract drift checker ([`2026-08-13-eds-contract-drift-checker.md`](2026-08-13-eds-contract-drift-checker.md))
 
@@ -487,6 +433,9 @@ at-rest plaintext ever matters.
 
 ## Recently shipped — 2026-08
 
+- **`create_project` demands a mesh workspace for mesh-free packages** — shipped 2026-08-18. `createHeadless` already asked `getResolvedMeshRequirement`; `createEds` did not, so the tool refused EVERY EDS creation an agent attempted (all EDS packages except BuildRight declare `requiresMesh: false`). Now conditional, with `adobe` optional through the three consumers that read it. Sibling guards audited and correctly scoped — `repoName`/`daLiveOrg`/`daLiveSite` apply to all EDS, `accsEndpoint` is already conditional on `-accs`. The forced-mesh half is a separate, undesigned item ([`2026-08-18-force-the-mesh-a-package-requires.md`](2026-08-18-force-the-mesh-a-package-requires.md)) ([`../complete/2026-08-18-create-project-tool-demands-a-mesh-workspace.md`](../complete/2026-08-18-create-project-tool-demands-a-mesh-workspace.md))
+- **`delete_mesh` deletes whatever the CLI last selected** — shipped in `v1.0.0-beta.132` (`b7769f16`). All three filed parts landed: the delete is wrapped in `withOrgContext` with `workspaceId` feeding `buildOrgTargetFromProjectAdobe`, so the validated argument now targets the delete instead of being discarded; and `ORG_SCOPED_AIO` matches the space form (`api-mesh[:\s]+`), so the guard no longer shares the blind spot its own tests had. Never reproduced live, and now cannot be ([`../complete/mesh-delete-untargeted.md`](../complete/mesh-delete-untargeted.md))
+- **Catalog prewarm 401s on every new storefront** — Fix A shipped 2026-08-15 (`3d73419b`); the runtime self-heal the entry called "designed, not built" shipped in `v1.0.0-beta.130` as `f9d757e3` (mint + register), `c69b175e` (re-mint on every path that destroys the key) and `0b544ed7` (30-day renewal sweep). Verified live 2026-08-18: a creation minted and registered a key and prewarm reported `Enumerated 30 SKUs … 30/30 succeeded`, against the filed symptom of `0/39` ([`../complete/pdp-prewarm-401-after-admin-pinning.md`](../complete/pdp-prewarm-401-after-admin-pinning.md))
 - **Reset sample-data ordering** — the data step now runs BEFORE the storefront pipeline, so catalog pre-warming is not spent on products about to be deleted (measured: 30 PDP pages published, then those products removed). The RESTORE half of that item was built and withdrawn before release — it tripled the tail of a three-minute operation and made "reset" mean two things depending on a button; reset removes sample data or leaves it, as it always did. Also unresolved and worth knowing: a removal is pack-scoped, and whether it can clear hand-created data is UNVERIFIED ([`../complete/2026-08-17-reset-should-restore-sample-data.md`](../complete/2026-08-17-reset-should-restore-sample-data.md))
 
 Pointers only; `../complete/` holds each writeup and git history holds the implementation.

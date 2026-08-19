@@ -1,6 +1,6 @@
 ---
 name: rptc-hygiene-scan
-description: Find rot in the RPTC record itself — backlog index links that do not resolve, items on disk with no index entry, plans that shipped but still sit in .rptc/plans/, and file:line citations pointing at deleted files or past a file's end. Use at release cuts alongside codebase-sweep, after moving or archiving any plan, or when the backlog stops being trustworthy enough to pick work from.
+description: Find rot in the RPTC record itself — backlog index links that do not resolve, items on disk with no index entry, plans that shipped but still sit in .rptc/plans/, file:line citations pointing at deleted files or past a file's end, shipped work still filed under an active backlog section, and items whose cited code has moved since they were written. Use at release cuts alongside codebase-sweep, after moving or archiving any plan, or when the backlog stops being trustworthy enough to pick work from.
 ---
 
 # RPTC Hygiene Scan
@@ -13,9 +13,63 @@ decide what to do next, so when it rots you pick the wrong work, or miss work en
 bash .claude/skills/rptc-hygiene-scan/scan.sh          # defaults to .rptc
 ```
 
-Four sections, each ending in a CONTROL line. Read the control first: a `(none)` from a
+Six sections, each ending in a CONTROL line. Read the control first: a `(none)` from a
 check that never executed reads exactly like a clean result — the `|| echo "none"` failure
 this repo's CLAUDE.md names.
+
+## §5 — shipped work still filed as active
+
+`§3` catches a PLAN that claims completion while sitting in `plans/`. `§5` is the same
+question aimed at the backlog: an item that shipped but still reads as work to do.
+
+Two signals, deliberately narrow — this check is worth having only if it never cries wolf:
+
+| Signal | What it means | Confidence |
+|---|---|---|
+| **TOMBSTONE** | The entry announces its own completion (`✅`, `SHIPPED`, `RESOLVED`, `~~struck~~`) while sitting in an active section | Certain — it says so itself |
+| **ARCHIVED TWIN** | The entry links to `backlog/<slug>`, and `complete/<slug>` also exists | Strong — it was archived and the index was not updated |
+
+An earlier draft added a third signal: grep the item's slug across commit messages since
+the last tag. It was **removed before shipping**. `git describe` picked up a backup-branch
+tag rather than a release, and more importantly a slug appears in a commit most often
+because that commit FILED the item — the opposite of shipped. It produced five false
+positives out of five. A check that cries wolf trains people to skip the whole scan.
+
+The fix for both signals is the same and a human should make it: move the entry into the
+index's archive section, or move the file to `complete/` and update the link.
+
+## §6 — the item's code moved after the item did
+
+`§5` catches an item that ANNOUNCES it is done. This catches the harder case: an
+item that quietly became untrue because the code it describes was fixed by other
+work, and nobody went back to the entry.
+
+It is real. On 2026-08-18 the two items picked off the top of the "active front"
+had both already shipped — one in `beta.130`, one in `beta.132` — and the section
+that is supposed to be nearest-to-actionable was the least trustworthy part of the
+backlog.
+
+**How it decides.** For each item: git says when the ITEM was last updated, and
+git says how many commits touched the CODE it cites since then. Nonzero means the
+ground moved.
+
+**Only `file.ts:NN` citations count.** A bare filename is background reference; a
+line number is a specific claim about specific code, and specific claims are what
+go stale. Bare filenames with line numbers resolve too, and unambiguously or not
+at all — two files sharing a basename means guessing, and guessing manufactures
+findings. Without the line-number restriction the check flagged 17 of 35 items,
+mostly old entries naming hot files, which is drift rather than staleness.
+
+**Ordered fewest-commits-first**, because one targeted commit against cited code is
+far likelier to BE the fix than twenty commits of ambient churn.
+
+**Advisory, always.** It says the ground moved, never that the item is wrong. Read
+the code before acting — the point is to tell you WHICH items deserve that read,
+not to make the judgement for you.
+
+**A clean result is evidence too.** `create_project demands a mesh workspace` was
+absent from the findings, with its citation resolved and 0 commits since filing —
+which is how that item was confirmed still live without re-deriving it by hand.
 
 ## When it runs
 

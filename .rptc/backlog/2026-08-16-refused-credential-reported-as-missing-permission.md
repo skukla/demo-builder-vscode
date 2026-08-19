@@ -12,17 +12,60 @@
 >
 > **What remains, and why each was left:**
 >
-> 1. **`syncCodeAndPermissions` has no retry wrapper** — and it is where run 1
->    first failed, at config-service registration. Wrapping it is small, but its
->    phases are not obviously idempotent on replay, which needs checking before a
->    retry is safe to add.
-> 2. **The 52 unpublish 403s are logged as warnings, never thrown**, so nothing can
->    catch them even now. Making them throw changes reset's failure semantics — a
+> 1. **WITHDRAWN 2026-08-19 — not actionable as written.** The idempotency read
+>    this asked for was done and the premise did not survive it:
+>
+>    - **It names the wrong function.** Config-service registration is Step 7, in
+>      `edsResetConfigStep.ts` (`publishConfigAndRegisterSite` → `registerSiteConfig`).
+>      `syncCodeAndPermissions` is Steps 4-5 and does not touch it.
+>    - **Step 7 is already handled**, by a decision made after this item was filed:
+>      a `DaLiveAuthError` there is caught, given its own message, and NOT rethrown,
+>      with recovery deferred to the pipeline's re-auth. Its docblock explains why
+>      rethrowing was worse — it aborted after `resetRepoToTemplate` had wiped the
+>      repo and skipped the only re-auth recovery in the reset.
+>    - **A wrapper would have nothing to catch.** `syncCodeAndPermissions` cannot
+>      propagate a DA.live failure: Step 4's `previewCode` is try/caught and
+>      continues by design, and Step 5's `configureDaLivePermissions`
+>      (`edsHelpers.ts:1147`) catches everything internally and returns
+>      `{success:false}` rather than throwing. `withDaLiveAuthRetry` around it would
+>      be dead code.
+>
+>    So the idempotency question is moot — there is no retry to make safe. The one
+>    unguarded await in that function is `daLiveAuthService.getUserEmail()`; noted
+>    so the next reader does not re-derive it.
+>
+>    ORIGINAL text: "`syncCodeAndPermissions` has no retry wrapper — and it is where
+>    run 1 first failed, at config-service registration. Wrapping it is small, but
+>    its phases are not obviously idempotent on replay, which needs checking before
+>    a retry is safe to add." 
+> 2. **PARTLY DONE 2026-08-19.** Investigating it split the item in two, and only
+>    one half was ever a product decision:
+>
+>    - **SURFACED (done).** `unpublishPages` never throws, but it DOES return a
+>      result — and `edsPipeline.ts:273` discarded it, wrapping the call in a
+>      try/catch that could never fire. It now returns `total`, `liveFailed` and
+>      `previewFailed`, and the caller warns when live deletes failed. `success`
+>      and `count` are unchanged: `success` means "did anything unpublish", which
+>      is the right question for the DELETE path, and it is TRUE when one path of
+>      52 succeeds — which is exactly why it was never enough on its own.
+>    - **STILL A DECISION.** Whether a failed unpublish should be FATAL to a reset.
+>      Non-fatal by design today, and the reset still republishes over the top; the
+>      cost is stale pages that should have disappeared but keep serving.
+>
+>    ORIGINAL text: "The 52 unpublish 403s are logged as warnings, never thrown",
+>    so nothing can catch them even now. Making them throw changes reset's failure semantics — a
 >    403 there is non-fatal by design today — so it is a product decision, not a
 >    refactor.
 > 3. **The probe (option 1 below) was not built.** With mid-pipeline recovery
 >    working it is now an optimisation — fail before the repo is rewritten rather
 >    than recover after — not the main fix. Re-evaluate on its own merits.
+> 4. **DONE 2026-08-19.** `probeConfigWriteAccess` no longer folds 401 into 403:
+>    401 returns `unauthenticated`, and the three remedy-choosing callers act on
+>    it — `logConfigAccessState` says sign in rather than blaming the role,
+>    `waitForConfigAccess` stops instead of polling ~105s for a role that is not
+>    the problem, and `announceConfigAccess` stops naming org admins to go ask.
+>    The ORIGINAL text follows.
+>
 > 4. **`configAccessRecovery` and `configurationService` still say "no admin
 >    role"** on a 403. `siteConfigRegistrar` already throws `DaLiveAuthError`, so
 >    the wiring is closer than it looks; the wording is downstream of item 1.

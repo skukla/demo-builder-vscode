@@ -146,3 +146,172 @@ if not bad:
 print(f"  control: {checked} file:line citations checked "
       f"({'OK' if checked else 'CHECK BROKEN — pattern matched nothing'})")
 PY
+
+echo
+echo "== 5. Shipped work still sitting in an ACTIVE backlog section =="
+python3 - "$RPTC" <<'PY'
+import os, re, sys
+
+rptc = sys.argv[1]
+readme = os.path.join(rptc, 'backlog', 'README.md')
+if not os.path.exists(readme):
+    print("  (no backlog index)"); raise SystemExit(0)
+lines = open(readme, encoding='utf-8').read().split('\n')
+
+def first(prefix, default):
+    return next((i for i, l in enumerate(lines) if l.startswith(prefix)), default)
+
+start = first('## Active backlog', 0)
+end = next((i for i, l in enumerate(lines[start + 1:], start + 1) if l.startswith('## ')), len(lines))
+
+section, active = None, []
+for i in range(start, end):
+    if lines[i].startswith('### '):
+        section = lines[i][4:].strip()
+    elif lines[i].startswith('#### '):
+        raw = lines[i]
+        title = re.sub(r'\s*\(\[.*', '', raw[5:])
+        title = re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', title).replace('**', '').replace('~~', '').strip(' —,')
+        targets = re.findall(r'\]\(([^)]+)\)', raw)
+        active.append((section, title, targets, raw))
+
+flagged = 0
+
+# ── Signal 1: TOMBSTONE ────────────────────────────────────────────────────
+# An entry in an ACTIVE section that announces its own completion. The item is
+# done; the index still files it under work-to-do. This is the cleanup the
+# archive sections exist for, and it is what makes the active list read longer
+# than it is — 3 of these were sitting in the list on 2026-08-18.
+for section, title, targets, raw in active:
+    if not ('✅' in raw or 'SHIPPED' in raw or 'RESOLVED' in raw or '~~' in raw):
+        continue
+    when = re.search(r'(\d{4}-\d{2}-\d{2})', raw)
+    print(f"  TOMBSTONE   [{(section or '?')[0]}] {title[:88]}")
+    print(f"              announces completion{' on ' + when.group(1) if when else ''}"
+          f" — move it to an archive section")
+    flagged += 1
+
+# ── Signal 2: ARCHIVED TWIN ────────────────────────────────────────────────
+# The item already lives under complete/, so it shipped AND was archived; only
+# the index still calls it active. Distinct from a tombstone: nothing in the
+# entry admits it, so only the filesystem knows.
+complete_names = set()
+cdir = os.path.join(rptc, 'complete')
+if os.path.isdir(cdir):
+    complete_names = {n[:-3] if n.endswith('.md') else n for n in os.listdir(cdir)}
+
+for section, title, targets, raw in active:
+    if '✅' in raw or 'SHIPPED' in raw or 'RESOLVED' in raw:
+        continue                      # already reported above
+    for t in targets:
+        base = os.path.basename(t.rstrip('/'))
+        base = base[:-3] if base.endswith('.md') else base
+        if '/complete/' not in t and base in complete_names:
+            print(f"  ARCHIVED TWIN  [{(section or '?')[0]}] {title[:80]}")
+            print(f"              index points at {t}, but complete/{base} exists")
+            flagged += 1
+            break
+
+if not flagged:
+    print("  (none)")
+
+# CONTROL. Both halves are named, because either can silently do nothing: an
+# empty active span makes signal 1 vacuous, an empty complete/ makes signal 2
+# vacuous, and both print "(none)" exactly like a clean record.
+broken = []
+if not active:
+    broken.append("no active entries parsed")
+if not complete_names:
+    broken.append("complete/ is empty or missing")
+print(f"  control: {len(active)} active entries scanned against "
+      f"{len(complete_names)} archived item(s)"
+      + (f"  ⚠️  CHECK BROKEN — {'; '.join(broken)}" if broken else ""))
+PY
+
+echo
+echo "== 6. Items citing a file:line whose CODE moved after the item was last updated =="
+python3 - "$RPTC" <<'PY'
+import os, re, subprocess, sys
+
+rptc = sys.argv[1]
+backlog = os.path.join(rptc, 'backlog')
+if not os.path.isdir(backlog):
+    print("  (no backlog dir)"); raise SystemExit(0)
+
+def git(*args):
+    try:
+        r = subprocess.run(['git', *args], capture_output=True, text=True, timeout=15)
+        return r.stdout.strip() if r.returncode == 0 else ''
+    except Exception:
+        return ''
+
+# LINE-NUMBERED citations only. A bare filename is background reference; a
+# `file.ts:NN` is a specific claim about specific code, and it is the claim that
+# goes stale. Restricting to these is what keeps the section actionable — the
+# unrestricted version flagged 17 of 35 items, most of them old entries naming
+# hot files, which is drift rather than staleness.
+CITE_RE = re.compile(r'\b([A-Za-z0-9_/.-]+?\.(?:ts|tsx|json)):\d+')
+
+# Bare filenames are the COMMON citation style ("`deleteHandler.ts:29-33`"), not
+# the exception — an earlier draft required a src/ prefix and missed the one item
+# already known to be stale. Resolve them, but only when unambiguous: two files
+# with the same basename means we cannot tell which was meant, and guessing would
+# manufacture findings.
+bare_index = {}
+for dirpath, dirnames, files in os.walk('src'):
+    dirnames[:] = [d for d in dirnames if d != 'node_modules']
+    for f in files:
+        bare_index.setdefault(f, []).append(os.path.join(dirpath, f))
+
+def resolve(cite):
+    if os.path.exists(cite):
+        return cite
+    hits = bare_index.get(os.path.basename(cite), [])
+    return hits[0] if len(hits) == 1 else None
+
+items = sorted(f for f in os.listdir(backlog) if f.endswith('.md') and f != 'README.md')
+scanned = cited_total = flagged = 0
+findings = []
+
+for name in items:
+    item = os.path.join(backlog, name)
+    last_touched = git('log', '-1', '--format=%cI', '--', item)
+    if not last_touched:
+        continue
+    scanned += 1
+    text = open(item, encoding='utf-8', errors='ignore').read()
+    refs = sorted({r for r in (resolve(c) for c in CITE_RE.findall(text)) if r})
+    cited_total += len(refs)
+    moved = []
+    for ref in refs:
+        out = git('log', '--oneline', f'--since={last_touched}', '--', ref)
+        n = len([l for l in out.split('\n') if l.strip()])
+        if n:
+            moved.append((n, ref))
+    if moved:
+        findings.append((sum(n for n, _ in moved), name, sorted(moved)))
+
+# Fewest commits first: a single targeted commit on cited code is far more likely
+# to BE the fix than twenty commits of ambient churn.
+findings.sort()
+for _, name, moved in findings:
+    flagged += 1
+    print(f"  CODE MOVED  {name}")
+    for n, ref in moved[:3]:
+        print(f"              {ref}  ({n} commit{'s' if n != 1 else ''} since the item was last updated)")
+    if len(moved) > 3:
+        print(f"              …and {len(moved) - 3} more")
+
+if not flagged:
+    print("  (none)")
+
+broken = []
+if not scanned:
+    broken.append("no committed backlog items found")
+elif not cited_total:
+    broken.append("no file:line citations resolved")
+print(f"  control: {scanned} committed item(s) scanned, {cited_total} line-numbered citation(s) resolved"
+      + (f"  ⚠️  CHECK BROKEN — {'; '.join(broken)}" if broken else ""))
+print("  NOTE: advisory, ordered fewest-commits-first. It says the ground moved,")
+print("        never that the item is wrong. Read the code before acting.")
+PY

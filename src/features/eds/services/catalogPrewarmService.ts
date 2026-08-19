@@ -93,6 +93,50 @@ const MAX_SKUS = 1000;
  * Catalog Service query; both `sku` and `urlKey` come from the
  * `productView` field per Catalog Service's response shape.
  */
+/**
+ * Is this project the one whose storefront is being set up?
+ *
+ * `storefront-setup-start` is registered by BOTH the wizard
+ * (`ProjectCreationHandlerRegistry`) and the dashboard (`edsHandlers`). In the
+ * wizard the project being created does not exist yet, so a `getCurrentProject()`
+ * read there returns WHATEVER WAS LAST OPEN — and prewarm would then enumerate
+ * that other project's Commerce scope and publish its product paths onto this
+ * site. `configureHandlers.ts:91-95` documents the same hazard for the same call.
+ *
+ * Measured 2026-08-18: a colleague with one existing project created a second
+ * storefront, prewarm ran against the FIRST project's store view, and the run
+ * reported `No index was found for this request` — a truthful answer about a
+ * scope nobody wanted. On a machine with zero projects the same code skipped
+ * prewarm entirely and looked clean, which is why it read as a per-person issue.
+ *
+ * Fails CLOSED: no project, or no recorded repo, means we cannot prove identity,
+ * and prewarming the wrong catalog is worse than not prewarming at all.
+ *
+ * @param project - The project the caller believes owns this storefront
+ * @param repoOwner - GitHub owner of the storefront being set up
+ * @param repoName - GitHub repo of the storefront being set up
+ * @returns True only when the project's recorded storefront repo matches
+ */
+export function projectTargetsStorefront(
+    project: Project | undefined,
+    repoOwner: string,
+    repoName: string,
+): boolean {
+    const recorded = project?.componentInstances?.['eds-storefront']?.metadata?.githubRepo;
+    if (typeof recorded !== 'string') {
+        return false;
+    }
+    const [owner, name, ...rest] = recorded.split('/');
+    if (!owner || !name || rest.length > 0) {
+        return false;
+    }
+    // GitHub treats owner and repo case-insensitively; so must this.
+    return (
+        owner.toLowerCase() === repoOwner.toLowerCase() &&
+        name.toLowerCase() === repoName.toLowerCase()
+    );
+}
+
 const ENUMERATE_QUERY = `
 query GetProductsForPrewarm($pageSize: Int!, $currentPage: Int!) {
   productSearch(phrase: "", page_size: $pageSize, current_page: $currentPage) {
@@ -211,8 +255,22 @@ export async function prewarmCatalog(
         skuPaths = await enumerateAccsCatalog(params as ConfigGeneratorParams, logger);
     } catch (error) {
         const reason = (error as Error).message;
+        // Name the SCOPE. The enumeration is `productSearch` against Catalog
+        // Service, scoped by the `Store:` header, so its commonest failure —
+        // `No index was found for this request` — means THIS store view has no
+        // search index. That index is built per scope and separately from the
+        // catalog, so the error is identical whether the backend holds zero
+        // products or thirty thousand: a colleague hit it on 2026-08-18 with a
+        // populated backend. Without the scope, a project with more than one
+        // store view cannot even tell which one is unindexed.
+        const scope = describeScope({
+            websiteCode: params.websiteCode,
+            storeCode: params.storeCode,
+            storeViewCode: params.storeViewCode,
+        });
         logger.warn(
-            `[Catalog Prewarm] Catalog enumeration failed: ${reason} — falling back to runtime smart-404 only`,
+            `[Catalog Prewarm] Catalog enumeration failed for scope ${scope}: ${reason}`
+                + ' — falling back to runtime smart-404 only',
         );
         return makeSkipped(`enumeration failed: ${reason}`);
     }

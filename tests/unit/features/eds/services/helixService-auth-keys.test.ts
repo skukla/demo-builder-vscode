@@ -244,7 +244,7 @@ describe('HelixService - Auth & Keys', () => {
     describe('unpublishPages (page-by-page)', () => {
         it('should return early for empty paths', async () => {
             const result = await service.unpublishPages('testorg', 'testsite', 'main', []);
-            expect(result).toEqual({ success: true, count: 0 });
+            expect(result).toMatchObject({ success: true, count: 0 });
             expect(mockFetch).not.toHaveBeenCalled();
         });
 
@@ -255,7 +255,7 @@ describe('HelixService - Auth & Keys', () => {
             mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
 
             const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about']);
-            expect(result).toEqual({ success: true, count: 1 });
+            expect(result).toMatchObject({ success: true, count: 1 });
             expect(mockFetch).toHaveBeenCalledTimes(2);
 
             // Verify live DELETE uses DA.live Bearer token auth
@@ -279,7 +279,7 @@ describe('HelixService - Auth & Keys', () => {
             mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
 
             const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about', '/products']);
-            expect(result).toEqual({ success: true, count: 2 });
+            expect(result).toMatchObject({ success: true, count: 2 });
             expect(mockFetch).toHaveBeenCalledTimes(4);
         });
 
@@ -292,7 +292,42 @@ describe('HelixService - Auth & Keys', () => {
             mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
 
             const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about', '/products']);
-            expect(result).toEqual({ success: true, count: 2 });
+            expect(result).toMatchObject({ success: true, count: 2 });
+        });
+
+        /**
+         * `success` is `liveCount > 0 || previewCount > 0`, so ONE path out of 52
+         * returns true — and the reset caller discarded the result entirely
+         * (`edsPipeline.ts:273` wraps it in a try/catch that can never fire,
+         * because this never throws). A run where all 52 live deletes 403'd
+         * reported a successful reset while the stale pages kept serving.
+         *
+         * The counts make that answerable without changing `success`, whose
+         * "did anything unpublish" meaning is what the DELETE path wants.
+         * `liveFailed` is the one users feel: the live entry is what serves.
+         */
+        it('reports live and preview failure counts, not just an aggregate', async () => {
+            // Live: /about ok, /products 403.  Preview: both ok.
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
+            mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
+
+            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about', '/products']);
+
+            expect(result).toMatchObject({ total: 2, liveFailed: 1, previewFailed: 0 });
+            // The aggregate still says "true" — which is exactly why it is not enough.
+            expect(result.success).toBe(true);
+        });
+
+        it('reports every path as failed when the credential is refused throughout', async () => {
+            for (let i = 0; i < 4; i++) {
+                mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
+            }
+
+            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about', '/products']);
+
+            expect(result).toMatchObject({ total: 2, liveFailed: 2, previewFailed: 2 });
         });
 
         it('should return failure when all pages fail', async () => {
@@ -304,7 +339,7 @@ describe('HelixService - Auth & Keys', () => {
             mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
 
             const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about', '/products']);
-            expect(result).toEqual({ success: false, count: 0 });
+            expect(result).toMatchObject({ success: false, count: 0 });
         });
 
         it('should treat 404 as successful (already deleted)', async () => {
@@ -314,7 +349,7 @@ describe('HelixService - Auth & Keys', () => {
             mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
 
             const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about']);
-            expect(result).toEqual({ success: true, count: 1 });
+            expect(result).toMatchObject({ success: true, count: 1 });
         });
     });
 });

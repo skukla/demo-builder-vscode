@@ -15,8 +15,12 @@ create_project { projectName: "libcheck-0818", package: "bodea", stack: "eds-acc
 Retried on `eds-paas` (the mesh-free EDS stack) and got the identical refusal, 0.0s elapsed.
 
 **Bodea does not use a mesh.** `src/features/project-creation/config/demo-packages.json`
-records `mesh: false` for it (measured, not recalled — `isle5`, `custom`, `citisignal` and
-`bodea` are all `false`; only `buildright` is `true`).
+records `requiresMesh: false` for it (`isle5`, `custom`, `citisignal` and `bodea` are all
+`false`; only `buildright` is `true`).
+
+**Correction 2026-08-18:** this paragraph originally named the field `mesh`. It is
+`requiresMesh`, and it is typed `boolean | 'optional'` — a third value the fix must handle.
+The wrong name was carried into a conversation before anyone read the config.
 
 ## The defect
 
@@ -84,3 +88,26 @@ Small and well-bounded.
 > guard conditional on the resolved mesh requirement, keep it firing for packages that do need
 > one (`buildright`), and fix the message. Tests in both directions; assert the workspace
 > actually reaching wizard state, not just the success flag.
+
+## Update 2026-08-18 — the premise moved
+
+Two things changed after this was filed, and both bear on the fix:
+
+1. **A mesh can now be added DURING creation**, through the Integrations area's Add
+   Integration flow. So "does this project need an Adobe workspace?" is not knowable when
+   `create_project` starts — the answer depends on what the caller does later. The guard
+   should demand a workspace only when the package's `requiresMesh` makes a mesh certain,
+   and otherwise let the mesh step demand it at the moment a mesh is actually chosen. That
+   is where the requirement genuinely lives.
+
+2. **The wizard has the same hole, in the other direction.** `isIntegrationsComplete`
+   (`tileStatus.ts:139`) never consults `requiresMesh`, so a package that REQUIRES a mesh
+   can be walked past with none selected. Filed as
+   `2026-08-18-force-the-mesh-a-package-requires.md`, deliberately separate: that one is an
+   undesigned capability gating zero users today, and this one is a bounded defect blocking
+   agent work now. **Whichever lands first defines the shared predicate** — *does the
+   selected package + stack require a mesh?* — and the other consumes it rather than
+   writing a second copy.
+
+Scope item 3 above ("check the sibling guards for the same shape") is unchanged and still
+the place a second instance would hide.
