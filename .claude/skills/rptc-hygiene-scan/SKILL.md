@@ -1,6 +1,6 @@
 ---
 name: rptc-hygiene-scan
-description: Find rot in the RPTC record itself — backlog index links that do not resolve, items on disk with no index entry, plans that shipped but still sit in .rptc/plans/, and file:line citations pointing at deleted files or past a file's end. Use at release cuts alongside codebase-sweep, after moving or archiving any plan, or when the backlog stops being trustworthy enough to pick work from.
+description: Find rot in the RPTC record itself — backlog index links that do not resolve, items on disk with no index entry, plans that shipped but still sit in .rptc/plans/, file:line citations pointing at deleted files or past a file's end, and shipped work still filed under an active backlog section. Use at release cuts alongside codebase-sweep, after moving or archiving any plan, or when the backlog stops being trustworthy enough to pick work from.
 ---
 
 # RPTC Hygiene Scan
@@ -13,9 +13,30 @@ decide what to do next, so when it rots you pick the wrong work, or miss work en
 bash .claude/skills/rptc-hygiene-scan/scan.sh          # defaults to .rptc
 ```
 
-Four sections, each ending in a CONTROL line. Read the control first: a `(none)` from a
+Five sections, each ending in a CONTROL line. Read the control first: a `(none)` from a
 check that never executed reads exactly like a clean result — the `|| echo "none"` failure
 this repo's CLAUDE.md names.
+
+## §5 — shipped work still filed as active
+
+`§3` catches a PLAN that claims completion while sitting in `plans/`. `§5` is the same
+question aimed at the backlog: an item that shipped but still reads as work to do.
+
+Two signals, deliberately narrow — this check is worth having only if it never cries wolf:
+
+| Signal | What it means | Confidence |
+|---|---|---|
+| **TOMBSTONE** | The entry announces its own completion (`✅`, `SHIPPED`, `RESOLVED`, `~~struck~~`) while sitting in an active section | Certain — it says so itself |
+| **ARCHIVED TWIN** | The entry links to `backlog/<slug>`, and `complete/<slug>` also exists | Strong — it was archived and the index was not updated |
+
+An earlier draft added a third signal: grep the item's slug across commit messages since
+the last tag. It was **removed before shipping**. `git describe` picked up a backup-branch
+tag rather than a release, and more importantly a slug appears in a commit most often
+because that commit FILED the item — the opposite of shipped. It produced five false
+positives out of five. A check that cries wolf trains people to skip the whole scan.
+
+The fix for both signals is the same and a human should make it: move the entry into the
+index's archive section, or move the file to `complete/` and update the link.
 
 ## When it runs
 

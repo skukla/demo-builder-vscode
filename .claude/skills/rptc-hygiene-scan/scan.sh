@@ -146,3 +146,84 @@ if not bad:
 print(f"  control: {checked} file:line citations checked "
       f"({'OK' if checked else 'CHECK BROKEN — pattern matched nothing'})")
 PY
+
+echo
+echo "== 5. Shipped work still sitting in an ACTIVE backlog section =="
+python3 - "$RPTC" <<'PY'
+import os, re, sys
+
+rptc = sys.argv[1]
+readme = os.path.join(rptc, 'backlog', 'README.md')
+if not os.path.exists(readme):
+    print("  (no backlog index)"); raise SystemExit(0)
+lines = open(readme, encoding='utf-8').read().split('\n')
+
+def first(prefix, default):
+    return next((i for i, l in enumerate(lines) if l.startswith(prefix)), default)
+
+start = first('## Active backlog', 0)
+end = next((i for i, l in enumerate(lines[start + 1:], start + 1) if l.startswith('## ')), len(lines))
+
+section, active = None, []
+for i in range(start, end):
+    if lines[i].startswith('### '):
+        section = lines[i][4:].strip()
+    elif lines[i].startswith('#### '):
+        raw = lines[i]
+        title = re.sub(r'\s*\(\[.*', '', raw[5:])
+        title = re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', title).replace('**', '').replace('~~', '').strip(' —,')
+        targets = re.findall(r'\]\(([^)]+)\)', raw)
+        active.append((section, title, targets, raw))
+
+flagged = 0
+
+# ── Signal 1: TOMBSTONE ────────────────────────────────────────────────────
+# An entry in an ACTIVE section that announces its own completion. The item is
+# done; the index still files it under work-to-do. This is the cleanup the
+# archive sections exist for, and it is what makes the active list read longer
+# than it is — 3 of these were sitting in the list on 2026-08-18.
+for section, title, targets, raw in active:
+    if not ('✅' in raw or 'SHIPPED' in raw or 'RESOLVED' in raw or '~~' in raw):
+        continue
+    when = re.search(r'(\d{4}-\d{2}-\d{2})', raw)
+    print(f"  TOMBSTONE   [{(section or '?')[0]}] {title[:88]}")
+    print(f"              announces completion{' on ' + when.group(1) if when else ''}"
+          f" — move it to an archive section")
+    flagged += 1
+
+# ── Signal 2: ARCHIVED TWIN ────────────────────────────────────────────────
+# The item already lives under complete/, so it shipped AND was archived; only
+# the index still calls it active. Distinct from a tombstone: nothing in the
+# entry admits it, so only the filesystem knows.
+complete_names = set()
+cdir = os.path.join(rptc, 'complete')
+if os.path.isdir(cdir):
+    complete_names = {n[:-3] if n.endswith('.md') else n for n in os.listdir(cdir)}
+
+for section, title, targets, raw in active:
+    if '✅' in raw or 'SHIPPED' in raw or 'RESOLVED' in raw:
+        continue                      # already reported above
+    for t in targets:
+        base = os.path.basename(t.rstrip('/'))
+        base = base[:-3] if base.endswith('.md') else base
+        if '/complete/' not in t and base in complete_names:
+            print(f"  ARCHIVED TWIN  [{(section or '?')[0]}] {title[:80]}")
+            print(f"              index points at {t}, but complete/{base} exists")
+            flagged += 1
+            break
+
+if not flagged:
+    print("  (none)")
+
+# CONTROL. Both halves are named, because either can silently do nothing: an
+# empty active span makes signal 1 vacuous, an empty complete/ makes signal 2
+# vacuous, and both print "(none)" exactly like a clean record.
+broken = []
+if not active:
+    broken.append("no active entries parsed")
+if not complete_names:
+    broken.append("complete/ is empty or missing")
+print(f"  control: {len(active)} active entries scanned against "
+      f"{len(complete_names)} archived item(s)"
+      + (f"  ⚠️  CHECK BROKEN — {'; '.join(broken)}" if broken else ""))
+PY
