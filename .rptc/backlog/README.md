@@ -355,6 +355,10 @@ not one bug in the direction testable from here.
 
 ### G. Live defects (filed 2026-07-29, verbatim in `v1.0.0-beta.121`)
 
+#### A package that requires a mesh must be forced to add one ([`2026-08-18-force-the-mesh-a-package-requires.md`](2026-08-18-force-the-mesh-a-package-requires.md))
+
+**NOT DESIGNED — requirement settled, surface open.** A package can declare `requiresMesh: true` (`demo-packages.json`; only BuildRight today), and nothing enforces it: `isIntegrationsComplete` (`tileStatus.ts:139`) opens with `if (!anyDeployableSelected(state)) return true`, so integrations are unconditionally optional and a required mesh can be walked past. **Hard block decided 2026-08-18** — a demo whose storefront queries a mesh that was never deployed is broken in a way the user finds out while presenting. Most of the machinery already exists (which mesh comes from the stack's `optionalDependencies`; the destination create-or-select flow and the build-time deploy are both built); the gap is the one predicate. **Constraint, also decided: the mesh does NOT go in `app-builder-components.json`** — that catalog is heading toward shared catch-all repos, and a package-specific mesh does not belong there even scoped by `onlyForPackages`. Note the schema currently invites the opposite ("the three seeded meshes") and `resolveRequirement` already handles `kind === 'mesh'`; do not take that invitation without revisiting. Gates zero users today (BuildRight is `hidden`/`coming-soon`), which is why it is safe to make strict. Filed 2026-08-18.
+
 #### `create_project` demands a mesh workspace for mesh-free packages ([`2026-08-18-create-project-tool-demands-a-mesh-workspace.md`](2026-08-18-create-project-tool-demands-a-mesh-workspace.md))
 
 Filed 2026-08-18. The headless `create_project` MCP tool refuses without an Adobe workspace
