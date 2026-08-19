@@ -75,19 +75,18 @@ describe('edsHandlers', () => {
             expect(hasHandler(edsHandlers, 'get-store-structure')).toBe(true);
         });
 
-        it('should have exactly 18 handlers', () => {
+        it('should have exactly 15 handlers', () => {
             // Given: edsHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(edsHandlers);
 
-            // Then: 5 GitHub + 7 DA.live + 2 store discovery (wizard +
+            // Then: 5 GitHub + 5 DA.live + 2 store discovery (wizard +
             // agent-facing get-store-structure) + 1 credential-service probe +
-            // 2 Storefront Setup + 1 refresh-block-library = 18.
+            // 2 Storefront Setup + 1 refresh-block-library = 16.
             // History: 20 → 14 when five superseded handlers were removed
             // 2026-08-05; 14 → 15 with get-store-structure; 15 → 16 with
-            // check-credential-service; 16 → 18 with the DA.live clipboard
-            // pair (check-dalive-clipboard, store-dalive-token-from-clipboard).
-            expect(types).toHaveLength(18);
+            // check-credential-service.
+            expect(types).toHaveLength(16);
         });
 
         it('should have handlers as functions', () => {

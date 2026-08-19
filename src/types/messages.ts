@@ -72,19 +72,14 @@ export type MessageType =
     // Unified on-open check result channel (org-context, mesh-verify, mcp-health, ai-verify)
     | 'checkResult'
 
-    // DA.live authentication messages
+    // DA.live authentication messages. These predate this entry by a long way —
+    // the union ends in `| string`, so their absence compiled silently and
+    // nothing ever pointed at the gap.
     | 'check-dalive-auth'
     | 'open-dalive-login'
     | 'store-dalive-token'
     | 'store-dalive-token-with-org'
     | 'clear-dalive-auth'
-    // Clipboard pair. `check-dalive-clipboard` answers only WHETHER a DA.live
-    // token is on the clipboard — never the value — so the webview can offer
-    // the one-click path without the token passing through it.
-    // `store-dalive-token-from-clipboard` then reads, validates and stores it
-    // extension-side, carrying only the namespace across the boundary.
-    | 'check-dalive-clipboard'
-    | 'store-dalive-token-from-clipboard'
 
     // Generic
     | 'continue-step'

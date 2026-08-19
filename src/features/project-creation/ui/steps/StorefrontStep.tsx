@@ -27,7 +27,7 @@
  * @module features/project-creation/ui/steps/StorefrontStep
  */
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
     getAvailableBlockLibraries,
     getNativeBlockLibraries,
@@ -126,21 +126,6 @@ export function StorefrontStep({
         setShowDaLiveInput(true);
     };
 
-    const handleUseClipboardToken = (org: string) => {
-        daLiveAuth.storeTokenFromClipboard(org);
-        setShowDaLiveInput(false);
-    };
-
-    // Ask once each time the form opens. The bookmarklet usually runs while the
-    // form is already up, so this is also re-run when the user returns from the
-    // browser via onSetup/openDaLive.
-    const { checkClipboard } = daLiveAuth;
-    useEffect(() => {
-        if (showDaLiveInput) {
-            void checkClipboard();
-        }
-    }, [showDaLiveInput, checkClipboard]);
-
     const handleCancelInput = () => {
         setShowDaLiveInput(false);
         daLiveAuth.cancelAuth();
@@ -238,8 +223,6 @@ export function StorefrontStep({
                 onSetup={handleDaLiveSetup}
                 onSubmit={handleDaLiveSubmit}
                 onReset={handleDaLiveReset}
-                clipboardHasToken={daLiveAuth.clipboardHasToken}
-                onUseClipboardToken={handleUseClipboardToken}
                 onCancelInput={handleCancelInput}
                 onOpenDaLive={daLiveAuth.openDaLive}
                 onOpenBookmarkletSetup={

@@ -50,10 +50,6 @@ export interface DaLiveServiceCardProps {
     onSubmit: (org: string, token: string) => void;
     /** Called when reset/change account clicked */
     onReset: () => void;
-    /** True when the extension found a DA.live token on the clipboard. */
-    clipboardHasToken?: boolean;
-    /** Store the clipboard's token against the picked namespace. */
-    onUseClipboardToken?: (org: string) => void;
     /** Called when input form cancelled */
     onCancelInput: () => void;
     /** Called when "Connect DA.Live" button clicked to open DA.live in browser */
@@ -118,8 +114,6 @@ export function DaLiveServiceCard({
     compact = false,
     githubUser,
     availableOrgs = EMPTY_ORGS,
-    clipboardHasToken = false,
-    onUseClipboardToken,
 }: DaLiveServiceCardProps): React.ReactElement {
     // Picker options: personal account always first, then orgs alphabetically.
     // The picker's `key` is the namespace slug — that's what gets passed to
@@ -154,11 +148,6 @@ export function DaLiveServiceCard({
         }
     }, [githubUser, namespaceOptions, selectedNamespace]);
     const [tokenValue, setTokenValue] = useState('');
-    // Set once the user chooses the field over the clipboard. Sticky for the
-    // life of the form: flipping back the moment the clipboard changed under
-    // them would yank the field away mid-type.
-    const [pasteManually, setPasteManually] = useState(false);
-    const showClipboardOffer = clipboardHasToken && !pasteManually && Boolean(onUseClipboardToken);
 
     const isLoading = isChecking || (isAuthenticating && !showInput);
     const canSubmit = selectedNamespace.trim() !== '' && tokenValue.trim() !== '';
@@ -170,16 +159,8 @@ export function DaLiveServiceCard({
         }
     };
 
-    const handleUseClipboard = () => {
-        const org = selectedNamespace.trim();
-        if (org) {
-            onUseClipboardToken?.(org);
-        }
-    };
-
     const handleCancel = () => {
         setTokenValue('');
-        setPasteManually(false);
         onCancelInput();
     };
 
@@ -211,56 +192,26 @@ export function DaLiveServiceCard({
                         >
                             {(item) => <Item key={item.key}>{item.label}</Item>}
                         </Picker>
-                        {/* The bookmarklet has already copied the token, so when
-                            the extension can see one we offer the click instead
-                            of the paste. The field stays one link away — the
-                            clipboard can hold the wrong token, and this is the
-                            only place the user can override it. */}
-                        {showClipboardOffer ? (
-                            <Text UNSAFE_className="status-text">
-                                A DA.live token is ready on your clipboard.
-                            </Text>
-                        ) : (
-                            <input
-                                type="password"
-                                placeholder="Token"
-                                value={tokenValue}
-                                onChange={(e) => setTokenValue(e.target.value)}
-                                className="service-input"
-                            />
-                        )}
+                        <input
+                            type="password"
+                            placeholder="Token"
+                            value={tokenValue}
+                            onChange={(e) => setTokenValue(e.target.value)}
+                            className="service-input"
+                        />
                         {error && <Text UNSAFE_className="status-text-error">{error}</Text>}
                         <Flex justifyContent="space-between" alignItems="center">
                             <Flex gap="size-100">
-                                {showClipboardOffer ? (
-                                    <button
-                                        className="service-action-button"
-                                        onClick={handleUseClipboard}
-                                        disabled={selectedNamespace.trim() === ''}
-                                    >
-                                        Use token from clipboard
-                                    </button>
-                                ) : (
-                                    <button
-                                        className="service-action-button"
-                                        onClick={handleSubmit}
-                                        disabled={!canSubmit}
-                                    >
-                                        Verify
-                                    </button>
-                                )}
+                                <button
+                                    className="service-action-button"
+                                    onClick={handleSubmit}
+                                    disabled={!canSubmit}
+                                >
+                                    Verify
+                                </button>
                                 <button className="service-action-link" onClick={handleCancel}>
                                     Cancel
                                 </button>
-                                {showClipboardOffer && (
-                                    <button
-                                        className="service-action-link"
-                                        onClick={() => setPasteManually(true)}
-                                        type="button"
-                                    >
-                                        Paste manually
-                                    </button>
-                                )}
                             </Flex>
                             <Flex gap="size-200" alignItems="center">
                                 {onOpenBookmarkletSetup && (

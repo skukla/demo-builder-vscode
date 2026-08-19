@@ -89,12 +89,6 @@ interface UseDaLiveAuthReturn {
     storeToken: (token: string) => void;
     /** Store token and verify org in one step (recommended) */
     storeTokenWithOrg: (token: string, orgName: string) => void;
-    /** Whether a DA.live token is currently on the clipboard (value never crosses). */
-    clipboardHasToken: boolean;
-    /** Re-ask the extension whether the clipboard holds a DA.live token. */
-    checkClipboard: () => Promise<void>;
-    /** Store the clipboard's token against a namespace; only the namespace travels. */
-    storeTokenFromClipboard: (orgName: string) => void;
     /** Check current auth status */
     checkAuthStatus: () => void;
     /** Reset DA.live auth (clear token and org) */
@@ -211,8 +205,6 @@ export function useDaLiveAuth({
     const daLiveAuth = edsConfig?.daLiveAuth;
 
     // Store bookmarklet URL in state so the step can react when it arrives
-    const [clipboardHasToken, setClipboardHasToken] = useState(false);
-
     const [bookmarkletUrl, setBookmarkletUrl] = useState<string | undefined>(undefined);
 
     // Track if user has completed bookmarklet setup before
@@ -282,36 +274,6 @@ export function useDaLiveAuth({
         log.debug('Storing DA.live token with org verification:', orgName);
         updateDaLiveAuthRef.current({ isAuthenticating: true, error: undefined });
         webviewClient.postMessage('store-dalive-token-with-org', { token, orgName });
-    }, []);
-
-    /**
-     * Ask whether a DA.live token is sitting on the clipboard.
-     *
-     * The answer is a boolean and nothing else — the token never crosses into
-     * the webview. Call it when the form opens; a stale answer is harmless
-     * because `storeTokenFromClipboard` re-reads and re-validates anyway.
-     */
-    const checkClipboard = useCallback(async () => {
-        try {
-            const res = await webviewClient.request<{ success: boolean; data?: { hasToken?: boolean } }>(
-                'check-dalive-clipboard',
-            );
-            setClipboardHasToken(Boolean(res?.success && res.data?.hasToken));
-        } catch {
-            // Never block the form on this — the paste field still works.
-            setClipboardHasToken(false);
-        }
-    }, []);
-
-    /**
-     * Store the clipboard's token against a namespace.
-     *
-     * Only the namespace travels; the extension reads and validates the token.
-     */
-    const storeTokenFromClipboard = useCallback((orgName: string) => {
-        log.debug('Storing DA.live token from clipboard for org:', orgName);
-        updateDaLiveAuthRef.current({ isAuthenticating: true, error: undefined });
-        webviewClient.postMessage('store-dalive-token-from-clipboard', { orgName });
     }, []);
 
     /**
@@ -424,9 +386,6 @@ export function useDaLiveAuth({
         openDaLive,
         storeToken,
         storeTokenWithOrg,
-        clipboardHasToken,
-        checkClipboard,
-        storeTokenFromClipboard,
         checkAuthStatus,
         resetAuth,
         cancelAuth,
