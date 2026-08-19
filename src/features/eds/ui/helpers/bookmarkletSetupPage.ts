@@ -128,7 +128,7 @@ export function getBookmarkletSetupPageUrl(bookmarkletUrl: string): string {
         <div class="step">
             <div class="step-header">
                 <span class="step-number">3</span>
-                <span class="step-title">Return to VS Code and paste the token</span>
+                <span class="step-title">Return to VS Code and finish signing in</span>
             </div>
             <div class="step-desc">The token is now on your clipboard</div>
         </div>

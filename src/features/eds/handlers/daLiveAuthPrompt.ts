@@ -169,7 +169,7 @@ export async function ensureDaLiveAuth(
  * Read a DA.live token off the clipboard.
  *
  * The bookmarklet's whole job is to put the token there, so by the time the
- * user clicks "Paste Token" we can usually just take it — a paste box asks for
+ * user says they have copied it we can usually just take it — a paste box asks for
  * a keystroke to hand us something we can already read.
  *
  * Validated, never trusted: re-copying the token that just expired is the
@@ -288,7 +288,8 @@ function promptForOrgName(): Thenable<string | undefined> {
 function promptForToken(): Thenable<string | undefined> {
     return vscode.window.showInputBox({
         title: 'Sign in to DA.live — token',
-        prompt: 'Paste your DA.live token (use the bookmarklet on da.live to copy it)',
+        prompt:
+            'No DA.live token found on your clipboard. Run the bookmarklet on da.live to copy one, then paste it here.',
         placeHolder: 'Paste token here',
         password: true,
         ignoreFocusOut: true,
@@ -342,11 +343,11 @@ async function confirmTokenReady(context: HandlerContext): Promise<boolean> {
     await vscode.env.openExternal(vscode.Uri.parse('https://da.live'));
 
     const pasteChoice = await vscode.window.showInformationMessage(
-        'When you have your DA.live token (via the bookmarklet), click "Paste Token".',
+        'Run the DA.live bookmarklet to copy your token, then click Continue.',
         { modal: false },
-        'Paste Token',
+        'Continue',
     );
-    if (pasteChoice !== 'Paste Token') {
+    if (pasteChoice !== 'Continue') {
         context.logger.info('[DA.live Auth] User cancelled at post-browser paste gate');
         return false;
     }
@@ -358,7 +359,7 @@ async function confirmTokenReady(context: HandlerContext): Promise<boolean> {
  *
  * Flow:
  * 1. Org name InputBox — SKIPPED when a namespace is already pinned
- * 2. Info message → optional browser trip → "Paste Token" gate
+ * 2. Info message → optional browser trip → "Continue" gate
  * 3. Token from the clipboard, or an input box when the clipboard has none
  * 4. Validates token → stores it against the org
  *

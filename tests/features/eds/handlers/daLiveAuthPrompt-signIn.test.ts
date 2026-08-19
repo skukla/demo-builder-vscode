@@ -33,7 +33,7 @@ let showInputBoxResponses: Array<string | undefined> = [];
 let showInputBoxIndex = 0;
 
 // Track showInformationMessage calls. The auth flow shows up to two info messages:
-// (1) initial "Open DA.live" / "I have my token" picker, (2) post-browser "Paste Token"
+// (1) initial "Open DA.live" / "I have my token" picker, (2) post-browser "Continue"
 // gate when the user took the browser route. Mock returns responses[i] for the i-th call.
 let showInfoMessageResponses: Array<string | undefined> = [];
 let showInfoMessageIndex = 0;
@@ -310,10 +310,10 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should open DA.live when user clicks Open DA.live button', async () => {
-            // After the browser opens, a post-browser "Paste Token" gate is shown;
+            // After the browser opens, a post-browser "Continue" gate is shown;
             // confirm it so the flow continues into the input box.
             mockGetOrgName.mockReturnValue('my-org');
-            showInfoMessageResponses = ['Open DA.live', 'Paste Token'];
+            showInfoMessageResponses = ['Open DA.live', 'Continue'];
             showInputBoxResponses = [undefined]; // cancel at token
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -321,9 +321,9 @@ describe('showDaLiveAuthQuickPick', () => {
             expect(vscode.env.openExternal).toHaveBeenCalled();
         });
 
-        it('should show a Paste Token gate after opening the browser', async () => {
+        it('should show a Continue gate after opening the browser', async () => {
             mockGetOrgName.mockReturnValue('my-org');
-            showInfoMessageResponses = ['Open DA.live', 'Paste Token'];
+            showInfoMessageResponses = ['Open DA.live', 'Continue'];
             showInputBoxResponses = [undefined]; // cancel at token
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -331,13 +331,13 @@ describe('showDaLiveAuthQuickPick', () => {
             // Two info messages total: initial choice + post-browser paste gate.
             const infoCalls = (vscode.window.showInformationMessage as jest.Mock).mock.calls;
             expect(infoCalls).toHaveLength(2);
-            expect(infoCalls[1][0]).toEqual(expect.stringContaining('Paste Token'));
-            expect(infoCalls[1]).toContain('Paste Token');
+            expect(infoCalls[1][0]).toEqual(expect.stringContaining('bookmarklet'));
+            expect(infoCalls[1]).toContain('Continue');
         });
 
-        it('should reach the token step only AFTER the Paste Token gate is clicked', async () => {
+        it('should reach the token step only AFTER the Continue gate is clicked', async () => {
             mockGetOrgName.mockReturnValue('my-org');
-            showInfoMessageResponses = ['Open DA.live', 'Paste Token'];
+            showInfoMessageResponses = ['Open DA.live', 'Continue'];
             showInputBoxResponses = [undefined]; // cancel at token
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -346,7 +346,7 @@ describe('showDaLiveAuthQuickPick', () => {
             expect(showInputBoxCalls[0]).toMatchObject({ password: true });
         });
 
-        it('should cancel the flow when the Paste Token gate is dismissed', async () => {
+        it('should cancel the flow when the Continue gate is dismissed', async () => {
             // User dismissed the post-browser gate (clicked X / pressed Escape).
             mockGetOrgName.mockReturnValue('my-org');
             showInfoMessageResponses = ['Open DA.live', undefined];
@@ -360,7 +360,7 @@ describe('showDaLiveAuthQuickPick', () => {
             expect(vscode.env.clipboard.readText).not.toHaveBeenCalled();
         });
 
-        it('should skip the Paste Token gate when the user already has a token', async () => {
+        it('should skip the Continue gate when the user already has a token', async () => {
             // User picked "I have my token" — no browser opens, no gate shown.
             mockGetOrgName.mockReturnValue('my-org');
             showInfoMessageResponses = ['I have my token'];
