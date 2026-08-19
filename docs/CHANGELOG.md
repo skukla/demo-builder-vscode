@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Signing in to DA.live again after the token expires used to take four
+interactions. It now takes one.
+
+### Changed
+
+- **DA.live sign-in no longer asks for your namespace every time.** The org is
+  the GitHub namespace, it is pinned in storage the first time you sign in, and
+  only an explicit sign-out clears it — a token expiring never did. The flow was
+  asking you to re-type a value it already held. It now asks only when nothing is
+  pinned, and when it does ask, it asks **first**: identifying yourself after
+  handing over a credential was backwards.
+- **You no longer paste the token.** The da.live bookmarklet already copies it to
+  your clipboard, so the flow reads it from there. The notification button is now
+  **Continue** rather than "Paste Token", and the paste box appears only when the
+  clipboard holds no usable token — saying so, rather than opening a box that
+  looks like your click did nothing.
+
+### Fixed
+
+- **A token-shaped string was accepted as a DA.live credential.** Validation
+  passed anything starting with `eyJ` whose payload it could not read — and base64
+  of any JSON begins `eyJ` and contains no `.`, so an encoded config file, a
+  copied secret or any foreign JWT qualified. It was then stored, written to
+  `~/.aem/da-token.json`, and sent as `Authorization: Bearer` to Adobe. Every path
+  that turns an untrusted string into a stored credential — the clipboard read and
+  both webview sign-in handlers — now requires proof: the payload must parse, name
+  DA.live's client, and carry a real expiry.
+- **A token with no readable expiry could evict a working one.** Without an expiry
+  the extension invented "24 hours from now", and the shared agent-token cache
+  keeps whichever copy expires later — so the invented one displaced a real
+  credential and every later call failed while the extension still reported itself
+  signed in.
+
+### Internal
+
+- `edsHelpers.ts` (1228 lines, six unrelated responsibilities) split into six
+  single-responsibility modules behind a re-export barrel; no consumer or test
+  changed. Admin API key persistence lifted out of `helixService.ts` into
+  `helixKeyStore.ts`, with its 88 existing tests passing untouched.
+- The god-file backlog item was measured and found to be pointed at the two
+  smallest candidates in the repo; corrected to name the three that measurement
+  actually condemns.
+
 ## [1.0.0-beta.135] - 2026-08-19
 
 A companion to `.134`, from the same field session. Where `.134` made failures
