@@ -15,7 +15,8 @@
 import * as vscode from 'vscode';
 import { DaLiveAuthService, parseJwtPayload } from '../services/daLiveAuthService';
 import { DaLiveConfigService } from '../services/daLiveConfigService';
-import { DaLiveContentOperations,
+import {
+    DaLiveContentOperations,
     createDaLiveServiceTokenProvider,
 } from '../services/daLiveContentOperations';
 import { type TokenProvider } from '../services/daLiveOrgOperations';
@@ -654,12 +655,55 @@ export async function ensureDaLiveAuth(
 }
 
 /**
- * Show multi-step DA.live authentication flow (token-first)
+ * Read a DA.live token off the clipboard.
+ *
+ * The bookmarklet's whole job is to put the token there, so by the time the
+ * user clicks "Paste Token" we can usually just take it — a paste box asks for
+ * a keystroke to hand us something we can already read.
+ *
+ * Validated, never trusted: re-copying the token that just expired is the
+ * likeliest thing to find here, and it must fall through to the input box
+ * rather than be stored as if it were fresh.
+ *
+ * @param logger - Logger for the (debug-level) reason a clipboard read was unusable
+ * @returns The token, or undefined when the clipboard holds anything else
+ */
+async function readTokenFromClipboard(logger: Logger): Promise<string | undefined> {
+    try {
+        const clipped = (await vscode.env.clipboard.readText())?.trim();
+        if (!clipped) {
+            return undefined;
+        }
+        const validation = validateDaLiveToken(clipped);
+        if (!validation.valid) {
+            logger.debug(`[DA.live Auth] Clipboard holds no usable token: ${validation.error}`);
+            return undefined;
+        }
+        logger.info('[DA.live Auth] Token taken from clipboard');
+        return clipped;
+    } catch (error) {
+        // A denied or unavailable clipboard is not an auth failure — the input
+        // box still works.
+        logger.debug(`[DA.live Auth] Clipboard read failed: ${(error as Error).message}`);
+        return undefined;
+    }
+}
+
+/**
+ * Show the DA.live authentication flow.
  *
  * Flow:
- * 1. Info message → token input (password-masked)
- * 2. Org name InputBox
- * 3. Validates token → verifies org access + write permissions → stores
+ * 1. Org name InputBox — SKIPPED when a namespace is already pinned
+ * 2. Info message → optional browser trip → "Paste Token" gate
+ * 3. Token from the clipboard, or an input box when the clipboard has none
+ * 4. Validates token → stores it against the org
+ *
+ * **The org step is the one that used to bite.** A token expiring does not
+ * clear the pinned namespace — only an explicit `logout()` does — so on every
+ * expiry this flow was asking the user to re-type a value it had already
+ * stored (`daLiveAuthService.getOrgName`). It now asks only when nothing is
+ * pinned, and asks FIRST when it does: the org identifies the user, and
+ * identifying yourself after handing over a credential reads backwards.
  *
  * Used by both project dashboard and projects list for EDS reset operations.
  *
@@ -669,9 +713,44 @@ export async function ensureDaLiveAuth(
 export async function showDaLiveAuthQuickPick(
     context: HandlerContext,
 ): Promise<QuickPickAuthResult> {
-    context.logger.info('[DA.live Auth] Starting token-first authentication flow');
+    context.logger.info('[DA.live Auth] Starting authentication flow');
 
-    // Step 1: Show info message with option to open DA.live
+    // Step 1: Org name — only when we do not already have one. The DA.live org
+    // is the GitHub namespace (a personal login or a GitHub org the user
+    // belongs to), so it CAN change between sign-ins; what it cannot do is
+    // change without the user going somewhere to change it, which makes the
+    // pinned value right until then.
+    const pinnedOrg = getDaLiveAuthService(context.context).getOrgName();
+    let orgName = pinnedOrg;
+    if (!orgName) {
+        // The wizard uses a Spectrum picker populated from GitHub org
+        // memberships (see DaLiveServiceCard); this flow is the fallback for
+        // command-palette and MCP entry points where the React webview isn't
+        // available. Converting this to a QuickPick over /user/orgs is a
+        // separate follow-up.
+        orgName = await vscode.window.showInputBox({
+            title: 'Sign in to DA.live (Step 1/2)',
+            prompt: 'Enter your DA.live organization name (your GitHub username or a team org you belong to)',
+            placeHolder: 'e.g. leahrayard or demo-system-stores',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value?.trim()) {
+                    return 'Organization name is required';
+                }
+                return null;
+            },
+        });
+
+        // User cancelled
+        if (orgName === undefined) {
+            context.logger.info('[DA.live Auth] User cancelled at org step');
+            return { success: false, cancelled: true };
+        }
+    } else {
+        context.logger.debug(`[DA.live Auth] Reusing pinned namespace: ${pinnedOrg}`);
+    }
+
+    // Step 2: Show info message with option to open DA.live
     const openDaLiveChoice = await vscode.window.showInformationMessage(
         'You\'ll need a token from DA.live. Click "Open DA.live" to get one, or continue if you already have it.',
         { modal: false },
@@ -697,7 +776,7 @@ export async function showDaLiveAuthQuickPick(
         await vscode.env.openExternal(vscode.Uri.parse('https://da.live'));
 
         const pasteChoice = await vscode.window.showInformationMessage(
-            'When you have your DA.live token (via the bookmarklet), click "Paste Token" to open the paste box.',
+            'When you have your DA.live token (via the bookmarklet), click "Paste Token".',
             { modal: false },
             'Paste Token',
         );
@@ -707,52 +786,32 @@ export async function showDaLiveAuthQuickPick(
         }
     }
 
-    // Step 2: Ask for token (password-masked)
-    const token = await vscode.window.showInputBox({
-        title: 'Sign in to DA.live (Step 1/2)',
-        prompt: 'Paste your DA.live token (use the bookmarklet on da.live to copy it)',
-        placeHolder: 'Paste token here',
-        password: true,
-        ignoreFocusOut: true,
-        validateInput: (value) => {
-            if (!value?.trim()) {
-                return 'Token is required';
-            }
-            if (!value.trim().startsWith('eyJ')) {
-                return 'Invalid token format. Token should start with "eyJ"';
-            }
-            return null;
-        },
-    });
-
-    // User cancelled
+    // Step 3: Token — from the clipboard when the bookmarklet has just put one
+    // there, otherwise from a paste box.
+    let token = await readTokenFromClipboard(context.logger);
     if (token === undefined) {
-        context.logger.info('[DA.live Auth] User cancelled at token step');
-        return { success: false, cancelled: true };
-    }
+        token = await vscode.window.showInputBox({
+            title: pinnedOrg ? 'Sign in to DA.live' : 'Sign in to DA.live (Step 2/2)',
+            prompt: 'Paste your DA.live token (use the bookmarklet on da.live to copy it)',
+            placeHolder: 'Paste token here',
+            password: true,
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value?.trim()) {
+                    return 'Token is required';
+                }
+                if (!value.trim().startsWith('eyJ')) {
+                    return 'Invalid token format. Token should start with "eyJ"';
+                }
+                return null;
+            },
+        });
 
-    // Step 3: Ask for org name. The wizard uses a Spectrum picker populated
-    // from GitHub org memberships (see DaLiveServiceCard); this auth flow is
-    // a fallback for command-palette and MCP entry points where the React
-    // webview isn't available. Free-text input remains here; converting to a
-    // VS Code QuickPick populated from /user/orgs is a separate follow-up.
-    const orgName = await vscode.window.showInputBox({
-        title: 'Sign in to DA.live (Step 2/2)',
-        prompt: 'Enter your DA.live organization name (your GitHub username or a team org you belong to)',
-        placeHolder: 'e.g. leahrayard or demo-system-stores',
-        ignoreFocusOut: true,
-        validateInput: (value) => {
-            if (!value?.trim()) {
-                return 'Organization name is required';
-            }
-            return null;
-        },
-    });
-
-    // User cancelled
-    if (orgName === undefined) {
-        context.logger.info('[DA.live Auth] User cancelled at org step');
-        return { success: false, cancelled: true };
+        // User cancelled
+        if (token === undefined) {
+            context.logger.info('[DA.live Auth] User cancelled at token step');
+            return { success: false, cancelled: true };
+        }
     }
 
     // Step 4: Validate token, verify org access + write permissions, store
@@ -1114,10 +1173,10 @@ export async function applyDaLiveOrgConfigSettings(
             // would train people to ignore the message that matters.
             if (result.removed?.includes('aem.repositoryId')) {
                 logger.warn(
-                    '[EDS Config] Removed this site\'s AEM Assets binding because '
-                        + 'demoBuilder.daLive.aemAuthorUrl is not set — the Assets panel will '
-                        + 'no longer appear in da.live. Set it (bare host, e.g. '
-                        + 'author-pXXXXX-eYYYYY.adobeaemcloud.com) and re-run to restore it.',
+                    "[EDS Config] Removed this site's AEM Assets binding because " +
+                        'demoBuilder.daLive.aemAuthorUrl is not set — the Assets panel will ' +
+                        'no longer appear in da.live. Set it (bare host, e.g. ' +
+                        'author-pXXXXX-eYYYYY.adobeaemcloud.com) and re-run to restore it.',
                 );
             }
         } else {
@@ -1156,7 +1215,7 @@ export async function configureDaLivePermissions(
         const result = await daLiveConfigService.grantUserAccess(daLiveOrg, daLiveSite, userEmail);
         if (result.success) {
             // `info` IS buffered into the debug export; mask like the rest of the batch.
-        logger.info(`[DaLivePermissions] Configured for ${maskEmail(userEmail)}`);
+            logger.info(`[DaLivePermissions] Configured for ${maskEmail(userEmail)}`);
         } else {
             logger.warn(`[DaLivePermissions] Warning: ${result.error}`);
         }

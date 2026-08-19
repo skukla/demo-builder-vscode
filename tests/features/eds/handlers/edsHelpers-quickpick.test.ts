@@ -1,12 +1,14 @@
 /**
- * EDS Helpers - DA.live Token-First Authentication Tests
+ * EDS Helpers - DA.live Authentication Tests
  *
  * Tests for showDaLiveAuthQuickPick function in edsHelpers:
- * - Step 1: Info message with "Open DA.live" / "I have my token"
- * - Step 2: Token input (password-masked)
- * - Step 3: Org name input (with default from settings)
- * - Token format validation and org access + write-access verification
- * - Token and org storage on success
+ * - Org step: skipped entirely when a namespace is already pinned, otherwise
+ *   asked FIRST (before the token) — the org is the GitHub namespace, and
+ *   re-typing it on every expiry is what the flow used to demand
+ * - Info message with "Open DA.live" / "I have my token"
+ * - Token step: taken from the clipboard when it holds a valid one (the
+ *   bookmarklet just put it there), input box only as the fallback
+ * - Token format validation, token and org storage on success
  * - User cancellation at each step
  */
 
@@ -36,6 +38,10 @@ let showInputBoxIndex = 0;
 let showInfoMessageResponses: Array<string | undefined> = [];
 let showInfoMessageIndex = 0;
 
+// Clipboard contents the token step reads. Empty by default so a test that says
+// nothing about the clipboard exercises the input-box fallback.
+let clipboardText = '';
+
 // Mock fetch for org verification
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
@@ -47,44 +53,51 @@ jest.mock('@/features/eds/services/daLiveOrgOperations', () => ({
 }));
 
 // Mock vscode
-jest.mock('vscode', () => {
-    return {
-        window: {
-            showInputBox: jest.fn().mockImplementation((options) => {
-                showInputBoxCalls.push(options);
-                const response = showInputBoxResponses[showInputBoxIndex];
-                showInputBoxIndex++;
-                return Promise.resolve(response);
-            }),
-            showInformationMessage: jest.fn().mockImplementation(() => {
-                const response = showInfoMessageResponses[showInfoMessageIndex];
-                showInfoMessageIndex++;
-                return Promise.resolve(response);
-            }),
-            showQuickPick: jest.fn(),
-            showErrorMessage: jest.fn(),
-            showWarningMessage: jest.fn(),
-            withProgress: jest.fn().mockImplementation((_options, callback) => {
-                return callback();
-            }),
-            setStatusBarMessage: jest.fn().mockReturnValue({ dispose: jest.fn() }),
-        },
-        env: {
-            openExternal: jest.fn(),
-        },
-        Uri: {
-            parse: jest.fn((url: string) => ({ toString: () => url })),
-        },
-        ProgressLocation: {
-            Notification: 15,
-        },
-        workspace: {
-            getConfiguration: jest.fn().mockReturnValue({
-                get: jest.fn().mockReturnValue(''),
-            }),
-        },
-    };
-}, { virtual: true });
+jest.mock(
+    'vscode',
+    () => {
+        return {
+            window: {
+                showInputBox: jest.fn().mockImplementation((options) => {
+                    showInputBoxCalls.push(options);
+                    const response = showInputBoxResponses[showInputBoxIndex];
+                    showInputBoxIndex++;
+                    return Promise.resolve(response);
+                }),
+                showInformationMessage: jest.fn().mockImplementation(() => {
+                    const response = showInfoMessageResponses[showInfoMessageIndex];
+                    showInfoMessageIndex++;
+                    return Promise.resolve(response);
+                }),
+                showQuickPick: jest.fn(),
+                showErrorMessage: jest.fn(),
+                showWarningMessage: jest.fn(),
+                withProgress: jest.fn().mockImplementation((_options, callback) => {
+                    return callback();
+                }),
+                setStatusBarMessage: jest.fn().mockReturnValue({ dispose: jest.fn() }),
+            },
+            env: {
+                openExternal: jest.fn(),
+                clipboard: {
+                    readText: jest.fn().mockImplementation(() => Promise.resolve(clipboardText)),
+                },
+            },
+            Uri: {
+                parse: jest.fn((url: string) => ({ toString: () => url })),
+            },
+            ProgressLocation: {
+                Notification: 15,
+            },
+            workspace: {
+                getConfiguration: jest.fn().mockReturnValue({
+                    get: jest.fn().mockReturnValue(''),
+                }),
+            },
+        };
+    },
+    { virtual: true }
+);
 
 // Mock core logging (prevents "Logger not initialized" error)
 jest.mock('@/core/logging', () => ({
@@ -99,6 +112,10 @@ jest.mock('@/core/logging', () => ({
 
 // Mock DaLiveAuthService
 const mockStoreToken = jest.fn().mockResolvedValue(undefined);
+// The pinned namespace. `undefined` = nothing pinned yet (first sign-in or
+// after an explicit logout); a string = the org survived the token's expiry,
+// which is the case the flow must not re-ask about.
+const mockGetOrgName = jest.fn<string | undefined, []>();
 jest.mock('@/features/eds/services/daLiveAuthService', () => {
     const actual = jest.requireActual('@/features/eds/services/daLiveAuthService');
     return {
@@ -106,6 +123,7 @@ jest.mock('@/features/eds/services/daLiveAuthService', () => {
         DaLiveAuthService: jest.fn().mockImplementation(() => ({
             storeToken: mockStoreToken,
             isAuthenticated: jest.fn().mockResolvedValue(true),
+            getOrgName: mockGetOrgName,
         })),
     };
 });
@@ -166,12 +184,40 @@ function resetTrackingState(): void {
     showInputBoxIndex = 0;
     showInfoMessageResponses = [];
     showInfoMessageIndex = 0;
+    clipboardText = '';
     (vscode.window.showInputBox as jest.Mock).mockClear();
     (vscode.window.showInformationMessage as jest.Mock).mockClear();
+    (vscode.env.clipboard.readText as jest.Mock).mockClear();
 }
 
-// Valid token for tests (darkalley client_id, future expiry, email)
-const validToken = 'eyJhbGciOiJIUzI1NiJ9.eyJjbGllbnRfaWQiOiJkYXJrYWxsZXkiLCJjcmVhdGVkX2F0IjoiOTk5OTk5OTk5OTk5OSIsImV4cGlyZXNfaW4iOiIzNjAwMDAwIiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIn0.sig';
+/**
+ * Build a DA.live-shaped JWT from a payload.
+ *
+ * Assembled rather than pasted so no JWT literal lands in the repo — a secret
+ * scanner flags the literal and cannot tell a fixture from a live credential.
+ * The signature is the word "signature": nothing here verifies one, and
+ * `parseJwtPayload` only base64-decodes the second part.
+ */
+function makeToken(payload: Record<string, string>): string {
+    const encode = (value: object): string => Buffer.from(JSON.stringify(value)).toString('base64');
+    return `${encode({ alg: 'HS256' })}.${encode(payload)}.signature`;
+}
+
+// created_at + expires_in land in the year 2286 — valid whenever this runs.
+const validToken = makeToken({
+    client_id: 'darkalley',
+    created_at: '9999999999999',
+    expires_in: '3600000',
+    email: 'user@example.com',
+});
+
+// Correct shape, correct client_id, expired back in 2001 — what a user's
+// clipboard holds when they re-copy the token that just went stale.
+const expiredToken = makeToken({
+    client_id: 'darkalley',
+    created_at: '1000000000000',
+    expires_in: '1000',
+});
 
 // =============================================================================
 // Tests - DA.live Token-First Authentication Flow
@@ -185,6 +231,9 @@ describe('showDaLiveAuthQuickPick', () => {
         resetTrackingState();
         mockContext = createMockContext();
         mockStoreToken.mockClear().mockResolvedValue(undefined);
+        // Default: nothing pinned, so the org step runs. Tests about the
+        // expiry path set a value.
+        mockGetOrgName.mockReset().mockReturnValue(undefined);
         mockFetch.mockReset();
         mockHasWriteAccess.mockReset();
     });
@@ -192,8 +241,52 @@ describe('showDaLiveAuthQuickPick', () => {
     // =========================================================================
     // Input Flow Tests
     // =========================================================================
-    describe('Token-first input flow', () => {
-        it('should show info message as first step', async () => {
+    describe('org step', () => {
+        it('should not ask for an org when a namespace is already pinned', async () => {
+            // The expiry path: the token went stale, the pinned org did not.
+            mockGetOrgName.mockReturnValue('demo-system-stores');
+            showInfoMessageResponses = ['I have my token'];
+            showInputBoxResponses = [validToken];
+
+            await showDaLiveAuthQuickPick(mockContext);
+
+            expect(showInputBoxCalls).toHaveLength(1);
+            expect(showInputBoxCalls[0]).toMatchObject({ password: true });
+        });
+
+        it('should store the pinned org rather than a re-typed one', async () => {
+            mockGetOrgName.mockReturnValue('demo-system-stores');
+            showInfoMessageResponses = ['I have my token'];
+            showInputBoxResponses = [validToken];
+
+            await showDaLiveAuthQuickPick(mockContext);
+
+            expect(mockStoreToken).toHaveBeenCalledWith(
+                validToken,
+                expect.objectContaining({ orgName: 'demo-system-stores' })
+            );
+        });
+
+        it('should ask for the org before the token when nothing is pinned', async () => {
+            showInputBoxResponses = [undefined]; // cancel at org
+
+            await showDaLiveAuthQuickPick(mockContext);
+
+            // The org box is the FIRST thing shown — before the info message,
+            // and before anything asks for a token.
+            expect(showInputBoxCalls).toHaveLength(1);
+            expect(showInputBoxCalls[0]).toMatchObject({
+                title: expect.stringContaining('Step 1/2'),
+                prompt: expect.stringContaining('organization'),
+            });
+            expect(showInputBoxCalls[0].password).toBeFalsy();
+            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('Token input flow', () => {
+        it('should show info message as first step once the org is settled', async () => {
+            mockGetOrgName.mockReturnValue('my-org');
             showInfoMessageResponses = [undefined];
 
             await showDaLiveAuthQuickPick(mockContext);
@@ -202,38 +295,27 @@ describe('showDaLiveAuthQuickPick', () => {
                 expect.stringContaining('token from DA.live'),
                 expect.anything(),
                 'Open DA.live',
-                'I have my token',
+                'I have my token'
             );
         });
 
-        it('should show token input with password masking as step 2', async () => {
+        it('should show token input password-masked as step 2', async () => {
             showInfoMessageResponses = ['I have my token'];
-            showInputBoxResponses = [undefined]; // cancel at token
-
-            await showDaLiveAuthQuickPick(mockContext);
-
-            expect(showInputBoxCalls[0]).toMatchObject({
-                title: expect.stringContaining('Step 1/2'),
-                password: true,
-            });
-        });
-
-        it('should show org input as step 3 after token', async () => {
-            showInfoMessageResponses = ['I have my token'];
-            showInputBoxResponses = [validToken, undefined]; // enter token, cancel at org
+            showInputBoxResponses = ['my-org', undefined]; // org, then cancel at token
 
             await showDaLiveAuthQuickPick(mockContext);
 
             expect(showInputBoxCalls).toHaveLength(2);
             expect(showInputBoxCalls[1]).toMatchObject({
                 title: expect.stringContaining('Step 2/2'),
-                prompt: expect.stringContaining('organization'),
+                password: true,
             });
         });
 
         it('should open DA.live when user clicks Open DA.live button', async () => {
             // After the browser opens, a post-browser "Paste Token" gate is shown;
             // confirm it so the flow continues into the input box.
+            mockGetOrgName.mockReturnValue('my-org');
             showInfoMessageResponses = ['Open DA.live', 'Paste Token'];
             showInputBoxResponses = [undefined]; // cancel at token
 
@@ -243,6 +325,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should show a Paste Token gate after opening the browser', async () => {
+            mockGetOrgName.mockReturnValue('my-org');
             showInfoMessageResponses = ['Open DA.live', 'Paste Token'];
             showInputBoxResponses = [undefined]; // cancel at token
 
@@ -255,31 +338,34 @@ describe('showDaLiveAuthQuickPick', () => {
             expect(infoCalls[1]).toContain('Paste Token');
         });
 
-        it('should open the token input box only AFTER the Paste Token gate is clicked', async () => {
+        it('should reach the token step only AFTER the Paste Token gate is clicked', async () => {
+            mockGetOrgName.mockReturnValue('my-org');
             showInfoMessageResponses = ['Open DA.live', 'Paste Token'];
             showInputBoxResponses = [undefined]; // cancel at token
 
             await showDaLiveAuthQuickPick(mockContext);
 
-            // showInputBox is called after the gate — verify it ran exactly once
-            // for the token step (org input wouldn't fire because we cancelled).
             expect(showInputBoxCalls).toHaveLength(1);
-            expect(showInputBoxCalls[0].title).toEqual(expect.stringContaining('Step 1/2'));
+            expect(showInputBoxCalls[0]).toMatchObject({ password: true });
         });
 
         it('should cancel the flow when the Paste Token gate is dismissed', async () => {
             // User dismissed the post-browser gate (clicked X / pressed Escape).
+            mockGetOrgName.mockReturnValue('my-org');
             showInfoMessageResponses = ['Open DA.live', undefined];
 
             const result = await showDaLiveAuthQuickPick(mockContext);
 
             expect(result).toEqual({ success: false, cancelled: true });
-            // Input box must not open — user never confirmed they have the token.
+            // Neither the input box nor the clipboard is touched — the user
+            // never confirmed they have the token.
             expect(showInputBoxCalls).toHaveLength(0);
+            expect(vscode.env.clipboard.readText).not.toHaveBeenCalled();
         });
 
         it('should skip the Paste Token gate when the user already has a token', async () => {
             // User picked "I have my token" — no browser opens, no gate shown.
+            mockGetOrgName.mockReturnValue('my-org');
             showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = [undefined];
 
@@ -288,6 +374,86 @@ describe('showDaLiveAuthQuickPick', () => {
             const infoCalls = (vscode.window.showInformationMessage as jest.Mock).mock.calls;
             expect(infoCalls).toHaveLength(1); // only the initial choice, no gate
             expect(vscode.env.openExternal).not.toHaveBeenCalled();
+        });
+    });
+
+    // =========================================================================
+    // Clipboard Tests — the bookmarklet has just copied the token, so the
+    // paste box is a keystroke asking for something we can already read.
+    // =========================================================================
+    describe('clipboard token', () => {
+        beforeEach(() => {
+            mockGetOrgName.mockReturnValue('my-org');
+        });
+
+        it('should take the token from the clipboard without opening an input box', async () => {
+            clipboardText = validToken;
+            showInfoMessageResponses = ['I have my token'];
+
+            const result = await showDaLiveAuthQuickPick(mockContext);
+
+            expect(showInputBoxCalls).toHaveLength(0);
+            expect(mockStoreToken).toHaveBeenCalledWith(validToken, expect.anything());
+            expect(result.success).toBe(true);
+        });
+
+        it('should tolerate surrounding whitespace on the copied token', async () => {
+            clipboardText = `\n  ${validToken}  \n`;
+            showInfoMessageResponses = ['I have my token'];
+
+            await showDaLiveAuthQuickPick(mockContext);
+
+            expect(showInputBoxCalls).toHaveLength(0);
+            expect(mockStoreToken).toHaveBeenCalledWith(validToken, expect.anything());
+        });
+
+        it('should fall back to the input box when the clipboard holds something else', async () => {
+            clipboardText = 'a git branch name I copied earlier';
+            showInfoMessageResponses = ['I have my token'];
+            showInputBoxResponses = [validToken];
+
+            await showDaLiveAuthQuickPick(mockContext);
+
+            expect(showInputBoxCalls).toHaveLength(1);
+            expect(showInputBoxCalls[0]).toMatchObject({ password: true });
+            expect(mockStoreToken).toHaveBeenCalledWith(validToken, expect.anything());
+        });
+
+        it('should fall back to the input box when the clipboard token has expired', async () => {
+            // Re-copying the token that just expired must not be accepted
+            // silently — the clipboard is validated, not trusted.
+            clipboardText = expiredToken;
+            showInfoMessageResponses = ['I have my token'];
+            showInputBoxResponses = [validToken];
+
+            await showDaLiveAuthQuickPick(mockContext);
+
+            expect(showInputBoxCalls).toHaveLength(1);
+            expect(mockStoreToken).toHaveBeenCalledWith(validToken, expect.anything());
+        });
+
+        it('should fall back to the input box when the clipboard is empty', async () => {
+            clipboardText = '';
+            showInfoMessageResponses = ['I have my token'];
+            showInputBoxResponses = [validToken];
+
+            await showDaLiveAuthQuickPick(mockContext);
+
+            expect(showInputBoxCalls).toHaveLength(1);
+            expect(mockStoreToken).toHaveBeenCalledWith(validToken, expect.anything());
+        });
+
+        it('should fall back to the input box when the clipboard read throws', async () => {
+            (vscode.env.clipboard.readText as jest.Mock).mockRejectedValueOnce(
+                new Error('clipboard unavailable')
+            );
+            showInfoMessageResponses = ['I have my token'];
+            showInputBoxResponses = [validToken];
+
+            await showDaLiveAuthQuickPick(mockContext);
+
+            expect(showInputBoxCalls).toHaveLength(1);
+            expect(mockStoreToken).toHaveBeenCalledWith(validToken, expect.anything());
         });
     });
 
@@ -306,7 +472,7 @@ describe('showDaLiveAuthQuickPick', () => {
     describe('successful authentication', () => {
         it('should store token via auth service on success', async () => {
             showInfoMessageResponses = ['I have my token'];
-            showInputBoxResponses = [validToken, 'my-org'];
+            showInputBoxResponses = ['my-org', validToken];
 
             await showDaLiveAuthQuickPick(mockContext);
 
@@ -315,13 +481,13 @@ describe('showDaLiveAuthQuickPick', () => {
                 expect.objectContaining({
                     email: 'user@example.com',
                     orgName: 'my-org',
-                }),
+                })
             );
         });
 
         it('should return success with email on valid auth', async () => {
             showInfoMessageResponses = ['I have my token'];
-            showInputBoxResponses = [validToken, 'my-org'];
+            showInputBoxResponses = ['my-org', validToken];
 
             const result = await showDaLiveAuthQuickPick(mockContext);
 
@@ -333,13 +499,13 @@ describe('showDaLiveAuthQuickPick', () => {
 
         it('should show success message with org name', async () => {
             showInfoMessageResponses = ['I have my token'];
-            showInputBoxResponses = [validToken, 'my-org'];
+            showInputBoxResponses = ['my-org', validToken];
 
             await showDaLiveAuthQuickPick(mockContext);
 
             expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
                 '✅ Connected to DA.live (my-org)',
-                expect.any(Number),
+                expect.any(Number)
             );
         });
     });
@@ -350,25 +516,24 @@ describe('showDaLiveAuthQuickPick', () => {
     describe('error handling', () => {
         it('should show error on invalid token format', async () => {
             showInfoMessageResponses = ['I have my token'];
-            showInputBoxResponses = ['not-a-jwt-token', 'my-org'];
+            showInputBoxResponses = ['my-org', 'not-a-jwt-token'];
 
             const result = await showDaLiveAuthQuickPick(mockContext);
 
             expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-                expect.stringContaining('Invalid token format'),
+                expect.stringContaining('Invalid token format')
             );
             expect(result.success).toBe(false);
         });
 
         it('should show error on expired token', async () => {
-            const expiredToken = 'eyJhbGciOiJIUzI1NiJ9.eyJjbGllbnRfaWQiOiJkYXJrYWxsZXkiLCJjcmVhdGVkX2F0IjoiMTAwMDAwMDAwMDAwMCIsImV4cGlyZXNfaW4iOiIxMDAwIn0.sig';
             showInfoMessageResponses = ['I have my token'];
-            showInputBoxResponses = [expiredToken, 'my-org'];
+            showInputBoxResponses = ['my-org', expiredToken];
 
             const result = await showDaLiveAuthQuickPick(mockContext);
 
             expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-                expect.stringContaining('expired'),
+                expect.stringContaining('expired')
             );
             expect(result.success).toBe(false);
         });
@@ -383,6 +548,7 @@ describe('showDaLiveAuthQuickPick', () => {
     // =========================================================================
     describe('user cancellation', () => {
         it('should return cancelled when user dismisses info message', async () => {
+            mockGetOrgName.mockReturnValue('my-org');
             showInfoMessageResponses = [undefined];
 
             const result = await showDaLiveAuthQuickPick(mockContext);
@@ -392,7 +558,7 @@ describe('showDaLiveAuthQuickPick', () => {
 
         it('should return cancelled when user cancels at token step', async () => {
             showInfoMessageResponses = ['I have my token'];
-            showInputBoxResponses = [undefined];
+            showInputBoxResponses = ['my-org', undefined];
 
             const result = await showDaLiveAuthQuickPick(mockContext);
 
@@ -400,8 +566,7 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should return cancelled when user cancels at org step', async () => {
-            showInfoMessageResponses = ['I have my token'];
-            showInputBoxResponses = [validToken, undefined];
+            showInputBoxResponses = [undefined];
 
             const result = await showDaLiveAuthQuickPick(mockContext);
 
@@ -409,34 +574,34 @@ describe('showDaLiveAuthQuickPick', () => {
         });
 
         it('should log cancellation at info message step', async () => {
+            mockGetOrgName.mockReturnValue('my-org');
             showInfoMessageResponses = [undefined];
 
             await showDaLiveAuthQuickPick(mockContext);
 
             expect(mockContext.logger.info).toHaveBeenCalledWith(
-                expect.stringContaining('cancelled at info message'),
+                expect.stringContaining('cancelled at info message')
             );
         });
 
         it('should log cancellation at token step', async () => {
             showInfoMessageResponses = ['I have my token'];
+            showInputBoxResponses = ['my-org', undefined];
+
+            await showDaLiveAuthQuickPick(mockContext);
+
+            expect(mockContext.logger.info).toHaveBeenCalledWith(
+                expect.stringContaining('cancelled at token step')
+            );
+        });
+
+        it('should log cancellation at org step', async () => {
             showInputBoxResponses = [undefined];
 
             await showDaLiveAuthQuickPick(mockContext);
 
             expect(mockContext.logger.info).toHaveBeenCalledWith(
-                expect.stringContaining('cancelled at token step'),
-            );
-        });
-
-        it('should log cancellation at org step', async () => {
-            showInfoMessageResponses = ['I have my token'];
-            showInputBoxResponses = [validToken, undefined];
-
-            await showDaLiveAuthQuickPick(mockContext);
-
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
-                expect.stringContaining('cancelled at org step'),
+                expect.stringContaining('cancelled at org step')
             );
         });
     });
@@ -458,21 +623,23 @@ describe('validateDaLiveToken', () => {
     });
 
     it('should accept valid JWT format tokens', () => {
-        const token = 'eyJhbGciOiJIUzI1NiJ9.eyJjbGllbnRfaWQiOiJkYXJrYWxsZXkiLCJjcmVhdGVkX2F0IjoiOTk5OTk5OTk5OTk5OSIsImV4cGlyZXNfaW4iOiIzNjAwMDAwIiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIn0.sig';
-        const result = validateDaLiveToken(token);
+        const result = validateDaLiveToken(validToken);
         expect(result.valid).toBe(true);
         expect(result.email).toBe('user@example.com');
     });
 
     it('should reject tokens with wrong client_id', () => {
-        const wrongClientToken = 'eyJhbGciOiJIUzI1NiJ9.eyJjbGllbnRfaWQiOiJ3cm9uZy1jbGllbnQiLCJjcmVhdGVkX2F0IjoiOTk5OTk5OTk5OTk5OSIsImV4cGlyZXNfaW4iOiIzNjAwMDAwIn0.sig';
+        const wrongClientToken = makeToken({
+            client_id: 'wrong-client',
+            created_at: '9999999999999',
+            expires_in: '3600000',
+        });
         const result = validateDaLiveToken(wrongClientToken);
         expect(result.valid).toBe(false);
         expect(result.error).toContain('not from DA.live');
     });
 
     it('should reject expired tokens', () => {
-        const expiredToken = 'eyJhbGciOiJIUzI1NiJ9.eyJjbGllbnRfaWQiOiJkYXJrYWxsZXkiLCJjcmVhdGVkX2F0IjoiMTAwMDAwMDAwMDAwMCIsImV4cGlyZXNfaW4iOiIxMDAwIn0.sig';
         const result = validateDaLiveToken(expiredToken);
         expect(result.valid).toBe(false);
         expect(result.error).toContain('expired');
