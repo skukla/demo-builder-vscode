@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.135] - 2026-08-19
+
+A companion to `.134`, from the same field session. Where `.134` made failures
+audible, this one fixes the two that were **silently doing the wrong thing** — and
+one of them had been publishing another project's products onto your storefront.
+
+### ⚠️ If you took `.134`, read its action-required note first
+
+`demoBuilder.daLive.aemAuthorUrl` still has no default. Until it is set, creating or
+resetting a storefront writes no AEM Assets binding and will remove an existing one.
+Nothing about that changed here.
+
+### Fixed
+
+- **Catalog pre-warming published the wrong project's products.** During project
+  creation the new project does not exist yet, so the storefront setup path resolved
+  "the current project" to **whatever was last open** — and pre-warmed that project's
+  catalog onto the site being built. Measured: a Bodea storefront received 39
+  CitiSignal product pages. It now refuses to pre-warm unless the project's recorded
+  storefront repository matches the repository being set up, and fails closed when it
+  cannot prove the match. If you had no other projects on disk, you never saw this —
+  the same code silently skipped pre-warming entirely and looked clean.
+- **Pre-warming ran before sample data was imported.** On a first create it could only
+  ever enumerate an unseeded catalog; it now runs after the datapack lands, as a phase
+  of its own. Reset was already correct and is unchanged.
+- **`create_project` refused every EDS project.** The agent tool demanded an Adobe
+  workspace "for API Mesh" regardless of whether the package used one — and every EDS
+  package except BuildRight declares that it does not. It now asks first. The message
+  was also wrong in a way that costs more than the block: it sent readers hunting a
+  mesh the project had never had.
+- **A refused DA.live session was reported as a missing admin role.** The two arrive
+  as different HTTP statuses and were folded into one, so the extension told users to
+  grant themselves a permission they already held — and then waited ~105 seconds for
+  it to propagate. 401 and 403 are now distinguished: a refused session says sign in,
+  and stops waiting.
+- **A reset now reports the pages it could not unpublish.** The result was computed
+  and then discarded, so a reset where every CDN delete was refused reported a clean
+  run while the stale pages kept serving.
+- **Catalog enumeration failures name the store scope they queried.** "No index was
+  found for this request" said nothing about *which* of your store views was
+  unindexed.
+
+### Notes
+
+`codebase-sweep` and `dream` were skipped for this cut — both are propose-only and
+last ran at `.133`. The RPTC hygiene scan ran clean.
+
+
 ## [1.0.0-beta.134] - 2026-08-18
 
 Five field-reported defects from one colleague's session, plus the settings failure that
