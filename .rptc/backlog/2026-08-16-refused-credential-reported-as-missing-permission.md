@@ -12,10 +12,32 @@
 >
 > **What remains, and why each was left:**
 >
-> 1. **`syncCodeAndPermissions` has no retry wrapper** — and it is where run 1
->    first failed, at config-service registration. Wrapping it is small, but its
->    phases are not obviously idempotent on replay, which needs checking before a
->    retry is safe to add.
+> 1. **WITHDRAWN 2026-08-19 — not actionable as written.** The idempotency read
+>    this asked for was done and the premise did not survive it:
+>
+>    - **It names the wrong function.** Config-service registration is Step 7, in
+>      `edsResetConfigStep.ts` (`publishConfigAndRegisterSite` → `registerSiteConfig`).
+>      `syncCodeAndPermissions` is Steps 4-5 and does not touch it.
+>    - **Step 7 is already handled**, by a decision made after this item was filed:
+>      a `DaLiveAuthError` there is caught, given its own message, and NOT rethrown,
+>      with recovery deferred to the pipeline's re-auth. Its docblock explains why
+>      rethrowing was worse — it aborted after `resetRepoToTemplate` had wiped the
+>      repo and skipped the only re-auth recovery in the reset.
+>    - **A wrapper would have nothing to catch.** `syncCodeAndPermissions` cannot
+>      propagate a DA.live failure: Step 4's `previewCode` is try/caught and
+>      continues by design, and Step 5's `configureDaLivePermissions`
+>      (`edsHelpers.ts:1147`) catches everything internally and returns
+>      `{success:false}` rather than throwing. `withDaLiveAuthRetry` around it would
+>      be dead code.
+>
+>    So the idempotency question is moot — there is no retry to make safe. The one
+>    unguarded await in that function is `daLiveAuthService.getUserEmail()`; noted
+>    so the next reader does not re-derive it.
+>
+>    ORIGINAL text: "`syncCodeAndPermissions` has no retry wrapper — and it is where
+>    run 1 first failed, at config-service registration. Wrapping it is small, but
+>    its phases are not obviously idempotent on replay, which needs checking before
+>    a retry is safe to add." 
 > 2. **The 52 unpublish 403s are logged as warnings, never thrown**, so nothing can
 >    catch them even now. Making them throw changes reset's failure semantics — a
 >    403 there is non-fatal by design today — so it is a product decision, not a
