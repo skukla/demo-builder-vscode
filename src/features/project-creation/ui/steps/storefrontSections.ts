@@ -71,8 +71,14 @@ export function storefrontSectionOrder(_state: WizardState): StorefrontSectionId
  * The ordered Storefront section states with a sequential lock: each step is `done`
  * when its own complete-condition holds; otherwise the FIRST not-done step is
  * `current` and every step after it is `locked`. Done steps before the current one
- * stay `done`. The `code-sync` step is present only for a new repo (see
- * {@link storefrontSectionOrder}).
+ * stay `done`.
+ *
+ * Every step is present in BOTH repo modes — {@link storefrontSectionOrder} returns
+ * the full list unconditionally, and its docblock explains why the old filtering was
+ * removed. What differs is whether `code-sync` can HOLD you: `computeCodeSyncValid`
+ * demands a verified app install for a new repo, and is satisfied by any selected
+ * repo for an existing one. So the same step is a gate in one mode and an
+ * explanation in the other.
  *
  * @param state - Wizard state (persisted selections + validity verdicts)
  * @returns the ordered sections with status / lockReason
