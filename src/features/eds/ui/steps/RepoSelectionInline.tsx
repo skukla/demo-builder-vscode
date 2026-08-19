@@ -34,6 +34,7 @@ import {
     type GitHubAppStatus,
     type RepoCreationState,
 } from './repoSelectionInline.helpers';
+import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { SelectionStepContent } from '@/core/ui/components/selection';
 import { useSelectionStep } from '@/core/ui/hooks';
 import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
@@ -506,6 +507,26 @@ export function RepoSelectionInline({
 
                 {repoMode === 'existing' && (
                     <>
+                        {/* Named where the choice is made. Everything downstream targets
+                            `main`, so this repo can never work -- and unlike the readiness
+                            warning below, a reset is NOT the remedy: the reset itself
+                            clones --branch main. Say what is wrong and what fixes it. */}
+                        {selectedRepo?.defaultBranch &&
+                            selectedRepo.defaultBranch !== 'main' && (
+                                <StatusDisplay
+                                    variant="warning"
+                                    title="This repository uses a different default branch"
+                                    height="auto"
+                                >
+                                    <Text UNSAFE_className="text-sm text-gray-600">
+                                        Edge Delivery builds from <strong>main</strong>, but{' '}
+                                        {selectedRepo.fullName} defaults to{' '}
+                                        <strong>{selectedRepo.defaultBranch}</strong>. Rename its
+                                        default branch to main on GitHub, or choose a different
+                                        repository.
+                                    </Text>
+                                </StatusDisplay>
+                            )}
                         {/* Always rendered (disabled until a repo is selected) so selecting one
                             never reflows the search + list below. */}
                         <ResetToTemplateOption

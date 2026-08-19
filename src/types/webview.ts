@@ -212,6 +212,16 @@ export interface GitHubRepoItem {
     isPrivate?: boolean;
     /** GitHub web URL */
     htmlUrl?: string;
+    /**
+     * The repo's default branch.
+     *
+     * Undefined on entries from a cache written before this field existed —
+     * absence means UNKNOWN, never "wrong branch". Every EDS path targets
+     * `main` (the Helix status URL, `DEFAULT_BRANCH`, the template reset's
+     * `git clone --branch main`), so a repo defaulting to anything else fails
+     * later with an error that names none of this.
+     */
+    defaultBranch?: string;
 }
 
 /**

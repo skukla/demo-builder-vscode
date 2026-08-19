@@ -162,6 +162,20 @@ export function computeRepoValid(
     }
     if (!selectedRepo || isLoading) return false;
 
+    // Every EDS path targets `main`: the Helix status URL in `githubAppService`,
+    // `DEFAULT_BRANCH` in `helixService`, and the template reset, which runs
+    // `git clone --depth 1 --branch main`. A repo defaulting to anything else
+    // cannot work, and fails in a way that names none of that — measured
+    // 2026-08-19 on `skukla/kukla-bodea` (only branch `master`): Helix answered
+    // `404 [admin] no such site` BEFORE authenticating, and the UI reported it
+    // as Adobe failing to answer. Ticking the reset would not have saved it
+    // either; the clone would have failed at Phase 1.
+    //
+    // UNKNOWN is not a rejection. A repo list cached before `defaultBranch`
+    // existed carries none, and blocking on its absence would strand those
+    // users over a field they cannot see.
+    if (selectedRepo.defaultBranch && selectedRepo.defaultBranch !== 'main') return false;
+
     // A populated repo that is not a storefront cannot complete setup: the
     // steps that need scripts/scripts.js and scripts/delayed.js skip
     // themselves, and the run still reports Complete. Reset is the remedy, so
@@ -461,9 +475,9 @@ export function CodeSyncStatusView({
                     height="auto"
                 >
                     <Text UNSAFE_className="text-sm text-gray-600">
-                        {owner}/{repo} is not an Edge Delivery storefront yet, so Adobe has no
-                        site to report on. Setup will reset it from the template first, then
-                        verify AEM Code Sync. You can continue.
+                        {owner}/{repo} is not an Edge Delivery storefront yet, so Adobe has no site
+                        to report on. Setup will reset it from the template first, then verify AEM
+                        Code Sync. You can continue.
                     </Text>
                 </StatusDisplay>
             </CenteredFeedbackContainer>

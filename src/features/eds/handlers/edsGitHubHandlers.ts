@@ -331,6 +331,7 @@ export async function handleGetGitHubRepos(
             updatedAt: repo.updatedAt,
             isPrivate: repo.isPrivate,
             htmlUrl: repo.htmlUrl,
+            defaultBranch: repo.defaultBranch,
         }));
         await context.sendMessage('get-github-repos', repoItems);
 
