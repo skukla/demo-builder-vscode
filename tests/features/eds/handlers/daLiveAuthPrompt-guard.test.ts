@@ -29,10 +29,6 @@ let showInputBoxIndex = 0;
 // Track showInformationMessage calls (used by showDaLiveAuthQuickPick Step 2a)
 let showInfoMessageResponse: string | undefined;
 
-// Mock fetch for org verification (used by showDaLiveAuthQuickPick)
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
-
 // Track showWarningMessage responses (used by ensureDaLiveAuth for "Sign In" prompt)
 let showWarningMessageResponse: string | undefined;
 
@@ -114,12 +110,6 @@ jest.mock('@/features/eds/services/daLiveAuthService', () => {
     };
 });
 
-// Mock hasWriteAccess (now imported by daLiveAuthPrompt from the service layer)
-const mockHasWriteAccess = jest.fn();
-jest.mock('@/features/eds/services/daLiveOrgOperations', () => ({
-    hasWriteAccess: (...args: unknown[]) => mockHasWriteAccess(...args),
-}));
-
 // Mock remaining service imports required by daLiveAuthPrompt to load
 jest.mock('@/features/eds/services/githubTokenService');
 jest.mock('@/features/eds/services/githubRepoOperations');
@@ -189,8 +179,6 @@ function resetMockState(): void {
     showWarningMessageResponse = undefined;
     mockIsAuthenticated.mockReset().mockResolvedValue(false);
     mockStoreToken.mockReset().mockResolvedValue(undefined);
-    mockFetch.mockReset();
-    mockHasWriteAccess.mockReset();
 }
 
 // =============================================================================
@@ -248,8 +236,6 @@ describe('ensureDaLiveAuth', () => {
         })}.signature`;
         showInfoMessageResponse = 'I have my token';
         showInputBoxResponses = [validToken];
-        mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
-        mockHasWriteAccess.mockResolvedValueOnce(true);
 
         // When: ensureDaLiveAuth is called
         const result = await ensureDaLiveAuth(mockContext);

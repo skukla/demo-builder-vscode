@@ -42,16 +42,6 @@ let showInfoMessageIndex = 0;
 // nothing about the clipboard exercises the input-box fallback.
 let clipboardText = '';
 
-// Mock fetch for org verification
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
-
-// Mock hasWriteAccess (now lives in the service layer)
-const mockHasWriteAccess = jest.fn();
-jest.mock('@/features/eds/services/daLiveOrgOperations', () => ({
-    hasWriteAccess: (...args: unknown[]) => mockHasWriteAccess(...args),
-}));
-
 // Mock vscode
 jest.mock(
     'vscode',
@@ -237,8 +227,6 @@ describe('showDaLiveAuthQuickPick', () => {
         // Default: nothing pinned, so the org step runs. Tests about the
         // expiry path set a value.
         mockGetOrgName.mockReset().mockReturnValue(undefined);
-        mockFetch.mockReset();
-        mockHasWriteAccess.mockReset();
     });
 
     // =========================================================================
@@ -254,7 +242,10 @@ describe('showDaLiveAuthQuickPick', () => {
             await showDaLiveAuthQuickPick(mockContext);
 
             expect(showInputBoxCalls).toHaveLength(1);
-            expect(showInputBoxCalls[0]).toMatchObject({ password: true });
+            expect(showInputBoxCalls[0]).toMatchObject({
+                title: 'Sign in to DA.live — token',
+                password: true,
+            });
         });
 
         it('should store the pinned org rather than a re-typed one', async () => {
@@ -278,8 +269,11 @@ describe('showDaLiveAuthQuickPick', () => {
             // The org box is the FIRST thing shown — before the info message,
             // and before anything asks for a token.
             expect(showInputBoxCalls).toHaveLength(1);
+            // Titled by WHAT it asks for, not "Step 1 of 2" — the clipboard can
+            // supply the token, and a promised step 2 that never arrives is a
+            // lie the flow cannot predict at this point.
             expect(showInputBoxCalls[0]).toMatchObject({
-                title: expect.stringContaining('Step 1/2'),
+                title: 'Sign in to DA.live — namespace',
                 prompt: expect.stringContaining('organization'),
             });
             expect(showInputBoxCalls[0].password).toBeFalsy();
@@ -310,7 +304,7 @@ describe('showDaLiveAuthQuickPick', () => {
 
             expect(showInputBoxCalls).toHaveLength(2);
             expect(showInputBoxCalls[1]).toMatchObject({
-                title: expect.stringContaining('Step 2/2'),
+                title: 'Sign in to DA.live — token',
                 password: true,
             });
         });
@@ -460,6 +454,74 @@ describe('showDaLiveAuthQuickPick', () => {
         });
     });
 
+    // =========================================================================
+    // The clipboard is read without the user selecting what it holds, so it
+    // must be shown to BE a DA.live credential rather than merely shaped like
+    // one. Each of these is a string a real clipboard plausibly holds, and
+    // each would otherwise be stored and sent as `Authorization: Bearer`.
+    // =========================================================================
+    describe('clipboard token identity', () => {
+        beforeEach(() => {
+            mockGetOrgName.mockReturnValue('my-org');
+        });
+
+        it('should reject a base64 blob that is not a JWT at all', async () => {
+            // Base64 of any JSON begins "eyJ" and contains no "." — an encoded
+            // .env, a k8s secret, a config payload. The format check alone
+            // cannot tell this from a token.
+            clipboardText = Buffer.from('{"aws_secret_access_key":"AKIA…"}').toString('base64');
+            showInfoMessageResponses = ['I have my token'];
+            showInputBoxResponses = [validToken];
+
+            await showDaLiveAuthQuickPick(mockContext);
+
+            expect(showInputBoxCalls).toHaveLength(1);
+            expect(mockStoreToken).toHaveBeenCalledWith(validToken, expect.anything());
+        });
+
+        it('should reject a JWT that does not name darkalley as its client', async () => {
+            // A GitHub App JWT, an IMS token for another client, any foreign
+            // service token. Absent `client_id` must not read as "fine".
+            clipboardText = makeToken({
+                created_at: '9999999999999',
+                expires_in: '3600000',
+                email: 'someone@example.com',
+            });
+            showInfoMessageResponses = ['I have my token'];
+            showInputBoxResponses = [validToken];
+
+            await showDaLiveAuthQuickPick(mockContext);
+
+            expect(showInputBoxCalls).toHaveLength(1);
+            expect(mockStoreToken).toHaveBeenCalledWith(validToken, expect.anything());
+        });
+
+        it('should reject a darkalley token carrying no readable lifetime', async () => {
+            // Without created_at + expires_in the flow invents `now + 24h`,
+            // and that fabricated expiry outranks a real one in the
+            // da-auth-helper cache — it would evict a working credential.
+            clipboardText = makeToken({ client_id: 'darkalley', email: 'user@example.com' });
+            showInfoMessageResponses = ['I have my token'];
+            showInputBoxResponses = [validToken];
+
+            await showDaLiveAuthQuickPick(mockContext);
+
+            expect(showInputBoxCalls).toHaveLength(1);
+            expect(mockStoreToken).toHaveBeenCalledWith(validToken, expect.anything());
+        });
+
+        it('should never store a token the clipboard check rejected', async () => {
+            const blob = Buffer.from('{"not":"a token"}').toString('base64');
+            clipboardText = blob;
+            showInfoMessageResponses = ['I have my token'];
+            showInputBoxResponses = [validToken];
+
+            await showDaLiveAuthQuickPick(mockContext);
+
+            expect(mockStoreToken).not.toHaveBeenCalledWith(blob, expect.anything());
+        });
+    });
+
     // Org access + write verification tests deleted in the namespace-picker
     // plan. The pre-auth verification gate (GET /list/<org>/ for existence,
     // HEAD for write access) was removed because it blocked first-time DA.live
@@ -500,9 +562,30 @@ describe('showDaLiveAuthQuickPick', () => {
             });
         });
 
-        it('should show success message with org name', async () => {
+        it('should name the signed-in identity in the confirmation', async () => {
+            // The clipboard path stores a token the user never looked at, so
+            // the confirmation is the only place a wrong identity can show
+            // itself. A colleague's still-valid token would otherwise bind
+            // silently and 403 on every later write.
             showInfoMessageResponses = ['I have my token'];
             showInputBoxResponses = ['my-org', validToken];
+
+            await showDaLiveAuthQuickPick(mockContext);
+
+            expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
+                '✅ Connected to DA.live (my-org) as user@example.com',
+                expect.any(Number)
+            );
+        });
+
+        it('should still confirm when the token carries no email', async () => {
+            const noEmail = makeToken({
+                client_id: 'darkalley',
+                created_at: '9999999999999',
+                expires_in: '3600000',
+            });
+            showInfoMessageResponses = ['I have my token'];
+            showInputBoxResponses = ['my-org', noEmail];
 
             await showDaLiveAuthQuickPick(mockContext);
 

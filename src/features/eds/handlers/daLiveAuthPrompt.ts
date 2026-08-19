@@ -185,9 +185,8 @@ async function readTokenFromClipboard(logger: Logger): Promise<string | undefine
         if (!clipped) {
             return undefined;
         }
-        const validation = validateDaLiveToken(clipped);
-        if (!validation.valid) {
-            logger.debug(`[DA.live Auth] Clipboard holds no usable token: ${validation.error}`);
+        if (!isDaLiveTokenPositivelyIdentified(clipped)) {
+            logger.debug('[DA.live Auth] Clipboard holds no DA.live token');
             return undefined;
         }
         logger.info('[DA.live Auth] Token taken from clipboard');
@@ -198,6 +197,145 @@ async function readTokenFromClipboard(logger: Logger): Promise<string | undefine
         logger.debug(`[DA.live Auth] Clipboard read failed: ${(error as Error).message}`);
         return undefined;
     }
+}
+
+/**
+ * Is this string demonstrably a DA.live credential, not merely token-SHAPED?
+ *
+ * `validateDaLiveToken` answers a weaker question, and deliberately so: it
+ * passes anything starting with `eyJ` whose payload it cannot read, which
+ * keeps a hand-pasted token working when Adobe changes the claims. But base64
+ * of any JSON begins `eyJ` and carries no `.`, so `parseJwtPayload` returns
+ * null for an encoded .env, a k8s secret, a config blob — and every one of
+ * those would be stored and sent as `Authorization: Bearer`.
+ *
+ * That was tolerable while a human selected and pasted the value. Reading the
+ * clipboard removes the human, so this path asserts identity POSITIVELY:
+ *
+ *   - the payload must parse (not "we could not tell");
+ *   - it must NAME darkalley, rather than merely not contradict it — a foreign
+ *     JWT with no `client_id` passes the weak check;
+ *   - it must carry a readable lifetime. Without one the caller invents
+ *     `now + 24h`, and that fabricated expiry outranks a real one in the
+ *     da-auth-helper cache (`writeDaAuthHelperToken` compares expiries), so it
+ *     would evict a working agent credential and 401 every later call.
+ *
+ * Anything failing this falls through to the paste box, where the user chooses.
+ *
+ * @param token - Trimmed clipboard contents
+ * @returns True only for a token this extension can prove is a live DA.live one
+ */
+function isDaLiveTokenPositivelyIdentified(token: string): boolean {
+    const validation = validateDaLiveToken(token);
+    if (!validation.valid || validation.expiresAt === undefined) {
+        return false;
+    }
+    return parseJwtPayload(token)?.client_id === 'darkalley';
+}
+
+/**
+ * Ask which DA.live namespace to sign into.
+ *
+ * The wizard uses a Spectrum picker populated from GitHub org memberships (see
+ * DaLiveServiceCard); this is the fallback for command-palette and MCP entry
+ * points where the React webview isn't available. Converting it to a QuickPick
+ * over /user/orgs is a separate follow-up.
+ *
+ * Titled by what it asks for rather than "Step 1 of 2": the clipboard may
+ * supply the token, in which case no second box ever opens, and this function
+ * cannot know that yet.
+ *
+ * @returns The namespace, or undefined when the user cancelled
+ */
+function promptForOrgName(): Thenable<string | undefined> {
+    return vscode.window.showInputBox({
+        title: 'Sign in to DA.live — namespace',
+        prompt: 'Enter your DA.live organization name (your GitHub username or a team org you belong to)',
+        placeHolder: 'e.g. your-github-username or demo-system-stores',
+        ignoreFocusOut: true,
+        validateInput: (value) => {
+            if (!value?.trim()) {
+                return 'Organization name is required';
+            }
+            return null;
+        },
+    });
+}
+
+/**
+ * Ask for the token, for when the clipboard did not hold a usable one.
+ *
+ * The `eyJ` check here is a fast-fail for the typist, not a security control —
+ * `validateDaLiveToken` re-checks everything before the token is stored.
+ *
+ * @returns The pasted token, or undefined when the user cancelled
+ */
+function promptForToken(): Thenable<string | undefined> {
+    return vscode.window.showInputBox({
+        title: 'Sign in to DA.live — token',
+        prompt: 'Paste your DA.live token (use the bookmarklet on da.live to copy it)',
+        placeHolder: 'Paste token here',
+        password: true,
+        ignoreFocusOut: true,
+        validateInput: (value) => {
+            if (!value?.trim()) {
+                return 'Token is required';
+            }
+            if (!value.trim().startsWith('eyJ')) {
+                return 'Invalid token format. Token should start with "eyJ"';
+            }
+            return null;
+        },
+    });
+}
+
+/**
+ * Offer the trip to da.live, and wait until the user says they hold a token.
+ *
+ * The second notification is load-bearing, not a courtesy. Without it the
+ * input box opens the moment the browser does — but the user is away doing
+ * OAuth, and when they return the dashboard webview owns the visual centre and
+ * the input strip at top-of-window is easy to miss. A bottom-right notification
+ * with a button is something they can actually find.
+ *
+ * It now gates more than an input box: `readTokenFromClipboard` runs after this
+ * returns, so this click is also the user's consent to read the clipboard.
+ * Nothing here or before it touches the clipboard.
+ *
+ * @param context - Handler context, for logging
+ * @returns True to proceed to the token step; false when the user backed out
+ */
+async function confirmTokenReady(context: HandlerContext): Promise<boolean> {
+    const openDaLiveChoice = await vscode.window.showInformationMessage(
+        'You\'ll need a token from DA.live. Click "Open DA.live" to get one, or continue if you already have it.',
+        { modal: false },
+        'Open DA.live',
+        'I have my token',
+    );
+
+    // User dismissed the message (clicked X or pressed Escape)
+    if (openDaLiveChoice === undefined) {
+        context.logger.info('[DA.live Auth] User cancelled at info message');
+        return false;
+    }
+
+    if (openDaLiveChoice !== 'Open DA.live') {
+        return true;
+    }
+
+    context.logger.debug('[DA.live Auth] Opening DA.live in browser');
+    await vscode.env.openExternal(vscode.Uri.parse('https://da.live'));
+
+    const pasteChoice = await vscode.window.showInformationMessage(
+        'When you have your DA.live token (via the bookmarklet), click "Paste Token".',
+        { modal: false },
+        'Paste Token',
+    );
+    if (pasteChoice !== 'Paste Token') {
+        context.logger.info('[DA.live Auth] User cancelled at post-browser paste gate');
+        return false;
+    }
+    return true;
 }
 
 /**
@@ -234,23 +372,7 @@ export async function showDaLiveAuthQuickPick(
     const pinnedOrg = getDaLiveAuthService(context.context).getOrgName();
     let orgName = pinnedOrg;
     if (!orgName) {
-        // The wizard uses a Spectrum picker populated from GitHub org
-        // memberships (see DaLiveServiceCard); this flow is the fallback for
-        // command-palette and MCP entry points where the React webview isn't
-        // available. Converting this to a QuickPick over /user/orgs is a
-        // separate follow-up.
-        orgName = await vscode.window.showInputBox({
-            title: 'Sign in to DA.live (Step 1/2)',
-            prompt: 'Enter your DA.live organization name (your GitHub username or a team org you belong to)',
-            placeHolder: 'e.g. leahrayard or demo-system-stores',
-            ignoreFocusOut: true,
-            validateInput: (value) => {
-                if (!value?.trim()) {
-                    return 'Organization name is required';
-                }
-                return null;
-            },
-        });
+        orgName = await promptForOrgName();
 
         // User cancelled
         if (orgName === undefined) {
@@ -261,62 +383,17 @@ export async function showDaLiveAuthQuickPick(
         context.logger.debug(`[DA.live Auth] Reusing pinned namespace: ${pinnedOrg}`);
     }
 
-    // Step 2: Show info message with option to open DA.live
-    const openDaLiveChoice = await vscode.window.showInformationMessage(
-        'You\'ll need a token from DA.live. Click "Open DA.live" to get one, or continue if you already have it.',
-        { modal: false },
-        'Open DA.live',
-        'I have my token',
-    );
-
-    // User dismissed the message (clicked X or pressed Escape)
-    if (openDaLiveChoice === undefined) {
-        context.logger.info('[DA.live Auth] User cancelled at info message');
+    // Step 2: Offer the browser trip, and wait for the user to say they have
+    // a token before anything reaches for one.
+    if (!(await confirmTokenReady(context))) {
         return { success: false, cancelled: true };
-    }
-
-    // Open DA.live if requested, then gate on an explicit "I'm back" click before
-    // opening the input box. Without this gate, the input box opens immediately at
-    // top-of-window — but the user is in the browser doing OAuth, and when they
-    // return, the dashboard webview owns the visual center and the input strip is
-    // easy to miss. A bottom-right notification with an action button gives the
-    // user an attention-grabbing surface to confirm "I have the token" before we
-    // open the paste field.
-    if (openDaLiveChoice === 'Open DA.live') {
-        context.logger.debug('[DA.live Auth] Opening DA.live in browser');
-        await vscode.env.openExternal(vscode.Uri.parse('https://da.live'));
-
-        const pasteChoice = await vscode.window.showInformationMessage(
-            'When you have your DA.live token (via the bookmarklet), click "Paste Token".',
-            { modal: false },
-            'Paste Token',
-        );
-        if (pasteChoice !== 'Paste Token') {
-            context.logger.info('[DA.live Auth] User cancelled at post-browser paste gate');
-            return { success: false, cancelled: true };
-        }
     }
 
     // Step 3: Token — from the clipboard when the bookmarklet has just put one
     // there, otherwise from a paste box.
     let token = await readTokenFromClipboard(context.logger);
     if (token === undefined) {
-        token = await vscode.window.showInputBox({
-            title: pinnedOrg ? 'Sign in to DA.live' : 'Sign in to DA.live (Step 2/2)',
-            prompt: 'Paste your DA.live token (use the bookmarklet on da.live to copy it)',
-            placeHolder: 'Paste token here',
-            password: true,
-            ignoreFocusOut: true,
-            validateInput: (value) => {
-                if (!value?.trim()) {
-                    return 'Token is required';
-                }
-                if (!value.trim().startsWith('eyJ')) {
-                    return 'Invalid token format. Token should start with "eyJ"';
-                }
-                return null;
-            },
-        });
+        token = await promptForToken();
 
         // User cancelled
         if (token === undefined) {
@@ -325,63 +402,79 @@ export async function showDaLiveAuthQuickPick(
         }
     }
 
-    // Step 4: Validate token, verify org access + write permissions, store
+    // Step 4: Validate token, store it against the org
     return vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
             title: 'Verifying DA.live credentials...',
             cancellable: false,
         },
-        async () => {
-            try {
-                const trimmedToken = token.trim();
-                const trimmedOrg = orgName.trim();
-
-                // Validate token format
-                const validation = validateDaLiveToken(trimmedToken);
-                if (!validation.valid) {
-                    context.logger.warn(
-                        `[DA.live Auth] Token validation failed: ${validation.error}`,
-                    );
-                    await vscode.window.showErrorMessage(
-                        validation.error ?? 'Token validation failed',
-                    );
-                    return { success: false, error: validation.error };
-                }
-
-                // Pre-auth verification gate removed (namespace-picker plan).
-                // It was blocking first-time DA.live users whose AEM Code Sync
-                // app hadn't been installed yet; first-time setup is handled by
-                // Phase 3 of the create pipeline. Genuine write failures surface
-                // at the actual write site with contextual error messaging.
-
-                // Store token with the entered org
-                const tokenExpiry = validation.expiresAt || Date.now() + 24 * 60 * 60 * 1000;
-                const authService = getDaLiveAuthService(context.context);
-                await authService.storeToken(trimmedToken, {
-                    expiresAt: tokenExpiry,
-                    email: validation.email,
-                    orgName: trimmedOrg,
-                });
-
-                context.logger.info(
-                    `[DA.live Auth] Token stored, namespace pinned to: ${trimmedOrg}`,
-                );
-                vscode.window.setStatusBarMessage(
-                    `✅ Connected to DA.live (${trimmedOrg})`,
-                    TIMEOUTS.STATUS_BAR_INFO,
-                );
-
-                return {
-                    success: true,
-                    email: validation.email,
-                };
-            } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                context.logger.error(`[DA.live Auth] Authentication error: ${errorMessage}`);
-                await vscode.window.showErrorMessage(`Authentication failed: ${errorMessage}`);
-                return { success: false, error: errorMessage };
-            }
-        },
+        () => validateAndStoreToken(context, token, orgName),
     );
+}
+
+/**
+ * Validate the collected token and pin it to the namespace.
+ *
+ * Runs for BOTH token sources. The clipboard path already proved identity in
+ * `isDaLiveTokenPositivelyIdentified`, but the typed path has proved nothing
+ * yet, so validation happens here regardless — the clipboard is simply checked
+ * twice, which is cheap and keeps this the single place a token becomes real.
+ *
+ * Never throws: every failure returns a result the caller reports.
+ *
+ * @param context - Handler context, for the extension context and logger
+ * @param token - The collected token, untrimmed
+ * @param orgName - The namespace to pin it to, untrimmed
+ * @returns The auth result
+ */
+async function validateAndStoreToken(
+    context: HandlerContext,
+    token: string,
+    orgName: string,
+): Promise<QuickPickAuthResult> {
+    try {
+        const trimmedToken = token.trim();
+        const trimmedOrg = orgName.trim();
+
+        const validation = validateDaLiveToken(trimmedToken);
+        if (!validation.valid) {
+            context.logger.warn(`[DA.live Auth] Token validation failed: ${validation.error}`);
+            await vscode.window.showErrorMessage(validation.error ?? 'Token validation failed');
+            return { success: false, error: validation.error };
+        }
+
+        // Pre-auth verification gate removed (namespace-picker plan).
+        // It was blocking first-time DA.live users whose AEM Code Sync
+        // app hadn't been installed yet; first-time setup is handled by
+        // Phase 3 of the create pipeline. Genuine write failures surface
+        // at the actual write site with contextual error messaging.
+
+        // Store token with the entered org
+        const tokenExpiry = validation.expiresAt || Date.now() + 24 * 60 * 60 * 1000;
+        const authService = getDaLiveAuthService(context.context);
+        await authService.storeToken(trimmedToken, {
+            expiresAt: tokenExpiry,
+            email: validation.email,
+            orgName: trimmedOrg,
+        });
+
+        context.logger.info(`[DA.live Auth] Token stored, namespace pinned to: ${trimmedOrg}`);
+        // Name WHO signed in, not just where. On the clipboard path the user
+        // never looked at the token, so this is the only place a wrong identity
+        // can show itself — a colleague's still-valid token would otherwise
+        // bind silently and 403 every later write.
+        vscode.window.setStatusBarMessage(
+            `✅ Connected to DA.live (${trimmedOrg})` +
+                (validation.email ? ` as ${validation.email}` : ''),
+            TIMEOUTS.STATUS_BAR_INFO,
+        );
+
+        return { success: true, email: validation.email };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        context.logger.error(`[DA.live Auth] Authentication error: ${errorMessage}`);
+        await vscode.window.showErrorMessage(`Authentication failed: ${errorMessage}`);
+        return { success: false, error: errorMessage };
+    }
 }
