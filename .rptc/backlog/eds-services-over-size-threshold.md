@@ -1,4 +1,11 @@
-# Two EDS services sit over the god-file threshold
+# Files over the god-file threshold
+
+> **The title used to say "Two EDS services". It was wrong** — see the
+> re-measurement at the bottom, which is the current answer. The two files this
+> item was opened on are the two smallest candidates in the repo; three files
+> three to four times their size were never filed. Read the bottom section
+> FIRST; everything above it is the original 2026-08-15 record, kept because its
+> reasoning about coupling-vs-size is still correct.
 
 **Filed:** 2026-08-15, from the `fix/leah-128-bugs` release prep.
 **Severity:** low — a project guideline, not a gate. `eslint` does not flag these
@@ -96,3 +103,71 @@ lines with 16 non-type imports**, over the >15 signal. `configurationService.ts`
 532 lines with **2** non-type imports and 7 public methods — over on size, under on
 every coupling signal, so the same "leave it" verdict applies until something else
 argues otherwise.
+
+---
+
+## Re-measured 2026-08-19 (second pass) — this item was pointed at the wrong files
+
+The two files in the title are the two SMALLEST candidates in the repo. Measured
+across `src/` with the coupling signals the `decompose-god-file` skill actually
+uses, not line count:
+
+| File | code lines | non-type imports | public methods | filed here before? |
+|---|---|---|---|---|
+| `project-creation/handlers/executor.ts` | 1403 | **23** | **33** | no |
+| `eds/services/helixService.ts` | 1313 | 8 | **16** | no |
+| `authentication/services/adobeEntityFetcher.ts` | 1232 | 9 | **21** | no |
+| `mcp-server.ts` | 1291 | 11 | — | no |
+| `eds/services/daLiveContentCopy.ts` | 811 | 13 | — | no |
+| `eds/services/configurationService.ts` | 532 | 2 | 7 | yes |
+| `eds/services/edsResetService.ts` | 343 | **16** | 2 | yes |
+
+Signals over threshold in **bold** (>15 non-type imports, >10 public methods).
+
+`configurationService.ts` is filed here and fails the coupling test — this item's
+own later section already reaches that verdict. `helixService.ts` was never
+filed and is an EDS service at nearly four times its size.
+
+The pattern is that this item tracks files somebody happened to touch, not files
+measurement condemns. Anyone picking work off it should re-measure first; the
+table above is the current answer.
+
+## `helixService.ts` — one cut taken, the rest is not free
+
+**Done:** `helixKeyStore.ts` (168 lines) now owns Admin API key persistence —
+the keychain, the one-time migration off plaintext globalState, the in-memory
+cache and the two expiries. That is a credential store; it knows nothing about
+`admin.hlx.page`, and the class knew nothing about keychains, so they were two
+responsibilities sharing a file. `HelixService`'s four public statics
+(`initKeyStore`, `clearKeyStore`, `clearApiKeyCache`, `forgetApiKey`) delegate
+and keep their signatures, so the three external callers did not change.
+
+Cleared the bar this item sets: **88 tests across 7 suites passed untouched.**
+
+**Not done, and not cheap.** The next clusters are entangled with instance
+state in a way the key store was not:
+
+- **Bulk-job protocol** (`parseBulkJobResponse`, `pollJobCompletion`,
+  `assertBulkResourcesSucceeded`, the two job interfaces, ~200 lines).
+  `pollJobCompletion` calls `this.tryAdminBearer()`, `this.getGitHubToken()`
+  and `this.logger`. Extracting it means passing an auth-header provider in —
+  doable, but it is an interface design decision, not a move.
+- **Page operations** (13 of the 16 public methods) all depend on the same
+  private auth/error helpers. Splitting them means splitting the class into
+  collaborating objects.
+
+The file is still 1848 lines. Size alone did not justify going further in the
+same session that changed its auth behaviour — see the "why it was deferred"
+section above, which is the same argument and was right the first time.
+
+## Kickoff prompt (supersedes the one above)
+
+> Read this whole file, then RE-MEASURE — the table is dated and files move.
+> The candidates ranked by coupling, not size, are `executor.ts` (23 non-type
+> imports, 33 functions), `adobeEntityFetcher.ts` (21 methods) and the rest of
+> `helixService.ts`. `configurationService.ts` is over on size only; leave it.
+> For `helixService.ts` the next cut is the bulk-job protocol, and it needs an
+> auth-header provider passed in rather than `this` — design that interface
+> before moving code. `helixKeyStore.ts` is the model for what a clean cut looks
+> like. The bar is unchanged and non-negotiable: the existing suites pass
+> UNTOUCHED. A test that has to change means the extraction changed behaviour.

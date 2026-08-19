@@ -148,9 +148,16 @@ describe('ResetAllCommand - Security Tests', () => {
 
     describe('Error Message Sanitization', () => {
         it('should sanitize Adobe logout error messages to prevent token leakage', async () => {
-            const errorWithToken = new Error(
-                'Adobe CLI error: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U'
-            );
+            // Assembled, not pasted: the literal this replaced was the jwt.io
+            // sample complete with its real HMAC signature, which secret
+            // scanners flag and cannot tell from a live credential. Deriving
+            // the header from the same builder also stops the negative
+            // assertion below drifting away from the fixture.
+            const encode = (v: object): string =>
+                Buffer.from(JSON.stringify(v)).toString('base64url');
+            const jwtHeader = encode({ alg: 'HS256', typ: 'JWT' });
+            const fakeToken = `${jwtHeader}.${encode({ sub: '1234567890' })}.not-a-real-signature`;
+            const errorWithToken = new Error(`Adobe CLI error: ${fakeToken}`);
             mockAuthService.logout.mockRejectedValue(errorWithToken);
 
             await command.execute();
@@ -161,7 +168,7 @@ describe('ResetAllCommand - Security Tests', () => {
                 expect.any(Error)
             );
             expect(mockLogger.warn).not.toHaveBeenCalledWith(
-                expect.stringContaining('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'),
+                expect.stringContaining(jwtHeader),
                 expect.any(Error)
             );
         });
