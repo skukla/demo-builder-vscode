@@ -28,6 +28,7 @@ import { getValidationState } from '@/core/ui/utils/validationState';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { sleep } from '@/core/utils/sleep';
 import { isValidRepositoryName } from '@/core/validation/normalizers';
+import { describeSiteUnknown, explainSiteUnknown } from '@/features/eds/utils/siteUnknownReason';
 import type { GitHubRepoItem } from '@/types/webview';
 
 /** GitHub App installation status tracking. */
@@ -417,6 +418,7 @@ export function CodeSyncStatusView({
     onCheckAgain,
     onOpenInstallPage,
     pendingReset = false,
+    siteChecks,
 }: {
     /** Set in `new` mode once the repo exists. */
     createdRepo?: { owner: string; name: string };
@@ -429,6 +431,12 @@ export function CodeSyncStatusView({
     onOpenInstallPage: () => void;
     /** The selected repo is not a storefront yet and is queued for reset. */
     pendingReset?: boolean;
+    /**
+     * What we can verify about the repo ourselves. A Helix 404 says only "no
+     * such site"; these are what let us name WHICH precondition is unmet
+     * instead of defaulting to "install the App".
+     */
+    siteChecks?: { defaultBranch?: string; missingFiles?: string[] };
 }): React.ReactElement {
     const view = resolveCodeSyncView(status, isRechecking, pendingReset);
     const [fallbackOwner, fallbackRepo] = (selectedRepoFullName ?? '/').split('/');
@@ -503,8 +511,31 @@ export function CodeSyncStatusView({
                     ]}
                 >
                     <Text UNSAFE_className="text-sm text-gray-600">
-                        Adobe did not answer for {owner}/{repo}. This does not mean the app is
-                        missing — a new repository can take a few minutes to register.
+                        {describeSiteUnknown(explainSiteUnknown(siteChecks ?? {}), `${owner}/${repo}`)}
+                    </Text>
+                </StatusDisplay>
+            </CenteredFeedbackContainer>
+        );
+    }
+
+    // The remaining branch used to assume the App is missing. A Helix 404 does
+    // not say that — it says Helix does not know the site, which has causes the
+    // install flow cannot fix. Offer the install ONLY where it is the remedy.
+    const siteReason = explainSiteUnknown(siteChecks ?? {});
+    if (siteReason.kind !== 'app-probably-missing') {
+        return (
+            <CenteredFeedbackContainer fill>
+                <StatusDisplay
+                    variant={siteReason.kind === 'wrong-default-branch' ? 'warning' : 'info'}
+                    title={
+                        siteReason.kind === 'wrong-default-branch'
+                            ? 'This repository uses a different default branch'
+                            : 'Code Sync is verified after setup'
+                    }
+                    height="auto"
+                >
+                    <Text UNSAFE_className="text-sm text-gray-600">
+                        {describeSiteUnknown(siteReason, `${owner}/${repo}`)}
                     </Text>
                 </StatusDisplay>
             </CenteredFeedbackContainer>

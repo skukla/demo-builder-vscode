@@ -177,11 +177,20 @@ async function verifyCodeSync(
             const githubUser = edsConfig.githubAuth?.user?.login;
             const isTeamOrg = !!githubUser && repoInfo.repoOwner !== githubUser;
 
+            // Worded as the inference it is. What we measured is that Helix does
+            // not know this site; `admin.hlx.page/status` answers about the SITE,
+            // not the App, and returns the same 404 for several causes (see
+            // `siteUnknownReason`). By this point the repo has been reset and
+            // fstab pushed, so a missing App is much the likeliest cause — but
+            // stating it as fact is what sent a user to reinstall eleven times,
+            // and on a team org it sends their admin on the same errand.
             const message = isTeamOrg
-                ? `AEM Code Sync is not installed on ${repoInfo.repoOwner}. ` +
+                ? `Adobe does not recognise ${repoInfo.repoOwner}/${repoInfo.repoName} as a site. ` +
+                  `The usual cause is that AEM Code Sync is not installed on ${repoInfo.repoOwner}. ` +
                   `Installing it on a GitHub organization requires admin rights — ask your ` +
                   `team admin to install it from: ${installUrl}`
-                : 'The AEM Code Sync GitHub App must be installed to continue.';
+                : `Adobe does not recognise ${repoInfo.repoOwner}/${repoInfo.repoName} as a site. ` +
+                  'The usual cause is that the AEM Code Sync GitHub App is not installed on it.';
 
             logger.info(
                 `[Storefront Setup] GitHub App not installed (isTeamOrg=${isTeamOrg}). Install URL: ${installUrl}`,

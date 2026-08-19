@@ -595,9 +595,12 @@ export function RepoSelectionInline({
         <div className="w-full relative flex-1 flex-column">
             {showAppStatus && (
                 <CodeSyncStatusView
-                    pendingReset={
-                        readiness?.kind === 'not-a-storefront' && resetToTemplate
-                    }
+                    pendingReset={readiness?.kind === 'not-a-storefront' && resetToTemplate}
+                    siteChecks={{
+                        defaultBranch: selectedRepo?.defaultBranch,
+                        missingFiles:
+                            readiness?.kind === 'not-a-storefront' ? readiness.missing : undefined,
+                    }}
                     createdRepo={edsConfig?.createdRepo}
                     selectedRepoFullName={selectedRepo?.fullName}
                     status={githubAppStatus}
