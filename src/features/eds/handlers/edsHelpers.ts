@@ -34,6 +34,7 @@ export {
 export {
     type DaLiveTokenValidationResult,
     validateDaLiveToken,
+    validateDaLiveTokenStrict,
     type QuickPickAuthResult,
     type DaLiveGuardResult,
     ensureDaLiveAuth,

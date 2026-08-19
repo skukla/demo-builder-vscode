@@ -185,8 +185,9 @@ async function readTokenFromClipboard(logger: Logger): Promise<string | undefine
         if (!clipped) {
             return undefined;
         }
-        if (!isDaLiveTokenPositivelyIdentified(clipped)) {
-            logger.debug('[DA.live Auth] Clipboard holds no DA.live token');
+        const validation = validateDaLiveTokenStrict(clipped);
+        if (!validation.valid) {
+            logger.debug(`[DA.live Auth] Clipboard holds no DA.live token: ${validation.error}`);
             return undefined;
         }
         logger.info('[DA.live Auth] Token taken from clipboard');
@@ -200,37 +201,51 @@ async function readTokenFromClipboard(logger: Logger): Promise<string | undefine
 }
 
 /**
- * Is this string demonstrably a DA.live credential, not merely token-SHAPED?
+ * Validate a token, demanding proof it IS a DA.live credential rather than
+ * merely absence of proof that it is not.
  *
- * `validateDaLiveToken` answers a weaker question, and deliberately so: it
- * passes anything starting with `eyJ` whose payload it cannot read, which
- * keeps a hand-pasted token working when Adobe changes the claims. But base64
- * of any JSON begins `eyJ` and carries no `.`, so `parseJwtPayload` returns
- * null for an encoded .env, a k8s secret, a config blob — and every one of
- * those would be stored and sent as `Authorization: Bearer`.
+ * {@link validateDaLiveToken} answers a weaker question, and deliberately so:
+ * it passes anything starting with `eyJ` whose payload it cannot read. But
+ * base64 of any JSON begins `eyJ` and carries no `.`, so `parseJwtPayload`
+ * returns null for an encoded .env, a k8s secret or a config blob — and every
+ * one of those was stored and sent as `Authorization: Bearer`.
  *
- * That was tolerable while a human selected and pasted the value. Reading the
- * clipboard removes the human, so this path asserts identity POSITIVELY:
+ * Three additional demands, each closing a measured hole:
  *
- *   - the payload must parse (not "we could not tell");
- *   - it must NAME darkalley, rather than merely not contradict it — a foreign
- *     JWT with no `client_id` passes the weak check;
- *   - it must carry a readable lifetime. Without one the caller invents
+ *   - the payload must PARSE, not merely be unreadable;
+ *   - it must NAME darkalley rather than fail to contradict it — a foreign JWT
+ *     carrying no `client_id` passes the weak check;
+ *   - it must carry a readable lifetime. Without one the callers invent
  *     `now + 24h`, and that fabricated expiry outranks a real one in the
- *     da-auth-helper cache (`writeDaAuthHelperToken` compares expiries), so it
- *     would evict a working agent credential and 401 every later call.
+ *     da-auth-helper cache (`writeDaAuthHelperToken` keeps the later expiry),
+ *     so it evicts a working agent credential and 401s every later call.
  *
- * Anything failing this falls through to the paste box, where the user chooses.
+ * Used by every path that turns an untrusted string into a stored credential:
+ * the clipboard read here, and both webview store-token handlers. The lenient
+ * check remains for callers that only need to know whether a token is
+ * plausible.
  *
- * @param token - Trimmed clipboard contents
- * @returns True only for a token this extension can prove is a live DA.live one
+ * @param token - The candidate token, already trimmed
+ * @returns The lenient result when it passes, or a reason the user can act on
  */
-function isDaLiveTokenPositivelyIdentified(token: string): boolean {
+export function validateDaLiveTokenStrict(token: string): DaLiveTokenValidationResult {
     const validation = validateDaLiveToken(token);
-    if (!validation.valid || validation.expiresAt === undefined) {
-        return false;
+    if (!validation.valid) {
+        return validation;
     }
-    return parseJwtPayload(token)?.client_id === 'darkalley';
+    if (parseJwtPayload(token)?.client_id !== 'darkalley') {
+        return {
+            valid: false,
+            error: 'This does not look like a DA.live token. Use the bookmarklet on da.live to copy a fresh one.',
+        };
+    }
+    if (validation.expiresAt === undefined) {
+        return {
+            valid: false,
+            error: 'This DA.live token carries no expiry, so it cannot be stored safely. Use the bookmarklet on da.live to copy a fresh one.',
+        };
+    }
+    return validation;
 }
 
 /**

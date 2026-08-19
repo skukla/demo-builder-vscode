@@ -14,10 +14,7 @@
  */
 
 import * as vscode from 'vscode';
-import {
-    getDaLiveAuthService,
-    validateDaLiveToken,
-} from './edsHelpers';
+import { getDaLiveAuthService, validateDaLiveTokenStrict } from './edsHelpers';
 import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
@@ -168,7 +165,7 @@ export async function handleStoreDaLiveToken(
         context.logger.debug('[EDS] Validating and storing DA.live token');
 
         // Validate token using helper
-        const validation = validateDaLiveToken(token);
+        const validation = validateDaLiveTokenStrict(token);
         if (!validation.valid) {
             if (validation.error?.includes('expired')) {
                 context.logger.warn('[EDS] DA.live token has expired');
@@ -253,7 +250,7 @@ export async function handleStoreDaLiveTokenWithOrg(
         context.logger.debug('[EDS] Validating DA.live token and org:', orgName);
 
         // Validate token using helper
-        const validation = validateDaLiveToken(token);
+        const validation = validateDaLiveTokenStrict(token);
         if (!validation.valid) {
             if (validation.error?.includes('expired')) {
                 context.logger.warn('[EDS] DA.live token has expired');
