@@ -20,12 +20,24 @@
  * that is a false errand for two people, and it fires after Phases 1 and 2
  * have already written to their repository.
  *
- * **There is no App detector, and there cannot be one here.** GitHub refuses:
- * `GET /user/installations` needs a user-to-server token issued by the App
- * itself (measured: 403), `GET /repos/{owner}/{repo}/installation` needs the
- * App's own JWT, and `aem-code-sync` is Adobe's App — we hold neither. So the
- * honest move is not to invent a detector but to stop claiming one: name the
- * causes we CAN check, and state the remaining one as the inference it is.
+ * **There IS a real detector — it is just nested, and only works for a site
+ * Helix already knows.** On an outer HTTP 200, `checkHelixStatus` reads the
+ * body's `code.status`, and that inner number genuinely reports code sync:
+ * `200` working, `400` initializing, `404` "Helix knows this repo and has no
+ * code sync for it" — which IS the App being absent. That is what makes
+ * "AEM Code Sync Verified" a true statement rather than a guess.
+ *
+ * The gap is the OUTER 404. With no site, there is no body, so there is no
+ * inner status to read — and the code returns `isInstalled: false` anyway,
+ * which is the only place the verdict is fabricated.
+ *
+ * Nothing else can fill that gap. GitHub refuses: `GET /user/installations`
+ * needs a user-to-server token issued by the App itself (measured: 403), and
+ * `GET /repos/{owner}/{repo}/installation` needs the App's own JWT —
+ * `aem-code-sync` is Adobe's App and we hold neither credential. So the honest
+ * move is not to invent a detector but to stop fabricating one in the single
+ * case that has none: name the causes we CAN check, and state the remainder as
+ * the inference it is.
  *
  * @module features/eds/utils/siteUnknownReason
  */
