@@ -9,15 +9,7 @@
  * @module features/eds/ui/steps/repoSelectionInline.helpers
  */
 
-import {
-    Button,
-    Checkbox,
-    Flex,
-    Heading,
-    Text,
-    TextField,
-    View,
-} from '@adobe/react-spectrum';
+import { Button, Checkbox, Flex, Heading, Text, TextField, View } from '@adobe/react-spectrum';
 import Alert from '@spectrum-icons/workflow/Alert';
 import React from 'react';
 import {
@@ -276,12 +268,25 @@ export function shouldShowAppStatus(
 export function resolveCodeSyncView(
     status: GitHubAppStatus,
     isRechecking: boolean,
-): { kind: 'checking' | 'verified' | 'needs-install' | 'unverifiable' } {
+    pendingReset = false,
+): { kind: 'checking' | 'verified' | 'needs-install' | 'unverifiable' | 'pending-reset' } {
     if (status.isChecking || isRechecking) return { kind: 'checking' };
     if (status.isInstalled === true) return { kind: 'verified' };
 
     // Not yet asked. Never "missing" — we have no answer to report.
     if (status.isInstalled === null) return { kind: 'checking' };
+
+    // The repo is not a storefront YET and is queued for reset-from-template.
+    // Helix answers 404 "no such site" because the files that make it a site do
+    // not exist — correct, and permanent until `storefrontSetupPhase1` performs
+    // the reset, long after this wizard step. Reporting that as a failed check
+    // blames latency for a known state and offers a re-check that cannot come
+    // good; the reporter on 2026-08-19 tried three times over six minutes,
+    // each firing a Helix code sync and polling it to exhaustion.
+    //
+    // Checked AFTER `verified`: a pending reset must never downgrade a real
+    // answer, only explain the absence of one.
+    if (pendingReset) return { kind: 'pending-reset' };
 
     // Undetermined means the check never resolved — a refused credential or an
     // unreachable service — and that says NOTHING about the app. Reporting it as
@@ -397,6 +402,7 @@ export function CodeSyncStatusView({
     recheckMessage,
     onCheckAgain,
     onOpenInstallPage,
+    pendingReset = false,
 }: {
     /** Set in `new` mode once the repo exists. */
     createdRepo?: { owner: string; name: string };
@@ -407,8 +413,10 @@ export function CodeSyncStatusView({
     recheckMessage: string;
     onCheckAgain: () => void;
     onOpenInstallPage: () => void;
+    /** The selected repo is not a storefront yet and is queued for reset. */
+    pendingReset?: boolean;
 }): React.ReactElement {
-    const view = resolveCodeSyncView(status, isRechecking);
+    const view = resolveCodeSyncView(status, isRechecking, pendingReset);
     const [fallbackOwner, fallbackRepo] = (selectedRepoFullName ?? '/').split('/');
     const owner = createdRepo?.owner ?? fallbackOwner;
     const repo = createdRepo?.name ?? fallbackRepo;
@@ -440,6 +448,28 @@ export function CodeSyncStatusView({
         );
     }
 
+    if (view.kind === 'pending-reset') {
+        // Informational, not a warning: nothing has gone wrong and there is
+        // nothing for the user to do. Deliberately offers no "Check Again" —
+        // the answer cannot change until setup resets the repo, and a button
+        // that re-asks a settled question is what made this look like a wall.
+        return (
+            <CenteredFeedbackContainer fill>
+                <StatusDisplay
+                    variant="info"
+                    title="Code Sync is verified after setup"
+                    height="auto"
+                >
+                    <Text UNSAFE_className="text-sm text-gray-600">
+                        {owner}/{repo} is not an Edge Delivery storefront yet, so Adobe has no
+                        site to report on. Setup will reset it from the template first, then
+                        verify AEM Code Sync. You can continue.
+                    </Text>
+                </StatusDisplay>
+            </CenteredFeedbackContainer>
+        );
+    }
+
     if (view.kind === 'unverifiable') {
         // Distinct from "not installed" ON PURPOSE. Adobe refusing the credential
         // says nothing about the app, and telling someone to install one that is
@@ -451,7 +481,11 @@ export function CodeSyncStatusView({
                     title="Couldn't verify AEM Code Sync"
                     height="auto"
                     actions={[
-                        { label: CODE_SYNC_RECHECK_ACTION, variant: 'accent', onPress: onCheckAgain },
+                        {
+                            label: CODE_SYNC_RECHECK_ACTION,
+                            variant: 'accent',
+                            onPress: onCheckAgain,
+                        },
                     ]}
                 >
                     <Text UNSAFE_className="text-sm text-gray-600">
@@ -475,7 +509,11 @@ export function CodeSyncStatusView({
                         variant: 'accent',
                         onPress: onOpenInstallPage,
                     },
-                    { label: CODE_SYNC_RECHECK_ACTION, variant: 'secondary', onPress: onCheckAgain },
+                    {
+                        label: CODE_SYNC_RECHECK_ACTION,
+                        variant: 'secondary',
+                        onPress: onCheckAgain,
+                    },
                 ]}
             >
                 <NumberedInstructions
@@ -622,8 +660,8 @@ export function describeResetOption(
             locked: false,
             tone: 'warn',
             message:
-                `Missing ${readiness.missing.join(', ')}. `
-                + 'Setup cannot complete without a reset.',
+                `Missing ${readiness.missing.join(', ')}. ` +
+                'Setup cannot complete without a reset.',
         };
     }
 

@@ -574,6 +574,9 @@ export function RepoSelectionInline({
         <div className="w-full relative flex-1 flex-column">
             {showAppStatus && (
                 <CodeSyncStatusView
+                    pendingReset={
+                        readiness?.kind === 'not-a-storefront' && resetToTemplate
+                    }
                     createdRepo={edsConfig?.createdRepo}
                     selectedRepoFullName={selectedRepo?.fullName}
                     status={githubAppStatus}
