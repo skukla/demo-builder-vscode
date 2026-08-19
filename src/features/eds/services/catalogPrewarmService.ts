@@ -211,8 +211,22 @@ export async function prewarmCatalog(
         skuPaths = await enumerateAccsCatalog(params as ConfigGeneratorParams, logger);
     } catch (error) {
         const reason = (error as Error).message;
+        // Name the SCOPE. The enumeration is `productSearch` against Catalog
+        // Service, scoped by the `Store:` header, so its commonest failure —
+        // `No index was found for this request` — means THIS store view has no
+        // search index. That index is built per scope and separately from the
+        // catalog, so the error is identical whether the backend holds zero
+        // products or thirty thousand: a colleague hit it on 2026-08-18 with a
+        // populated backend. Without the scope, a project with more than one
+        // store view cannot even tell which one is unindexed.
+        const scope = describeScope({
+            websiteCode: params.websiteCode,
+            storeCode: params.storeCode,
+            storeViewCode: params.storeViewCode,
+        });
         logger.warn(
-            `[Catalog Prewarm] Catalog enumeration failed: ${reason} — falling back to runtime smart-404 only`,
+            `[Catalog Prewarm] Catalog enumeration failed for scope ${scope}: ${reason}`
+                + ' — falling back to runtime smart-404 only',
         );
         return makeSkipped(`enumeration failed: ${reason}`);
     }

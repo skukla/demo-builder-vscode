@@ -400,6 +400,29 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
         expect(result.skipReason).toContain('enumeration failed');
     });
 
+    /**
+     * `No index was found for this request` is Catalog Service saying THIS STORE
+     * VIEW has no search index — built per scope, separately from the catalog, so
+     * it fails identically whether the backend holds 0 products or 30,000. A
+     * colleague hit it on 2026-08-18 with a POPULATED backend, and the message
+     * named no scope, so "which of my two store views is unindexed?" could not be
+     * answered from the log. The scope is already in the headers just sent.
+     */
+    it('names the store scope it queried when enumeration fails', async () => {
+        (global.fetch as jest.Mock).mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ errors: [{ message: 'No index was found for this request' }] }),
+        });
+
+        await prewarmCatalog(
+            makeAccsProject(), ACCS_OVERLAY, DA_ORG, DA_SITE, makePublisher(), mockLogger as never
+        );
+
+        // describeScope's exact shape: websiteCode / storeCode / storeViewCode.
+        expect(JSON.stringify((mockLogger.warn as jest.Mock).mock.calls))
+            .toContain('base / main_website_store / default');
+    });
+
     it('returns skipped when GraphQL response contains errors', async () => {
         (global.fetch as jest.Mock).mockResolvedValueOnce({
             ok: true,
