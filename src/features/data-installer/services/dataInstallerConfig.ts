@@ -132,7 +132,7 @@ export function actionUrl(
  * itself must never reach a log line. Scheme and host are safe and are what a
  * reader actually needs.
  *
- * Not shared with `describeRejectedUrl` in `edsHelpers.ts` on purpose: that one
+ * Not shared with `describeRejectedUrl` in `byomOverlay.ts` on purpose: that one
  * is file-private and hardcodes the BYOM length cap. This is the second instance
  * of the idea; a third should extract one parameterised helper into
  * `@/core/validation` and retire both.

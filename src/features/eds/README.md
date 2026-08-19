@@ -103,7 +103,13 @@ src/features/eds/
 │   ├── configServiceRegistration.ts # Wizard wiring for registration: progress, admin pin, PDP caveats
 │   ├── storefrontSetupPhaseHelpers.ts # Shared phase helpers (GitHub App check)
 │   ├── storefrontSetupPhases.ts    # Main orchestrator (delegates to phase1/2/3 files)
-│   ├── edsHelpers.ts               # Shared handler utilities (ensureDaLiveAuth, service cache)
+│   ├── edsHelpers.ts               # Re-export barrel — the public import path; declares nothing
+│   ├── edsServiceCache.ts          # Cached GitHub + DA.live service instances
+│   ├── daLiveAuthPrompt.ts         # Token validation + the DA.live sign-in flow
+│   ├── byomOverlay.ts              # BYOM overlay URL resolution + its failure messages
+│   ├── authoringExperience.ts      # Which AEM authoring experience a project uses
+│   ├── blockLibraryPublish.ts      # Publishing the block library + verifying it took
+│   ├── daLiveSiteConfig.ts         # Writes to a site's own DA.live config
 │   └── cleanupDaLiveSitesHandler.ts # DA.live site cleanup handler
 └── index.ts                         # Public API exports
 ```

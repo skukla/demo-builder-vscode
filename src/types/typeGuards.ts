@@ -464,7 +464,7 @@ export function getEdsPreviewUrl(project: Project | undefined | null): string | 
  *     even though the page still renders. The bare site root (no doc) renders
  *     blank, so the `index` segment stays required. A non-empty ewCanvasBranch
  *     (sourced from the demoBuilder.daLive.ewCanvasBranch setting via
- *     edsHelpers.getEwCanvasBranch) re-adds a `?nx=<branch>` override to pin a
+ *     authoringExperience.getEwCanvasBranch) re-adds a `?nx=<branch>` override to pin a
  *     specific pre-release da-nx build:
  *     `da.live/canvas?nx=<branch>#/<org>/<site>/index`. The default param value
  *     keeps this webview-safe and back-compat.

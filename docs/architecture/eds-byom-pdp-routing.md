@@ -227,8 +227,8 @@ If Phase 1's behavior diverges from this in production, those four probes locali
 
 | Concern | File |
 |---|---|
-| Overlay URL resolution + stamping | `src/features/eds/handlers/edsHelpers.ts` (`resolveByomOverlayConfig`, `appendOverlayParams`) |
-| Overlay registration failure surfacing | `src/features/eds/handlers/edsHelpers.ts` (`surfaceOverlayRegistrationFailure`), wired from `handlers/configServiceRegistration.ts` (create/edit, toast — the 403 toast carries Manage Site Access / Repair Site Configuration buttons) and `edsResetService.ts` (reset, `report()` — headless-safe) |
+| Overlay URL resolution + stamping | `src/features/eds/handlers/byomOverlay.ts` (`resolveByomOverlayConfig`, `appendOverlayParams`) |
+| Overlay registration failure surfacing | `src/features/eds/handlers/byomOverlay.ts` (`surfaceOverlayRegistrationFailure`), wired from `handlers/configServiceRegistration.ts` (create/edit, toast — the 403 toast carries Manage Site Access / Repair Site Configuration buttons) and `edsResetService.ts` (reset, `report()` — headless-safe) |
 | Site-registration protocol (409→update, 401→re-auth, 403→propagation retry) | `src/features/eds/services/siteConfigRegistrar.ts` (`registerSiteConfig`), shared by the wizard, the reset path and the repair command |
 | Standalone retry after a refused registration | `src/features/eds/services/repairSiteConfigHeadless.ts` + `src/commands/repairSiteConfiguration.ts` (`demoBuilder.repairSiteConfiguration`) |
 | Configuration Service registration with overlay (incl. `suffix: ".html"`) | `src/features/eds/services/configurationService.ts` (`registerSite`, `updateSiteConfig`, `buildSiteConfigParams`) |

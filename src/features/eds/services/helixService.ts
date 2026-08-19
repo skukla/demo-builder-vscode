@@ -214,7 +214,7 @@ export class HelixService {
     /**
      * Fallback DA.live token source, registered once at activation.
      *
-     * There is exactly ONE DA.live session per extension host — `edsHelpers`
+     * There is exactly ONE DA.live session per extension host — `edsServiceCache`
      * caches a single `DaLiveAuthService`. Threading that singleton through
      * every layer that happens to build a HelixService modelled a plurality
      * that does not exist, and the cost was real: two construction sites were

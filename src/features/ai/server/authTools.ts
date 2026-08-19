@@ -175,11 +175,12 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
                 return asText({ provider, success: res.success });
             }
             // dalive — DA.live has no headless token grant, so sign-in completes
-            // through native VS Code prompts (open browser → paste token → org).
-            // Use showDaLiveAuthQuickPick directly: it collects the token via
-            // vscode.window.showInputBox (no webview). The 'open-dalive-login'
+            // through native VS Code prompts: namespace (skipped when one is
+            // already pinned) → open browser → token, taken from the clipboard
+            // when it holds a DA.live one and from an input box otherwise.
+            // Use showDaLiveAuthQuickPick directly; the 'open-dalive-login'
             // handler can't be used from here — it posts the paste UI to a webview,
-            // and the agent's headless context drops sendMessage, so the input box
+            // and the agent's headless context drops sendMessage, so the prompt
             // never appears.
             const res = await showDaLiveAuthQuickPick(ctx);
             return asText({

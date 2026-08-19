@@ -288,7 +288,7 @@ export interface CustomIconPaths {
  * Stored per-project on the EDS component-instance metadata as
  * `authoringExperience` (beside `daLiveOrg`/`daLiveSite`). Absence falls back
  * to the global `demoBuilder.daLive.authoringExperience` setting (default
- * 'da-live-classic'). Resolved via resolveAuthoringExperience in edsHelpers.
+ * 'da-live-classic'). Resolved via resolveAuthoringExperience in authoringExperience.ts.
  */
 export type AuthoringExperience = 'da-live-classic' | 'experience-workspace';
 

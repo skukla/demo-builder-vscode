@@ -3,9 +3,9 @@
  *
  * This file used to hold all of it: 1200 lines carrying six unrelated reasons
  * to change. The implementations now live in the modules re-exported below,
- * one responsibility each. This barrel stays because ~100 files import from
- * `edsHelpers` and 45 test suites mock this specifier — the module path IS the
- * public API, and moving code is not a reason to break it.
+ * one responsibility each. This barrel stays because 83 files import from
+ * `edsHelpers` (37 src, 46 test) and 45 test suites mock this specifier — the
+ * module path IS the public API, and moving code is not a reason to break it.
  *
  * **New code belongs in the specialized module, never here.** A helper added
  * to this file rather than to its module rebuilds the god file behind a barrel
