@@ -291,6 +291,12 @@ export function resolveCodeSyncView(
     // Not yet asked. Never "missing" — we have no answer to report.
     if (status.isInstalled === null) return { kind: 'checking' };
 
+    // An undetermined check OUTRANKS a pending reset. `undetermined` means Helix
+    // refused our credential or was unreachable — a problem the reset does not
+    // fix and that will bite again at Phase 3. Telling the user "Code Sync is
+    // verified after setup" would hide it behind reassurance.
+    if (status.undetermined) return { kind: 'unverifiable' };
+
     // The repo is not a storefront YET and is queued for reset-from-template.
     // Helix answers 404 "no such site" because the files that make it a site do
     // not exist — correct, and permanent until `storefrontSetupPhase1` performs
@@ -318,7 +324,6 @@ export function resolveCodeSyncView(
     // That shortcut is why a brand-new repository — Helix 404, no `code.status` to
     // report, install genuinely required — showed "Couldn't verify" and offered
     // nothing but a re-check that could never come good.
-    if (status.undetermined) return { kind: 'unverifiable' };
 
     // Positive evidence either way: the handler offered somewhere to install, or
     // Helix reported an actual code.status. With neither, claim nothing.
@@ -431,6 +436,38 @@ export function buildAppStatusFromResult(result: GitHubAppCheckResult): GitHubAp
  * install steps grow past it and scroll. One state centred and the next
  * top-aligned is the jump reported as "the message is too high in the web view".
  */
+/**
+ * What to say when Helix DECLINED to answer.
+ *
+ * `unverifiable` means a refused credential or an unreachable service — not a
+ * verdict about the site, and emphatically not one about the App. If the
+ * preconditions we can check ourselves are bad, naming those is still true and
+ * still useful, because they hold whatever Helix thinks. But when they are
+ * clean we know nothing, and must say so: `explainSiteUnknown` would otherwise
+ * fall through to "the App is probably missing", which asserts a cause we never
+ * measured and sends the user to reinstall — the eleven-reinstalls failure this
+ * module exists to prevent.
+ *
+ * @param checks - The preconditions we can verify without Helix
+ * @param repoFullName - `owner/repo`
+ * @returns A sentence that claims only what is known
+ */
+function describeUnverifiable(
+    checks: { defaultBranch?: string; missingFiles?: string[] },
+    repoFullName: string,
+): string {
+    const reason = explainSiteUnknown(checks);
+    if (reason.kind !== 'app-probably-missing') {
+        return describeSiteUnknown(reason, repoFullName);
+    }
+    return (
+        `Adobe did not answer for ${repoFullName}, so we cannot tell whether AEM Code Sync `
+        + 'is installed. This does NOT mean it is missing — a new repository can take a few '
+        + 'minutes to register, and a refused sign-in looks the same from here. Check again '
+        + 'in a moment.'
+    );
+}
+
 export function CodeSyncStatusView({
     createdRepo,
     selectedRepoFullName,
@@ -536,10 +573,7 @@ export function CodeSyncStatusView({
                     ]}
                 >
                     <Text UNSAFE_className="text-sm text-gray-600">
-                        {describeSiteUnknown(
-                            explainSiteUnknown(siteChecks ?? {}),
-                            `${owner}/${repo}`,
-                        )}
+                        {describeUnverifiable(siteChecks ?? {}, `${owner}/${repo}`)}
                     </Text>
                 </StatusDisplay>
             </CenteredFeedbackContainer>

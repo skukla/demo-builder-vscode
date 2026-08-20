@@ -74,3 +74,19 @@ describe('a repo awaiting its reset', () => {
         expect(resolveCodeSyncView(helix404, false).kind).toBe('unverifiable');
     });
 });
+
+describe('an undetermined check', () => {
+    // `unverifiable` means Helix DECLINED — a refused credential or an
+    // unreachable service. It says nothing about the site and nothing about the
+    // App. Naming a cause here is the eleven-reinstalls failure: a user was sent
+    // to reinstall an App that was installed, because a 401 was read as absence.
+    const undetermined = { isChecking: false, isInstalled: false, undetermined: true };
+
+    it('stays undetermined regardless of what the preconditions say', () => {
+        expect(resolveCodeSyncView(undetermined, false, false).kind).toBe('unverifiable');
+    });
+
+    it('is not downgraded by a pending reset', () => {
+        expect(resolveCodeSyncView(undetermined, false, true).kind).toBe('unverifiable');
+    });
+});
