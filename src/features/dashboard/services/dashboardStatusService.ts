@@ -10,6 +10,7 @@
  * - Extracting mesh endpoint from configurations
  */
 
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import { Project } from '@/types';
 import {
@@ -61,7 +62,10 @@ export function buildStatusPayload(
     mesh?: MeshStatusInfo,
 ): StatusPayload {
     return {
-        name: project.name,
+        // The dashboard heading AND its inline rename field read this. Both
+        // want the title: the heading is what the user reads, and renaming
+        // edits the title -- `renameProjectCore` re-derives the slug from it.
+        name: getProjectDisplayName(project),
         path: project.path,
         status: project.status || 'ready',
         port: getProjectFrontendPort(project),

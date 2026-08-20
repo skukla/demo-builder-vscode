@@ -290,7 +290,10 @@ export interface ImportedSettings {
  * Configuration for editing an existing project
  */
 export interface EditProjectConfig {
+    /** The SLUG — still the identity `editOriginalName` compares against. */
     projectName: string;
+    /** The TITLE, so the name field shows what the user called it. */
+    projectTitle?: string;
     projectPath: string;
     settings: ImportedSettings;
 }

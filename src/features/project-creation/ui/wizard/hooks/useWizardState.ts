@@ -251,6 +251,7 @@ function buildEditModeState(firstStep: WizardStep, editProject: EditProjectConfi
     const editSettings = editProject.settings;
     log.info('Initializing wizard in edit mode', {
         projectName: editProject.projectName,
+        projectTitle: editProject.projectTitle,
         projectPath: editProject.projectPath,
         hasSelections: !!editSettings.selections,
         hasAdobe: !!editSettings.adobe,
@@ -274,6 +275,7 @@ function buildEditModeState(firstStep: WizardStep, editProject: EditProjectConfi
     return {
         currentStep: firstStep,
         projectName: editProject.projectName,
+        projectTitle: editProject.projectTitle,
         wizardMode: 'edit',
         editProjectPath: editProject.projectPath,
         editOriginalName: editProject.projectName,

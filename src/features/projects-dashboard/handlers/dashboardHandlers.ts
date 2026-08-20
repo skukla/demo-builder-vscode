@@ -546,7 +546,12 @@ export const handleEditProject: MessageHandler<{ projectPath: string }> = async 
         await vscode.commands.executeCommand('demoBuilder.createProject', {
             editProject: {
                 projectPath: project.path,
+                // The SLUG stays the identity (`editOriginalName` compares against
+                // it, so the dedupe check still allows keeping the current name).
                 projectName: project.name,
+                // ...and the TITLE seeds the field, so editing a project shows
+                // what the user called it rather than its folder.
+                projectTitle: project.title,
                 settings,
             },
         });

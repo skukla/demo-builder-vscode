@@ -9,6 +9,7 @@ import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import { dashboardHandlers } from '@/features/dashboard/handlers';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
@@ -194,7 +195,9 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             theme,
             project: project
                 ? {
-                      name: project.name,
+                      // Display only -- the dashboard heading. See
+                      // dashboardStatusService, which sends the same field.
+                      name: getProjectDisplayName(project),
                       path: project.path,
                   }
                 : null,
