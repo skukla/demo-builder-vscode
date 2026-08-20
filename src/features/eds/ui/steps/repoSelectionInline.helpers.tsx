@@ -331,6 +331,7 @@ export function computeCodeSyncValid(
     repoMode: string,
     githubAppStatus: GitHubAppStatus,
     selectedRepo: GitHubRepoItem | undefined,
+    installLinkOpened = false,
 ): boolean {
     if (repoMode === 'new') {
         return githubAppStatus.isInstalled === true && !githubAppStatus.isChecking;
@@ -349,7 +350,28 @@ export function computeCodeSyncValid(
     // refuses — the exact bug class this check was broken by before.
     const definitivelyMissing =
         githubAppStatus.isInstalled === false && githubAppStatus.codeStatus === 404;
-    return !definitivelyMissing;
+    if (definitivelyMissing) return false;
+
+    // The INFERRED missing App: an outer 404 carries no `code.status` to read
+    // (see `siteUnknownReason`), so the install prompt above it is a well-founded
+    // guess, not a measurement. Blocking on a guess strands whoever it is wrong
+    // about; letting it through silently is how an existing-repo user reached
+    // Phase 3 — and a halt — only AFTER Phase 1 had reset their repo and Phase 2
+    // had pushed to it.
+    //
+    // So: ask them to open the install page, and take the click as the
+    // acknowledgement. Costs one click, keeps the user in control, and restores
+    // the "learn before your repository is written to" guarantee that moving
+    // this check earlier was meant to provide. Same bar `storefront-tools`
+    // settled on after abandoning verification outright.
+    const inferredMissing =
+        githubAppStatus.isInstalled === false &&
+        githubAppStatus.codeStatus === undefined &&
+        !githubAppStatus.undetermined &&
+        Boolean(githubAppStatus.installUrl);
+    if (inferredMissing && !installLinkOpened) return false;
+
+    return true;
 }
 
 /**
@@ -419,6 +441,7 @@ export function CodeSyncStatusView({
     onOpenInstallPage,
     pendingReset = false,
     siteChecks,
+    installLinkOpened = false,
 }: {
     /** Set in `new` mode once the repo exists. */
     createdRepo?: { owner: string; name: string };
@@ -437,6 +460,8 @@ export function CodeSyncStatusView({
      * instead of defaulting to "install the App".
      */
     siteChecks?: { defaultBranch?: string; missingFiles?: string[] };
+    /** The user has opened the install page — the acknowledgement Continue waits on. */
+    installLinkOpened?: boolean;
 }): React.ReactElement {
     const view = resolveCodeSyncView(status, isRechecking, pendingReset);
     const [fallbackOwner, fallbackRepo] = (selectedRepoFullName ?? '/').split('/');
@@ -511,7 +536,10 @@ export function CodeSyncStatusView({
                     ]}
                 >
                     <Text UNSAFE_className="text-sm text-gray-600">
-                        {describeSiteUnknown(explainSiteUnknown(siteChecks ?? {}), `${owner}/${repo}`)}
+                        {describeSiteUnknown(
+                            explainSiteUnknown(siteChecks ?? {}),
+                            `${owner}/${repo}`,
+                        )}
                     </Text>
                 </StatusDisplay>
             </CenteredFeedbackContainer>
@@ -565,6 +593,16 @@ export function CodeSyncStatusView({
                     description={buildCodeSyncInstallSummary(owner, repo)}
                     instructions={buildCodeSyncInstallSteps(owner, repo)}
                 />
+                {/* Name the gate. Continue is held until the install page is
+                    opened, and a disabled button with no stated reason is the
+                    failure this whole screen exists to stop repeating. */}
+                {!installLinkOpened && (
+                    <Text UNSAFE_className="text-sm text-gray-600">
+                        Open the install page to continue. We cannot confirm the app from
+                        here, so this is your confirmation — you can install it now or check
+                        that it is already there.
+                    </Text>
+                )}
             </StatusDisplay>
         </CenteredFeedbackContainer>
     );

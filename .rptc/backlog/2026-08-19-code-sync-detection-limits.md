@@ -5,10 +5,9 @@
 Filed so nobody re-derives this from scratch, and so nobody "fixes" the detector
 by reaching for an API that cannot answer.
 
-**ONE change is proposed here**: gate Continue on the install link being
-clicked (section B near the bottom). A second — treating an outer 401/403 as
-site-exists — was proposed and REJECTED the same day; section A says why, so it
-does not get re-proposed. Everything above those sections is reference.
+**Both proposals are now closed.** B shipped 2026-08-20; A was rejected the day
+it was raised. Nothing here is outstanding work — the rest is reference. Section A says why the 401/403 idea
+was rejected, so it does not get re-proposed.
 
 ## The one endpoint
 
@@ -165,7 +164,7 @@ behind it — `appInstallationResolver`'s docblock records a user told **eleven
 times** to install an App that was already installed, caused by over-reading
 precisely this refusal.
 
-**B. Gate on the install click — the one worth doing.** `templates.js:786` disables their Continue
+**B. Gate on the install click — SHIPPED 2026-08-20.** `templates.js:786` disables their Continue
 button until the install link has been clicked:
 `?disabled=${loading || !installLinkClicked}`. It turns "the user probably
 installed it" into "the user at least opened the install page" — the honest bar
