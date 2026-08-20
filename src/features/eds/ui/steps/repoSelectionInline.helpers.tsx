@@ -163,19 +163,14 @@ export function computeRepoValid(
     }
     if (!selectedRepo || isLoading) return false;
 
-    // Every EDS path targets `main`: the Helix status URL in `githubAppService`,
-    // `DEFAULT_BRANCH` in `helixService`, and the template reset, which runs
-    // `git clone --depth 1 --branch main`. A repo defaulting to anything else
-    // cannot work, and fails in a way that names none of that — measured
-    // 2026-08-19 on `skukla/kukla-bodea` (only branch `master`): Helix answered
-    // `404 [admin] no such site` BEFORE authenticating, and the UI reported it
-    // as Adobe failing to answer. Ticking the reset would not have saved it
-    // either; the clone would have failed at Phase 1.
-    //
-    // UNKNOWN is not a rejection. A repo list cached before `defaultBranch`
-    // existed carries none, and blocking on its absence would strand those
-    // users over a field they cannot see.
-    if (selectedRepo.defaultBranch && selectedRepo.defaultBranch !== 'main') return false;
+    // A non-`main` default branch does NOT block. It is surfaced as a warning at
+    // the point of choice instead (`RepoSelectionInline`), because the reason to
+    // care has moved three times in one session and a block needs a settled
+    // justification that a warning does not. What is settled: our seven
+    // `main--{repo}--{owner}` URL builders and the reset's
+    // `git clone --branch main` both assume it, so such a repo will not work —
+    // but the user, not our inference, gets to make that call.
+    // See `.rptc/backlog/2026-08-20-storefront-branch-is-hardcoded-main.md`.
 
     // A populated repo that is not a storefront cannot complete setup: the
     // steps that need scripts/scripts.js and scripts/delayed.js skip
@@ -284,52 +279,31 @@ export function resolveCodeSyncView(
     status: GitHubAppStatus,
     isRechecking: boolean,
     pendingReset = false,
-): { kind: 'checking' | 'verified' | 'needs-install' | 'unverifiable' | 'pending-reset' } {
+): { kind: 'checking' | 'verified' | 'needs-install' | 'cannot-verify' } {
     if (status.isChecking || isRechecking) return { kind: 'checking' };
-    if (status.isInstalled === true) return { kind: 'verified' };
 
     // Not yet asked. Never "missing" — we have no answer to report.
     if (status.isInstalled === null) return { kind: 'checking' };
 
-    // An undetermined check OUTRANKS a pending reset. `undetermined` means Helix
-    // refused our credential or was unreachable — a problem the reset does not
-    // fix and that will bite again at Phase 3. Telling the user "Code Sync is
-    // verified after setup" would hide it behind reassurance.
-    if (status.undetermined) return { kind: 'unverifiable' };
+    // The two DEFINITIVE shapes, both read off the body's `code.status` on an
+    // outer 200 (`githubAppService.checkHelixStatus`): sync is working, or Helix
+    // knows this repo and reports no code sync for it. These are measurements.
+    if (status.isInstalled === true) return { kind: 'verified' };
+    if (status.codeStatus === 404) return { kind: 'needs-install' };
 
-    // The repo is not a storefront YET and is queued for reset-from-template.
-    // Helix answers 404 "no such site" because the files that make it a site do
-    // not exist — correct, and permanent until `storefrontSetupPhase1` performs
-    // the reset, long after this wizard step. Reporting that as a failed check
-    // blames latency for a known state and offers a re-check that cannot come
-    // good; the reporter on 2026-08-19 tried three times over six minutes,
-    // each firing a Helix code sync and polling it to exhaustion.
+    // Everything else is the same fact wearing different clothes: WE CANNOT
+    // TELL. An outer 404 carries no `code.status` to read; a 401/403/5xx is
+    // Helix declining; a repo awaiting its reset is not a site yet. This step
+    // grew a view per diagnosis — five of them — each added to explain what the
+    // one before it got wrong, and every one of them ended at the same place:
+    // install it if you have not, because we cannot check.
     //
-    // Checked AFTER `verified`: a pending reset must never downgrade a real
-    // answer, only explain the absence of one.
-    if (pendingReset) return { kind: 'pending-reset' };
-
-    // Undetermined means the check never resolved — a refused credential or an
-    // unreachable service — and that says NOTHING about the app. Reporting it as
-    // missing sends the user to reinstall one that is already there, which is
-    // exactly what the old "Registering..." row did.
-    //
-    // Read the HANDLER's verdict, not the absence of a number. It sends
-    // `installUrl` when it is confident enough to offer the install and withholds
-    // it when it is not. `githubAppService` warns about the shortcut this used to
-    // take: `httpNotFound` is the only signal meaning "Helix has never heard of
-    // this repo", and callers "must not re-derive it from codeStatus === undefined,
-    // which is equally true of a 401/403/5xx".
-    //
-    // That shortcut is why a brand-new repository — Helix 404, no `code.status` to
-    // report, install genuinely required — showed "Couldn't verify" and offered
-    // nothing but a re-check that could never come good.
-
-    // Positive evidence either way: the handler offered somewhere to install, or
-    // Helix reported an actual code.status. With neither, claim nothing.
-    if (status.installUrl || status.codeStatus !== undefined) return { kind: 'needs-install' };
-
-    return { kind: 'unverifiable' };
+    // What we noticed on the way (a non-`main` default branch, a repo that is
+    // not a storefront) is worth SAYING, but it is a sentence in this view, not
+    // a screen of its own. `pendingReset` is kept as an input for that sentence
+    // rather than as a separate verdict.
+    void pendingReset;
+    return { kind: 'cannot-verify' };
 }
 
 export function computeCodeSyncValid(
@@ -436,38 +410,6 @@ export function buildAppStatusFromResult(result: GitHubAppCheckResult): GitHubAp
  * install steps grow past it and scroll. One state centred and the next
  * top-aligned is the jump reported as "the message is too high in the web view".
  */
-/**
- * What to say when Helix DECLINED to answer.
- *
- * `unverifiable` means a refused credential or an unreachable service — not a
- * verdict about the site, and emphatically not one about the App. If the
- * preconditions we can check ourselves are bad, naming those is still true and
- * still useful, because they hold whatever Helix thinks. But when they are
- * clean we know nothing, and must say so: `explainSiteUnknown` would otherwise
- * fall through to "the App is probably missing", which asserts a cause we never
- * measured and sends the user to reinstall — the eleven-reinstalls failure this
- * module exists to prevent.
- *
- * @param checks - The preconditions we can verify without Helix
- * @param repoFullName - `owner/repo`
- * @returns A sentence that claims only what is known
- */
-function describeUnverifiable(
-    checks: { defaultBranch?: string; missingFiles?: string[] },
-    repoFullName: string,
-): string {
-    const reason = explainSiteUnknown(checks);
-    if (reason.kind !== 'app-probably-missing') {
-        return describeSiteUnknown(reason, repoFullName);
-    }
-    return (
-        `Adobe did not answer for ${repoFullName}, so we cannot tell whether AEM Code Sync `
-        + 'is installed. This does NOT mean it is missing — a new repository can take a few '
-        + 'minutes to register, and a refused sign-in looks the same from here. Check again '
-        + 'in a moment.'
-    );
-}
-
 export function CodeSyncStatusView({
     createdRepo,
     selectedRepoFullName,
@@ -532,83 +474,21 @@ export function CodeSyncStatusView({
         );
     }
 
-    if (view.kind === 'pending-reset') {
-        // Informational, not a warning: nothing has gone wrong and there is
-        // nothing for the user to do. Deliberately offers no "Check Again" —
-        // the answer cannot change until setup resets the repo, and a button
-        // that re-asks a settled question is what made this look like a wall.
-        return (
-            <CenteredFeedbackContainer fill>
-                <StatusDisplay
-                    variant="info"
-                    title="Code Sync is verified after setup"
-                    height="auto"
-                >
-                    <Text UNSAFE_className="text-sm text-gray-600">
-                        {owner}/{repo} is not an Edge Delivery storefront yet, so Adobe has no site
-                        to report on. Setup will reset it from the template first, then verify AEM
-                        Code Sync. You can continue.
-                    </Text>
-                </StatusDisplay>
-            </CenteredFeedbackContainer>
-        );
-    }
-
-    if (view.kind === 'unverifiable') {
-        // Distinct from "not installed" ON PURPOSE. Adobe refusing the credential
-        // says nothing about the app, and telling someone to install one that is
-        // already there is the wrong remedy.
-        return (
-            <CenteredFeedbackContainer fill>
-                <StatusDisplay
-                    variant="warning"
-                    title="Couldn't verify AEM Code Sync"
-                    height="auto"
-                    actions={[
-                        {
-                            label: CODE_SYNC_RECHECK_ACTION,
-                            variant: 'accent',
-                            onPress: onCheckAgain,
-                        },
-                    ]}
-                >
-                    <Text UNSAFE_className="text-sm text-gray-600">
-                        {describeUnverifiable(siteChecks ?? {}, `${owner}/${repo}`)}
-                    </Text>
-                </StatusDisplay>
-            </CenteredFeedbackContainer>
-        );
-    }
-
-    // The remaining branch used to assume the App is missing. A Helix 404 does
-    // not say that — it says Helix does not know the site, which has causes the
-    // install flow cannot fix. Offer the install ONLY where it is the remedy.
-    const siteReason = explainSiteUnknown(siteChecks ?? {});
-    if (siteReason.kind !== 'app-probably-missing') {
-        return (
-            <CenteredFeedbackContainer fill>
-                <StatusDisplay
-                    variant={siteReason.kind === 'wrong-default-branch' ? 'warning' : 'info'}
-                    title={
-                        siteReason.kind === 'wrong-default-branch'
-                            ? 'This repository uses a different default branch'
-                            : 'Code Sync is verified after setup'
-                    }
-                    height="auto"
-                >
-                    <Text UNSAFE_className="text-sm text-gray-600">
-                        {describeSiteUnknown(siteReason, `${owner}/${repo}`)}
-                    </Text>
-                </StatusDisplay>
-            </CenteredFeedbackContainer>
-        );
-    }
+    // ONE view for every shape of "we cannot tell". Says what we noticed if we
+    // noticed anything, shows the install steps, and always lets the user past —
+    // our signal is a guess here, and a guess must never be a wall.
+    const noticed = explainSiteUnknown(siteChecks ?? {});
+    const definitive = view.kind === 'needs-install';
 
     return (
         <CenteredFeedbackContainer fill>
             <StatusDisplay
                 variant="info"
-                title="Install the AEM Code Sync App"
+                title={
+                    definitive
+                        ? 'Install the AEM Code Sync App'
+                        : 'Make sure AEM Code Sync is installed'
+                }
                 height="auto"
                 actions={[
                     {
@@ -623,18 +503,27 @@ export function CodeSyncStatusView({
                     },
                 ]}
             >
+                {/* What we noticed, when we noticed something. A sentence, not a
+                    screen — and omitted entirely when the App really is the
+                    answer, since the steps below already say it. */}
+                {!definitive && noticed.kind !== 'app-probably-missing' && (
+                    <Text UNSAFE_className="text-sm text-gray-600">
+                        {describeSiteUnknown(noticed, `${owner}/${repo}`)}
+                    </Text>
+                )}
                 <NumberedInstructions
                     description={buildCodeSyncInstallSummary(owner, repo)}
                     instructions={buildCodeSyncInstallSteps(owner, repo)}
                 />
-                {/* Name the gate. Continue is held until the install page is
-                    opened, and a disabled button with no stated reason is the
-                    failure this whole screen exists to stop repeating. */}
-                {!installLinkOpened && (
+                {!definitive && (
                     <Text UNSAFE_className="text-sm text-gray-600">
-                        Open the install page to continue. We cannot confirm the app from
-                        here, so this is your confirmation — you can install it now or check
-                        that it is already there.
+                        We cannot confirm this from here. Install it if you have not, then
+                        continue — setup checks again before it publishes anything.
+                    </Text>
+                )}
+                {!installLinkOpened && !definitive && (
+                    <Text UNSAFE_className="text-sm text-gray-600">
+                        Open the install page to continue.
                     </Text>
                 )}
             </StatusDisplay>

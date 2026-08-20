@@ -259,8 +259,14 @@ describe('RepoSelectionInline', () => {
 
             await renderInline(state, 'code-sync');
 
+            // Collapsed 2026-08-20: the distinction now lives in the TITLE rather
+            // than in a separate view. "Make sure…" offers the install without
+            // asserting it is missing; the imperative "Install the…" is reserved
+            // for the one DEFINITIVE shape (inner code.status 404).
             await waitFor(() => {
-                expect(screen.getByText(/Couldn't verify AEM Code Sync/i)).toBeInTheDocument();
+                expect(
+                    screen.getByText(/Make sure AEM Code Sync is installed/i)
+                ).toBeInTheDocument();
             });
             expect(screen.queryByText(/Install the AEM Code Sync App/i)).not.toBeInTheDocument();
         });

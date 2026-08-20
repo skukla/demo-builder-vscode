@@ -688,7 +688,7 @@ describe('resolveCodeSyncView', () => {
         // to reinstall an app that is already there.
         expect(
             resolveCodeSyncView(status({ isInstalled: false, codeStatus: undefined }), false).kind,
-        ).toBe('unverifiable');
+        ).toBe('cannot-verify');
     });
 
     it('treats a not-yet-checked status as checking, never as missing', () => {

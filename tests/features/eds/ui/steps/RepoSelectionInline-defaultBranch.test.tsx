@@ -23,6 +23,16 @@
  * at Phase 1 even if the user had got that far.
  *
  * So this is caught where the repo is CHOSEN, with the real reason.
+ *
+ * SOFTENED 2026-08-20 from a block to a warning. Two reasons. The justification
+ * moved three times in one session (ours / Adobe's / unresolved — see
+ * `.rptc/backlog/2026-08-20-storefront-branch-is-hardcoded-main.md`), and a
+ * block needs a settled one where a warning does not. And a later probe showed
+ * the branch was never why Helix 404'd here: `admin.hlx.page` returns 401 for a
+ * KNOWN site on any ref, including a nonsense one, so the ref is not part of
+ * site identity. The repo still cannot work — our seven
+ * `main--{repo}--{owner}` builders and the reset's clone both assume `main` —
+ * but that is the user's call to override, not our inference's to enforce.
  */
 
 import { computeRepoValid } from '@/features/eds/ui/steps/repoSelectionInline.helpers';
@@ -41,15 +51,18 @@ function repo(defaultBranch?: string) {
 }
 
 describe('computeRepoValid — default branch', () => {
-    it('rejects a repo whose default branch is master', () => {
+    it('does NOT block a repo whose default branch is master', () => {
+        // Warned about at the point of choice instead. The user may know
+        // something we do not, and being stuck beats being wrong only when we
+        // are certain — which, here, we are not.
         expect(
             computeRepoValid('existing', notCreated, repo('master'), false, { kind: 'storefront' })
-        ).toBe(false);
+        ).toBe(true);
     });
 
-    it('rejects it even when a reset is ticked', () => {
-        // The reset would not save it: resetToTemplate clones --branch main,
-        // which does not exist on this repo.
+    it('still blocks a non-storefront until a reset is ticked, whatever the branch', () => {
+        // The readiness gate is unchanged and is the one that still holds: it
+        // rests on a measurement (files absent) rather than an inference.
         expect(
             computeRepoValid(
                 'existing',
@@ -57,7 +70,7 @@ describe('computeRepoValid — default branch', () => {
                 repo('master'),
                 false,
                 { kind: 'not-a-storefront', missing: ['head.html'] },
-                true
+                false
             )
         ).toBe(false);
     });
