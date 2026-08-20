@@ -597,11 +597,6 @@ export function RepoSelectionInline({
             {showAppStatus && (
                 <CodeSyncStatusView
                     pendingReset={readiness?.kind === 'not-a-storefront' && resetToTemplate}
-                    siteChecks={{
-                        defaultBranch: selectedRepo?.defaultBranch,
-                        missingFiles:
-                            readiness?.kind === 'not-a-storefront' ? readiness.missing : undefined,
-                    }}
                     createdRepo={edsConfig?.createdRepo}
                     selectedRepoFullName={selectedRepo?.fullName}
                     status={githubAppStatus}

@@ -29,7 +29,6 @@ import { getValidationState } from '@/core/ui/utils/validationState';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { sleep } from '@/core/utils/sleep';
 import { isValidRepositoryName } from '@/core/validation/normalizers';
-import { describeSiteUnknown, explainSiteUnknown } from '@/features/eds/utils/siteUnknownReason';
 import type { GitHubRepoItem } from '@/types/webview';
 
 /** GitHub App installation status tracking. */
@@ -333,7 +332,7 @@ export function computeCodeSyncValid(
     if (definitivelyMissing) return false;
 
     // The INFERRED missing App: an outer 404 carries no `code.status` to read
-    // (see `siteUnknownReason`), so the install prompt above it is a well-founded
+    // (the outer 404 has no body), so the install prompt above it is a well-founded
     // guess, not a measurement. Blocking on a guess strands whoever it is wrong
     // about; letting it through silently is how an existing-repo user reached
     // Phase 3 — and a halt — only AFTER Phase 1 had reset their repo and Phase 2
@@ -420,7 +419,6 @@ export function CodeSyncStatusView({
     onCheckAgain,
     onOpenInstallPage,
     pendingReset = false,
-    siteChecks,
     installLinkOpened = false,
 }: {
     /** Set in `new` mode once the repo exists. */
@@ -434,12 +432,6 @@ export function CodeSyncStatusView({
     onOpenInstallPage: () => void;
     /** The selected repo is not a storefront yet and is queued for reset. */
     pendingReset?: boolean;
-    /**
-     * What we can verify about the repo ourselves. A Helix 404 says only "no
-     * such site"; these are what let us name WHICH precondition is unmet
-     * instead of defaulting to "install the App".
-     */
-    siteChecks?: { defaultBranch?: string; missingFiles?: string[] };
     /** The user has opened the install page — the acknowledgement Continue waits on. */
     installLinkOpened?: boolean;
 }): React.ReactElement {
@@ -478,7 +470,6 @@ export function CodeSyncStatusView({
     // ONE view for every shape of "we cannot tell". Says what we noticed if we
     // noticed anything, shows the install steps, and always lets the user past —
     // our signal is a guess here, and a guess must never be a wall.
-    const noticed = explainSiteUnknown(siteChecks ?? {});
     const definitive = view.kind === 'needs-install';
 
     return (
@@ -504,27 +495,24 @@ export function CodeSyncStatusView({
                     },
                 ]}
             >
-                {/* What we noticed, when we noticed something. A sentence, not a
-                    screen — and omitted entirely when the App really is the
-                    answer, since the steps below already say it. */}
-                {!definitive && noticed.kind !== 'app-probably-missing' && (
-                    <Text UNSAFE_className="text-sm text-gray-600">
-                        {describeSiteUnknown(noticed, `${owner}/${repo}`)}
-                    </Text>
-                )}
+                {/* The summary and steps are shared with the mid-run install dialog
+                    and have already been trimmed once; do not pad around them.
+                    Three paragraphs were added here on 2026-08-20 and the screen
+                    became a wall — one repeating what the Repository step had
+                    just said about this repo, two saying in different words what
+                    the title and the buttons already carry.
+
+                    What is left: the title states the ask, the steps say what to
+                    do on GitHub, the buttons do it. The single line below earns
+                    its place only while Continue is held, because a disabled
+                    button with no stated reason is its own bug. */}
                 <NumberedInstructions
                     description={buildCodeSyncInstallSummary(owner, repo)}
                     instructions={buildCodeSyncInstallSteps(owner, repo)}
                 />
-                {!definitive && (
+                {!definitive && !installLinkOpened && (
                     <Text UNSAFE_className="text-sm text-gray-600">
-                        We cannot confirm this from here. Install it if you have not, then
-                        continue — setup checks again before it publishes anything.
-                    </Text>
-                )}
-                {!installLinkOpened && !definitive && (
-                    <Text UNSAFE_className="text-sm text-gray-600">
-                        Open the install page to continue.
+                        We cannot confirm this from here — open the install page to continue.
                     </Text>
                 )}
             </StatusDisplay>

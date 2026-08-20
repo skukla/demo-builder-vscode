@@ -180,8 +180,9 @@ async function verifyCodeSync(
             // Worded as the inference it is. What we measured is that Helix does
             // not know this site; `admin.hlx.page/status` answers about the SITE,
             // not the App, and returns the same 404 for several causes (see
-            // `siteUnknownReason`). By this point the repo has been reset and
-            // fstab pushed, so a missing App is much the likeliest cause — but
+            // `.rptc/backlog/2026-08-19-code-sync-detection-limits.md`). By this
+            // point the repo has been reset and fstab pushed, so a missing App
+            // is much the likeliest cause — but
             // stating it as fact is what sent a user to reinstall eleven times,
             // and on a team org it sends their admin on the same errand.
             const message = isTeamOrg
