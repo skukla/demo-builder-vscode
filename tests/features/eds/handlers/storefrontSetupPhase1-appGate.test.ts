@@ -1,18 +1,27 @@
 /**
  * Phase 1 existing-repo AEM Code Sync gate — ordering enforcement.
  *
- * The gate used to live in Phase 2 (progress 28). By the time it ran, Phase 1
- * had already executed `resetToTemplate` (progress 6) and Phase 2 had pushed
- * fstab.yaml, installed block collections, and vendored the smart-404 and
- * Quick Edit scripts. A user whose repo lacked the App had it rewritten and was
- * only then told setup could not continue.
+ * Where the gate runs depends on whether the repo is being reset, because that
+ * decides whether the question can be answered at all.
  *
- * It now runs in Phase 1, between resolving the repo and the first write. These
- * tests assert the ORDER, not merely that a check happens — a gate that fires
- * after the reset is the bug, and would pass any test that only counts calls.
+ * `admin.hlx.page/status` reports on the SITE, not the App. A repo that is not
+ * a storefront yet has no site, so it answers `404 no such site` however the App
+ * is configured. Measured on skukla/kukla-bodea 2026-08-20: GitHub listed the
+ * repo under the AEM Code Sync installation, and the status endpoint 404'd
+ * anyway — 28 minutes after a code-sync trigger Helix had accepted.
  *
- * The existing-repo branch had no Phase 1 coverage before this file, despite
- * `storefrontSetupPhase1-pin.test.ts`'s docblock naming it.
+ * So:
+ * - **No reset** — the repo is already a storefront and can answer. Gate first,
+ *   before any write. That is the job this file was written for: the gate used
+ *   to live in Phase 2 (progress 28), after fstab.yaml, block collections and
+ *   the vendored smart-404 / Quick Edit scripts had landed in a repo the user
+ *   asked to preserve.
+ * - **Reset** — the repo cannot answer yet. Gate AFTER the reset, the first
+ *   moment it can succeed.
+ *
+ * These tests assert the ORDER in both directions, not merely that a check
+ * happens — either gate firing on the wrong side of the reset is the bug, and
+ * would pass any test that only counts calls.
  */
 
 import { executePhaseGitHubRepo } from '@/features/eds/handlers/storefrontSetupPhase1';
@@ -101,53 +110,94 @@ async function runPhase1(
     );
 }
 
-describe('Phase 1 existing repo — the App gate runs before any write', () => {
-    it('checks the App BEFORE resetting the repo to template', async () => {
+const NO_RESET = {
+    ...EXISTING_REPO_CONFIG,
+    resetToTemplate: false,
+} as unknown as StorefrontSetupStartPayload['edsConfig'];
+
+describe('a repo being RESET cannot answer until it has been reset', () => {
+    it('checks the App AFTER the reset, which is the first moment Helix can answer', async () => {
         await runPhase1(makeServices());
 
-        expect(callOrder).toEqual(['appCheck', 'resetToTemplate']);
+        expect(callOrder).toEqual(['resetToTemplate', 'appCheck']);
     });
 
-    it('does not touch the repo at all when the App is missing', async () => {
+    it('tells the resolver a push just landed, so a not-yet-registered site is not a missing App', async () => {
+        // Assert the ARGUMENT. The resolver is mocked, so it answers the same
+        // whether or not it was told to wait -- and without that flag a repo
+        // checked one second after its reset push reads as "App not installed".
+        await runPhase1(makeServices());
+
+        expect(mockResolve).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.anything(),
+            expect.anything(),
+            { awaitRegistration: true },
+        );
+    });
+
+    it('still halts, and still surfaces the install dialog, when the App is genuinely missing', async () => {
         mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 404 });
-        const services = makeServices();
 
-        const result = await runPhase1(services);
-
-        expect(services.githubRepoOps.resetToTemplate).not.toHaveBeenCalled();
-        expect(mockPin).not.toHaveBeenCalled();
-        expect(result).toMatchObject({
-            success: false,
-            awaitingGitHubApp: true,
-        });
-    });
-
-    it('does not touch the repo when Helix declines to answer', async () => {
-        // Undetermined is not "installed" — but it is also not the install
-        // dialog. Setup stops with the real reason and writes nothing.
-        mockResolve.mockResolvedValue({ kind: 'undetermined', httpStatus: 401 });
-        const services = makeServices();
-
-        const result = await runPhase1(services);
-
-        expect(services.githubRepoOps.resetToTemplate).not.toHaveBeenCalled();
-        expect(mockPin).not.toHaveBeenCalled();
-        expect(result?.success).toBe(false);
-        expect(result?.awaitingGitHubApp).toBeUndefined();
-    });
-
-    it('gates the no-reset path too — Phase 2 would still write to a preserved repo', async () => {
-        mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 404 });
-        const noReset = {
-            ...EXISTING_REPO_CONFIG,
-            resetToTemplate: false,
-        } as unknown as StorefrontSetupStartPayload['edsConfig'];
-
-        const result = await runPhase1(makeServices(), noReset);
+        const result = await runPhase1(makeServices());
 
         expect(result).toMatchObject({ success: false, awaitingGitHubApp: true });
     });
 
+    it('halts with the real reason, not the install dialog, when Helix declines to answer', async () => {
+        mockResolve.mockResolvedValue({ kind: 'undetermined', httpStatus: 401 });
+
+        const result = await runPhase1(makeServices());
+
+        expect(result?.success).toBe(false);
+        expect(result?.awaitingGitHubApp).toBeUndefined();
+    });
+});
+
+describe('a repo the user chose to PRESERVE is gated before any write', () => {
+    it('checks the App with no reset to wait for', async () => {
+        await runPhase1(makeServices(), NO_RESET);
+
+        expect(callOrder).toEqual(['appCheck']);
+    });
+
+    it('does NOT ask the resolver to wait — an outer 404 here is a settled answer', async () => {
+        // The repo is already a storefront, so nothing is about to register.
+        // Waiting would only delay a verdict that will not change.
+        await runPhase1(makeServices(), NO_RESET);
+
+        expect(mockResolve).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.anything(),
+            expect.anything(),
+            { awaitRegistration: false },
+        );
+    });
+
+    it('writes nothing when the App is missing — Phase 2 would land in a preserved repo', async () => {
+        mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 404 });
+        const services = makeServices();
+
+        const result = await runPhase1(services, NO_RESET);
+
+        expect(services.githubRepoOps.resetToTemplate).not.toHaveBeenCalled();
+        expect(mockPin).not.toHaveBeenCalled();
+        expect(result).toMatchObject({ success: false, awaitingGitHubApp: true });
+    });
+
+    it('writes nothing when Helix declines to answer', async () => {
+        mockResolve.mockResolvedValue({ kind: 'undetermined', httpStatus: 401 });
+        const services = makeServices();
+
+        const result = await runPhase1(services, NO_RESET);
+
+        expect(services.githubRepoOps.resetToTemplate).not.toHaveBeenCalled();
+        expect(mockPin).not.toHaveBeenCalled();
+        expect(result?.success).toBe(false);
+    });
+});
+
+describe('both paths, once the answer is good', () => {
     it('proceeds normally once the App is verified', async () => {
         const services = makeServices();
 

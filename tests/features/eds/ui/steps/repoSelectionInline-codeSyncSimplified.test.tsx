@@ -52,13 +52,32 @@ describe('resolveCodeSyncView — collapsed', () => {
         expect(resolveCodeSyncView(status, false).kind).toBe('cannot-verify');
     });
 
-    it('collapses a pending reset too — it is another way of not knowing yet', () => {
+    // Superseded 2026-08-20. A repo with no storefront content was collapsed into
+    // cannot-verify as "another way of not knowing yet". It is not the same thing:
+    // the others are questions we FAILED to answer, this is one that cannot be
+    // asked. `admin.hlx.page/status` reports on the SITE, and a repo with no
+    // storefront content has none, so it answers `404 no such site` however AEM
+    // Code Sync is configured. Measured on skukla/kukla-bodea: GitHub listed the
+    // repo under the installation and the endpoint 404'd anyway, 28 minutes after
+    // a code-sync trigger Helix had accepted.
+    //
+    // Collapsing it sent an install prompt to people who already had it installed
+    // -- the eleven-reinstalls failure in gentler wording.
+    it('gives a repo that cannot have a site yet its own answer, not a shrug', () => {
         expect(
             resolveCodeSyncView({ isChecking: false, isInstalled: false }, false, true).kind
-        ).toBe('cannot-verify');
+        ).toBe('after-setup');
     });
 
-    it('never lets a pending reset outrank a real answer', () => {
+    it('says so before it says "checking", since nothing will be asked', () => {
+        // The caller does not probe in this state, so `isInstalled` stays null.
+        // Ordered after `checking` this renders a spinner that never resolves.
+        expect(
+            resolveCodeSyncView({ isChecking: false, isInstalled: null }, false, true).kind
+        ).toBe('after-setup');
+    });
+
+    it('never lets it outrank a real answer', () => {
         expect(
             resolveCodeSyncView({ isChecking: false, isInstalled: true }, false, true).kind
         ).toBe('verified');

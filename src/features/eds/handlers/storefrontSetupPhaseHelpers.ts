@@ -19,11 +19,19 @@ import type { HandlerContext } from '@/types/handlers';
 
 /**
  * Check GitHub App installation for existing repos. Returns early result if not installed.
+ *
+ * @param context - handler context
+ * @param services - setup services
+ * @param repoInfo - the repo being checked
+ * @param options - `afterReset` when the repo was JUST rewritten from the template,
+ *   which changes what a `404 no such site` means. See the call site in
+ *   `storefrontSetupPhase1.executePhaseExistingRepo` for why the check moved.
  */
 export async function checkGitHubAppForExistingRepo(
     context: HandlerContext,
     services: SetupServices,
     repoInfo: RepoInfo,
+    options: { afterReset?: boolean } = {},
 ): Promise<StorefrontSetupResult | null> {
     const logger = context.logger;
     const { githubAppService } = services;
@@ -37,7 +45,9 @@ export async function checkGitHubAppForExistingRepo(
     logger.info(
         `[Storefront Setup] Checking GitHub App for existing repo: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
     );
-    const outcome = await resolveAppInstallation(githubAppService, repoInfo, logger);
+    const outcome = await resolveAppInstallation(githubAppService, repoInfo, logger, {
+        awaitRegistration: options.afterReset === true,
+    });
 
     if (outcome.kind === 'undetermined') {
         return {

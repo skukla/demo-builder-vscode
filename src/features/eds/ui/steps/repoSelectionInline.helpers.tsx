@@ -279,31 +279,42 @@ export function shouldShowAppStatus(
 export function resolveCodeSyncView(
     status: GitHubAppStatus,
     isRechecking: boolean,
-    pendingReset = false,
-): { kind: 'checking' | 'verified' | 'needs-install' | 'cannot-verify' } {
+    siteNotPossibleYet = false,
+): { kind: 'checking' | 'verified' | 'needs-install' | 'cannot-verify' | 'after-setup' } {
     if (status.isChecking || isRechecking) return { kind: 'checking' };
+
+    // The two DEFINITIVE shapes first, both read off the body's `code.status` on
+    // an outer 200 (`githubAppService.checkHelixStatus`): sync is working, or
+    // Helix knows this repo and reports no code sync for it. These are
+    // measurements, and they outrank everything below — including
+    // `siteNotPossibleYet`, which is a structural inference about what Helix CAN
+    // answer. If it turns out Helix can already see the site, it can.
+    if (status.isInstalled === true) return { kind: 'verified' };
+    if (status.codeStatus === 404) return { kind: 'needs-install' };
+
+    // No storefront content means Helix has no SITE for this repo — and
+    // `admin.hlx.page/status` reports on the site, not the App. It answers
+    // `404 no such site` however AEM Code Sync is configured, so the question is
+    // unanswerable here rather than merely unanswered. Measured on
+    // skukla/kukla-bodea 2026-08-20: GitHub listed the repo under the AEM Code
+    // Sync installation and the endpoint 404'd anyway, 28 minutes after a
+    // code-sync trigger Helix had accepted.
+    //
+    // Above `checking` because the caller does not probe in this state, so
+    // `isInstalled` stays null and would otherwise spin forever. Phase 1 asks
+    // once the reset has made the repo a storefront, which is the first moment
+    // an answer exists.
+    if (siteNotPossibleYet) return { kind: 'after-setup' };
 
     // Not yet asked. Never "missing" — we have no answer to report.
     if (status.isInstalled === null) return { kind: 'checking' };
 
-    // The two DEFINITIVE shapes, both read off the body's `code.status` on an
-    // outer 200 (`githubAppService.checkHelixStatus`): sync is working, or Helix
-    // knows this repo and reports no code sync for it. These are measurements.
-    if (status.isInstalled === true) return { kind: 'verified' };
-    if (status.codeStatus === 404) return { kind: 'needs-install' };
-
     // Everything else is the same fact wearing different clothes: WE CANNOT
     // TELL. An outer 404 carries no `code.status` to read; a 401/403/5xx is
-    // Helix declining; a repo awaiting its reset is not a site yet. This step
-    // grew a view per diagnosis — five of them — each added to explain what the
-    // one before it got wrong, and every one of them ended at the same place:
-    // install it if you have not, because we cannot check.
-    //
-    // What we noticed on the way (a non-`main` default branch, a repo that is
-    // not a storefront) is worth SAYING, but it is a sentence in this view, not
-    // a screen of its own. `pendingReset` is kept as an input for that sentence
-    // rather than as a separate verdict.
-    void pendingReset;
+    // Helix declining. This step grew a view per diagnosis — five of them —
+    // each added to explain what the one before it got wrong, and every one
+    // ended at the same place: install it if you have not, because we cannot
+    // check.
     return { kind: 'cannot-verify' };
 }
 
@@ -435,7 +446,7 @@ export function CodeSyncStatusView({
     recheckMessage,
     onCheckAgain,
     onOpenInstallPage,
-    pendingReset = false,
+    siteNotPossibleYet = false,
 }: {
     /** Set in `new` mode once the repo exists. */
     createdRepo?: { owner: string; name: string };
@@ -446,10 +457,14 @@ export function CodeSyncStatusView({
     recheckMessage: string;
     onCheckAgain: () => void;
     onOpenInstallPage: () => void;
-    /** The selected repo is not a storefront yet and is queued for reset. */
-    pendingReset?: boolean;
+    /**
+     * The repo has no storefront content, so Helix has no site for it and the
+     * status endpoint cannot answer about AEM Code Sync at all. See
+     * {@link resolveCodeSyncView}.
+     */
+    siteNotPossibleYet?: boolean;
 }): React.ReactElement {
-    const view = resolveCodeSyncView(status, isRechecking, pendingReset);
+    const view = resolveCodeSyncView(status, isRechecking, siteNotPossibleYet);
     // Unconditional: every branch below returns, so this must precede them all.
     const longWait = useElapsedStage(view.kind === 'checking', CODE_SYNC_CHECK_STAGES);
     const [fallbackOwner, fallbackRepo] = (selectedRepoFullName ?? '/').split('/');
@@ -477,6 +492,30 @@ export function CodeSyncStatusView({
     // was centered, so the pane's content jumped to the top the moment the check
     // finished — the same view, in a different place, for no reason the user can
     // see. `CenteredFeedbackContainer` is the house treatment for exactly this.
+    if (view.kind === 'after-setup') {
+        return (
+            <CenteredFeedbackContainer fill>
+                <StatusDisplay
+                    variant="info"
+                    title="Code Sync is checked after setup"
+                    height="auto"
+                    actions={[
+                        {
+                            label: CODE_SYNC_INSTALL_ACTION,
+                            variant: 'secondary',
+                            onPress: onOpenInstallPage,
+                        },
+                    ]}
+                >
+                    <Text UNSAFE_className="text-sm text-gray-600">
+                        {`Adobe can't see ${owner}/${repo} yet, because it isn't a storefront. ` +
+                            'Setup will fix that, and verify Code Sync straight afterwards.'}
+                    </Text>
+                </StatusDisplay>
+            </CenteredFeedbackContainer>
+        );
+    }
+
     if (view.kind === 'verified') {
         return (
             <CenteredFeedbackContainer fill>

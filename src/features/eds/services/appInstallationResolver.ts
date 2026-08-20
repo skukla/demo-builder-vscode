@@ -24,6 +24,48 @@ import type { Logger } from '@/types/logger';
 const APP_CHECK_RETRY_DELAY_MS = 2000;
 
 /**
+ * How long to wait for Helix to register a site after a push, when the caller
+ * says one has just happened.
+ *
+ * 10 x 2s = 20s, matching the code-bus warm-up `storefrontSetupPhase3` already
+ * budgets for the same repo a moment later. Nobody has measured how long the
+ * AEM Code Sync webhook actually takes to register a site, so this is a starting
+ * budget, not a finding — each attempt logs, so the first real runs will say.
+ */
+const REGISTRATION_WAIT_ATTEMPTS = 10;
+const REGISTRATION_WAIT_DELAY_MS = 2000;
+
+/** Options for {@link resolveAppInstallation}. */
+export interface ResolveAppInstallationOptions {
+    /**
+     * A push to this repo has JUST happened, so `404 no such site` may simply
+     * mean Helix has not caught up yet — the AEM Code Sync webhook fires on the
+     * push and registration follows.
+     *
+     * Default false, because for every other caller an outer 404 is a settled
+     * answer and waiting on it only delays the verdict. Measured 2026-08-20:
+     * a repo that is not a storefront 404s permanently, 28 minutes after a
+     * successful code-sync trigger. Only set this where a push has just landed.
+     */
+    awaitRegistration?: boolean;
+}
+
+/**
+ * Is this outcome the bare outer 404 — "Helix has no site for this repo"?
+ *
+ * Distinguished from the INNER 404 (`code.status: 404`, meaning Helix knows the
+ * site and has no code sync for it) by which field carries the number. Only the
+ * outer one is worth waiting on after a push; the inner one is already a real
+ * answer about a site that exists.
+ *
+ * @param check - the raw check result
+ * @returns true when Helix reported no such site
+ */
+function isSiteNotRegistered(check: { httpStatus?: number; codeStatus?: number }): boolean {
+    return check.httpStatus === 404 && check.codeStatus === undefined;
+}
+
+/**
  * Outcome of resolving whether AEM Code Sync is installed on a repo.
  *
  * The third case is the one that matters. Helix can decline to answer — and a
@@ -67,16 +109,35 @@ export function formatAdminDiagnostics(d: {
  * @param githubAppService - Service performing the Helix status check
  * @param repoInfo - Repo being checked
  * @param logger - Logger for diagnostic breadcrumbs
+ * @param options - See {@link ResolveAppInstallationOptions}
  * @returns The classified outcome
  */
 export async function resolveAppInstallation(
     githubAppService: Pick<GitHubAppService, 'isAppInstalled'>,
     repoInfo: RepoInfo,
     logger: Logger,
+    options: ResolveAppInstallationOptions = {},
 ): Promise<AppInstallationOutcome> {
     const { repoOwner, repoName } = repoInfo;
 
     let check = await githubAppService.isAppInstalled(repoOwner, repoName);
+
+    // A push has just landed and Helix has no site yet. Unlike every other
+    // not-installed answer, this one is EXPECTED to change on its own: the AEM
+    // Code Sync webhook fires on the push and the site appears. Waiting here is
+    // what stops a freshly reset repo being reported as "App not installed"
+    // purely because we asked one second too early.
+    if (options.awaitRegistration && !check.isInstalled && isSiteNotRegistered(check)) {
+        for (let attempt = 1; attempt <= REGISTRATION_WAIT_ATTEMPTS; attempt++) {
+            logger.info(
+                `[Storefront Setup] Waiting for Helix to register ${repoOwner}/${repoName} ` +
+                    `(attempt ${attempt}/${REGISTRATION_WAIT_ATTEMPTS})`,
+            );
+            await sleep(REGISTRATION_WAIT_DELAY_MS);
+            check = await githubAppService.isAppInstalled(repoOwner, repoName);
+            if (!isSiteNotRegistered(check)) break;
+        }
+    }
 
     // Only an undetermined answer is worth retrying. A definitive "not
     // installed" won't change, and retrying it just delays the install prompt.

@@ -271,6 +271,79 @@ describe('RepoSelectionInline', () => {
             expect(screen.queryByText(/Install the AEM Code Sync App/i)).not.toBeInTheDocument();
         });
 
+        describe('a repo that cannot have a site yet', () => {
+            /**
+             * `admin.hlx.page/status` reports on the SITE, not the App. A repo with
+             * no storefront content has no site, so it answers `404 no such site`
+             * however AEM Code Sync is configured.
+             *
+             * Measured on skukla/kukla-bodea 2026-08-20: GitHub listed the repo
+             * under the AEM Code Sync installation, and the endpoint 404'd anyway
+             * -- 28 minutes after a code-sync trigger Helix had accepted. So the
+             * question is not merely unanswered here, it is unanswerable, and
+             * asking it produced an install prompt aimed at someone who already
+             * had it installed.
+             *
+             * The first assertion is the load-bearing one, and it is about the
+             * CALL. `webviewClient` is mocked, so it answers the same whether or
+             * not we ask -- only the absence of the request distinguishes "we know
+             * better than to ask" from "we asked and ignored it". On the Check
+             * Again path that request also fires a code-sync trigger against the
+             * user's repository, for nothing.
+             */
+            const notAStorefront = (type: string) =>
+                type === 'check-repo-readiness'
+                    ? Promise.resolve({
+                          success: true,
+                          readiness: { kind: 'not-a-storefront', missing: ['scripts/scripts.js'] },
+                      })
+                    : Promise.resolve({ success: true, isInstalled: false, codeStatus: 404 });
+
+            const selected = () =>
+                createDefaultState({
+                    repoMode: 'existing',
+                    selectedRepo: { id: 'r1', name: 'kukla-bodea', fullName: 'skukla/kukla-bodea' },
+                });
+
+            it('never asks Adobe a question Adobe cannot answer', async () => {
+                mockRequest.mockImplementation(notAStorefront);
+
+                await renderInline(selected(), 'code-sync');
+
+                await waitFor(() => {
+                    expect(screen.getByText(/checked after setup/i)).toBeInTheDocument();
+                });
+                expect(mockRequest).not.toHaveBeenCalledWith(
+                    'check-github-app',
+                    expect.anything(),
+                );
+            });
+
+            it('says why, instead of telling them to install what they have', async () => {
+                mockRequest.mockImplementation(notAStorefront);
+
+                await renderInline(selected(), 'code-sync');
+
+                await waitFor(() => {
+                    expect(screen.getByText(/isn't a storefront/i)).toBeInTheDocument();
+                });
+                expect(
+                    screen.queryByText(/Install the AEM Code Sync App/i),
+                ).not.toBeInTheDocument();
+            });
+
+            it('does not hold Continue on a question it declined to ask', async () => {
+                mockRequest.mockImplementation(notAStorefront);
+
+                await renderInline(selected(), 'code-sync');
+
+                await waitFor(() => {
+                    expect(screen.getByText(/checked after setup/i)).toBeInTheDocument();
+                });
+                expect(mockOnCodeSyncValidChange).toHaveBeenLastCalledWith(true);
+            });
+        });
+
         it('shows the install flow for an EXISTING repo too (the old dead end)', async () => {
             // Previously the modal returned null unless `repoMode === 'new'`, so a
             // selected repo missing the app was blocked by computeCodeSyncValid
