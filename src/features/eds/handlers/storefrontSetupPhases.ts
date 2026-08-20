@@ -174,7 +174,6 @@ async function runConfigCodeSyncPhases(
                 edsConfig,
                 services,
                 repoInfo,
-                signal,
             );
             if (phase3Result) {
                 return {

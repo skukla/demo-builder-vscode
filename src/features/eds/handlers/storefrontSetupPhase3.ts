@@ -8,15 +8,13 @@
  */
 
 import {
-    buildUndeterminedAppCheckError,
+    formatAdminDiagnostics,
     resolveAppInstallation,
 } from '../services/appInstallationResolver';
 import { registerConfigurationService } from './configServiceRegistration';
 import { configureDaLivePermissions } from './edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
-import { sleep } from '@/core/utils/sleep';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { HandlerContext } from '@/types/handlers';
 
 /**
@@ -27,7 +25,6 @@ export async function executePhaseCodeSync(
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
     services: SetupServices,
     repoInfo: RepoInfo,
-    signal: AbortSignal,
 ): Promise<StorefrontSetupResult | null> {
     const logger = context.logger;
     const { helixService, daLiveAuthService, daLiveTokenProvider } = services;
@@ -37,9 +34,6 @@ export async function executePhaseCodeSync(
         message: 'Verifying code synchronization...',
         progress: 40,
     });
-
-    const codeSyncResult = await verifyCodeSync(context, services, repoInfo, signal, edsConfig);
-    if (codeSyncResult) return codeSyncResult;
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'code-sync',
@@ -90,6 +84,11 @@ export async function executePhaseCodeSync(
 
     await registerConfigurationService(context, services, repoInfo, edsConfig, logger);
 
+    // NOW the App can be verified, and this is the only place in the whole flow
+    // where that is true. See `confirmCodeSync`.
+    const codeSyncVerdict = await confirmCodeSync(context, services, repoInfo, edsConfig);
+    if (codeSyncVerdict) return codeSyncVerdict;
+
     await context.sendMessage('storefront-setup-progress', {
         phase: 'site-config',
         message: 'Site configuration complete',
@@ -99,179 +98,124 @@ export async function executePhaseCodeSync(
     return null;
 }
 
-// Warm-up wait after the App-installed check passes. 10 × 2s = 20s caps the
-// worst-case latency before downstream phases reference the bus. App-installed
-// repos typically settle in under 10s in practice; longer warm-ups added
-// latency without changing correctness now that the App check is the gate.
-const CODE_SYNC_MAX_ATTEMPTS = 10;
-const CODE_SYNC_POLL_INTERVAL_MS = 2000;
-
 /**
- * Verify the AEM Code Sync GitHub App is installed, then wait for the code
- * bus to warm up.
+ * Verify AEM Code Sync, after the site exists.
  *
- * Ground-truth ordering is load-bearing. The code bus retains files seeded
- * during initial template setup (e.g., `scripts/aem.js` pushed by DA.live or
- * a template-clone bootstrap) even when the GitHub App is not installed on
- * the user's repo. A poll that treats file fetchability as proof of sync
- * therefore produces a false positive — it sees the seeded boilerplate, calls
- * verification done, and lets the user finish setup. Their *next* push then
- * 404s on the bus because no GitHub → Helix webhook fires without the App.
+ * Every earlier check in this pipeline asked before there was anything to ask
+ * about. `admin.hlx.page/status` reports on the SITE, and in Helix 5 a site is a
+ * Configuration Service record — created by the `registerConfigurationService`
+ * call immediately above this one. Measured on skukla/kukla-bodea 2026-08-20:
  *
- * Fix: check `isAppInstalled` first. If the App is missing, surface the
- * install dialog and stop the phase — never poll. If the App is installed,
- * the existing poll is preserved as a warm-up wait for sync to settle before
- * downstream phases reference the bus.
+ *   14:33:27.865  [ConfigAccess] access indeterminate (404)   <- no site
+ *   14:33:34.018  PUT /config/skukla/sites/kukla-bodea.json -> 201 OK
+ *   ... and /status went 404 -> 401, aem.page 404 -> 200
+ *
+ * So this is the first and only moment an App verdict means anything. Before
+ * it, `installed=false` said nothing at all — which is how a user whose App was
+ * installed the whole time got told eleven times to install it.
+ *
+ * It also REPORTS SUCCESS, not just failure. A check that only speaks when it
+ * fails is indistinguishable from a check that never ran, and that ambiguity is
+ * most of what made this hard to diagnose: "no green tick" looked identical to
+ * "silently skipped".
+ *
+ * Only the inner `code.status: 404` halts — Helix having the site and reporting
+ * no code sync for it. Anything else (a refused credential, an unreachable
+ * service, a site still settling) is a failed CHECK, not a missing App, and must
+ * not block a setup that has otherwise succeeded.
+ *
+ * @param context - handler context
+ * @param services - setup services
+ * @param repoInfo - the repo being verified
+ * @returns an early result when the App is definitively missing, else null
  */
-async function verifyCodeSync(
+async function confirmCodeSync(
     context: HandlerContext,
     services: SetupServices,
     repoInfo: RepoInfo,
-    signal: AbortSignal,
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
 ): Promise<StorefrontSetupResult | null> {
     const logger = context.logger;
     const { githubAppService } = services;
 
-    try {
-        // 1. Ground truth — is the AEM Code Sync GitHub App installed on this repo?
-        //    The check can fail transiently (network blip, Helix 5xx, parse error).
-        //    Since the dialog this gates is disruptive — it asks the user to leave
-        //    the IDE and complete a GitHub install flow — give a flaky first check
-        //    exactly one short retry before declaring the App missing.
-        const outcome = await resolveAppInstallation(githubAppService, repoInfo, logger);
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'site-config',
+        message: 'Verifying AEM Code Sync...',
+        progress: 48,
+    });
 
-        // Helix declined to answer. Do NOT show the install dialog — a rejected
-        // credential says nothing about whether the App is installed, and the
-        // install flow cannot resolve it. Fail with the real reason instead.
-        if (outcome.kind === 'undetermined') {
-            return {
-                success: false,
-                error: buildUndeterminedAppCheckError(
-                    repoInfo,
-                    outcome.httpStatus,
-                    outcome.noCredential,
-                ),
-                ...repoInfo,
-            };
-        }
+    // The site was created seconds ago; code sync can lag it slightly. This is a
+    // legitimate wait — unlike every earlier one, the thing being waited for is
+    // genuinely on its way.
+    const outcome = await resolveAppInstallation(githubAppService, repoInfo, logger, {
+        awaitRegistration: true,
+    });
 
-        const initialCheck = {
-            isInstalled: outcome.kind === 'installed',
-            codeStatus: outcome.codeStatus,
-        };
-
-        // Same reason as Phase 1's gate: an outer 404 means Helix has no SITE for
-        // this repo, and nothing before `registerConfigurationService` (below, in
-        // this very phase) creates one. It is not evidence about the App. See
-        // `storefrontSetupPhaseHelpers.checkGitHubAppForExistingRepo` for the
-        // four-repo measurement.
-        //
-        // Continue, and let the post-registration check be the one that speaks.
-        const siteUnregistered =
-            outcome.kind === 'not-installed' &&
-            outcome.httpStatus === 404 &&
-            outcome.codeStatus === undefined;
-        if (!initialCheck.isInstalled && siteUnregistered) {
-            logger.info(
-                `[Storefront Setup] Helix has no site for ${repoInfo.repoOwner}/${repoInfo.repoName} yet ` +
-                    '— expected before registration. Deferring the App verdict.',
-            );
-            return null;
-        }
-
-        if (!initialCheck.isInstalled) {
-            const installUrl = githubAppService.getInstallUrl(
-                repoInfo.repoOwner,
-                repoInfo.repoName,
-            );
-
-            // Differentiate the install-prompt message based on whether the
-            // repo lives in the SC's personal namespace or a team org. SCs
-            // can install GitHub Apps on their own accounts (personal case);
-            // they typically cannot install on a team org without admin
-            // rights (team-org case), so the messaging needs to direct them
-            // to ask the org admin rather than implying they can fix it
-            // themselves.
-            const githubUser = edsConfig.githubAuth?.user?.login;
-            const isTeamOrg = !!githubUser && repoInfo.repoOwner !== githubUser;
-
-            // Worded as the inference it is. What we measured is that Helix does
-            // not know this site; `admin.hlx.page/status` answers about the SITE,
-            // not the App, and returns the same 404 for several causes (see
-            // `.rptc/backlog/2026-08-19-code-sync-detection-limits.md`). By this
-            // point the repo has been reset and fstab pushed, so a missing App
-            // is much the likeliest cause — but
-            // stating it as fact is what sent a user to reinstall eleven times,
-            // and on a team org it sends their admin on the same errand.
-            const message = isTeamOrg
-                ? `Adobe does not recognise ${repoInfo.repoOwner}/${repoInfo.repoName} as a site. ` +
-                  `The usual cause is that AEM Code Sync is not installed on ${repoInfo.repoOwner}. ` +
-                  `Installing it on a GitHub organization requires admin rights — ask your ` +
-                  `team admin to install it from: ${installUrl}`
-                : `Adobe does not recognise ${repoInfo.repoOwner}/${repoInfo.repoName} as a site. ` +
-                  'The usual cause is that the AEM Code Sync GitHub App is not installed on it.';
-
-            logger.info(
-                `[Storefront Setup] GitHub App not installed (isTeamOrg=${isTeamOrg}). Install URL: ${installUrl}`,
-            );
-
-            await context.sendMessage('storefront-setup-github-app-required', {
-                owner: repoInfo.repoOwner,
-                repo: repoInfo.repoName,
-                installUrl,
-                isTeamOrg,
-                message,
-            });
-
-            return {
-                success: false,
-                error: 'GitHub App installation required',
-                awaitingGitHubApp: true,
-                ...repoInfo,
-            };
-        }
-
-        // 2. App is installed — wait briefly for the bus to start serving the
-        //    boilerplate before downstream phases reference it. Exhaustion is
-        //    not fatal here; the App check above already confirmed sync will work.
-        const owner = encodeURIComponent(repoInfo.repoOwner);
-        const repo = encodeURIComponent(repoInfo.repoName);
-        const codeUrl = `https://admin.hlx.page/code/${owner}/${repo}/main/scripts/aem.js`;
-        let syncVerified = false;
-
-        for (let attempt = 0; attempt < CODE_SYNC_MAX_ATTEMPTS && !syncVerified; attempt++) {
-            if (signal.aborted) throw new Error('Operation cancelled');
-
-            try {
-                const response = await fetch(codeUrl, {
-                    method: 'GET',
-                    signal: AbortSignal.timeout(TIMEOUTS.QUICK),
-                });
-                if (response.ok) syncVerified = true;
-            } catch {
-                // Continue polling
-            }
-
-            if (!syncVerified && attempt < CODE_SYNC_MAX_ATTEMPTS - 1) {
-                // 2s interval (faster than TIMEOUTS.EDS_CODE_SYNC_POLL=5s) — code sync typically settles quickly
-                await sleep(CODE_SYNC_POLL_INTERVAL_MS);
-            }
-        }
-
-        if (syncVerified) {
-            logger.info('[Storefront Setup] Code sync verified');
-        } else if (initialCheck.codeStatus === 400) {
-            logger.info('[Storefront Setup] Code sync in progress (initializing), continuing...');
-        } else {
-            logger.warn(
-                `[Storefront Setup] Code sync warm-up exhausted (code.status: ${initialCheck.codeStatus}), continuing...`,
-            );
-        }
-    } catch (error) {
-        if (signal.aborted) throw error;
-        throw new Error(`Code sync failed: ${(error as Error).message}`);
+    if (outcome.kind === 'installed') {
+        logger.info(
+            `[Storefront Setup] AEM Code Sync verified for ${repoInfo.repoOwner}/${repoInfo.repoName} ` +
+                `(code.status ${outcome.codeStatus ?? 'none'})`,
+        );
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'site-config',
+            message: '✓ AEM Code Sync verified',
+            progress: 48,
+        });
+        return null;
     }
 
+    // Helix knows the site and reports no code sync for it. The one measurement
+    // that has always meant what it says, and the only one that earns a halt.
+    if (outcome.kind === 'not-installed' && outcome.codeStatus === 404) {
+        const installUrl = githubAppService.getInstallUrl(repoInfo.repoOwner, repoInfo.repoName);
+
+        // A repo in the user's own namespace is theirs to fix; one in a team org
+        // usually is not. SCs can install GitHub Apps on their own account but
+        // typically lack admin rights on an organization, so the org case has to
+        // direct them to an admin rather than imply they can do it themselves.
+        //
+        // Unlike every earlier version of this message, it can now state the
+        // cause outright: Helix HAS the site and reports `code.status: 404`,
+        // which is a measurement about code sync and not an inference from a
+        // missing site.
+        const githubUser = edsConfig.githubAuth?.user?.login;
+        const isTeamOrg = !!githubUser && repoInfo.repoOwner !== githubUser;
+        const message = isTeamOrg
+            ? `AEM Code Sync is not installed on ${repoInfo.repoOwner}. Installing it on a ` +
+              `GitHub organization requires admin rights — ask your team admin to install it ` +
+              `from: ${installUrl}`
+            : 'The AEM Code Sync GitHub App must be installed to continue.';
+
+        logger.info(
+            `[Storefront Setup] AEM Code Sync is not installed on ` +
+                `${repoInfo.repoOwner}/${repoInfo.repoName} — Helix has the site and reports ` +
+                `code.status 404 (isTeamOrg=${isTeamOrg}). Install URL: ${installUrl}`,
+        );
+        await context.sendMessage('storefront-setup-github-app-required', {
+            owner: repoInfo.repoOwner,
+            repo: repoInfo.repoName,
+            installUrl,
+            isTeamOrg,
+            siteUnregistered: false,
+            message,
+        });
+        return {
+            success: false,
+            error: 'GitHub App installation required',
+            awaitingGitHubApp: true,
+            ...repoInfo,
+        };
+    }
+
+    logger.warn(
+        `[Storefront Setup] Could not verify AEM Code Sync for ` +
+            `${repoInfo.repoOwner}/${repoInfo.repoName} (${formatAdminDiagnostics(outcome)}). ` +
+            'Setup succeeded; this is a failed check, not a missing App.',
+    );
+    await context.sendMessage('storefront-setup-progress', {
+        phase: 'site-config',
+        message: '⚠️ Could not verify AEM Code Sync — setup completed anyway',
+        progress: 48,
+    });
     return null;
 }
