@@ -116,7 +116,10 @@ export function ConfigureScreen({
     const [activeSectionId, setActiveSectionId] = useState('project-info');
     // The TITLE as typed, not the slug. `handleRenameProject` derives the slug
     // from it on save, so this field never has to show hyphens.
-    const [projectName, setProjectName] = useState(getProjectDisplayName(project));
+    // Explicitly `string`: this holds RAW user input while they type. It is
+    // seeded from the display name but stops being one the moment a key lands,
+    // so branding the state would be a lie the compiler then enforces.
+    const [projectName, setProjectName] = useState<string>(getProjectDisplayName(project));
     const [projectNameTouched, setProjectNameTouched] = useState(false);
 
     // Focus trap for keyboard navigation

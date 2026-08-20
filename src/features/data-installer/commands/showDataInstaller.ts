@@ -23,7 +23,11 @@ import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHan
 import type { StateManager } from '@/core/state/stateManager';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
-import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
+import {
+    asDisplayName,
+    getProjectDisplayName,
+    type ProjectDisplayName,
+} from '@/core/utils/projectDisplayName';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
@@ -81,10 +85,17 @@ export class ShowDataInstallerCommand extends BaseWebviewCommand {
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
         const project = await this.stateManager.getCurrentProject();
 
+                // Annotated, because `getInitialData` returns `Record<string, unknown>`
+        // and erases this the moment it enters the payload. The annotation puts
+        // the check where the mistake would actually be MADE -- swap this for
+        // `project.name` and it stops compiling here, at the assignment, rather
+        // than surfacing as a slug on screen weeks later.
+        const projectName: ProjectDisplayName = project
+            ? getProjectDisplayName(project)
+            : asDisplayName('');
         return {
             theme,
-            // Display only -- "Capture data from X into a new datapack."
-            projectName: project ? getProjectDisplayName(project) : '',
+            projectName,
         };
     }
 

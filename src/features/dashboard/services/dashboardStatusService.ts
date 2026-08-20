@@ -10,7 +10,7 @@
  * - Extracting mesh endpoint from configurations
  */
 
-import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
+import { getProjectDisplayName, type ProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getMeshAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentState';
 import { Project } from '@/types';
 import {
@@ -33,7 +33,13 @@ export interface MeshStatusInfo {
  * Status payload for dashboard updates
  */
 export interface StatusPayload {
-    name: string;
+    /**
+     * What the dashboard heading shows, and what its inline rename field seeds
+     * from. Branded so `name: project.name` — the slug — cannot be assigned here
+     * by accident. It was, and shipped: a renamed project showed its folder in
+     * the heading while its card showed the title.
+     */
+    name: ProjectDisplayName;
     path: string;
     status: string;
     port: number | undefined;

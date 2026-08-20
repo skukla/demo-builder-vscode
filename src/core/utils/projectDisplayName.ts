@@ -20,6 +20,39 @@
  * @module core/utils/projectDisplayName
  */
 
+/**
+ * A string that is safe to show a human as a project's name.
+ *
+ * Branded, and that is the entire point. `getProjectDisplayName` existed before
+ * this type did and was still missed four times -- the dashboard heading, the
+ * wizard's edit mode, and two payload producers -- because nothing STOPPED a
+ * caller writing `name: project.name`. A helper you have to remember to call is
+ * a convention; a type you cannot bypass is a constraint.
+ *
+ * The brand is phantom: at runtime this is an ordinary string, so rendering,
+ * template literals and `.toUpperCase()` all work untouched. It only exists at
+ * compile time, where it makes a slug fail to assign.
+ *
+ * Two ways to get one: derive it from a project, or say `asDisplayName` and mean
+ * it.
+ */
+export type ProjectDisplayName = string & { readonly __projectDisplayName: unique symbol };
+
+/**
+ * Declare a string display-safe when it does not come from a project.
+ *
+ * The escape hatch, deliberately verbose: an empty placeholder for "no project
+ * open", or a name that arrived already resolved from elsewhere. Spelling it out
+ * is the difference between a decision and an accident -- if you are reaching
+ * for this with a `project` in scope, use {@link getProjectDisplayName} instead.
+ *
+ * @param value - a string already known to be safe to render
+ * @returns the same string, branded
+ */
+export function asDisplayName(value: string): ProjectDisplayName {
+    return value as ProjectDisplayName;
+}
+
 /** The parts of a project this needs. Deliberately narrow, so tests need no fixture. */
 export interface ProjectNameParts {
     /** The slug: folder name, dedupe key, path component. */
@@ -34,7 +67,7 @@ export interface ProjectNameParts {
  * @param project - anything carrying `name` and optionally `title`
  * @returns the trimmed title when there is a usable one, else the slug
  */
-export function getProjectDisplayName(project: ProjectNameParts): string {
+export function getProjectDisplayName(project: ProjectNameParts): ProjectDisplayName {
     const title = project.title?.trim();
-    return title ? title : project.name;
+    return asDisplayName(title ? title : project.name);
 }
