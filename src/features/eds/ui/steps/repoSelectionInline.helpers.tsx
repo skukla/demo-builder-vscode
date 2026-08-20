@@ -25,6 +25,7 @@ import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { SuccessStateDisplay } from '@/core/ui/components/feedback/SuccessStateDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout';
 import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
+import { type ElapsedStage, useElapsedStage } from '@/core/ui/hooks/useElapsedStage';
 import { getValidationState } from '@/core/ui/utils/validationState';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { sleep } from '@/core/utils/sleep';
@@ -399,6 +400,33 @@ export function buildAppStatusFromResult(result: GitHubAppCheckResult): GitHubAp
  * install steps grow past it and scroll. One state centred and the next
  * top-aligned is the jump reported as "the message is too high in the web view".
  */
+/**
+ * Copy for a Code Sync check that outlives a glance.
+ *
+ * Two different checks render this same view. The selection-time probe passes
+ * `skipTrigger` and answers in about a second. "Check Again"
+ * (`pollGitHubAppInstallation`) does NOT, so when Helix has never heard of the
+ * repo the handler TRIGGERS a real code sync and polls for it — bounded by
+ * `TIMEOUTS.LONG` over 30 attempts in `checkGitHubAppHandler.triggerAndWaitForCodeSync`,
+ * i.e. up to three minutes. That path previously showed one static line for its
+ * whole duration, so the user with the most to wait for got the least evidence
+ * anything was happening.
+ *
+ * The copy hedges on purpose. From the webview we cannot see WHICH path the
+ * handler took — only that it has not answered yet. Past ~6s the trigger path is
+ * much the likelier one, so "may be" is the strongest claim the evidence carries.
+ * The three-minute figure is read from the timeout above, not estimated.
+ */
+export const CODE_SYNC_CHECK_STAGES: ElapsedStage[] = [
+    { afterMs: 6000, message: 'Still waiting on Adobe\u2026' },
+    {
+        afterMs: 20000,
+        message:
+            'Adobe may be running a first-time sync for this repository. ' +
+            'That can take up to three minutes.',
+    },
+];
+
 export function CodeSyncStatusView({
     createdRepo,
     selectedRepoFullName,
@@ -422,6 +450,8 @@ export function CodeSyncStatusView({
     pendingReset?: boolean;
 }): React.ReactElement {
     const view = resolveCodeSyncView(status, isRechecking, pendingReset);
+    // Unconditional: every branch below returns, so this must precede them all.
+    const longWait = useElapsedStage(view.kind === 'checking', CODE_SYNC_CHECK_STAGES);
     const [fallbackOwner, fallbackRepo] = (selectedRepoFullName ?? '/').split('/');
     const owner = createdRepo?.owner ?? fallbackOwner;
     const repo = createdRepo?.name ?? fallbackRepo;
@@ -432,7 +462,12 @@ export function CodeSyncStatusView({
                 <LoadingDisplay
                     size="L"
                     message="Checking AEM Code Sync"
-                    subMessage={recheckMessage || `Verifying ${owner}/${repo}...`}
+                    // A caller-supplied line is always more specific than an
+                    // elapsed-time guess -- the retry loop's "attempt 2 of 5" must
+                    // not be overwritten by it.
+                    subMessage={
+                        recheckMessage || longWait || `Verifying ${owner}/${repo}...`
+                    }
                 />
             </CenteredFeedbackContainer>
         );

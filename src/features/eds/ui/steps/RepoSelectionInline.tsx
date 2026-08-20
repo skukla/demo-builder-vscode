@@ -167,7 +167,12 @@ export function RepoSelectionInline({
         isInstalled: null,
     });
     const [isRechecking, setIsRechecking] = useState(false);
-    const [recheckMessage, setRecheckMessage] = useState('Checking installation status...');
+    // Empty, not a generic line. The view falls back to "Verifying owner/repo..."
+    // and lets CODE_SYNC_CHECK_STAGES speak once the wait outlives a glance; a
+    // non-empty default here outranks both and pinned one static line over a
+    // check that can run for three minutes. Set by the retry loop when it has
+    // something specific to say ("attempt 2 of 5"), which still wins.
+    const [recheckMessage, setRecheckMessage] = useState('');
 
     const {
         items: repos,
@@ -355,7 +360,9 @@ export function RepoSelectionInline({
         if (!target) return;
 
         setIsRechecking(true);
-        setRecheckMessage('Checking installation status...');
+        // Clear, so a stale "attempt 2 of 5" from the previous run does not
+        // outrank this run's elapsed-wait copy.
+        setRecheckMessage('');
         setGitHubAppStatus({ isChecking: true, isInstalled: null });
 
         const { status } = await pollGitHubAppInstallation(
