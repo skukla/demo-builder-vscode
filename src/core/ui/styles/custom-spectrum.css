@@ -4501,6 +4501,18 @@ div[class*="spectrum"] input[type="search"] {
     min-height: 100%;
 }
 
+/* The `fill` variant of CenteredFeedbackContainer. Its inline `min-height: 100%`
+ * measures against .step-view-anim, whose own height is content-driven — so the
+ * percentage is indefinite and collapses, leaving a short state (the Code Sync
+ * spinner) near the TOP of a tall pane. Growing as a flex item is what actually
+ * reaches the bottom. This is the `flex-1` opt-in .step-view-anim's own comment
+ * describes. It cannot live on the Spectrum `flex` prop: `Flex` takes container
+ * props and drops item props silently.
+ * `auto` basis, so taller content still grows and .step-view keeps the scroll. */
+.centered-feedback--fill {
+    flex: 1 1 auto;
+}
+
 /* ---- Backend "choice cards" (.choice-*) — prominent binary pick, not a dense tile.
  * Roomy, readable, theme-aware; subtle Spectrum surfaces with a confident selected
  * state (blue accent ring), no saturated fills. ADDED alongside .selector-card (which
