@@ -211,6 +211,91 @@ describe('checkGitHubApp handler', () => {
      * gate keeps the trigger, because that is where the latency is affordable and
      * where a repo genuinely needs indexing before setup can proceed.
      */
+    describe('the answer AFTER the trigger', () => {
+        // These queue per-call answers, and `jest.clearAllMocks()` does NOT drain a
+        // `mockResolvedValueOnce` queue — it clears calls, not implementations. An
+        // unconsumed answer therefore leaks into the NEXT test and satisfies it for
+        // the wrong reason: caught here when the old-behaviour control failed 2 of 4
+        // instead of 3. Reset the queue, so each case starts from nothing.
+        beforeEach(() => {
+            mockIsAppInstalled.mockReset();
+        });
+
+        /**
+         * The trigger IS the remedy, so its whole value is that the answer
+         * changes. Measured on skukla/kukla-bodea, 2026-08-20:
+         *
+         *   11:20:07.940  Successfully previewed code            <- Helix accepted
+         *   11:22:41.850  Code sync polling failed: Maximum ...  <- 154s, unrelated file
+         *
+         * The re-check was gated on that poll, which asked whether
+         * `scripts/aem.js` was being served. A repo reaching this check is
+         * usually not a storefront yet, so that file cannot exist and the poll
+         * could only fail — taking the re-check down with it and returning the
+         * stale pre-trigger 404. The user's App was installed throughout.
+         *
+         * These assert the CALL and the REPORTED verdict, not that `previewCode`
+         * happened. Every test above passed while the bug shipped, because
+         * `toHaveBeenCalled()` on the trigger is equally true of a handler that
+         * throws the result away.
+         */
+        it('asks again once Helix has accepted the trigger', async () => {
+            mockIsAppInstalled
+                .mockResolvedValueOnce({ isInstalled: false, httpNotFound: true, httpStatus: 404 })
+                .mockResolvedValueOnce({ isInstalled: true, codeStatus: 200 });
+            const context = makeContext();
+
+            await checkGitHubApp(context, REQUEST);
+
+            expect(mockIsAppInstalled).toHaveBeenCalledTimes(2);
+        });
+
+        it('reports the SECOND answer, not the 404 that prompted the trigger', async () => {
+            mockIsAppInstalled
+                .mockResolvedValueOnce({ isInstalled: false, httpNotFound: true, httpStatus: 404 })
+                .mockResolvedValueOnce({ isInstalled: true, codeStatus: 200 });
+            const context = makeContext();
+
+            const result = await checkGitHubApp(context, REQUEST);
+
+            expect(result.isInstalled).toBe(true);
+            expect(result.codeStatus).toBe(200);
+            // The install URL is the tell: offering it here is the wizard telling
+            // someone to install an App they already have.
+            expect(result.installUrl).toBeUndefined();
+        });
+
+        it('does not re-ask when Helix refused the trigger', async () => {
+            mockIsAppInstalled.mockResolvedValue({
+                isInstalled: false,
+                httpNotFound: true,
+                httpStatus: 404,
+            });
+            mockPreviewCode.mockRejectedValue(new Error('Failed to preview code: 403 Forbidden'));
+            const context = makeContext();
+
+            const result = await checkGitHubApp(context, REQUEST);
+
+            expect(mockIsAppInstalled).toHaveBeenCalledTimes(1);
+            expect(result.isInstalled).toBe(false);
+        });
+
+        it('still reports a repo Helix cannot place even after the trigger', async () => {
+            mockIsAppInstalled.mockResolvedValue({
+                isInstalled: false,
+                httpNotFound: true,
+                httpStatus: 404,
+            });
+            const context = makeContext();
+
+            const result = await checkGitHubApp(context, REQUEST);
+
+            expect(mockIsAppInstalled).toHaveBeenCalledTimes(2);
+            expect(result.isInstalled).toBe(false);
+            expect(result.installUrl).toBeTruthy();
+        });
+    });
+
     describe('skipTrigger — for the selection-time check', () => {
         it('does NOT trigger a code sync on a 404 when asked to skip', async () => {
             mockIsAppInstalled.mockResolvedValue({

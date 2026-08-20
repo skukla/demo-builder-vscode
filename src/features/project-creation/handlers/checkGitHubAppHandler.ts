@@ -11,14 +11,12 @@
  *
  * Automatic Code Sync:
  * When Helix returns HTTP 404 (repo not indexed yet), the handler automatically:
- * 1. Triggers code sync via POST /code/{owner}/{repo}/main/*
- * 2. Polls for sync completion (up to 50 seconds)
- * 3. Retries the status check
+ * 1. Triggers code sync via POST /code/{owner}/{repo}/main/*, which is what makes
+ *    Helix aware of the site
+ * 2. Re-asks the status endpoint, which can now answer
  * This handles the case where the GitHub app is installed but Helix hasn't indexed yet.
  */
 
-import { PollingService } from '@/core/shell/pollingService';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getGitHubServices, tryCreateDaLiveTokenProvider } from '@/features/eds/handlers/edsHelpers';
 import { buildUndeterminedAppCheckError } from '@/features/eds/services/appInstallationResolver';
 import { HelixService } from '@/features/eds/services/helixService';
@@ -66,19 +64,42 @@ interface CheckGitHubAppResponse {
 }
 
 /**
- * Trigger Helix code sync and wait for completion.
+ * Ask Helix to index this repository.
  *
- * When Helix returns HTTP 404, it means the repo hasn't been indexed yet.
- * This function triggers the indexing by POSTing to the code endpoint,
- * then polls to verify the sync completed using PollingService.
+ * A `POST /code/{owner}/{repo}/main/*` is what makes Helix aware of the site —
+ * a repo it has never seen answers `404 no such site` on `/status` until this
+ * runs. So the trigger IS the remedy for an outer 404, and the only thing the
+ * caller needs to know is whether Helix accepted it.
+ *
+ * It deliberately does NOT wait for anything afterwards. It used to poll
+ * `https://main--{repo}--{owner}.aem.page/scripts/aem.js` for up to three
+ * minutes and report success only if that file appeared, which was wrong twice
+ * over. Measured against `skukla/kukla-bodea` on 2026-08-20:
+ *
+ *   11:20:07.940  Successfully previewed code: /*      <- Helix accepted it
+ *   11:22:41.850  Code sync polling failed: Maximum polling attempts reached
+ *
+ * 1. The file cannot exist yet. A repo reaching this check is typically NOT a
+ *    storefront — that is why the user ticked reset — so `scripts/aem.js` is not
+ *    there and will not be until Phase 1 rewrites the repo. The poll was
+ *    guaranteed to fail from its first attempt and spent 154 seconds proving it.
+ * 2. Its failure discarded a good answer. The caller only re-checked the status
+ *    `if (syncSucceeded)`, so a failed poll for an unrelated FILE threw away the
+ *    re-check of the thing actually being asked — and the handler returned the
+ *    original 404, captured BEFORE the trigger that fixes it. The user's App was
+ *    installed the whole time.
+ *
+ * The code-bus warm-up that poll was reaching for still exists, in
+ * `storefrontSetupPhase3`, which runs after the repo has storefront files and is
+ * the only place the question makes sense.
  *
  * @param owner - Repository owner
  * @param repo - Repository name
  * @param tokenService - GitHub token service for authentication
  * @param logger - Logger instance
- * @returns True if code sync completed successfully
+ * @returns True if Helix accepted the request
  */
-async function triggerAndWaitForCodeSync(
+async function triggerCodeSync(
     owner: string,
     repo: string,
     tokenService: import('@/features/eds/services/githubTokenService').GitHubTokenService,
@@ -90,41 +111,11 @@ async function triggerAndWaitForCodeSync(
     const helixService = new HelixService(logger, tokenService);
 
     try {
-        // Trigger code sync: POST /code/{owner}/{repo}/main/*
         await helixService.previewCode(owner, repo, '/*');
-        logger.debug(`[GitHub App Check] Code sync triggered, polling for completion...`);
-    } catch (error) {
-        logger.warn(`[GitHub App Check] Failed to trigger code sync: ${(error as Error).message}`);
-        return false;
-    }
-
-    // Poll for sync completion using existing PollingService
-    // Verifies scripts/aem.js is accessible (exists in all EDS repos)
-    const verifyUrl = `https://main--${repo}--${owner}.aem.page/scripts/aem.js`;
-    const pollingService = new PollingService();
-
-    try {
-        await pollingService.pollUntilCondition(
-            async () => {
-                const response = await fetch(verifyUrl, {
-                    method: 'HEAD',
-                    signal: AbortSignal.timeout(TIMEOUTS.QUICK),
-                });
-                return response.ok;
-            },
-            {
-                name: 'code-sync',
-                initialDelay: TIMEOUTS.EDS_CODE_SYNC_POLL,
-                maxDelay: TIMEOUTS.EDS_CODE_SYNC_POLL,
-                backoffFactor: 1, // No backoff - consistent interval for code sync
-                timeout: TIMEOUTS.LONG, // 3 minutes max
-                maxAttempts: 30,
-            },
-        );
-        logger.info(`[GitHub App Check] Code sync completed`);
+        logger.info(`[GitHub App Check] Helix accepted the code sync for ${owner}/${repo}`);
         return true;
     } catch (error) {
-        logger.warn(`[GitHub App Check] Code sync polling failed: ${(error as Error).message}`);
+        logger.warn(`[GitHub App Check] Failed to trigger code sync: ${(error as Error).message}`);
         return false;
     }
 }
@@ -209,8 +200,7 @@ export async function checkGitHubApp(
                 `[GitHub App Check] HTTP 404 detected - repo not indexed yet, triggering code sync`,
             );
 
-            // Trigger code sync and wait for it to complete
-            const syncSucceeded = await triggerAndWaitForCodeSync(
+            const triggered = await triggerCodeSync(
                 request.owner,
                 request.repo,
                 tokenService,
@@ -218,9 +208,15 @@ export async function checkGitHubApp(
             );
             codeSyncTriggered = true;
 
-            if (syncSucceeded) {
-                // Retry the status check after successful code sync
-                context.logger.debug(`[GitHub App Check] Retrying status check after code sync`);
+            // Re-ask whenever Helix ACCEPTED the trigger. The old condition also
+            // required a three-minute poll for `scripts/aem.js` to succeed, so a
+            // repo that is not a storefront yet — the usual case here — never got
+            // re-checked at all and the stale pre-trigger 404 was returned as the
+            // verdict. The whole point of triggering is that the answer changes.
+            if (triggered) {
+                context.logger.info(
+                    `[GitHub App Check] Re-checking status now Helix knows ${request.owner}/${request.repo}`,
+                );
                 result = await githubAppService.isAppInstalled(request.owner, request.repo, {
                     lenient,
                 });

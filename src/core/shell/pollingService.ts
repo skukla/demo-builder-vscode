@@ -57,6 +57,16 @@ export class PollingService {
                     this.logger.debug(`[Polling Service] Poll succeeded for: ${name} (attempt ${attempt})`);
                     return;
                 }
+                // A condition that is simply NOT YET TRUE was the one outcome this
+                // loop never reported. Success logged, a thrown error logged, and
+                // the ordinary "keep waiting" case silent — so a poll that ran its
+                // full budget produced no evidence it had run at all. A user
+                // watching a spinner for 154 seconds found nothing in the Debug
+                // Logs between the trigger and "Maximum polling attempts reached"
+                // (2026-08-20). Debug, not info: this is per attempt.
+                this.logger.debug(
+                    `[Polling Service] Not ready for: ${name} (attempt ${attempt}/${maxAttempts})`,
+                );
             } catch (error) {
                 this.logger.debug(`[Polling Service] Poll check error for ${name}: ${error}`);
             }
