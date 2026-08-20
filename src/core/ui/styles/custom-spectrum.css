@@ -2249,7 +2249,13 @@ button[class*="spectrum-Button"][disabled],
 }
 
 .inline-notice {
+    /* border-box or the 32px padding + 4px border ADD to width:100% and the
+       banner overhangs its column. Reported 2026-08-20 in the wizard, where the
+       repo panel constrains width; the dashboard's wider band had hidden it. A
+       shared component must not need its parent to fix its own box model. */
+    box-sizing: border-box;
     width: 100%;
+    max-width: 100%;
     margin: 0 0 16px;
     display: flex;
     align-items: center;

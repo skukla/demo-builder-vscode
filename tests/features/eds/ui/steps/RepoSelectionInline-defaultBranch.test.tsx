@@ -35,6 +35,7 @@
  * but that is the user's call to override, not our inference's to enforce.
  */
 
+import '@testing-library/jest-dom';
 import { computeRepoValid } from '@/features/eds/ui/steps/repoSelectionInline.helpers';
 
 const created = { isCreated: true, isCreating: false };
@@ -94,5 +95,63 @@ describe('computeRepoValid — default branch', () => {
         // A repo created from the template is always on main; there is no
         // selection to police.
         expect(computeRepoValid('new', created, undefined, false)).toBe(true);
+    });
+});
+
+describe('one message at a time', () => {
+    // Reported 2026-08-20: the branch notice and the reset warning both showed,
+    // both amber, competing. Worse, the reset one was WRONG in that state —
+    // "Setup cannot complete without a reset" promises a fix the reset cannot
+    // deliver, because `resetToTemplate` clones `--branch main` and this repo
+    // has no `main`.
+    //
+    // So while the repo is unusable for a reason a reset would not fix, the
+    // reset control goes quiet and the notice above it speaks alone. That also
+    // gives the reset warning its purpose back: it now appears only when a
+    // reset genuinely IS the remedy.
+    it('silences the reset warning when a reset cannot help', async () => {
+        const { ResetToTemplateOption } = await import(
+            '@/features/eds/ui/steps/repoSelectionInline.helpers'
+        );
+        const { render, screen } = await import('@testing-library/react');
+        const { TestWrapper } = await import(
+            '../components/DaLiveServiceCard.testUtils'
+        );
+
+        render(
+            <TestWrapper>
+                <ResetToTemplateOption
+                    resetToTemplate={false}
+                    onResetToTemplateChange={jest.fn()}
+                    readiness={{ kind: 'not-a-storefront', missing: ['head.html'] }}
+                    unusable
+                />
+            </TestWrapper>
+        );
+
+        expect(screen.queryByText(/Setup cannot complete without a reset/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/head\.html/i)).not.toBeInTheDocument();
+    });
+
+    it('still shows it when a reset IS the remedy', async () => {
+        const { ResetToTemplateOption } = await import(
+            '@/features/eds/ui/steps/repoSelectionInline.helpers'
+        );
+        const { render, screen } = await import('@testing-library/react');
+        const { TestWrapper } = await import(
+            '../components/DaLiveServiceCard.testUtils'
+        );
+
+        render(
+            <TestWrapper>
+                <ResetToTemplateOption
+                    resetToTemplate={false}
+                    onResetToTemplateChange={jest.fn()}
+                    readiness={{ kind: 'not-a-storefront', missing: ['head.html'] }}
+                />
+            </TestWrapper>
+        );
+
+        expect(screen.getByText(/Setup cannot complete without a reset/i)).toBeInTheDocument();
     });
 });

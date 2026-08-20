@@ -18,6 +18,7 @@ import {
     buildCodeSyncInstallSteps,
     buildCodeSyncInstallSummary,
 } from '../helpers/codeSyncInstallContent';
+import { InlineNotice } from '@/core/ui/components/feedback';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { LoadingOverlay } from '@/core/ui/components/feedback/LoadingOverlay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
@@ -647,7 +648,17 @@ export function describeResetOption(
     readiness: RepoReadinessState | undefined,
     resetToTemplate: boolean,
     disabled: boolean,
+    unusable = false,
 ): { checked: boolean; locked: boolean; tone: 'info' | 'warn' | 'none'; message: string } {
+    // Nothing to say while the repo is unusable for a DIFFERENT reason. Its own
+    // notice is already on screen, and "Setup cannot complete without a reset"
+    // would be a false promise here — the reset clones `--branch main`, which is
+    // exactly what this repo does not have. Two amber lines competing, one of
+    // them wrong.
+    if (unusable) {
+        return { checked: false, locked: true, tone: 'none' as const, message: '' };
+    }
+
     if (disabled) return { checked: false, locked: true, tone: 'none', message: '' };
 
     if (readiness?.kind === 'empty') {
@@ -689,11 +700,45 @@ export function describeResetOption(
  * the reset because setup cannot otherwise succeed; a real storefront gets the
  * original prompt and warning.
  */
+/**
+ * The non-`main` default-branch notice.
+ *
+ * A NOTICE, not a full-pane `StatusDisplay`: nothing here is fatal and the repo
+ * picker below stays usable. Rendered as a wall once (2026-08-20) and it
+ * swallowed the list while Continue was one checkbox away.
+ *
+ * Returns null when the branch is fine or unknown — unknown is not a fault (a
+ * repo list cached before `defaultBranch` existed carries none).
+ *
+ * @param selectedRepo - The chosen repo, if any
+ * @returns The notice, or null
+ */
+export function DefaultBranchNotice({
+    selectedRepo,
+}: {
+    selectedRepo?: GitHubRepoItem;
+}): React.ReactElement | null {
+    const branch = selectedRepo?.defaultBranch;
+    if (!selectedRepo || !branch || branch === 'main') return null;
+
+    return (
+        <InlineNotice
+            title="This repository uses a different default branch"
+            testId="default-branch-notice"
+        >
+            Demo Builder builds storefronts from <strong>main</strong>, and{' '}
+            {selectedRepo.fullName} defaults to <strong>{branch}</strong>. Rename its default
+            branch to main on GitHub, or choose a different repository.
+        </InlineNotice>
+    );
+}
+
 export function ResetToTemplateOption({
     resetToTemplate,
     onResetToTemplateChange,
     disabled = false,
     readiness,
+    unusable = false,
 }: {
     resetToTemplate: boolean;
     onResetToTemplateChange: (isSelected: boolean) => void;
@@ -701,11 +746,18 @@ export function ResetToTemplateOption({
     disabled?: boolean;
     /** Undefined while the readiness check is in flight. */
     readiness?: RepoReadinessState;
+    /**
+     * The repo cannot be used for a reason a reset would NOT fix — today, a
+     * non-`main` default branch. Silences this control so the notice above it
+     * is the only thing asking for attention.
+     */
+    unusable?: boolean;
 }): React.ReactElement {
     const { checked, locked, tone, message } = describeResetOption(
         readiness,
         resetToTemplate,
         disabled,
+        unusable,
     );
 
     return (

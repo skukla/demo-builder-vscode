@@ -26,6 +26,7 @@ import {
     NewRepoForm,
     ResetToTemplateOption,
     computeCodeSyncValid,
+    DefaultBranchNotice,
     computeRepoValid,
     type RepoReadinessState,
     pollGitHubAppInstallation,
@@ -34,7 +35,6 @@ import {
     type GitHubAppStatus,
     type RepoCreationState,
 } from './repoSelectionInline.helpers';
-import { InlineNotice } from '@/core/ui/components/feedback';
 import { SelectionStepContent } from '@/core/ui/components/selection';
 import { useSelectionStep } from '@/core/ui/hooks';
 import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
@@ -500,6 +500,12 @@ export function RepoSelectionInline({
         !!selectedRepo,
     );
 
+    // One predicate, read by the notice AND by the reset control it silences —
+    // so they can never disagree about whether this repo is usable.
+    const wrongDefaultBranch = Boolean(
+        selectedRepo?.defaultBranch && selectedRepo.defaultBranch !== 'main',
+    );
+
     // --- `repository` phase: pick/create the repo (no app-install UI) ---------
     if (phase === 'repository') {
         return (
@@ -520,23 +526,7 @@ export function RepoSelectionInline({
 
                 {repoMode === 'existing' && (
                     <>
-                        {/* Named where the choice is made, as a NOTICE rather than a
-                            full-pane StatusDisplay: nothing here is fatal and the picker
-                            below stays usable. Rendered as a wall once (2026-08-20) and it
-                            swallowed the repo list while Continue was one checkbox away. */}
-                        {selectedRepo?.defaultBranch &&
-                            selectedRepo.defaultBranch !== 'main' && (
-                                <InlineNotice
-                                    title="This repository uses a different default branch"
-                                    testId="default-branch-notice"
-                                >
-                                    Demo Builder builds storefronts from <strong>main</strong>,
-                                    and {selectedRepo.fullName} defaults to{' '}
-                                    <strong>{selectedRepo.defaultBranch}</strong>. Rename its
-                                    default branch to main on GitHub, or choose a different
-                                    repository.
-                                </InlineNotice>
-                            )}
+                        <DefaultBranchNotice selectedRepo={selectedRepo} />
                         {/* Always rendered (disabled until a repo is selected) so selecting one
                             never reflows the search + list below. */}
                         <ResetToTemplateOption
@@ -544,6 +534,7 @@ export function RepoSelectionInline({
                             onResetToTemplateChange={handleResetToTemplateChange}
                             disabled={!selectedRepo}
                             readiness={readiness}
+                            unusable={wrongDefaultBranch}
                         />
                         <SelectionStepContent
                             headerAction={
