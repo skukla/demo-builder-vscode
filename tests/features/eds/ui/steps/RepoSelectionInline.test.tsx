@@ -259,13 +259,15 @@ describe('RepoSelectionInline', () => {
 
             await renderInline(state, 'code-sync');
 
-            // Collapsed 2026-08-20: the distinction now lives in the TITLE rather
-            // than in a separate view. "Make sure…" offers the install without
-            // asserting it is missing; the imperative "Install the…" is reserved
-            // for the one DEFINITIVE shape (inner code.status 404).
+            // Collapsed again 2026-08-20, further: there is no install prompt
+            // here at all now. A refused check tells us nothing about the App,
+            // and neither does the outer 404 that `/status` returns before the
+            // site exists -- so no surface offers an install without the one
+            // DEFINITIVE shape behind it (inner code.status 404). The user is
+            // told when it will actually be checked instead.
             await waitFor(() => {
                 expect(
-                    screen.getByText(/Make sure AEM Code Sync is installed/i)
+                    screen.getByText(/Code Sync is checked after setup/i)
                 ).toBeInTheDocument();
             });
             expect(screen.queryByText(/Install the AEM Code Sync App/i)).not.toBeInTheDocument();
@@ -324,8 +326,14 @@ describe('RepoSelectionInline', () => {
 
                 await renderInline(selected(), 'code-sync');
 
+                // Deliberately NOT "because it isn't a storefront". A repo reset
+                // to the template, with every file on main, still answers 404 --
+                // the site is a Configuration Service record created during
+                // setup, and storefront content does not create one.
                 await waitFor(() => {
-                    expect(screen.getByText(/isn't a storefront/i)).toBeInTheDocument();
+                    expect(
+                        screen.getByText(/doesn't have a site for/i),
+                    ).toBeInTheDocument();
                 });
                 expect(
                     screen.queryByText(/Install the AEM Code Sync App/i),

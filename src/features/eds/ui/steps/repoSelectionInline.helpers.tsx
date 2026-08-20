@@ -280,42 +280,46 @@ export function resolveCodeSyncView(
     status: GitHubAppStatus,
     isRechecking: boolean,
     siteNotPossibleYet = false,
-): { kind: 'checking' | 'verified' | 'needs-install' | 'cannot-verify' | 'after-setup' } {
+): { kind: 'checking' | 'verified' | 'needs-install' | 'after-setup' } {
     if (status.isChecking || isRechecking) return { kind: 'checking' };
 
-    // The two DEFINITIVE shapes first, both read off the body's `code.status` on
-    // an outer 200 (`githubAppService.checkHelixStatus`): sync is working, or
-    // Helix knows this repo and reports no code sync for it. These are
-    // measurements, and they outrank everything below — including
-    // `siteNotPossibleYet`, which is a structural inference about what Helix CAN
-    // answer. If it turns out Helix can already see the site, it can.
+    // The two DEFINITIVE shapes, both read off the body's `code.status` on an
+    // outer 200 (`githubAppService.checkHelixStatus`). Only these are answers.
     if (status.isInstalled === true) return { kind: 'verified' };
     if (status.codeStatus === 404) return { kind: 'needs-install' };
 
-    // No storefront content means Helix has no SITE for this repo — and
-    // `admin.hlx.page/status` reports on the site, not the App. It answers
-    // `404 no such site` however AEM Code Sync is configured, so the question is
-    // unanswerable here rather than merely unanswered. Measured on
-    // skukla/kukla-bodea 2026-08-20: GitHub listed the repo under the AEM Code
-    // Sync installation and the endpoint 404'd anyway, 28 minutes after a
-    // code-sync trigger Helix had accepted.
-    //
-    // Above `checking` because the caller does not probe in this state, so
-    // `isInstalled` stays null and would otherwise spin forever. Phase 1 asks
-    // once the reset has made the repo a storefront, which is the first moment
-    // an answer exists.
+    // The probe was SKIPPED, so `isInstalled` is still null and the `checking`
+    // branch below would spin forever. Ordered ahead of it for that reason.
     if (siteNotPossibleYet) return { kind: 'after-setup' };
 
-    // Not yet asked. Never "missing" — we have no answer to report.
+    // Not yet asked. Never "missing", and never "after setup" either — we have
+    // no answer to report because we have not finished asking.
     if (status.isInstalled === null) return { kind: 'checking' };
 
-    // Everything else is the same fact wearing different clothes: WE CANNOT
-    // TELL. An outer 404 carries no `code.status` to read; a 401/403/5xx is
-    // Helix declining. This step grew a view per diagnosis — five of them —
-    // each added to explain what the one before it got wrong, and every one
-    // ended at the same place: install it if you have not, because we cannot
-    // check.
-    return { kind: 'cannot-verify' };
+    // EVERYTHING else means Adobe has not told us anything about the App, and
+    // at this point in the flow it structurally cannot.
+    //
+    // In Helix 5 a "site" is a Configuration Service record, created during
+    // setup. `admin.hlx.page/status` reports on the site, so before that record
+    // exists it answers `404 no such site` — App installed or not, storefront
+    // content or not. Measured unauthenticated 2026-08-20, where 401 means the
+    // site exists (auth is checked before existence) and 404 means it does not:
+    //
+    //   skukla/kukla-bodea       404   App installed, full template content
+    //   skukla/kukla-citisignal  401
+    //   skukla/demo-builder-test 401   registered, nothing published
+    //   adobe/helix-website      401
+    //
+    // Four repos with the App; three have sites. So storefront content is not
+    // the condition either — this view was first gated on readiness, and a repo
+    // that had JUST been reset to the template still landed here.
+    //
+    // This replaces `cannot-verify`, which showed install steps and a "Check
+    // Again". Both were dead ends: the install cannot create a site, and the
+    // re-check cannot succeed, so pressing it returned to the same screen every
+    // time. `undetermined` (a refused credential) lands here too — also not
+    // something an install fixes, and also resolved by checking later.
+    return { kind: 'after-setup' };
 }
 
 export function computeCodeSyncValid(
@@ -458,8 +462,9 @@ export function CodeSyncStatusView({
     onCheckAgain: () => void;
     onOpenInstallPage: () => void;
     /**
-     * The repo has no storefront content, so Helix has no site for it and the
-     * status endpoint cannot answer about AEM Code Sync at all. See
+     * Skip the probe entirely: we already know Adobe has no site for this repo,
+     * so asking costs a round trip to be told nothing. Purely an optimisation
+     * now — the view lands on `after-setup` either way. See
      * {@link resolveCodeSyncView}.
      */
     siteNotPossibleYet?: boolean;
@@ -508,8 +513,12 @@ export function CodeSyncStatusView({
                     ]}
                 >
                     <Text UNSAFE_className="text-sm text-gray-600">
-                        {`Adobe can't see ${owner}/${repo} yet, because it isn't a storefront. ` +
-                            'Setup will fix that, and verify Code Sync straight afterwards.'}
+                        {/* No longer "because it isn't a storefront": a repo reset to
+                            the template, with all 3342 files on main, still answers
+                            404. The site is a Configuration Service record created
+                            during setup, and nothing before that creates one. */}
+                        {`Adobe doesn't have a site for ${owner}/${repo} yet — setup ` +
+                            'creates one, and verifies AEM Code Sync straight afterwards.'}
                     </Text>
                 </StatusDisplay>
             </CenteredFeedbackContainer>

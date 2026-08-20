@@ -15,6 +15,18 @@
  * 5. Status display text (only for NEW repos)
  */
 
+// 2026-08-20: `cannot-verify` is gone -- every state that reached it now lands
+// on `after-setup`. In Helix 5 a "site" is a Configuration Service record
+// created during setup, and `admin.hlx.page/status` reports on the site, so
+// before that record exists it answers `404 no such site` whatever the App is
+// doing. Measured unauthenticated (401 = site exists, 404 = it does not):
+// kukla-bodea 404 with the App installed and full template content;
+// citisignal, demo-builder-test and adobe/helix-website all 401.
+// So the old view's install steps and "Check Again" were both dead ends -- the
+// install cannot create a site and the re-check cannot succeed, which is
+// exactly what pressing it did: return to the same screen.
+
+
 import {
     computeRepoValid,
     computeCodeSyncValid,
@@ -688,7 +700,7 @@ describe('resolveCodeSyncView', () => {
         // to reinstall an app that is already there.
         expect(
             resolveCodeSyncView(status({ isInstalled: false, codeStatus: undefined }), false).kind,
-        ).toBe('cannot-verify');
+        ).toBe('after-setup');
     });
 
     it('treats a not-yet-checked status as checking, never as missing', () => {
