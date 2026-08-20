@@ -135,38 +135,48 @@ describe('checkGitHubAppForExistingRepo', () => {
         const outer404 = () =>
             makeServices({ isInstalled: false, httpNotFound: true, httpStatus: 404 });
 
-        it('still halts — an unregistered site cannot complete setup', async () => {
+        it('does NOT halt — the question has no answer yet, so it is not a verdict', async () => {
+            // In Helix 5 a "site" is a Configuration Service record, and nothing
+            // before `registerConfigurationService` (Phase 3) creates one. So a
+            // first-time setup ALWAYS 404s here, App installed or not, and this
+            // gate could only ever pass for a repo that was already a registered
+            // site. Halting on it blocked every first-time existing-repo run.
+            //
+            // Measured unauthenticated, where 401 means the site exists (auth is
+            // checked before existence) and 404 means it does not:
+            //   skukla/kukla-bodea       404  <- App installed, freshly reset
+            //   skukla/kukla-citisignal  401
+            //   skukla/demo-builder-test 401  <- registered, nothing published
+            //   adobe/helix-website      401
             const context = makeContext();
 
             const result = await checkGitHubAppForExistingRepo(context, outer404(), REPO_INFO);
 
-            expect(result?.success).toBe(false);
-            expect(sentMessageTypes(context)).toContain('storefront-setup-github-app-required');
+            expect(result).toBeNull();
         });
 
-        it('does NOT claim the App is missing', async () => {
-            // The flag the dialog reads to choose its title, body and which
-            // action leads. Assert the ARGUMENT: the surface is not under test
-            // here, and the payload is the whole contract between them.
+        it('never shows the install dialog for it', async () => {
             const context = makeContext();
 
             await checkGitHubAppForExistingRepo(context, outer404(), REPO_INFO);
 
-            expect(sentPayload(context, 'storefront-setup-github-app-required')).toMatchObject({
-                siteUnregistered: true,
-            });
+            expect(sentMessageTypes(context)).not.toContain(
+                'storefront-setup-github-app-required',
+            );
         });
 
-        it('tells the user what is actually true', async () => {
+        it('says so in the progress feed rather than passing in silence', async () => {
             const context = makeContext();
 
             await checkGitHubAppForExistingRepo(context, outer404(), REPO_INFO);
 
-            const payload = sentPayload(context, 'storefront-setup-github-app-required') as {
-                message: string;
-            };
-            expect(payload.message).toMatch(/not registered/i);
-            expect(payload.message).not.toMatch(/must be installed/i);
+            // ALL progress messages, not the first: this function opens with
+            // "Verifying GitHub App installation...", which sentPayload would
+            // return and which would pass this assertion for the wrong reason.
+            const messages = (context.sendMessage as unknown as jest.Mock).mock.calls
+                .filter((c) => c[0] === 'storefront-setup-progress')
+                .map((c) => String((c[1] as { message?: string }).message));
+            expect(messages.join('\n')).toMatch(/no site for this repository yet/i);
         });
 
         it('does not blame the App in the log either', async () => {

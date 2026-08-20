@@ -86,14 +86,46 @@ export async function checkGitHubAppForExistingRepo(
                   `Install URL: ${installUrl}`,
         );
 
+        // An outer 404 does NOT halt, because at this point in the pipeline it
+        // carries no information at all.
+        //
+        // In Helix 5 a "site" is a Configuration Service record. Nothing before
+        // `registerConfigurationService` (Phase 3) creates one, so `/status` has
+        // nothing to answer with and returns `no such site` for every first-time
+        // setup — App installed or not.
+        //
+        // Measured 2026-08-20, unauthenticated `/status/{owner}/{repo}/main`,
+        // where 401 means the site exists (auth is checked before existence) and
+        // 404 means it does not:
+        //
+        //   skukla/kukla-bodea       404   <- App installed, freshly reset, no site
+        //   skukla/kukla-citisignal  401
+        //   skukla/demo-builder-test 401   <- registered, nothing published
+        //   adobe/helix-website      401
+        //
+        // Four repos with the App; three have sites. So the App does not create
+        // one, and this gate could only ever pass for a repo that was ALREADY a
+        // registered site — a re-run over a previously built demo. Every
+        // first-time existing-repo setup was blocked by a question that had no
+        // answer yet.
+        //
+        // The real check belongs after registration, where `/status` finally
+        // means something and a missing App shows up as `code.status: 404`.
+        if (siteUnregistered) {
+            await context.sendMessage('storefront-setup-progress', {
+                phase: 'storefront-code',
+                message: 'Adobe has no site for this repository yet — continuing setup',
+                progress: 28,
+            });
+            return null;
+        }
+
         await context.sendMessage('storefront-setup-github-app-required', {
             owner: repoInfo.repoOwner,
             repo: repoInfo.repoName,
             installUrl,
             siteUnregistered,
-            message: siteUnregistered
-                ? `Adobe has not registered ${repoInfo.repoOwner}/${repoInfo.repoName} yet.`
-                : 'The AEM Code Sync GitHub App must be installed to continue.',
+            message: 'The AEM Code Sync GitHub App must be installed to continue.',
         });
 
         return {

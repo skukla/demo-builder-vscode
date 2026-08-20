@@ -161,6 +161,25 @@ async function verifyCodeSync(
             codeStatus: outcome.codeStatus,
         };
 
+        // Same reason as Phase 1's gate: an outer 404 means Helix has no SITE for
+        // this repo, and nothing before `registerConfigurationService` (below, in
+        // this very phase) creates one. It is not evidence about the App. See
+        // `storefrontSetupPhaseHelpers.checkGitHubAppForExistingRepo` for the
+        // four-repo measurement.
+        //
+        // Continue, and let the post-registration check be the one that speaks.
+        const siteUnregistered =
+            outcome.kind === 'not-installed' &&
+            outcome.httpStatus === 404 &&
+            outcome.codeStatus === undefined;
+        if (!initialCheck.isInstalled && siteUnregistered) {
+            logger.info(
+                `[Storefront Setup] Helix has no site for ${repoInfo.repoOwner}/${repoInfo.repoName} yet ` +
+                    '— expected before registration. Deferring the App verdict.',
+            );
+            return null;
+        }
+
         if (!initialCheck.isInstalled) {
             const installUrl = githubAppService.getInstallUrl(
                 repoInfo.repoOwner,
