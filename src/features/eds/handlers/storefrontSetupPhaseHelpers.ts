@@ -59,17 +59,41 @@ export async function checkGitHubAppForExistingRepo(
 
     if (outcome.kind === 'not-installed') {
         const installUrl = githubAppService.getInstallUrl(repoInfo.repoOwner, repoInfo.repoName);
+
+        // Which 404 is it? The distinction decides what we are allowed to claim.
+        //
+        // INNER (`code.status: 404`): Helix knows the site and reports no code
+        // sync for it. A measurement. "Install the App" is the right answer.
+        //
+        // OUTER (HTTP 404, no `code.status`): Helix has no site for this repo at
+        // all — and `/status` reports on the SITE, not the App. It says nothing
+        // about whether AEM Code Sync is installed. Measured on
+        // skukla/kukla-bodea 2026-08-20: GitHub listed the repo under the
+        // installation and this endpoint 404'd anyway.
+        //
+        // Both used to land on the install dialog, so a user with the App
+        // already installed was told to install it, and the only action offered
+        // could not have helped. Say what is true instead: Adobe has not
+        // registered the repository yet.
+        const siteUnregistered = outcome.httpStatus === 404 && outcome.codeStatus === undefined;
         logger.info(
-            `[Storefront Setup] AEM Code Sync is not installed on ` +
-                `${repoInfo.repoOwner}/${repoInfo.repoName} (${formatAdminDiagnostics(outcome)}). ` +
-                `Install URL: ${installUrl}`,
+            siteUnregistered
+                ? `[Storefront Setup] Helix has no site for ${repoInfo.repoOwner}/${repoInfo.repoName} ` +
+                  `(${formatAdminDiagnostics(outcome)}). This says nothing about the App — ` +
+                  `/status reports on the site. Not offering the install flow.`
+                : `[Storefront Setup] AEM Code Sync is not installed on ` +
+                  `${repoInfo.repoOwner}/${repoInfo.repoName} (${formatAdminDiagnostics(outcome)}). ` +
+                  `Install URL: ${installUrl}`,
         );
 
         await context.sendMessage('storefront-setup-github-app-required', {
             owner: repoInfo.repoOwner,
             repo: repoInfo.repoName,
             installUrl,
-            message: 'The AEM Code Sync GitHub App must be installed to continue.',
+            siteUnregistered,
+            message: siteUnregistered
+                ? `Adobe has not registered ${repoInfo.repoOwner}/${repoInfo.repoName} yet.`
+                : 'The AEM Code Sync GitHub App must be installed to continue.',
         });
 
         return {

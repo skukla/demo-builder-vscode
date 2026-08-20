@@ -74,6 +74,8 @@ interface GitHubAppData {
     repo: string;
     installUrl: string;
     message: string;
+    /** Helix has no site for this repo — see {@link GitHubAppInstallDialog}. */
+    siteUnregistered?: boolean;
 }
 
 /**
@@ -512,6 +514,7 @@ export function StorefrontSetupStep({
                                 repo={setupState.githubAppData.repo}
                                 installUrl={setupState.githubAppData.installUrl}
                                 message={setupState.githubAppData.message}
+                                siteUnregistered={setupState.githubAppData.siteUnregistered}
                                 onInstallDetected={handleInstallDetected}
                             />
                         </CenteredFeedbackContainer>

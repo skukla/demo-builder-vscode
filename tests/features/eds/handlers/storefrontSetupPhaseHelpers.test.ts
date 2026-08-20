@@ -67,6 +67,13 @@ function makeServices(...results: Array<Record<string, unknown>>): SetupServices
     } as unknown as SetupServices;
 }
 
+/** The payload of the first message of `type` that was sent. */
+function sentPayload(context: HandlerContext, type: string): unknown {
+    const send = context.sendMessage as unknown as jest.Mock;
+    const call = send.mock.calls.find((c) => c[0] === type);
+    return call?.[1];
+}
+
 function sentMessageTypes(context: HandlerContext): string[] {
     return (context.sendMessage as jest.Mock).mock.calls.map((c) => c[0] as string);
 }
@@ -98,18 +105,80 @@ describe('checkGitHubAppForExistingRepo', () => {
             expect(sentMessageTypes(context)).toContain('storefront-setup-github-app-required');
         });
 
-        it('prompts to install when the status endpoint returns HTTP 404', async () => {
+        it('says the App is missing only when Helix KNOWS the site', async () => {
+            // `code.status: 404` is the measurement: Helix has the site and
+            // reports no code sync for it. Only this one earns the claim.
             const context = makeContext();
-            const services = makeServices({
-                isInstalled: false,
-                httpNotFound: true,
-                httpStatus: 404,
+            const services = makeServices({ isInstalled: false, codeStatus: 404 });
+
+            await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
+
+            expect(sentPayload(context, 'storefront-setup-github-app-required')).toMatchObject({
+                siteUnregistered: false,
             });
+        });
+    });
 
-            const result = await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
+    describe('Helix has no SITE for the repo (the outer 404)', () => {
+        /**
+         * `/status` reports on the SITE, not the App. A repo Helix has never
+         * registered answers HTTP 404 however AEM Code Sync is configured.
+         *
+         * Measured on skukla/kukla-bodea 2026-08-20: GitHub listed the repo
+         * under the AEM Code Sync installation, and this endpoint 404'd anyway
+         * -- 28 minutes after a code-sync trigger Helix had accepted, so not lag
+         * either. It was still collapsed into "not installed", so the halt told
+         * someone to install an App they had, and the only action on screen
+         * could not have changed the outcome. The same conflation as the 401
+         * this file was written for, one endpoint layer up.
+         */
+        const outer404 = () =>
+            makeServices({ isInstalled: false, httpNotFound: true, httpStatus: 404 });
 
-            expect(result?.error).toBe('GitHub App installation required');
+        it('still halts — an unregistered site cannot complete setup', async () => {
+            const context = makeContext();
+
+            const result = await checkGitHubAppForExistingRepo(context, outer404(), REPO_INFO);
+
+            expect(result?.success).toBe(false);
             expect(sentMessageTypes(context)).toContain('storefront-setup-github-app-required');
+        });
+
+        it('does NOT claim the App is missing', async () => {
+            // The flag the dialog reads to choose its title, body and which
+            // action leads. Assert the ARGUMENT: the surface is not under test
+            // here, and the payload is the whole contract between them.
+            const context = makeContext();
+
+            await checkGitHubAppForExistingRepo(context, outer404(), REPO_INFO);
+
+            expect(sentPayload(context, 'storefront-setup-github-app-required')).toMatchObject({
+                siteUnregistered: true,
+            });
+        });
+
+        it('tells the user what is actually true', async () => {
+            const context = makeContext();
+
+            await checkGitHubAppForExistingRepo(context, outer404(), REPO_INFO);
+
+            const payload = sentPayload(context, 'storefront-setup-github-app-required') as {
+                message: string;
+            };
+            expect(payload.message).toMatch(/not registered/i);
+            expect(payload.message).not.toMatch(/must be installed/i);
+        });
+
+        it('does not blame the App in the log either', async () => {
+            const context = makeContext();
+
+            await checkGitHubAppForExistingRepo(context, outer404(), REPO_INFO);
+
+            const logged = (context.logger as unknown as Record<string, jest.Mock>).info.mock.calls
+                .map((c) => String(c[0]))
+                .join('\n');
+            expect(logged).toMatch(/no site for/i);
+            expect(logged).not.toMatch(/AEM Code Sync is not installed/i);
         });
 
         it('does NOT retry a definitive answer', async () => {
