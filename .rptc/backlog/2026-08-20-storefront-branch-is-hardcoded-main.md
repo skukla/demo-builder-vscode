@@ -1,10 +1,16 @@
 # Storefronts are hardcoded to `main` — should they follow the repo's default branch?
 
 **Filed:** 2026-08-20, from the `kukla-bodea` field report.
-**Severity:** low — the case it would serve has not been seen in the field.
-**Status: OPEN, blocked on one unresolved question.** Adobe's guidance was read
-as settling it and does not; see below. Do not implement until it is settled,
-and do not close it on the doc quote alone.
+**Status: CLOSED 2026-08-20 — decided on SCOPE, not on a platform constraint.**
+Demo Builder makes throwaway demo storefronts from a template, so every repo it
+touches is either created by us on `main` or reset from a `main` boilerplate.
+Threading the branch through would cost ~19 call sites and seven URL builders
+across publish, config generation, CDN URLs and reset, to serve a case
+(a storefront already living on `master`) that has never been seen.
+
+Deliberately NOT closed on "Adobe requires `main`" — that was claimed here
+earlier and is still unproven. This decision does not depend on it, which is
+why it is safe to make.
 
 ## The question
 
@@ -40,7 +46,7 @@ user-visible half:
 So this is a **threading exercise, not a redesign**. Roughly a dozen call sites
 and seven URL builders, all mechanical.
 
-## The blocking unknown — STILL OPEN (a wrong answer was recorded first)
+## The platform question — STILL UNRESOLVED, and no longer load-bearing
 
 **Does Adobe serve `.aem.live` from a non-`main` branch?**
 
@@ -76,10 +82,29 @@ to `master` gets `master--site--org`. Our seven URL builders emit
 `main--{repo}--{owner}` unconditionally. That mismatch is real whatever Adobe
 means, which is why the current guard stays.
 
-**What would settle it.** `GET admin.hlx.page/status/{owner}/{repo}/master`
-against a repo that has a `master` branch AND is a Helix site — or ask the Code
-Sync team whether `.aem.live` serves a non-`main` ref in production. No such
-repo was available in this session.
+**Probed 2026-08-20; still not settled.** Four measurements, with controls:
+
+- `admin.hlx.page/status/skukla/team-bodea-demo/{ref}` returns `401 not
+  authenticated` for `main`, `master`, `develop` AND `nonexistent-xyz`. Auth is
+  checked before the ref, so **the ref is not part of site identity**.
+- Against a live site with a passing control
+  (`main--helix-website--adobe.aem.live` → 200), `master` and
+  `nonexistent-xyz` also return 200 — so `.aem.live` does not reject non-`main`
+  hostnames.
+- But `master` and `nonexistent-xyz` came back BYTE-IDENTICAL (46,317) and both
+  differed from `main` (46,758). `helix-website` has no `master` branch, so
+  unknown refs FALL BACK. That is not evidence a real `master` branch serves its
+  own code.
+
+Still open, and it would still take a genuine master-branch Helix site or the
+Code Sync team. It just no longer gates anything.
+
+**A correction the probes forced.** This item and `siteUnknownReason` both said
+Helix 404'd for `kukla-bodea` BECAUSE it had no `main` branch. That is wrong —
+a known site 401s on a garbage ref, so the ref plays no part in the lookup. The
+`404 no such site` was purely about `skukla/kukla-bodea` not being a known site.
+The missing branch is a real problem for other reasons (the clone dies, the URLs
+would be wrong); it was never the cause of the reported symptom.
 
 **The instructive part — the reason this section is worth keeping.** This item
 was filed on the premise that `main` was our parochialism, then closed an hour
@@ -122,12 +147,10 @@ silently to someone's repository.
 
 ## Kickoff prompt
 
-> Read the whole item, and note that Adobe's go-live quote does NOT settle it —
-> "the main branch" is ambiguous between a literal name and "your primary
-> branch", and the docs say nothing about branch naming. SETTLE THAT FIRST, by
-> testing `admin.hlx.page/status/{owner}/{repo}/master` against a real
-> master-branch Helix site or by asking the Code Sync team. Only then decide.
-> Keep the current guard meanwhile: our URL builders emit `main--{repo}--{owner}`
-> regardless, so a `master` repo genuinely cannot work today. If you are here
-> because a user is stuck, the remedy the warning states is correct — rename the
-> default branch, or pick another repo.
+> This item is CLOSED on scope: Demo Builder builds throwaway demo storefronts
+> from a `main` boilerplate, so the case this would serve does not arise. Reopen
+> only if a real customer storefront on a non-`main` branch turns up — and if it
+> does, note the platform question is still unresolved (the probes above are as
+> far as it got) and settle that before threading anything. Do NOT reopen it on
+> the strength of Adobe's "always use the main branch" quote; that sentence is
+> ambiguous and has already been over-read once here.

@@ -48,17 +48,23 @@
  * `git clone --depth 1 --branch main`, and the `main--{repo}--{owner}` site
  * URLs built in `typeGuards` and five other places.
  *
- * **This constraint is OURS.** The host is `{ref}--{site}--{org}` — a literal
- * git ref — and our seven URL builders emit `main--{repo}--{owner}`
- * unconditionally, so a repo defaulting to `master` cannot work here. That is
- * true whatever Adobe requires.
+ * **This constraint is OURS, and deliberately so.** The host is
+ * `{ref}--{site}--{org}` — a literal git ref — and our seven URL builders emit
+ * `main--{repo}--{owner}` unconditionally, so a repo defaulting to `master`
+ * cannot work here. Following the repo's own branch was considered and declined
+ * on SCOPE: this tool builds throwaway demo storefronts from a `main`
+ * boilerplate, so the case never arises
+ * (`.rptc/backlog/2026-08-20-storefront-branch-is-hardcoded-main.md`).
  *
- * Whether ADOBE requires the ref to be spelled `main` is UNRESOLVED. Their
- * go-live checklist says "Always use the main branch for production sites",
- * which reads equally as "a branch named main" or "your primary branch", and
- * the docs say nothing about branch naming. See
- * `.rptc/backlog/2026-08-20-storefront-branch-is-hardcoded-main.md` — that
- * quote was briefly written up here as settling it, and it does not.
+ * Whether ADOBE requires the ref to be spelled `main` is UNRESOLVED, and the
+ * decision above deliberately does not rest on it.
+ *
+ * **A non-`main` branch is NOT why Helix answers "no such site".** Measured
+ * 2026-08-20: `admin.hlx.page` returns 401 for a KNOWN site on any ref,
+ * including a nonsense one, so the ref plays no part in the site lookup. It is
+ * a real problem for other reasons — the reset's clone dies, the URLs would be
+ * wrong — but do not reintroduce it as the CAUSE of a 404. That claim was made
+ * here and was wrong.
  *
  * So phrase it as ours: "Demo Builder builds storefronts from main". Never
  * "Edge Delivery requires main" — unverified, and Edge Delivery is demonstrably
@@ -68,7 +74,11 @@ const REQUIRED_BRANCH = 'main';
 
 /** Why `admin.hlx.page` reports no such site. */
 export type SiteUnknownReason =
-    /** Nothing downstream targets this branch, so Helix was asked about a ref that does not exist. */
+    /**
+     * Nothing downstream targets this branch — our URL builders and the reset's
+     * clone both assume `main`. NOT the reason Helix reports "no such site":
+     * the ref is not part of site identity (see the module docblock).
+     */
     | { kind: 'wrong-default-branch'; branch: string }
     /** The repo exists on main but is not an Edge Delivery storefront. */
     | { kind: 'not-a-storefront'; missing: string[] }
