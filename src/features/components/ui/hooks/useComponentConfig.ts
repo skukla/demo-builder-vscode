@@ -93,6 +93,41 @@ interface UseComponentConfigReturn {
 // so the mesh group will be empty and hidden via `.filter(group => group.fields.length > 0)`
 
 /**
+ * The component registry, fetched once per webview.
+ *
+ * `get-components-data` is a pure read of bundled registry JSON
+ * (`componentHandlers.handleGetComponentsData`) — the same bytes on every call,
+ * for the life of the webview. It was fetched on every MOUNT of this hook, and
+ * the Commerce area remounts its whole body on each sub-step change
+ * (`StepAreaShell viewKey`, which is how the crossfade is implemented). So
+ * stepping Business Structure → Catalog tore down the loaded config, restarted
+ * the request, and flashed "Loading component configurations..." for data that
+ * had not changed and did not need fetching. Reported 2026-08-20.
+ *
+ * The in-flight promise is cached too, so two hooks mounting in the same frame
+ * share one request instead of racing.
+ *
+ * Nothing invalidates this, because nothing can: the registry ships with the
+ * extension, so a change to it means a new extension build, which reloads the
+ * webview and takes this module with it.
+ */
+let registryCache: ComponentsData | undefined;
+let registryInFlight: Promise<ComponentsData> | undefined;
+
+/**
+ * Drop the cached registry.
+ *
+ * For TESTS. Module state outlives a single `renderHook`, so without this the
+ * first test in a file warms the cache and every later mount starts already
+ * loaded — which silently changes what those tests are asserting. Production has
+ * no caller and wants none: the cache is meant to live as long as the webview.
+ */
+export function resetComponentRegistryCache(): void {
+    registryCache = undefined;
+    registryInFlight = undefined;
+}
+
+/**
  * Apply field defaults and brand-specific package defaults to component configs.
  *
  * Writes through `writeToComponents`, so `prevConfigs` and every per-component object
@@ -149,7 +184,9 @@ export function useComponentConfig({
         initialConfigs || {},
     );
     const [hasInitializedFromState, setHasInitializedFromState] = useState(false);
-    const [componentsData, setComponentsData] = useState<ComponentsData>({});
+    // Seeded from the cache, so a remount with the registry already in hand
+    // renders the form immediately instead of flashing a loader.
+    const [componentsData, setComponentsData] = useState<ComponentsData>(registryCache ?? {});
 
     // The backend owns the store-scope keys, so those writes land only there
     // (`resolveWriteTargets`). Every other field still writes to each component
@@ -157,7 +194,7 @@ export function useComponentConfig({
     const backendId = selectedStack ? getStackById(selectedStack)?.backend : undefined;
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(registryCache === undefined);
     const [loadError, setLoadError] = useState<string | null>(null);
 
     // Stable refs for callbacks to avoid re-render loops in effects
@@ -189,23 +226,36 @@ export function useComponentConfig({
 
     // Load components data
     useEffect(() => {
+        if (registryCache !== undefined) {
+            return;
+        }
+        let cancelled = false;
         const loadData = async () => {
             try {
-                const response = await vscode.request<{
-                    success: boolean;
-                    type: string;
-                    data: ComponentsData;
-                }>('get-components-data');
-                const data = response.data;
+                registryInFlight ??= vscode
+                    .request<{ success: boolean; type: string; data: ComponentsData }>(
+                        'get-components-data',
+                    )
+                    .then((response) => response.data);
+                const data = await registryInFlight;
+                registryCache = data;
+                if (cancelled) return;
                 setComponentsData(data);
                 setIsLoading(false);
             } catch (error) {
+                // Clear the shared promise so a retry is not permanently poisoned
+                // by one failure.
+                registryInFlight = undefined;
                 log.error('Failed to load components:', error);
+                if (cancelled) return;
                 setLoadError('Failed to load component configuration. Please try again.');
                 setIsLoading(false);
             }
         };
         loadData();
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     // Build selected components with dependencies.

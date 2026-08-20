@@ -8,7 +8,7 @@
  * @jest-environment jsdom
  */
 
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import type { ComponentConfigs } from '@/types/webview';
 
 // ---------------------------------------------------------------------------
@@ -67,12 +67,14 @@ jest.mock('@/core/ui/utils/componentDataHelpers', () => ({
 
 // Lazy-import so mocks are registered first
 let useComponentConfig: any;
+let resetComponentRegistryCache: () => void;
 
 beforeAll(async () => {
     const mod = await import(
         '@/features/components/ui/hooks/useComponentConfig'
     );
     useComponentConfig = mod.useComponentConfig;
+    resetComponentRegistryCache = mod.resetComponentRegistryCache;
 });
 
 // ---------------------------------------------------------------------------
@@ -81,6 +83,10 @@ beforeAll(async () => {
 
 describe('useComponentConfig — narrow interface', () => {
     beforeEach(() => {
+        // The registry is cached at module scope for the life of the webview, so
+        // without this the first test warms it and every later mount starts
+        // already loaded -- quietly changing what the assertions below mean.
+        resetComponentRegistryCache();
         jest.clearAllMocks();
         // Default: request resolves with empty components data
         mockRequest.mockResolvedValue({
@@ -333,6 +339,54 @@ describe('useComponentConfig — narrow interface', () => {
             expect(() => {
                 renderHook(() => useComponentConfig(props));
             }).not.toThrow();
+        });
+    });
+
+    // -------------------------------------------------------------------
+    // The registry is fetched once per webview, not once per mount
+    // -------------------------------------------------------------------
+
+    describe('remounting does not refetch the registry', () => {
+        /**
+         * `get-components-data` is a pure read of bundled registry JSON
+         * (`componentHandlers.handleGetComponentsData`) — the same bytes every
+         * call, for the life of the webview.
+         *
+         * It was fetched on every MOUNT, and the Commerce area remounts its whole
+         * body on each sub-step change (`StepAreaShell viewKey`, which is how the
+         * crossfade is implemented). So stepping Business Structure → Catalog tore
+         * down the loaded config, reissued the request, and flashed "Loading
+         * component configurations..." for data that had not changed. Reported
+         * 2026-08-20 as a spinner blip with nothing to load.
+         */
+        const props = {
+            selectedStack: 'eds-paas',
+            componentConfigs: {},
+            onConfigsChange: jest.fn(),
+            onValidationChange: jest.fn(),
+        };
+
+        it('asks once, however many times the view is rebuilt', async () => {
+            const first = renderHook(() => useComponentConfig(props));
+            await waitFor(() => expect(first.result.current.isLoading).toBe(false));
+            const callsAfterFirst = mockRequest.mock.calls.length;
+
+            first.unmount();
+            renderHook(() => useComponentConfig(props));
+
+            expect(mockRequest.mock.calls.length).toBe(callsAfterFirst);
+        });
+
+        it('renders the form straight away on the rebuild, with no loader', async () => {
+            const first = renderHook(() => useComponentConfig(props));
+            await waitFor(() => expect(first.result.current.isLoading).toBe(false));
+            first.unmount();
+
+            // The blip itself: this was `true` for a frame, for a fetch that was
+            // never going to return anything new.
+            const second = renderHook(() => useComponentConfig(props));
+
+            expect(second.result.current.isLoading).toBe(false);
         });
     });
 });
