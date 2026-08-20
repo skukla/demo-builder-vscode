@@ -43,9 +43,26 @@
  */
 
 /**
- * The branch every EDS path targets: the Helix status URL in
- * `githubAppService`, `DEFAULT_BRANCH` in `helixService`, and the template
- * reset's `git clone --depth 1 --branch main`.
+ * The branch every EDS path in THIS EXTENSION targets: the Helix status URL in
+ * `githubAppService`, `DEFAULT_BRANCH` in `helixService`, the template reset's
+ * `git clone --depth 1 --branch main`, and the `main--{repo}--{owner}` site
+ * URLs built in `typeGuards` and five other places.
+ *
+ * **This constraint is OURS.** The host is `{ref}--{site}--{org}` — a literal
+ * git ref — and our seven URL builders emit `main--{repo}--{owner}`
+ * unconditionally, so a repo defaulting to `master` cannot work here. That is
+ * true whatever Adobe requires.
+ *
+ * Whether ADOBE requires the ref to be spelled `main` is UNRESOLVED. Their
+ * go-live checklist says "Always use the main branch for production sites",
+ * which reads equally as "a branch named main" or "your primary branch", and
+ * the docs say nothing about branch naming. See
+ * `.rptc/backlog/2026-08-20-storefront-branch-is-hardcoded-main.md` — that
+ * quote was briefly written up here as settling it, and it does not.
+ *
+ * So phrase it as ours: "Demo Builder builds storefronts from main". Never
+ * "Edge Delivery requires main" — unverified, and Edge Delivery is demonstrably
+ * branch-aware for preview.
  */
 const REQUIRED_BRANCH = 'main';
 
@@ -115,9 +132,9 @@ export function describeSiteUnknown(reason: SiteUnknownReason, repoFullName: str
     switch (reason.kind) {
         case 'wrong-default-branch':
             return (
-                `Edge Delivery builds from ${REQUIRED_BRANCH}, but ${repoFullName} defaults to ` +
-                `${reason.branch}. Rename its default branch to ${REQUIRED_BRANCH} on GitHub, ` +
-                'or choose a different repository.'
+                `Demo Builder builds storefronts from ${REQUIRED_BRANCH}, and ${repoFullName} ` +
+                `defaults to ${reason.branch}. Rename its default branch to ${REQUIRED_BRANCH} ` +
+                'on GitHub, or choose a different repository.'
             );
         case 'not-a-storefront':
             return (

@@ -532,9 +532,9 @@ export function RepoSelectionInline({
                                     height="auto"
                                 >
                                     <Text UNSAFE_className="text-sm text-gray-600">
-                                        Edge Delivery builds from <strong>main</strong>, but{' '}
-                                        {selectedRepo.fullName} defaults to{' '}
-                                        <strong>{selectedRepo.defaultBranch}</strong>. Rename its
+                                        Demo Builder builds storefronts from{' '}
+                                        <strong>main</strong>, and {selectedRepo.fullName} defaults
+                                        to <strong>{selectedRepo.defaultBranch}</strong>. Rename its
                                         default branch to main on GitHub, or choose a different
                                         repository.
                                     </Text>
