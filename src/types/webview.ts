@@ -56,7 +56,19 @@ export type StorefrontSectionId = 'accounts' | 'repository' | 'code-sync' | 'blo
 
 export interface WizardState {
     currentStep: WizardStep;
+    /**
+     * The SLUG, derived from {@link projectTitle}. Folder name, dedupe key,
+     * path component. Still the field every downstream consumer reads.
+     */
     projectName: string;
+    /**
+     * What the user typed. Free text — capitals, spaces, punctuation.
+     *
+     * The field used to run `normalizeProjectName` on every keystroke, so typing
+     * "My Bodea Demo" rewrote itself to "my-bodea-demo" under the cursor. The
+     * slug is still enforced, just derived rather than typed.
+     */
+    projectTitle?: string;
     selectedPackage?: string; // Selected package ID (e.g., 'citisignal', 'buildright')
     selectedBackend?: string; // Persisted Commerce backend id (e.g., 'adobe-commerce-paas'); source of truth for the backend choice + the "frontend pending" display. selectedStack stays the downstream key.
     selectedStack?: string; // Selected stack ID (e.g., 'headless-paas', 'eds-paas')

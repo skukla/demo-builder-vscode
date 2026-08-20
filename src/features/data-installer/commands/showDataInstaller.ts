@@ -23,6 +23,7 @@ import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHan
 import type { StateManager } from '@/core/state/stateManager';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
@@ -82,7 +83,8 @@ export class ShowDataInstallerCommand extends BaseWebviewCommand {
 
         return {
             theme,
-            projectName: project?.name ?? '',
+            // Display only -- "Capture data from X into a new datapack."
+            projectName: project ? getProjectDisplayName(project) : '',
         };
     }
 

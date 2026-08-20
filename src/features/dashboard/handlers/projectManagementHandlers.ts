@@ -10,6 +10,7 @@
 
 import * as vscode from 'vscode';
 import { handleRequestStatus } from './statusHandlers';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler } from '@/types/handlers';
@@ -36,7 +37,10 @@ export const handleEditProject: MessageHandler = async (context) => {
     await vscode.commands.executeCommand('demoBuilder.createProject', {
         editProject: {
             projectPath: project.path,
-            projectName: project.name,
+            // The dashboard heading AND the inline rename field's value. Both
+            // want the title: renaming edits what the user typed, and the slug
+            // is re-derived from it by `renameProjectCore`.
+            projectName: getProjectDisplayName(project),
             settings,
         },
     });

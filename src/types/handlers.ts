@@ -25,7 +25,10 @@ import {
  * (Legacy type - kept for backwards compatibility)
  */
 export interface ProjectConfig {
+    /** The SLUG — folder name and dedupe key. */
     projectName?: string;
+    /** What the user typed. Optional: absent means display falls back to the slug. */
+    projectTitle?: string;
     envVars?: Record<string, string>;
     components?: {
         frontend?: string;

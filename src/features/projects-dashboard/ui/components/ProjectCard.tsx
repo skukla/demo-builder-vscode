@@ -15,6 +15,7 @@ import { useProjectSelectHandlers } from '../hooks/useProjectSelectHandlers';
 import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
 import { InlineRenameField } from '@/core/ui/components/forms';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { normalizeProjectName } from '@/core/validation/normalizers';
 import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {
@@ -65,7 +66,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     // project at rest has no runtime line, and a project with nothing deployed has
     // no deployment line. Joining what exists keeps the spoken label matching the
     // visible card instead of hard-coding a slot that may be empty.
-    const ariaLabel = [project.name, runtime?.text, deployment?.text, brandStackSummary]
+    const ariaLabel = [getProjectDisplayName(project), runtime?.text, deployment?.text, brandStackSummary]
         .filter(Boolean)
         .join(', ');
 
@@ -99,7 +100,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                         for an input; hidden while running (backend rejects) or
                         when the rename callback isn't wired. */}
                     <InlineRenameField
-                        name={project.name}
+                        name={getProjectDisplayName(project)}
                         textClassName="project-card-spectrum-name"
                         disabled={isRunning || !actions.onRenameSubmit}
                         normalize={normalizeProjectName}

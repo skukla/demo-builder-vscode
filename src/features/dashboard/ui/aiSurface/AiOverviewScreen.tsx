@@ -18,6 +18,7 @@ import { PromptEditDialog } from './components/PromptEditDialog';
 import { PromptGrid } from './components/PromptGrid';
 import { PageFooter, PageHeader, PageLayout } from '@/core/ui/components/layout';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import type { AiPrompt, Project } from '@/types/base';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -160,7 +161,7 @@ export function AiOverviewScreen({ project }: AiOverviewScreenProps): React.Reac
     return (
         <>
             <PageLayout
-                header={<PageHeader title="Prompt Library" subtitle={project.name} constrainWidth />}
+                header={<PageHeader title="Prompt Library" subtitle={getProjectDisplayName(project)} constrainWidth />}
                 footer={
                     <PageFooter
                         leftContent={

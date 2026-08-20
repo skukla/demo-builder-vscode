@@ -43,6 +43,8 @@ export function normalizePackageId(id: string | undefined): string | undefined {
 
 export interface ProjectManifest {
     name?: string;
+    /** Display title. Absent on every project created before it existed. */
+    title?: string;
     created?: string;
     lastModified?: string;
     adobe?: Project['adobe'];
@@ -112,6 +114,10 @@ export class ProjectFileLoader {
 
             const project: Project = {
                 name: manifest.name || path.basename(projectPath),
+                // Absent on older projects, and that is the supported state:
+                // `getProjectDisplayName` falls back to the slug, so they render
+                // exactly as they always have. Nothing backfills this.
+                title: manifest.title,
                 path: projectPath,
                 status: 'stopped', // Will be updated below if demo is actually running
                 created: manifest.created ? new Date(manifest.created) : new Date(),

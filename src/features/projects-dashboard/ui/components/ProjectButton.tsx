@@ -10,6 +10,7 @@ import { Flex, Text } from '@adobe/react-spectrum';
 import React, { useCallback } from 'react';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import {
     getStatusText,
     getStatusVariant,
@@ -67,7 +68,7 @@ export const ProjectButton: React.FC<ProjectButtonProps> = ({
     const statusVariant = getStatusVariant(project.status);
     const displayName = truncateName(project.name);
 
-    const ariaLabel = `${project.name}, ${statusText}`;
+    const ariaLabel = `${getProjectDisplayName(project)}, ${statusText}`;
 
     return (
         <div

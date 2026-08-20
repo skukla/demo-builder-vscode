@@ -33,6 +33,7 @@ import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { StateManager } from '@/core/state';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers/addIntegrationFlowHandlers';
 import { getAvailableAppBuilderComponents } from '@/features/project-creation/services/appBuilderComponentCatalogLoader';
@@ -89,7 +90,8 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand {
 
         return {
             theme,
-            projectName: project?.name ?? '',
+            // Display only (the screen's subtitle), so it carries the title.
+            projectName: project ? getProjectDisplayName(project) : '',
             hasAdobeContext: Boolean(project?.adobe?.organization),
             appBuilderComponents: project?.appBuilderComponents,
             commerceStoreStructure: project?.commerceStoreStructure,

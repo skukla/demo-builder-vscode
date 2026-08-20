@@ -41,7 +41,22 @@ export interface AiPrompt {
  * Project - Core project definition
  */
 export interface Project {
+    /**
+     * The SLUG. Folder name under `~/.demo-builder/projects/`, the key
+     * `createHandler` dedupes on, and the path `renameProjectCore` moves.
+     * Constrained to `[a-z][a-z0-9-]*` because a filesystem and a shell have
+     * opinions. Never rendered directly — see {@link title}.
+     */
     name: string;
+    /**
+     * What the user typed, shown wherever a human reads the project's name.
+     *
+     * Optional forever: projects created before this existed have only a slug
+     * and must render exactly as they always have, so there is no migration.
+     * Read it through `getProjectDisplayName`, never directly — that helper is
+     * what makes a missed display site greppable.
+     */
+    title?: string;
     template?: ProjectTemplate;
     created: Date;
     lastModified: Date;

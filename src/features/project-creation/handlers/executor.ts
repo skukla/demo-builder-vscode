@@ -163,7 +163,10 @@ interface FrontendSource {
  * ProjectCreationConfig - Configuration passed to project creation
  */
 interface ProjectCreationConfig {
+    /** The SLUG — folder name and dedupe key. */
     projectName: string;
+    /** What the user typed. Absent for a project with no title set. */
+    projectTitle?: string;
     adobe?: AdobeConfig;
     components?: {
         frontend?: string;
@@ -318,6 +321,10 @@ export function buildInitialProject(
 ): import('@/types').Project {
     return {
         name: typedConfig.projectName,
+        // Only when the user actually set one. Seeding it from the slug would
+        // render identically and then persist the slug as a genuine title, so a
+        // later rename would move the folder and leave the old name on screen.
+        ...(typedConfig.projectTitle ? { title: typedConfig.projectTitle } : {}),
         created: existingProject?.created || new Date(), // Preserve original creation date in edit mode
         lastModified: new Date(),
         path: projectPath,

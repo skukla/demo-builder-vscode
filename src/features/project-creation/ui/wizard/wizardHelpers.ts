@@ -723,6 +723,7 @@ export function buildProjectConfig(
 
     return {
         projectName: wizardState.projectName,
+        projectTitle: wizardState.projectTitle,
         adobe: {
             organization: wizardState.adobeOrg?.id,
             organizationName: wizardState.adobeOrg?.name,
