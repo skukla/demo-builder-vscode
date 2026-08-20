@@ -61,7 +61,7 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
     // hook reads a field the envelope has not got, and a guard refusal comes back
     // looking exactly like a success. This step had both bugs: an empty list
     // forever, with no reason shown.
-    const { load, loading, value, failure } = useDataInstallerRequest<Page<DatapackSummary>>(
+    const { load, value, failure, settled } = useDataInstallerRequest<Page<DatapackSummary>>(
         'find-datapacks',
     );
 
@@ -156,7 +156,11 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                         },
                     )}
                 </CenteredFeedbackContainer>
-            ) : loading ? (
+            ) : !settled ? (
+                // `!settled`, not `loading`: `loading` starts false and the fetch
+                // runs from a useEffect, i.e. after the first paint -- so frame 1
+                // rendered the grid below for one frame before the loader appeared.
+                // Reported as a blip 2026-08-20.
                 // Not an empty grid. A None card over an empty grid states "there
                 // is no sample data" for as long as the fetch takes — the same
                 // false-empty this step showed for its whole broken life.

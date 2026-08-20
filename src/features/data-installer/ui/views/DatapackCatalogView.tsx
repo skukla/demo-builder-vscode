@@ -93,7 +93,7 @@ export function DatapackCatalogView(): React.JSX.Element {
     /** Stage 3: capture a NEW pack from the connected instance. */
     const [exporting, setExporting] = useState(false);
 
-    const { load, loading, value, failure } =
+    const { load, loading, value, failure, settled } =
         useDataInstallerRequest<Page<DatapackSummary>>('find-datapacks');
     const detail = useDataInstallerRequest<DatapackDetailResponse>('get-datapack-detail');
     // What the open project was CREATED to hold, recorded by the wizard's Sample
@@ -215,7 +215,18 @@ export function DatapackCatalogView(): React.JSX.Element {
         }
     }, [loadDetail, selected]);
 
-    if (loading && !value) {
+    // `!settled`, not `loading`. `loading` starts FALSE and the fetch is kicked
+    // off from a useEffect, which React runs AFTER the first paint -- so frame 1
+    // renders with nothing loading and nothing loaded, falls straight past this
+    // guard, and shows the loaded view for one frame before the spinner arrives.
+    // That is the blip reported 2026-08-20.
+    //
+    // `settled` (data !== null || error !== null) is false until something has
+    // actually come back, which is the question this branch is asking. It also
+    // behaves on every other path: a retry after failure clears `error` and
+    // leaves `data` null, so it shows the loader again; a refresh after success
+    // keeps `data`, so content stays put and `isRefreshing` carries the hint.
+    if (!settled) {
         // Centered in the full viewport — IntegrationsScreen's exact gate shape
         // (its comment records why not CenteredFeedbackContainer: that takes a
         // FIXED DimensionValue and cannot express "fill this screen").
