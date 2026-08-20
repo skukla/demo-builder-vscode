@@ -42,6 +42,7 @@ import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
 import { StepRail } from '@/core/ui/components/navigation/StepRail';
 import { useFocusTrap } from '@/core/ui/hooks';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { normalizeProjectName, getProjectNameError } from '@/core/validation/normalizers';
 import { ACCS_OAUTH_CLIENT_ID } from '@/features/components/config/envVarKeys';
 import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
@@ -113,7 +114,9 @@ export function ConfigureScreen({
     // `retainContextWhenHidden`, which already preserves it across a tab-away.
     // `componentConfigs` does reset on that init; the asymmetry is accepted.
     const [activeSectionId, setActiveSectionId] = useState('project-info');
-    const [projectName, setProjectName] = useState(project.name);
+    // The TITLE as typed, not the slug. `handleRenameProject` derives the slug
+    // from it on save, so this field never has to show hyphens.
+    const [projectName, setProjectName] = useState(getProjectDisplayName(project));
     const [projectNameTouched, setProjectNameTouched] = useState(false);
 
     // Focus trap for keyboard navigation
@@ -148,13 +151,20 @@ export function ConfigureScreen({
     // Validate project name
     const projectNameError = useMemo(() => {
         if (!projectNameTouched) return undefined;
-        return getProjectNameError(projectName, existingProjectNames, project.name);
+        // Validate the DERIVED slug: it is what has to be a legal folder and what
+        // `existingProjectNames` holds. Validating the raw title would reject
+        // every capital and space the field now exists to allow.
+        return getProjectNameError(
+            normalizeProjectName(projectName),
+            existingProjectNames,
+            project.name,
+        );
     }, [projectName, existingProjectNames, project.name, projectNameTouched]);
 
-    // Handle project name change with normalization
+    // Keep what was typed. It used to run `normalizeProjectName` on every
+    // keystroke, so "My Bodea Demo" rewrote itself under the cursor.
     const handleProjectNameChange = useCallback((value: string) => {
-        const normalized = normalizeProjectName(value);
-        setProjectName(normalized);
+        setProjectName(value);
         setProjectNameTouched(true);
     }, []);
 
@@ -233,8 +243,13 @@ export function ConfigureScreen({
         setIsSaving(true);
         try {
             // Include projectName if it changed
+            // Compare against the TITLE, so editing only the capitalisation of a
+            // title still counts as a change. Comparing to the slug would treat
+            // "bodea demo" -> "Bodea Demo" as a no-op and silently discard it.
             const newProjectName =
-                projectName.trim() !== project.name ? projectName.trim() : undefined;
+                projectName.trim() !== getProjectDisplayName(project)
+                    ? projectName.trim()
+                    : undefined;
             // The authoring-experience preference is EDS-only; for non-EDS projects
             // it is omitted entirely so the payload shape is unchanged.
             const result = await webviewClient.request<SaveConfigurationResponse>(
@@ -266,7 +281,11 @@ export function ConfigureScreen({
         componentSecretFlags,
         touchedFields,
         projectName,
-        project.name,
+        // `project`, not `project.name`: handleSave now compares against
+        // `getProjectDisplayName(project)`, which reads `title` too. Depending on
+        // `.name` alone left a stale closure that would compare a new title
+        // against an old one and silently drop the rename.
+        project,
         isEds,
         authoringExperience,
     ]);
@@ -371,6 +390,7 @@ export function ConfigureScreen({
                                 onProjectNameChange={handleProjectNameChange}
                                 projectNameError={projectNameError}
                                 projectNameTouched={projectNameTouched}
+                                projectFolder={normalizeProjectName(projectName)}
                                 appBuilderComponentCatalog={appBuilderComponentCatalog}
                                 componentConfigs={componentConfigs}
                                 providedEnvVars={providedEnvVars}

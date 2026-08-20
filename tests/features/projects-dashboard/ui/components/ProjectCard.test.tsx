@@ -455,9 +455,12 @@ describe('ProjectCard', () => {
             fireEvent.keyDown(input, { key: 'Enter' });
 
             await screen.findByText('Old Name'); // back to display mode
-            // Card wires normalizeProjectName → spaces become hyphens, lowercased,
-            // matching the create-flow project-name affordance.
-            expect(onRenameSubmit).toHaveBeenCalledWith(project, 'new-name');
+            // The TITLE as typed, capitals and spaces intact. The card used to
+            // wire `normalizeProjectName`, so a rename rewrote itself to
+            // "new-name" under the cursor. `renameProjectCore` derives the slug
+            // now and moves the folder to match, so the enforcement is unchanged
+            // -- it just stopped happening where the user has to watch it.
+            expect(onRenameSubmit).toHaveBeenCalledWith(project, 'New Name');
         });
 
         it('never opens the project while interacting with the rename editor', () => {

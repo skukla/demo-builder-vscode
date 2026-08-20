@@ -25,7 +25,6 @@ import { InlineRenameField } from '@/core/ui/components/forms';
 import { PageLayout, PageHeader, ControlPanelLayout } from '@/core/ui/components/layout';
 import { useFocusTrap, useSingleTimer } from '@/core/ui/hooks';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { normalizeProjectName } from '@/core/validation/normalizers';
 import type { AppBuilderComponentState } from '@/types/base';
 
 /**
@@ -228,7 +227,11 @@ export function ProjectDashboardScreen({
                             <InlineRenameField
                                 name={displayName}
                                 disabled={isRunning}
-                                normalize={normalizeProjectName}
+                                // No `normalize`: the field takes the TITLE as typed.
+                        // `renameProjectCore` derives the slug from it and moves
+                        // the folder to match, so rewriting keystrokes to hyphens
+                        // here would only put the enforcement back in the one
+                        // place the user has to look at.
                                 onRename={renameInline}
                             />
                         }

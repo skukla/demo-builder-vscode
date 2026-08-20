@@ -15,7 +15,6 @@ import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
 import { InlineRenameField } from '@/core/ui/components/forms';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
-import { normalizeProjectName } from '@/core/validation/normalizers';
 import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {
     getProjectStatusDisplay,
@@ -85,7 +84,11 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                         name={getProjectDisplayName(project)}
                         textClassName="project-row-name"
                         disabled={isRunning || !actions.onRenameSubmit}
-                        normalize={normalizeProjectName}
+                        // No `normalize`: the field takes the TITLE as typed.
+                        // `renameProjectCore` derives the slug from it and moves
+                        // the folder to match, so rewriting keystrokes to hyphens
+                        // here would only put the enforcement back in the one
+                        // place the user has to look at.
                         onRename={(newName) =>
                             actions.onRenameSubmit
                                 ? actions.onRenameSubmit(project, newName)
