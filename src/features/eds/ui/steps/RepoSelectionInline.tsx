@@ -368,22 +368,12 @@ export function RepoSelectionInline({
         setIsRechecking(false);
     }, [edsConfig?.createdRepo, selectedRepo?.fullName]);
 
-    // Acknowledgement, not verification. See `computeCodeSyncValid` — when the
-    // missing App is inferred rather than measured, opening the install page is
-    // what releases Continue. Reset per repo below, so acknowledging one repo
-    // never speaks for the next.
-    const [installLinkOpened, setInstallLinkOpened] = useState(false);
-
     const handleOpenInstallPage = useCallback(() => {
         if (githubAppStatus.installUrl) {
-            setInstallLinkOpened(true);
             vscode.postMessage('openExternal', { url: githubAppStatus.installUrl });
         }
     }, [githubAppStatus.installUrl]);
 
-    useEffect(() => {
-        setInstallLinkOpened(false);
-    }, [selectedRepo?.fullName]);
 
     // Validate pre-selected repo exists in loaded repos (for import flow).
     useEffect(() => {
@@ -489,9 +479,9 @@ export function RepoSelectionInline({
     // `code-sync` sub-step gate stays live while showing `repository`.
     useEffect(() => {
         onCodeSyncValidChange(
-            computeCodeSyncValid(repoMode, githubAppStatus, selectedRepo, installLinkOpened),
+            computeCodeSyncValid(repoMode, githubAppStatus, selectedRepo),
         );
-    }, [repoMode, githubAppStatus, selectedRepo, installLinkOpened, onCodeSyncValidChange]);
+    }, [repoMode, githubAppStatus, selectedRepo, onCodeSyncValidChange]);
 
     const templateAvailable = !!(edsConfig?.templateOwner && edsConfig?.templateRepo);
     const showAppStatus = shouldShowAppStatus(
@@ -604,7 +594,6 @@ export function RepoSelectionInline({
                     recheckMessage={recheckMessage}
                     onCheckAgain={handleCheckAgain}
                     onOpenInstallPage={handleOpenInstallPage}
-                    installLinkOpened={installLinkOpened}
                 />
             )}
         </div>

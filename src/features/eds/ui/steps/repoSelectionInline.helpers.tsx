@@ -310,7 +310,6 @@ export function computeCodeSyncValid(
     repoMode: string,
     githubAppStatus: GitHubAppStatus,
     selectedRepo: GitHubRepoItem | undefined,
-    installLinkOpened = false,
 ): boolean {
     if (repoMode === 'new') {
         return githubAppStatus.isInstalled === true && !githubAppStatus.isChecking;
@@ -331,25 +330,15 @@ export function computeCodeSyncValid(
         githubAppStatus.isInstalled === false && githubAppStatus.codeStatus === 404;
     if (definitivelyMissing) return false;
 
-    // The INFERRED missing App: an outer 404 carries no `code.status` to read
-    // (the outer 404 has no body), so the install prompt above it is a well-founded
-    // guess, not a measurement. Blocking on a guess strands whoever it is wrong
-    // about; letting it through silently is how an existing-repo user reached
-    // Phase 3 — and a halt — only AFTER Phase 1 had reset their repo and Phase 2
-    // had pushed to it.
+    // An INFERRED missing App does not gate. It was gated on briefly (an
+    // acknowledgement click), and the only way to make that honest was a line
+    // saying why Continue was held — which turned out to be one more paragraph
+    // on a screen that already said the same thing three ways. The screen IS the
+    // encouragement: it is titled "Make sure AEM Code Sync is installed", lists
+    // the steps, and offers the button. A forced click on top of an inference we
+    // know is unreliable bought friction, not safety.
     //
-    // So: ask them to open the install page, and take the click as the
-    // acknowledgement. Costs one click, keeps the user in control, and restores
-    // the "learn before your repository is written to" guarantee that moving
-    // this check earlier was meant to provide. Same bar `storefront-tools`
-    // settled on after abandoning verification outright.
-    const inferredMissing =
-        githubAppStatus.isInstalled === false &&
-        githubAppStatus.codeStatus === undefined &&
-        !githubAppStatus.undetermined &&
-        Boolean(githubAppStatus.installUrl);
-    if (inferredMissing && !installLinkOpened) return false;
-
+    // The DEFINITIVE case above still blocks, because that one is measured.
     return true;
 }
 
@@ -419,7 +408,6 @@ export function CodeSyncStatusView({
     onCheckAgain,
     onOpenInstallPage,
     pendingReset = false,
-    installLinkOpened = false,
 }: {
     /** Set in `new` mode once the repo exists. */
     createdRepo?: { owner: string; name: string };
@@ -432,8 +420,6 @@ export function CodeSyncStatusView({
     onOpenInstallPage: () => void;
     /** The selected repo is not a storefront yet and is queued for reset. */
     pendingReset?: boolean;
-    /** The user has opened the install page — the acknowledgement Continue waits on. */
-    installLinkOpened?: boolean;
 }): React.ReactElement {
     const view = resolveCodeSyncView(status, isRechecking, pendingReset);
     const [fallbackOwner, fallbackRepo] = (selectedRepoFullName ?? '/').split('/');
@@ -510,11 +496,6 @@ export function CodeSyncStatusView({
                     description={buildCodeSyncInstallSummary(owner, repo)}
                     instructions={buildCodeSyncInstallSteps(owner, repo)}
                 />
-                {!definitive && !installLinkOpened && (
-                    <Text UNSAFE_className="text-sm text-gray-600">
-                        We cannot confirm this from here — open the install page to continue.
-                    </Text>
-                )}
             </StatusDisplay>
         </CenteredFeedbackContainer>
     );
