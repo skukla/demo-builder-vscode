@@ -29,13 +29,22 @@ import '@testing-library/jest-dom';
 /** Nothing loading, nothing loaded — exactly what the first paint sees. */
 const NOT_YET_ASKED = { loading: false, error: null, data: null };
 
+/**
+ * Hoisted, and that is load-bearing.
+ *
+ * The hook's return feeds `useCallback` deps all the way down. Building these
+ * inline in the factory hands out a NEW identity on every render, so the
+ * effects that call `load` re-fire forever and the render never settles — the
+ * suite hangs rather than failing. Module scope keeps the identity stable, the
+ * way the real hook's `useCallback` does.
+ */
+const stableExecute = jest.fn().mockReturnValue(new Promise(() => undefined));
+const stableReset = jest.fn();
+
 jest.mock('@/core/ui/hooks/useVSCodeRequest', () => ({
-    // `execute` must return a promise: the wrapper does
-    // `void execute(payload).catch(...)` so an unhandled rejection never reaches
-    // the webview console. A bare jest.fn() returns undefined and throws there.
     useVSCodeRequest: () => ({
-        execute: jest.fn().mockReturnValue(new Promise(() => undefined)),
-        reset: jest.fn(),
+        execute: stableExecute,
+        reset: stableReset,
         ...NOT_YET_ASKED,
     }),
 }));

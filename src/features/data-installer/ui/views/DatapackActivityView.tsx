@@ -72,7 +72,7 @@ export function DatapackActivityView(): React.JSX.Element {
     const [total, setTotal] = useState(0);
     const [hasLoaded, setHasLoaded] = useState(false);
 
-    const { load, loading, value, failure } =
+    const { load, loading, value, failure, settled } =
         useDataInstallerRequest<Page<ActivityEntry>>('get-datapack-activity');
 
     /**
@@ -204,7 +204,7 @@ export function DatapackActivityView(): React.JSX.Element {
                     </div>
                 }
             >
-                {renderActivityBody({ loading, entries, total, loadMore })}
+                {renderActivityBody({ loading, settled, entries, total, loadMore })}
             </FullScreenSurface>
         </>
     );
@@ -222,16 +222,24 @@ export function DatapackActivityView(): React.JSX.Element {
  */
 function renderActivityBody({
     loading,
+    settled,
     entries,
     total,
     loadMore,
 }: {
     loading: boolean;
+    settled: boolean;
     entries: ActivityEntry[];
     total: number;
     loadMore: () => void;
 }): React.JSX.Element {
-    if (loading && entries.length === 0) {
+    // `!settled` covers the FIRST frame, which `loading` cannot: `loading` starts
+    // false and the fetch runs from a useEffect, i.e. after the first paint. This
+    // branch used to read `loading && entries.length === 0`, so frame 1 fell
+    // through to the EmptyState below and stated "No activity yet" before anything
+    // had been asked. `loading` is kept for the append case, where entries already
+    // exist and more are on the way.
+    if (!settled || (loading && entries.length === 0)) {
         // Inline, under the filter that is still on screen — not the full-block
         // takeover, which would remove it.
         return <LoadingDisplay size="M" message="Loading activity..." />;
