@@ -14,8 +14,8 @@
  */
 
 import { Text, Button, ProgressCircle } from '@adobe/react-spectrum';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import React from 'react';
+import { InlineNotice } from '@/core/ui/components/feedback';
 import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
 import type { OrgCheckState } from '@/features/dashboard/ui/hooks/useDashboardStatus';
 
@@ -66,16 +66,11 @@ export function OrgContextNotice({
     const { currentOrg, expectedOrgName } = orgMismatch;
     return (
         <div className="page-container-padded">
-            <div className="dashboard-org-banner" data-testid="org-mismatch-banner">
-                <AlertCircle size="S" UNSAFE_className="dashboard-org-banner-icon" />
-                <div className="dashboard-org-banner-body">
-                    <Text UNSAFE_className="dashboard-org-banner-title">Wrong Adobe organization</Text>
-                    <Text UNSAFE_className="status-text">{buildMessage(expectedOrgName, currentOrg)}</Text>
-                    {switchAttempted && (
-                        <Text UNSAFE_className="dashboard-org-banner-hint">{buildHint(currentOrg)}</Text>
-                    )}
-                </div>
-                <div className="dashboard-org-banner-actions">
+            <InlineNotice
+                title="Wrong Adobe organization"
+                testId="org-mismatch-banner"
+                hint={switchAttempted ? buildHint(currentOrg) : undefined}
+                action={
                     <Button variant="accent" onPress={onSwitchOrg} isDisabled={isSwitching}>
                         {isSwitching ? (
                             <>
@@ -83,7 +78,7 @@ export function OrgContextNotice({
                                     size="S"
                                     isIndeterminate
                                     aria-label="Switching organization"
-                                    UNSAFE_className="dashboard-org-banner-spinner"
+                                    UNSAFE_className="inline-notice-spinner"
                                 />
                                 <Text>Switching…</Text>
                             </>
@@ -91,8 +86,10 @@ export function OrgContextNotice({
                             <Text>Switch IMS Org</Text>
                         )}
                     </Button>
-                </div>
-            </div>
+                }
+            >
+                {buildMessage(expectedOrgName, currentOrg)}
+            </InlineNotice>
         </div>
     );
 }

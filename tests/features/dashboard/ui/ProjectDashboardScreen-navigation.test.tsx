@@ -132,6 +132,18 @@ jest.mock('@/core/ui/hooks', () => ({
 
 // Mock StatusCard and GridLayout
 jest.mock('@/core/ui/components/feedback', () => ({
+    // OrgContextNotice now renders through the shared InlineNotice (extracted
+    // 2026-08-20). Stubbed to its structure — title, body, optional hint and
+    // action — so the suite keeps asserting on CONTENT rather than on the
+    // banner's markup.
+    InlineNotice: ({ title, children, hint, action, testId }: any) => (
+        <div data-testid={testId}>
+            <span>{title}</span>
+            <span>{children}</span>
+            {hint && <span>{hint}</span>}
+            {action}
+        </div>
+    ),
     StatusCard: ({ label, status, color }: any) => (
         <div data-testid={`status-card-${label}`} data-color={color}>{label}: {status}</div>
     ),

@@ -24,3 +24,5 @@ export type { LoadingOverlayProps } from './LoadingOverlay';
 
 export { SuccessStateDisplay } from './SuccessStateDisplay';
 export type { SuccessStateDisplayProps } from './SuccessStateDisplay';
+export { InlineNotice } from './InlineNotice';
+export type { InlineNoticeProps } from './InlineNotice';

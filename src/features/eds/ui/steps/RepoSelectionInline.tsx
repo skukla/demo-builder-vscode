@@ -34,7 +34,7 @@ import {
     type GitHubAppStatus,
     type RepoCreationState,
 } from './repoSelectionInline.helpers';
-import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
+import { InlineNotice } from '@/core/ui/components/feedback';
 import { SelectionStepContent } from '@/core/ui/components/selection';
 import { useSelectionStep } from '@/core/ui/hooks';
 import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
@@ -520,25 +520,22 @@ export function RepoSelectionInline({
 
                 {repoMode === 'existing' && (
                     <>
-                        {/* Named where the choice is made. Everything downstream targets
-                            `main`, so this repo can never work -- and unlike the readiness
-                            warning below, a reset is NOT the remedy: the reset itself
-                            clones --branch main. Say what is wrong and what fixes it. */}
+                        {/* Named where the choice is made, as a NOTICE rather than a
+                            full-pane StatusDisplay: nothing here is fatal and the picker
+                            below stays usable. Rendered as a wall once (2026-08-20) and it
+                            swallowed the repo list while Continue was one checkbox away. */}
                         {selectedRepo?.defaultBranch &&
                             selectedRepo.defaultBranch !== 'main' && (
-                                <StatusDisplay
-                                    variant="warning"
+                                <InlineNotice
                                     title="This repository uses a different default branch"
-                                    height="auto"
+                                    testId="default-branch-notice"
                                 >
-                                    <Text UNSAFE_className="text-sm text-gray-600">
-                                        Demo Builder builds storefronts from{' '}
-                                        <strong>main</strong>, and {selectedRepo.fullName} defaults
-                                        to <strong>{selectedRepo.defaultBranch}</strong>. Rename its
-                                        default branch to main on GitHub, or choose a different
-                                        repository.
-                                    </Text>
-                                </StatusDisplay>
+                                    Demo Builder builds storefronts from <strong>main</strong>,
+                                    and {selectedRepo.fullName} defaults to{' '}
+                                    <strong>{selectedRepo.defaultBranch}</strong>. Rename its
+                                    default branch to main on GitHub, or choose a different
+                                    repository.
+                                </InlineNotice>
                             )}
                         {/* Always rendered (disabled until a repo is selected) so selecting one
                             never reflows the search + list below. */}

@@ -18,6 +18,7 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | Error / empty / success full-block state | `feedback/StatusDisplay` (`variant`, `actions[]`) | red `<Text>`, a bespoke panel |
 | "Nothing here yet" + a CTA | `feedback/EmptyState` | a hand-rolled centered div |
 | Ambient status badge (dot + label + value) | `feedback/StatusCard` (`action` for remediation) | an inline colored span |
+| Warning/context banner ABOVE content the user can still use | `feedback/InlineNotice` (`tone`, `hint`, `action`) | a full-pane `StatusDisplay`, which reads as a wall |
 | Just the status dot | `ui/StatusDot` | a styled `<span>` |
 | Centering any of the above at a fixed height | `layout/CenteredFeedbackContainer` | ad-hoc flex + height |
 | Adobe API catalog fetch states | `feedback/ApiCatalogFeedback` | re-deriving loading/sign-in/error |
