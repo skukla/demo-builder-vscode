@@ -5,9 +5,10 @@
 Filed so nobody re-derives this from scratch, and so nobody "fixes" the detector
 by reaching for an API that cannot answer.
 
-**Two small changes ARE proposed here**, in "Two things worth taking" at the
-bottom: treat an outer 401/403 as site-exists, and gate on the install click.
-Everything above that section is reference.
+**ONE change is proposed here**: gate Continue on the install link being
+clicked (section B near the bottom). A second — treating an outer 401/403 as
+site-exists — was proposed and REJECTED the same day; section A says why, so it
+does not get re-proposed. Everything above those sections is reference.
 
 ## The one endpoint
 
@@ -133,24 +134,60 @@ What their work DOES give us:
    sync check WILL return 401/403."* — the `access.admin` role that
    `catalogPrewarmService` already documents closing the admin API.
 
-### Two things worth taking
+### A. Treat an outer 401/403 as site-exists — PROPOSED AND REJECTED, 2026-08-19
 
-**A. Treat an outer 401/403 as site-exists, not `undetermined`.** We currently
-classify it transient and retry. Both measurements say it confirms Helix knows
-the site. This matters because our own pipeline pins a site admin, creating
-exactly that condition on storefronts we made. Careful: `undetermined` also
-covers genuine transport failures, and the module's docblock records the
-eleven-reinstalls bug caused by over-reading a refusal — so narrow this to
-401/403 specifically, keep 5xx and timeouts transient, and do not let it become
-a positive App verdict. A site existing is not an App installed.
+Proposed here after reading their `worker/aem-proxy.js`, then rejected the same
+day on a second look. **Do not re-propose it without reading this section.**
 
-**B. Gate on the install click.** `templates.js:786` disables their Continue
+The proposal was: we classify an outer 401/403 as `undetermined` and retry;
+their worker treats it as proof the site exists; adopt theirs.
+
+It was pattern-matching on a shared status code without checking that the
+situations match. They do not:
+
+| | storefront-tools | this extension |
+|---|---|---|
+| How the call is made | anonymous — no user credential | authenticated (`x-auth-token` + admin bearer) |
+| What a 401/403 means | "the site is there, you may not see it" | "we sent a credential and it was refused" |
+
+Their reading is sound *because* they never presented a credential. Ours would
+be a different fact wearing the same status code.
+
+And it buys nothing even if adopted. Concluding the site exists still leaves
+`code.status` unreadable, so it says nothing about the App — it would add a
+"site exists, App unknown" state that no caller can act on differently.
+Meanwhile `undetermined` already produces a credential-specific message through
+`buildUndeterminedAppCheckError`; the generic "Adobe did not answer" wording
+that prompted all of this came from the 404 path, fixed in `fa7d2b4f`.
+
+Zero gain, and it edits the one classifier with a documented field failure
+behind it — `appInstallationResolver`'s docblock records a user told **eleven
+times** to install an App that was already installed, caused by over-reading
+precisely this refusal.
+
+**B. Gate on the install click — the one worth doing.** `templates.js:786` disables their Continue
 button until the install link has been clicked:
-`?disabled=${loading || !installLinkClicked}`. Cheap, and it turns "the user
-probably installed it" into "the user at least opened the install page", which
-is the honest bar for a case we cannot verify. Fits our existing-repo path. For
-an existing repo they show only a note: *"Ensure that the AEM Code Sync app is
-installed and has completed its initial deployment before continuing."*
+`?disabled=${loading || !installLinkClicked}`. It turns "the user probably
+installed it" into "the user at least opened the install page" — the honest bar
+for something we cannot verify.
+
+**What it actually fixes.** On the existing-repo path a user with a missing App
+can walk past the wizard's install prompt, hit Create, and be halted at Phase 3
+— AFTER Phase 1 reset the repo and Phase 2 wrote to it. That breaks the "learn
+before your repository is written to" guarantee, which is the whole reason the
+check was moved earlier on 2026-08-06.
+
+**Why a click and not a block.** Blocking on the check was considered and
+rejected: our signal is unreliable, and blocking wrongly leaves a user with no
+way forward, while a click-gate costs them one click and a look at GitHub. Same
+early warning, no stranding — see `computeCodeSyncValid`'s own comment on why
+existing repos deliberately do not gate on a conflated answer.
+
+Scope: only when the check says needs-install, only on the existing-repo path
+(new repos already gate on real verification, which is stronger), and moot once
+the check comes back verified. For their equivalent existing-repo case they show
+only a note: *"Ensure that the AEM Code Sync app is installed and has completed
+its initial deployment before continuing."*
 
 ### Noted, different question
 
