@@ -492,10 +492,17 @@ export function CodeSyncStatusView({
                     do on GitHub, the buttons do it. The single line below earns
                     its place only while Continue is held, because a disabled
                     button with no stated reason is its own bug. */}
-                <NumberedInstructions
-                    description={buildCodeSyncInstallSummary(owner, repo)}
-                    instructions={buildCodeSyncInstallSteps(owner, repo)}
-                />
+                <NumberedInstructions instructions={buildCodeSyncInstallSteps(owner, repo)} />
+                {/* Below the steps, not above them. This surface centres its title,
+                    and a paragraph directly under it competed with the heading for
+                    the same glance. `GitHubAppInstallDialog` keeps it as the
+                    `description` lead-in because a modal has no centred title to
+                    compete with — the shared COPY is identical either way, which
+                    is the drift `codeSyncInstallContent` guards against. Where a
+                    surface puts it is that surface's call. */}
+                <Text UNSAFE_className="text-sm text-gray-600">
+                    {buildCodeSyncInstallSummary(owner, repo)}
+                </Text>
             </StatusDisplay>
         </CenteredFeedbackContainer>
     );
