@@ -60,6 +60,15 @@ describe('REQUEST_TIMEOUTS', () => {
         expect([...budgetedTypes()]).toContain(type);
     });
 
+    // The Code Sync check is fast ONLY when the caller passes `skipTrigger`.
+    // "Check Again" does not, so on a repo Helix has never indexed the handler
+    // triggers a real code sync and polls it for up to TIMEOUTS.LONG. Unbudgeted,
+    // the frontend gave up at 30s and rendered "couldn't verify" over a sync that
+    // was still running — and the gate on that step reads that verdict.
+    it('budgets the Code Sync check for the path that triggers a sync', () => {
+        expect([...budgetedTypes()]).toContain('check-github-app');
+    });
+
     // Every Adobe-console call routes through getServicesForOrg or a subscribe PUT,
     // both measured well past the 30s default. If a twin exists for one, it exists
     // for the other.

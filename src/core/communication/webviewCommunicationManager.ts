@@ -71,6 +71,15 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     'update-api-mesh': TIMEOUTS.LONG,                // 180s - update and deploy mesh
     'ensure-mesh-api-subscribed': TIMEOUTS.LONG,     // 180s - subscribe required APIs (getCredentials + create + subscribe; multiple Adobe calls)
 
+    // AEM Code Sync check. The fast path answers in about a second, but only
+    // because the caller passed `skipTrigger`. "Check Again" does NOT, and when
+    // Helix has never heard of the repo the handler TRIGGERS a real code sync and
+    // polls it (`checkGitHubAppHandler.triggerAndWaitForCodeSync`, bounded by
+    // TIMEOUTS.LONG over 30 attempts). Unbudgeted, the frontend hung up at 30s and
+    // showed "couldn't verify" while the sync ran on for up to another 2.5 minutes
+    // and often succeeded — the 2026-07-31 failure above, in a different message.
+    'check-github-app': TIMEOUTS.LONG,               // 180s - may trigger a code sync and poll it
+
     // Project deletion (EDS cleanup involves multiple external APIs)
     'deleteProject': TIMEOUTS.LONG,                  // 180s - DA.live + GitHub + local cleanup
 
