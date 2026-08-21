@@ -55,6 +55,68 @@ This is the same shape the repo has already paid for. From the project CLAUDE.md
 Milder here — `MessagePayload` is a widening, not `any` — but it is the gap the
 display-name drift came through.
 
+## ATTEMPTED 2026-08-20, ABANDONED AND REVERTED — read this before starting
+
+The refactor was tried end to end and backed out. Nothing shipped; the tree was
+returned to this commit. **It was abandoned for what it FOUND, not for anything
+that went wrong**, and the finding changes the shape of the work:
+
+> This is not mechanical. Every producer/consumer pair that had never been
+> compared disagrees, and each disagreement needs a judgement call about which
+> side is right.
+
+Ten of them surfaced before the attempt stopped, and it was still finding new
+ones rather than converging — the tenth was two type names for the same concept,
+one layer below the ninth. That is the signal that this needs a scoped session of
+its own, not a slot at the end of another one.
+
+**The failures are all `tsc` errors, so the sequence reproduces exactly.** Wire
+producer and consumer to one declaration and they appear in this order.
+
+### What it found
+
+| # | Finding | Severity |
+|---|---|---|
+| 1 | **Two `WizardStep` types.** `@/types/webview` exports a step-**id union** (`'welcome' \| 'prerequisites' \| ...`); `createProject.ts` declares a step-**definition object** (`{ id, name, [key]: unknown }`). Unrelated things, one name. Silent because neither file imported the other's. | naming |
+| 2 | **The step-definition shape is declared FOUR times** — `createProject.ts`, `wizardHelpers.WizardStepConfig`, `stepLogger.WizardStepConfig`, and the wizard bundle's own `WizardInitData.wizardSteps`. Each subtly different: `enabled` optional in two, an index signature in two others. | duplication |
+| 3 | **`isWizardStep` validates two of the four fields the consumer depends on** (`createProject.ts`). It checks `id` and `name`. `wizard-steps.json` carries `description` and `enabled` on all 6 steps, and `wizardHelpers` filters on `step.enabled` in three places (`:113`, `:424`, `:539`). So a config that lost `enabled` passes validation, is sent, and every step is silently dropped from the wizard — `undefined` is falsy. The guard is not lying about its declared type; the declared type (`{ id, name, [key]: unknown }`) is too loose to describe what the consumer needs, which is the same root as the rest of this item. | **latent bug** |
+| 4 | Wizard payload `componentDefaults`: producer sends `ComponentDefaults` (`{frontend?, backend?, dependencies?}`), consumer declares `ComponentSelection` (a superset with `integrations`, `services`, `preset`). | divergence |
+| 5 | Wizard payload `importedSettings`: `SettingsFile` on one side, `ImportedSettings` on the other. | divergence |
+| 6 | **`EditProjectConfig` is declared twice** — `createProject.ts` and `wizardHelpers.ts` — once per side of the wire. | duplication |
+| 7 | Configure payload `componentsData`: producer declares the arrays `unknown[]`, consumer needs `ComponentData[]`. | divergence |
+| 8 | **`envVars` carries no `key`.** The producer sends `registry.envVars` straight through, and the registry's records have no `key` — it IS the record key. `ComponentEnvVar` requires it. Anything reading `envVars[x].key` off this payload reads `undefined`. `UniqueField` happens to rebuild the key by pairing record key with value, which is why nothing has broken yet. | **latent bug** |
+| 9 | **`EnvVarDefinition` and `ComponentEnvVar` are two types for the same thing**, and they are not structurally equal. | duplication |
+| 10 | Several `\| null` (producer) vs `?: undefined` (consumer) mismatches on the same fields. | divergence |
+
+### What that means for the plan
+
+- Items **3 and 8 are bugs today** and are worth fixing on their own, ahead of
+  and independently of the typing work. Neither needs the refactor.
+- Items **1, 2, 6, 9 are duplicate or colliding declarations.** Resolving them is
+  most of the work and has to happen FIRST — the payload module cannot import a
+  name that means two things.
+- Items **4, 5, 7, 10 are per-field decisions**: which side is right. Cheap
+  individually, and there is no way to know the count in advance. Ten surfaced
+  before the attempt stopped; assume more.
+
+### Revised sequencing
+
+The original plan below is still correct in outline, with one step inserted
+before all of it:
+
+**Step 0 — resolve the duplicate and colliding declarations** (findings 1, 2, 6,
+9). One shape, one name, one file each. Land it separately and verify it on its
+own; nothing about the payload boundary changes yet, so it is safe to ship alone.
+
+Then steps 1–5 become genuinely mechanical, because the types they move will
+finally be unambiguous.
+
+### One practical note
+
+`src/types/webviewPayloads.ts` **must not import `vscode`** — it compiles into the
+browser bundles. That rules out keeping any payload shape beside the command that
+produces it, which is why they have to move rather than just be exported.
+
 ## Goal
 
 Producer and consumer check against ONE shape, so a brand survives the boundary and
@@ -84,17 +146,28 @@ the two cannot drift.
 
 ## Why it is filed rather than done
 
-No bug is currently attached to it. The one it caused is fixed (`02cac443`), and the
-brand plus the local annotations stop that specific class recurring at the three sites
-that matter. This is the durable version, worth doing on its own terms rather than
-folded into a feature.
+Filed first because no bug was attached to it; the one it caused is fixed
+(`02cac443`), and the brand plus the local annotations stop that class recurring at
+the three sites that matter.
+
+**Then attempted, and abandoned for cause** — see the section above. Two bugs DID turn
+out to be attached to it (findings 3 and 8); they were invisible until producer and
+consumer shared a declaration. The reason to do this is no longer tidiness.
 
 ## Kickoff prompt
 
 > Webview initial payloads are declared and then cast away — see
 > `.rptc/backlog/2026-08-20-webview-payloads-are-typed-then-cast-away.md`.
-> Re-measure the central claim first, it is three commands: confirm
+>
+> Read the ATTEMPTED section first. This was tried once and reverted, and the ten
+> findings there are the map — do not rediscover them.
+>
+> Re-measure the central claim before starting, it is three commands: confirm
 > `baseWebviewCommand.ts` still casts to `MessagePayload`, confirm the abstract still
 > returns `Promise<unknown>`, and confirm `grep -rln ConfigureInitialData src` still
-> returns a single file. If any has changed, the item's premise has moved and the plan
-> needs re-scoping before step 1.
+> returns a single file. If any has changed, the premise has moved.
+>
+> Then start at **Step 0** (resolve the duplicate and colliding declarations), NOT at
+> step 1. Findings 3 and 8 are bugs that need neither and can be fixed first, alone.
+> Expect more than ten divergences — ten is where the first attempt stopped, not where
+> they ran out.
