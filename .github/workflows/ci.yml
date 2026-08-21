@@ -38,6 +38,14 @@ jobs:
       - name: Typecheck tests
         run: npm run typecheck:tests
 
+      # tsc's include globs keep one file per basename (.ts beats .tsx), so a
+      # file pair like index.ts + index.tsx leaves the .tsx silently unchecked
+      # — how the dashboard webview entry went untypechecked for months and hid
+      # a dead wire read (fixed 20f45f8f). This asserts both configs' file sets
+      # cover everything on disk.
+      - name: Typecheck blind spots
+        run: npm run validate:tsc-blindspots
+
       - name: Lint
         run: npm run lint
 

@@ -448,6 +448,7 @@
     "validate:eslint-rules": "node scripts/validate-eslint-rules.js",
     "validate:test-guidelines": "node scripts/validate-test-guidelines.js",
     "validate:test-file-sizes": "node scripts/check-test-file-sizes.js",
+    "validate:tsc-blindspots": "node scripts/check-tsc-blindspots.js",
     "analyze": "ANALYZE=true npm run compile:webview",
     "package": "vsce package",
     "publish": "vsce publish",
