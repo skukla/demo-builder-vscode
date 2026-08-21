@@ -1,6 +1,12 @@
 # The other webview message channels are still untyped
 
 **Filed:** 2026-08-21
+**Push-channel campaign COMPLETE 2026-08-21** — every live extension→webview
+push channel now has ONE declaration in `@/types/webviewPayloads` that both
+sides check against (commits `efd83a05`…`f5a5a39b` on top of the dashboard
+family). What remains in this item is the OTHER direction: the
+webview→extension request/response contracts and the cast clusters listed
+below, which die when those request payloads get one declaration each.
 **Origin:** The webview payload typing pass
 (`../complete/2026-08-20-webview-payloads-are-typed-then-cast-away.md`). That
 work closed the `init` channel — one channel of roughly thirty.
@@ -110,24 +116,54 @@ grep before belief — 6 of the first 7 such leads had senders the scan missed.
   is ProjectCreationStep's own creationFailed listener
   (GitHubAppInstallDialog). Duplicate deleted.
 
-**Live push channels = the slicing worklist** (sent AND heard; type these,
-highest traffic first): `statusUpdate` + `meshStatusUpdate` +
-`appBuilderComponentsSnapshot` + `projectDestinationUpdate` +
-`appBuilderComponentStatusUpdate` (the dashboard status family — one slice,
-they share consumers), `creationProgress`/`creationFailed`/`feedback` (the
-creation-progress family), `deployment-status`, the prerequisites family
-(`prerequisite-status`/`-install-complete`/`prerequisites-complete`/
-`-loaded`), the dalive/github auth families, `configChanged`/
-`projectsUpdated`/`demoStateChanged`/`projectDeleted` (projects-list
-family), block-library updates, `storefront-setup-*` (wizard EDS family).
+**Live push channels — ALL DONE 2026-08-21** (one commit per family):
+- dashboard status family (`statusUpdate`/`meshStatusUpdate`/
+  `appBuilderComponentsSnapshot`/`projectDestinationUpdate`/
+  `appBuilderComponentStatusUpdate`) — earlier commits; found the missing
+  resetting/republishing states + the ProjectStatus name collision.
+- creation family (`creationProgress`/`creationFailed`) — `efd83a05`. Dead
+  deleted: `creationComplete` + `creationCancelled` pushes (the progress
+  sentinels are the live signal) and the ENTIRE `feedback` channel (sender
+  `_sendFeedback` had zero callers AND the listener read fields the sender
+  never sent — dead on both ends).
+- `deployment-status` + prerequisites family — `7d7fff3e`. Dead deleted:
+  `prerequisite-check-stopped` listener (no sender), the install request's
+  id/name echo (handler reads prereqId only). Drift fixed: loaded `id` is a
+  NUMBER (was typed string), loaded plugins are config identity without
+  `installed`, status `message` is optional, raw config entries (with install
+  commands) no longer shipped to the webview.
+- github/dalive auth families — `a8d78196`. Dead deleted: `dalive-auth-error`
+  listener (no sender), the login-opened `instructions` field. Drift fixed:
+  FOUR GitHubUser twins unified (services original, hook twin, WizardState
+  inline, GitHubServiceCard export) — nullable fields were being retyped as
+  optional strings.
+- projects-list family + block-library updates — in `f5a5a39b` (shapes
+  agreed; typed end-to-end).
+- `storefront-setup-*` family — `f5a5a39b`. Dead deleted:
+  `storefront-setup-cancelled`/`-cancel-aborted` pushes (cancel arrives on
+  unmount — nobody left to hear), `isTeamOrg` field. Drift fixed: the phase
+  union was missing `auth-recovery`/`complete`; **two receiver bookkeeping
+  branches were provably dead** — repoCreated was gated on
+  `phase !== 'repository'` while every repo-info push IS 'repository'-phase
+  (so cancelling mid-setup never cleaned up the created repo), and
+  contentCopied compared the wire's `complete` against the local `completed`.
+  Both fixed.
 
-**Remaining unverified leads** (run the bare-string grep per type before
-acting): `dalive-auth-error`, `prerequisite-check-stopped`,
-`authoringExperienceUpdate` on the subscribe side; the sent-side list mixes
-in webview→extension REQUESTS (sidebar rows) that belong to
-webviewHandlerCoverage's jurisdiction, plus wizard-flow pushes whose
-listeners use a different subscription mechanism — the scanner needs the
-direction split before its sent-side output is trustworthy.
+**Leads — all resolved 2026-08-21:** `dalive-auth-error` and
+`prerequisite-check-stopped` were dead listeners (deleted);
+`authoringExperienceUpdate` is live on both sides and typed. Remaining
+scanner homework if the inventory script is ever re-run: it must learn the
+`postMessage({type: 'X'})` send style and split webview→extension REQUESTS
+out of the sent-side list before its output is trustworthy.
+
+## Remaining scope (the request/response direction)
+
+The webview→extension REQUEST payloads (`create-project`,
+`get-components-data`, `install-prerequisite`, `storefront-setup-start`, …)
+still cross untyped; the cast clusters above are their symptoms. Same
+discipline when opened: one request channel per slice, declaration in
+webviewPayloads (or a request-side sibling), handler payload param typed from
+it, sender annotated.
 
 ## Kickoff prompt (per-channel, when one bites)
 
