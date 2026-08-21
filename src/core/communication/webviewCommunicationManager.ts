@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { getLogger } from '@/core/logging';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { Message, MessageType, MessagePayload, PendingRequest } from '@/types/messages';
+import { Message, PendingRequest } from '@/types/messages';
 
 /**
  * Message Handler Function Type
@@ -11,7 +11,7 @@ import { Message, MessageType, MessagePayload, PendingRequest } from '@/types/me
  * Handlers can return Promise or direct value.
  * Payload type is flexible to support all message types.
  */
-type MessageHandlerFunction<P = MessagePayload, R = unknown> = (payload: P) => Promise<R> | R;
+type MessageHandlerFunction<P = unknown, R = unknown> = (payload: P) => Promise<R> | R;
 
 /**
  * Communication manager configuration
@@ -179,15 +179,15 @@ export class WebviewCommunicationManager {
      *
      * `payload` is `unknown` on purpose: the wire is postMessage, which takes
      * any structured-clonable value, and this manager never inspects payload
-     * contents. The single widening below replaces the per-call-site
-     * `as MessagePayload` casts every sender used to need (interfaces do not
-     * structurally satisfy the union's `Record<string, unknown>` arm).
+     * contents. Typing lives at each CHANNEL's declaration
+     * (@/types/webviewPayloads, @/types/webviewRequests), enforced at the
+     * sender and the handler — not here in the transport.
      */
-    async sendMessage(type: MessageType, payload?: unknown): Promise<void> {
+    async sendMessage(type: string, payload?: unknown): Promise<void> {
         const message: Message = {
             id: uuidv4(),
             type,
-            payload: payload as MessagePayload | undefined,
+            payload,
             timestamp: Date.now(),
         };
 
@@ -207,11 +207,11 @@ export class WebviewCommunicationManager {
      *
      * `payload` is `unknown` for the same reason as {@link sendMessage}.
      */
-    async request<T = unknown>(type: MessageType, payload?: unknown): Promise<T> {
+    async request<T = unknown>(type: string, payload?: unknown): Promise<T> {
         const message: Message = {
             id: uuidv4(),
             type,
-            payload: payload as MessagePayload | undefined,
+            payload,
             timestamp: Date.now(),
         };
 
@@ -243,8 +243,8 @@ export class WebviewCommunicationManager {
     /**
      * Register a message handler
      */
-    on<P = MessagePayload, R = unknown>(
-        type: MessageType,
+    on<P = unknown, R = unknown>(
+        type: string,
         handler: MessageHandlerFunction<P, R>,
     ): void {
         this.messageHandlers.set(type, handler as MessageHandlerFunction);
@@ -253,11 +253,11 @@ export class WebviewCommunicationManager {
     /**
      * Register a one-time message handler
      */
-    once<P = MessagePayload, R = unknown>(
-        type: MessageType,
+    once<P = unknown, R = unknown>(
+        type: string,
         handler: MessageHandlerFunction<P, R>,
     ): void {
-        const wrappedHandler: MessageHandlerFunction = (payload: MessagePayload) => {
+        const wrappedHandler: MessageHandlerFunction = (payload: unknown) => {
             this.messageHandlers.delete(type);
             return handler(payload as P);
         };
@@ -270,8 +270,8 @@ export class WebviewCommunicationManager {
      * Explicit naming to indicate handlers that return streaming responses.
      * Functionally identical to on() but semantically clearer for response handlers.
      */
-    onStreaming<P = MessagePayload, R = unknown>(
-        type: MessageType,
+    onStreaming<P = unknown, R = unknown>(
+        type: string,
         handler: MessageHandlerFunction<P, R>,
     ): void {
         this.on(type, handler);
@@ -321,7 +321,7 @@ export class WebviewCommunicationManager {
         if (message.type === '__webview_ready__') {
             const handler = this.messageHandlers.get('__webview_ready__');
             if (handler) {
-                await handler(message.payload ?? ({} as MessagePayload));
+                await handler(message.payload ?? {});
             }
             return;
         }
@@ -379,14 +379,14 @@ export class WebviewCommunicationManager {
                 // CRITICAL FIX (v1.5.0): Properly await async handler results
                 // Previously, Promise objects were being sent to UI instead of resolved values
                 // This caused "Error Loading Projects" despite successful backend operations
-                const result = await handler(message.payload ?? ({} as MessagePayload));
+                const result = await handler(message.payload ?? {});
 
                 // If the message has an ID, send a response
                 if (message.id && message.expectsResponse) {
                     this.sendRawMessage({
                         id: uuidv4(),
                         type: '__response__',
-                        payload: result as MessagePayload,
+                        payload: result,
                         timestamp: Date.now(),
                         isResponse: true,
                         responseToId: message.id,

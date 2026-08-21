@@ -15,6 +15,7 @@
  */
 
 import { FRONTEND_TIMEOUTS } from './frontendTimeouts';
+import type { Message } from '@/types/messages';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 declare global {
@@ -29,16 +30,10 @@ interface VSCodeApi {
     setState<T = unknown>(state: T): void;
 }
 
-interface Message<T = unknown> {
-    id: string;
-    type: string;
-    payload?: T;
-    timestamp: number;
-    isResponse?: boolean;
-    responseToId?: string;
-    error?: string;
-    expectsResponse?: boolean;
-}
+// Message is the shared transport envelope from @/types/messages — this file
+// used to carry a byte-identical local twin. PendingRequest below stays local
+// on purpose: it is the webview VARIANT (no retry state, browser-safe timeout
+// handle), not a copy of the extension's.
 
 interface PendingRequest {
     resolve: (value: unknown) => void;
