@@ -27,7 +27,14 @@ import type { Logger } from '@/types/logger';
 export interface UpdateContext {
     secrets: vscode.SecretStorage;
     extensionPath: string;
-    stateManager: StateManager;
+    /**
+     * Narrowed to the methods the update pipeline actually calls (updateCore's
+     * saveProject, updateExecutor's getCurrentProject, adobeMcpUpdateCore's
+     * saveProjectConfigOnly). This also lets the MCP applyUpdatesTool pass its
+     * HandlerContext stateManager (typed via the @/types/state INTERFACE, not
+     * the class) without a widening cast.
+     */
+    stateManager: Pick<StateManager, 'saveProject' | 'getCurrentProject' | 'saveProjectConfigOnly'>;
     logger: Logger;
 }
 

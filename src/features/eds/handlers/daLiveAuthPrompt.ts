@@ -15,6 +15,14 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
+/**
+ * The two HandlerContext fields this module's whole flow reads. Narrowed so
+ * headless/command callers (e.g. refreshBlockLibraryHeadless) can pass
+ * `{ context, logger }` without a widening cast; full-HandlerContext callers
+ * satisfy it structurally.
+ */
+type DaLiveAuthContext = Pick<HandlerContext, 'context' | 'logger'>;
+
 // ==========================================================
 // Token Validation
 // ==========================================================
@@ -132,7 +140,7 @@ export interface DaLiveGuardResult {
  * - Storefront setup mid-pipeline recovery (storefrontSetupPhases.ts)
  */
 export async function ensureDaLiveAuth(
-    context: HandlerContext,
+    context: DaLiveAuthContext,
     logPrefix = '[Auth]',
 ): Promise<DaLiveGuardResult> {
     const daLiveAuthService = getDaLiveAuthService(context.context);
@@ -288,8 +296,7 @@ function promptForOrgName(): Thenable<string | undefined> {
 function promptForToken(): Thenable<string | undefined> {
     return vscode.window.showInputBox({
         title: 'Sign in to DA.live — token',
-        prompt:
-            'No DA.live token found on your clipboard. Run the bookmarklet on da.live to copy one, then paste it here.',
+        prompt: 'No DA.live token found on your clipboard. Run the bookmarklet on da.live to copy one, then paste it here.',
         placeHolder: 'Paste token here',
         password: true,
         ignoreFocusOut: true,
@@ -321,7 +328,7 @@ function promptForToken(): Thenable<string | undefined> {
  * @param context - Handler context, for logging
  * @returns True to proceed to the token step; false when the user backed out
  */
-async function confirmTokenReady(context: HandlerContext): Promise<boolean> {
+async function confirmTokenReady(context: DaLiveAuthContext): Promise<boolean> {
     const openDaLiveChoice = await vscode.window.showInformationMessage(
         'You\'ll need a token from DA.live. Click "Open DA.live" to get one, or continue if you already have it.',
         { modal: false },
@@ -376,7 +383,7 @@ async function confirmTokenReady(context: HandlerContext): Promise<boolean> {
  * @returns Promise with auth result (success/cancelled/error)
  */
 export async function showDaLiveAuthQuickPick(
-    context: HandlerContext,
+    context: DaLiveAuthContext,
 ): Promise<QuickPickAuthResult> {
     context.logger.info('[DA.live Auth] Starting authentication flow');
 
@@ -445,7 +452,7 @@ export async function showDaLiveAuthQuickPick(
  * @returns The auth result
  */
 async function validateAndStoreToken(
-    context: HandlerContext,
+    context: DaLiveAuthContext,
     token: string,
     orgName: string,
 ): Promise<QuickPickAuthResult> {

@@ -15,7 +15,6 @@
 
 import { z } from 'zod';
 import { asText } from './mcpToolResult';
-import type { StateManager } from '@/core/state';
 import {
     applyUpdatesHeadless,
     computeProjectUpdateSelections,
@@ -53,7 +52,10 @@ export function registerApplyUpdatesTool(
             description:
                 'Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK. Without confirm, reports what is available.',
             inputSchema: {
-                confirm: z.boolean().optional().describe('Set true to apply; omit to only report what is available'),
+                confirm: z
+                    .boolean()
+                    .optional()
+                    .describe('Set true to apply; omit to only report what is available'),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -94,9 +96,10 @@ export function registerApplyUpdatesTool(
                 {
                     secrets: ctx.context.secrets,
                     extensionPath: ctx.context.extensionPath,
-                    // Runtime value is the real StateManager; HandlerContext types it
-                    // via the @/types/state interface, which lacks the class privates.
-                    stateManager: ctx.stateManager as unknown as StateManager,
+                    // UpdateContext declares only the method the updaters call
+                    // (saveProject), which the interface-typed context satisfies
+                    // structurally — no class/interface widening cast.
+                    stateManager: ctx.stateManager,
                     logger: ctx.logger,
                 },
                 (m) => phases.push(m),

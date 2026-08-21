@@ -31,7 +31,6 @@ import { extractResetParams } from '@/features/eds/services/edsResetParams';
 import { HelixService } from '@/features/eds/services/helixService';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Project } from '@/types/base';
-import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
 const LOG_PREFIX = '[RefreshBlockLibrary]';
@@ -78,9 +77,9 @@ export async function refreshBlockLibraryHeadless(
     }
     const params = paramsResult.params;
 
-    // Minimal HandlerContext for the auth retry helper — `ensureDaLiveAuth` only
-    // reads `context` (ExtensionContext) and `logger`.
-    const handlerContext = { context, logger } as unknown as HandlerContext;
+    // ensureDaLiveAuth and getGitHubServices declare narrowed parameters
+    // (exactly the fields they read), so this partial context needs no cast.
+    const handlerContext = { context, logger };
 
     const daLiveAuthService = getDaLiveAuthService(context);
     const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);

@@ -35,7 +35,6 @@ import {
     migrateStorefrontNameForProject,
     type StorefrontNameMismatch,
 } from '@/features/eds/services/storefrontNameMigrationForProject';
-import type { HandlerContext } from '@/types/handlers';
 
 const LOG_PREFIX = '[MigrateStorefrontNames]';
 
@@ -70,13 +69,12 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
         }
 
         // Step 3: authenticate DA.live once for all migrations.
-        // ensureDaLiveAuth only reads `context` and `logger` off the
-        // HandlerContext — the cast keeps us out of the full shape we
-        // don't need (panel, communicationManager, etc).
+        // ensureDaLiveAuth declares the two fields it reads (DaLiveAuthContext),
+        // so this partial context needs no widening cast.
         const handlerContext = {
             context: this.context,
             logger,
-        } as unknown as HandlerContext;
+        };
         const authResult = await ensureDaLiveAuth(handlerContext, LOG_PREFIX);
         if (!authResult.authenticated) {
             const message = authResult.cancelled

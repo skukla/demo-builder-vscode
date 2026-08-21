@@ -26,7 +26,7 @@ import type { HandlerContext, HandlerResponse } from '@/types/handlers';
  */
 export const GLOBAL_AI_PROMPTS_KEY = 'demoBuilder.ai.globalPrompts';
 
-function readGlobalPrompts(context: HandlerContext): AiPrompt[] {
+function readGlobalPrompts(context: Pick<HandlerContext, 'context'>): AiPrompt[] {
     return context.context.globalState.get<AiPrompt[]>(GLOBAL_AI_PROMPTS_KEY, []);
 }
 
@@ -71,7 +71,10 @@ export function mergePromptsForRead(
  * project prompts simply degrade to an empty list rather than throwing.
  */
 export function readMergedAiPrompts(
-    context: HandlerContext,
+    // Narrowed to the one field the read path touches (globalState via
+    // `context.context`), so command-palette callers without a full
+    // HandlerContext (showPromptsPicker) call it without a widening cast.
+    context: Pick<HandlerContext, 'context'>,
     project: Project | undefined,
 ): AiPrompt[] {
     const globalPrompts = readGlobalPrompts(context);

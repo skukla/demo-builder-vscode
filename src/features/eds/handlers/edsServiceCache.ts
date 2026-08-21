@@ -39,8 +39,13 @@ let cachedDaLiveAuthService: DaLiveAuthService | null = null;
 /**
  * Get or create GitHub services
  * Returns all GitHub-related services with explicit dependencies
+ *
+ * Parameter narrowed to the ONE field this actually reads
+ * (`context.context.secrets`) — same reason `getDaLiveAuthService` below
+ * takes ExtensionContext directly: callers without a full HandlerContext
+ * (commands, headless paths) can then call it without a widening cast.
  */
-export function getGitHubServices(context: HandlerContext): GitHubServices {
+export function getGitHubServices(context: Pick<HandlerContext, 'context'>): GitHubServices {
     const logger = getLogger();
     if (!cachedGitHubServices) {
         logger.debug('[EDS:ServiceCache] Creating NEW GitHub services (no cache)');

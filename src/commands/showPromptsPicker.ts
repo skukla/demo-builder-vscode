@@ -94,15 +94,12 @@ export class ShowPromptsPickerCommand extends BaseCommand {
     }
 
     /**
-     * Build the minimal `HandlerContext` shape the prompt helper reads — only
-     * `context`, `stateManager`, and `logger`. The remaining HandlerContext
-     * fields are unused by `readMergedAiPrompts`.
+     * The one field `readMergedAiPrompts` declares (its parameter is a
+     * `Pick<HandlerContext, 'context'>`), so no widening cast — and if the
+     * helper ever grows a new dependency, this stops compiling instead of
+     * handing it `undefined`.
      */
-    private handlerContext(): HandlerContext {
-        return {
-            context: this.context,
-            stateManager: this.stateManager,
-            logger: this.logger,
-        } as unknown as HandlerContext;
+    private handlerContext(): Pick<HandlerContext, 'context'> {
+        return { context: this.context };
     }
 }

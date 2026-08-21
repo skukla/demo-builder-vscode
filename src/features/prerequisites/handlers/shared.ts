@@ -81,7 +81,7 @@ export function getPluginNodeVersions(
     // Value may contain multiple IDs comma-separated (e.g., "eds,commerce-mesh")
     for (const [nodeVersion, componentIds] of Object.entries(nodeVersionIdMapping)) {
         const ids = componentIds.split(',');
-        if (ids.some(id => requiredForComponents.includes(id))) {
+        if (ids.some((id) => requiredForComponents.includes(id))) {
             pluginNodeVersions.push(nodeVersion);
         }
     }
@@ -136,8 +136,8 @@ export function formatVersionSuffix(
     // For Node.js with multiple versions, show all installed versions
     if (prereq.id === 'node' && nodeVersionStatus && nodeVersionStatus.length > 1) {
         const installedVersions = nodeVersionStatus
-            .filter(v => v.installed)
-            .map(v => v.version.replace('Node ', 'v'));
+            .filter((v) => v.installed)
+            .map((v) => v.version.replace('Node ', 'v'));
         if (installedVersions.length > 0) {
             return `: ${installedVersions.join(', ')}`;
         }
@@ -238,12 +238,7 @@ export function getPrerequisiteDisplayMessage(
 function getComponentSelectionParams(
     selection: ComponentSelection,
 ): [string | undefined, string | undefined, string[] | undefined, string[] | undefined] {
-    return [
-        selection.frontend,
-        selection.backend,
-        selection.dependencies,
-        selection.integrations,
-    ];
+    return [selection.frontend, selection.backend, selection.dependencies, selection.integrations];
 }
 
 /**
@@ -270,7 +265,9 @@ export async function getNodeVersionMapping(
     }
 
     try {
-        const { ComponentRegistryManager } = await import('../../components/services/ComponentRegistryManager');
+        const { ComponentRegistryManager } = await import(
+            '../../components/services/ComponentRegistryManager'
+        );
         const registryManager = new ComponentRegistryManager(context.context.extensionPath);
         const params = getComponentSelectionParams(context.sharedState.currentComponentSelection);
         const mapping = await registryManager.getNodeVersionToComponentMapping(...params);
@@ -312,7 +309,9 @@ export async function getNodeVersionIdMapping(
     }
 
     try {
-        const { ComponentRegistryManager } = await import('../../components/services/ComponentRegistryManager');
+        const { ComponentRegistryManager } = await import(
+            '../../components/services/ComponentRegistryManager'
+        );
         const registryManager = new ComponentRegistryManager(context.context.extensionPath);
         const params = getComponentSelectionParams(context.sharedState.currentComponentSelection);
         const mapping = await registryManager.getNodeVersionToComponentIdMapping(...params);
@@ -333,19 +332,26 @@ export async function getNodeVersionIdMapping(
  */
 export async function getRequiredNodeVersions(context: HandlerContext): Promise<string[]> {
     if (!context.sharedState.currentComponentSelection) {
-        context.debugLogger.debug('[Prerequisites] No component selection - no Node versions required', {
-            hasSelection: false,
-        });
+        context.debugLogger.debug(
+            '[Prerequisites] No component selection - no Node versions required',
+            {
+                hasSelection: false,
+            },
+        );
         return [];
     }
 
     try {
-        const { ComponentRegistryManager } = await import('../../components/services/ComponentRegistryManager');
+        const { ComponentRegistryManager } = await import(
+            '../../components/services/ComponentRegistryManager'
+        );
         const registryManager = new ComponentRegistryManager(context.context.extensionPath);
         const params = getComponentSelectionParams(context.sharedState.currentComponentSelection);
         const mapping = await registryManager.getRequiredNodeVersions(...params);
         // Sort versions in ascending order (18, 20, 24) for predictable installation order
-        const sortedVersions = Array.from(mapping).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+        const sortedVersions = Array.from(mapping).sort(
+            (a, b) => parseInt(a, 10) - parseInt(b, 10),
+        );
 
         context.debugLogger.debug('[Prerequisites] Detected component Node requirements', {
             frontend: context.sharedState.currentComponentSelection.frontend,
@@ -387,8 +393,15 @@ export function areDependenciesInstalled(
         for (const entry of states.values()) {
             if (entry.prereq.id === depId) {
                 // Special handling: if dependency is Node and required majors missing, treat as not installed
-                if (depId === 'node' && entry.nodeVersionStatus && entry.nodeVersionStatus.length > 0) {
-                    const missing = entry.nodeVersionStatus.some((v: { version: string; component: string; installed: boolean }) => !v.installed);
+                if (
+                    depId === 'node' &&
+                    entry.nodeVersionStatus &&
+                    entry.nodeVersionStatus.length > 0
+                ) {
+                    const missing = entry.nodeVersionStatus.some(
+                        (v: { version: string; component: string; installed: boolean }) =>
+                            !v.installed,
+                    );
                     if (missing) return false;
                 }
                 return !!entry.result?.installed;
@@ -434,9 +447,16 @@ export function areDependenciesInstalled(
 export async function checkPerNodeVersionStatus(
     prereq: import('@/features/prerequisites/services/PrerequisitesManager').PrerequisiteDefinition,
     nodeVersions: string[],
-    context: HandlerContext,
+    // Narrowed to the one field this reads, so PrerequisitesManager's minimal
+    // context calls it without a widening cast.
+    context: Pick<HandlerContext, 'logger'>,
 ): Promise<{
-    perNodeVersionStatus: { version: string; major: string; component: string; installed: boolean }[];
+    perNodeVersionStatus: {
+        version: string;
+        major: string;
+        component: string;
+        installed: boolean;
+    }[];
     perNodeVariantMissing: boolean;
     missingVariantMajors: string[];
 }> {
@@ -448,7 +468,12 @@ export async function checkPerNodeVersionStatus(
         };
     }
 
-    const perNodeVersionStatus: { version: string; major: string; component: string; installed: boolean }[] = [];
+    const perNodeVersionStatus: {
+        version: string;
+        major: string;
+        component: string;
+        installed: boolean;
+    }[] = [];
     const missingVariantMajors: string[] = [];
     const commandManager = ServiceLocator.getCommandExecutor();
 
@@ -458,7 +483,10 @@ export async function checkPerNodeVersionStatus(
         timeout: TIMEOUTS.PREREQUISITE_CHECK,
         shell: DEFAULT_SHELL, // Add shell context for fnm availability (fixes ENOENT errors)
     });
-    const installedVersions = fnmListResult.stdout.trim().split('\n').filter(v => v.trim());
+    const installedVersions = fnmListResult.stdout
+        .trim()
+        .split('\n')
+        .filter((v) => v.trim());
     const installedMajors = new Set<string>();
     for (const version of installedVersions) {
         const match = /v?(\d+)/.exec(version);
@@ -484,20 +512,19 @@ export async function checkPerNodeVersionStatus(
         // Scenario 1: Node version not installed on system
         // Skip checking the tool if Node itself isn't installed for this major version
         if (!installedMajors.has(major)) {
-            context.logger.debug(`[Prerequisites] Node ${major} not installed, skipping ${prereq.name} check for this version`);
+            context.logger.debug(
+                `[Prerequisites] Node ${major} not installed, skipping ${prereq.name} check for this version`,
+            );
             return createVersionStatus(major, false);
         }
 
         try {
             // Node version is installed - now check if the tool is installed for it
             // Use fnm exec for bulletproof Node version isolation
-            const result = await commandManager.execute(
-                prereq.check.command,
-                {
-                    useNodeVersion: major,
-                    timeout: TIMEOUTS.PREREQUISITE_CHECK,
-                },
-            );
+            const result = await commandManager.execute(prereq.check.command, {
+                useNodeVersion: major,
+                timeout: TIMEOUTS.PREREQUISITE_CHECK,
+            });
 
             // CRITICAL BUG FIX: Check exit code to determine command success
             // Exit code 0 = success, non-zero = failure (e.g., 127 = command not found)
@@ -531,7 +558,9 @@ export async function checkPerNodeVersionStatus(
     // Wait for all checks to complete in parallel
     const results = await Promise.all(checkPromises);
     const duration = Date.now() - startTime;
-    context.logger.debug(`[Prerequisites] Parallel check for ${prereq.name} across ${nodeVersions.length} Node versions completed in ${formatDuration(duration)}`);
+    context.logger.debug(
+        `[Prerequisites] Parallel check for ${prereq.name} across ${nodeVersions.length} Node versions completed in ${formatDuration(duration)}`,
+    );
 
     // Process results to build status arrays
     for (const result of results) {
@@ -579,20 +608,39 @@ export async function handlePrerequisiteCheckError(
 
     // Log to all appropriate channels
     if (isTimeoutErr) {
-        context.logger.warn(`[Prerequisites] ${prereq.name} ${checkType} timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000}s`);
-        context.stepLogger?.log('prerequisites', `⏱️ ${prereq.name} ${checkType} timed out (${TIMEOUTS.PREREQUISITE_CHECK / 1000}s)`, 'warn');
-        context.debugLogger.debug(`[Prerequisites] ${isRecheck ? 'Re-check' : 'Check'} timeout details:`, {
-            prereq: prereq.id,
-            timeout: TIMEOUTS.PREREQUISITE_CHECK,
-            error: errorMessage,
-        });
+        context.logger.warn(
+            `[Prerequisites] ${prereq.name} ${checkType} timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000}s`,
+        );
+        context.stepLogger?.log(
+            'prerequisites',
+            `⏱️ ${prereq.name} ${checkType} timed out (${TIMEOUTS.PREREQUISITE_CHECK / 1000}s)`,
+            'warn',
+        );
+        context.debugLogger.debug(
+            `[Prerequisites] ${isRecheck ? 'Re-check' : 'Check'} timeout details:`,
+            {
+                prereq: prereq.id,
+                timeout: TIMEOUTS.PREREQUISITE_CHECK,
+                error: errorMessage,
+            },
+        );
     } else {
-        context.logger.error(`[Prerequisites] Failed to ${checkType} ${prereq.name}:`, error as Error);
-        context.stepLogger?.log('prerequisites', `✗ ${prereq.name} ${checkType} failed: ${errorMessage}`, 'error');
-        context.debugLogger.debug(`[Prerequisites] ${isRecheck ? 'Re-check' : 'Check'} failure details:`, {
-            prereq: prereq.id,
-            error,
-        });
+        context.logger.error(
+            `[Prerequisites] Failed to ${checkType} ${prereq.name}:`,
+            error as Error,
+        );
+        context.stepLogger?.log(
+            'prerequisites',
+            `✗ ${prereq.name} ${checkType} failed: ${errorMessage}`,
+            'error',
+        );
+        context.debugLogger.debug(
+            `[Prerequisites] ${isRecheck ? 'Re-check' : 'Check'} failure details:`,
+            {
+                prereq: prereq.id,
+                error,
+            },
+        );
     }
 
     // Send error status to UI

@@ -17,7 +17,6 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger } from '@/core/logging';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { HandlerContext } from '@/types/handlers';
 
 interface RepoQuickPickItem extends vscode.QuickPickItem {
     repoFullName: string;
@@ -31,13 +30,9 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
         // Step 1: Check GitHub authentication
         const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
 
-        // Create a minimal context for getGitHubServices
-        const minimalContext = {
-            context,
-            logger,
-        };
-
-        const { tokenService, repoOperations } = getGitHubServices(minimalContext as unknown as HandlerContext);
+        // getGitHubServices' parameter is narrowed to the one field it reads,
+        // so a command without a full HandlerContext calls it without a cast.
+        const { tokenService, repoOperations } = getGitHubServices({ context });
 
         // Check if we have a valid token
         let token = await tokenService.getToken();
@@ -55,9 +50,13 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
 
             // Try VS Code's GitHub auth provider with delete_repo scope
             try {
-                const session = await vscode.authentication.getSession('github', ['repo', 'delete_repo'], {
-                    createIfNone: true,
-                });
+                const session = await vscode.authentication.getSession(
+                    'github',
+                    ['repo', 'delete_repo'],
+                    {
+                        createIfNone: true,
+                    },
+                );
 
                 if (session) {
                     await tokenService.storeToken({
@@ -122,20 +121,19 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
         );
 
         if (allRepos.length === 0) {
-            vscode.window.showInformationMessage(
-                'No GitHub repositories found for your account.',
-            );
+            vscode.window.showInformationMessage('No GitHub repositories found for your account.');
             return;
         }
 
         // Step 3: Create QuickPick items from ALL repos
-        const quickPickItems: RepoQuickPickItem[] = allRepos.map(repo => {
+        const quickPickItems: RepoQuickPickItem[] = allRepos.map((repo) => {
             const linkedProjects = repoToProjectMap.get(repo.fullName) || [];
             return {
                 label: `$(repo) ${repo.fullName}`,
-                description: linkedProjects.length > 0
-                    ? `Linked to: ${linkedProjects.join(', ')}`
-                    : undefined,
+                description:
+                    linkedProjects.length > 0
+                        ? `Linked to: ${linkedProjects.join(', ')}`
+                        : undefined,
                 repoFullName: repo.fullName,
                 linkedProject: linkedProjects[0],
             };
@@ -154,7 +152,7 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
         }
 
         // Step 5: Confirm deletion with strong warning
-        const reposToDelete = selectedItems.map(item => item.repoFullName);
+        const reposToDelete = selectedItems.map((item) => item.repoFullName);
         const confirmMessage =
             reposToDelete.length === 1
                 ? `Delete repository "${reposToDelete[0]}"?`
@@ -224,7 +222,7 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
                 },
             );
         } else if (deleted.length > 0 && failed.length > 0) {
-            const failedList = failed.map(f => f.repo).join(', ');
+            const failedList = failed.map((f) => f.repo).join(', ');
             vscode.window.showWarningMessage(
                 `Deleted ${deleted.length}, failed ${failed.length}: ${failedList}`,
             );

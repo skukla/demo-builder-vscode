@@ -1,5 +1,35 @@
 # Partial HandlerContexts are cast to full and handed to handlers
 
+**Filed:** 2026-08-21 · **DONE same day** — all seven sites traced and
+resolved; see Progress below.
+
+## Progress 2026-08-21 — every site traced, every cast dead
+
+The trace method from below ran per site; every one landed on verdict (a) —
+narrow the CALLEE's parameter to the fields it reads — or better. No gaps
+(verdict b) were found: each partial context matched what its call tree
+actually touches. The casts are gone and the contracts are now
+compiler-enforced:
+
+| Site | Trace result | Fix |
+|---|---|---|
+| manageGitHubRepos | `getGitHubServices` reads only `context.context.secrets` | callee takes `Pick<HandlerContext, 'context'>` (same-file precedent: `getDaLiveAuthService` already took ExtensionContext directly) |
+| refreshBlockLibraryHeadless | `ensureDaLiveAuth` + the whole daLiveAuthPrompt call tree read only `context`/`logger` | module-wide `DaLiveAuthContext = Pick<'context'\|'logger'>` |
+| migrateStorefrontNames | same callee | cast dropped, rides the same narrowing |
+| PrerequisitesManager | `checkPerNodeVersionStatus` reads only `context.logger` | `Pick<'logger'>` |
+| showPromptsPicker | `readMergedAiPrompts` read path touches only `context.context` (globalState) | `Pick<'context'>`; the command's helper now returns exactly that — a new helper dependency stops compiling instead of arriving `undefined` |
+| applyUpdatesTool | the update pipeline calls exactly `saveProject`/`getCurrentProject`/`saveProjectConfigOnly` (tsc surfaced the two my grep's scope missed) | `UpdateContext.stateManager` is a `Pick` of those three; `AdobeMcpUpdateCoreContext` picks its one — kills the interface-vs-class widening cast |
+| headlessHandlerContext | the prose claim is now MEASURED: zero non-optional-chained reads of `errorLogger`/`progressUnifier`/`stepLogger` anywhere in src/ — and the fields were ALREADY optional on HandlerContext, so the three `undefined as unknown as` casts never needed to exist | plain `undefined`, with the measurement recorded at the site |
+
+The narrowing pattern doubles as regression protection: any callee that grows
+a new context dependency breaks its narrowed signature instead of silently
+receiving `undefined` from a partial caller — which is the failure mode this
+item existed to prevent.
+
+---
+
+Original filing below.
+
 **Filed:** 2026-08-21
 **Origin:** The boundary-cast audit's first triage. Seven sites build a
 PARTIAL `HandlerContext` and cast it to the full interface before handing it
