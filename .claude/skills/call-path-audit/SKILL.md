@@ -69,7 +69,7 @@ multi-site; skip).
 | Mesh delete | `aio api-mesh:delete` | 3 | `mesh/services/meshDeleteCommand.ts` (verdict: three legitimate doors — dashboard delete, cancel-rollback, removal — sharing ONE command constant; the two spellings unified) | **PINNED** |
 | Adobe sign-in/out | `aio auth login/logout` | 1 each | `authentication/services/authenticationService.ts` (diagnostics' hit is a `--help` capability probe — a read) | **PINNED** |
 | Manifest write | names `.demo-builder.json` AND writes | 2 | `core/state/projectConfigWriter.ts` + `mcp-server.ts` (verdict: TWO doors by design — state serializer vs agent byte-writer; the agent door now refuses malformed JSON + reports schema warnings) | **PINNED** |
-| Helix preview/publish/unpublish | `admin.hlx.page` per-verb | 9 files touch the host | `eds/services/helixApiClient.ts`/`helixService.ts` (others are probes/reads — split by verb) | AUDIT |
+| Helix preview/publish/unpublish | verb-path builders (`/preview/`,`/live/`,`/code/`) | 2 engines | **TWO parallel engines found** — helixService + helixApiClient, service never imports client, its claim that it did was false. Consolidation filed (`2026-08-22-helix-publish-has-two-engines.md`); pin holds the pair at two until then | **PINNED (pair)** |
 | DA.live content + config writes | `admin.da.live` per-verb | 5 | `daLiveContentOperations`/`daLiveConfigService` | AUDIT |
 | Config Service site registration | the registration POST | regex too loose (24 name-matches) | `eds/services/siteConfigRegistrar.ts` (documented) | AUDIT (sharpen primitive first) |
 | GitHub repo create/reset/delete | repo-mutation API calls | 5 files touch `api.github.com` | `eds/services/githubRepoOperations.ts` (updates/componentInstallation are READS — different actions) | AUDIT |

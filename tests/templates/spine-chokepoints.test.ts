@@ -214,4 +214,25 @@ describe('spine choke-points', () => {
         expect(hits).toEqual(expect.arrayContaining(spine));
         expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
     });
+
+    it('helix PUBLISH verbs: URL builders exist in exactly the two known engines', () => {
+        // Audited 2026-08-22: the sweep's biggest find — helixService and the
+        // vscode-free helixApiClient each implement preview/live/code URL
+        // building; the service never imports the client (its old comment
+        // claiming otherwise was false). Consolidation is filed
+        // (2026-08-22-helix-publish-has-two-engines.md); this pin's job until
+        // then is narrower: no THIRD engine. Config-Service and status-check
+        // modules share the admin.hlx.page HOST but never build these verb
+        // paths, which is why the pattern anchors on the path segment.
+        const primitive = /admin\.hlx\.page.*\/(preview|live|code)\/|\/(preview|live|code)\/\$\{/;
+        const spine = [
+            'features/eds/services/helixApiClient.ts',
+            'features/eds/services/helixService.ts',
+        ];
+
+        const hits = filesTouchingPrimitive(primitive);
+
+        expect(hits).toEqual(expect.arrayContaining(spine));
+        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+    });
 });

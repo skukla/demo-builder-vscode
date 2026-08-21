@@ -2,9 +2,17 @@
  * Helix Admin API client (vscode-free).
  *
  * Pure HTTP wrapper for the subset of admin.hlx.page endpoints the storefront
- * sync flow needs (preview, publish, preview+publish). Exists so both the
- * extension process (via `helixService.ts`) and the standalone MCP server
- * process (via `mcp-server.ts`) can drive Helix without dragging in `vscode`.
+ * sync flow needs (preview, publish, preview+publish, unpublish). Used by the
+ * MCP server and `storefrontSyncService`.
+ *
+ * KNOWN PARALLEL PATH (2026-08-22 spine sweep): `helixService.ts` implements
+ * the SAME verbs with its own URL builders and never imports this module — an
+ * earlier version of this comment claimed it did, which was false the day it
+ * was written. Consolidation (service verbs delegating here; auth/bulk/retry
+ * staying in the service) is filed in
+ * `.rptc/backlog/2026-08-22-helix-publish-has-two-engines.md`. Until then the
+ * spine-chokepoints test pins the verb URLs to exactly these two files so a
+ * THIRD engine cannot appear.
  *
  * Tokens are passed in by callers — this module does NOT discover or refresh
  * them. The extension obtains tokens through `GitHubTokenService` and the
