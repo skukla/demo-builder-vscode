@@ -7,16 +7,8 @@ import { WebviewCommunicationManager } from '@/core/communication';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
-import { Project } from '@/types';
 import type { HandlerContext } from '@/types/handlers';
-
-/**
- * Initial data sent to the prompt library webview.
- */
-interface AiOverviewInitialData {
-    theme: 'dark' | 'light';
-    project: Project;
-}
+import type { AiOverviewInitialData } from '@/types/webviewPayloads';
 
 /**
  * ShowAiCommand — opens the prompt library webview.
@@ -84,7 +76,7 @@ export class ShowAiCommand extends BaseWebviewCommand {
      * appear or disappear without a manual reload of the AI dashboard.
      */
     private subscribeToSurfaceChanges(): void {
-        const listener = vscode.workspace.onDidChangeConfiguration(event => {
+        const listener = vscode.workspace.onDidChangeConfiguration((event) => {
             if (event.affectsConfiguration('demoBuilder.ai.surface')) {
                 void this.sendMessage('surface-changed');
             }
@@ -122,9 +114,8 @@ export class ShowAiCommand extends BaseWebviewCommand {
             throw new Error('No project found');
         }
 
-        const theme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark
-            ? 'dark'
-            : 'light';
+        const theme =
+            vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
 
         return {
             theme,

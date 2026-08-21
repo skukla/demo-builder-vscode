@@ -1,16 +1,12 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { AiOverviewScreen } from './AiOverviewScreen';
-import { WebviewApp, WebviewInitData } from '@/core/ui/components/WebviewApp';
-import { Project } from '@/types/base';
+import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
 import '@/core/ui/styles/custom-spectrum.css';
-
-interface AiOverviewInitData extends WebviewInitData {
-    project?: Project;
-}
+import type { AiOverviewInitialData } from '@/types/webviewPayloads';
 
 const container = document.getElementById('root');
 if (!container) {
@@ -20,11 +16,11 @@ if (!container) {
 const root = createRoot(container);
 root.render(
     <WebviewApp>
-        {(initData) => {
-            const data = initData as AiOverviewInitData;
-            return data?.project
-                ? <AiOverviewScreen project={data.project} />
-                : null;
+        {(data) => {
+            // ONE boundary cast against the shape ShowAiCommand.getInitialData()
+            // owns. Partial because `data` is null until the init message lands.
+            const init = (data ?? {}) as Partial<AiOverviewInitialData>;
+            return init.project ? <AiOverviewScreen project={init.project} /> : null;
         }}
     </WebviewApp>,
 );

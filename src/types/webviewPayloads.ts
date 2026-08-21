@@ -75,6 +75,14 @@ export interface ProjectsListInitialData {
 }
 
 /**
+ * `ShowAiCommand.getInitialData` → the aiOverview (Prompt Library) bundle.
+ */
+export interface AiOverviewInitialData {
+    theme: ThemeMode;
+    project: Project;
+}
+
+/**
  * The Configure screen's registry slice: the categorized component buckets
  * (registry entries pass through untransformed) plus the keyed env-var
  * definitions. No `appBuilder` bucket — that mechanism was removed
