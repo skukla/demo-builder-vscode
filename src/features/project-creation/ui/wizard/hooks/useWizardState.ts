@@ -8,7 +8,6 @@ import {
     getFirstEnabledStep,
     ImportedSettings,
     EditProjectConfig,
-    WizardStepConfigWithRequirements,
 } from '../wizardHelpers';
 import { isMeshComponentId } from '@/core/constants';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
@@ -16,12 +15,13 @@ import { RESERVED_EXISTING_KEY } from '@/features/project-creation/ui/components
 import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 import type { Stack } from '@/types/stacks';
 import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
+import type { WizardStepDefinition } from '@/types/wizard';
 
 const log = webviewLogger('useWizardState');
 
 interface UseWizardStateProps {
     componentDefaults?: ComponentSelection;
-    wizardSteps?: WizardStepConfigWithRequirements[];
+    wizardSteps?: WizardStepDefinition[];
     existingProjectNames?: string[];
     importedSettings?: ImportedSettings | null;
     editProject?: EditProjectConfig;
@@ -306,7 +306,7 @@ function buildEditModeState(firstStep: WizardStep, editProject: EditProjectConfi
  * Compute initial state based on mode (edit vs create) and any imported settings
  */
 function computeInitialState(
-    wizardSteps: WizardStepConfigWithRequirements[] | undefined,
+    wizardSteps: WizardStepDefinition[] | undefined,
     editProject: EditProjectConfig | undefined,
     importedSettings: ImportedSettings | null | undefined,
     componentDefaults: ComponentSelection | undefined,

@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
-import type { WizardStepConfigWithRequirements } from '@/types/wizard';
+import type { WizardStepDefinition } from '@/types/wizard';
 
 /**
  * Logging templates structure
@@ -21,11 +21,7 @@ export class StepLogger {
     private logger: Logger;
     private templates: LoggingTemplates;
 
-    constructor(
-        logger: Logger,
-        wizardSteps?: WizardStepConfigWithRequirements[],
-        templatesPath?: string,
-    ) {
+    constructor(logger: Logger, wizardSteps?: WizardStepDefinition[], templatesPath?: string) {
         this.logger = logger;
         this.stepNames = new Map();
         this.templates = this.loadTemplates(templatesPath);
@@ -41,7 +37,7 @@ export class StepLogger {
      */
     static async create(
         logger: Logger,
-        wizardSteps?: WizardStepConfigWithRequirements[],
+        wizardSteps?: WizardStepDefinition[],
         templatesPath?: string,
     ): Promise<StepLogger> {
         // For now, construction is synchronous, but this factory method allows
@@ -52,7 +48,7 @@ export class StepLogger {
     /**
      * Load step names from configuration or use defaults
      */
-    private loadStepNames(wizardSteps?: WizardStepConfigWithRequirements[]) {
+    private loadStepNames(wizardSteps?: WizardStepDefinition[]) {
         // Default names (fallback if no config provided)
         const defaults = {
             welcome: 'Project Setup',

@@ -5,7 +5,7 @@ import { WizardContainer, ImportedSettings, EditProjectConfig } from './WizardCo
 import { WebviewApp, WebviewInitData } from '@/core/ui/components/WebviewApp';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import { ComponentSelection } from '@/types/webview';
-import type { WizardStepConfigWithRequirements } from '@/types/wizard';
+import type { WizardStepDefinition } from '@/types/wizard';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
@@ -13,7 +13,7 @@ import '@/core/ui/styles/custom-spectrum.css';
 
 interface WizardInitData extends WebviewInitData {
     componentDefaults?: ComponentSelection;
-    wizardSteps?: WizardStepConfigWithRequirements[];
+    wizardSteps?: WizardStepDefinition[];
     existingProjectNames?: string[];
     importedSettings?: ImportedSettings | null;
     editProject?: EditProjectConfig | null;

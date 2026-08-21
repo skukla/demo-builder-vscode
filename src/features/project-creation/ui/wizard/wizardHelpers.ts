@@ -9,12 +9,7 @@ import type { SettingsEdsConfig } from '@/features/projects-dashboard/types/sett
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
-import type { WizardStepConfigWithRequirements } from '@/types/wizard';
-
-// Re-exported for this module's consumers: the canonical step-definition shape
-// (one entry of wizard-steps.json) now lives in @/types/wizard, shared with the
-// extension-side producer.
-export type { WizardStepConfigWithRequirements } from '@/types/wizard';
+import type { WizardStepDefinition } from '@/types/wizard';
 
 /**
  * Filters committed custom block library selections to remove any that
@@ -87,7 +82,7 @@ export function isComponentSelected(
  * @returns Filtered steps that should be displayed
  */
 export function filterStepsByComponents(
-    allSteps: WizardStepConfigWithRequirements[],
+    allSteps: WizardStepDefinition[],
     selectedComponents: ComponentSelection | undefined,
 ): Array<{ id: WizardStep; name: string; description?: string }> {
     return allSteps

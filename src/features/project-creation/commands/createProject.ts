@@ -26,7 +26,7 @@ import { parseCustomBlockLibrarySettings } from '@/features/project-creation/ser
 import type { SettingsFile } from '@/features/projects-dashboard';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { parseJSON } from '@/types/typeGuards';
-import type { WizardStepConfigWithRequirements } from '@/types/wizard';
+import type { WizardStepDefinition } from '@/types/wizard';
 
 /**
  * Type guard for one wizard-steps.json entry (SOP §10 compliance)
@@ -36,7 +36,7 @@ import type { WizardStepConfigWithRequirements } from '@/types/wizard';
  * getEnabledWizardSteps) — a step without it is silently dropped there,
  * so it must fail loudly here instead.
  */
-function isWizardStepConfig(value: unknown): value is WizardStepConfigWithRequirements {
+function isWizardStepDefinition(value: unknown): value is WizardStepDefinition {
     if (typeof value !== 'object' || value === null) return false;
     if (!('id' in value) || typeof value.id !== 'string') return false;
     if (!('name' in value) || typeof value.name !== 'string') return false;
@@ -67,7 +67,7 @@ interface InitialWizardData {
     theme: 'dark' | 'light';
     workspacePath: string | undefined;
     componentDefaults: ComponentDefaults | null;
-    wizardSteps: WizardStepConfigWithRequirements[] | null;
+    wizardSteps: WizardStepDefinition[] | null;
     existingProjectNames: string[];
     importedSettings: SettingsFile | null;
     editProject: EditProjectConfig | null;
@@ -182,7 +182,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         // Start initialization
         this.stepLoggerInitPromise = (async () => {
             // Try to load wizard steps for better step names
-            let wizardSteps: WizardStepConfigWithRequirements[] | undefined;
+            let wizardSteps: WizardStepDefinition[] | undefined;
             try {
                 const stepsPath = path.join(
                     this.context.extensionPath,
@@ -197,7 +197,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     const stepsConfig = parseJSON<{ steps: unknown[] }>(stepsContent);
                     if (stepsConfig && Array.isArray(stepsConfig.steps)) {
                         // Validate all steps have required properties using type guard
-                        if (stepsConfig.steps.every(isWizardStepConfig)) {
+                        if (stepsConfig.steps.every(isWizardStepDefinition)) {
                             wizardSteps = stepsConfig.steps;
                         }
                     }
@@ -287,7 +287,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         }
 
         // Load wizard steps configuration
-        let wizardSteps: WizardStepConfigWithRequirements[] | null = null;
+        let wizardSteps: WizardStepDefinition[] | null = null;
         try {
             const stepsPath = path.join(
                 this.context.extensionPath,
@@ -301,7 +301,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 const stepsContent = fs.readFileSync(stepsPath, 'utf8');
                 const stepsConfig = parseJSON<{ steps: unknown[] }>(stepsContent);
                 if (stepsConfig && Array.isArray(stepsConfig.steps)) {
-                    if (stepsConfig.steps.every(isWizardStepConfig)) {
+                    if (stepsConfig.steps.every(isWizardStepDefinition)) {
                         wizardSteps = stepsConfig.steps;
                         // Extract step IDs for logging (show first 3 + count of remaining)
                         const stepCount = wizardSteps.length;

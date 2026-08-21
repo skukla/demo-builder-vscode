@@ -100,7 +100,7 @@ export interface StepCondition {
  * was declared four times with subtly different fields before; producer and
  * consumer must check against this one declaration.
  */
-export interface WizardStepConfigWithRequirements {
+export interface WizardStepDefinition {
     id: string;
     name: string;
     description?: string;

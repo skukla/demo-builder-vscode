@@ -21,7 +21,6 @@ import {
     filterRemovedCustomLibraries,
     ImportedSettings,
     EditProjectConfig,
-    WizardStepConfigWithRequirements,
 } from './wizardHelpers';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { LoadingOverlay } from '@/core/ui/components/feedback';
@@ -44,6 +43,7 @@ import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import { ComponentSelection, type WizardState } from '@/types/webview';
+import type { WizardStepDefinition } from '@/types/wizard';
 
 // Extracted hooks
 
@@ -54,7 +54,7 @@ export type { ImportedSettings, EditProjectConfig };
 
 interface WizardContainerProps {
     componentDefaults?: ComponentSelection;
-    wizardSteps?: WizardStepConfigWithRequirements[];
+    wizardSteps?: WizardStepDefinition[];
     existingProjectNames?: string[];
     importedSettings?: ImportedSettings | null;
     /** Edit project configuration for edit mode */
@@ -180,9 +180,7 @@ export function WizardContainer({
         let cancelled = false;
         void getPackageById(currentPackageId).then((own) => {
             if (!cancelled && own) {
-                setPackages((prev) =>
-                    prev.some((p) => p.id === own.id) ? prev : [...prev, own],
-                );
+                setPackages((prev) => (prev.some((p) => p.id === own.id) ? prev : [...prev, own]));
             }
         });
         return () => {
