@@ -30,14 +30,14 @@ import type { AppBuilderComponentState } from '@/types/base';
 /**
  * Props for the ProjectDashboardScreen component
  */
-interface ProjectDashboardScreenProps {
+export interface ProjectDashboardScreenProps {
     project?: {
         name: string;
         path: string;
     };
     hasMesh?: boolean;
-    /** Resolved brand name (e.g., "CitiSignal") */
-    brandName?: string;
+    /** Resolved demo-package name (e.g., "CitiSignal") — demo-packages.json `name`. */
+    packageName?: string;
     /** Resolved stack/architecture name (e.g., "Headless + PaaS") */
     stackName?: string;
     /** Whether this is an EDS project (always published, no start/stop) */
@@ -76,7 +76,7 @@ interface ProjectDashboardScreenProps {
 export function ProjectDashboardScreen({
     project,
     hasMesh = false,
-    brandName,
+    packageName,
     stackName,
     isEds = false,
     edsLiveUrl,
@@ -207,8 +207,8 @@ export function ProjectDashboardScreen({
     // Derived values
     const displayName = statusDisplayName || project?.name || 'Demo Project';
 
-    // Build subtitle from brand/stack (e.g., "CitiSignal · Headless + PaaS")
-    const brandStackSubtitle = [brandName, stackName].filter(Boolean).join(' · ') || undefined;
+    // Build subtitle from package/stack (e.g., "CitiSignal · Headless + PaaS")
+    const brandStackSubtitle = [packageName, stackName].filter(Boolean).join(' · ') || undefined;
 
     // Button disabled states
     const isStartDisabled = isStartActionDisabled(isTransitioning, meshStatus, status || 'ready');
@@ -228,10 +228,10 @@ export function ProjectDashboardScreen({
                                 name={displayName}
                                 disabled={isRunning}
                                 // No `normalize`: the field takes the TITLE as typed.
-                        // `renameProjectCore` derives the slug from it and moves
-                        // the folder to match, so rewriting keystrokes to hyphens
-                        // here would only put the enforcement back in the one
-                        // place the user has to look at.
+                                // `renameProjectCore` derives the slug from it and moves
+                                // the folder to match, so rewriting keystrokes to hyphens
+                                // here would only put the enforcement back in the one
+                                // place the user has to look at.
                                 onRename={renameInline}
                             />
                         }

@@ -24,6 +24,16 @@ describe('ProjectDashboardScreen - Rendering and Status', () => {
             expect(screen.getByText('Demo Project')).toBeInTheDocument();
         });
 
+        // Regression: the wire field is `packageName` (resolvePackageStackNames →
+        // demo-packages.json `name`), but the screen prop was `brandName` — a name
+        // no producer sends — so the brand half of the subtitle never rendered.
+        // The mismatch lived in the untypechecked entry (index.tsx shadowed by
+        // index.ts) where `data?.brandName` read undefined forever.
+        it('renders the package · stack subtitle from the wire field names', () => {
+            renderDashboard({ packageName: 'CitiSignal', stackName: 'Headless + PaaS' });
+            expect(screen.getByText('CitiSignal · Headless + PaaS')).toBeInTheDocument();
+        });
+
         it('should request status on mount', () => {
             renderDashboard();
             expect(ctx.mockPostMessage).toHaveBeenCalledWith('requestStatus');
