@@ -493,3 +493,94 @@ export interface DaLiveTokenWithOrgResultPayload {
     orgName?: string;
     error?: string;
 }
+
+/** `configChanged` — projects-list view-mode setting changed (or re-sent on reveal). */
+export interface ConfigChangedPayload {
+    projectsViewMode: 'cards' | 'rows';
+}
+
+/** `projectsUpdated` — the full refreshed project list for the cards/rows grid. */
+export interface ProjectsUpdatedPayload {
+    projects: Project[];
+}
+
+/**
+ * `demoStateChanged` — a demo started or stopped somewhere; the projects list
+ * repaints its STARTED badge. `runningProjectPath` is undefined on stop.
+ */
+export interface DemoStateChangedPayload {
+    runningProjectPath?: string;
+}
+
+/** `blockLibraryDefaultsUpdated` — the built-in block-library defaults setting changed. */
+export interface BlockLibraryDefaultsUpdatedPayload {
+    blockLibraryDefaults: string[];
+}
+
+/** `customBlockLibraryDefaultsUpdated` — the custom block-library setting changed. */
+export interface CustomBlockLibraryDefaultsUpdatedPayload {
+    customBlockLibraryDefaults: CustomBlockLibrary[];
+}
+
+/**
+ * Phase vocabulary the storefront-setup pipeline actually pushes over
+ * `storefront-setup-progress`. The webview's own state adds local-only values
+ * (idle / github-app / completed / error) on top of these.
+ */
+export type StorefrontSetupProgressPhase =
+    | 'repository'
+    | 'storefront-code'
+    | 'code-sync'
+    | 'site-config'
+    | 'content'
+    | 'block-library'
+    | 'publish'
+    | 'cancelling'
+    /** Waiting on a DA.live re-auth mid-pipeline (progress: -1). */
+    | 'auth-recovery'
+    /** The pipeline's own final push; the `storefront-setup-complete` channel follows. */
+    | 'complete';
+
+/** `storefront-setup-progress` — pipeline step progress for the wizard. */
+export interface StorefrontSetupProgressPayload {
+    phase: StorefrontSetupProgressPhase;
+    message: string;
+    subMessage?: string;
+    /** 0-100, or -1 while paused for auth recovery. */
+    progress: number;
+    /** Repo identity, included once known — drives the webview's cancel-cleanup bookkeeping. */
+    repoUrl?: string;
+    repoOwner?: string;
+    repoName?: string;
+}
+
+/** `storefront-setup-complete` — the pipeline finished. */
+export interface StorefrontSetupCompletePayload {
+    message: string;
+    /** Repo URL; preview/live URLs are derived from it webview-side. */
+    githubRepo?: string;
+    daLiveSite?: string;
+    repoOwner?: string;
+    repoName?: string;
+    /** Present when setup finished with caveats (e.g. PDP routing degraded). */
+    warnings?: string[];
+}
+
+/** `storefront-setup-error` — the pipeline failed; the wizard offers Retry. */
+export interface StorefrontSetupErrorPayload {
+    message: string;
+    error: string;
+}
+
+/**
+ * `storefront-setup-github-app-required` — AEM Code Sync is not installed on
+ * the repo; the wizard opens the install dialog.
+ */
+export interface StorefrontGitHubAppRequiredPayload {
+    owner: string;
+    repo: string;
+    installUrl: string;
+    message: string;
+    /** Helix has no site for this repo — see GitHubAppInstallDialog. */
+    siteUnregistered?: boolean;
+}

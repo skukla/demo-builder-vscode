@@ -220,8 +220,10 @@ describe('who can actually fix it', () => {
 
         await run(context, makeServices(), TEAM_ORG_CONFIG);
 
+        // The org/own-repo distinction is observable in the message itself;
+        // the isTeamOrg flag that used to ride along was never read webview-side
+        // and was deleted by the 2026-08-21 channel inventory.
         const payload = appRequiredPayload(context);
-        expect(payload.isTeamOrg).toBe(true);
         expect(payload.message).toMatch(/admin rights/i);
     });
 
@@ -231,7 +233,6 @@ describe('who can actually fix it', () => {
         await run(context, makeServices());
 
         const payload = appRequiredPayload(context);
-        expect(payload.isTeamOrg).toBe(false);
         expect(payload.message).not.toMatch(/admin rights/i);
     });
 

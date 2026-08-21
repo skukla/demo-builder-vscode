@@ -36,6 +36,7 @@ import {
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import type { StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
 
 // Validates GitHub owner/repo names. Must start and end with alphanumeric;
 // no leading/trailing dots or hyphens. Invalid identifiers are rejected by GitHub API.
@@ -82,7 +83,7 @@ export async function executePhaseHelixConfig(
         phase: 'storefront-code',
         message: 'Configuring Edge Delivery Services...',
         progress: 20,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
     await pushFstabToGitHub(githubFileOps, repoInfo, edsConfig, context, logger);
 
@@ -141,7 +142,7 @@ export async function executePhaseHelixConfig(
         phase: 'storefront-code',
         message: 'Helix configured',
         progress: 35,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
     return { blockCollectionIds };
 }
@@ -158,7 +159,7 @@ async function pushFstabToGitHub(
         phase: 'storefront-code',
         message: 'Pushing fstab.yaml configuration...',
         progress: 25,
-    });
+    } satisfies StorefrontSetupProgressPayload);
     const fstabContent = generateFstabContent({
         daLiveOrg: edsConfig.daLiveOrg,
         daLiveSite: edsConfig.daLiveSite,
@@ -241,7 +242,7 @@ async function installBlockCollectionsWithTracking(
         phase: 'storefront-code',
         message: 'Preparing inspector tagging...',
         progress: 27,
-    });
+    } satisfies StorefrontSetupProgressPayload);
     let inspectorEntries: GitHubTreeInput[];
     try {
         inspectorEntries = await generateInspectorTreeEntries(
@@ -261,7 +262,7 @@ async function installBlockCollectionsWithTracking(
             phase: 'storefront-code',
             message: `Installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}...`,
             progress: 28,
-        });
+        } satisfies StorefrontSetupProgressPayload);
         const result = await installBlockCollections(
             githubFileOps,
             repoInfo.repoOwner,
@@ -323,7 +324,7 @@ async function applyStandaloneInspectorTagging(
             phase: 'storefront-code',
             message: 'Inspector tagging installed',
             progress: 28,
-        });
+        } satisfies StorefrontSetupProgressPayload);
         logger.info('[Storefront Setup] Inspector tagging installed (standalone)');
     } else {
         logger.warn(`[Storefront Setup] Inspector tagging skipped: ${inspectorResult.error}`);

@@ -41,6 +41,7 @@ import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import { ComponentSelection, type WizardState } from '@/types/webview';
+import type { BlockLibraryDefaultsUpdatedPayload, CustomBlockLibraryDefaultsUpdatedPayload } from '@/types/webviewPayloads';
 import type { EditProjectConfig, ImportedSettings, WizardStepDefinition } from '@/types/wizard';
 
 // Extracted hooks
@@ -83,13 +84,13 @@ export function WizardContainer({
     useEffect(() => {
         const unsubDefaults = vscode.onMessage(
             'blockLibraryDefaultsUpdated',
-            (data: { blockLibraryDefaults: string[] }) => {
+            (data: BlockLibraryDefaultsUpdatedPayload) => {
                 setBlockLibraryDefaults(data.blockLibraryDefaults);
             },
         );
         const unsubCustom = vscode.onMessage(
             'customBlockLibraryDefaultsUpdated',
-            (data: { customBlockLibraryDefaults: CustomBlockLibrary[] }) => {
+            (data: CustomBlockLibraryDefaultsUpdatedPayload) => {
                 setCustomBlockLibraryDefaults(data.customBlockLibraryDefaults);
             },
         );

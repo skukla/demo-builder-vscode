@@ -16,6 +16,7 @@ import {
 } from '../services/appInstallationResolver';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
+import type { StorefrontGitHubAppRequiredPayload, StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
 
 /**
  * Check GitHub App installation for existing repos. Returns early result if not installed.
@@ -40,7 +41,7 @@ export async function checkGitHubAppForExistingRepo(
         phase: 'storefront-code',
         message: 'Verifying GitHub App installation...',
         progress: 28,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
     logger.info(
         `[Storefront Setup] Checking GitHub App for existing repo: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
@@ -116,7 +117,7 @@ export async function checkGitHubAppForExistingRepo(
                 phase: 'storefront-code',
                 message: 'Adobe has no site for this repository yet — continuing setup',
                 progress: 28,
-            });
+            } satisfies StorefrontSetupProgressPayload);
             return null;
         }
 
@@ -126,7 +127,7 @@ export async function checkGitHubAppForExistingRepo(
             installUrl,
             siteUnregistered,
             message: 'The AEM Code Sync GitHub App must be installed to continue.',
-        });
+        } satisfies StorefrontGitHubAppRequiredPayload);
 
         return {
             success: false,

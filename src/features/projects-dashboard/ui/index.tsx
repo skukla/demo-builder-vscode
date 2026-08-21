@@ -13,6 +13,7 @@ import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { sleep } from '@/core/utils/sleep';
 import type { Project } from '@/types/base';
+import type { ConfigChangedPayload, DemoStateChangedPayload, ProjectsUpdatedPayload } from '@/types/webviewPayloads';
 
 // Import global styles
 import '@/core/ui/styles/index.css';
@@ -86,7 +87,7 @@ const ProjectsDashboardApp: React.FC = () => {
         // Subscribe to configuration changes (live updates from VS Code settings)
         // Just update the view mode directly - no need to re-fetch projects
         const unsubscribeConfig = webviewClient.onMessage('configChanged', (data) => {
-            const configData = data as { projectsViewMode?: 'cards' | 'rows' } | undefined;
+            const configData = data as Partial<ConfigChangedPayload> | undefined;
             if (configData?.projectsViewMode) {
                 setInitialViewMode(configData.projectsViewMode);
             }
@@ -94,7 +95,7 @@ const ProjectsDashboardApp: React.FC = () => {
 
         // Subscribe to project updates
         const unsubscribeProjects = webviewClient.onMessage('projectsUpdated', (data) => {
-            const typedData = data as { projects?: Project[] } | undefined;
+            const typedData = data as Partial<ProjectsUpdatedPayload> | undefined;
             if (typedData?.projects) {
                 setProjects(typedData.projects);
             }
@@ -107,7 +108,7 @@ const ProjectsDashboardApp: React.FC = () => {
 
         // Subscribe to demo state changes (start/stop)
         const unsubscribeDemoState = webviewClient.onMessage('demoStateChanged', (data) => {
-            const typedData = data as { runningProjectPath?: string } | undefined;
+            const typedData = data as DemoStateChangedPayload | undefined;
             setRunningProjectPath(typedData?.runningProjectPath);
         });
 

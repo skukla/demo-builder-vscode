@@ -34,6 +34,13 @@ import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayo
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { GitHubAppInstallDialog } from '@/features/eds/ui/components';
 import type { WizardState } from '@/types/webview';
+import type {
+    StorefrontGitHubAppRequiredPayload,
+    StorefrontSetupCompletePayload,
+    StorefrontSetupErrorPayload,
+    StorefrontSetupProgressPayload,
+    StorefrontSetupProgressPhase,
+} from '@/types/webviewPayloads';
 
 /**
  * Progress ranges for each setup phase
@@ -52,31 +59,20 @@ const PROGRESS_RANGES = {
 /**
  * Setup phase states
  */
+// The wire phases live in @/types/webviewPayloads (ONE declaration with the
+// senders — this union used to be a local twin missing the 'auth-recovery'
+// and 'complete' values the pipeline actually pushes). The webview adds its
+// local-only states on top.
 type StorefrontSetupPhase =
+    | StorefrontSetupProgressPhase
     | 'idle'
-    | 'repository'
-    | 'storefront-code'
-    | 'code-sync'
-    | 'site-config'
     | 'github-app'
-    | 'content'
-    | 'block-library'
-    | 'publish'
-    | 'cancelling'
     | 'completed'
     | 'error';
 
-/**
- * GitHub App installation data for the install dialog
- */
-interface GitHubAppData {
-    owner: string;
-    repo: string;
-    installUrl: string;
-    message: string;
-    /** Helix has no site for this repo — see {@link GitHubAppInstallDialog}. */
-    siteUnregistered?: boolean;
-}
+// GitHubAppData is the github-app-required wire shape — ONE declaration in
+// @/types/webviewPayloads, aliased here for this file's existing vocabulary.
+type GitHubAppData = StorefrontGitHubAppRequiredPayload;
 
 /**
  * Partial state tracking for cleanup on cancel
@@ -202,30 +198,29 @@ export function StorefrontSetupStep({
      * Handle progress updates from the extension
      */
     const handleProgress = useCallback(
-        (data: {
-            phase: StorefrontSetupPhase;
-            message: string;
-            subMessage?: string;
-            progress: number;
-            repoUrl?: string;
-            repoOwner?: string;
-            repoName?: string;
-        }) => {
+        (data: StorefrontSetupProgressPayload) => {
             setSetupState((prev) => {
                 // Update partial state based on phase transitions
                 const newPartialState = { ...prev.partialState, phase: data.phase };
 
-                // Mark repo as created when moving past repository phase
-                if (data.phase !== 'idle' && data.phase !== 'repository' && data.repoUrl) {
+                // A push carrying repoUrl means the repo exists — record it for
+                // cancel-cleanup. This used to be gated on phase !== 'repository',
+                // which excluded exactly the pushes that carry repo info (they are
+                // all 'repository'-phase pushes), so repoCreated never got set from
+                // progress and cancelling mid-setup skipped repo cleanup. Found when
+                // the shared payload type made the comparison provably dead.
+                if (data.repoUrl) {
                     newPartialState.repoCreated = true;
                     newPartialState.repoUrl = data.repoUrl;
                     newPartialState.repoOwner = data.repoOwner;
                     newPartialState.repoName = data.repoName;
                 }
 
-                // Mark content as copied when completing content phase
+                // Mark content as copied when completing content phase. The wire's
+                // terminal value is 'complete' — this compared against the local
+                // 'completed' state and so never matched (same dead-comparison find).
                 if (
-                    data.phase === 'completed' ||
+                    data.phase === 'complete' ||
                     (prev.partialState.phase === 'content' && data.phase !== 'content')
                 ) {
                     newPartialState.contentCopied = true;
@@ -255,7 +250,7 @@ export function StorefrontSetupStep({
      * Updates both local state and wizard state to mark setup as complete
      */
     const handleComplete = useCallback(
-        (data: { message: string; githubRepo?: string; warnings?: string[] }) => {
+        (data: StorefrontSetupCompletePayload) => {
             // Update local setup state
             setSetupState((prev) => ({
                 ...prev,
@@ -288,7 +283,7 @@ export function StorefrontSetupStep({
      * Handle error notification from the extension
      */
     const handleError = useCallback(
-        (data: { message: string; error: string; phase?: StorefrontSetupPhase }) => {
+        (data: StorefrontSetupErrorPayload) => {
             setSetupState((prev) => ({
                 ...prev,
                 phase: 'error',
@@ -425,29 +420,22 @@ export function StorefrontSetupStep({
     // Set up message listeners (stable callbacks, no re-subscription needed)
     useEffect(() => {
         // Subscribe to progress updates
-        const unsubProgress = vscode.onMessage<{
-            phase: StorefrontSetupPhase;
-            message: string;
-            subMessage?: string;
-            progress: number;
-        }>('storefront-setup-progress', handleProgress);
+        const unsubProgress = vscode.onMessage<StorefrontSetupProgressPayload>(
+            'storefront-setup-progress',
+            handleProgress,
+        );
 
         // Subscribe to completion notifications
-        const unsubComplete = vscode.onMessage<{
-            message: string;
-            githubRepo?: string;
-            /** Must match what storefrontSetupHandlers actually sends: a declared
-             *  shape narrower than the wire still type-checks (bivariant params),
-             *  which is how a sent-but-never-rendered field went unnoticed. */
-            warnings?: string[];
-        }>('storefront-setup-complete', handleComplete);
+        const unsubComplete = vscode.onMessage<StorefrontSetupCompletePayload>(
+            'storefront-setup-complete',
+            handleComplete,
+        );
 
         // Subscribe to error notifications
-        const unsubError = vscode.onMessage<{
-            message: string;
-            error: string;
-            phase?: StorefrontSetupPhase;
-        }>('storefront-setup-error', handleError);
+        const unsubError = vscode.onMessage<StorefrontSetupErrorPayload>(
+            'storefront-setup-error',
+            handleError,
+        );
 
         // Subscribe to GitHub App required notifications
         const unsubGitHubApp = vscode.onMessage<GitHubAppData>(

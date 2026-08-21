@@ -13,6 +13,7 @@ import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { checkGitHubAppForExistingRepo } from './storefrontSetupPhaseHelpers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
+import type { StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
 
 /**
  * Execute Phase 1: GitHub repository setup (create, use existing, or pre-created)
@@ -50,7 +51,7 @@ export async function executePhaseGitHubRepo(
             message: `Using repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
             progress: 10,
             ...repoInfo,
-        });
+        } satisfies StorefrontSetupProgressPayload);
 
         // ADR-006 Step 4b applies here too: the wizard's "Create Repository"
         // button creates the repo BEFORE storefront setup runs, so this branch
@@ -121,7 +122,7 @@ async function announcePinAndComplete(
         phase: 'repository',
         message: 'Pinning to verified canonical state...',
         progress: 12,
-    });
+    } satisfies StorefrontSetupProgressPayload);
     await pinIfThinLayer(
         edsConfig,
         services,
@@ -136,7 +137,7 @@ async function announcePinAndComplete(
         message: 'Repository ready',
         progress: 15,
         ...repoInfo,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 }
 
 /**
@@ -243,7 +244,7 @@ async function executePhaseExistingRepo(
         message: `Using existing repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 5,
         ...repoInfo,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
     // Check BEFORE the first write ONLY when the repo can already answer.
     //
@@ -272,7 +273,7 @@ async function executePhaseExistingRepo(
             phase: 'repository',
             message: 'Resetting repository to template...',
             progress: 6,
-        });
+        } satisfies StorefrontSetupProgressPayload);
 
         if (edsConfig.codePatchSource) {
             // Thin-layer flow: bulk Tree reset to canonical@LKG + apply canonical
@@ -315,7 +316,7 @@ async function executePhaseExistingRepo(
         message: 'Repository ready',
         progress: 15,
         ...repoInfo,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
     return null;
 }
@@ -339,7 +340,7 @@ async function executePhaseNewRepo(
         phase: 'repository',
         message: 'Creating GitHub repository from template...',
         progress: 5,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
     logger.info(`[Storefront Setup] Creating repository: ${repoInfo.repoName}`);
 
@@ -373,7 +374,7 @@ async function executePhaseNewRepo(
         message: 'Waiting for repository content...',
         progress: 10,
         ...repoInfo,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
     await services.githubRepoOps.waitForContent(repoInfo.repoOwner, repoInfo.repoName, signal);
 

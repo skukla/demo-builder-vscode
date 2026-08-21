@@ -17,7 +17,7 @@ import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers';
 import { HandlerContext } from '@/types/handlers';
-import type { ProjectsListInitialData } from '@/types/webviewPayloads';
+import type { ConfigChangedPayload, ProjectsUpdatedPayload , ProjectsListInitialData } from '@/types/webviewPayloads';
 
 /**
  * Command to show the "Projects List" as the home screen
@@ -99,7 +99,7 @@ export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInit
             if (e.affectsConfiguration('demoBuilder.projectsViewMode')) {
                 const config = vscode.workspace.getConfiguration('demoBuilder');
                 const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
-                this.sendMessage('configChanged', { projectsViewMode });
+                this.sendMessage('configChanged', { projectsViewMode } satisfies ConfigChangedPayload);
             }
         });
         this.disposables.add(configListener);
@@ -167,7 +167,7 @@ export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInit
 
         const config = vscode.workspace.getConfiguration('demoBuilder');
         const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
-        await this.sendMessage('configChanged', { projectsViewMode });
+        await this.sendMessage('configChanged', { projectsViewMode } satisfies ConfigChangedPayload);
     }
 
     /**
@@ -193,7 +193,7 @@ export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInit
             }
 
             // Send to webview
-            await this.sendMessage('projectsUpdated', { projects });
+            await this.sendMessage('projectsUpdated', { projects } satisfies ProjectsUpdatedPayload);
         } catch (error) {
             this.logger.error('[ProjectsList] Failed to refresh projects list', error as Error);
         }

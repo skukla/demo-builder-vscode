@@ -16,6 +16,7 @@ import { configureDaLivePermissions } from './edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
+import type { StorefrontGitHubAppRequiredPayload, StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
 
 /**
  * Execute Phase 3: Code sync verification and CDN publishing
@@ -33,13 +34,13 @@ export async function executePhaseCodeSync(
         phase: 'code-sync',
         message: 'Verifying code synchronization...',
         progress: 40,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'code-sync',
         message: 'Publishing code to CDN...',
         progress: 43,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
     try {
         await helixService.previewCode(repoInfo.repoOwner, repoInfo.repoName, '/*', 'main');
@@ -52,13 +53,13 @@ export async function executePhaseCodeSync(
         phase: 'code-sync',
         message: 'Code synchronized',
         progress: 45,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'site-config',
         message: 'Configuring site permissions...',
         progress: 46,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
     const daLiveEmail = await daLiveAuthService.getUserEmail();
     const userEmail = daLiveEmail || edsConfig.githubAuth?.user?.email;
@@ -76,7 +77,7 @@ export async function executePhaseCodeSync(
                 phase: 'site-config',
                 message: `⚠️ Permissions partially configured: ${adminResult.error}`,
                 progress: 47,
-            });
+            } satisfies StorefrontSetupProgressPayload);
         }
     } else {
         logger.warn('[Storefront Setup] No user email available for permissions');
@@ -93,7 +94,7 @@ export async function executePhaseCodeSync(
         phase: 'site-config',
         message: 'Site configuration complete',
         progress: 49,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
     return null;
 }
@@ -142,7 +143,7 @@ async function confirmCodeSync(
         phase: 'site-config',
         message: 'Verifying AEM Code Sync...',
         progress: 48,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
     // The site was created seconds ago; code sync can lag it slightly. This is a
     // legitimate wait — unlike every earlier one, the thing being waited for is
@@ -160,7 +161,7 @@ async function confirmCodeSync(
             phase: 'site-config',
             message: '✓ AEM Code Sync verified',
             progress: 48,
-        });
+        } satisfies StorefrontSetupProgressPayload);
         return null;
     }
 
@@ -195,10 +196,11 @@ async function confirmCodeSync(
             owner: repoInfo.repoOwner,
             repo: repoInfo.repoName,
             installUrl,
-            isTeamOrg,
+            // isTeamOrg used to ride along here; nothing webview-side ever
+            // read it (deleted by the 2026-08-21 channel inventory).
             siteUnregistered: false,
             message,
-        });
+        } satisfies StorefrontGitHubAppRequiredPayload);
         return {
             success: false,
             error: 'GitHub App installation required',
@@ -216,6 +218,6 @@ async function confirmCodeSync(
         phase: 'site-config',
         message: '⚠️ Could not verify AEM Code Sync — setup completed anyway',
         progress: 48,
-    });
+    } satisfies StorefrontSetupProgressPayload);
     return null;
 }

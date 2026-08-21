@@ -38,6 +38,7 @@ import { hasMeshInDependencies } from '@/core/constants';
 import { redactUrlUserParam } from '@/core/utils/maskEmail';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { StorefrontSetupCompletePayload, StorefrontSetupErrorPayload, StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
 
 // ==========================================================
 // Types
@@ -224,8 +225,11 @@ export async function handleCancelStorefrontSetup(
         );
 
         if (confirm !== 'Yes, Cancel') {
+            // No push here: the cancel request arrives on webview unmount, so
+            // there is nobody left to hear a 'storefront-setup-cancel-aborted'
+            // message — the old send had no listener anywhere (deleted by the
+            // 2026-08-21 channel inventory).
             context.logger.debug('[Storefront Setup] Cancel aborted by user');
-            await context.sendMessage('storefront-setup-cancel-aborted', {});
             return { success: true };
         }
     }
@@ -247,7 +251,7 @@ export async function handleCancelStorefrontSetup(
                 phase: 'cancelling',
                 message: 'Cleaning up resources...',
                 progress: 0,
-            });
+            } satisfies StorefrontSetupProgressPayload);
 
             const cleanupResult = await cleanupStorefrontSetupResources(
                 context,
@@ -269,7 +273,8 @@ export async function handleCancelStorefrontSetup(
         }
     }
 
-    await context.sendMessage('storefront-setup-cancelled', {});
+    // No 'storefront-setup-cancelled' push: same reason as above — the webview
+    // that asked for the cancel is already gone, and no listener ever existed.
     return { success: true };
 }
 
@@ -317,7 +322,7 @@ export async function handleStartStorefrontSetup(
         await context.sendMessage('storefront-setup-error', {
             message: 'Missing required parameters',
             error: 'Project name and EDS config are required',
-        });
+        } satisfies StorefrontSetupErrorPayload);
         return { success: false, error: 'Missing required parameters' };
     }
 
@@ -345,7 +350,7 @@ export async function handleStartStorefrontSetup(
             await context.sendMessage('storefront-setup-error', {
                 message: 'Authentication required',
                 error: 'Please authenticate with Adobe before starting storefront setup',
-            });
+            } satisfies StorefrontSetupErrorPayload);
             return { success: false, error: 'AuthenticationService not available' };
         }
 
@@ -361,7 +366,7 @@ export async function handleStartStorefrontSetup(
                 error: adobeResult.cancelled
                     ? 'Adobe sign-in was cancelled.'
                     : 'Adobe sign-in failed. Please try again.',
-            });
+            } satisfies StorefrontSetupErrorPayload);
             return { success: false, error: 'Adobe authentication required' };
         }
     } else {
@@ -376,7 +381,7 @@ export async function handleStartStorefrontSetup(
             error: daLiveResult.cancelled
                 ? 'DA.live sign-in was cancelled.'
                 : daLiveResult.error || 'Your DA.live session has expired.',
-        });
+        } satisfies StorefrontSetupErrorPayload);
         return { success: false, error: 'DA.live authentication required' };
     }
 
@@ -457,7 +462,7 @@ export async function handleStartStorefrontSetup(
                 repoOwner: result.repoOwner,
                 repoName: result.repoName,
                 // Note: previewUrl/liveUrl not sent - derived from githubRepo by typeGuards
-            });
+            } satisfies StorefrontSetupCompletePayload);
             return { success: true, data: result };
         } else {
             throw new Error(result.error || 'Unknown error');
@@ -468,7 +473,7 @@ export async function handleStartStorefrontSetup(
         await context.sendMessage('storefront-setup-error', {
             message: 'Storefront setup failed',
             error: errorMessage,
-        });
+        } satisfies StorefrontSetupErrorPayload);
         return { success: false, error: errorMessage };
     } finally {
         context.sharedState.storefrontSetupAbortController = undefined;

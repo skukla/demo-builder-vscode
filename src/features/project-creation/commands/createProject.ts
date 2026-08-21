@@ -26,7 +26,7 @@ import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/
 import type { SettingsFile } from '@/types/settingsFile';
 import { parseJSON } from '@/types/typeGuards';
 import type { ComponentSelection } from '@/types/webview';
-import type { WizardInitialData } from '@/types/webviewPayloads';
+import type { BlockLibraryDefaultsUpdatedPayload, CustomBlockLibraryDefaultsUpdatedPayload, WizardInitialData } from '@/types/webviewPayloads';
 import type { EditProjectConfig, WizardStepDefinition } from '@/types/wizard';
 
 /**
@@ -475,12 +475,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
                 );
                 this.sendMessage('customBlockLibraryDefaultsUpdated', {
                     customBlockLibraryDefaults: updated,
-                });
+                } satisfies CustomBlockLibraryDefaultsUpdatedPayload);
             }
             if (e.affectsConfiguration('demoBuilder.blockLibraries.defaults')) {
                 const config = vscode.workspace.getConfiguration('demoBuilder');
                 const blockLibraryDefaults = config.get<string[]>('blockLibraries.defaults', []);
-                this.sendMessage('blockLibraryDefaultsUpdated', { blockLibraryDefaults });
+                this.sendMessage('blockLibraryDefaultsUpdated', { blockLibraryDefaults } satisfies BlockLibraryDefaultsUpdatedPayload);
             }
         });
         this.disposables.add(configListener);

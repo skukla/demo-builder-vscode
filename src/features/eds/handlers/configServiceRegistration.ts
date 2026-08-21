@@ -34,6 +34,7 @@ import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import type { RepoInfo, SetupServices } from './storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import type { StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
 
 /**
  * Register site with Configuration Service.
@@ -56,7 +57,7 @@ export async function registerConfigurationService(
         phase: 'site-config',
         message: 'Registering site with Configuration Service...',
         progress: 46,
-    });
+    } satisfies StorefrontSetupProgressPayload);
 
     // Access state, to the log and the wizard both. The detail lives in
     // `configAccessRecovery` — this handler only needs the outcome.
@@ -71,7 +72,7 @@ export async function registerConfigurationService(
                 phase: 'site-config',
                 message,
                 progress: 46,
-            }),
+            } satisfies StorefrontSetupProgressPayload),
     );
 
     // Same precedence the DA.live permission step uses: the IMS identity is the
@@ -101,7 +102,7 @@ export async function registerConfigurationService(
                     phase: 'site-config',
                     message,
                     progress: 46,
-                }),
+                } satisfies StorefrontSetupProgressPayload),
         });
 
         // Losing the site's admin list is unrecoverable from inside the app, so it
@@ -129,7 +130,7 @@ export async function registerConfigurationService(
                 message:
                     '⚠️ Configuration Service registration failed — da.live preview may not work',
                 progress: 47,
-            });
+            } satisfies StorefrontSetupProgressPayload);
         }
 
         // Three outcomes, not two. Configured-and-registered is the only one that
@@ -188,7 +189,7 @@ export async function registerConfigurationService(
             message:
                 '⚠️ Configuration Service setup incomplete — da.live preview may need manual configuration',
             progress: 49,
-        });
+        } satisfies StorefrontSetupProgressPayload);
         if (edsConfig.byomOverlayUrl) {
             addPdpCaveat(repoInfo, BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE);
             surfaceOverlayRegistrationFailure(logger, vscode.window.showWarningMessage);

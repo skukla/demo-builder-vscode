@@ -21,6 +21,7 @@ import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { sleep } from '@/core/utils/sleep';
 import { DEFAULT_SHELL } from '@/types/shell';
 import { getComponentInstancesByType } from '@/types/typeGuards';
+import type { DemoStateChangedPayload } from '@/types/webviewPayloads';
 
 export class StopDemoCommand extends BaseCommand {
     private _processCleanup: ProcessCleanup | null = null;
@@ -188,7 +189,7 @@ export class StopDemoCommand extends BaseCommand {
                 if (projectsPanel) {
                     await projectsPanel.webview.postMessage({
                         type: 'demoStateChanged',
-                        payload: { runningProjectPath: undefined },
+                        payload: { runningProjectPath: undefined } satisfies DemoStateChangedPayload,
                     });
                 }
 
