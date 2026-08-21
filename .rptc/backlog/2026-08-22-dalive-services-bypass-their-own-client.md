@@ -28,7 +28,20 @@ Migrate the services' raw `fetch` calls onto `daLiveApiClient.fetchWithRetry`
 semantics it doesn't yet expose), then delete the per-service retry loops and
 `MAX_RETRY_ATTEMPTS` re-implementations. One service per slice —
 `daLiveContentCopy` first (largest, and its retry loop is the most complete
-duplicate). Proof per slice: that service's suite unchanged.
+duplicate).
+
+**Proof caveat (measured 2026-08-22):** `daLiveContentCopy.ts` has NO
+dedicated suite — it was extracted from `DaLiveContentOperations` and its
+coverage rides the old names: `daLiveContentOperations-transform/-enumeration/
+-referenceDiscovery/-applySiteConfig/-library-creation.test.ts`, plus
+`edsPipeline-operations.test.ts` and `contentCompleteness.smoke.test.ts`.
+Before migrating its retry loop, check those suites actually exercise the
+retry path; if not, write the retry regression test FIRST (test-first on the
+exact behaviour being preserved), then migrate. `daLiveConfigService` has
+`daLiveConfigService-queries/-mutations.test.ts`.
+
+**Constraint:** `daLiveApiClient` must stay vscode-free — the MCP server
+constructs it in a separate Node process.
 
 ## Contained meanwhile
 
@@ -36,3 +49,14 @@ The host constant is pinned to one definition, and the client remains the only
 token source — the duplication is in transport concerns (retry/timeout/error
 mapping), which drift silently but are also exercised constantly, so breakage
 surfaces fast. Lower urgency than the Helix item, where whole verbs fork.
+
+## Kickoff prompt
+
+> Migrate one DA.live service off raw fetch per
+> `.rptc/backlog/2026-08-22-dalive-services-bypass-their-own-client.md`
+> (start: `daLiveContentCopy`). Read the Proof caveat first — the retry
+> behaviour may need a regression test written BEFORE the migration. Extend
+> `daLiveApiClient.fetchWithRetry` as needed (FormData bodies); keep the
+> client vscode-free. Delete that service's retry loop when its calls are
+> migrated. Proof suites per the caveat section. Full `gate`; one service
+> per slice, own commit.

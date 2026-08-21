@@ -47,4 +47,41 @@ the same shape `deployMeshComponent` has). Consolidate by delegation:
 
 `tests/templates/spine-chokepoints.test.ts` ("helix PUBLISH verbs") pins the
 verb-URL builders to exactly these two files — the duplication cannot grow a
-third engine while it waits.
+third engine while it waits. When consolidation lands, UPDATE that pin's
+spine list to the client alone — that is the completion signal.
+
+## Constraints a cold session must not rediscover the hard way
+
+- `helixApiClient` must STAY vscode-free — `mcp-server.ts` (a separate Node
+  process) imports it directly.
+- The service's token discovery (`getDaLiveToken`, GitHubTokenService) stays
+  service-side; tokens are PASSED INTO the client (its existing contract).
+- The DELETE-auth rule (ADR-002: DA.live IMS Bearer ALONE for `DELETE
+  /live`; publish token withheld) is currently duplicated —
+  `helixService.getDeleteAuthHeaders` and the client's `buildDeleteHeaders`.
+  After delegation the client's version is the only one; delete the
+  service's and its "matches exactly" mirror comment.
+- Service-only machinery with no client counterpart (bulk preview/publish,
+  page-by-page fallback, rate limiting, API-key management) is NOT being
+  moved — only the per-page verb URL/request construction delegates.
+
+## Proof suites (verified to exist 2026-08-22)
+
+`tests/features/eds/services/helixApiClient.test.ts`,
+`helixService-preview-publish.test.ts`, `helixService-rate-limiting.test.ts`,
+`helixService-credentialRefused.test.ts`, `helixService-auth-keys.test.ts`,
+`storefrontSyncService.test.ts`, plus the mcpServer suites. Audit their mocks
+when the delegation lands.
+
+## Kickoff prompt
+
+> Consolidate the two Helix publish engines per
+> `.rptc/backlog/2026-08-22-helix-publish-has-two-engines.md`. Read the
+> Constraints section first. Order: extend `helixApiClient` with the
+> per-request surface the service needs → delegate `helixService`'s per-page
+> verbs (preview/publish/unpublish/previewAndPublish) → delete the service's
+> URL builders and its duplicated delete-header helper → collapse the seven
+> `admin.hlx.page` host constants to one exported from the client → update
+> the spine-chokepoints "helix PUBLISH verbs" pin to the client alone.
+> Proof: the suites named above run unchanged. Full `gate`; one slice per
+> step is fine, own commits.

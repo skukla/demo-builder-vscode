@@ -45,3 +45,25 @@ unchanged (that is the proof, per the ServiceGroupList precedent).
 Touches both reset flows at once; the spine choke-point test already prevents
 either copy from becoming a second deploy path. Do it as its own slice, not as
 a rider on other reset work.
+
+## Proof suites (verified to exist 2026-08-22)
+
+`tests/features/eds/services/edsResetMeshHelper.test.ts`,
+`tests/features/eds/services/edsResetService-meshAuth.test.ts`,
+`tests/features/lifecycle/services/projectResetService-meshContext.test.ts`
+(+ the rest of the projectResetService-* family). Behaviour-preserving means
+these run unchanged; their MOCKS are the first thing to audit when the shared
+helper lands (a mock keeps answering in the old shape — see
+webview-test-authoring §8).
+
+## Kickoff prompt
+
+> Extract the shared post-reset mesh redeploy per
+> `.rptc/backlog/2026-08-22-post-reset-mesh-redeploy-has-two-wrappers.md`.
+> Read both wrappers first (`edsResetMeshHelper.deployMeshAndPersist`,
+> `projectResetService.runTargetedMeshDeploy`) plus the near-third
+> (`deployMeshHeadless`); design the helper against all three even if
+> headless keeps its own surface. Home: `features/mesh/services`, beside
+> `deployMeshComponent`. Callers keep auth preflight, org targeting,
+> progress, and their own partial-success result shapes. Proof: the suites
+> named above run unchanged. Full `gate` after; one slice, its own commit.
