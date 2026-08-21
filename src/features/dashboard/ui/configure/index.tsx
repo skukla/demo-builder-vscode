@@ -20,6 +20,7 @@ interface ConfigureInitData extends WebviewInitData {
     appBuilderComponentCatalog?: AppBuilderComponentCatalogEntry[];
     providedEnvVars?: Record<string, string>;
     appBuilderComponentSecretFlags?: Record<string, Record<string, boolean>>;
+    componentSecretFlags?: Record<string, Record<string, boolean>>;
 }
 
 // Get root element
@@ -46,6 +47,7 @@ root.render(
                     appBuilderComponentCatalog={data.appBuilderComponentCatalog}
                     providedEnvVars={data.providedEnvVars}
                     appBuilderComponentSecretFlags={data.appBuilderComponentSecretFlags}
+                    componentSecretFlags={data.componentSecretFlags}
                 />
             ) : null;
         }}
